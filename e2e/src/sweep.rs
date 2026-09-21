@@ -1,10 +1,5 @@
-//! The a11y sweep over every docs page (todo 760): `cargo run -p e2e -- sweep`.
-//!
-//! Every page the docs nav links, in light and dark, at desktop and mobile
-//! width: axe, text contrast, control boundaries, focus rings and pointer
-//! targets. A report, not a gate: hits never fail the run, a harness error
-//! (a page that never renders, a CDP call that fails) does, after the report
-//! is written.
+//! The a11y sweep over every docs page, both schemes and viewports (todo 760): `cargo run -p e2e -- sweep`.
+//! A report, not a gate: only harness errors fail the run, after the report is written.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -168,9 +163,7 @@ fn report_path() -> PathBuf {
         .unwrap_or_else(|| std::env::temp_dir().join("a11y-sweep.md"))
 }
 
-/// Every page path the docs nav links, home first. Read from the rendered
-/// nav with every section expanded, so a page added to `nav.rs` is swept
-/// without touching this file.
+/// Every page path the rendered docs nav links (all sections expanded), home first.
 async fn discover() -> Result<Vec<String>> {
     let mut fixture = Fixture::open_until("/", Viewport::Desktop, Scheme::Light, READY).await?;
     // The landing page is full width with the nav hidden: read it from the first page it links.
@@ -442,10 +435,8 @@ const tileOf = (e, s) => {
     return { box: { left: b.left + x, top: b.top + y, width: w, height: h }, repeat: false };
 };"#;
 
-/// Text contrast for nodes axe could not decide: the text colour against the
-/// backgrounds `elementsFromPoint` stacks under three points of the first line,
-/// scrolled into view first; a linear gradient counts at each point. `None` where
-/// an image lies under it, or the text is covered.
+/// Text contrast axe could not decide, against the stacked backgrounds at three points
+/// of the first line. `None` over an image or when covered.
 async fn text_contrast(page: &Page, nodes: &[&contrast::Node]) -> Result<Vec<Option<TextReading>>> {
     if nodes.is_empty() {
         return Ok(Vec::new());
@@ -618,12 +609,8 @@ async fn settle(page: &Page) -> Result<()> {
     Ok(())
 }
 
-/// WCAG 1.4.11 for controls whose boundary is what identifies them: fields,
-/// checkboxes, radios, switches and sliders. A button with a text label needs
-/// none, so buttons are left out. The boundary is the first visible box with a
-/// border, a fill or a spread shadow among the control, its siblings and two
-/// ancestors: a field frame draws its input's border, a checkbox box sits
-/// beside its hidden input. Colours are composited over what lies behind.
+/// WCAG 1.4.11 for fields, checkboxes, radios, switches and sliders (not labelled buttons).
+/// The boundary is the first visible border, fill or shadow on the control, siblings or two ancestors.
 async fn boundaries(page: &Page) -> Result<(Vec<(String, String)>, usize)> {
     let script = format!(
         r#"(() => {{ {DESCRIBE} {CLIPPED} {COLOUR}

@@ -1,19 +1,11 @@
-//! Polling with a deadline: the auto-waiting we give up by not using
-//! Playwright.
-//!
-//! Every read against the app goes through one of these. A bare read races the
-//! app's mount, and a race is what produced most of the false readings recorded
-//! in `codebase/testing`. The rule is boring and absolute: never assert on a
-//! value you did not wait for.
+//! Polling with a deadline. Never assert on a value you did not wait for: a bare read races dioxus.
 
 use std::time::{Duration, Instant};
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
-/// Overridable, because the right value depends on the machine and on how much
-/// else is running. A fixed budget that is fine on an idle laptop is the
-/// classic source of "passes locally, flakes under load".
+/// `E2E_TIMEOUT_MS`, default 15 s: the right budget depends on machine load.
 pub(crate) fn timeout() -> Duration {
     std::env::var("E2E_TIMEOUT_MS")
         .ok()
@@ -24,9 +16,7 @@ pub(crate) fn timeout() -> Duration {
 
 const POLL: Duration = Duration::from_millis(25);
 
-/// The journal's name for an ordinary per-assertion poll, the one
-/// `E2E_TIMEOUT_MS` bounds. `Fixture::open` passes its own names, because a
-/// red run has to say which of the three waits gave up (todo 364).
+/// The journal's name for an ordinary per-assertion poll (todo 364).
 pub const READ: &str = "read";
 
 /// Poll `check` until it returns true, or fail naming what was waited for.
@@ -38,14 +28,8 @@ where
     until_kind(READ, what, check).await
 }
 
-/// `until`, with the journal's name for this kind of wait.
-///
-/// Besides polling it measures, because "it took 15 s" and "one call took
-/// 120 s" are the two mechanisms behind todo 364 and the wall-clock number
-/// alone cannot tell them apart. The failure message and the journal line
-/// both carry the poll count and the slowest single poll: hundreds of quick
-/// polls mean the condition never came true, one long poll means the page or
-/// the CDP connection stopped answering.
+/// `until` under a journal kind. Reports poll count and slowest poll: many quick polls
+/// mean a false condition, one long poll a stuck page or CDP connection (todo 364).
 pub async fn until_kind<F, Fut>(kind: &'static str, what: &str, mut check: F) -> Result<()>
 where
     F: FnMut() -> Fut,
@@ -65,10 +49,7 @@ where
             Ok(true) => return Ok(()),
             Ok(false) => {}
             Err(error) => {
-                // The poll itself failed - a CDP call that errored or timed
-                // out. Worth a journal line of its own: it is the shape a
-                // dead browser connection takes, and it never reaches the
-                // `expired` branch below.
+                // A failed CDP call is how a dead connection looks; journal it too.
                 crate::journal::gave_up(&crate::journal::GaveUp {
                     kind,
                     how: "failed",
@@ -102,14 +83,8 @@ where
     }
 }
 
-/// Wait for a JavaScript expression to become true.
-///
-/// **Use this instead of reading a value straight after an interaction.** A
-/// keypress or a click returns as soon as the event is dispatched; dioxus then
-/// runs the handler, writes a signal, and re-renders on its own schedule. An
-/// assertion that reads the DOM on the next line is racing that, and it is the
-/// single largest source of flakiness in a browser suite - the kind that passes
-/// on an idle machine and fails when twelve tests share one.
+/// Waits for a JavaScript expression to become true. Use it after every interaction:
+/// dioxus re-renders after the event returns.
 pub async fn for_js_true(page: &Page, expression: &str, what: &str) -> Result<()> {
     until(what, || async {
         let value: bool = page.evaluate(expression).await?.into_value()?;
@@ -118,13 +93,8 @@ pub async fn for_js_true(page: &Page, expression: &str, what: &str) -> Result<()
     .await
 }
 
-/// Read `expression`, run `act`, then wait for `expression` to stop equalling
-/// what it read.
-///
-/// The shape wanted after an interaction that should change something: "the
-/// value moved", without hard-coding what it moved to. The "before" value is
-/// read here, and nothing is not a value: a caller that defaulted a `None` to
-/// `""` had a wait that passed on its first poll (todo 383).
+/// Reads `expression`, runs `act`, then waits for it to change. A null before-value
+/// fails, since a defaulted one passed on the first poll (todo 383).
 ///
 /// ```ignore
 /// wait::for_js_change(page, VALUE_NOW, "ArrowRight to step", || {
@@ -159,9 +129,7 @@ pub async fn for_selector(page: &Page, selector: &str) -> Result<()> {
     for_selector_kind(READ, page, selector).await
 }
 
-/// `for_selector`, under a journal name of the caller's choosing.
-/// `Fixture::open` uses it so the `[data-fixture-ready]` wait is not filed as
-/// an ordinary read (todo 364).
+/// `for_selector` under a journal kind, e.g. `fixture-ready` (todo 364).
 pub async fn for_selector_kind(kind: &'static str, page: &Page, selector: &str) -> Result<()> {
     until_kind(kind, &format!("selector {selector}"), || async {
         let found: bool = page
@@ -176,15 +144,8 @@ pub async fn for_selector_kind(kind: &'static str, page: &Page, selector: &str) 
     .await
 }
 
-/// Wait for an element to be **visible**, not merely present.
-///
-/// This is the distinction the popover work paid for once: a popover is laid
-/// out `visibility: hidden` until its first measurement lands, because
-/// `display: none` has nothing to measure. Waiting on presence therefore
-/// returns while the box is still invisible and unfocusable - and
-/// `focus()` on a `visibility: hidden` element does nothing *and reports
-/// success* (`codebase/use-popover`). So the suite waits on placed, never on
-/// mounted.
+/// Waits for an element to be visible, not just present: a popover stays
+/// `visibility: hidden` until measured (`codebase/use-popover`).
 pub async fn for_visible(page: &Page, selector: &str) -> Result<()> {
     until(&format!("{selector} to be visible"), || {
         is_visible(page, selector)

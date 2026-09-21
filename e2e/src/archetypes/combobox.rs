@@ -1,17 +1,5 @@
-//! The APG combobox pattern.
-//!
-//! ## What this is checked against
-//!
-//! - **APG, Combobox pattern** - the keyboard interface: Down/Up move the
-//!   highlight, Home/End jump to the ends, Escape closes, and **DOM focus stays
-//!   on the combobox** while `aria-activedescendant` moves.
-//!   <https://www.w3.org/WAI/ARIA/apg/patterns/combobox/>
-//! - **WAI-ARIA, `aria-activedescendant`** - the referenced id must exist and
-//!   be a descendant of, or owned by, the element.
-//!   <https://www.w3.org/TR/wai-aria-1.2/#aria-activedescendant>
-//! - **WCAG 2.1.1 Keyboard** - every function reachable without a pointer.
-//! - **WCAG 4.1.2 Name, Role, Value** - `aria-expanded` and `aria-controls`
-//!   reporting the current state.
+//! The APG combobox pattern: <https://www.w3.org/WAI/ARIA/apg/patterns/combobox/>.
+//! DOM focus stays on the combobox while `aria-activedescendant` names a drawn option.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -32,23 +20,11 @@ pub struct Combobox<'a> {
 }
 
 impl Combobox<'_> {
-    /// The full pattern: open, navigate, highlight tracking, close, focus return.
-    ///
-    /// The assertion that matters most is that focus **never leaves the
-    /// trigger**. In this pattern the visual highlight moves while DOM focus
-    /// stays put, so a test that follows `document.activeElement` around would
-    /// pass against a component that had broken the pattern entirely.
+    /// The full pattern: open, navigate, close. Focus must never leave the trigger.
     pub async fn assert_contract(&self, page: &Page) -> Result<()> {
         self.assert_closed(page).await?;
 
-        // Tab to it here rather than requiring the caller to have done so.
-        //
-        // This used to be an implicit precondition, and an unmet one produced
-        // "expected focus on X but the document holds body" - a message that
-        // reads like a focus bug in the component under test rather than like a
-        // misuse of the archetype. `Overlay` always did its own tabbing; these
-        // now behave the same way, so there is one less thing to know when
-        // adding a component.
+        // Tabs to it itself, like `Overlay`: callers need no focus precondition.
         page.evaluate("document.activeElement && document.activeElement.blur()")
             .await?;
         keyboard::tab_to(page, self.trigger, self.tab_budget).await?;
@@ -62,9 +38,7 @@ impl Combobox<'_> {
         self.assert_expanded(page, true).await?;
         focus::assert_focused(page, self.trigger, "opening the list").await?;
 
-        // Once the list is open something must be highlighted, and it must be
-        // one of the drawn options. An absent attribute is a failure here: it
-        // used to count as valid, so a combobox that never set it passed.
+        // An open list must highlight a drawn option; an absent attribute fails.
         self.active_descendant(page, &listbox, "opening the list")
             .await?;
 
@@ -79,10 +53,7 @@ impl Combobox<'_> {
         self.expect_active(page, &listbox, first, "pressing Home")
             .await?;
 
-        // Every arrow must move the highlight exactly one row. A highlight
-        // that stays put, skips a row or names a row that is not drawn fails
-        // here. What happens past either end (clamp or wrap) is the
-        // component's choice, so it is not pressed.
+        // Each arrow moves exactly one row. Past the ends (clamp or wrap) is the component's choice.
         for (index, id) in options.iter().enumerate().skip(1) {
             keyboard::press(page, keyboard::ARROW_DOWN).await?;
             self.expect_active(page, &listbox, id, &format!("arrowing down to row {index}"))
@@ -105,9 +76,7 @@ impl Combobox<'_> {
         Ok(())
     }
 
-    /// On an open list highlighting `first`: Ctrl and Meta chords are the
-    /// caret's or the browser's, Alt+ArrowDown keeps the highlight, Alt+ArrowUp
-    /// closes and Alt+ArrowDown reopens (APG). Todo 509.
+    /// Ctrl/Meta chords are ignored; Alt+ArrowUp closes, Alt+ArrowDown keeps or reopens (APG, 509).
     async fn assert_chords(&self, page: &Page, listbox: &str, first: &str) -> Result<()> {
         let probe = format!(
             "(t => [t.getAttribute('aria-expanded'), t.getAttribute('aria-activedescendant')])(document.querySelector({}))",
@@ -164,9 +133,7 @@ impl Combobox<'_> {
             "(() => {{ const el = document.querySelector({}); return el ? el.getAttribute('aria-expanded') : null; }})()",
             serde_json::to_string(self.trigger)?
         );
-        // Polled, not read once: the attribute is written by a dioxus
-        // re-render that has not necessarily happened when the keypress
-        // returns.
+        // Polled: the re-render may not have run when the keypress returns.
         let wanted = expected.to_string();
         let check = format!("{read} === {}", serde_json::to_string(&wanted)?);
         if wait::for_js_true(page, &check, &format!("aria-expanded={wanted}"))
@@ -205,13 +172,8 @@ impl Combobox<'_> {
         Ok(ids)
     }
 
-    /// The highlight, once it names a drawn option. Polled, because it is
-    /// written on re-render and not necessarily there when the key returns.
-    ///
-    /// Todo 101 shipped a combobox whose highlight named `option-0` while the
-    /// list was loading, when no such row was drawn: the attribute was present
-    /// and well-formed, and only its target was missing. Review 7 (E2) found
-    /// the opposite hole: an absent attribute was accepted as valid.
+    /// The highlight, polled until it names a drawn option in the listbox.
+    /// Absent and dangling ids both fail (todo 101, review 7 E2).
     async fn active_descendant(&self, page: &Page, listbox: &str, during: &str) -> Result<String> {
         let read = format!(
             r#"(() => {{
@@ -225,9 +187,7 @@ impl Combobox<'_> {
             serde_json::to_string(self.trigger)?,
             serde_json::to_string(listbox)?
         );
-        // The last reading that named something is kept for the diagnosis. A
-        // single read after the deadline can find the list already gone and
-        // report "absent" for a highlight that was dangling all along.
+        // Keeps the last named reading: a read after the deadline may find the list gone.
         let seen = std::cell::RefCell::new((None::<String>, false, false));
         let _ = wait::until("aria-activedescendant to name an option", || async {
             let reading: (Option<String>, bool, bool) =
@@ -278,10 +238,8 @@ impl Combobox<'_> {
         bail!("while {during}, aria-activedescendant stayed on {actual:?}, expected {expected:?}")
     }
 
-    /// The listbox, found through `aria-controls` rather than the DOM tree: it
-    /// is portaled to an outlet at the document root and is no descendant of
-    /// the trigger (`codebase/use-popover`). Polled: the attribute is set only
-    /// while the listbox is mounted, by the re-render the opening key starts.
+    /// The listbox via `aria-controls`: it is portaled, not a descendant of the trigger.
+    /// Polled, since the attribute is set only once the listbox mounts.
     async fn listbox_selector(&self, page: &Page) -> Result<String> {
         let read = format!(
             "(() => {{ const el = document.querySelector({}); return el ? el.getAttribute('aria-controls') : null; }})()",

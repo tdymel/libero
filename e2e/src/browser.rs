@@ -1,9 +1,4 @@
-//! One browser, many pages.
-//!
-//! The browser and the tokio runtime are process-wide and built once. Spawning
-//! a browser per test would cost a process launch and its memory for every
-//! case; a page is cheap by comparison, and each test gets a fresh one so
-//! nothing leaks between them.
+//! One process-wide browser and tokio runtime; each test gets a fresh page.
 
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -20,10 +15,7 @@ use chromiumoxide::{Browser, BrowserConfig, Page};
 use futures::StreamExt;
 use tokio::runtime::Runtime;
 
-/// The two viewports every pass runs at.
-///
-/// Mobile is 390px because that is the width the docs reviews use, so a finding
-/// here and a finding there describe the same screen.
+/// The two viewports every pass runs at. Mobile is 390px, the docs reviews' width.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Viewport {
     Desktop,
@@ -65,10 +57,8 @@ impl Scheme {
     }
 }
 
-/// Emulate the colour scheme, and `prefers-reduced-motion` when given.
-///
-/// One call, because `Emulation.setEmulatedMedia` replaces the whole feature
-/// list: setting reduced motion alone would drop a dark scheme set earlier.
+/// Emulates the colour scheme and optional reduced motion in one call:
+/// `setEmulatedMedia` replaces the whole feature list.
 pub async fn emulate_media(
     page: &Page,
     scheme: Scheme,
@@ -95,13 +85,8 @@ fn chrome_profile() -> std::path::PathBuf {
 struct Harness {
     runtime: Runtime,
     browser: Browser,
-    /// Caps how many fixtures navigate at once.
-    ///
-    /// Every run gets a fresh Chrome profile, so the HTTP cache starts empty.
-    /// Eight tests pulling the cold wasm bundle at once against one dev server
-    /// timed out the lot of them. So the first navigation runs alone and fills
-    /// the cache, then [`NAVIGATIONS`] run at once: the old cap of three was
-    /// half the suite's time (146 s against 72 s unbounded, todo 823).
+    /// Caps concurrent navigations: the first runs alone to fill the cold HTTP cache,
+    /// then [`NAVIGATIONS`] at once (todo 823).
     navigations: tokio::sync::Semaphore,
     primed: std::sync::Once,
 }
@@ -135,23 +120,12 @@ fn harness() -> &'static Harness {
                 // Headless, and with a window big enough that the desktop
                 // viewport override is never clamped by the outer window.
                 .window_size(1280, 900)
-                // A profile directory of our own, per run.
-                //
-                // chromiumoxide's default is a fixed `/tmp/chromiumoxide-runner`,
-                // and Chrome refuses to start a second instance against a
-                // profile another process still holds: "Failed to create
-                // SingletonLock: File exists". So one interrupted run leaves a
-                // browser behind and *every subsequent run* dies at launch,
-                // with an error that says nothing about the real cause. It also
-                // means two agents running the suite at once break each other.
+                // Own profile per run: the fixed default hits "SingletonLock: File exists"
+                // after one interrupted run, or with two runs at once.
                 .user_data_dir(chrome_profile())
-                // The default is short enough that a cold wasm bundle can miss
-                // it. A timeout here should mean "the app is broken", never
-                // "the bundle was still downloading".
+                // Long enough for a cold wasm bundle.
                 .request_timeout(Duration::from_secs(120))
-                // Every scroll instant: a background page gets frames only now
-                // and then, so a smooth one stalled mid-way (todo 687).
-                // chromiumoxide adds the `--`.
+                // Instant scrolls: a background page stalls smooth ones (todo 687).
                 .arg("disable-smooth-scrolling")
                 .build()
                 .expect("browser config");
@@ -180,11 +154,7 @@ pub struct Fixture {
     pub page: Page,
     pub viewport: Viewport,
     pub scheme: Scheme,
-    /// Attached **before** navigation, so it catches errors raised during the
-    /// app's first mount. Attaching after `goto` - which is what this harness
-    /// did at first - silently misses exactly the errors most worth having,
-    /// since a component that throws while mounting throws once and never
-    /// again.
+    /// Attached before navigation, to catch errors thrown once during the first mount.
     pub console: crate::passes::console::Recorder,
     closes_on_drop: ClosesOnDrop,
 }
@@ -205,20 +175,13 @@ impl Drop for ClosesOnDrop {
 }
 
 impl Fixture {
-    /// Open a fixture route and wait until the app has actually rendered.
-    ///
-    /// The wait is on `data-fixture-ready`, not on the navigation resolving:
-    /// while its first build runs, `dx` answers every path with a 404
-    /// placeholder *at a success status*, so a page that loaded proves nothing
-    /// (`codebase/testing`). The marker is rendered by the app itself, which a
-    /// placeholder cannot fake.
+    /// Opens a fixture route and waits for `data-fixture-ready`: during its first build
+    /// `dx` serves a placeholder at a success status (`codebase/testing`).
     pub async fn open(route: &str, viewport: Viewport) -> Result<Self> {
         Self::open_in(route, viewport, Scheme::Light).await
     }
 
-    /// [`Fixture::open`] under a colour scheme. The emulation is in place
-    /// before navigation, so the first paint is already in that scheme, and
-    /// the page is checked to have resolved it (see [`Fixture::assert_scheme`]).
+    /// [`Fixture::open`] under a colour scheme, emulated before navigation.
     pub async fn open_in(route: &str, viewport: Viewport, scheme: Scheme) -> Result<Self> {
         Self::open_until(route, viewport, scheme, "[data-fixture-ready]").await
     }
@@ -231,10 +194,7 @@ impl Fixture {
         scheme: Scheme,
         ready: &str,
     ) -> Result<Self> {
-        // Resolved first, deliberately: it panics with an explanation when the
-        // runner did not set it, and doing that *before* launching Chrome is
-        // what stops a bare `cargo test` leaving a browser and a profile
-        // directory behind on every invocation.
+        // First: panicking before Chrome launches keeps a bare `cargo test` from leaking a browser.
         let url = format!("{}{}", crate::base_url(), route);
 
         let _permit = harness()
@@ -244,20 +204,14 @@ impl Fixture {
             .expect("navigation semaphore");
         let _primes = PrimesOnDrop;
 
-        // Everything from here to the ready marker is journalled as
-        // `navigation` (todo 364). It is the half of the run that shares the
-        // browser connection with every other test, so it is where a red run
-        // that failed *everything* has to be distinguished from one page's own
-        // trouble. `navigated` measures it; nothing is written on success.
+        // Failures up to the ready marker are journalled as `navigation` (todo 364).
         let navigation_started = std::time::Instant::now();
         let stage = |stage: &'static str, started: std::time::Instant, error: &anyhow::Error| {
             crate::journal::gave_up(&crate::journal::GaveUp {
                 kind: "navigation",
                 how: "failed",
                 what: &format!("{stage} for {url} ({error})"),
-                // chromiumoxide's own request timeout bounds these, not
-                // `E2E_TIMEOUT_MS`; recorded so the line is readable without
-                // knowing that.
+                // chromiumoxide's request timeout bounds these, not `E2E_TIMEOUT_MS`.
                 budget: Duration::from_secs(120),
                 elapsed: started.elapsed(),
                 slowest_poll: started.elapsed(),
@@ -265,13 +219,8 @@ impl Fixture {
             });
         };
 
-        // In the background, so a new page never takes activation from the
-        // pages other tests are driving. Focus emulation alone (below) stopped
-        // the blur, but runs with it and foreground pages timed out on
-        // navigation 1-2 times per full run (the 30s CDP navigation limit, or
-        // the 15s ready wait), against none in five runs with both. Measured
-        // 2026-09-19; why foreground creation slows loads is not known.
-        // Background alone passed too, but took 118s a run against 21s.
+        // Background plus focus emulation: foreground pages timed out on navigation
+        // 1-2 times a run, background alone was 5x slower (measured 2026-09-19).
         let page = harness()
             .browser
             .new_page(
@@ -299,11 +248,8 @@ impl Fixture {
         .context("set the viewport")
         .inspect_err(|error| stage("setting the viewport", at, error))?;
 
-        // Every page behaves as the focused one. The tests share one browser,
-        // and a page another test opens takes window focus: the first page
-        // gets `blur`, and an open combobox, menu or popover closes by itself
-        // mid-test. `isolation::a_page_keeps_focus_while_another_opens` pins
-        // it; without this it fails every time (todo 356).
+        // Every page acts focused: another test's new page would blur it and close
+        // open popovers (todo 356, `isolation::a_page_keeps_focus_while_another_opens`).
         page.execute(SetFocusEmulationEnabledParams::new(true))
             .await
             .context("emulate a focused page")?;
@@ -344,12 +290,8 @@ impl Fixture {
         Ok(fixture)
     }
 
-    /// The page must be drawn in `self.scheme`: the media query matches, no
-    /// `data-lsx-theme` pins another one, and the body is painted dark.
-    ///
-    /// Without it an emulation that did nothing, or a stored
-    /// `lsx-color-scheme` pinning the light theme, leaves every dark pass
-    /// measuring the light page and reporting it clean.
+    /// The page is drawn in `self.scheme`: media query, no pinning `data-lsx-theme`, body
+    /// paint. Else a no-op emulation lets every dark pass measure the light page.
     pub async fn assert_scheme(&self) -> Result<()> {
         let (matches, pinned, luminance): (bool, Option<String>, f64) = self
             .page
@@ -376,11 +318,7 @@ impl Fixture {
         Ok(())
     }
 
-    /// Write a PNG of the current page and return where it went.
-    ///
-    /// This is the trace viewer we gave up with Playwright, in its cheapest
-    /// useful form. A focus or layout failure described only in prose costs the
-    /// next person a re-run to see; a picture costs them nothing.
+    /// Writes a PNG of the current page and returns its path.
     pub async fn screenshot(&self, name: &str) -> Result<std::path::PathBuf> {
         let dir = std::env::var("E2E_ARTIFACTS")
             .map(std::path::PathBuf::from)
@@ -402,9 +340,7 @@ impl Fixture {
         Ok(path)
     }
 
-    /// Close the page and wait for it. A fixture dropped without this closes
-    /// its page in the background instead. Fails on a `dioxus_signals`
-    /// warning the page logged, the web half of todo 719.
+    /// Closes the page and waits. Fails on a logged `dioxus_signals` warning (todo 719).
     pub async fn close(mut self) -> Result<()> {
         self.closes_on_drop.0 = None;
         self.page.close().await.context("close the page")?;

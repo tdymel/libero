@@ -1,37 +1,5 @@
-//! The APG radio group pattern.
-//!
-//! A radio group looks like a roving-tabindex strip and is not one, which is
-//! why it has its own archetype rather than a flag on [`RovingTabindex`]:
-//!
-//! - **Selection follows focus.** Every arrow press moves focus *and* checks
-//!   the radio it lands on. A strip moves focus only, and a tab strip that
-//!   selected on arrow would be a choice rather than the pattern.
-//! - **Home and End are not part of it.** APG's radio group lists Tab, Space
-//!   and the four arrows, nothing else. `RovingTabindex` requires Home and
-//!   End, so running it here would report a missing key the pattern never
-//!   promised - an archetype bent into asserting one widget's contract on
-//!   another (todo 310 is the same mistake made with `Tree`).
-//! - **Both arrow axes work whatever the layout.** Down and Right go forward,
-//!   Up and Left go back, in a column and in a row alike.
-//! - **Tab enters at the checked radio**, not at the first one.
-//!
-//! It asserts only what APG requires. A component that also answers Home or
-//! End is not wrong, so nothing here checks that those keys do nothing: a
-//! pass that failed on an extra key would have to be bent later.
-//!
-//! `RadioGroup` and `SegmentedControl` are both this: each segment is a native
-//! `<input type="radio">`.
-//!
-//! [`RovingTabindex`]: super::RovingTabindex
-//!
-//! ## What this is checked against
-//!
-//! - **APG, Radio Group pattern** - the keyboard table, including wrapping from
-//!   the last radio to the first and back.
-//!   <https://www.w3.org/WAI/ARIA/apg/patterns/radio/>
-//! - **WCAG 2.1.1 Keyboard** and **2.4.3 Focus Order**.
-//! - **WCAG 4.1.2 Name, Role, Value** - the checked state is what a screen
-//!   reader announces as the answer, so it has to move with the focus.
+//! The APG radio group pattern: selection follows focus, both arrow axes wrap, Tab enters at
+//! the checked radio. Unlike `RovingTabindex`, Home and End are not part of it (todo 310).
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -42,9 +10,7 @@ use crate::wait;
 pub struct RadioSet<'a> {
     /// Every radio in the group, e.g. `[role=radiogroup] input[type=radio]`.
     pub radios: &'a str,
-    /// Which radio the fixture starts checked. Pick one other than the first:
-    /// "Tab enters at the checked radio" cannot fail when the checked radio is
-    /// also the first one.
+    /// Which radio starts checked. Not the first, or "Tab enters at the checked radio" cannot fail.
     pub checked: usize,
     /// How many Tab presses from the top of the document may pass before
     /// focus enters the group.
@@ -138,9 +104,7 @@ impl RadioSet<'_> {
         )
         .await?;
 
-        // Space checks the focused radio. With selection following focus, a
-        // keyboard never rests on an unchecked radio, so what Space can show
-        // here is that it keeps the focused one checked and moves nothing.
+        // Selection follows focus, so Space can only show it keeps the focused radio checked.
         keyboard::press(page, keyboard::SPACE).await?;
         let _ = wait::for_js_true(
             page,
@@ -160,20 +124,8 @@ impl RadioSet<'_> {
             );
         }
 
-        // One tab stop, measured by tabbing rather than read off `tabindex`.
-        //
-        // A native radio group is one stop because the browser groups radios
-        // by `name`, whatever their `tabindex` says - `SegmentedControl` leaves
-        // every radio without one and is still a single stop. An attribute
-        // count reports three stops there, which is a false red of exactly the
-        // kind `principles/assertions-that-prove-nothing` warns about.
-        //
-        // The fixture needs a control on each side of the group. At the edge
-        // of the document Chromium parks Shift+Tab on a stop of its own for one
-        // press - measured 2026-09-19: from the first control, one Shift+Tab
-        // leaves focus where it is and the next reaches `<body>` - so "Shift+Tab
-        // leaves the group" read against the edge reports a defect that is the
-        // browser's.
+        // One tab stop, measured by tabbing: native radios group by `name`, not `tabindex`.
+        // Needs a control on each side: at the document edge Chromium parks one Shift+Tab.
         keyboard::press(page, keyboard::TAB).await?;
         self.assert_left(page, "Tab").await?;
         // Back in, onto the radio the arrows left checked, and out again.

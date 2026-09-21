@@ -1,16 +1,5 @@
-//! Accessibility tree snapshots.
-//!
-//! The computed tree, as the browser exposes it to assistive technology, not
-//! the ARIA attributes scraped off the DOM. A role can be implicit, and an
-//! accessible name can come from six places; only the browser knows the answer.
-//!
-//! ## Scoping: follow the ARIA relations, not DOM containment
-//!
-//! A popover is portaled to an outlet at the document root, so its listbox is
-//! no descendant of its trigger and a subtree walk misses it entirely. What
-//! ties them together is `aria-controls` - which is precisely what makes it a
-//! popover - so the snapshot follows that edge. This generalises to every
-//! portaled component in the library (`codebase/use-popover`).
+//! Snapshots of the browser's computed accessibility tree, not scraped ARIA attributes.
+//! Follows `aria-controls` out of the subtree, since popovers are portaled (`codebase/use-popover`).
 
 use std::collections::HashMap;
 
@@ -21,11 +10,8 @@ use chromiumoxide::cdp::browser_protocol::dom::{
     BackendNodeId, DescribeNodeParams, GetDocumentParams, Node, QuerySelectorParams,
 };
 
-/// Render the accessibility subtree under `selector` as stable, indented text.
-///
-/// Anything volatile is dropped: node ids, and the generated `lsx-<n>` ids that
-/// change per render. What is left is role, accessible name, and the states
-/// that carry meaning.
+/// Renders the accessibility subtree under `selector` as indented text: role, name
+/// and meaningful states, without volatile ids.
 pub async fn snapshot(page: &Page, selector: &str) -> Result<String> {
     let backend_id = backend_node_id(page, selector).await?;
     let nodes = page
@@ -46,14 +32,7 @@ pub async fn snapshot(page: &Page, selector: &str) -> Result<String> {
     let mut out = String::new();
     render(root, &by_id, &current, 0, &mut out);
 
-    // Follow `aria-controls` out of the subtree, for a caller whose root does
-    // not hold the portal outlet. A target the walk above already rendered is
-    // named but not rendered twice - the fixture's own root holds the outlet
-    // (`fixtures/src/main.rs`), so for `Suite` that is every target, and the
-    // line records the relation rather than the content.
-    //
-    // A target that is not there is written down too, so that a baseline taken
-    // while a reference dangles records the dangling (review 7, E7).
+    // Targets already rendered are only named; missing ones are recorded (review 7, E7).
     for target in controlled_selectors(page, selector).await? {
         let Ok(id) = backend_node_id(page, &target).await else {
             out.push_str(&format!(
@@ -96,12 +75,8 @@ async fn contains(page: &Page, outer: &str, inner: &str) -> Result<bool> {
         .into_value()?)
 }
 
-/// The ids named by any `aria-controls` inside the subtree, as selectors.
-///
-/// Returned even when the target does not exist, so that a dangling reference
-/// shows up in the snapshot as `(missing)` rather than silently disappearing.
-/// Todo 101 was exactly that bug: `aria-activedescendant` named
-/// an option that was not in the DOM.
+/// The ids named by any `aria-controls` in the subtree, as selectors. Dangling ones
+/// are kept, so the snapshot shows them as `(missing)` (todo 101).
 async fn controlled_selectors(page: &Page, selector: &str) -> Result<Vec<String>> {
     let ids: Vec<String> = page
         .evaluate(format!(
@@ -119,30 +94,17 @@ async fn controlled_selectors(page: &Page, selector: &str) -> Result<Vec<String>
         ))
         .await?
         .into_value()?;
-    // `[id="..."]` rather than `#id`: an id is allowed characters that a CSS
-    // id selector would have to escape, and a caller supplies their own id.
+    // `[id="..."]`, not `#id`: caller ids may hold characters `#` would need escaped.
     Ok(ids
         .into_iter()
         .map(|id| format!("[id={}]", serde_json::to_string(&id).unwrap_or_default()))
         .collect())
 }
 
-/// Roles dropped from the snapshot.
-///
-/// `InlineTextBox` is a line-box artefact: the browser emits one per rendered
-/// line, so the same text produces a different tree at 1280px and at 390px, and
-/// re-wrapping churns the baseline for no accessibility reason at all. It
-/// carries nothing a screen reader user experiences that its `StaticText`
-/// parent does not.
+/// Roles dropped from the snapshot. `InlineTextBox` is one per wrapped line, so it churns with the viewport.
 const NOISE: &[&str] = &["InlineTextBox"];
 
-/// Replace generated ids with a placeholder.
-///
-/// `use_id` hands out `lsx-<n>` in render order, so the same component is
-/// `lsx-0` alone in a fixture and `lsx-7` once anything is added above it. The
-/// snapshot is about the shape of the tree, not about the counter, and a
-/// baseline that churns on an unrelated addition is a baseline people learn to
-/// accept without reading.
+/// Replaces generated `lsx-<n>` ids, which shift whenever something renders above.
 fn stable(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     let mut rest = value;
@@ -195,13 +157,7 @@ fn render(
         // Chrome versions disagree on a name's edge whitespace (a label's " A").
         .trim();
 
-    // `value` is a **field** of the node, not one of its `properties`.
-    //
-    // This is why filtering for a property called `valuenow` did nothing: the
-    // list gained the word and the output never changed. A slider's whole state
-    // lives here, so a baseline without it stays green on a slider that has
-    // stopped reporting where it is - the exact regression the snapshot exists
-    // to catch.
+    // `value` is a field of the node, not a property: filtering for `valuenow` found nothing.
     let value = node
         .value
         .as_ref()
@@ -250,18 +206,10 @@ fn render(
     }
 }
 
-/// States where `false` is **not** the same as absent, so they are printed
-/// either way.
-///
-/// A combobox that says `aria-expanded="false"` and one that says nothing at
-/// all are different components to a screen reader, and only one of them is
-/// correct. Dropping false here would have hidden that distinction in the very
-/// first snapshot this suite took.
+/// States where `false` differs from absent to a screen reader, so printed either way.
 const KEEP_WHEN_FALSE: &[&str] = &["expanded", "checked", "pressed", "selected"];
 
-/// The properties worth pinning. Deliberately a short list: every property
-/// included is one more reason for a snapshot to churn on an unrelated change,
-/// and a noisy snapshot gets accepted without being read.
+/// The properties worth pinning. Kept short: each one is another reason to churn.
 fn states(node: &AxNode) -> Vec<String> {
     const KEEP: &[&str] = &[
         "expanded",
@@ -291,9 +239,7 @@ fn states(node: &AxNode) -> Vec<String> {
             continue;
         }
         match prop.value.value.as_ref() {
-            // Chromium reports some of these as the *string* "false" rather
-            // than a boolean, so both spellings have to be recognised or the
-            // tree fills with `invalid=false` style noise.
+            // Chromium sends some as the string "false", not a boolean.
             Some(v)
                 if (v.as_bool() == Some(false) || v.as_str() == Some("false"))
                     && !KEEP_WHEN_FALSE.contains(&name.as_str()) => {}
@@ -302,10 +248,7 @@ fn states(node: &AxNode) -> Vec<String> {
                     .as_str()
                     .map(str::to_string)
                     .unwrap_or_else(|| v.to_string());
-                // Chromium reports some properties with an empty value rather
-                // than omitting them - `valuetext` on a slider with no custom
-                // label is the case that surfaced this. Printing `valuetext=`
-                // is noise that reads like a defect.
+                // Chromium sends some empty rather than omitting them (`valuetext` on a slider).
                 if text.is_empty() {
                     continue;
                 }
@@ -351,9 +294,7 @@ async fn current_by_node(page: &Page) -> Result<HashMap<BackendNodeId, String>> 
     Ok(out)
 }
 
-/// The accessible description the browser computed for `selector` - what
-/// `aria-describedby` resolves to - or `""` when it has none. The snapshot
-/// leaves descriptions out, so a test that cares asks for one here.
+/// The computed accessible description of `selector`, or `""`. The snapshot leaves descriptions out.
 pub async fn description(page: &Page, selector: &str) -> Result<String> {
     let backend_id = backend_node_id(page, selector).await?;
     let nodes = page

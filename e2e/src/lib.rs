@@ -1,14 +1,5 @@
-//! The E2E harness.
-//!
-//! Drives a real Chromium over CDP against the fixture app in `e2e/fixtures`.
-//! See `.agents/brain/plans/13-e2e-pass/overview.md` for why this is raw CDP
-//! rather than a Playwright binding, and `.agents/brain/codebase/e2e-harness.md`
-//! for the model it follows.
-//!
-//! Entry point is `cargo run -p e2e`, not `cargo test -p e2e`: the runner owns
-//! the fixture server's lifecycle and hands the tests its URL. Running the
-//! tests directly fails with an explanatory message rather than a connection
-//! error.
+//! The E2E harness: Chromium over CDP against `e2e/fixtures` (`codebase/e2e-harness`).
+//! Run with `cargo run -p e2e`, not `cargo test`: the runner owns the fixture server.
 
 #[cfg(feature = "android")]
 pub mod android;

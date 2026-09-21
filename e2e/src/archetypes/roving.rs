@@ -1,33 +1,5 @@
-//! The APG roving-tabindex pattern.
-//!
-//! A composite widget is **one** tab stop, and the arrow keys move within it.
-//! `Tabs`, `Menubar` and `Toolbar` are this. Two widgets that look like it are
-//! not: a radio group selects as it moves and has no Home or End, so
-//! `RadioGroup` and `SegmentedControl` use [`RadioSet`]; a tree's Left and
-//! Right open and close rows rather than moving along an axis, and the set of
-//! rows changes under the walk, so `Tree` uses [`TreeWalk`] (todo 310).
-//!
-//! [`RadioSet`]: super::RadioSet
-//! [`TreeWalk`]: super::TreeWalk
-//!
-//! ## What this is checked against
-//!
-//! - **APG, Developing a Keyboard Interface - "Managing focus with roving
-//!   tabindex"** - exactly one item carries `tabindex="0"` and the rest carry
-//!   `-1`. <https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/>
-//! - **APG, Tabs pattern** - Left/Right for a horizontal strip, Home and End
-//!   for the ends, and whether the ends wrap is the component's choice.
-//!   <https://www.w3.org/WAI/ARIA/apg/patterns/tabs/>
-//! - **WCAG 2.1.1 Keyboard** and **2.4.3 Focus Order** - the order is
-//!   meaningful and every item is reachable.
-//!
-//! The assertion that earns its keep is the tab-stop count. A widget whose
-//! items are each independently tabbable still *works* with a keyboard - every
-//! item is reachable, nothing throws - so it passes a naive "is it keyboard
-//! accessible" check while being wrong in the way that matters: a thirty-item
-//! toolbar becomes thirty tab stops between the user and the next control.
-//! `TagsField` paid for this once already, dropping its chips' own tab stops -
-//! see `codebase/components/tags-field` for what having them cost.
+//! The APG roving-tabindex pattern: one tab stop, arrows move within (`Tabs`, `Menubar`,
+//! `Toolbar`). Radio groups and trees have their own archetypes (todo 310).
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -35,23 +7,8 @@ use chromiumoxide::Page;
 use crate::passes::keyboard::{self, Key};
 use crate::wait;
 
-/// How many distinct tab stops lie inside the widget holding `items`.
-///
-/// **Counted by tabbing, not read off `tabindex`.** An attribute count over the
-/// item selector answers a narrower question than the one the pattern asks: it
-/// sees a tab stop that *is* an item and is blind to a tab stop *inside* one.
-/// A tab strip whose tabs each carry a close button, a toolbar row with a
-/// nested link, a tree row with an action - every one of those is several stops
-/// where the pattern allows one, and every one of them counted as a single stop
-/// (review 7, E3). The same blindness runs the other way: `RadioSet` measured
-/// three stops on `SegmentedControl`'s native radios, which the browser groups
-/// into one, and that false red is why it already counts this way.
-///
-/// The widget is the closest ancestor holding every item, so "inside" covers
-/// the items, anything nested in them, and any chrome the widget draws between
-/// them. Tab walks forward from a blurred document until focus has entered the
-/// widget and left it again, and each distinct element focused inside counts
-/// once.
+/// Distinct tab stops inside the closest ancestor holding every item, counted by tabbing:
+/// a `tabindex` count misses stops nested in items (review 7, E3).
 pub async fn count_tab_stops(page: &Page, items: &str) -> Result<usize> {
     let sel = serde_json::to_string(items)?;
     // The widget, kept on `window` so the per-press read below is one cheap
@@ -106,16 +63,8 @@ pub async fn count_tab_stops(page: &Page, items: &str) -> Result<usize> {
     Ok(stops)
 }
 
-/// Put the next Tab back at the top of the document.
-///
-/// `blur()` alone does not: it clears the focus and leaves the **sequential
-/// focus navigation starting point** where the element was, so the next Tab
-/// continues from there. Counting stops walks past the widget, so without this
-/// the walk that follows tabbed into whatever comes after it and reported the
-/// widget unreachable. Focusing `<body>` moves the starting point to the start
-/// of the document, and the temporary `tabindex` is what makes `<body>`
-/// focusable at all; it is removed again so nothing else - the AX snapshot
-/// especially - sees it.
+/// Puts the next Tab back at the top of the document. `blur()` alone keeps the
+/// focus navigation starting point, so this focuses `<body>` via a temporary `tabindex`.
 pub async fn reset_tab_position(page: &Page) -> Result<()> {
     page.evaluate(
         "(() => { if (document.activeElement) document.activeElement.blur(); \
@@ -153,9 +102,7 @@ pub struct RovingTabindex<'a> {
     /// Every item in the group, e.g. `[role=tab]`.
     pub items: &'a str,
     pub orientation: Orientation,
-    /// Whether the arrows wrap from the last item back to the first. APG
-    /// allows either, so it is the component's choice - but it must be
-    /// consistent, and stating it here is what makes it a contract.
+    /// Whether the arrows wrap at the ends. APG allows either; this makes it a contract.
     pub wraps: bool,
 }
 
@@ -261,12 +208,8 @@ impl RovingTabindex<'_> {
             .into_value()?)
     }
 
-    /// Wait for focus to land on a given item, then report where it is.
-    ///
-    /// Focus is moved from a dioxus handler, so it has not necessarily happened
-    /// when the keypress returns. Polling for the expected index and only then
-    /// reading the actual one keeps the failure message honest while removing
-    /// the race.
+    /// Polls for focus on the expected item, then reports where it is: focus moves
+    /// from a dioxus handler, possibly after the keypress returns.
     async fn settle_on(&self, page: &Page, expected: usize) -> Result<Option<usize>> {
         let check = format!(
             "[...document.querySelectorAll({})].indexOf(document.activeElement) === {expected}",

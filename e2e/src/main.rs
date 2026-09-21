@@ -1,33 +1,5 @@
-//! The runner: `cargo run -p e2e`.
-//!
-//! Owns the fixture server's lifecycle so the tests do not have to, which is
-//! what Playwright's `webServer` block does for the fork's suite. A Rust test
-//! binary has no global teardown, so a server started from inside a test would
-//! outlive the run - and this repo's brief is strict that a browser pass is not
-//! done until its processes are gone.
-//!
-//! What it does, in order:
-//!
-//! 1. Picks a free port, so the suite never collides with a dev server.
-//! 2. Starts `dx run` on the fixture crate. `run`, not `serve`: it builds once
-//!    and starts no watcher, which is what makes the whole trap class in
-//!    `codebase/testing` unreachable rather than merely avoidable.
-//! 3. Waits for the app, not the socket. `dx` answers with a 404 placeholder at
-//!    a success status while the first build runs, so a reachable port proves
-//!    nothing.
-//! 4. Runs the tests with `E2E_BASE_URL` set.
-//! 5. Kills the server and exits with the tests' status, or with a failure
-//!    when the name filter matched no test.
-//!
-//! A guard process covers the runner's own death (todo 313). SIGKILL cannot
-//! be caught, so no signal handler in the runner can clean up after it. The
-//! runner starts a copy of itself instead, in its own process group, and tells
-//! it over a pipe what to stop. The kernel closes the pipe however the runner
-//! dies (SIGKILL, SIGTERM, Ctrl-C, a panic, the OOM killer). A guard that
-//! reads end-of-file without `done` stops the server, the tests and Chrome.
-//! The guard does not help when it is killed as well: a kill of every
-//! descendant, `kill -9 -1`, or a shutdown. Neither does a SIGKILL in the few
-//! microseconds between spawning a process and telling the guard about it.
+//! The runner, `cargo run -p e2e`: serves the fixtures with `dx run` (no watcher) on a free
+//! port, runs the tests, then stops everything; a guard process cleans up if it dies (todo 313).
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -39,18 +11,13 @@ use anyhow::{Context, Result, bail};
 
 mod android_runner;
 
-/// Generous, because a cold cargo build happens inside this wait. The fork's
-/// playwright config allows 50 minutes for the same reason; a stock 30 second
-/// timeout fails every cold run and reads as a broken test rather than a slow
-/// one.
+/// Generous: a cold cargo build happens inside this wait.
 const BUILD_TIMEOUT: Duration = Duration::from_secs(45 * 60);
 
 /// Set on the guard process, which is this same binary.
 const GUARD_ENV: &str = "E2E_GUARD";
 
-/// The fixture app's `<title>`, from `e2e/fixtures/Dioxus.toml`. It is the one
-/// string in the served body that neither dx's build splash nor somebody
-/// else's app can produce, which is why `wait_for_app` waits for it.
+/// The fixture app's `<title>` (`e2e/fixtures/Dioxus.toml`): dx's build splash cannot fake it.
 const FIXTURE_TITLE: &str = "libero e2e fixtures";
 
 /// The docs site's `<title>`, from `docs/Dioxus.toml`, for `sweep`.
@@ -81,24 +48,12 @@ fn main() -> Result<()> {
 
     let dx = dx(&root)?;
 
-    // Every build the runner starts goes where the runner itself was built.
-    // Neither `dx run` nor the nested `cargo test` sees `--target-dir` on the
-    // outer `cargo run`, so without this both fell back to the root config's
-    // shared `target/main` (todo 328).
+    // Nested builds go where the runner was built: they don't see the outer `--target-dir` (todo 328).
     let target_dir = own_target_dir()?;
     eprintln!("e2e: building into {}", target_dir.display());
 
-    // Artifacts (failure screenshots, dx.log, the wait journal, the tests'
-    // own output) go in a directory of this run's own. One shared directory,
-    // emptied at start, let a second agent's run delete the first one's
-    // evidence, and a `dx.log` read afterwards could belong to the other
-    // worktree (todo 329).
-    //
-    // Keyed by **run**, not by port, since todo 364: a port comes round again
-    // and the next run deleted the evidence of the red one before anybody had
-    // read it. Both all-fail events lost their artifacts exactly this way.
-    // Nothing is deleted at start any more - the name is new every time - and
-    // `prune_old_runs` keeps a red run a week instead of a day.
+    // One artifacts directory per run, never per port: a reused one lost red runs' evidence
+    // (todos 329, 364). `prune_old_runs` keeps a red run a week.
     let started = SystemTime::now();
     let artifacts = std::env::temp_dir().join("e2e-artifacts").join(format!(
         "run-{}-pid{}-port{port}",
@@ -113,8 +68,7 @@ fn main() -> Result<()> {
     std::fs::create_dir_all(&artifacts).context("create the artifacts directory")?;
     eprintln!("e2e: artifacts go to {}", artifacts.display());
 
-    // The journal and the offsets in it need to be readable from the test
-    // process too, which is a child of this one.
+    // Inherited by the test process, which journals too.
     // SAFETY: single-threaded, before anything is spawned.
     unsafe {
         std::env::set_var("E2E_ARTIFACTS", &artifacts);
@@ -158,10 +112,7 @@ fn main() -> Result<()> {
             log_handle.try_clone().context("clone the log handle")?,
         ))
         .stderr(Stdio::from(log_handle))
-        // Its own process group, so killing it takes the cargo and rustc
-        // children it spawned. Killing the `dx` pid alone leaves a multi-minute
-        // wasm build running against the shared target directory, long after
-        // the run that wanted it has gone.
+        // Own process group, so a kill also takes its cargo and rustc children.
         .process_group(0)
         .spawn()
         .context("start dx run")?;
@@ -177,25 +128,17 @@ fn main() -> Result<()> {
         return Err(error);
     }
 
-    // A Chrome profile unique to this run. Chrome will not start against a
-    // profile another process still holds, so sharing one means an interrupted
-    // run poisons every run after it. Under the run's target dir, so seats never share one.
+    // Per-run Chrome profile under the target dir: a held profile blocks every later launch.
     let profile = target_dir.join(format!("e2e-chrome-{}", std::process::id()));
     guard.tell(&format!("profile {}", profile.display()));
 
     eprintln!("e2e: server is up, running the suite");
-    // Everything after the runner's own name goes to the **test harness**, not
-    // to cargo. Without the `--`, `cargo run -p e2e -- --nocapture` hands
-    // `--nocapture` to cargo, which rejects it and prints a usage message -
-    // and the run dies having told you nothing about your tests. libtest takes
-    // a name filter after `--` just as happily, so both
-    // `-- focus_contrast` and `-- --nocapture` work.
+    // The runner's arguments go to libtest after `--`, so filters and `--nocapture` both work.
     let status = Command::new(env!("CARGO"))
         .current_dir(&root)
         .args(["test", "-p", "e2e", "--test", test, "--target-dir"])
         .arg(&target_dir)
-        // Before the `--`: after it, `--target-dir` would go to the test
-        // binary and cargo would build into `target/main` without a word.
+        // Before the `--`, or cargo silently builds into `target/main`.
         .arg("--")
         .args(&passthrough)
         .env("E2E_BASE_URL", &base_url)
@@ -212,17 +155,11 @@ fn main() -> Result<()> {
         .and_then(|mut tests| {
             guard.tell(&format!("group {}", tests.id()));
             let mut tally = e2e::journal::Tally::default();
-            // Counted separately from the summary line, because the verdict's
-            // question is about **pages**: a unit that drives no browser
-            // cannot be a sibling that stayed up (todo 364, `NON_BROWSER`).
+            // Browser tests only: the verdict is about pages (todo 364, `NON_BROWSER`).
             let mut browser = e2e::journal::Tally::default();
             let mut set_aside = 0u64;
             let stdout = tests.stdout.take().context("the tests' stdout")?;
-            // Teed to a file as well as echoed. Both all-fail events were run
-            // under a pipe through `tail`, so the per-test detail - which is
-            // the only thing that says *how* they failed - was cut before
-            // anybody read it, and the todo has said "no per-test output
-            // survived" twice (todo 364).
+            // Teed to a file: a caller's `| tail` cut the per-test detail twice (todo 364).
             let mut log = std::fs::File::create(artifacts.join("test-output.log")).ok();
             for line in BufReader::new(stdout).lines() {
                 let line = line.context("read the tests' output")?;
@@ -232,9 +169,7 @@ fn main() -> Result<()> {
                         (true, true) => browser.passed += 1,
                         (true, false) => browser.failed += 1,
                         (false, true) => set_aside += 1,
-                        // A non-browser unit that failed is an ordinary
-                        // failure and says nothing about the pages either,
-                        // so it is neither counted nor set aside.
+                        // Says nothing about pages: neither counted nor set aside.
                         (false, false) => {}
                     }
                 }
@@ -257,14 +192,8 @@ fn main() -> Result<()> {
         .map(|(_, _, browser, set_aside)| (*browser, *set_aside))
         .unwrap_or_default();
 
-    // The browser lives in a `static` inside the test binary, and a static is
-    // never dropped - so nothing kills Chrome when the tests end. Reap it here,
-    // matched on this run's own profile path, which no other process can carry.
-    //
-    // On a red run, what is alive at this moment is evidence: the second
-    // all-fail left eleven Chromiums with a dead parent and the runner still
-    // printed `reaped 88` and exited 0 (todo 364). So the list is written down
-    // before anything is signalled.
+    // The browser is a never-dropped static, so reap Chrome by this run's profile path.
+    // On a red run, list the survivors first: they are evidence (todo 364).
     let needle = profile.to_string_lossy().into_owned();
     if red {
         let before = pids_by_cmdline(&needle);
@@ -284,22 +213,13 @@ fn main() -> Result<()> {
     }
     let signalled = kill_by_cmdline(&needle);
 
-    // Wait for them to actually go before deleting the directory.
-    //
-    // `kill` only *asks*. Removing the profile while Chrome is still shutting
-    // down and writing to it leaves a partially deleted directory behind, and
-    // because the result was discarded nothing ever said so - three leaked
-    // profiles were sitting in /tmp before this check was written. They are
-    // small individually and unbounded in number.
+    // Wait for them to exit: deleting a profile Chrome still writes leaves it half-deleted.
     let deadline = Instant::now() + Duration::from_secs(10);
     while Instant::now() < deadline && count_by_cmdline(&needle) > 0 {
         std::thread::sleep(Duration::from_millis(100));
     }
 
-    // `reaped N` used to be printed straight after the SIGTERM, so it said how
-    // many processes were *asked* to go, not how many went - and it was being
-    // read as proof the run tidied up. Verify, escalate, and if anything is
-    // still there say which pids rather than claiming a number (todo 364).
+    // Verify, escalate, and name any surviving pids rather than a count of SIGTERMs (todo 364).
     let mut survivors = pids_by_cmdline(&needle);
     if !survivors.is_empty() {
         for &pid in &survivors {
@@ -344,8 +264,6 @@ fn main() -> Result<()> {
         eprintln!("e2e: could not remove {} ({error})", profile.display());
     }
 
-    // Kill the server whatever the tests did, including a panic in the
-    // command itself.
     stop(&mut server);
     eprintln!("e2e: server stopped");
     guard.done();
@@ -381,8 +299,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-/// Mark the artifacts directory so `prune_old_runs` keeps it a week, and so
-/// the next reader finds the verdict without rebuilding it from the log.
+/// Writes the verdict to `RED`, so `prune_old_runs` keeps the directory a week.
 fn mark_red(artifacts: &Path, verdict: &str) {
     let _ = std::fs::write(
         artifacts.join("RED"),
@@ -390,13 +307,10 @@ fn mark_red(artifacts: &Path, verdict: &str) {
     );
 }
 
-/// `pid ppid state cmdline` for one process, or a note that it is already
-/// gone. The parent is the interesting column: a Chromium whose parent is 1
-/// outlived the run that started it.
+/// `pid ppid state cmdline`; a ppid of 1 means it outlived its run.
 fn describe_pid(pid: u32) -> String {
     let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).unwrap_or_default();
-    // `comm` can contain spaces and brackets, so the fields after it are found
-    // from the last `)`, not by splitting the whole line.
+    // `comm` may hold spaces and brackets: split after the last `)`.
     let after = stat.rsplit_once(')').map(|(_, rest)| rest).unwrap_or("");
     let mut fields = after.split_whitespace();
     let state = fields.next().unwrap_or("?");
@@ -407,9 +321,7 @@ fn describe_pid(pid: u32) -> String {
     format!("{pid} {ppid} {state} {}", cmdline.trim())
 }
 
-/// The runner's side of the guard: the pipe it tells the guard things over.
-/// Dropped without `done`, as when the runner dies, it tells the guard to
-/// clean up.
+/// The runner's pipe to the guard. Closed without `done`, the guard cleans up.
 struct Guard {
     child: Child,
     pipe: Option<ChildStdin>,
@@ -445,9 +357,8 @@ impl Guard {
     }
 }
 
-/// The guard process. Reads what to stop until `done` or end-of-file, and on
-/// end-of-file stops it: the process groups first, then any Chrome left on
-/// the profile, then the profile itself.
+/// The guard process: on end-of-file without `done`, stops the process groups, then
+/// Chrome on the profile, then deletes the profile.
 fn guard() -> Result<()> {
     let (mut groups, mut profiles) = (Vec::new(), Vec::new());
     for line in std::io::stdin().lock().lines() {
@@ -486,9 +397,7 @@ fn guard() -> Result<()> {
         while Instant::now() < deadline && count_by_cmdline(profile) > 0 {
             std::thread::sleep(Duration::from_millis(100));
         }
-        // SIGTERM only asks, and a Chromium whose main thread is frozen never
-        // gets round to answering. The runner's own reap escalates for the
-        // same reason (todo 364).
+        // A frozen Chromium ignores SIGTERM (todo 364).
         for pid in pids_by_cmdline(profile) {
             unsafe { libc_kill(pid as i32, 9) };
         }
@@ -512,19 +421,9 @@ fn guard() -> Result<()> {
     Ok(())
 }
 
-/// Bind port 0, read what the OS gave us, release it. There is a race between
-/// releasing and `dx` binding, which is why this is preferable to a fixed port
-/// only in a shared checkout - here it is what keeps the suite off the eight
-/// dev servers running beside it.
+/// A free port from the OS (racy until `dx` binds it).
 fn free_port() -> Result<u16> {
-    // `E2E_PORT` pins it, which is what a shared checkout wants when several
-    // agents each own a port and have to prove theirs is free afterwards.
-    //
-    // Bound here rather than taken on trust (todo 364, 2026-09-20). A pinned
-    // port that somebody else already held was accepted, `dx run` could not
-    // have it, and the suite ran its whole filter against **that** server -
-    // another agent's docs site - failing every test with nothing anywhere
-    // saying the port was not ours.
+    // `E2E_PORT` pins it, checked free: a held one ran the suite against another app (todo 364).
     if let Ok(port) = std::env::var("E2E_PORT") {
         let port: u16 = port.parse().context("E2E_PORT is not a port number")?;
         TcpListener::bind(("127.0.0.1", port)).with_context(|| {
@@ -536,19 +435,12 @@ fn free_port() -> Result<u16> {
     Ok(listener.local_addr()?.port())
 }
 
-/// Terminate the server and everything it spawned.
-///
-/// Negative pid is the process group, which is why the child was given one:
-/// `dx run` drives cargo and rustc, and killing only `dx` leaves a wasm build
-/// grinding away against the shared target directory.
+/// Terminates the server's whole process group, cargo and rustc included.
 fn stop(server: &mut Child) {
     let pid = server.id() as i32;
     unsafe { libc_kill(-pid, 15) };
 
-    // A grace period before SIGKILL. Sending both back to back makes the
-    // SIGTERM pointless: dx never gets to remove its own lock files or let
-    // cargo finish writing, and a half-written target directory is a problem
-    // for whoever builds next, not for this run.
+    // Grace period, so dx and cargo leave no half-written target dir.
     let deadline = Instant::now() + Duration::from_secs(5);
     while Instant::now() < deadline {
         if matches!(server.try_wait(), Ok(Some(_))) {
@@ -562,15 +454,8 @@ fn stop(server: &mut Child) {
     let _ = server.wait();
 }
 
-/// Wait until the served page is the fixture app and not dx's placeholder.
-///
-/// Three ways this ends, and the second is the one worth having:
-///
-/// * the app answers, and we go;
-/// * **`dx` exits**, which is what a compile error in the fixture crate looks
-///   like. Without this check the runner sat out the full build timeout and
-///   then reported a timeout, hiding a compile error behind a 45-minute wait;
-/// * the deadline passes.
+/// Waits until the fixture app, not dx's placeholder, is served. Fails early when `dx`
+/// exits, which is how a fixture compile error looks.
 fn wait_for_app(
     base_url: &str,
     title: &str,
@@ -580,8 +465,7 @@ fn wait_for_app(
     let started = Instant::now();
     let deadline = started + BUILD_TIMEOUT;
     let (mut polls, mut slowest) = (0u32, Duration::ZERO);
-    // Named in the timeout so a failure says which link of the chain never
-    // appeared, rather than only that something did not.
+    // Named in the timeout: which link of the chain never appeared.
     let mut reached;
     loop {
         if let Ok(Some(status)) = server.try_wait() {
@@ -632,8 +516,7 @@ fn wait_for_app(
 enum Readiness {
     /// Nothing answered on the port.
     NoServer,
-    /// Something answered, but not this app - dx's build splash, or an
-    /// entirely different application on a port we do not own.
+    /// Something else answered: dx's build splash or another app.
     NotOurApp,
     /// Our index.html, but its script is not being served yet.
     NoScript,
@@ -643,29 +526,8 @@ enum Readiness {
     Ready,
 }
 
-/// Follow what the index references until something that only exists once the
-/// build has finished.
-///
-/// Three checks were tried here and the first two were both wrong in the same
-/// way (todo 364, 2026-09-20):
-///
-/// 1. *"The body does not say `dx is not serving a web app` and does contain
-///    `wasm`."* A double negative that dx's **build splash** satisfies, and so
-///    does any other app with a wasm bundle - another agent's docs site
-///    satisfied it when `E2E_PORT` named a port this run did not own.
-/// 2. *"The body contains the fixture app's `<title>`."* A positive assertion,
-///    and still wrong: **dx serves the real `index.html` from the moment it
-///    binds the port**, so the title is there about 44 s before the bundle is.
-///    Measured: with this check the first navigation went out at +2.6 s and
-///    the build finished at +46.5 s, and the suite failed all 87 browser
-///    tests exactly as before.
-///
-/// The lesson is the one this whole todo keeps teaching: a marker the app
-/// *emits* is not a marker that the app is *ready*. So this follows the chain
-/// to the wasm bundle, which cannot exist before the build has produced it,
-/// and it reads each link out of what was actually served rather than
-/// hardcoding a path - a hardcoded one that quietly stopped matching would
-/// make the check vacuous again, which is the failure mode being fixed.
+/// Follows index, script, wasm bundle as served: dx serves the real `index.html` (title
+/// included) ~44 s before the bundle exists (todo 364).
 fn app_readiness(base_url: &str, title: &str) -> Readiness {
     let Some(index) = http_get(base_url) else {
         return Readiness::NoServer;
@@ -673,9 +535,7 @@ fn app_readiness(base_url: &str, title: &str) -> Readiness {
     if !index.contains(title) {
         return Readiness::NotOurApp;
     }
-    // `.js`, not merely the first `src="`: an icon or an image would send the
-    // rest of the chain looking at the wrong file, and the symptom would be a
-    // 45-minute timeout rather than anything that names the cause.
+    // `.js`, not the first `src=`: that may be an icon.
     let Some(script) = quoted_ending_in(&index, ".js") else {
         return Readiness::NoScript;
     };
@@ -685,10 +545,7 @@ fn app_readiness(base_url: &str, title: &str) -> Readiness {
     if !is_ok(&js) {
         return Readiness::NoScript;
     }
-    // wasm-bindgen's glue names the bundle. It appears twice and in different
-    // shapes - `'e2e-fixtures_bg.wasm'` bare, and
-    // `"/./wasm/e2e-fixtures_bg.wasm"` rooted - so `join` resolves either
-    // against the script's own directory.
+    // The glue names the bundle bare or rooted; `join` resolves either.
     let Some(bundle) = quoted_ending_in(&js, ".wasm") else {
         return Readiness::NoBundle;
     };
@@ -730,18 +587,8 @@ fn is_ok(response: &str) -> bool {
         .is_some_and(|code| code.starts_with('2'))
 }
 
-/// A one-shot HTTP GET.
-///
-/// Hand-rolled rather than shelling out to `curl`: a test harness that fails
-/// when a system binary is missing fails for a reason that has nothing to do
-/// with the code under test, and the failure would read as "the server never
-/// came up".
+/// A one-shot HTTP GET, hand-rolled so no `curl` is needed.
 fn http_get(url: &str) -> Option<String> {
-    // Host and path split apart. This used to hardcode `GET /` and hand the
-    // whole remainder to `TcpStream::connect`, which was fine while `/` was
-    // the only thing ever fetched - and silently returned `None` for every
-    // URL with a path the moment the readiness check needed one, so the
-    // runner waited out its 45-minute budget saying nothing (todo 364).
     let rest = url.strip_prefix("http://")?;
     let (address, path) = match rest.find('/') {
         Some(at) => (&rest[..at], &rest[at..]),
@@ -762,13 +609,8 @@ fn http_get(url: &str) -> Option<String> {
     Some(String::from_utf8_lossy(&body).into_owned())
 }
 
-/// Kill every process whose command line contains `needle`.
-///
-/// Reads `/proc` rather than shelling out to `pkill -f`. `-f` matches the whole
-/// command line, and the shell running the pkill carries the pattern in its own,
-/// so pkill SIGTERMs that shell before the kill is reported (exit 144, measured
-/// three times in this repo, most recently while building this harness).
-/// Reading `/proc` and skipping our own pid has no such failure mode.
+/// SIGTERMs every process whose command line contains `needle`. Reads `/proc`:
+/// `pkill -f` also kills the shell carrying the pattern (exit 144).
 fn kill_by_cmdline(needle: &str) -> usize {
     each_matching_pid(needle, |pid| unsafe {
         // SIGTERM, so Chrome flushes and removes its own lock file.
@@ -781,8 +623,7 @@ fn count_by_cmdline(needle: &str) -> usize {
     each_matching_pid(needle, |_| {})
 }
 
-/// Which processes still match. A count says a leak happened; the pids say
-/// what leaked, which is what the second all-fail needed and did not have.
+/// Which processes still match.
 fn pids_by_cmdline(needle: &str) -> Vec<u32> {
     let mut pids = Vec::new();
     each_matching_pid(needle, |pid| pids.push(pid));
@@ -818,13 +659,8 @@ unsafe extern "C" {
     fn libc_kill(pid: i32, sig: i32) -> i32;
 }
 
-/// The target directory this runner was built into.
-///
-/// Cargo passes a `--target-dir` flag to nothing it runs, so the runner reads
-/// it off its own path: the nearest ancestor of the executable holding the
-/// `CACHEDIR.TAG` cargo writes at every target directory's root. That covers
-/// the flag, `CARGO_TARGET_DIR`, the root config's default and a `--target`
-/// triple alike.
+/// The runner's own target directory: the nearest ancestor of the executable with
+/// cargo's `CACHEDIR.TAG`, whichever way it was chosen.
 fn own_target_dir() -> Result<std::path::PathBuf> {
     let exe = std::env::current_exe().context("locate the runner's executable")?;
     exe.ancestors()
@@ -834,14 +670,7 @@ fn own_target_dir() -> Result<std::path::PathBuf> {
         .with_context(|| format!("no cargo target directory above {}", exe.display()))
 }
 
-/// Delete other runs' artifact directories once they are old enough.
-///
-/// Never a younger one: a parallel run may still be writing to it, or its owner
-/// may not have read it yet. A day keeps /tmp from growing without bound.
-///
-/// A run that ended red carries a `RED` marker and is kept a week instead
-/// (todo 364). The evidence from a red run is the scarce thing here; a green
-/// run's artifacts have never been worth reading.
+/// Deletes artifact directories older than a day, or a week when marked `RED` (todo 364).
 fn prune_old_runs(parent: &Path) {
     const MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
     const MAX_AGE_RED: Duration = Duration::from_secs(7 * 24 * 60 * 60);

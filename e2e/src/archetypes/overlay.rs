@@ -1,25 +1,5 @@
-//! The APG dialog / dismissible-overlay pattern.
-//!
-//! `Modal`, `Drawer`, `Menu`, `Lightbox`, `Spotlight` and `FloatingWindow` all
-//! promise the same four things: it opens, focus moves inside, Escape closes
-//! it, and focus returns to whatever opened it. The fourth is the one that
-//! breaks silently - nothing looks wrong on screen when focus falls back to
-//! `<body>`, and the keyboard user is simply dumped at the top of the document.
-//!
-//! `principles/focus-after-removal` is the house rule this encodes.
-//!
-//! ## What this is checked against
-//!
-//! - **APG, Dialog (Modal) pattern** - focus moves into the dialog on open,
-//!   Escape closes it, and focus returns to the element that invoked it.
-//!   <https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/>
-//! - **WCAG 2.1.2 No Keyboard Trap** - the trap assertion here is the
-//!   *intended* modal trap; 2.1.2 requires that Escape is always a way out,
-//!   which is why the contract closes with it rather than only tabbing.
-//! - **WCAG 2.4.3 Focus Order** - focus return is the half of focus order that
-//!   fails silently.
-//! - **WCAG 3.2.1 On Focus** - closing must not move focus somewhere
-//!   unexpected, which for this pattern means the trigger and nowhere else.
+//! The APG dialog / dismissible-overlay pattern: opens, focus moves inside, Escape closes,
+//! focus returns to the trigger (`principles/focus-after-removal`).
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -55,14 +35,10 @@ impl Overlay<'_> {
         keyboard::press(page, keyboard::ESCAPE).await?;
         let focus_returned = self.wait_for_close_signal(page).await?;
 
-        // It must not still be readable once it says it is closed. Read at the
-        // close signal, not after the panel has gone: waiting for it to be
-        // hidden first waited for exactly what this asserts, so a phantom
-        // panel failed as a timeout, or never (review 7, E6).
+        // Read at the close signal: waiting for hidden first masked a phantom panel (review 7, E6).
         dismissal::assert_gone_from_at(page, self.panel).await?;
 
-        // The assertion that silently fails everywhere else. Given time to
-        // land, since a component may return focus once its exit has ended.
+        // Given time: a component may return focus once its exit has ended.
         if !focus_returned {
             let _ = self.wait_for_focus_on_trigger(page).await;
         }
@@ -70,13 +46,8 @@ impl Overlay<'_> {
         Ok(())
     }
 
-    /// Wait for the overlay to report itself closed. Returns whether focus is
-    /// already back on the trigger.
-    ///
-    /// A trigger with `aria-expanded` says so there: a menu's or a popover's.
-    /// A dialog's trigger carries no state, and returning focus to it is the
-    /// dialog's own close signal (APG). When that never comes, the wait gives
-    /// up quietly and the focus assertion below reports it.
+    /// Waits for `aria-expanded="false"`, or for a dialog, for focus on the trigger.
+    /// Returns whether focus is already back.
     async fn wait_for_close_signal(&self, page: &Page) -> Result<bool> {
         let trigger = serde_json::to_string(self.trigger)?;
         let has_state: bool = page
@@ -112,12 +83,8 @@ impl Overlay<'_> {
         .await
     }
 
-    /// Focus must land inside the panel, not stay on the trigger.
-    ///
-    /// Read from the document, never from a `focus()` result: focusing an
-    /// element inside a box that is still `visibility: hidden` does nothing and
-    /// reports success (`codebase/use-popover`), which is exactly how a
-    /// searchable `Select` shipped with a search box that never took focus.
+    /// Focus must land inside the panel. Read from the document: `focus()` inside a
+    /// `visibility: hidden` box silently does nothing (`codebase/use-popover`).
     async fn assert_focus_moved_inside(&self, page: &Page) -> Result<()> {
         let inside: bool = page
             .evaluate(format!(
@@ -140,12 +107,7 @@ impl Overlay<'_> {
         Ok(())
     }
 
-    /// Tab all the way round, forwards then backwards, and confirm focus never
-    /// leaves the panel.
-    ///
-    /// The budget is the panel's own tabbable count plus two, so the walk
-    /// wraps at least once. Tabbing a fixed large number instead would pass
-    /// trivially on a panel with many controls.
+    /// Tabs round both ways; focus never leaves the panel. Tabbable count + 2 wraps at least once.
     async fn assert_focus_is_trapped(&self, page: &Page) -> Result<()> {
         let tabbables: usize = page
             .evaluate(format!(
