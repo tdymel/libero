@@ -59,6 +59,9 @@ let items = vec![
         .checkbox(hidden())
         .onselect(move |_| hidden.toggle())
         .into(),
+    MenuItem::new("Documentation")
+        .href("https://libero-ui.dev")
+        .into(),
     MenuEntry::Separator,
     MenuItem::new("Delete").onselect(pick("Delete")).into(),
 ];
@@ -174,6 +177,9 @@ fn MenuDemo(
             .checkbox(hidden())
             .onselect(move |_| hidden.toggle())
             .into(),
+        MenuItem::new("Documentation")
+            .href("https://libero-ui.dev")
+            .into(),
         MenuEntry::Separator,
         MenuItem::new("Delete").onselect(pick("Delete")).into(),
     ];
@@ -253,6 +259,8 @@ pub fn MenuPage() -> Element {
                         .doc("Runs when the item is chosen by a click, Enter or Space."),
                     prop("submenu", "Vec<MenuEntry>")
                         .doc("Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins."),
+                    prop("href", "String")
+                        .doc("Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`."),
                     prop("leading", "Element")
                         .doc("Before the label, such as an icon. Nothing interactive, since it sits inside the item's button."),
                     prop("trailing", "Element")
