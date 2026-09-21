@@ -1,4 +1,4 @@
-//! Ready-made [`ThemeSet`]s: the library's own, and nineteen community palettes.
+//! Ready-made [`ThemeSet`]s: the library's own, and twenty community palettes.
 //! Each file names its source: the Kopuz theme pack or the upstream repository.
 //!
 //! ## The pack's dark-only palettes
@@ -49,6 +49,7 @@ mod nord;
 mod one;
 mod osmium;
 mod rose_pine;
+mod shadcn;
 mod vague;
 
 pub use ayu::{AYU_DARK, AYU_LIGHT, AYU_MIRAGE_DARK};
@@ -67,6 +68,7 @@ pub use nord::{NORD_DARK, NORD_LIGHT};
 pub use one::{ONE_DARK, ONE_LIGHT};
 pub use osmium::{OSMIUM_DARK, OSMIUM_LIGHT};
 pub use rose_pine::{ROSE_PINE_DARK, ROSE_PINE_LIGHT};
+pub use shadcn::{SHADCN_DARK, SHADCN_LIGHT};
 pub use vague::{VAGUE_DARK, VAGUE_LIGHT};
 
 use super::ThemeSet;
@@ -96,6 +98,7 @@ impl ThemeSet {
         &ThemeSet::ONE,
         &ThemeSet::OSMIUM,
         &ThemeSet::ROSE_PINE,
+        &ThemeSet::SHADCN,
         &ThemeSet::VAGUE,
     ];
 

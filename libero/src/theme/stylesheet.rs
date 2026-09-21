@@ -777,6 +777,7 @@ mod tests {
                 "One light: warning",
                 "Osmium light: primary secondary warning info success",
                 "Rosé Pine light: warning",
+                "shadcn/ui light: warning success",
                 "Vague light: secondary warning info success",
             ],
             "the shipped palettes' text roles moved"
@@ -804,6 +805,36 @@ mod tests {
             ],
             "the shipped palettes' muted.6 moved"
         );
+    }
+
+    /// shadcn's own `--border`, `--input` and `--ring` sit at 1.3:1 to 2.5:1 on white, so
+    /// they are not taken: functional edges are `muted.6` and the ring is ink and surface.
+    #[test]
+    fn the_shadcn_pair_reads_and_keeps_its_edges_and_ring_visible() {
+        use crate::theme::{SHADCN_DARK, SHADCN_LIGHT};
+
+        for theme in [&SHADCN_LIGHT, &SHADCN_DARK] {
+            let css = Stylesheet::from(theme).as_str().to_string();
+            let paper = HexColor::parse(theme.paper.background).expect("a hex");
+            let var = |name: &str| HexColor::parse(&root_var(&css, name)).expect("a hex");
+
+            for (what, against) in [("page", theme.surface), ("card", paper)] {
+                for (name, floor) in [
+                    ("--lsx-ink", TEXT_CONTRAST),
+                    ("--lsx-muted-text-6", TEXT_CONTRAST),
+                    ("--lsx-muted-6", 3.0),
+                ] {
+                    let ratio = var(name).contrast_ratio(against);
+                    assert!(
+                        ratio >= floor,
+                        "{name} on the {} {what} is {ratio:.2}:1",
+                        theme.surface.color_scheme()
+                    );
+                }
+            }
+
+            assert!(theme.ink.contrast_ratio(theme.surface) >= 3.0, "focus ring");
+        }
     }
 
     /// `muted.6` on `theme`'s surface; never re-based, so it stays as pale as drawn.

@@ -47,6 +47,8 @@ menu "Choose a theme"
       StaticText "Osmium"
     menuitemradio "Rosé Pine" [checked=false]
       StaticText "Rosé Pine"
+    menuitemradio "shadcn/ui" [checked=false]
+      StaticText "shadcn/ui"
     menuitemradio "Vague" [checked=false]
       StaticText "Vague"
 --> aria-controls [id="lsx-N-menu"] (rendered above)
