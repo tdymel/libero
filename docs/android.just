@@ -35,9 +35,11 @@ android-avd:
     echo no | {{sdk}}/cmdline-tools/latest/bin/avdmanager create avd -n {{avd}} -k "{{image}}" -d pixel_6 --force
 
 # Boots the emulator and stays in the foreground - `start-android` needs it
-# already running, so this belongs in its own terminal.
-android-emulator:
-    {{aenv}} {{sdk}}/emulator/emulator -avd {{avd}} -gpu host -no-boot-anim
+# already running, so this belongs in its own terminal. Without a host GPU
+# use `gpu=swangle_indirect`: `swiftshader_indirect` (and `guest`, which falls
+# back to it) segfaults qemu every ~10 min under the WebView (995).
+android-emulator gpu="host":
+    {{aenv}} {{sdk}}/emulator/emulator -avd {{avd}} -gpu {{gpu}} -no-boot-anim
 
 # Blocks until the booted emulator is ready to be installed onto.
 android-wait:

@@ -1,5 +1,5 @@
 //! `cargo run -p e2e -- android [filter]` (964): the scenarios' `android` arm
-//! against the fixtures APK in an emulator, booted headless when no device is up.
+//! against the fixtures APK in an emulator of its own, booted headless.
 
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -12,6 +12,9 @@ use super::{Guard, dx, free_port, own_target_dir, stop, workspace_root};
 
 const PACKAGE: &str = "dev.libero.fixtures";
 const ACTIVITY: &str = "dev.libero.fixtures/dev.dioxus.main.MainActivity";
+/// Host GLES renderer, `E2E_ANDROID_GPU` overrides it. `swiftshader_indirect`
+/// (legacy SwiftShader 4.0) segfaulted qemu every ~10 min (995).
+const GPU: &str = "swangle_indirect";
 
 pub fn run(filters: Vec<String>) -> Result<()> {
     let root = workspace_root()?;
@@ -30,14 +33,21 @@ pub fn run(filters: Vec<String>) -> Result<()> {
 
     let mut guard = Guard::spawn()?;
     let mut emulator = None;
-    let serial = match attached_device()? {
-        Some(serial) => serial,
-        None => boot(&sdk, &artifacts, &mut guard, &mut emulator)?,
+    // Each run boots its own emulator on a free console port, so seats run in
+    // parallel (997); `E2E_ANDROID_SERIAL` picks a running device instead.
+    let port = match std::env::var("E2E_ANDROID_SERIAL") {
+        Ok(_) => None,
+        Err(_) => Some(free_console_port()?),
+    };
+    let serial = match port {
+        Some(port) => boot(&sdk, &artifacts, port, &mut guard, &mut emulator)?,
+        None => std::env::var("E2E_ANDROID_SERIAL")?,
     };
     eprintln!("e2e android: device {serial}");
 
     let outcome = run_on(
         &serial,
+        port,
         &sdk,
         &root,
         &dx,
@@ -59,22 +69,42 @@ pub fn run(filters: Vec<String>) -> Result<()> {
     outcome
 }
 
-/// Boots the emulator headless and waits for it; its serial.
+/// Boots the emulator headless on `port` and waits for it; its serial.
 fn boot(
     sdk: &Path,
     artifacts: &Path,
+    port: u16,
     guard: &mut Guard,
     emulator: &mut Option<Child>,
 ) -> Result<String> {
-    let child = boot_emulator(sdk, artifacts)?;
+    let child = boot_emulator(sdk, artifacts, port)?;
     guard.tell(&format!("group {}", child.id()));
-    *emulator = Some(child);
-    wait_for_boot()
+    let serial = format!("emulator-{port}");
+    wait_for_boot(&serial, emulator.insert(child))?;
+    Ok(serial)
+}
+
+/// The first even console port from 5554 whose pair (console, adb) is free
+/// and no device claims.
+fn free_console_port() -> Result<u16> {
+    let devices = Command::new("adb")
+        .arg("devices")
+        .output()
+        .context("run adb")?;
+    let devices = String::from_utf8_lossy(&devices.stdout).into_owned();
+    let free = |port: u16| std::net::TcpListener::bind(("127.0.0.1", port)).is_ok();
+    (5554..=5682)
+        .step_by(2)
+        .find(|&port| {
+            !devices.contains(&format!("emulator-{port}")) && free(port) && free(port + 1)
+        })
+        .context("no free emulator console port in 5554..5682")
 }
 
 #[allow(clippy::too_many_arguments)]
 fn run_on(
     serial: &str,
+    port: Option<u16>,
     sdk: &Path,
     root: &Path,
     dx: &std::ffi::OsStr,
@@ -143,17 +173,20 @@ fn run_on(
     );
 
     // One app per unit, and a unit whose emulator died is run again on a fresh
-    // one: its qemu dies of SIGSEGV every 30-40 scenarios (964).
+    // one: its qemu died of SIGSEGV every 30-40 scenarios before swangle (995).
     let mut red = Vec::new();
     for unit in names.chunk_by(|a, b| a.split("::").next() == b.split("::").next()) {
         let name = unit[0].split("::").next().unwrap_or_default();
         let mut passed = run_unit(serial, root, target_dir, artifacts, unit, guard)?;
-        if attached_device()?.is_none() {
+        if !is_up(serial)? {
+            let Some(port) = port else {
+                bail!("{serial} went away during {name}");
+            };
             eprintln!("e2e android: the emulator died during {name}; rebooting, running it again");
             if let Some(mut dead) = emulator.take() {
                 stop(&mut dead);
             }
-            boot(sdk, artifacts, guard, emulator)?;
+            boot(sdk, artifacts, port, guard, emulator)?;
             passed = run_unit(serial, root, target_dir, artifacts, unit, guard)?;
         }
         if !passed {
@@ -235,7 +268,7 @@ fn run_unit(
         if let Some(status) = tests.try_wait()? {
             break status.success();
         }
-        if Instant::now() > deadline || attached_device()?.is_none() {
+        if Instant::now() > deadline || !is_up(serial)? {
             eprintln!(
                 "e2e android: {} overran its deadline or lost the device; stopped",
                 unit[0]
@@ -259,7 +292,7 @@ fn launch(serial: &str) -> Result<u16> {
         attempts += 1;
         match start_app(serial) {
             Ok(pid) => break pid,
-            Err(error) if attempts < 3 => eprintln!("e2e android: {error:#}; starting it again"),
+            Err(error) if attempts < 5 => eprintln!("e2e android: {error:#}; starting it again"),
             Err(error) => return Err(error),
         }
     };
@@ -291,10 +324,19 @@ fn start_app(serial: &str) -> Result<String> {
     if pid.is_empty() {
         bail!("{PACKAGE} is not running after `am start`");
     }
-    // The WebView opens it after `am start -W` returns.
+    // The WebView opens it after `am start -W` returns. A start still races
+    // into wry's or tao's no-activity panic about one launch in five, and the
+    // process lives on without a WebView.
     let socket = format!("@webview_devtools_remote_{pid}");
     let deadline = Instant::now() + Duration::from_secs(20);
     while !adb(serial, &["shell", "cat", "/proc/net/unix"])?.contains(&socket) {
+        let log = adb(
+            serial,
+            &["logcat", "-d", "--pid", &pid, "-s", "RustStdoutStderr"],
+        )?;
+        if let Some(panic) = log.lines().find(|line| line.contains("panicked at")) {
+            bail!("{PACKAGE} panicked at start: {}", panic.trim());
+        }
         if Instant::now() > deadline {
             bail!("{PACKAGE} opened no {socket} within 20 s");
         }
@@ -303,26 +345,27 @@ fn start_app(serial: &str) -> Result<String> {
     Ok(pid)
 }
 
-/// The first device `adb devices` lists as ready.
-fn attached_device() -> Result<Option<String>> {
+/// Whether `adb devices` lists `serial` as ready.
+fn is_up(serial: &str) -> Result<bool> {
     let output = Command::new("adb")
         .arg("devices")
         .output()
         .context("run adb")?;
     Ok(String::from_utf8_lossy(&output.stdout)
         .lines()
-        .skip(1)
-        .find_map(|line| line.strip_suffix("\tdevice"))
-        .map(str::to_string))
+        .any(|line| line == format!("{serial}\tdevice")))
 }
 
-/// Headless, and never on the desktop's display.
-fn boot_emulator(sdk: &Path, artifacts: &Path) -> Result<Child> {
+/// Headless, and never on the desktop's display. `-read-only` lets several
+/// runs boot the same AVD at once; installs vanish with the instance.
+fn boot_emulator(sdk: &Path, artifacts: &Path, port: u16) -> Result<Child> {
     let avd = std::env::var("E2E_ANDROID_AVD").unwrap_or_else(|_| "libero-docs".into());
-    eprintln!("e2e android: booting the {avd} emulator headless");
+    let gpu = std::env::var("E2E_ANDROID_GPU").unwrap_or_else(|_| GPU.into());
+    eprintln!("e2e android: booting the {avd} emulator headless on {port}, -gpu {gpu}");
     let log = std::fs::File::create(artifacts.join("emulator.log"))?;
     Command::new(sdk.join("emulator/emulator"))
-        .args(["-avd", &avd, "-no-window", "-gpu", "swiftshader_indirect"])
+        .args(["-avd", &avd, "-no-window", "-gpu", &gpu, "-read-only"])
+        .args(["-port", &port.to_string()])
         .args(["-no-audio", "-no-snapshot-save", "-no-boot-anim"])
         .env_remove("DISPLAY")
         .env("ANDROID_HOME", sdk)
@@ -334,14 +377,19 @@ fn boot_emulator(sdk: &Path, artifacts: &Path) -> Result<Child> {
         .context("start the emulator")
 }
 
-fn wait_for_boot() -> Result<String> {
+/// Until `serial` finished booting; fails early when the emulator exits (its
+/// port taken by a run that raced this one).
+fn wait_for_boot(serial: &str, emulator: &mut Child) -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(300);
     while Instant::now() < deadline {
-        if let Some(serial) = attached_device()?
-            && adb(&serial, &["shell", "getprop", "sys.boot_completed"])
+        if let Some(status) = emulator.try_wait()? {
+            bail!("the emulator exited while booting ({status}), see emulator.log");
+        }
+        if is_up(serial)?
+            && adb(serial, &["shell", "getprop", "sys.boot_completed"])
                 .is_ok_and(|booted| booted.trim() == "1")
         {
-            return Ok(serial);
+            return Ok(());
         }
         std::thread::sleep(Duration::from_secs(1));
     }
