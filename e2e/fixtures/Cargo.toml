@@ -10,6 +10,10 @@ publish = false
 dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = true, features = ["router"] }
 libero = { path = "../../libero" }
 
+[features]
+# The Android fixtures APK (964): `dx build --platform android --features mobile`.
+mobile = ["dioxus/mobile"]
+
 # `perf::install`: counts dioxus-core's `render` spans per scope on `/perf/*`
 # pages. The versions dioxus-logger already pulls in.
 [target.'cfg(target_arch = "wasm32")'.dependencies]

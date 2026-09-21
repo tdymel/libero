@@ -37,6 +37,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, bail};
 
+mod android_runner;
+
 /// Generous, because a cold cargo build happens inside this wait. The fork's
 /// playwright config allows 50 minutes for the same reason; a stock 30 second
 /// timeout fails every cold run and reads as a broken test rather than a slow
@@ -61,6 +63,9 @@ fn main() -> Result<()> {
     // `sweep` (todo 760) serves the docs site instead of the fixtures and runs
     // `tests/sweep.rs` alone: a report over every page, too slow for the suite.
     let mut passthrough: Vec<String> = std::env::args().skip(1).collect();
+    if passthrough.first().is_some_and(|arg| arg == "android") {
+        return android_runner::run(passthrough.split_off(1));
+    }
     let sweep = passthrough.first().is_some_and(|arg| arg == "sweep");
     if sweep {
         passthrough.remove(0);

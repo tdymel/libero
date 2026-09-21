@@ -251,10 +251,43 @@ pub fn App() -> Element {
 
 #[derive(Clone, Routable, PartialEq, Debug)]
 enum Route {
+    #[layout(Shell)]
     #[route("/")]
     Index {},
     #[route("/:..segments")]
     Page { segments: Vec<String> },
+}
+
+/// Which navigation [`Fixture`] was mounted for; a new one remounts it, so a
+/// route opened twice in one app starts fresh. Always 0 on the web.
+#[derive(Clone, Copy)]
+struct Generation(Signal<u64>);
+
+#[component]
+fn Shell() -> Element {
+    let generation = use_context_provider(|| Generation(Signal::new(0)));
+    #[cfg(target_os = "android")]
+    android_route_hook(generation.0);
+    let _ = generation;
+    rsx! { Outlet::<Route> {} }
+}
+
+/// wry keeps routes in memory, so the e2e Android driver (964) navigates by
+/// `window.__route(path)`, which returns the generation to wait for.
+#[cfg(target_os = "android")]
+fn android_route_hook(mut generation: Signal<u64>) {
+    let navigator = navigator();
+    use_future(move || async move {
+        let mut hook = document::eval(
+            "let generation = 0;
+             window.__route = (path) => { generation += 1; dioxus.send([path, generation]); return generation; };
+             await new Promise(() => {});",
+        );
+        while let Ok((path, next)) = hook.recv::<(String, u64)>().await {
+            navigator.push(path);
+            generation.set(next);
+        }
+    });
 }
 
 #[component]
@@ -290,10 +323,16 @@ fn Page(segments: Vec<String>) -> Element {
 /// trigger alone. Found 2026-09-19 by Olaf95.
 #[component]
 fn Fixture(children: Element) -> Element {
+    let generation = try_use_context::<Generation>().map_or(0, |g| (g.0)());
     rsx! {
-        div { "data-fixture-ready": "true",
-            LiberoProvider {
-                div { padding: "24px", {children} }
+        for generation in [generation] {
+            div {
+                key: "{generation}",
+                "data-fixture-ready": "true",
+                "data-fixture-generation": "{generation}",
+                LiberoProvider {
+                    div { padding: "24px", {children.clone()} }
+                }
             }
         }
     }

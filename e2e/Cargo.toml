@@ -75,6 +75,9 @@ native = [
     "dep:peniko",
     "dep:tracing",
 ]
+# The `android` scenario arm (964), against the emulator the runner's
+# `android` mode sets up: `cargo run -p e2e -- android [filter]`.
+android = []
 
 # Blitz-only tests (paint, stylo, Blitz's event order), one binary as `all` is.
 [[test]]

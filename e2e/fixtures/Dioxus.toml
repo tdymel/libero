@@ -2,3 +2,7 @@
 # `dx` concatenates its title into an existing <title>; naming it here keeps
 # the fixture pages from rendering as "e2e-fixturesdioxus | ⛺".
 title = "libero e2e fixtures"
+
+[android]
+# The package the e2e runner installs, launches and forwards CDP to (964).
+identifier = "dev.libero.fixtures"

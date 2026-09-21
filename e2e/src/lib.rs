@@ -10,6 +10,8 @@
 //! tests directly fails with an explanatory message rather than a connection
 //! error.
 
+#[cfg(feature = "android")]
+pub mod android;
 pub mod archetypes;
 pub mod ax;
 pub mod browser;
