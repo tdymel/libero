@@ -7,10 +7,12 @@ use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::rc::{Rc, Weak};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::core::{Runtime, ScopeId, Task, spawn_forever};
-use dioxus::document::{Document, eval};
+use dioxus::document::{Document, Eval, eval};
 use dioxus::prelude::{Key, Modifiers, spawn};
+use serde_json::{Value, json};
 
 use crate::platform::a11y_media::{
     A11yMediaSubscription, REDUCED_MOTION_STORAGE_KEY, kept_reduced_motion, parse_reduced_motion,
@@ -51,10 +53,9 @@ fn runs_scripts() -> bool {
     if let Some(runs) = known {
         return runs;
     }
-    let runs = document
-        .eval("await dioxus.recv();".to_string())
-        .send(())
-        .is_ok();
+    // No `dioxus.recv()`: liveview's spins on an empty queue, and dropping the
+    // eval empties it, which froze the tab.
+    let runs = document.eval(String::new()).send(()).is_ok();
     RUNS_SCRIPTS.with_borrow_mut(|known| {
         known.retain(|(seen, _)| seen.strong_count() > 0);
         known.push((key, runs));
@@ -97,12 +98,71 @@ impl DocumentApi for WebViewDocument {
 
     /// Queued: the script runs before any edit dioxus sends after it.
     fn set_root_attribute(&self, name: &str, value: Option<&str>) -> bool {
-        let script = eval(
-            "const [name, value] = await dioxus.recv();
+        eval_with(
+            json!([name, value]),
+            "const [name, value] = data;
             const root = document.documentElement;
             value === null ? root.removeAttribute(name) : root.setAttribute(name, value);",
         );
-        script.send((name, value)).is_ok()
+        runs_scripts()
+    }
+}
+
+/// Runs `script` with `data` bound as `data`. Never `dioxus.recv()`: liveview's
+/// spins on an empty queue and freezes the tab.
+fn eval_with(data: Value, script: &str) -> Eval {
+    eval(&format!("const data = {data};\n{script}"))
+}
+
+/// A running script's `window` slot, which a later eval reaches it through.
+/// `stop` ends the script; dropping this calls it.
+struct Slot {
+    token: u64,
+    document: Weak<dyn Document>,
+}
+
+static NEXT_SLOT: AtomicU64 = AtomicU64::new(0);
+
+impl Slot {
+    fn new() -> Self {
+        Slot {
+            token: NEXT_SLOT.fetch_add(1, Ordering::Relaxed),
+            document: Rc::downgrade(&dioxus::document::document()),
+        }
+    }
+
+    /// Ends in `await` until [`Slot`]'s drop; `extra` adds members to the slot.
+    fn park(&self, extra: &str) -> String {
+        format!(
+            "await new Promise((stop) => {{
+                (window.__lsxSlots ??= {{}})[{}] = {{ stop, {extra} }};
+            }});",
+            self.token
+        )
+    }
+
+    /// Calls the slot's `member` with `argument`, if the script still runs.
+    fn call(&self, member: &str, argument: Value) {
+        if let Some(document) = self.document.upgrade() {
+            document.eval(format!(
+                "window.__lsxSlots?.[{}]?.{member}({argument});",
+                self.token
+            ));
+        }
+    }
+}
+
+impl Drop for Slot {
+    fn drop(&mut self) {
+        let Some(document) = self.document.upgrade() else {
+            return;
+        };
+        document.eval(format!(
+            "const slot = window.__lsxSlots?.[{0}];
+            delete window.__lsxSlots?.[{0}];
+            slot?.stop();",
+            self.token
+        ));
     }
 }
 
@@ -118,34 +178,43 @@ const ON_SCROLL: &str = "let queued = false;
         queued = true;
         requestAnimationFrame(() => { queued = false; dioxus.send(null); });
     };
-    window.addEventListener('scroll', tick, { capture: true, passive: true });
-    await dioxus.recv();
-    window.removeEventListener('scroll', tick, { capture: true });";
+    window.addEventListener('scroll', tick, { capture: true, passive: true });";
 
 impl ScrollApi for WebViewScroll {
     fn on_scroll(&self, callback: Box<dyn Fn()>) -> Box<dyn ScrollSubscription> {
-        let script = eval(ON_SCROLL);
+        let slot = Slot::new();
+        let script = eval(&format!(
+            "{ON_SCROLL}
+            {}
+            window.removeEventListener('scroll', tick, {{ capture: true }});",
+            slot.park("")
+        ));
         let task = spawn(async move {
             let mut script = script;
             while script.recv::<()>().await.is_ok() {
                 callback();
             }
         });
-        Box::new(WebViewScrollSubscription { script, task })
+        Box::new(WebViewListener {
+            task,
+            _slot: Rc::new(slot),
+        })
     }
 }
 
-struct WebViewScrollSubscription {
-    script: dioxus::document::Eval,
+/// A listening script's task and slot: dropping it stops both.
+struct WebViewListener {
     task: Task,
+    _slot: Rc<Slot>,
 }
 
-impl ScrollSubscription for WebViewScrollSubscription {}
+impl ScrollSubscription for WebViewListener {}
 
-impl Drop for WebViewScrollSubscription {
+impl KeySubscription for WebViewListener {}
+
+impl Drop for WebViewListener {
     fn drop(&mut self) {
         self.task.cancel();
-        let _ = self.script.send(());
     }
 }
 
@@ -157,8 +226,9 @@ impl ClipboardApi for WebViewClipboard {
     fn write_text(&self, text: String) -> Write {
         // The WebView denies `clipboard-write` unless the app grants it, so a
         // rejected write falls back to `execCommand`, which the tap's activation allows.
-        let script = eval(
-            "const text = await dioxus.recv();
+        let script = eval_with(
+            json!(text),
+            "const text = data;
             try { await navigator.clipboard.writeText(text); return true; } catch (error) {}
             const area = document.createElement('textarea');
             area.value = text;
@@ -173,9 +243,7 @@ impl ClipboardApi for WebViewClipboard {
             active?.focus?.({ preventScroll: true });
             return copied;",
         );
-        let sent = script.send(text);
         Box::pin(async move {
-            sent.map_err(|_| PlatformError::Unsupported)?;
             match script.join::<bool>().await {
                 Ok(true) => Ok(()),
                 Ok(false) => Err(PlatformError::Denied),
@@ -185,28 +253,50 @@ impl ClipboardApi for WebViewClipboard {
     }
 }
 
-thread_local! {
+type SchemeCallback = Rc<dyn Fn(ColorScheme)>;
+type A11yCallback = Rc<dyn Fn(AccessibilityPreferences)>;
+
+/// One page's answers, kept on its dom's root: liveview runs many sessions on
+/// one thread. Each watcher is a task of that dom.
+#[derive(Default)]
+struct PageState {
     /// The media query's last answer; `None` until a listener is running.
-    static REDUCED_MOTION: Cell<Option<bool>> = const { Cell::new(None) };
-    /// As [`REDUCED_MOTION`], for the system colour scheme.
-    static SCHEME: Cell<Option<ColorScheme>> = const { Cell::new(None) };
-    static SCHEME_CALLBACKS: RefCell<Vec<(u64, SchemeCallback)>> =
-        const { RefCell::new(Vec::new()) };
-    static NEXT_SCHEME_CALLBACK: Cell<u64> = const { Cell::new(0) };
+    reduced_motion: Cell<Option<bool>>,
+    scheme: Cell<Option<ColorScheme>>,
+    scheme_callbacks: RefCell<Vec<(u64, SchemeCallback)>>,
+    a11y: Cell<Option<AccessibilityPreferences>>,
+    a11y_callbacks: RefCell<Vec<(u64, A11yCallback)>>,
+    next_callback: Cell<u64>,
+    /// The chords each subscribing scope has taken, by `Key` name and modifiers.
+    taken_chords: RefCell<HashMap<ScopeId, HashSet<String>>>,
 }
 
-type SchemeCallback = Rc<dyn Fn(ColorScheme)>;
+impl PageState {
+    fn next_id(&self) -> u64 {
+        self.next_callback.replace(self.next_callback.get() + 1)
+    }
+}
+
+/// The current dom's [`PageState`], `None` outside a runtime.
+fn page() -> Option<Rc<PageState>> {
+    let runtime = Runtime::try_current()?;
+    Some(
+        runtime
+            .consume_context::<Rc<PageState>>(ScopeId::ROOT)
+            .unwrap_or_else(|| runtime.provide_context(ScopeId::ROOT, Rc::default())),
+    )
+}
 
 /// Hands `answer` the media query's result now and on every change. The script
 /// starts here: from inside `spawn_forever` it never ran.
 fn watch_media(query: &'static str, answer: impl Fn(bool) + 'static) {
-    let script = eval(
-        "const query = window.matchMedia(await dioxus.recv());
+    let script = eval_with(
+        json!(query),
+        "const query = window.matchMedia(data);
         dioxus.send(query.matches);
         query.addEventListener('change', () => dioxus.send(query.matches));
         await new Promise(() => {});",
     );
-    let _ = script.send(query);
     spawn_forever(async move {
         let mut script = script;
         while let Ok(matches) = script.recv::<bool>().await {
@@ -220,12 +310,15 @@ pub(super) fn prefers_reduced_motion() -> bool {
     if !runs_scripts() {
         return false;
     }
-    if let Some(reduced) = REDUCED_MOTION.get() {
+    let Some(page) = page() else {
+        return false;
+    };
+    if let Some(reduced) = page.reduced_motion.get() {
         return reduced;
     }
-    REDUCED_MOTION.set(Some(false));
-    watch_media(crate::sx::REDUCED_MOTION, |reduced| {
-        REDUCED_MOTION.set(Some(reduced))
+    page.reduced_motion.set(Some(false));
+    watch_media(crate::sx::REDUCED_MOTION, move |reduced| {
+        page.reduced_motion.set(Some(reduced))
     });
     false
 }
@@ -239,34 +332,27 @@ struct WebViewA11yMedia;
 
 static A11Y_MEDIA: WebViewA11yMedia = WebViewA11yMedia;
 
-type A11yCallback = Rc<dyn Fn(AccessibilityPreferences)>;
-
-thread_local! {
-    static A11Y: Cell<Option<AccessibilityPreferences>> = const { Cell::new(None) };
-    static A11Y_CALLBACKS: RefCell<Vec<(u64, A11yCallback)>> = const { RefCell::new(Vec::new()) };
-    static NEXT_A11Y_CALLBACK: Cell<u64> = const { Cell::new(0) };
-}
-
 /// The defaults until the page first answers; every answer then reaches the subscribers.
-fn watch_a11y() {
-    if A11Y.get().is_some() {
+fn watch_a11y(page: &Rc<PageState>) {
+    if page.a11y.get().is_some() {
         return;
     }
-    A11Y.set(Some(AccessibilityPreferences::default()));
-    let script = eval(
-        "const queries = (await dioxus.recv()).map((query) => window.matchMedia(query));
+    page.a11y.set(Some(AccessibilityPreferences::default()));
+    let page = page.clone();
+    let script = eval_with(
+        json!([
+            crate::sx::REDUCED_MOTION,
+            crate::sx::FORCED_COLORS,
+            "(prefers-contrast: more)",
+            "(prefers-contrast: less)",
+            "(prefers-reduced-transparency: reduce)",
+        ]),
+        "const queries = data.map((query) => window.matchMedia(query));
         const send = () => dioxus.send(queries.map((query) => query.matches));
         send();
         queries.forEach((query) => query.addEventListener('change', send));
         await new Promise(() => {});",
     );
-    let _ = script.send([
-        crate::sx::REDUCED_MOTION,
-        crate::sx::FORCED_COLORS,
-        "(prefers-contrast: more)",
-        "(prefers-contrast: less)",
-        "(prefers-reduced-transparency: reduce)",
-    ]);
     spawn_forever(async move {
         let mut script = script;
         while let Ok([motion, forced, more, less, transparency]) = script.recv::<[bool; 5]>().await
@@ -281,11 +367,12 @@ fn watch_a11y() {
                 },
                 reduced_transparency: transparency,
             };
-            if A11Y.replace(Some(preferences)) == Some(preferences) {
+            if page.a11y.replace(Some(preferences)) == Some(preferences) {
                 continue;
             }
-            let callbacks: Vec<_> = A11Y_CALLBACKS
-                .with_borrow(|callbacks| callbacks.iter().map(|(_, call)| call.clone()).collect());
+            let callbacks: Vec<_> = (page.a11y_callbacks.borrow().iter())
+                .map(|(_, call)| call.clone())
+                .collect();
             for callback in callbacks {
                 callback(preferences);
             }
@@ -295,18 +382,26 @@ fn watch_a11y() {
 
 impl A11yMediaApi for WebViewA11yMedia {
     fn system(&self) -> AccessibilityPreferences {
-        watch_a11y();
-        A11Y.get().unwrap_or_default()
+        let Some(page) = page() else {
+            return AccessibilityPreferences::default();
+        };
+        watch_a11y(&page);
+        page.a11y.get().unwrap_or_default()
     }
 
     fn on_change(
         &self,
         callback: Box<dyn Fn(AccessibilityPreferences)>,
     ) -> Box<dyn A11yMediaSubscription> {
-        watch_a11y();
-        let id = NEXT_A11Y_CALLBACK.replace(NEXT_A11Y_CALLBACK.get() + 1);
-        A11Y_CALLBACKS.with_borrow_mut(|callbacks| callbacks.push((id, Rc::from(callback))));
-        Box::new(WebViewA11yMediaSubscription(id))
+        let Some(page) = page() else {
+            return Box::new(WebViewSubscription(Weak::new(), 0));
+        };
+        watch_a11y(&page);
+        let id = page.next_id();
+        page.a11y_callbacks
+            .borrow_mut()
+            .push((id, Rc::from(callback)));
+        Box::new(WebViewSubscription(Rc::downgrade(&page), id))
     }
 
     fn stored_reduced_motion(&self) -> Option<bool> {
@@ -324,13 +419,24 @@ impl A11yMediaApi for WebViewA11yMedia {
     }
 }
 
-struct WebViewA11yMediaSubscription(u64);
+/// A media callback's page and id; dropping it removes the callback.
+struct WebViewSubscription(Weak<PageState>, u64);
 
-impl A11yMediaSubscription for WebViewA11yMediaSubscription {}
+impl A11yMediaSubscription for WebViewSubscription {}
 
-impl Drop for WebViewA11yMediaSubscription {
+impl ColorSchemeSubscription for WebViewSubscription {}
+
+impl Drop for WebViewSubscription {
     fn drop(&mut self) {
-        A11Y_CALLBACKS.with_borrow_mut(|callbacks| callbacks.retain(|(id, _)| *id != self.0));
+        let Some(page) = self.0.upgrade() else {
+            return;
+        };
+        page.a11y_callbacks
+            .borrow_mut()
+            .retain(|(id, _)| *id != self.1);
+        page.scheme_callbacks
+            .borrow_mut()
+            .retain(|(id, _)| *id != self.1);
     }
 }
 
@@ -346,22 +452,24 @@ static COLOR_SCHEME: WebViewColorScheme = WebViewColorScheme;
 
 /// Light until the page first answers; a dark answer then reaches every
 /// [`on_change`](ColorSchemeApi::on_change) subscriber.
-fn watch_scheme() {
-    if SCHEME.get().is_some() {
+fn watch_scheme(page: &Rc<PageState>) {
+    if page.scheme.get().is_some() {
         return;
     }
-    SCHEME.set(Some(ColorScheme::Light));
-    watch_media(crate::theme::DARK_SCHEME_QUERY, |dark| {
+    page.scheme.set(Some(ColorScheme::Light));
+    let page = page.clone();
+    watch_media(crate::theme::DARK_SCHEME_QUERY, move |dark| {
         let scheme = if dark {
             ColorScheme::Dark
         } else {
             ColorScheme::Light
         };
-        if SCHEME.replace(Some(scheme)) == Some(scheme) {
+        if page.scheme.replace(Some(scheme)) == Some(scheme) {
             return;
         }
-        let callbacks: Vec<_> = SCHEME_CALLBACKS
-            .with_borrow(|callbacks| callbacks.iter().map(|(_, call)| call.clone()).collect());
+        let callbacks: Vec<_> = (page.scheme_callbacks.borrow().iter())
+            .map(|(_, call)| call.clone())
+            .collect();
         for callback in callbacks {
             callback(scheme);
         }
@@ -397,15 +505,23 @@ fn app_file(name: &str) -> Option<PathBuf> {
 
 impl ColorSchemeApi for WebViewColorScheme {
     fn system(&self) -> ColorScheme {
-        watch_scheme();
-        SCHEME.get().unwrap_or(ColorScheme::Light)
+        let Some(page) = page() else {
+            return ColorScheme::Light;
+        };
+        watch_scheme(&page);
+        page.scheme.get().unwrap_or(ColorScheme::Light)
     }
 
     fn on_change(&self, callback: Box<dyn Fn(ColorScheme)>) -> Box<dyn ColorSchemeSubscription> {
-        watch_scheme();
-        let id = NEXT_SCHEME_CALLBACK.replace(NEXT_SCHEME_CALLBACK.get() + 1);
-        SCHEME_CALLBACKS.with_borrow_mut(|callbacks| callbacks.push((id, Rc::from(callback))));
-        Box::new(WebViewColorSchemeSubscription(id))
+        let Some(page) = page() else {
+            return Box::new(WebViewSubscription(Weak::new(), 0));
+        };
+        watch_scheme(&page);
+        let id = page.next_id();
+        page.scheme_callbacks
+            .borrow_mut()
+            .push((id, Rc::from(callback)));
+        Box::new(WebViewSubscription(Rc::downgrade(&page), id))
     }
 
     fn stored(&self) -> Option<ColorSchemeSetting> {
@@ -420,16 +536,6 @@ impl ColorSchemeApi for WebViewColorScheme {
     }
 }
 
-struct WebViewColorSchemeSubscription(u64);
-
-impl ColorSchemeSubscription for WebViewColorSchemeSubscription {}
-
-impl Drop for WebViewColorSchemeSubscription {
-    fn drop(&mut self) {
-        SCHEME_CALLBACKS.with_borrow_mut(|callbacks| callbacks.retain(|(id, _)| *id != self.0));
-    }
-}
-
 pub(super) fn keyboard() -> Option<&'static dyn KeyboardApi> {
     runs_scripts().then_some(&KEYBOARD as &'static dyn KeyboardApi)
 }
@@ -440,15 +546,9 @@ struct WebViewKeyboard;
 
 static KEYBOARD: WebViewKeyboard = WebViewKeyboard;
 
-thread_local! {
-    /// The chords each subscribing scope has taken, by `Key` name and modifiers.
-    static TAKEN_CHORDS: RefCell<HashMap<ScopeId, HashSet<String>>> =
-        RefCell::new(HashMap::new());
-}
-
 /// The answer crosses the IPC after the press is over, so the script prevents
 /// a chord once its subscription has taken it: from the second press on.
-const ON_KEY: &str = "const [skipTyping, clicked, seeded] = await dioxus.recv();
+const ON_KEY: &str = "const [skipTyping, clicked, seeded] = data;
     const taken = new Set(seeded);
     const typing = (target) => {
         if (!(target instanceof Element)) return false;
@@ -466,9 +566,7 @@ const ON_KEY: &str = "const [skipTyping, clicked, seeded] = await dioxus.recv();
         if (taken.has(name)) event.preventDefault();
         dioxus.send([name, ...chord, event.repeat]);
     };
-    window.addEventListener('keydown', onKey);
-    for (let name; (name = await dioxus.recv()) !== null; ) taken.add(name);
-    window.removeEventListener('keydown', onKey);";
+    window.addEventListener('keydown', onKey);";
 
 impl WebViewKeyboard {
     fn listen(
@@ -479,11 +577,21 @@ impl WebViewKeyboard {
         // Per scope: a hotkey re-subscribes on every open and close, and would
         // otherwise start over without its chord each time.
         let scope = Runtime::try_current().and_then(|runtime| runtime.try_current_scope_id());
-        let mut taken = TAKEN_CHORDS
-            .with_borrow(|taken| scope.and_then(|scope| taken.get(&scope).cloned()))
+        let page = page();
+        let mut taken = (page.as_ref().zip(scope))
+            .and_then(|(page, scope)| page.taken_chords.borrow().get(&scope).cloned())
             .unwrap_or_default();
-        let script = eval(ON_KEY);
-        let _ = script.send((skip_text_entry, CLICKED_INPUT_TYPES, &taken));
+        let slot = Rc::new(Slot::new());
+        let script = eval_with(
+            json!([skip_text_entry, CLICKED_INPUT_TYPES, &taken]),
+            &format!(
+                "{ON_KEY}
+                {}
+                window.removeEventListener('keydown', onKey);",
+                slot.park("take: (name) => taken.add(name)")
+            ),
+        );
+        let task_slot = slot.clone();
         let task = spawn(async move {
             let mut script = script;
             while let Ok((name, key, ctrl, shift, alt, meta, repeat)) = script
@@ -508,16 +616,17 @@ impl WebViewKeyboard {
                     warn_reserved_chord(&chord_key, modifiers);
                 }
                 if taken.insert(name.clone()) {
-                    if let Some(scope) = scope {
-                        TAKEN_CHORDS.with_borrow_mut(|taken| {
-                            taken.entry(scope).or_default().insert(name.clone())
-                        });
+                    if let Some((page, scope)) = page.as_ref().zip(scope) {
+                        (page.taken_chords.borrow_mut())
+                            .entry(scope)
+                            .or_default()
+                            .insert(name.clone());
                     }
-                    let _ = script.send(name);
+                    task_slot.call("take", json!(name));
                 }
             }
         });
-        Box::new(WebViewKeySubscription { script, task })
+        Box::new(WebViewListener { task, _slot: slot })
     }
 }
 
@@ -534,24 +643,16 @@ impl KeyboardApi for WebViewKeyboard {
     }
 }
 
-struct WebViewKeySubscription {
-    script: dioxus::document::Eval,
-    task: Task,
-}
-
-impl KeySubscription for WebViewKeySubscription {}
-
-impl Drop for WebViewKeySubscription {
-    fn drop(&mut self) {
-        self.task.cancel();
-        let _ = self.script.send(());
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use dioxus::document::NoOpDocument;
+    use std::future::Future;
+    use std::pin::pin;
+    use std::task::{Context, Poll, Waker};
+
+    use dioxus::document::{Eval, EvalError, Evaluator, NoOpDocument};
     use dioxus::prelude::*;
+    use dioxus::signals::{AnyStorage, Owner, UnsyncStorage};
+    use serde_json::Value;
 
     use super::*;
 
@@ -583,5 +684,82 @@ mod tests {
         let dom = VirtualDom::new(app).with_root_context(Rc::new(NoOpDocument) as Rc<dyn Document>);
         assert_eq!(answers(&dom), [false; 5]);
         assert!(!dom.in_scope(ScopeId::ROOT, prefers_reduced_motion));
+    }
+
+    /// A page whose every script answers `dark` once.
+    struct FakePage {
+        dark: bool,
+        owners: RefCell<Vec<Owner<UnsyncStorage>>>,
+    }
+
+    struct Answer(Option<bool>);
+
+    impl Evaluator for Answer {
+        fn poll_join(&mut self, _: &mut Context<'_>) -> Poll<Result<Value, EvalError>> {
+            Poll::Pending
+        }
+
+        fn poll_recv(&mut self, _: &mut Context<'_>) -> Poll<Result<Value, EvalError>> {
+            match self.0.take() {
+                Some(dark) => Poll::Ready(Ok(Value::Bool(dark))),
+                None => Poll::Pending,
+            }
+        }
+
+        fn send(&self, _: Value) -> Result<(), EvalError> {
+            Ok(())
+        }
+    }
+
+    impl Document for FakePage {
+        fn eval(&self, _: String) -> Eval {
+            let owner = UnsyncStorage::owner();
+            let answer = owner.insert(Box::new(Answer(Some(self.dark))) as Box<dyn Evaluator>);
+            self.owners.borrow_mut().push(owner);
+            Eval::new(answer)
+        }
+    }
+
+    fn page_dom(dark: bool) -> VirtualDom {
+        let page = FakePage {
+            dark,
+            owners: RefCell::default(),
+        };
+        let mut dom = VirtualDom::new(app).with_root_context(Rc::new(page) as Rc<dyn Document>);
+        dom.rebuild_in_place();
+        dom
+    }
+
+    fn settle(dom: &mut VirtualDom) {
+        let mut cx = Context::from_waker(Waker::noop());
+        for _ in 0..4 {
+            let _ = pin!(dom.wait_for_work()).poll(&mut cx);
+        }
+    }
+
+    /// Liveview sessions and desktop windows share a thread: one's answer must not reach another.
+    #[test]
+    fn two_pages_on_one_thread_keep_their_own_scheme() {
+        let mut dark = page_dom(true);
+        let mut light = page_dom(false);
+        let heard = Rc::new(Cell::new(0));
+        let system =
+            |dom: &VirtualDom| dom.in_scope(ScopeId::ROOT, || color_scheme().unwrap().system());
+        let _subscription = light.in_scope(ScopeId::ROOT, || {
+            let heard = heard.clone();
+            color_scheme()
+                .unwrap()
+                .on_change(Box::new(move |_| heard.set(heard.get() + 1)))
+        });
+        system(&dark);
+        settle(&mut dark);
+        settle(&mut light);
+        assert_eq!(system(&dark), ColorScheme::Dark);
+        assert_eq!(system(&light), ColorScheme::Light);
+        assert_eq!(
+            heard.get(),
+            0,
+            "the dark page's answer reached the light one"
+        );
     }
 }
