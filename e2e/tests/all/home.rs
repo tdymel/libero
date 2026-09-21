@@ -120,6 +120,43 @@ fn the_booking_card_submits_from_the_keyboard() {
     });
 }
 
+/// The stats section is named by a visually hidden `h2`, not an `aria-label`.
+#[test]
+fn the_stats_section_is_named_by_a_hidden_h2() {
+    block_on(async {
+        let fixture = Fixture::open("/home-stats", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "section[aria-labelledby]")
+            .await
+            .unwrap();
+
+        let facts: Vec<Option<String>> = page
+            .evaluate(
+                "(() => { const s = document.querySelector('section'); \
+                 const h = document.getElementById(s.getAttribute('aria-labelledby')); \
+                 const r = h.firstElementChild.getBoundingClientRect(); \
+                 return [s.getAttribute('aria-label'), h.tagName + ':' + h.textContent, \
+                 String(r.width <= 1 && r.height <= 1)]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            facts,
+            [
+                None,
+                Some("H2:Libero in numbers".into()),
+                Some("true".into())
+            ]
+        );
+        fixture.console.assert_clean("the stats section").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     e2e::Suite::new("home_booking", "/home-booking")

@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Flex, Paper, Text},
+    components::{Box, Flex, Paper, Text, Title, VisuallyHidden},
     sx::sx,
     theme::Size,
 };
@@ -9,7 +9,11 @@ use libero::{
 #[component]
 pub fn Stats() -> Element {
     rsx! {
-        section { "aria-label": "Libero in numbers",
+        section { "aria-labelledby": "stats-title",
+            // The hidden span sits in the `h2`, not around it: a span may not hold a heading.
+            Title { component: "h2", id: "stats-title", sx: sx().margin("0"),
+                VisuallyHidden { "Libero in numbers" }
+            }
             Box {
                 component: "ul",
                 // Safari drops the list role with `list-style: none`.

@@ -6,19 +6,36 @@ use libero::{
     chrono::NaiveDate,
     components::{
         Button, DateField, Fields, Form, Notifications, Options, Paper, Rule, Select, Switch,
-        Table, Tabs, TextField, Title, column, not_empty, use_form, use_notifications,
+        Table, Tabs, TextField, Title, VisuallyHidden, column, not_empty, use_form,
+        use_notifications,
     },
     sx::sx,
 };
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/home-booking", || {
+pub const ROUTES: Routes = &[
+    ("/home-booking", || {
+        rsx! {
+            BookingCard {}
+            Notifications {}
+        }
+    }),
+    ("/home-stats", || rsx! { Stats {} }),
+];
+
+/// A copy of the "Libero in numbers" section of `docs/src/pages/home/stats.rs`, cards cut to one.
+#[component]
+fn Stats() -> Element {
     rsx! {
-        BookingCard {}
-        Notifications {}
+        section { "aria-labelledby": "stats-title",
+            Title { component: "h2", id: "stats-title", sx: sx().margin("0"),
+                VisuallyHidden { "Libero in numbers" }
+            }
+            Paper { bordered: true, "100+ Components and Hooks" }
+        }
     }
-})];
+}
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Guests {
