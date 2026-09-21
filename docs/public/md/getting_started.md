@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::LiberoProvider;`
 Index: [index.md](index.md) lists every other page
-Description: Installing libero, wrapping an app in LiberoProvider, building for the web, natively and for Android, and the feature flags.
+Description: Installing libero, wrapping an app in LiberoProvider, building for the web, natively, in a desktop WebView and for Android, and the feature flags.
 
 Libero is a Dioxus component library focused on developer experience, UX,
 accessibility, and configurability.
@@ -99,6 +99,25 @@ On Linux you need:
 - A Vulkan driver to draw (`mesa-vulkan-drivers`, or `vulkan-intel` on Arch).
   Without a GPU, dioxus-native's CPU renderer (`vello-cpu-softbuffer`) still
   draws.
+
+### Desktop (WebView)
+
+Early: focus traps and tree keys do nothing in a WebView yet, as on Android.
+
+A window with the system WebView inside: WebKitGTK on Linux, WebView2 on
+Windows, WKWebView on macOS. The pages look and behave like the web build. Turn
+on dioxus's `desktop` feature; libero needs no feature of its own.
+
+```shell
+dx serve --platform desktop --renderer webview
+dx build --platform desktop --renderer webview --release
+```
+
+On Linux you need:
+
+- WebKitGTK 4.1, GTK 3 and xdo to build
+  (`libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev` on Debian and Ubuntu,
+  `webkit2gtk-4.1 xdotool` on Arch).
 
 ### Android
 

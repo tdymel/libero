@@ -79,6 +79,17 @@ pub fn PlatformPage() -> Element {
                     "answers them through the page's scripts, but some element calls there are "
                     "unsupported."
                 }
+                Text {
+                    "The renderer is a build-time choice, one dioxus feature each: "
+                    Code { source: "web" }
+                    ", "
+                    Code { source: "native" }
+                    " (Blitz), "
+                    Code { source: "desktop" }
+                    " (a WebView window) or "
+                    Code { source: "mobile" }
+                    " (Android's WebView). These docs build with each of them."
+                }
             }
 
             DocSection {

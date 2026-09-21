@@ -61,6 +61,10 @@ fullstack = ["dioxus/fullstack"]
 # the same CSS engine styles it as on the web. `dioxus/mobile` is
 # `dioxus-desktop` with a mobile event loop, so no separate `launch` call.
 mobile = ["dioxus/mobile"]
+# WebView (wry) in a desktop window: the system's WebKitGTK / WebView2 / WKWebView
+# lays out the pages, next to Blitz's own engine under `native`. libero needs no
+# feature: its WebView backend is the default off wasm32. Selected by `just start-desktop`.
+desktop = ["dioxus/desktop"]
 # Every route in its own lazily fetched chunk. Release only, with `dx --wasm-split`:
 # the split wasm imports `__wasm_split.js`. Not in `build_release` until dx fixes
 # "Failed to find data symbol" (938).

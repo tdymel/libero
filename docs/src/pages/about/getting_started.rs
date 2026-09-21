@@ -73,6 +73,10 @@ const NATIVE_COMMANDS: &str = "dx serve --platform linux --renderer native
 dx build --platform linux --renderer native --profile native";
 
 // snippet: ignore - shell commands, not Rust
+const DESKTOP_COMMANDS: &str = "dx serve --platform desktop --renderer webview
+dx build --platform desktop --renderer webview --release";
+
+// snippet: ignore - shell commands, not Rust
 const ANDROID_COMMANDS: &str = "rustup target add aarch64-linux-android x86_64-linux-android
 export ANDROID_HOME=$HOME/Android/Sdk
 dx serve --platform android
@@ -88,6 +92,8 @@ enum Environment {
     Web,
     #[option(label = "Native (Blitz)")]
     Native,
+    #[option(label = "Desktop (WebView)")]
+    Desktop,
     Android,
 }
 
@@ -123,6 +129,7 @@ pub fn GettingStarted() -> Element {
                     panel: |environment: Environment| match environment {
                         Environment::Web => rsx! { WebPanel {} },
                         Environment::Native => rsx! { NativePanel {} },
+                        Environment::Desktop => rsx! { DesktopPanel {} },
                         Environment::Android => rsx! { AndroidPanel {} },
                     },
                 }
@@ -242,6 +249,36 @@ fn NativePanel() -> Element {
                     " on Arch). Without a GPU, dioxus-native's CPU renderer ("
                     Code { source: "vello-cpu-softbuffer" }
                     ") still draws."
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn DesktopPanel() -> Element {
+    rsx! {
+        Panel {
+            Alert { title: "Early",
+                Text {
+                    "Focus traps and tree keys do nothing in a WebView yet, as on Android."
+                }
+            }
+            Text {
+                "A window with the system WebView inside: WebKitGTK on Linux, WebView2 on Windows, WKWebView on macOS. "
+                "The pages look and behave like the web build. Turn on dioxus's "
+                Code { source: "desktop" }
+                " feature; libero needs no feature of its own."
+            }
+            CodeBlock { source: DESKTOP_COMMANDS, language: "shell" }
+            Text { "On Linux you need:" }
+            Checklist {
+                ListItem {
+                    "WebKitGTK 4.1, GTK 3 and xdo to build ("
+                    Code { source: "libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev" }
+                    " on Debian and Ubuntu, "
+                    Code { source: "webkit2gtk-4.1 xdotool" }
+                    " on Arch)."
                 }
             }
         }

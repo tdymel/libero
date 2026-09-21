@@ -21,9 +21,12 @@ and natively, and each renderer answers with what it has.
 | `color_scheme()` | The system's light or dark, its changes, and a stored choice. | Follow the system theme and remember what the reader picked. |
 | `clock()` | Today's date in the user's time zone. | Mark today in a calendar, start a date field on today. |
 
-The web and Blitz answer all of them. Android's WebView has no `keyboard()`,
-`scroll()`, `document()` or `color_scheme()` yet, and some element calls there
-are unsupported.
+The web and Blitz answer all of them. A WebView, on desktop or Android, answers
+them through the page's scripts, but some element calls there are unsupported.
+
+The renderer is a build-time choice, one dioxus feature each: `web`, `native`
+(Blitz), `desktop` (a WebView window) or `mobile` (Android's WebView). These
+docs build with each of them.
 
 ## Using them
 

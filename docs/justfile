@@ -9,6 +9,7 @@ dioxus_version := `awk '/^name = "dioxus"$/ { getline; gsub(/"/, "", $3); print 
 dioxus_rev := `awk '/^name = "dioxus"$/ { f = 1 } f && /^source = / { n = split($3, a, "#"); gsub(/"/, "", a[n]); print a[n]; exit }' ../Cargo.lock`
 
 import 'native.just'
+import 'desktop.just'
 import 'android.just'
 
 # Target dir `target/main`, so `cargo` picks it up too - not just these recipes.
