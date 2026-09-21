@@ -2,17 +2,12 @@ use dioxus::prelude::*;
 use libero::{
     components::{Box, Flex, Paper, Text},
     sx::sx,
-    theme::{Size, ThemeSet},
+    theme::Size,
 };
 
-use crate::exports::COMPONENTS;
-
-/// The library in four numbers, each computed where it can be.
+/// The library in four numbers, each a floor the tests below hold.
 #[component]
 pub fn Stats() -> Element {
-    let components = COMPONENTS.len().to_string();
-    let palettes = ThemeSet::CATALOGUE.len().to_string();
-
     rsx! {
         section { "aria-label": "Libero in numbers",
             Box {
@@ -26,17 +21,17 @@ pub fn Stats() -> Element {
                     .list_style("none")
                     .margin("0")
                     .padding("0"),
-                Stat { value: components, label: "components, from Button to ChronoPicker" }
-                Stat { value: palettes, label: "palettes, each light and dark" }
-                Stat { value: "2", label: "targets from one codebase: web and native" }
-                Stat { value: "AA", label: "WCAG 2.2, the accessibility target" }
+                Stat { value: "100+", title: "Components and Hooks" }
+                Stat { value: "20+", title: "ThemeSets" }
+                Stat { value: "4", title: "Platform Targets" }
+                Stat { value: "AA", title: "WCAG 2.2" }
             }
         }
     }
 }
 
 #[component]
-fn Stat(value: String, label: &'static str) -> Element {
+fn Stat(value: &'static str, title: &'static str) -> Element {
     rsx! {
         Paper {
             component: "li",
@@ -57,8 +52,24 @@ fn Stat(value: String, label: &'static str) -> Element {
                         .color("primary.7"),
                     "{value}"
                 }
-                Text { component: "span", size: "sm", "{label}" }
+                Text { component: "span", sx: sx().font_weight("700"), "{title}" }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::exports::COMPONENTS;
+    use libero::theme::ThemeSet;
+
+    #[test]
+    fn the_cards_claims_hold() {
+        assert!(COMPONENTS.len() >= 100, "{} components", COMPONENTS.len());
+        assert!(
+            ThemeSet::CATALOGUE.len() >= 20,
+            "{} themes",
+            ThemeSet::CATALOGUE.len()
+        );
     }
 }
