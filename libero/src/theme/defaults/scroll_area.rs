@@ -13,7 +13,7 @@ pub(crate) const SCROLL_AREA_KEYFRAMES: &str = concat!(
     "@keyframes lsx-scroll-area-pin-x{from{translate:0 0;}",
     "to{translate:var(--lsx-scroll-area-range-x) 0;}}",
     "@supports (animation-timeline:scroll()){",
-    "[data-scrollbars]{animation:lsx-scroll-area-pin-y linear both;",
+    "[data-scrollbars]:not([data-empty]){animation:lsx-scroll-area-pin-y linear both;",
     "animation-timeline:scroll(nearest block);}",
     "[data-scrollbars-x]{animation:lsx-scroll-area-pin-x linear both;",
     "animation-timeline:scroll(nearest inline);}}"

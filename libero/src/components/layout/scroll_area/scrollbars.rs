@@ -24,6 +24,8 @@ static DRAWN_BARS_SX: StaticSx = StaticSx::new(|| {
             .width("100%")
             .height("100%")
             .pointer_events("none")
+            // Only the tracks show: a visible layer over the rows hides their contrast from axe.
+            .with("visibility", "hidden")
     };
     // Above any row, inside the area's own stacking context.
     layer()
@@ -31,7 +33,9 @@ static DRAWN_BARS_SX: StaticSx = StaticSx::new(|| {
         .selector("& > [data-scrollbars-x]", layer())
         .selector(
             "& [data-scrollbar]",
-            sx().position("absolute").pointer_events("auto"),
+            sx().position("absolute")
+                .pointer_events("auto")
+                .with("visibility", "visible"),
         )
         .selector(
             "& [data-scrollbar=vertical]",
@@ -332,20 +336,22 @@ pub(super) fn ScrollAreaBars(
         .style(layer_style)
         .prepare()
         .element(&state.layer);
-    // Empty until a bar shows: its size is what the area measures.
-    let render = |tracks: Element| {
+    // Empty until a bar shows: its size is what the area measures. Empty, it
+    // runs no scroll animation, which would never settle.
+    let render = |tracks: Option<Element>| {
         layer
             .attr("data-scrollbars", true)
+            .attr("data-empty", tracks.is_none())
             .attr("aria-hidden", "true")
-            .render(HtmlTag::Div, Vec::new(), tracks)
+            .render(HtmlTag::Div, Vec::new(), tracks.unwrap_or_else(|| rsx! {}))
     };
 
     let Some(measured) = measured else {
-        return render(rsx! {});
+        return render(None);
     };
     let drawn = bars(scrollbars, measured, thick);
     if drawn.x.is_none() && drawn.y.is_none() {
-        return render(rsx! {});
+        return render(None);
     }
     // Under RTL the content moves right as it scrolls on: the layer follows left.
     let range_x = (measured.content_width - measured.view_width).max(0.0);
@@ -396,7 +402,7 @@ pub(super) fn ScrollAreaBars(
             }
         }
     };
-    render(tracks)
+    render(Some(tracks))
 }
 
 #[cfg(test)]
