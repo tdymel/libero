@@ -35,7 +35,7 @@ pub(crate) use dismiss::{
     use_escape_dismiss, use_field_list_layer, use_press_marker,
 };
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
-pub(crate) use drag::{sideways_drag_sx, use_sideways_drag};
+pub(crate) use drag::{sideways_drag_sx, use_drag_with, use_sideways_drag};
 pub use element::{ElementHandle, use_element};
 pub(crate) use element::{use_content_changes, use_form_owner, use_resize_fallback};
 pub use focus_return::{FocusReturn, use_focus_return};

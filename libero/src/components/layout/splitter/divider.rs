@@ -5,7 +5,7 @@ use crate::{
         common::{HtmlTag, Input, States},
         layout::use_box,
     },
-    hooks::{ElementHandle, drag_handle_sx},
+    hooks::{ElementHandle, drag_handle_sx, sideways_drag_sx},
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, CssVar, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
 };
@@ -36,7 +36,11 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
 // Invisible, and negatively inset past the bar into both panes, so the drag
 // target is larger than the visible line without the panes leaving a gap.
 static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
-    let base = sx().position("absolute").and(drag_handle_sx());
+    // A vertical swipe over a vertical divider scrolls the page (1039).
+    let base = sx()
+        .position("absolute")
+        .and(drag_handle_sx())
+        .when("vertical", sideways_drag_sx());
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         let inset = format!(

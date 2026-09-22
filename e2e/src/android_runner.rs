@@ -322,6 +322,9 @@ fn start_app(serial: &str) -> Result<String> {
     // `NoAvailableActivity` panic ([[codebase/platform/android-build]]).
     adb(serial, &["shell", "am", "force-stop", PACKAGE])?;
     std::thread::sleep(Duration::from_secs(1));
+    // Launched in touch mode (a fresh boot, an earlier tap), the WebView holds no
+    // view focus and drops key presses; a key to the launcher leaves it (1006).
+    adb(serial, &["shell", "input", "keyevent", "KEYCODE_DPAD_UP"])?;
     adb(serial, &["shell", "am", "start", "-W", "-n", ACTIVITY])?;
     let pid = adb(serial, &["shell", "pidof", PACKAGE])?;
     let pid = pid

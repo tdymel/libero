@@ -1,9 +1,9 @@
 //! `Splitter`: the divider keeps the keyboard after a mouse drag (431): `use_drag` cancels
 //! the pointerdown's focus, so it focuses the divider itself (439c).
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, ensure};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text, linger};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -88,6 +88,62 @@ e2e::scenario!(
     the_arrows_and_home_end_move_a_focused_divider,
     "/splitter",
     the_keys_move_it
+);
+
+const ROW: &str = "#row [role=separator]";
+const COLUMN: &str = "#column [role=separator]";
+
+/// Todo 1039, as the Slider's 1020: on Android a vertical swipe over a vertical
+/// divider scrolls the page; a mouse still grabs at once. A sideways drag moves
+/// it, a tap starts before it ends, and a horizontal divider still drags.
+async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (_, height) = d.viewport().await?;
+    d.drag(ROW, 0.0, -250.0).await?;
+    if d.platform() == Platform::Android {
+        let at = d.rect(ROW).await?;
+        ensure!(
+            at.y + at.height / 2.0 < height / 2.0 - 100.0,
+            "a swipe up over the divider did not scroll: its top at {}",
+            at.y
+        );
+        linger(d, 8).await;
+        ensure!(
+            d.text("#row-log").await?.is_empty(),
+            "a swipe over the divider grabbed it"
+        );
+    } else {
+        eventually_text(d, "#row-end", "50", "a vertical mouse drag").await?;
+    }
+
+    // Past `DoublePress`'s 500ms, or Blitz takes the second press as a double.
+    std::thread::sleep(std::time::Duration::from_millis(550));
+    d.drag(ROW, 40.0, 0.0).await?;
+    // `aria-valuenow` (the first divider's) truncates, `#row-end` rounds.
+    eventually(d, "a sideways drag to move it and end", async |d| {
+        let value = value(d).await?;
+        let ended: f64 = d.text("#row-end").await?.parse().unwrap_or_default();
+        Ok(value > 55.0 && (ended - value).abs() <= 1.0)
+    })
+    .await?;
+
+    let log = d.text("#row-log").await?;
+    d.click(ROW).await?;
+    eventually_text(d, "#row-log", &format!("{log}start end "), "a tap").await?;
+
+    d.drag(COLUMN, 0.0, 40.0).await?;
+    eventually(d, "a vertical drag on the horizontal divider", async |d| {
+        Ok(d.text("#column-end")
+            .await?
+            .parse::<f64>()
+            .is_ok_and(|v| v > 55.0))
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_vertical_swipe_over_a_vertical_divider_scrolls_the_page_and_a_sideways_drag_moves_it,
+    "/splitter/scroll",
+    a_swipe_scrolls
 );
 
 #[test]

@@ -14,7 +14,16 @@ async fn shown<D: Driver>(d: &mut D, selector: &str, open: bool, after: &str) ->
         "{selector} {} after {after}",
         if open { "open" } else { "closed" }
     );
-    eventually(d, &what, async |d| Ok(d.exists(selector).await? == open)).await
+    // Open means placed: a card still hidden takes no focus (1006, the WebView
+    // places it a round trip later).
+    eventually(d, &what, async |d| {
+        let exists = d.exists(selector).await?;
+        Ok(match open {
+            true => exists && d.style(selector, "visibility").await? == "visible",
+            false => !exists,
+        })
+    })
+    .await
 }
 
 async fn escape_on_the_trigger<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

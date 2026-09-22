@@ -10,7 +10,9 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_element, use_id, use_theme},
+    hooks::{
+        DragMove, DragOptions, DragStart, use_css, use_drag_with, use_element, use_id, use_theme,
+    },
     platform::{DoublePress, ElementApi},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, Size},
@@ -176,60 +178,73 @@ pub fn Splitter(props: SplitterProps) -> Element {
         notify(SplitterResizeEvent::End(new_a, 100.0 - new_a));
     };
 
-    let drag = use_drag(DragOptions {
-        capture: root,
-        onstart: use_callback(move |start: DragStart| {
-            let cancel = start.cancel;
-            // Unmeasured until the task below lands: `onmove` skips moves till then.
-            container_size.set(0.0);
-            toward_b.set(inline_sign(vertical && root.is_rtl()));
-            // Started here, awaited in the task: see `ElementApi::dimensions`.
-            let size = root.dimensions();
-            spawn(async move {
-                let Ok(dimensions) = size.await else {
-                    cancel.call(());
-                    return;
-                };
-                let size = if vertical {
-                    dimensions.width
-                } else {
-                    dimensions.height
-                };
-                if size <= 0.0 {
-                    cancel.call(());
+    // A touch tap ends before the measure lands: (measuring, released).
+    let mut starting = use_hook(|| CopyValue::new((false, false)));
+
+    // A touch on a vertical divider drags once it moves sideways (1039).
+    let drag = use_drag_with(
+        DragOptions {
+            capture: root,
+            onstart: use_callback(move |start: DragStart| {
+                let cancel = start.cancel;
+                // Unmeasured until the task below lands: `onmove` skips moves till then.
+                container_size.set(0.0);
+                starting.set((true, false));
+                toward_b.set(inline_sign(vertical && root.is_rtl()));
+                // Started here, awaited in the task: see `ElementApi::dimensions`.
+                let size = root.dimensions();
+                spawn(async move {
+                    let measured = size.await;
+                    let (_, released) = starting.replace((false, false));
+                    let size = match measured {
+                        Ok(dimensions) if vertical => dimensions.width,
+                        Ok(dimensions) => dimensions.height,
+                        Err(_) => 0.0,
+                    };
+                    if size <= 0.0 {
+                        cancel.call(());
+                        return;
+                    }
+
+                    // `use_drag` gives the divider focus back only on the web, where
+                    // it can see the press's target: this covers the other renderers.
+                    let _ = divider.focus();
+                    container_size.set(size);
+                    let from = bounded();
+                    start_a.set(from);
+                    notify(SplitterResizeEvent::Start(from, 100.0 - from));
+                    if released {
+                        notify(SplitterResizeEvent::End(from, 100.0 - from));
+                    }
+                });
+            }),
+            onmove: use_callback(move |event: DragMove| {
+                // A move before the measure would divide by 0 and write `NaN%`.
+                if container_size() <= 0.0 {
                     return;
                 }
-
-                // `use_drag` gives the divider focus back only on the web, where
-                // it can see the press's target: this covers the other renderers.
-                let _ = divider.focus();
-                container_size.set(size);
-                let from = bounded();
-                start_a.set(from);
-                notify(SplitterResizeEvent::Start(from, 100.0 - from));
-            });
-        }),
-        onmove: use_callback(move |event: DragMove| {
-            // A move before the measure would divide by 0 and write `NaN%`.
-            if container_size() <= 0.0 {
-                return;
-            }
-            let delta = event.delta();
-            let pixels = if vertical {
-                delta.x * toward_b()
-            } else {
-                delta.y
-            };
-            let delta_pct = pixels / container_size() * 100.0;
-            let new_a = (start_a() + delta_pct).clamp(min_size, 100.0 - min_size);
-            a.set(new_a);
-            notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
-        }),
-        onend: use_callback(move |()| {
-            let to = bounded();
-            notify(SplitterResizeEvent::End(to, 100.0 - to));
-        }),
-    });
+                let delta = event.delta();
+                let pixels = if vertical {
+                    delta.x * toward_b()
+                } else {
+                    delta.y
+                };
+                let delta_pct = pixels / container_size() * 100.0;
+                let new_a = (start_a() + delta_pct).clamp(min_size, 100.0 - min_size);
+                a.set(new_a);
+                notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
+            }),
+            onend: use_callback(move |()| {
+                if starting.peek().0 {
+                    starting.set((true, true));
+                    return;
+                }
+                let to = bounded();
+                notify(SplitterResizeEvent::End(to, 100.0 - to));
+            }),
+        },
+        vertical,
+    );
 
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
         // Alt+ArrowLeft is Back: a chord is the browser's, not a step.

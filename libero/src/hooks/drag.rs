@@ -133,7 +133,9 @@ pub(crate) fn sideways_drag_sx() -> Sx {
     sx().touch_action("pan-y")
 }
 
-fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
+/// [`use_sideways_drag`] while `sideways`, else [`use_drag`]: for a control
+/// whose axis can change between renders.
+pub(crate) fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
     let DragOptions {
         capture,
         onstart,
