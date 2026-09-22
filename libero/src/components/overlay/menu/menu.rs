@@ -394,7 +394,13 @@ impl Level {
         }
     }
 
-    fn choose(self, index: usize, onselect: Option<Callback<()>>, submenu: bool) {
+    fn choose(
+        self,
+        index: usize,
+        onselect: Option<Callback<()>>,
+        submenu: bool,
+        close: Option<bool>,
+    ) {
         if submenu {
             self.enter_submenu(index);
             return;
@@ -402,7 +408,7 @@ impl Level {
         if let Some(onselect) = onselect {
             onselect.call(());
         }
-        if self.close_on_select {
+        if close.unwrap_or(self.close_on_select) {
             self.close_all.call(true);
         }
     }
@@ -959,6 +965,7 @@ fn menu_item(
     let check = item.check;
     let disabled = item.disabled;
     let onselect = item.onselect_callback();
+    let close_on_select = item.close_on_select;
     let item_id = format!("{level_id}-item-{index}");
     let child_id = format!("{level_id}-{index}");
     let is_expanded = has_submenu && *expanded == Some(index);
@@ -998,7 +1005,7 @@ fn menu_item(
                 return;
             }
             hover.cancel();
-            level.choose(index, onselect, has_submenu);
+            level.choose(index, onselect, has_submenu, close_on_select);
         }
     };
 

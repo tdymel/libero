@@ -43,6 +43,10 @@ let items = vec![
     MenuEntry::Separator,
     MenuItem::new("Save").onselect(pick("Save")).into(),
     MenuItem::new("Save as").onselect(pick("Save as")).into(),
+    MenuItem::new("Zoom in")
+        .keep_open()
+        .onselect(pick("Zoom in"))
+        .into(),
     MenuItem::new("Share")
         .submenu(vec![
             MenuItem::new("Copy link").onselect(pick("Copy link")).into(),
@@ -159,6 +163,10 @@ fn MenuDemo(
         MenuEntry::Separator,
         MenuItem::new("Save").onselect(pick("Save")).into(),
         MenuItem::new("Save as").onselect(pick("Save as")).into(),
+        MenuItem::new("Zoom in")
+            .keep_open()
+            .onselect(pick("Zoom in"))
+            .into(),
         MenuItem::new("Share")
             .submenu(vec![
                 MenuItem::new("Copy link")
@@ -261,6 +269,8 @@ pub fn MenuPage() -> Element {
                         .doc("Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins."),
                     prop("href", "String")
                         .doc("Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`."),
+                    prop("keep_open", "()")
+                        .doc("Choosing the item leaves the menu open, and focus stays on it, whatever the menu's `close_on_select` says. `close_on_select(bool)` overrides it either way."),
                     prop("leading", "Element")
                         .doc("Before the label, such as an icon. Nothing interactive, since it sits inside the item's button."),
                     prop("trailing", "Element")

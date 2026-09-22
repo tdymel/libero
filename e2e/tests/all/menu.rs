@@ -567,3 +567,52 @@ fn a_lone_toggle_lines_up_and_a_disabled_shortcut_dims() {
         outcome.unwrap();
     });
 }
+
+/// Todo 1080: a keep-open item stays open on click and Enter with focus on it; others close.
+#[test]
+fn a_keep_open_item_leaves_the_menu_open() {
+    const ZOOM: &str = "[role=menu] [data-menu-index=\"0\"]";
+    block_on(async {
+        let fixture = Fixture::open("/menu-keep-open", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_visible(page, MENU).await?;
+            pointer::click(page, ZOOM).await?;
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.querySelector('#count').textContent === '1' \
+                     && document.querySelector('{MENU}') !== null \
+                     && document.activeElement === document.querySelector('{ZOOM}')"
+                ),
+                "one click counted, menu open, focus on the item",
+            )
+            .await?;
+            keyboard::press(page, keyboard::ENTER).await?;
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.querySelector('#count').textContent === '2' \
+                     && document.activeElement === document.querySelector('{ZOOM}')"
+                ),
+                "Enter counted, menu still open",
+            )
+            .await?;
+            keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            keyboard::press(page, keyboard::ENTER).await?;
+            wait::for_js_true(
+                page,
+                &format!("document.querySelector('{MENU}') === null"),
+                "a plain item closes the menu",
+            )
+            .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}

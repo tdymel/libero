@@ -11,7 +11,31 @@ pub const ROUTES: Routes = &[
     ("/menu-submenu-reopen", || rsx! { MenuSubmenuReopenPage {} }),
     ("/menu-choices", || rsx! { MenuChoicesPage {} }),
     ("/menu-row", || rsx! { MenuRowPage {} }),
+    ("/menu-keep-open", || rsx! { MenuKeepOpenPage {} }),
 ];
+
+/// One item that keeps the menu open, one that closes it.
+#[component]
+fn MenuKeepOpenPage() -> Element {
+    let menu = use_menu();
+    let mut count = use_signal(|| 0);
+    let items = vec![
+        MenuItem::new("Zoom in")
+            .keep_open()
+            .onselect(move |_| count += 1)
+            .into(),
+        MenuItem::new("Save").onselect(|_| {}).into(),
+    ];
+
+    rsx! {
+        p { id: "count", "{count}" }
+        Menu {
+            state: menu,
+            items,
+            Button { variant: "outlined", attributes: menu.a11y_attributes(), "View" }
+        }
+    }
+}
 
 /// Radio items with one checked, a toggle with a shortcut, a label longer than
 /// a phone is wide, and a disabled item with a shortcut.

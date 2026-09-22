@@ -58,6 +58,7 @@ pub struct MenuItem {
     pub(super) check: Option<Check>,
     pub(super) shortcut: Option<String>,
     pub(super) disabled: bool,
+    pub(super) close_on_select: Option<bool>,
 }
 
 /// A checkable item's kind and state: one choice of several, or a toggle.
@@ -99,6 +100,7 @@ impl MenuItem {
             check: None,
             shortcut: None,
             disabled: false,
+            close_on_select: None,
         }
     }
 
@@ -185,6 +187,18 @@ impl MenuItem {
     /// Stays in the arrow-key order but cannot be chosen; typeahead skips it.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Choosing this item leaves the menu open, whatever the menu's
+    /// `close_on_select` says. Focus stays on the item.
+    pub fn keep_open(self) -> Self {
+        self.close_on_select(false)
+    }
+
+    /// Overrides the menu's `close_on_select` for this item, either way.
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = Some(close);
         self
     }
 

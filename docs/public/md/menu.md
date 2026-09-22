@@ -45,6 +45,7 @@ fn Demo() -> Element {
             .onselect(move |_| hidden.toggle())
             .into(),
         MenuItem::new("Save").onselect(pick("Save")).into(),
+        MenuItem::new("Zoom in").keep_open().onselect(pick("Zoom in")).into(),
         MenuItem::new("Share")
             .submenu(vec![MenuItem::new("Email").onselect(pick("Email")).into()])
             .into(),
@@ -120,6 +121,7 @@ Like every component, `Menu` also takes the shared props `sx`, `class`,
 | `onselect` | `FnMut(())` | - | Runs when the item is chosen by a click, Enter or Space. |
 | `submenu` | `Vec<MenuEntry>` | - | Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins. |
 | `href` | `String` | - | Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`. |
+| `keep_open` | `()` | - | Choosing the item leaves the menu open, and focus stays on it, whatever the menu's `close_on_select` says. `close_on_select(bool)` overrides it either way. |
 | `leading` | `Element` | - | Before the label, such as an icon. Nothing interactive, since it sits inside the item's button. |
 | `trailing` | `Element` | - | At the far end, such as a badge. It joins the accessible name. Nothing interactive. |
 | `shortcut` | `&str` | - | The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`"Control+X"`). Drawn as a hint ("Ctrl+X") and kept out of the name. `Control`, `Shift`, `Alt` and `Meta` are drawn in the localization's `menu` words ("Strg+Umschalt+S" in German). You bind the key yourself. |
