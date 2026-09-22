@@ -307,7 +307,8 @@ fn AppShell() -> Element {
     let burger = use_element();
     let content = use_element();
     // The home page is full width: the nav is a drawer at every width there.
-    let home = use_route::<Route>() == Route::Home {};
+    let route = use_route::<Route>();
+    let home = route == Route::Home {};
     // The docs search: every page, Ctrl/Cmd+K from anywhere.
     let pages = use_hook(nav::page_actions);
     let search = use_spotlight(SpotlightOptions {
@@ -319,8 +320,15 @@ fn AppShell() -> Element {
         ..Default::default()
     });
     let area = use_scroll_area();
-    heading_focus::use_scroll_reset(use_route::<Route>(), area);
-    heading_focus::use_heading_focus(use_route::<Route>(), content);
+    heading_focus::use_scroll_reset(route.clone(), area);
+    heading_focus::use_heading_focus(route.clone(), content);
+    // Any route change closes the drawer (search, pager, TLDR, body link, back); focus stays put.
+    use_effect(use_reactive!(|route| {
+        let _ = route;
+        if *open.peek() {
+            open.set(false);
+        }
+    }));
 
     rsx! {
         Flex {

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Box, Flex, Paper, Text, Title, VisuallyHidden},
     sx::sx,
-    theme::Size,
+    theme::{Gradient, Size},
 };
 
 /// The library in four numbers, each a floor the tests below hold.
@@ -41,7 +41,7 @@ fn Stat(value: &'static str, title: &'static str) -> Element {
     rsx! {
         Paper {
             component: "li",
-            bordered: true,
+            gradient: Gradient::default(),
             shadow: "xs",
             sx: sx()
                 .flex("1 1 calc(50% - 8px)")
@@ -54,8 +54,7 @@ fn Stat(value: &'static str, title: &'static str) -> Element {
                     sx: sx()
                         .font_size("2.25rem")
                         .font_weight("800")
-                        .line_height("1")
-                        .color("primary.7"),
+                        .line_height("1"),
                     "{value}"
                 }
                 Text { component: "span", sx: sx().font_weight("700"), "{title}" }

@@ -76,7 +76,7 @@ fn Battery(title: &'static str, icon: Element, children: Element) -> Element {
                 .breakpoint(Size::Sm, sx().flex("1 1 calc(50% - 8px)")),
             Flex { direction: "column", gap: "md",
                 Flex { direction: "row", gap: "md", align: "center",
-                    Icon { variant: "tonal", color: "primary", size: "lg", radius: "md", {icon} }
+                    Icon { variant: "gradient", size: "lg", radius: "md", {icon} }
                     Title {
                         size: "md",
                         component: "h3",

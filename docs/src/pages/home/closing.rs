@@ -1,11 +1,11 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Button, CodeBlock, Divider, Flex, Text, Title},
+    components::{Anchor, Button, CodeBlock, Divider, Flex, Paper, Text, Title},
     sx::sx,
-    theme::{ColorCss, ColorShade},
+    theme::Gradient,
 };
 
-use super::{cta_row_sx, tint};
+use super::cta_row_sx;
 use crate::{GITHUB, Route};
 
 /// The way in once more, and the page's footer line.
@@ -13,24 +13,19 @@ use crate::{GITHUB, Route};
 pub fn Closing() -> Element {
     rsx! {
         section { "aria-labelledby": "closing-title",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                align: "center",
-                sx: sx()
-                    .padding("48px 24px")
-                    .border_radius("xl")
-                    .text_align("center")
-                    .background(format!(
-                        "linear-gradient(135deg, {} 0%, {} 100%)",
-                        tint(22),
-                        tint(6),
-                    )),
-                Title {
-                    size: "xxl",
-                    component: "h2",
-                    id: "closing-title",
-                    span { color: ColorCss::PRIMARY.role_value("text-", ColorShade::S6), "The ball is in your hands" }
+            Flex { direction: "column", gap: "lg", align: "center",
+                // The install line sits outside the gradient: its code colours are not measured against it.
+                Paper {
+                    gradient: Gradient::default(),
+                    radius: "xl",
+                    sx: sx().width("100%").padding("48px 24px").text_align("center"),
+                    Flex { direction: "column", gap: "lg", align: "center",
+                        Title { size: "xxl", component: "h2", id: "closing-title", "The ball is in your hands" }
+                        Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center", sx: cta_row_sx(),
+                            Button { to: Route::GettingStarted {}, size: "lg", color: "surface", "Get started" }
+                            Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "currentColor", "Browse components" }
+                        }
+                    }
                 }
                 CodeBlock {
                     // copy: install
@@ -41,11 +36,6 @@ pub fn Closing() -> Element {
                     line_numbers: false,
                     // copy: end
                     sx: sx().width("100%").max_width("320px").text_align("start"),
-                }
-                Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center", sx: cta_row_sx(),
-                    Button { to: Route::GettingStarted {}, size: "lg", "Get started" }
-                    // Text role 8: role 6 misses 4.5:1 on the tint (899).
-                    Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "primary.8", "Browse components" }
                 }
             }
         }
