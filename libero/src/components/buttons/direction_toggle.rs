@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{HtmlTag, Input, TextDirectionIcon, Variant, base_props},
+        common::{HtmlTag, Input, TextDirectionIcon, Variant, base_props, use_button_group},
         layout::use_box,
     },
     hooks::{use_direction, use_localization, use_theme},
@@ -59,16 +59,23 @@ pub fn DirectionToggle(props: DirectionToggleProps) -> Element {
         }
         .to_string(),
     };
+    let group = use_button_group();
     // Unset, `Button`'s `sm`: a toolbar control, not a page action (1069).
     let size = props
         .size
         .clone()
         .into_option()
+        .or(group.size.map(ThemeAwareValue::Size))
         .unwrap_or(ThemeAwareValue::Size(crate::theme::Size::Sm));
-    let variant = Input::Value(props.variant.copied_or(theme.direction_toggle.variant));
+    let variant = Input::Value(
+        props
+            .variant
+            .copied_or(group.variant.unwrap_or(theme.direction_toggle.variant)),
+    );
     let color = props
         .color
         .into_option()
+        .or(group.color)
         .unwrap_or_else(|| theme.direction_toggle.color.into());
     let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
         HtmlTag::Span,

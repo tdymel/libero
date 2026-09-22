@@ -1,5 +1,6 @@
 mod action_icon;
 mod button;
+mod button_group;
 mod copy_button;
 mod direction_toggle;
 mod repo_button;
@@ -9,6 +10,7 @@ mod tldr;
 pub use action_icon::{ActionIcon, ActionIconProps};
 pub(crate) use button::button_variables;
 pub use button::{Button, ButtonProps};
+pub use button_group::{ButtonGroup, ButtonGroupProps};
 pub use copy_button::{CopyButton, CopyButtonProps};
 pub use direction_toggle::{DirectionToggle, DirectionToggleProps};
 pub use repo_button::{RepoButton, RepoButtonProps, RepoHost};

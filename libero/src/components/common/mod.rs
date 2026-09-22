@@ -1,4 +1,5 @@
 mod base_props;
+mod button_group_context;
 mod closing_focus;
 mod color_variant;
 mod combobox_aria;
@@ -24,6 +25,9 @@ pub use crate::sx::class_list::{ClassList, class_list};
 pub use crate::sx::input::Input;
 pub(crate) use crate::sx::input::input_from_str;
 pub(crate) use base_props::base_props;
+pub(crate) use button_group_context::{
+    ButtonGroupContext, use_button_group, use_provide_button_group,
+};
 pub(crate) use closing_focus::use_closing_focus;
 pub(crate) use color_variant::{
     base_color, contrast_color, contrast_shade_color, fill_color, hover_color,

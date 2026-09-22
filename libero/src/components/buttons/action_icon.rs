@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
+        common::{ButtonGroupContext, use_button_group},
         common::{HtmlTag, Input, States, Variables, Variant, base_props, variables},
         common::{
             VariantVars, base_color, borderless_on_state_sx, contrast_color, disabled_look_sx,
@@ -179,6 +180,20 @@ fn action_icon_variables(
         )
 }
 
+/// The enclosing `ButtonGroup`'s defaults, where the caller left a prop unset.
+fn fill_from_group(props: &mut ActionIconProps, group: ButtonGroupContext) {
+    fn fill<T>(prop: &mut Input<T>, group: Option<T>) {
+        if let (Input::None, Some(value)) = (&*prop, group) {
+            *prop = Input::Value(value);
+        }
+    }
+    fill(&mut props.size, group.size.map(ThemeAwareValue::Size));
+    fill(&mut props.radius, group.radius.map(ThemeAwareValue::Size));
+    fill(&mut props.variant, group.variant);
+    fill(&mut props.color, group.color);
+    props.disabled = props.disabled.or(group.disabled);
+}
+
 base_props! {
     pub struct ActionIconProps {
         #[props(default, into)]
@@ -234,7 +249,9 @@ base_props! {
 ///
 /// Docs: <https://libero-ui.dev/buttons/action-icon>
 #[component]
-pub fn ActionIcon(props: ActionIconProps) -> Element {
+pub fn ActionIcon(mut props: ActionIconProps) -> Element {
+    let group = use_button_group();
+    fill_from_group(&mut props, group);
     let disabled = props.disabled.unwrap_or(false);
     let selectable = props.selected.is_some();
     let selected = props.selected.unwrap_or(false);

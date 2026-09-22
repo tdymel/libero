@@ -5,7 +5,7 @@ use crate::{
         buttons::ActionIcon,
         common::{
             ChevronDownIcon, HtmlTag, Input, MoonIcon, SunIcon, SystemSchemeIcon, Variant,
-            base_props,
+            base_props, use_button_group,
         },
         layout::use_box,
         overlay::{Menu, MenuEntry, MenuItem, use_menu},
@@ -97,17 +97,25 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
         }
         .to_string(),
     };
+    let group = use_button_group();
     // Unset, `Button`'s `sm`: a toolbar control, not a page action (1069).
     let size = props
         .size
         .clone()
         .into_option()
+        .or(group.size.map(ThemeAwareValue::Size))
         .unwrap_or(ThemeAwareValue::Size(crate::theme::Size::Sm));
-    let variant = Input::Value(props.variant.copied_or(theme.theme_toggle.variant));
+    let variant = Input::Value(
+        props
+            .variant
+            .copied_or(group.variant.unwrap_or(theme.theme_toggle.variant)),
+    );
     let color = props
         .color
         .into_option()
+        .or(group.color)
         .unwrap_or_else(|| theme.theme_toggle.color.into());
+    let disabled = props.disabled.or(group.disabled);
 
     let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
         HtmlTag::Span,
@@ -186,7 +194,7 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
                 state: menu,
                 items,
                 align: Align::End,
-                disabled: props.disabled.unwrap_or(false),
+                disabled: disabled.unwrap_or(false),
                 ActionIcon {
                     aria_label: labels.picker,
                     variant,

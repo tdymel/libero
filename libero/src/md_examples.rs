@@ -46,6 +46,7 @@ md_pages! {
     Box => "box",
     Burger => "burger",
     Button => "button",
+    ButtonGroup => "button_group",
     Carousel => "carousel",
     Cascader => "cascader",
     Center => "center",

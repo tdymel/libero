@@ -9,6 +9,7 @@ mod avatar;
 mod badge;
 mod boundary;
 mod button;
+mod button_group;
 mod calendar;
 mod carousel;
 mod cascader;

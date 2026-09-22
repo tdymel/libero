@@ -3,7 +3,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{GitHubIcon, GitLabIcon, HtmlTag, Input, States, Variant, base_props},
+        common::{
+            GitHubIcon, GitLabIcon, HtmlTag, Input, States, Variant, base_props, use_button_group,
+        },
         layout::use_box,
     },
     hooks::{use_cache, use_formats, use_localization, use_theme},
@@ -197,16 +199,21 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
         ),
         (None, None) => format!("{subject} {new_tab}"),
     };
+    let group = use_button_group();
     // Unset, `Button`'s `sm`: a toolbar control, not a page action (1069).
     let size = props
         .size
         .clone()
         .into_option()
+        .or(group.size.map(ThemeAwareValue::Size))
         .unwrap_or(ThemeAwareValue::Size(crate::theme::Size::Sm));
-    let variant = props.variant.copied_or(theme.repo_button.variant);
+    let variant = props
+        .variant
+        .copied_or(group.variant.unwrap_or(theme.repo_button.variant));
     let color = props
         .color
         .into_option()
+        .or(group.color)
         .unwrap_or_else(|| theme.repo_button.color.into());
     // An unfilled label may miss 4.5:1 (`warning` is 3.27:1).
     let ink = match variant {

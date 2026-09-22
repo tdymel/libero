@@ -6,9 +6,9 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, Box, Burger, Button, Container, DirectionToggle, Flex, Header, Icon,
-        Kbd, Notifications, RepoButton, ScrollArea, SpotlightOptions, ThemeToggle, Title,
-        spotlight_filter, use_scroll_area, use_spotlight,
+        ActionIcon, Anchor, Box, Burger, Button, ButtonGroup, Container, DirectionToggle, Flex,
+        Header, Icon, Kbd, Notifications, RepoButton, ScrollArea, SpotlightOptions, ThemeToggle,
+        Title, spotlight_filter, use_scroll_area, use_spotlight,
     },
     hooks::use_element,
     localization::Formats,
@@ -96,6 +96,8 @@ pub(crate) enum Route {
     ActionIconPage {},
     #[route("/buttons/button")]
     ButtonPage {},
+    #[route("/buttons/button-group")]
+    ButtonGroupPage {},
     #[route("/buttons/copy-button")]
     CopyButtonPage {},
     #[route("/buttons/direction-toggle")]
@@ -484,11 +486,15 @@ fn AppShell() -> Element {
                         "Ctrl K"
                     }
                 }
-                RepoButton { repo: REPO, size: "sm" }
-                // Lets a reviewer check any component right to left.
-                DirectionToggle { size: "sm" }
-                // In the header, so any page can be checked in every scheme and palette.
-                ThemeToggle { size: "sm", themes: ThemeSet::CATALOGUE }
+                // One joined control. The phone search stays out: hidden from `Sm` up, it
+                // would still be the group's first child and square off the next one's corners.
+                ButtonGroup { "aria-label": "Site", size: "sm",
+                    RepoButton { repo: REPO }
+                    // Lets a reviewer check any component right to left.
+                    DirectionToggle {}
+                    // In the header, so any page can be checked in every scheme and palette.
+                    ThemeToggle { themes: ThemeSet::CATALOGUE }
+                }
             }
             // The row never scrolls: the nav scrolls itself, and `ScrollArea` (not
             // `Container`) fills the rest and scrolls the page.

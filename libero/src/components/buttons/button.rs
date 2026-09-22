@@ -7,7 +7,8 @@ use crate::{
             BUTTON_HOVER_VAR, BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR,
             BUTTON_VARS, HtmlTag, Input, States, Variant, base_color, base_props, contrast_color,
             disabled_look_sx, fill_color, focus_ring_sx, input_from_str, interactive_variant_sx,
-            literal_contrast, text_color, variables, variant_colors, variant_selected_sx,
+            literal_contrast, text_color, use_button_group, variables, variant_colors,
+            variant_selected_sx,
         },
         feedback::Loader,
         layout::{render_anchor, use_box},
@@ -217,9 +218,13 @@ base_props! {
 #[component]
 pub fn Button(props: ButtonProps) -> Element {
     let theme = use_theme();
-    let variant = props.variant.copied_or(theme.button.variant);
-    let color = base_color(props.color.as_ref());
-    let disabled = props.disabled.unwrap_or(false);
+    let group = use_button_group();
+    let variant = props
+        .variant
+        .copied_or(group.variant.unwrap_or(theme.button.variant));
+    let color_prop = props.color.as_ref().or(group.color.as_ref());
+    let color = base_color(color_prop);
+    let disabled = props.disabled.or(group.disabled).unwrap_or(false);
     let full_width = props.full_width.unwrap_or(false);
     let selectable = props.selected.is_some();
     let selected = props.selected.unwrap_or(false);
@@ -239,8 +244,12 @@ pub fn Button(props: ButtonProps) -> Element {
 
     let ripple = use_ripple();
 
-    let size = props.size.copied_or(theme.button.size);
-    let radius = props.radius.copied_or(theme.button.radius);
+    let size = props
+        .size
+        .copied_or(group.size.unwrap_or(theme.button.size));
+    let radius = props
+        .radius
+        .copied_or(group.radius.unwrap_or(theme.button.radius));
 
     let showing = ripple.showing();
     // ~790 ns uncached, and the key rarely changes between renders.
@@ -250,7 +259,7 @@ pub fn Button(props: ButtonProps) -> Element {
     );
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
-        props.color.as_ref(),
+        color_prop,
         variant == Variant::Gradient,
         false,
     );

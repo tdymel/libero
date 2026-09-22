@@ -25,6 +25,7 @@ mod blockquote;
 mod r#box;
 mod burger;
 mod button;
+mod button_group;
 mod carousel;
 mod cascader;
 mod checkbox_card;

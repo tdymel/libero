@@ -308,6 +308,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             vec![
                 page(Route::ButtonPage {}, "Button"),
                 page(Route::ActionIconPage {}, "ActionIcon"),
+                page(Route::ButtonGroupPage {}, "ButtonGroup"),
                 page(Route::CopyButtonPage {}, "CopyButton"),
                 page(Route::DirectionTogglePage {}, "DirectionToggle"),
                 page(Route::RepoButtonPage {}, "RepoButton"),

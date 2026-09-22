@@ -1,0 +1,48 @@
+//! `ButtonGroup`: bordered and borderless rows, a column, wrapped items, RTL.
+
+use dioxus::prelude::*;
+use libero::components::{ActionIcon, Button, ButtonGroup, DirectionToggle, Flex, ThemeToggle};
+use libero::theme::ThemeSet;
+
+use crate::Routes;
+
+pub const ROUTES: Routes = &[
+    ("/button-group", || rsx! { ButtonGroupPage {} }),
+    ("/button-group/rtl", || {
+        rsx! {
+            div { dir: "rtl", ButtonGroupPage {} }
+        }
+    }),
+];
+
+#[component]
+fn ButtonGroupPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", align: "start",
+            ButtonGroup { id: "outlined", "aria-label": "Outlined", variant: "outlined", radius: "lg",
+                Button { id: "o1", "One" }
+                Button { id: "o2", "Two" }
+                ActionIcon { id: "o3", aria_label: "Three", "3" }
+            }
+            ButtonGroup { id: "filled", "aria-label": "Filled", variant: "filled",
+                Button { id: "f1", "One" }
+                Button { id: "f2", "Two" }
+            }
+            // A `display: contents` wrapper, as `RepoButton`'s, and `ThemeToggle`'s own pair.
+            ButtonGroup { id: "mixed", "aria-label": "Mixed", size: "sm",
+                span { display: "contents", Button { id: "m1", "Wrapped" } }
+                DirectionToggle { id: "m2" }
+                ThemeToggle { id: "m3", themes: ThemeSet::CATALOGUE }
+            }
+            ButtonGroup { id: "disabled", "aria-label": "Disabled", variant: "outlined", disabled: true,
+                Button { id: "d1", "Off" }
+                Button { id: "d2", disabled: false, "On" }
+            }
+            ButtonGroup { id: "vertical", "aria-label": "Vertical", variant: "outlined", orientation: "vertical",
+                Button { id: "v1", "Top" }
+                Button { id: "v2", "Middle" }
+                Button { id: "v3", "Bottom" }
+            }
+        }
+    }
+}

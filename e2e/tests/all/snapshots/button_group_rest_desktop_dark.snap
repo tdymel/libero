@@ -1,0 +1,37 @@
+---
+source: e2e/src/suite.rs
+assertion_line: 510
+description: "button_group at desktop (rest, dark)"
+expression: tree
+---
+group "Outlined"
+  button "One"
+    StaticText "One"
+  button "Two"
+    StaticText "Two"
+  button "Three"
+    StaticText "3"
+group "Filled"
+  button "One"
+    StaticText "One"
+  button "Two"
+    StaticText "Two"
+group "Mixed"
+  button "Wrapped"
+    StaticText "Wrapped"
+  button "Switch to right-to-left text"
+  group "Theme"
+    button "Switch to the light theme"
+    button "Choose a theme" [expanded=false] [haspopup=menu]
+group "Disabled"
+  button "Off" [disabled]
+    StaticText "Off"
+  button "On"
+    StaticText "On"
+group "Vertical"
+  button "Top"
+    StaticText "Top"
+  button "Middle"
+    StaticText "Middle"
+  button "Bottom"
+    StaticText "Bottom"

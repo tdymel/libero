@@ -13,6 +13,7 @@ mod autocomplete;
 mod avatar;
 mod badge;
 mod button;
+mod button_group;
 mod calendar;
 mod carousel;
 mod cascader;
@@ -121,6 +122,7 @@ const FIXTURES: &[Routes] = &[
     avatar::ROUTES,
     badge::ROUTES,
     button::ROUTES,
+    button_group::ROUTES,
     calendar::ROUTES,
     carousel::ROUTES,
     cascader::ROUTES,
