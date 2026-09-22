@@ -31,6 +31,8 @@ mod web;
 mod webview;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::clipboard as webview_clipboard;
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+pub(crate) use webview::file_dialog as webview_file_dialog;
 
 /// What HTML counts as interactive content, plus anything a caller made
 /// focusable. A label does not forward a click on any of these.

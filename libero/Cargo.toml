@@ -51,6 +51,9 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Event
 # 2026-09-19, todo 36a).
 dioxus-html = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["serialize"] }
 regex = "1"
+# Only to name `NativeFileData::byte_stream`'s return type for a picked file.
+# Already in dioxus's tree.
+futures-core = "0.3"
 # `Local`, for today off the web: the system time zone via `iana-time-zone`.
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 # Blitz's `NodeHandle`, which is what a `MountedData` downcasts to under
@@ -76,8 +79,6 @@ arboard = { version = "3.6", optional = true, default-features = false }
 # The file dialog Blitz does not open for `input[type=file]`. The portal
 # backend only, as blitz-shell's copy in the lock, so no second copy.
 rfd = { version = "0.17", optional = true, default-features = false, features = ["xdg-portal"] }
-# Only to name `NativeFileData::byte_stream`'s return type for a picked file.
-futures-core = { version = "0.3", optional = true }
 # Turns Blitz's callback-style fetch into a future. Already in dioxus's tree.
 futures-channel = { version = "0.3", optional = true }
 
@@ -99,7 +100,7 @@ archunit = "0.0.1"
 # Reach elements through Blitz directly when running under `dioxus-native`.
 # Nothing forces it on: without it `platform::backend` falls back to dioxus's
 # portable mounted handle, which cannot query a subtree or report focus.
-native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cursor-icon", "dep:style", "dep:arboard", "dep:rfd", "dep:futures-core", "dep:futures-channel", "dep:dbus"]
+native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cursor-icon", "dep:style", "dep:arboard", "dep:rfd", "dep:futures-channel", "dep:dbus"]
 default = [
     "code-lang-rust",
     "code-lang-bash",

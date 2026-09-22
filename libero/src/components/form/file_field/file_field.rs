@@ -384,10 +384,12 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     // The input's own picker, or the system dialog where the input opens none.
     let accept = props.accept.clone().unwrap_or_default();
+    let capture = props.capture.clone();
     let open = use_callback(move |()| {
         platform::pick_files(
             &accept,
             multiple,
+            capture.as_deref(),
             || {
                 let _ = input_element.click();
             },

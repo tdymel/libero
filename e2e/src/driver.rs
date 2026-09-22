@@ -89,6 +89,12 @@ pub trait Driver {
     async fn focused_id(&mut self) -> Result<String>;
     /// What focus is on, for a failure message.
     async fn focus_owner(&mut self) -> Result<String>;
+    /// Presses `trigger`, then answers the file chooser it opens with `files`,
+    /// each a name and its text.
+    async fn choose_files(&mut self, trigger: &str, files: &[(&str, &str)]) -> Result<()> {
+        let _ = (trigger, files);
+        bail!("{:?}: no file chooser to answer", self.platform())
+    }
     /// Whether a soft keyboard is up; `false` where there is none.
     async fn soft_keyboard_shown(&mut self) -> Result<bool> {
         Ok(false)
@@ -394,6 +400,48 @@ mod web {
         fn budget(&self) -> Duration {
             crate::wait::timeout()
         }
+
+        /// CDP intercepts the chooser and names the input it opened for.
+        async fn choose_files(&mut self, trigger: &str, files: &[(&str, &str)]) -> Result<()> {
+            use anyhow::Context;
+            use chromiumoxide::cdp::browser_protocol::dom::SetFileInputFilesParams;
+            use chromiumoxide::cdp::browser_protocol::page::{
+                EventFileChooserOpened, SetInterceptFileChooserDialogParams,
+            };
+            use futures::StreamExt;
+
+            let dir = std::env::temp_dir().join(format!("e2e-chooser-{}", std::process::id()));
+            std::fs::create_dir_all(&dir)?;
+            let mut paths = Vec::new();
+            for (name, text) in files {
+                let path = dir.join(name);
+                std::fs::write(&path, text)?;
+                paths.push(path.to_string_lossy().into_owned());
+            }
+            let page = &self.fixture.page;
+            let mut opened = page.event_listener::<EventFileChooserOpened>().await?;
+            page.execute(SetInterceptFileChooserDialogParams::new(true))
+                .await?;
+            pointer::click(page, trigger).await?;
+            let event = tokio::time::timeout(crate::wait::timeout(), opened.next())
+                .await
+                .context("no file chooser opened")?
+                .context("the chooser events ended")?;
+            let input = event
+                .backend_node_id
+                .context("the chooser names no input")?;
+            page.execute(
+                SetFileInputFilesParams::builder()
+                    .files(paths)
+                    .backend_node_id(input)
+                    .build()
+                    .map_err(anyhow::Error::msg)?,
+            )
+            .await?;
+            page.execute(SetInterceptFileChooserDialogParams::new(false))
+                .await?;
+            Ok(())
+        }
     }
 }
 
@@ -563,7 +611,8 @@ mod android {
     use super::web::{element, json};
     use super::{Driver, Platform, Rect};
     use crate::android::{
-        CTRL, SHIFT, harness, input, input_text, keycode, soft_keyboard_shown, webview_view_focused,
+        CTRL, SHIFT, download, harness, input, input_text, keycode, soft_keyboard_shown, tap_node,
+        webview_view_focused,
     };
     use crate::passes::{focus, keyboard, pointer};
 
@@ -801,6 +850,20 @@ mod android {
 
         async fn soft_keyboard_shown(&mut self) -> Result<bool> {
             soft_keyboard_shown().await
+        }
+
+        /// The files go to Downloads, and the system picker's row is tapped
+        /// there: one file, since a tap on a row picks it and closes the picker.
+        async fn choose_files(&mut self, trigger: &str, files: &[(&str, &str)]) -> Result<()> {
+            let [(name, text)] = files else {
+                anyhow::bail!("Android: one file per pick");
+            };
+            download(name, text).await?;
+            self.click(trigger).await?;
+            // It opens on Recent, which lists no file a shell wrote.
+            tap_node("content-desc=\"Show roots\"").await?;
+            tap_node("text=\"Downloads\"").await?;
+            tap_node(&format!("text=\"{name}\"")).await
         }
 
         async fn idle(&mut self) {

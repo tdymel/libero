@@ -162,6 +162,50 @@ fn view_focused(dump: &str) -> Option<bool> {
     Some(flags.as_bytes().get(1) == Some(&b'F'))
 }
 
+/// Writes `text` to `/sdcard/Download/<name>`, where the system picker lists it.
+pub(crate) async fn download(name: &str, text: &str) -> Result<()> {
+    let quote = |s: &str| format!("'{}'", s.replace('\'', "'\\''"));
+    let path = quote(&format!("/sdcard/Download/{name}"));
+    shell(&[format!("printf %s {} > {path}", quote(text))])
+        .await
+        .map(drop)
+}
+
+/// Taps the first on-screen node carrying `wanted` (`text="…"`), in whatever
+/// app is on top (the system picker), once it shows.
+pub(crate) async fn tap_node(wanted: &str) -> Result<()> {
+    let started = std::time::Instant::now();
+    loop {
+        let dump = shell(&[
+            "uiautomator dump /sdcard/lsx-ui.xml >/dev/null && cat /sdcard/lsx-ui.xml".into(),
+        ])
+        .await?;
+        if let Some(centre) = node_centre(&dump, wanted) {
+            return input(&["tap".into(), centre.0.to_string(), centre.1.to_string()]).await;
+        }
+        if started.elapsed() > crate::wait::timeout() {
+            bail!("no {wanted} on screen");
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    }
+}
+
+/// The centre of the first `<node>` carrying `attribute`, from its `bounds="[x1,y1][x2,y2]"`.
+fn node_centre(dump: &str, attribute: &str) -> Option<(i64, i64)> {
+    let node = dump.split("<node ").find(|node| node.contains(attribute))?;
+    let bounds = node.split("bounds=\"").nth(1)?.split('"').next()?;
+    let numbers: Vec<i64> = bounds
+        .split(|c: char| !c.is_ascii_digit())
+        .filter(|n| !n.is_empty())
+        .map(str::parse)
+        .collect::<Result<_, _>>()
+        .ok()?;
+    match numbers[..] {
+        [x1, y1, x2, y2] => Some(((x1 + x2) / 2, (y1 + y2) / 2)),
+        _ => None,
+    }
+}
+
 /// `adb shell <args>` on the runner's device; its stdout.
 async fn shell(args: &[String]) -> Result<String> {
     let mut command = tokio::process::Command::new("adb");
@@ -233,7 +277,14 @@ pub(crate) fn input_text(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::view_focused;
+    use super::{node_centre, view_focused};
+
+    #[test]
+    fn a_node_is_found_by_its_text_and_tapped_at_its_centre() {
+        let dump = r#"<node text="Downloads" bounds="[0,0][10,10]" /><node index="1" text="note.txt" class="android.widget.TextView" bounds="[100,200][300,260]" />"#;
+        assert_eq!(node_centre(dump, "text=\"note.txt\""), Some((200, 230)));
+        assert_eq!(node_centre(dump, "text=\"other\""), None);
+    }
 
     #[test]
     fn view_focus_reads_the_second_flag_group() {

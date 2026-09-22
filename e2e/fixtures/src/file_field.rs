@@ -10,7 +10,35 @@ pub const ROUTES: Routes = &[
     ("/file-field/input", || rsx! { FileInputPage {} }),
     ("/file-field/states", || rsx! { FileStatesPage {} }),
     ("/file-field/modes", || rsx! { FileModesPage {} }),
+    ("/file-field/pick", || rsx! { FilePickPage {} }),
 ];
+
+/// One file from the chooser, whose text shows once read: the bytes arrived.
+#[component]
+fn FilePickPage() -> Element {
+    let mut files = use_signal(Files::default);
+    let mut read = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            FileField {
+                id: "receipt",
+                label: "Receipt",
+                placeholder: "Pick a file",
+                value: files(),
+                onchange: move |next: Files| {
+                    if let Some(file) = next.iter().next().cloned() {
+                        spawn(async move {
+                            read.set(file.read_string().await.unwrap_or_default());
+                        });
+                    }
+                    files.set(next);
+                },
+            }
+            p { id: "read", "{read}" }
+        }
+    }
+}
 
 /// One `multiple` field the buttons switch to read-only or disabled once the
 /// unit has dropped its files in.

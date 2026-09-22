@@ -1,11 +1,13 @@
-//! `FileField`: a real CDP drop, focus after its file is removed (406), and the group,
+//! `FileField`: a real CDP drop, a chooser pick (1061), focus after its file is removed (406), and the group,
 //! Browse button and chip list (529, 530).
 
+use anyhow::Result;
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::{
     DispatchDragEventParams, DispatchDragEventType, DragData, DragDataItem,
 };
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_text};
 use e2e::passes::keyboard::Key;
 use e2e::passes::{contrast, focus, keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
@@ -61,6 +63,25 @@ fn the_required_and_bare_fields_meet_the_baseline() {
         .targets(FRAME)
         .run();
 }
+
+/// Todo 1061: Browse opens the chooser, and the picked file's bytes reach Rust.
+/// Android's WebView opened none: dioxus hands its inputs' clicks to the host.
+async fn picks_and_reads<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.choose_files("#receipt", &[("note.txt", "picked on the device")])
+        .await?;
+    eventually_text(d, "#read", "picked on the device", "a pick").await?;
+    eventually(d, "the picked file's name in the field", async |d| {
+        Ok(d.text(FRAME).await?.contains("note.txt"))
+    })
+    .await
+}
+
+e2e::scenario!(
+    browse_picks_a_file_and_rust_reads_it,
+    "/file-field/pick",
+    picks_and_reads,
+    native: skip("rfd opens the desktop portal's dialog, which no driver answers")
+);
 
 /// WCAG 1.4.11: the dashed border is all that shows the dropzone's extent
 /// (todo 490).

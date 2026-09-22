@@ -1,4 +1,4 @@
-use std::{future::Future, pin::Pin};
+use std::{cell::Cell, future::Future, pin::Pin};
 
 use dioxus::html::FileData;
 
@@ -8,8 +8,9 @@ pub(crate) type Picked = Pin<Box<dyn Future<Output = Vec<FileData>>>>;
 /// The system's file dialog, where no `input[type=file]` opens one. Not
 /// element-scoped, like [`ClipboardApi`](super::clipboard::ClipboardApi).
 pub(crate) trait FileDialogApi {
-    /// `accept` is the attribute's syntax and narrows what the dialog shows.
-    fn open(&self, accept: &str, multiple: bool) -> Picked;
+    /// `accept` and `capture` are the attributes' syntax; `accept` narrows
+    /// what the dialog shows.
+    fn open(&self, accept: &str, multiple: bool, capture: Option<&str>) -> Picked;
 }
 
 /// Blitz opens no picker for a file input, so `rfd` does (`native` only).
@@ -20,7 +21,7 @@ mod native {
     pub(super) struct NativeFileDialog;
 
     impl FileDialogApi for NativeFileDialog {
-        fn open(&self, accept: &str, multiple: bool) -> Picked {
+        fn open(&self, accept: &str, multiple: bool, _capture: Option<&str>) -> Picked {
             let mut dialog = rfd::AsyncFileDialog::new();
             if let Some(extensions) = extensions(accept) {
                 dialog = dialog.add_filter(accept, &extensions);
@@ -46,24 +47,55 @@ mod native {
 pub(crate) fn pick_files(
     accept: &str,
     multiple: bool,
+    capture: Option<&str>,
     input: impl FnOnce(),
     take: impl FnOnce(Vec<FileData>) + 'static,
 ) {
     match file_dialog() {
+        // One dialog at a time: a WebView hears one press from the button and
+        // again from the group around it (`nested_interactive` is `false` there).
+        Some(_) if PICKING.get() => {}
         Some(dialog) => {
-            let picked = dialog.open(accept, multiple);
-            dioxus::prelude::spawn(async move { take(picked.await) });
+            let picked = dialog.open(accept, multiple, capture);
+            let picking = Picking::start();
+            dioxus::prelude::spawn(async move {
+                let files = picked.await;
+                drop(picking);
+                take(files);
+            });
         }
         None => input(),
     }
 }
 
-/// `None` where a file input opens the platform's own picker: the web and the
-/// WebView.
+thread_local! {
+    static PICKING: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Holds [`PICKING`] until dropped, also when the field unmounts mid-pick.
+struct Picking;
+
+impl Picking {
+    fn start() -> Self {
+        PICKING.set(true);
+        Picking
+    }
+}
+
+impl Drop for Picking {
+    fn drop(&mut self) {
+        PICKING.set(false);
+    }
+}
+
+/// `None` where a file input opens the platform's own picker: the web. A
+/// WebView's input cannot be clicked from Rust, so it gets one of its own.
 fn file_dialog() -> Option<&'static dyn FileDialogApi> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return Some(&native::FILE_DIALOG);
-    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return super::backend::webview_file_dialog();
+    #[cfg(target_arch = "wasm32")]
     return None;
 }
 
@@ -160,31 +192,100 @@ fn picked_file(path: std::path::PathBuf) -> FileData {
 #[cfg(any(test, all(not(target_arch = "wasm32"), feature = "native")))]
 struct PickedFile(std::path::PathBuf);
 
+#[cfg(not(target_arch = "wasm32"))]
+type Chunk = Result<dioxus::html::bytes::Bytes, dioxus::CapturedError>;
+
+/// The whole file as one chunk.
+#[cfg(not(target_arch = "wasm32"))]
+struct Whole(Option<Chunk>);
+
+#[cfg(not(target_arch = "wasm32"))]
+impl futures_core::Stream for Whole {
+    type Item = Chunk;
+
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        _: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Chunk>> {
+        std::task::Poll::Ready(self.0.take())
+    }
+}
+
+/// A file a WebView's picker read into memory: its path is only its name.
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+pub(crate) fn held_file(
+    name: String,
+    content_type: String,
+    last_modified: u64,
+    bytes: Vec<u8>,
+) -> FileData {
+    FileData::new(HeldFile {
+        name,
+        content_type: (!content_type.is_empty()).then_some(content_type),
+        last_modified,
+        bytes: bytes.into(),
+    })
+}
+
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+struct HeldFile {
+    name: String,
+    content_type: Option<String>,
+    last_modified: u64,
+    bytes: dioxus::html::bytes::Bytes,
+}
+
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+impl dioxus::html::NativeFileData for HeldFile {
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn size(&self) -> u64 {
+        self.bytes.len() as u64
+    }
+
+    fn last_modified(&self) -> u64 {
+        self.last_modified
+    }
+
+    fn path(&self) -> std::path::PathBuf {
+        self.name.clone().into()
+    }
+
+    fn content_type(&self) -> Option<String> {
+        self.content_type.clone()
+    }
+
+    fn read_bytes(&self) -> Pin<Box<dyn Future<Output = Chunk>>> {
+        Box::pin(std::future::ready(Ok(self.bytes.clone())))
+    }
+
+    fn byte_stream(&self) -> Pin<Box<dyn futures_core::Stream<Item = Chunk> + Send>> {
+        Box::pin(Whole(Some(Ok(self.bytes.clone()))))
+    }
+
+    fn read_string(&self) -> Pin<Box<dyn Future<Output = Result<String, dioxus::CapturedError>>>> {
+        let text = String::from_utf8(self.bytes.to_vec()).map_err(dioxus::CapturedError::from);
+        Box::pin(std::future::ready(text))
+    }
+
+    fn inner(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
 #[cfg(any(test, all(not(target_arch = "wasm32"), feature = "native")))]
 mod picked {
     use std::{
         future::{Future, ready},
         pin::Pin,
-        task::{Context, Poll},
         time::UNIX_EPOCH,
     };
 
     use dioxus::{CapturedError, html::bytes::Bytes};
 
-    use super::{PickedFile, content_type};
-
-    type Chunk = Result<Bytes, CapturedError>;
-
-    /// The whole file as one chunk.
-    struct Whole(Option<Chunk>);
-
-    impl futures_core::Stream for Whole {
-        type Item = Chunk;
-
-        fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Chunk>> {
-            Poll::Ready(self.0.take())
-        }
-    }
+    use super::{Chunk, PickedFile, Whole, content_type};
 
     impl PickedFile {
         fn read(&self) -> Chunk {

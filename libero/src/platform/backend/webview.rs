@@ -22,6 +22,7 @@ use crate::platform::{
     KeyChord, KeySubscription, KeyboardApi, PRESS_MARKER_ATTR, PlatformError, PressApi,
     PressSubscription, Read, ScrollApi, ScrollSubscription,
     clipboard::{ClipboardApi, Write},
+    file_dialog::{FileDialogApi, Picked, held_file},
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
 };
 use crate::tokens::{
@@ -60,6 +61,10 @@ pub(super) fn scroll() -> Option<&'static dyn ScrollApi> {
 
 pub(crate) fn clipboard() -> Option<&'static dyn ClipboardApi> {
     runs_scripts().then_some(&CLIPBOARD as &'static dyn ClipboardApi)
+}
+
+pub(crate) fn file_dialog() -> Option<&'static dyn FileDialogApi> {
+    runs_scripts().then_some(&FILE_DIALOG as &'static dyn FileDialogApi)
 }
 
 struct WebViewDocument;
@@ -311,6 +316,76 @@ impl ClipboardApi for WebViewClipboard {
             }
         })
     }
+}
+
+struct WebViewFileDialog;
+
+static FILE_DIALOG: WebViewFileDialog = WebViewFileDialog;
+
+/// A detached input: dioxus hands a click on one of its own inputs to the host,
+/// which picks nothing on Android. Resolves to `[name, type, lastModified, base64]`s.
+const PICK_FILES: &str = "const [accept, multiple, capture] = data;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.multiple = multiple;
+    if (capture !== null) input.setAttribute('capture', capture);
+    const files = await new Promise((done) => {
+        input.addEventListener('change', () => done([...input.files]));
+        input.addEventListener('cancel', () => done([]));
+        input.click();
+    });
+    const encode = (bytes) => {
+        let binary = '';
+        for (let at = 0; at < bytes.length; at += 0x8000) {
+            binary += String.fromCharCode(...bytes.subarray(at, at + 0x8000));
+        }
+        return btoa(binary);
+    };
+    return await Promise.all(files.map(async (file) =>
+        [file.name, file.type, file.lastModified, encode(new Uint8Array(await file.arrayBuffer()))]));";
+
+impl FileDialogApi for WebViewFileDialog {
+    fn open(&self, accept: &str, multiple: bool, capture: Option<&str>) -> Picked {
+        let script = eval_with(json!([accept, multiple, capture]), PICK_FILES);
+        Box::pin(async move {
+            let picked = script
+                .join::<Vec<(String, String, f64, String)>>()
+                .await
+                .unwrap_or_default();
+            picked
+                .into_iter()
+                .filter_map(|(name, content_type, modified, encoded)| {
+                    let bytes = decode_base64(&encoded)?;
+                    Some(held_file(name, content_type, modified as u64, bytes))
+                })
+                .collect()
+        })
+    }
+}
+
+/// Standard, padded base64, as `btoa` writes it; `None` on anything else.
+fn decode_base64(text: &str) -> Option<Vec<u8>> {
+    let text = text.trim_end_matches('=').as_bytes();
+    let mut bytes = Vec::with_capacity(text.len() * 3 / 4);
+    let (mut buffer, mut bits) = (0u32, 0);
+    for &ch in text {
+        let value = match ch {
+            b'A'..=b'Z' => ch - b'A',
+            b'a'..=b'z' => ch - b'a' + 26,
+            b'0'..=b'9' => ch - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            _ => return None,
+        };
+        buffer = (buffer << 6) | u32::from(value);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            bytes.push((buffer >> bits) as u8);
+        }
+    }
+    Some(bytes)
 }
 
 type SchemeCallback = Rc<dyn Fn(ColorScheme)>;
@@ -979,5 +1054,31 @@ mod tests {
             0,
             "the dark page's answer reached the light one"
         );
+    }
+
+    #[test]
+    fn base64_decodes_as_btoa_wrote_it() {
+        assert_eq!(decode_base64("").unwrap(), b"");
+        assert_eq!(decode_base64("YQ==").unwrap(), b"a");
+        assert_eq!(decode_base64("YWI=").unwrap(), b"ab");
+        assert_eq!(decode_base64("YWJj").unwrap(), b"abc");
+        assert_eq!(decode_base64("AP+A/w==").unwrap(), [0, 255, 128, 255]);
+        assert_eq!(decode_base64("YW\nJj"), None);
+    }
+
+    #[test]
+    fn a_held_file_reads_from_memory() {
+        let file = held_file("a.txt".into(), "text/plain".into(), 7, b"hello".to_vec());
+        assert_eq!(file.name(), "a.txt");
+        assert_eq!(file.size(), 5);
+        assert_eq!(file.last_modified(), 7);
+        assert_eq!(file.content_type().as_deref(), Some("text/plain"));
+        let mut cx = Context::from_waker(Waker::noop());
+        let Poll::Ready(text) = pin!(file.read_string()).poll(&mut cx) else {
+            panic!("a held file's read waits on nothing");
+        };
+        assert_eq!(text.unwrap(), "hello");
+        let untyped = held_file("a".into(), String::new(), 0, Vec::new());
+        assert_eq!(untyped.content_type(), None);
     }
 }
