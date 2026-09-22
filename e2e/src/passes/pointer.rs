@@ -167,6 +167,51 @@ pub async fn touch_drag(page: &Page, from: Point, to: Point, steps: usize) -> Re
     Ok(())
 }
 
+/// Two touches either side of `at`, `from` apart sideways, spread to `to` apart in
+/// `steps`, then lifted one by one. Turns on touch emulation for the page.
+pub async fn pinch(page: &Page, at: Point, from: f64, to: f64, steps: usize) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchTouchEventParams, DispatchTouchEventType, TouchPoint,
+    };
+    page.execute(SetTouchEmulationEnabledParams::new(true))
+        .await?;
+    let fingers = |gap: f64, count: usize| -> Result<Vec<TouchPoint>> {
+        [-1.0, 1.0]
+            .into_iter()
+            .take(count)
+            .enumerate()
+            .map(|(id, side)| {
+                TouchPoint::builder()
+                    .x(at.x + side * gap / 2.0)
+                    .y(at.y)
+                    .id(id as f64)
+                    .build()
+                    .map_err(anyhow::Error::msg)
+            })
+            .collect()
+    };
+    let mut events = vec![
+        (DispatchTouchEventType::TouchStart, fingers(from, 1)?),
+        (DispatchTouchEventType::TouchStart, fingers(from, 2)?),
+    ];
+    for step in 1..=steps {
+        let gap = from + (to - from) * step as f64 / steps as f64;
+        events.push((DispatchTouchEventType::TouchMove, fingers(gap, 2)?));
+    }
+    // One end lifts every touch; CDP rejects one without a point.
+    events.push((DispatchTouchEventType::TouchEnd, fingers(to, 2)?));
+    for (kind, points) in events {
+        let event = DispatchTouchEventParams::builder()
+            .r#type(kind)
+            .touch_points(points)
+            .build()
+            .map_err(anyhow::Error::msg)?;
+        page.execute(event).await?;
+    }
+    Ok(())
+}
+
 /// Click an element at its centre.
 pub async fn click(page: &Page, selector: &str) -> Result<()> {
     click_at(page, centre_of(page, selector).await?).await

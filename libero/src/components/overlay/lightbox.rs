@@ -148,8 +148,8 @@ static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
         .media(REDUCED_MOTION, sx().transition("none"))
         .when("zoomable", sx().cursor("zoom-in"))
         // The carousel still scrolls sideways natively; a vertical move is
-        // left to the swipe-down.
-        .when("swipe", sx().touch_action("pan-x"))
+        // left to the swipe-down, two fingers to the pinch.
+        .when("sideways", sx().touch_action("pan-x"))
         .when("zoomed", drag_handle_sx().cursor("grab"))
         // A drag is the pointer's own position: easing towards it lags.
         .when("dragging", sx().cursor("grabbing").transition("none"))
@@ -332,8 +332,44 @@ impl Zoom {
 /// What the current pointer drag on the picture is doing.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Gesture {
-    Pan { origin: DragPoint },
-    Swipe { delta: DragPoint },
+    Pan {
+        origin: DragPoint,
+    },
+    Swipe {
+        delta: DragPoint,
+    },
+    /// Two fingers `distance` apart at `mid` went down on `from`. `origin` is
+    /// `mid` from the frame's centre, once the frame is measured.
+    Pinch {
+        from: Zoom,
+        distance: f64,
+        mid: DragPoint,
+        origin: Option<(Fit, DragPoint)>,
+    },
+    /// A pinch lost a finger: the one left pans from where the pinch put it.
+    Settling,
+}
+
+/// Two fingers' distance and midpoint.
+fn span(a: DragPoint, b: DragPoint) -> (f64, DragPoint) {
+    (
+        (a.x - b.x).hypot(a.y - b.y),
+        DragPoint {
+            x: (a.x + b.x) / 2.0,
+            y: (a.y + b.y) / 2.0,
+        },
+    )
+}
+
+/// A pinch at `scale`: about its starting midpoint `origin`, then moved by
+/// `shift`, the midpoint's travel since.
+fn pinched(from: Zoom, scale: f64, origin: DragPoint, shift: DragPoint, fit: Fit) -> Zoom {
+    match scale > 1.0 {
+        true => from
+            .scaled(scale, origin, fit)
+            .panned(shift.x, shift.y, fit),
+        false => Zoom::fitted(from.index),
+    }
 }
 
 /// One wheel notch, or one `+` / `-`, from `scale`: out when `closer`.
@@ -363,10 +399,6 @@ fn swipe_closes(delta: DragPoint) -> bool {
     delta.y > SWIPE_CLOSE_DISTANCE && delta.y > delta.x.abs()
 }
 
-fn frame_selector(index: usize) -> String {
-    format!("[data-lightbox-frame=\"{index}\"]")
-}
-
 fn image_id(base: &str, index: usize) -> String {
     format!("{base}-image-{index}")
 }
@@ -386,24 +418,18 @@ fn reopened(zoom: Zoom, index: usize, count: usize) -> (usize, Zoom) {
 }
 
 /// The untransformed frame's bounds and top-left. Call in the handler, await in
-/// the task: Blitz answers a read only while the document is free.
+/// the task: Blitz answers a read only while the document is free. The frame's
+/// own handle, not a query: a WebView answers none (1068).
 fn measure_fit(
-    stage: ElementHandle,
+    frame: ElementHandle,
     picture: ElementHandle,
-    index: usize,
 ) -> impl Future<Output = Option<(Fit, f64, f64)>> {
-    let reads = stage
-        .query_selector(&frame_selector(index))
-        .ok()
-        .map(|frame| {
-            (
-                frame.dimensions(),
-                frame.client_offset(),
-                picture.natural_size(),
-            )
-        });
+    let (dimensions, origin, natural) = (
+        frame.dimensions(),
+        frame.client_offset(),
+        picture.natural_size(),
+    );
     async move {
-        let (dimensions, origin, natural) = reads?;
         let (Ok(dimensions), Ok((left, top))) = (dimensions.await, origin.await) else {
             return None;
         };
@@ -422,7 +448,7 @@ fn from_frame_centre(client: DragPoint, bounds: Fit, left: f64, top: f64) -> Dra
 /// Rescales picture `index` to `next(current scale)`, about `client` or the
 /// centre, once the frame is measured.
 fn zoom_about(
-    stage: ElementHandle,
+    frame: ElementHandle,
     picture: ElementHandle,
     zooming: Zooming,
     index: usize,
@@ -430,7 +456,7 @@ fn zoom_about(
     next: impl Fn(f64) -> f64 + 'static,
 ) {
     let (mut zoom, mut fit) = (zooming.zoom, zooming.fit);
-    let measured = measure_fit(stage, picture, index);
+    let measured = measure_fit(frame, picture);
     spawn(async move {
         let Some((bounds, left, top)) = measured.await else {
             return;
@@ -458,14 +484,14 @@ fn zoom_about(
 
 /// A click on zoomed picture `index` brings the spot clicked to the centre.
 fn centre_on(
-    stage: ElementHandle,
+    frame: ElementHandle,
     picture: ElementHandle,
     zooming: Zooming,
     index: usize,
     client: DragPoint,
 ) {
     let (mut zoom, mut fit) = (zooming.zoom, zooming.fit);
-    let measured = measure_fit(stage, picture, index);
+    let measured = measure_fit(frame, picture);
     spawn(async move {
         let Some((bounds, left, top)) = measured.await else {
             return;
@@ -480,12 +506,12 @@ fn centre_on(
 
 /// After the stage resized: new bounds for the zoomed picture, and its pan
 /// clamped to them, so it still covers its frame.
-fn refit(stage: ElementHandle, picture: ElementHandle, zooming: Zooming) {
+fn refit(frame: ElementHandle, picture: ElementHandle, zooming: Zooming) {
     let (mut zoom, mut fit, held) = (zooming.zoom, zooming.fit, zooming.held());
     if !held.is_zoomed() {
         return;
     }
-    let measured = measure_fit(stage, picture, held.index);
+    let measured = measure_fit(frame, picture);
     spawn(async move {
         let Some((bounds, ..)) = measured.await else {
             return;
@@ -514,6 +540,8 @@ struct Zooming {
     /// The press on the picture travelled past [`CLICK_SLOP`]: its click is
     /// the end of a pan, not a click.
     dragged: Signal<bool>,
+    /// The touches down on the picture, for a pinch: the drag follows one.
+    touches: Signal<Vec<(i32, DragPoint)>>,
     max_zoom: f64,
     announcer: Announcer,
     labels: LightboxLabels,
@@ -541,6 +569,102 @@ impl Zooming {
     fn step_scale(self, scale: f64) -> f64 {
         zoom_step(scale, self.max_zoom)
     }
+
+    /// A second finger went down: the pinch takes over from any pan or swipe.
+    fn start_pinch(self, slide: Slide) {
+        let (mut gesture, mut fit, mut dragged) = (self.gesture, self.fit, self.dragged);
+        let touches = self.touches.peek();
+        let [(_, a), (_, b), ..] = touches.as_slice() else {
+            return;
+        };
+        let (distance, mid) = span(*a, *b);
+        let from = self.held();
+        gesture.set(Some(Gesture::Pinch {
+            from,
+            distance,
+            mid,
+            origin: None,
+        }));
+        // Its fingers' lift is no click to centre on.
+        dragged.set(true);
+        let measured = measure_fit(slide.frame, slide.picture);
+        spawn(async move {
+            let Some((bounds, left, top)) = measured.await else {
+                return;
+            };
+            fit.set(Some(bounds));
+            let waiting = matches!(*gesture.peek(), Some(Gesture::Pinch { origin: None, .. }));
+            if waiting {
+                let origin = Some((bounds, from_frame_centre(mid, bounds, left, top)));
+                gesture.set(Some(Gesture::Pinch {
+                    from,
+                    distance,
+                    mid,
+                    origin,
+                }));
+            }
+        });
+    }
+
+    /// Scales by the fingers' spread and pans by their midpoint's travel.
+    fn pinch_moved(self) {
+        let mut zoom = self.zoom;
+        let Some(Gesture::Pinch {
+            from,
+            distance,
+            mid,
+            origin: Some((fit, origin)),
+        }) = *self.gesture.peek()
+        else {
+            return;
+        };
+        let touches = self.touches.peek();
+        let [(_, a), (_, b), ..] = touches.as_slice() else {
+            return;
+        };
+        let (now, at) = span(*a, *b);
+        if distance < 1.0 {
+            return;
+        }
+        let scale = (from.scale * now / distance).clamp(1.0, self.max_zoom);
+        let shift = DragPoint {
+            x: at.x - mid.x,
+            y: at.y - mid.y,
+        };
+        let to = pinched(from, scale, origin, shift, fit);
+        if *zoom.peek() != to {
+            zoom.set(to);
+        }
+    }
+
+    /// A touch lifted or was cancelled: a pinch left with one finger settles.
+    fn lift(self, pointer_id: i32) {
+        let (mut touches, mut gesture) = (self.touches, self.gesture);
+        if !touches.peek().iter().any(|(id, _)| *id == pointer_id) {
+            return;
+        }
+        touches.write().retain(|(id, _)| *id != pointer_id);
+        let left = touches.peek().len();
+        let held = *gesture.peek();
+        match held {
+            Some(Gesture::Pinch { from, .. }) if left < 2 => {
+                gesture.set((left > 0).then_some(Gesture::Settling));
+                let to = self.held();
+                if to.scale != from.scale {
+                    self.announce(to.scale);
+                }
+            }
+            Some(Gesture::Settling) if left == 0 => gesture.set(None),
+            _ => {}
+        }
+    }
+}
+
+/// One picture's handles: the frame measures, the picture holds the drag.
+#[derive(Clone, Copy)]
+struct Slide {
+    frame: ElementHandle,
+    picture: ElementHandle,
 }
 
 /// Everything a picture and a thumbnail read: the zoom, the drag, the ids and
@@ -549,7 +673,6 @@ impl Zooming {
 struct Stage {
     zooming: Zooming,
     drag: Drag,
-    stage: ElementHandle,
     base_id: Signal<String>,
     /// The element a move sends focus to, read by the effect that focuses it.
     focus_next: Signal<Option<String>>,
@@ -615,7 +738,17 @@ fn use_lightbox_drag(zooming: Zooming, capture: ElementHandle, close: Callback<(
                     );
                 }
                 Some(Gesture::Swipe { .. }) => gesture.set(Some(Gesture::Swipe { delta })),
-                None => {}
+                // The pan restarts from where the pinch left the picture.
+                Some(Gesture::Settling) => {
+                    let from = zooming.held();
+                    gesture.set(from.is_zoomed().then_some(Gesture::Pan {
+                        origin: DragPoint {
+                            x: from.x - delta.x,
+                            y: from.y - delta.y,
+                        },
+                    }));
+                }
+                Some(Gesture::Pinch { .. }) | None => {}
             }
         }),
         onend: Callback::new(move |()| {
@@ -635,13 +768,16 @@ fn lightbox_slide(
     stage: Stage,
     i: usize,
     item: &LightboxItem,
-    image: ElementHandle,
+    slide: Slide,
     described: Option<String>,
 ) -> Element {
+    let Slide {
+        frame,
+        picture: image,
+    } = slide;
     let Stage {
         zooming,
         drag,
-        stage: root,
         base_id,
         current,
         last,
@@ -658,6 +794,7 @@ fn lightbox_slide(
         fit,
         mut gesture,
         mut dragged,
+        mut touches,
         max_zoom,
         ..
     } = zooming;
@@ -668,7 +805,7 @@ fn lightbox_slide(
     let frame_states: Input<States> = states().with(SVG_FIT, fitted).into();
     let image_states: Input<States> = states()
         .with("zoomable", zoomable && !zoomed)
-        .with("swipe", swipe && !zoomed)
+        .with("sideways", (swipe || zoomable) && !zoomed)
         .with("zoomed", zoomed)
         .with("dragging", is_current && gesture().is_some())
         .with(SVG_FIT, fitted)
@@ -692,6 +829,7 @@ fn lightbox_slide(
             framework_sx: &LIGHTBOX_FRAME_SX,
             states: frame_states,
             "data-lightbox-frame": i,
+            onmounted: frame.mount(),
             onwheel: move |event: Event<WheelData>| {
                 if !zoomable || i != *index.peek() {
                     return;
@@ -700,7 +838,7 @@ fn lightbox_slide(
                 let closer = platform::wheel_travel_y(&event.data(), 1.0, 1.0) > 0.0;
                 let client = event.client_coordinates();
                 zoom_about(
-                    root,
+                    frame,
                     image,
                     zooming,
                     i,
@@ -714,7 +852,7 @@ fn lightbox_slide(
                 }
                 let client = event.client_coordinates();
                 zoom_about(
-                    root,
+                    frame,
                     image,
                     zooming,
                     i,
@@ -726,6 +864,21 @@ fn lightbox_slide(
             // release land there.
             onpointerdown: move |event: Event<PointerData>| {
                 if i != *index.peek() {
+                    return;
+                }
+                if event.data().pointer_type() != "mouse" {
+                    let (id, client) = (event.pointer_id(), event.client_coordinates());
+                    let mut touches = touches.write();
+                    touches.retain(|(held, _)| *held != id);
+                    touches.push((id, DragPoint { x: client.x, y: client.y }));
+                }
+                if touches.peek().len() >= 2 {
+                    if zoomable && !matches!(*gesture.peek(), Some(Gesture::Pinch { .. })) {
+                        event.prevent_default();
+                        // Implicit on touch; Blitz and a WebView have none to take.
+                        let _ = image.set_pointer_capture(event.pointer_id());
+                        zooming.start_pinch(slide);
+                    }
                     return;
                 }
                 if *dragged.peek() {
@@ -794,14 +947,14 @@ fn lightbox_slide(
                         Key::Home => stage.go(0, true),
                         Key::End => stage.go(last, true),
                         Key::Character(ref c) if c.eq_ignore_ascii_case("z") => {
-                            zoom_about(root, image, zooming, i, None, move |scale| {
+                            zoom_about(frame, image, zooming, i, None, move |scale| {
                                 zooming.step_scale(scale)
                             });
                         }
                         // The wheel's steps, so the keyboard reaches `max_zoom` too.
                         Key::Character(ref c) if matches!(c.as_str(), "+" | "=" | "-") => {
                             let closer = c == "-";
-                            zoom_about(root, image, zooming, i, None, move |scale| {
+                            zoom_about(frame, image, zooming, i, None, move |scale| {
                                 wheel_step(scale, closer, max_zoom)
                             });
                         }
@@ -815,12 +968,27 @@ fn lightbox_slide(
                         return;
                     }
                     let client = event.client_coordinates();
-                    centre_on(root, image, zooming, i, DragPoint { x: client.x, y: client.y });
+                    centre_on(frame, image, zooming, i, DragPoint { x: client.x, y: client.y });
                 },
                 onmounted: image.mount(),
-                onpointermove: drag.onpointermove,
-                onpointerup: drag.onpointerup,
-                onpointercancel: drag.onpointercancel,
+                onpointermove: move |event: Event<PointerData>| {
+                    let id = event.pointer_id();
+                    let at = touches.peek().iter().position(|(held, _)| *held == id);
+                    if let Some(at) = at {
+                        let client = event.client_coordinates();
+                        touches.write()[at].1 = DragPoint { x: client.x, y: client.y };
+                        zooming.pinch_moved();
+                    }
+                    drag.onpointermove.call(event);
+                },
+                onpointerup: move |event: Event<PointerData>| {
+                    zooming.lift(event.pointer_id());
+                    drag.onpointerup.call(event);
+                },
+                onpointercancel: move |event: Event<PointerData>| {
+                    zooming.lift(event.pointer_id());
+                    drag.onpointercancel.call(event);
+                },
             }
             {ring_overlay()}
         }
@@ -962,6 +1130,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         fit: use_signal(|| None::<Fit>),
         gesture: use_signal(|| None::<Gesture>),
         dragged: use_signal(|| false),
+        touches: use_signal(Vec::new),
         max_zoom: options.max_zoom.unwrap_or(theme.lightbox.max_zoom).max(1.0),
         announcer: use_announcer(),
         labels: localization.lightbox,
@@ -990,13 +1159,16 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         }
     });
 
-    // One handle per picture, grown in render as a later opening can bring more;
-    // a `RefCell`, so growing it re-renders nothing.
-    let pictures = use_hook(|| Rc::new(RefCell::new(Vec::<ElementHandle>::new())));
+    // One frame and picture handle pair per picture, grown in render as a later
+    // opening can bring more; a `RefCell`, so growing it re-renders nothing.
+    let pictures = use_hook(|| Rc::new(RefCell::new(Vec::<Slide>::new())));
     {
         let mut pictures = pictures.borrow_mut();
         while pictures.len() < count {
-            pictures.push(ElementHandle::new());
+            pictures.push(Slide {
+                frame: ElementHandle::new(),
+                picture: ElementHandle::new(),
+            });
         }
     }
     let picture = |i: usize| pictures.borrow()[i];
@@ -1004,7 +1176,11 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
 
     let drag = use_lightbox_drag(
         zooming,
-        if count > 0 { picture(current) } else { stage },
+        if count > 0 {
+            picture(current).picture
+        } else {
+            stage
+        },
         close,
     );
 
@@ -1016,7 +1192,6 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let stage_parts = Stage {
         zooming,
         drag,
-        stage,
         base_id,
         focus_next,
         current,
@@ -1092,8 +1267,8 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     // About the stage's centre, in the wheel's steps.
     let shown_picture = (count > 0 && !pending).then(|| picture(current));
     let zoom_by = move |closer: bool| {
-        if let Some(image) = shown_picture {
-            zoom_about(stage, image, zooming, current, None, move |scale| {
+        if let Some(Slide { frame, picture }) = shown_picture {
+            zoom_about(frame, picture, zooming, current, None, move |scale| {
                 wheel_step(scale, closer, max_zoom)
             });
         }
@@ -1147,8 +1322,8 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                     framework_sx: &LIGHTBOX_STAGE_SX,
                     // A window resize or a phone turned moves the pan bounds.
                     onresize: move |_: Event<ResizeData>| {
-                        if let Some(&picture) = resized_pictures.borrow().get(*index.peek()) {
-                            refit(stage, picture, zooming);
+                        if let Some(&Slide { frame, picture }) = resized_pictures.borrow().get(*index.peek()) {
+                            refit(frame, picture, zooming);
                         }
                     },
                     {stage_body}
@@ -1382,6 +1557,40 @@ mod tests {
         assert_eq!(zoom_step(3.0, 3.0), 1.0);
         assert_eq!(zoom_step(WHEEL_FACTOR, 8.0), 2.0);
         assert_eq!(zoom_step(1.0, 1.0), 1.0);
+    }
+
+    /// Todo 1067: fingers spread to twice their gap double the scale about their
+    /// starting midpoint, and the midpoint's travel pans on top.
+    #[test]
+    fn a_pinch_scales_about_its_midpoint_and_follows_it() {
+        let (gap, mid) = span(DragPoint { x: 0.0, y: 0.0 }, DragPoint { x: 60.0, y: 80.0 });
+        assert_eq!((gap, mid), (100.0, DragPoint { x: 30.0, y: 40.0 }));
+
+        let origin = DragPoint { x: 100.0, y: -50.0 };
+        let still = DragPoint { x: 0.0, y: 0.0 };
+        let doubled = pinched(Zoom::fitted(0), 2.0, origin, still, FILLS);
+        assert_eq!(doubled, Zoom::fitted(0).scaled(2.0, origin, FILLS));
+
+        let moved = pinched(
+            Zoom::fitted(0),
+            2.0,
+            origin,
+            DragPoint { x: 10.0, y: 0.0 },
+            FILLS,
+        );
+        assert_eq!(moved.x, doubled.x + 10.0);
+    }
+
+    /// Pinched back to 1x or under, the picture fits again, centred.
+    #[test]
+    fn a_pinch_closed_to_fit_centres_the_picture() {
+        let zoomed = Zoom {
+            scale: 2.0,
+            x: 200.0,
+            ..Zoom::fitted(3)
+        };
+        let origin = DragPoint { x: 0.0, y: 0.0 };
+        assert_eq!(pinched(zoomed, 1.0, origin, origin, FILLS), Zoom::fitted(3));
     }
 
     #[test]

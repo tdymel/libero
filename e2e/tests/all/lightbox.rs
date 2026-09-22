@@ -6,6 +6,7 @@ use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, linger};
 use e2e::suite::Step;
 use e2e::{
     Fixture, Suite, Viewport, passes::focus, passes::keyboard, passes::motion, passes::pointer,
@@ -922,3 +923,74 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
 
     Ok(())
 }
+
+const ZOOM_IN: &str = "[role=dialog] button[aria-label='Zoom in']";
+
+/// The current picture's scale, read off its inline transform; 1 when fitted.
+async fn scale<D: Driver>(d: &mut D) -> Result<f64> {
+    let style = d.attr(PICTURE, "style").await?.unwrap_or_default();
+    let Some((_, after)) = style.split_once("scale(") else {
+        return Ok(1.0);
+    };
+    let number = after.split(')').next().unwrap_or_default();
+    Ok(number.parse()?)
+}
+
+/// Opens the gallery and waits for its picture to take presses.
+async fn open<D: Driver>(d: &mut D) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually(d, "the lightbox's picture", async |d| {
+        d.exists(PICTURE).await
+    })
+    .await?;
+    // The stage's first scroll settles before a gesture lands on it.
+    linger(d, 10).await;
+    Ok(())
+}
+
+/// Todo 1068: a tap on "Zoom in" zooms (a WebView answered the frame query
+/// with nothing).
+async fn zoom_in_tapped<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d).await?;
+    d.click(ZOOM_IN).await?;
+    eventually(d, "one zoom step in", async |d| Ok(scale(d).await? == 1.25)).await
+}
+
+e2e::scenario!(
+    a_tap_on_zoom_in_zooms_the_picture,
+    "/lightbox",
+    zoom_in_tapped
+);
+
+/// Todo 1067: two fingers spread zoom the picture and do not close the viewer;
+/// pinched back together it fits again.
+async fn pinch_zooms<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d).await?;
+    // 2.5x: no power of the wheel's 1.25, so no page pinch turned into wheel steps.
+    d.pinch(PICTURE, 80.0, 200.0).await?;
+    eventually(d, "the pinch to 2.5x", async |d| {
+        Ok((scale(d).await? - 2.5).abs() < 0.01)
+    })
+    .await?;
+    ensure_open(d).await?;
+    d.pinch(PICTURE, 200.0, 40.0).await?;
+    eventually(d, "the pinch back to fit", async |d| {
+        Ok(scale(d).await? == 1.0)
+    })
+    .await?;
+    ensure_open(d).await
+}
+
+async fn ensure_open<D: Driver>(d: &mut D) -> Result<()> {
+    match d.exists(DIALOG).await? {
+        true => Ok(()),
+        false => bail!("{:?}: the pinch closed the lightbox", d.platform()),
+    }
+}
+
+e2e::scenario!(
+    a_pinch_zooms_the_picture,
+    "/lightbox",
+    pinch_zooms,
+    native: skip("Blitz takes no multi-touch input")
+);

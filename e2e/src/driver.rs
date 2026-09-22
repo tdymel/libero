@@ -70,6 +70,12 @@ pub trait Driver {
         let _ = (selector, ms);
         bail!("{:?}: no touch input", self.platform())
     }
+    /// Two touches either side of the first match's centre, `from` px apart,
+    /// spread to `to` px apart, then lifted.
+    async fn pinch(&mut self, selector: &str, from: f64, to: f64) -> Result<()> {
+        let _ = (selector, from, to);
+        bail!("{:?}: no multi-touch input", self.platform())
+    }
     async fn focus(&mut self, selector: &str) -> Result<()>;
     async fn text(&mut self, selector: &str) -> Result<String>;
     /// The first match's live `value`, which its attribute does not follow.
@@ -333,6 +339,11 @@ mod web {
 
         async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
             pointer::long_press(&self.fixture.page, selector, ms).await
+        }
+
+        async fn pinch(&mut self, selector: &str, from: f64, to: f64) -> Result<()> {
+            let at = pointer::centre_of(&self.fixture.page, selector).await?;
+            pointer::pinch(&self.fixture.page, at, from, to, 8).await
         }
 
         async fn focus(&mut self, selector: &str) -> Result<()> {
@@ -784,6 +795,12 @@ mod android {
         async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
             let [x, y] = self.device(self.centre(selector).await?);
             input(&["swipe".into(), x.clone(), y.clone(), x, y, ms.to_string()]).await
+        }
+
+        /// CDP's: `adb input` has one finger.
+        async fn pinch(&mut self, selector: &str, from: f64, to: f64) -> Result<()> {
+            let at = self.centre(selector).await?;
+            pointer::pinch(&self.page, at, from, to, 8).await
         }
 
         async fn focus(&mut self, selector: &str) -> Result<()> {
