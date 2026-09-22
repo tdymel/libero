@@ -12,7 +12,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_element, use_localization, use_theme},
     localization::fill,
-    platform::{ElementApi, PlatformError},
+    platform::{ElementApi, PlatformError, set_value_by_id},
     sx::{StaticSx, sx},
     theme::{FIELD_HEIGHT, PinFieldDefaults},
 };
@@ -202,6 +202,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         kind,
         root,
         handles,
+        id: field.id().to_string(),
         readonly,
         report,
     };
@@ -313,6 +314,8 @@ struct PinEdit {
     kind: PinKind,
     root: ElementHandle,
     handles: CellHandles,
+    /// The field's id; cell `n` is `{id}-{n + 1}`.
+    id: String,
     readonly: bool,
     report: Rc<dyn Fn(Vec<Option<char>>)>,
 }
@@ -327,15 +330,17 @@ impl PinEdit {
         let _ = cell_at(&self.root, &self.handles, index).and_then(|el| el.focus());
     }
 
-    /// One cell set or cleared.
-    fn edit(&self, index: usize, character: Option<char>) {
+    /// One cell set or cleared. Returns the cells it reported.
+    fn edit(&self, index: usize, character: Option<char>) -> Vec<Option<char>> {
         let mut next = self.cells.clone();
         next[index] = character;
-        (self.report)(next);
+        (self.report)(next.clone());
+        next
     }
 
-    /// A paste, from `index` onwards. Returns the cell the caret lands on.
-    fn spread(&self, index: usize, characters: Vec<char>) -> usize {
+    /// A paste, from `index` onwards. Returns the cells it reported and the
+    /// cell the caret lands on.
+    fn spread(&self, index: usize, characters: Vec<char>) -> (Vec<Option<char>>, usize) {
         let mut next = self.cells.clone();
         let mut cursor = index;
         for character in characters {
@@ -345,8 +350,16 @@ impl PinEdit {
             next[cursor] = Some(character);
             cursor += 1;
         }
-        (self.report)(next);
-        cursor.min(next_len_floor(self.length))
+        (self.report)(next.clone());
+        (next, cursor.min(next_len_floor(self.length)))
+    }
+
+    /// Writes cell `index`'s text. A WebView handle cannot, so it goes by id there.
+    fn show(&self, index: usize, character: Option<char>) {
+        let text = character.map(String::from).unwrap_or_default();
+        let _ = cell_at(&self.root, &self.handles, index)
+            .and_then(|cell| cell.set_value(&text))
+            .or_else(|_| set_value_by_id(&format!("{}-{}", self.id, index + 1), &text));
     }
 
     /// Where a character for cell `index` lands: that cell when it is filled,
@@ -361,10 +374,6 @@ impl PinEdit {
     /// What arrived in one cell's `oninput`: a paste, or a character a soft
     /// keyboard typed without naming its key.
     fn typed(&self, index: usize, raw: String) {
-        // Back to what the cell last rendered: dioxus writes it again only if
-        // the edit changes it, so an unchanged cell would keep the raw text.
-        let shown = self.cells[index].map(String::from).unwrap_or_default();
-        let _ = cell_at(&self.root, &self.handles, index).and_then(|cell| cell.set_value(&shown));
         let mut accepted: Vec<char> = raw.chars().filter(|c| self.kind.accepts(*c)).collect();
         // The cell's old character sits on whichever side the caret was not.
         if accepted.len() > 1
@@ -377,21 +386,26 @@ impl PinEdit {
             }
         }
         let at = self.landing(index);
-        match accepted.len() {
+        let next = match accepted.len() {
             // The cell was emptied - Backspace handles its own focus.
             0 if raw.is_empty() => self.edit(index, None),
             // Every character was rejected. The key handler drops those
             // before they land, so this is a paste of junk.
-            0 => {}
+            0 => self.cells.clone(),
             1 => {
-                self.edit(at, Some(accepted[0]));
+                let next = self.edit(at, Some(accepted[0]));
                 self.focus(at + 1);
+                next
             }
             _ => {
-                let cursor = self.spread(at, accepted);
+                let (next, cursor) = self.spread(at, accepted);
                 self.focus(cursor);
+                next
             }
-        }
+        };
+        // Dioxus writes the cell only if the edit changes it, so an unchanged
+        // cell would keep the raw text. Its final text, as a WebView's write lands late.
+        self.show(index, next[index]);
     }
 
     /// One cell's keyboard: the moves, the two deletions, and the characters

@@ -5,7 +5,7 @@ use anyhow::Result;
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::InsertTextParams;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually_focused, eventually_text};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -27,6 +27,48 @@ e2e::scenario!(
     a_pin_field_takes_one_digit_per_cell_and_moves_on,
     "/pin-field/echo",
     one_digit_per_cell
+);
+
+async fn cells_read<D: Driver>(d: &mut D, expected: [&str; 4], during: &str) -> Result<()> {
+    eventually(
+        d,
+        &format!("cells {expected:?} after {during}"),
+        async |d| {
+            for (index, want) in expected.iter().enumerate() {
+                if d.value(&format!("[data-pin-index='{index}']")).await? != *want {
+                    return Ok(false);
+                }
+            }
+            Ok(true)
+        },
+    )
+    .await
+}
+
+/// Todo 1030: a soft keyboard commits text with no key named, so the cell's raw
+/// text is put back even where the edit leaves the pin unchanged (590).
+async fn retyped_text_without_a_key<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("[data-pin-index='0']").await?;
+    d.insert_text("1").await?;
+    eventually_text(d, "#echo", "1", "1 inserted").await?;
+    eventually_focused(d, "[data-pin-index='1']", "1 inserted").await?;
+
+    d.focus("[data-pin-index='0']").await?;
+    d.insert_text("1").await?;
+    cells_read(d, ["1", "", "", ""], "1 inserted again").await?;
+    eventually_focused(d, "[data-pin-index='1']", "1 inserted again").await?;
+
+    d.focus("[data-pin-index='0']").await?;
+    d.insert_text("23").await?;
+    cells_read(d, ["2", "3", "", ""], "23 inserted over the 1").await?;
+    eventually_text(d, "#echo", "23", "23 inserted over the 1").await
+}
+
+e2e::scenario!(
+    a_digit_retyped_without_a_key_leaves_no_drifted_cell,
+    "/pin-field/echo",
+    retyped_text_without_a_key,
+    native: skip("no text without a key on Blitz")
 );
 
 /// Todo 507: every cell is named, so axe `label` holds.

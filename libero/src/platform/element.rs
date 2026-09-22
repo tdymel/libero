@@ -25,6 +25,12 @@ pub(crate) fn on_form_reset(
     backend::on_form_reset(mounted, on_reset)
 }
 
+/// Sets the `value` of the element with `id`, for a WebView, whose handles cannot
+/// set one (1030). `Unsupported` elsewhere: an [`ElementApi`] there can.
+pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), PlatformError> {
+    backend::set_value_by_id(id, value)
+}
+
 /// Whether `mounted` lays out right to left: its computed `direction`, which
 /// `dir="rtl"` on it or an ancestor sets. `false` where the renderer cannot say.
 pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {

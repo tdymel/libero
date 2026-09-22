@@ -802,6 +802,21 @@ pub(super) fn guard_typed_values() {
     }
 }
 
+/// Queued like [`WebViewDocument::set_root_attribute`], so an edit dioxus sends
+/// later still lands over it.
+pub(super) fn set_value_by_id(id: &str, value: &str) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    eval_with(
+        json!([id, value]),
+        "const [id, value] = data;
+        const el = document.getElementById(id);
+        if (el && el.value !== value) el.value = value;",
+    );
+    Ok(())
+}
+
 fn focused() -> Focused {
     focus_page().and_then(|page| page.focused.borrow().clone())
 }

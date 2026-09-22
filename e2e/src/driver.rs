@@ -58,6 +58,11 @@ pub trait Driver {
         let _ = ms;
         self.type_text(text).await
     }
+    /// Text committed with no key event, as a soft keyboard's IME sends it.
+    async fn insert_text(&mut self, text: &str) -> Result<()> {
+        let _ = text;
+        bail!("{:?}: no text without a key", self.platform())
+    }
     /// Presses at the first match's centre, moves by `(dx, dy)` in steps, releases.
     async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()>;
     /// A touch held still at the first match's centre for `ms`, then lifted.
@@ -67,6 +72,11 @@ pub trait Driver {
     }
     async fn focus(&mut self, selector: &str) -> Result<()>;
     async fn text(&mut self, selector: &str) -> Result<String>;
+    /// The first match's live `value`, which its attribute does not follow.
+    async fn value(&mut self, selector: &str) -> Result<String> {
+        let _ = selector;
+        bail!("{:?}: no live value read", self.platform())
+    }
     async fn attr(&mut self, selector: &str, name: &str) -> Result<Option<String>>;
     async fn exists(&mut self, selector: &str) -> Result<bool>;
     /// The first match's bounding rect.
@@ -301,6 +311,10 @@ mod web {
             keyboard::type_text(&self.fixture.page, text).await
         }
 
+        async fn insert_text(&mut self, text: &str) -> Result<()> {
+            keyboard::insert_text(&self.fixture.page, text).await
+        }
+
         async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
             let page = &self.fixture.page;
             let from = pointer::centre_of(page, selector).await?;
@@ -326,6 +340,10 @@ mod web {
         async fn text(&mut self, selector: &str) -> Result<String> {
             self.json(&format!("{}.textContent", element(selector)))
                 .await
+        }
+
+        async fn value(&mut self, selector: &str) -> Result<String> {
+            self.json(&format!("{}.value", element(selector))).await
         }
 
         async fn attr(&mut self, selector: &str, name: &str) -> Result<Option<String>> {
@@ -544,7 +562,9 @@ mod android {
 
     use super::web::{element, json};
     use super::{Driver, Platform, Rect};
-    use crate::android::{CTRL, SHIFT, harness, input, input_text, keycode, soft_keyboard_shown};
+    use crate::android::{
+        CTRL, SHIFT, harness, input, input_text, keycode, soft_keyboard_shown, webview_view_focused,
+    };
     use crate::passes::{focus, keyboard, pointer};
 
     /// A fixture route in the emulator's WebView, reached through the app's
@@ -557,6 +577,11 @@ mod android {
         pub async fn open(route: &str) -> Result<Self> {
             let harness = harness();
             let page = harness.page.clone();
+            // Launched in touch mode, the WebView lacks view focus and eats the first key;
+            // take it before the fixture mounts, as gaining it moves DOM focus (1052).
+            if !webview_view_focused().await? {
+                input(&["keyevent".into(), keycode("ArrowUp")?.to_string()]).await?;
+            }
             page.evaluate("document.activeElement?.blur(); scrollTo(0, 0)")
                 .await?;
             harness.console.drain();
@@ -691,6 +716,11 @@ mod android {
             Ok(())
         }
 
+        /// CDP's: `adb` has no IME, and `input text` names a key per character.
+        async fn insert_text(&mut self, text: &str) -> Result<()> {
+            keyboard::insert_text(&self.page, text).await
+        }
+
         async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
             let from = self.centre(selector).await?;
             let [x1, y1] = self.device(from);
@@ -716,6 +746,10 @@ mod android {
 
         async fn text(&mut self, selector: &str) -> Result<String> {
             json(&self.page, &format!("{}.textContent", element(selector))).await
+        }
+
+        async fn value(&mut self, selector: &str) -> Result<String> {
+            json(&self.page, &format!("{}.value", element(selector))).await
         }
 
         async fn attr(&mut self, selector: &str, name: &str) -> Result<Option<String>> {

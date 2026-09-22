@@ -399,6 +399,17 @@ pub(crate) fn rtl_target(event: &Event<KeyboardData>) -> bool {
     return webview::rtl_target();
 }
 
+/// Only a WebView - see [`set_value_by_id`](crate::platform::set_value_by_id).
+pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::set_value_by_id(id, value);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return {
+        let _ = (id, value);
+        Err(super::PlatformError::Unsupported)
+    };
+}
+
 /// Only a WebView on a phone - see [`soft_keyboard_app`](crate::platform::soft_keyboard_app).
 pub(crate) fn soft_keyboard_app() -> bool {
     #[cfg(all(

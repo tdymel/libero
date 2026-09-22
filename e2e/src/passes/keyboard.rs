@@ -4,7 +4,7 @@
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::{
-    DispatchKeyEventParams, DispatchKeyEventParamsBuilder, DispatchKeyEventType,
+    DispatchKeyEventParams, DispatchKeyEventParamsBuilder, DispatchKeyEventType, InsertTextParams,
 };
 
 /// A key, with the virtual key code Chromium needs to apply default actions
@@ -179,6 +179,12 @@ pub async fn type_text(page: &Page, text: &str) -> Result<()> {
         )
         .await?;
     }
+    Ok(())
+}
+
+/// Text committed with no key event, as a soft keyboard's IME sends it.
+pub async fn insert_text(page: &Page, text: &str) -> Result<()> {
+    page.execute(InsertTextParams::new(text)).await?;
     Ok(())
 }
 

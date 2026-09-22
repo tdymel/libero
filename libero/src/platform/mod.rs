@@ -55,6 +55,7 @@ pub(crate) use direction::{
 pub use document::{DocumentApi, document};
 pub(crate) use element::{
     ContentSubscription, SCROLL_MARGIN_VAR, is_rtl, on_content_change, on_form_reset,
+    set_value_by_id,
 };
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;

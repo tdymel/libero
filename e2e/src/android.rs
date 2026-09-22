@@ -148,6 +148,20 @@ pub(crate) async fn soft_keyboard_shown() -> Result<bool> {
     Ok(state.contains("mInputShown=true"))
 }
 
+/// Whether wry's `RustWebView` holds Android view focus; `document.hasFocus()`
+/// reads `true` without it while keys go nowhere (1052).
+pub(crate) async fn webview_view_focused() -> Result<bool> {
+    let top = shell(&["dumpsys".into(), "activity".into(), "top".into()]).await?;
+    Ok(view_focused(&top).unwrap_or(true))
+}
+
+/// `View.toString`'s second flag group, e.g. `RustWebView{c5bcc68 VFEDHVC.. .F...... …}`.
+fn view_focused(dump: &str) -> Option<bool> {
+    let view = &dump[dump.find("RustWebView{")?..];
+    let flags = view.split_whitespace().nth(2)?;
+    Some(flags.as_bytes().get(1) == Some(&b'F'))
+}
+
 /// `adb shell <args>` on the runner's device; its stdout.
 async fn shell(args: &[String]) -> Result<String> {
     let mut command = tokio::process::Command::new("adb");
@@ -215,4 +229,18 @@ pub(crate) fn input_text(text: &str) -> String {
         .replace(' ', "%s")
         .replace('\'', "'\\''");
     format!("'{escaped}'")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::view_focused;
+
+    #[test]
+    fn view_focus_reads_the_second_flag_group() {
+        let dump =
+            |flags: &str| format!("  RustWebView{{2b54105 VFEDHVC.. {flags} 0,0-1080,2209}}");
+        assert_eq!(view_focused(&dump(".F......")), Some(true));
+        assert_eq!(view_focused(&dump("........")), Some(false));
+        assert_eq!(view_focused("no web view"), None);
+    }
 }
