@@ -49,11 +49,24 @@ android-wait:
 check-android:
     cd {{root}} && {{aenv}} cargo check -p docs --target x86_64-linux-android {{mfeat}}
 
+# `dx` has no icon setting and rewrites its stock launcher icon on every build.
+# A build type's gradle source set outranks `main` and `dx` never writes it, so
+# the Libero logo goes there: `debug` (dx always packages that variant) and
+# `release` (gradle's own). Create it before `dx` runs.
+_android-icon profile:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    app="${CARGO_TARGET_DIR:-{{root}}/target/main}/dx/docs/{{profile}}/android/app/app/src"
+    for variant in debug release; do
+        mkdir -p "$app/$variant/res"
+        cp -r "{{root}}/docs/android/res/." "$app/$variant/res"
+    done
+
 # Build, install and run on whatever `adb devices` shows, with hot reload.
-start-android: _dx android-wait
+start-android: _dx android-wait (_android-icon "debug")
     cd {{root}}/docs && {{aenv}} {{dx}} serve --platform android {{mfeat}}
 
-build-android: _dx
+build-android: _dx (_android-icon "debug")
     cd {{root}}/docs && {{aenv}} {{dx}} build --platform android {{mfeat}}
 
 # Signing key for the sideloaded APK. Created on first use, outside the repo;
@@ -64,7 +77,7 @@ apk_dir := clean(root / "target/android")
 
 # Signed release APK, arm64 for a phone (`x86_64` for the emulator). `dx` only
 # packages gradle's debug variant, so gradle builds the release one itself.
-apk-android arch="aarch64": _dx
+apk-android arch="aarch64": _dx (_android-icon "release")
     #!/usr/bin/env bash
     set -euo pipefail
     cd {{root}}/docs
@@ -72,10 +85,6 @@ apk-android arch="aarch64": _dx
     # `dx` keeps the other arch's library from an earlier build.
     rm -rf "$app/app/src/main/jniLibs"
     {{aenv}} {{dx}} build --platform android --release --target {{arch}}-linux-android {{mfeat}}
-    # `dx` has no icon setting: swap its stock launcher icon for the Libero logo.
-    res="$app/app/src/main/res"
-    rm -f "$res"/mipmap-*/ic_launcher.webp "$res/drawable-v24/ic_launcher_foreground.xml"
-    cp -r "{{root}}/docs/android/res/." "$res"
     # No R8: it strips the Kotlin classes wry reaches only through JNI.
     sed -i 's/isMinifyEnabled = true/isMinifyEnabled = false/' "$app/app/build.gradle.kts"
     (cd "$app" && {{aenv}} ./gradlew -q assembleRelease)
