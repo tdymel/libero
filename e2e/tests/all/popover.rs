@@ -80,6 +80,29 @@ async fn matches_width<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     .await
 }
 
+/// Todo 1002: a page scroll re-places the open box, through the WebView's
+/// scroll script on Android.
+async fn follows_a_scroll<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    lands_below(d, route).await?;
+    let before = d.rect(ANCHOR).await?;
+    d.click("#scroll-by").await?;
+    eventually(d, "the page to scroll the anchor up", async |d| {
+        Ok(close_to(d.rect(ANCHOR).await?.y, before.y - 120.0))
+    })
+    .await?;
+    eventually(d, "the box to follow its anchor", async |d| {
+        let (a, f) = (d.rect(ANCHOR).await?, d.rect(FLOATING).await?);
+        Ok(close_to(f.x, a.x) && close_to(f.y, a.y + a.height + GAP))
+    })
+    .await
+}
+
+e2e::scenario!(
+    it_follows_its_anchor_when_the_page_scrolls,
+    "/popover/place/scroll",
+    follows_a_scroll,
+    native: skip("1002: Blitz runs no document eval to scroll the page")
+);
 e2e::scenario!(
     it_lands_below_the_anchor_at_its_start,
     "/popover/place/below",

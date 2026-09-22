@@ -676,6 +676,17 @@ mod android {
         /// The first match's centre, scrolled into view first: the screen is
         /// narrower than the desktop viewport the fixtures are written for.
         async fn centre(&self, selector: &str) -> Result<pointer::Point> {
+            // A popover mounts hidden at 0,0 a round trip before it is placed (1002).
+            let hidden = format!(
+                "(e => !!e && getComputedStyle(e).visibility === 'hidden')({})",
+                element(selector)
+            );
+            for _ in 0..40 {
+                if !json::<bool>(&self.page, &hidden).await? {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
             self.page
                 .evaluate(format!(
                     "{}?.scrollIntoView({{ block: 'center', inline: 'center' }})",
@@ -783,12 +794,26 @@ mod android {
 
         async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
             let from = self.centre(selector).await?;
-            let [x1, y1] = self.device(from);
-            let [x2, y2] = self.device(pointer::Point {
-                x: from.x + dx,
-                y: from.y + dy,
-            });
-            input(&["swipe".into(), x1, y1, x2, y2, "400".into()]).await
+            // `input swipe` lifts 1-2px short of its last move, and a drag follows moves
+            // only (1002): step the touch by hand, its last move on the end point.
+            // A touch lifted off the screen leaves the WebView a stuck touch that eats later drags.
+            let (vw, vh) = self.viewport().await?;
+            let mut events = vec!["DOWN".to_string()];
+            events.extend(std::iter::repeat_n("MOVE".to_string(), 4));
+            events.push("UP".into());
+            let mut chain = Vec::new();
+            for (i, event) in events.into_iter().enumerate() {
+                let t = (i as f64 / 4.0).min(1.0);
+                let [x, y] = self.device(pointer::Point {
+                    x: (from.x + dx * t).clamp(0.0, vw - 1.0),
+                    y: (from.y + dy * t).clamp(0.0, vh - 1.0),
+                });
+                if i > 0 {
+                    chain.extend([";".into(), "input".into()]);
+                }
+                chain.extend(["motionevent".into(), event, x, y]);
+            }
+            input(&chain).await
         }
 
         /// A swipe that goes nowhere.

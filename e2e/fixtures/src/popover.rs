@@ -28,6 +28,10 @@ pub const ROUTES: Routes = &[
         "/popover/place/match",
         || rsx! { PlacedPage { left: "200px", top: "100px", width: PopoverWidth::Match } },
     ),
+    (
+        "/popover/place/scroll",
+        || rsx! { PlacedPage { left: "200px", top: "100px", tall: true } },
+    ),
 ];
 
 /// A 220px anchor placed absolutely, so the page's padding does not move it,
@@ -38,6 +42,10 @@ fn PlacedPage(
     top: &'static str,
     #[props(default = Align::Start)] align: Align,
     #[props(default = PopoverWidth::Auto)] width: PopoverWidth,
+    /// A page taller than the viewport and a fixed `#scroll-by` button that
+    /// scrolls it 120px, so an open box has to follow its anchor.
+    #[props(default)]
+    tall: bool,
 ) -> Element {
     let anchor = use_element();
     let mut opened = use_signal(|| false);
@@ -66,6 +74,18 @@ fn PlacedPage(
                 onmounted: anchor.mount(),
                 onclick: move |_| opened.toggle(),
                 "Anchor"
+            }
+        }
+        if tall {
+            div { height: "300vh" }
+            div { position: "fixed", left: "8px", bottom: "8px",
+                Button {
+                    id: "scroll-by",
+                    onclick: move |_| {
+                        document::eval("window.scrollBy(0, 120)");
+                    },
+                    "Scroll"
+                }
             }
         }
     }
