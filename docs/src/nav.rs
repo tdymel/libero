@@ -96,7 +96,11 @@ pub fn page_actions() -> Vec<SpotlightAction> {
                 }
             });
             // The section is a keyword too: "Accessibility" finds its "Overview".
-            action.keywords = group.map(str::to_string).into_iter().collect();
+            action.keywords = group
+                .into_iter()
+                .chain(aliases(label).iter().copied())
+                .map(str::to_string)
+                .collect();
             action.group = group.map(str::to_string);
             action
         })
@@ -124,6 +128,121 @@ pub fn page_label(route: &Route) -> Option<&'static str> {
         .into_iter()
         .find(|(id, ..)| *id == path)
         .map(|(_, label, _)| label)
+}
+
+// Hidden search names other libraries use for a page, by its label. Add a row to extend.
+fn aliases(label: &str) -> &'static [&'static str] {
+    match label {
+        "Box" => &["div"],
+        "Paper" => &["card", "surface"],
+        "Flex" => &["stack", "row", "column", "group"],
+        "Grid" => &["simple grid", "layout"],
+        "Center" => &["centre"],
+        "Container" => &["max width"],
+        "AspectRatio" => &["aspect ratio", "ratio"],
+        "Divider" => &["separator", "rule", "hr"],
+        "Collapse" => &["expand", "disclosure", "details"],
+        "Float" => &["floating"],
+        "Header" => &["app bar", "top bar", "navbar"],
+        "Sidebar" => &["navbar", "aside", "app shell"],
+        "Splitter" => &["resizable", "split pane", "panel group"],
+        "ScrollArea" => &["scrollbar", "overflow"],
+        "Button" => &["btn"],
+        "ActionIcon" => &["icon button", "iconbutton"],
+        "CopyButton" => &["clipboard", "copy"],
+        "DirectionToggle" => &["rtl", "ltr", "direction"],
+        "RepoButton" => &["github", "repository"],
+        "ThemeToggle" => &["dark mode", "color scheme", "light dark"],
+        "Form" => &["form field"],
+        "Fieldset" => &["group", "legend"],
+        "TextField" => &["input", "text input", "textinput"],
+        "Textarea" => &["multiline", "text area"],
+        "PasswordField" => &["password input", "secret"],
+        "PhoneField" => &["phone input", "tel", "telephone"],
+        "NumberField" => &["number input", "numeric", "spinner", "stepper"],
+        "PinField" => &["pin input", "otp", "verification code"],
+        "Autocomplete" => &["typeahead", "suggest", "search select"],
+        "Select" => &["dropdown", "drop down", "listbox"],
+        "MultiSelect" => &["multi select", "multiple select", "dropdown"],
+        "TagsField" => &["tags input", "taginput", "chips input"],
+        "Cascader" => &["cascading select", "nested select"],
+        "NativeSelect" => &["native dropdown", "html select"],
+        "Combobox" => &["combo box", "dropdown", "autocomplete"],
+        "Checkbox" => &["check box", "tick"],
+        "Chip" => &["tag", "pill", "toggle chip"],
+        "Switch" => &["toggle"],
+        "RadioGroup" => &["radio", "radio button", "option group"],
+        "SegmentedControl" => &["segmented button", "button group", "toggle group"],
+        "Slider" => &["range", "track"],
+        "RangeSlider" => &["range", "two thumb", "min max"],
+        "ColorField" => &["color input", "colour"],
+        "ColorPicker" => &["colour picker", "eyedropper", "swatch"],
+        "ChronoField" => &[
+            "DateField",
+            "date picker",
+            "datepicker",
+            "date input",
+            "time field",
+            "time input",
+            "datetime",
+        ],
+        "ChronoPicker" => &[
+            "calendar",
+            "date picker",
+            "datepicker",
+            "time picker",
+            "datetime",
+        ],
+        "FileField" => &["file input", "upload", "dropzone", "file picker"],
+        "Anchor" => &["link", "toc", "table of contents"],
+        "NavLink" => &["nav item", "menu item", "link"],
+        "Burger" => &["hamburger", "menu button", "nav toggle"],
+        "Tabs" => &["tab list", "tabbed"],
+        "Menubar" => &["menu bar"],
+        "Pagination" => &["pager", "paging", "page numbers"],
+        "Stepper" => &["steps", "wizard", "progress steps"],
+        "Tree" => &["treeview", "tree view", "hierarchy"],
+        "Overlay" => &["backdrop", "scrim"],
+        "Modal" => &["dialog", "popup"],
+        "Dialog" => &["modal", "alert dialog", "confirm"],
+        "Drawer" => &["sheet", "side panel", "offcanvas"],
+        "Popover" => &["popup", "popper", "dropdown"],
+        "Tooltip" => &["hint", "hover text", "title"],
+        "HoverCard" => &["hover card", "preview card"],
+        "Menu" => &["dropdown menu", "context menu", "actions menu"],
+        "Spotlight" => &["command palette", "command k", "cmdk", "search"],
+        "Lightbox" => &["image viewer", "gallery", "zoom"],
+        "FloatingWindow" => &["window", "draggable", "floating panel"],
+        "Alert" => &["banner", "callout", "message"],
+        "Notifications" => &["toast", "snackbar", "notify"],
+        "Loader" => &["spinner", "loading", "activity indicator"],
+        "ProgressBar" => &["progress", "meter"],
+        "Skeleton" => &["placeholder", "shimmer", "loading"],
+        "Icon" => &["svg", "glyph"],
+        "Badge" => &["label", "tag", "pill", "chip"],
+        "Indicator" => &["dot", "status dot", "notification badge"],
+        "Avatar" => &["profile picture", "user picture", "initials"],
+        "Image" => &["img", "picture", "photo"],
+        "ImageList" => &["gallery", "masonry", "image grid"],
+        "Carousel" => &["slideshow", "slider", "swiper"],
+        "List" => &["ul", "ol", "bullet list"],
+        "DataList" => &["description list", "definition list", "key value"],
+        "Table" => &["data grid", "datagrid", "datatable"],
+        "Timeline" => &["history", "activity feed"],
+        "Accordion" => &["expansion panel", "collapsible", "disclosure"],
+        "Marquee" => &["ticker", "scrolling text"],
+        "QrCode" => &["qr", "qrcode", "barcode"],
+        "Title" => &["heading", "h1", "headline"],
+        "Text" => &["typography", "paragraph"],
+        "Mark" => &["highlight"],
+        "Code" => &["inline code", "monospace"],
+        "Kbd" => &["keyboard", "key", "shortcut"],
+        "CodeBlock" => &["pre", "code snippet", "syntax highlight"],
+        "Blockquote" => &["quote", "citation"],
+        "FocusTrap" => &["focus lock", "focus scope"],
+        "VisuallyHidden" => &["sr only", "screen reader only", "hidden"],
+        _ => &[],
+    }
 }
 
 // Every page as (path, label, group label), in sidebar order.
@@ -471,5 +590,25 @@ mod tests {
             })
         };
         assert!(hit("Overview") && hit("FocusTrap"));
+    }
+
+    #[test]
+    fn an_alias_finds_its_page_after_label_matches() {
+        let dom = VirtualDom::new(VNode::empty);
+        let actions = dom.in_scope(ScopeId::ROOT, page_actions);
+        let labels = |query| {
+            spotlight_filter(query, &actions)
+                .into_iter()
+                .map(|action| action.label)
+                .collect::<Vec<_>>()
+        };
+        assert!(labels("datepicker").contains(&"ChronoField".to_string()));
+        assert_eq!(labels("select")[0], "Select");
+        let popup = labels("popup");
+        assert!(popup.contains(&"Modal".to_string()) && popup.contains(&"Popover".to_string()));
+        // "Menu" lists "Menu" and "Menubar" (labels) before "Burger" (alias "menu button").
+        let menu = labels("menu");
+        let at = |label: &str| menu.iter().position(|found| found == label).unwrap();
+        assert!(at("Menubar") < at("Burger"));
     }
 }
