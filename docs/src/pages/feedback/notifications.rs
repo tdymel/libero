@@ -22,21 +22,29 @@ fn default_variant() -> &'static str {
 /// The preview's own template for the card option, printed as it is written
 /// below.
 // snippet: item #[component] fn DismissIcon() -> Element { rsx! {} }
-const CARD_EXAMPLE: &str = r#"// A `fn`, not a capturing closure. Everything it draws travels in the data.
-fn card_notification(s: NotificationScope<NotificationData>) -> Element {
+const CARD_EXAMPLE: &str = r#"#[derive(Clone, PartialEq)]
+struct Message {
+    sender: &'static str,
+    initials: &'static str,
+    title: Option<String>,
+    text: &'static str,
+}
+
+// A `fn`, not a capturing closure. Everything it draws travels in `Message`.
+fn card_notification(s: NotificationScope<Message>) -> Element {
     let data = s.args();
 
     rsx! {
         Paper { shadow: "md", sx: sx().padding("md"),
             Flex { direction: "row", align: "start", gap: "md",
-                Avatar { name: "Ada Lovelace", initials: "AL", color: "primary" }
+                Avatar { name: data.sender, initials: data.initials, color: "primary" }
                 Flex { direction: "column", gap: "sm", sx: sx().flex("1").min_width("0"),
                     Flex { direction: "row", align: "start", justify: "space-between", gap: "sm",
                         Flex { direction: "column", gap: "xs",
                             if let Some(title) = data.title {
                                 Text { sx: sx().font_weight("600"), "{title}" }
                             }
-                            Text { "{data.message}" }
+                            Text { "{data.text}" }
                         }
                         if s.closable() {
                             ActionIcon { variant: "standard", size: "sm", aria_label: "Dismiss",
@@ -53,15 +61,34 @@ fn card_notification(s: NotificationScope<NotificationData>) -> Element {
     }
 }"#;
 
+#[derive(Clone, PartialEq)]
+struct Message {
+    sender: &'static str,
+    initials: &'static str,
+    title: Option<String>,
+    text: &'static str,
+}
+
+/// The senders the demo button cycles through.
+const SENDERS: [(&str, &str, &str); 3] = [
+    ("Ada Lovelace", "AL", "The engine is ready for review."),
+    ("Grace Hopper", "GH", "I found the bug in the compiler."),
+    ("Alan Turing", "AT", "Lunch at noon?"),
+];
+
 /// A notification drawn by your own template instead of an `Alert`: an avatar beside the
 /// text, with an action row below.
-fn card_notification(s: NotificationScope<NotificationData>) -> Element {
+fn card_notification(s: NotificationScope<Message>) -> Element {
     let data = s.args();
 
     rsx! {
         Paper { shadow: "md", sx: sx().padding("md"),
             Flex { direction: "row", align: "start", gap: "md",
-                Avatar { name: "Ada Lovelace", initials: "AL", color: "primary" }
+                Avatar {
+                    name: data.sender,
+                    initials: data.initials,
+                    color: "primary",
+                }
                 Flex {
                     direction: "column",
                     gap: "sm",
@@ -75,7 +102,7 @@ fn card_notification(s: NotificationScope<NotificationData>) -> Element {
                             if let Some(title) = data.title {
                                 Text { sx: sx().font_weight("600"), "{title}" }
                             }
-                            Text { "{data.message}" }
+                            Text { "{data.text}" }
                         }
                         if s.closable() {
                             ActionIcon {
@@ -244,7 +271,7 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
         _ => "use_notifications()",
     };
     let mut fields = Vec::new();
-    if values.str("title") == "true" {
+    if values.str("title") == "true" && template != "card" {
         fields.push("title: Some(\"Saved\".into())".to_string());
     }
     if template == "alert" {
@@ -259,6 +286,14 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
     }
     let data = if upload {
         "Upload { file: \"archive.zip\", percent: 0.0 }".to_string()
+    } else if template == "card" {
+        let title = match values.str("title") == "true" {
+            true => "Some(\"Saved\".into())",
+            false => "None",
+        };
+        format!(
+            "// Each message carries its own sender.\nMessage {{\n        sender: \"Ada Lovelace\",\n        initials: \"AL\",\n        title: {title},\n        text: \"The engine is ready for review.\",\n    }}"
+        )
     } else if fields.is_empty() {
         "\"Your changes are safe.\"".to_string()
     } else {
@@ -346,12 +381,9 @@ fn Examples(
     auto_close: String,
     contained: bool,
 ) -> Element {
-    // One hook either way: `use_notifications()` is the default template.
-    let notify = if template == "card" {
-        use_notifications_with(card_notification)
-    } else {
-        use_notifications()
-    };
+    let notify = use_notifications();
+    let cards = use_notifications_with(card_notification);
+    let next_sender = use_hook(|| Rc::new(Cell::new(0)));
     let uploads = use_notifications_with(upload_notification);
     // Each upload's ticker. Dropped with the preview, which is what stops them.
     let tickers = use_hook(|| {
@@ -422,6 +454,20 @@ fn Examples(
             show_upload();
             return;
         }
+        if template == "card" {
+            let (sender, initials, text) = SENDERS[next_sender.get() % SENDERS.len()];
+            next_sender.set(next_sender.get() + 1);
+            cards.show_with(
+                Message {
+                    sender,
+                    initials,
+                    title: title.then(|| "Saved".into()),
+                    text,
+                },
+                options(false),
+            );
+            return;
+        }
         notify.show_with(
             NotificationData {
                 title: title.then(|| "Saved".into()),
@@ -448,7 +494,11 @@ fn Examples(
             }),
             Flex { direction: "row", justify: "center", gap: "sm", wrap: "wrap",
                 Button { variant: "outlined", onclick: show, "Show one" }
-                Button { variant: "text", onclick: move |_| notify.clear(), "Clear all" }
+                Button { variant: "text", onclick: move |_| {
+                        notify.clear();
+                        cards.clear();
+                    },
+                    "Clear all" }
             }
             Text { size: "sm",
                 if contained {
