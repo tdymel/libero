@@ -34,6 +34,7 @@ pub struct Localization {
     pub pin_field: PinFieldLabels,
     pub theme_toggle: ThemeToggleLabels,
     pub repo_button: RepoButtonLabels,
+    pub tldr: TldrLabels,
     pub direction_toggle: DirectionToggleLabels,
     pub spotlight: SpotlightLabels,
     pub carousel: CarouselLabels,
@@ -72,6 +73,7 @@ impl Localization {
         pin_field: PinFieldLabels::ENGLISH,
         theme_toggle: ThemeToggleLabels::ENGLISH,
         repo_button: RepoButtonLabels::ENGLISH,
+        tldr: TldrLabels::ENGLISH,
         direction_toggle: DirectionToggleLabels::ENGLISH,
         spotlight: SpotlightLabels::ENGLISH,
         carousel: CarouselLabels::ENGLISH,
@@ -109,6 +111,7 @@ impl Localization {
         pin_field: PinFieldLabels::GERMAN,
         theme_toggle: ThemeToggleLabels::GERMAN,
         repo_button: RepoButtonLabels::GERMAN,
+        tldr: TldrLabels::GERMAN,
         direction_toggle: DirectionToggleLabels::GERMAN,
         spotlight: SpotlightLabels::GERMAN,
         carousel: CarouselLabels::GERMAN,
@@ -141,7 +144,7 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 30] {
+    fn templates(words: &Localization) -> [&'static str; 31] {
         [
             words.common.remove,
             words.chips.added,
@@ -168,6 +171,7 @@ mod tests {
             words.notifications.region,
             words.pin_field.cell,
             words.code_block.code_named,
+            words.tldr.prompt,
             words.date.on_or_after,
             words.date.on_or_before,
             words.date.between,
@@ -211,6 +215,7 @@ mod tests {
             ("max", &"March 9, 2026"),
             ("from", &1),
             ("to", &3),
+            ("url", &"https://libero-ui.dev"),
         ];
         for words in [&Localization::ENGLISH, &Localization::GERMAN] {
             for template in templates(words) {

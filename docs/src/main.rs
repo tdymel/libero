@@ -104,6 +104,8 @@ pub(crate) enum Route {
     RepoButtonPage {},
     #[route("/buttons/theme-toggle")]
     ThemeTogglePage {},
+    #[route("/buttons/tldr")]
+    TldrPage {},
 
     #[route("/data-display/accordion")]
     AccordionPage {},

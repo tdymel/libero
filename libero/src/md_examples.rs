@@ -135,6 +135,7 @@ md_pages! {
     Theming => "theming",
     Timeline => "timeline",
     Title => "title",
+    Tldr => "tldr",
     Tooltip => "tooltip",
     Tree => "tree",
     UseAccessibility => "use_accessibility",

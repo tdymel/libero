@@ -101,7 +101,7 @@ static WORDS: Localization = Localization {
 The groups live in `libero::localization`, each with an `ENGLISH` and a `GERMAN`
 const: `CommonLabels`, `DateLocale`, `PaginationLabels`, `AvatarLabels`,
 `BurgerLabels`, `AnchorLabels`, `PinFieldLabels`, `ThemeToggleLabels`,
-`RepoButtonLabels`, `DirectionToggleLabels`, `SpotlightLabels`, `CarouselLabels`, `NavLinkLabels`, `LightboxLabels`,
+`RepoButtonLabels`, `TldrLabels`, `DirectionToggleLabels`, `SpotlightLabels`, `CarouselLabels`, `NavLinkLabels`, `LightboxLabels`,
 `FloatingWindowLabels`, `NotificationsLabels`, `ScrollerLabels`,
 `StepperLabels`, `MarqueeLabels`, `ChipsLabels`, `ComboboxLabels`,
 `TagsFieldLabels`, `ImageLabels`, `CodeBlockLabels`, `CopyButtonLabels`, `ColorLabels`,

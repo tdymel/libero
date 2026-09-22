@@ -97,6 +97,7 @@ mod textarea;
 mod theme_toggle;
 mod time_picker;
 mod timeline;
+mod tldr;
 mod tooltip;
 mod trailing_button;
 mod tree;

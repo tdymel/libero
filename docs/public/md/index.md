@@ -44,6 +44,7 @@ fetch only the file you need.
 - [DirectionToggle](direction_toggle.md): An icon button that turns the app's text between left to right and right to left.
 - [RepoButton](repo_button.md): A link to a GitHub or GitLab repository with its star count beside the host's icon.
 - [ThemeToggle](theme_toggle.md): An icon button that steps the colour scheme through system, dark and light, with an optional theme picker beside it.
+- [Tldr](tldr.md): A menu of links that ask an AI assistant (ChatGPT, Google AI, Claude, Perplexity or your own) to summarize a page.
 
 ## Form
 

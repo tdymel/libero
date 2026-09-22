@@ -153,6 +153,7 @@ fn aliases(label: &str) -> &'static [&'static str] {
         "DirectionToggle" => &["rtl", "ltr", "direction"],
         "RepoButton" => &["github", "repository"],
         "ThemeToggle" => &["dark mode", "color scheme", "light dark"],
+        "Tldr" => &["summarize", "summary", "ai", "chatgpt", "claude"],
         "Form" => &["form field"],
         "Fieldset" => &["group", "legend"],
         "TextField" => &["input", "text input", "textinput"],
@@ -311,6 +312,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::DirectionTogglePage {}, "DirectionToggle"),
                 page(Route::RepoButtonPage {}, "RepoButton"),
                 page(Route::ThemeTogglePage {}, "ThemeToggle"),
+                page(Route::TldrPage {}, "Tldr"),
             ],
         ),
         // Fields built on `use_field`, ordered for reading: guide, containers, then fields

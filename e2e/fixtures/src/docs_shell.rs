@@ -3,10 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{
-        ActionIcon, Button, Icon, Menu, MenuEntry, MenuItem, ScrollArea, ScrollAreaHandle,
-        use_menu, use_scroll_area,
-    },
+    components::{Button, ScrollArea, ScrollAreaHandle, use_scroll_area},
     hooks::{ElementHandle, use_element},
     platform::ElementApi,
 };
@@ -38,58 +35,7 @@ pub fn use_heading_focus<T: Clone + PartialEq + 'static>(location: T, content: E
 pub const ROUTES: Routes = &[
     ("/docs-shell/heading", || rsx! { HeadingPage {} }),
     ("/docs-shell/scroll", || rsx! { ScrollPage {} }),
-    ("/docs-shell/tldr", || rsx! { TldrPage { label: true } }),
-    (
-        "/docs-shell/tldr-icon",
-        || rsx! { TldrPage { label: false } },
-    ),
 ];
-
-const MARK: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3C/svg%3E";
-
-/// The docs' `Tldr` menu (`docs/src/components/tldr.rs`), with links that stay on the fixture.
-#[component]
-fn TldrPage(label: bool) -> Element {
-    let menu = use_menu();
-    let providers = ["ChatGPT", "Google AI", "Claude", "Perplexity"]
-        .map(|name| {
-            MenuItem::new(name)
-                .href(format!("https://example.test/{name}?q=x"))
-                .leading(
-                    rsx! { Icon { src: MARK, variant: "standard", size: "sm", color: "inherit" } },
-                )
-                .into()
-        })
-        .to_vec();
-    let items = vec![MenuEntry::Group {
-        label: "Summarize with".into(),
-        items: providers,
-    }];
-    rsx! {
-        h1 { "A page" }
-        Menu { state: menu, items,
-            if label {
-                Button {
-                    size: "sm",
-                    variant: "outlined",
-                    color: "neutral",
-                    icon: rsx! { Icon { variant: "standard", size: "sm", color: "inherit", svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "9" } } } },
-                    attributes: menu.a11y_attributes(),
-                    "TLDR"
-                }
-            } else {
-                ActionIcon {
-                    size: "sm",
-                    variant: "outlined",
-                    color: "neutral",
-                    aria_label: "Summarize with AI",
-                    attributes: menu.a11y_attributes(),
-                    svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "9" } }
-                }
-            }
-        }
-    }
-}
 
 /// Two "pages" behind one signal: the hook only needs a value that changes.
 #[component]

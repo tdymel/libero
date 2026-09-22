@@ -98,6 +98,7 @@ mod textarea;
 mod theme_toggle;
 mod time_picker;
 mod timeline;
+mod tldr;
 mod tooltip;
 mod trailing_button;
 mod tree;
@@ -204,6 +205,7 @@ const FIXTURES: &[Routes] = &[
     theme_toggle::ROUTES,
     time_picker::ROUTES,
     timeline::ROUTES,
+    tldr::ROUTES,
     tooltip::ROUTES,
     trailing_button::ROUTES,
     tree::ROUTES,
