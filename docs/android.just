@@ -57,6 +57,8 @@ _android-icon profile:
     #!/usr/bin/env bash
     set -euo pipefail
     app="${CARGO_TARGET_DIR:-{{root}}/target/main}/dx/docs/{{profile}}/android/app/app/src"
+    # Older runs copied these into `main`, where they clash with the variants' ("Duplicate resources").
+    (cd "{{root}}/docs/android/res" && find . -type f) | while read -r f; do rm -f "$app/main/res/$f"; done
     for variant in debug release; do
         mkdir -p "$app/$variant/res"
         cp -r "{{root}}/docs/android/res/." "$app/$variant/res"

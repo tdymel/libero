@@ -385,31 +385,42 @@ fn bare(name: &str) -> &str {
 }
 
 /// The names in a mirror's `## Props` and `## API` tables, per `###` group; `""` names the
-/// `## Props` ones before any. `## API` files options structs and handles by heading.
+/// `## Props` ones before any. `## API` files options structs and handles by heading; a handle may also have a `## ` section
+/// or a table headed by its type.
 fn md_props(md: &str) -> Vec<(String, BTreeSet<String>)> {
     let mut groups: Vec<(String, BTreeSet<String>)> = Vec::new();
     let mut section = "";
     // The group the next row joins: none until a heading (or, in `## Props`, a row) opens one.
     let mut current: Option<usize> = None;
+    let open = |groups: &mut Vec<(String, BTreeSet<String>)>, name: &str| {
+        groups.push((name.to_string(), BTreeSet::new()));
+        Some(groups.len() - 1)
+    };
     for line in md.lines() {
         if let Some(heading) = line.strip_prefix("## ") {
             section = heading.trim();
             current = None;
-        } else if !matches!(section, "Props" | "API") {
+            // A handle may have a `## ` section of its own, named by its type.
+            if section.trim_matches('`').ends_with("Handle") {
+                current = open(&mut groups, section.trim_matches('`'));
+            }
+        } else if current.is_none() && !matches!(section, "Props" | "API") {
             continue;
         } else if let Some(heading) = line.strip_prefix("### ") {
-            groups.push((
-                heading.trim().trim_matches('`').to_string(),
-                BTreeSet::new(),
-            ));
-            current = Some(groups.len() - 1);
+            if matches!(section, "Props" | "API") {
+                current = open(&mut groups, heading.trim().trim_matches('`'));
+            }
         } else if let Some(row) = line.strip_prefix("| `") {
             let Some((name, _)) = row.split_once('`') else {
                 continue;
             };
+            // A table may head its first column with its type: `| `FooHandle` | Description |`.
+            if name.starts_with(|c: char| c.is_uppercase()) {
+                current = open(&mut groups, name);
+                continue;
+            }
             if current.is_none() && section == "Props" {
-                groups.push((String::new(), BTreeSet::new()));
-                current = Some(groups.len() - 1);
+                current = open(&mut groups, "");
             }
             if let Some(group) = current {
                 groups[group].1.insert(bare(name).to_string());
@@ -451,6 +462,9 @@ fn md_mirrors_list_the_props_of_their_page() {
                     })
                     .map(|(_, names)| names);
                 let Some(listed) = listed else {
+                    if group.component().ends_with("Handle") {
+                        problems.push(format!("{markdown}: no table for `{}`", group.component()));
+                    }
                     continue;
                 };
                 let page: BTreeSet<&str> = group.names().map(bare).collect();
