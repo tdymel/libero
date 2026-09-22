@@ -3,6 +3,8 @@
 # `Default`, where `public_dir` is `None` and nothing is copied.
 [application]
 public_dir = "public"
+# The Android launcher label; `dx` otherwise derives "Docs" from the crate name.
+name = "Libero"
 
 [web]
 # Emits brotli siblings (`.br`, no gzip) for the wasm and assets in release

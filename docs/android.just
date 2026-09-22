@@ -72,6 +72,10 @@ apk-android arch="aarch64": _dx
     # `dx` keeps the other arch's library from an earlier build.
     rm -rf "$app/app/src/main/jniLibs"
     {{aenv}} {{dx}} build --platform android --release --target {{arch}}-linux-android {{mfeat}}
+    # `dx` has no icon setting: swap its stock launcher icon for the Libero logo.
+    res="$app/app/src/main/res"
+    rm -f "$res"/mipmap-*/ic_launcher.webp "$res/drawable-v24/ic_launcher_foreground.xml"
+    cp -r "{{root}}/docs/android/res/." "$res"
     # No R8: it strips the Kotlin classes wry reaches only through JNI.
     sed -i 's/isMinifyEnabled = true/isMinifyEnabled = false/' "$app/app/build.gradle.kts"
     (cd "$app" && {{aenv}} ./gradlew -q assembleRelease)
@@ -87,6 +91,22 @@ apk-android arch="aarch64": _dx
     "$tools/apksigner" sign --ks "{{keystore}}" --ks-pass "pass:{{ks_pass}}" "$apk"
     ln -sf "$(basename "$apk")" "{{apk_dir}}/libero-docs-{{arch}}.apk"
     echo "$apk"
+
+# Regenerates `docs/android/res` from `assets/logo.svg`: an adaptive icon (the
+# logo inside the 66dp safe zone of a 108dp canvas) plus square legacy icons.
+android-icons:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{root}}/docs
+    for spec in mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432; do
+        IFS=: read -r density icon fg <<< "$spec"
+        dir=android/res/mipmap-$density
+        mkdir -p "$dir"
+        rsvg-convert -w $((fg * 56 / 100)) assets/logo.svg \
+            | magick png:- -background none -gravity center -extent ${fg}x${fg} "$dir/ic_launcher_foreground.png"
+        rsvg-convert -w $((icon * 80 / 100)) assets/logo.svg \
+            | magick png:- -background white -gravity center -extent ${icon}x${icon} "$dir/ic_launcher.png"
+    done
 
 # Installs `apk-android`'s newest file on the one device `adb devices` shows.
 install-android arch="aarch64":
