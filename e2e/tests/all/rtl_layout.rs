@@ -129,3 +129,17 @@ fn an_end_float_sits_at_the_end() {
         "the float in the end corner",
     );
 }
+
+/// A textarea's counter sits in its bottom end corner (1078).
+#[test]
+fn a_textarea_counter_sits_in_the_end_corner() {
+    mirrors(
+        "/textarea/counter",
+        "const c = document.querySelector('[data-slot=counter]').getBoundingClientRect(); \
+         const t = document.querySelector('textarea').getBoundingClientRect(); \
+         const side = rtl ? c.left - t.left : t.right - c.right; \
+         const other = rtl ? t.right - c.right : c.left - t.left; \
+         return side < other && c.top >= t.top;",
+        "the counter in the end corner",
+    );
+}

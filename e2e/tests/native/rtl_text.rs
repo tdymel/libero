@@ -6,8 +6,17 @@ use e2e::native::{Page, mount};
 use libero::components::Textarea;
 
 fn app() -> Element {
+    rsx! { Fixture { dir: "rtl" } }
+}
+
+fn ltr_app() -> Element {
+    rsx! { Fixture { dir: "ltr" } }
+}
+
+#[component]
+fn Fixture(dir: &'static str) -> Element {
     rsx! {
-        div { dir: "rtl", style: "width: 600px",
+        div { dir, style: "width: 600px",
             p { id: "paragraph", "Short line" }
             h2 { id: "heading", "Short line" }
             p { id: "centred", style: "text-align: center", "Short line" }
@@ -40,11 +49,28 @@ fn rtl_text_sits_right() {
     }
 }
 
+/// Whether the counter's box is painted, and its horizontal centre relative to the textarea's.
+fn counter_side(page: &Page) -> (bool, f64) {
+    let (left, top, width, height) = page.rect("[data-slot=counter]");
+    let (frame_left, _, frame_width, _) = page.rect("textarea");
+    let y = (top + height / 2.0) as u32;
+    let row = (0..width as u32)
+        .map(|x| (left as u32 + x, y))
+        .collect::<Vec<_>>();
+    let inked = page.painted_pixels(&row).iter().any(|p| p[0] < 128);
+    (inked, left + width / 2.0 - (frame_left + frame_width / 2.0))
+}
+
 #[test]
 fn a_counter_at_the_end_sits_left_under_rtl() {
-    let page = mount(app);
-    let (left, right) = ink(&page, "[data-slot=counter]");
-    assert!(left > 0 && right == 0, "ink left={left} right={right}");
+    let (inked, offset) = counter_side(&mount(app));
+    assert!(inked && offset < 0.0, "inked={inked} offset={offset}");
+}
+
+#[test]
+fn a_counter_at_the_end_sits_right_under_ltr() {
+    let (inked, offset) = counter_side(&mount(ltr_app));
+    assert!(inked && offset > 0.0, "inked={inked} offset={offset}");
 }
 
 #[test]
