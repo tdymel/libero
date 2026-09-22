@@ -98,6 +98,7 @@ pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
         warnings,
         redraws,
         navigations,
+        last_press: None,
     };
     page.settle();
     page
@@ -279,6 +280,8 @@ pub struct Page {
     warnings: SignalWarnings,
     redraws: Arc<Redraws>,
     navigations: Arc<Navigations>,
+    /// When and where the last drag pressed, see [`Page::press_apart`].
+    last_press: Option<(Instant, f32, f32)>,
 }
 
 impl Page {
@@ -477,10 +480,11 @@ impl Page {
     }
 
     /// Presses at the first match's centre, moves by `(dx, dy)` in eight steps,
-    /// releases there.
+    /// releases there. Waits out a double press of the drag before it.
     pub fn drag(&mut self, selector: &str, dx: f32, dy: f32) {
         const STEPS: u8 = 8;
         let (x, y) = self.centre(selector);
+        self.press_apart(x, y);
         self.dispatch(UiEvent::PointerDown(self.pointer(x, y, true)));
         for step in 1..=STEPS {
             let t = f32::from(step) / f32::from(STEPS);
@@ -496,7 +500,19 @@ impl Page {
     /// The steps of a hand-driven drag, each settled: press, move with the
     /// button held, release.
     pub fn press_at(&mut self, x: f32, y: f32) {
+        self.press_apart(x, y);
         self.dispatch(UiEvent::PointerDown(self.pointer(x, y, true)));
+    }
+
+    /// Sleeps until a press at `(x, y)` is no double press of the last drag's, so
+    /// two drags on one handle (`Splitter` collapses on a double) need no sleep.
+    /// `click` skips it: two clicks are how a test asks for a double.
+    fn press_apart(&mut self, x: f32, y: f32) {
+        let gap = double_press_gap(self.last_press, Instant::now(), x, y);
+        if !gap.is_zero() {
+            self.wait(gap);
+        }
+        self.last_press = Some((Instant::now(), x, y));
     }
 
     pub fn move_to(&mut self, x: f32, y: f32) {
@@ -939,6 +955,17 @@ fn key_event(key: Key, state: KeyState, modifiers: Modifiers) -> BlitzKeyEvent {
     }
 }
 
+/// How long a press at `(x, y)` waits to be no double press of `last`: libero's
+/// `DoublePress` counts one within 500 ms and 2 px.
+fn double_press_gap(last: Option<(Instant, f32, f32)>, now: Instant, x: f32, y: f32) -> Duration {
+    match last {
+        Some((at, last_x, last_y)) if (x - last_x).abs() <= 2.0 && (y - last_y).abs() <= 2.0 => {
+            Duration::from_millis(500).saturating_sub(now.saturating_duration_since(at))
+        }
+        _ => Duration::ZERO,
+    }
+}
+
 fn pointer(x: f32, y: f32, down: bool) -> BlitzPointerEvent {
     BlitzPointerEvent {
         id: BlitzPointerId::Mouse,
@@ -961,5 +988,37 @@ fn pointer(x: f32, y: f32, down: bool) -> BlitzPointerEvent {
         details: PointerDetails::default(),
         element: Point { x: 0.0, y: 0.0 },
         active_pointers: Default::default(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_press_at_the_same_point_waits_out_the_500_ms() {
+        let then = Instant::now();
+        let last = Some((then, 10.0, 20.0));
+
+        assert_eq!(
+            double_press_gap(last, then + Duration::from_millis(120), 11.0, 21.5),
+            Duration::from_millis(380)
+        );
+        assert_eq!(
+            double_press_gap(last, then + Duration::from_millis(500), 10.0, 20.0),
+            Duration::ZERO
+        );
+    }
+
+    #[test]
+    fn another_point_or_no_earlier_press_waits_for_nothing() {
+        let then = Instant::now();
+        let soon = then + Duration::from_millis(10);
+
+        assert_eq!(
+            double_press_gap(Some((then, 10.0, 20.0)), soon, 13.0, 20.0),
+            Duration::ZERO
+        );
+        assert_eq!(double_press_gap(None, soon, 10.0, 20.0), Duration::ZERO);
     }
 }

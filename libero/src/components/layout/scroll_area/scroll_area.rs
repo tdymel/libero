@@ -352,10 +352,11 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         && draws_own_scrollbars();
     let drawn_bars = DrawnBars {
         root,
+        layer: use_element(),
         metrics: use_signal(|| None::<ScrollMetrics>),
     };
     let measure_bars_now = move |own_bars: bool| {
-        if own_bars && root.is_mounted() {
+        if own_bars && root.is_mounted() && drawn_bars.layer.is_mounted() {
             drawn_bars.measure(1);
         }
     };

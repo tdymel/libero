@@ -4,7 +4,7 @@
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
 use libero::{
-    components::{Checkbox, Radio, Slider, SliderChangeEvent, Switch},
+    components::{Checkbox, Radio, Slider, SliderChangeEvent, Splitter, Switch},
     sx::sx,
     theme::ChoiceVariant,
 };
@@ -181,6 +181,34 @@ fn a_link_in_a_radio_card_keeps_its_click() {
     assert!(!picked(&page), "{}", page.tree());
     page.click("label");
     assert!(picked(&page), "the card's label picks it");
+}
+
+/// Two drags on one divider press at one point, which the divider counts as a double
+/// press within 500 ms; the driver spaces them so it does not collapse.
+#[test]
+fn two_drags_on_one_divider_do_not_collapse_it() {
+    const DIVIDER: &str = "[role=separator]";
+    fn app() -> Element {
+        rsx! {
+            div { style: "width: 400px; height: 120px",
+                Splitter {
+                    initial_size: 50.0,
+                    aria_label: "Resize",
+                    panel_a: rsx! { "Pane A" },
+                    panel_b: rsx! { "Pane B" },
+                }
+            }
+        }
+    }
+    let mut page = mount(app);
+    page.drag(DIVIDER, 0.0, 0.0);
+    page.drag(DIVIDER, 0.0, 0.0);
+    assert_eq!(
+        page.attr(DIVIDER, "aria-valuenow").as_deref(),
+        Some("50"),
+        "{}",
+        page.tree()
+    );
 }
 
 fn switch_card() -> Element {

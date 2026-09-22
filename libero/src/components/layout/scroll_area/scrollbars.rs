@@ -170,6 +170,8 @@ pub(super) fn bars(axis: ScrollAxis, metrics: ScrollMetrics, thickness: f64) -> 
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct DrawnBars {
     pub root: ElementHandle,
+    /// The drawn layer, as big as the area's padding box.
+    pub layer: ElementHandle,
     pub metrics: Signal<Option<ScrollMetrics>>,
 }
 
@@ -193,32 +195,28 @@ impl DrawnBars {
     /// Re-reads the geometry once laid out. A changed one is read once more:
     /// the tracks it replaced may have stretched the overflow it measured.
     pub fn measure(self, tries: u8) {
-        let Self { root, mut metrics } = self;
+        let Self {
+            root,
+            layer,
+            mut metrics,
+        } = self;
+        // Mounting the layer measures again.
+        if !layer.is_mounted() {
+            return;
+        }
         when_laid_out(move || {
+            // The layer, not the border box less `computed_px` borders: a WebView has none.
             let (size, content, offset) =
-                (root.dimensions(), root.scroll_size(), root.scroll_offset());
-            // The padding box is the border box less the borders; 0 in a WebView.
-            let borders = [
-                "border-top-width",
-                "border-bottom-width",
-                "border-left-width",
-                "border-right-width",
-            ]
-            .map(|property| root.computed_px(property));
+                (layer.dimensions(), root.scroll_size(), root.scroll_offset());
             spawn(async move {
                 let (Ok(size), Ok(content), Ok((left, y))) =
                     (size.await, content.await, offset.await)
                 else {
                     return;
                 };
-                let mut read = [0.0; 4];
-                for (slot, px) in read.iter_mut().zip(borders) {
-                    *slot = px.await.ok().flatten().unwrap_or(0.0);
-                }
-                let [top, bottom, start, end] = read;
                 let measured = ScrollMetrics {
-                    view_width: size.width - start - end,
-                    view_height: size.height - top - bottom,
+                    view_width: size.width,
+                    view_height: size.height,
                     content_width: content.width,
                     content_height: content.height,
                     x: inline_x(left),
@@ -250,7 +248,7 @@ pub(super) fn ScrollAreaBars(
     scrollbars: ScrollAxis,
     size: ScrollbarSize,
 ) -> Element {
-    let DrawnBars { root, metrics } = state;
+    let DrawnBars { root, metrics, .. } = state;
     let thick = thickness(size);
     let current = move |axis: Axis| {
         let drawn = bars(scrollbars, (*metrics.peek())?, thick);
@@ -332,14 +330,22 @@ pub(super) fn ScrollAreaBars(
         .framework_sx(&DRAWN_BARS_SX)
         .focus_ring(false)
         .style(layer_style)
-        .prepare();
+        .prepare()
+        .element(&state.layer);
+    // Empty until a bar shows: its size is what the area measures.
+    let render = |tracks: Element| {
+        layer
+            .attr("data-scrollbars", true)
+            .attr("aria-hidden", "true")
+            .render(HtmlTag::Div, Vec::new(), tracks)
+    };
 
     let Some(measured) = measured else {
-        return rsx! {};
+        return render(rsx! {});
     };
     let drawn = bars(scrollbars, measured, thick);
     if drawn.x.is_none() && drawn.y.is_none() {
-        return rsx! {};
+        return render(rsx! {});
     }
     // Under RTL the content moves right as it scrolls on: the layer follows left.
     let range_x = (measured.content_width - measured.view_width).max(0.0);
@@ -390,10 +396,7 @@ pub(super) fn ScrollAreaBars(
             }
         }
     };
-    layer
-        .attr("data-scrollbars", true)
-        .attr("aria-hidden", "true")
-        .render(HtmlTag::Div, Vec::new(), tracks)
+    render(tracks)
 }
 
 #[cfg(test)]
