@@ -4,15 +4,16 @@ use dioxus::prelude::*;
 
 use super::hover_intent::{HoverIntent, TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
+    CssLayer,
     components::{
         common::{HtmlTag, Input, States, base_props, input_from_str, variables},
         layout::use_box,
     },
     hooks::{
-        Align, ElementHandle, PopoverOptions, escape_closes, use_element, use_escape_dismiss,
-        use_focus_within, use_popover_on, use_theme,
+        Align, ElementHandle, PopoverOptions, Rect, escape_closes, place, use_css, use_element,
+        use_escape_dismiss, use_focus_within, use_popover_on, use_portal_slot, use_theme,
     },
-    platform::keyboard,
+    platform::{Dimensions, ElementApi, document, keyboard, when_laid_out},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, POPOVER_PADDING, Size, SizeCss, TOOLTIP_DURATION, TOOLTIP_IN, TooltipDefaults,
@@ -73,35 +74,30 @@ static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
-/// Against the trigger's positioned ancestor, `gap` off the landed side: no
-/// flip, no shift into the viewport.
-fn inline_side_sx(side: Side) -> Sx {
-    let off = format!("calc(100% + {})", TOOLTIP_GAP_VAR.value());
-    let across = sx().left("50%").transform("translateX(-50%)");
-    let along = sx().top("50%").transform("translateY(-50%)");
-    match side {
-        Side::Top => across.bottom(off),
-        Side::Bottom => across.top(off),
-        Side::Start => along.right(off.clone()).rtl(sx().right("auto").left(off)),
-        Side::End => along.left(off.clone()).rtl(sx().left("auto").right(off)),
-    }
-}
-
-static TOOLTIP_INLINE_SX: StaticSx = StaticSx::new(|| {
-    let base = bubble_sx()
-        .position("absolute")
+/// `flex: none`: a 0x0 point would shrink it to its longest word.
+static TOOLTIP_PINNED_SX: StaticSx = StaticSx::new(|| {
+    bubble_sx()
+        .flex("none")
         .width("max-content")
-        .pointer_events("none");
-    Side::ALL.iter().fold(base, |base, &side| {
-        base.when(side.state_name(), inline_side_sx(side))
-    })
+        .pointer_events("none")
+});
+
+/// The 0x0 point a pinned bubble grows from; overflowing it keeps a label that
+/// changes width centred, no `transform` (Blitz's client rect ignores one).
+static TOOLTIP_POINT_SX: StaticSx = StaticSx::new(|| {
+    sx().position("fixed")
+        .width("0")
+        .height("0")
+        .display("flex")
+        .pointer_events("none")
+        .z_index(Z_INDEX_POPOVER.overridable())
 });
 
 /// Provided above a `Tooltip` whose trigger its caller focuses from code after
 /// a press outside it (a slider's track, todo 476): the next focus is a press's.
 ///
-/// Its caller also opens the bubble for a drag: a touch's long press opens none,
-/// and a forced-open bubble rides inside its moving trigger (1058).
+/// Its caller draws a drag's bubble itself, [`TooltipPinned`]: a touch's long
+/// press opens none (1058).
 #[derive(Clone, Default)]
 pub(crate) struct PressFocus(Rc<Cell<bool>>);
 
@@ -221,9 +217,6 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     let dismissible = props.open.is_none();
 
     let bubble = match open {
-        true if owned && props.open == Some(true) => rsx! {
-            TooltipInline { tooltip: props.clone() }
-        },
         true => rsx! {
             TooltipBubble {
                 tooltip: props.clone(),
@@ -293,43 +286,96 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     wrapper.render(HtmlTag::Span, Vec::new(), vec![props.children, bubble])
 }
 
-/// Drawn inside the trigger's wrapper, so it moves in the same frame as the
-/// trigger; a portaled one trails it by a measuring round trip (1058).
+/// A forced-open bubble on a rect its caller works out each render, a slider
+/// thumb's from its value: portaled, but measured once per open (1065).
 #[component]
-fn TooltipInline(tooltip: TooltipProps) -> Element {
+pub(crate) fn TooltipPinned(
+    label: Element,
+    /// The trigger, in viewport coordinates.
+    anchor: Rect,
+    size: Size,
+    gap: Size,
+    id: Option<String>,
+    rtl: bool,
+) -> Element {
     let theme = use_theme();
-    let side = tooltip.side.copied_or(theme.tooltip.side);
-    let size = tooltip.size.copied_or(theme.tooltip.size);
-    let gap = tooltip.gap.copied_or(theme.tooltip.gap);
+    let options = PopoverOptions::new(theme.spacing.get(gap).into(), theme.popover.padding)
+        .side(theme.tooltip.side)
+        .align(Align::Center);
+    let floating = use_element();
+    let slot = use_portal_slot();
+    // The bubble's size and the viewport, which a drag does not change.
+    let mut measured = use_signal(|| None::<(Dimensions, Dimensions)>);
+    let retry = use_signal(|| 0u8);
+    use_effect(move || {
+        let tries = retry();
+        if floating.mount_token().is_none() || measured.peek().is_some() {
+            return;
+        }
+        let Some(document) = document() else {
+            return;
+        };
+        let (size, viewport) = (floating.dimensions(), document.viewport());
+        spawn(async move {
+            let (Ok(size), Ok(viewport)) = (size.await, viewport.await) else {
+                return;
+            };
+            // Not laid out yet (native shell), as `use_popover_on` waits (todo 896).
+            if size.width == 0.0 && size.height == 0.0 && tries < 3 {
+                when_laid_out(move || {
+                    let mut retry = retry;
+                    retry.set(tries + 1);
+                });
+                return;
+            }
+            measured.set(Some((size, viewport)));
+        });
+    });
 
-    let states: Input<States> = tooltip
-        .states
-        .unwrap_or_default()
+    let placed = measured().map(|(size, viewport)| {
+        let placed = place(anchor, size, viewport, &options, rtl);
+        (placed, size)
+    });
+    let side = placed.map_or(options.side, |(placed, _)| placed.placement.side);
+    // The point on the landed side the bubble grows away from.
+    let point = placed.map(|(placed, size)| {
+        let (x, y, width, height) = (placed.x, placed.y, size.width, size.height);
+        match side {
+            Side::Top => (x + width / 2.0, y + height, "center", "flex-end"),
+            Side::Bottom => (x + width / 2.0, y, "center", "flex-start"),
+            side if (side == Side::Start) != rtl => {
+                (x + width, y + height / 2.0, "flex-end", "center")
+            }
+            _ => (x, y + height / 2.0, "flex-start", "center"),
+        }
+    });
+    let style = match point {
+        Some((x, y, justify, align)) => format!(
+            "left:{x}px;top:{y}px;justify-content:{justify};align-items:{align};visibility:visible;"
+        ),
+        None => String::from(
+            "left:0px;top:0px;justify-content:flex-start;align-items:flex-start;visibility:hidden;",
+        ),
+    };
+
+    let states: Input<States> = States::default()
         .with(side.state_name(), true)
         .with(size.state_name(), true)
         .into();
-    let variables: Input<crate::components::common::Variables> = variables()
-        .with(TOOLTIP_GAP_VAR, SizeCss::SPACING.value(gap))
-        .with(
-            Z_INDEX_POPOVER.override_var(),
-            tooltip.z_index.resolve(None),
-        )
-        .into();
-
-    use_box()
-        .framework_sx(&TOOLTIP_INLINE_SX)
-        .class(&tooltip.class)
-        .sx(&tooltip.sx)
+    let point_class = use_css(Some(&TOOLTIP_POINT_SX), CssLayer::Framework);
+    let bubble = use_box()
+        .framework_sx(&TOOLTIP_PINNED_SX)
         .states(&states)
-        .variables(&variables)
         .prepare()
+        .element(&floating)
         .attr("role", "tooltip")
-        .attr("id", tooltip.label_id.clone())
-        .render(
-            HtmlTag::Span,
-            tooltip.attributes.clone(),
-            tooltip.label.clone(),
-        )
+        .attr("id", id)
+        .render(HtmlTag::Span, Vec::new(), label);
+    slot.show(Some(rsx! {
+        span { class: point_class, style, {bubble} }
+    }));
+
+    rsx! {}
 }
 
 /// Its own component, so a closed tooltip runs no popover hooks: a page may hold hundreds.

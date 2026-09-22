@@ -211,10 +211,12 @@ fn the_thumb_tracks_a_drag() {
     });
 }
 
-/// Per frame, how far the open bubble's centre is off the thumb's.
+/// Per frame, how far the open bubble's centre is off the thumb's. A pinned
+/// bubble is `visibility: hidden` until its one measuring pass (1065).
 const SAMPLE_BUBBLE: &str = "(() => { window.__offsets = []; const frame = () => { \
     const thumb = document.querySelector('[role=slider]').getBoundingClientRect(); \
-    const bubble = document.querySelector('[role=tooltip]:not([hidden])')?.getBoundingClientRect(); \
+    const open = document.querySelector('[role=tooltip]:not([hidden])'); \
+    const bubble = open?.checkVisibility({ visibilityProperty: true }) && open.getBoundingClientRect(); \
     if (bubble) __offsets.push(Math.abs(thumb.x + thumb.width / 2 - bubble.x - bubble.width / 2)); \
     if (!window.__sampled) requestAnimationFrame(frame); }; requestAnimationFrame(frame); })()";
 
@@ -251,6 +253,81 @@ fn the_value_bubble_rides_the_thumb_through_a_drag() {
         assert!(
             worst < 1.0,
             "the bubble trailed the thumb by up to {worst}px"
+        );
+        fixture.console.assert_clean("a drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Per frame of a drag on `thumb`, whether `check` failed for its shown bubble
+/// (`b`, the bubble's rect; `t`, the thumb's; `el`, the bubble).
+fn sample_bubble(thumb: &str, check: &str) -> String {
+    format!(
+        "(() => {{ window.__shown = 0; window.__failed = []; const frame = () => {{ \
+        const el = document.querySelector('[role=tooltip]:not([hidden])'); \
+        if (el?.checkVisibility({{ visibilityProperty: true }})) {{ \
+            const b = el.getBoundingClientRect(); \
+            const t = document.querySelector('{thumb}').getBoundingClientRect(); \
+            __shown += 1; if (!({check})) __failed.push([b.top, b.bottom, t.top, t.bottom]); }} \
+        if (!window.__sampled) requestAnimationFrame(frame); }}; requestAnimationFrame(frame); }})()"
+    )
+}
+
+/// Drags `thumb` 120px with `sample_bubble` running; the frames shown and failed.
+async fn drag_sampled(page: &chromiumoxide::Page, thumb: &str, check: &str) -> (usize, String) {
+    page.evaluate(sample_bubble(thumb, check)).await.unwrap();
+    let from = pointer::centre_of(page, thumb).await.unwrap();
+    let to = pointer::Point {
+        x: from.x + 120.0,
+        y: from.y,
+    };
+    let value = format!("document.querySelector('{thumb}').getAttribute('aria-valuenow')");
+    wait::for_js_change(page, &value, "the thumb to move", || {
+        pointer::drag(page, from, to, 20)
+    })
+    .await
+    .unwrap();
+    page.evaluate(
+        "(() => { window.__sampled = true; return [__shown, JSON.stringify(__failed)]; })()",
+    )
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
+/// Todo 1065: the drag bubble is portaled, so an `overflow: hidden` box its
+/// slider's own height does not clip it.
+#[test]
+fn an_overflow_box_does_not_clip_the_drag_bubble() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/edges", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let check = "!document.querySelector('#clip-box').contains(el) \
+            && b.bottom <= document.querySelector('#clip-box').getBoundingClientRect().top + 0.5";
+        let (shown, failed) = drag_sampled(page, "[aria-label=Clipped]", check).await;
+        assert!(shown > 3, "the bubble showed in {shown} frames of the drag");
+        assert_eq!(failed, "[]", "frames with the bubble inside the box [b, t]");
+        fixture.console.assert_clean("a drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1065: at the viewport's top edge the drag bubble flips below the thumb.
+#[test]
+fn the_drag_bubble_flips_below_at_the_top_edge() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/edges", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let (shown, failed) = drag_sampled(page, "[aria-label=Edge]", "b.top >= t.bottom").await;
+        assert!(shown > 3, "the bubble showed in {shown} frames of the drag");
+        assert_eq!(
+            failed, "[]",
+            "frames with the bubble not below the thumb [b, t]"
         );
         fixture.console.assert_clean("a drag").unwrap();
         fixture.close().await.unwrap();

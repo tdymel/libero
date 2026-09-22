@@ -29,5 +29,5 @@ pub use overlay::{Overlay, OverlayProps};
 pub use spotlight::{
     SpotlightAction, SpotlightHandle, SpotlightOptions, spotlight_filter, use_spotlight,
 };
-pub(crate) use tooltip::PressFocus;
+pub(crate) use tooltip::{PressFocus, TooltipPinned};
 pub use tooltip::{Tooltip, TooltipProps};

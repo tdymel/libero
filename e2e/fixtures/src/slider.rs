@@ -13,7 +13,33 @@ pub const ROUTES: Routes = &[
     ("/slider/states", || rsx! { SliderStatesPage {} }),
     ("/slider/drag", || rsx! { SliderDragPage {} }),
     ("/slider/scroll", || rsx! { SliderScrollPage {} }),
+    ("/slider/edges", || rsx! { SliderEdgesPage {} }),
 ];
+
+/// Todo 1065: a slider in an `overflow: hidden` box its own height, and one
+/// fixed to the viewport's top edge, with no room above for its bubble.
+#[component]
+fn SliderEdgesPage() -> Element {
+    let mut clipped = use_signal(|| 50.0f64);
+    let mut edge = use_signal(|| 50.0f64);
+
+    rsx! {
+        div { id: "clip-box", style: "overflow: hidden; margin-top: 200px; padding: 0 16px; width: 400px;",
+            Slider {
+                aria_label: "Clipped",
+                value: Some(clipped()),
+                oninput: move |e: SliderChangeEvent<f64>| clipped.set(e.value()),
+            }
+        }
+        div { style: "position: fixed; top: 0; left: 0; padding: 0 16px; width: 400px;",
+            Slider {
+                aria_label: "Edge",
+                value: Some(edge()),
+                oninput: move |e: SliderChangeEvent<f64>| edge.set(e.value()),
+            }
+        }
+    }
+}
 
 /// Todo 1020: a 300px slider and range mid-way down a page taller than any
 /// screen. `#slider-end` and `#range-end` show the value each last committed.

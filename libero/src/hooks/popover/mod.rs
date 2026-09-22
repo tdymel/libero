@@ -24,7 +24,7 @@ use crate::{
     platform::{ElementApi, ScrollSubscription, document, scroll, when_laid_out},
 };
 
-use place::place;
+pub(crate) use place::place;
 
 /// A popover's own state: where its box goes, and the portal slot it goes in.
 /// Built by [`use_popover`]; `Copy`, so it travels into handlers.

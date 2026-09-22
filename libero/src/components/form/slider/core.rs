@@ -10,13 +10,13 @@ use crate::{
             shadow_sx, variables,
         },
         layout::use_box,
-        overlay::{PressFocus, Tooltip},
+        overlay::{PressFocus, Tooltip, TooltipPinned},
     },
     hooks::{
-        DragMove, DragOptions, DragStart, ElementHandle, sideways_drag_sx, use_css, use_element,
-        use_formats, use_id, use_local_state, use_sideways_drag, use_theme,
+        DragMove, DragOptions, DragStart, ElementHandle, Rect, sideways_drag_sx, use_css,
+        use_element, use_formats, use_id, use_local_state, use_sideways_drag, use_theme,
     },
-    platform::{ElementApi, logical_key, next_task},
+    platform::{Dimensions, ElementApi, logical_key, next_task},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::NamedColorCss,
     theme::{
@@ -360,6 +360,30 @@ struct Starting {
     released: bool,
 }
 
+/// Where a thumb sits at any value, measured at drag start: its bubble is
+/// placed from the value, not from a measuring round trip per move (1065).
+#[derive(Clone, Copy, PartialEq)]
+struct ThumbTrack {
+    /// The left edge of a thumb at the track's left end.
+    left: f64,
+    travel: f64,
+    top: f64,
+    thumb: Dimensions,
+    rtl: bool,
+}
+
+impl ThumbTrack {
+    fn at(&self, fraction: f64) -> Rect {
+        let along = if self.rtl { 1.0 - fraction } else { fraction };
+        Rect {
+            x: self.left + along * self.travel,
+            y: self.top,
+            width: self.thumb.width,
+            height: self.thumb.height,
+        }
+    }
+}
+
 #[component]
 fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let props = core;
@@ -402,6 +426,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // Which thumb the pointer grabbed. Always 0 for a single thumb. A signal:
     // the thumbs' scope reads it for the open bubble.
     let mut active = use_signal(|| 0_usize);
+    let mut thumb_track = use_signal(|| None::<ThumbTrack>);
 
     let oninput = props.oninput;
     let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
@@ -513,7 +538,11 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
             };
             let (track_left, track_width, thumb_width) =
                 (track_left.clone(), track_width.clone(), thumb_width.clone());
-            track_rtl.set(root_element.is_rtl());
+            let rtl = root_element.is_rtl();
+            track_rtl.set(rtl);
+            if thumb_track.peek().is_some() {
+                thumb_track.set(None);
+            }
             // Any focus till the task ends is the pointer's, the web's focus of
             // a pressed thumb too: a touch matches `:focus-visible` (1058).
             let press_focus = press_focus.clone();
@@ -523,6 +552,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
             let track_size = track_element.dimensions();
             let track_offset = track_element.client_offset();
             let thumb_size = thumb_elements[0].dimensions();
+            let thumb_offset = thumb_elements[0].client_offset();
             spawn(async move {
                 let (Ok(dimensions), Ok((left, _))) = (track_size.await, track_offset.await) else {
                     press_focus.clear();
@@ -539,7 +569,17 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
 
                 track_left.set(left);
                 track_width.set(dimensions.width);
-                thumb_width.set(thumb_size.await.map_or(0.0, |size| size.width));
+                let thumb = thumb_size.await;
+                thumb_width.set(thumb.as_ref().map_or(0.0, |size| size.width));
+                if let (Ok(thumb), Ok((_, top))) = (thumb, thumb_offset.await) {
+                    thumb_track.set(Some(ThumbTrack {
+                        left,
+                        travel: dimensions.width - thumb.width,
+                        top,
+                        thumb,
+                        rtl,
+                    }));
+                }
 
                 match position_at.call(event.client.x) {
                     Some(raw) => {
@@ -716,6 +756,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         onthumbdown,
                         dragging: drag.dragging,
                         active,
+                        thumb_track,
                     }
                 }
                 {hidden}
@@ -750,6 +791,7 @@ struct SliderThumbsProps {
     onthumbdown: Callback<Event<PointerData>>,
     dragging: Signal<bool>,
     active: Signal<usize>,
+    thumb_track: Signal<Option<ThumbTrack>>,
 }
 
 #[component]
@@ -769,6 +811,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         onthumbdown,
         dragging,
         active,
+        thumb_track,
         ..
     } = props;
     let Live { value, thumb_fill } = live();
@@ -887,22 +930,39 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             };
         }
 
-        // A drag holds it open off the thumb; a disabled thumb opens none
-        // (todo 596).
-        let open = match props.disabled {
-            true => Some(false),
-            false => (dragging() && active() == index).then_some(true),
+        // Clear of the thumb's hit area, which overhangs a sub-24px thumb by
+        // up to 6px: the bubble took those presses (todo 649).
+        let gap = Size::Sm;
+        // A drag's bubble is pinned to the value, and takes over the id; a
+        // disabled thumb opens none (todo 596).
+        let pinned = thumb_track()
+            .filter(|_| !props.disabled && dragging() && active() == index)
+            .map(|track| {
+                rsx! {
+                    TooltipPinned {
+                        label: rsx! { {bubble_text.clone()} },
+                        anchor: track.at(fraction(thumb_value, min, max)),
+                        size,
+                        gap,
+                        id: bubble_id.clone(),
+                        rtl: track.rtl,
+                    }
+                }
+            });
+        let (open, label_id) = match (props.disabled, pinned.is_some()) {
+            (true, _) => (Some(false), bubble_id),
+            (false, true) => (Some(false), None),
+            (false, false) => (None, bubble_id),
         };
         rsx! {
             span { class: anchor_class.clone(), style: "{at}",
+                {pinned}
                 Tooltip {
                     label: rsx! { {bubble_text} },
                     size,
-                    // Clear of the thumb's hit area, which overhangs a sub-24px
-                    // thumb by up to 6px: the bubble took those presses (todo 649).
-                    gap: Size::Sm,
+                    gap,
                     open,
-                    label_id: bubble_id,
+                    label_id,
                     // No bridge: it would take the thumb's presses, and Blitz
                     // hits even an overflowing box.
                     sx: sx().selector("&::before", sx().display("none")),
