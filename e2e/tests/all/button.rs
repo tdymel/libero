@@ -273,6 +273,15 @@ async fn assert_marked(page: &chromiumoxide::Page, on: &str, off: &str, mark: &s
 /// Forced colours drop author fills: the on state paints `Highlight` under its
 /// ring (a start bar for a NavLink or a listbox row).
 pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, off: &str) {
+    assert_forced_colours(page, on, off, true).await;
+}
+
+/// [`assert_on_in_forced_colours`] for a row marked by its tint alone: no ring or bar to find.
+pub async fn assert_unmarked_in_forced_colours(page: &chromiumoxide::Page, on: &str, off: &str) {
+    assert_forced_colours(page, on, off, false).await;
+}
+
+async fn assert_forced_colours(page: &chromiumoxide::Page, on: &str, off: &str, marker: bool) {
     let [on_bg, off_bg, highlight]: [String; 3] = page
         .evaluate(format!(
             "(() => {{ const probe = document.createElement('div'); \
@@ -313,7 +322,9 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
     );
     assert_ne!(label, on_bg, "{on}: the label is its own background");
     assert_eq!(stray, "", "{on}: these do not paint HighlightText");
-    assert_eq!(line, "yes", "{on} lost its on-state marker");
+    if marker {
+        assert_eq!(line, "yes", "{on} lost its on-state marker");
+    }
 
     // Todo 686: `forced-color-adjust: none` is inherited, so a descendant's own
     // fill or border (a Badge, a filled x) kept its author colour under HighlightText.

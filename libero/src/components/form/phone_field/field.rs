@@ -92,6 +92,11 @@ static ROW_SX: StaticSx = StaticSx::new(|| {
                 .text_overflow("ellipsis"),
         )
         .selector("& > [data-slot='dial']", sx().color("text-dimmed"))
+        // Dimmed text misses 4.5:1 on the selected tint; the row's own colour reads.
+        .selector(
+            ":where([aria-selected='true']) & > [data-slot='dial']",
+            sx().color("inherit"),
+        )
 });
 
 field_props! {

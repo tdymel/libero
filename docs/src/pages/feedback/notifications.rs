@@ -5,7 +5,7 @@ use crate::icons::DismissIcon;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Box, Button, Code, Flex, Input, NotificationData, NotificationLive,
+        ActionIcon, Avatar, Box, Button, Code, Flex, Input, NotificationData, NotificationLive,
         NotificationOptions, NotificationScope, Notifications, Paper, ProgressBar, Text, Variant,
         use_notifications, use_notifications_with,
     },
@@ -28,46 +28,78 @@ fn card_notification(s: NotificationScope<NotificationData>) -> Element {
 
     rsx! {
         Paper { shadow: "md", sx: sx().padding("md"),
-            Flex { direction: "row", align: "center", justify: "space-between", gap: "sm",
-                Flex { direction: "column", gap: "xs",
-                    if let Some(title) = data.title {
-                        Text { sx: sx().font_weight("600"), "{title}" }
+            Flex { direction: "row", align: "start", gap: "md",
+                Avatar { name: "Ada Lovelace", initials: "AL", color: "primary" }
+                Flex { direction: "column", gap: "sm", sx: sx().flex("1").min_width("0"),
+                    Flex { direction: "row", align: "start", justify: "space-between", gap: "sm",
+                        Flex { direction: "column", gap: "xs",
+                            if let Some(title) = data.title {
+                                Text { sx: sx().font_weight("600"), "{title}" }
+                            }
+                            Text { "{data.message}" }
+                        }
+                        if s.closable() {
+                            ActionIcon { variant: "standard", size: "sm", aria_label: "Dismiss",
+                                onclick: move |_| s.close(), DismissIcon {} }
+                        }
                     }
-                    Text { "{data.message}" }
-                }
-                if s.closable() {
-                    ActionIcon { variant: "standard", size: "sm", aria_label: "Dismiss",
-                        onclick: move |_| s.close(), DismissIcon {} }
+                    Flex { direction: "row", gap: "sm",
+                        Button { variant: "outlined", size: "xs", onclick: move |_| s.close(), "Reply" }
+                        Button { variant: "text", size: "xs", onclick: move |_| s.close(), "Mute" }
+                    }
                 }
             }
         }
     }
 }"#;
 
-/// A plain notification drawn by your own template instead of an `Alert`.
+/// A notification drawn by your own template instead of an `Alert`: an avatar beside the
+/// text, with an action row below.
 fn card_notification(s: NotificationScope<NotificationData>) -> Element {
     let data = s.args();
 
     rsx! {
         Paper { shadow: "md", sx: sx().padding("md"),
-            Flex {
-                direction: "row",
-                align: "center",
-                justify: "space-between",
-                gap: "sm",
-                Flex { direction: "column", gap: "xs",
-                    if let Some(title) = data.title {
-                        Text { sx: sx().font_weight("600"), "{title}" }
+            Flex { direction: "row", align: "start", gap: "md",
+                Avatar { name: "Ada Lovelace", initials: "AL", color: "primary" }
+                Flex {
+                    direction: "column",
+                    gap: "sm",
+                    sx: sx().flex("1").min_width("0"),
+                    Flex {
+                        direction: "row",
+                        align: "start",
+                        justify: "space-between",
+                        gap: "sm",
+                        Flex { direction: "column", gap: "xs",
+                            if let Some(title) = data.title {
+                                Text { sx: sx().font_weight("600"), "{title}" }
+                            }
+                            Text { "{data.message}" }
+                        }
+                        if s.closable() {
+                            ActionIcon {
+                                variant: "standard",
+                                size: "sm",
+                                aria_label: "Dismiss",
+                                onclick: move |_| s.close(),
+                                DismissIcon {}
+                            }
+                        }
                     }
-                    Text { "{data.message}" }
-                }
-                if s.closable() {
-                    ActionIcon {
-                        variant: "standard",
-                        size: "sm",
-                        aria_label: "Dismiss",
-                        onclick: move |_| s.close(),
-                        DismissIcon {}
+                    Flex { direction: "row", gap: "sm",
+                        Button {
+                            variant: "outlined",
+                            size: "xs",
+                            onclick: move |_| s.close(),
+                            "Reply"
+                        }
+                        Button {
+                            variant: "text",
+                            size: "xs",
+                            onclick: move |_| s.close(),
+                            "Mute"
+                        }
                     }
                 }
             }

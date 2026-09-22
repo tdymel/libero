@@ -1,5 +1,8 @@
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Chip, Icon, Menu, MenuEntry, MenuItem, use_menu};
+use libero::{
+    components::{ActionIcon, Chip, Icon, Menu, MenuEntry, MenuItem, use_menu},
+    sx::sx,
+};
 
 use crate::{Route, icons::SparklesIcon};
 
@@ -15,9 +18,13 @@ pub fn Tldr(
     /// The button's text. `None` makes it an icon-only button.
     #[props(default = Some("TLDR".to_string()))]
     label: Option<String>,
+    /// The page's markdown mirror, e.g. `/md/textarea.md`; assistants read it instead of the route.
+    #[props(default)]
+    markdown: Option<String>,
 ) -> Element {
     let menu = use_menu();
-    let providers = summarize_links(&use_route::<Route>().to_string())
+    let route = use_route::<Route>().to_string();
+    let providers = summarize_links(markdown.as_deref().unwrap_or(&route))
         .into_iter()
         .map(|(name, url, logo)| {
             MenuItem::new(name)
@@ -45,6 +52,8 @@ pub fn Tldr(
                     icon: rsx! {
                         Icon { variant: "standard", size: "sm", color: "inherit", SparklesIcon {} }
                     },
+                    // A block chip: in the menu's block wrapper an inline one sits on a line box.
+                    sx: sx().display("flex"),
                     onclick: |_| {},
                     attributes: menu.a11y_attributes(),
                     "{label}"
@@ -104,9 +113,9 @@ fn encode(text: &str) -> String {
     out
 }
 
-/// Every provider's name, its URL asking it to summarize the page at `route`, and its mark.
-fn summarize_links(route: &str) -> Vec<(&'static str, String, &'static Asset)> {
-    let query = encode(&prompt(&format!("{SITE}{route}")));
+/// Every provider's name, its URL asking it to summarize the page at `path`, and its mark.
+fn summarize_links(path: &str) -> Vec<(&'static str, String, &'static Asset)> {
+    let query = encode(&prompt(&format!("{SITE}{path}")));
     PROVIDERS
         .iter()
         .map(|(name, base, logo)| (*name, format!("{base}{query}"), *logo))
@@ -130,6 +139,16 @@ mod tests {
             links[1]
                 .1
                 .starts_with("https://www.google.com/search?udm=50&aep=11&q=")
+        );
+    }
+
+    #[test]
+    fn a_markdown_page_replaces_the_route() {
+        let links = summarize_links("/md/textarea.md");
+        assert!(
+            links[2]
+                .1
+                .contains("https%3A%2F%2Flibero-ui.dev%2Fmd%2Ftextarea.md%20and")
         );
     }
 

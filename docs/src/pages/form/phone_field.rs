@@ -5,34 +5,21 @@ use libero::{
     sx::sx,
 };
 
-/// Three bands, every flag this example needs. The library ships none.
-#[component]
-fn Tricolour(iso: String) -> Element {
-    let (bands, vertical) = match iso.as_str() {
-        "DE" => (["#000000", "#dd0000", "#ffce00"], false),
-        "FR" => (["#002395", "#ffffff", "#ed2939"], true),
-        "IT" => (["#008c45", "#f4f5f0", "#cd212a"], true),
-        "BE" => (["#000000", "#fae042", "#ed2939"], true),
-        _ => (["#cccccc", "#eeeeee", "#cccccc"], false),
-    };
+/// The flag emoji for an ISO 3166-1 alpha-2 code: two regional indicator symbols.
+fn flag_emoji(iso: &str) -> String {
+    iso.bytes()
+        .filter(u8::is_ascii_alphabetic)
+        .filter_map(|letter| {
+            char::from_u32(0x1F1E6 + u32::from(letter.to_ascii_uppercase() - b'A'))
+        })
+        .collect()
+}
 
+/// A flag emoji for every country; the library ships no flags.
+#[component]
+fn Flag(iso: String) -> Element {
     rsx! {
-        svg {
-            width: "16",
-            height: "12",
-            view_box: "0 0 3 3",
-            "aria-hidden": "true",
-            for (index , band) in bands.iter().enumerate() {
-                rect {
-                    key: "{index}",
-                    x: if vertical { index.to_string() } else { "0".to_string() },
-                    y: if vertical { "0".to_string() } else { index.to_string() },
-                    width: if vertical { "1" } else { "3" },
-                    height: if vertical { "3" } else { "1" },
-                    fill: "{band}",
-                }
-            }
-        }
+        span { "aria-hidden": "true", "{flag_emoji(&iso)}" }
     }
 }
 
@@ -117,7 +104,7 @@ pub fn PhoneFieldPage() -> Element {
                 }
             },
             // snippet: let mut phone = use_signal(String::new);
-            // snippet: item #[component] fn Tricolour(iso: String) -> Element { rsx! {} }
+            // snippet: item #[component] fn Flag(iso: String) -> Element { rsx! {} }
             Demo {
                 component: "PhoneField",
                 children_text: "",
@@ -173,7 +160,7 @@ pub fn PhoneFieldPage() -> Element {
                     Control::switch("flag").default("true").code(|_, values| {
                         match values.str("flag").as_str() {
                             "true" => vec![
-                                "flag: move |iso: String| rsx! { Tricolour { iso } }".to_string(),
+                                "flag: move |iso: String| rsx! { Flag { iso } }".to_string(),
                             ],
                             _ => vec![],
                         }
@@ -184,7 +171,7 @@ pub fn PhoneFieldPage() -> Element {
                 ],
                 render: move |values: DemoValues| {
                     let flag: Option<Callback<String, Element>> = (values.str("flag") == "true")
-                        .then(|| Callback::new(move |iso: String| rsx! { Tricolour { iso } }));
+                        .then(|| Callback::new(move |iso: String| rsx! { Flag { iso } }));
                     let e164 = value();
                     rsx! {
                         // The column takes the width: sized by content, it outgrows a phone.

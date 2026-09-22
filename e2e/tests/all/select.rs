@@ -80,27 +80,21 @@ fn a_searchable_field_meets_the_baseline() {
         .run();
 }
 
-/// `[active row is the selected one, selected row's bar (`bar` if the house
-/// bar, then size and position), an unselected idle row's image]`.
+/// `[active row is the selected one, the selected row's image, an unselected idle row's
+/// image]`.
 fn rows_js() -> String {
-    format!(
-        "(() => {{ {} const t = document.querySelector('[aria-activedescendant]'); \
-         const act = t && document.getElementById(t.getAttribute('aria-activedescendant')); \
-         const rows = [...document.querySelectorAll('[role=option]')]; \
-         const sel = rows.find(r => r.getAttribute('aria-selected') === 'true'); \
-         const off = rows.find(r => r !== act && r !== sel); \
-         const s = getComputedStyle(sel); \
-         const b = `${{bar(s) ? 'bar' : s.backgroundImage}} ${{s.backgroundSize}} ${{s.backgroundPosition}}`; \
-         return [String(act === sel), b, getComputedStyle(off).backgroundImage]; }})()",
-        crate::button::BAR
-    )
+    "(() => { const t = document.querySelector('[aria-activedescendant]'); \
+     const act = t && document.getElementById(t.getAttribute('aria-activedescendant')); \
+     const rows = [...document.querySelectorAll('[role=option]')]; \
+     const sel = rows.find(r => r.getAttribute('aria-selected') === 'true'); \
+     const off = rows.find(r => r !== act && r !== sel); \
+     return [String(act === sel), getComputedStyle(sel).backgroundImage, \
+             getComputedStyle(off).backgroundImage]; })()"
+        .to_string()
 }
 
-/// The bar and its size, its length resolved to the row's font.
-const BAR: &str = "bar 2px min(50%, ";
-
-/// Todo 631: the selected row carries the house start line beside the tint, inside the
-/// active row's ring. `Combobox` shares the `ComboboxOption` rows.
+/// Todo 1073: the selected row is marked by its tint and check mark, no start bar.
+/// `Combobox` shares the `ComboboxOption` rows.
 pub fn selected_row_is_marked(route: &str) {
     block_on(async {
         let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
@@ -117,27 +111,21 @@ pub fn selected_row_is_marked(route: &str) {
                 .unwrap()
         };
 
-        let [on_it, bar, _] = rows().await;
+        let [on_it, image, _] = rows().await;
         assert_eq!(on_it, "true", "{route}: the list opens on the selected row");
-        assert!(
-            bar.starts_with(BAR) && bar.ends_with(") 2px 50%"),
-            "{route}: the active selected row keeps its bar clear of the ring: {bar}"
-        );
+        assert_eq!(image, "none", "{route}: the active selected row has no bar");
 
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        let [on_it, bar, off] = rows().await;
+        let [on_it, image, off] = rows().await;
         assert_eq!(
             on_it, "false",
             "{route}: ArrowDown moves off the selected row"
         );
-        assert!(
-            bar.starts_with(BAR) && bar.ends_with(") 0px 50%"),
-            "{route}: the selected row's start bar: {bar}"
-        );
-        assert_eq!(off, "none", "{route}: an idle row is marked");
+        assert_eq!(image, "none", "{route}: the selected row has no bar");
+        assert_eq!(off, "none", "{route}: an idle row has no image");
 
         crate::calendar::force_colours(page).await;
-        crate::button::assert_on_in_forced_colours(
+        crate::button::assert_unmarked_in_forced_colours(
             page,
             "[role=option][aria-selected=true]",
             "[role=option]:not([aria-selected=true])",

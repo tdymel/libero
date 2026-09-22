@@ -3,14 +3,13 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, base_props, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx,
-            on_tint_color, option_id,
+            HtmlTag, Input, States, base_props, forced_on_sx, inset_focus_ring_sx, option_id,
         },
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{Color, ColorShade, ColorValue, ComboboxDefaults, Size},
+    sx::{StaticSx, sx},
+    theme::{ComboboxDefaults, Size},
 };
 
 /// Shared with the rows. Signals: a provider runs once, so plain fields would freeze.
@@ -45,9 +44,6 @@ pub struct ComboboxOptionArgs<T> {
 const ACTIVE_RING_OFFSET: &str = "-2px";
 
 static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
-    // The label colour made to read on the tints: 4.5:1 on either, hover included.
-    let primary = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, ColorShade::S6));
-    let bar = on_tint_color(&primary).unwrap_or_default();
     ComboboxDefaults::row_theme_vars()
         .display("flex")
         .align_items("center")
@@ -66,30 +62,17 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         )
         .hover(sx().background("muted.1"))
         .when("active", sx().background("muted.2"))
-        // The contrast twin, not `primary.7` (hard to read). A start bar, as `NavLink`'s: a ring means active.
+        // The contrast twin, not `primary.7` (hard to read). A ring means active.
         .when(
             "selected",
             sx().background("primary.1")
                 .color("primary-contrast.1")
-                .and(on_start_bar_sx("0px", &bar))
                 .and(forced_on_sx()),
         )
         // After the selected tint: equal specificity, so source order decides.
-        // The bar again, since `background` resets it.
-        .when(
-            "selected",
-            sx().hover(
-                sx().background("primary.2")
-                    .and(on_start_bar_sx("0px", &bar)),
-            ),
-        )
+        .when("selected", sx().hover(sx().background("primary.2")))
         // A ring, since a tint can't mark an already tinted row. Inset, so the dropdown doesn't clip it.
         .when("active", inset_focus_ring_sx(ACTIVE_RING_OFFSET))
-        // Outranks the bar above, moving it clear of the ring.
-        .when(
-            "selected",
-            sx().when("active", on_start_bar_sx("2px", &bar)),
-        )
         // Last, so it beats the tints by source order. The hover is undone by hand.
         .when(
             "disabled",

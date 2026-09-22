@@ -675,9 +675,7 @@ fn both_axes_share_the_corner_and_rtl_starts_at_the_right() {
             &part(
                 "bars-rtl",
                 H_THUMB,
-                &format!(
-                    "Math.abs(p.width - {RTL}.clientWidth ** 2 / {RTL}.scrollWidth) < 1"
-                ),
+                &format!("Math.abs(p.width - {RTL}.clientWidth ** 2 / {RTL}.scrollWidth) < 1"),
             ),
             "the RTL thumb sized by the padding box",
         )

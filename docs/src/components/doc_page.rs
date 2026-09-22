@@ -113,7 +113,7 @@ pub fn DocPage(
                                 "Source"
                             }
                         }
-                        if let Some(markdown) = markdown {
+                        if let Some(markdown) = markdown.clone() {
                             Chip {
                                 // `External`: a static file, not a route. Blitz drops a root-relative
                                 // URL (no `public/` served), so native links the repo copy.
@@ -132,7 +132,7 @@ pub fn DocPage(
                                 "View as markdown"
                             }
                         }
-                        Tldr {}
+                        Tldr { markdown }
                     }
                 }
                 {lead}

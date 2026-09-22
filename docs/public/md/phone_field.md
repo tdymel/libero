@@ -18,6 +18,14 @@ validation, so add a rule through `validate`.
 use dioxus::prelude::*;
 use libero::components::PhoneField;
 
+// Two regional indicator symbols make the flag emoji of an ISO code.
+fn flag_emoji(iso: &str) -> String {
+    iso.bytes()
+        .filter(u8::is_ascii_alphabetic)
+        .filter_map(|letter| char::from_u32(0x1F1E6 + u32::from(letter.to_ascii_uppercase() - b'A')))
+        .collect()
+}
+
 #[component]
 fn Demo() -> Element {
     let mut phone = use_signal(String::new);
@@ -28,7 +36,7 @@ fn Demo() -> Element {
             country: "DE",
             countries: vec!["DE".to_string(), "FR".to_string(), "IT".to_string()],
             flag: move |iso: String| rsx! {
-                span { "aria-hidden": "true", "{iso}" }
+                span { "aria-hidden": "true", "{flag_emoji(&iso)}" }
             },
             value: phone(),
             oninput: move |next| phone.set(next),

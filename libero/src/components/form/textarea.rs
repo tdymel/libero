@@ -5,7 +5,7 @@ use crate::{
     CssLayer,
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input, LogicalTextAlign},
+        common::{HtmlTag, Input},
         form::{FormScope, field_control_sx, field_props, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
@@ -23,6 +23,8 @@ static TEXTAREA_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // The frame's `min-height` is a single line's floor; `rows` is what
         // decides the box, so the control must not inherit that floor.
         .min_height("0")
+        // A strip under the control for the counter, so scrolled text never runs under it.
+        .selector("&[data-counter]", sx().margin_bottom("1.25rem"))
 });
 
 field_props! {
@@ -45,14 +47,22 @@ field_props! {
         /// Visible lines, which set the starting height.
         #[props(default = 3)]
         rows: u32,
-        /// Shows `12/200` under the control while a `maxlength` attribute is set.
+        /// Shows `12/200` in the control's corner while a `maxlength` attribute is set.
         #[props(default)]
         counter: bool,
     }
 }
 
-/// The counter under the control, at its end.
-static COUNTER_SX: StaticSx = StaticSx::new(|| sx().text_align_end());
+/// The counter in the frame's bottom end corner (bottom left in RTL).
+static COUNTER_SX: StaticSx = StaticSx::new(|| {
+    sx().position("absolute")
+        .bottom("0.25rem")
+        .inset_inline_end("0.5rem")
+        .font_size("0.75rem")
+        .line_height("1")
+        .color("text-dimmed")
+        .pointer_events("none")
+});
 
 /// The `maxlength` a caller passed among the extra attributes.
 fn max_length(attributes: &[Attribute]) -> Option<usize> {
@@ -172,17 +182,24 @@ pub fn Textarea(props: TextareaProps) -> Element {
         let used = value.as_deref().map_or(typed_now, length);
         let left = max.saturating_sub(used);
         let spoken = near_limit(left, max).then(|| (words.characters_left)(left));
-        rsx! {
+        let badge = rsx! {
             div {
                 class: counter_class,
                 "data-slot": "counter",
-                // The live region below says it in words.
+                // The live region beside the frame says it in words.
                 "aria-hidden": "true",
                 "{used}/{max}"
             }
+        };
+        let status = rsx! {
             VisuallyHidden { role: "status", {spoken} }
-        }
+        };
+        (badge, status)
     });
+    let (badge, status) = match counter {
+        Some((badge, status)) => (Some(badge), Some(status)),
+        None => (None, None),
+    };
 
     let emit = bound.emit(props.oninput);
     let track = emit.is_some() || limit.is_some();
@@ -199,6 +216,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .attr("name", bound.name().map(str::to_string))
         // A form reset leaves the text alone when this component sets it.
         .attr("data-controlled", value.is_some())
+        .attr("data-counter", limit.is_some())
         .attr("value", value)
         .attr("rows", props.rows.to_string())
         .attr("placeholder", props.placeholder)
@@ -209,8 +227,8 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .render(HtmlTag::Textarea, props.attributes, ());
 
     field.render(rsx! {
-        {frame.render(textarea)}
-        {counter}
+        {frame.render(rsx! { {textarea} {badge} })}
+        {status}
     })
 }
 

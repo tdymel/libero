@@ -634,8 +634,8 @@ fn a_disabled_branch_does_not_open() {
     });
 }
 
-/// Todo 642: drilled to Lyon, the marked rows read as a path: one row per
-/// column carries the selected bar, and only the rows on the path.
+/// Todo 642: drilled to Lyon, the marked rows read as a path: one selected row per
+/// column, none drawing a start bar (todo 1073).
 #[test]
 fn the_drilled_rows_read_as_a_path() {
     block_on(async {
@@ -660,8 +660,8 @@ fn the_drilled_rows_read_as_a_path() {
             .unwrap()
             .into_value()
             .unwrap();
-        let path = ["Europe", "France", "Lyon"].map(|label| vec![(label.to_string(), true)]);
-        assert_eq!(marked, path, "one barred row per column, on the path");
+        let path = ["Europe", "France", "Lyon"].map(|label| vec![(label.to_string(), false)]);
+        assert_eq!(marked, path, "one selected row per column, none barred");
         fixture.console.assert_clean("a drilled cascader").unwrap();
         fixture.close().await.unwrap();
     });
