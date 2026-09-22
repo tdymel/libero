@@ -451,6 +451,11 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseElementPage {}, "use_element"),
                 page(Route::UseFocusReturnPage {}, "use_focus_return"),
                 page(Route::UseDragPage {}, "use_drag"),
+                page(Route::UseTimersPage {}, "use_timeout, use_interval"),
+                page(
+                    Route::UseDebouncePage {},
+                    "use_debounced_value, use_throttled_value",
+                ),
                 page(Route::UseThemeSetPage {}, "use_theme_set"),
                 page(Route::UseStylesheetPage {}, "use_stylesheet"),
                 page(Route::UseAccessibilityPage {}, "use_accessibility"),

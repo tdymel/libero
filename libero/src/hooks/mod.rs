@@ -2,6 +2,7 @@ mod accessibility;
 mod cache;
 mod clipboard;
 mod color_scheme;
+mod debounce;
 mod direction;
 mod dismiss;
 mod drag;
@@ -23,12 +24,18 @@ mod ripple;
 mod silent_focus;
 mod stylesheet;
 mod theme;
+mod timers;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod timers_tests;
 mod typeahead;
 
 pub use accessibility::{AccessibilityHandle, use_accessibility};
 pub(crate) use cache::use_cache;
 pub use clipboard::{Clipboard, use_clipboard};
 pub use color_scheme::{ColorSchemeHandle, use_color_scheme};
+pub use debounce::{
+    use_debounced_callback, use_debounced_value, use_throttled_callback, use_throttled_value,
+};
 pub use direction::{DirectionHandle, use_direction};
 pub(crate) use dismiss::{
     DismissHandle, DismissOptions, PressMarker, escape_closes, use_dismiss, use_dismiss_layer,
@@ -59,6 +66,7 @@ pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
 pub use theme::{ThemeSetHandle, use_theme, use_theme_set};
 pub(crate) use theme::{use_glass_tint, use_gradient_style};
+pub use timers::{IntervalHandle, TimeoutHandle, use_interval, use_timeout};
 pub(crate) use typeahead::{TYPEAHEAD_RESET, Typeahead, typeahead_match, use_typeahead};
 
 // The overlay hooks render a component, so they live beside it (todo 178).

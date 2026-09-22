@@ -140,11 +140,13 @@ md_pages! {
     Tooltip => "tooltip",
     Tree => "tree",
     UseAccessibility => "use_accessibility",
+    UseDebounce => "use_debounce",
     UseDrag => "use_drag",
     UseElement => "use_element",
     UseFocusReturn => "use_focus_return",
     UseId => "use_id",
     UseStylesheet => "use_stylesheet",
     UseThemeSet => "use_theme_set",
+    UseTimers => "use_timers",
     VisuallyHidden => "visually_hidden",
 }

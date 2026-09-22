@@ -105,6 +105,7 @@ mod trailing_button;
 mod tree;
 mod typography;
 mod use_accessibility;
+mod use_timers;
 mod visually_hidden;
 
 use dioxus::prelude::*;
@@ -213,6 +214,7 @@ const FIXTURES: &[Routes] = &[
     tree::ROUTES,
     typography::ROUTES,
     use_accessibility::ROUTES,
+    use_timers::ROUTES,
     visually_hidden::ROUTES,
 ];
 

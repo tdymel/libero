@@ -104,6 +104,7 @@ mod trailing_button;
 mod tree;
 mod typography;
 mod use_accessibility;
+mod use_timers;
 mod visually_hidden;
 
 /// Every `.rs` file here needs a `mod` line: an unregistered test file silently never runs.

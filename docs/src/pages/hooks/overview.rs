@@ -43,6 +43,36 @@ fn hooks() -> Vec<HookRow> {
             Route::UseDragPage {},
         ),
         row(
+            "use_timeout",
+            "Runs a callback once, a while after you start it.",
+            Route::UseTimersPage {},
+        ),
+        row(
+            "use_interval",
+            "Runs a callback repeatedly, with start, stop and toggle.",
+            Route::UseTimersPage {},
+        ),
+        row(
+            "use_debounced_value",
+            "A signal that follows another once it stops changing.",
+            Route::UseDebouncePage {},
+        ),
+        row(
+            "use_debounced_callback",
+            "A callback that runs after its last call, with the last argument.",
+            Route::UseDebouncePage {},
+        ),
+        row(
+            "use_throttled_value",
+            "A signal that follows another at most once per period.",
+            Route::UseDebouncePage {},
+        ),
+        row(
+            "use_throttled_callback",
+            "A callback that runs at once, then at most once per period.",
+            Route::UseDebouncePage {},
+        ),
+        row(
             "use_theme",
             "The active theme, for values CSS cannot carry.",
             Route::ThemingPage {},

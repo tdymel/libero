@@ -18,6 +18,12 @@ belong to.
 | `use_element` | A handle to one of your component's elements, to focus, scroll or measure it. | [use_element](use_element.md) |
 | `use_focus_return` | Puts focus back on the trigger when a panel closes. | [use_focus_return](use_focus_return.md) |
 | `use_drag` | Pointer capture and deltas for a drag. | [use_drag](use_drag.md) |
+| `use_timeout` | Runs a callback once, a while after you start it. | [use_timeout, use_interval](use_timers.md) |
+| `use_interval` | Runs a callback repeatedly, with start, stop and toggle. | [use_timeout, use_interval](use_timers.md) |
+| `use_debounced_value` | A signal that follows another once it stops changing. | [use_debounced_value, use_throttled_value](use_debounce.md) |
+| `use_debounced_callback` | A callback that runs after its last call, with the last argument. | [use_debounced_value, use_throttled_value](use_debounce.md) |
+| `use_throttled_value` | A signal that follows another at most once per period. | [use_debounced_value, use_throttled_value](use_debounce.md) |
+| `use_throttled_callback` | A callback that runs at once, then at most once per period. | [use_debounced_value, use_throttled_value](use_debounce.md) |
 | `use_theme` | The active theme, for values CSS cannot carry. | [Theming](theming.md) |
 | `use_theme_set` | Reads and swaps the active theme set. | [use_theme_set](use_theme_set.md) |
 | `use_localization` | The words libero's components say, in the active language. | [Localization](localization.md) |

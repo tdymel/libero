@@ -85,6 +85,10 @@ pub(crate) enum Route {
     UseFocusReturnPage {},
     #[route("/hooks/use-drag")]
     UseDragPage {},
+    #[route("/hooks/use-timers")]
+    UseTimersPage {},
+    #[route("/hooks/use-debounce")]
+    UseDebouncePage {},
     #[route("/hooks/use-theme-set")]
     UseThemeSetPage {},
     #[route("/hooks/use-stylesheet")]
