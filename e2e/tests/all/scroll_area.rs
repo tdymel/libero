@@ -669,6 +669,20 @@ fn both_axes_share_the_corner_and_rtl_starts_at_the_right() {
         )
         .await
         .unwrap();
+        // Its share of the track is the padding box's, not the border box's.
+        wait::for_js_true(
+            page,
+            &part(
+                "bars-rtl",
+                H_THUMB,
+                &format!(
+                    "Math.abs(p.width - {RTL}.clientWidth ** 2 / {RTL}.scrollWidth) < 1"
+                ),
+            ),
+            "the RTL thumb sized by the padding box",
+        )
+        .await
+        .unwrap();
         page.evaluate(format!("{RTL}.scrollLeft = -{RTL}.scrollWidth"))
             .await
             .unwrap();
