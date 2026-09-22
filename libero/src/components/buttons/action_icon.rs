@@ -14,7 +14,8 @@ use crate::{
     hooks::{clipped_ripple_sx, use_gradient_style, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        ACTION_ICON_RADIUS, ACTION_ICON_SIZE, CssVar, Gradient, ICON_SIZE, LOADER_SIZE, SizeCss,
+        ACTION_ICON_GLYPH, ACTION_ICON_RADIUS, ACTION_ICON_SIZE, BUTTON_HEIGHT, CssVar, Gradient,
+        ICON_SIZE, LOADER_SIZE, SizeCss,
     },
     utils::warn,
 };
@@ -58,6 +59,12 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .height(ACTION_ICON_SIZE.overridable())
         .border_radius(ACTION_ICON_RADIUS.overridable())
         .selector("& svg", sx().width("100%").height("100%"))
+        // A bare glyph; one in a wrapper follows the wrapper.
+        .selector(
+            "& > svg",
+            sx().width(ACTION_ICON_GLYPH.overridable())
+                .height(ACTION_ICON_GLYPH.overridable()),
+        )
         // WCAG 2.5.8: an invisible 24x24 press target round a smaller icon (todos 505, 566).
         .selector(
             "::before",
@@ -128,11 +135,18 @@ fn action_icon_variables(
     has_variant_styling: bool,
 ) -> Variables {
     let selectable = props.selected.is_some();
+    // A size word is `Button`'s height round `Icon`'s glyph; a length is both.
+    let glyph = match props.size.as_ref() {
+        Some(ThemeAwareValue::Size(size)) => Some(ICON_SIZE.value(*size)),
+        Some(_) => Some("100%".to_string()),
+        None => None,
+    };
     let result = variables()
         .with(
             ACTION_ICON_SIZE.override_var(),
-            props.size.resolve(Some(ICON_SIZE)),
+            props.size.resolve(Some(BUTTON_HEIGHT)),
         )
+        .with(ACTION_ICON_GLYPH.override_var(), glyph)
         .with(
             ACTION_ICON_RADIUS.override_var(),
             props.radius.resolve(Some(SizeCss::RADIUS)),
@@ -175,7 +189,8 @@ base_props! {
         gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Below 24px the press target stays 24x24 (WCAG 2.5.8): keep other targets clear.
+        /// A size word takes `Button`'s height, the glyph `Icon`'s size; a length
+        /// sizes both. Below 24px the press target stays 24x24 (WCAG 2.5.8).
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -384,6 +399,23 @@ mod tests {
 
         assert!(variables.contains(ACTION_ICON_SIZE.override_var().name()));
         assert!(!variables.contains(ACTION_ICON_COLOR_VAR.name()));
+    }
+
+    /// Todo 1069: a size word is `Button`'s height round `Icon`'s glyph; a length fills.
+    #[test]
+    fn a_size_word_takes_the_button_height_and_a_length_fills() {
+        let word = action_icon_variables(&action_icon_props(Input::None), Variant::Filled, false)
+            .to_string();
+        assert!(word.contains(&BUTTON_HEIGHT.value(Size::Md)), "{word}");
+        assert!(word.contains(&ICON_SIZE.value(Size::Md)), "{word}");
+
+        let length = ActionIconProps {
+            size: "20px".into(),
+            ..action_icon_props(Input::None)
+        };
+        let length = action_icon_variables(&length, Variant::Filled, false).to_string();
+        assert!(length.contains("-size-override:20px;"), "{length}");
+        assert!(length.contains("-glyph-override:100%;"), "{length}");
     }
 
     #[test]

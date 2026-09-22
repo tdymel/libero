@@ -58,13 +58,19 @@ pub fn CopyButton(props: CopyButtonProps) -> Element {
     let value = props.value.clone();
     let label_id = use_id();
     let described = props.label.as_ref().map(|_| label_id());
+    // Unset, `Button`'s `sm`: a toolbar control, not a page action (1069).
+    let size = props
+        .size
+        .clone()
+        .into_option()
+        .unwrap_or(ThemeAwareValue::Size(crate::theme::Size::Sm));
 
     rsx! {
         ActionIcon {
             aria_label: props.aria_label.clone().unwrap_or_else(|| labels.copy.to_string()),
             variant: props.variant.clone(),
             color: props.color.clone(),
-            size: props.size.clone(),
+            size: size.clone(),
             radius: props.radius.clone(),
             disabled: props.disabled,
             aria_describedby: described,

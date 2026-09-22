@@ -228,7 +228,7 @@ pub fn Alert(props: AlertProps) -> Element {
                 // `currentColor` reads on every variant's ground, `Filled` too.
                 variant: "standard",
                 color: "currentColor",
-                size: "sm",
+                size: "xs",
                 aria_label: close_label,
                 onclick: move |_| onclose.call(()),
                 CloseIcon {}

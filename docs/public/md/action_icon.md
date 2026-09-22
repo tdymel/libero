@@ -37,8 +37,8 @@ fn Demo() -> Element {
 
 ### Libero handles
 
-- Below 24px (`xs` and `sm`) the button still takes presses in a 24x24 box
-  centred on it.
+- Below 24px (a length such as `"20px"`) the button still takes presses in a
+  24x24 box centred on it.
 - `focusable_when_disabled` keeps a disabled button in the Tab order, with
   `aria-disabled`.
 
@@ -46,8 +46,8 @@ fn Demo() -> Element {
 
 - Name the button with `aria_label`: the icon gives a screen reader nothing to
   read.
-- Keep other targets 2px (`sm`) or 4px (`xs`) away, or the one drawn later
-  takes the overlap.
+- Below 24px, keep other targets clear of that 24x24 box, or the one drawn
+  later takes the overlap.
 
 ## Props
 
@@ -56,7 +56,7 @@ fn Demo() -> Element {
 | `variant` | `Variant` | - | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. With `color` also unset, the button takes the surrounding text color. |
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`. Under a gradient, its first stop. |
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
-| `size` | `ThemeAwareValue` | `md` | Button size, independent of the icon's own size. |
+| `size` | `ThemeAwareValue` | `md` | A size word takes `Button`'s height at that step, so the two line up in a row, and sizes the icon inside as `Icon`'s. A length such as `"20px"` sizes the box, and the icon fills it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | required | The button's accessible name. |
 | `selected` | `bool` | - | Makes it a toggle button. The selected look shows once `variant` or `color` is set. Leave it unset for a plain action. |
@@ -73,8 +73,9 @@ Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
 
 ## Theme defaults
 
-`ActionIconDefaults` on the theme; the size resolves through the shared icon
-size scale and the radius through the theme's radius scale.
+`ActionIconDefaults` on the theme; the size resolves through `Button`'s height
+scale, the icon inside through the shared icon size scale, and the radius
+through the theme's radius scale.
 
 | Field | Type | Description |
 |---|---|---|
@@ -88,6 +89,8 @@ size scale and the radius through the theme's radius scale.
 |---|---|
 | `--lsx-action-icon-size` | Button size, from the theme. |
 | `--lsx-action-icon-size-override` | The `size` prop, set per instance. |
+| `--lsx-action-icon-glyph` | The icon's size inside the button, from the theme. |
+| `--lsx-action-icon-glyph-override` | The icon's size for the `size` prop, set per instance. |
 | `--lsx-action-icon-radius` | Corner radius, from the theme. |
 | `--lsx-action-icon-radius-override` | The `radius` prop, set per instance. |
 | `--lsx-action-icon-color` | Accent color of the current variant. Only set when the button has variant styling. |

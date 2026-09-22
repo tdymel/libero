@@ -15,7 +15,8 @@ use crate::{
         feedback::Loader,
         form::{
             PreparedField, SelectionArgs, Setter, clear_button, field_control_sx, field_props,
-            removable_chip, use_bound, use_chip_announcer, use_field, use_field_frame,
+            removable_chip, slot_icon_size, use_bound, use_chip_announcer, use_field,
+            use_field_frame,
         },
         layout::{BoxStyle, use_box},
     },
@@ -496,7 +497,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         cards,
         multiple,
         editable,
-        icon_size: ThemeAwareValue::Size(size).into(),
+        icon_size: ThemeAwareValue::Size(slot_icon_size(size)).into(),
         size,
         // Only once the surface is gone: otherwise the loader is on the
         // surface, and one is enough.

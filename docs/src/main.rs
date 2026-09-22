@@ -14,7 +14,7 @@ use libero::{
     localization::Formats,
     platform::ElementApi,
     sx::sx,
-    theme::{HEADER_HEIGHT_VAR, ICON_SIZE, PAPER_BACKGROUND, Size, ThemeSet, Z_INDEX_HEADER},
+    theme::{BUTTON_HEIGHT, HEADER_HEIGHT_VAR, PAPER_BACKGROUND, Size, ThemeSet, Z_INDEX_HEADER},
 };
 
 mod components;
@@ -423,7 +423,7 @@ fn AppShell() -> Element {
                     // Same box as the icon buttons beside it.
                     variant: "outlined",
                     color: "muted",
-                    size: "lg",
+                    size: "sm",
                     // Logical, so the controls stay at the end under RTL.
                     sx: sx()
                         .margin_inline_start("auto")
@@ -448,9 +448,8 @@ fn AppShell() -> Element {
                         // `use_field_frame`'s border step: `standard`'s transparent border left
                         // no edge on palettes whose paper is close to the page.
                         .border_color("muted.5")
-                        // The icon buttons' `lg` box, not a `Button`'s own 36px:
-                        // one row of controls, one height.
-                        .height(ICON_SIZE.value(Size::Lg))
+                        // The icon buttons' `sm` box: one row of controls, one height.
+                        .height(BUTTON_HEIGHT.value(Size::Sm))
                         .gap("sm")
                         .hover(sx().background("muted.1"))
                         .breakpoint(
@@ -475,11 +474,11 @@ fn AppShell() -> Element {
                         "Ctrl K"
                     }
                 }
-                RepoButton { repo: REPO, size: "lg" }
+                RepoButton { repo: REPO, size: "sm" }
                 // Lets a reviewer check any component right to left.
-                DirectionToggle { size: "lg" }
+                DirectionToggle { size: "sm" }
                 // In the header, so any page can be checked in every scheme and palette.
-                ThemeToggle { size: "lg", themes: ThemeSet::CATALOGUE }
+                ThemeToggle { size: "sm", themes: ThemeSet::CATALOGUE }
             }
             // The row never scrolls: the nav scrolls itself, and `ScrollArea` (not
             // `Container`) fills the rest and scrolls the page.

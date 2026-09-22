@@ -101,6 +101,7 @@ pub use accordion::{
     ACCORDION_FONT_SIZE, ACCORDION_HOVER, ACCORDION_PAD_X, ACCORDION_PAD_Y, ACCORDION_PADDING_X,
     ACCORDION_PADDING_Y, AccordionDefaults, AccordionSizeLevel,
 };
+pub(crate) use action_icon::ACTION_ICON_GLYPH;
 pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
 pub use alert::{
     ALERT_BODY_GAP, ALERT_GAP, ALERT_ICON_SIZE, ALERT_PADDING, ALERT_RADIUS, AlertDefaults,

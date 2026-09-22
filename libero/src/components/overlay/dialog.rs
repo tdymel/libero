@@ -40,6 +40,11 @@ static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| {
         .justify_content("flex-end")
         .gap("sm")
         .margin_bottom("md")
+        // The 30px close box reaches into the padding, its glyph where a bare one sat.
+        .selector(
+            "& > button",
+            sx().margin_top("-5px").margin_inline_end("-5px"),
+        )
 });
 
 static DIALOG_HEADER_TITLE_SX: StaticSx = StaticSx::new(|| sx().margin("0").flex("1"));

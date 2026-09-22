@@ -14,7 +14,7 @@ const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
             span { "data-slot": "remove",
                 ActionIcon {
                     aria_label: "Remove {t.value}",
-                    size: "xs",
+                    size: "16px",
                     // A `<button>` inherits no colour of its own.
                     sx: sx().color("inherit"),
                     // The input is the field's one tab stop.
@@ -50,7 +50,7 @@ fn topic_tag(t: SelectionArgs<String>) -> Element {
                 span { "data-slot": "remove",
                     ActionIcon {
                         aria_label: "Remove {label}",
-                        size: "xs",
+                        size: "16px",
                         sx: sx().color("inherit"),
                         tabindex: "-1",
                         onclick: move |_| t.remove.call(()),

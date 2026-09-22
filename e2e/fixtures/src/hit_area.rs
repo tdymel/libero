@@ -34,8 +34,8 @@ fn HitAreaPage() -> Element {
             Flex { gap: "lg", align: "center",
                 Burger { id: "burger-xs", size: "xs", onclick: move |_| {} }
                 Burger { id: "burger-sm", size: "sm", onclick: move |_| {} }
-                ActionIcon { id: "icon-xs", aria_label: "Extra small", size: "xs", {glyph()} }
-                ActionIcon { id: "icon-sm", aria_label: "Small", size: "sm", {glyph()} }
+                ActionIcon { id: "icon-xs", aria_label: "Extra small", size: "16px", {glyph()} }
+                ActionIcon { id: "icon-sm", aria_label: "Small", size: "20px", {glyph()} }
                 ActionIcon { id: "icon-md", aria_label: "Medium", size: "md", {glyph()} }
             }
             div { "data-case": "tags",

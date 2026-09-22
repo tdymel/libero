@@ -10,8 +10,8 @@ use crate::{
             navigation_chord,
         },
         form::{
-            FIELD_CONTROL_SX, FieldStatus, SliderChangeEvent, field_props, slot_icon_size,
-            use_bound, use_field, use_field_frame,
+            FIELD_CONTROL_SX, FieldStatus, SLOT_BUTTON_SX, SliderChangeEvent, field_props,
+            slot_icon_size, use_bound, use_field, use_field_frame,
         },
         layout::{paper_sx, use_box},
     },
@@ -220,6 +220,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             ActionIcon {
                 aria_label: labels.eye_dropper,
                 size: icon_size,
+                sx: &SLOT_BUTTON_SX,
                 onclick: move |_| {
                     let Some(api) = eye_dropper() else {
                         return;

@@ -300,6 +300,7 @@ pub fn Marquee(props: MarqueeProps) -> Element {
                     ActionIcon {
                         "data-slot": "pause",
                         variant: "elevated",
+                        size: "xs",
                         aria_label: labels.pause,
                         aria_pressed: paused.to_string(),
                         onclick: toggle,

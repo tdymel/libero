@@ -17,7 +17,7 @@ pub fn CopyButtonPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .doc("Accent color. A theme color name or any CSS color."),
                 prop("size", "ThemeAwareValue")
-                    .default("md")
+                    .default("sm")
                     .doc("Button size."),
                 prop("radius", "ThemeAwareValue")
                     .default("sm")
@@ -86,7 +86,7 @@ pub fn CopyButtonPage() -> Element {
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
                     Control::color("color"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
                     Control::switch("disabled"),

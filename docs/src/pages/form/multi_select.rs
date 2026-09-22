@@ -74,7 +74,7 @@ const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rs
                 onclick: move |event| event.stop_propagation(),
                 ActionIcon {
                     aria_label: "Remove {s.value.label()}",
-                    size: "xs",
+                    size: "16px",
                     // A `<button>` inherits no colour of its own.
                     sx: sx().color("inherit"),
                     tabindex: "-1",
@@ -232,7 +232,7 @@ fn topping_selection(s: SelectionArgs<Topping>) -> Element {
                     onclick: move |event: MouseEvent| event.stop_propagation(),
                     ActionIcon {
                         aria_label: "Remove {label}",
-                        size: "xs",
+                        size: "16px",
                         sx: sx().color("inherit"),
                         tabindex: "-1",
                         onclick: move |_| s.remove.call(()),

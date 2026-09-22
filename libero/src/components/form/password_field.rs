@@ -4,7 +4,7 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{EyeIcon, EyeOffIcon, Input},
-        form::{Disabled, FormScope, TextField, field_props, slot_icon_size},
+        form::{Disabled, FormScope, SLOT_BUTTON_SX, TextField, field_props, slot_icon_size},
     },
     hooks::{use_localization, use_theme},
     sx::ThemeAwareValue,
@@ -107,6 +107,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
                     aria_label,
                     "aria-pressed": revealed().to_string(),
                     size,
+                    sx: &SLOT_BUTTON_SX,
                     disabled,
                     onclick: move |_| revealed_at.set((!revealed()).then_some(settled)),
                     // A struck-through eye while the secret is readable.

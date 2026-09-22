@@ -42,7 +42,7 @@ fn a_small_action_icon_takes_presses_in_its_24px_box() {
         let mut count = use_signal(|| 0);
         rsx! {
             div { display: "flex", padding: "20px",
-                ActionIcon { id: "icon", aria_label: "Go", size: "sm", onclick: move |_| count += 1,
+                ActionIcon { id: "icon", aria_label: "Go", size: "20px", onclick: move |_| count += 1,
                     svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
                 }
             }

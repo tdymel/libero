@@ -17,7 +17,7 @@ pub fn DirectionTogglePage() -> Element {
                     .default("muted")
                     .doc("Accent color. A theme color name or any CSS color."),
                 prop("size", "ThemeAwareValue")
-                    .default("md")
+                    .default("sm")
                     .doc("Button size. The icon takes 55% of it."),
                 prop("radius", "ThemeAwareValue")
                     .default("sm")
@@ -62,7 +62,7 @@ pub fn DirectionTogglePage() -> Element {
                     // `muted` is what an unset `color` resolves to, so that
                     // swatch prints nothing.
                     Control::color("color").default("muted"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
                     Control::switch("disabled"),

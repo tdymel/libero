@@ -31,7 +31,7 @@ pub fn ActionIconPage() -> Element {
                     .doc("Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`. Under a gradient, its first stop."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
-                    .doc("Button size, independent of the icon's own size."),
+                    .doc("A size word takes `Button`'s height at that step, so the two line up in a row, and sizes the icon inside as `Icon`'s. A length such as `\"20px\"` sizes the box, and the icon fills it."),
                 prop("radius", "ThemeAwareValue")
                     .default("sm")
                     .doc("Corner radius, independent of `size`."),
@@ -59,12 +59,12 @@ pub fn ActionIconPage() -> Element {
             ])],
             accessibility: a11y()
                 .handles([
-                    "Below 24px (`xs` and `sm`) the button still takes presses in a 24x24 box centred on it.",
+                    "Below 24px (a length such as `\"20px\"`) the button still takes presses in a 24x24 box centred on it.",
                     "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
                 ])
                 .must([
                     "Name the button with `aria_label`: the icon gives a screen reader nothing to read.",
-                    "Keep other targets 2px (`sm`) or 4px (`xs`) away, or the one drawn later takes the overlap.",
+                    "Below 24px, keep other targets clear of that 24x24 box, or the one drawn later takes the overlap.",
                 ]),
             lead: rsx! {
                 Text {

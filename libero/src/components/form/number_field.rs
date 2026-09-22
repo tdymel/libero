@@ -7,8 +7,8 @@ use crate::{
         buttons::ActionIcon,
         common::{HtmlTag, Input, MinusIcon, NumberValue, PlusIcon, navigation_chord},
         form::{
-            FIELD_CONTROL_SX, LiveControl, field_props, slot_icon_size, use_bound, use_field,
-            use_field_frame,
+            FIELD_CONTROL_SX, LiveControl, field_props, slot_button_sx, slot_icon_size, use_bound,
+            use_field, use_field_frame,
         },
         layout::use_box,
     },
@@ -25,11 +25,13 @@ static STEPPERS_SX: StaticSx =
 
 /// Each 24px hit area stops mid-gap so the two meet; spare width goes outwards.
 static DECREMENT_SX: StaticSx = StaticSx::new(|| {
-    sx().selector("::before", sx().left("calc(100% - 23px)").right("-1px"))
+    slot_button_sx()
+        .selector("::before", sx().left("calc(100% - 23px)").right("-1px"))
         .rtl(sx().selector("&::before", sx().left("-1px").right("calc(100% - 23px)")))
 });
 static INCREMENT_SX: StaticSx = StaticSx::new(|| {
-    sx().selector("::before", sx().left("-1px").right("calc(100% - 23px)"))
+    slot_button_sx()
+        .selector("::before", sx().left("-1px").right("calc(100% - 23px)"))
         .rtl(sx().selector("&::before", sx().left("calc(100% - 23px)").right("-1px")))
 });
 

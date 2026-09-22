@@ -952,6 +952,11 @@ async fn open<D: Driver>(d: &mut D) -> Result<()> {
 /// with nothing).
 async fn zoom_in_tapped<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     open(d).await?;
+    // Todo 1069: the toolbar is `sm`, `Button`'s 30px.
+    let height = d.rect(ZOOM_IN).await?.height;
+    if (height - 30.0).abs() > 0.5 {
+        bail!("{:?}: zoom in is {height}px tall, not 30px", d.platform());
+    }
     d.click(ZOOM_IN).await?;
     eventually(d, "one zoom step in", async |d| Ok(scale(d).await? == 1.25)).await
 }

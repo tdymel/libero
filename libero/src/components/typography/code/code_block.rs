@@ -59,7 +59,6 @@ static CODE_BLOCK_HEADER_SX: StaticSx = StaticSx::new(|| {
 // No `variant`/`color` on the `CopyButton`, so these fully control the look.
 static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().border_radius("6px")
-        .padding("5px")
         .color(CODE_BLOCK_MUTED_TEXT.value())
         .hover(
             sx().background(CODE_BLOCK_COPY_HOVER_BACKGROUND.value())
@@ -67,7 +66,7 @@ static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-// Centred on the first code line: 12px padding + 10px half line, minus half the ~26px button.
+// Centred on the first code line: 12px padding + 10px half line, minus half the 24px button.
 static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .top("9px")
@@ -76,7 +75,6 @@ static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
         .border("1px solid")
         .border_color(CODE_BLOCK_BORDER.value())
         .border_radius("6px")
-        .padding("5px")
         .color(CODE_BLOCK_MUTED_TEXT.value())
         .hover(
             sx().background(CODE_BLOCK_COPY_HOVER_BACKGROUND.value())
@@ -525,6 +523,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
                             value: copy_source,
                             aria_label: labels.copy,
                             label: group_label.clone(),
+                            size: "xs",
                             sx: &CODE_COPY_BUTTON_SX,
                         }
                     }
@@ -534,6 +533,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
                     value: copy_source,
                     aria_label: labels.copy,
                     label: group_label.clone(),
+                    size: "xs",
                     sx: &CODE_COPY_BUTTON_FLOATING_SX,
                 }
             }

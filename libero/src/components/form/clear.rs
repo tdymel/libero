@@ -4,7 +4,7 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{CloseIcon, Input},
-        form::slot_icon_size,
+        form::{SLOT_BUTTON_SX, slot_icon_size},
     },
     hooks::{ElementHandle, current_localization},
     platform::ElementApi,
@@ -26,6 +26,7 @@ pub(crate) fn clear_button(
             ActionIcon {
                 aria_label: current_localization().common.clear,
                 size: icon_size,
+                sx: &SLOT_BUTTON_SX,
                 onclick: move |event: MouseEvent| {
                     let _ = target.focus();
                     onclear(event);

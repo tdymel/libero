@@ -859,6 +859,7 @@ fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
             "/floating-window",
             Some(&stylesheet(
                 "[data-window-title-bar] { gap: 0 !important; } \
+                 [data-window-title-bar] button { width: 16px !important; height: 16px !important; } \
                  [data-window-title-bar] button::before { content: none !important; } \
                  [data-window-handle] { flex: 0 0 8px !important; min-width: 0 !important; }",
             )),

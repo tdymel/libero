@@ -12,7 +12,7 @@ use crate::{
         padding_press, placeholder_drawn,
     },
     sx::{StaticSx, Sx, sx},
-    theme::{FieldDefaults, PaperDefaults, Size, SizeCss},
+    theme::{ACTION_ICON_GLYPH, ACTION_ICON_SIZE, FieldDefaults, PaperDefaults, Size, SizeCss},
 };
 
 /// The bordered box every framed field's control sits in.
@@ -123,6 +123,19 @@ pub(crate) const fn slot_icon_size(size: Size) -> Size {
         Size::Xl | Size::Xxl => Size::Md,
     }
 }
+
+/// A slot button's box reaches into the frame's padding: laid out at its glyph's
+/// height, it leaves the frame a bare field's (todo 495).
+pub(crate) fn slot_button_sx() -> Sx {
+    let overhang = format!(
+        "calc(({} - {}) / 2)",
+        ACTION_ICON_GLYPH.overridable(),
+        ACTION_ICON_SIZE.overridable()
+    );
+    sx().margin_top(overhang.clone()).margin_bottom(overhang)
+}
+
+pub(crate) static SLOT_BUTTON_SX: StaticSx = StaticSx::new(slot_button_sx);
 
 /// The native control inside the frame, stripped of the frame's chrome.
 pub(crate) static FIELD_CONTROL_SX: StaticSx = StaticSx::new(field_control_sx);

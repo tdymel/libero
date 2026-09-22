@@ -35,14 +35,15 @@ fn small_action_icons_take_presses_in_a_24px_box() {
 
         // Selector, drawn size.
         let cases = [
-            ("#dialog button[aria-label=Close]", 20.0),
+            // Todo 1069: size words follow `Button`'s heights, 24px and up.
+            ("#dialog button[aria-label=Close]", 30.0),
             ("#burger-xs", 16.0),
             ("#burger-sm", 22.0),
             ("#icon-xs", 16.0),
             ("#icon-sm", 20.0),
-            ("[data-case=password-md] [data-slot=trailing] button", 20.0),
-            ("[data-case=select-md] button[aria-label=Clear]", 20.0),
-            ("[data-case=color-xs] [data-slot=trailing] button", 16.0),
+            ("[data-case=password-md] [data-slot=trailing] button", 30.0),
+            ("[data-case=select-md] button[aria-label=Clear]", 30.0),
+            ("[data-case=color-xs] [data-slot=trailing] button", 24.0),
             // Todo 645: the pill no longer clips its x's box.
             ("[data-case=tags] button[aria-label='Remove rust']", 14.4),
         ];

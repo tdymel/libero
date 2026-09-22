@@ -32,12 +32,12 @@ impl ButtonDefaults {
         sizes: Sizes::new(
             ButtonSizeLevel {
                 font_size: "0.75rem",
-                height: "30px",
+                height: "24px",
                 padding_x: "10px",
             },
             ButtonSizeLevel {
                 font_size: "0.875rem",
-                height: "36px",
+                height: "30px",
                 padding_x: "14px",
             },
             ButtonSizeLevel {

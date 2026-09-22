@@ -29,7 +29,7 @@ use libero::{components::ThemeToggle, theme::ThemeSet};
 #[component]
 fn Demo() -> Element {
     rsx! {
-        ThemeToggle { size: "md", themes: ThemeSet::CATALOGUE }
+        ThemeToggle { themes: ThemeSet::CATALOGUE }
     }
 }
 ```
@@ -54,7 +54,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
 | `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes 55% of it. |
+| `size` | `ThemeAwareValue` | `sm` | Button size. The icon takes 55% of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `themes` | `&'static [&'static ThemeSet]` | - | Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both. |
 | `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does. |

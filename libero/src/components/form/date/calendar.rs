@@ -1299,7 +1299,7 @@ fn Nav(props: NavProps) -> Element {
     }
 }
 
-/// The nav icon size for a picker size: `ActionIcon`'s scale climbs faster, so two share one.
+/// The nav button size for a picker size: `ActionIcon`'s scale climbs faster, so two share one.
 const fn nav_size(size: Size) -> Size {
     match size {
         Size::Xs | Size::Sm => Size::Xs,

@@ -59,6 +59,12 @@ pub fn DirectionToggle(props: DirectionToggleProps) -> Element {
         }
         .to_string(),
     };
+    // Unset, `Button`'s `sm`: a toolbar control, not a page action (1069).
+    let size = props
+        .size
+        .clone()
+        .into_option()
+        .unwrap_or(ThemeAwareValue::Size(crate::theme::Size::Sm));
     let variant = Input::Value(props.variant.copied_or(theme.direction_toggle.variant));
     let color = props
         .color
@@ -76,7 +82,7 @@ pub fn DirectionToggle(props: DirectionToggleProps) -> Element {
             onclick: move |_| direction.toggle(),
             variant,
             color,
-            size: props.size.clone(),
+            size: size.clone(),
             radius: props.radius.clone(),
             disabled: props.disabled,
             class: props.class.clone(),
