@@ -204,8 +204,9 @@ pub use gradient::{
     GradientDefaults,
 };
 pub(crate) use gradient::{
-    glass_tint, gradient_fill_sx, gradient_hover_sx, gradient_image, gradient_selected_sx,
-    gradient_surface_sx, theme_declarations as gradient_theme_declarations,
+    GlassTint, glass_gradient_declarations, glass_tint, gradient_fill_sx, gradient_hover_sx,
+    gradient_image, gradient_selected_sx, gradient_surface_sx,
+    theme_declarations as gradient_theme_declarations,
 };
 pub use grid::{
     GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR,
@@ -260,6 +261,7 @@ pub use pagination::{
     PAGINATION_ACTIVE_BACKGROUND, PAGINATION_ACTIVE_COLOR, PAGINATION_BORDER,
     PAGINATION_CONTROL_SIZE, PAGINATION_FONT_SIZE, PAGINATION_GAP, PaginationDefaults,
 };
+pub(crate) use paper::GLASS_SHEEN;
 pub use paper::{
     GLASS_BACKGROUND, GLASS_BLUR, PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, PAPER_SHADOW,
     PaperDefaults,

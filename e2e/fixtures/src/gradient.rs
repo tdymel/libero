@@ -57,6 +57,8 @@ fn GradientPage() -> Element {
                 sx: libero::sx::sx().padding("md"),
                 Text { "A glass tint." }
             }
+            // 1085: a glass header tinted by its `color`, like the Paper above.
+            Header { id: "header-tint", position: "static", glass: true, color: "info", "Tinted" }
             Paper { id: "paper-gradient", color: "error", gradient: ("info", 90),
                 sx: libero::sx::sx().padding("md"),
                 Text { "From error to info." }

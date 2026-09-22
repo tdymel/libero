@@ -39,5 +39,7 @@ paragraph
   StaticText "On a literal fill."
 paragraph
   StaticText "A glass tint."
+banner
+  StaticText "Tinted"
 paragraph
   StaticText "From error to info."

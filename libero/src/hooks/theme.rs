@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     context::LiberoContext,
     sx::ThemeAwareValue,
-    theme::{Gradient, Theme, ThemeSet, glass_tint},
+    theme::{GlassTint, Gradient, Theme, ThemeSet, glass_gradient_declarations, glass_tint},
 };
 
 /// The active theme. Reactive, so a Rust-side read never disagrees with the CSS vars.
@@ -67,9 +67,27 @@ pub(crate) fn use_gradient_style(
     )
 }
 
+/// The gradient vars of [`use_gradient_style`] plus, for a glass surface, the label
+/// and share the glass raises them to; `None` under the same conditions.
+pub(crate) fn use_glass_gradient_style(
+    gradient: Option<&Gradient>,
+    color: Option<&ThemeAwareValue>,
+    active: bool,
+    glass: bool,
+) -> Option<String> {
+    let style = use_gradient_style(gradient, color, active, false);
+    if !glass {
+        return style;
+    }
+    let context = use_context::<LiberoContext>();
+    let gradient = gradient.cloned().unwrap_or_default();
+    let glass = glass_gradient_declarations(&gradient, color, &scheme_themes(&context));
+    Some(style? + &glass.iter().map(ToString::to_string).collect::<String>())
+}
+
 /// The label and share of a glass tint of `fill` (see [`glass_tint`]), measured
 /// as [`use_gradient_style`] is. `None` without a `fill`.
-pub(crate) fn use_glass_tint(fill: Option<&ThemeAwareValue>) -> Option<(String, u8)> {
+pub(crate) fn use_glass_tint(fill: Option<&ThemeAwareValue>) -> Option<GlassTint> {
     let context = use_context::<LiberoContext>();
     glass_tint(fill?, &scheme_themes(&context))
 }

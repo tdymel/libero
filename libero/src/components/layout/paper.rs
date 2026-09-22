@@ -8,12 +8,12 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{use_glass_tint, use_gradient_style},
+    hooks::{use_glass_gradient_style, use_glass_tint},
     platform::draws_backdrop_filter,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CssVar, FOCUS_RING_HALO, Gradient, NamedColorCss, PAPER_BORDER_COLOR, PaperDefaults, Size,
-        gradient_surface_sx,
+        CssVar, FOCUS_RING_HALO, GLASS_SHEEN, GlassTint, Gradient, NamedColorCss,
+        PAPER_BORDER_COLOR, PaperDefaults, Size, gradient_surface_sx,
     },
 };
 
@@ -51,7 +51,7 @@ pub fn paper_sx() -> Sx {
 const PAPER_FILL: CssVar = CssVar::new("--lsx-paper-fill");
 const PAPER_FILL_CONTRAST: CssVar = CssVar::new("--lsx-paper-fill-contrast");
 /// A glass tint's share of the fill, raised past `glass_background` where the label needs it.
-const PAPER_TINT_SHARE: CssVar = CssVar::new("--lsx-paper-tint-share");
+pub(crate) const PAPER_TINT_SHARE: CssVar = CssVar::new("--lsx-paper-tint-share");
 
 /// A `color` fill; a literal has no computed label, so the text inherits.
 fn colored_sx() -> Sx {
@@ -60,29 +60,43 @@ fn colored_sx() -> Sx {
         .var(FOCUS_RING_HALO, PAPER_FILL.value())
 }
 
-/// The palette `color` a glass tint is measured for; a literal's label is the caller's.
-fn glass_tint_color(props: &PaperProps) -> Option<ThemeAwareValue> {
-    let glass = props.glass && draws_backdrop_filter() && props.gradient.is_none();
-    let base = base_color(Some(props.color.as_ref().filter(|_| glass)?));
+/// The palette `color` a glass tint is measured for, shared with `Header`; a
+/// literal's label is the caller's. `None` off glass, natively and under a gradient.
+pub(crate) fn glass_tint_color(
+    color: Option<&ThemeAwareValue>,
+    glass: bool,
+    gradient: bool,
+) -> Option<ThemeAwareValue> {
+    let glass = glass && draws_backdrop_filter() && !gradient;
+    let base = base_color(Some(color.filter(|_| glass)?));
     contrast_color(&base).is_some().then_some(base)
 }
 
 /// The fill and label of `color`, unless a `gradient` takes it as its first stop.
 /// `tint`: the label and share of a glass tint, which replace the solid fill's label.
-fn paper_variables(props: &PaperProps, tint: Option<(String, u8)>) -> Option<String> {
+fn paper_variables(props: &PaperProps, tint: Option<GlassTint>) -> Option<String> {
     if props.gradient.is_some() {
         return None;
     }
     let base = base_color(Some(props.color.as_ref()?));
-    let (contrast, share) = match tint {
-        Some((label, share)) => (Some(label), Some(format!("{share}%"))),
-        None => (contrast_color(&base).and_then(|c| c.resolve(None)), None),
+    let (contrast, share, sheen) = match tint {
+        Some(tint) => (
+            Some(tint.label),
+            Some(format!("{}%", tint.share)),
+            Some(format!("{}%", tint.sheen)),
+        ),
+        None => (
+            contrast_color(&base).and_then(|c| c.resolve(None)),
+            None,
+            None,
+        ),
     };
     Some(
         variables()
             .with(PAPER_FILL, fill_color(&base))
             .with(PAPER_FILL_CONTRAST, contrast.clone())
             .with(PAPER_TINT_SHARE, share)
+            .with(GLASS_SHEEN, sheen)
             .with(
                 CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
                 contrast,
@@ -150,13 +164,15 @@ base_props! {
 #[component]
 pub fn Paper(props: PaperProps) -> Element {
     let states = paper_states(&props);
-    let gradient = use_gradient_style(
+    let gradient = use_glass_gradient_style(
         props.gradient.as_ref(),
         props.color.as_ref(),
         props.gradient.is_some(),
-        false,
+        props.glass && draws_backdrop_filter(),
     );
-    let tint = use_glass_tint(glass_tint_color(&props).as_ref());
+    let tint = use_glass_tint(
+        glass_tint_color(props.color.as_ref(), props.glass, props.gradient.is_some()).as_ref(),
+    );
     // At most one is set: a gradient takes `color` as its first stop.
     let style = paper_variables(&props, tint).or(gradient);
 
@@ -316,7 +332,7 @@ mod tests {
 
         assert!(style.contains("--lsx-paper-fill:#123456;"), "{style}");
         assert!(!style.contains("--lsx-paper-fill-contrast"), "{style}");
-        assert_eq!(glass_tint_color(&props), None);
+        assert_eq!(glass_tint_color(props.color.as_ref(), true, false), None);
     }
 
     /// Under glass the tint's label and share replace the solid fill's label.
@@ -327,15 +343,44 @@ mod tests {
             glass: true,
             ..props()
         };
-        let style = paper_variables(&props, Some(("#000000".into(), 95))).unwrap();
+        let style = paper_variables(
+            &props,
+            Some(GlassTint {
+                label: "#000000".into(),
+                share: 95,
+                sheen: 12,
+            }),
+        )
+        .unwrap();
 
         assert!(
             style.contains("--lsx-paper-fill-contrast:#000000;"),
             "{style}"
         );
         assert!(style.contains("--lsx-paper-tint-share:95%;"), "{style}");
+        assert!(style.contains("--lsx-glass-sheen:12%;"), "{style}");
         assert!(style.contains("--lsx-focus-contrast:#000000;"), "{style}");
-        assert_eq!(glass_tint_color(&props).is_some(), draws_backdrop_filter());
+        let color = props.color.as_ref();
+        assert_eq!(
+            glass_tint_color(color, true, false).is_some(),
+            draws_backdrop_filter()
+        );
+        assert_eq!(glass_tint_color(color, false, false), None);
+        assert_eq!(glass_tint_color(color, true, true), None);
+    }
+
+    /// A coloured glass saturates its backdrop and carries a highlight and a sheen.
+    #[test]
+    fn a_coloured_glass_carries_the_glass_cues() {
+        let css = Stylesheet::from(&paper_sx());
+        let css = css.as_str();
+
+        assert!(
+            css.contains("backdrop-filter:var(--lsx-glass-blur) saturate(160%);"),
+            "{css}"
+        );
+        assert!(css.contains("top / 100% 1px no-repeat"), "{css}");
+        assert!(css.contains("white var(--lsx-glass-sheen, 18%)"), "{css}");
     }
 
     /// Under a gradient the colour is the first stop, not a flat fill.

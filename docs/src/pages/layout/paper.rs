@@ -4,7 +4,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Input, Paper, Text, Title},
+    components::{Box, Code, Flex, Input, Paper, Text, Title},
     sx::sx,
     theme::Size,
     use_theme,
@@ -23,19 +23,31 @@ const PADDING: &str = r#"sx: sx().padding("lg")"#;
 // snippet: in Paper { .. }
 const NO_SHADOW: &str = r#"sx: sx().padding("lg").box_shadow("none")"#;
 
-/// Sharp stripes behind the glass, so the blur has something to show.
-const STRIPES: &str =
-    "repeating-linear-gradient(45deg, var(--lsx-primary-fill-6) 0 12px, transparent 12px 24px)";
+/// Large squares, well past the blur radius, in a colour and the page's ink, so the
+/// blur softens hard edges the glass overlaps.
+const BACKDROP: &str = "repeating-conic-gradient(var(--lsx-secondary-fill-6) 0 25%, var(--lsx-ink) 0 50%) 0 0 / 96px 96px";
 
-/// Glass prints the striped `Box` it sits on; off, the bare `Paper`.
-fn wrap_backdrop(values: &DemoValues, code: &str) -> String {
-    match values.str("glass") == "true" {
-        true => format!(
-            "Box {{\n    sx: sx().padding(\"xl\").background({STRIPES:?}),\n{}}}",
-            indent(code)
-        ),
-        false => code.to_string(),
+/// The second glass beside the demo's: tinted if the demo's is plain, plain if it is tinted.
+fn other_glass(values: &DemoValues) -> (Option<&'static str>, &'static str) {
+    match values.str("color").as_str() {
+        UNSET => (Some("primary"), "Tinted glass"),
+        _ => (None, "Plain glass"),
     }
+}
+
+/// Glass prints the backdrop `Box` it sits on, with the second glass beside it; off, the bare `Paper`.
+fn wrap_backdrop(values: &DemoValues, code: &str) -> String {
+    if values.str("glass") != "true" {
+        return code.to_string();
+    }
+    let (color, label) = other_glass(values);
+    let color = color
+        .map(|color| format!("color: {color:?}, "))
+        .unwrap_or_default();
+    format!(
+        "Box {{\n    sx: sx().padding(\"xl\").background({BACKDROP:?}),\n    Flex {{ gap: \"md\", wrap: \"wrap\",\n{}\n        Paper {{ glass: true, {color}sx: sx().padding(\"lg\"), Text {{ {label:?} }} }}\n    }}\n}}",
+        indent(&indent(code))
+    )
 }
 
 fn no_gradient(values: &DemoValues) -> bool {
@@ -65,11 +77,11 @@ pub fn PaperPage() -> Element {
                         .doc("A hairline border in the theme's surface border colour. Works together with a shadow."),
                     prop("glass", "bool")
                         .default("false")
-                        .doc("Frosted glass: translucent, blurring what is behind it, tuned by the theme's `paper.glass_background` and `paper.glass_blur`. Use it over app chrome, not over images, where text can lose contrast. Opaque when the user reduces transparency, in forced colours, and in native windows."),
+                        .doc("Frosted glass: translucent, blurring what is behind it, tuned by the theme's `paper.glass_background` and `paper.glass_blur`. A `color` or `gradient` tints it, and a tinted glass gets glass cues: a saturated backdrop, a top highlight and a light sheen. Use it over app chrome, not over images, where text can lose contrast. Opaque when the user reduces transparency, in forced colours, and in native windows, where a coloured one is its solid fill."),
                     prop("color", "ThemeAwareValue")
-                        .doc("Fills the surface. A theme color name paints its shade 6 under a text colour picked to read on it; any other CSS color is used as given, and its text colour is yours to set. With `glass`, a translucent tint of it, kept dense enough for the text to read. Under a gradient, its first stop."),
+                        .doc("Fills the surface. A theme color name paints its shade 6 under a text colour picked to read on it; any other CSS color is used as given, and its text colour is yours to set. With `glass`, a translucent tint of it, its share raised until the text reads 4.5:1: the more a colour must carry text, the less see-through the glass. Under a gradient, its first stop."),
                     prop("gradient", "Gradient")
-                        .doc("Fills the surface with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text colour is picked to read on both stops. With `glass`, the stops turn translucent. Its stops carry down to any gradient inside it."),
+                        .doc("Fills the surface with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text colour is picked to read on both stops. With `glass`, the stops turn translucent, their share raised until the text reads 4.5:1; a literal stop's text is yours to check. Its stops carry down to any gradient inside it."),
                     prop("component", "HtmlTag")
                         .default("div")
                         .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. A `section` or `aside` is a landmark and needs your `aria-label`."),
@@ -166,11 +178,25 @@ pub fn PaperPage() -> Element {
                             Text { "Due 30 September." }
                         }
                     };
-                    let backdrop = libero::sx::sx().padding("xl").background(STRIPES);
+                    let backdrop = libero::sx::sx().padding("xl").background(BACKDROP);
+                    let (color, label) = other_glass(&values);
 
                     rsx! {
                         if glass {
-                            Box { sx: backdrop, {paper} }
+                            Box { sx: backdrop,
+                                Flex { gap: "md", wrap: "wrap",
+                                    {paper}
+                                    Paper {
+                                        glass: true,
+                                        color: match color {
+                                            Some(color) => Input::from(color),
+                                            None => Input::None,
+                                        },
+                                        sx: libero::sx::sx().padding("lg"),
+                                        Text { "{label}" }
+                                    }
+                                }
+                            }
                         } else {
                             {paper}
                         }

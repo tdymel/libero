@@ -11,7 +11,7 @@ pub const ROUTES: Routes = &[
     ("/header-glass", || rsx! { GlassPage {} }),
 ];
 
-/// A glass banner given a `color` it must drop, and a glass `Paper`.
+/// A glass banner tinted by its `color`, and a plain glass `Paper`.
 #[component]
 fn GlassPage() -> Element {
     rsx! {

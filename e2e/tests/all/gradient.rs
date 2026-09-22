@@ -41,6 +41,30 @@ const FILL_RATIO: &str = "(sel => { const el = document.querySelector(sel); \
         .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0); \
     const [x, y] = [lum(fill), lum(label)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); })";
 
+/// The worst WCAG ratio of the label on a glass surface's fill, the tint over the page
+/// and the sheen on it: the points `glass_tint` measures, read back from the browser.
+const GLASS_RATIO: &str = "(sel => { const el = document.querySelector(sel); \
+    const probe = document.createElement('div'); document.body.append(probe); \
+    const rgb = c => { probe.style.color = c; return getComputedStyle(probe).color.match(/[\\d.]+/g).slice(0, 3).map(Number); }; \
+    const s = getComputedStyle(el); \
+    const bg = getComputedStyle(document.body).backgroundColor; \
+    const page = rgb(bg === 'rgba(0, 0, 0, 0)' ? 'var(--lsx-surface)' : bg); \
+    const share = parseFloat(s.getPropertyValue('--lsx-glass-share') || s.getPropertyValue('--lsx-paper-tint-share')) / 100; \
+    const tintShare = s.getPropertyValue('--lsx-paper-tint-share'); \
+    const k = tintShare ? parseFloat(tintShare) / 100 : share; \
+    const sheen = parseFloat(s.getPropertyValue('--lsx-glass-sheen') || '18') / 100; \
+    const fills = (el.getAttribute('data-state') || '').includes('gradient') \
+        ? (() => { const a = rgb(s.getPropertyValue('--lsx-gradient-from')); const b = rgb(s.getPropertyValue('--lsx-gradient-to')); \
+            return [a, b, a.map((v, i) => Math.ceil((v + b[i]) / 2))]; })() \
+        : [rgb(s.getPropertyValue('--lsx-paper-fill') || s.getPropertyValue('--lsx-header-background'))]; \
+    const label = rgb(s.color); probe.remove(); \
+    const lum = c => c.map(v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }) \
+        .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0); \
+    const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); }; \
+    const points = fills.flatMap(f => { const tint = f.map((v, i) => v * k + page[i] * (1 - k)); \
+        return [f, tint, tint.map(v => 255 * sheen + v * (1 - sheen))]; }); \
+    return Math.min(...points.map(p => ratio(p, label))); })";
+
 async fn ratio(page: &Page, script: &str, selector: &str) -> f64 {
     page.evaluate(format!("{script}('{selector}')"))
         .await
@@ -92,6 +116,11 @@ fn every_label_reads_on_its_whole_gradient_in_both_schemes() {
             // Paper `color` (1017): a palette fill and a glass tint of it.
             for selector in ["#paper-color", "#paper-glass"] {
                 let ratio = ratio(page, FILL_RATIO, selector).await;
+                assert!(ratio >= 4.5, "{selector} in {name}: {ratio:.2}:1");
+            }
+            // 1085: glass over a colour or a gradient, sheen included.
+            for selector in ["#paper-glass", "#header-tint", "#glass", "#header"] {
+                let ratio = ratio(page, GLASS_RATIO, selector).await;
                 assert!(ratio >= 4.5, "{selector} in {name}: {ratio:.2}:1");
             }
         }
@@ -171,6 +200,37 @@ fn paper_color_paints_the_fill_and_its_label() {
             style(page, "#text-color", "color").await,
             style(page, "#text", "color").await
         );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// 1085: a coloured or gradient glass saturates its backdrop and carries a highlight and a
+/// sheen over the tint; an uncoloured one stays plain blur.
+#[test]
+fn a_coloured_glass_carries_the_glass_cues() {
+    block_on(async {
+        let fixture = Fixture::open("/gradient", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#paper-glass").await.unwrap();
+        for selector in ["#paper-glass", "#header-tint", "#glass", "#header"] {
+            let filter = style(page, selector, "backdrop-filter").await;
+            assert!(
+                filter.contains("blur(12px)") && filter.contains("saturate"),
+                "{selector}: {filter}"
+            );
+            let image = style(page, selector, "background-image").await;
+            let layers = image.matches("linear-gradient").count();
+            assert!(layers >= 2, "{selector}: {image}");
+        }
+        let share = style(page, "#paper-glass", "--lsx-paper-tint-share").await;
+        assert!(share.ends_with('%'), "{share}");
+        // The tint of `#header-tint` is measured for its colour, like the Paper's.
+        assert!(
+            !style(page, "#header-tint", "--lsx-paper-tint-share")
+                .await
+                .is_empty()
+        );
+        assert!(!style(page, "#glass", "--lsx-glass-share").await.is_empty());
         fixture.close().await.unwrap();
     });
 }
@@ -262,15 +322,30 @@ fn forced_colours_drop_the_image() {
         )
         .await
         .unwrap();
-        for selector in ["#button", "#paper", "#glass", "#text", "#header"] {
-            assert_eq!(
-                style(page, selector, "background-image").await,
-                "none",
-                "{selector}"
+        for selector in [
+            "#button",
+            "#paper",
+            "#glass",
+            "#text",
+            "#header",
+            "#paper-glass",
+        ] {
+            // One `none` per layer: a glass carries its cue layers.
+            let image = style(page, selector, "background-image").await;
+            assert!(
+                image.split(", ").all(|layer| layer == "none"),
+                "{selector}: {image}"
             );
         }
         assert_eq!(style(page, "#glass", "backdrop-filter").await, "none");
         assert_eq!(style(page, "#header", "backdrop-filter").await, "none");
+        for selector in ["#paper-glass", "#header-tint"] {
+            assert_eq!(
+                style(page, selector, "backdrop-filter").await,
+                "none",
+                "{selector}"
+            );
+        }
         assert_ne!(style(page, "#text", "color").await, "rgba(0, 0, 0, 0)");
         fixture.close().await.unwrap();
     });

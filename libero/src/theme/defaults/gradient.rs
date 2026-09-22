@@ -1,3 +1,4 @@
+use super::paper::{GLASS_SHARE, GLASS_SHEEN, GLASS_SHEEN_MAX};
 use crate::css::CssDeclaration;
 use crate::sx::{ColorRole, Sx, ThemeAwareValue, sx};
 use crate::theme::{
@@ -259,7 +260,7 @@ fn midpoint(a: HexColor, b: HexColor) -> HexColor {
 /// Theme ends first; literals only where they fail. `None`: nothing measurable.
 fn best_label(
     themes: &[&Theme],
-    points: impl Fn(&Theme) -> Option<[HexColor; 3]>,
+    points: impl Fn(&Theme) -> Option<Vec<HexColor>>,
 ) -> Option<(f32, String, String)> {
     let (ink, surface) = (NamedColorCss::INK.value(), NamedColorCss::SURFACE.value());
     let (black, white) = (BLACK.to_string(), WHITE.to_string());
@@ -300,7 +301,7 @@ fn pick_label(stops: &[ThemeAwareValue; 2], themes: &[&Theme], text: bool) -> (S
     let best = best_label(themes, |theme| {
         let from = stop_hex(&stops[0], theme, text)?;
         let to = stop_hex(&stops[1], theme, text)?;
-        Some([from, to, midpoint(from, to)])
+        Some(vec![from, to, midpoint(from, to)])
     });
     // Nothing measurable: Mantine's white, on the caller.
     let (score, label, layer) = best.unwrap_or((f32::MAX, WHITE.to_string(), BLACK.to_string()));
@@ -312,36 +313,102 @@ fn pick_label(stops: &[ThemeAwareValue; 2], themes: &[&Theme], text: bool) -> (S
     (label, layer)
 }
 
-/// The label and share of a glass tint of `fill`: the label reads on the solid fill
-/// (the opaque fallbacks) and on the tint over the page's surface, and the share is
-/// the theme's `glass_background`, raised in steps of 5% until it does.
+/// What a coloured glass needs to stay legible: the label, the tint's share of the
+/// fill and the white sheen (percent) left on it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct GlassTint {
+    pub label: String,
+    pub share: u8,
+    pub sheen: u8,
+}
+
+/// The [`GlassTint`] of `fill`: the label reads on the solid fill (the opaque fallbacks)
+/// and on the tint, with its sheen, over the page's surface. The share is the theme's
+/// `glass_background`, raised in steps of 5% until it does; where even the solid fill
+/// cannot carry the full sheen, the sheen is thinned first.
 /// `None` for a literal with no hex.
-pub(crate) fn glass_tint(fill: &ThemeAwareValue, themes: &[&Theme]) -> Option<(String, u8)> {
+pub(crate) fn glass_tint(fill: &ThemeAwareValue, themes: &[&Theme]) -> Option<GlassTint> {
+    glass_share(fill, themes, |theme| {
+        Some(vec![stop_hex(fill, theme, false)?])
+    })
+}
+
+/// [`glass_tint`] of a gradient from `from`: every point of the gradient is a fill.
+pub(crate) fn glass_gradient_tint(
+    gradient: &Gradient,
+    from: Option<&ThemeAwareValue>,
+    themes: &[&Theme],
+) -> Option<GlassTint> {
+    let stops = gradient.stops(from, &themes[0].gradient);
+    glass_share(&stops, themes, |theme| {
+        let from = stop_hex(&stops[0], theme, false)?;
+        let to = stop_hex(&stops[1], theme, false)?;
+        Some(vec![from, to, midpoint(from, to)])
+    })
+}
+
+/// The gradient's label, glass share and sheen as vars, over [`Gradient::declarations`].
+pub(crate) fn glass_gradient_declarations(
+    gradient: &Gradient,
+    from: Option<&ThemeAwareValue>,
+    themes: &[&Theme],
+) -> Vec<CssDeclaration> {
+    glass_gradient_tint(gradient, from, themes)
+        .map(|tint| {
+            vec![
+                GRADIENT_CONTRAST.declare(tint.label),
+                GLASS_SHARE.declare(format!("{}%", tint.share)),
+                GLASS_SHEEN.declare(format!("{}%", tint.sheen)),
+            ]
+        })
+        .unwrap_or_default()
+}
+
+/// The search behind [`glass_tint`]: per sheen, thinning from [`GLASS_SHEEN_MAX`], the lowest
+/// share at which a label reads 4.5:1 on every `fills` point, its tint and the sheen on it.
+fn glass_share(
+    what: &impl std::fmt::Debug,
+    themes: &[&Theme],
+    fills: impl Fn(&Theme) -> Option<Vec<HexColor>>,
+) -> Option<GlassTint> {
     let start = themes
         .iter()
         .map(|theme| theme.paper.glass_background)
-        .max()?;
-    let at = |share: u8| {
+        .max()?
+        .min(100);
+    let at = |share: u8, sheen: u8| {
         best_label(themes, |theme| {
-            let solid = stop_hex(fill, theme, false)?;
-            let tint = mix(solid, theme.surface, share);
-            Some([solid, tint, midpoint(solid, tint)])
+            let mut points = Vec::new();
+            for solid in fills(theme)? {
+                let tint = mix(solid, theme.surface, share);
+                points.extend([solid, tint, midpoint(solid, tint), mix(WHITE, tint, sheen)]);
+            }
+            Some(points)
         })
     };
-    let mut share = start.min(100);
-    loop {
-        let (score, label, _) = at(share)?;
-        if score >= TEXT_CONTRAST {
-            return Some((label, share));
+    let mut last = None;
+    for sheen in (0..=GLASS_SHEEN_MAX).rev().step_by(6) {
+        for share in (start..100).step_by(5).chain([100]) {
+            let (score, label, _) = at(share, sheen)?;
+            if score >= TEXT_CONTRAST {
+                return Some(GlassTint {
+                    label,
+                    share,
+                    sheen,
+                });
+            }
+            last = Some((score, label));
         }
-        if share == 100 {
-            warn_once(format!(
-                "Paper: no label reads at 4.5:1 on {fill:?} (best {score:.2}:1); pick a darker colour."
-            ));
-            return Some((label, share));
-        }
-        share = (share + 5).min(100);
     }
+    let (score, label) = last?;
+    warn_once(format!(
+        "Paper: no label reads at 4.5:1 on {what:?} (best {score:.2}:1); pick a darker colour."
+    ));
+    Some(GlassTint {
+        label,
+        share: 100,
+        sheen: 0,
+    })
 }
 
 /// `a` at `percent` over `b`, as `color-mix(in srgb, a percent, b)` paints it.
@@ -459,7 +526,11 @@ mod tests {
             Color::Success,
         ] {
             let fill = ThemeAwareValue::ColorValue(ColorValue::Shade(color, ColorShade::S6));
-            let (label, share) = glass_tint(&fill, &themes).unwrap();
+            let GlassTint {
+                label,
+                share,
+                sheen,
+            } = glass_tint(&fill, &themes).unwrap();
             for theme in themes {
                 let paint = match label.as_str() {
                     "#000000" => BLACK,
@@ -469,13 +540,72 @@ mod tests {
                 };
                 let solid = stop_hex(&fill, theme, false).unwrap();
                 let tint = mix(solid, theme.surface, share);
-                for point in [solid, tint] {
+                for point in [solid, tint, mix(WHITE, tint, sheen)] {
                     let ratio = point.contrast_ratio(paint);
                     assert!(ratio >= TEXT_CONTRAST, "{color:?}: {ratio}");
                 }
             }
         }
         assert!(crate::utils::take_warnings().is_empty());
+    }
+
+    /// The label reads 4.5:1 on every gradient point at the raised glass share, sheen included.
+    #[test]
+    fn a_glass_gradient_label_reads_on_the_tint_and_the_sheen() {
+        crate::utils::take_warnings();
+        let themes = [&Theme::DEFAULT, &Theme::DARK];
+        for (color, to) in [
+            ("primary", "secondary"),
+            ("warning", "info"),
+            ("error", "success"),
+        ] {
+            let gradient = Gradient::default().to(to);
+            let from = ThemeAwareValue::from(color);
+            let GlassTint {
+                label,
+                share,
+                sheen,
+            } = glass_gradient_tint(&gradient, Some(&from), &themes).unwrap();
+            let stops = gradient.stops(Some(&from), &GradientDefaults::DEFAULT);
+            for theme in themes {
+                let paint = match label.as_str() {
+                    "#000000" => BLACK,
+                    "#FFFFFF" => WHITE,
+                    label if label == NamedColorCss::INK.value() => theme.ink,
+                    _ => theme.surface,
+                };
+                let a = stop_hex(&stops[0], theme, false).unwrap();
+                let b = stop_hex(&stops[1], theme, false).unwrap();
+                for solid in [a, b, midpoint(a, b)] {
+                    let tint = mix(solid, theme.surface, share);
+                    for point in [solid, tint, mix(WHITE, tint, sheen)] {
+                        let ratio = point.contrast_ratio(paint);
+                        assert!(ratio >= TEXT_CONTRAST, "{color}->{to}: {ratio}");
+                    }
+                }
+            }
+        }
+        assert!(crate::utils::take_warnings().is_empty());
+    }
+
+    /// The share never drops under the theme's `glass_background`.
+    #[test]
+    fn a_glass_share_starts_at_the_theme_s_glass_background() {
+        let fill = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, ColorShade::S6));
+        let GlassTint { share, .. } = glass_tint(&fill, &[&Theme::DEFAULT, &Theme::DARK]).unwrap();
+        assert!(share >= Theme::DEFAULT.paper.glass_background);
+    }
+
+    /// A mid-tone fill that the full sheen would push under 4.5:1 loses the sheen, not the label.
+    #[test]
+    fn the_sheen_thins_where_the_fill_cannot_carry_it() {
+        let themes = [&Theme::DEFAULT, &Theme::DARK];
+        let tint = |color| {
+            let fill = ThemeAwareValue::ColorValue(ColorValue::Shade(color, ColorShade::S6));
+            glass_tint(&fill, &themes).unwrap()
+        };
+        assert_eq!(tint(Color::Warning).sheen, GLASS_SHEEN_MAX);
+        assert!(tint(Color::Secondary).sheen < GLASS_SHEEN_MAX);
     }
 
     /// The tuple form is the builder's shorthand.

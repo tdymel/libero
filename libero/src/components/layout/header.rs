@@ -5,6 +5,7 @@ use std::{
 
 use dioxus::prelude::*;
 
+use super::paper::{PAPER_TINT_SHARE, glass_tint_color};
 use crate::{
     CssLayer,
     components::{
@@ -14,14 +15,14 @@ use crate::{
         layout::use_box,
     },
     css::Stylesheet,
-    hooks::{use_css, use_gradient_style, use_id},
+    hooks::{use_css, use_glass_gradient_style, use_glass_tint, use_id},
     platform::{document, draws_backdrop_filter, when_laid_out},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, Gradient, HEADER_HEIGHT,
-        HEADER_HEIGHT_VAR, NamedColorCss, PAPER_BACKGROUND, PaperDefaults, Size, Z_INDEX_HEADER,
-        gradient_surface_sx,
+        ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GLASS_SHEEN, GlassTint, Gradient,
+        HEADER_HEIGHT, HEADER_HEIGHT_VAR, NamedColorCss, PAPER_BACKGROUND, PaperDefaults, Size,
+        Z_INDEX_HEADER, gradient_surface_sx,
     },
 };
 
@@ -149,24 +150,42 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         // After `gradient`, which its shorthand would otherwise reset.
         .when(
             "glass",
-            PaperDefaults::glass_sx().when("gradient", PaperDefaults::glass_gradient_sx()),
+            PaperDefaults::glass_sx()
+                .when(
+                    "colored",
+                    PaperDefaults::glass_fill_sx(
+                        &HEADER_BACKGROUND_VAR.value(),
+                        Some(&PAPER_TINT_SHARE),
+                    ),
+                )
+                .when("gradient", PaperDefaults::glass_gradient_sx()),
         )
 });
 
-fn header_variables(props: &HeaderProps) -> Variables {
-    // Glass and gradient paint their own fill (a gradient starts at `color`), with their own label.
-    let color = props
-        .color
-        .as_ref()
-        .filter(|_| !props.glass && props.gradient.is_none());
+/// `tint`: the label and share of a glass tint, which replace the solid fill's label.
+fn header_variables(props: &HeaderProps, tint: Option<GlassTint>) -> Variables {
+    // A gradient paints its own fill (it starts at `color`), with its own label.
+    let color = props.color.as_ref().filter(|_| props.gradient.is_none());
     let base = header_base_color(color);
-    let contrast = base
-        .as_ref()
-        .and_then(header_contrast_color)
-        .and_then(|v| v.resolve(None));
+    let (contrast, share, sheen) = match tint {
+        Some(tint) => (
+            Some(tint.label),
+            Some(format!("{}%", tint.share)),
+            Some(format!("{}%", tint.sheen)),
+        ),
+        None => (
+            base.as_ref()
+                .and_then(header_contrast_color)
+                .and_then(|v| v.resolve(None)),
+            None,
+            None,
+        ),
+    };
     let fill = base.as_ref().and_then(fill_color);
 
     variables()
+        .with(PAPER_TINT_SHARE, share)
+        .with(GLASS_SHEEN, sheen)
         .with(
             HEADER_HEIGHT.override_var(),
             props.size.resolve(Some(HEADER_HEIGHT)),
@@ -200,7 +219,7 @@ base_props! {
         /// Publishes the height on `:root`, so focus scrolls clear. The page's banner only.
         #[props(default)]
         publish_height: bool,
-        /// Frosted glass, as on `Paper`. Replaces a `color`.
+        /// Frosted glass, as on `Paper`: a `color` tints it.
         #[props(default)]
         glass: bool,
         /// A linear gradient fill from `color`, as on `Paper`: `("secondary", 45)` or a [`Gradient`].
@@ -226,21 +245,29 @@ base_props! {
 #[component]
 pub fn Header(props: HeaderProps) -> Element {
     let position = props.position.copied_or_default();
-    let variables: Input<Variables> = header_variables(&props).into();
+    let glass = props.glass && draws_backdrop_filter();
+    let tint = use_glass_tint(
+        glass_tint_color(props.color.as_ref(), props.glass, props.gradient.is_some()).as_ref(),
+    );
+    let variables: Input<Variables> = header_variables(&props, tint).into();
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with("static", position == HeaderPosition::Static)
         .with("fixed", position == HeaderPosition::Fixed)
-        .with("glass", props.glass && draws_backdrop_filter())
+        .with("glass", glass)
+        .with(
+            "colored",
+            props.color.as_ref().is_some() && props.gradient.is_none(),
+        )
         .with("gradient", props.gradient.is_some())
         .into();
-    let gradient = use_gradient_style(
+    let gradient = use_glass_gradient_style(
         props.gradient.as_ref(),
         props.color.as_ref(),
         props.gradient.is_some(),
-        false,
+        glass,
     );
 
     // The last mounted publisher wins; the size's own CSS, so nothing is measured.
@@ -307,7 +334,7 @@ mod tests {
 
     #[test]
     fn a_theme_color_brings_its_own_contrast_along() {
-        let variables = header_variables(&header_props(Color::Primary.into())).to_string();
+        let variables = header_variables(&header_props(Color::Primary.into()), None).to_string();
 
         assert!(variables.contains(HEADER_BACKGROUND_VAR.name()));
         assert!(variables.contains(HEADER_COLOR_VAR.name()));
@@ -346,15 +373,48 @@ mod tests {
     }
 
     #[test]
-    fn glass_drops_the_color_it_replaces() {
+    fn glass_tints_with_the_color_and_takes_the_tint_label_and_share() {
         let props = HeaderProps {
             glass: true,
             ..header_props(Color::Primary.into())
         };
-        let variables = header_variables(&props).to_string();
+        let variables = header_variables(
+            &props,
+            Some(GlassTint {
+                label: "#000000".into(),
+                share: 90,
+                sheen: 18,
+            }),
+        )
+        .to_string();
 
-        assert!(!variables.contains(HEADER_BACKGROUND_VAR.name()));
-        assert!(!variables.contains(HEADER_COLOR_VAR.name()));
+        assert!(
+            variables.contains(HEADER_BACKGROUND_VAR.name()),
+            "{variables}"
+        );
+        assert!(
+            variables.contains(&format!("{}:#000000;", HEADER_COLOR_VAR.name())),
+            "{variables}"
+        );
+        assert!(
+            variables.contains("--lsx-paper-tint-share:90%;"),
+            "{variables}"
+        );
+    }
+
+    /// The glass fill mixes the header's own fill, cues included.
+    #[test]
+    fn a_coloured_glass_mixes_the_header_fill() {
+        let css = crate::css::Stylesheet::from(&*HEADER_BASE_SX);
+        let css = css.as_str();
+
+        assert!(
+            css.contains(
+                "color-mix(in srgb, var(--lsx-header-background) var(--lsx-paper-tint-share"
+            ),
+            "{css}"
+        );
+        assert!(css.contains("saturate(160%)"), "{css}");
     }
 
     /// The colour is the gradient's first stop, not a flat fill under it.
@@ -364,7 +424,7 @@ mod tests {
             gradient: Some(Gradient::default()),
             ..header_props(Color::Primary.into())
         };
-        let variables = header_variables(&props).to_string();
+        let variables = header_variables(&props, None).to_string();
 
         assert!(!variables.contains(HEADER_BACKGROUND_VAR.name()));
         assert!(!variables.contains(HEADER_COLOR_VAR.name()));
@@ -389,7 +449,7 @@ mod tests {
     /// Unset means the themed default applies, so neither var is pinned.
     #[test]
     fn no_color_emits_neither_variable() {
-        let variables = header_variables(&header_props(Input::None)).to_string();
+        let variables = header_variables(&header_props(Input::None), None).to_string();
 
         assert!(!variables.contains(HEADER_BACKGROUND_VAR.name()));
         assert!(!variables.contains(HEADER_COLOR_VAR.name()));

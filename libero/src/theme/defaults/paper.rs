@@ -2,7 +2,7 @@ use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{FORCED_COLORS, Sx, sx};
 use crate::theme::{
     Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GRADIENT_FROM, NamedColorCss, Size,
-    SizeCss, gradient_fill_sx, gradient_image,
+    SizeCss, gradient_image,
 };
 
 /// The library's one surface colour: anything painted as paper reads this.
@@ -19,6 +19,30 @@ pub const GLASS_BACKGROUND: CssVar = CssVar::new("--lsx-glass-background");
 pub const GLASS_BLUR: CssVar = CssVar::new("--lsx-glass-blur");
 /// `glass_background` as a percentage, for mixing a gradient's stops.
 pub(crate) const GLASS_SHARE: CssVar = CssVar::new("--lsx-glass-share");
+
+/// The white sheen over a coloured glass, thinned per surface where its label needs it.
+pub(crate) const GLASS_SHEEN: CssVar = CssVar::new("--lsx-glass-sheen");
+/// The full sheen, in percent; `glass_tint` measures the label with it.
+pub(crate) const GLASS_SHEEN_MAX: u8 = 18;
+const GLASS_HIGHLIGHT: u8 = 40;
+
+/// A one-pixel top highlight and a light sheen, painted over a coloured glass.
+fn glass_cue_layers() -> String {
+    let white =
+        |share: &dyn std::fmt::Display| format!("color-mix(in srgb, white {share}, transparent)");
+    let highlight = white(&format!("{GLASS_HIGHLIGHT}%"));
+    let sheen = GLASS_SHEEN.value_or(format!("{GLASS_SHEEN_MAX}%"));
+    format!(
+        "linear-gradient({highlight}, {highlight}) top / 100% 1px no-repeat, \
+         linear-gradient({}, transparent)",
+        white(&sheen)
+    )
+}
+
+/// The theme's blur, saturated so the backdrop's colour bleeds through.
+fn glass_cue_filter() -> String {
+    format!("{} saturate(160%)", GLASS_BLUR.value())
+}
 
 /// Not Baseline yet, so [`FORCED_COLORS`] and the native branch back it up.
 const REDUCED_TRANSPARENCY: &str = "(prefers-reduced-transparency: reduce)";
@@ -97,29 +121,41 @@ impl PaperDefaults {
             .media(FORCED_COLORS, opaque)
     }
 
-    /// Glass over a flat `fill`, mixed down to `share` (`glass_background` if `None`);
-    /// opaque where [`glass_sx`](Self::glass_sx) turns opaque.
+    /// Glass over a flat `fill`, mixed down to `share` (`glass_background` if `None`),
+    /// with the glass cues; opaque where [`glass_sx`](Self::glass_sx) turns opaque.
     pub(crate) fn glass_fill_sx(fill: &str, share: Option<&CssVar>) -> Sx {
         let opaque = sx().background(fill).backdrop_filter("none");
         let share = match share {
             Some(share) => share.value_or(GLASS_SHARE.value()),
             None => GLASS_SHARE.value(),
         };
-        sx().background(format!("color-mix(in srgb, {fill} {share}, transparent)"))
-            .media(REDUCED_TRANSPARENCY, opaque.clone())
-            .media(FORCED_COLORS, opaque)
+        sx().background(format!(
+            "{}, color-mix(in srgb, {fill} {share}, transparent)",
+            glass_cue_layers()
+        ))
+        .backdrop_filter(glass_cue_filter())
+        .media(REDUCED_TRANSPARENCY, opaque.clone())
+        .media(FORCED_COLORS, opaque)
     }
 
-    /// Glass over a gradient: each stop mixed down to `glass_background`, and
-    /// the opaque gradient again wherever [`glass_sx`](Self::glass_sx) turns opaque.
+    /// Glass over a gradient: each stop mixed down to the glass share, with the glass
+    /// cues, and the opaque gradient again wherever [`glass_sx`](Self::glass_sx) turns opaque.
     pub(crate) fn glass_gradient_sx() -> Sx {
         let share = GLASS_SHARE.value();
-        let opaque = gradient_fill_sx().backdrop_filter("none");
-        sx().background_color(format!(
-            "color-mix(in srgb, {} {share}, transparent)",
+        let opaque = sx()
+            .background(format!(
+                "{}, {}",
+                gradient_image(None),
+                GRADIENT_FROM.value()
+            ))
+            .backdrop_filter("none");
+        sx().background(format!(
+            "{}, {}, color-mix(in srgb, {} {share}, transparent)",
+            glass_cue_layers(),
+            gradient_image(Some(&share)),
             GRADIENT_FROM.value()
         ))
-        .background_image(gradient_image(Some(&share)))
+        .backdrop_filter(glass_cue_filter())
         .media(REDUCED_TRANSPARENCY, opaque.clone())
         .media(FORCED_COLORS, opaque)
     }

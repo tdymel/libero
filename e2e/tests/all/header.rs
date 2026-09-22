@@ -104,8 +104,9 @@ const GLASS: &str = "(() => ['#banner', '#card'].map(id => { \
     const alpha = (s.backgroundColor.match(/[\\d.]+/g) || [])[3] ?? '1'; \
     return [s.backdropFilter, alpha, s.color].join('|'); }).join(' / '))()";
 
-/// Todo 812. Glass is translucent with a blur on the web, drops the banner's
-/// `color`, and turns opaque under reduced transparency and forced colours.
+/// Todo 812, 1085. Glass is translucent with a blur on the web, the banner tinted by its
+/// `color` (a raised share, the tint's label, the glass cues), and turns opaque under
+/// reduced transparency and forced colours.
 #[test]
 fn glass_blurs_and_turns_opaque_where_asked() {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
@@ -122,12 +123,30 @@ fn glass_blurs_and_turns_opaque_where_asked() {
             .unwrap()
             .into_value()
             .unwrap();
-        for surface in glass.split(" / ") {
-            let parts: Vec<&str> = surface.split('|').collect();
-            assert_eq!(parts[0], "blur(12px)", "{glass}");
-            assert_eq!(parts[1], "0.8", "{glass}");
-            assert_eq!(parts[2], body, "the banner kept its colour: {glass}");
-        }
+        let surfaces: Vec<Vec<&str>> = glass
+            .split(" / ")
+            .map(|surface| surface.split('|').collect())
+            .collect();
+        let (banner, card) = (&surfaces[0], &surfaces[1]);
+        assert_eq!(banner[0], "blur(12px) saturate(1.6)", "{glass}");
+        let share: f64 = banner[1].parse().unwrap();
+        assert!(
+            share >= 0.8,
+            "the tint share never drops below 80%: {glass}"
+        );
+        let label: String = page
+            .evaluate("getComputedStyle(document.querySelector('#banner')).getPropertyValue('--lsx-header-color')")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            !label.is_empty(),
+            "the banner takes the tint's label: {glass}"
+        );
+        assert_eq!(card[0], "blur(12px)", "{glass}");
+        assert_eq!(card[1], "0.8", "{glass}");
+        assert_eq!(card[2], body, "{glass}");
 
         for feature in [
             MediaFeature::new("prefers-reduced-transparency", "reduce"),
