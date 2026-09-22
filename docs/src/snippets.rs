@@ -379,26 +379,41 @@ fn pages_of(route: Route) -> Vec<(Option<String>, Vec<PropGroup>)> {
     PAGES.with(|pages| std::mem::take(&mut *pages.borrow_mut()))
 }
 
-/// The names in a mirror's `## Props` tables, per `###` group; `""` names the ones before any.
+/// A method's name without its parameters: `show(args)` is `show`.
+fn bare(name: &str) -> &str {
+    name.split('(').next().unwrap_or(name)
+}
+
+/// The names in a mirror's `## Props` and `## API` tables, per `###` group; `""` names the
+/// `## Props` ones before any. `## API` files options structs and handles by heading.
 fn md_props(md: &str) -> Vec<(String, BTreeSet<String>)> {
     let mut groups: Vec<(String, BTreeSet<String>)> = Vec::new();
-    let mut in_props = false;
+    let mut section = "";
+    // The group the next row joins: none until a heading (or, in `## Props`, a row) opens one.
+    let mut current: Option<usize> = None;
     for line in md.lines() {
         if let Some(heading) = line.strip_prefix("## ") {
-            in_props = heading.trim() == "Props";
-        } else if !in_props {
+            section = heading.trim();
+            current = None;
+        } else if !matches!(section, "Props" | "API") {
             continue;
         } else if let Some(heading) = line.strip_prefix("### ") {
-            let heading = heading.trim().trim_matches('`');
-            groups.push((heading.to_string(), BTreeSet::new()));
+            groups.push((
+                heading.trim().trim_matches('`').to_string(),
+                BTreeSet::new(),
+            ));
+            current = Some(groups.len() - 1);
         } else if let Some(row) = line.strip_prefix("| `") {
             let Some((name, _)) = row.split_once('`') else {
                 continue;
             };
-            if groups.is_empty() {
+            if current.is_none() && section == "Props" {
                 groups.push((String::new(), BTreeSet::new()));
+                current = Some(groups.len() - 1);
             }
-            groups.last_mut().unwrap().1.insert(name.to_string());
+            if let Some(group) = current {
+                groups[group].1.insert(bare(name).to_string());
+            }
         }
     }
     groups
@@ -431,14 +446,14 @@ fn md_mirrors_list_the_props_of_their_page() {
                     .find(|(heading, _)| named(heading))
                     .or_else(|| {
                         mirrored
-                            .first()
-                            .filter(|(heading, _)| groups.len() == 1 && heading.is_empty())
+                            .iter()
+                            .find(|(heading, _)| groups.len() == 1 && heading.is_empty())
                     })
                     .map(|(_, names)| names);
                 let Some(listed) = listed else {
                     continue;
                 };
-                let page: BTreeSet<&str> = group.names().collect();
+                let page: BTreeSet<&str> = group.names().map(bare).collect();
                 for name in page.iter().filter(|name| !listed.contains(**name)) {
                     problems.push(format!(
                         "{markdown}: `{}` lacks `{name}`",

@@ -78,14 +78,19 @@ apk-android arch="aarch64": _dx
     [ -f "{{keystore}}" ] || keytool -genkeypair -keystore "{{keystore}}" -storepass "{{ks_pass}}" \
         -alias libero-docs -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Libero docs"
     tools=$(ls -d {{sdk}}/build-tools/* | sort -V | tail -1)
-    apk="{{apk_dir}}/libero-docs-{{arch}}.apk"
+    # The commit is in the file name, so a stale APK shows at once; the
+    # unstamped name stays as a symlink to the newest build.
+    apk="{{apk_dir}}/libero-docs-{{arch}}-$(git -C {{root}} describe --always --dirty).apk"
     mkdir -p "{{apk_dir}}"
+    rm -f "{{apk_dir}}"/libero-docs-{{arch}}-*.apk
     "$tools/zipalign" -f -p 4 "$app/app/build/outputs/apk/release/app-release-unsigned.apk" "$apk"
     "$tools/apksigner" sign --ks "{{keystore}}" --ks-pass "pass:{{ks_pass}}" "$apk"
+    ln -sf "$(basename "$apk")" "{{apk_dir}}/libero-docs-{{arch}}.apk"
     echo "$apk"
 
-# Installs `apk-android`'s file on the one device `adb devices` shows.
+# Installs `apk-android`'s newest file on the one device `adb devices` shows.
 install-android arch="aarch64":
+    @echo "installing $(readlink "{{apk_dir}}/libero-docs-{{arch}}.apk")"
     adb install -r "{{apk_dir}}/libero-docs-{{arch}}.apk"
 
 # The app's own log lines; a Rust panic surfaces here and nowhere else.

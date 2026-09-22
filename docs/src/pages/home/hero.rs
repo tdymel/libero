@@ -92,11 +92,13 @@ pub fn Hero() -> Element {
                     }
                 }
                 CodeBlock {
+                    // copy: install
                     source: "cargo add libero",
                     language: "shell",
                     label: "Add libero to your project",
                     header: false,
                     line_numbers: false,
+                    // copy: end
                     sx: sx().width("100%").max_width("360px").text_align("left"),
                 }
             }

@@ -78,13 +78,20 @@ mod tests {
         found
     }
 
-    /// Todo 1031: the e2e fixture's hand copies of the booking card and the stats heading.
+    /// Todos 1031 and 1049: the e2e fixture's hand copies of the booking card, the stats heading and the code blocks.
     #[test]
     fn the_e2e_copies_match_their_docs_source() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let read = |path: &str| std::fs::read_to_string(root.join(path)).unwrap();
-        let mut original = regions(&read("src/pages/home/booking.rs"));
-        original.extend(regions(&read("src/pages/home/stats.rs")));
+        let mut original = BTreeMap::new();
+        for file in ["booking", "stats", "hero", "closing", "example"] {
+            for (name, lines) in regions(&read(&format!("src/pages/home/{file}.rs"))) {
+                // A region several files share must be the same in each.
+                if let Some(seen) = original.insert(name.clone(), lines.clone()) {
+                    assert_eq!(seen, lines, "region `{name}` differs between home pages");
+                }
+            }
+        }
         let copy = regions(&read("../e2e/fixtures/src/home.rs"));
         assert!(!original.is_empty());
         assert_eq!(

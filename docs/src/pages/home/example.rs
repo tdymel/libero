@@ -106,6 +106,10 @@ fn BookingsTable(bookings: Vec<Booking>) -> Element {
     }
 }"#;
 
+// copy: card-label
+const CARD_LABEL: &str = "The booking card, Rust code";
+// copy: end
+
 #[derive(Clone, Copy, PartialEq, Options)]
 enum File {
     #[option(label = "booking_card.rs")]
@@ -128,7 +132,7 @@ impl File {
     // Names the block and its copy button in the visitor's words, not the file name.
     fn code_label(self) -> &'static str {
         match self {
-            File::Card => "The booking card, Rust code",
+            File::Card => CARD_LABEL,
             File::Form => "The booking form, Rust code",
             File::Table => "The bookings table, Rust code",
         }

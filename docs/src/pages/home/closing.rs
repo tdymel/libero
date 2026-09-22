@@ -33,11 +33,13 @@ pub fn Closing() -> Element {
                     span { color: ColorCss::PRIMARY.role_value("text-", ColorShade::S6), "The ball is in your hands" }
                 }
                 CodeBlock {
+                    // copy: install
                     source: "cargo add libero",
                     language: "shell",
                     label: "Add libero to your project",
                     header: false,
                     line_numbers: false,
+                    // copy: end
                     sx: sx().width("100%").max_width("320px").text_align("start"),
                 }
                 Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center", sx: cta_row_sx(),

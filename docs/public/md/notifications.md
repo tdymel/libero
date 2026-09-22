@@ -196,7 +196,9 @@ pub fn use_notifications_with<T: 'static>(
 
 ## Props
 
-`Notifications`, the host:
+### `Notifications`
+
+The host.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|

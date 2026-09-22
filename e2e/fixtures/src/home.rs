@@ -40,24 +40,31 @@ fn Stats() -> Element {
     }
 }
 
+// copy: card-label
+const CARD_LABEL: &str = "The booking card, Rust code";
+// copy: end
+
 /// The landing page's code blocks, copied like the card: `hero.rs`, `closing.rs`, `example.rs` (todo 1025).
+/// The card's source is a stub; only its label and the install block's props are compared.
 #[component]
 fn HomeCode() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "360px",
             CodeBlock {
                 id: "install",
+                // copy: install
                 source: "cargo add libero",
                 language: "shell",
                 label: "Add libero to your project",
                 header: false,
                 line_numbers: false,
+                // copy: end
             }
             CodeBlock {
                 id: "card-code",
                 source: "#[component]\npub fn BookingCard() -> Element {{\n    rsx! {{ Paper {{}} }}\n}}",
                 language: "rust",
-                label: "The booking card, Rust code",
+                label: CARD_LABEL,
                 header: false,
             }
         }
