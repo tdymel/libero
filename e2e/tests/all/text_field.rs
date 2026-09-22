@@ -17,6 +17,17 @@ async fn typing_reaches_the_value<D: Driver>(d: &mut D, _route: &str) -> Result<
     eventually_text(d, "#echo", "Ad", "Backspace").await
 }
 
+/// Keys faster than a WebView's IPC round trip: an older render must not
+/// overwrite a later letter (1026). 12 ms failed 1 run in 5 on Android, 4 ms every run.
+async fn fast_typing_keeps_every_letter<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("input").await?;
+    eventually_focused(d, "input", "a click").await?;
+    // Doubled letters: the write-back of the first erased the second.
+    const TEXT: &str = "bookkeeper committee";
+    d.type_burst(TEXT, 4).await?;
+    eventually_text(d, "#echo", TEXT, "typing at 4 ms a key").await
+}
+
 async fn the_reveal_shows_it<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const REVEAL: &str = "button[aria-label='Show password']";
     d.click("input").await?;
@@ -36,6 +47,11 @@ e2e::scenario!(
     typing_into_a_text_field_reaches_its_value,
     "/text-field/echo",
     typing_reaches_the_value
+);
+e2e::scenario!(
+    fast_typing_into_a_text_field_keeps_every_letter,
+    "/text-field/echo",
+    fast_typing_keeps_every_letter
 );
 e2e::scenario!(
     the_reveal_button_shows_a_password,

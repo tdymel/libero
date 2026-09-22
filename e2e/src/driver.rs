@@ -53,6 +53,11 @@ pub trait Driver {
     /// A chord with Ctrl held; give `key` no `text`.
     async fn press_ctrl(&mut self, key: Key) -> Result<()>;
     async fn type_text(&mut self, text: &str) -> Result<()>;
+    /// Types `text` one key per `ms`, faster than a WebView's IPC round trip (1026).
+    async fn type_burst(&mut self, text: &str, ms: u64) -> Result<()> {
+        let _ = ms;
+        self.type_text(text).await
+    }
     /// Presses at the first match's centre, moves by `(dx, dy)` in steps, releases.
     async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()>;
     /// A touch held still at the first match's centre for `ms`, then lifted.
@@ -673,6 +678,15 @@ mod android {
         async fn type_text(&mut self, text: &str) -> Result<()> {
             for ch in text.chars() {
                 input(&["text".into(), input_text(&ch.to_string())]).await?;
+            }
+            Ok(())
+        }
+
+        /// CDP's key events: each `adb input` is a process, far slower than `ms`.
+        async fn type_burst(&mut self, text: &str, ms: u64) -> Result<()> {
+            for ch in text.chars() {
+                keyboard::type_text(&self.page, &ch.to_string()).await?;
+                tokio::time::sleep(Duration::from_millis(ms)).await;
             }
             Ok(())
         }
