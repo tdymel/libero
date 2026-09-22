@@ -146,17 +146,20 @@ impl SliderCoreValue {
         }
     }
 
-    /// The thumb a pointer aiming at `target` grabs: the closer one, and the
-    /// one the pointer is heading towards when they sit on the same spot.
-    pub(super) fn nearest(self, target: f64) -> usize {
+    /// The thumb a pointer aiming at `target` grabs: the closer one, else the
+    /// one `heading` lies towards. `None` for thumbs on one spot while the
+    /// pointer has not moved: its first move picks (1060).
+    pub(super) fn nearest(self, target: f64, heading: f64) -> Option<usize> {
         let Self::Range { from, to } = self else {
-            return 0;
+            return Some(0);
         };
         let (to_from, to_to) = ((target - from).abs(), (target - to).abs());
         match () {
-            _ if to_from < to_to => 0,
-            _ if to_to < to_from => 1,
-            _ => usize::from(target > to),
+            _ if to_from < to_to => Some(0),
+            _ if to_to < to_from => Some(1),
+            _ if heading != target => Some(usize::from(heading > target)),
+            _ if from == to => None,
+            _ => Some(0),
         }
     }
 
@@ -324,17 +327,22 @@ mod tests {
             from: 20.0,
             to: 80.0,
         };
-        assert_eq!(value.nearest(30.0), 0);
-        assert_eq!(value.nearest(70.0), 1);
-        // Equidistant: the lower thumb, which is what a leftward drag wants.
-        assert_eq!(value.nearest(50.0), 0);
+        assert_eq!(value.nearest(30.0, 30.0), Some(0));
+        assert_eq!(value.nearest(70.0, 70.0), Some(1));
+        // Equidistant: the side the pointer moves to.
+        assert_eq!(value.nearest(50.0, 55.0), Some(1));
+        assert_eq!(value.nearest(50.0, 45.0), Some(0));
         // Collapsed thumbs part in whichever direction the pointer went.
         let closed = SliderCoreValue::Range {
             from: 50.0,
             to: 50.0,
         };
-        assert_eq!(closed.nearest(80.0), 1);
-        assert_eq!(closed.nearest(20.0), 0);
+        // Pressed on the pair: open until it moves (1060).
+        assert_eq!(closed.nearest(51.0, 51.0), None);
+        assert_eq!(closed.nearest(50.0, 54.0), Some(1));
+        assert_eq!(closed.nearest(50.0, 46.0), Some(0));
+        assert_eq!(closed.nearest(51.0, 49.0), Some(0));
+        assert_eq!(SliderCoreValue::Single(5.0).nearest(9.0, 9.0), Some(0));
     }
 
     #[test]

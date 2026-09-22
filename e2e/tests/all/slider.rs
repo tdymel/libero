@@ -20,10 +20,17 @@ async fn value_now<D: Driver>(d: &mut D) -> Result<f64> {
         .unwrap_or_default())
 }
 
-/// The 400px track's centre is 50; a quarter of it further is 75.
+/// The 400px track's centre is 50; a quarter of it further is 75. A touch
+/// that began off the thumb neither drags nor taps (1059).
 async fn centre_drag<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     ensure!(value_now(d).await? == 0.0, "the slider starts off 0");
     d.drag(TRACK, 100.0, 0.0).await?;
+    if d.platform() == Platform::Android {
+        linger(d, 8).await;
+        let moved = value_now(d).await?;
+        ensure!(moved == 0.0, "a swipe from the track moved it to {moved}");
+        return Ok(());
+    }
     eventually(d, "the drag to reach 75", async |d| {
         Ok((value_now(d).await? - 75.0).abs() < 2.0)
     })
@@ -44,6 +51,31 @@ e2e::scenario!(
     pressing_the_track_centre_and_dragging_right_follows_the_pointer,
     "/slider/drag",
     centre_drag
+);
+
+const BUBBLE: &str = "[role=tooltip]:not([hidden])";
+
+/// Todo 1058: a touch held on the thumb opens no lingering long-press bubble;
+/// its tap's bubble is gone right after the release.
+async fn held_thumb<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.long_press(THUMB, 800).await?;
+    let released = std::time::Instant::now();
+    loop {
+        if !d.exists(BUBBLE).await? {
+            return Ok(());
+        }
+        ensure!(
+            released.elapsed().as_millis() < 700,
+            "the bubble still shows 700 ms after the release"
+        );
+    }
+}
+
+e2e::scenario!(
+    a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release,
+    "/slider/drag",
+    held_thumb,
+    native: skip("996: Blitz has no touch input")
 );
 e2e::scenario!(
     the_thumb_moves_with_the_value,
@@ -176,6 +208,115 @@ fn the_thumb_tracks_a_drag() {
                 .unwrap();
             fixture.close().await.unwrap();
         }
+    });
+}
+
+/// Per frame, how far the open bubble's centre is off the thumb's.
+const SAMPLE_BUBBLE: &str = "(() => { window.__offsets = []; const frame = () => { \
+    const thumb = document.querySelector('[role=slider]').getBoundingClientRect(); \
+    const bubble = document.querySelector('[role=tooltip]:not([hidden])')?.getBoundingClientRect(); \
+    if (bubble) __offsets.push(Math.abs(thumb.x + thumb.width / 2 - bubble.x - bubble.width / 2)); \
+    if (!window.__sampled) requestAnimationFrame(frame); }; requestAnimationFrame(frame); })()";
+
+/// Todo 1058: the value bubble sits centred on the thumb in every frame of a
+/// drag. The web measured fast enough before too; the lag showed over Android's IPC.
+#[test]
+fn the_value_bubble_rides_the_thumb_through_a_drag() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/drag", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(SAMPLE_BUBBLE).await.unwrap();
+        let from = pointer::centre_of(page, THUMB).await.unwrap();
+        let to = pointer::Point {
+            x: from.x + 240.0,
+            y: from.y,
+        };
+        wait::for_js_change(page, VALUE_NOW, "the thumb to move", || {
+            pointer::drag(page, from, to, 30)
+        })
+        .await
+        .unwrap();
+        let (frames, worst): (usize, f64) = page
+            .evaluate("(() => { window.__sampled = true; return [__offsets.length, Math.max(0, ...__offsets)]; })()")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            frames > 3,
+            "the bubble showed in {frames} frames of the drag"
+        );
+        assert!(
+            worst < 1.0,
+            "the bubble trailed the thumb by up to {worst}px"
+        );
+        fixture.console.assert_clean("a drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1059 on web touch: a swipe from the track neither drags nor taps, a
+/// still tap there jumps, and a sideways drag from the thumb moves it.
+#[test]
+fn a_touch_drags_only_from_the_thumb() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/scroll", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let value =
+            format!("document.querySelector('{SCROLL_THUMB}').getAttribute('aria-valuenow')");
+        let thumb = pointer::centre_of(page, SCROLL_THUMB).await.unwrap();
+        let track = pointer::Point {
+            x: thumb.x + 150.0,
+            y: thumb.y,
+        };
+        let aside = pointer::Point {
+            x: track.x + 60.0,
+            y: track.y,
+        };
+
+        pointer::touch_drag(page, track, aside, 6).await.unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        let (now, ended): (String, String) = page
+            .evaluate(format!(
+                "[{value}, document.querySelector('#slider-end').textContent]"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            (now.as_str(), ended.as_str()),
+            ("0", ""),
+            "a swipe from the track moved it"
+        );
+
+        pointer::touch_drag(page, track, track, 0).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('#slider-end').textContent === {value} && Number({value}) > 40"
+            ),
+            "a still tap on the track to jump there and commit",
+        )
+        .await
+        .unwrap();
+
+        let thumb = pointer::centre_of(page, SCROLL_THUMB).await.unwrap();
+        let back = pointer::Point {
+            x: thumb.x - 80.0,
+            y: thumb.y,
+        };
+        wait::for_js_change(page, &value, "a drag from the thumb to move it", || {
+            pointer::touch_drag(page, thumb, back, 8)
+        })
+        .await
+        .unwrap();
+        fixture.console.assert_clean("touches").unwrap();
+        fixture.close().await.unwrap();
     });
 }
 

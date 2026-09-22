@@ -436,16 +436,38 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
 
     // The drag's two steps, both through `use_callback` so they see this
     // render's bounds - the handlers `use_drag` holds do not.
-    let grab = use_callback(move |raw: f64| {
+    // `heading`: where the pointer already went, which picks between two
+    // thumbs on one spot. Unmoved, the press's side holds until `slide`.
+    let mut undecided = use_hook(|| CopyValue::new(None::<f64>));
+    let grab = use_callback(move |(raw, heading): (f64, f64)| {
         let value = live.peek().value;
-        let index = value.nearest(raw);
+        let choice = value.nearest(raw, heading);
+        undecided.set(choice.is_none().then_some(raw));
+        let index = choice.unwrap_or_else(|| usize::from(raw > value.thumb(1)));
         active.set(index);
         emit.call(SliderChangeEvent::Start(
             value.moved(index, raw, min, max, step, min_range),
         ));
         index
     });
+    let slide_focus = press_focus.clone();
     let slide = use_callback(move |raw: f64| {
+        let pressed = *undecided.peek();
+        if let Some(pressed) = pressed.filter(|pressed| *pressed != raw) {
+            undecided.set(None);
+            let index = usize::from(raw > pressed);
+            active.set(index);
+            let thumb = thumb_elements[index];
+            if focusable && !thumb.is_focused() {
+                let press_focus = slide_focus.clone();
+                press_focus.mark();
+                let _ = thumb.focus();
+                spawn(async move {
+                    next_task().await;
+                    press_focus.clear();
+                });
+            }
+        }
         // Copied out first: `emit` writes `latest` while the call runs.
         let (from, index) = (*latest.peek(), *active.peek());
         emit.call(SliderChangeEvent::Change(
@@ -456,8 +478,11 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // Moves and a release that arrive before the measuring task has grabbed
     // (a sideways touch starts mid-move) wait for the `Start`.
     let mut starting = use_hook(|| CopyValue::new(Starting::default()));
+    // Set by a thumb's `pointerdown`, which runs before the root's: only a
+    // touch that began on a thumb drags (1059).
+    let mut on_thumb = use_hook(|| CopyValue::new(false));
 
-    let drag = use_sideways_drag(DragOptions {
+    let options = DragOptions {
         capture: root_element,
         onstart: Callback::new(move |event: DragStart| {
             if !editable {
@@ -489,7 +514,10 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
             let (track_left, track_width, thumb_width) =
                 (track_left.clone(), track_width.clone(), thumb_width.clone());
             track_rtl.set(root_element.is_rtl());
+            // Any focus till the task ends is the pointer's, the web's focus of
+            // a pressed thumb too: a touch matches `:focus-visible` (1058).
             let press_focus = press_focus.clone();
+            press_focus.mark();
             // Started here, awaited in the task: Blitz locks the document
             // while tasks drain.
             let track_size = track_element.dimensions();
@@ -497,11 +525,13 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
             let thumb_size = thumb_elements[0].dimensions();
             spawn(async move {
                 let (Ok(dimensions), Ok((left, _))) = (track_size.await, track_offset.await) else {
+                    press_focus.clear();
                     settle(false);
                     event.cancel.call(());
                     return;
                 };
                 if dimensions.width <= 0.0 {
+                    press_focus.clear();
                     settle(false);
                     event.cancel.call(());
                     return;
@@ -513,9 +543,14 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
 
                 match position_at.call(event.client.x) {
                     Some(raw) => {
+                        let heading = starting
+                            .peek()
+                            .moved_to
+                            .and_then(|x| position_at.call(x))
+                            .unwrap_or(raw);
                         // `use_drag` cancels the pointerdown and so its focus;
                         // the grabbed thumb is focused here instead.
-                        let index = grab.call(raw);
+                        let index = grab.call((raw, heading));
                         settle(true);
                         let thumb = thumb_elements[index];
                         if focusable && !thumb.is_focused() {
@@ -523,11 +558,12 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                             // tell it this focus is the pointer's (todo 476).
                             press_focus.mark();
                             let _ = thumb.focus();
-                            next_task().await;
-                            press_focus.clear();
                         }
+                        next_task().await;
+                        press_focus.clear();
                     }
                     None => {
+                        press_focus.clear();
                         settle(false);
                         event.cancel.call(());
                     }
@@ -559,7 +595,13 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
             let last = *latest.peek();
             emit.call(SliderChangeEvent::End(last));
         }),
+    };
+    let drag = use_sideways_drag(options, Callback::new(move |()| *on_thumb.peek()));
+    let onpointerdown = use_callback(move |event: Event<PointerData>| {
+        drag.onpointerdown.call(event);
+        on_thumb.set(false);
     });
+    let onthumbdown = use_callback(move |_: Event<PointerData>| on_thumb.set(true));
 
     // One handler for both thumbs: the focused thumb is the one the keys
     // move, so the index comes from whichever element fired.
@@ -637,7 +679,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .variables(&root_variables)
         .prepare()
         .element(&root_element)
-        .event("onpointerdown", drag.onpointerdown)
+        .event("onpointerdown", onpointerdown)
         .event("onpointermove", drag.onpointermove)
         .event("onpointerup", drag.onpointerup)
         .event("onpointercancel", drag.onpointercancel)
@@ -671,6 +713,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         bubble_id,
                         thumb_elements,
                         onkeydown,
+                        onthumbdown,
                         dragging: drag.dragging,
                         active,
                     }
@@ -704,6 +747,7 @@ struct SliderThumbsProps {
     bubble_id: Signal<String>,
     thumb_elements: [ElementHandle; 2],
     onkeydown: Callback<(usize, Event<KeyboardData>)>,
+    onthumbdown: Callback<Event<PointerData>>,
     dragging: Signal<bool>,
     active: Signal<usize>,
 }
@@ -722,6 +766,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         bubble_id,
         thumb_elements,
         onkeydown,
+        onthumbdown,
         dragging,
         active,
         ..
@@ -825,6 +870,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             .event("onkeydown", move |event: Event<KeyboardData>| {
                 onkeydown.call((index, event))
             })
+            .event("onpointerdown", onthumbdown)
             .render(HtmlTag::Span, Vec::new(), rsx! {});
 
         let at = variables()

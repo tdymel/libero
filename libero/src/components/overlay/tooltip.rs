@@ -55,8 +55,8 @@ fn bridge_sx(side: Side) -> Sx {
     }
 }
 
-static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
-    let base = TooltipDefaults::theme_vars()
+fn bubble_sx() -> Sx {
+    TooltipDefaults::theme_vars()
         .z_index(Z_INDEX_POPOVER.overridable())
         .max_width(format!(
             "min({MAX_WIDTH}, calc(100vw - 2 * {}))",
@@ -64,15 +64,44 @@ static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
         ))
         .selector("&::before", sx().content("\"\"").position("absolute"))
         .animation(format!("{TOOLTIP_IN} {} ease", TOOLTIP_DURATION.value()))
-        .media(REDUCED_MOTION, sx().animation("none"));
+        .media(REDUCED_MOTION, sx().animation("none"))
+}
 
-    Side::ALL.iter().fold(base, |base, &side| {
+static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
+    Side::ALL.iter().fold(bubble_sx(), |base, &side| {
         base.when(side.state_name(), bridge_sx(side))
+    })
+});
+
+/// Against the trigger's positioned ancestor, `gap` off the landed side: no
+/// flip, no shift into the viewport.
+fn inline_side_sx(side: Side) -> Sx {
+    let off = format!("calc(100% + {})", TOOLTIP_GAP_VAR.value());
+    let across = sx().left("50%").transform("translateX(-50%)");
+    let along = sx().top("50%").transform("translateY(-50%)");
+    match side {
+        Side::Top => across.bottom(off),
+        Side::Bottom => across.top(off),
+        Side::Start => along.right(off.clone()).rtl(sx().right("auto").left(off)),
+        Side::End => along.left(off.clone()).rtl(sx().left("auto").right(off)),
+    }
+}
+
+static TOOLTIP_INLINE_SX: StaticSx = StaticSx::new(|| {
+    let base = bubble_sx()
+        .position("absolute")
+        .width("max-content")
+        .pointer_events("none");
+    Side::ALL.iter().fold(base, |base, &side| {
+        base.when(side.state_name(), inline_side_sx(side))
     })
 });
 
 /// Provided above a `Tooltip` whose trigger its caller focuses from code after
 /// a press outside it (a slider's track, todo 476): the next focus is a press's.
+///
+/// Its caller also opens the bubble for a drag: a touch's long press opens none,
+/// and a forced-open bubble rides inside its moving trigger (1058).
 #[derive(Clone, Default)]
 pub(crate) struct PressFocus(Rc<Cell<bool>>);
 
@@ -147,6 +176,7 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     // The last press was a touch, until the pointer leaves: a long press opens it (996).
     let touch = use_hook(|| Rc::new(Cell::new(false)));
     let press_focus = use_hook(try_consume_context::<PressFocus>);
+    let owned = press_focus.is_some();
     let marked = move || press_focus.as_ref().is_some_and(PressFocus::take);
     // Where the document hears Escape, the open bubble's `use_dismiss` does.
     let global_escape = use_hook(|| keyboard().is_some());
@@ -191,6 +221,9 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     let dismissible = props.open.is_none();
 
     let bubble = match open {
+        true if owned && props.open == Some(true) => rsx! {
+            TooltipInline { tooltip: props.clone() }
+        },
         true => rsx! {
             TooltipBubble {
                 tooltip: props.clone(),
@@ -229,18 +262,18 @@ pub fn Tooltip(props: TooltipProps) -> Element {
             pressed.set(true);
             let is_touch = event.data().pointer_type() == "touch";
             press_touch.set(is_touch);
-            if is_touch {
+            if is_touch && !owned {
                 hover.hover(true, LONG_PRESS);
             }
         })
         // Released before the long press: nothing. After: it lingers, then closes.
         .event("onpointerup", move |event: PointerEvent| {
-            if event.data().pointer_type() == "touch" {
+            if event.data().pointer_type() == "touch" && !owned {
                 hover.hover(false, TOUCH_LINGER);
             }
         })
         .event("onpointercancel", move |event: PointerEvent| {
-            if event.data().pointer_type() == "touch" {
+            if event.data().pointer_type() == "touch" && !owned {
                 hover.hover(false, TOUCH_LINGER);
             }
         })
@@ -258,6 +291,45 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         });
     }
     wrapper.render(HtmlTag::Span, Vec::new(), vec![props.children, bubble])
+}
+
+/// Drawn inside the trigger's wrapper, so it moves in the same frame as the
+/// trigger; a portaled one trails it by a measuring round trip (1058).
+#[component]
+fn TooltipInline(tooltip: TooltipProps) -> Element {
+    let theme = use_theme();
+    let side = tooltip.side.copied_or(theme.tooltip.side);
+    let size = tooltip.size.copied_or(theme.tooltip.size);
+    let gap = tooltip.gap.copied_or(theme.tooltip.gap);
+
+    let states: Input<States> = tooltip
+        .states
+        .unwrap_or_default()
+        .with(side.state_name(), true)
+        .with(size.state_name(), true)
+        .into();
+    let variables: Input<crate::components::common::Variables> = variables()
+        .with(TOOLTIP_GAP_VAR, SizeCss::SPACING.value(gap))
+        .with(
+            Z_INDEX_POPOVER.override_var(),
+            tooltip.z_index.resolve(None),
+        )
+        .into();
+
+    use_box()
+        .framework_sx(&TOOLTIP_INLINE_SX)
+        .class(&tooltip.class)
+        .sx(&tooltip.sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare()
+        .attr("role", "tooltip")
+        .attr("id", tooltip.label_id.clone())
+        .render(
+            HtmlTag::Span,
+            tooltip.attributes.clone(),
+            tooltip.label.clone(),
+        )
 }
 
 /// Its own component, so a closed tooltip runs no popover hooks: a page may hold hundreds.

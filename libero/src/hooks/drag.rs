@@ -121,10 +121,13 @@ const SIDEWAYS_SLOP: f64 = 8.0;
 /// Android slider: a touch drags once it moves sideways, a tap jumps on release,
 /// and a vertical swipe scrolls the page. Give it [`sideways_drag_sx`].
 ///
+/// `grabs` answers, at a touch's press, whether it may drag at all; one that
+/// may not only taps, and moving drops it (1059). A mouse always drags.
+///
 /// A tap calls `onend` right after `onstart`: an `onstart` that measures first
 /// must hold the end back until it has run.
-pub(crate) fn use_sideways_drag(options: DragOptions) -> Drag {
-    use_drag_with(options, true)
+pub(crate) fn use_sideways_drag(options: DragOptions, grabs: Callback<(), bool>) -> Drag {
+    use_drag_inner(options, true, Some(grabs))
 }
 
 /// `touch-action: pan-y` for a [`use_sideways_drag`] control: the browser
@@ -136,6 +139,18 @@ pub(crate) fn sideways_drag_sx() -> Sx {
 /// [`use_sideways_drag`] while `sideways`, else [`use_drag`]: for a control
 /// whose axis can change between renders.
 pub(crate) fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
+    use_drag_inner(options, sideways, None)
+}
+
+/// A touch not yet moved far enough to be a drag.
+#[derive(Clone, Copy)]
+struct Pending {
+    press: ActiveDrag,
+    /// `false`: a tap or nothing.
+    grabs: bool,
+}
+
+fn use_drag_inner(options: DragOptions, sideways: bool, grabs: Option<Callback<(), bool>>) -> Drag {
     let DragOptions {
         capture,
         onstart,
@@ -145,8 +160,7 @@ pub(crate) fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
 
     let mut active = use_signal(|| Option::<ActiveDrag>::None);
     let mut dragging = use_signal(|| false);
-    // A sideways touch not yet moved far enough to be a drag.
-    let mut pending = use_signal(|| Option::<ActiveDrag>::None);
+    let mut pending = use_signal(|| Option::<Pending>::None);
 
     let cancel = use_callback(move |()| {
         active.set(None);
@@ -235,7 +249,10 @@ pub(crate) fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
             start: client,
         };
         match sideways && event.pointer_type() == "touch" {
-            true => pending.set(Some(press)),
+            true => pending.set(Some(Pending {
+                press,
+                grabs: grabs.is_none_or(|grabs| grabs.call(())),
+            })),
             false => {
                 begin.call((event, client));
             }
@@ -243,7 +260,7 @@ pub(crate) fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
     });
 
     let onpointermove = use_callback(move |event: Event<PointerData>| {
-        let Some(press) = *pending.peek() else {
+        let Some(Pending { press, grabs }) = *pending.peek() else {
             track.call(event);
             return;
         };
@@ -252,6 +269,13 @@ pub(crate) fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
         }
         let coordinates = event.client_coordinates();
         let (dx, dy) = (coordinates.x - press.start.x, coordinates.y - press.start.y);
+        // No longer a tap, and not allowed to drag.
+        if !grabs {
+            if dx.hypot(dy) >= SIDEWAYS_SLOP {
+                pending.set(None);
+            }
+            return;
+        }
         // Not yet sideways: wait, the browser cancels a swipe it scrolls.
         if dx.abs() < SIDEWAYS_SLOP || dx.abs() <= dy.abs() {
             return;
@@ -264,7 +288,7 @@ pub(crate) fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
 
     // A touch released before it moved is a tap: start and end at once.
     let onpointerup = use_callback(move |event: Event<PointerData>| {
-        let Some(press) = *pending.peek() else {
+        let Some(Pending { press, .. }) = *pending.peek() else {
             end.call(event);
             return;
         };
@@ -282,7 +306,7 @@ pub(crate) fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
     let onpointercancel = use_callback(move |event: Event<PointerData>| {
         if pending
             .peek()
-            .is_some_and(|press| press.pointer_id == event.pointer_id())
+            .is_some_and(|pending| pending.press.pointer_id == event.pointer_id())
         {
             pending.set(None);
             return;

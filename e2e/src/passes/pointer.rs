@@ -131,6 +131,42 @@ pub async fn long_press(page: &Page, selector: &str, ms: u64) -> Result<()> {
     Ok(())
 }
 
+/// A touch pressed at `from`, moved to `to` in `steps`, lifted there; `steps: 0`
+/// is a tap. Turns on touch emulation for the page.
+pub async fn touch_drag(page: &Page, from: Point, to: Point, steps: usize) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchTouchEventParams, DispatchTouchEventType, TouchPoint,
+    };
+    page.execute(SetTouchEmulationEnabledParams::new(true))
+        .await?;
+    let moves = (1..=steps).map(|step| {
+        let t = step as f64 / steps as f64;
+        let at = Point {
+            x: from.x + (to.x - from.x) * t,
+            y: from.y + (to.y - from.y) * t,
+        };
+        (DispatchTouchEventType::TouchMove, at)
+    });
+    let events = std::iter::once((DispatchTouchEventType::TouchStart, from))
+        .chain(moves)
+        .chain(std::iter::once((DispatchTouchEventType::TouchEnd, to)));
+    for (kind, at) in events {
+        let point = TouchPoint::builder()
+            .x(at.x)
+            .y(at.y)
+            .build()
+            .map_err(anyhow::Error::msg)?;
+        let event = DispatchTouchEventParams::builder()
+            .r#type(kind)
+            .touch_point(point)
+            .build()
+            .map_err(anyhow::Error::msg)?;
+        page.execute(event).await?;
+    }
+    Ok(())
+}
+
 /// Click an element at its centre.
 pub async fn click(page: &Page, selector: &str) -> Result<()> {
     click_at(page, centre_of(page, selector).await?).await
