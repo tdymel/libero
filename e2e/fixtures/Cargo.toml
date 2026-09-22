@@ -13,6 +13,8 @@ libero = { path = "../../libero" }
 [features]
 # The Android fixtures APK (964): `dx build --platform android --features mobile`.
 mobile = ["dioxus/mobile"]
+# The desktop WebView (wry) build, opened at `E2E_ROUTE` (1026).
+desktop = ["dioxus/desktop"]
 
 # `perf::install`: counts dioxus-core's `render` spans per scope on `/perf/*`
 # pages. The versions dioxus-logger already pulls in.

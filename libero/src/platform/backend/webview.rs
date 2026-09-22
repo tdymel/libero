@@ -10,7 +10,7 @@ use std::rc::{Rc, Weak};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::core::{Runtime, ScopeId, Task, spawn_forever};
-use dioxus::document::{Document, Eval, eval};
+use dioxus::document::{Document, Eval, NoOpDocument};
 use dioxus::prelude::{Key, Modifiers, spawn};
 use serde_json::{Value, json};
 
@@ -37,11 +37,7 @@ pub(super) fn runs_scripts() -> bool {
     if let Some(runs) = page.runs_scripts.get() {
         return runs;
     }
-    // Outside a scope (a drop, a task's wake-up) the root's document answers.
-    let Some(document) = Runtime::try_current().and_then(|runtime| {
-        let scope = runtime.try_current_scope_id().unwrap_or(ScopeId::ROOT);
-        runtime.consume_context::<Rc<dyn Document>>(scope)
-    }) else {
+    let Some(document) = page_document() else {
         return false;
     };
     // Alive past the send queued behind it: an ended script's query is gone, and
@@ -99,6 +95,29 @@ impl DocumentApi for WebViewDocument {
     }
 }
 
+/// The current scope's document, else the one the page last saw. Desktop provides
+/// it in its window's scope, above which a `spawn_forever` task runs (1027).
+fn page_document() -> Option<Rc<dyn Document>> {
+    let runtime = Runtime::try_current()?;
+    let page = page()?;
+    let scope = runtime.try_current_scope_id().unwrap_or(ScopeId::ROOT);
+    match runtime.consume_context::<Rc<dyn Document>>(scope) {
+        Some(document) => {
+            page.document.replace(Some(Rc::downgrade(&document)));
+            Some(document)
+        }
+        None => page.document.borrow().as_ref()?.upgrade(),
+    }
+}
+
+/// Runs `script` in [`page_document`]'s page; a quiet no-op without one.
+fn eval(script: &str) -> Eval {
+    match page_document() {
+        Some(document) => document.eval(script.to_string()),
+        None => NoOpDocument.eval(script.to_string()),
+    }
+}
+
 /// Runs `script` with `data` bound as `data`. Never `dioxus.recv()`: liveview's
 /// spins on an empty queue and freezes the tab.
 fn eval_with(data: Value, script: &str) -> Eval {
@@ -118,7 +137,10 @@ impl Slot {
     fn new() -> Self {
         Slot {
             token: NEXT_SLOT.fetch_add(1, Ordering::Relaxed),
-            document: Rc::downgrade(&dioxus::document::document()),
+            document: page_document().map_or_else(
+                || Weak::<NoOpDocument>::new() as Weak<dyn Document>,
+                |document| Rc::downgrade(&document),
+            ),
         }
     }
 
@@ -300,6 +322,8 @@ type A11yCallback = Rc<dyn Fn(AccessibilityPreferences)>;
 struct PageState {
     /// [`runs_scripts`]'s answer, `None` until probed.
     runs_scripts: Cell<Option<bool>>,
+    /// The document a scope last found, for code running above it.
+    document: RefCell<Option<Weak<dyn Document>>>,
     /// The media query's last answer; `None` until a listener is running.
     reduced_motion: Cell<Option<bool>>,
     scheme: Cell<Option<ColorScheme>>,
@@ -312,6 +336,8 @@ struct PageState {
     /// The focused element, mirrored by [`watch_focus`] once `watching_focus`.
     focused: RefCell<Focused>,
     watching_focus: Cell<bool>,
+    /// Whether [`guard_typed_values`] ran on this page.
+    guarding_values: Cell<bool>,
 }
 
 /// The focused element as the page last reported it: tag, `type`, editable, RTL.
@@ -446,7 +472,7 @@ impl A11yMediaApi for WebViewA11yMedia {
         let id = page.next_id();
         page.a11y_callbacks
             .borrow_mut()
-            .push((id, Rc::from(callback)));
+            .push((id, in_subscriber(callback)));
         Box::new(WebViewSubscription(Rc::downgrade(&page), id))
     }
 
@@ -463,6 +489,16 @@ impl A11yMediaApi for WebViewA11yMedia {
             None => std::fs::remove_file(path),
         };
     }
+}
+
+/// Runs `callback` in the subscribing scope: a watcher's task runs at the root,
+/// which owns none of the subscriber's signals.
+fn in_subscriber<T: 'static>(callback: Box<dyn Fn(T)>) -> Rc<dyn Fn(T)> {
+    let scope = Runtime::try_current().and_then(|runtime| runtime.try_current_scope_id());
+    Rc::new(move |value| match (scope, Runtime::try_current()) {
+        (Some(scope), Some(runtime)) => runtime.in_scope(scope, || callback(value)),
+        _ => callback(value),
+    })
 }
 
 /// A media callback's page and id; dropping it removes the callback.
@@ -566,7 +602,7 @@ impl ColorSchemeApi for WebViewColorScheme {
         let id = page.next_id();
         page.scheme_callbacks
             .borrow_mut()
-            .push((id, Rc::from(callback)));
+            .push((id, in_subscriber(callback)));
         Box::new(WebViewSubscription(Rc::downgrade(&page), id))
     }
 
@@ -724,6 +760,48 @@ fn focus_page() -> Option<Rc<PageState>> {
     Some(page)
 }
 
+/// Wraps the interpreter's attribute write. Each `input` records the text it sent;
+/// a `value` write matching an older record is the render of a stale keystroke and
+/// is dropped. Any other value is the app's own and lands. Records expire after 2 s.
+const GUARD_TYPED: &str = "const interpreter = window.interpreter;
+    if (!interpreter || interpreter.lsxTyped) return;
+    const typed = interpreter.lsxTyped = new WeakMap();
+    const live = (node) => {
+        const now = performance.now();
+        return (typed.get(node) ?? []).filter(([, at]) => now - at < 2000);
+    };
+    window.addEventListener('input', (event) => {
+        const node = event.target;
+        if (!(node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement)) return;
+        typed.set(node, [...live(node), [node.value, performance.now()]]);
+    }, { capture: true });
+    const write = interpreter.setAttributeInner.bind(interpreter);
+    interpreter.setAttributeInner = (node, field, value, ns) => {
+        if (field === 'value' && !ns && typed.has(node)) {
+            const records = live(node);
+            const index = records.findIndex(([text]) => text === value);
+            if (index !== -1 && records.splice(0, index + 1) && records.length > 0) {
+                typed.set(node, records);
+                return;
+            }
+            typed.delete(node);
+        }
+        write(node, field, value, ns);
+    };";
+
+/// Keeps a controlled field's older renders from overwriting faster typing: an
+/// `input` crosses the IPC and its render comes back after the next keystroke (1026).
+pub(super) fn guard_typed_values() {
+    if !runs_scripts() {
+        return;
+    }
+    if let Some(page) = page()
+        && !page.guarding_values.replace(true)
+    {
+        eval(GUARD_TYPED);
+    }
+}
+
 fn focused() -> Focused {
     focus_page().and_then(|page| page.focused.borrow().clone())
 }
@@ -835,6 +913,31 @@ mod tests {
         for _ in 0..4 {
             let _ = pin!(dom.wait_for_work()).poll(&mut cx);
         }
+    }
+
+    /// Desktop provides its document in the window's scope; a `spawn_forever`
+    /// task runs at the root and must still reach it (1027).
+    #[test]
+    fn the_root_reaches_a_document_provided_below_it() {
+        #[component]
+        fn Window() -> Element {
+            use_hook(|| {
+                let page = FakePage {
+                    dark: true,
+                    owners: RefCell::default(),
+                };
+                provide_context(Rc::new(page) as Rc<dyn Document>);
+                assert!(runs_scripts());
+            });
+            rsx! {}
+        }
+        fn windowed() -> Element {
+            rsx! { Window {} }
+        }
+        let mut dom = VirtualDom::new(windowed);
+        assert!(dom.in_scope(ScopeId::ROOT, page_document).is_none());
+        dom.rebuild_in_place();
+        assert!(dom.in_scope(ScopeId::ROOT, page_document).is_some());
     }
 
     /// Liveview sessions and desktop windows share a thread: one's answer must not reach another.

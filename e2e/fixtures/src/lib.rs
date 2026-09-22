@@ -247,6 +247,16 @@ fn Shell() -> Element {
     let generation = use_context_provider(|| Generation(Signal::new(0)));
     #[cfg(target_os = "android")]
     android_route_hook(generation.0);
+    // The desktop WebView has no DevTools socket to navigate through.
+    #[cfg(feature = "desktop")]
+    {
+        let navigator = navigator();
+        use_hook(|| {
+            if let Ok(path) = std::env::var("E2E_ROUTE") {
+                navigator.push(path);
+            }
+        });
+    }
     let _ = generation;
     rsx! { Outlet::<Route> {} }
 }

@@ -12,6 +12,7 @@ pub const ROUTES: Routes = &[
     ("/text-field", || rsx! { TextFieldPage {} }),
     ("/text-field/form", || rsx! { PasswordFormPage {} }),
     ("/text-field/echo", || rsx! { TextFieldEchoPage {} }),
+    ("/text-field/upper", || rsx! { TextFieldUpperPage {} }),
     ("/text-field/password-echo", || rsx! { PasswordEchoPage {} }),
 ];
 
@@ -24,6 +25,18 @@ fn TextFieldEchoPage() -> Element {
         Flex { direction: "column", gap: "md", max_width: "320px",
             TextField { label: "Name", value: value(), oninput: move |next| value.set(next) }
             Text { id: "echo", "{value}" }
+        }
+    }
+}
+
+/// The app rewrites what was typed: the WebView's typed-value guard must let it land (1026).
+#[component]
+fn TextFieldUpperPage() -> Element {
+    let mut value = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TextField { label: "Code", value: value(), oninput: move |next: String| value.set(next.to_uppercase()) }
         }
     }
 }

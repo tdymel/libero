@@ -110,7 +110,8 @@ pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
 }
 
 /// What the renderer needs mounted at the root, once, by `LiberoProvider`:
-/// Blitz's `blitz::Outlet`; a WebView starts its focus mirror before any press.
+/// Blitz's `blitz::Outlet`; a WebView starts its focus mirror before any press
+/// and its typed-value guard before any keystroke.
 #[allow(non_snake_case)]
 pub(crate) fn Outlet() -> Element {
     use dioxus::prelude::*;
@@ -119,6 +120,7 @@ pub(crate) fn Outlet() -> Element {
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     use_hook(|| {
         webview::watch_focus();
+        webview::guard_typed_values();
     });
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
     return rsx! {};
