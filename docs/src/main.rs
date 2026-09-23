@@ -89,6 +89,10 @@ pub(crate) enum Route {
     UseTimersPage {},
     #[route("/hooks/use-debounce")]
     UseDebouncePage {},
+    #[route("/hooks/use-hotkeys")]
+    UseHotkeysPage {},
+    #[route("/hooks/use-media-query")]
+    UseMediaQueryPage {},
     #[route("/hooks/use-theme-set")]
     UseThemeSetPage {},
     #[route("/hooks/use-stylesheet")]

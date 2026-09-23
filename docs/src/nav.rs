@@ -456,6 +456,11 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                     Route::UseDebouncePage {},
                     "use_debounced_value, use_throttled_value",
                 ),
+                page(Route::UseHotkeysPage {}, "use_hotkeys"),
+                page(
+                    Route::UseMediaQueryPage {},
+                    "use_media_query, use_is_mobile",
+                ),
                 page(Route::UseThemeSetPage {}, "use_theme_set"),
                 page(Route::UseStylesheetPage {}, "use_stylesheet"),
                 page(Route::UseAccessibilityPage {}, "use_accessibility"),

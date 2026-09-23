@@ -10,9 +10,11 @@ mod element;
 mod focus_return;
 mod focus_within;
 mod formats;
+mod hotkeys;
 mod id;
 mod local_state;
 mod localization;
+mod media_query;
 mod popover;
 mod portal;
 #[cfg(test)]
@@ -49,11 +51,13 @@ pub use focus_return::{FocusReturn, use_focus_return};
 pub(crate) use focus_within::{FocusChange, FocusWithin, use_focus_within};
 pub(crate) use formats::current_formats;
 pub use formats::{FormatsHandle, use_formats, use_formats_handle};
+pub use hotkeys::{Hotkey, use_hotkeys};
 pub use id::use_id;
 pub(crate) use id::{id_selector, use_root_id};
 pub(crate) use local_state::{LocalState, use_local_state};
 pub(crate) use localization::current_localization;
 pub use localization::{LocalizationHandle, use_localization, use_localization_handle};
+pub use media_query::{use_is_mobile, use_media_query};
 pub use popover::{
     Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,
 };

@@ -16,8 +16,9 @@ use crate::platform::a11y_media::{
 };
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
-    DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, PlatformError, Read,
-    ScrollApi, ScrollSubscription, TimerApi, TimerSubscription,
+    DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, MediaQueryApi,
+    MediaQuerySubscription, PlatformError, Read, ScrollApi, ScrollSubscription, TimerApi,
+    TimerSubscription,
     keyboard::{takes_arrows, takes_typing, warn_reserved_chord},
 };
 use crate::tokens::{
@@ -393,6 +394,69 @@ impl Drop for WebColorSchemeSubscription {
             );
         }
     }
+}
+
+pub(super) fn media_query() -> Option<&'static dyn MediaQueryApi> {
+    Some(&MEDIA_QUERY)
+}
+
+struct WebMediaQuery;
+
+static MEDIA_QUERY: WebMediaQuery = WebMediaQuery;
+
+impl MediaQueryApi for WebMediaQuery {
+    fn watch(&self, query: &str, callback: Box<dyn Fn(bool)>) -> Box<dyn MediaQuerySubscription> {
+        let list = web_sys::window()
+            .and_then(|window| window.match_media(query).ok())
+            .flatten();
+        let callback = Rc::new(callback);
+        let source = list.clone();
+        let heard = callback.clone();
+        // Read off the list, so it cannot disagree with the first answer.
+        let closure = Closure::<dyn FnMut()>::new(move || {
+            if let Some(list) = &source {
+                heard(list.matches());
+            }
+        });
+        let list = list.filter(|list| {
+            list.add_event_listener_with_callback("change", closure.as_ref().unchecked_ref())
+                .is_ok()
+        });
+        if let Some(list) = &list {
+            callback(list.matches());
+        }
+        Box::new(WebMediaQuerySubscription { list, closure })
+    }
+}
+
+struct WebMediaQuerySubscription {
+    /// `None` without a list: the subscription never fires.
+    list: Option<web_sys::MediaQueryList>,
+    /// Kept alive as long as the listener is registered.
+    closure: Closure<dyn FnMut()>,
+}
+
+impl MediaQuerySubscription for WebMediaQuerySubscription {}
+
+impl Drop for WebMediaQuerySubscription {
+    fn drop(&mut self) {
+        if let Some(list) = &self.list {
+            let _ = list.remove_event_listener_with_callback(
+                "change",
+                self.closure.as_ref().unchecked_ref(),
+            );
+        }
+    }
+}
+
+/// Cmd on a Mac, an iPhone and an iPad, read from `navigator.platform`.
+pub(super) fn mod_is_meta() -> bool {
+    let platform = web_sys::window()
+        .and_then(|window| window.navigator().platform().ok())
+        .unwrap_or_default();
+    ["Mac", "iPhone", "iPad", "iPod"]
+        .iter()
+        .any(|apple| platform.starts_with(apple))
 }
 
 struct WebDocument;

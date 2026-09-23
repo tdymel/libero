@@ -73,6 +73,21 @@ fn hooks() -> Vec<HookRow> {
             Route::UseDebouncePage {},
         ),
         row(
+            "use_hotkeys",
+            "Runs a handler on a keyboard shortcut, from anywhere in the page.",
+            Route::UseHotkeysPage {},
+        ),
+        row(
+            "use_media_query",
+            "Whether a CSS media query matches, live.",
+            Route::UseMediaQueryPage {},
+        ),
+        row(
+            "use_is_mobile",
+            "Whether the viewport is narrower than 768px, live.",
+            Route::UseMediaQueryPage {},
+        ),
+        row(
             "use_theme",
             "The active theme, for values CSS cannot carry.",
             Route::ThemingPage {},

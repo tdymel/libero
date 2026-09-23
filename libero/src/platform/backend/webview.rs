@@ -19,8 +19,9 @@ use crate::platform::a11y_media::{
 };
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi,
-    KeyChord, KeySubscription, KeyboardApi, PRESS_MARKER_ATTR, PlatformError, PressApi,
-    PressSubscription, Read, ScrollApi, ScrollSubscription,
+    KeyChord, KeySubscription, KeyboardApi, MediaQueryApi, MediaQuerySubscription,
+    PRESS_MARKER_ATTR, PlatformError, PressApi, PressSubscription, Read, ScrollApi,
+    ScrollSubscription,
     clipboard::{ClipboardApi, Write},
     file_dialog::{FileDialogApi, Picked, held_file},
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
@@ -220,6 +221,43 @@ impl ScrollApi for WebViewScroll {
     }
 }
 
+pub(super) fn media_query() -> Option<&'static dyn MediaQueryApi> {
+    runs_scripts().then_some(&MEDIA_QUERY as &'static dyn MediaQueryApi)
+}
+
+struct WebViewMediaQuery;
+
+static MEDIA_QUERY: WebViewMediaQuery = WebViewMediaQuery;
+
+impl MediaQueryApi for WebViewMediaQuery {
+    /// The first answer crosses the IPC, so it arrives after the call returns.
+    fn watch(&self, query: &str, callback: Box<dyn Fn(bool)>) -> Box<dyn MediaQuerySubscription> {
+        let slot = Slot::new();
+        let script = eval_with(
+            json!(query),
+            &format!(
+                "const list = window.matchMedia(data);
+                const send = () => dioxus.send(list.matches);
+                send();
+                list.addEventListener('change', send);
+                {}
+                list.removeEventListener('change', send);",
+                slot.park("")
+            ),
+        );
+        let task = spawn(async move {
+            let mut script = script;
+            while let Ok(matches) = script.recv::<bool>().await {
+                callback(matches);
+            }
+        });
+        Box::new(WebViewListener {
+            task,
+            _slot: Rc::new(slot),
+        })
+    }
+}
+
 pub(super) fn press() -> Option<&'static dyn PressApi> {
     runs_scripts().then_some(&PRESS as &'static dyn PressApi)
 }
@@ -276,6 +314,8 @@ impl ScrollSubscription for WebViewListener {}
 impl KeySubscription for WebViewListener {}
 
 impl PressSubscription for WebViewListener {}
+
+impl MediaQuerySubscription for WebViewListener {}
 
 impl Drop for WebViewListener {
     fn drop(&mut self) {

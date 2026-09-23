@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 use dioxus::prelude::*;
 
@@ -13,8 +13,11 @@ use crate::{
         overlay::Dialog,
         typography::Kbd,
     },
-    hooks::{ModalHandle, ModalScope, use_dismiss_layer, use_localization, use_modal, use_theme},
-    platform::{self, KeyChord, KeySubscription, keyboard, warn_reserved_chord},
+    hooks::{
+        Hotkey, ModalHandle, ModalScope, use_dismiss_layer, use_hotkeys, use_localization,
+        use_modal, use_theme,
+    },
+    platform,
     sx::{StaticSx, sx},
     theme::{
         SPOTLIGHT_DESCRIPTION_COLOR, SPOTLIGHT_GROUP_COLOR, SPOTLIGHT_MAX_LIST_HEIGHT,
@@ -386,77 +389,25 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
         state,
         clear_on_close: options.clear_on_close,
     };
-    use_hotkey(handle, options.shortcut);
+    use_shortcut(handle, options.shortcut);
     handle
 }
 
 /// Ctrl/Cmd + `shortcut` toggles the palette. Closed, it listens filtered, so a
 /// text field keeps the chord; open, unfiltered, as focus sits in the search box.
-fn use_hotkey(handle: SpotlightHandle, shortcut: Option<char>) {
+fn use_shortcut(handle: SpotlightHandle, shortcut: Option<char>) {
     let layer = use_dismiss_layer();
-    // The key callback runs with no runtime on the web: it records, an effect
-    // toggles ([[codebase/platform-timer]]).
-    let tick = use_signal(|| 0u64);
-    let slot: Rc<RefCell<Option<Box<dyn KeySubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let slot = slot.clone();
-        move || {
-            slot.borrow_mut().take();
-        }
+    let open = handle.is_open();
+    // Both Ctrl and Cmd on every platform, not `mod`: a Linux keyboard may have a Meta key.
+    let bindings = shortcut.into_iter().flat_map(|key| {
+        ["ctrl", "meta"].map(|modifier| {
+            Hotkey::new(format!("{modifier}+{key}"), move || handle.toggle())
+                .include_editable(open)
+                // Something else is open above the page: not ours to cover.
+                .when(move || open || !layer.any_open())
+        })
     });
-
-    use_effect(use_reactive!(|shortcut| {
-        if let Some(key) = shortcut {
-            warn_reserved_chord(&Key::Character(key.to_string()), Modifiers::CONTROL);
-        }
-    }));
-
-    let listening = slot.clone();
-    use_effect(use_reactive!(|shortcut| {
-        // Read here, so opening reruns this effect, not the host's render.
-        let open = handle.is_open();
-        listening.borrow_mut().take();
-        let (Some(key), Some(api)) = (shortcut, keyboard()) else {
-            return;
-        };
-        let callback = Box::new(move |chord: KeyChord| {
-            let modifiers = chord.modifiers;
-            let pressed = matches!(&chord.key, Key::Character(text) if text.eq_ignore_ascii_case(&key.to_string()));
-            if !pressed
-                || !(modifiers.ctrl() || modifiers.meta())
-                || modifiers.alt()
-                || modifiers.shift()
-            {
-                return false;
-            }
-            // Something else is open above the page: not ours to cover.
-            if !open && layer.any_open() {
-                return false;
-            }
-            if !chord.repeat {
-                let mut tick = tick;
-                let next = tick.peek().wrapping_add(1);
-                tick.set(next);
-            }
-            // Ours, repeat included: the browser's Ctrl+K must not fire.
-            true
-        });
-        *listening.borrow_mut() = Some(match open {
-            true => api.on_key_unfiltered(callback),
-            false => api.on_key(callback),
-        });
-    }));
-
-    let mut seen = use_signal(|| 0u64);
-    use_effect(move || {
-        let pressed = tick();
-        if pressed == *seen.peek() {
-            return;
-        }
-        seen.set(pressed);
-        handle.toggle();
-    });
+    use_hotkeys(bindings);
 }
 
 /// The action rows, grouped. A group label is presentational: a `listbox` holds

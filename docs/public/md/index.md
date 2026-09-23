@@ -153,6 +153,8 @@ fetch only the file you need.
 - [use_drag](use_drag.md): Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
 - [use_timeout, use_interval](use_timers.md): Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.
 - [use_debounced_value, use_throttled_value](use_debounce.md): Signals and callbacks that follow their source once it settles or at most once per period.
+- [use_hotkeys](use_hotkeys.md): Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked.
+- [use_media_query, use_is_mobile](use_media_query.md): Whether a CSS media query or the 768px mobile breakpoint matches, live.
 - [use_theme_set](use_theme_set.md): Reads and swaps the active theme set, which a theme picker is built on.
 - [use_stylesheet](use_stylesheet.md): Registers a stylesheet of your own above every libero layer and returns its class.
 - [use_accessibility](use_accessibility.md): Reads the reader's accessibility settings and lets an app force reduced motion.

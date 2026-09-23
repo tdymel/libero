@@ -24,6 +24,9 @@ belong to.
 | `use_debounced_callback` | A callback that runs after its last call, with the last argument. | [use_debounced_value, use_throttled_value](use_debounce.md) |
 | `use_throttled_value` | A signal that follows another at most once per period. | [use_debounced_value, use_throttled_value](use_debounce.md) |
 | `use_throttled_callback` | A callback that runs at once, then at most once per period. | [use_debounced_value, use_throttled_value](use_debounce.md) |
+| `use_hotkeys` | Runs a handler on a keyboard shortcut, from anywhere in the page. | [use_hotkeys](use_hotkeys.md) |
+| `use_media_query` | Whether a CSS media query matches, live. | [use_media_query, use_is_mobile](use_media_query.md) |
+| `use_is_mobile` | Whether the viewport is narrower than 768px, live. | [use_media_query, use_is_mobile](use_media_query.md) |
 | `use_theme` | The active theme, for values CSS cannot carry. | [Theming](theming.md) |
 | `use_theme_set` | Reads and swaps the active theme set. | [use_theme_set](use_theme_set.md) |
 | `use_localization` | The words libero's components say, in the active language. | [Localization](localization.md) |

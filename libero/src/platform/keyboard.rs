@@ -78,6 +78,11 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     backend::arrow_target(event)
 }
 
+/// Whether the platform's shortcut modifier is Cmd (Apple) rather than Ctrl.
+pub(crate) fn mod_is_meta() -> bool {
+    backend::mod_is_meta()
+}
+
 /// Whether a tap on a field raises a soft keyboard that covers its dropdown: a
 /// mobile WebView app. The web answers `false`, touch screens included.
 pub(crate) fn soft_keyboard_app() -> bool {

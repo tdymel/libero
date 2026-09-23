@@ -19,9 +19,9 @@ use crate::{
         feedback::Alert,
         layout::{Box, Float, use_box},
     },
-    hooks::{use_focus_within, use_localization, use_portal_slot, use_theme},
+    hooks::{Hotkey, use_focus_within, use_hotkeys, use_localization, use_portal_slot, use_theme},
     localization::fill,
-    platform::{self, ElementApi, KeyChord, KeySubscription, TimerSubscription, keyboard, timer},
+    platform::{self, ElementApi, TimerSubscription, timer},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         AutoClose, NOTIFICATION_GAP, NOTIFICATION_IN, NOTIFICATION_OFFSET, NOTIFICATION_OUT,
@@ -770,64 +770,25 @@ pub fn Notifications(
 /// `hotkey` focuses the newest notification (todo 575). A letter is not taken
 /// from a text field; any other key is heard from anywhere.
 fn use_hotkey(store: NotificationStore, hotkey: Key) {
-    // The key callback runs outside every scope on the web; an effect moves focus.
-    let tick = use_signal(|| 0u64);
-    let slot: Rc<RefCell<Option<std::boxed::Box<dyn KeySubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
     let host = use_hook(|| NEXT_ID.fetch_add(1, Ordering::Relaxed));
-    use_drop({
-        let slot = slot.clone();
-        move || {
-            slot.borrow_mut().take();
-            HOTKEYS.with_borrow_mut(|hosts| hosts.retain(|(other, ..)| *other != host));
-        }
-    });
-
-    let listening = slot.clone();
+    use_drop(move || HOTKEYS.with_borrow_mut(|hosts| hosts.retain(|(other, ..)| *other != host)));
     use_effect(use_reactive!(|hotkey| {
-        listening.borrow_mut().take();
         HOTKEYS.with_borrow_mut(|hosts| {
             hosts.retain(|(other, ..)| *other != host);
             hosts.push((host, store, hotkey.clone()));
         });
-        let Some(api) = keyboard() else {
-            return;
-        };
-        let typed = matches!(hotkey, Key::Character(_));
-        let key = hotkey.clone();
-        let callback = std::boxed::Box::new(move |chord: KeyChord| {
-            let modifiers = chord.modifiers;
-            // Nothing on screen, or another host holds a newer one: not ours.
-            if !is_hotkey(&chord.key, &key)
-                || modifiers.ctrl()
-                || modifiers.alt()
-                || modifiers.meta()
-                || hotkey_owner(&chord.key) != Some(host)
-            {
-                return false;
-            }
-            if !chord.repeat {
-                let mut tick = tick;
-                let next = tick.peek().wrapping_add(1);
-                tick.set(next);
-            }
-            true
-        });
-        *listening.borrow_mut() = Some(match typed {
-            true => api.on_key(callback),
-            false => api.on_key_unfiltered(callback),
-        });
     }));
 
-    let mut seen = use_signal(|| 0u64);
-    use_effect(move || {
-        let pressed = tick();
-        if pressed == *seen.peek() {
-            return;
-        }
-        seen.set(pressed);
-        store.focus_newest();
-    });
+    let chord = match &hotkey {
+        Key::Character(text) if text == " " => "space".to_owned(),
+        Key::Character(text) => text.clone(),
+        key => key.to_string(),
+    };
+    let key = hotkey.clone();
+    use_hotkeys([Hotkey::new(chord, move || store.focus_newest())
+        .include_editable(!matches!(hotkey, Key::Character(_)))
+        // Nothing on screen, or another host holds a newer one: not ours.
+        .when(move || hotkey_owner(&key) == Some(host))]);
 }
 
 fn is_hotkey(pressed: &Key, key: &Key) -> bool {

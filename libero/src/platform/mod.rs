@@ -21,6 +21,7 @@ mod form;
 mod http;
 mod keyboard;
 mod max_length;
+mod media_query;
 mod motion;
 mod paint;
 mod placeholder;
@@ -70,11 +71,13 @@ pub(crate) use http::fetch_text;
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::logical_key;
+pub(crate) use keyboard::mod_is_meta;
 pub(crate) use keyboard::soft_keyboard_app;
 pub(crate) use keyboard::typing_target;
 pub(crate) use keyboard::warn_reserved_chord;
 pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 pub(crate) use max_length::fit_max_length;
+pub use media_query::{MediaQueryApi, MediaQuerySubscription, media_query};
 pub(crate) use motion::prefers_reduced_motion;
 pub(crate) use paint::{
     aligns_logical_text, clips_background_to_text, colors_form_controls, draws_backdrop_filter,

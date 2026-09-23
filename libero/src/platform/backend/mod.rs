@@ -13,7 +13,7 @@ use dioxus::prelude::{
 
 use super::{
     A11yMediaApi, ColorSchemeApi, ContentSubscription, DocumentApi, ElementApi, KeyboardApi,
-    PressApi, ScrollApi, SilentFocusApi, TimerApi,
+    MediaQueryApi, PressApi, ScrollApi, SilentFocusApi, TimerApi,
 };
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
@@ -250,6 +250,24 @@ pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     return blitz::color_scheme();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::color_scheme();
+}
+
+/// The web and a WebView answer media queries; Blitz and a server get `None`.
+pub(crate) fn media_query() -> Option<&'static dyn MediaQueryApi> {
+    #[cfg(target_arch = "wasm32")]
+    return web::media_query();
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return None;
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::media_query();
+}
+
+/// Cmd on Apple platforms, read from the browser's platform on the web.
+pub(crate) fn mod_is_meta() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    return web::mod_is_meta();
+    #[cfg(not(target_arch = "wasm32"))]
+    return cfg!(any(target_os = "macos", target_os = "ios"));
 }
 
 /// The web, Blitz and a WebView report a scroll; a server gets `None`.
