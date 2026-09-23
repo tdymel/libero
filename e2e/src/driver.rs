@@ -65,6 +65,11 @@ pub trait Driver {
     }
     /// Presses at the first match's centre, moves by `(dx, dy)` in steps, releases.
     async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()>;
+    /// Scrolls the page by `dy` CSS px (positive: down), by a swipe on touch.
+    async fn scroll_by(&mut self, dy: f64) -> Result<()> {
+        let _ = dy;
+        bail!("{:?}: no page scroll", self.platform())
+    }
     /// A touch held still at the first match's centre for `ms`, then lifted.
     async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
         let _ = (selector, ms);
@@ -339,6 +344,13 @@ mod web {
 
         async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
             pointer::long_press(&self.fixture.page, selector, ms).await
+        }
+
+        async fn scroll_by(&mut self, dy: f64) -> Result<()> {
+            // Instant: a smooth scroll restarts on every poll and never arrives.
+            let scroll = format!("(window.scrollBy({{ top: {dy}, behavior: 'instant' }}), true)");
+            let _: bool = self.json(&scroll).await?;
+            Ok(())
         }
 
         async fn pinch(&mut self, selector: &str, from: f64, to: f64) -> Result<()> {
@@ -693,7 +705,41 @@ mod android {
                     element(selector)
                 ))
                 .await?;
-            pointer::centre_of(&self.page, selector).await
+            // A fling from the last swipe keeps the page moving under a press (1104).
+            let mut at = pointer::centre_of(&self.page, selector).await?;
+            for _ in 0..40 {
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                let next = pointer::centre_of(&self.page, selector).await?;
+                let settled = (next.x - at.x).abs() < 0.5 && (next.y - at.y).abs() < 0.5;
+                at = next;
+                if settled {
+                    break;
+                }
+            }
+            Ok(at)
+        }
+
+        async fn swipe(&mut self, from: pointer::Point, dx: f64, dy: f64) -> Result<()> {
+            // `input swipe` lifts 1-2px short of its last move, and a drag follows moves
+            // only (1002): step the touch by hand, its last move on the end point.
+            // A touch lifted off the screen leaves the WebView a stuck touch that eats later drags.
+            let (vw, vh) = self.viewport().await?;
+            let mut events = vec!["DOWN".to_string()];
+            events.extend(std::iter::repeat_n("MOVE".to_string(), 4));
+            events.push("UP".into());
+            let mut chain = Vec::new();
+            for (i, event) in events.into_iter().enumerate() {
+                let t = (i as f64 / 4.0).min(1.0);
+                let [x, y] = self.device(pointer::Point {
+                    x: (from.x + dx * t).clamp(0.0, vw - 1.0),
+                    y: (from.y + dy * t).clamp(0.0, vh - 1.0),
+                });
+                if i > 0 {
+                    chain.extend([";".into(), "input".into()]);
+                }
+                chain.extend(["motionevent".into(), event, x, y]);
+            }
+            input(&chain).await
         }
 
         async fn tap(&self, at: pointer::Point) -> Result<()> {
@@ -794,26 +840,16 @@ mod android {
 
         async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
             let from = self.centre(selector).await?;
-            // `input swipe` lifts 1-2px short of its last move, and a drag follows moves
-            // only (1002): step the touch by hand, its last move on the end point.
-            // A touch lifted off the screen leaves the WebView a stuck touch that eats later drags.
+            self.swipe(from, dx, dy).await
+        }
+
+        async fn scroll_by(&mut self, dy: f64) -> Result<()> {
             let (vw, vh) = self.viewport().await?;
-            let mut events = vec!["DOWN".to_string()];
-            events.extend(std::iter::repeat_n("MOVE".to_string(), 4));
-            events.push("UP".into());
-            let mut chain = Vec::new();
-            for (i, event) in events.into_iter().enumerate() {
-                let t = (i as f64 / 4.0).min(1.0);
-                let [x, y] = self.device(pointer::Point {
-                    x: (from.x + dx * t).clamp(0.0, vw - 1.0),
-                    y: (from.y + dy * t).clamp(0.0, vh - 1.0),
-                });
-                if i > 0 {
-                    chain.extend([";".into(), "input".into()]);
-                }
-                chain.extend(["motionevent".into(), event, x, y]);
-            }
-            input(&chain).await
+            let from = pointer::Point {
+                x: vw / 2.0,
+                y: vh / 2.0 + dy / 2.0,
+            };
+            self.swipe(from, 0.0, -dy).await
         }
 
         /// A swipe that goes nowhere.

@@ -71,7 +71,7 @@ pub(crate) fn on_content_change(
     }
 }
 
-/// Only the web has an `IntersectionObserver`.
+/// The web has an `IntersectionObserver`; a WebView measures rects; Blitz has neither.
 pub(crate) fn on_intersection(
     target: &Rc<MountedData>,
     root: Option<&Rc<MountedData>>,
@@ -81,7 +81,9 @@ pub(crate) fn on_intersection(
 ) -> Option<Box<dyn ContentSubscription>> {
     #[cfg(target_arch = "wasm32")]
     return web::on_intersection(target, root, root_margin, thresholds, callback);
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::on_intersection(target, root, root_margin, thresholds, callback);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     {
         let _ = (target, root, root_margin, thresholds, callback);
         None

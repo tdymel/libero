@@ -1,9 +1,9 @@
 //! `use_in_viewport` and `use_intersection` against a real `IntersectionObserver`:
 //! scrolling a target into view and out again.
 
-use std::time::Duration;
-
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_text, linger};
 use e2e::{Fixture, Viewport, wait};
 
 async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expression: &str) -> T {
@@ -24,54 +24,50 @@ async fn state_reads(page: &chromiumoxide::Page, expected: &str) {
     .unwrap();
 }
 
-/// Scrolls `target` to the middle of the viewport (`true`) or the page to the top.
-async fn scroll(page: &chromiumoxide::Page, to_target: bool) {
-    let expression = match to_target {
-        true => "(document.getElementById('target').scrollIntoView({block: 'center'}), true)",
-        false => "(window.scrollTo(0, 0), true)",
-    };
-    let _: bool = js(page, expression).await;
+/// Scrolls by a quarter screen per poll (the target must stay up for a few polls) until `#state` reads `expected`.
+async fn scroll_until<D: Driver>(d: &mut D, expected: &str, dy: f64) -> Result<()> {
+    let (_, height) = d.viewport().await?;
+    eventually(d, &format!("#state to read {expected}"), async |d| {
+        if d.text("#state").await? == expected {
+            return Ok(true);
+        }
+        d.scroll_by(dy * height / 4.0).await?;
+        // The observer reports after a frame; a scroll that does not wait overshoots it.
+        linger(d, 8).await;
+        Ok(false)
+    })
+    .await
 }
 
-#[test]
-fn a_target_is_in_the_viewport_only_while_scrolled_to() {
-    block_on(async {
-        let fixture = Fixture::open("/use-intersection/viewport", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        state_reads(page, "out").await;
-        scroll(page, true).await;
-        state_reads(page, "in").await;
-        scroll(page, false).await;
-        state_reads(page, "out").await;
-
-        fixture
-            .console
-            .assert_clean("scrolling a target in and out")
-            .unwrap();
-        fixture.close().await.unwrap();
-    });
+async fn in_view_only_while_scrolled_to<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#state", "out", "the first measure").await?;
+    scroll_until(d, "in", 1.0).await?;
+    scroll_until(d, "out", -1.0).await
 }
 
-#[test]
-fn once_keeps_the_first_sighting() {
-    block_on(async {
-        let fixture = Fixture::open("/use-intersection/once", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        state_reads(page, "unseen").await;
-        scroll(page, true).await;
-        state_reads(page, "seen").await;
-        scroll(page, false).await;
-        // The control is the viewport test: there the same scroll flips it back.
-        tokio::time::sleep(Duration::from_millis(400)).await;
-        state_reads(page, "seen").await;
+e2e::scenario!(
+    a_target_is_in_the_viewport_only_while_scrolled_to,
+    "/use-intersection/viewport",
+    in_view_only_while_scrolled_to,
+    native: skip("Blitz has no IntersectionObserver")
+);
 
-        fixture.close().await.unwrap();
-    });
+async fn keeps_the_first_sighting<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#state", "unseen", "the first measure").await?;
+    scroll_until(d, "seen", 1.0).await?;
+    // The control is the viewport scenario: there the same scroll flips it back.
+    let (_, height) = d.viewport().await?;
+    d.scroll_by(-height * 2.0).await?;
+    linger(d, 20).await;
+    eventually_text(d, "#state", "seen", "scrolling away").await
 }
+
+e2e::scenario!(
+    once_keeps_the_first_sighting,
+    "/use-intersection/once",
+    keeps_the_first_sighting,
+    native: skip("Blitz has no IntersectionObserver")
+);
 
 #[test]
 fn a_scroller_is_the_root_and_the_ratio_follows_the_threshold() {

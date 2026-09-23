@@ -14,8 +14,8 @@ browser's `IntersectionObserver`. Give `on_mounted` to the element's
 updates, and `once`, which stops observing after the first sighting.
 
 `use_in_viewport() -> (handler, ReadSignal<bool>)` is the same with the
-defaults, as a bool. Where nothing can observe (Blitz, a WebView, a server
-render) `entry` stays `None` and the bool is `false`.
+defaults, as a bool. Where nothing can observe (Blitz, a server render) `entry`
+stays `None` and the bool is `false`.
 
 ## Usage
 
@@ -65,7 +65,9 @@ fn Reveal() -> Element {
 
 ### Limits
 
-- Only the web observes. On Blitz, in a WebView and in a server render `entry`
+- Only the web has an `IntersectionObserver`. A WebView (desktop, Android)
+  measures the element against its root on every scroll and resize, and does not
+  see a scroller in between hide it. On Blitz and in a server render `entry`
   stays `None`: treat `None` as "unknown" and show lazy content, rather than
   waiting for a sighting that never comes.
 

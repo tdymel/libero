@@ -43,7 +43,7 @@ pub struct Intersection {
     /// The `onmounted` handler of the observed element.
     pub on_mounted: Callback<MountedEvent>,
     /// `None` until the first observation, and always `None` where nothing can
-    /// observe: Blitz, a WebView, a server render.
+    /// observe: Blitz, a server render.
     pub entry: ReadSignal<Option<IntersectionEntry>>,
 }
 
@@ -51,8 +51,10 @@ type Slot = Rc<RefCell<Option<Box<dyn ContentSubscription>>>>;
 
 /// Reports how much of an element is visible inside its root.
 ///
-/// It is built on the browser's `IntersectionObserver`. Where there is none,
-/// `entry` stays `None` and the element counts as never intersecting.
+/// It is built on the browser's `IntersectionObserver`; a WebView (desktop,
+/// Android) measures the element against its root on every scroll and resize,
+/// without clipping by scrollers in between. Where there is neither, `entry`
+/// stays `None` and the element counts as never intersecting.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

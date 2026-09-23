@@ -6,8 +6,8 @@ use super::{ContentSubscription, backend};
 
 /// Calls `callback` with `(is_intersecting, ratio)` at the first observation
 /// and whenever `target` crosses a threshold of its `root` (the viewport for
-/// `None`) grown by `root_margin`. Only the web has an `IntersectionObserver`;
-/// elsewhere, and where the browser lacks it, `None`: nothing ever intersects.
+/// `None`) grown by `root_margin`. The web uses an `IntersectionObserver`, a
+/// WebView measures rects; elsewhere `None`: nothing ever intersects.
 pub(crate) fn on_intersection(
     target: &Rc<MountedData>,
     root: Option<&Rc<MountedData>>,
