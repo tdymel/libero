@@ -1,5 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
-use crate::icons::{ClipboardCheckIcon, CreditCardIcon, TruckIcon};
+use libero::components::Pictogram;
+use pictogram_icons_lucide as lucide;
+
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -78,15 +80,12 @@ const RICH: &str = r#"option_label: |step: Step| OptionLabel::rich(
 
 /// Printed with the rich label, which calls it.
 // snippet: after STEP_ENUM
-// snippet: item #[component] fn TruckIcon() -> Element { rsx! {} }
-// snippet: item #[component] fn CreditCardIcon() -> Element { rsx! {} }
-// snippet: item #[component] fn ClipboardCheckIcon() -> Element { rsx! {} }
 const STEP_ICON: &str = r#"impl Step {
     fn icon(&self) -> Element {
         match self {
-            Step::Shipping => rsx! { TruckIcon {} },
-            Step::Payment => rsx! { CreditCardIcon {} },
-            Step::Review => rsx! { ClipboardCheckIcon {} },
+            Step::Shipping => rsx! { Pictogram { icon: lucide::truck::outlined } },
+            Step::Payment => rsx! { Pictogram { icon: lucide::credit_card::outlined } },
+            Step::Review => rsx! { Pictogram { icon: lucide::clipboard_check::outlined } },
         }
     }
 }
@@ -104,9 +103,9 @@ enum Step {
 impl Step {
     fn icon(&self) -> Element {
         match self {
-            Step::Shipping => rsx! { TruckIcon {} },
-            Step::Payment => rsx! { CreditCardIcon {} },
-            Step::Review => rsx! { ClipboardCheckIcon {} },
+            Step::Shipping => rsx! { Pictogram { icon: lucide::truck::outlined } },
+            Step::Payment => rsx! { Pictogram { icon: lucide::credit_card::outlined } },
+            Step::Review => rsx! { Pictogram { icon: lucide::clipboard_check::outlined } },
         }
     }
 }

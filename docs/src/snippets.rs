@@ -32,6 +32,7 @@ use libero::theme::*;
 use libero::{LiberoProvider, use_theme};
 // Both globs name a `Title`; the component is the one a snippet means.
 use libero::components::Title;
+use pictogram_icons_lucide as lucide;
 use std::time::Duration;
 ";
 

@@ -1,5 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
-use crate::icons::{FileIcon, FolderIcon};
+use libero::components::Pictogram;
+use pictogram_icons_lucide as lucide;
+
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -53,13 +55,11 @@ fn commands(mut last: Signal<String>) -> Vec<SpotlightAction> {
     ]
 }
 
-// snippet: item #[component] fn FileIcon() -> Element { rsx! {} }
-// snippet: item #[component] fn FolderIcon() -> Element { rsx! {} }
 const FILES_CODE: &str = r#"fn files(mut last: Signal<String>) -> Vec<SpotlightAction> {
     ["src", "src/main.rs", "src/lib.rs", "tests", "Cargo.toml", "README.md"]
         .into_iter()
         .map(|path| {
-            let icon = if path.contains('.') { rsx! { FileIcon {} } } else { rsx! { FolderIcon {} } };
+            let icon = if path.contains('.') { rsx! { Pictogram { icon: lucide::file::outlined } } } else { rsx! { Pictogram { icon: lucide::folder::outlined } } };
             SpotlightAction::new(path).icon(icon).onclick(move |_| last.set(path.to_string()))
         })
         .collect()
@@ -78,9 +78,9 @@ fn files(mut last: Signal<String>) -> Vec<SpotlightAction> {
     .into_iter()
     .map(|path| {
         let icon = if path.contains('.') {
-            rsx! { FileIcon {} }
+            rsx! { Pictogram { icon: lucide::file::outlined } }
         } else {
-            rsx! { FolderIcon {} }
+            rsx! { Pictogram { icon: lucide::folder::outlined } }
         };
         SpotlightAction::new(path)
             .icon(icon)

@@ -1,7 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
-use crate::icons::{CheckmarkIcon, CodeIcon, FileIcon, GitHubIcon};
+use crate::icons::GitHubIcon;
 use dioxus::prelude::*;
+use libero::components::Pictogram;
 use libero::components::{Code, Text, Timeline, TimelineEvent, TimelineLine};
+use pictogram_icons_lucide as lucide;
 
 /// The four fixed events as printed, with the controls' bullets and line style.
 fn items_code(values: &DemoValues) -> String {
@@ -9,10 +11,22 @@ fn items_code(values: &DemoValues) -> String {
     let dashed = values.str("line") == "dashed";
 
     let rows = [
-        ("Pushed to main", "3 commits", "CodeIcon"),
-        ("Review requested", "@tom", "GitHubIcon"),
-        ("Deployed", "v2.4.0 to production", "CheckmarkIcon"),
-        ("Rolled back", "reverted in 4 minutes", "FileIcon"),
+        (
+            "Pushed to main",
+            "3 commits",
+            "Pictogram { icon: lucide::code::outlined }",
+        ),
+        ("Review requested", "@tom", "GitHubIcon {}"),
+        (
+            "Deployed",
+            "v2.4.0 to production",
+            "Pictogram { icon: lucide::check::outlined }",
+        ),
+        (
+            "Rolled back",
+            "reverted in 4 minutes",
+            "Pictogram { icon: lucide::file::outlined }",
+        ),
     ];
 
     let mut out = String::from("items: vec![\n");
@@ -22,7 +36,7 @@ fn items_code(values: &DemoValues) -> String {
              .content(rsx! {{ Text {{ \"{content}\" }} }})"
         ));
         if bullets {
-            out.push_str(&format!("\n        .bullet(rsx! {{ {icon} {{}} }})"));
+            out.push_str(&format!("\n        .bullet(rsx! {{ {icon} }})"));
         }
         // On the second-to-last: its connector reaches the final bullet.
         if dashed && index == rows.len() - 2 {
@@ -63,13 +77,13 @@ fn demo_items(values: &DemoValues) -> Vec<TimelineEvent> {
             let content = content.to_string();
             let mut event = TimelineEvent::new(*title).content(rsx! { Text { "{content}" } });
             if bullets {
-                // Matched by index rather than looked up: each icon is its own
-                // component, and the printed code names it directly.
+                // Matched by index rather than looked up: the printed code names
+                // each icon directly.
                 event = event.bullet(match index {
-                    0 => rsx! { CodeIcon {} },
+                    0 => rsx! { Pictogram { icon: lucide::code::outlined } },
                     1 => rsx! { GitHubIcon {} },
-                    2 => rsx! { CheckmarkIcon {} },
-                    _ => rsx! { FileIcon {} },
+                    2 => rsx! { Pictogram { icon: lucide::check::outlined } },
+                    _ => rsx! { Pictogram { icon: lucide::file::outlined } },
                 });
             }
             if dashed && index == rows.len() - 2 {

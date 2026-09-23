@@ -1,7 +1,9 @@
+use libero::components::Pictogram;
+use pictogram_icons_lucide as lucide;
 use std::{cell::Cell, rc::Rc, time::Duration};
 
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
-use crate::icons::DismissIcon;
+
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -21,7 +23,6 @@ fn default_variant() -> &'static str {
 
 /// The preview's own template for the card option, printed as it is written
 /// below.
-// snippet: item #[component] fn DismissIcon() -> Element { rsx! {} }
 const CARD_EXAMPLE: &str = r#"#[derive(Clone, PartialEq)]
 struct Message {
     sender: &'static str,
@@ -48,7 +49,7 @@ fn card_notification(s: NotificationScope<Message>) -> Element {
                         }
                         if s.closable() {
                             ActionIcon { variant: "standard", size: "sm", aria_label: "Dismiss",
-                                onclick: move |_| s.close(), DismissIcon {} }
+                                onclick: move |_| s.close(), Pictogram { icon: lucide::x::outlined } }
                         }
                     }
                     Flex { direction: "row", gap: "sm",
@@ -110,7 +111,7 @@ fn card_notification(s: NotificationScope<Message>) -> Element {
                                 size: "sm",
                                 aria_label: "Dismiss",
                                 onclick: move |_| s.close(),
-                                DismissIcon {}
+                                Pictogram { icon: lucide::x::outlined }
                             }
                         }
                     }
@@ -136,7 +137,6 @@ fn card_notification(s: NotificationScope<Message>) -> Element {
 
 /// The upload option's type and template, printed above the hook. The ticker
 /// that drives it is printed by `wrap_demo`.
-// snippet: item #[component] fn DismissIcon() -> Element { rsx! {} }
 const TEMPLATE_EXAMPLE: &str = r#"#[derive(Clone, PartialEq)]
 struct Upload {
     file: &'static str,
@@ -155,7 +155,7 @@ fn upload_notification(s: NotificationScope<Upload>) -> Element {
                     Text { if done { "Uploaded {upload.file}" } else { "Uploading {upload.file}" } }
                     if done {
                         ActionIcon { variant: "standard", size: "sm", aria_label: "Dismiss",
-                            onclick: move |_| s.close(), DismissIcon {} }
+                            onclick: move |_| s.close(), Pictogram { icon: lucide::x::outlined } }
                     }
                 }
                 ProgressBar { value: upload.percent, "aria-label": "{upload.file}" }
@@ -195,7 +195,7 @@ fn upload_notification(s: NotificationScope<Upload>) -> Element {
                             size: "sm",
                             aria_label: "Dismiss",
                             onclick: move |_| s.close(),
-                            DismissIcon {}
+                            Pictogram { icon: lucide::x::outlined }
                         }
                     }
                 }

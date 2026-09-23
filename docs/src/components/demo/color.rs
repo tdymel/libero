@@ -1,12 +1,12 @@
 use dioxus::prelude::*;
+use libero::components::Pictogram;
 use libero::{
     components::{Box, Button, ColorCode, ColorPicker, ColorSwatch, Flex, SliderChangeEvent},
     hooks::use_element,
     platform::ElementApi,
     sx::sx,
 };
-
-use crate::icons::CheckmarkIcon;
+use pictogram_icons_lucide as lucide;
 
 use super::{Control, UNSET, demo::border};
 
@@ -129,7 +129,7 @@ pub fn ColorControl(
                                 .background(fill_color.clone())
                                 .color(tick_color.clone()),
                             if value == *option {
-                                CheckmarkIcon {}
+                                Pictogram { icon: lucide::check::outlined }
                             }
                         }
                     }
@@ -161,7 +161,7 @@ pub fn ColorControl(
                                     // The swatch's own box is a size step; this one fills the
                                     // button like the theme swatches.
                                     sx: fill().min_width("0"),
-                                    CheckmarkIcon {}
+                                    Pictogram { icon: lucide::check::outlined }
                                 }
                             } else {
                                 Box { sx: fill().background(HUE_WHEEL) }

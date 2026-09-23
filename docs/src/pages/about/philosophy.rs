@@ -1,5 +1,4 @@
 use crate::components::DocPage;
-use crate::icons::{AccessibilityIcon, CheckmarkIcon, CodeIcon};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -30,7 +29,7 @@ pub fn PhilosophyPage() -> Element {
                     number: 1,
                     title: "Developer experience",
                     summary: "An API that is small, clear and hard to misuse.",
-                    icon: rsx! { CodeIcon {} },
+                    icon: rsx! { Pictogram { icon: lucide::code::outlined } },
                     why: "AI writes a lot of code now, and someone still has to read it, review it \
                           and change it next month. Code that is hard to get wrong is easier for a \
                           person to check and for a model to get right.",
@@ -42,7 +41,7 @@ pub fn PhilosophyPage() -> Element {
                     number: 2,
                     title: "Accessibility",
                     summary: "Everyone should be able to use what you build.",
-                    icon: rsx! { AccessibilityIcon {} },
+                    icon: rsx! { Pictogram { icon: lucide::accessibility::outlined } },
                     why: "It helps more people than screen reader users. Keyboard support helps \
                           anyone who would rather not reach for the mouse. A state that does not rely \
                           on colour still reads on a dim screen in the sun. Motion that stops on \
@@ -130,7 +129,7 @@ fn Principle(
                 Label { "What we do" }
                 List {
                     size: "sm",
-                    icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", CheckmarkIcon {} } },
+                    icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } } },
                     {children}
                 }
                 if let Some(limit) = limit {

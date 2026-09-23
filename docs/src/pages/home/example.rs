@@ -1,12 +1,13 @@
 use dioxus::prelude::*;
+use libero::components::Pictogram;
 use libero::{
     components::{Box, CodeBlock, Flex, Options, Tabs},
     sx::sx,
     theme::Size,
 };
+use pictogram_icons_lucide as lucide;
 
 use super::{SectionTitle, booking::BookingCard, icon_label};
-use crate::icons::FileIcon;
 
 // The card beside it is this code, less the details: it needs the three files together.
 // snippet: after FORM_CODE, TABLE_CODE
@@ -176,7 +177,7 @@ fn Files() -> Element {
             value: open(),
             onchange: move |next| open.set(next),
             "aria-label": "Files",
-            option_label: |file: File| icon_label(file.label(), rsx! { FileIcon {} }),
+            option_label: |file: File| icon_label(file.label(), rsx! { Pictogram { icon: lucide::file::outlined } }),
             sx: sx()
                 .display("flex")
                 .flex_direction("column")

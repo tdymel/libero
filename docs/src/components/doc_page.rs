@@ -1,14 +1,15 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Chip, Flex, Icon, OptionLabel, Options, Tabs, Title, Tldr},
+    components::{Anchor, Chip, Flex, Icon, OptionLabel, Options, Pictogram, Tabs, Title, Tldr},
     sx::{Sx, sx},
     theme::PAPER_BORDER_COLOR,
 };
+use pictogram_icons_lucide as lucide;
 
 use super::{A11yDoc, A11yPanel, PropGroup, PropertyTable};
 use crate::{
     Route,
-    icons::{AccessibilityIcon, CodeIcon, FileIcon, GitHubIcon, MarkdownIcon},
+    icons::{GitHubIcon, MarkdownIcon},
     nav::neighbours,
 };
 
@@ -162,9 +163,9 @@ pub fn DocPage(
                             Icon { variant: "standard", size: "md",
                                 sx: icon_sx.clone(),
                                 match selected {
-                                    DocTab::Usage => rsx! { FileIcon {} },
-                                    DocTab::Properties => rsx! { CodeIcon {} },
-                                    DocTab::Accessibility => rsx! { AccessibilityIcon {} },
+                                    DocTab::Usage => rsx! { Pictogram { icon: lucide::file::outlined } },
+                                    DocTab::Properties => rsx! { Pictogram { icon: lucide::code::outlined } },
+                                    DocTab::Accessibility => rsx! { Pictogram { icon: lucide::accessibility::outlined } },
                                 }
                             }
                             "{selected.label()}"

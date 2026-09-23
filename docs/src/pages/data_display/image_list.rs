@@ -1,5 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
-use crate::icons::CheckmarkIcon;
+use libero::components::Pictogram;
+use pictogram_icons_lucide as lucide;
+
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -105,7 +107,7 @@ fn caption(index: usize) -> Element {
             sx: sx().color("inherit").flex("0 0 auto"),
             size: "sm",
             aria_label: format!("Select {}", TITLES[index]),
-            CheckmarkIcon {}
+            Pictogram { icon: lucide::check::outlined }
         }
     }
 }

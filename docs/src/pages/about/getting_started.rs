@@ -1,5 +1,7 @@
 use crate::components::{DocPage, DocSection};
-use crate::icons::CheckmarkIcon;
+use libero::components::Pictogram;
+use pictogram_icons_lucide as lucide;
+
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -167,7 +169,7 @@ fn Checklist(children: Element) -> Element {
     rsx! {
         List {
             size: "sm",
-            icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", CheckmarkIcon {} } },
+            icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } } },
             {children}
         }
     }

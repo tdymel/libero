@@ -7,8 +7,8 @@ use libero::{
     LiberoProvider,
     components::{
         ActionIcon, Anchor, Box, Burger, Button, ButtonGroup, Container, DirectionToggle, Flex,
-        Header, Icon, Kbd, Notifications, RepoButton, ScrollArea, SpotlightOptions, ThemeToggle,
-        Title, spotlight_filter, use_scroll_area, use_spotlight,
+        Header, Icon, Kbd, Notifications, Pictogram, RepoButton, ScrollArea, SpotlightOptions,
+        ThemeToggle, Title, spotlight_filter, use_scroll_area, use_spotlight,
     },
     hooks::use_element,
     localization::Formats,
@@ -28,8 +28,8 @@ mod pages;
 #[cfg(test)]
 mod snippets;
 
-use icons::SearchIcon;
 use nav::DocsNav;
+use pictogram_icons_lucide as lucide;
 // A glob, so a new page never edits this file's import list.
 use pages::*;
 
@@ -460,7 +460,7 @@ fn AppShell() -> Element {
                         display: "inline-flex",
                         width: "18px",
                         height: "18px",
-                        SearchIcon {}
+                        Pictogram { icon: lucide::search::outlined }
                     }
                 }
                 // Looks like a field, but opens Spotlight, so it stays a button.
@@ -494,7 +494,7 @@ fn AppShell() -> Element {
                         display: "inline-flex",
                         width: "16px",
                         height: "16px",
-                        SearchIcon {}
+                        Pictogram { icon: lucide::search::outlined }
                     }
                     "Search"
                     Kbd {

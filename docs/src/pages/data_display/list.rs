@@ -1,5 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
-use crate::icons::CheckmarkIcon;
+use libero::components::Pictogram;
+use pictogram_icons_lucide as lucide;
+
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, List, ListItem, Text};
 
@@ -16,7 +18,7 @@ ListItem {
 }"#;
 
 // snippet: ignore - CheckmarkIcon is the docs site's own svg, as on the Alert page
-const ICON_CODE: &str = r#"icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", CheckmarkIcon {} } }"#;
+const ICON_CODE: &str = r#"icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } } }"#;
 
 #[component]
 pub fn ListPage() -> Element {
@@ -92,7 +94,7 @@ pub fn ListPage() -> Element {
                         size: values.str("size"),
                         ordered: values.str("ordered") == "true",
                         icon: (values.str("icon") == "true").then(|| rsx! {
-                            Icon { variant: "standard", color: "primary", size: "sm", CheckmarkIcon {} }
+                            Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } }
                         }),
                         ListItem { "First item" }
                         ListItem { "Second item" }

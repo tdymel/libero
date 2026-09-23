@@ -1,5 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
-use crate::icons::CheckmarkIcon;
+use libero::components::Pictogram;
+use pictogram_icons_lucide as lucide;
+
 use dioxus::prelude::*;
 use libero::{
     components::{Alert, Button, Code, Flex, Text},
@@ -92,7 +94,7 @@ pub fn AlertPage() -> Element {
                     }),
                     Control::switch("icon").code(|_, values| {
                         match values.str("icon").as_str() {
-                            "true" => vec!["icon: rsx! { CheckmarkIcon {} }".to_string()],
+                            "true" => vec!["icon: rsx! { Pictogram { icon: lucide::check::outlined } }".to_string()],
                             _ => vec![],
                         }
                     }),
@@ -119,7 +121,7 @@ pub fn AlertPage() -> Element {
                                 color: values.str("color"),
                                 radius: values.str("radius"),
                                 title: (values.str("title") == "true").then(|| TITLE.to_string()),
-                                icon: (values.str("icon") == "true").then(|| rsx! { CheckmarkIcon {} }),
+                                icon: (values.str("icon") == "true").then(|| rsx! { Pictogram { icon: lucide::check::outlined } }),
                                 onclose: (values.str("onclose") == "true")
                                     .then(|| EventHandler::new(move |_| {
                                         shown.set(false);

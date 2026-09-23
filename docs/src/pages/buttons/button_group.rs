@@ -1,14 +1,13 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::Pictogram;
 use libero::components::{ActionIcon, Button, ButtonGroup, Code, Input, Text};
-
-use crate::icons::CheckmarkIcon;
+use pictogram_icons_lucide as lucide;
 
 /// The buttons inside - a subtree, so the code block prints it verbatim.
-// snippet: item #[component] fn CheckmarkIcon() -> Element { rsx! {} }
 const CHILDREN: &str = r#"Button { "Undo" }
 Button { "Redo" }
-ActionIcon { aria_label: "Confirm", CheckmarkIcon {} }"#;
+ActionIcon { aria_label: "Confirm", Pictogram { icon: lucide::check::outlined } }"#;
 
 #[component]
 pub fn ButtonGroupPage() -> Element {
@@ -101,7 +100,7 @@ pub fn ButtonGroupPage() -> Element {
                         disabled: values.str("disabled") == "true",
                         Button { "Undo" }
                         Button { "Redo" }
-                        ActionIcon { aria_label: "Confirm", CheckmarkIcon {} }
+                        ActionIcon { aria_label: "Confirm", Pictogram { icon: lucide::check::outlined } }
                     }
                 },
             }

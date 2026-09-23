@@ -1,3 +1,5 @@
+use libero::components::Pictogram;
+use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
 use crate::components::{
@@ -11,8 +13,6 @@ use libero::{
     sx::sx,
     use_theme,
 };
-
-use crate::icons::{FileIcon, FolderIcon};
 
 #[derive(Clone, PartialEq)]
 enum FileKind {
@@ -106,7 +106,7 @@ fn file_icon(entry: &FileEntry) -> Element {
             variant: "standard",
             size: "sm",
             color: if folder { "primary" } else { "muted.6" },
-            if folder { FolderIcon {} } else { FileIcon {} }
+            if folder { Pictogram { icon: lucide::folder::outlined } } else { Pictogram { icon: lucide::file::outlined } }
         }
     }
 }

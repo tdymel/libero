@@ -6,14 +6,14 @@ use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
     components::{
-        Box, Button, DateField, Fields, Form, Options, Paper, Rule, Select, Switch, Table, Tabs,
-        TextField, column, not_empty, use_form, use_notifications,
+        Box, Button, DateField, Fields, Form, Options, Paper, Pictogram, Rule, Select, Switch,
+        Table, Tabs, TextField, column, not_empty, use_form, use_notifications,
     },
     sx::sx,
 };
+use pictogram_icons_lucide as lucide;
 
 use super::icon_label;
-use crate::icons::{CalendarCheckIcon, UtensilsIcon};
 
 // copy: model
 #[derive(Clone, Copy, PartialEq, Options)]
@@ -100,8 +100,8 @@ pub fn BookingCard() -> Element {
                 onchange: move |next| tab.set(next),
                 option_label: |tab: CardTab| {
                     let icon = match tab {
-                        CardTab::Book => rsx! { UtensilsIcon {} },
-                        CardTab::Bookings => rsx! { CalendarCheckIcon {} },
+                        CardTab::Book => rsx! { Pictogram { icon: lucide::utensils::outlined } },
+                        CardTab::Bookings => rsx! { Pictogram { icon: lucide::calendar_check::outlined } },
                     };
                     icon_label(tab.label(), icon)
                 },

@@ -1,5 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, or_unset, prop, props};
-use crate::icons::{AlignCenterIcon, AlignLeftIcon, AlignRightIcon};
+use libero::components::Pictogram;
+use pictogram_icons_lucide as lucide;
+
 use dioxus::prelude::*;
 use libero::components::{
     Code, FieldStatus, Icon, Input, OptionLabel, OptionList, Options, SegmentedControl, Text,
@@ -31,9 +33,6 @@ const RENAMED: &str = r#"option_label: |alignment: Alignment| -> OptionLabel {
 
 // A segment is a `label`, so its content stays phrasing: `Icon` is a `span`, a `Flex` a `div`.
 // snippet: after ALIGNMENT_ENUM
-// snippet: item #[component] fn AlignLeftIcon() -> Element { rsx! {} }
-// snippet: item #[component] fn AlignCenterIcon() -> Element { rsx! {} }
-// snippet: item #[component] fn AlignRightIcon() -> Element { rsx! {} }
 // snippet: let mut alignment = use_signal(|| Alignment::Left);
 // snippet: in SegmentedControl { value: alignment(), onchange: move |next| alignment.set(next), .. }
 const RICH: &str = r#"option_label: |alignment: Alignment| OptionLabel::rich(
@@ -43,9 +42,9 @@ const RICH: &str = r#"option_label: |alignment: Alignment| OptionLabel::rich(
             variant: "standard",
             size: "sm",
             match alignment {
-                Alignment::Left => rsx! { AlignLeftIcon {} },
-                Alignment::Center => rsx! { AlignCenterIcon {} },
-                Alignment::Right => rsx! { AlignRightIcon {} },
+                Alignment::Left => rsx! { Pictogram { icon: lucide::text_align_start::outlined } },
+                Alignment::Center => rsx! { Pictogram { icon: lucide::text_align_center::outlined } },
+                Alignment::Right => rsx! { Pictogram { icon: lucide::text_align_end::outlined } },
             }
         }
         "{alignment.label()}"
@@ -84,9 +83,9 @@ fn rich(alignment: Alignment) -> OptionLabel {
                 variant: "standard",
                 size: "sm",
                 match alignment {
-                    Alignment::Left => rsx! { AlignLeftIcon {} },
-                    Alignment::Center => rsx! { AlignCenterIcon {} },
-                    Alignment::Right => rsx! { AlignRightIcon {} },
+                    Alignment::Left => rsx! { Pictogram { icon: lucide::text_align_start::outlined } },
+                    Alignment::Center => rsx! { Pictogram { icon: lucide::text_align_center::outlined } },
+                    Alignment::Right => rsx! { Pictogram { icon: lucide::text_align_end::outlined } },
                 }
             }
             "{alignment.label()}"

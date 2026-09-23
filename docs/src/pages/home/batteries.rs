@@ -1,15 +1,13 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Box, Code, Flex, Icon, List, ListItem, Paper, Text, Title},
+    components::{Anchor, Box, Code, Flex, Icon, List, ListItem, Paper, Pictogram, Text, Title},
     sx::sx,
     theme::Size,
 };
+use pictogram_icons_lucide as lucide;
 
 use super::SectionTitle;
-use crate::{
-    GITHUB,
-    icons::{BookOpenIcon, CheckmarkIcon, CodeIcon, PaletteIcon, SparklesIcon},
-};
+use crate::GITHUB;
 
 /// The core batteries, one card each.
 #[component]
@@ -29,7 +27,7 @@ pub fn Batteries() -> Element {
                         .list_style("none")
                         .margin("0")
                         .padding("0"),
-                    Battery { title: "Rich developer experience", icon: rsx! { CodeIcon {} },
+                    Battery { title: "Rich developer experience", icon: rsx! { Pictogram { icon: lucide::code::outlined } },
                         Checks {
                             ListItem {
                                 "Typed "
@@ -39,19 +37,19 @@ pub fn Batteries() -> Element {
                             ListItem { "Modern JSX-like dx with Rust semantics" }
                         }
                     }
-                    Battery { title: "Documentation", icon: rsx! { BookOpenIcon {} },
+                    Battery { title: "Documentation", icon: rsx! { Pictogram { icon: lucide::book_open::outlined } },
                         Checks {
                             ListItem { "Rich documentation with live demos" }
                             ListItem { "LLM optimized view" }
                         }
                     }
-                    Battery { title: "Custom themes", icon: rsx! { PaletteIcon {} },
+                    Battery { title: "Custom themes", icon: rsx! { Pictogram { icon: lucide::palette::outlined } },
                         Checks {
                             ListItem { "20+ ready-made theme sets" }
                             ListItem { "Adjust them or make your own" }
                         }
                     }
-                    Battery { title: "More to come", icon: rsx! { SparklesIcon {} },
+                    Battery { title: "More to come", icon: rsx! { Pictogram { icon: lucide::sparkles::outlined } },
                         Text { "We are warming up for our first season, will you join our team?" }
                         Anchor { to: GITHUB, target: "_blank", "Join us on GitHub" }
                     }
@@ -97,7 +95,7 @@ fn Checks(children: Element) -> Element {
         List {
             size: "sm",
             icon: rsx! {
-                Icon { variant: "standard", color: "primary", size: "xs", CheckmarkIcon {} }
+                Icon { variant: "standard", color: "primary", size: "xs", Pictogram { icon: lucide::check::outlined } }
             },
             {children}
         }

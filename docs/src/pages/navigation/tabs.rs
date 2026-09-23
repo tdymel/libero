@@ -1,5 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
-use crate::icons::FileIcon;
+use libero::components::Pictogram;
+use pictogram_icons_lucide as lucide;
+
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, OptionLabel, OptionList, Options, Tabs, Text};
 
@@ -30,13 +32,12 @@ const RENAMED: &str = r#"option_label: |section: Section| -> OptionLabel {
 // A tab is a `button`, so its content has to stay phrasing content: `Icon` is
 // an inline-flex `span` (and it is what sizes the raw svg), a `Flex` is a `div`.
 // snippet: after SECTION_ENUM
-// snippet: item #[component] fn FileIcon() -> Element { rsx! {} }
 // snippet: let mut section = use_signal(|| Section::Account);
 // snippet: in Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, .. }
 const RICH: &str = r#"option_label: |section: Section| OptionLabel::rich(
     section.label(),
     rsx! {
-        Icon { variant: "standard", size: "sm", FileIcon {} }
+        Icon { variant: "standard", size: "sm", Pictogram { icon: lucide::file::outlined } }
         "{section.label()}"
     },
 )"#;
@@ -69,7 +70,7 @@ fn rich(section: Section) -> OptionLabel {
     OptionLabel::rich(
         section.label(),
         rsx! {
-            Icon { variant: "standard", size: "sm", FileIcon {} }
+            Icon { variant: "standard", size: "sm", Pictogram { icon: lucide::file::outlined } }
             "{section.label()}"
         },
     )
