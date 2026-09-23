@@ -23,7 +23,6 @@ fn Demo() -> Element {
         ProgressBar {
             aria_label: "Upload",
             value: uploaded(),
-            size: "xxl",
         }
     }
 }

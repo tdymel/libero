@@ -1,4 +1,4 @@
-# use_intersection, use_in_viewport
+# Intersection
 
 Crate: `libero`
 Import: `use libero::hooks::{Intersection, IntersectionEntry, IntersectionOptions, use_in_viewport, use_intersection};`

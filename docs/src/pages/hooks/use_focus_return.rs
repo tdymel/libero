@@ -114,7 +114,7 @@ fn Filters() -> Element {
 pub fn UseFocusReturnPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_focus_return",
+            title: "Focus return",
             source: "libero/src/hooks/focus_return.rs",
             markdown: "/md/use_focus_return.md",
             accessibility: a11y()

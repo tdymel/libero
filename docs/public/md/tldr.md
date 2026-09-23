@@ -93,7 +93,7 @@ fn Demo() -> Element {
 | `icon_only` | `bool` | `false` | Draws only the sparkles, named by `aria_label`. |
 | `aria_label` | `String` | - | Names the icon-only trigger. Unset, `TldrLabels::icon_only` ("Summarize with AI"). |
 | `variant` | `Variant` | `outlined` | The trigger's visual style. Unset, `theme.tldr.variant`. |
-| `size` | `Size` | `sm` | The trigger's size step, the icon-only one too. |
+| `size` | `Size` | `md` | The trigger's size step, the icon-only one too. |
 | `radius` | `Size` | - | Corner radius, independent of `size`. Unset, the trigger's own: `xl` on the labelled chip, `sm` icon-only. |
 | `color` | `ThemeAwareValue` | `neutral` | The trigger's accent color. A theme color name or any CSS color. Unset, `theme.tldr.color`. |
 

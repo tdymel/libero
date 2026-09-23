@@ -199,13 +199,6 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
         (None, None) => format!("{subject} {new_tab}"),
     };
     let group = use_button_group();
-    // Unset, `Button`'s `sm`: a toolbar control, not a page action (1069).
-    let size = props
-        .size
-        .clone()
-        .into_option()
-        .or(group.size.map(ThemeAwareValue::Size))
-        .unwrap_or(ThemeAwareValue::Size(crate::theme::Size::Sm));
     let variant = props
         .variant
         .copied_or(group.variant.unwrap_or(theme.repo_button.variant));
@@ -258,7 +251,7 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
                 target: "_blank",
                 variant: Input::Value(variant),
                 color,
-                size: size.clone(),
+                size: props.size.clone(),
                 radius: props.radius.clone(),
                 class: props.class.clone(),
                 sx: props.sx.clone(),

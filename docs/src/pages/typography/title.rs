@@ -53,9 +53,8 @@ pub fn TitlePage() -> Element {
                     component: "Title",
                     children_text: "The quick brown fox",
                     controls: vec![
-                        // `xl` is h2, under the page's `xxl` h1; `xxl` would open a second h1.
                         Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default("xl"),
+                            .default("xxl"),
                         Control::slider(
                             "component",
                             ["auto", "h1", "h2", "h3", "h4", "h5", "h6"],

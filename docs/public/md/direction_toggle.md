@@ -49,7 +49,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
 | `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `sm` | Button size. The icon takes 55% of it. |
+| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes 55% of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `label` | `Callback<Direction, String>` | - | Replaces the two built-in names. Gets the direction a press turns the text to and returns what the press does. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |

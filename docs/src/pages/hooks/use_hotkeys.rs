@@ -1,7 +1,7 @@
 use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Kbd, Text},
+    components::{Code, Flex, Kbd, Text, TextField},
     hooks::{Hotkey, use_hotkeys},
 };
 
@@ -18,7 +18,7 @@ rsx! {
     Flex { direction: "column", gap: "sm",
         Text { "Search opened {searches} times" }
         Text { "Help opened {helps} times" }
-        input { placeholder: "Type here" }
+        TextField { label: "Press Alt+H while typing" }
     }
 }"#
     .to_string()
@@ -37,7 +37,7 @@ fn Shortcuts() -> Element {
         Flex { direction: "column", gap: "sm",
             Text { "Search opened {searches} times" }
             Text { "Help opened {helps} times" }
-            input { placeholder: "Type here" }
+            TextField { label: "Press Alt+H while typing" }
         }
     }
 }
@@ -46,7 +46,7 @@ fn Shortcuts() -> Element {
 pub fn UseHotkeysPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_hotkeys",
+            title: "Hotkeys",
             source: "libero/src/hooks/hotkeys.rs",
             markdown: "/md/use_hotkeys.md",
             accessibility: a11y()

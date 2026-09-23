@@ -6,11 +6,7 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/button
 Index: [index.md](index.md) lists every other page
 Description: An icon-only button, rendered as a `button` or a link, with a required `aria_label`.
 
-> **Icons from [pictogram](https://github.com/tdymel/pictogram)**
-> ([crates.io](https://crates.io/crates/pictogram)): lucide, Tabler, Material
-> and nine more icon sets as `SvgData` consts, one crate each. Use its 0.4
-> line, the one libero builds on: another minor is a second `SvgData` type
-> and does not compile.
+Need icons? [pictogram](https://github.com/tdymel/pictogram) ships lucide, Tabler, Material and more.
 
 An icon-only button for actions like copy, close or delete. It renders a
 `<button>`, or a link when `to` is set. `aria_label` is required, because the

@@ -1,4 +1,4 @@
-# use_element
+# Element handle
 
 Crate: `libero`
 Import: `use libero::{hooks::{ElementHandle, use_element}, platform::ElementApi};`

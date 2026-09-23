@@ -31,7 +31,7 @@ pub fn TldrPage() -> Element {
                     .default("outlined")
                     .doc("The trigger's visual style."),
                 prop("size", "Size")
-                    .default("sm")
+                    .default("md")
                     .doc("The trigger's size step, the icon-only one too."),
                 prop("radius", "Size")
                     .doc("Corner radius, independent of `size`. Unset, the trigger's own: `xl` on the labelled chip, `sm` icon-only."),
@@ -89,7 +89,7 @@ pub fn TldrPage() -> Element {
                         .labels(["Outlined", "Filled", "Tonal", "Standard"])
                         .default("outlined"),
                     Control::color("color").default("neutral"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     // Unset is the trigger's own: `xl` on the chip, `sm` icon-only.
                     Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("auto")

@@ -52,7 +52,7 @@ fn Disclosure(title: String, children: Element) -> Element {
 pub fn UseIdPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_id",
+            title: "Unique ID",
             source: "libero/src/hooks/id.rs",
             markdown: "/md/use_id.md",
             accessibility: a11y()

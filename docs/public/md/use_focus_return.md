@@ -1,4 +1,4 @@
-# use_focus_return
+# Focus return
 
 Crate: `libero`
 Import: `use libero::hooks::{FocusReturn, use_focus_return};`

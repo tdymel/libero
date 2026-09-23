@@ -192,7 +192,7 @@ pub fn Tldr(props: TldrProps) -> Element {
     }];
 
     let variant = props.variant.copied_or(theme.tldr.variant);
-    let size = props.size.copied_or(Size::Sm);
+    let size = props.size.copied_or(Size::Md);
     let color = props
         .color
         .clone()

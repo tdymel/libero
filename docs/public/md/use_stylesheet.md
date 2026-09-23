@@ -1,4 +1,4 @@
-# use_stylesheet
+# Stylesheet
 
 Crate: `libero`
 Import: `use libero::hooks::use_stylesheet;`

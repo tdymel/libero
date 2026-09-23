@@ -12,7 +12,7 @@ ends swap under right-to-left text.
 
 `variant`, `color`, `size`, `radius` and `disabled` set the default of every
 button inside; a button's own prop wins. This site's header groups its
-repository link, direction toggle and theme toggle.
+repository link, direction toggle and theme toggle, and on a phone the search.
 
 ## Usage
 

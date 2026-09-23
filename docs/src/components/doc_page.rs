@@ -139,7 +139,7 @@ pub fn DocPage(
                                 "View as markdown"
                             }
                         }
-                        Tldr { url: format!("{SITE}{tldr_path}"), prompt: TLDR_PROMPT }
+                        Tldr { url: format!("{SITE}{tldr_path}"), prompt: TLDR_PROMPT, size: "sm" }
                     }
                 }
                 {lead}

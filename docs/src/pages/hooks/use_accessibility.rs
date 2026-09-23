@@ -71,7 +71,7 @@ fn Settings() -> Element {
 pub fn UseAccessibilityPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_accessibility",
+            title: "Accessibility settings",
             source: "libero/src/hooks/accessibility.rs",
             markdown: "/md/use_accessibility.md",
             lead: rsx! {

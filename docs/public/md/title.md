@@ -19,7 +19,7 @@ use libero::components::Title;
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Title { size: "xl", "The quick brown fox" }
+        Title { "The quick brown fox" }
     }
 }
 ```

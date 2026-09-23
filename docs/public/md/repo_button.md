@@ -61,7 +61,7 @@ fn Demo() -> Element {
 | `host` | `RepoHost` | `GitHub` | Where the repository lives: `RepoHost::GitHub` or `RepoHost::GitLab`. |
 | `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
 | `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `sm` | Button size. The icon takes half of it. |
+| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes half of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | - | Replaces the whole built name: host, repository, star count and new-tab cue. Unset, the built name. |
 

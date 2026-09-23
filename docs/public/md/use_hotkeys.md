@@ -1,4 +1,4 @@
-# use_hotkeys
+# Hotkeys
 
 Crate: `libero`
 Import: `use libero::hooks::{Hotkey, use_hotkeys};`
@@ -24,7 +24,7 @@ nothing.
 ```rust
 use dioxus::prelude::*;
 use libero::{
-    components::{Flex, Text},
+    components::{Flex, Text, TextField},
     hooks::{Hotkey, use_hotkeys},
 };
 
@@ -41,7 +41,7 @@ fn Shortcuts() -> Element {
         Flex { direction: "column", gap: "sm",
             Text { "Search opened {searches} times" }
             Text { "Help opened {helps} times" }
-            input { placeholder: "Type here" }
+            TextField { label: "Press Alt+H while typing" }
         }
     }
 }

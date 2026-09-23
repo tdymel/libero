@@ -55,7 +55,7 @@ fn ThemePicker() -> Element {
 pub fn UseThemeSetPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_theme_set",
+            title: "Theme set",
             source: "libero/src/hooks/theme.rs",
             markdown: "/md/use_theme_set.md",
             lead: rsx! {

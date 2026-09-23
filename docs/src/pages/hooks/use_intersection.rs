@@ -56,7 +56,7 @@ fn Reveal() -> Element {
 pub fn UseIntersectionPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_intersection, use_in_viewport",
+            title: "Intersection",
             source: "libero/src/hooks/intersection.rs",
             markdown: "/md/use_intersection.md",
             accessibility: a11y()

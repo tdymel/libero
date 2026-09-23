@@ -1,4 +1,4 @@
-# use_theme_set
+# Theme set
 
 Crate: `libero`
 Import: `use libero::hooks::use_theme_set;`

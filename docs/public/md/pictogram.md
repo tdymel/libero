@@ -6,11 +6,7 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_d
 Index: [index.md](index.md) lists every other page
 Description: An inline svg drawn from `SvgData`, such as a lucide icon, in `currentColor` and with no size of its own.
 
-> **Icons from [pictogram](https://github.com/tdymel/pictogram)**
-> ([crates.io](https://crates.io/crates/pictogram)): lucide, Tabler, Material
-> and nine more icon sets as `SvgData` consts, one crate each. Use its 0.4
-> line, the one libero builds on: another minor is a second `SvgData` type
-> and does not compile.
+Need icons? [pictogram](https://github.com/tdymel/pictogram) ships lucide, Tabler, Material and more.
 
 Draws an `SvgData` glyph as an inline svg. It has no size of its own: `Icon`
 and `ActionIcon` size it, or set `width` and `height`. It draws in

@@ -10,7 +10,7 @@ use libero::{
         Header, Icon, Kbd, Notifications, Pictogram, RepoButton, ScrollArea, SpotlightOptions,
         ThemeToggle, Title, spotlight_filter, use_scroll_area, use_spotlight,
     },
-    hooks::use_element,
+    hooks::{use_element, use_is_mobile},
     localization::Formats,
     platform::ElementApi,
     sx::sx,
@@ -344,6 +344,7 @@ fn AppShell() -> Element {
         })),
         ..Default::default()
     });
+    let mobile = use_is_mobile();
     let area = use_scroll_area();
     heading_focus::use_scroll_reset(route.clone(), area);
     heading_focus::use_heading_focus(route.clone(), content);
@@ -416,11 +417,9 @@ fn AppShell() -> Element {
                         },
                     }
                 }
-                // The way home: the nav has no entry for it. The title is hidden on a phone,
-                // so the label names it.
+                // The way home: the nav has no entry for it.
                 Anchor {
                     to: Route::Home {},
-                    "aria-label": "Libero",
                     underline: "never",
                     // The logo is the one item that gives way when the row runs short.
                     sx: sx()
@@ -435,40 +434,17 @@ fn AppShell() -> Element {
                         color: "primary",
                         // Wide, and the glyph nearly filling it: at icon size the bars blur together.
                         sx: sx()
-                            .width("72px")
+                            .width("44px")
+                            .breakpoint(Size::Sm, sx().width("72px"))
                             .min_width("0")
                             .height("44px")
                             .with("--lsx-icon-glyph", "84%"),
                     }
-                    Title {
-                        size: "lg",
-                        component: "span",
-                        sx: sx().display("none").breakpoint(Size::Sm, sx().display("inline")),
-                        "Libero"
-                    }
+                    Title { size: "lg", component: "span", "Libero" }
                 }
-                // Search: an icon button on a phone, the field-shaped button below from `Sm` up.
-                // Both open Spotlight; the shortcut rides `aria-keyshortcuts`, not the name.
-                ActionIcon {
-                    aria_label: "Search",
-                    "aria-keyshortcuts": "Control+K Meta+K",
-                    onclick: move |_| search.open(),
-                    // Same box as the icon buttons beside it.
-                    variant: "outlined",
-                    color: "muted",
-                    size: "sm",
-                    // Logical, so the controls stay at the end under RTL.
-                    sx: sx()
-                        .margin_inline_start("auto")
-                        .breakpoint(Size::Sm, sx().display("none")),
-                    span {
-                        display: "inline-flex",
-                        width: "18px",
-                        height: "18px",
-                        Pictogram { icon: lucide::search::outlined }
-                    }
-                }
-                // Looks like a field, but opens Spotlight, so it stays a button.
+                // Looks like a field, but opens Spotlight, so it stays a button. On a phone the
+                // search is an icon button in the group below. Both carry the shortcut in
+                // `aria-keyshortcuts`, not the name.
                 Button {
                     variant: "standard",
                     aria_label: "Search",
@@ -507,9 +483,31 @@ fn AppShell() -> Element {
                         "Ctrl K"
                     }
                 }
-                // One joined control. The phone search stays out: hidden from `Sm` up, it
-                // would still be the group's first child and square off the next one's corners.
-                ButtonGroup { "aria-label": "Site", size: "sm",
+                // One joined control. The phone search is rendered, not hidden: a hidden first
+                // child would still square off the next one's corners.
+                ButtonGroup {
+                    "aria-label": "Site",
+                    size: "sm",
+                    // Logical, so the controls stay at the end under RTL. From `Sm` up the
+                    // search field takes the free space instead.
+                    sx: sx()
+                        .margin_inline_start("auto")
+                        .breakpoint(Size::Sm, sx().margin_inline_start("0")),
+                    if mobile() {
+                        ActionIcon {
+                            aria_label: "Search",
+                            "aria-keyshortcuts": "Control+K Meta+K",
+                            onclick: move |_| search.open(),
+                            variant: "outlined",
+                            color: "muted",
+                            span {
+                                display: "inline-flex",
+                                width: "18px",
+                                height: "18px",
+                                Pictogram { icon: lucide::search::outlined }
+                            }
+                        }
+                    }
                     RepoButton { repo: REPO }
                     // Lets a reviewer check any component right to left.
                     DirectionToggle {}

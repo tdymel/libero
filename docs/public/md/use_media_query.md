@@ -1,4 +1,4 @@
-# use_media_query, use_is_mobile
+# Media query
 
 Crate: `libero`
 Import: `use libero::hooks::{use_is_mobile, use_media_query};`

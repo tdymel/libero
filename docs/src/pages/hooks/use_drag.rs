@@ -113,7 +113,7 @@ fn Knob() -> Element {
 pub fn UseDragPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_drag",
+            title: "Drag",
             source: "libero/src/hooks/drag.rs",
             markdown: "/md/use_drag.md",
             accessibility: a11y()

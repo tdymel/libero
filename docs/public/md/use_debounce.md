@@ -1,4 +1,4 @@
-# use_debounced_value, use_throttled_value
+# Debounce and throttle
 
 Crate: `libero`
 Import: `use libero::hooks::{use_debounced_callback, use_debounced_value, use_throttled_callback, use_throttled_value};`

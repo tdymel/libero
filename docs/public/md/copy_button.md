@@ -61,7 +61,7 @@ fn Demo() -> Element {
 | `value` | `String` | - | Required. The text a press writes to the clipboard. |
 | `variant` | `Variant` | - | Visual style, as on `ActionIcon`. With `color` also unset, the button draws no chrome of its own. |
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `sm` | Button size. |
+| `size` | `ThemeAwareValue` | `md` | Button size. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | `"Copy"` | The button's name, such as "Copy link". Unset, the localization's. |
 | `label` | `String` | - | Describes what a press copies, read after the name, such as "Add libero to your project". |

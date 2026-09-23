@@ -97,13 +97,6 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
         .to_string(),
     };
     let group = use_button_group();
-    // Unset, `Button`'s `sm`: a toolbar control, not a page action (1069).
-    let size = props
-        .size
-        .clone()
-        .into_option()
-        .or(group.size.map(ThemeAwareValue::Size))
-        .unwrap_or(ThemeAwareValue::Size(crate::theme::Size::Sm));
     let variant = Input::Value(
         props
             .variant
@@ -154,7 +147,7 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
                 onclick: move |_| scheme.cycle(),
                 variant: variant.clone(),
                 color: color.clone(),
-                size: size.clone(),
+                size: props.size.clone(),
                 radius: props.radius.clone(),
                 disabled: props.disabled,
                 class: props.class.clone(),
@@ -190,7 +183,7 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
                 onclick: move |_| scheme.cycle(),
                 variant: variant.clone(),
                 color: color.clone(),
-                size: size.clone(),
+                size: props.size.clone(),
                 radius: props.radius.clone(),
                 disabled: props.disabled,
                 {glyph}
@@ -204,7 +197,7 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
                     aria_label: labels.picker,
                     variant,
                     color,
-                    size: size.clone(),
+                    size: props.size.clone(),
                     radius: props.radius.clone(),
                     disabled: props.disabled,
                     attributes: menu.a11y_attributes(),

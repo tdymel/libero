@@ -76,7 +76,7 @@ fn Measure() -> Element {
 pub fn UseElementPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_element",
+            title: "Element handle",
             source: "libero/src/hooks/element.rs",
             markdown: "/md/use_element.md",
             lead: rsx! {

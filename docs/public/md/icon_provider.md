@@ -6,11 +6,7 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/context/icons.rs>
 Index: [index.md](index.md) lists every other page
 Description: Swaps the glyphs libero draws itself (chevrons, close, checks, ...), slot by slot, for everything below it; lucide by default.
 
-> **Icons from [pictogram](https://github.com/tdymel/pictogram)**
-> ([crates.io](https://crates.io/crates/pictogram)): lucide, Tabler, Material
-> and nine more icon sets as `SvgData` consts, one crate each. Use its 0.4
-> line, the one libero builds on: another minor is a second `SvgData` type
-> and does not compile.
+Need icons? [pictogram](https://github.com/tdymel/pictogram) ships lucide, Tabler, Material and more.
 
 Swaps the glyphs libero draws itself, slot by slot, for everything below it.
 Each `IconSlot` names one glyph by what it means; an `IconSet` maps slots to

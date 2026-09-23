@@ -14,30 +14,30 @@ belong to.
 
 | Hook | What it is for | Page |
 |---|---|---|
-| `use_id` | A unique id for the aria wiring between one instance's elements. | [use_id](use_id.md) |
-| `use_element` | A handle to one of your component's elements, to focus, scroll or measure it. | [use_element](use_element.md) |
-| `use_focus_return` | Puts focus back on the trigger when a panel closes. | [use_focus_return](use_focus_return.md) |
-| `use_drag` | Pointer capture and deltas for a drag. | [use_drag](use_drag.md) |
-| `use_intersection` | How much of an element is visible inside a root. | [use_intersection, use_in_viewport](use_intersection.md) |
-| `use_in_viewport` | Whether an element is in the viewport. | [use_intersection, use_in_viewport](use_intersection.md) |
-| `use_long_press` | Handlers that call back once a pointer stays down. | [use_long_press](use_long_press.md) |
-| `use_timeout` | Runs a callback once, a while after you start it. | [use_timeout, use_interval](use_timers.md) |
-| `use_interval` | Runs a callback repeatedly, with start, stop and toggle. | [use_timeout, use_interval](use_timers.md) |
-| `use_debounced_value` | A signal that follows another once it stops changing. | [use_debounced_value, use_throttled_value](use_debounce.md) |
-| `use_debounced_callback` | A callback that runs after its last call, with the last argument. | [use_debounced_value, use_throttled_value](use_debounce.md) |
-| `use_throttled_value` | A signal that follows another at most once per period. | [use_debounced_value, use_throttled_value](use_debounce.md) |
-| `use_throttled_callback` | A callback that runs at once, then at most once per period. | [use_debounced_value, use_throttled_value](use_debounce.md) |
-| `use_hotkeys` | Runs a handler on a keyboard shortcut, from anywhere in the page. | [use_hotkeys](use_hotkeys.md) |
-| `use_media_query` | Whether a CSS media query matches, live. | [use_media_query, use_is_mobile](use_media_query.md) |
-| `use_is_mobile` | Whether the viewport is narrower than 768px, live. | [use_media_query, use_is_mobile](use_media_query.md) |
+| `use_id` | A unique id for the aria wiring between one instance's elements. | [Unique ID](use_id.md) |
+| `use_element` | A handle to one of your component's elements, to focus, scroll or measure it. | [Element handle](use_element.md) |
+| `use_focus_return` | Puts focus back on the trigger when a panel closes. | [Focus return](use_focus_return.md) |
+| `use_drag` | Pointer capture and deltas for a drag. | [Drag](use_drag.md) |
+| `use_intersection` | How much of an element is visible inside a root. | [Intersection](use_intersection.md) |
+| `use_in_viewport` | Whether an element is in the viewport. | [Intersection](use_intersection.md) |
+| `use_long_press` | Handlers that call back once a pointer stays down. | [Long press](use_long_press.md) |
+| `use_timeout` | Runs a callback once, a while after you start it. | [Timers](use_timers.md) |
+| `use_interval` | Runs a callback repeatedly, with start, stop and toggle. | [Timers](use_timers.md) |
+| `use_debounced_value` | A signal that follows another once it stops changing. | [Debounce and throttle](use_debounce.md) |
+| `use_debounced_callback` | A callback that runs after its last call, with the last argument. | [Debounce and throttle](use_debounce.md) |
+| `use_throttled_value` | A signal that follows another at most once per period. | [Debounce and throttle](use_debounce.md) |
+| `use_throttled_callback` | A callback that runs at once, then at most once per period. | [Debounce and throttle](use_debounce.md) |
+| `use_hotkeys` | Runs a handler on a keyboard shortcut, from anywhere in the page. | [Hotkeys](use_hotkeys.md) |
+| `use_media_query` | Whether a CSS media query matches, live. | [Media query](use_media_query.md) |
+| `use_is_mobile` | Whether the viewport is narrower than 768px, live. | [Media query](use_media_query.md) |
 | `use_theme` | The active theme, for values CSS cannot carry. | [Theming](theming.md) |
-| `use_theme_set` | Reads and swaps the active theme set. | [use_theme_set](use_theme_set.md) |
+| `use_theme_set` | Reads and swaps the active theme set. | [Theme set](use_theme_set.md) |
 | `use_localization` | The words libero's components say, in the active language. | [Localization](localization.md) |
 | `use_localization_handle` | Switches the language at runtime. | [Localization](localization.md) |
 | `use_formats` | The active date, time and number formats. | [Localization](localization.md) |
 | `use_formats_handle` | Switches the formats at runtime. | [Localization](localization.md) |
-| `use_stylesheet` | Registers a stylesheet of your own, above every libero layer. | [use_stylesheet](use_stylesheet.md) |
-| `use_accessibility` | The reader's motion, contrast and transparency settings; forces reduced motion. | [use_accessibility](use_accessibility.md) |
+| `use_stylesheet` | Registers a stylesheet of your own, above every libero layer. | [Stylesheet](use_stylesheet.md) |
+| `use_accessibility` | The reader's motion, contrast and transparency settings; forces reduced motion. | [Accessibility settings](use_accessibility.md) |
 | `use_scroll_area` | Scrolls a ScrollArea from code. | [ScrollArea](scroll_area.md) |
 | `use_scroller` | Steps a Scroller from controls of your own. | [Scroller](scroller.md) |
 | `use_form` | Controls a Form: validity, check, submit and reset. | [Form](form.md) |

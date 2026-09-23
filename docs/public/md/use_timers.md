@@ -1,4 +1,4 @@
-# use_timeout, use_interval
+# Timers
 
 Crate: `libero`
 Import: `use libero::hooks::{IntervalHandle, TimeoutHandle, use_interval, use_timeout};`

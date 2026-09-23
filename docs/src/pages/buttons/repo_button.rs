@@ -22,7 +22,7 @@ pub fn RepoButtonPage() -> Element {
                     .default("muted")
                     .doc("Accent color. A theme color name or any CSS color."),
                 prop("size", "ThemeAwareValue")
-                    .default("sm")
+                    .default("md")
                     .doc("Button size. The icon takes half of it."),
                 prop("radius", "ThemeAwareValue")
                     .default("sm")
@@ -72,7 +72,7 @@ pub fn RepoButtonPage() -> Element {
                     // `muted` is what an unset `color` resolves to, so that
                     // swatch prints nothing.
                     Control::color("color").default("muted"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
                 ],

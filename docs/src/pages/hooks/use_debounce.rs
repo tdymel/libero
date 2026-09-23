@@ -50,7 +50,7 @@ fn LiveSearch() -> Element {
 pub fn UseDebouncePage() -> Element {
     rsx! {
         DocPage {
-            title: "use_debounced_value, use_throttled_value",
+            title: "Debounce and throttle",
             source: "libero/src/hooks/debounce.rs",
             markdown: "/md/use_debounce.md",
             accessibility: a11y()

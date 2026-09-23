@@ -48,7 +48,7 @@ fn Layout() -> Element {
 pub fn UseMediaQueryPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_media_query, use_is_mobile",
+            title: "Media query",
             source: "libero/src/hooks/media_query.rs",
             markdown: "/md/use_media_query.md",
             accessibility: a11y()

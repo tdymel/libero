@@ -78,7 +78,7 @@ fn HoldToCount() -> Element {
 pub fn UseLongPressPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_long_press",
+            title: "Long press",
             source: "libero/src/hooks/long_press.rs",
             markdown: "/md/use_long_press.md",
             accessibility: a11y()

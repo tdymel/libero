@@ -80,7 +80,7 @@ fn Stopwatch() -> Element {
 pub fn UseTimersPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_timeout, use_interval",
+            title: "Timers",
             source: "libero/src/hooks/timers.rs",
             markdown: "/md/use_timers.md",
             accessibility: a11y()

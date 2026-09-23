@@ -1,4 +1,4 @@
-# use_accessibility
+# Accessibility settings
 
 Crate: `libero`
 Import: `use libero::hooks::use_accessibility;`

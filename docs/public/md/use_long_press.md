@@ -1,4 +1,4 @@
-# use_long_press
+# Long press
 
 Crate: `libero`
 Import: `use libero::hooks::{LongPress, LongPressOptions, use_long_press};`

@@ -46,7 +46,7 @@ fn Callout(background: String, padding: String, border_radius: String) -> Elemen
 pub fn UseStylesheetPage() -> Element {
     rsx! {
         DocPage {
-            title: "use_stylesheet",
+            title: "Stylesheet",
             source: "libero/src/hooks/stylesheet.rs",
             markdown: "/md/use_stylesheet.md",
             lead: rsx! {

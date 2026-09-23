@@ -1,4 +1,4 @@
-# use_drag
+# Drag
 
 Crate: `libero`
 Import: `use libero::hooks::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};`
