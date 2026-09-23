@@ -24,9 +24,8 @@ trademarks of their owners, shown only to name the service a link opens.
 
 **Lucide (ISC)**
 
-Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part
-of Feather (MIT). All other copyright (c) for Lucide are held by Lucide
-Contributors 2022.
+Copyright (c) 2026 Lucide Icons and Contributors. Icons derived from Feather
+are also under the MIT License, Copyright (c) 2013-present Cole Bemis.
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -36,7 +35,11 @@ copyright notice and this permission notice appear in all copies.
 
 Copyright (c) 2023 LobeHub.
 
+**GitHub Octicons (MIT)**
+
+Copyright (c) 2026 GitHub Inc.
+
 **pictogram (MIT OR Apache-2.0)**
 
-Used as the `pictogram-core` and `pictogram-icons-lucide` crates. Licence texts
+Copyright (c) 2025 Tom Dymel. Used as the `pictogram-core` and `pictogram-icons-lucide` crates. Licence texts
 ship with the crates.

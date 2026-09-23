@@ -78,9 +78,8 @@ pub fn CreditsPage() -> Element {
                 title: "Notices",
                 Text { sx: sx().font_weight("600"), "Lucide (ISC)" }
                 Text {
-                    "Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as "
-                    "part of Feather (MIT). All other copyright (c) for Lucide are held by "
-                    "Lucide Contributors 2022."
+                    "Copyright (c) 2026 Lucide Icons and Contributors. Icons derived from "
+                    "Feather are also under the MIT License, Copyright (c) 2013-present Cole Bemis."
                 }
                 Text {
                     "Permission to use, copy, modify, and/or distribute this software for any "
@@ -89,8 +88,11 @@ pub fn CreditsPage() -> Element {
                 }
                 Text { sx: sx().font_weight("600"), "Lobe Icons (MIT)" }
                 Text { "Copyright (c) 2023 LobeHub." }
+                Text { sx: sx().font_weight("600"), "GitHub Octicons (MIT)" }
+                Text { "Copyright (c) 2026 GitHub Inc." }
                 Text { sx: sx().font_weight("600"), "pictogram (MIT OR Apache-2.0)" }
                 Text {
+                    "Copyright (c) 2025 Tom Dymel. "
                     "Used as the "
                     Code { source: "pictogram-core" }
                     " and "

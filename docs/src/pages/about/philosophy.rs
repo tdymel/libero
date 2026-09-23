@@ -1,5 +1,5 @@
 use crate::components::DocPage;
-use crate::icons::{CheckmarkIcon, CodeIcon};
+use crate::icons::{AccessibilityIcon, CheckmarkIcon, CodeIcon};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -148,13 +148,6 @@ fn Principle(
 fn Label(children: Element) -> Element {
     rsx! {
         Text { size: "sm", sx: sx().font_weight("600"), {children} }
-    }
-}
-
-#[component]
-fn AccessibilityIcon() -> Element {
-    rsx! {
-        Pictogram { icon: lucide::accessibility::outlined }
     }
 }
 
