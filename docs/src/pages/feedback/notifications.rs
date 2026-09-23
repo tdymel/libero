@@ -1,6 +1,6 @@
 use std::{cell::Cell, rc::Rc, time::Duration};
 
-use crate::components::{Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use crate::icons::DismissIcon;
 use dioxus::prelude::*;
 use libero::{
@@ -276,7 +276,7 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
     }
     if template == "alert" {
         let color = values.str("color");
-        if color != UNSET {
+        if color != Theme::DEFAULT.alert.color {
             fields.push(format!("color: {color:?}.into()"));
         }
         let variant = values.str("variant");
@@ -392,10 +392,7 @@ fn Examples(
         >::new()))
     });
 
-    let color: Input<_> = match color.as_str() {
-        UNSET => Input::None,
-        color => Input::from(color),
-    };
+    let color: Input<_> = Input::from(color.as_str());
     let variant = Input::<Variant>::from(variant.as_str()).copied_or(Variant::Tonal);
     let live = match live.as_str() {
         "assertive" => NotificationLive::Assertive,
@@ -645,7 +642,7 @@ pub fn NotificationsPage() -> Element {
                     .default(default_variant())
                     .hidden_when(|values| values.str("template") != "alert"),
                     Control::color("color")
-                        .with_unset()
+                        .default(Theme::DEFAULT.alert.color)
                         .hidden_when(|values| values.str("template") != "alert"),
                     Control::toggle("live", ["polite", "assertive"])
                         .labels(["Polite", "Assertive"])

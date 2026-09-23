@@ -148,6 +148,25 @@ only in `adb logcat`.
 identifier = "com.example.app"
 ```
 
+### iOS
+
+Untested: nobody has run it locally or on a device; expect rough edges.
+
+The app runs in the system WebView (WKWebView), so it looks and behaves like
+the web build. Turn on dioxus's `mobile` feature; libero needs no feature of
+its own.
+
+Install once:
+
+- macOS.
+- Xcode with the iOS Simulator runtime.
+- `rustup target add aarch64-apple-ios-sim aarch64-apple-ios x86_64-apple-ios`
+
+```shell
+dx serve --platform ios
+dx build --platform ios
+```
+
 ## Feature flags
 
 Every feature is additive.

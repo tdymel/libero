@@ -20,13 +20,15 @@ const HUE_WHEEL: &str = "conic-gradient(red, yellow, lime, aqua, blue, magenta, 
 /// `Control::unset_swatch` names that color where it isn't the surface.
 fn swatch(control: &Control, option: &str) -> (String, String) {
     match option {
-        UNSET => (
-            control
+        UNSET => {
+            let fill = control
                 .unset_swatch
                 .clone()
-                .unwrap_or_else(|| "surface".to_string()),
-            "ink".to_string(),
-        ),
+                .unwrap_or_else(|| "surface".to_string());
+            // An ink swatch needs a tick that reads on it.
+            let tick = if fill == "ink" { "surface" } else { "ink" };
+            (fill, tick.to_string())
+        }
         // The palette's own contrast color, so the tick reads on every swatch.
         // A shade keeps its step: `grey.1` pairs with `grey-contrast.1`.
         color => match color.split_once('.') {

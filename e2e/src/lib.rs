@@ -8,6 +8,7 @@ pub mod ax;
 pub mod browser;
 pub mod clock;
 pub mod driver;
+pub mod frames;
 pub mod journal;
 #[cfg(feature = "native")]
 pub mod native;

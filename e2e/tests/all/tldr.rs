@@ -120,6 +120,41 @@ async fn custom_providers_and_prompt<D: Driver>(d: &mut D, _route: &str) -> Resu
     Ok(())
 }
 
+async fn trigger_height<D: Driver>(d: &mut D, wrapper: &str) -> Result<f64> {
+    Ok(d.rect(&format!("#{wrapper} {TRIGGER}")).await?.height)
+}
+
+async fn radius<D: Driver>(d: &mut D, wrapper: &str) -> Result<f64> {
+    let value = d
+        .style(&format!("#{wrapper} {TRIGGER}"), "border-top-left-radius")
+        .await?;
+    Ok(value.trim_end_matches("px").parse()?)
+}
+
+async fn size_and_radius_reach_the_trigger<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the triggers to mount", async |d| {
+        d.exists("#icon-round [aria-haspopup=menu]").await
+    })
+    .await?;
+    for kind in ["labelled", "icon"] {
+        let normal = trigger_height(d, &format!("{kind}-default")).await?;
+        let big = trigger_height(d, &format!("{kind}-big")).await?;
+        ensure!(
+            big > normal,
+            "{kind}: xl is {big}px, the default {normal}px"
+        );
+        let tight = radius(d, &format!("{kind}-tight")).await?;
+        let round = radius(d, &format!("{kind}-round")).await?;
+        ensure!(tight < round, "{kind}: xs radius {tight}px, xl {round}px");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    size_and_radius_reach_both_triggers,
+    "/tldr/sized",
+    size_and_radius_reach_the_trigger
+);
 e2e::scenario!(
     every_provider_links_to_its_chat_in_a_new_tab,
     "/tldr",

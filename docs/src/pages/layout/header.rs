@@ -77,9 +77,8 @@ pub fn HeaderPage() -> Element {
                     Control::toggle("position", ["sticky", "static"]).labels(["Sticky", "Static"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
-                    // Opens tinted, but unset is the real default, so that prints nothing.
+                    // Unset is the paper surface, the real default, so that prints nothing.
                     Control::color("color").with_unset()
-                    .default("primary")
                     .code(|_, values| match values.str("color").as_str() {
                         UNSET => vec![],
                         color => vec![format!("color: {color:?}")],

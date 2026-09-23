@@ -14,6 +14,7 @@ use crate::{
     hooks::use_localization,
     localization::fill,
     sx::{ThemeAwareValue, sx},
+    theme::Size,
 };
 
 /// An assistant a [`Tldr`] menu can hand a page to.
@@ -135,6 +136,12 @@ base_props! {
         /// Unset, outlined.
         #[props(default, into)]
         variant: Input<Variant>,
+        /// The trigger's size step. Unset, `sm`.
+        #[props(default, into)]
+        size: Input<Size>,
+        /// Corner radius, independent of `size`. Unset, the trigger's own: `xl` on the chip, `sm` icon-only.
+        #[props(default, into)]
+        radius: Input<Size>,
         /// Unset, neutral.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -182,6 +189,7 @@ pub fn Tldr(props: TldrProps) -> Element {
     }];
 
     let variant = props.variant.copied_or(Variant::Outlined);
+    let size = props.size.copied_or(Size::Sm);
     let color = props
         .color
         .clone()
@@ -194,7 +202,8 @@ pub fn Tldr(props: TldrProps) -> Element {
         Menu { state: menu, items,
             if props.icon_only {
                 ActionIcon {
-                    size: "sm",
+                    size,
+                    radius: props.radius.as_ref().copied(),
                     variant,
                     color,
                     aria_label: props.aria_label.clone().unwrap_or_else(|| words.icon_only.into()),
@@ -206,7 +215,8 @@ pub fn Tldr(props: TldrProps) -> Element {
                 }
             } else {
                 Chip {
-                    size: "sm",
+                    size,
+                    radius: props.radius.clone(),
                     variant,
                     color,
                     icon: rsx! {

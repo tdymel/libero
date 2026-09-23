@@ -11,6 +11,6 @@ pub use demo::{
     Child, Control, Demo, DemoValues, UNSET, Wrap, gradient_controls, gradient_value, indent,
     not_gradient_variant, or_unset,
 };
-pub use doc_page::DocPage;
+pub use doc_page::{DocPage, SITE, TLDR_PROMPT};
 pub use doc_section::DocSection;
 pub use prop_doc::{PropGroup, PropertyTable, prop, props};

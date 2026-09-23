@@ -55,7 +55,8 @@ pub fn TextPage() -> Element {
                         .default("md"),
                     Control::toggle("component", ["p", "span", "div"])
                         .labels(["P", "Span", "Div"]),
-                    Control::color("color").with_unset(),
+                    // Unset inherits the page's ink, so the unset swatch is painted ink.
+                    Control::color("color").with_unset().unset_swatch("ink"),
                     // The theme's own second stop and angle print as `Gradient::default()`.
                     Control::switch("gradient").code(|_, values| {
                         let default = values.str("gradient_to") == "secondary"

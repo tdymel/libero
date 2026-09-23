@@ -86,6 +86,10 @@ dx build --platform android";
 const ANDROID_DIOXUS: &str = r#"[android]
 identifier = "com.example.app""#;
 
+// snippet: ignore - shell commands, not Rust
+const IOS_COMMANDS: &str = "dx serve --platform ios
+dx build --platform ios";
+
 /// Where the app runs, one tab each.
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Environment {
@@ -95,6 +99,8 @@ enum Environment {
     #[option(label = "Desktop (WebView)")]
     Desktop,
     Android,
+    #[option(label = "iOS")]
+    Ios,
 }
 
 #[component]
@@ -131,6 +137,7 @@ pub fn GettingStarted() -> Element {
                         Environment::Native => rsx! { NativePanel {} },
                         Environment::Desktop => rsx! { DesktopPanel {} },
                         Environment::Android => rsx! { AndroidPanel {} },
+                        Environment::Ios => rsx! { IosPanel {} },
                     },
                 }
             }
@@ -316,6 +323,31 @@ fn AndroidPanel() -> Element {
                 "."
             }
             CodeBlock { source: ANDROID_DIOXUS, language: "toml" }
+        }
+    }
+}
+
+#[component]
+fn IosPanel() -> Element {
+    rsx! {
+        Panel {
+            Alert { title: "Untested",
+                Text { "Nobody has run it locally or on a device; expect rough edges." }
+            }
+            Text {
+                "The app runs in the system WebView (WKWebView), so it looks and behaves like the web build. Turn on dioxus's "
+                Code { source: "mobile" }
+                " feature; libero needs no feature of its own."
+            }
+            Text { "Install once:" }
+            Checklist {
+                ListItem { "macOS." }
+                ListItem { "Xcode with the iOS Simulator runtime." }
+                ListItem {
+                    Code { source: "rustup target add aarch64-apple-ios-sim aarch64-apple-ios x86_64-apple-ios" }
+                }
+            }
+            CodeBlock { source: IOS_COMMANDS, language: "shell" }
         }
     }
 }

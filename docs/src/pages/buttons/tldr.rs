@@ -1,8 +1,9 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, SITE, TLDR_PROMPT, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, Input, Text, Tldr};
-
-const PAGE: &str = "https://libero-ui.dev/md/tldr.md";
+use libero::{
+    components::{Code, Flex, Input, Text, Tldr},
+    hooks::use_localization,
+};
 
 #[component]
 pub fn TldrPage() -> Element {
@@ -29,6 +30,11 @@ pub fn TldrPage() -> Element {
                 prop("variant", "Variant")
                     .default("outlined")
                     .doc("The trigger's visual style."),
+                prop("size", "Size")
+                    .default("sm")
+                    .doc("The trigger's size step, the icon-only one too."),
+                prop("radius", "Size")
+                    .doc("Corner radius, independent of `size`. Unset, the trigger's own: `xl` on the labelled chip, `sm` icon-only."),
                 prop("color", "ThemeAwareValue")
                     .default("neutral")
                     .doc("The trigger's accent color. A theme color name or any CSS color."),
@@ -62,26 +68,81 @@ pub fn TldrPage() -> Element {
             Demo {
                 component: "Tldr",
                 children_text: "",
-                fixed: vec![format!("url: \"{PAGE}\"")],
                 controls: vec![
+                    Control::toggle("url", ["tldr", "menu", "button"])
+                        .labels(["Tldr", "Menu", "Button"])
+                        .default("tldr")
+                        .code(|_, values| vec![format!("url: \"{}\"", page_url(&values.str("url")))]),
+                    // The docs' own prompt is long; the default prints nothing.
+                    Control::toggle("prompt", ["default", "docs"])
+                        .labels(["Default", "Docs"])
+                        .default("default")
+                        .code(|_, values| match values.str("prompt").as_str() {
+                            "docs" => vec![format!(
+                                "prompt: {:?}",
+                                TLDR_PROMPT.replace("{url}", "{{url}}")
+                            )],
+                            _ => vec![],
+                        }),
                     Control::switch("icon_only"),
                     Control::toggle("variant", ["outlined", "filled", "tonal", "standard"])
                         .labels(["Outlined", "Filled", "Tonal", "Standard"])
                         .default("outlined"),
                     Control::color("color").default("neutral"),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
+                    // Unset is the trigger's own: `xl` on the chip, `sm` icon-only.
+                    Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("auto")
+                        .code(|_, values| match values.str("radius").as_str() {
+                            "auto" => vec![],
+                            radius => vec![format!("radius: {radius:?}")],
+                        }),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    Tldr {
-                        url: PAGE,
-                        icon_only: values.str("icon_only") == "true",
-                        variant: values.str("variant"),
-                        color: match values.str("color").as_str() {
-                            "neutral" => Input::None,
-                            color => Input::from(color),
-                        },
+                render: move |values: DemoValues| {
+                    let url = page_url(&values.str("url"));
+                    let docs = values.str("prompt") == "docs";
+                    rsx! {
+                        Flex {
+                            direction: "column",
+                            gap: "md",
+                            Tldr {
+                                url: url.clone(),
+                                prompt: docs.then(|| TLDR_PROMPT.to_string()),
+                                icon_only: values.str("icon_only") == "true",
+                                variant: values.str("variant"),
+                                color: match values.str("color").as_str() {
+                                    "neutral" => Input::None,
+                                    color => Input::from(color),
+                                },
+                                size: values.str("size"),
+                                radius: match values.str("radius").as_str() {
+                                    "auto" => Input::None,
+                                    radius => Input::from(radius),
+                                },
+                            }
+                            PromptPreview { url, docs }
+                        }
                     }
                 },
             }
         }
+    }
+}
+
+fn page_url(page: &str) -> String {
+    format!("{SITE}/md/{page}.md")
+}
+
+/// What the menu's links ask the assistant, `{url}` filled.
+#[component]
+fn PromptPreview(url: String, docs: bool) -> Element {
+    let prompt = if docs {
+        TLDR_PROMPT
+    } else {
+        use_localization().tldr.prompt
+    };
+    let asked = prompt.replace("{url}", &url);
+    rsx! {
+        Text { size: "sm", "Prompt: {asked}" }
     }
 }

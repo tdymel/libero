@@ -14,6 +14,7 @@ pub const ROUTES: Routes = &[
     ("/tldr/icon", || rsx! { TldrIconPage {} }),
     ("/tldr/german", || rsx! { TldrGermanPage {} }),
     ("/tldr/custom", || rsx! { TldrCustomPage {} }),
+    ("/tldr/sized", || rsx! { TldrSizedPage {} }),
 ];
 
 const PAGE: &str = "https://libero-ui.dev/md/menu.md";
@@ -41,6 +42,21 @@ fn TldrGermanPage() -> Element {
     rsx! {
         h1 { "Eine Seite" }
         Tldr { url: PAGE, icon_only: true }
+    }
+}
+
+/// Both triggers at the default and at `xl`, a tight and a round radius at the default size.
+#[component]
+fn TldrSizedPage() -> Element {
+    rsx! {
+        div { id: "labelled-default", Tldr { url: PAGE } }
+        div { id: "labelled-big", Tldr { url: PAGE, size: "xl" } }
+        div { id: "labelled-tight", Tldr { url: PAGE, radius: "xs" } }
+        div { id: "labelled-round", Tldr { url: PAGE, radius: "xl" } }
+        div { id: "icon-default", Tldr { url: PAGE, icon_only: true } }
+        div { id: "icon-big", Tldr { url: PAGE, icon_only: true, size: "xl" } }
+        div { id: "icon-tight", Tldr { url: PAGE, icon_only: true, radius: "xs" } }
+        div { id: "icon-round", Tldr { url: PAGE, icon_only: true, radius: "xl" } }
     }
 }
 
