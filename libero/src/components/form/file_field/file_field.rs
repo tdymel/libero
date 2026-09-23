@@ -2,6 +2,7 @@ use std::{cell::Cell, rc::Rc};
 
 use dioxus::html::{FileData, HasFileData};
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     CssLayer,
@@ -9,8 +10,8 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
         common::{
-            CloseIcon, HtmlTag, Input, LogicalTextAlign, States, UploadIcon, focus_ring_sx,
-            input_from_str, navigation_chord, ring_overlay, ring_overlay_sx,
+            Glyph, HtmlTag, Input, LogicalTextAlign, States, focus_ring_sx, input_from_str,
+            navigation_chord, ring_overlay, ring_overlay_sx,
         },
         feedback::Loader,
         form::{
@@ -20,6 +21,7 @@ use crate::{
         },
         layout::{BoxStyle, use_box},
     },
+    context::IconSlot,
     hooks::{
         ElementHandle, LocalState, current_formats, current_localization, id_selector, use_css,
         use_element, use_local_state, use_theme,
@@ -893,7 +895,7 @@ fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
         if let Some(size) = loader {
             Loader { size }
         } else {
-            UploadIcon {}
+            Glyph { slot: IconSlot::Upload, icon: lucide::upload::outlined }
         }
         {prompt}
         {hint}
@@ -1255,7 +1257,7 @@ fn default_card(
                             sx().background("color-mix(in srgb, currentColor 12%, transparent)"),
                         ),
                     onclick: move |_: MouseEvent| remove.call(()),
-                    CloseIcon {}
+                    Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
                 }
             }
         }

@@ -28,7 +28,7 @@ mod utils;
 /// names the same version.
 pub use chrono;
 pub(crate) use context::CssLayer;
-pub use context::{LiberoContext, LiberoProvider};
+pub use context::{IconProvider, IconSet, IconSlot, LiberoContext, LiberoProvider};
 pub use css::Stylesheet;
 pub use hooks::{
     ColorSchemeHandle, FormatsHandle, LocalizationHandle, ThemeSetHandle, use_color_scheme,

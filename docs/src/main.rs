@@ -20,7 +20,6 @@ use libero::{
 mod components;
 mod exports;
 mod heading_focus;
-mod icons;
 #[cfg(test)]
 mod index_html;
 mod nav;
@@ -139,6 +138,8 @@ pub(crate) enum Route {
     IconPage {},
     #[route("/data-display/pictogram")]
     PictogramPage {},
+    #[route("/data-display/icon-provider")]
+    IconProviderPage {},
     #[route("/data-display/image")]
     ImagePage {},
     #[route("/data-display/indicator")]

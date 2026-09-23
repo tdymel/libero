@@ -221,6 +221,7 @@ fn aliases(label: &str) -> &'static [&'static str] {
         "Skeleton" => &["placeholder", "shimmer", "loading"],
         "Icon" => &["glyph", "icon box"],
         "Pictogram" => &["svg", "lucide", "inline svg"],
+        "IconProvider" => &["icon set", "icon theme", "swap icons", "lucide"],
         "Badge" => &["label", "tag", "pill", "chip"],
         "Indicator" => &["dot", "status dot", "notification badge"],
         "Avatar" => &["profile picture", "user picture", "initials"],
@@ -406,6 +407,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             vec![
                 page(Route::IconPage {}, "Icon"),
                 page(Route::PictogramPage {}, "Pictogram"),
+                page(Route::IconProviderPage {}, "IconProvider"),
                 page(Route::BadgePage {}, "Badge"),
                 page(Route::IndicatorPage {}, "Indicator"),
                 page(Route::AvatarPage {}, "Avatar"),

@@ -241,7 +241,7 @@ fn a_multi_select_pick_stays_in_budget() {
                 ("SelectCore", 1),
                 ("Chip", 1),
                 ("ActionIcon", 1),
-                ("CloseIcon", 1),
+                ("Glyph", 1),
                 ("VisuallyHidden", 2),
                 ("ComboboxCore", 1),
                 ("ComboboxPopup", 2),

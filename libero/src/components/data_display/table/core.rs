@@ -1,7 +1,8 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use super::cell_value::{CellAlign, SortDirection, SortKey};
-use crate::components::common::ArrowDownIcon;
+use crate::{components::common::Glyph, context::IconSlot};
 
 /// What the non-generic body needs from a `Column<T>`, once `T` is gone.
 pub(super) struct HeaderSpec {
@@ -105,7 +106,7 @@ pub(super) fn render_body(
                                 "{spec.header}"
                                 // Always rendered, so sorting can't change the width;
                                 // `aria-sort` shows and flips it.
-                                ArrowDownIcon {}
+                                Glyph { slot: IconSlot::ArrowDown, icon: lucide::arrow_down::outlined }
                             }
                         } else {
                             "{spec.header}"

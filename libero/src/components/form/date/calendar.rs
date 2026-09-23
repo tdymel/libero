@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use chrono::{Datelike, Days, Months, NaiveDate};
 
@@ -12,11 +13,12 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            ChevronLeftIcon, ChevronRightIcon, ClassList, HtmlTag, Input, States, Variant,
-            disabled_look_sx, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx,
+            ClassList, Glyph, HtmlTag, Input, States, Variant, disabled_look_sx, focus_ring_sx,
+            has_shortcut_modifier, inset_focus_ring_sx,
         },
         layout::use_box,
     },
+    context::IconSlot,
     hooks::{ElementHandle, use_element, use_formats, use_localization},
     localization::{DateLocale, Formats},
     platform::{ElementApi, logical_key},
@@ -1291,9 +1293,9 @@ fn Nav(props: NavProps) -> Element {
             disabled: props.disabled,
             onclick: move |_| paged.set(Some(targets.peek()[usize::from(forward)])),
             if props.forward {
-                ChevronRightIcon {}
+                Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }
             } else {
-                ChevronLeftIcon {}
+                Glyph { slot: IconSlot::ChevronLeft, icon: lucide::chevron_left::outlined }
             }
         }
     }

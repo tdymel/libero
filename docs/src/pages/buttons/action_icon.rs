@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, gradient_controls, gradient_value,
+    Control, Demo, DemoValues, DocPage, PictogramNote, a11y, gradient_controls, gradient_value,
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
@@ -64,6 +64,7 @@ pub fn ActionIconPage() -> Element {
                     "Below 24px, keep other targets clear of that 24x24 box, or the one drawn later takes the overlap.",
                 ]),
             lead: rsx! {
+                PictogramNote {}
                 Text {
                     "An icon-only button for actions like copy, close or delete. It renders a "
                     Code { source: "<button>" }

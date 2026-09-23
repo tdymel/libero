@@ -1,11 +1,13 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{EyeIcon, EyeOffIcon, Input},
+        common::{Glyph, Input},
         form::{Disabled, FormScope, SLOT_BUTTON_SX, TextField, field_props, slot_icon_size},
     },
+    context::IconSlot,
     hooks::{use_localization, use_theme},
     sx::ThemeAwareValue,
 };
@@ -112,9 +114,9 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
                     onclick: move |_| revealed_at.set((!revealed()).then_some(settled)),
                     // A struck-through eye while the secret is readable.
                     if revealed() {
-                        EyeOffIcon {}
+                        Glyph { slot: IconSlot::EyeOff, icon: lucide::eye_off::outlined }
                     } else {
-                        EyeIcon {}
+                        Glyph { slot: IconSlot::Eye, icon: lucide::eye::outlined }
                     }
                 }
             }),

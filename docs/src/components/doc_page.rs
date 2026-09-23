@@ -7,11 +7,8 @@ use libero::{
 use pictogram_icons_lucide as lucide;
 
 use super::{A11yDoc, A11yPanel, PropGroup, PropertyTable};
-use crate::{
-    Route,
-    icons::{GitHubIcon, MarkdownIcon},
-    nav::neighbours,
-};
+use crate::{Route, nav::neighbours};
+use pictogram_icons_simple as simple;
 
 const REPO: &str = "https://github.com/tdymel/libero/tree/main/";
 /// The site's public address: what an assistant is asked to read.
@@ -119,7 +116,7 @@ pub fn DocPage(
                                 // Filled would outrank the page title.
                                 variant: "outlined",
                                 color: "neutral",
-                                icon: rsx! { Icon { variant: "standard", size: "sm", color: "inherit", GitHubIcon {} } },
+                                icon: rsx! { Icon { variant: "standard", size: "sm", color: "inherit", svg: simple::github::regular } },
                                 "Source"
                             }
                         }
@@ -138,7 +135,7 @@ pub fn DocPage(
                                 size: "sm",
                                 variant: "outlined",
                                 color: "neutral",
-                                icon: rsx! { Icon { variant: "standard", size: "sm", color: "inherit", MarkdownIcon {} } },
+                                icon: rsx! { Icon { variant: "standard", size: "sm", color: "inherit", svg: simple::markdown::regular } },
                                 "View as markdown"
                             }
                         }

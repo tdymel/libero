@@ -2477,6 +2477,7 @@ dependencies = [
  "dioxus-native",
  "libero",
  "pictogram-icons-lucide",
+ "pictogram-icons-simple",
 ]
 
 [[package]]
@@ -4467,7 +4468,9 @@ dependencies = [
  "js-sys",
  "libero-macros",
  "pictogram-core",
+ "pictogram-icons-lobe",
  "pictogram-icons-lucide",
+ "pictogram-icons-simple",
  "regex",
  "rfd",
  "serde_json",
@@ -5704,10 +5707,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee8bffbac0ec28818b71333f4bb9ac71412275266ae3efced79002e0ccc85021"
 
 [[package]]
+name = "pictogram-icons-lobe"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c50458fe2e9552ae1aafa3d524149a32d9890e8a72f80355b12f4ff4a9f5ece"
+dependencies = [
+ "pictogram-core",
+]
+
+[[package]]
 name = "pictogram-icons-lucide"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77a0051607fd71ff9598276312218be40d57e1dc390d77194e8c746c6b4fb488"
+dependencies = [
+ "pictogram-core",
+]
+
+[[package]]
+name = "pictogram-icons-simple"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67d259d50f2664d7ec78243c0be4453eb466ad63f783406832b4dbc82a08202c"
 dependencies = [
  "pictogram-core",
 ]

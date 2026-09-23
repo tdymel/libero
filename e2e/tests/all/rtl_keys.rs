@@ -289,7 +289,7 @@ fn carousel_dots_step_forward_on_arrow_left() {
 }
 
 /// Which way a glyph points on screen: the x of its `(vx, vy)` after every transform up to
-/// the root (`ChevronRightIcon` draws `(1, 0)`, `ChevronDownIcon` `(0, 1)`).
+/// the root (the `ChevronRight` glyph draws `(1, 0)`, `ChevronDown` `(0, 1)`).
 async fn screen_x(page: &Page, selector: &str, vx: f64, vy: f64) -> Option<f64> {
     page.evaluate(format!(
         "(() => {{ let el = document.querySelector({selector:?}); \

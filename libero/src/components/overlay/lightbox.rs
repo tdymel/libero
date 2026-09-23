@@ -1,20 +1,22 @@
 use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         accessibility::{Announcer, use_announcer},
         buttons::ActionIcon,
         common::{
-            CloseIcon, Input, MinusIcon, PlusIcon, SVG_FIT, States, Variables,
-            has_shortcut_modifier, inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states,
-            svg_fit, svg_fit_sx, svg_fit_variables, use_name_warning, variables,
+            Glyph, Input, SVG_FIT, States, Variables, has_shortcut_modifier, inset_focus_ring_sx,
+            ring_overlay, ring_overlay_sx, states, svg_fit, svg_fit_sx, svg_fit_variables,
+            use_name_warning, variables,
         },
         data_display::{Carousel, CarouselJump, CarouselQuietWhenFits},
         layout::Box,
         overlay::Dialog,
     },
+    context::IconSlot,
     hooks::{
         Drag, DragMove, DragOptions, DragPoint, DragStart, ElementHandle, LightboxItem,
         LightboxOpening, LightboxOptions, drag_handle_sx, id_selector, use_drag, use_element,
@@ -1290,7 +1292,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         disabled: at_fit,
                         focusable_when_disabled: true,
                         onclick: move |_: MouseEvent| zoom_by(true),
-                        MinusIcon {}
+                        Glyph { slot: IconSlot::Minus, icon: lucide::minus::outlined }
                     }
                     ActionIcon {
                         variant: "standard",
@@ -1300,7 +1302,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         disabled: at_max,
                         focusable_when_disabled: true,
                         onclick: move |_: MouseEvent| zoom_by(false),
-                        PlusIcon {}
+                        Glyph { slot: IconSlot::Plus, icon: lucide::plus::outlined }
                     }
                 }
                 // Focused on open, as `Dialog`'s own close button was: a zoom
@@ -1312,7 +1314,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                     aria_label: localization.common.close,
                     "data-autofocus": "true",
                     onclick: move |_: MouseEvent| close.call(()),
-                    CloseIcon {}
+                    Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
                 }
             }
             Box {

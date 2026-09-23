@@ -1,17 +1,19 @@
 use std::{any::TypeId, rc::Rc};
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{HtmlTag, Input, MinusIcon, NumberValue, PlusIcon, navigation_chord},
+        common::{Glyph, HtmlTag, Input, NumberValue, navigation_chord},
         form::{
             FIELD_CONTROL_SX, LiveControl, field_props, slot_button_sx, slot_icon_size, use_bound,
             use_field, use_field_frame,
         },
         layout::use_box,
     },
+    context::IconSlot,
     hooks::{current_localization, use_formats, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
@@ -364,7 +366,7 @@ fn Steppers(
                 tabindex: "-1",
                 disabled,
                 onclick: move |_| nudge.call(-1),
-                MinusIcon {}
+                Glyph { slot: IconSlot::Minus, icon: lucide::minus::outlined }
             }
             ActionIcon {
                 aria_label: increment_label.unwrap_or_else(|| labels.increase.to_string()),
@@ -373,7 +375,7 @@ fn Steppers(
                 tabindex: "-1",
                 disabled,
                 onclick: move |_| nudge.call(1),
-                PlusIcon {}
+                Glyph { slot: IconSlot::Plus, icon: lucide::plus::outlined }
             }
         },
     )

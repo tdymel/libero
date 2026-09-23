@@ -117,9 +117,8 @@ filled, percent-encoded, appended to the provider's address.
 The words are `TldrLabels` in the localization: `label`, `icon_only`, `group`
 and `prompt`. Provider names are brand names and are not translated.
 
-The marks are monochrome one-path icons: Claude, Google and Perplexity from
-Simple Icons (CC0 1.0), ChatGPT from Lobe Icons (MIT, Copyright (c) 2023
-LobeHub). They are trademarks of their owners, shown only to name the service a
+The marks are Lobe Icons' monochrome ones (MIT, Copyright (c) 2023 LobeHub),
+from `pictogram-icons-lobe`. They are trademarks of their owners, shown only to name the service a
 link opens.
 
 ## CSS variables

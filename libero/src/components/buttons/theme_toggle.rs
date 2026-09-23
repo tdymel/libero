@@ -1,15 +1,14 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{
-            ChevronDownIcon, HtmlTag, Input, MoonIcon, SunIcon, SystemSchemeIcon, Variant,
-            base_props, use_button_group,
-        },
+        common::{Glyph, HtmlTag, Input, Variant, base_props, use_button_group},
         layout::use_box,
         overlay::{Menu, MenuEntry, MenuItem, use_menu},
     },
+    context::IconSlot,
     hooks::{Align, use_color_scheme, use_localization, use_theme, use_theme_set},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_SIZE, ColorSchemeSetting, ThemeSet},
@@ -122,15 +121,21 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
         Vec::new(),
         // Where a press goes: a sun switches to light.
         match next {
-            ColorSchemeSetting::System => rsx! { SystemSchemeIcon {} },
-            ColorSchemeSetting::Light => rsx! { SunIcon {} },
-            ColorSchemeSetting::Dark => rsx! { MoonIcon {} },
+            ColorSchemeSetting::System => {
+                rsx! { Glyph { slot: IconSlot::SystemScheme, icon: lucide::contrast::outlined } }
+            }
+            ColorSchemeSetting::Light => {
+                rsx! { Glyph { slot: IconSlot::Sun, icon: lucide::sun::outlined } }
+            }
+            ColorSchemeSetting::Dark => {
+                rsx! { Glyph { slot: IconSlot::Moon, icon: lucide::moon::outlined } }
+            }
         },
     );
     let chevron = use_box().framework_sx(&GLYPH_SX).prepare().render(
         HtmlTag::Span,
         Vec::new(),
-        rsx! { ChevronDownIcon {} },
+        rsx! { Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } },
     );
     // A hook, so above the branch: the picker's wrapper is built either way.
     let split = use_box()

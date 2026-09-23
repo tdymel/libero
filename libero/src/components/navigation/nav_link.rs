@@ -1,14 +1,16 @@
 use dioxus::{dioxus_core::AttributeValue, prelude::*};
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         common::{
-            ChevronDownIcon, HtmlTag, Input, States, StyleAttributes, Variables, attr, base_props,
+            Glyph, HtmlTag, Input, States, StyleAttributes, Variables, attr, base_props,
             disabled_look_sx, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx, on_tint_color,
             use_style_attributes, variables,
         },
         layout::{Collapse, box_style, use_box},
     },
+    context::IconSlot,
     hooks::{
         ElementHandle, use_cache, use_element, use_id, use_localization, use_root_id, use_theme,
     },
@@ -329,7 +331,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
                     "aria-controls": panel_id(),
                     disabled: disabled.then_some(true),
                     onclick: toggle,
-                    ChevronDownIcon {}
+                    Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
                 }
             }
             Collapse { id: panel_id(), open: opened,

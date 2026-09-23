@@ -36,13 +36,7 @@ pub(crate) use color_variant::{
 pub(crate) use combobox_aria::{group_id, listbox_id, option_id};
 pub use combobox_state::{ComboboxState, use_combobox};
 pub(crate) use focusable::FOCUSABLE_SELECTOR;
-pub(crate) use icons::{
-    ArrowDownIcon, ChatGptIcon, CheckIcon, CheckboxMarkIcon, ChevronDownIcon, ChevronFirstIcon,
-    ChevronLastIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ClaudeIcon, CloseIcon,
-    CopiedIcon, CopyFailedIcon, CopyIcon, ExternalLinkIcon, EyeDropperIcon, EyeIcon, EyeOffIcon,
-    GitHubIcon, GitLabIcon, GoogleIcon, MinusIcon, MoonIcon, PauseIcon, PerplexityIcon, PersonIcon,
-    PlayIcon, PlusIcon, SparklesIcon, SunIcon, SystemSchemeIcon, TextDirectionIcon, UploadIcon,
-};
+pub(crate) use icons::{Glyph, draw_svg};
 pub(crate) use logical_text::LogicalTextAlign;
 pub(crate) use neighbour::neighbour;
 pub use number_value::NumberValue;

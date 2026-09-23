@@ -17,7 +17,7 @@ fetch only the file you need.
 - [Theming](theming.md): How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.
 - [Localization](localization.md): The words components say on their own, how dates and numbers are written, and the reading direction: `Localization`, `Formats` and the hooks that switch them.
 - [Platform](platform.md): Every platform API (elements, timers, keys, scroll, the document, the colour scheme and the clock), what each makes possible, and how to use them where a renderer lacks one.
-- [Credits](credits.md): The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons, Octicons), their licences and notices.
+- [Credits](credits.md): The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons), their licences and notices.
 
 ## Layout
 
@@ -116,6 +116,7 @@ fetch only the file you need.
 
 - [Icon](icon.md): A sized, colored box around an svg, which takes the box's color through `currentColor`.
 - [Pictogram](pictogram.md): An inline svg drawn from `SvgData`, such as a lucide icon, in `currentColor` and with no size of its own.
+- [IconProvider](icon_provider.md): Swaps the glyphs libero draws itself (chevrons, close, checks, ...), slot by slot, for everything below it; lucide by default.
 - [Badge](badge.md): A short status label, one uppercase pill with no role and no interaction.
 - [Indicator](indicator.md): A dot or a small capped count pinned to something else with a `Float`, never read out itself.
 - [Avatar](avatar.md): A person as a fixed square, with a fallback chain from a picture down to a person glyph, and a group that collapses its overflow into a +N chip.

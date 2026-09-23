@@ -1,16 +1,16 @@
 use dioxus::prelude::*;
+use pictogram_icons_lobe as lobe;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{
-            ChatGptIcon, ClaudeIcon, GoogleIcon, Input, PerplexityIcon, SparklesIcon, Variant,
-            base_props,
-        },
-        data_display::Icon,
+        common::{Glyph, Input, Variant, base_props},
+        data_display::{Icon, Pictogram},
         form::Chip,
         overlay::{Menu, MenuEntry, MenuItem, use_menu},
     },
+    context::IconSlot,
     hooks::use_localization,
     localization::fill,
     sx::{ThemeAwareValue, sx},
@@ -54,7 +54,8 @@ impl SummaryProvider {
     }
 
     pub fn chatgpt() -> Self {
-        Self::new("ChatGPT", "https://chat.openai.com/?q=").mark(rsx! { ChatGptIcon {} })
+        Self::new("ChatGPT", "https://chat.openai.com/?q=")
+            .mark(rsx! { Pictogram { icon: lobe::openai::mono } })
     }
 
     pub fn google_ai() -> Self {
@@ -62,16 +63,17 @@ impl SummaryProvider {
             "Google AI",
             "https://www.google.com/search?udm=50&aep=11&q=",
         )
-        .mark(rsx! { GoogleIcon {} })
+        .mark(rsx! { Pictogram { icon: lobe::google::mono } })
     }
 
     pub fn claude() -> Self {
-        Self::new("Claude", "https://claude.ai/new?q=").mark(rsx! { ClaudeIcon {} })
+        Self::new("Claude", "https://claude.ai/new?q=")
+            .mark(rsx! { Pictogram { icon: lobe::claude::mono } })
     }
 
     pub fn perplexity() -> Self {
         Self::new("Perplexity", "https://www.perplexity.ai/search/new?q=")
-            .mark(rsx! { PerplexityIcon {} })
+            .mark(rsx! { Pictogram { icon: lobe::perplexity::mono } })
     }
 
     /// ChatGPT, Google AI, Claude and Perplexity, in that order.
@@ -211,7 +213,7 @@ pub fn Tldr(props: TldrProps) -> Element {
                     sx: props.sx.clone(),
                     states: props.states.clone(),
                     attributes,
-                    SparklesIcon {}
+                    Glyph { slot: IconSlot::Sparkles, icon: lucide::sparkles::outlined }
                 }
             } else {
                 Chip {
@@ -220,7 +222,7 @@ pub fn Tldr(props: TldrProps) -> Element {
                     variant,
                     color,
                     icon: rsx! {
-                        Icon { variant: "standard", size: "sm", color: "inherit", SparklesIcon {} }
+                        Icon { variant: "standard", size: "sm", color: "inherit", Glyph { slot: IconSlot::Sparkles, icon: lucide::sparkles::outlined } }
                     },
                     // A block chip: in the menu's block wrapper an inline one sits on a line box.
                     sx: sx().display("flex").and(props.sx.clone().into_option().unwrap_or_default()),

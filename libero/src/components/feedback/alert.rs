@@ -1,15 +1,16 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            CloseIcon, HtmlTag, Input, States, Variables, Variant, VariantVars, base_color,
-            base_props, contrast_color, fill_color, text_color, variables, variant_chrome_sx,
-            variant_colors,
+            Glyph, HtmlTag, Input, States, Variables, Variant, VariantVars, base_color, base_props,
+            contrast_color, fill_color, text_color, variables, variant_chrome_sx, variant_colors,
         },
         layout::{paper_sx, use_box},
     },
+    context::IconSlot,
     hooks::{use_localization, use_root_id, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -231,7 +232,7 @@ pub fn Alert(props: AlertProps) -> Element {
                 size: "xs",
                 aria_label: close_label,
                 onclick: move |_| onclose.call(()),
-                CloseIcon {}
+                Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
             }
         }
     };

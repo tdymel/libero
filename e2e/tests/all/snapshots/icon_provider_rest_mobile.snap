@@ -1,0 +1,17 @@
+---
+source: e2e/src/suite.rs
+description: icon_provider at mobile (rest)
+expression: tree
+---
+button "Swap glyph"
+  StaticText "Swap glyph"
+LabelText
+  StaticText "Default"
+combobox "Default" = Apple [expanded=false] [haspopup=listbox]
+  StaticText "Apple"
+status [atomic] [live=polite]
+LabelText
+  StaticText "Provided"
+combobox "Provided" = Apple [expanded=false] [haspopup=listbox]
+  StaticText "Apple"
+status [atomic] [live=polite]

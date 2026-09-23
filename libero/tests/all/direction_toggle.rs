@@ -9,8 +9,8 @@ use libero::{
 };
 
 /// The arrow of each glyph: left for "to right to left", right for back.
-const TO_RTL: &str = "M7 16l-3 3 3 3";
-const TO_LTR: &str = "M17 16l3 3-3 3";
+const TO_RTL: &str = pictogram_icons_lucide::pilcrow_left::outlined.body;
+const TO_LTR: &str = pictogram_icons_lucide::pilcrow_right::outlined.body;
 
 #[test]
 fn left_to_right_it_offers_right_to_left() {

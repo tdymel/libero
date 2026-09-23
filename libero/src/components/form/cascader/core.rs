@@ -1,12 +1,13 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ChevronDownIcon, HtmlTag, Input, NavigationChord, States, attr, has_shortcut_modifier,
+            Glyph, HtmlTag, Input, NavigationChord, States, attr, has_shortcut_modifier,
             input_from_str, navigation_chord,
         },
         form::{
@@ -17,6 +18,7 @@ use crate::{
         },
         layout::{Box, BoxStyle, ScrollArea, use_box},
     },
+    context::IconSlot,
     hooks::{
         ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, TYPEAHEAD_RESET, Typeahead,
         typeahead_match, use_element, use_field_list_layer, use_localization, use_popover_on,
@@ -1019,7 +1021,7 @@ impl CascaderRows {
                 },
                 span { "data-slot": "label", {content} }
                 if has_children && !whole_path {
-                    span { "data-slot": "branch", ChevronDownIcon {} }
+                    span { "data-slot": "branch", Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } }
                 }
             }
         }
@@ -1040,7 +1042,7 @@ impl CascaderRows {
                 tabindex: "-1",
                 "aria-label": name,
                 onclick: move |_| cursor.set(back_to.clone()),
-                span { "data-slot": "back", ChevronDownIcon {} }
+                span { "data-slot": "back", Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } }
                 span { "data-slot": "title", "{label}" }
             }
         })
@@ -1506,7 +1508,7 @@ fn cascader_trigger(
             rsx! {
                 {value_slot}
                 if chevron {
-                    ChevronDownIcon {}
+                    Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
                 }
             },
         )

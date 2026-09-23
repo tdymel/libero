@@ -1,16 +1,18 @@
 use dioxus::{html::input_data::MouseButton, prelude::*};
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         common::{
-            ChevronDownIcon, HtmlTag, Input, States, Variables, base_props, focus_ring_sx,
-            input_from_str, inset_focus_ring_sx, states, variables,
+            Glyph, HtmlTag, Input, States, Variables, base_props, focus_ring_sx, input_from_str,
+            inset_focus_ring_sx, states, variables,
         },
         layout::{
             Box, ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, inline_x,
             physical_x, scroll_area_base, use_box, use_scroll_area,
         },
     },
+    context::IconSlot,
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id,
         use_localization, use_resize_fallback, use_silent_focus_in, use_theme,
@@ -618,7 +620,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
                         handle.step(forward);
                     }
                 },
-                ChevronDownIcon {}
+                Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
             }
         }
     };

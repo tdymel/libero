@@ -1,11 +1,13 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{HtmlTag, Input, TextDirectionIcon, Variant, base_props, use_button_group},
+        common::{Glyph, HtmlTag, Input, Variant, base_props, use_button_group},
         layout::use_box,
     },
+    context::IconSlot,
     hooks::{use_direction, use_localization, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     tokens::Direction,
@@ -77,10 +79,15 @@ pub fn DirectionToggle(props: DirectionToggleProps) -> Element {
         .into_option()
         .or(group.color)
         .unwrap_or_else(|| theme.direction_toggle.color.into());
+    // A pilcrow over an arrow pointing where a press turns the text.
+    let (slot, icon) = match next {
+        Direction::Rtl => (IconSlot::TextDirectionRtl, lucide::pilcrow_left::outlined),
+        Direction::Ltr => (IconSlot::TextDirectionLtr, lucide::pilcrow_right::outlined),
+    };
     let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
         HtmlTag::Span,
         Vec::new(),
-        rsx! { TextDirectionIcon { to_rtl: next == Direction::Rtl } },
+        rsx! { Glyph { slot, icon } },
     );
 
     rsx! {

@@ -1,16 +1,17 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            CloseIcon, HtmlTag, Input, Variables, attr, base_props, names_itself, use_name_warning,
+            Glyph, HtmlTag, Input, Variables, attr, base_props, names_itself, use_name_warning,
             variables,
         },
         layout::{Box, paper_sx, use_box},
         typography::Title,
     },
-    context::ModalContext,
+    context::{IconSlot, ModalContext},
     hooks::{current_localization, use_id},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
@@ -200,7 +201,7 @@ fn DialogHeader(
                     size: "sm",
                     aria_label: close_label.unwrap_or_else(|| current_localization().common.close.to_string()),
                     onclick: move |_: MouseEvent| close.call(()),
-                    CloseIcon {}
+                    Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
                 }
             }
         }

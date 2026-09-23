@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, gradient_controls, gradient_value,
+    Control, Demo, DemoValues, DocPage, PictogramNote, a11y, gradient_controls, gradient_value,
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
@@ -50,6 +50,7 @@ pub fn IconPage() -> Element {
                     "For a clickable icon, use `ActionIcon`.",
                 ]),
             lead: rsx! {
+                PictogramNote {}
                 Text {
                     "Wraps an svg in a sized, colored box: an "
                     Code { source: "SvgData" }

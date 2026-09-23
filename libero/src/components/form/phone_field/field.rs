@@ -1,16 +1,18 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{ChevronDownIcon, ComboboxState, HtmlTag, Input, use_combobox},
+        common::{ComboboxState, Glyph, HtmlTag, Input, use_combobox},
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, FIELD_CONTROL_SX, field_props, use_bound,
             use_field, use_field_frame, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
+    context::IconSlot,
     hooks::{
         ElementHandle, PopoverWidth, current_localization, use_element, use_localization, use_theme,
     },
@@ -610,7 +612,7 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
                 {picker_flag}
                 span { "data-slot": "iso", "{country.iso}" }
                 span { "data-slot": "dial", "+{country.dial}" }
-                ChevronDownIcon {}
+                Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
             },
         )
 }

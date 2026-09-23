@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use super::{ColorCode, ColorFormat, ColorPicker, ColorSwatch, Swatches};
 use crate::{
@@ -6,8 +7,7 @@ use crate::{
         accessibility::use_announcer,
         buttons::ActionIcon,
         common::{
-            EyeDropperIcon, FOCUSABLE_SELECTOR, HtmlTag, Input, NavigationChord, States,
-            navigation_chord,
+            FOCUSABLE_SELECTOR, Glyph, HtmlTag, Input, NavigationChord, States, navigation_chord,
         },
         form::{
             FIELD_CONTROL_SX, FieldStatus, SLOT_BUTTON_SX, SliderChangeEvent, field_props,
@@ -15,6 +15,7 @@ use crate::{
         },
         layout::{paper_sx, use_box},
     },
+    context::IconSlot,
     hooks::{
         PopoverOptions, use_element, use_field_list_layer, use_focus_within, use_localization,
         use_popover_on, use_theme,
@@ -238,7 +239,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                         }
                     });
                 },
-                EyeDropperIcon {}
+                Glyph { slot: IconSlot::EyeDropper, icon: lucide::pipette::outlined }
             }
         }
     });

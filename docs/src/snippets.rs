@@ -29,7 +29,7 @@ use libero::localization::*;
 use libero::platform::*;
 use libero::sx::*;
 use libero::theme::*;
-use libero::{LiberoProvider, use_theme};
+use libero::{IconProvider, IconSet, IconSlot, LiberoProvider, use_theme};
 // Both globs name a `Title`; the component is the one a snippet means.
 use libero::components::Title;
 use pictogram_icons_lucide as lucide;
@@ -549,7 +549,7 @@ fn demo_sources(code: &DemoCode) -> Vec<String> {
 }
 
 /// Stand-ins for what a `Demo`'s code names but the reader's app would own:
-/// the docs' icons as empty components, and its `Asset` statics as paths.
+/// a page's own `...Icon` components as empty ones, and its `Asset` statics as paths.
 fn stand_ins(sources: &[&str]) -> String {
     let mut items = String::new();
     for source in sources {
@@ -654,7 +654,6 @@ fn page_snippets_are_current() {
         })
         .collect();
 
-    let icons = std::fs::read_to_string(root.join("src/icons.rs")).unwrap();
     let main = std::fs::read_to_string(root.join("src/main.rs")).unwrap();
 
     let mut out = String::from(
@@ -808,7 +807,7 @@ fn page_snippets_are_current() {
                 // Its own `main`, or rustdoc wraps the modules in one and
                 // `super` stops reaching the prelude.
                 "\n## {heading}\n\n```rust,no_run\n{PRELUDE}\n{}\n{block}\nfn main() {{}}\n```\n",
-                stand_ins(&[&icons, &main, source])
+                stand_ins(&[&main, source])
             );
             out.push_str(&skipped);
         }

@@ -1,10 +1,11 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ChevronDownIcon, ComboboxState, HtmlTag, Input, States, attr, focus_ring_sx,
+            ComboboxState, Glyph, HtmlTag, Input, States, attr, focus_ring_sx,
             has_shortcut_modifier, navigation_chord, ring_overlay,
         },
         form::{
@@ -14,6 +15,7 @@ use crate::{
         },
         layout::{BoxStyle, use_box},
     },
+    context::IconSlot,
     hooks::{
         ElementHandle, PopoverWidth, TYPEAHEAD_RESET, Typeahead, typeahead_match, use_element,
         use_localization, use_theme, use_typeahead,
@@ -337,7 +339,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             chevron_box
                 .event("onmousedown", |event: MouseEvent| event.prevent_default())
                 .event("onclick", move |_: MouseEvent| open.toggle())
-                .render(HtmlTag::Span, Vec::new(), rsx! { ChevronDownIcon {} }),
+                .render(HtmlTag::Span, Vec::new(), rsx! { Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } }),
         ),
         _ => clear.clone(),
     };
@@ -739,7 +741,7 @@ fn select_trigger(
             rsx! {
                 {content}
                 if chevron {
-                    ChevronDownIcon {}
+                    Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
                 }
             },
         )

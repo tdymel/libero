@@ -1,14 +1,16 @@
 use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
-        common::{CloseIcon, Input},
+        common::{Glyph, Input},
         form::Chip,
     },
+    context::IconSlot,
     hooks::{current_localization, use_localization},
     localization::{ChipsLabels, fill},
     sx::{StaticSx, ThemeAwareValue, sx},
@@ -68,7 +70,7 @@ pub(crate) fn removable_chip(
                     // The field is one tab stop; its keys remove a chip.
                     tabindex: "-1",
                     onclick: move |_| remove.call(()),
-                    CloseIcon {}
+                    Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
                 }
             } },
             span { "data-slot": "label", "{label}" }

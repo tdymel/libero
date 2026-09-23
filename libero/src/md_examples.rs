@@ -81,6 +81,7 @@ md_pages! {
     Header => "header",
     HoverCard => "hover_card",
     Icon => "icon",
+    IconProvider => "icon_provider",
     Hooks => "hooks",
     Image => "image",
     ImageList => "image_list",

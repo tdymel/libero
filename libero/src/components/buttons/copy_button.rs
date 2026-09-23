@@ -1,11 +1,13 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
-        common::{CopiedIcon, CopyFailedIcon, CopyIcon, Input, Variant, base_props},
+        common::{Glyph, Input, Variant, base_props},
     },
+    context::IconSlot,
     hooks::{use_clipboard, use_id, use_localization, use_silent_focus_out},
     sx::ThemeAwareValue,
 };
@@ -92,11 +94,11 @@ pub fn CopyButton(props: CopyButtonProps) -> Element {
                 }
             },
             if clipboard.copied() {
-                CopiedIcon {}
+                Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
             } else if clipboard.failed() {
-                CopyFailedIcon {}
+                Glyph { slot: IconSlot::CopyFailed, icon: lucide::circle_alert::outlined }
             } else {
-                CopyIcon {}
+                Glyph { slot: IconSlot::Copy, icon: lucide::copy::outlined }
             }
         }
         // `hidden`: a description only, not read again in browse mode.

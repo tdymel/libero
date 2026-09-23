@@ -1,14 +1,13 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{
-            HtmlTag, Input, Orientation, PauseIcon, PlayIcon, States, Variables, base_props,
-            variables,
-        },
+        common::{Glyph, HtmlTag, Input, Orientation, States, Variables, base_props, variables},
         layout::use_box,
     },
+    context::IconSlot,
     hooks::{use_localization, use_theme},
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
@@ -305,9 +304,9 @@ pub fn Marquee(props: MarqueeProps) -> Element {
                         aria_pressed: paused.to_string(),
                         onclick: toggle,
                         if paused {
-                            PlayIcon {}
+                            Glyph { slot: IconSlot::Play, icon: lucide::play::outlined }
                         } else {
-                            PauseIcon {}
+                            Glyph { slot: IconSlot::Pause, icon: lucide::pause::outlined }
                         }
                     }
                 }

@@ -1,15 +1,16 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            ChevronFirstIcon, ChevronLastIcon, ChevronLeftIcon, ChevronRightIcon, HtmlTag, Input,
-            States, Variables, base_color, base_props, contrast_color, fill_color, focus_ring_sx,
-            on_state_sx, variables,
+            Glyph, HtmlTag, Input, States, Variables, base_color, base_props, contrast_color,
+            fill_color, focus_ring_sx, on_state_sx, variables,
         },
         layout::{BoxStyle, use_box},
     },
+    context::IconSlot,
     hooks::{ElementHandle, use_element, use_localization},
     localization::fill,
     platform::ElementApi,
@@ -364,12 +365,15 @@ fn PaginationArrow(
     disabled: bool,
     onarrow: Callback<PaginationLabel>,
 ) -> Element {
-    let icon = match label {
-        PaginationLabel::First => rsx! { ChevronFirstIcon {} },
-        PaginationLabel::Previous => rsx! { ChevronLeftIcon {} },
-        PaginationLabel::Next => rsx! { ChevronRightIcon {} },
-        PaginationLabel::Last | PaginationLabel::Page { .. } => rsx! { ChevronLastIcon {} },
+    let (slot, icon) = match label {
+        PaginationLabel::First => (IconSlot::ChevronFirst, lucide::chevron_first::outlined),
+        PaginationLabel::Previous => (IconSlot::ChevronLeft, lucide::chevron_left::outlined),
+        PaginationLabel::Next => (IconSlot::ChevronRight, lucide::chevron_right::outlined),
+        PaginationLabel::Last | PaginationLabel::Page { .. } => {
+            (IconSlot::ChevronLast, lucide::chevron_last::outlined)
+        }
     };
+    let icon = rsx! { Glyph { slot, icon } };
     rsx! {
         ActionIcon {
             aria_label: name,

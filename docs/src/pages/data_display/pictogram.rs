@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, PictogramNote, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Pictogram, SvgData, Text};
 use pictogram_icons_lucide as lucide;
@@ -27,18 +27,23 @@ pub fn PictogramPage() -> Element {
                     prop("icon", "SvgData")
                         .default("required")
                         .doc("The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!(\"x.svg\"))`."),
+                    prop("aria_label", "Option<String>")
+                        .default("None")
+                        .doc("Names the glyph: `role=\"img\"` instead of `aria-hidden`. Leave unset next to a text label."),
                 ]),
             ],
             accessibility: a11y()
                 .handles([
                     "A pictogram is hidden from screen readers (`aria-hidden=\"true\"`).",
-                    "`aria_label` or `aria_labelledby` makes it `role=\"img\"` instead.",
+                    "`aria_label`, or `\"aria-labelledby\"` by its name in quotes, makes it `role=\"img\"` instead.",
+                    "A leading `<title>` in the glyph (lobe and simple icons carry one) is dropped: it would add a hover tooltip and stray words to the host's text. `aria_label` is the name.",
                 ])
                 .must([
                     "Name a pictogram that means something on its own with `aria_label`. One next to a text label stays hidden.",
                     "For a clickable glyph, use `ActionIcon { icon }`.",
                 ]),
             lead: rsx! {
+                PictogramNote {}
                 Text {
                     "Draws an "
                     Code { source: "SvgData" }
@@ -75,7 +80,7 @@ pub fn PictogramPage() -> Element {
                             if stroke == control.default {
                                 vec![]
                             } else {
-                                vec![format!("\"stroke-width\": {stroke:?}")]
+                                vec![format!("stroke_width: {stroke:?}")]
                             }
                         }),
                 ],
@@ -84,7 +89,7 @@ pub fn PictogramPage() -> Element {
                         icon: icon(&values.str("icon")),
                         width: values.str("size"),
                         height: values.str("size"),
-                        "stroke-width": values.str("stroke"),
+                        stroke_width: values.str("stroke"),
                     }
                 },
             }

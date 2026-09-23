@@ -1,11 +1,13 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{CloseIcon, Input},
+        common::{Glyph, Input},
         form::{SLOT_BUTTON_SX, slot_icon_size},
     },
+    context::IconSlot,
     hooks::{ElementHandle, current_localization},
     platform::ElementApi,
     sx::ThemeAwareValue,
@@ -31,7 +33,7 @@ pub(crate) fn clear_button(
                     let _ = target.focus();
                     onclear(event);
                 },
-                CloseIcon {}
+                Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
             }
         }
     })

@@ -1,8 +1,11 @@
+mod icons;
 mod libero;
 mod modal;
 mod portal;
 mod window;
 
+pub(crate) use icons::IconContext;
+pub use icons::{IconProvider, IconProviderProps, IconSet, IconSlot};
 pub(crate) use libero::{CssLayer, SheetRank, StylesheetKey};
 pub use libero::{LiberoContext, LiberoProvider};
 pub use modal::ModalContext;

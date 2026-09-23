@@ -13,10 +13,10 @@ use libero::{
     theme::{ColorSchemeSetting, ThemeSet},
 };
 
-/// The three glyphs, told apart by a path only each one draws.
-const SYSTEM: &str = "M12 3a9 9";
-const SUN: &str = "<circle cx=\"12\" cy=\"12\" r=\"4\"";
-const MOON: &str = "M20 14.5A8.5";
+/// The three glyphs, told apart by their whole bodies.
+const SYSTEM: &str = pictogram_icons_lucide::contrast::outlined.body;
+const SUN: &str = pictogram_icons_lucide::sun::outlined.body;
+const MOON: &str = pictogram_icons_lucide::moon::outlined.body;
 
 thread_local! {
     static PRESSES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };

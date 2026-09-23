@@ -47,6 +47,7 @@ mod hit_area;
 mod home;
 mod hover_card;
 mod icon;
+mod icon_provider;
 mod image;
 mod image_list;
 mod isolation;

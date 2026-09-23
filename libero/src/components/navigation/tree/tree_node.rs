@@ -1,13 +1,15 @@
 use std::{any::Any, rc::Rc};
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{ChevronRightIcon, States},
+        common::{Glyph, States},
         data_display::Icon,
         layout::Box,
     },
+    context::IconSlot,
     sx::{StaticSx, sx},
     theme::{ICON_SIZE, Size},
 };
@@ -191,7 +193,7 @@ pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element
                 color: "muted.6",
                 "data-tree-chevron": true,
                 states: States::new().with("expanded", expanded),
-                ChevronRightIcon {}
+                Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }
             }
         },
         None => rsx! {

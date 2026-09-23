@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use super::{
     ColorCode, ColorSwatch, HueSlider, Swatches,
@@ -9,12 +10,11 @@ use super::{
 };
 use crate::{
     components::{
-        common::{
-            CheckIcon, HtmlTag, Input, States, Variables, base_props, input_from_str, variables,
-        },
+        common::{Glyph, HtmlTag, Input, States, Variables, base_props, input_from_str, variables},
         form::SliderChangeEvent,
         layout::use_box,
     },
+    context::IconSlot,
     hooks::{use_localization, use_theme},
     sx::{StaticSx, sx},
     theme::{
@@ -396,7 +396,7 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
                     }
                 },
                 if pressed {
-                    CheckIcon {}
+                    Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
                 }
             }
         }

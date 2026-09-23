@@ -9,10 +9,11 @@ use std::{
 use dioxus::prelude::*;
 use e2e::native::{ColorScheme, Page, WAIT_LIMIT, mount, mount_in};
 use libero::{
+    IconProvider, IconSet, IconSlot,
     components::{
-        Autocomplete, Box, Cascader, CascaderOption, CodeBlock, MultiSelect, NavLink, NumberField,
-        Options, PasswordField, Pictogram, Select, States, SvgData, TagsField, TextField, Tree,
-        TreeNode, TreeNodeRenderArgs,
+        Autocomplete, Box, Cascader, CascaderOption, Checkbox, CodeBlock, MultiSelect, NavLink,
+        NumberField, Options, PasswordField, Pictogram, Select, States, SvgData, TagsField,
+        TextField, Tree, TreeNode, TreeNodeRenderArgs,
     },
     hooks::use_color_scheme,
     sx::sx,
@@ -557,6 +558,39 @@ fn a_pictogram_paints_its_stroke_and_follows_a_restyle() {
     assert_painted(&mut page, "#marked", RED);
     page.click("#toggle");
     assert_painted(&mut page, "#marked", BLACK);
+}
+
+/// A bar down the right edge: where lucide's check never draws.
+const EDGE: SvgData = SvgData::new(
+    r#"<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="4"><path d="M13 1v14"/></svg>"#,
+);
+
+fn icon_provider_app() -> Element {
+    rsx! {
+        div { id: "default",
+            Checkbox { label: "Default", checked: true, onchange: move |_| {} }
+        }
+        IconProvider { icons: IconSet::new().with(IconSlot::CheckboxCheck, EDGE),
+            div { id: "swapped",
+                Checkbox { label: "Swapped", checked: true, onchange: move |_| {} }
+            }
+        }
+    }
+}
+
+/// Todo 1094: a slot an `IconProvider` swaps paints natively in place of the default.
+#[test]
+fn a_provided_glyph_paints_in_place_of_the_default() {
+    let page = mount(icon_provider_app);
+    let edge = |selector: &str| {
+        let (x, y, width, height) = page.rect(selector);
+        page.painted_pixel((x + width * 0.81) as u32, (y + height * 0.5) as u32)
+    };
+    assert_ne!(
+        edge("#swapped svg"),
+        edge("#default svg"),
+        "the swapped mark paints the right edge, lucide's check does not"
+    );
 }
 
 /// Todo 893: a check's baked rebuild asks for a redraw arming no check (`redraw::quiet`);

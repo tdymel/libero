@@ -1,13 +1,13 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     CssLayer,
     components::{
         accessibility::VisuallyHidden,
-        common::{
-            ExternalLinkIcon, Input, States, base_props, input_from_str, use_style_attributes,
-        },
+        common::{Glyph, Input, States, base_props, input_from_str, use_style_attributes},
     },
+    context::IconSlot,
     hooks::{use_css, use_localization, use_theme},
     sx::{StaticSx, Sx, sx},
     theme::{AnchorDefaults, Size},
@@ -70,7 +70,7 @@ pub(crate) fn NewTabHint(#[props(default)] in_text: bool) -> Element {
     };
     rsx! {
         {before}
-        span { class, "data-anchor-new-tab": "", "aria-hidden": "true", {inside}, ExternalLinkIcon {} }
+        span { class, "data-anchor-new-tab": "", "aria-hidden": "true", {inside}, Glyph { slot: IconSlot::ExternalLink, icon: lucide::external_link::outlined } }
         VisuallyHidden { "{gap}{new_tab}" }
     }
 }

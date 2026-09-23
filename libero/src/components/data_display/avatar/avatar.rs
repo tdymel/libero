@@ -1,14 +1,16 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, PersonIcon, SVG_FIT, States, Variables, Variant, VariantVars,
-            base_color, base_props, contrast_color, fill_color, svg_fit, svg_fit_sx,
-            svg_fit_variables, text_color, variables, variant_chrome_sx, variant_colors,
+            Glyph, HtmlTag, Input, SVG_FIT, States, Variables, Variant, VariantVars, base_color,
+            base_props, contrast_color, fill_color, svg_fit, svg_fit_sx, svg_fit_variables,
+            text_color, variables, variant_chrome_sx, variant_colors,
         },
         layout::{Box, use_box},
     },
+    context::IconSlot,
     hooks::use_theme,
     platform,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -186,7 +188,7 @@ pub fn Avatar(props: AvatarProps) -> Element {
     let fallback = match (props.children, props.initials) {
         (Some(children), _) => children,
         (None, Some(initials)) => rsx! { "{initials}" },
-        (None, None) => rsx! { PersonIcon {} },
+        (None, None) => rsx! { Glyph { slot: IconSlot::Person, icon: lucide::user::outlined } },
     };
     let content = match (src, failed) {
         (Some(src), false) => {

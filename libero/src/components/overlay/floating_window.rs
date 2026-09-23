@@ -5,19 +5,19 @@ use std::{
 };
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         buttons::{ActionIcon, Button},
         common::{
-            ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon, HtmlTag,
-            Input, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx,
+            Glyph, HtmlTag, Input, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx,
         },
         layout::{Float, Placement, paper_sx, use_box},
         overlay::{Menu, MenuEntry, MenuItem, use_menu},
         typography::Title,
     },
-    context::{ModalContext, WindowHost},
+    context::{IconSlot, ModalContext, WindowHost},
     hooks::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, escape_closes,
         use_dismiss_layer, use_drag, use_element, use_focus_within, use_id,
@@ -648,7 +648,7 @@ fn WindowTitleBar(
                         size: "sm",
                         aria_label: labels.menu,
                         attributes: trigger,
-                        ChevronDownIcon {}
+                        Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
                     }
                 }
             }
@@ -658,7 +658,7 @@ fn WindowTitleBar(
                 size: "sm",
                 aria_label: close_label,
                 onclick: move |_| onclose.call(()),
-                CloseIcon {}
+                Glyph { slot: IconSlot::Close, icon: lucide::x::outlined }
             }
         }
     }
@@ -722,10 +722,10 @@ fn WindowSteps(
                     ondone.call(());
                 }
             },
-            {step(up, (0.0, -1.0), rsx! { ChevronUpIcon {} })}
-            {step(down, (0.0, 1.0), rsx! { ChevronDownIcon {} })}
-            {step(left, (-1.0, 0.0), rsx! { ChevronLeftIcon {} })}
-            {step(right, (1.0, 0.0), rsx! { ChevronRightIcon {} })}
+            {step(up, (0.0, -1.0), rsx! { Glyph { slot: IconSlot::ChevronUp, icon: lucide::chevron_up::outlined } })}
+            {step(down, (0.0, 1.0), rsx! { Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } })}
+            {step(left, (-1.0, 0.0), rsx! { Glyph { slot: IconSlot::ChevronLeft, icon: lucide::chevron_left::outlined } })}
+            {step(right, (1.0, 0.0), rsx! { Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined } })}
             Button { variant: "outlined", size: "xs", onclick: move |_| ondone.call(()), "{labels.done}" }
         }
     }

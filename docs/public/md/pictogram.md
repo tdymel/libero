@@ -6,15 +6,19 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_d
 Index: [index.md](index.md) lists every other page
 Description: An inline svg drawn from `SvgData`, such as a lucide icon, in `currentColor` and with no size of its own.
 
+> **Icons from [pictogram](https://github.com/tdymel/pictogram)**
+> ([crates.io](https://crates.io/crates/pictogram)): lucide, Tabler, Material
+> and nine more icon sets as `SvgData` consts, one crate each. Use its 0.4
+> line, the one libero builds on: another minor is a second `SvgData` type
+> and does not compile.
+
 Draws an `SvgData` glyph as an inline svg. It has no size of its own: `Icon`
 and `ActionIcon` size it, or set `width` and `height`. It draws in
 `currentColor`, so it takes the text color. Your attributes win over the
 glyph's own.
 
-`SvgData` is [pictogram](https://github.com/tdymel/pictogram)'s `Svg` type, so
-every icon of a pictogram icon crate passes straight in:
-`pictogram_icons_lucide::house::outlined`. libero depends on pictogram 0.4; an
-icon crate of another 0.x version has its own, different type. For your own
+`SvgData` is pictogram's `Svg` type, so every icon of a pictogram icon crate
+passes straight in: `pictogram_icons_lucide::house::outlined`. For your own
 glyph, `SvgData::new(include_str!("logo.svg"))` splits the file at compile time.
 
 ## Usage
@@ -32,9 +36,14 @@ fn Demo() -> Element {
     rsx! {
         Pictogram { icon: pictogram_icons_lucide::house::outlined, width: "32px", height: "32px" }
         Pictogram { icon: LOGO, width: "32px", height: "32px", aria_label: "Acme" }
+        h2 { id: "logo-title", "Acme" }
+        Pictogram { icon: LOGO, width: "32px", height: "32px", "aria-labelledby": "logo-title" }
     }
 }
 ```
+
+`aria_label` names the glyph; any other aria attribute goes by its name in
+quotes, as `"aria-labelledby"` above.
 
 Attributes merge by name, a later one replacing an earlier one:
 
@@ -43,21 +52,25 @@ Attributes merge by name, a later one replacing an earlier one:
 2. the glyph's own root attributes (lucide's `stroke`, `stroke-width`, ...);
 3. yours.
 
-`"stroke-width": "3"` replaces the glyph's attribute. `width`, `height`,
-`color` and the other shared HTML props are CSS properties in `style`, which
-win over the stylesheet.
+`stroke_width: "3"` replaces the glyph's attribute. `width`, `height`, `fill`,
+`stroke` and the other svg props are svg attributes, which the stylesheet
+beats: inside `Icon` or `ActionIcon` the host's CSS still sizes the glyph.
 
 ## Accessibility
 
 ### Libero handles
 
 - A pictogram is hidden from screen readers (`aria-hidden="true"`).
-- `aria_label` or `aria_labelledby` makes it `role="img"` instead.
+- `aria_label`, or `"aria-labelledby"` by its name in quotes, makes it
+  `role="img"` instead.
+- A leading `<title>` in the glyph (lobe and simple icons carry one) is
+  dropped: it would add a hover tooltip and stray words to the host's text.
+  `aria_label` is the name.
 
 ### You must
 
-- Name a pictogram that means something on its own with `aria_label`. One next
-  to a text label stays hidden.
+- Name a pictogram that means something on its own with `aria_label`. One
+  next to a text label stays hidden.
 - For a clickable glyph, use `ActionIcon { icon }`.
 
 ## Props
@@ -65,6 +78,7 @@ win over the stylesheet.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `icon` | `SvgData` | required | The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!("x.svg"))`. |
+| `aria_label` | `Option<String>` | `None` | Names the glyph: `role="img"` instead of `aria-hidden`. Leave unset next to a text label. |
 
-`Pictogram` also takes any extra HTML attributes, and attribute names in
-quotes (`"stroke-width": "3"`) as svg attributes.
+`Pictogram` also takes every svg attribute (`stroke_width`, `width`, `class`,
+...), and any other attribute by its name in quotes (`"aria-labelledby": "logo-title"`).

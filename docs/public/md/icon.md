@@ -6,6 +6,12 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_d
 Index: [index.md](index.md) lists every other page
 Description: A sized, colored box around an svg, which takes the box's color through `currentColor`.
 
+> **Icons from [pictogram](https://github.com/tdymel/pictogram)**
+> ([crates.io](https://crates.io/crates/pictogram)): lucide, Tabler, Material
+> and nine more icon sets as `SvgData` consts, one crate each. Use its 0.4
+> line, the one libero builds on: another minor is a second `SvgData` type
+> and does not compile.
+
 Wraps an svg in a sized, colored box: an `SvgData` glyph through `svg`, or
 your own svg as children. An svg drawn in `currentColor` takes the box's
 `color`. The box never stretches in a flex row.

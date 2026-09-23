@@ -1,16 +1,18 @@
 use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            CheckIcon, ClassList, CloseIcon, HtmlTag, Input, LogicalTextAlign, Orientation, Rail,
-            RailInset, States, Variables, focus_ring_sx, on_ring_sx, use_closing_focus, variables,
+            ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, Orientation, Rail, RailInset,
+            States, Variables, focus_ring_sx, on_ring_sx, use_closing_focus, variables,
         },
         layout::{Collapse, use_box},
     },
+    context::IconSlot,
     hooks::{id_selector, use_element},
     str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
@@ -490,8 +492,10 @@ fn StepItem(
     };
 
     let marker = match state {
-        StepState::Completed => rsx! { CheckIcon {} },
-        StepState::Error => rsx! { CloseIcon {} },
+        StepState::Completed => {
+            rsx! { Glyph { slot: IconSlot::Check, icon: lucide::check::outlined } }
+        }
+        StepState::Error => rsx! { Glyph { slot: IconSlot::Close, icon: lucide::x::outlined } },
         _ => rsx! { "{index + 1}" },
     };
     // Every part is a `span`: a `<button>` takes phrasing content only.

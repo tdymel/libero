@@ -1,17 +1,18 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     CssLayer,
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            CheckboxMarkIcon, HtmlTag, Input, States, base_color, contrast_color, fill_color,
-            focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx, use_name_warning,
-            variables,
+            Glyph, HtmlTag, Input, States, base_color, contrast_color, fill_color, focus_ring_sx,
+            names_itself, ring_overlay, ring_overlay_sx, use_name_warning, variables,
         },
         form::{field_props, use_bound, use_field},
         layout::use_box,
     },
+    context::IconSlot,
     hooks::{use_cache, use_css, use_element, use_theme},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
@@ -249,6 +250,10 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
 
     // Decoration that carries the click: a hidden input has no hit area, and a
     // second `<label for>` would compete for the name. A card takes the click itself.
+    let (slot, icon) = match indeterminate {
+        true => (IconSlot::CheckboxIndeterminate, lucide::minus::outlined),
+        false => (IconSlot::CheckboxCheck, lucide::check::outlined),
+    };
     let box_node = rsx! {
         span {
             class: box_class,
@@ -262,7 +267,8 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
                     }
                 }
             },
-            CheckboxMarkIcon { indeterminate }
+            // Heavier than other glyphs: drawn at 65% of a small box.
+            Glyph { slot, icon, stroke_width: "3" }
         }
     };
 

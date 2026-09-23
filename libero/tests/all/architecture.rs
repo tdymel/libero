@@ -41,11 +41,15 @@ const RENDERER_CRATES: [&str; 11] = [
 ];
 
 /// Every crate `docs` may name, each for one reason.
-const DOCS_CRATES: [(&str, &str); 5] = [
+const DOCS_CRATES: [(&str, &str); 6] = [
     ("dioxus", "the app itself"),
     (
         "pictogram_icons_lucide",
         "the glyphs a reader's app passes as `SvgData`",
+    ),
+    (
+        "pictogram_icons_simple",
+        "the GitHub and Markdown marks on every page",
     ),
     ("std", "the standard library"),
     (

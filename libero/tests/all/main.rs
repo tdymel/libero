@@ -58,6 +58,7 @@ mod grid;
 mod header;
 mod hover_card;
 mod icon;
+mod icon_provider;
 mod ids;
 mod image;
 mod image_list;

@@ -1,14 +1,14 @@
 use std::{cell::Cell, rc::Rc, time::Duration};
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
         common::{
-            ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, HtmlTag, Input,
-            Orientation, PauseIcon, PlayIcon, States, Variables, base_props, focus_ring_sx,
+            Glyph, HtmlTag, Input, Orientation, States, Variables, base_props, focus_ring_sx,
             has_shortcut_modifier, input_from_str, inset_focus_ring_sx, shadow_sx, states,
             use_name_warning, variables,
         },
@@ -17,6 +17,7 @@ use crate::{
             physical_x, scroll_area_base, use_box, use_scroll_area,
         },
     },
+    context::IconSlot,
     hooks::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element,
         use_focus_within, use_id, use_localization, use_theme,
@@ -1464,12 +1465,23 @@ fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> E
                     (true, _) => nav.go_to(index + 1),
                 }
             },
-            {match (orientation, forward) {
-                (Orientation::Horizontal, false) => rsx! { ChevronLeftIcon {} },
-                (Orientation::Vertical, false) => rsx! { ChevronUpIcon {} },
-                (Orientation::Horizontal, true) => rsx! { ChevronRightIcon {} },
-                (Orientation::Vertical, true) => rsx! { ChevronDownIcon {} },
-            }}
+            {
+                let (slot, icon) = match (orientation, forward) {
+                    (Orientation::Horizontal, false) => {
+                        (IconSlot::ChevronLeft, lucide::chevron_left::outlined)
+                    }
+                    (Orientation::Vertical, false) => {
+                        (IconSlot::ChevronUp, lucide::chevron_up::outlined)
+                    }
+                    (Orientation::Horizontal, true) => {
+                        (IconSlot::ChevronRight, lucide::chevron_right::outlined)
+                    }
+                    (Orientation::Vertical, true) => {
+                        (IconSlot::ChevronDown, lucide::chevron_down::outlined)
+                    }
+                };
+                rsx! { Glyph { slot, icon } }
+            }
         }
     }
 }
@@ -1552,9 +1564,9 @@ fn carousel_pause_button(view: CarouselView, controls: bool) -> Element {
             },
             onclick: move |_| paused.toggle(),
             if paused() {
-                PlayIcon {}
+                Glyph { slot: IconSlot::Play, icon: lucide::play::outlined }
             } else {
-                PauseIcon {}
+                Glyph { slot: IconSlot::Pause, icon: lucide::pause::outlined }
             }
         }
     }

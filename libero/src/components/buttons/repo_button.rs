@@ -3,9 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{
-            GitHubIcon, GitLabIcon, HtmlTag, Input, States, Variant, base_props, use_button_group,
-        },
+        common::{HtmlTag, Input, States, Variant, base_props, use_button_group},
+        data_display::Pictogram,
         layout::use_box,
     },
     hooks::{use_cache, use_formats, use_localization, use_theme},
@@ -224,9 +223,13 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
     let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
         HtmlTag::Span,
         Vec::new(),
-        match host {
-            RepoHost::GitHub => rsx! { GitHubIcon {} },
-            RepoHost::GitLab => rsx! { GitLabIcon {} },
+        rsx! {
+            Pictogram {
+                icon: match host {
+                    RepoHost::GitHub => pictogram_icons_simple::github::regular,
+                    RepoHost::GitLab => pictogram_icons_simple::gitlab::regular,
+                },
+            }
         },
     );
     let count_states: Input<States> = States::new().with("ink", ink).into();

@@ -2,6 +2,7 @@ mod a11y_doc;
 mod demo;
 mod doc_page;
 mod doc_section;
+mod pictogram_note;
 mod prop_doc;
 
 pub use a11y_doc::{A11yDoc, A11yPanel, a11y};
@@ -13,4 +14,5 @@ pub use demo::{
 };
 pub use doc_page::{DocPage, SITE, TLDR_PROMPT};
 pub use doc_section::DocSection;
+pub use pictogram_note::PictogramNote;
 pub use prop_doc::{PropGroup, PropertyTable, prop, props};

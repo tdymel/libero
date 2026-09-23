@@ -13,7 +13,7 @@ mod tests {
             assert!(COMPONENTS.contains(&name), "{name} is missing");
         }
         // Crate-only ones stay out.
-        for name in ["Modal", "Calendar", "CloseIcon"] {
+        for name in ["Modal", "Calendar", "Glyph"] {
             assert!(!COMPONENTS.contains(&name), "{name} is not exported");
         }
     }

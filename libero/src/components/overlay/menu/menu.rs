@@ -1,16 +1,18 @@
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         common::{
-            CheckIcon, ChevronRightIcon, HtmlTag, Input, LogicalTextAlign, States, base_props,
-            disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx, is_javascript_url,
+            Glyph, HtmlTag, Input, LogicalTextAlign, States, base_props, disabled_look_sx,
+            has_shortcut_modifier, inset_focus_ring_sx, is_javascript_url,
         },
         layout::{Divider, paper_sx, use_box},
         typography::Kbd,
     },
+    context::IconSlot,
     hooks::{
         Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, PressMarker, Side,
         TYPEAHEAD_RESET, Typeahead, current_localization, typeahead_match, use_dismiss,
@@ -1014,7 +1016,7 @@ fn menu_item(
         if check.is_some() || *checks {
             span { "data-menu-check": "",
                 if check.is_some_and(Check::is_checked) {
-                    CheckIcon {}
+                    Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
                 }
             }
         }
@@ -1032,7 +1034,7 @@ fn menu_item(
             }
         }
         if has_submenu {
-            span { "data-menu-chevron": "", ChevronRightIcon {} }
+            span { "data-menu-chevron": "", Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined } }
         }
     };
     let onmounted = move |event| {

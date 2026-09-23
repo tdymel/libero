@@ -1,15 +1,17 @@
 use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
         common::{
-            ChevronDownIcon, ClassList, HtmlTag, Input, LogicalTextAlign, States, disabled_look_sx,
+            ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, States, disabled_look_sx,
             has_shortcut_modifier, inset_focus_ring_sx, use_closing_focus,
         },
         layout::{Collapse, use_box},
     },
+    context::IconSlot,
     hooks::{id_selector, use_element},
     platform::ElementApi,
     sx::{REDUCED_MOTION, StaticSx, sx},
@@ -227,7 +229,7 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
                 },
                 onkeydown,
                 span { {section.content} }
-                span { "data-accordion-chevron": "", ChevronDownIcon {} }
+                span { "data-accordion-chevron": "", Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } }
             }
         };
         rsx! {

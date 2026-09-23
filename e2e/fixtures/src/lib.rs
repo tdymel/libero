@@ -51,6 +51,7 @@ mod hit_area;
 pub mod home;
 mod hover_card;
 mod icon;
+mod icon_provider;
 mod image;
 mod image_list;
 mod layout;
@@ -164,6 +165,7 @@ const FIXTURES: &[Routes] = &[
     home::ROUTES,
     hover_card::ROUTES,
     icon::ROUTES,
+    icon_provider::ROUTES,
     image::ROUTES,
     image_list::ROUTES,
     layout::ROUTES,

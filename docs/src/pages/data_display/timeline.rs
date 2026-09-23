@@ -1,5 +1,4 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
-use crate::icons::GitHubIcon;
 use dioxus::prelude::*;
 use libero::components::Pictogram;
 use libero::components::{Code, Text, Timeline, TimelineEvent, TimelineLine};
@@ -16,7 +15,11 @@ fn items_code(values: &DemoValues) -> String {
             "3 commits",
             "Pictogram { icon: lucide::code::outlined }",
         ),
-        ("Review requested", "@tom", "GitHubIcon {}"),
+        (
+            "Review requested",
+            "@tom",
+            "Pictogram { icon: pictogram_icons_simple::github::regular }",
+        ),
         (
             "Deployed",
             "v2.4.0 to production",
@@ -81,7 +84,7 @@ fn demo_items(values: &DemoValues) -> Vec<TimelineEvent> {
                 // each icon directly.
                 event = event.bullet(match index {
                     0 => rsx! { Pictogram { icon: lucide::code::outlined } },
-                    1 => rsx! { GitHubIcon {} },
+                    1 => rsx! { Pictogram { icon: pictogram_icons_simple::github::regular } },
                     2 => rsx! { Pictogram { icon: lucide::check::outlined } },
                     _ => rsx! { Pictogram { icon: lucide::file::outlined } },
                 });

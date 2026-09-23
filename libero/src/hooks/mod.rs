@@ -11,6 +11,7 @@ mod focus_return;
 mod focus_within;
 mod formats;
 mod hotkeys;
+mod icons;
 mod id;
 mod intersection;
 #[cfg(all(test, not(target_arch = "wasm32")))]
@@ -58,6 +59,7 @@ pub(crate) use focus_within::{FocusChange, FocusWithin, use_focus_within};
 pub(crate) use formats::current_formats;
 pub use formats::{FormatsHandle, use_formats, use_formats_handle};
 pub use hotkeys::{Hotkey, use_hotkeys};
+pub use icons::use_icon;
 pub use id::use_id;
 pub(crate) use id::{id_selector, use_root_id};
 pub use intersection::{

@@ -8,7 +8,7 @@ use libero::{
 /// Name, what it is used for, licence, and its source.
 type Row = (&'static str, &'static str, &'static str, &'static str);
 
-const CREDITS: [Row; 5] = [
+const CREDITS: [Row; 4] = [
     (
         "Lucide",
         "Icons on these pages and the default icons of libero's components.",
@@ -17,27 +17,21 @@ const CREDITS: [Row; 5] = [
     ),
     (
         "pictogram",
-        "Carries the Lucide icons as Rust data.",
+        "Carries the Lucide icons and the Lobe and Simple Icons marks as Rust data.",
         "MIT OR Apache-2.0",
         "https://github.com/tdymel/pictogram",
     ),
     (
         "Lobe Icons",
-        "The ChatGPT mark in Tldr.",
+        "The ChatGPT, Google, Claude and Perplexity marks in Tldr.",
         "MIT",
         "https://github.com/lobehub/lobe-icons",
     ),
     (
         "Simple Icons",
-        "The Claude, Google, Perplexity and GitLab marks.",
+        "The GitHub and GitLab marks in RepoButton, and the GitHub and Markdown marks on these pages.",
         "CC0 1.0",
         "https://simpleicons.org",
-    ),
-    (
-        "GitHub Octicons",
-        "The GitHub mark on the repository links.",
-        "MIT",
-        "https://github.com/primer/octicons",
     ),
 ];
 
@@ -88,15 +82,17 @@ pub fn CreditsPage() -> Element {
                 }
                 Text { sx: sx().font_weight("600"), "Lobe Icons (MIT)" }
                 Text { "Copyright (c) 2023 LobeHub." }
-                Text { sx: sx().font_weight("600"), "GitHub Octicons (MIT)" }
-                Text { "Copyright (c) 2026 GitHub Inc." }
                 Text { sx: sx().font_weight("600"), "pictogram (MIT OR Apache-2.0)" }
                 Text {
                     "Copyright (c) 2025 Tom Dymel. "
                     "Used as the "
                     Code { source: "pictogram-core" }
-                    " and "
+                    ", "
                     Code { source: "pictogram-icons-lucide" }
+                    ", "
+                    Code { source: "pictogram-icons-lobe" }
+                    " and "
+                    Code { source: "pictogram-icons-simple" }
                     " crates. Licence texts ship with the crates."
                 }
             }
