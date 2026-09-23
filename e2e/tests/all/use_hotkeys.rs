@@ -57,6 +57,26 @@ async fn an_unmounted_listener_stops<D: Driver>(d: &mut D, _route: &str) -> Resu
     count_is(d, "#open", "1").await
 }
 
+async fn unmounting_one_instance_leaves_the_other<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.focus("#plain").await?;
+    d.press_ctrl(K).await?;
+    count_is(d, "#open", "1").await?;
+    count_is(d, "#other", "1").await?;
+    d.click("#remove").await?;
+    d.idle().await;
+    d.press_ctrl(K).await?;
+    count_is(d, "#other", "2").await?;
+    count_is(d, "#open", "1").await
+}
+
+e2e::scenario!(
+    unmounting_one_hotkey_instance_keeps_the_other_listening,
+    "/use-hotkeys",
+    unmounting_one_instance_leaves_the_other
+);
 e2e::scenario!(
     mod_k_counts_each_press_once,
     "/use-hotkeys",

@@ -291,6 +291,23 @@ fn each_thumb_is_described_by_its_value_bubble() {
     });
 }
 
+/// Todo 1134: the two thumbs sit in one group named by the label, each a slider of its own.
+#[test]
+fn the_thumbs_form_a_labelled_group() {
+    block_on(async {
+        let fixture = Fixture::open("/range-slider", Viewport::Desktop)
+            .await
+            .unwrap();
+        let tree = e2e::ax::snapshot(&fixture.page, "[role=group]")
+            .await
+            .unwrap();
+        assert!(tree.contains("group \"Price\""), "{tree}");
+        assert!(tree.contains("slider \"Price Minimum\""), "{tree}");
+        assert!(tree.contains("slider \"Price Maximum\""), "{tree}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Alt+ArrowLeft is Back: neither thumb swallows a browser chord (todo 562).
 #[test]
 fn modifier_chords_are_left_to_the_browser() {

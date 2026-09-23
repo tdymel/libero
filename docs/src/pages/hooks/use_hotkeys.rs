@@ -110,6 +110,12 @@ pub fn UseHotkeysPage() -> Element {
                     ". A press a binding takes has its default action prevented. "
                     "Native Blitz hears presses that bubble out of the app, and a server render binds nothing."
                 }
+                Text {
+                    "A hotkey lives as long as the component that calls the hook: it is bound when "
+                    "the component mounts and removed when it unmounts, such as when a route change "
+                    "drops the page. A hook in a layout or the app root stays bound across navigation. "
+                    "Each call listens on its own, so two components with the same chord both run."
+                }
             },
 
             Demo {

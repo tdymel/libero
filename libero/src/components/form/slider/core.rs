@@ -711,6 +711,12 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         rsx! { SliderHidden { live, name, disabled } }
     });
 
+    // Two thumbs are one control: a labelled group names them together. A
+    // single thumb already carries the label itself.
+    let grouped = matches!(props.value, SliderCoreValue::Range { .. })
+        .then(|| props.labelledby.clone())
+        .flatten();
+
     use_box()
         .framework_sx(&SLIDER_ROOT_SX)
         .class(&props.class)
@@ -718,6 +724,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .states(&states)
         .variables(&root_variables)
         .prepare()
+        .attr("role", grouped.as_ref().map(|_| "group"))
+        .attr("aria-labelledby", grouped)
         .element(&root_element)
         .event("onpointerdown", onpointerdown)
         .event("onpointermove", drag.onpointermove)

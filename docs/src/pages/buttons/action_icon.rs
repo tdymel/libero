@@ -81,6 +81,20 @@ pub fn ActionIconPage() -> Element {
                     Code { source: "color" }
                     " set, it has no background of its own and takes the surrounding text color."
                 }
+                Text {
+                    "Use it when the icon is the whole control: a square button that lines up with a "
+                    Code { source: "Button" }
+                    " of the same size, and cannot be built without an accessible name. Once the button "
+                    "carries a visible label, use a "
+                    Code { source: "Button" }
+                    " with its "
+                    Code { source: "icon" }
+                    " prop instead. A "
+                    Code { source: "Button" }
+                    " with an icon and no text is a wide pill and has no name unless you add "
+                    Code { source: "aria-label" }
+                    " yourself."
+                }
             },
             Demo {
                 component: "ActionIcon",

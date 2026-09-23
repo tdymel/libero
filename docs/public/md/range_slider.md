@@ -135,6 +135,9 @@ form.getAll("price") // ["20", "80"]
 
 ### Libero handles
 
+- The two thumbs sit in a `role="group"` named by the label, and each is its own
+  `role="slider"`, as in the ARIA multi-thumb slider pattern. A single `Slider`
+  is one slider and needs no group.
 - Each thumb is named by the label plus its own word, such as "Price Minimum"
   and "Price Maximum", from the localization's `slider.minimum` and
   `slider.maximum`.

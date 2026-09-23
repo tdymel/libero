@@ -17,12 +17,21 @@ fn Listener(mut open: Signal<u32>, mut typing: Signal<u32>) -> Element {
 }
 
 #[component]
+fn Sibling(mut count: Signal<u32>) -> Element {
+    use_hotkeys([Hotkey::new("mod+k", move || count += 1)]);
+    rsx! {}
+}
+
+#[component]
 fn Hotkeys() -> Element {
     let open = use_signal(|| 0);
     let typing = use_signal(|| 0);
+    let other = use_signal(|| 0);
     let mut listening = use_signal(|| true);
 
     rsx! {
+        Sibling { count: other }
+        p { id: "other", "{other}" }
         button { id: "plain", "Plain" }
         input { id: "field" }
         button { id: "remove", onclick: move |_| listening.set(false), "Remove" }

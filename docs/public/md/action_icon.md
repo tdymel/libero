@@ -15,6 +15,12 @@ icon gives a screen reader nothing to read.
 With neither `variant` nor `color` set, it has no background of its own and
 takes the surrounding text color.
 
+Use it when the icon is the whole control: a square button that lines up with a
+`Button` of the same size, and cannot be built without an accessible name. Once
+the button carries a visible label, use a `Button` with its `icon` prop instead.
+A `Button` with an icon and no text is a wide pill and has no name unless you add
+`aria-label` yourself.
+
 ## Usage
 
 `icon` takes a glyph as `SvgData`, drawn as a [`Pictogram`](pictogram.md).

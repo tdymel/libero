@@ -282,6 +282,7 @@ pub fn RangeSliderPage() -> Element {
                 .key(["Shift+Arrow", "PageUp", "PageDown"], "Move the focused thumb `big_step` steps.")
                 .key(["Home", "End"], "Move the focused thumb to the end, stopping at the other thumb.")
                 .handles([
+                    "The two thumbs sit in a `role=\"group\"` named by the label, and each is its own `role=\"slider\"`, as in the ARIA multi-thumb slider pattern. A single `Slider` is one slider and needs no group.",
                     "Each thumb is named by the label plus its own word, such as \"Price Minimum\" and \"Price Maximum\", from the localization's `slider.minimum` and `slider.maximum`.",
                     "On a discrete range the mark captions are hidden from screen readers, since the thumbs already name each value.",
                 ])
