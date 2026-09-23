@@ -887,6 +887,20 @@ impl ScrollerLabels {
     };
 }
 
+/// A `Sortable` item's drag handle.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SortableLabels {
+    pub handle: &'static str,
+}
+
+impl SortableLabels {
+    pub const ENGLISH: Self = Self { handle: "Reorder" };
+
+    pub const GERMAN: Self = Self {
+        handle: "Neu anordnen",
+    };
+}
+
 /// Read by a screen reader after a step's label. The marker's glyph is
 /// drawing only.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -51,7 +51,7 @@ pub(crate) use dismiss::{
     use_escape_dismiss, use_field_list_layer, use_press_marker,
 };
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
-pub(crate) use drag::{sideways_drag_sx, use_drag_with, use_sideways_drag};
+pub(crate) use drag::{sideways_drag_sx, use_distance_drag, use_drag_with, use_sideways_drag};
 pub use element::{ElementHandle, use_element};
 pub(crate) use element::{use_content_changes, use_form_owner, use_resize_fallback};
 pub use focus_return::{FocusReturn, use_focus_return};
@@ -94,4 +94,10 @@ pub use crate::components::overlay::{
     use_floating_window::{FloatingWindowHandle, use_floating_window},
     use_lightbox::{LightboxItem, LightboxOpening, LightboxOptions, use_lightbox},
     use_modal::{ModalHandle, ModalScope, Opening, OpeningFuture, use_modal, use_modal_close},
+};
+// The sortable hooks share `Sortable`'s context and orientation, so they live beside it.
+// archunit: ignore components::data_display
+pub use crate::components::data_display::sortable::{
+    SortableHandle, SortableItemHandle, SortableMove, SortableOptions, use_sortable,
+    use_sortable_item,
 };

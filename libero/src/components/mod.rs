@@ -1,7 +1,7 @@
 mod accessibility;
 mod buttons;
 mod common;
-mod data_display;
+pub(crate) mod data_display;
 mod feedback;
 mod form;
 mod layout;

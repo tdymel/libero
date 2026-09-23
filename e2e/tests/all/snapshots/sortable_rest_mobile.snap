@@ -1,0 +1,29 @@
+---
+source: e2e/src/suite.rs
+description: sortable at mobile (rest)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+list
+  listitem [level=1]
+    button "Reorder"
+    paragraph
+      StaticText "Alpha"
+  listitem [level=1]
+    button "Reorder"
+    paragraph
+      StaticText "Beta"
+  listitem [level=1]
+    button "Reorder"
+    paragraph
+      StaticText "Gamma"
+  listitem [level=1]
+    button "Reorder"
+    paragraph
+      StaticText "Delta"
+paragraph
+  StaticText "Alpha Beta Gamma Delta"
+paragraph
+button "After"
+  StaticText "After"

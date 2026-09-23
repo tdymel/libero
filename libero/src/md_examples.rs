@@ -124,6 +124,7 @@ md_pages! {
     Sidebar => "sidebar",
     Skeleton => "skeleton",
     Slider => "slider",
+    Sortable => "sortable",
     Splitter => "splitter",
     Spotlight => "spotlight",
     Stepper => "stepper",

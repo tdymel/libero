@@ -12,6 +12,7 @@ mod list;
 mod marquee;
 mod pictogram;
 mod qr_code;
+mod sortable;
 mod table;
 mod timeline;
 
@@ -29,5 +30,6 @@ pub use list::ListPage;
 pub use marquee::MarqueePage;
 pub use pictogram::PictogramPage;
 pub use qr_code::QrCodePage;
+pub use sortable::SortablePage;
 pub use table::TablePage;
 pub use timeline::TimelinePage;

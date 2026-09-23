@@ -126,6 +126,7 @@ fetch only the file you need.
 - [Carousel](carousel.md): A strip of slides that snaps as it scrolls and knows which one it is on, with controls, indicators and optional autoplay.
 - [List](list.md): A `<ul>` of `<li>` items without the browser's list styling, with themed gaps and nested indent.
 - [DataList](data_list.md): A `<dl>` of term/description pairs, where one term can carry several descriptions.
+- [Sortable](sortable.md): A list the user reorders by dragging each item's handle. `use_sortable` and `use_sortable_item` do the same for your own markup.
 - [Table](table.md): A sortable data table built from a row type and a list of column definitions.
 - [Timeline](timeline.md): An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.
 - [Accordion](accordion.md): Sections over an enum, each a heading whose button opens its panel, with one or many open.

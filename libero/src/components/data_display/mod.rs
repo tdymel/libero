@@ -11,6 +11,7 @@ mod list;
 mod marquee;
 mod pictogram;
 mod qr_code;
+pub(crate) mod sortable;
 mod table;
 mod timeline;
 
@@ -28,6 +29,7 @@ pub use list::{List, ListItem, ListItemProps, ListProps};
 pub use marquee::{Marquee, MarqueeProps};
 pub use pictogram::{Pictogram, PictogramProps, SvgData};
 pub use qr_code::{QrCode, QrCodeProps};
+pub use sortable::{Sortable, SortableItem, SortableItemProps, SortableProps};
 pub use table::{CellAlign, CellValue, Column, ColumnHeader, SortKey, Table, TableProps, column};
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelineProps};
 

@@ -117,6 +117,26 @@ pub fn use_drag(options: DragOptions) -> Drag {
 /// sideways before it drags. Android's touch slop is 8dp.
 const SIDEWAYS_SLOP: f64 = 8.0;
 
+/// How far a mouse or pen moves before a [`use_distance_drag`] drags.
+const MOUSE_SLOP: f64 = 4.0;
+
+/// When a press turns into a drag.
+#[derive(Clone, Copy, PartialEq)]
+enum Activation {
+    /// At once.
+    Press,
+    /// A touch once it moves sideways; see [`use_sideways_drag`].
+    Sideways,
+    /// Once it moves a few px; see [`use_distance_drag`].
+    Distance,
+}
+
+/// [`use_drag`] that drags only once the pointer moved a few px, so a click on
+/// the handle stays a click: no `onstart` or `onend` for it.
+pub(crate) fn use_distance_drag(options: DragOptions) -> Drag {
+    use_drag_inner(options, Activation::Distance, None)
+}
+
 /// [`use_drag`] for a horizontal control on a page that scrolls, as a native
 /// Android slider: a touch drags once it moves sideways, a tap jumps on release,
 /// and a vertical swipe scrolls the page. Give it [`sideways_drag_sx`].
@@ -127,7 +147,7 @@ const SIDEWAYS_SLOP: f64 = 8.0;
 /// A tap calls `onend` right after `onstart`: an `onstart` that measures first
 /// must hold the end back until it has run.
 pub(crate) fn use_sideways_drag(options: DragOptions, grabs: Callback<(), bool>) -> Drag {
-    use_drag_inner(options, true, Some(grabs))
+    use_drag_inner(options, Activation::Sideways, Some(grabs))
 }
 
 /// `touch-action: pan-y` for a [`use_sideways_drag`] control: the browser
@@ -139,18 +159,29 @@ pub(crate) fn sideways_drag_sx() -> Sx {
 /// [`use_sideways_drag`] while `sideways`, else [`use_drag`]: for a control
 /// whose axis can change between renders.
 pub(crate) fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
-    use_drag_inner(options, sideways, None)
+    let activation = if sideways {
+        Activation::Sideways
+    } else {
+        Activation::Press
+    };
+    use_drag_inner(options, activation, None)
 }
 
-/// A touch not yet moved far enough to be a drag.
+/// A press not yet moved far enough to be a drag.
 #[derive(Clone, Copy)]
 struct Pending {
     press: ActiveDrag,
     /// `false`: a tap or nothing.
     grabs: bool,
+    /// Set for a [`Activation::Distance`] press: how far it must move.
+    slop: Option<f64>,
 }
 
-fn use_drag_inner(options: DragOptions, sideways: bool, grabs: Option<Callback<(), bool>>) -> Drag {
+fn use_drag_inner(
+    options: DragOptions,
+    activation: Activation,
+    grabs: Option<Callback<(), bool>>,
+) -> Drag {
     let DragOptions {
         capture,
         onstart,
@@ -234,7 +265,8 @@ fn use_drag_inner(options: DragOptions, sideways: bool, grabs: Option<Callback<(
         // webviews, and touch) still counts as primary.
         if matches!(event.trigger_button(), Some(button) if button != MouseButton::Primary)
             || active.read().is_some()
-            || pending.read().is_some()
+            // Uncaptured, a distance press released outside never ends: a new one replaces it.
+            || pending.read().is_some_and(|pending| pending.slop.is_none())
         {
             return;
         }
@@ -248,19 +280,32 @@ fn use_drag_inner(options: DragOptions, sideways: bool, grabs: Option<Callback<(
             pointer_id: event.pointer_id(),
             start: client,
         };
-        match sideways && event.pointer_type() == "touch" {
-            true => pending.set(Some(Pending {
+        let touch = event.pointer_type() == "touch";
+        match activation {
+            Activation::Sideways if touch => pending.set(Some(Pending {
                 press,
                 grabs: grabs.is_none_or(|grabs| grabs.call(())),
+                slop: None,
             })),
-            false => {
+            Activation::Distance => {
+                // The press keeps its focus even if it never drags.
+                if let Some(within) = capture.mounted() {
+                    platform::focus_pressed(&event, &within);
+                }
+                pending.set(Some(Pending {
+                    press,
+                    grabs: true,
+                    slop: Some(if touch { SIDEWAYS_SLOP } else { MOUSE_SLOP }),
+                }));
+            }
+            _ => {
                 begin.call((event, client));
             }
         }
     });
 
     let onpointermove = use_callback(move |event: Event<PointerData>| {
-        let Some(Pending { press, grabs }) = *pending.peek() else {
+        let Some(Pending { press, grabs, slop }) = *pending.peek() else {
             track.call(event);
             return;
         };
@@ -269,6 +314,15 @@ fn use_drag_inner(options: DragOptions, sideways: bool, grabs: Option<Callback<(
         }
         let coordinates = event.client_coordinates();
         let (dx, dy) = (coordinates.x - press.start.x, coordinates.y - press.start.y);
+        if let Some(slop) = slop {
+            if dx.hypot(dy) >= slop {
+                pending.set(None);
+                if begin.call((event.clone(), press.start)) {
+                    track.call(event);
+                }
+            }
+            return;
+        }
         // No longer a tap, and not allowed to drag.
         if !grabs {
             if dx.hypot(dy) >= SIDEWAYS_SLOP {
@@ -286,9 +340,10 @@ fn use_drag_inner(options: DragOptions, sideways: bool, grabs: Option<Callback<(
         }
     });
 
-    // A touch released before it moved is a tap: start and end at once.
+    // A touch released before it moved is a tap: start and end at once. A
+    // distance press is a click, reported to nobody.
     let onpointerup = use_callback(move |event: Event<PointerData>| {
-        let Some(Pending { press, .. }) = *pending.peek() else {
+        let Some(Pending { press, slop, .. }) = *pending.peek() else {
             end.call(event);
             return;
         };
@@ -296,7 +351,7 @@ fn use_drag_inner(options: DragOptions, sideways: bool, grabs: Option<Callback<(
             return;
         }
         pending.set(None);
-        if begin.call((event.clone(), press.start)) {
+        if slop.is_none() && begin.call((event.clone(), press.start)) {
             end.call(event);
         }
     });

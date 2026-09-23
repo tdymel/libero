@@ -418,6 +418,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::CarouselPage {}, "Carousel"),
                 page(Route::ListPage {}, "List"),
                 page(Route::DataListPage {}, "DataList"),
+                page(Route::SortablePage {}, "Sortable"),
                 page(Route::TablePage {}, "Table"),
                 page(Route::TimelinePage {}, "Timeline"),
                 page(Route::AccordionPage {}, "Accordion"),

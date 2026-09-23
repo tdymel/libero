@@ -88,6 +88,7 @@ mod segmented_control;
 mod select;
 mod skeleton;
 mod slider;
+mod sortable;
 mod splitter;
 mod spotlight;
 mod stepper;

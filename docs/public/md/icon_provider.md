@@ -114,7 +114,7 @@ What a slot cannot change:
 `CheckboxIndeterminate`, `Plus`, `Minus`, `Eye`, `EyeOff`, `Upload`,
 `EyeDropper`, `Copy`, `CopyFailed`, `ExternalLink`, `Person`, `Sun`, `Moon`,
 `SystemScheme`, `Play`, `Pause`, `TextDirectionLtr`, `TextDirectionRtl`,
-`Sparkles`. `IconSlot` is `#[non_exhaustive]`: new slots may come.
+`Sparkles`, `Grip`. `IconSlot` is `#[non_exhaustive]`: new slots may come.
 
 ## Accessibility
 

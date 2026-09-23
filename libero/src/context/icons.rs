@@ -70,9 +70,11 @@ pub enum IconSlot {
     TextDirectionRtl,
     /// The TL;DR trigger.
     Sparkles,
+    /// A sortable item's drag handle.
+    Grip,
 }
 
-const SLOTS: usize = IconSlot::Sparkles as usize + 1;
+const SLOTS: usize = IconSlot::Grip as usize + 1;
 
 /// Glyphs by [`IconSlot`]; an empty slot keeps libero's default (lucide).
 ///
