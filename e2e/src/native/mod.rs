@@ -528,6 +528,18 @@ impl Page {
         self.dispatch(UiEvent::PointerUp(self.pointer(x, y, false)));
     }
 
+    /// A finger lands on the first match's centre; [`touch_up`](Self::touch_up) lifts it.
+    pub fn touch_down(&mut self, selector: &str) -> (f32, f32) {
+        let (x, y) = self.centre(selector);
+        self.dispatch(UiEvent::PointerDown(self.finger(x, y, true)));
+        (x, y)
+    }
+
+    /// Lifts the finger at a viewport point.
+    pub fn touch_up(&mut self, x: f32, y: f32) {
+        self.dispatch(UiEvent::PointerUp(self.finger(x, y, false)));
+    }
+
     /// Moves the pointer, no button held, to the first match's centre.
     pub fn hover(&mut self, selector: &str) {
         let (x, y) = self.centre(selector);
@@ -904,6 +916,14 @@ impl Page {
         event.coords.page_x += left;
         event.coords.page_y += top;
         event
+    }
+
+    /// [`pointer`](Self::pointer) as the first finger.
+    fn finger(&self, x: f32, y: f32, down: bool) -> BlitzPointerEvent {
+        BlitzPointerEvent {
+            id: BlitzPointerId::Finger(1),
+            ..self.pointer(x, y, down)
+        }
     }
 }
 

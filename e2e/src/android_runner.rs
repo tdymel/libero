@@ -127,6 +127,8 @@ fn run_on(
         .max()
         .context("no NDK under the SDK")?;
     let log = std::fs::File::create(artifacts.join("dx.log"))?;
+    // `E2E_RELEASE=1`: optimised fixtures, for the frame-time report (1086).
+    let release = std::env::var_os("E2E_RELEASE").is_some();
     let status = Command::new(dx)
         .current_dir(root.join("e2e/fixtures"))
         .args([
@@ -138,6 +140,7 @@ fn run_on(
             "--target",
         ])
         .arg(format!("{arch}-linux-android"))
+        .args(release.then_some("--release"))
         .env("CARGO_TARGET_DIR", target_dir)
         .env("ANDROID_HOME", sdk)
         .env("ANDROID_SDK_ROOT", sdk)
@@ -152,8 +155,10 @@ fn run_on(
             artifacts.join("dx.log").display()
         );
     }
-    let apk = target_dir
-        .join("dx/e2e-fixtures/debug/android/app/app/build/outputs/apk/debug/app-debug.apk");
+    let profile = if release { "release" } else { "debug" };
+    let apk = target_dir.join(format!(
+        "dx/e2e-fixtures/{profile}/android/app/app/build/outputs/apk/debug/app-debug.apk"
+    ));
     adb(serial, &["install", "-r", &apk.to_string_lossy()])?;
 
     // libtest ORs its filters, so the `android` tests matching any of them are

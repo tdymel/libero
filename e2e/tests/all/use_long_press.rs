@@ -58,14 +58,12 @@ async fn a_click_is_a_tap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_held_touch_fires_the_callback_once_and_swallows_the_click,
     "/use-long-press/basic",
-    a_held_touch_fires_once,
-    native: skip("Blitz has no touch input")
+    a_held_touch_fires_once
 );
 e2e::scenario!(
     a_short_touch_still_clicks,
     "/use-long-press/basic",
-    a_short_touch_is_a_tap,
-    native: skip("Blitz has no touch input")
+    a_short_touch_is_a_tap
 );
 e2e::scenario!(
     a_plain_click_never_counts_as_a_press,

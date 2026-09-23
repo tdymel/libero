@@ -562,6 +562,13 @@ mod native {
             Ok(())
         }
 
+        async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
+            let (x, y) = self.page.touch_down(selector);
+            self.page.wait(Duration::from_millis(ms));
+            self.page.touch_up(x, y);
+            Ok(())
+        }
+
         async fn focus(&mut self, selector: &str) -> Result<()> {
             self.page.focus(selector);
             Ok(())
@@ -665,6 +672,11 @@ mod android {
             )
             .await?;
             Ok(Self { page })
+        }
+
+        /// The WebView's page, for CDP calls the driver has no verb for.
+        pub fn page(&self) -> &Page {
+            &self.page
         }
 
         /// The console stayed clean since [`Android::open`].
