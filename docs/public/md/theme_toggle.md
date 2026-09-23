@@ -7,8 +7,9 @@ Index: [index.md](index.md) lists every other page
 Description: An icon button that flips the colour scheme, optionally through the system's too, with an optional theme picker beside it.
 
 An icon button that switches the app's colour scheme. It starts on the
-system's scheme, and each press flips to the other one. The icon shows where
-the next press goes: a sun for light, a moon for dark.
+system's scheme, and each press flips to the other one. Flipping back to the
+system's scheme follows the system again, so the app never stays pinned. The
+icon shows where the next press goes: a sun for light, a moon for dark.
 
 With `with_system`, following the system is a step of its own. A press goes
 from following the system, to the scheme the system is not showing, to the one
@@ -61,7 +62,7 @@ fn Demo() -> Element {
 | `size` | `ThemeAwareValue` | `md` | Button size. The icon takes 55% of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `themes` | `&'static [&'static ThemeSet]` | - | Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both. |
-| `with_system` | `bool` | `false` | Adds following the system to the cycle. Off, a press flips between light and dark, and the system's own scheme is the starting state. |
+| `with_system` | `bool` | `false` | Adds following the system to the cycle. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again. |
 | `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 

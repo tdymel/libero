@@ -29,7 +29,7 @@ pub fn ThemeTogglePage() -> Element {
                     .doc("Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both."),
                 prop("with_system", "bool")
                     .default("false")
-                    .doc("Adds following the system to the cycle. Off, a press flips between light and dark, and the system's own scheme is the starting state."),
+                    .doc("Adds following the system to the cycle. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again."),
                 prop("label", "Callback<ColorSchemeSetting, String>")
                     .doc("Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does."),
                 prop("disabled", "bool")
@@ -45,8 +45,10 @@ pub fn ThemeTogglePage() -> Element {
             lead: rsx! {
                 Text {
                     "An icon button that switches the app's colour scheme. It starts on the "
-                    "system's scheme, and each press flips to the other one. The icon shows "
-                    "where the next press goes: a sun for light, a moon for dark."
+                    "system's scheme, and each press flips to the other one. Flipping back to "
+                    "the system's scheme follows the system again, so the app never stays "
+                    "pinned. The icon shows where the next press goes: a sun for light, a "
+                    "moon for dark."
                 }
                 Text {
                     "With "

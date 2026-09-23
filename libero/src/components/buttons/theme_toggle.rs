@@ -58,7 +58,8 @@ base_props! {
         /// Adds a chevron beside the toggle that opens a menu of these theme sets.
         #[props(default)]
         themes: Option<&'static [&'static ThemeSet]>,
-        /// Adds following the system to the cycle. Off, a press flips between light and dark.
+        /// Adds following the system to the cycle. Off, a press flips between light and dark,
+        /// and flipping to the system's own scheme follows the system again.
         #[props(default)]
         with_system: Option<bool>,
         /// Names the press, given the setting it moves to. Replaces the localized names.

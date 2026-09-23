@@ -151,6 +151,39 @@ async fn text_colour(page: &Page) -> String {
         .unwrap()
 }
 
+/// With `with_system`, under a dark platform: light, then dark, then back to following it.
+#[test]
+fn a_dark_platform_cycles_light_then_dark_then_system() {
+    block_on(async {
+        let fixture = Fixture::open("/theme-toggle/system", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(SHIELD_STORAGE).await.unwrap();
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("prefers-color-scheme", "dark")])
+                .build(),
+        )
+        .await
+        .unwrap();
+
+        wait_for_name(page, "Switch to the light theme").await;
+        for (pin, name) in [
+            (Some("light"), "Switch to the dark theme"),
+            (Some("dark"), "Follow the system theme"),
+            (None, "Switch to the light theme"),
+        ] {
+            pointer::click(page, BUTTON).await.unwrap();
+            wait_for_pin(page, pin).await;
+            wait_for_name(page, name).await;
+        }
+
+        fixture.console.assert_clean("cycling under dark").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Under a light platform, without the system entry: dark, then back to
 /// following the platform (which reads light). Enter and a click each flip it.
 #[test]
