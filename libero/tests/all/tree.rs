@@ -5,7 +5,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Tree, TreeItem, TreeNode, TreeNodeRenderArgs},
+    components::{Tree, TreeItem, TreeItemContent, TreeNode, TreeNodeRenderArgs},
 };
 
 /// The row hands its content the tab stop and the `disabled` flag through
@@ -261,4 +261,111 @@ fn a_controlled_expanded_opens_its_branches_only() {
     let body = body(&render(app));
     assert!(body.contains("Child B"), "{body}");
     assert!(!body.contains("Child A"), "{body}");
+}
+
+fn nested() -> Vec<TreeNode<String>> {
+    vec![
+        TreeNode::new("a", "Alpha".to_string())
+            .children(vec![TreeNode::new("a1", "Child".to_string())]),
+        TreeNode::new("b", "Beta".to_string()),
+    ]
+}
+
+fn guided(guides: bool, current: &'static str) -> Element {
+    rsx! {
+        LiberoProvider {
+            Tree {
+                aria_label: "Files",
+                data: nested(),
+                default_expanded: ["a".to_string()].into(),
+                guides,
+                current,
+            }
+        }
+    }
+}
+
+/// Todo 1135: `guides` marks every row, and only a nested `current` row's
+/// content carries the active segment.
+#[test]
+fn guides_mark_the_rows_and_a_nested_current_row() {
+    let guided = |app: fn() -> Element| body(&render(app)).to_string();
+
+    let on = guided(|| self::guided(true, "a1"));
+    assert_eq!(on.matches("<li").count(), 3, "{on}");
+    assert_eq!(on.matches(r#"guides"#).count(), 3, "{on}");
+    assert_eq!(on.matches("guide-current").count(), 1, "{on}");
+    let marked = &on[on.find("guide-current").unwrap()..];
+    assert!(
+        marked[..marked.find("</li>").unwrap()].contains("Child"),
+        "{on}"
+    );
+
+    let top = guided(|| self::guided(true, "b"));
+    assert!(
+        !top.contains("guide-current"),
+        "a top-level row has no guide: {top}"
+    );
+
+    let off = guided(|| self::guided(false, "a1"));
+    assert!(!off.contains("guides"), "{off}");
+}
+
+/// Todo 1136: the default row is a `TreeItemContent`: chevron, then the label.
+#[test]
+fn the_default_row_is_the_standard_item() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tree { aria_label: "Files", data: nested() }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    assert_eq!(body.matches("data-tree-chevron").count(), 1, "{body}");
+    assert_eq!(body.matches("data-tree-label").count(), 2, "{body}");
+}
+
+/// Todo 1136: icons go before and after the label; a `TreeItem` draws the same parts.
+#[test]
+fn a_standard_item_draws_its_icons_around_the_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tree {
+                    aria_label: "Files",
+                    data: nested(),
+                    render_node: move |args: TreeNodeRenderArgs<String>| match args.expanded {
+                        Some(_) => rsx! {
+                            TreeItemContent {
+                                icon: pictogram_icons_lucide::folder::outlined,
+                                trailing: rsx! { span { "data-probe": "count" } },
+                                "{args.data}"
+                            }
+                        },
+                        None => rsx! {
+                            TreeItem {
+                                trailing_icon: pictogram_icons_lucide::star::outlined,
+                                "{args.data}"
+                            }
+                        },
+                    },
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    assert_eq!(body.matches("data-tree-icon").count(), 2, "{body}");
+    let alpha = &body[..body.find("Beta").unwrap()];
+    let icon = alpha.find("data-tree-icon").unwrap();
+    let label = alpha.find("Alpha").unwrap();
+    let probe = alpha.find("data-probe").unwrap();
+    assert!(icon < label && label < probe, "{alpha}");
+    let beta = &body[body.find("<button").unwrap()..];
+    assert!(
+        beta.find("Beta").unwrap() < beta.find("data-tree-icon").unwrap(),
+        "{beta}"
+    );
 }

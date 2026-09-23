@@ -351,7 +351,10 @@ pub use transition::{
     TRANSITION_DISTANCE, TRANSITION_DURATION, TRANSITION_EASING, TRANSITION_POP_SCALE,
     TRANSITION_SCALE, TransitionDefaults,
 };
-pub use tree::TreeDefaults;
+pub use tree::{
+    TREE_GUIDE_ACTIVE_COLOR, TREE_GUIDE_ACTIVE_WIDTH, TREE_GUIDE_COLOR, TREE_GUIDE_WIDTH,
+    TreeDefaults,
+};
 pub use variant::Variant;
 pub use z_index::{
     Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_NOTIFICATION, Z_INDEX_OVERLAY,

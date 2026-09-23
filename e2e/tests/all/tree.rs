@@ -264,6 +264,77 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView")
 );
 
+/// Todos 1135/1136: the guide runs under the branch's chevron on the inline-start
+/// side, the current row's marker sits on it without moving its label, and the
+/// trailing icon follows the label.
+async fn guides_line_up<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    let rtl = route.ends_with("/rtl");
+    let start = |r: &e2e::driver::Rect| if rtl { r.x + r.width } else { r.x };
+    let group = d.rect("[role=group]").await?;
+    let chevron = d.rect("[data-tree-id=src] [data-tree-chevron]").await?;
+    let current = d.rect("[data-tree-id='src/lib.rs'] > div").await?;
+    let label = d
+        .rect("[data-tree-id='src/lib.rs'] [data-tree-label]")
+        .await?;
+    let sibling = d
+        .rect("[data-tree-id='src/main.rs'] [data-tree-label]")
+        .await?;
+    let star = d
+        .rect("[data-tree-id='src/lib.rs'] [data-tree-icon]:last-of-type")
+        .await?;
+
+    let side = if rtl { "right" } else { "left" };
+    let guide = d
+        .style("[role=group]", &format!("border-{side}-width"))
+        .await?;
+    let marker = d
+        .style(
+            "[data-tree-id='src/lib.rs'] > div",
+            &format!("border-{side}-width"),
+        )
+        .await?;
+    // Android snaps borders to device pixels: 1px reads 0.76px at a 2.625 ratio.
+    let px = |value: &str| value.trim_end_matches("px").parse::<f64>().unwrap_or(0.0);
+    ensure!(
+        px(&guide) > 0.5 && px(&marker) > px(&guide),
+        "guide {guide}, marker {marker}"
+    );
+
+    let sign = if rtl { -1.0 } else { 1.0 };
+    let guide_mid = start(&group) + sign * 0.5;
+    let chevron_mid = chevron.x + chevron.width / 2.0;
+    ensure!(
+        (guide_mid - chevron_mid).abs() <= 1.0,
+        "guide at {guide_mid}, chevron centre at {chevron_mid}"
+    );
+    ensure!(
+        (start(&current) - start(&group)).abs() <= 0.5,
+        "marker starts at {current:?}, guide at {group:?}"
+    );
+    ensure!(
+        (start(&label) - start(&sibling)).abs() <= 0.5,
+        "the current label moved: {label:?} vs {sibling:?}"
+    );
+    let after = if rtl {
+        star.x + star.width <= label.x
+    } else {
+        star.x >= label.x + label.width
+    };
+    ensure!(after, "trailing icon {star:?}, label {label:?}");
+    Ok(())
+}
+
+e2e::scenario!(
+    guides_line_up_under_the_chevron,
+    "/tree/guides",
+    guides_line_up
+);
+e2e::scenario!(
+    guides_line_up_under_the_chevron_rtl,
+    "/tree/guides/rtl",
+    guides_line_up
+);
+
 #[test]
 fn it_walks_like_a_tree() {
     block_on(async {

@@ -1,18 +1,8 @@
 use std::{any::Any, rc::Rc};
 
 use dioxus::prelude::*;
-use pictogram_icons_lucide as lucide;
 
-use crate::{
-    components::{
-        common::{Glyph, States},
-        data_display::Icon,
-        layout::Box,
-    },
-    context::IconSlot,
-    sx::{StaticSx, sx},
-    theme::{ICON_SIZE, Size},
-};
+use super::tree_item::TreeItemContent;
 
 /// A node's text, for typeahead and the default `render_node`.
 pub trait TreeLabel {
@@ -157,56 +147,11 @@ pub struct TreeNodeRenderArgs<T> {
     pub depth: usize,
 }
 
-// Chevron-width, so leaves line up with their branch siblings.
-static DEFAULT_RENDER_LEADING_SPACER_SX: StaticSx =
-    StaticSx::new(|| sx().flex_shrink("0").width(ICON_SIZE.value(Size::Xs)));
-
-// Row and chevron in one static, so a visible row builds no `Sx` of its own.
-static DEFAULT_RENDER_ROW_SX: StaticSx = StaticSx::new(|| {
-    sx().display("flex")
-        .align_items("center")
-        .gap("6px")
-        .padding("6px 0")
-        .selector(
-            "& [data-tree-chevron]",
-            sx().flex_shrink("0")
-                .transition("transform 120ms ease")
-                .transform("rotate(0deg)"),
-        )
-        // A closed row's chevron points to the start of the line. Before the
-        // expanded rule, which wins at equal specificity.
-        .rtl(sx().selector("& [data-tree-chevron]", sx().transform("rotate(180deg)")))
-        .selector(
-            "& [data-tree-chevron][data-state~=\"expanded\"]",
-            sx().transform("rotate(90deg)"),
-        )
-});
-
-/// `render_node`'s default: a chevron or a leaf spacer, then `tree_label()`.
-/// A custom `render_node` can fall back to it for some rows.
+/// `render_node`'s default: a [`TreeItemContent`] of `tree_label()`, so a chevron
+/// or a leaf spacer, then the label. A custom `render_node` can fall back to it for some rows.
 pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element {
-    let leading = match args.expanded {
-        Some(expanded) => rsx! {
-            Icon {
-                variant: "standard",
-                size: "xs",
-                color: "muted.6",
-                "data-tree-chevron": true,
-                states: States::new().with("expanded", expanded),
-                Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }
-            }
-        },
-        None => rsx! {
-            Box { framework_sx: &DEFAULT_RENDER_LEADING_SPACER_SX }
-        },
-    };
-
     rsx! {
-        Box {
-            framework_sx: &DEFAULT_RENDER_ROW_SX,
-            {leading}
-            "{args.data.tree_label()}"
-        }
+        TreeItemContent { "{args.data.tree_label()}" }
     }
 }
 

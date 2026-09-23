@@ -22,7 +22,7 @@ impl ListDefaults {
 
     fn size_sx(size: Size) -> Sx {
         sx().gap(LIST_GAP.value(size))
-            .selector("& ul", sx().padding_left(LIST_INDENT.value(size)))
+            .selector("& ul", sx().padding_inline_start(LIST_INDENT.value(size)))
     }
 
     pub fn theme_vars() -> Sx {

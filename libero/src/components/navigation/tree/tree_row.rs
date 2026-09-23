@@ -8,7 +8,10 @@ use crate::{
         layout::use_box,
     },
     sx::{StaticSx, sx},
-    theme::Size,
+    theme::{
+        CssVar, ICON_SIZE, LIST_INDENT, Size, TREE_GUIDE_ACTIVE_COLOR, TREE_GUIDE_ACTIVE_WIDTH,
+        TREE_GUIDE_COLOR, TREE_GUIDE_WIDTH,
+    },
 };
 
 use super::{
@@ -16,7 +19,7 @@ use super::{
     tree_node::{ErasedRenderNode, TreeNodeErased, TreeNodeRenderArgsErased},
 };
 
-/// The row's tabindex and `disabled`, for its content. A signal, as
+/// The row's tabindex, `disabled` and expansion, for its content. A signal, as
 /// `use_context_provider` runs once.
 #[derive(Clone, Copy)]
 pub(super) struct TreeRowContext(pub Signal<TreeRowState>);
@@ -25,18 +28,58 @@ pub(super) struct TreeRowContext(pub Signal<TreeRowState>);
 pub(super) struct TreeRowState {
     pub tabindex: &'static str,
     pub disabled: bool,
+    /// `None` for a leaf.
+    pub expanded: Option<bool>,
 }
 
 // No hover here: the `<li>` holds its descendants, so it would paint the chain.
 // Only the subtree drops the pointer, so the `<li>` shows `not-allowed` (todo 596).
 static TREE_ROW_SX: StaticSx = StaticSx::new(|| {
-    sx().focus_visible(focus_ring_sx()).when(
-        "disabled",
-        sx().opacity("0.5")
-            .cursor("not-allowed")
-            .selector("& *", sx().pointer_events("none")),
-    )
+    sx().focus_visible(focus_ring_sx())
+        .when(
+            "disabled",
+            sx().opacity("0.5")
+                .cursor("not-allowed")
+                .selector("& *", sx().pointer_events("none")),
+        )
+        // The size state is only set with guides, as only the guide's padding reads it.
+        .per_size(|size| sx().var(TREE_GUIDE_PADDING, guide_padding(size)))
+        // The guide sits under the parent's chevron; `[role]` outranks `List`'s `& ul` indent.
+        .when(
+            "guides",
+            sx().selector(
+                "& > [role=\"group\"]",
+                sx().margin_inline_start(guide_offset())
+                    .padding_inline_start(TREE_GUIDE_PADDING.value())
+                    .border_inline_start(format!(
+                        "{} solid {}",
+                        TREE_GUIDE_WIDTH.value(),
+                        TREE_GUIDE_COLOR.value()
+                    )),
+            ),
+        )
 });
+
+/// The group's padding after the guide: what is left of `List`'s indent, at least none.
+const TREE_GUIDE_PADDING: CssVar = CssVar::new("--lsx-tree-guide-padding");
+
+/// From the row's inline start to the guide: content padding plus half a chevron.
+fn guide_offset() -> String {
+    format!(
+        "calc(8px + {} / 2 - {} / 2)",
+        ICON_SIZE.value(Size::Xs),
+        TREE_GUIDE_WIDTH.value()
+    )
+}
+
+fn guide_padding(size: Size) -> String {
+    format!(
+        "max(0px, calc({} - {} - {}))",
+        LIST_INDENT.value(size),
+        guide_offset(),
+        TREE_GUIDE_WIDTH.value()
+    )
+}
 
 // A sibling of the children `List`, keeping hover row-local. No vertical padding,
 // so a border in `render_node`'s content spans the full row.
@@ -51,6 +94,29 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
         // A long unbreakable label wraps instead of widening the page (1.4.10).
         .with("overflow-wrap", "anywhere")
         .hover(sx().background("muted.2"))
+        // Pulled back over the parent's guide from its outer edge, the content left
+        // in place. Not centred: half pixels round apart natively.
+        .when(
+            "guide-current",
+            sx().margin_inline_start(format!(
+                "calc(-1 * ({} + {}))",
+                TREE_GUIDE_PADDING.value(),
+                TREE_GUIDE_WIDTH.value()
+            ))
+            .padding_inline_start(format!(
+                "calc({} + {} - {} + 8px)",
+                TREE_GUIDE_PADDING.value(),
+                TREE_GUIDE_WIDTH.value(),
+                TREE_GUIDE_ACTIVE_WIDTH.value()
+            ))
+            .border_inline_start(format!(
+                "{} solid {}",
+                TREE_GUIDE_ACTIVE_WIDTH.value(),
+                TREE_GUIDE_ACTIVE_COLOR.value()
+            ))
+            .with("border-start-start-radius", "0")
+            .with("border-end-start-radius", "0"),
+        )
 });
 
 #[derive(Props, Clone, PartialEq)]
@@ -70,6 +136,7 @@ pub(super) struct TreeRowProps {
     /// Under a disabled branch, so the row acts disabled too.
     #[props(default)]
     pub ancestor_disabled: bool,
+    pub guides: bool,
 }
 
 #[component]
@@ -82,14 +149,14 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     // The `<li>` is the roving tab stop; `render_node`'s content is always "-1".
     let li_tabindex = if is_roving_active { "0" } else { "-1" };
 
-    let mut row_context = use_context_provider(|| {
-        Signal::new(TreeRowState {
-            tabindex: "-1",
-            disabled,
-        })
-    });
-    if row_context.peek().disabled != disabled {
-        row_context.write().disabled = disabled;
+    let state = TreeRowState {
+        tabindex: "-1",
+        disabled,
+        expanded: is_expanded,
+    };
+    let mut row_context = use_context_provider(|| Signal::new(state));
+    if *row_context.peek() != state {
+        row_context.set(state);
     }
     use_context_provider(|| TreeRowContext(row_context));
 
@@ -117,16 +184,29 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         }
     };
 
+    let is_current = props.current.as_deref().is_some_and(<[usize]>::is_empty);
     // The node's own flag: the ancestor's opacity already covers this row.
-    let row_states = states().with("disabled", node.disabled).into();
+    let row_states = states()
+        .with("disabled", node.disabled)
+        .with("guides", props.guides)
+        .with(props.size.state_name(), props.guides)
+        .into();
     let row = use_box()
         .framework_sx(&TREE_ROW_SX)
         .states(&row_states)
         .prepare();
+    // A top-level row has no guide to mark.
+    let content_states = states()
+        .with(
+            "guide-current",
+            props.guides && is_current && props.depth > 0,
+        )
+        .into();
     // On the inner div, a sibling of the children `List`, so a child's click
     // never toggles the parent.
     let row_content = use_box()
         .framework_sx(&TREE_ROW_CONTENT_SX)
+        .states(&content_states)
         .prepare()
         .event("onclick", onclick)
         .render(HtmlTag::Div, Vec::new(), content);
@@ -152,6 +232,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                             active_id: props.active_id,
                             render_node: props.render_node.clone(),
                             ancestor_disabled: disabled,
+                            guides: props.guides,
                         }
                     }
                 }
@@ -160,7 +241,6 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         None => row_content,
     };
 
-    let is_current = props.current.as_deref().is_some_and(<[usize]>::is_empty);
     row.attr("role", "treeitem")
         .attr("data-tree-id", node.id.to_string())
         // No selection model: without an explicit "false" Chrome announces the

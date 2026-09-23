@@ -243,6 +243,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         data_list,
         table,
         timeline,
+        tree,
         tabs,
         stepper,
         title,
@@ -302,7 +303,6 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         password_field: _,
         color_field: _,
         scroll_area: _,
-        tree: _,
         mark: _,
         hover_card: _,
         nav_link: _,
@@ -374,6 +374,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(data_list.to_css_declarations());
     declarations.extend(table.to_css_declarations());
     declarations.extend(timeline.to_css_declarations());
+    declarations.extend(tree.to_css_declarations());
     declarations.extend(tabs.to_css_declarations());
     declarations.extend(stepper.to_css_declarations());
     declarations.extend(title.to_css_declarations());

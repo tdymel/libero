@@ -3,7 +3,10 @@
 use std::collections::HashSet;
 
 use dioxus::prelude::*;
-use libero::components::{Flex, NavLink, Tree, TreeItem, TreeNode, TreeNodeRenderArgs};
+use libero::components::{
+    Flex, NavLink, Tree, TreeItem, TreeItemContent, TreeNode, TreeNodeRenderArgs,
+};
+use pictogram_icons_lucide as lucide;
 
 use crate::Routes;
 
@@ -16,7 +19,46 @@ pub const ROUTES: Routes = &[
     ("/tree/controlled", || rsx! { ControlledTreePage {} }),
     ("/tree/chevron", || rsx! { ChevronTreePage {} }),
     ("/tree/activate", || rsx! { ActivateTreePage {} }),
+    ("/tree/guides", || rsx! { GuidesTreePage {} }),
+    (
+        "/tree/guides/rtl",
+        || rsx! { div { dir: "rtl", GuidesTreePage {} } },
+    ),
 ];
+
+/// Todos 1135/1136: guides with `src/lib.rs` current, standard items with an icon
+/// before the label and one at the end.
+#[component]
+fn GuidesTreePage() -> Element {
+    let data = vec![
+        TreeNode::new("src", "src").children(vec![
+            TreeNode::new("src/lib.rs", "lib.rs"),
+            TreeNode::new("src/main.rs", "main.rs"),
+        ]),
+        TreeNode::new("README.md", "README.md"),
+    ];
+    rsx! {
+        Flex { direction: "column", max_width: "320px",
+            Tree {
+                aria_label: "Files",
+                data,
+                guides: true,
+                current: "src/lib.rs",
+                default_expanded: HashSet::from(["src".to_string()]),
+                render_node: |args: TreeNodeRenderArgs<&'static str>| rsx! {
+                    TreeItemContent {
+                        icon: match args.expanded {
+                            Some(_) => lucide::folder::outlined,
+                            None => lucide::file::outlined,
+                        },
+                        trailing_icon: lucide::star::outlined,
+                        "{args.data}"
+                    }
+                },
+            }
+        }
+    }
+}
 
 /// One branch, one leaf: the branch's chevron turns as it expands.
 #[component]

@@ -3,13 +3,13 @@ use std::collections::HashSet;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Flex, NavLink, Sidebar, SpotlightAction, States, Tree, TreeLabel, TreeNode,
-        TreeNodeRenderArgs, default_tree_render,
+        Flex, NavLink, Sidebar, SpotlightAction, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs,
+        default_tree_render,
     },
     hooks::ElementHandle,
     platform::ElementApi,
     sx::{Sx, sx},
-    theme::{ColorCss, ColorShade, SIDEBAR_SIZE, Size},
+    theme::{SIDEBAR_SIZE, Size},
 };
 
 use crate::Route;
@@ -537,11 +537,9 @@ pub fn DocsNav(
                     key: "{drawer}",
                     aria_label: "Documentation pages",
                     size: "xs",
-                    // Zero gap and indent at every depth: leaf borders form one continuous line,
-                    // in line with the parent chevron. `args.depth` only pads the label.
-                    sx: sx()
-                        .gap("0")
-                        .selector("& ul", sx().gap("0").padding_inline_start("0")),
+                    // The tree's guide under each section's chevron marks the current page.
+                    guides: true,
+                    sx: sx().gap("0").selector("& ul", sx().gap("0")),
                     data,
                     expanded: expanded(),
                     onexpandedchange: move |open: HashSet<String>| expanded.set(open),
@@ -551,7 +549,6 @@ pub fn DocsNav(
                         if args.expanded.is_some() {
                             return default_tree_render(args);
                         }
-                        let padding_start = 7 + args.depth as u32 * 16;
                         // A page link (not a chevron) closes the panel and focuses the burger. `NavLink`
                         // has no `onclick`, so a `display: contents` wrapper catches the bubble.
                         rsx! {
@@ -570,33 +567,10 @@ pub fn DocsNav(
                                     // `Tree`'s roving `<li>` is the only tab stop.
                                     tabindex: args.tabindex,
                                     scroll_into_view: true,
-                                    // Only a nested leaf gets the connecting border.
-                                    states: States::new().with("leaf", args.depth > 0),
-                                    // The border follows `NavLink`'s own active state. Stretched and
-                                    // unrounded, so it runs continuously between rows.
+                                    // The guide is the one active indicator, so `NavLink`'s start bar goes.
                                     sx: sx()
                                         .align_self("stretch")
-                                        .padding_inline_start(0)
-                                        .when("leaf", sx()
-                                            .border_radius("0")
-                                            .margin_inline_start("7px")
-                                            .padding_inline_start(format!("{padding_start}px"))
-                                            .border_inline_start(format!(
-                                                "2px solid {}",
-                                                ColorCss::MUTED.value(ColorShade::S3),
-                                            ))
-                                            // The rail is the one active indicator, so
-                                            // `NavLink`'s start bar goes; in the bar's colour, which reads on the tint.
-                                            .when(
-                                                "active",
-                                                sx().border_inline_start(format!(
-                                                    "2px solid var({}, {})",
-                                                    ColorCss::PRIMARY.role_name("on-tint-", ColorShade::S6),
-                                                    ColorCss::PRIMARY.role_value("text-", ColorShade::S6),
-                                                ))
-                                                .with("background-image", "none"),
-                                            )
-                                        ),
+                                        .when("active", sx().with("background-image", "none")),
                                     "{args.data.label}"
                                 }
                             }

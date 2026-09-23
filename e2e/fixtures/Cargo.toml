@@ -9,6 +9,7 @@ publish = false
 # identical dioxus the library is.
 dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = true, features = ["router"] }
 libero = { path = "../../libero" }
+pictogram-icons-lucide = "0.4"
 
 [features]
 # The Android fixtures APK (964): `dx build --platform android --features mobile`.

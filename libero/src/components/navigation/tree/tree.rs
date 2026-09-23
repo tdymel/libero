@@ -241,6 +241,9 @@ base_props! {
         /// Row gap and per-level indent, on `List`'s scale; set them apart through `sx`.
         #[props(default, into)]
         size: Input<Size>,
+        /// A line down each open branch, the `current` row's segment marked.
+        #[props(default)]
+        guides: Option<bool>,
         /// Required by WAI-ARIA's tree pattern.
         #[props(into)]
         aria_label: String,
@@ -327,6 +330,7 @@ pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
             sx: props.sx,
             states: props.states,
             size: props.size,
+            guides: props.guides,
             aria_label: props.aria_label,
             data: erased_data,
             render_node: erased_render_node,
@@ -355,6 +359,8 @@ base_props! {
     struct TreeCoreProps {
         #[props(default, into)]
         size: Input<Size>,
+        #[props(default)]
+        guides: Option<bool>,
         #[props(into)]
         aria_label: String,
         data: Vec<TreeNodeErased>,
@@ -398,6 +404,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     };
 
     let size = props.size.copied_or(theme.tree.size);
+    let guides = props.guides.unwrap_or(theme.tree.guides);
 
     let order = visible_order(&props.data, &expanded.read());
     let visible = |id: &String| order.iter().any(|node| node.id == id);
@@ -605,6 +612,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     current: child_active(current_path.as_deref(), index),
                     active_id,
                     render_node: props.render_node.clone(),
+                    guides,
                 }
             }
         }

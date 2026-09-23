@@ -1,7 +1,7 @@
 # Tree
 
 Crate: `libero`
-Import: `use libero::components::{Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs};`
+Import: `use libero::components::{Tree, TreeItem, TreeItemContent, TreeLabel, TreeNode, TreeNodeRenderArgs};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/tree>
 Index: [index.md](index.md) lists every other page
 Description: A data-driven, keyboard-navigable tree view over your own node type.
@@ -15,10 +15,17 @@ once you store the new set, and you can open one from outside, as this site's
 sidebar opens the current page's section.
 
 `Tree` has no selection. `render_node` decides what a row does, and gets the
-row's live `expanded` state. `TreeItem` makes a row a button that picks up the
-tab stop and `disabled`. A row that links somewhere is a
-[`NavLink`](nav_link.md) with `args.tabindex`. `default_tree_render(args)` draws
-the default row, so a custom `render_node` can fall back to it.
+row's live `expanded` state. `TreeItemContent` is the standard row: the
+chevron, an `icon`, the label and a `trailing_icon`, icons as `SvgData` (see
+[`Pictogram`](pictogram.md)). The default row is one. `TreeItem` lays a row out
+the same way as a button that picks up the tab stop and `disabled`. A row that
+links somewhere is a [`NavLink`](nav_link.md) with `args.tabindex`.
+`default_tree_render(args)` draws the default row, so a custom `render_node`
+can fall back to it.
+
+`guides` draws a line down each open branch, under its chevron, and marks the
+`current` row's part of it, as this site's sidebar does. The lines use logical
+properties, so they move to the right under `dir="rtl"`.
 
 `Tree` renders through [`List`](list.md). `size` sets the row gap and the
 per-level indent together. Set them apart through `sx`.
@@ -29,12 +36,21 @@ per-level indent together. Set them apart through `sx`.
 use std::collections::HashSet;
 
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Flex, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs};
+use libero::components::{Button, Code, Flex, SvgData, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs};
 use libero::sx::sx;
+use pictogram_icons_lucide as lucide;
 
 #[derive(Clone, PartialEq)]
 struct FileEntry {
     name: &'static str,
+}
+
+fn file_icon(entry: &FileEntry, expanded: Option<bool>) -> SvgData {
+    match expanded {
+        Some(true) => lucide::folder_open::outlined,
+        Some(false) => lucide::folder::outlined,
+        None => lucide::file::outlined,
+    }
 }
 
 impl TreeLabel for FileEntry {
@@ -82,11 +98,14 @@ fn Demo() -> Element {
                 data: file_tree(),
                 expanded: expanded(),
                 onexpandedchange: move |next| expanded.set(next),
+                current: selected(),
+                guides: true,
                 render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
                     let id = args.id.clone();
                     rsx! {
                         TreeItem {
                             onclick: move |_| selected.set(Some(id.clone())),
+                            icon: file_icon(&args.data, args.expanded),
                             "{args.data.name}"
                         }
                     }
@@ -134,6 +153,7 @@ state, not part of `Tree`.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`. |
+| `guides` | `bool` | `false` | Draws a line down each open branch, under its chevron, and marks the `current` row's part of it. Theme default `TreeDefaults::guides`. |
 | `aria_label` | `String` | required | The tree's accessible name. |
 | `data` | `Vec<TreeNode<T>>` | required | The nodes, over your own data type. |
 | `render_node` | `Callback<TreeNodeRenderArgs<T>, Element>` | `default_tree_render` | Each visible row's content. A custom one can still call the default for some rows. |
@@ -167,12 +187,30 @@ Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 | `tabindex` | `&'static str` | Put it on any link or button in the row, or it adds a tab stop the arrow keys never reach. |
 | `depth` | `usize` | 0 at the top level, for custom indentation. |
 
+### `TreeItemContent`
+
+The chevron (a spacer on a leaf), `icon`, the label, `trailing_icon`, then
+`trailing`, in one flex row that fills the tree row. Icons are `muted.6`, the
+chevron's colour.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `icon` | `SvgData` | - | Drawn after the chevron, before the label. |
+| `trailing_icon` | `SvgData` | - | Drawn at the row's end. |
+| `trailing` | `Element` | - | After `trailing_icon`, such as a count. Never interactive inside a `TreeItem`. |
+| `children` | `Element` | required | The label. |
+
 ### `TreeItem`
+
+A button laid out like `TreeItemContent`, chevron included.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. |
-| `children` | `Element` | required | The row's content, such as an icon and the label. |
+| `icon` | `SvgData` | - | Drawn after the chevron, before the label. |
+| `trailing_icon` | `SvgData` | - | Drawn at the row's end. |
+| `trailing` | `Element` | - | After `trailing_icon`, such as a count. Never interactive: it sits in the button. |
+| `children` | `Element` | required | The label. |
 
 ## Theme defaults
 
@@ -182,16 +220,32 @@ indent values live in `ListDefaults`.
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Default `size`, `md`. |
+| `guides` | `bool` | Default `guides`, `false`. |
+| `guide_color` | `ColorValue` | The guide's colour, `muted.3`. |
+| `guide_active_color` | `ColorValue` | The `current` row's marker, `primary.6`. |
+| `guide_width` | `u8` | The guide's width in px, `1`. |
+| `guide_active_width` | `u8` | The marker's width in px, `2`. |
 
 ## CSS variables
 
-None of its own. Sizing comes from `List`'s `--lsx-list-gap-<size>` and
-`--lsx-list-indent-<size>`.
+| Variable | Description |
+|---|---|
+| `--lsx-tree-guide-color` | The guide's colour. |
+| `--lsx-tree-guide-active-color` | The `current` row's marker colour. |
+| `--lsx-tree-guide-width` | The guide's width. |
+| `--lsx-tree-guide-active-width` | The marker's width. |
+
+Sizing comes from `List`'s `--lsx-list-gap-<size>` and
+`--lsx-list-indent-<size>`. With `guides`, a level's indent is the guide's
+offset plus what is left of the list indent, so it is never smaller than the
+offset.
 
 ## Data attributes
 
 | Token | Condition |
 |---|---|
 | `disabled` | On a row whose node is disabled. |
+| `guides` | On every row of a tree with `guides`. |
+| `guide-current` | On the content of a nested `current` row in a tree with `guides`. |
 
 The root also carries whatever `data-state` tokens `List` sets for its `size`.

@@ -1,4 +1,3 @@
-use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
@@ -8,7 +7,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Code, Flex, Icon, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs,
+        Button, Code, Flex, SvgData, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs,
     },
     sx::sx,
     use_theme,
@@ -99,31 +98,28 @@ fn file_tree() -> Vec<TreeNode<FileEntry>> {
     ]
 }
 
-fn file_icon(entry: &FileEntry) -> Element {
-    let folder = entry.kind == FileKind::Folder;
-    rsx! {
-        Icon {
-            variant: "standard",
-            size: "sm",
-            color: if folder { "primary" } else { "muted.6" },
-            if folder { Pictogram { icon: lucide::folder::outlined } } else { Pictogram { icon: lucide::file::outlined } }
-        }
+fn file_icon(entry: &FileEntry, expanded: Option<bool>) -> SvgData {
+    match (&entry.kind, expanded) {
+        (_, Some(true)) => lucide::folder_open::outlined,
+        (FileKind::Folder, _) => lucide::folder::outlined,
+        _ => lucide::file::outlined,
     }
 }
 
 /// The data, the controlled expansion and the row renderer are the demo's
 /// fixture, not controls, but the code block has to print them.
-const FIXED: [&str; 5] = [
+const FIXED: [&str; 6] = [
     r#"aria_label: "Project files""#,
     "data: file_tree()",
     "expanded: expanded()",
     "onexpandedchange: move |next| expanded.set(next)",
+    "current: selected()",
     r#"render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
         let id = args.id.clone();
         rsx! {
             TreeItem {
                 onclick: move |_| selected.set(Some(id.clone())),
-                {file_icon(&args.data)}
+                icon: file_icon(&args.data, args.expanded),
                 "{args.data.name}"
             }
         }
@@ -167,6 +163,9 @@ pub fn TreePage() -> Element {
                     prop("size", "Size")
                         .default("md")
                         .doc("Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`."),
+                    prop("guides", "bool")
+                        .default("false")
+                        .doc("Draws a line down each open branch, under its chevron, and marks the `current` row's part of it. Theme default `TreeDefaults::guides`."),
                     prop("aria_label", "String").default("required").doc("The tree's accessible name."),
                     prop("data", "Vec<TreeNode<T>>").default("required").doc("The nodes, over your own data type."),
                     prop("render_node", "Callback<TreeNodeRenderArgs<T>, Element>")
@@ -197,9 +196,18 @@ pub fn TreePage() -> Element {
                         .doc("Put it on any link or button in the row, or it adds a tab stop the arrow keys never reach."),
                     prop("depth", "usize").doc("0 at the top level, for custom indentation."),
                 ]).without_base_props(),
+                props("TreeItemContent", vec![
+                    prop("icon", "SvgData").doc("Drawn after the chevron, before the label."),
+                    prop("trailing_icon", "SvgData").doc("Drawn at the row's end."),
+                    prop("trailing", "Element").doc("After `trailing_icon`, such as a count. Never interactive inside a `TreeItem`."),
+                    prop("children", "Element").default("required").doc("The label."),
+                ]),
                 props("TreeItem", vec![
                     prop("onclick", "EventHandler<MouseEvent>").doc("Click handler."),
-                    prop("children", "Element").default("required").doc("The row's content, such as an icon and the label."),
+                    prop("icon", "SvgData").doc("Drawn after the chevron, before the label."),
+                    prop("trailing_icon", "SvgData").doc("Drawn at the row's end."),
+                    prop("trailing", "Element").doc("After `trailing_icon`, such as a count. Never interactive: it sits in the button."),
+                    prop("children", "Element").default("required").doc("The label."),
                 ]),
             ],
             accessibility: a11y()
@@ -241,8 +249,14 @@ pub fn TreePage() -> Element {
                     " has no selection. "
                     Code { source: "render_node" }
                     " decides what a row does. "
+                    Code { source: "TreeItemContent" }
+                    " is the standard row: the chevron, an "
+                    Code { source: "icon" }
+                    ", the label and a "
+                    Code { source: "trailing_icon" }
+                    ". The default row is one. "
                     Code { source: "TreeItem" }
-                    " makes a row a button that picks up the tab stop and "
+                    " lays a row out the same way as a button that picks up the tab stop and "
                     Code { source: "disabled" }
                     ". A row that links somewhere is a "
                     Code { source: "NavLink" }
@@ -250,11 +264,17 @@ pub fn TreePage() -> Element {
                     Code { source: "args.tabindex" }
                     ", as in this site's sidebar."
                 }
+                Text {
+                    Code { source: "guides" }
+                    " draws a line down each open branch and marks the "
+                    Code { source: "current" }
+                    " row's part of it, as this site's sidebar does. Pick a file below to see it."
+                }
             },
             // snippet: item #[derive(Clone, PartialEq)] struct FileEntry { name: &'static str }
             // snippet: item impl TreeLabel for FileEntry { fn tree_label(&self) -> String { self.name.to_string() } }
             // snippet: item fn file_tree() -> Vec<TreeNode<FileEntry>> { Vec::new() }
-            // snippet: item fn file_icon(_: &FileEntry) -> Element { rsx! {} }
+            // snippet: item fn file_icon(_: &FileEntry, _: Option<bool>) -> libero::components::SvgData { pictogram_icons_lucide::file::outlined }
             // snippet: item use std::collections::HashSet;
             // snippet: item fn folders() -> HashSet<String> { HashSet::new() }
             // snippet: let mut selected = use_signal(|| None::<String>);
@@ -264,6 +284,7 @@ pub fn TreePage() -> Element {
                 children_text: "",
                 fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![
+                    Control::switch("guides"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.tree.size.as_str()),
                 ],
@@ -283,13 +304,15 @@ pub fn TreePage() -> Element {
                             data: file_tree(),
                             expanded: expanded(),
                             onexpandedchange: move |next| expanded.set(next),
+                            current: selected(),
+                            guides: values.str("guides") == "true",
                             size: or_unset(values.str("size")),
                             render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
                                 let id = args.id.clone();
                                 rsx! {
                                     TreeItem {
                                         onclick: move |_| selected.set(Some(id.clone())),
-                                        {file_icon(&args.data)}
+                                        icon: file_icon(&args.data, args.expanded),
                                         "{args.data.name}"
                                     }
                                 }
