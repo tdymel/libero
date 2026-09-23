@@ -25,7 +25,7 @@ use libero::{
     components::{
         ActionIcon, Alert, AspectRatio, Avatar, Badge, Burger, Carousel, Center, Collapse,
         Container, Dialog, Float, Header, Icon, Image, ImageItem, ImageList, Indicator, Marquee,
-        Overlay, Scroller, Tooltip,
+        Overlay, Scroller, Tooltip, Transition,
     },
 };
 
@@ -72,6 +72,7 @@ fn app() -> Element {
             Scroller { aria_label: "Tags", fade_color: "red", span { "one" } }
             // Open: the bubble is rendered only then.
             Tooltip { label: rsx! { "t" }, z_index: "5", open: true, "x" }
+            Transition { duration: 350, "transition" }
         }
     }
 }

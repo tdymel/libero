@@ -253,6 +253,8 @@ pub(crate) enum Route {
     SidebarPage {},
     #[route("/layout/splitter")]
     SplitterPage {},
+    #[route("/layout/transition")]
+    TransitionPage {},
 
     #[route("/navigation/burger")]
     BurgerPage {},

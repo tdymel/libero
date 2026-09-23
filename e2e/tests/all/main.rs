@@ -103,6 +103,7 @@ mod timeline;
 mod tldr;
 mod tooltip;
 mod trailing_button;
+mod transition;
 mod tree;
 mod typography;
 mod use_accessibility;

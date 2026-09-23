@@ -88,6 +88,7 @@ mod theme_toggle;
 mod timeline;
 mod title;
 mod tooltip;
+mod transition;
 mod tree;
 mod variant;
 mod z_index;
@@ -344,6 +345,10 @@ pub use tooltip::{
     TOOLTIP_BACKGROUND, TOOLTIP_COLOR, TOOLTIP_DURATION, TOOLTIP_FONT_SIZE, TooltipDefaults,
 };
 pub(crate) use tooltip::{TOOLTIP_IN, TOOLTIP_KEYFRAMES};
+pub use transition::{
+    TRANSITION_DISTANCE, TRANSITION_DURATION, TRANSITION_EASING, TRANSITION_SCALE,
+    TransitionDefaults,
+};
 pub use tree::TreeDefaults;
 pub use variant::Variant;
 pub use z_index::{

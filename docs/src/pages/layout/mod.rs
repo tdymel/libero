@@ -13,6 +13,7 @@ mod scroll_area;
 mod scroller;
 mod sidebar;
 mod splitter;
+mod transition;
 
 pub use aspect_ratio::AspectRatioPage;
 pub use r#box::BoxPage;
@@ -29,3 +30,4 @@ pub use scroll_area::ScrollAreaPage;
 pub use scroller::ScrollerPage;
 pub use sidebar::SidebarPage;
 pub use splitter::SplitterPage;
+pub use transition::TransitionPage;

@@ -108,6 +108,7 @@ mod theme_toggle;
 mod timeline;
 mod title;
 mod tooltip;
+mod transition;
 mod tree;
 mod validation;
 mod variant_contrast;

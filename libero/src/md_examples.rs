@@ -141,6 +141,7 @@ md_pages! {
     Title => "title",
     Tldr => "tldr",
     Tooltip => "tooltip",
+    Transition => "transition",
     Tree => "tree",
     UseAccessibility => "use_accessibility",
     UseDebounce => "use_debounce",

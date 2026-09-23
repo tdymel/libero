@@ -14,6 +14,7 @@ mod scroll_area;
 mod scroller;
 mod sidebar;
 mod splitter;
+mod transition;
 
 pub use aspect_ratio::{AspectRatio, AspectRatioProps};
 pub use r#box::{Box, BoxProps};
@@ -42,3 +43,4 @@ pub use scroller::{
 };
 pub use sidebar::{Sidebar, SidebarProps, SidebarSide};
 pub use splitter::{Splitter, SplitterProps, SplitterResizeEvent};
+pub use transition::{Transition, TransitionKind, TransitionProps};

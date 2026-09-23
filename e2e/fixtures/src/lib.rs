@@ -103,6 +103,7 @@ mod timeline;
 mod tldr;
 mod tooltip;
 mod trailing_button;
+mod transition;
 mod tree;
 mod typography;
 mod use_accessibility;
@@ -217,6 +218,7 @@ const FIXTURES: &[Routes] = &[
     tldr::ROUTES,
     tooltip::ROUTES,
     trailing_button::ROUTES,
+    transition::ROUTES,
     tree::ROUTES,
     typography::ROUTES,
     use_accessibility::ROUTES,

@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 use e2e::native::mount;
-use libero::components::Collapse;
+use libero::components::{Collapse, Transition};
 
 fn collapse_app() -> Element {
     let mut open = use_signal(|| true);
@@ -18,6 +18,29 @@ fn collapse_app() -> Element {
 #[test]
 fn a_closed_collapse_unmounts_its_content_on_the_exit_timer() {
     let mut page = mount(collapse_app);
+    assert!(page.exists("#content"));
+
+    page.click("#toggle");
+    page.advance(2.0);
+    page.wait(Duration::from_secs(1));
+    assert!(
+        !page.exists("#content"),
+        "the closed content is still mounted:\n{}",
+        page.tree()
+    );
+}
+
+fn transition_app() -> Element {
+    let mut open = use_signal(|| true);
+    rsx! {
+        button { id: "toggle", onclick: move |_| open.toggle(), "Toggle" }
+        Transition { open: open(), div { id: "content", "Details" } }
+    }
+}
+
+#[test]
+fn a_closed_transition_unmounts_its_content_on_the_exit_timer() {
+    let mut page = mount(transition_app);
     assert!(page.exists("#content"));
 
     page.click("#toggle");

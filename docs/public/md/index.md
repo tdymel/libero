@@ -34,6 +34,7 @@ fetch only the file you need.
 - [Header](header.md): The page's banner landmark, a sticky, static or fixed `header` bar for nav and actions.
 - [Sidebar](sidebar.md): An in-flow panel on one edge of its parent that scrolls its own content, like a nav rail or an inspector.
 - [Splitter](splitter.md): Two panes split by a divider you can drag or move with the keyboard. Nest another `Splitter` in a pane for more than two.
+- [Transition](transition.md): Fades, slides or scales its children in on mount, and out when `open` turns false.
 - [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, scroll positions in percent, edge events and row virtualization through `Virtualize`.
 - [Scroller](scroller.md): A horizontal strip with a hidden scrollbar and a step control over each end, shown while there is more content that way.
 
