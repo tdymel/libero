@@ -10,18 +10,27 @@ list
     button "Reorder"
     paragraph
       StaticText "Alpha"
+    button "Move up" [disabled]
+    button "Move down"
   listitem [level=1]
     button "Reorder"
     paragraph
       StaticText "Beta"
+    button "Move up"
+    button "Move down"
   listitem [level=1]
     button "Reorder"
     paragraph
       StaticText "Gamma"
+    button "Move up"
+    button "Move down"
   listitem [level=1]
     button "Reorder"
     paragraph
       StaticText "Delta"
+    button "Move up"
+    button "Move down" [disabled]
+status [atomic] [live=polite]
 paragraph
   StaticText "Alpha Beta Gamma Delta"
 paragraph

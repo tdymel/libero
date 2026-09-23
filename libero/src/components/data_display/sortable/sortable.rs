@@ -3,17 +3,18 @@ use pictogram_icons_lucide as lucide;
 
 use super::{
     reorder::SortableMove,
-    use_sortable::{SortableOptions, use_sortable, use_sortable_item},
+    use_sortable::{SortableOptions, use_labelled_sortable_item, use_sortable},
 };
 use crate::{
     CssLayer,
     components::{
+        accessibility::VisuallyHidden,
         common::{Glyph, HtmlTag, Input, Orientation, States, base_props, focus_ring_sx},
         layout::use_box,
     },
     context::IconSlot,
-    hooks::{current_localization, drag_handle_sx, use_css},
-    sx::{StaticSx, sx},
+    hooks::{current_localization, drag_handle_sx, use_css, use_id},
+    sx::{StaticSx, Sx, sx},
 };
 
 static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -42,9 +43,12 @@ static SORTABLE_ITEM_SX: StaticSx = StaticSx::new(|| {
         .when("dragging", sx().z_index("1"))
 });
 
-static SORTABLE_HANDLE_SX: StaticSx = StaticSx::new(|| {
-    sx().and(drag_handle_sx())
-        .display("inline-flex")
+static SORTABLE_HANDLE_SX: StaticSx =
+    StaticSx::new(|| control_sx().and(drag_handle_sx()).cursor("grab"));
+
+/// The handle's and the move buttons' box.
+fn control_sx() -> Sx {
+    sx().display("inline-flex")
         .align_items("center")
         .justify_content("center")
         .flex_shrink("0")
@@ -56,12 +60,27 @@ static SORTABLE_HANDLE_SX: StaticSx = StaticSx::new(|| {
         .border_radius("sm")
         .background("transparent")
         .color("inherit")
-        .cursor("grab")
         .focus_visible(focus_ring_sx())
         .selector("& svg", sx().width("16px").height("16px"))
-});
+}
 
 static SORTABLE_CONTENT_SX: StaticSx = StaticSx::new(|| sx().flex("1 1 auto").min_width("0"));
+
+/// The move buttons: the handle's box, an arrow cursor, dimmed at the list's end.
+static SORTABLE_MOVE_SX: StaticSx = StaticSx::new(|| {
+    control_sx()
+        .cursor("pointer")
+        .selector("&:disabled", sx().opacity("0.4").cursor("default"))
+        .rtl(sx().selector("& svg", sx().transform("scaleX(-1)")))
+});
+
+/// What a [`SortableItem`] reads from its [`Sortable`].
+#[derive(Clone, PartialEq)]
+struct SortableView {
+    instructions: String,
+    horizontal: bool,
+    move_buttons: bool,
+}
 
 base_props! {
     pub struct SortableProps {
@@ -70,6 +89,10 @@ base_props! {
         orientation: Input<Orientation>,
         /// Called on drop when an item changed place. Apply it to your data.
         onreorder: EventHandler<SortableMove>,
+        /// Each item's two buttons moving it one slot without a drag (WCAG 2.5.7).
+        /// Hidden, give the reader another way to reorder without dragging.
+        #[props(default = true)]
+        move_buttons: bool,
         /// [`SortableItem`]s, keyed by their data.
         children: Element,
     }
@@ -103,6 +126,18 @@ pub fn Sortable(props: SortableProps) -> Element {
         onreorder: use_callback(move |step| onreorder.call(step)),
     });
     let vertical = orientation == Orientation::Vertical;
+    let words = current_localization().sortable;
+
+    let instructions = use_id();
+    let view = SortableView {
+        instructions: instructions(),
+        horizontal: !vertical,
+        move_buttons: props.move_buttons,
+    };
+    let mut shared = use_context_provider(|| Signal::new(view.clone()));
+    if *shared.peek() != view {
+        shared.set(view);
+    }
 
     let states: Input<States> = props
         .states
@@ -112,7 +147,7 @@ pub fn Sortable(props: SortableProps) -> Element {
         .with("sorting", (list.sorting)())
         .into();
 
-    use_box()
+    let items = use_box()
         .framework_sx(&SORTABLE_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
@@ -122,23 +157,35 @@ pub fn Sortable(props: SortableProps) -> Element {
         .event("onpointermove", list.onpointermove)
         .event("onpointerup", list.onpointerup)
         .event("onpointercancel", list.onpointercancel)
-        .render(HtmlTag::Ul, props.attributes, props.children)
+        .render(HtmlTag::Ul, props.attributes, props.children);
+
+    rsx! {
+        {items}
+        // Hidden, not visually hidden: read only as the handles' description.
+        div { id: "{instructions}", hidden: true, {words.instructions} }
+        VisuallyHidden { role: "status", {list.announcement} }
+    }
 }
 
 base_props! {
     pub struct SortableItemProps {
         /// The item's current position, from 0. Key it by its data, not this.
         index: usize,
+        /// Names the item in the announcements. Unset, "Item {n}" by where it was lifted.
+        #[props(default, into)]
+        label: Option<String>,
         children: Element,
     }
 }
 
-/// One item of a [`Sortable`]: a drag handle, then `children`.
+/// One item of a [`Sortable`]: a drag handle, `children`, then the move buttons.
 ///
 /// Docs: <https://libero-ui.dev/data-display/sortable>
 #[component]
 pub fn SortableItem(props: SortableItemProps) -> Element {
-    let item = use_sortable_item(props.index);
+    let item = use_labelled_sortable_item(props.index, props.label.clone());
+    let view = use_context::<Signal<SortableView>>()();
+    let words = current_localization().sortable;
     let dragging = (item.dragging)();
 
     let states: Input<States> = props
@@ -149,18 +196,60 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
         .into();
 
     let content_class = use_css(Some(&SORTABLE_CONTENT_SX), CssLayer::Framework);
+    let move_class = use_css(Some(&SORTABLE_MOVE_SX), CssLayer::Framework);
     let handle = use_box()
         .framework_sx(&SORTABLE_HANDLE_SX)
         .prepare()
         .element(&item.handle)
         .attr("type", "button")
-        .attr("aria-label", current_localization().sortable.handle)
+        .attr("aria-label", words.handle)
+        .attr("aria-describedby", view.instructions.clone())
         .event("onpointerdown", item.onpointerdown)
+        .event("onkeydown", item.onkeydown)
+        .event("onblur", item.onblur)
         .render(
             HtmlTag::Button,
             Vec::new(),
             rsx! { Glyph { slot: IconSlot::Grip, icon: lucide::grip_vertical::outlined } },
         );
+
+    let moves = view.move_buttons.then(|| {
+        let (earlier, later) = match view.horizontal {
+            true => (words.move_backward, words.move_forward),
+            false => (words.move_up, words.move_down),
+        };
+        let (onearlier, onlater) = (item.onearlier, item.onlater);
+        rsx! {
+            button {
+                class: move_class.clone(),
+                r#type: "button",
+                "data-slot": "move-earlier",
+                "aria-label": earlier,
+                disabled: (item.first)(),
+                onmounted: item.earlier.mount(),
+                onclick: move |event| onearlier.call(event),
+                if view.horizontal {
+                    Glyph { slot: IconSlot::ChevronLeft, icon: lucide::chevron_left::outlined }
+                } else {
+                    Glyph { slot: IconSlot::ChevronUp, icon: lucide::chevron_up::outlined }
+                }
+            }
+            button {
+                class: move_class.clone(),
+                r#type: "button",
+                "data-slot": "move-later",
+                "aria-label": later,
+                disabled: (item.last)(),
+                onmounted: item.later.mount(),
+                onclick: move |event| onlater.call(event),
+                if view.horizontal {
+                    Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }
+                } else {
+                    Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
+                }
+            }
+        }
+    });
 
     use_box()
         .framework_sx(&SORTABLE_ITEM_SX)
@@ -176,6 +265,7 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
             rsx! {
                 {handle}
                 div { class: content_class, {props.children} }
+                {moves}
             },
         )
 }

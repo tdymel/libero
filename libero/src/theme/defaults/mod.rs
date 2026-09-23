@@ -74,6 +74,7 @@ mod select;
 mod sidebar;
 mod skeleton;
 mod slider;
+mod sortable;
 mod splitter;
 mod spotlight;
 mod stepper;
@@ -299,6 +300,7 @@ pub use slider::{
     SLIDER_FONT_SIZE, SLIDER_THUMB, SLIDER_THUMB_SIZE, SLIDER_TRACK, SLIDER_TRACK_SIZE,
     SliderDefaults, SliderSizeLevel,
 };
+pub(crate) use sortable::{SORTABLE_KEYFRAMES, SORTABLE_SETTLE, SORTABLE_SETTLE_FROM};
 pub use splitter::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, SplitterDefaults};
 pub use spotlight::{
     SPOTLIGHT_DESCRIPTION_COLOR, SPOTLIGHT_GROUP_COLOR, SPOTLIGHT_MAX_LIST_HEIGHT,

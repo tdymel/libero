@@ -150,7 +150,7 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 33] {
+    fn templates(words: &Localization) -> [&'static str; 38] {
         [
             words.common.remove,
             words.cascader.back,
@@ -178,6 +178,11 @@ mod tests {
             words.lightbox.zoomed,
             words.notifications.region,
             words.pin_field.cell,
+            words.sortable.item,
+            words.sortable.lifted,
+            words.sortable.moved,
+            words.sortable.dropped,
+            words.sortable.cancelled,
             words.code_block.code_named,
             words.tldr.prompt,
             words.date.on_or_after,

@@ -86,6 +86,16 @@ pub(super) fn target_index(spans: &[Span], from: usize, offset: f64) -> usize {
     from - before
 }
 
+/// How far item `from` travels to sit in slot `to`, its neighbours stepped aside.
+pub(super) fn slot_offset(spans: &[Span], from: usize, to: usize) -> f64 {
+    let own = spans[from];
+    match to.cmp(&from) {
+        std::cmp::Ordering::Greater => spans[to].end() - own.end(),
+        std::cmp::Ordering::Less => spans[to].start - own.start,
+        std::cmp::Ordering::Equal => 0.0,
+    }
+}
+
 /// How far item `index` steps aside while item `from` hovers over slot `to`.
 pub(super) fn shift(spans: &[Span], from: usize, to: usize, index: usize) -> f64 {
     if from < to && (from + 1..=to).contains(&index) {
@@ -170,6 +180,27 @@ mod tests {
         assert_eq!(target_index(&spans, 0, 17.0), 0);
         assert_eq!(target_index(&spans, 0, 19.0), 1);
         assert_eq!(target_index(&spans, 0, 1000.0), 2);
+    }
+
+    #[test]
+    fn a_slot_offset_lines_the_item_up_with_the_slot_it_takes() {
+        let spans = even();
+        assert_eq!(slot_offset(&spans, 0, 2), 100.0);
+        assert_eq!(slot_offset(&spans, 2, 0), -100.0);
+        assert_eq!(slot_offset(&spans, 1, 1), 0.0);
+        // A tall item ends where the last short one ended.
+        let spans = [
+            Span {
+                start: 0.0,
+                size: 100.0,
+            },
+            Span {
+                start: 108.0,
+                size: 20.0,
+            },
+        ];
+        assert_eq!(slot_offset(&spans, 0, 1), 28.0);
+        assert_eq!(target_index(&spans, 0, slot_offset(&spans, 0, 1)), 1);
     }
 
     #[test]

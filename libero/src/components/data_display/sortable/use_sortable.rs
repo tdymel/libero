@@ -2,11 +2,16 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use super::reorder::{SortableMove, Span, clamp_offset, shift, target_index};
+use super::reorder::{SortableMove, Span, clamp_offset, shift, slot_offset, target_index};
 use crate::{
     components::common::Orientation,
-    hooks::{DragMove, DragOptions, DragStart, ElementHandle, use_distance_drag, use_element},
-    platform::{self, ElementApi},
+    hooks::{
+        DragMove, DragOptions, DragStart, ElementHandle, current_localization, use_distance_drag,
+        use_element,
+    },
+    localization::fill,
+    platform::{self, Dimensions, ElementApi, Read},
+    theme::{SORTABLE_SETTLE, SORTABLE_SETTLE_FROM, TRANSITION_DURATION, TRANSITION_EASING},
 };
 
 /// What [`use_sortable`] takes.
@@ -23,8 +28,10 @@ pub struct SortableOptions {
 pub struct SortableHandle {
     /// The list: takes the pointer capture while an item drags.
     pub element: ElementHandle,
-    /// An item is being dragged.
+    /// An item is being dragged, by pointer or keyboard.
     pub sorting: Memo<bool>,
+    /// The last lift, move, drop or cancel, in words. Show it in a `role="status"` region.
+    pub announcement: Signal<String>,
     pub onpointermove: Callback<Event<PointerData>>,
     pub onpointerup: Callback<Event<PointerData>>,
     pub onpointercancel: Callback<Event<PointerData>>,
@@ -39,11 +46,26 @@ pub struct SortableItemHandle {
     pub handle: ElementHandle,
     /// The grab handle's.
     pub onpointerdown: Callback<Event<PointerData>>,
+    /// The grab handle's: Space or Enter lifts and drops, the arrows move, Escape cancels.
+    pub onkeydown: Callback<Event<KeyboardData>>,
+    /// The grab handle's: focus leaving it cancels a keyboard move.
+    pub onblur: Callback<Event<FocusData>>,
+    /// A button moving the item one slot up (back, in a row), without a drag.
+    pub earlier: ElementHandle,
+    pub onearlier: Callback<Event<MouseData>>,
+    /// A button moving the item one slot down (forward, in a row).
+    pub later: ElementHandle,
+    pub onlater: Callback<Event<MouseData>>,
+    /// The item is first: there is no slot before it.
+    pub first: Memo<bool>,
+    /// The item is last: there is no slot after it.
+    pub last: Memo<bool>,
     /// This item is the one being dragged.
     pub dragging: Memo<bool>,
     /// Some item of the list is being dragged.
     pub sorting: Memo<bool>,
     offset: Memo<f64>,
+    settle: Memo<Option<f64>>,
     horizontal: Memo<bool>,
 }
 
@@ -53,13 +75,24 @@ impl SortableItemHandle {
         (self.offset)()
     }
 
-    /// The item's inline `style`: a `transform` moving it by [`offset`](Self::offset).
+    /// The item's inline `style`: a `transform` moving it by [`offset`](Self::offset),
+    /// and just after a drop the slide from where it was let go into its slot.
     pub fn style(&self) -> String {
         let offset = self.offset();
-        match (self.horizontal)() {
-            true => format!("transform: translate({offset}px, 0px)"),
-            false => format!("transform: translate(0px, {offset}px)"),
+        let translate = |px: f64| match (self.horizontal)() {
+            true => format!("translate({px}px, 0px)"),
+            false => format!("translate(0px, {px}px)"),
+        };
+        let mut style = format!("transform: {}", translate(offset));
+        if let Some(from) = (self.settle)() {
+            style.push_str(&format!(
+                "; {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {}",
+                translate(from),
+                TRANSITION_DURATION.value(),
+                TRANSITION_EASING.value()
+            ));
         }
+        style
     }
 }
 
@@ -73,6 +106,7 @@ struct Registered {
     id: usize,
     element: Mounted,
     handle: Mounted,
+    label: Option<String>,
 }
 
 /// A drag measured and under way.
@@ -82,6 +116,41 @@ struct Session {
     spans: Vec<Span>,
     /// `-1.0` where the flow runs against the screen axis: a row right to left.
     sign: f64,
+    /// A keyboard move's slot; `None` while a pointer drags.
+    keyed: Option<usize>,
+    /// The item's name, for the announcements.
+    label: String,
+}
+
+impl Session {
+    fn target(&self, travel: f64) -> usize {
+        self.keyed
+            .unwrap_or_else(|| target_index(&self.spans, self.from, travel))
+    }
+
+    /// The dragged item's offset along the flow.
+    fn offset(&self, travel: f64) -> f64 {
+        match self.keyed {
+            Some(to) => slot_offset(&self.spans, self.from, to),
+            None => clamp_offset(&self.spans, self.from, travel),
+        }
+    }
+}
+
+/// The item just dropped at `to`: it slides in from `offset` px, on screen (1129).
+#[derive(Clone, Copy, PartialEq)]
+struct Settle {
+    id: usize,
+    to: usize,
+    offset: f64,
+}
+
+/// Which of an item's controls takes the focus back after its move.
+#[derive(Clone, Copy, PartialEq)]
+enum Refocus {
+    Handle,
+    Earlier,
+    Later,
 }
 
 /// What [`use_sortable_item`] reads from its list.
@@ -89,8 +158,8 @@ struct Session {
 struct SortableContext {
     registry: CopyValue<Vec<Option<Registered>>>,
     next_id: CopyValue<usize>,
-    /// The item just dropped elsewhere: its move took the focus off its handle.
-    refocus: CopyValue<Option<usize>>,
+    /// The item just moved: its move took the focus off its control.
+    refocus: CopyValue<Option<(usize, Refocus)>>,
     pressed: CopyValue<Option<usize>>,
     session: Signal<Option<Session>>,
     /// The pointer's travel along the flow, since the press.
@@ -98,7 +167,77 @@ struct SortableContext {
     target: Memo<Option<usize>>,
     sorting: Memo<bool>,
     horizontal: Memo<bool>,
+    count: Signal<usize>,
+    settle: Signal<Option<Settle>>,
     onpointerdown: Callback<Event<PointerData>>,
+    onkeydown: Callback<(usize, Event<KeyboardData>)>,
+    onblur: Callback<usize>,
+    onstep: Callback<(usize, bool)>,
+}
+
+/// Every item's position read, started at once: see `ElementApi::dimensions`.
+type Reads = Vec<(Read<(f64, f64)>, Read<Dimensions>)>;
+
+/// Each item's mounted node and handle, in order; `None` while a slot is empty.
+fn mounted(registry: &[Option<Registered>]) -> Option<Vec<(Rc<MountedData>, Mounted)>> {
+    registry
+        .iter()
+        .map(|item| {
+            let item = item.as_ref()?;
+            Some((item.element.clone()?, item.handle.clone()))
+        })
+        .collect()
+}
+
+fn start_reads(items: &[(Rc<MountedData>, Mounted)]) -> Reads {
+    items
+        .iter()
+        .map(|(item, _)| {
+            let item = platform::element(item);
+            (item.client_offset(), item.dimensions())
+        })
+        .collect()
+}
+
+/// The spans along the flow, `None` when a read failed.
+async fn spans(reads: Reads, vertical: bool, flipped: bool) -> Option<Vec<Span>> {
+    let mut spans = Vec::with_capacity(reads.len());
+    for (offset, size) in reads {
+        let (Ok((x, y)), Ok(size)) = (offset.await, size.await) else {
+            return None;
+        };
+        spans.push(match (vertical, flipped) {
+            (true, _) => Span {
+                start: y,
+                size: size.height,
+            },
+            (false, false) => Span {
+                start: x,
+                size: size.width,
+            },
+            (false, true) => Span {
+                start: -(x + size.width),
+                size: size.width,
+            },
+        });
+    }
+    Some(spans)
+}
+
+/// `template` with the item's `label` and position `index` of `count`.
+fn say(template: &str, label: &str, index: usize, count: usize) -> String {
+    fill(
+        template,
+        &[("label", &label), ("n", &(index + 1)), ("m", &count)],
+    )
+}
+
+fn lifts(key: &Key) -> bool {
+    match key {
+        Key::Character(c) => c == " ",
+        Key::Enter => true,
+        _ => false,
+    }
 }
 
 /// A list whose items reorder by dragging their handle. Call
@@ -106,10 +245,12 @@ struct SortableContext {
 ///
 /// A press on a handle drags once it moved a few px, so a click stays a click.
 /// The items step aside while one drags; on drop `onreorder` gets the move.
+/// On the keyboard, Space lifts the focused handle's item, the arrows move it,
+/// Space drops it and Escape puts it back.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
-/// # use libero::components::{Box, Orientation};
+/// # use libero::components::{Box, Orientation, VisuallyHidden};
 /// # use libero::hooks::{
 /// #     SortableMove, SortableOptions, drag_handle_sx, use_sortable, use_sortable_item,
 /// # };
@@ -130,6 +271,7 @@ struct SortableContext {
 ///             Fruit { key: "{name}", index, name }
 ///         }
 ///     }
+///     VisuallyHidden { role: "status", {list.announcement} }
 /// }
 /// # }
 ///
@@ -138,13 +280,14 @@ struct SortableContext {
 ///     let item = use_sortable_item(index);
 ///     rsx! {
 ///         Box { onmounted: item.element.mount(), style: item.style(),
-///             Box {
+///             button {
 ///                 onmounted: item.handle.mount(),
 ///                 onpointerdown: move |event| item.onpointerdown.call(event),
-///                 sx: drag_handle_sx(),
-///                 "Drag"
+///                 onkeydown: move |event| item.onkeydown.call(event),
+///                 onblur: move |event| item.onblur.call(event),
+///                 style: "touch-action: none",
+///                 "Drag {name}"
 ///             }
-///             "{name}"
 ///         }
 ///     }
 /// }
@@ -159,95 +302,144 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
     let element = use_element();
     let horizontal = orientation == Orientation::Horizontal;
     let horizontal = use_memo(use_reactive!(|horizontal| horizontal));
+    let words = current_localization().sortable;
 
     let registry = use_hook(|| CopyValue::new(Vec::<Option<Registered>>::new()));
     let next_id = use_hook(|| CopyValue::new(0_usize));
-    let mut refocus = use_hook(|| CopyValue::new(None::<usize>));
+    let mut refocus = use_hook(|| CopyValue::new(None::<(usize, Refocus)>));
     let mut pressed = use_hook(|| CopyValue::new(None::<usize>));
     let mut session = use_signal(|| None::<Session>);
     let mut travel = use_signal(|| 0.0_f64);
+    let mut announcement = use_signal(String::new);
+    let count = use_signal(|| 0_usize);
+    let mut settle = use_signal(|| None::<Settle>);
     // A release can land before the measure: (measuring, released).
     let mut starting = use_hook(|| CopyValue::new((false, false)));
 
     let target = use_memo(move || {
         let session = session.read();
-        let session = session.as_ref()?;
-        Some(target_index(&session.spans, session.from, travel()))
+        Some(session.as_ref()?.target(travel()))
     });
     let sorting = use_memo(move || session.read().is_some());
+
+    let label_of = move |index: usize| -> (usize, String) {
+        let registry = registry.peek();
+        let item = registry.get(index).cloned().flatten();
+        let id = item.as_ref().map_or(usize::MAX, |item| item.id);
+        let label = item
+            .and_then(|item| item.label)
+            .unwrap_or_else(|| fill(words.item, &[("n", &(index + 1))]));
+        (id, label)
+    };
+
+    let mut lift = move |lifted: Session| {
+        announcement.set(say(
+            words.lifted,
+            &lifted.label,
+            lifted.from,
+            lifted.spans.len(),
+        ));
+        session.set(Some(lifted));
+    };
+
+    // Measures the list, then calls `started` with the session; `None` when it can't.
+    let mut begin = move |from: usize, keyed: bool, started: Callback<Option<Session>>| {
+        let items = mounted(&registry.peek());
+        let Some(items) = items.filter(|items| from < items.len()) else {
+            started.call(None);
+            return;
+        };
+        let flipped = *horizontal.peek() && element.is_rtl();
+        let vertical = !*horizontal.peek();
+        let reads = start_reads(&items);
+        let handle = items[from].1.clone();
+        let label = label_of(from).1;
+        settle.set(None);
+        spawn(async move {
+            let Some(spans) = spans(reads, vertical, flipped).await else {
+                started.call(None);
+                return;
+            };
+            // `use_drag` refocuses the handle only on the web.
+            if !keyed && let Some(handle) = &handle {
+                let _ = platform::element(handle).focus();
+            }
+            started.call(Some(Session {
+                from,
+                spans,
+                sign: if flipped { -1.0 } else { 1.0 },
+                keyed: keyed.then_some(from),
+                label,
+            }));
+        });
+    };
+
+    // Ends the session at `to`; `commit: false` puts the item back.
+    let mut finish = move |commit: bool| {
+        let Some(ended) = session.peek().clone() else {
+            return;
+        };
+        let travel_now = *travel.peek();
+        let to = if commit {
+            ended.target(travel_now)
+        } else {
+            ended.from
+        };
+        session.set(None);
+        travel.set(0.0);
+        pressed.set(None);
+        let count = ended.spans.len();
+        let words_for = if commit {
+            words.dropped
+        } else {
+            words.cancelled
+        };
+        announcement.set(say(words_for, &ended.label, to, count));
+        let (id, _) = label_of(ended.from);
+        let from_slot = ended.offset(travel_now) - slot_offset(&ended.spans, ended.from, to);
+        if from_slot.abs() > 0.5 {
+            settle.set(Some(Settle {
+                id,
+                to,
+                offset: from_slot * ended.sign,
+            }));
+        }
+        if to != ended.from {
+            refocus.set(Some((id, Refocus::Handle)));
+            onreorder.call(SortableMove {
+                from: ended.from,
+                to,
+            });
+        }
+    };
 
     let drag = use_distance_drag(DragOptions {
         capture: element,
         onstart: use_callback(move |start: DragStart| {
             let cancel = start.cancel;
-            // Every slot filled and mounted, or there is no order to measure.
-            let items: Option<Vec<(Rc<MountedData>, Mounted)>> = registry
-                .peek()
-                .iter()
-                .map(|item| {
-                    let item = item.as_ref()?;
-                    Some((item.element.clone()?, item.handle.clone()))
-                })
-                .collect();
-            let (Some(from), Some(items)) = (*pressed.peek(), items) else {
+            let from = *pressed.peek();
+            let (Some(from), false) = (from, session.peek().is_some()) else {
                 cancel.call(());
                 return;
             };
-            if from >= items.len() {
-                cancel.call(());
-                return;
-            }
-            let flipped = *horizontal.peek() && element.is_rtl();
-            let vertical = !*horizontal.peek();
             starting.set((true, false));
             travel.set(0.0);
-            // Started here, awaited in the task: see `ElementApi::dimensions`.
-            let reads: Vec<_> = items
-                .iter()
-                .map(|(item, _)| {
-                    let item = platform::element(item);
-                    (item.client_offset(), item.dimensions())
-                })
-                .collect();
-            let handle = items[from].1.clone();
-            spawn(async move {
-                let mut spans = Vec::with_capacity(reads.len());
-                for (offset, size) in reads {
-                    let (Ok((x, y)), Ok(size)) = (offset.await, size.await) else {
-                        starting.set((false, false));
-                        cancel.call(());
-                        return;
-                    };
-                    spans.push(match (vertical, flipped) {
-                        (true, _) => Span {
-                            start: y,
-                            size: size.height,
-                        },
-                        (false, false) => Span {
-                            start: x,
-                            size: size.width,
-                        },
-                        (false, true) => Span {
-                            start: -(x + size.width),
-                            size: size.width,
-                        },
-                    });
-                }
-                let (_, released) = starting.replace((false, false));
-                if released {
-                    pressed.set(None);
-                    return;
-                }
-                // `use_drag` refocuses the handle only on the web.
-                if let Some(handle) = &handle {
-                    let _ = platform::element(handle).focus();
-                }
-                session.set(Some(Session {
-                    from,
-                    spans,
-                    sign: if flipped { -1.0 } else { 1.0 },
-                }));
-            });
+            begin(
+                from,
+                false,
+                Callback::new(move |measured: Option<Session>| {
+                    let (_, released) = starting.replace((false, false));
+                    match measured {
+                        None => cancel.call(()),
+                        // A flick let go before the measure still lands where it was let go.
+                        Some(measured) if released => {
+                            session.set(Some(measured));
+                            finish(true);
+                        }
+                        Some(measured) => lift(measured),
+                    }
+                }),
+            );
         }),
         onmove: use_callback(move |step: DragMove| {
             let delta = step.delta();
@@ -261,29 +453,107 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
                 starting.set((true, true));
                 return;
             }
-            let landed = session.peek().as_ref().map(|session| {
-                let to = target_index(&session.spans, session.from, *travel.peek());
-                SortableMove {
-                    from: session.from,
-                    to,
-                }
-            });
-            session.set(None);
-            travel.set(0.0);
-            pressed.set(None);
-            if let Some(step) = landed
-                && step.from != step.to
-            {
-                let id = registry
-                    .peek()
-                    .get(step.from)
-                    .cloned()
-                    .flatten()
-                    .map(|item| item.id);
-                refocus.set(id);
-                onreorder.call(step);
+            if session.peek().as_ref().is_some_and(|s| s.keyed.is_none()) {
+                finish(true);
             }
         }),
+    });
+
+    let onkeydown = use_callback(move |(index, event): (usize, Event<KeyboardData>)| {
+        let key = event.key();
+        let keyed = session
+            .peek()
+            .as_ref()
+            .and_then(|s| s.keyed.map(|to| (s.from, to, s.spans.len(), s.sign)));
+        let Some((from, to, count, sign)) = keyed else {
+            // Escape puts a pointer drag's item back too.
+            if key == Key::Escape && session.peek().is_some() {
+                event.prevent_default();
+                finish(false);
+            } else if lifts(&key) && session.peek().is_none() && !starting.peek().0 {
+                event.prevent_default();
+                starting.set((true, false));
+                begin(
+                    index,
+                    true,
+                    Callback::new(move |measured: Option<Session>| {
+                        starting.set((false, false));
+                        if let Some(measured) = measured {
+                            lift(measured);
+                        }
+                    }),
+                );
+            }
+            return;
+        };
+        if index != from {
+            return;
+        }
+        let last = count.saturating_sub(1);
+        // In a right to left row the next slot sits to the left.
+        let step = |forward: bool| if forward == (sign > 0.0) { 1 } else { -1 };
+        let next = match key {
+            _ if lifts(&key) => {
+                event.prevent_default();
+                finish(true);
+                return;
+            }
+            Key::Escape => {
+                event.prevent_default();
+                finish(false);
+                return;
+            }
+            Key::ArrowDown if !*horizontal.peek() => to as isize + 1,
+            Key::ArrowUp if !*horizontal.peek() => to as isize - 1,
+            Key::ArrowRight if *horizontal.peek() => to as isize + step(true),
+            Key::ArrowLeft if *horizontal.peek() => to as isize + step(false),
+            Key::Home => 0,
+            Key::End => last as isize,
+            _ => return,
+        };
+        event.prevent_default();
+        let next = next.clamp(0, last as isize) as usize;
+        if next == to {
+            return;
+        }
+        if let Some(lifted) = session.write().as_mut() {
+            lifted.keyed = Some(next);
+            announcement.set(say(words.moved, &lifted.label, next, count));
+        }
+    });
+
+    let onblur = use_callback(move |index: usize| {
+        let lifted = session
+            .peek()
+            .as_ref()
+            .is_some_and(|s| s.keyed.is_some() && s.from == index);
+        if lifted {
+            finish(false);
+        }
+    });
+
+    // A move button's: one slot, no drag.
+    let onstep = use_callback(move |(index, later): (usize, bool)| {
+        let total = *count.peek();
+        if session.peek().is_some() || total == 0 {
+            return;
+        }
+        let to = match later {
+            true if index + 1 < total => index + 1,
+            false if index > 0 => index - 1,
+            _ => return,
+        };
+        let (id, label) = label_of(index);
+        // A button that turns disabled drops the focus: the other one takes it.
+        let keep = match (later, to == 0, to + 1 == total) {
+            (true, _, true) => Refocus::Earlier,
+            (false, true, _) => Refocus::Later,
+            (true, _, _) => Refocus::Later,
+            (false, _, _) => Refocus::Earlier,
+        };
+        refocus.set(Some((id, keep)));
+        announcement.set(say(words.moved, &label, to, total));
+        onreorder.call(SortableMove { from: index, to });
     });
 
     use_context_provider(|| SortableContext {
@@ -296,12 +566,18 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
         target,
         sorting,
         horizontal,
+        count,
+        settle,
         onpointerdown: drag.onpointerdown,
+        onkeydown,
+        onblur,
+        onstep,
     });
 
     SortableHandle {
         element,
         sorting,
+        announcement,
         onpointermove: drag.onpointermove,
         onpointerup: drag.onpointerup,
         onpointercancel: drag.onpointercancel,
@@ -325,10 +601,20 @@ fn trim(items: &mut Vec<Option<Registered>>) {
 /// Key the item by its data, not its index: a reorder then moves the item,
 /// focus included, instead of rebuilding it.
 pub fn use_sortable_item(index: usize) -> SortableItemHandle {
+    use_labelled_sortable_item(index, None)
+}
+
+/// [`use_sortable_item`], named `label` in the announcements.
+pub(super) fn use_labelled_sortable_item(
+    index: usize,
+    label: Option<String>,
+) -> SortableItemHandle {
     let context = try_use_context::<SortableContext>()
         .expect("use_sortable_item: no `use_sortable` list above this component.");
     let element = use_element();
     let handle = use_element();
+    let earlier = use_element();
+    let later = use_element();
     let mut slot = use_hook(|| CopyValue::new(None::<usize>));
     let id = use_hook(|| {
         let mut next_id = context.next_id;
@@ -339,8 +625,9 @@ pub fn use_sortable_item(index: usize) -> SortableItemHandle {
 
     let mut registry = context.registry;
     let mut refocus = context.refocus;
+    let mut count = context.count;
     // After the mount and every reorder: the DOM is in its new order by then.
-    use_effect(use_reactive!(|index| {
+    use_effect(use_reactive!(|index, label| {
         let _ = (element.mount_token(), handle.mount_token());
         let mut items = registry.write();
         if let Some(old) = slot.replace(Some(index))
@@ -355,13 +642,25 @@ pub fn use_sortable_item(index: usize) -> SortableItemHandle {
             id,
             element: element.mounted(),
             handle: handle.mounted(),
+            label: label.clone(),
         });
         trim(&mut items);
+        let len = items.len();
         drop(items);
+        if *count.peek() != len {
+            count.set(len);
+        }
         // Moving a node in the DOM blurs it.
-        if *refocus.peek() == Some(id) {
+        let moved = *refocus.peek();
+        if let Some((moved, control)) = moved
+            && moved == id
+        {
             refocus.set(None);
-            let _ = handle.focus();
+            let _ = match control {
+                Refocus::Handle => handle.focus(),
+                Refocus::Earlier => earlier.focus(),
+                Refocus::Later => later.focus(),
+            };
         }
     }));
     use_drop(move || {
@@ -371,6 +670,12 @@ pub fn use_sortable_item(index: usize) -> SortableItemHandle {
         {
             items[index] = None;
             trim(&mut items);
+            let len = items.len();
+            drop(items);
+            // The list may be going too.
+            if let Ok(mut count) = count.try_write() {
+                *count = len;
+            }
         }
     });
 
@@ -378,6 +683,7 @@ pub fn use_sortable_item(index: usize) -> SortableItemHandle {
         session,
         travel,
         target,
+        settle,
         ..
     } = context;
     let offset = use_memo(use_reactive!(|index| {
@@ -386,7 +692,7 @@ pub fn use_sortable_item(index: usize) -> SortableItemHandle {
             return 0.0;
         };
         let flow = if index == session.from {
-            clamp_offset(&session.spans, session.from, travel())
+            session.offset(travel())
         } else {
             target().map_or(0.0, |to| shift(&session.spans, session.from, to, index))
         };
@@ -398,20 +704,40 @@ pub fn use_sortable_item(index: usize) -> SortableItemHandle {
             .as_ref()
             .is_some_and(|session| session.from == index)
     }));
+    let settle = use_memo(use_reactive!(|index| {
+        settle()
+            .filter(|settle| settle.id == id && settle.to == index)
+            .map(|settle| settle.offset)
+    }));
+    let first = use_memo(use_reactive!(|index| index == 0));
+    let last = use_memo(use_reactive!(|index| index + 1 >= count()));
 
     let mut pressed = context.pressed;
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
         pressed.set(Some(index));
         context.onpointerdown.call(event);
     });
+    let onkeydown = use_callback(move |event| context.onkeydown.call((index, event)));
+    let onblur = use_callback(move |_| context.onblur.call(index));
+    let onearlier = use_callback(move |_| context.onstep.call((index, false)));
+    let onlater = use_callback(move |_| context.onstep.call((index, true)));
 
     SortableItemHandle {
         element,
         handle,
         onpointerdown,
+        onkeydown,
+        onblur,
+        earlier,
+        onearlier,
+        later,
+        onlater,
+        first,
+        last,
         dragging,
         sorting: context.sorting,
         offset,
+        settle,
         horizontal: context.horizontal,
     }
 }
