@@ -40,8 +40,8 @@ fn the_recorder_sees_a_page_that_burns_fifty_milliseconds_per_frame() {
     });
 }
 
-/// The wheel in 40 px steps over the virtualized list, a frame apart. The fixtures' debug wasm
-/// takes about a second per step, so the numbers only compare against a run of the same build.
+/// The wheel in 40 px steps over the virtualized list, a frame apart. Run it with
+/// `E2E_RELEASE=1`: the debug wasm is far slower and only compares against a debug run.
 #[test]
 #[ignore = "frame-time report, run on request"]
 fn frame_time_of_a_scroll_area_under_the_wheel() {

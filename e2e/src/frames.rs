@@ -66,8 +66,12 @@ fn percentile(sorted: &[f64], fraction: f64) -> f64 {
     sorted[rank.clamp(1, sorted.len()) - 1]
 }
 
-/// Starts recording; a recorder already on the page is stopped and replaced.
+/// Starts recording; a recorder already on the page is stopped and replaced. The tab is
+/// brought to front first: in a background tab every input event waits out a 500 ms frame.
 pub async fn start(page: &Page) -> Result<()> {
+    page.bring_to_front()
+        .await
+        .context("bring the page to front")?;
     page.evaluate(RECORDER)
         .await
         .context("inject the frame recorder")?;
