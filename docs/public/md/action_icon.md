@@ -15,7 +15,8 @@ takes the surrounding text color.
 
 ## Usage
 
-`CheckmarkIcon` stands for any component of yours that renders an `svg`.
+`icon` takes a glyph as `SvgData`, drawn as a [`Pictogram`](pictogram.md).
+Any other content, such as an svg component of yours, goes in as children.
 
 ```rust
 use dioxus::prelude::*;
@@ -25,13 +26,16 @@ use libero::components::ActionIcon;
 fn Demo() -> Element {
     rsx! {
         ActionIcon { size: "md", radius: "sm", aria_label: "Confirm",
-            CheckmarkIcon {}
+            icon: pictogram_icons_lucide::check::outlined,
         }
+        ActionIcon { aria_label: "Done", CheckmarkIcon {} }
     }
 }
 #
 # #[component] fn CheckmarkIcon() -> Element { rsx! {} }
 ```
+
+With both `icon` and `children` set, `icon` wins and a debug build warns.
 
 ## Accessibility
 
@@ -66,7 +70,8 @@ fn Demo() -> Element {
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. |
 | `target` | `String` | - | The link's `target` attribute. |
-| `children` | `Element` | required | The icon. |
+| `icon` | `SvgData` | - | The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`. |
+| `children` | `Element` | - | The icon, when it is not `SvgData`: your own svg, or any element. |
 
 Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

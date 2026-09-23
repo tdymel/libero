@@ -106,6 +106,7 @@ md_pages! {
     PasswordField => "password_field",
     Philosophy => "philosophy",
     PhoneField => "phone_field",
+    Pictogram => "pictogram",
     PinField => "pin_field",
     Platform => "platform",
     Popover => "popover",

@@ -10,5 +10,6 @@ button "Save" [busy=1] [disabled]
 button "Delete" [disabled]
 button "Small"
 button "Extra small"
+button "Square"
 paragraph
   StaticText "0"

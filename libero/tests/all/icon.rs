@@ -1,7 +1,11 @@
 use crate::common::{attributes_of, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Icon, theme::Color};
+use libero::{
+    LiberoProvider,
+    components::{Icon, SvgData},
+    theme::Color,
+};
 
 #[test]
 fn icon_renders_its_variant_and_colour_variables() {
@@ -76,4 +80,32 @@ fn a_callers_role_is_kept() {
     let attributes = attributes_of(&render(app), "span");
 
     assert_eq!(attributes["role"], "status");
+}
+
+const BAR: SvgData = SvgData::new(r#"<svg viewBox="0 0 16 16"><path d="M2 8h12"/></svg>"#);
+
+/// Todo 1094: `src` > `svg` > `children`.
+#[test]
+fn an_svg_draws_a_pictogram_and_a_src_wins_over_it() {
+    fn svg() -> Element {
+        rsx! {
+            LiberoProvider {
+                Icon { svg: BAR, "children" }
+            }
+        }
+    }
+    fn src() -> Element {
+        rsx! {
+            LiberoProvider {
+                Icon { src: "/a.svg", svg: BAR }
+            }
+        }
+    }
+
+    let html = render(svg);
+    assert!(html.contains(r#"<path d="M2 8h12"/>"#), "{html}");
+    assert!(!html.contains("children"), "{html}");
+    let html = render(src);
+    assert!(html.contains("mask-image"), "{html}");
+    assert!(!html.contains("<svg"), "{html}");
 }

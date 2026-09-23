@@ -114,6 +114,7 @@ fetch only the file you need.
 ## Data display
 
 - [Icon](icon.md): A sized, colored box around an svg, which takes the box's color through `currentColor`.
+- [Pictogram](pictogram.md): An inline svg drawn from `SvgData`, such as a lucide icon, in `currentColor` and with no size of its own.
 - [Badge](badge.md): A short status label, one uppercase pill with no role and no interaction.
 - [Indicator](indicator.md): A dot or a small capped count pinned to something else with a `Float`, never read out itself.
 - [Avatar](avatar.md): A person as a fixed square, with a fallback chain from a picture down to a person glyph, and a group that collapses its overflow into a +N chip.

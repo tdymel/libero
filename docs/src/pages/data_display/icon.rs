@@ -5,10 +5,8 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, Text};
 
-use crate::icons::CheckmarkIcon;
-
-/// The svg the box wraps. A subtree, so the code block prints it verbatim.
-const CHILDREN: &str = "CheckmarkIcon {}";
+/// The glyph the box draws; no control varies it.
+const GLYPH: &str = "svg: pictogram_icons_lucide::check::outlined";
 
 #[component]
 pub fn IconPage() -> Element {
@@ -37,7 +35,9 @@ pub fn IconPage() -> Element {
                         .doc("Corner radius."),
                     prop("src", "String")
                         .doc("An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored."),
-                    prop("children", "Element").doc("The svg. Not needed with `src`."),
+                    prop("svg", "SvgData")
+                        .doc("A glyph drawn as a `Pictogram`, such as `pictogram_icons_lucide::check::outlined`, instead of `children`. `src` wins over it."),
+                    prop("children", "Element").doc("The svg. Not needed with `src` or `svg`."),
                 ]),
             ],
             accessibility: a11y()
@@ -51,7 +51,11 @@ pub fn IconPage() -> Element {
                 ]),
             lead: rsx! {
                 Text {
-                    "Wraps an svg in a sized, colored box. An svg drawn in "
+                    "Wraps an svg in a sized, colored box: an "
+                    Code { source: "SvgData" }
+                    " glyph through "
+                    Code { source: "svg" }
+                    ", or your own svg as children. An svg drawn in "
                     Code { source: "currentColor" }
                     " takes the box's "
                     Code { source: "color" }
@@ -64,7 +68,7 @@ pub fn IconPage() -> Element {
             Demo {
                 component: "Icon",
                 children_text: "",
-                children_code: CHILDREN,
+                fixed: vec![GLYPH.to_string()],
                 controls: vec![
                     Control::toggle(
                         "variant",
@@ -92,7 +96,7 @@ pub fn IconPage() -> Element {
                         },
                         size: values.str("size"),
                         radius: values.str("radius"),
-                        CheckmarkIcon {}
+                        svg: pictogram_icons_lucide::check::outlined,
                     }
                 },
             }

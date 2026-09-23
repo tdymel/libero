@@ -21,6 +21,34 @@ fn it_meets_the_baseline() {
 
 const CLICKS: &str = "document.getElementById('clicks').textContent";
 
+/// Todo 1094: an `icon` glyph is sized and filled like a child svg.
+#[test]
+fn an_icon_glyph_is_sized_and_coloured_like_a_child_svg() {
+    block_on(async {
+        let fixture = Fixture::open("/action-icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let look = |id: &str| {
+            format!(
+                "(() => {{ const svg = document.querySelector('#{id} > svg'); \
+                 const r = svg.getBoundingClientRect(); \
+                 return [r.width, r.height, getComputedStyle(svg.querySelector('path')).fill].join(); }})()"
+            )
+        };
+        let read = |id: &'static str| {
+            let page = &fixture.page;
+            let script = look(id);
+            async move {
+                let value: String = page.evaluate(script).await.unwrap().into_value().unwrap();
+                value
+            }
+        };
+        assert_eq!(read("data").await, read("plain").await);
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A busy icon keeps its tab stop, and neither Enter nor a click runs it.
 #[test]
 fn a_loading_icon_stays_focusable_and_swallows_presses() {

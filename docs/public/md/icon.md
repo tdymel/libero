@@ -6,9 +6,9 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_d
 Index: [index.md](index.md) lists every other page
 Description: A sized, colored box around an svg, which takes the box's color through `currentColor`.
 
-Wraps an svg in a sized, colored box. An svg drawn in `currentColor` takes the
-box's `color`. The box never stretches in a flex row. Any svg works, including
-one from an icon crate.
+Wraps an svg in a sized, colored box: an `SvgData` glyph through `svg`, or
+your own svg as children. An svg drawn in `currentColor` takes the box's
+`color`. The box never stretches in a flex row.
 
 ## Usage
 
@@ -19,6 +19,7 @@ use libero::components::Icon;
 #[component]
 fn Demo() -> Element {
     rsx! {
+        Icon { variant: "filled", svg: pictogram_icons_lucide::check::outlined }
         Icon {
             variant: "filled",
             svg {
@@ -30,6 +31,10 @@ fn Demo() -> Element {
     }
 }
 ```
+
+`svg` draws a [`Pictogram`](pictogram.md): any icon of a pictogram icon crate,
+or `SvgData::new(include_str!("logo.svg"))` for one of yours. `src` wins over
+`svg`, and `svg` over `children`.
 
 With `standard`, which draws no container, the svg fills the box. Every other
 variant insets it to 60% of the box, clear of the container's edges. Set
@@ -59,7 +64,8 @@ variant insets it to 60% of the box, clear of the container's edges. Set
 | `size` | `ThemeAwareValue` | `md` | Width and height. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius. |
 | `src` | `String` | - | An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored. |
-| `children` | `Element` | required | The svg. Not needed with `src`. |
+| `svg` | `SvgData` | - | A glyph drawn as a `Pictogram`, such as `pictogram_icons_lucide::check::outlined`, instead of `children`. `src` wins over it. |
+| `children` | `Element` | - | The svg. Not needed with `src` or `svg`. |
 
 Like every component, `Icon` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.

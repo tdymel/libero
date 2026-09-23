@@ -41,8 +41,12 @@ const RENDERER_CRATES: [&str; 11] = [
 ];
 
 /// Every crate `docs` may name, each for one reason.
-const DOCS_CRATES: [(&str, &str); 4] = [
+const DOCS_CRATES: [(&str, &str); 5] = [
     ("dioxus", "the app itself"),
+    (
+        "pictogram_icons_lucide",
+        "the glyphs a reader's app passes as `SvgData`",
+    ),
     ("std", "the standard library"),
     (
         "dioxus_native",
@@ -70,8 +74,10 @@ const CATEGORY_TIERS: [(&str, &[&str]); 5] = [
 
 /// The base tier's files. They stay in their docs group's folder (722 q2), so
 /// the tier is declared by file.
-const BASE_FILES: [&str; 6] = [
+const BASE_FILES: [&str; 7] = [
     "libero/src/components/buttons/action_icon.rs",
+    // Draws every glyph: `ActionIcon`'s and `Icon`'s.
+    "libero/src/components/data_display/pictogram.rs",
     "libero/src/components/buttons/button.rs",
     // `CodeBlock`'s copy control.
     "libero/src/components/buttons/copy_button.rs",

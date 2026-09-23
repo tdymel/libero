@@ -11,8 +11,8 @@ use e2e::native::{ColorScheme, Page, WAIT_LIMIT, mount, mount_in};
 use libero::{
     components::{
         Autocomplete, Box, Cascader, CascaderOption, CodeBlock, MultiSelect, NavLink, NumberField,
-        Options, PasswordField, Select, States, TagsField, TextField, Tree, TreeNode,
-        TreeNodeRenderArgs,
+        Options, PasswordField, Pictogram, Select, States, SvgData, TagsField, TextField, Tree,
+        TreeNode, TreeNodeRenderArgs,
     },
     hooks::use_color_scheme,
     sx::sx,
@@ -524,6 +524,39 @@ fn an_inline_svg_paints_its_stroke() {
     let (x, y, width, height) = page.rect("#marked svg");
     let centre = page.painted_pixel((x + width / 2.0) as u32, (y + height / 2.0) as u32);
     assert_eq!(centre, BLACK, "the icon's stroke at its centre");
+}
+
+const BAR: SvgData = SvgData::new(
+    r#"<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="4"><path d="M2 8h12"/></svg>"#,
+);
+
+/// [`state_app`]'s `#marked` row, its glyph a `Pictogram`: a body from `dangerous_inner_html`.
+fn pictogram_app() -> Element {
+    let mut on = use_signal(|| false);
+    rsx! {
+        style {
+            "#marked {{ display: flex; gap: 8px; color: rgb(0, 0, 0); }}
+            #marked[data-on=true] {{ color: rgb(200, 0, 0); }}"
+        }
+        button { id: "toggle", onclick: move |_| on.toggle(), "Toggle" }
+        div { id: "marked", "data-on": "{on}",
+            Pictogram { icon: BAR, width: "16px", height: "16px" }
+            "Marked"
+        }
+    }
+}
+
+/// Todo 1094: a `Pictogram` paints natively and its baked `currentColor` follows a restyle.
+#[test]
+fn a_pictogram_paints_its_stroke_and_follows_a_restyle() {
+    let mut page = mount(pictogram_app);
+    let (x, y, width, height) = page.rect("#marked svg");
+    let centre = page.painted_pixel((x + width / 2.0) as u32, (y + height / 2.0) as u32);
+    assert_eq!(centre, BLACK, "the pictogram's stroke at its centre");
+    page.click("#toggle");
+    assert_painted(&mut page, "#marked", RED);
+    page.click("#toggle");
+    assert_painted(&mut page, "#marked", BLACK);
 }
 
 /// Todo 893: a check's baked rebuild asks for a redraw arming no check (`redraw::quiet`);

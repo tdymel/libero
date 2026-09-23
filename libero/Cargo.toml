@@ -26,6 +26,10 @@ libero-macros = { path = "../libero-macros", version = "0.1.0" }
 # on the web today comes from JS `Date`, so chrono pulls in no second `js-sys`
 # path. Native turns `clock` on below for `Local`.
 chrono = { version = "0.4", default-features = false, features = ["std"] }
+# `Pictogram`'s glyph data, and lucide for the library's own glyphs. Zero deps
+# besides core. 0.x: pinned, an app on another minor has a second `SvgData` type.
+pictogram-core = "0.4"
+pictogram-icons-lucide = "0.4"
 # `RepoButton` reads a host's JSON reply. Already in every graph through `dioxus-document`.
 serde_json = "1"
 

@@ -1,0 +1,93 @@
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use dioxus::prelude::*;
+use libero::components::{Code, Pictogram, SvgData, Text};
+use pictogram_icons_lucide as lucide;
+
+const ICONS: [&str; 5] = ["house", "heart", "star", "bell", "search"];
+
+fn icon(name: &str) -> SvgData {
+    match name {
+        "heart" => lucide::heart::outlined,
+        "star" => lucide::star::outlined,
+        "bell" => lucide::bell::outlined,
+        "search" => lucide::search::outlined,
+        _ => lucide::house::outlined,
+    }
+}
+
+#[component]
+pub fn PictogramPage() -> Element {
+    rsx! {
+        DocPage {
+            title: "Pictogram",
+            source: "libero/src/components/data_display/pictogram.rs",
+            markdown: "/md/pictogram.md",
+            properties: vec![
+                props("Pictogram", vec![
+                    prop("icon", "SvgData")
+                        .default("required")
+                        .doc("The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!(\"x.svg\"))`."),
+                ]),
+            ],
+            accessibility: a11y()
+                .handles([
+                    "A pictogram is hidden from screen readers (`aria-hidden=\"true\"`).",
+                    "`aria_label` or `aria_labelledby` makes it `role=\"img\"` instead.",
+                ])
+                .must([
+                    "Name a pictogram that means something on its own with `aria_label`. One next to a text label stays hidden.",
+                    "For a clickable glyph, use `ActionIcon { icon }`.",
+                ]),
+            lead: rsx! {
+                Text {
+                    "Draws an "
+                    Code { source: "SvgData" }
+                    " glyph as an inline svg. It has no size of its own: "
+                    Code { source: "Icon" }
+                    " and "
+                    Code { source: "ActionIcon" }
+                    " size it, or set "
+                    Code { source: "width" }
+                    " and "
+                    Code { source: "height" }
+                    ". It draws in "
+                    Code { source: "currentColor" }
+                    ", so it takes the text color. Your attributes win over the glyph's own."
+                }
+            },
+            Demo {
+                component: "Pictogram",
+                children_text: "",
+                controls: vec![
+                    Control::select("icon", ICONS).code(|_, values| {
+                        vec![format!("icon: pictogram_icons_lucide::{}::outlined", values.str("icon"))]
+                    }),
+                    Control::slider("size", ["16px", "24px", "32px", "48px"])
+                        .default("32px")
+                        .code(|_, values| {
+                            let size = values.str("size");
+                            vec![format!("width: {size:?}"), format!("height: {size:?}")]
+                        }),
+                    Control::slider("stroke", ["1", "1.5", "2", "2.5", "3"])
+                        .default("2")
+                        .code(|control, values| {
+                            let stroke = values.str(control.name);
+                            if stroke == control.default {
+                                vec![]
+                            } else {
+                                vec![format!("\"stroke-width\": {stroke:?}")]
+                            }
+                        }),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Pictogram {
+                        icon: icon(&values.str("icon")),
+                        width: values.str("size"),
+                        height: values.str("size"),
+                        "stroke-width": values.str("stroke"),
+                    }
+                },
+            }
+        }
+    }
+}

@@ -1,7 +1,29 @@
 use crate::common::{attributes_of, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::ActionIcon};
+use libero::{
+    LiberoProvider,
+    components::{ActionIcon, SvgData},
+};
+
+const BAR: SvgData = SvgData::new(r#"<svg viewBox="0 0 16 16"><path d="M2 8h12"/></svg>"#);
+
+/// Todo 1094: `icon` draws a `Pictogram` and wins over `children`.
+#[test]
+fn an_icon_is_drawn_instead_of_the_children() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ActionIcon { aria_label: "Close", icon: BAR }
+                ActionIcon { aria_label: "Both", icon: BAR, "children" }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert_eq!(html.matches(r#"<path d="M2 8h12"/>"#).count(), 2, "{html}");
+    assert!(!html.contains("children"), "{html}");
+}
 
 #[test]
 fn action_icon_labels_itself_for_assistive_technology() {

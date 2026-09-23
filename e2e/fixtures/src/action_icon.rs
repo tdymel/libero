@@ -1,8 +1,8 @@
 //! `ActionIcon` in each of its states: plain, toggle, loading, disabled, and
-//! the smallest sizes.
+//! the smallest sizes, and a glyph from `icon` (1094).
 
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Flex, Text};
+use libero::components::{ActionIcon, Flex, SvgData, Text};
 
 use crate::Routes;
 
@@ -15,6 +15,9 @@ fn glyph() -> Element {
         }
     }
 }
+
+/// [`glyph`] as data, for `icon`.
+const SQUARE: SvgData = SvgData::new(r#"<svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/></svg>"#);
 
 #[component]
 fn ActionIconPage() -> Element {
@@ -49,6 +52,7 @@ fn ActionIconPage() -> Element {
             ActionIcon { id: "disabled", aria_label: "Delete", variant: "filled", disabled: true, {glyph()} }
             ActionIcon { id: "sm", aria_label: "Small", size: "sm", {glyph()} }
             ActionIcon { id: "xs", aria_label: "Extra small", size: "xs", {glyph()} }
+            ActionIcon { id: "data", aria_label: "Square", icon: SQUARE }
             Text { id: "clicks", "{clicks}" }
         }
     }

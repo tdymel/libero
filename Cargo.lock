@@ -2476,6 +2476,7 @@ dependencies = [
  "dioxus",
  "dioxus-native",
  "libero",
+ "pictogram-icons-lucide",
 ]
 
 [[package]]
@@ -4465,6 +4466,8 @@ dependencies = [
  "futures-core",
  "js-sys",
  "libero-macros",
+ "pictogram-core",
+ "pictogram-icons-lucide",
  "regex",
  "rfd",
  "serde_json",
@@ -5693,6 +5696,21 @@ name = "pico-args"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5be167a7af36ee22fe3115051bc51f6e6c7054c9348e28deb4f49bd6f705a315"
+
+[[package]]
+name = "pictogram-core"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee8bffbac0ec28818b71333f4bb9ac71412275266ae3efced79002e0ccc85021"
+
+[[package]]
+name = "pictogram-icons-lucide"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77a0051607fd71ff9598276312218be40d57e1dc390d77194e8c746c6b4fb488"
+dependencies = [
+ "pictogram-core",
+]
 
 [[package]]
 name = "pin-project"

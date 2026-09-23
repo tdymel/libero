@@ -7,6 +7,7 @@ use crate::{
             contrast_color, css_string, fill_color, names_itself, text_color, variables,
             variant_chrome_sx, variant_colors,
         },
+        data_display::{Pictogram, SvgData},
         layout::use_box,
     },
     hooks::{use_cache, use_gradient_style, use_theme},
@@ -121,6 +122,9 @@ base_props! {
         /// It is only a stencil: its own colors are ignored.
         #[props(default, into)]
         src: Option<String>,
+        /// A glyph drawn as a [`Pictogram`], instead of `children`; `src` wins over it.
+        #[props(default, into)]
+        svg: Option<SvgData>,
         #[props(default)]
         children: Element,
     }
@@ -135,6 +139,7 @@ base_props! {
 /// rsx! {
 ///     Icon { aria_label: "Verified", "✓" }
 ///     Icon { src: "/assets/logo.svg", color: "primary" }
+///     Icon { svg: pictogram_icons_lucide::house::outlined }
 /// }
 /// # }
 /// ```
@@ -172,9 +177,10 @@ pub fn Icon(props: IconProps) -> Element {
         .with(variant.state_name(), true)
         .into();
     let named = names_itself(&props.attributes);
-    let children = match props.src {
-        Some(src) => rsx! { IconMask { src } },
-        None => props.children,
+    let children = match (props.src, props.svg) {
+        (Some(src), _) => rsx! { IconMask { src } },
+        (None, Some(icon)) => rsx! { Pictogram { icon } },
+        (None, None) => props.children,
     };
 
     use_box()
@@ -208,6 +214,7 @@ mod tests {
             size: Input::None,
             radius: Input::None,
             src: None,
+            svg: None,
             children: rsx! {},
         }
     }

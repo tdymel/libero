@@ -5,11 +5,6 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Text};
 
-use crate::icons::CheckmarkIcon;
-
-/// The svg the button wraps - a subtree, so the code block prints it verbatim.
-const CHILDREN: &str = "CheckmarkIcon {}";
-
 fn is_link(values: &DemoValues) -> bool {
     values.str("link") == "true"
 }
@@ -55,7 +50,9 @@ pub fn ActionIconPage() -> Element {
                     .doc("Renders a link instead of a `<button>`."),
                 prop("target", "String")
                     .doc("The link's `target` attribute."),
-                prop("children", "Element").default("required").doc("The icon."),
+                prop("icon", "SvgData")
+                    .doc("The glyph, drawn as a `Pictogram`: `pictogram_icons_lucide::x::outlined`. Wins over `children`."),
+                prop("children", "Element").doc("The icon, when it is not `SvgData`: your own svg, or any element."),
             ])],
             accessibility: a11y()
                 .handles([
@@ -87,8 +84,10 @@ pub fn ActionIconPage() -> Element {
             Demo {
                 component: "ActionIcon",
                 children_text: "",
-                children_code: CHILDREN,
-                fixed: vec!["aria_label: \"Confirm\"".to_string()],
+                fixed: vec![
+                    "aria_label: \"Confirm\"".to_string(),
+                    "icon: pictogram_icons_lucide::check::outlined".to_string(),
+                ],
                 controls: vec![
                     Control::toggle(
                         "variant",
@@ -152,7 +151,7 @@ pub fn ActionIconPage() -> Element {
                         },
                         target: (values.str("link") == "true").then(|| "_blank".to_string()),
                         aria_label: "Confirm",
-                        CheckmarkIcon {}
+                        icon: pictogram_icons_lucide::check::outlined,
                     }
                 },
             }

@@ -9,6 +9,7 @@ use crate::{
             fill_color, focus_ring_sx, interactive_variant_sx, literal_contrast, names_itself,
             text_color, use_name_warning, variant_colors, variant_selected_sx,
         },
+        data_display::{Pictogram, SvgData},
         feedback::Loader,
         layout::{InternalAnchor, use_box},
     },
@@ -231,7 +232,11 @@ base_props! {
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
-        children: Element,
+        /// The glyph, drawn as a [`Pictogram`]; `children` for anything else.
+        #[props(default, into)]
+        icon: Option<SvgData>,
+        #[props(default)]
+        children: Option<Element>,
     }
 }
 
@@ -242,7 +247,8 @@ base_props! {
 /// # use libero::components::ActionIcon;
 /// # fn app() -> Element {
 /// rsx! {
-///     ActionIcon { aria_label: "Close", onclick: move |_| {}, svg { view_box: "0 0 24 24" } }
+///     ActionIcon { aria_label: "Close", onclick: move |_| {}, icon: pictogram_icons_lucide::x::outlined }
+///     ActionIcon { aria_label: "Menu", svg { view_box: "0 0 24 24" } }
 /// }
 /// # }
 /// ```
@@ -262,6 +268,15 @@ pub fn ActionIcon(mut props: ActionIconProps) -> Element {
     if is_link && props.loading == Some(true) {
         warn("ActionIcon:`loading` is ignored on a link - an `<a>` has nothing to wait for.");
     }
+    let glyph = match (props.icon, props.children.take()) {
+        (Some(icon), children) => {
+            if children.is_some() {
+                warn("ActionIcon: both `icon` and `children` set; `children` is ignored.");
+            }
+            rsx! { Pictogram { icon } }
+        }
+        (None, children) => children.unwrap_or_else(VNode::empty),
+    };
     if selectable && is_link {
         warn(
             "ActionIcon: a link keeps the `selected` look but not `aria-pressed`, which `<a>` has no use for.",
@@ -334,7 +349,7 @@ pub fn ActionIcon(mut props: ActionIconProps) -> Element {
                 .attr("aria-label", props.aria_label)
                 .attr("aria-disabled", "true")
                 .attr("tabindex", if soft_disabled { "0" } else { "-1" })
-                .render(HtmlTag::A, props.attributes, props.children);
+                .render(HtmlTag::A, props.attributes, glyph);
         }
 
         return rsx! {
@@ -348,18 +363,18 @@ pub fn ActionIcon(mut props: ActionIconProps) -> Element {
                 variables,
                 "aria-label": props.aria_label,
                 attributes: props.attributes,
-                {props.children}
+                {glyph}
             }
         };
     }
 
     let children = if loading {
         rsx! {
-            span { {props.children} }
+            span { {glyph} }
             Loader { color: "currentColor" }
         }
     } else {
-        props.children
+        glyph
     };
 
     boxed
@@ -403,7 +418,8 @@ mod tests {
             onclick: None,
             to: Input::None,
             target: None,
-            children: rsx! {},
+            icon: None,
+            children: None,
         }
     }
 
