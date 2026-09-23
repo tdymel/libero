@@ -279,6 +279,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ThemingPage {}, "Theming"),
                 page(Route::LocalizationPage {}, "Localization"),
                 page(Route::PlatformPage {}, "Platform"),
+                page(Route::CreditsPage {}, "Credits"),
             ],
         ),
         // The two building blocks first, then arranging, sizing, and the app shell.

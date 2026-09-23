@@ -2,10 +2,13 @@ use crate::components::DocPage;
 use crate::icons::{CheckmarkIcon, CodeIcon};
 use dioxus::prelude::*;
 use libero::{
-    components::{Alert, Anchor, Badge, Divider, Flex, Icon, List, ListItem, Paper, Text, Title},
+    components::{
+        Alert, Anchor, Badge, Divider, Flex, Icon, List, ListItem, Paper, Pictogram, Text, Title,
+    },
     sx::sx,
     theme::Size,
 };
+use pictogram_icons_lucide as lucide;
 
 #[component]
 pub fn PhilosophyPage() -> Element {
@@ -151,71 +154,27 @@ fn Label(children: Element) -> Element {
 #[component]
 fn AccessibilityIcon() -> Element {
     rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            circle { cx: "16", cy: "4", r: "1" }
-            path { d: "m18 19 1-7-6 1" }
-            path { d: "m5 8 3-3 5.5 3-2.36 3.5" }
-            path { d: "M4.24 14.5a5 5 0 0 0 6.88 6" }
-            path { d: "M13.76 17.5a5 5 0 0 0-6.88-6" }
-        }
+        Pictogram { icon: lucide::accessibility::outlined }
     }
 }
 
 #[component]
 fn BatteryIcon() -> Element {
     rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            rect { x: "2", y: "6", width: "16", height: "12", rx: "2" }
-            path { d: "M22 14v-4" }
-            path { d: "M6 10v4" }
-            path { d: "M10 10v4" }
-            path { d: "M14 10v4" }
-        }
+        Pictogram { icon: lucide::battery::outlined }
     }
 }
 
 #[component]
 fn SparkleIcon() -> Element {
     rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            path { d: "M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z" }
-            path { d: "M19 3v4" }
-            path { d: "M21 5h-4" }
-        }
+        Pictogram { icon: lucide::sparkles::outlined }
     }
 }
 
 #[component]
 fn InfoIcon() -> Element {
     rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            circle { cx: "12", cy: "12", r: "10" }
-            path { d: "M12 16v-4" }
-            path { d: "M12 8h.01" }
-        }
+        Pictogram { icon: lucide::info::outlined }
     }
 }

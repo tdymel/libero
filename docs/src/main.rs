@@ -67,6 +67,8 @@ pub(crate) enum Route {
     LocalizationPage {},
     #[route("/about/platform")]
     PlatformPage {},
+    #[route("/about/credits")]
+    CreditsPage {},
 
     #[route("/accessibility")]
     AccessibilityPage {},

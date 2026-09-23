@@ -60,6 +60,7 @@ md_pages! {
     Combobox => "combobox",
     Container => "container",
     CopyButton => "copy_button",
+    Credits => "credits",
     DataList => "data_list",
     ChronoField => "chrono_field",
     ChronoPicker => "chrono_picker",

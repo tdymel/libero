@@ -17,6 +17,7 @@ fetch only the file you need.
 - [Theming](theming.md): How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.
 - [Localization](localization.md): The words components say on their own, how dates and numbers are written, and the reading direction: `Localization`, `Formats` and the hooks that switch them.
 - [Platform](platform.md): Every platform API (elements, timers, keys, scroll, the document, the colour scheme and the clock), what each makes possible, and how to use them where a renderer lacks one.
+- [Credits](credits.md): The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons, Octicons), their licences and notices.
 
 ## Layout
 
