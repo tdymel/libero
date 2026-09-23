@@ -139,6 +139,44 @@ async fn disabled_defaults<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
+async fn pair_leads<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    let (start, end) = if route.ends_with("/rtl") {
+        ("border-right-color", "border-left-color")
+    } else {
+        ("border-left-color", "border-right-color")
+    };
+    let chevron = "#p1 > div > button";
+    let (at, away) = (d.style(chevron, start).await?, d.style(chevron, end).await?);
+    ensure!(at != away, "chevron seam colour {at} on both sides");
+    ensure!(
+        d.style("#p2", start).await? != d.style("#p2", end).await?,
+        "no divider after the pair"
+    );
+    Ok(())
+}
+
+async fn hidden_child<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(
+        !round(d, "#h2", TOP_LEFT).await?,
+        "a hidden first child no longer squares its neighbour: update the docs"
+    );
+    ensure!(
+        round(d, "#h3", TOP_LEFT).await? && round(d, "#h3", TOP_RIGHT).await?,
+        "a lone visible child is round"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_leading_theme_toggle_pair_has_a_divider_at_its_chevron,
+    "/button-group",
+    pair_leads
+);
+e2e::scenario!(
+    a_hidden_child_still_counts_as_first,
+    "/button-group",
+    hidden_child
+);
 e2e::scenario!(
     the_seams_are_flush_and_only_the_ends_round,
     "/button-group",

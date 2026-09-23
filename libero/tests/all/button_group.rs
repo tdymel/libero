@@ -95,6 +95,18 @@ fn outside_a_group_nothing_changes() {
 }
 
 #[test]
+fn the_css_divides_the_inner_seam_of_a_theme_toggle_pair() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { ButtonGroup { Button { "A" } } } }
+    }
+    let html = render(app);
+    assert!(
+        html.contains("> [role=\"group\"] > div > :is(button, a):not([data-state~=\"outlined\"])"),
+        "{html}"
+    );
+}
+
+#[test]
 fn the_css_joins_the_seams_on_logical_sides() {
     fn app() -> Element {
         rsx! { LiberoProvider { ButtonGroup { Button { "A" } Button { "B" } } } }

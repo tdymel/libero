@@ -43,6 +43,20 @@ fn ButtonGroupPage() -> Element {
                 Button { id: "v2", "Middle" }
                 Button { id: "v3", "Bottom" }
             }
+            // After the rest: the baseline's tab walk reaches `#v2` first.
+            // The pair leads: its chevron seam needs a divider of its own.
+            ButtonGroup { id: "pair", "aria-label": "Pair", size: "sm", variant: "standard",
+                ThemeToggle { id: "p1", themes: ThemeSet::CATALOGUE }
+                Button { id: "p2", "After" }
+            }
+            // A hidden first child still squares its neighbour; a lone child is round.
+            ButtonGroup { id: "hidden-in", "aria-label": "Hidden in", variant: "outlined",
+                span { display: "none", Button { id: "h1", "Hidden" } }
+                Button { id: "h2", "Shown" }
+            }
+            ButtonGroup { id: "hidden-out", "aria-label": "Hidden out", variant: "outlined",
+                Button { id: "h3", "Shown" }
+            }
         }
     }
 }

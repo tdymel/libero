@@ -38,6 +38,15 @@ fn seam(overlap: Sx, line: Sx) -> Sx {
         })
 }
 
+/// `ThemeToggle`'s pair is a group of its own: its chevron's inner seam gets the divider too.
+fn pair_seam(line: Sx) -> Sx {
+    let borderless = format!(":not([data-state~=\"{}\"])", Variant::Outlined.state_name());
+    sx().selector(
+        format!("& > [role=\"group\"] > div > {CONTROL}{borderless}"),
+        line,
+    )
+}
+
 // One `when` deep, so these outrank the controls' own radius and variant rules.
 static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
@@ -59,7 +68,8 @@ static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
             .and(seam(
                 sx().margin_inline_start("-1px"),
                 sx().border_inline_start(divider()),
-            )),
+            ))
+            .and(pair_seam(sx().border_inline_start(divider()))),
         )
         .when(
             Orientation::Vertical.state_name(),
@@ -78,7 +88,9 @@ static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
                 .and(seam(
                     sx().margin_top("-1px"),
                     sx().border_block_start(divider()),
-                )),
+                ))
+                // The pair stays a row in a column.
+                .and(pair_seam(sx().border_inline_start(divider()))),
         )
 });
 
@@ -109,6 +121,9 @@ base_props! {
 
 /// Buttons and action icons side by side as one control: shared seams, only the outer corners round.
 /// Name it with an `aria-label`: it renders `role="group"`.
+///
+/// A child hidden with `display: none` still counts as first or last and squares its neighbour's
+/// outer corners. Render a conditional control only when shown, or keep it outside the group.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
