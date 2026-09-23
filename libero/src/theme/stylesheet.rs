@@ -267,6 +267,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         theme_toggle: _,
         repo_button: _,
         direction_toggle: _,
+        tldr: _,
         anchor,
         file_field,
         pin_field,

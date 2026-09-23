@@ -92,10 +92,10 @@ fn Demo() -> Element {
 | `label` | `String` | - | The trigger's text. Unset, `TldrLabels::label` ("TLDR"). |
 | `icon_only` | `bool` | `false` | Draws only the sparkles, named by `aria_label`. |
 | `aria_label` | `String` | - | Names the icon-only trigger. Unset, `TldrLabels::icon_only` ("Summarize with AI"). |
-| `variant` | `Variant` | `outlined` | The trigger's visual style. |
+| `variant` | `Variant` | `outlined` | The trigger's visual style. Unset, `theme.tldr.variant`. |
 | `size` | `Size` | `sm` | The trigger's size step, the icon-only one too. |
 | `radius` | `Size` | - | Corner radius, independent of `size`. Unset, the trigger's own: `xl` on the labelled chip, `sm` icon-only. |
-| `color` | `ThemeAwareValue` | `neutral` | The trigger's accent color. A theme color name or any CSS color. |
+| `color` | `ThemeAwareValue` | `neutral` | The trigger's accent color. A theme color name or any CSS color. Unset, `theme.tldr.color`. |
 
 Like every component, `Tldr` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the trigger.
@@ -120,6 +120,15 @@ and `prompt`. Provider names are brand names and are not translated.
 The marks are Lobe Icons' monochrome ones (MIT, Copyright (c) 2023 LobeHub),
 from `pictogram-icons-lobe`. They are trademarks of their owners, shown only to name the service a
 link opens.
+
+## Theme defaults
+
+`TldrDefaults` on the theme, as `tldr`.
+
+| Field | Type | Description |
+|---|---|---|
+| `variant` | `Variant` | Default `variant` when the prop is omitted (`outlined`). |
+| `color` | `Color` | Default `color` when the prop is omitted (`neutral`). |
 
 ## CSS variables
 

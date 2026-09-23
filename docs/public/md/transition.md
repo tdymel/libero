@@ -76,6 +76,7 @@ Like every component, `Transition` also takes the shared props `sx`, `class`,
 | `easing` | `&'static str` | `"ease"` | The CSS timing function. |
 | `distance` | `&'static str` | `"1rem"` | How far `FadeUp` and `FadeDown` travel. |
 | `scale` | `&'static str` | `"0.9"` | The factor `Scale` grows from. |
+| `pop_scale` | `&'static str` | `"0.8"` | The factor `Pop` grows from. |
 
 ## CSS variables
 
@@ -85,6 +86,7 @@ Like every component, `Transition` also takes the shared props `sx`, `class`,
 | `--lsx-transition-easing` | Timing function of the transition. |
 | `--lsx-transition-distance` | Travel of `FadeUp` and `FadeDown`, a CSS length. |
 | `--lsx-transition-scale` | Starting factor of `Scale`. |
+| `--lsx-transition-pop-scale` | Starting factor of `Pop`. |
 
 ## Data attributes
 

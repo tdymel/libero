@@ -87,6 +87,7 @@ mod textarea;
 mod theme_toggle;
 mod timeline;
 mod title;
+mod tldr;
 mod tooltip;
 mod transition;
 mod tree;
@@ -341,13 +342,14 @@ pub use title::{
     TITLE_FONT_FAMILY, TITLE_FONT_SIZE, TITLE_FONT_WEIGHT, TITLE_LETTER_SPACING, TITLE_LINE_HEIGHT,
     TitleDefaults, TitleSizeLevel,
 };
+pub use tldr::TldrDefaults;
 pub use tooltip::{
     TOOLTIP_BACKGROUND, TOOLTIP_COLOR, TOOLTIP_DURATION, TOOLTIP_FONT_SIZE, TooltipDefaults,
 };
 pub(crate) use tooltip::{TOOLTIP_IN, TOOLTIP_KEYFRAMES};
 pub use transition::{
-    TRANSITION_DISTANCE, TRANSITION_DURATION, TRANSITION_EASING, TRANSITION_SCALE,
-    TransitionDefaults,
+    TRANSITION_DISTANCE, TRANSITION_DURATION, TRANSITION_EASING, TRANSITION_POP_SCALE,
+    TRANSITION_SCALE, TransitionDefaults,
 };
 pub use tree::TreeDefaults;
 pub use variant::Variant;

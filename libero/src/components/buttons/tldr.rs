@@ -11,7 +11,7 @@ use crate::{
         overlay::{Menu, MenuEntry, MenuItem, use_menu},
     },
     context::IconSlot,
-    hooks::use_localization,
+    hooks::{use_localization, use_theme},
     localization::fill,
     sx::{ThemeAwareValue, sx},
     theme::Size,
@@ -135,7 +135,7 @@ base_props! {
         /// Names the icon-only trigger. Unset, the localization's.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// Unset, outlined.
+        /// Unset, `theme.tldr.variant`.
         #[props(default, into)]
         variant: Input<Variant>,
         /// The trigger's size step. Unset, `sm`.
@@ -144,7 +144,7 @@ base_props! {
         /// Corner radius, independent of `size`. Unset, the trigger's own: `xl` on the chip, `sm` icon-only.
         #[props(default, into)]
         radius: Input<Size>,
-        /// Unset, neutral.
+        /// Unset, `theme.tldr.color`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
     }
@@ -167,6 +167,7 @@ base_props! {
 /// Docs: <https://libero-ui.dev/buttons/tldr>
 #[component]
 pub fn Tldr(props: TldrProps) -> Element {
+    let theme = use_theme();
     let words = use_localization().tldr;
     let menu = use_menu();
     let prompt = props.prompt.as_deref().unwrap_or(words.prompt);
@@ -190,13 +191,13 @@ pub fn Tldr(props: TldrProps) -> Element {
         items: links,
     }];
 
-    let variant = props.variant.copied_or(Variant::Outlined);
+    let variant = props.variant.copied_or(theme.tldr.variant);
     let size = props.size.copied_or(Size::Sm);
     let color = props
         .color
         .clone()
         .into_option()
-        .unwrap_or_else(|| "neutral".into());
+        .unwrap_or_else(|| theme.tldr.color.into());
     let mut attributes = menu.a11y_attributes();
     attributes.extend(props.attributes.clone());
 
@@ -271,6 +272,13 @@ mod tests {
         assert!(url.starts_with("https://chat.openai.com/?q=Summarize%20and%20analyze"));
         assert!(url.contains("https%3A%2F%2Fa.b%2Fmd%2Ftextarea.md."));
         assert!(!url.contains(' '));
+    }
+
+    #[test]
+    fn the_theme_defaults_keep_the_outlined_neutral_trigger() {
+        let defaults = crate::theme::Theme::DEFAULT.tldr;
+        assert_eq!(defaults.variant, Variant::Outlined);
+        assert_eq!(defaults.color, crate::theme::Color::Neutral);
     }
 
     #[test]

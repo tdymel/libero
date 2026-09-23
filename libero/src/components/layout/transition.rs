@@ -10,7 +10,8 @@ use crate::{
     hooks::{use_presence, use_theme},
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
-        CssVar, TRANSITION_DISTANCE, TRANSITION_DURATION, TRANSITION_EASING, TRANSITION_SCALE,
+        CssVar, TRANSITION_DISTANCE, TRANSITION_DURATION, TRANSITION_EASING, TRANSITION_POP_SCALE,
+        TRANSITION_SCALE,
     },
 };
 
@@ -67,7 +68,7 @@ pub enum TransitionKind {
     SlideLeft,
     /// Moves right its own width into place (physical, not logical).
     SlideRight,
-    /// Grows from a smaller size than `Scale`.
+    /// Grows from `theme.transition.pop_scale`, smaller than `Scale`.
     Pop,
 }
 
@@ -84,7 +85,7 @@ impl TransitionKind {
             Self::SlideDown => "translateY(-100%)".to_string(),
             Self::SlideLeft => "translateX(100%)".to_string(),
             Self::SlideRight => "translateX(-100%)".to_string(),
-            Self::Pop => "scale(0.8)".to_string(),
+            Self::Pop => format!("scale({})", TRANSITION_POP_SCALE.value()),
         }
     }
 }
@@ -221,7 +222,10 @@ mod tests {
             (TransitionKind::SlideDown, "translateY(-100%)"),
             (TransitionKind::SlideLeft, "translateX(100%)"),
             (TransitionKind::SlideRight, "translateX(-100%)"),
-            (TransitionKind::Pop, "scale(0.8)"),
+            (
+                TransitionKind::Pop,
+                "scale(var(--lsx-transition-pop-scale))",
+            ),
         ];
         for (kind, transform) in expected {
             let variables = transition_variables(kind, None).to_string();
