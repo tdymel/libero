@@ -173,6 +173,24 @@ fn native_narrow_window_drills_in() {
     e2e::futures::executor::block_on(taps_walk_the_levels(&mut driver, "/cascader")).unwrap();
 }
 
+/// Todo 1124: stylo applies the sheet's `!important` rules too: edge to edge, at the foot.
+#[cfg(feature = "native")]
+#[test]
+fn native_narrow_window_shows_a_bottom_sheet() {
+    let mut driver = e2e::driver::Native::open("/cascader");
+    driver.page.resize(390, 844);
+    e2e::futures::executor::block_on(async {
+        driver.click(TRIGGER).await.unwrap();
+        eventually(&mut driver, "the roots", async |d| shown(d, EUROPE).await)
+            .await
+            .unwrap();
+    });
+    let (x, y, width, height) = driver.page.rect("[data-state~=bordered]");
+    assert!(x.abs() < 1.0 && (width - 390.0).abs() < 1.0, "{x} {width}");
+    assert!((y + height - 844.0).abs() < 1.0, "{y} {height}");
+    assert!(height <= 844.0 * 0.7 + 1.0, "too tall: {height}");
+}
+
 /// Todo 1084: `any_level` on a phone, the first row picks the parent a tap only drilled into.
 #[test]
 fn a_phone_picks_a_branch_from_its_first_row() {
