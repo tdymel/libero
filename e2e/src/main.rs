@@ -95,16 +95,20 @@ fn main() -> Result<()> {
     let mut guard = Guard::spawn()?;
 
     eprintln!("e2e: starting the {app_dir} server on {base_url}");
-    let mut server = Command::new(&dx)
-        .current_dir(root.join(app_dir))
-        .args([
-            "run",
-            "--web",
-            "--addr",
-            "127.0.0.1",
-            "--port",
-            &port.to_string(),
-        ])
+    let mut server = Command::new(&dx);
+    server.current_dir(root.join(app_dir)).args([
+        "run",
+        "--web",
+        "--addr",
+        "127.0.0.1",
+        "--port",
+        &port.to_string(),
+    ]);
+    // `E2E_RELEASE=1`: optimised fixtures, for the frame-time report (1086).
+    if std::env::var_os("E2E_RELEASE").is_some() {
+        server.arg("--release");
+    }
+    let mut server = server
         // The env var, since `dx` takes no `--target-dir`. `RUSTC_WRAPPER` is
         // left alone: `dx` drives it itself for hot-patching.
         .env("CARGO_TARGET_DIR", &target_dir)

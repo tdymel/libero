@@ -54,6 +54,8 @@ fn Demo() -> Element {
 - It is not a `toolbar`: no arrow-key navigation between the buttons.
 - For one choice out of several, use [`SegmentedControl`](segmented_control.md),
   which is a radio group.
+- A child hidden with `display: none` still counts as first or last and squares its
+  neighbour's outer corners; render a conditional control only when shown.
 
 ## Props
 
