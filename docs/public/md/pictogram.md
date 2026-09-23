@@ -59,9 +59,6 @@ beats: inside `Icon` or `ActionIcon` the host's CSS still sizes the glyph.
 - A pictogram is hidden from screen readers (`aria-hidden="true"`).
 - `aria_label`, or `"aria-labelledby"` by its name in quotes, makes it
   `role="img"` instead.
-- A leading `<title>` in the glyph (lobe and simple icons carry one) is
-  dropped: it would add a hover tooltip and stray words to the host's text.
-  `aria_label` is the name.
 
 ### You must
 

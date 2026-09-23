@@ -22,7 +22,6 @@ pub struct PictogramProps {
 
 /// An inline `<svg>` drawn from [`SvgData`], in `currentColor`; decorative unless given `aria_label`.
 /// Other aria attributes go by name in quotes: `"aria-labelledby": "title"`.
-/// A leading `<title>` in the glyph (lobe, simple) is dropped: no tooltip, no stray text.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -77,11 +76,12 @@ mod tests {
     }
 
     #[test]
-    fn a_leading_title_is_dropped() {
+    fn brand_marks_render_without_a_title() {
         let html = dioxus_ssr::render_element(rsx! {
-            Pictogram { icon: pictogram_icons_simple::github::regular, aria_label: "GitHub" }
+            Pictogram { icon: pictogram_icons_simple::github::regular }
+            Pictogram { icon: pictogram_icons_lobe::openai::mono }
         });
-        assert!(!html.contains("<title>"), "{html}");
+        assert!(!html.contains("<title"), "{html}");
         assert!(html.contains("<path"), "{html}");
     }
 

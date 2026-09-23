@@ -35,9 +35,7 @@ pub fn PictogramPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "A pictogram is hidden from screen readers (`aria-hidden=\"true\"`).",
-                    "`aria_label`, or `\"aria-labelledby\"` by its name in quotes, makes it `role=\"img\"` instead.",
-                    "A leading `<title>` in the glyph (lobe and simple icons carry one) is dropped: it would add a hover tooltip and stray words to the host's text. `aria_label` is the name.",
-                ])
+                    "`aria_label`, or `\"aria-labelledby\"` by its name in quotes, makes it `role=\"img\"` instead.",                ])
                 .must([
                     "Name a pictogram that means something on its own with `aria_label`. One next to a text label stays hidden.",
                     "For a clickable glyph, use `ActionIcon { icon }`.",

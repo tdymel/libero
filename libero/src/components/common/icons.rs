@@ -17,14 +17,6 @@ pub(crate) fn Glyph(
     draw_svg(&use_icon(slot, icon), attributes)
 }
 
-/// `body` without a leading `<title>`: lobe and simple glyphs carry one, which adds
-/// a hover tooltip and its words to the host's text. `aria_label` is the name.
-fn untitled(body: &str) -> &str {
-    body.strip_prefix("<title>")
-        .and_then(|rest| rest.split_once("</title>"))
-        .map_or(body, |(_, rest)| rest)
-}
-
 /// `icon` as an inline `<svg>`, `own` winning over its attributes. `Pictogram`'s body.
 pub(crate) fn draw_svg(icon: &SvgData, own: Vec<Attribute>) -> Element {
     let attributes = attributes(icon, &[], own);
@@ -32,7 +24,7 @@ pub(crate) fn draw_svg(icon: &SvgData, own: Vec<Attribute>) -> Element {
         svg {
             view_box: icon.view_box,
             xmlns: XMLNS,
-            dangerous_inner_html: untitled(icon.body),
+            dangerous_inner_html: icon.body,
             ..attributes,
         }
     }
@@ -157,20 +149,6 @@ mod tests {
         assert_eq!(value(&hidden, "aria-hidden"), Some(&text("true")));
         let shown = attributes(&STROKED, &[], vec![attr("aria-hidden", "false")]);
         assert_eq!(value(&shown, "aria-hidden"), Some(&text("false")));
-    }
-
-    #[test]
-    fn untitled_drops_only_a_leading_title() {
-        assert_eq!(
-            untitled(r#"<title>GitHub</title><path d="M1 1"/>"#),
-            r#"<path d="M1 1"/>"#
-        );
-        assert_eq!(untitled(STROKED.body), STROKED.body);
-        assert_eq!(untitled("<title>open"), "<title>open");
-        assert_eq!(
-            untitled(r#"<path d="M1 1"/><title>late</title>"#),
-            r#"<path d="M1 1"/><title>late</title>"#
-        );
     }
 
     #[test]

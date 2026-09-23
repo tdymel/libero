@@ -275,6 +275,15 @@ mod tests {
     }
 
     #[test]
+    fn a_provider_mark_adds_no_text() {
+        for provider in SummaryProvider::defaults() {
+            let mark = provider.mark.expect("a default provider has a mark");
+            let html = dioxus_ssr::render_element(mark);
+            assert!(!html.contains("<title"), "{}: {html}", provider.name);
+        }
+    }
+
+    #[test]
     fn the_theme_defaults_keep_the_outlined_neutral_trigger() {
         let defaults = crate::theme::Theme::DEFAULT.tldr;
         assert_eq!(defaults.variant, Variant::Outlined);

@@ -31,8 +31,8 @@ chrono = { version = "0.4", default-features = false, features = ["std"] }
 pictogram-core = "0.4"
 pictogram-icons-lucide = "0.4"
 # Brand marks: `Tldr`'s providers (lobe), `RepoButton`'s hosts (simple). Unused consts compile away.
-pictogram-icons-lobe = "0.4"
-pictogram-icons-simple = "0.4"
+pictogram-icons-lobe = "0.4.1"
+pictogram-icons-simple = "0.4.1"
 # `RepoButton` reads a host's JSON reply. Already in every graph through `dioxus-document`.
 serde_json = "1"
 

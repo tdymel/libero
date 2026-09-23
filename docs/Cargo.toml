@@ -17,7 +17,7 @@ libero = { path = "../libero", default-features = false, features = [
 # The `Pictogram` and `Icon` demos' glyphs; libero's own pin.
 pictogram-icons-lucide = "0.4"
 # The GitHub and Markdown marks on every page's source and markdown links.
-pictogram-icons-simple = "0.4"
+pictogram-icons-simple = "0.4.1"
 # `dioxus/native` would pull this in with its default features, and its
 # default renderer (`vello-hybrid`) can't be switched off from here - so
 # `native-cpu` depends on it directly, with the default set minus the
