@@ -47,10 +47,35 @@ fn Demo() -> Element {
 
 One slot: `IconSet::new().with(slot, icon)` for just that slot, as above.
 
-The whole set: fill every slot once, from another pictogram icon crate
-(`pictogram-icons-tabler`, `pictogram-icons-material`, ...), at the root of
-your app. There is no mapping between sets, since their icon names differ; a
-slot you skip keeps lucide.
+A whole set: turn on its libero feature and start from its constructor, at
+the root of your app. Only the set and style you call is compiled into your
+app; the features keep the other crates out of your build.
+
+| Feature | Constructors |
+|---|---|
+| none | `IconSet::lucide_outlined()` (libero's defaults, to reset a subtree) |
+| `icons-material` | `material_filled`, `material_outlined`, `material_rounded`, `material_sharp`, `material_two_tone` |
+| `icons-tabler` | `tabler_outlined` |
+| `icons-bootstrap` | `bootstrap_outlined` |
+| `icons-phosphor` | `phosphor_regular`, `phosphor_bold`, `phosphor_light`, `phosphor_thin`, `phosphor_fill`, `phosphor_duotone` |
+
+Bootstrap and Phosphor have no text direction glyph: `TextDirectionLtr` and
+`TextDirectionRtl` keep lucide. Override single slots on top with `with`:
+
+```toml
+libero = { version = "0.1", features = ["icons-material"] }
+```
+
+```rust,ignore
+// Needs the `icons-material` feature; libero's own doc-tests build without it.
+IconProvider {
+    icons: IconSet::material_rounded().with(IconSlot::Close, lucide::circle_x::outlined),
+    "The rest of your app."
+}
+```
+
+Any other pictogram crate: fill the slots yourself. There is no mapping between
+sets, since their icon names differ; a slot you skip keeps lucide.
 
 ```rust
 use dioxus::prelude::*;

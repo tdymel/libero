@@ -34,3 +34,23 @@ e2e::scenario!(
     "/icon-provider",
     one_slot_swapped
 );
+
+async fn whole_set_drawn<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let tabler = d.attr("#tabler svg path", "d").await?;
+    let lucide = d.attr("#default svg path", "d").await?;
+    ensure!(
+        tabler.is_some(),
+        "the select under the tabler set draws a chevron"
+    );
+    ensure!(
+        tabler != lucide,
+        "the tabler chevron differs from lucide's: {tabler:?} vs {lucide:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_whole_set_redraws_its_subtree,
+    "/icon-provider",
+    whole_set_drawn
+);

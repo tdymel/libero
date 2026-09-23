@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
 use pictogram_core::Svg as SvgData;
 
+mod sets;
+
 /// A glyph libero draws itself, by what it means. An [`IconProvider`] can swap
 /// each one. Brand marks (GitHub, Google, ...) are not slots: they name a service.
 ///
@@ -77,6 +79,8 @@ pub enum IconSlot {
 const SLOTS: usize = IconSlot::Grip as usize + 1;
 
 /// Glyphs by [`IconSlot`]; an empty slot keeps libero's default (lucide).
+/// A whole set starts from its constructor, one `icons-<set>` feature each:
+/// `IconSet::material_rounded()`, `tabler_outlined()`, `bootstrap_outlined()`, `phosphor_regular()`, ...
 ///
 /// ```rust
 /// # use libero::{IconSet, IconSlot};

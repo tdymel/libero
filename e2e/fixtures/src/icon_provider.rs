@@ -1,5 +1,6 @@
 //! Two selects, one under an `IconProvider` whose `ChevronDown` a button swaps
 //! between two glyphs (1094): one slot replaced, the other select untouched.
+//! A third sits under a whole set, `IconSet::tabler_outlined()` (1133).
 
 use dioxus::prelude::*;
 use libero::{
@@ -37,6 +38,11 @@ fn IconProviderPage() -> Element {
         IconProvider { icons: IconSet::new().with(IconSlot::ChevronDown, chevron),
             div { id: "provided",
                 Select { label: "Provided", value: Fruit::Apple, onchange: move |_| {} }
+            }
+        }
+        IconProvider { icons: IconSet::tabler_outlined(),
+            div { id: "tabler",
+                Select { label: "Tabler", value: Fruit::Apple, onchange: move |_| {} }
             }
         }
     }

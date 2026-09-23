@@ -4469,9 +4469,13 @@ dependencies = [
  "js-sys",
  "libero-macros",
  "pictogram-core",
+ "pictogram-icons-bootstrap",
  "pictogram-icons-lobe",
  "pictogram-icons-lucide",
+ "pictogram-icons-material",
+ "pictogram-icons-phosphor",
  "pictogram-icons-simple",
+ "pictogram-icons-tabler",
  "regex",
  "rfd",
  "serde_json",
@@ -5708,6 +5712,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee8bffbac0ec28818b71333f4bb9ac71412275266ae3efced79002e0ccc85021"
 
 [[package]]
+name = "pictogram-icons-bootstrap"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e11879f279b090fa758a812823c074e0f5f2e1cc324caacd7762a7d1698b8c7"
+dependencies = [
+ "pictogram-core",
+]
+
+[[package]]
 name = "pictogram-icons-lobe"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5726,10 +5739,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "pictogram-icons-material"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3ce1c2fcdfa861a342f00018ecf5cd3ae796fec1456161f6e258e515c1f4d91"
+dependencies = [
+ "pictogram-core",
+]
+
+[[package]]
+name = "pictogram-icons-phosphor"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8ace4807be1608dd67657804193a8abf4890ebd9c85b3bdb5abb6c21b000e99"
+dependencies = [
+ "pictogram-core",
+]
+
+[[package]]
 name = "pictogram-icons-simple"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16c9d13ca0558d92581f1610425f128f494e1129a058863b254593b502a26c11"
+dependencies = [
+ "pictogram-core",
+]
+
+[[package]]
+name = "pictogram-icons-tabler"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da9ed4cfa636f366774e488e5b04e08e28f17a0bfc2d9810f16cd2b278975607"
 dependencies = [
  "pictogram-core",
 ]

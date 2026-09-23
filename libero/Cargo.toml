@@ -33,6 +33,11 @@ pictogram-icons-lucide = "0.4"
 # Brand marks: `Tldr`'s providers (lobe), `RepoButton`'s hosts (simple). Unused consts compile away.
 pictogram-icons-lobe = "0.4.1"
 pictogram-icons-simple = "0.4.1"
+# Whole sets for `IconProvider`, one `icons-<set>` feature each (`IconSet::material_rounded()`, ...).
+pictogram-icons-bootstrap = { version = "0.4", optional = true }
+pictogram-icons-material = { version = "0.4.1", optional = true }
+pictogram-icons-phosphor = { version = "0.4", optional = true }
+pictogram-icons-tabler = { version = "0.4", optional = true }
 # `RepoButton` reads a host's JSON reply. Already in every graph through `dioxus-document`.
 serde_json = "1"
 
@@ -130,6 +135,12 @@ default = [
 # `<div>` and warns in a debug build (and silently in release), so turn this
 # on if your own app passes one to `component`.
 full-polymorphism = []
+# Each adds one pictogram set's `IconSet` constructors. Off by default: libero's
+# own glyphs are lucide without any, and the crates are large to compile.
+icons-bootstrap = ["dep:pictogram-icons-bootstrap"]
+icons-material = ["dep:pictogram-icons-material"]
+icons-phosphor = ["dep:pictogram-icons-phosphor"]
+icons-tabler = ["dep:pictogram-icons-tabler"]
 # Each turns on one hand-ported grammar in `components/typography/code/languages/`
 # (see `language_catalog.rs`) - only the languages you enable are compiled in.
 code-lang-bash = []

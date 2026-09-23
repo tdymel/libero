@@ -13,6 +13,11 @@ libero = { path = "../libero", default-features = false, features = [
     "code-lang-bash",
     "code-lang-css",
     "code-lang-toml",
+    # The IconProvider page's set picker.
+    "icons-bootstrap",
+    "icons-material",
+    "icons-phosphor",
+    "icons-tabler",
 ] }
 # The `Pictogram` and `Icon` demos' glyphs; libero's own pin.
 pictogram-icons-lucide = "0.4"

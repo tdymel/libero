@@ -15,3 +15,8 @@ LabelText
 combobox "Provided" = Apple [expanded=false] [haspopup=listbox]
   StaticText "Apple"
 status [atomic] [live=polite]
+LabelText
+  StaticText "Tabler"
+combobox "Tabler" = Apple [expanded=false] [haspopup=listbox]
+  StaticText "Apple"
+status [atomic] [live=polite]
