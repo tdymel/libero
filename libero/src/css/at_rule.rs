@@ -5,6 +5,7 @@ use std::fmt::{self, Display, Formatter};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AtRule {
     Media(String),
+    Supports(String),
     Container { name: String, condition: String },
 }
 
@@ -24,6 +25,7 @@ impl Display for AtRule {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             AtRule::Media(query) => write!(f, "@media {query}"),
+            AtRule::Supports(condition) => write!(f, "@supports {condition}"),
             AtRule::Container { name, condition } => write!(f, "@container {name} {condition}"),
         }
     }

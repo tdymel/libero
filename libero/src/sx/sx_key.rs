@@ -371,6 +371,7 @@ pub enum SxModifierKey {
     Condition(String),
     Breakpoint(Size),
     Media(String),
+    Supports(String),
     Container { name: String, condition: String },
 }
 

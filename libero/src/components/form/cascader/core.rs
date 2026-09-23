@@ -148,6 +148,8 @@ fn cascader_rows_sx() -> Sx {
     )
     // `selected` follows the cursor here, so the committed path needs its own mark.
     .selector("& [data-state~='committed']", sx().font_weight("700"))
+    // On top of the row's half opacity, so a disabled label reads as dimmed text.
+    .selector("& [data-state~='disabled']", sx().color("text-dimmed"))
 }
 
 /// `column_width`, set on each column's `style` so the narrow rule can override the width.
@@ -263,7 +265,9 @@ static CASCADER_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
             .max_height("70vh")
             .border_bottom_left_radius("0")
             .border_bottom_right_radius("0")
-            .padding_bottom("calc(4px + env(safe-area-inset-bottom, 0px))"),
+            .padding_bottom("calc(4px + env(safe-area-inset-bottom, 0px))")
+            // Tracks the visible viewport as a phone's URL bar slides in and out.
+            .supports("(height: 1dvh)", sx().max_height("70dvh")),
     )
 });
 
@@ -1026,11 +1030,8 @@ impl CascaderRows {
                 selected: marked,
                 active: is_cursor,
                 states: States::new().with("committed", is_committed),
-                "aria-disabled": row_disabled.then_some("true"),
+                disabled: row_disabled,
                 onpick: move |_| {
-                    if row_disabled {
-                        return;
-                    }
                     cursor.set(next_cursor.clone());
                     match has_children {
                         false => commit(picked.clone(), true),
@@ -1648,6 +1649,25 @@ mod tests {
         ] {
             assert!(narrow.contains(declaration), "{declaration} in {narrow}");
         }
+        // `vh` first for a browser without `dvh`, which skips the `@supports` block.
+        let (plain, dynamic) = narrow
+            .split_once("@supports (height: 1dvh){")
+            .unwrap_or_else(|| panic!("no dvh override: {narrow}"));
+        assert!(plain.contains("max-height:70vh;"), "{plain}");
+        assert!(dynamic.contains("max-height:70dvh;"), "{dynamic}");
+    }
+
+    /// A disabled row is dimmed text on top of `ComboboxOption`'s disabled look (todo 1132).
+    #[test]
+    fn a_disabled_row_dims_its_text() {
+        let css = Stylesheet::from(&*CASCADER_COLUMNS_SX);
+
+        assert!(
+            css.as_str()
+                .contains("[data-state~='disabled']{color:var(--lsx-text-dimmed);}"),
+            "{}",
+            css.as_str()
+        );
     }
 
     /// `aria-controls` must name the column that holds the `aria-activedescendant` row.

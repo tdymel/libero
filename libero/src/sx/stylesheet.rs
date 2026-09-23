@@ -141,6 +141,10 @@ fn apply_modifier(context: &CssContext, modifier: &SxModifierKey) -> CssContext 
             selectors: context.selectors.clone(),
             at_rules: context.wrapped_in(AtRule::Media(query.clone())),
         },
+        SxModifierKey::Supports(condition) => CssContext {
+            selectors: context.selectors.clone(),
+            at_rules: context.wrapped_in(AtRule::Supports(condition.clone())),
+        },
         SxModifierKey::Container { name, condition } => CssContext {
             selectors: context.selectors.clone(),
             at_rules: context.wrapped_in(AtRule::Container {

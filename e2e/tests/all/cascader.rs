@@ -124,6 +124,41 @@ e2e::scenario!(
     taps_walk_the_levels
 );
 
+const ASIA: &str = "[role=option][id$='-option-0-1']";
+
+/// Todo 1132: a disabled row is dimmed and half transparent, with `aria-disabled` kept.
+pub async fn a_disabled_row_looks_disabled<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually(d, "the roots", async |d| shown(d, EUROPE).await).await?;
+    let disabled = d.attr(ASIA, "aria-disabled").await?;
+    anyhow::ensure!(
+        disabled.as_deref() == Some("true"),
+        "aria-disabled {disabled:?}"
+    );
+    let (asia, europe) = (
+        d.style(ASIA, "opacity").await?,
+        d.style(EUROPE, "opacity").await?,
+    );
+    anyhow::ensure!(
+        asia.parse::<f32>()? < europe.parse::<f32>()?,
+        "opacity {asia} vs {europe}"
+    );
+    let (asia, europe) = (
+        d.style(&format!("{ASIA} [data-slot=label]"), "color")
+            .await?,
+        d.style(&format!("{EUROPE} [data-slot=label]"), "color")
+            .await?,
+    );
+    anyhow::ensure!(asia != europe, "label colour {asia} as an enabled row's");
+    Ok(())
+}
+
+e2e::scenario!(
+    a_disabled_cascader_row_looks_disabled,
+    "/cascader",
+    a_disabled_row_looks_disabled
+);
+
 /// The same walk in a 390px browser, below `sm`.
 #[test]
 fn a_phone_drills_into_one_level_at_a_time() {

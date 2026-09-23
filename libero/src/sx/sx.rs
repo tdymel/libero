@@ -121,6 +121,12 @@ impl Sx {
         self.modifier(SxModifierKey::Media(query.into()), nested)
     }
 
+    /// Styles where the browser knows `condition`, e.g. `"(height: 1dvh)"`: declare the plain
+    /// value first, then override it here, since CSS has no two values for one property.
+    pub(crate) fn supports(self, condition: impl Into<String>, nested: Sx) -> Self {
+        self.modifier(SxModifierKey::Supports(condition.into()), nested)
+    }
+
     /// Makes this a named inline-size container for [`container_query`](Self::container_query).
     /// Named, since an anonymous one binds to the nearest container once they nest.
     ///
@@ -339,6 +345,21 @@ mod tests {
             "re-declared property must render last, got {}",
             Stylesheet::from(&merged).as_str()
         );
+    }
+
+    #[test]
+    fn supports_wraps_its_block_in_an_at_supports_after_the_plain_value() {
+        use crate::css::Stylesheet;
+
+        let sheet = super::sx()
+            .height("70vh")
+            .supports("(height: 1dvh)", super::sx().height("70dvh"));
+        let css = Stylesheet::from(&sheet);
+        let css = css.as_str();
+
+        let (plain, wrapped) = css.split_once("@supports (height: 1dvh){").unwrap();
+        assert!(plain.contains("height:70vh;"), "{css}");
+        assert!(wrapped.contains("height:70dvh;"), "{css}");
     }
 
     #[test]
