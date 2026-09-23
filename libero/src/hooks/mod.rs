@@ -63,7 +63,8 @@ pub use icons::use_icon;
 pub use id::use_id;
 pub(crate) use id::{id_selector, use_root_id};
 pub use intersection::{
-    Intersection, IntersectionEntry, IntersectionOptions, use_in_viewport, use_intersection,
+    InViewport, Intersection, IntersectionEntry, IntersectionOptions, use_in_viewport,
+    use_intersection,
 };
 pub(crate) use local_state::{LocalState, use_local_state};
 pub(crate) use localization::current_localization;

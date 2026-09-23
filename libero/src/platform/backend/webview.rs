@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::core::{Runtime, ScopeId, Task, spawn_forever};
 use dioxus::document::{Document, Eval, NoOpDocument};
-use dioxus::prelude::{Key, Modifiers, MountedData, spawn};
+use dioxus::prelude::{Key, Modifiers, spawn};
 use serde_json::{Value, json};
 
 use crate::platform::a11y_media::{
@@ -20,8 +20,8 @@ use crate::platform::a11y_media::{
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
     DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, MediaQueryApi,
-    MediaQuerySubscription, PRESS_MARKER_ATTR, PlatformError, PressApi, PressSubscription, Read,
-    ScrollApi, ScrollSubscription,
+    MediaQuerySubscription, OBSERVE_ATTR, PRESS_MARKER_ATTR, PlatformError, PressApi,
+    PressSubscription, Read, ScrollApi, ScrollSubscription,
     clipboard::{ClipboardApi, Write},
     file_dialog::{FileDialogApi, Picked, held_file},
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
@@ -258,23 +258,33 @@ impl MediaQueryApi for WebViewMediaQuery {
     }
 }
 
-/// One message per frame at most, on a scroll anywhere or a resize: the viewport's size.
-const ON_LAYOUT: &str = "let queued = false;
-    const tick = () => {
-        if (queued) return;
-        queued = true;
-        requestAnimationFrame(() => { queued = false; dioxus.send([innerWidth, innerHeight]); });
+/// An `IntersectionObserver` on the element carrying the tag, started once it
+/// renders. Sends `[isIntersecting, ratio]` of the newest entry; a root without
+/// a tag (or one that never renders) falls back to the viewport.
+const ON_INTERSECTION: &str = "const [attr, tag, rootTag, margin, thresholds] = data;
+    const find = (value) => document.querySelector('[' + attr + '=\"' + value + '\"]');
+    let observer = null;
+    const start = () => {
+        const target = find(tag);
+        if (!target) return false;
+        const root = rootTag === null ? null : find(rootTag);
+        if (rootTag !== null && !root) console.warn('use_intersection: the root carries no attribute');
+        observer = new IntersectionObserver((entries) => {
+            const latest = entries[entries.length - 1];
+            dioxus.send([latest.isIntersecting, latest.intersectionRatio]);
+        }, { root, rootMargin: margin, threshold: thresholds });
+        observer.observe(target);
+        return true;
     };
-    window.addEventListener('scroll', tick, { capture: true, passive: true });
-    window.addEventListener('resize', tick);
-    tick();";
+    const waiting = start() ? null : new MutationObserver(() => {
+        if (start()) waiting.disconnect();
+    });
+    waiting?.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: [attr] });";
 
-/// Measured from the element's rect, not an `IntersectionObserver`: Rust holds
-/// no DOM node here. It clips by the root only, so a scroller between the two
-/// that hides the target is not seen, and it re-measures on a scroll or resize.
+/// Observed in the page, keyed by the `tag` attribute the element carries: it
+/// clips by every scroller up to the root and sees layout-only changes.
 pub(super) fn on_intersection(
-    target: &Rc<MountedData>,
-    root: Option<&Rc<MountedData>>,
+    tags: (u64, Option<u64>),
     root_margin: &str,
     thresholds: &[f64],
     callback: Box<dyn Fn(bool, f64)>,
@@ -283,94 +293,33 @@ pub(super) fn on_intersection(
         return None;
     }
     let slot = Slot::new();
-    let script = eval(&format!(
-        "{ON_LAYOUT}
-        {}
-        window.removeEventListener('scroll', tick, {{ capture: true }});
-        window.removeEventListener('resize', tick);",
-        slot.park("")
-    ));
-    let (target, root) = (target.clone(), root.cloned());
-    let (margin, thresholds) = (root_margin.to_owned(), thresholds.to_vec());
+    let (tag, root_tag) = tags;
+    let script = eval_with(
+        json!([
+            OBSERVE_ATTR,
+            tag.to_string(),
+            root_tag.map(|tag| tag.to_string()),
+            root_margin,
+            thresholds
+        ]),
+        &format!(
+            "{ON_INTERSECTION}
+            {}
+            observer?.disconnect();
+            waiting?.disconnect();",
+            slot.park("")
+        ),
+    );
     let task = spawn(async move {
         let mut script = script;
-        let mut seen = None;
-        while let Ok([width, height]) = script.recv::<[f64; 2]>().await {
-            let Ok(target) = target.get_client_rect().await else {
-                continue;
-            };
-            let root = match &root {
-                Some(root) => match root.get_client_rect().await {
-                    Ok(rect) => (rect.min_x(), rect.min_y(), rect.max_x(), rect.max_y()),
-                    Err(_) => continue,
-                },
-                None => (0.0, 0.0, width, height),
-            };
-            let (is_intersecting, ratio) = overlap(
-                (
-                    target.min_x(),
-                    target.min_y(),
-                    target.max_x(),
-                    target.max_y(),
-                ),
-                grown(root, &margin),
-            );
-            let step = thresholds.iter().filter(|at| **at <= ratio).count();
-            if seen != Some((is_intersecting, step)) {
-                seen = Some((is_intersecting, step));
-                callback(is_intersecting, ratio);
-            }
+        while let Ok((is_intersecting, ratio)) = script.recv::<(bool, f64)>().await {
+            callback(is_intersecting, ratio);
         }
     });
     Some(Box::new(WebViewListener {
         task,
         _slot: Rc::new(slot),
     }))
-}
-
-type Edges = (f64, f64, f64, f64);
-
-/// `root` grown by a CSS margin of 1 to 4 `px` or `%` values (top, right, bottom, left).
-fn grown(root: Edges, margin: &str) -> Edges {
-    let (left, top, right, bottom) = root;
-    let (width, height) = (right - left, bottom - top);
-    let values: Vec<&str> = margin.split_whitespace().collect();
-    let pick = |index: usize| match values.len() {
-        0 => None,
-        1 => Some(values[0]),
-        2 => Some(values[index % 2]),
-        3 => Some(values[[0, 1, 2, 1][index]]),
-        _ => values.get(index).copied(),
-    };
-    let length = |index: usize, whole: f64| {
-        let value = pick(index).unwrap_or("0px");
-        match value.strip_suffix('%') {
-            Some(percent) => percent.parse::<f64>().unwrap_or(0.0) * whole / 100.0,
-            None => value.trim_end_matches("px").parse::<f64>().unwrap_or(0.0),
-        }
-    };
-    (
-        left - length(3, width),
-        top - length(0, height),
-        right + length(1, width),
-        bottom + length(2, height),
-    )
-}
-
-/// Whether `target` touches `root` and the share of `target`'s box inside it.
-fn overlap(target: Edges, root: Edges) -> (bool, f64) {
-    let width = target.2.min(root.2) - target.0.max(root.0);
-    let height = target.3.min(root.3) - target.1.max(root.1);
-    if width < 0.0 || height < 0.0 {
-        return (false, 0.0);
-    }
-    let area = (target.2 - target.0) * (target.3 - target.1);
-    let ratio = if area > 0.0 {
-        (width * height / area).min(1.0)
-    } else {
-        1.0
-    };
-    (true, ratio)
 }
 
 impl ContentSubscription for WebViewListener {}
@@ -1099,20 +1048,13 @@ mod tests {
     }
 
     #[test]
-    fn a_margin_grows_the_root_by_px_or_percent() {
-        let root = (0.0, 0.0, 200.0, 100.0);
-        assert_eq!(grown(root, "0px"), root);
-        assert_eq!(grown(root, "10px"), (-10.0, -10.0, 210.0, 110.0));
-        assert_eq!(grown(root, "10px 50%"), (-100.0, -10.0, 300.0, 110.0));
-        assert_eq!(grown(root, "1px 2px 3px 4px"), (-4.0, -1.0, 202.0, 103.0));
-    }
-
-    #[test]
-    fn overlap_is_the_visible_share_of_the_target() {
-        let root = (0.0, 0.0, 100.0, 100.0);
-        assert_eq!(overlap((0.0, 80.0, 100.0, 120.0), root), (true, 0.5));
-        assert_eq!(overlap((0.0, 100.0, 100.0, 140.0), root), (true, 0.0));
-        assert_eq!(overlap((0.0, 101.0, 100.0, 141.0), root), (false, 0.0));
+    fn a_page_observes_by_tag_and_a_server_does_not() {
+        let observes =
+            |dom: &VirtualDom| dom.in_scope(ScopeId::ROOT, crate::platform::observes_by_tag);
+        assert!(observes(&page_dom(false)));
+        let server =
+            VirtualDom::new(app).with_root_context(Rc::new(NoOpDocument) as Rc<dyn Document>);
+        assert!(!observes(&server));
     }
 
     #[test]

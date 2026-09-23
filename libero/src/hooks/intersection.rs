@@ -1,9 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
+use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use super::{ElementHandle, use_element};
-use crate::platform::{ContentSubscription, on_intersection};
+use crate::platform::{
+    ContentSubscription, OBSERVE_ATTR, next_observe_tag, observes_by_tag, on_intersection,
+};
 
 /// What [`use_intersection`] takes.
 #[derive(Clone, PartialEq)]
@@ -37,11 +40,15 @@ pub struct IntersectionEntry {
     pub ratio: f64,
 }
 
-/// An observed element: give it to `onmounted`, read `entry`.
-#[derive(Clone, Copy)]
+/// An observed element: give `on_mounted` to its `onmounted`, spread
+/// `attributes` on it, read `entry`.
+#[derive(Clone)]
 pub struct Intersection {
     /// The `onmounted` handler of the observed element.
     pub on_mounted: Callback<MountedEvent>,
+    /// Spread on the observed element (`..seen.attributes`). A WebView finds the
+    /// element by it and observes nothing without; empty on the web and Blitz.
+    pub attributes: Vec<Attribute>,
     /// `None` until the first observation, and always `None` where nothing can
     /// observe: Blitz, a server render.
     pub entry: ReadSignal<Option<IntersectionEntry>>,
@@ -51,10 +58,9 @@ type Slot = Rc<RefCell<Option<Box<dyn ContentSubscription>>>>;
 
 /// Reports how much of an element is visible inside its root.
 ///
-/// It is built on the browser's `IntersectionObserver`; a WebView (desktop,
-/// Android) measures the element against its root on every scroll and resize,
-/// without clipping by scrollers in between. Where there is neither, `entry`
-/// stays `None` and the element counts as never intersecting.
+/// It is built on the browser's `IntersectionObserver`, in a WebView (desktop,
+/// Android) too, where the element must carry `attributes`. Where there is
+/// neither, `entry` stays `None` and the element counts as never intersecting.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -67,7 +73,9 @@ type Slot = Rc<RefCell<Option<Box<dyn ContentSubscription>>>>;
 /// let revealed = seen.entry.read().is_some_and(|entry| entry.is_intersecting);
 ///
 /// rsx! {
-///     div { onmounted: move |event| seen.on_mounted.call(event),
+///     div {
+///         onmounted: move |event| seen.on_mounted.call(event),
+///         ..seen.attributes,
 ///         if revealed {
 ///             "Now visible"
 ///         }
@@ -86,6 +94,7 @@ pub fn use_intersection(options: IntersectionOptions) -> Intersection {
     } = options;
     let target = use_element();
     let entry = use_signal(|| None::<IntersectionEntry>);
+    let tag = use_hook(|| observes_by_tag().then(next_observe_tag));
     let slot: Slot = use_hook(|| Rc::new(RefCell::new(None)));
     use_drop({
         let slot = slot.clone();
@@ -111,6 +120,7 @@ pub fn use_intersection(options: IntersectionOptions) -> Intersection {
                     on_intersection(
                         &mounted,
                         root_mounted.as_ref(),
+                        (tag.unwrap_or_default(), None),
                         &root_margin,
                         &thresholds,
                         Box::new(move |is_intersecting, ratio| {
@@ -138,24 +148,49 @@ pub fn use_intersection(options: IntersectionOptions) -> Intersection {
     });
 
     let on_mounted = use_callback(move |event: MountedEvent| target.mount()(event));
+    let attributes = tag
+        .map(|tag| {
+            Attribute::new(
+                OBSERVE_ATTR,
+                AttributeValue::Text(tag.to_string()),
+                None,
+                false,
+            )
+        })
+        .into_iter()
+        .collect();
     Intersection {
         on_mounted,
+        attributes,
         entry: entry.into(),
     }
 }
 
-/// Whether an element is in the viewport: [`use_intersection`] with its
-/// defaults, reduced to a bool. `false` where nothing can observe.
+/// What [`use_in_viewport`] gives: [`use_intersection`] with its defaults,
+/// reduced to a bool.
+#[derive(Clone)]
+pub struct InViewport {
+    /// The `onmounted` handler of the observed element.
+    pub on_mounted: Callback<MountedEvent>,
+    /// Spread on the observed element, see [`Intersection::attributes`].
+    pub attributes: Vec<Attribute>,
+    /// `false` where nothing can observe.
+    pub visible: ReadSignal<bool>,
+}
+
+/// Whether an element is in the viewport, as a bool.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::hooks::use_in_viewport;
 /// # fn app() -> Element {
-/// let (on_mounted, visible) = use_in_viewport();
+/// let seen = use_in_viewport();
 ///
 /// rsx! {
-///     div { onmounted: move |event| on_mounted.call(event),
-///         if visible() {
+///     div {
+///         onmounted: move |event| seen.on_mounted.call(event),
+///         ..seen.attributes,
+///         if (seen.visible)() {
 ///             "On screen"
 ///         }
 ///     }
@@ -164,8 +199,16 @@ pub fn use_intersection(options: IntersectionOptions) -> Intersection {
 /// ```
 ///
 /// Docs: <https://libero-ui.dev/hooks/use-intersection>
-pub fn use_in_viewport() -> (Callback<MountedEvent>, ReadSignal<bool>) {
-    let Intersection { on_mounted, entry } = use_intersection(IntersectionOptions::default());
+pub fn use_in_viewport() -> InViewport {
+    let Intersection {
+        on_mounted,
+        attributes,
+        entry,
+    } = use_intersection(IntersectionOptions::default());
     let visible = use_memo(move || entry().is_some_and(|entry| entry.is_intersecting));
-    (on_mounted, visible.into())
+    InViewport {
+        on_mounted,
+        attributes,
+        visible: visible.into(),
+    }
 }

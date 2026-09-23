@@ -69,7 +69,7 @@ pub(crate) use focus::{
 };
 pub(crate) use form::{lifts_legends, submit_event, submit_listeners};
 pub(crate) use http::fetch_text;
-pub(crate) use intersection::on_intersection;
+pub(crate) use intersection::{OBSERVE_ATTR, next_observe_tag, observes_by_tag, on_intersection};
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::logical_key;

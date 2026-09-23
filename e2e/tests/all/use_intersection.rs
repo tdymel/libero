@@ -52,6 +52,19 @@ e2e::scenario!(
     native: skip("Blitz has no IntersectionObserver")
 );
 
+async fn a_clipped_target_stays_out<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#state", "shown in, hidden out", "the first measure").await?;
+    linger(d, 20).await;
+    eventually_text(d, "#state", "shown in, hidden out", "a clipped target").await
+}
+
+e2e::scenario!(
+    a_target_clipped_by_a_scroller_is_not_in_the_viewport,
+    "/use-intersection/clipped",
+    a_clipped_target_stays_out,
+    native: skip("Blitz has no IntersectionObserver")
+);
+
 async fn keeps_the_first_sighting<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "#state", "unseen", "the first measure").await?;
     scroll_until(d, "seen", 1.0).await?;

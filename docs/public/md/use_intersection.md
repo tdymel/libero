@@ -1,20 +1,21 @@
 # Intersection
 
 Crate: `libero`
-Import: `use libero::hooks::{Intersection, IntersectionEntry, IntersectionOptions, use_in_viewport, use_intersection};`
+Import: `use libero::hooks::{InViewport, Intersection, IntersectionEntry, IntersectionOptions, use_in_viewport, use_intersection};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/intersection.rs>
 Index: [index.md](index.md) lists every other page
 Description: Reports how much of an element is visible, with a root, margin and thresholds; never intersecting where nothing can observe.
 
 `use_intersection(options) -> Intersection` watches one element with the
 browser's `IntersectionObserver`. Give `on_mounted` to the element's
-`onmounted` and read `entry`, a signal of `Option<IntersectionEntry>` with
+`onmounted`, spread its `attributes` on it (a WebView finds the element by
+them) and read `entry`, a signal of `Option<IntersectionEntry>` with
 `is_intersecting` and the visible `ratio`. The options name a `root` element
 (the viewport by default), a `root_margin`, the `thresholds` at which the entry
 updates, and `once`, which stops observing after the first sighting.
 
-`use_in_viewport() -> (handler, ReadSignal<bool>)` is the same with the
-defaults, as a bool. Where nothing can observe (Blitz, a server render) `entry`
+`use_in_viewport() -> InViewport` is the same with the defaults, with
+`visible` as a bool. Where nothing can observe (Blitz, a server render) `entry`
 stays `None` and the bool is `false`.
 
 ## Usage
@@ -42,7 +43,11 @@ fn Reveal() -> Element {
             tabindex: "0",
             style: "height: 8rem; overflow: auto; border: 1px solid currentColor;",
             div { style: "height: 12rem;", "Scroll down" }
-            div { onmounted: move |event| seen.on_mounted.call(event), "{percent}% visible" }
+            div {
+                onmounted: move |event| seen.on_mounted.call(event),
+                ..seen.attributes,
+                "{percent}% visible"
+            }
             div { style: "height: 12rem;" }
         }
     }
@@ -65,9 +70,10 @@ fn Reveal() -> Element {
 
 ### Limits
 
-- Only the web has an `IntersectionObserver`. A WebView (desktop, Android)
-  measures the element against its root on every scroll and resize, and does not
-  see a scroller in between hide it. On Blitz and in a server render `entry`
+- The web and a WebView (desktop, Android) use an `IntersectionObserver`. A
+  WebView finds the element by `attributes`, so spread them on it; without them
+  nothing is observed there. A WebView also ignores `root` and observes against
+  the viewport. On Blitz and in a server render `entry`
   stays `None`: treat `None` as "unknown" and show lazy content, rather than
   waiting for a sighting that never comes.
 
@@ -75,7 +81,7 @@ fn Reveal() -> Element {
 
 ```rust,ignore
 pub fn use_intersection(options: IntersectionOptions) -> Intersection
-pub fn use_in_viewport() -> (Callback<MountedEvent>, ReadSignal<bool>)
+pub fn use_in_viewport() -> InViewport
 
 pub struct IntersectionOptions {
     pub root: Option<ElementHandle>,
@@ -86,7 +92,14 @@ pub struct IntersectionOptions {
 
 pub struct Intersection {
     pub on_mounted: Callback<MountedEvent>,
+    pub attributes: Vec<Attribute>,
     pub entry: ReadSignal<Option<IntersectionEntry>>,
+}
+
+pub struct InViewport {
+    pub on_mounted: Callback<MountedEvent>,
+    pub attributes: Vec<Attribute>,
+    pub visible: ReadSignal<bool>,
 }
 ```
 
@@ -102,4 +115,4 @@ pub struct Intersection {
 | `IntersectionEntry::is_intersecting` | `bool` | Whether any part of the element is inside the root. |
 | `IntersectionEntry::ratio` | `f64` | The visible share of the element's box, 0 to 1. |
 
-`Intersection` is `Copy`. Changing an option re-observes the element.
+`Intersection` and `InViewport` are `Clone`. Changing an option re-observes the element.

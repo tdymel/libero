@@ -8,29 +8,69 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/use-intersection/viewport", || rsx! { Viewport {} }),
+    ("/use-intersection/clipped", || rsx! { Clipped {} }),
     ("/use-intersection/once", || rsx! { Once {} }),
     ("/use-intersection/root", || rsx! { Rooted {} }),
 ];
 
 #[component]
 fn Viewport() -> Element {
-    let (on_mounted, visible) = use_in_viewport();
+    let seen = use_in_viewport();
     rsx! {
         div { style: "height: 200vh;" }
         div {
             id: "target",
             style: "height: 40px;",
-            onmounted: move |event| on_mounted.call(event),
+            onmounted: move |event| seen.on_mounted.call(event),
+            ..seen.attributes,
             "target"
         }
         p { id: "state",
-            if visible() {
+            if (seen.visible)() {
                 "in"
             } else {
                 "out"
             }
         }
         div { style: "height: 200vh;" }
+    }
+}
+
+/// A target whose box lies in the viewport but is clipped by a scroller: out. A plain one beside it: in.
+#[component]
+fn Clipped() -> Element {
+    let hidden = use_in_viewport();
+    let shown = use_in_viewport();
+    rsx! {
+        div { style: "height: 40px; overflow: hidden;",
+            div { style: "height: 100px;" }
+            div {
+                id: "hidden",
+                style: "height: 20px;",
+                onmounted: move |event| hidden.on_mounted.call(event),
+                ..hidden.attributes,
+                "hidden"
+            }
+        }
+        div {
+            id: "shown",
+            style: "height: 20px;",
+            onmounted: move |event| shown.on_mounted.call(event),
+            ..shown.attributes,
+            "shown"
+        }
+        p { id: "state",
+            if (shown.visible)() {
+                "shown in"
+            } else {
+                "shown out"
+            }
+            if (hidden.visible)() {
+                ", hidden in"
+            } else {
+                ", hidden out"
+            }
+        }
     }
 }
 
@@ -47,6 +87,7 @@ fn Once() -> Element {
             id: "target",
             style: "height: 40px;",
             onmounted: move |event| seen.on_mounted.call(event),
+            ..seen.attributes,
             "target"
         }
         p { id: "state",
@@ -83,6 +124,7 @@ fn Rooted() -> Element {
                 id: "target",
                 style: "height: 60px;",
                 onmounted: move |event| seen.on_mounted.call(event),
+                ..seen.attributes,
                 "target"
             }
             div { style: "height: 300px;" }

@@ -20,7 +20,11 @@ rsx! {
         onmounted: scroller.mount(),
         style: "height: 8rem; overflow: auto;",
         div { style: "height: 12rem;", "Scroll down" }
-        div { onmounted: move |event| seen.on_mounted.call(event), "{percent}% visible" }
+        div {
+            onmounted: move |event| seen.on_mounted.call(event),
+            ..seen.attributes,
+            "{percent}% visible"
+        }
         div { style: "height: 12rem;" }
     }
 }"#
@@ -46,7 +50,11 @@ fn Reveal() -> Element {
             tabindex: "0",
             style: "height: 8rem; overflow: auto; border: 1px solid currentColor;",
             div { style: "height: 12rem;", "Scroll down" }
-            div { onmounted: move |event| seen.on_mounted.call(event), "{percent}% visible" }
+            div {
+                onmounted: move |event| seen.on_mounted.call(event),
+                ..seen.attributes,
+                "{percent}% visible"
+            }
             div { style: "height: 12rem;" }
         }
     }
@@ -68,7 +76,7 @@ pub fn UseIntersectionPage() -> Element {
                     "Gate reveal animations on the reader's motion setting (`use_accessibility`).",
                 ])
                 .limits([
-                    "Only the web has an `IntersectionObserver`. A WebView (desktop, Android) measures the element against its root on every scroll and resize, and does not see a scroller in between hide it. On Blitz and in a server render `entry` stays `None`: treat `None` as \"unknown\" and show lazy content, rather than waiting for a sighting that never comes.",
+                    "The web and a WebView (desktop, Android) use an `IntersectionObserver`. A WebView finds the element by `attributes`, so spread them on it; without them nothing is observed there. A WebView also ignores `root` and observes against the viewport. On Blitz and in a server render `entry` stays `None`: treat `None` as \"unknown\" and show lazy content, rather than waiting for a sighting that never comes.",
                 ]),
             lead: rsx! {
                 Text {
@@ -79,7 +87,9 @@ pub fn UseIntersectionPage() -> Element {
                     Code { source: "on_mounted" }
                     " to the element's "
                     Code { source: "onmounted" }
-                    " and read "
+                    ", spread its "
+                    Code { source: "attributes" }
+                    " on it (a WebView finds the element by them) and read "
                     Code { source: "entry" }
                     ", a signal of "
                     Code { source: "Option<IntersectionEntry>" }
@@ -98,8 +108,10 @@ pub fn UseIntersectionPage() -> Element {
                     ", which stops observing after the first sighting."
                 }
                 Text {
-                    Code { source: "use_in_viewport() -> (handler, ReadSignal<bool>)" }
-                    " is the same with the defaults, as a bool. Where nothing can observe (Blitz, a server render) "
+                    Code { source: "use_in_viewport() -> InViewport" }
+                    " is the same with the defaults, with "
+                    Code { source: "visible" }
+                    " as a bool. Where nothing can observe (Blitz, a server render) "
                     Code { source: "entry" }
                     " stays "
                     Code { source: "None" }

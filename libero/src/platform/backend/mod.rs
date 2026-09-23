@@ -71,21 +71,36 @@ pub(crate) fn on_content_change(
     }
 }
 
-/// The web has an `IntersectionObserver`; a WebView measures rects; Blitz has neither.
+/// Only a WebView - see [`observes_by_tag`](crate::platform::observes_by_tag).
+pub(crate) fn observes_by_tag() -> bool {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::runs_scripts();
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return false;
+}
+
+/// The web and a WebView have an `IntersectionObserver`; Blitz has none.
 pub(crate) fn on_intersection(
     target: &Rc<MountedData>,
     root: Option<&Rc<MountedData>>,
+    tags: (u64, Option<u64>),
     root_margin: &str,
     thresholds: &[f64],
     callback: Box<dyn Fn(bool, f64)>,
 ) -> Option<Box<dyn ContentSubscription>> {
     #[cfg(target_arch = "wasm32")]
-    return web::on_intersection(target, root, root_margin, thresholds, callback);
+    {
+        let _ = tags;
+        web::on_intersection(target, root, root_margin, thresholds, callback)
+    }
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-    return webview::on_intersection(target, root, root_margin, thresholds, callback);
+    {
+        let _ = (target, root);
+        webview::on_intersection(tags, root_margin, thresholds, callback)
+    }
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     {
-        let _ = (target, root, root_margin, thresholds, callback);
+        let _ = (target, root, tags, root_margin, thresholds, callback);
         None
     }
 }

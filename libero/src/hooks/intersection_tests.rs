@@ -17,8 +17,9 @@ fn app() -> Element {
         thresholds: vec![0.0, 0.5],
         ..Default::default()
     });
-    let (on_mounted, visible) = use_in_viewport();
-    SEEN.with(|slot| *slot.borrow_mut() = Some((*seen.entry.peek(), visible())));
+    let viewport = use_in_viewport();
+    let on_mounted = viewport.on_mounted;
+    SEEN.with(|slot| *slot.borrow_mut() = Some((*seen.entry.peek(), (viewport.visible)())));
     rsx! {
         div {
             onmounted: move |event| {
