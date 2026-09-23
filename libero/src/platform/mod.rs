@@ -19,6 +19,7 @@ mod file_dialog;
 mod focus;
 mod form;
 mod http;
+mod intersection;
 mod keyboard;
 mod max_length;
 mod media_query;
@@ -68,6 +69,7 @@ pub(crate) use focus::{
 };
 pub(crate) use form::{lifts_legends, submit_event, submit_listeners};
 pub(crate) use http::fetch_text;
+pub(crate) use intersection::on_intersection;
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::logical_key;

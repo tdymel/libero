@@ -71,6 +71,23 @@ pub(crate) fn on_content_change(
     }
 }
 
+/// Only the web has an `IntersectionObserver`.
+pub(crate) fn on_intersection(
+    target: &Rc<MountedData>,
+    root: Option<&Rc<MountedData>>,
+    root_margin: &str,
+    thresholds: &[f64],
+    callback: Box<dyn Fn(bool, f64)>,
+) -> Option<Box<dyn ContentSubscription>> {
+    #[cfg(target_arch = "wasm32")]
+    return web::on_intersection(target, root, root_margin, thresholds, callback);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = (target, root, root_margin, thresholds, callback);
+        None
+    }
+}
+
 /// Only Blitz: every other renderer fires `onresize` itself.
 pub(crate) fn on_resize(
     mounted: &Rc<MountedData>,

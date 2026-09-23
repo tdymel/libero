@@ -146,6 +146,8 @@ md_pages! {
     UseFocusReturn => "use_focus_return",
     UseHotkeys => "use_hotkeys",
     UseId => "use_id",
+    UseIntersection => "use_intersection",
+    UseLongPress => "use_long_press",
     UseMediaQuery => "use_media_query",
     UseStylesheet => "use_stylesheet",
     UseThemeSet => "use_theme_set",

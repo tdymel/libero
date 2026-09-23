@@ -12,8 +12,14 @@ mod focus_within;
 mod formats;
 mod hotkeys;
 mod id;
+mod intersection;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod intersection_tests;
 mod local_state;
 mod localization;
+mod long_press;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod long_press_tests;
 mod media_query;
 mod popover;
 mod portal;
@@ -54,9 +60,13 @@ pub use formats::{FormatsHandle, use_formats, use_formats_handle};
 pub use hotkeys::{Hotkey, use_hotkeys};
 pub use id::use_id;
 pub(crate) use id::{id_selector, use_root_id};
+pub use intersection::{
+    Intersection, IntersectionEntry, IntersectionOptions, use_in_viewport, use_intersection,
+};
 pub(crate) use local_state::{LocalState, use_local_state};
 pub(crate) use localization::current_localization;
 pub use localization::{LocalizationHandle, use_localization, use_localization_handle};
+pub use long_press::{LongPress, LongPressOptions, use_long_press};
 pub use media_query::{use_is_mobile, use_media_query};
 pub use popover::{
     Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,

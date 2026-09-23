@@ -106,6 +106,8 @@ mod tree;
 mod typography;
 mod use_accessibility;
 mod use_hotkeys;
+mod use_intersection;
+mod use_long_press;
 mod use_media_query;
 mod use_timers;
 mod visually_hidden;

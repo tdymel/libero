@@ -451,6 +451,11 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseElementPage {}, "use_element"),
                 page(Route::UseFocusReturnPage {}, "use_focus_return"),
                 page(Route::UseDragPage {}, "use_drag"),
+                page(
+                    Route::UseIntersectionPage {},
+                    "use_intersection, use_in_viewport",
+                ),
+                page(Route::UseLongPressPage {}, "use_long_press"),
                 page(Route::UseTimersPage {}, "use_timeout, use_interval"),
                 page(
                     Route::UseDebouncePage {},

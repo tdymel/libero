@@ -577,6 +577,53 @@ struct WebContentSubscription {
     _closure: Closure<dyn FnMut()>,
 }
 
+/// The newest of a batch's entries is the element's current state.
+pub(super) fn on_intersection(
+    target: &Rc<MountedData>,
+    root: Option<&Rc<MountedData>>,
+    root_margin: &str,
+    thresholds: &[f64],
+    callback: Box<dyn Fn(bool, f64)>,
+) -> Option<Box<dyn ContentSubscription>> {
+    let element = target.downcast::<web_sys::Element>()?;
+    let closure = Closure::<dyn FnMut(js_sys::Array)>::new(move |entries: js_sys::Array| {
+        let latest = entries.pop();
+        if let Ok(entry) = latest.dyn_into::<web_sys::IntersectionObserverEntry>() {
+            callback(entry.is_intersecting(), entry.intersection_ratio());
+        }
+    });
+    let options = web_sys::IntersectionObserverInit::new();
+    if let Some(root) = root {
+        options.set_root(Some(root.downcast::<web_sys::Element>()?));
+    }
+    options.set_root_margin(root_margin);
+    let thresholds: js_sys::Array = thresholds.iter().copied().map(JsValue::from).collect();
+    options.set_threshold(&thresholds);
+    // Throws where the browser has no `IntersectionObserver`.
+    let observer =
+        web_sys::IntersectionObserver::new_with_options(closure.as_ref().unchecked_ref(), &options)
+            .ok()?;
+    observer.observe(element);
+    Some(Box::new(WebIntersectionSubscription {
+        observer,
+        _closure: closure,
+    }))
+}
+
+struct WebIntersectionSubscription {
+    observer: web_sys::IntersectionObserver,
+    /// Kept alive for as long as the observer can call it.
+    _closure: Closure<dyn FnMut(js_sys::Array)>,
+}
+
+impl ContentSubscription for WebIntersectionSubscription {}
+
+impl Drop for WebIntersectionSubscription {
+    fn drop(&mut self) {
+        self.observer.disconnect();
+    }
+}
+
 pub(super) fn on_form_reset(
     mounted: &Rc<MountedData>,
     on_reset: Box<dyn Fn()>,

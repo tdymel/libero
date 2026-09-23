@@ -40,7 +40,7 @@ js-sys = "0.3"
 # 0.2.128+ imports a wasm exception tag (`__wbindgen_jstag`) that dx's hotpatch parser rejects.
 wasm-bindgen = "=0.2.127"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlImageElement", "HtmlInputElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "NodeList", "Navigator", "ScrollBehavior", "ScrollToOptions", "Clipboard", "CssStyleDeclaration", "DomRect", "KeyboardEvent", "MediaQueryList", "MutationObserver", "MutationObserverInit", "Storage", "MouseEvent", "FocusEvent", "FocusOptions", "PointerEvent", "TransitionEvent", "console"] }
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlImageElement", "HtmlInputElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "NodeList", "Navigator", "ScrollBehavior", "ScrollToOptions", "Clipboard", "CssStyleDeclaration", "DomRect", "KeyboardEvent", "MediaQueryList", "MutationObserver", "MutationObserverInit", "IntersectionObserver", "IntersectionObserverEntry", "IntersectionObserverInit", "Storage", "MouseEvent", "FocusEvent", "FocusOptions", "PointerEvent", "TransitionEvent", "console"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # Only for `serialize`, which is what defines `SerializedTransitionData` - the

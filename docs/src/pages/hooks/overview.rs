@@ -43,6 +43,21 @@ fn hooks() -> Vec<HookRow> {
             Route::UseDragPage {},
         ),
         row(
+            "use_intersection",
+            "How much of an element is visible inside a root.",
+            Route::UseIntersectionPage {},
+        ),
+        row(
+            "use_in_viewport",
+            "Whether an element is in the viewport.",
+            Route::UseIntersectionPage {},
+        ),
+        row(
+            "use_long_press",
+            "Handlers that call back once a pointer stays down.",
+            Route::UseLongPressPage {},
+        ),
+        row(
             "use_timeout",
             "Runs a callback once, a while after you start it.",
             Route::UseTimersPage {},

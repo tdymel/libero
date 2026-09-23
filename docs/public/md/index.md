@@ -151,6 +151,8 @@ fetch only the file you need.
 - [use_element](use_element.md): A handle to one of your component's own elements, to focus, scroll and measure it on every renderer.
 - [use_focus_return](use_focus_return.md): Puts focus back on the element that opened a panel or popup once it closes, with fallbacks for a trigger that is gone.
 - [use_drag](use_drag.md): Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
+- [use_intersection, use_in_viewport](use_intersection.md): Reports how much of an element is visible, with a root, margin and thresholds; never intersecting where nothing can observe.
+- [use_long_press](use_long_press.md): Pointer handlers that call back once a press is held, without breaking a tap or a scroll.
 - [use_timeout, use_interval](use_timers.md): Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.
 - [use_debounced_value, use_throttled_value](use_debounce.md): Signals and callbacks that follow their source once it settles or at most once per period.
 - [use_hotkeys](use_hotkeys.md): Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked.

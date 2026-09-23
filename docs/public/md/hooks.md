@@ -18,6 +18,9 @@ belong to.
 | `use_element` | A handle to one of your component's elements, to focus, scroll or measure it. | [use_element](use_element.md) |
 | `use_focus_return` | Puts focus back on the trigger when a panel closes. | [use_focus_return](use_focus_return.md) |
 | `use_drag` | Pointer capture and deltas for a drag. | [use_drag](use_drag.md) |
+| `use_intersection` | How much of an element is visible inside a root. | [use_intersection, use_in_viewport](use_intersection.md) |
+| `use_in_viewport` | Whether an element is in the viewport. | [use_intersection, use_in_viewport](use_intersection.md) |
+| `use_long_press` | Handlers that call back once a pointer stays down. | [use_long_press](use_long_press.md) |
 | `use_timeout` | Runs a callback once, a while after you start it. | [use_timeout, use_interval](use_timers.md) |
 | `use_interval` | Runs a callback repeatedly, with start, stop and toggle. | [use_timeout, use_interval](use_timers.md) |
 | `use_debounced_value` | A signal that follows another once it stops changing. | [use_debounced_value, use_throttled_value](use_debounce.md) |
