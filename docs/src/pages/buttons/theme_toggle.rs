@@ -27,6 +27,9 @@ pub fn ThemeTogglePage() -> Element {
                     .doc("Corner radius, independent of `size`."),
                 prop("themes", "&'static [&'static ThemeSet]")
                     .doc("Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both."),
+                prop("with_system", "bool")
+                    .default("false")
+                    .doc("Adds following the system to the cycle. Off, a press flips between light and dark, and the system's own scheme is the starting state."),
                 prop("label", "Callback<ColorSchemeSetting, String>")
                     .doc("Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does."),
                 prop("disabled", "bool")
@@ -35,16 +38,23 @@ pub fn ThemeTogglePage() -> Element {
             ])],
             accessibility: a11y()
                 .handles([
-                    "The button's name says what a press does, from the localization's `ThemeToggleLabels`: `to_light`, `to_dark` or `to_system`.",
+                    "The button's name says what a press does, from the localization's `ThemeToggleLabels`: `to_light` and `to_dark`, plus `to_system` with `with_system`.",
                     "With `themes`, both buttons sit in a `role=\"group\"` named by `group`. The picker is named by `picker` and opens a `Menu`, with its keys; the sets are radio items in a group named by `themes`.",
                 ])
                 .must(["With `label`, return what the press does, not the current scheme."]),
             lead: rsx! {
                 Text {
-                    "An icon button that switches the app's colour scheme. Each press steps "
-                    "from following the system, to the scheme the system is not showing, to "
-                    "the one it is, and back. The icon shows where the next press goes: a sun "
-                    "for light, a moon for dark, a half-filled disc for following the system."
+                    "An icon button that switches the app's colour scheme. It starts on the "
+                    "system's scheme, and each press flips to the other one. The icon shows "
+                    "where the next press goes: a sun for light, a moon for dark."
+                }
+                Text {
+                    "With "
+                    Code { source: "with_system" }
+                    ", following the system is a step of its own. A press goes from following "
+                    "the system, to the scheme the system is not showing, to the one it is, "
+                    "and back, so under a light system the order is system, dark, light. The "
+                    "icon for that step is a half-filled disc."
                 }
                 Text {
                     "While it follows the system, a change of the OS setting applies at once. "
@@ -85,6 +95,10 @@ pub fn ThemeTogglePage() -> Element {
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
                     Control::switch("disabled"),
+                    Control::switch("with_system").code(|_, values| match values.str("with_system").as_str() {
+                        "true" => vec!["with_system: true".to_string()],
+                        _ => vec![],
+                    }),
                     Control::switch("themes").code(|_, values| match values.str("themes").as_str() {
                         "true" => vec!["themes: ThemeSet::CATALOGUE".to_string()],
                         _ => vec![],
@@ -100,6 +114,7 @@ pub fn ThemeTogglePage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         disabled: values.str("disabled") == "true",
+                        with_system: values.str("with_system") == "true",
                         themes: (values.str("themes") == "true").then_some(ThemeSet::CATALOGUE),
                     }
                 },

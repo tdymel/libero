@@ -4,12 +4,16 @@ Crate: `libero`
 Import: `use libero::components::ThemeToggle;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/theme_toggle.rs>
 Index: [index.md](index.md) lists every other page
-Description: An icon button that steps the colour scheme through system, dark and light, with an optional theme picker beside it.
+Description: An icon button that flips the colour scheme, optionally through the system's too, with an optional theme picker beside it.
 
-An icon button that switches the app's colour scheme. Each press steps from
-following the system, to the scheme the system is not showing, to the one it
-is, and back. The icon shows where the next press goes: a sun for light, a moon
-for dark, a half-filled disc for following the system.
+An icon button that switches the app's colour scheme. It starts on the
+system's scheme, and each press flips to the other one. The icon shows where
+the next press goes: a sun for light, a moon for dark.
+
+With `with_system`, following the system is a step of its own. A press goes
+from following the system, to the scheme the system is not showing, to the one
+it is, and back, so under a light system the order is system, dark, light. The
+icon for that step is a half-filled disc.
 
 While it follows the system, a change of the OS setting applies at once. A
 picked scheme stays until the next press. For your own control, such as a menu
@@ -39,7 +43,7 @@ fn Demo() -> Element {
 ### Libero handles
 
 - The button's name says what a press does, from the localization's
-  `ThemeToggleLabels`: `to_light`, `to_dark` or `to_system`.
+  `ThemeToggleLabels`: `to_light` and `to_dark`, plus `to_system` with `with_system`.
 - With `themes`, both buttons sit in a `role="group"` named by `group`. The
   picker is named by `picker` and opens a [`Menu`](menu.md), with its keys; the
   sets are radio items in a group named by `themes`.
@@ -57,6 +61,7 @@ fn Demo() -> Element {
 | `size` | `ThemeAwareValue` | `md` | Button size. The icon takes 55% of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `themes` | `&'static [&'static ThemeSet]` | - | Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both. |
+| `with_system` | `bool` | `false` | Adds following the system to the cycle. Off, a press flips between light and dark, and the system's own scheme is the starting state. |
 | `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 

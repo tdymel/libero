@@ -9,7 +9,9 @@ use crate::{
         overlay::{Menu, MenuEntry, MenuItem, use_menu},
     },
     context::IconSlot,
-    hooks::{Align, use_color_scheme, use_localization, use_theme, use_theme_set},
+    hooks::{
+        Align, ColorSchemeHandle, use_color_scheme, use_localization, use_theme, use_theme_set,
+    },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_SIZE, ColorSchemeSetting, ThemeSet},
 };
@@ -56,6 +58,9 @@ base_props! {
         /// Adds a chevron beside the toggle that opens a menu of these theme sets.
         #[props(default)]
         themes: Option<&'static [&'static ThemeSet]>,
+        /// Adds following the system to the cycle. Off, a press flips between light and dark.
+        #[props(default)]
+        with_system: Option<bool>,
         /// Names the press, given the setting it moves to. Replaces the localized names.
         #[props(default)]
         label: Option<Callback<ColorSchemeSetting, String>>,
@@ -64,7 +69,15 @@ base_props! {
     }
 }
 
-/// An icon button that cycles the app's colour scheme, optionally with a theme-set picker.
+fn press(scheme: &ColorSchemeHandle, with_system: bool) {
+    if with_system {
+        scheme.cycle();
+    } else {
+        scheme.toggle();
+    }
+}
+
+/// An icon button that switches the app's colour scheme, optionally with a theme-set picker.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -72,6 +85,7 @@ base_props! {
 /// # fn app() -> Element {
 /// rsx! {
 ///     ThemeToggle {}
+///     ThemeToggle { with_system: true }
 ///     ThemeToggle { themes: ThemeSet::CATALOGUE }
 /// }
 /// # }
@@ -86,7 +100,12 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
     let menu = use_menu();
     let labels = use_localization().theme_toggle;
 
-    let next = scheme.next_in_cycle();
+    let with_system = props.with_system.unwrap_or(false);
+    let next = if with_system {
+        scheme.next_in_cycle()
+    } else {
+        scheme.resolved().flipped().into()
+    };
     let aria_label = match props.label {
         Some(label) => label.call(next),
         None => match next {
@@ -144,7 +163,7 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
         return rsx! {
             ActionIcon {
                 aria_label,
-                onclick: move |_| scheme.cycle(),
+                onclick: move |_| press(&scheme, with_system),
                 variant: variant.clone(),
                 color: color.clone(),
                 size: props.size.clone(),
@@ -180,7 +199,7 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
         rsx! {
             ActionIcon {
                 aria_label,
-                onclick: move |_| scheme.cycle(),
+                onclick: move |_| press(&scheme, with_system),
                 variant: variant.clone(),
                 color: color.clone(),
                 size: props.size.clone(),

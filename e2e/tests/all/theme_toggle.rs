@@ -151,12 +151,66 @@ async fn text_colour(page: &Page) -> String {
         .unwrap()
 }
 
-/// Under a light platform: dark, then light, then back to following it. Enter,
-/// Space and a click each take one step, and focus stays on the button.
+/// Under a light platform, without the system entry: dark, then back to
+/// following the platform (which reads light). Enter and a click each flip it.
+#[test]
+fn each_press_flips_the_scheme_and_renames_the_button() {
+    block_on(async {
+        let fixture = Fixture::open("/theme-toggle", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(SHIELD_STORAGE).await.unwrap();
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("prefers-color-scheme", "light")])
+                .build(),
+        )
+        .await
+        .unwrap();
+
+        wait_for_name(page, "Switch to the dark theme").await;
+        wait_for_pin(page, None).await;
+
+        keyboard::tab_to(page, BUTTON, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait_for_pin(page, Some("dark")).await;
+        wait_for_name(page, "Switch to the light theme").await;
+        focus::assert_focused(page, BUTTON, "pressing Enter")
+            .await
+            .unwrap();
+
+        pointer::click(page, BUTTON).await.unwrap();
+        wait_for_pin(page, None).await;
+        wait_for_name(page, "Switch to the dark theme").await;
+
+        let (stored, leaked): (Vec<String>, Option<String>) = page
+            .evaluate("[window.__stored, window.__realStorage.getItem('lsx-color-scheme')]")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            stored,
+            ["lsx-color-scheme=dark", "lsx-color-scheme=system"],
+            "each press persists the setting it moved to"
+        );
+        assert_eq!(leaked, None, "a press reached the shared localStorage");
+
+        fixture
+            .console
+            .assert_clean("flipping the colour scheme")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// With `with_system`, under a light platform: dark, then light, then back to
+/// following it. Enter, Space and a click each take one step, and focus stays on the button.
 #[test]
 fn each_press_steps_the_cycle_and_renames_the_button() {
     block_on(async {
-        let fixture = Fixture::open("/theme-toggle", Viewport::Desktop)
+        let fixture = Fixture::open("/theme-toggle/system", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
