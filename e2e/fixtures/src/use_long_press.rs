@@ -18,6 +18,7 @@ fn Pressable() -> Element {
     rsx! {
         button {
             id: "target",
+            "data-pressing": "{press.pressing}",
             style: "width: 160px; height: 80px; user-select: none; -webkit-touch-callout: none;",
             onpointerdown: move |event| press.onpointerdown.call(event),
             onpointermove: move |event| press.onpointermove.call(event),

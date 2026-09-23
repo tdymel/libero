@@ -34,6 +34,8 @@ pub struct LongPress {
     /// fired press ends with, which you should skip, and stops that click
     /// from reaching ancestors.
     pub onclick: Callback<MouseEvent, bool>,
+    /// `true` from the pointer going down until the press fires or is dropped.
+    pub pressing: ReadSignal<bool>,
 }
 
 #[derive(Clone, Copy)]
@@ -48,6 +50,7 @@ struct Press {
 /// The press is dropped when the pointer moves beyond the tolerance, leaves,
 /// is released or cancelled (a touch that starts to scroll), or a second finger
 /// lands. A tap that ends first runs no callback and keeps its click.
+/// `pressing` is `true` while a press is held and not yet fired, for a hold cue.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -83,6 +86,7 @@ pub fn use_long_press(on_long_press: Callback, options: LongPressOptions) -> Lon
     let LongPressOptions { ms, move_tolerance } = options;
     let mut press = use_signal(|| None::<Press>);
     let mut fired = use_signal(|| false);
+    let pressing = use_memo(move || press.read().is_some());
     let timeout = use_timeout(
         move || {
             if press.peek().is_some() {
@@ -157,5 +161,6 @@ pub fn use_long_press(on_long_press: Callback, options: LongPressOptions) -> Lon
         onpointercancel: end,
         oncontextmenu,
         onclick,
+        pressing: pressing.into(),
     }
 }

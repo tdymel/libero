@@ -28,7 +28,11 @@ rsx! {
                     taps += 1;
                 }
             },
-            "Tap, or hold"
+            if (press.pressing)() {
+                "Keep holding"
+            } else {
+                "Tap, or hold"
+            }
         }
         div { role: "status", "{taps} taps, {holds} holds" }
     }
@@ -59,7 +63,11 @@ fn HoldToCount() -> Element {
                         taps += 1;
                     }
                 },
-                "Tap, or hold"
+                if (press.pressing)() {
+                    "Keep holding"
+                } else {
+                    "Tap, or hold"
+                }
             }
             div { role: "status", "{taps} taps, {holds} holds" }
         }
@@ -110,6 +118,11 @@ pub fn UseLongPressPage() -> Element {
                     " and "
                     Code { source: "onclick" }
                     "."
+                }
+                Text {
+                    "Read "
+                    Code { source: "pressing" }
+                    ", a signal that is true while a press is held and not yet fired, for a hold cue."
                 }
                 Text {
                     "Give the element "

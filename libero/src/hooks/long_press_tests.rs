@@ -105,6 +105,28 @@ fn a_held_press_fires_once() {
     assert_eq!(fired(), 1, "fired again");
 }
 
+fn pressing(dom: &VirtualDom) -> bool {
+    dom.in_runtime(|| *handlers().pressing.peek())
+}
+
+#[test]
+fn pressing_is_true_only_while_the_press_is_held() {
+    let mut dom = started();
+    assert!(!pressing(&dom));
+    down(&dom, at(5.0, 5.0));
+    pump(&mut dom, Duration::from_millis(20));
+    assert!(pressing(&dom), "not pressing while held");
+    pump(&mut dom, Duration::from_millis(250));
+    assert_eq!(fired(), 1);
+    assert!(!pressing(&dom), "still pressing after firing");
+
+    down(&dom, at(5.0, 5.0));
+    pump(&mut dom, Duration::from_millis(10));
+    up(&dom, at(5.0, 5.0));
+    pump(&mut dom, Duration::from_millis(10));
+    assert!(!pressing(&dom), "still pressing after a release");
+}
+
 #[test]
 fn a_tap_does_not_fire() {
     let mut dom = started();

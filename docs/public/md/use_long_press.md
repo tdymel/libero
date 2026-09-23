@@ -12,6 +12,9 @@ a pointer stays down for `options.ms` (400 by default). It moves no more than
 element: `onpointerdown`, `onpointermove`, `onpointerup`, `onpointerleave`,
 `onpointercancel`, `oncontextmenu` and `onclick`.
 
+Read `pressing`, a signal that is true while a press is held and not yet fired,
+for a hold cue.
+
 Give the element `user-select: none` and `-webkit-touch-callout: none` so
 holding does not select text. It runs on the web, Blitz and a WebView, on one
 timer.
@@ -48,7 +51,11 @@ fn HoldToCount() -> Element {
                         taps += 1;
                     }
                 },
-                "Tap, or hold"
+                if (press.pressing)() {
+                    "Keep holding"
+                } else {
+                    "Tap, or hold"
+                }
             }
             div { role: "status", "{taps} taps, {holds} holds" }
         }
@@ -101,6 +108,7 @@ pub struct LongPressOptions {
 | `onpointerup`, `onpointerleave`, `onpointercancel` | `Callback<PointerEvent>` | Drop the press. |
 | `oncontextmenu` | `Callback<MouseEvent>` | Suppresses the browser's menu, only after the press fired. |
 | `onclick` | `Callback<MouseEvent, bool>` | Call it first in your `onclick`: `true` for the click a fired press ends with, which you should skip. |
+| `pressing` | `ReadSignal<bool>` | `true` from the pointer going down until the press fires or is dropped. |
 
 `LongPress` is `Copy`. Pass the same `LongPressOptions` each render; the delay
 of the newest render is the one used.

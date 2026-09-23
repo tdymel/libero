@@ -15,6 +15,14 @@ async fn text_is<D: Driver>(d: &mut D, selector: &str, expected: &str) -> Result
     .await
 }
 
+/// The hold cue is off once a press has fired or ended.
+async fn pressing_is<D: Driver>(d: &mut D, expected: &str) -> Result<()> {
+    eventually(d, &format!("data-pressing to be {expected}"), async |d| {
+        Ok(d.attr(TARGET, "data-pressing").await?.as_deref() == Some(expected))
+    })
+    .await
+}
+
 /// Long enough for a wrong late callback or click to have landed.
 async fn linger<D: Driver>(d: &mut D) {
     let started = Instant::now();
@@ -28,14 +36,16 @@ async fn a_held_touch_fires_once<D: Driver>(d: &mut D, _route: &str) -> Result<(
     text_is(d, "#holds", "1").await?;
     linger(d).await;
     text_is(d, "#holds", "1").await?;
-    text_is(d, "#taps", "0").await
+    text_is(d, "#taps", "0").await?;
+    pressing_is(d, "false").await
 }
 
 async fn a_short_touch_is_a_tap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.long_press(TARGET, 100).await?;
     text_is(d, "#taps", "1").await?;
     linger(d).await;
-    text_is(d, "#holds", "0").await
+    text_is(d, "#holds", "0").await?;
+    pressing_is(d, "false").await
 }
 
 async fn a_click_is_a_tap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
