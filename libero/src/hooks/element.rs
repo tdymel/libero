@@ -1,10 +1,11 @@
 use std::{cell::RefCell, rc::Rc};
 
+use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use crate::platform::{
-    self, ContentSubscription, Dimensions, ElementApi, PlatformError, Read, is_rtl,
-    on_content_change, on_form_reset, on_resize,
+    self, ContentSubscription, Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, is_rtl,
+    next_observe_tag, observes_by_tag, on_content_change, on_form_reset, on_resize,
 };
 
 /// A handle to one of this component's own elements, and the only way to reach
@@ -16,9 +17,32 @@ use crate::platform::{
 #[derive(Clone, Copy, PartialEq)]
 pub struct ElementHandle {
     mounted: Signal<Option<Rc<MountedData>>>,
+    /// What a WebView finds the element by, see [`attributes`](Self::attributes).
+    tag: Option<u64>,
 }
 
 impl ElementHandle {
+    /// Spread on the element (`..handle.attributes()`) where a WebView has to find
+    /// it, as `use_intersection`'s `root`. Empty on the web and Blitz, and on a
+    /// handle made by a component rather than `use_element`.
+    pub fn attributes(&self) -> Vec<Attribute> {
+        self.tag
+            .map(|tag| {
+                Attribute::new(
+                    OBSERVE_ATTR,
+                    AttributeValue::Text(tag.to_string()),
+                    None,
+                    false,
+                )
+            })
+            .into_iter()
+            .collect()
+    }
+
+    pub(crate) fn tag(&self) -> Option<u64> {
+        self.tag
+    }
+
     /// The `onmounted` handler that fills this handle in. Prefer
     /// `.element(&handle)` on the `Box` builder, which wires this up.
     pub fn mount(mut self) -> impl FnMut(Event<MountedData>) + 'static {
@@ -44,6 +68,7 @@ impl ElementHandle {
     pub(crate) fn new() -> Self {
         Self {
             mounted: Signal::new(None),
+            tag: None,
         }
     }
 
@@ -52,6 +77,7 @@ impl ElementHandle {
     pub(crate) fn new_in_scope(owner: ScopeId) -> Self {
         Self {
             mounted: Signal::new_in_scope(None, owner),
+            tag: None,
         }
     }
 
@@ -101,6 +127,7 @@ impl ElementHandle {
 pub fn use_element() -> ElementHandle {
     ElementHandle {
         mounted: use_signal(|| None),
+        tag: use_hook(|| observes_by_tag().then(next_observe_tag)),
     }
 }
 

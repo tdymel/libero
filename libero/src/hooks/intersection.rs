@@ -11,7 +11,8 @@ use crate::platform::{
 /// What [`use_intersection`] takes.
 #[derive(Clone, PartialEq)]
 pub struct IntersectionOptions {
-    /// The element whose box clips the target; the viewport when `None`.
+    /// The element whose box clips the target; the viewport when `None`. A WebView
+    /// needs `root.attributes()` spread on it, else it falls back to the viewport.
     pub root: Option<ElementHandle>,
     /// CSS margin that grows or shrinks the root's box, like `"100px 0px"`.
     pub root_margin: String,
@@ -117,10 +118,16 @@ pub fn use_intersection(options: IntersectionOptions) -> Intersection {
                         Some(root) => Some(root.mounted()?),
                         None => None,
                     };
+                    let root_tag = root.and_then(|root| root.tag());
+                    if cfg!(debug_assertions) && tag.is_some() && root.is_some() && root_tag.is_none() {
+                        crate::utils::warn(
+                            "use_intersection: the root carries no `attributes()`, so a WebView observes against the viewport",
+                        );
+                    }
                     on_intersection(
                         &mounted,
                         root_mounted.as_ref(),
-                        (tag.unwrap_or_default(), None),
+                        (tag.unwrap_or_default(), root_tag),
                         &root_margin,
                         &thresholds,
                         Box::new(move |is_intersecting, ratio| {

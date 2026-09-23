@@ -65,6 +65,13 @@ e2e::scenario!(
     native: skip("Blitz has no IntersectionObserver")
 );
 
+e2e::scenario!(
+    a_root_clips_a_target_that_the_viewport_shows,
+    "/use-intersection/root-clip",
+    a_clipped_target_stays_out,
+    native: skip("Blitz has no IntersectionObserver")
+);
+
 async fn keeps_the_first_sighting<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "#state", "unseen", "the first measure").await?;
     scroll_until(d, "seen", 1.0).await?;

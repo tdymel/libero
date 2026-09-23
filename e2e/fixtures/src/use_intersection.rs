@@ -9,6 +9,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/use-intersection/viewport", || rsx! { Viewport {} }),
     ("/use-intersection/clipped", || rsx! { Clipped {} }),
+    ("/use-intersection/root-clip", || rsx! { RootClip {} }),
     ("/use-intersection/once", || rsx! { Once {} }),
     ("/use-intersection/root", || rsx! { Rooted {} }),
 ];
@@ -74,6 +75,55 @@ fn Clipped() -> Element {
     }
 }
 
+/// Two targets in a root that clips one of them, though both lie in the viewport.
+#[component]
+fn RootClip() -> Element {
+    let root = use_element();
+    let options = || IntersectionOptions {
+        root: Some(root),
+        ..Default::default()
+    };
+    let hidden = use_intersection(options());
+    let shown = use_intersection(options());
+    let is_in = |seen: &libero::hooks::Intersection| {
+        seen.entry.read().is_some_and(|entry| entry.is_intersecting)
+    };
+    rsx! {
+        div {
+            style: "height: 40px; overflow: hidden;",
+            onmounted: root.mount(),
+            ..root.attributes(),
+            div {
+                id: "shown",
+                style: "height: 20px;",
+                onmounted: move |event| shown.on_mounted.call(event),
+                ..shown.attributes.clone(),
+                "shown"
+            }
+            div { style: "height: 100px;" }
+            div {
+                id: "hidden",
+                style: "height: 20px;",
+                onmounted: move |event| hidden.on_mounted.call(event),
+                ..hidden.attributes.clone(),
+                "hidden"
+            }
+        }
+        p { id: "state",
+            if is_in(&shown) {
+                "shown in"
+            } else {
+                "shown out"
+            }
+            if is_in(&hidden) {
+                ", hidden in"
+            } else {
+                ", hidden out"
+            }
+        }
+    }
+}
+
 #[component]
 fn Once() -> Element {
     let seen = use_intersection(IntersectionOptions {
@@ -119,6 +169,7 @@ fn Rooted() -> Element {
             id: "scroller",
             onmounted: scroller.mount(),
             style: "height: 100px; overflow: auto;",
+            ..scroller.attributes(),
             div { style: "height: 300px;" }
             div {
                 id: "target",
