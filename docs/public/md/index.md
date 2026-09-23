@@ -16,6 +16,7 @@ fetch only the file you need.
 - [Styling](styling.md): The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and `StaticSx`.
 - [Theming](theming.md): How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.
 - [Localization](localization.md): The words components say on their own, how dates and numbers are written, and the reading direction: `Localization`, `Formats` and the hooks that switch them.
+- [Providers](providers.md): LiberoProvider (themes, localization, formats, direction) and IconProvider (glyphs): what each provides, and how different parts of one page can sit below different providers.
 - [Platform](platform.md): Every platform API (elements, timers, keys, scroll, the document, the colour scheme and the clock), what each makes possible, and how to use them where a renderer lacks one.
 - [Credits](credits.md): The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons), their licences and notices.
 

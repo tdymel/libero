@@ -11,7 +11,8 @@ Need icons? [pictogram](https://github.com/tdymel/pictogram) ships lucide, Table
 Swaps the glyphs libero draws itself, slot by slot, for everything below it.
 Each `IconSlot` names one glyph by what it means; an `IconSet` maps slots to
 `SvgData`. Slots you leave empty keep lucide, libero's default. Nested
-providers merge: the inner one wins per slot.
+providers merge: the inner one wins per slot. More on [providers](providers.md)
+in one page.
 
 ## Usage
 

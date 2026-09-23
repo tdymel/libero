@@ -1,8 +1,9 @@
+use crate::Route;
 use crate::components::{Control, Demo, DemoValues, DocPage, PictogramNote, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     IconProvider, IconSet, IconSlot,
-    components::{Checkbox, Code, Flex, Options, PasswordField, Select, SvgData, Text},
+    components::{Anchor, Checkbox, Code, Flex, Options, PasswordField, Select, SvgData, Text},
 };
 use pictogram_icons_lucide as lucide;
 
@@ -60,7 +61,9 @@ pub fn IconProviderPage() -> Element {
                     Code { source: "IconSet" }
                     " maps slots to "
                     Code { source: "SvgData" }
-                    ". Slots you leave empty keep lucide, libero's default. Nested providers merge: the inner one wins per slot."
+                    ". Slots you leave empty keep lucide, libero's default. Nested providers merge: the inner one wins per slot. More on "
+                    Anchor { to: Route::ProvidersPage {}, "providers" }
+                    " in one page."
                 }
                 Text {
                     "One slot: "

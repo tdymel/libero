@@ -75,6 +75,7 @@ mod menu;
 mod menubar;
 mod modal;
 mod nav_link;
+mod nested_providers;
 mod no_has_selector;
 mod notifications;
 mod overlay;

@@ -106,6 +106,7 @@ md_pages! {
     Pagination => "pagination",
     Paper => "paper",
     PasswordField => "password_field",
+    Providers => "providers",
     Philosophy => "philosophy",
     PhoneField => "phone_field",
     Pictogram => "pictogram",

@@ -33,6 +33,10 @@ use pictogram_icons_lucide as lucide;
 use pages::*;
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
+/// The logo's svg in the text color, for the header.
+static LOGO_INLINE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+    include_str!("../assets/logo.svg").replace("#228be6", "currentColor")
+});
 const REPO: &str = "tdymel/libero";
 const GITHUB: &str = "https://github.com/tdymel/libero";
 /// A 16:9 landscape, for docs examples where the logo's square shape hides
@@ -64,6 +68,8 @@ pub(crate) enum Route {
     ThemingPage {},
     #[route("/about/localization")]
     LocalizationPage {},
+    #[route("/about/providers")]
+    ProvidersPage {},
     #[route("/about/platform")]
     PlatformPage {},
     #[route("/about/credits")]
@@ -428,8 +434,8 @@ fn AppShell() -> Element {
                         .gap("md")
                         .color("inherit")
                         .min_width("0"),
+                    // Inline, not `src`: Android's WebView draws the mask of `src` as a solid box.
                     Icon {
-                        src: LOGO,
                         variant: "standard",
                         color: "primary",
                         // Wide, and the glyph nearly filling it: at icon size the bars blur together.
@@ -439,6 +445,14 @@ fn AppShell() -> Element {
                             .min_width("0")
                             .height("44px")
                             .with("--lsx-icon-glyph", "84%"),
+                        span {
+                            display: "flex",
+                            align_items: "center",
+                            justify_content: "center",
+                            width: "100%",
+                            height: "100%",
+                            dangerous_inner_html: LOGO_INLINE.as_str(),
+                        }
                     }
                     Title { size: "lg", component: "span", "Libero" }
                 }

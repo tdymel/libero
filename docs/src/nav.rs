@@ -298,6 +298,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::StylingPage {}, "Styling"),
                 page(Route::ThemingPage {}, "Theming"),
                 page(Route::LocalizationPage {}, "Localization"),
+                page(Route::ProvidersPage {}, "Providers"),
                 page(Route::PlatformPage {}, "Platform"),
                 page(Route::CreditsPage {}, "Credits"),
             ],
