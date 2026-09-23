@@ -221,7 +221,7 @@ async fn a_swipe_off_the_handle_scrolls<D: Driver>(d: &mut D, _route: &str) -> R
     Ok(())
 }
 
-/// A long touch drag on a handle, down a 24 item list.
+/// A long touch drag on a handle, down a 40 item list.
 async fn a_long_handle_drag_moves_it_far<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let (a, b) = (d.rect("#Item2").await?, d.rect("#Item3").await?);
     let pitch = b.y - a.y;

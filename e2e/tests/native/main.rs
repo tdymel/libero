@@ -23,6 +23,7 @@ mod focus_return;
 mod focus_ring;
 mod form;
 mod form_controls;
+mod frames;
 mod gradient;
 mod header;
 mod hit;

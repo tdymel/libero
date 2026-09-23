@@ -50,7 +50,8 @@ use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveTime};
 use libero::components::Title;
 use libero::hooks::{
-    DrawerOptions, ModalScope, PopoverOptions, use_drawer, use_element, use_modal, use_popover,
+    DrawerOptions, ModalScope, PopoverOptions, SortableMove, use_drawer, use_element, use_modal,
+    use_popover,
 };
 use libero::{LiberoProvider, components::*};
 
@@ -606,6 +607,53 @@ const CLICK_SHAPES: &[Shape] = &[
     },
 ];
 
+/// Items per `Sortable` list, as long as the e2e fixture's long list.
+const SORTABLE_ITEMS: usize = 40;
+
+/// [`CHILDREN`] items in lists of [`SORTABLE_ITEMS`], keyed by their data. A
+/// [`flip`] round swaps each list's first two items: a drop.
+fn sortable_app<const DROP: bool>() -> Element {
+    let onreorder = use_callback(|_: SortableMove| {});
+    let order = move || {
+        let mut order: Vec<usize> = (0..SORTABLE_ITEMS).collect();
+        if DROP && flip() {
+            order.swap(0, 1);
+        }
+        order
+    };
+    rsx! {
+        LiberoProvider {
+            for _ in 0..CHILDREN / SORTABLE_ITEMS {
+                Sortable { onreorder,
+                    for (index, item) in order().into_iter().enumerate() {
+                        SortableItem { key: "{item}", index, "{item}" }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Priced per list. A drag frame cannot be driven here: it writes the list's
+/// own travel signal once the mounted items are measured, and nothing mounts
+/// under `NoOpMutations`. It re-renders the dragged item, and the two items
+/// trading places when it crosses a slot: 1 to 3 of the "Sortable" row's
+/// [`SORTABLE_ITEMS`] items.
+const SORTABLE_SHAPES: &[Shape] = &[
+    Shape {
+        name: "Sortable",
+        app: sortable_app::<false>,
+        count: CHILDREN / SORTABLE_ITEMS,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Sortable drop",
+        app: sortable_app::<true>,
+        count: CHILDREN / SORTABLE_ITEMS,
+        round: rerender_app,
+    },
+];
+
 /// Whether `RENDER_COST` asks for this row. Unset or empty measures them all,
 /// and the controls always run - every row is read against `Leaf`.
 fn wanted(label: &str) -> bool {
@@ -864,6 +912,7 @@ fn render_cost_per_component() {
         .chain(OVERLAY_SHAPES)
         .chain(NOTIFICATION_SHAPES)
         .chain(CLICK_SHAPES)
+        .chain(SORTABLE_SHAPES)
         .filter(|shape| wanted(shape.name))
         .copied()
         .collect();

@@ -49,6 +49,8 @@ use libero::LiberoProvider;
 use style::properties::PropertyId;
 use warnings::SignalWarnings;
 
+use crate::frames::FrameStats;
+
 mod warnings;
 
 pub use blitz_traits::shell::ColorScheme;
@@ -56,6 +58,15 @@ pub use dioxus::prelude::{Code, Key, Location, Modifiers};
 
 /// The viewport every test renders into, CSS pixels at scale 1.
 pub const VIEWPORT: (u32, u32) = (1024, 768);
+
+/// [`Page::time_raster_steps`] in ms per step, the warm-up steps dropped.
+#[derive(Debug, Clone, Copy)]
+pub struct RasterTimes {
+    /// The wheel event, its re-render and Blitz's resolve.
+    pub update: FrameStats,
+    /// Painting and rasterising the viewport on the CPU.
+    pub raster: FrameStats,
+}
 
 // Bounds `settle`, so a render loop fails the test instead of hanging it.
 const MAX_POLLS: usize = 200;
@@ -800,6 +811,26 @@ impl Page {
                 [0, 1, 2, 3].map(|i| buffer[at + i])
             })
             .collect()
+    }
+
+    /// Times `steps` wheel steps of `dy` px over `selector`, each one's event and
+    /// re-render, then its CPU raster of the viewport (1086). Report only.
+    pub fn time_raster_steps(&mut self, selector: &str, steps: usize, dy: f64) -> RasterTimes {
+        let (x, y) = self.centre(selector);
+        let ms = |started: Instant| started.elapsed().as_secs_f64() * 1000.0;
+        let (mut update, mut raster) = (Vec::with_capacity(steps), Vec::with_capacity(steps));
+        for _ in 0..steps {
+            let started = Instant::now();
+            self.wheel_at(x, y, dy);
+            update.push(ms(started));
+            let started = Instant::now();
+            self.painted_pixels(&[(0, 0)]);
+            raster.push(ms(started));
+        }
+        RasterTimes {
+            update: FrameStats::from_deltas(&update, 0),
+            raster: FrameStats::from_deltas(&raster, 0),
+        }
     }
 
     /// The whole viewport rasterised as a binary PPM, for looking at a failure.

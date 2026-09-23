@@ -260,6 +260,12 @@ fn run_unit(
         ])
         .arg(target_dir)
         .args(["--", "--exact", "--test-threads=1", "--format", "pretty"])
+        // `E2E_FRAMES`: the frame-time rows and the swipe's first row are printed (1153).
+        .args(
+            std::env::var_os("E2E_FRAMES")
+                .is_some()
+                .then_some("--nocapture"),
+        )
         .args(unit)
         .env("E2E_ANDROID_CDP", format!("127.0.0.1:{port}"))
         .env("E2E_ANDROID_SERIAL", serial)
