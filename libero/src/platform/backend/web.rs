@@ -1162,7 +1162,8 @@ impl WebKeyboard {
                     return;
                 }
 
-                if skip_text_entry && editable_target(&event) {
+                let text_entry = editable_target(&event);
+                if skip_text_entry && text_entry {
                     return;
                 }
 
@@ -1179,6 +1180,7 @@ impl WebKeyboard {
                     key,
                     modifiers,
                     repeat: event.repeat(),
+                    text_entry,
                 });
                 if handled {
                     event.prevent_default();

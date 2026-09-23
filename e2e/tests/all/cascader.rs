@@ -137,6 +137,32 @@ fn a_phone_drills_into_one_level_at_a_time() {
     });
 }
 
+/// Todo 1111: below `sm` the dropdown is a sheet on the screen's foot, edge to edge.
+#[test]
+fn a_phone_shows_the_dropdown_as_a_bottom_sheet() {
+    const SHEET: &str = "[data-state~=bordered]:has([role=listbox])";
+    block_on(async {
+        let fixture = Fixture::open("/cascader", Viewport::Mobile).await.unwrap();
+        let mut d = e2e::driver::Web { fixture };
+        d.click(TRIGGER).await.unwrap();
+        eventually(&mut d, "the roots", async |d| shown(d, EUROPE).await)
+            .await
+            .unwrap();
+        let (width, height) = d.viewport().await.unwrap();
+        let sheet = d.rect(SHEET).await.unwrap();
+        assert!(
+            sheet.x.abs() < 1.0 && (sheet.width - width).abs() < 1.0,
+            "not edge to edge: {sheet:?} in {width}"
+        );
+        assert!(
+            (sheet.y + sheet.height - height).abs() < 1.0,
+            "not at the foot: {sheet:?} in {height}"
+        );
+        assert!(sheet.height <= height * 0.7 + 1.0, "too tall: {sheet:?}");
+        d.finish("a phone's cascader sheet").await.unwrap();
+    });
+}
+
 /// The same walk in a 390px Blitz window: stylo matches the narrow rule too.
 #[cfg(feature = "native")]
 #[test]

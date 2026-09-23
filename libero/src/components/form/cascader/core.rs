@@ -248,6 +248,25 @@ static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
 
 static CASCADER_PATHS_SX: StaticSx = StaticSx::new(cascader_rows_sx);
 
+/// The dropdown. Narrow, a bottom sheet: full width at the screen's foot. `!important`
+/// beats the popover's inline position, which keeps measuring but no longer places.
+static CASCADER_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
+    COMBOBOX_DROPDOWN_SX.clone().media(
+        narrow_query(),
+        sx().left("0 !important")
+            .right("0 !important")
+            .top("auto !important")
+            .bottom("0 !important")
+            .width("100% !important")
+            .min_width("0 !important")
+            .max_width("100% !important")
+            .max_height("70vh")
+            .border_bottom_left_radius("0")
+            .border_bottom_right_radius("0")
+            .padding_bottom("calc(4px + env(safe-area-inset-bottom, 0px))"),
+    )
+});
+
 /// The search box above the rows, as on `Select`. Not a field control, so it carries its own chrome.
 static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
@@ -1424,7 +1443,7 @@ fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         .into();
     let dropdown = use_box()
         // `use_popover` caps it to the viewport; wide columns scroll inside instead of off-screen.
-        .framework_sx(&COMBOBOX_DROPDOWN_SX)
+        .framework_sx(&CASCADER_DROPDOWN_SX)
         .states(&dropdown_states)
         .style(popover.style())
         .prepare();
@@ -1611,6 +1630,24 @@ mod tests {
             wide.contains("width:var(--lsx-cascader-column-width);"),
             "{wide}"
         );
+    }
+
+    /// Below `sm` the dropdown is a bottom sheet; the inline position of the popover must lose.
+    #[test]
+    fn a_narrow_screen_makes_the_dropdown_a_bottom_sheet() {
+        let css = Stylesheet::from(&*CASCADER_DROPDOWN_SX);
+        let css = css.as_str();
+        let (_, narrow) = css
+            .split_once("@media not all and (min-width: 48rem){")
+            .unwrap_or_else(|| panic!("no narrow rule: {css}"));
+
+        for declaration in [
+            "left:0 !important;",
+            "bottom:0 !important;",
+            "width:100% !important;",
+        ] {
+            assert!(narrow.contains(declaration), "{declaration} in {narrow}");
+        }
     }
 
     /// `aria-controls` must name the column that holds the `aria-activedescendant` row.

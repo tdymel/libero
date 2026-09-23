@@ -757,11 +757,13 @@ const ON_KEY: &str = "const [skipTyping, clicked, seeded] = data;
     };
     const onKey = (event) => {
         if (event.defaultPrevented || event.isComposing) return;
-        if (skipTyping && typing(event.target)) return;
+        const entry = typing(event.target);
+        if (skipTyping && entry) return;
         const chord = [event.key, event.ctrlKey, event.shiftKey, event.altKey, event.metaKey];
-        const name = chord.join(' ');
+        // Per target kind: a chord taken outside text entry stays the field's inside it.
+        const name = chord.join(' ') + (entry ? ' typing' : '');
         if (taken.has(name)) event.preventDefault();
-        dioxus.send([name, ...chord, event.repeat]);
+        dioxus.send([name, ...chord, event.repeat, entry]);
     };
     window.addEventListener('keydown', onKey);";
 
@@ -791,8 +793,8 @@ impl WebViewKeyboard {
         let task_slot = slot.clone();
         let task = spawn(async move {
             let mut script = script;
-            while let Ok((name, key, ctrl, shift, alt, meta, repeat)) = script
-                .recv::<(String, String, bool, bool, bool, bool, bool)>()
+            while let Ok((name, key, ctrl, shift, alt, meta, repeat, text_entry)) = script
+                .recv::<(String, String, bool, bool, bool, bool, bool, bool)>()
                 .await
             {
                 let key = key.parse().unwrap_or(Key::Unidentified);
@@ -806,6 +808,7 @@ impl WebViewKeyboard {
                     key,
                     modifiers,
                     repeat,
+                    text_entry,
                 }) {
                     continue;
                 }

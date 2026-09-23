@@ -452,6 +452,7 @@ fn keyed(event: &Event<KeyboardData>) {
             key: key.clone(),
             modifiers,
             repeat: event.is_auto_repeating(),
+            text_entry: typing,
         };
         let handled = origin.run(|| callback(chord));
         if handled && skip_text_entry {

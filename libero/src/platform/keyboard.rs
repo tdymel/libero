@@ -14,6 +14,8 @@ pub struct KeyChord {
     /// Whether the platform is repeating a held key. Sticky Keys or a switch
     /// device turn one press into many: a toggle should ignore a repeat.
     pub repeat: bool,
+    /// Whether the press started in text entry; set on every press, filtered or not.
+    pub(crate) text_entry: bool,
 }
 
 /// Hearing a key press anywhere in the document, for a global shortcut: a root

@@ -169,8 +169,7 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
             guard: binding.guard,
         })
         .collect();
-    let filtered = entries.iter().any(|entry| !entry.include_editable);
-    let unfiltered = entries.iter().any(|entry| entry.include_editable);
+    let bound = !entries.is_empty();
     let chords: Vec<Chord> = entries.iter().filter_map(|e| e.chord.clone()).collect();
 
     let shared: Rc<RefCell<Vec<Entry>>> = use_hook(|| Rc::new(RefCell::new(Vec::new())));
@@ -195,43 +194,38 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
     let subscriptions = listening.clone();
     let owned = shared.clone();
     let queue = pending.clone();
-    use_effect(use_reactive!(|filtered, unfiltered| {
+    // One listener, so a press is matched once: with a listener per kind, the
+    // handler's effect could run between the two and the second would see its result.
+    use_effect(use_reactive!(|bound| {
         subscriptions.borrow_mut().clear();
-        let Some(api) = keyboard() else {
+        let Some(api) = keyboard().filter(|_| bound) else {
             return;
         };
-        for (editable, wanted) in [(false, filtered), (true, unfiltered)] {
-            if !wanted {
-                continue;
-            }
-            let entries = owned.clone();
-            let queue = queue.clone();
-            let callback = Box::new(move |pressed: KeyChord| {
-                let hit = entries.borrow().iter().position(|entry| {
-                    entry.include_editable == editable
-                        && entry
-                            .chord
-                            .as_ref()
-                            .is_some_and(|chord| chord.matches(&pressed))
-                        && entry.guard.as_ref().is_none_or(|guard| guard())
-                });
-                let Some(index) = hit else {
-                    return false;
-                };
-                if !pressed.repeat {
-                    queue.borrow_mut().push(index);
-                    let mut tick = tick;
-                    let next = tick.peek().wrapping_add(1);
-                    tick.set(next);
-                }
-                true
+        let entries = owned.clone();
+        let queue = queue.clone();
+        let callback = Box::new(move |pressed: KeyChord| {
+            let hit = entries.borrow().iter().position(|entry| {
+                (entry.include_editable || !pressed.text_entry)
+                    && entry
+                        .chord
+                        .as_ref()
+                        .is_some_and(|chord| chord.matches(&pressed))
+                    && entry.guard.as_ref().is_none_or(|guard| guard())
             });
-            let subscription = match editable {
-                true => api.on_key_unfiltered(callback),
-                false => api.on_key(callback),
+            let Some(index) = hit else {
+                return false;
             };
-            subscriptions.borrow_mut().push(subscription);
-        }
+            if !pressed.repeat {
+                queue.borrow_mut().push(index);
+                let mut tick = tick;
+                let next = tick.peek().wrapping_add(1);
+                tick.set(next);
+            }
+            true
+        });
+        subscriptions
+            .borrow_mut()
+            .push(api.on_key_unfiltered(callback));
     }));
 
     let mut seen = use_signal(|| 0u64);
@@ -268,6 +262,7 @@ mod tests {
             key,
             modifiers,
             repeat: false,
+            text_entry: false,
         }
     }
 

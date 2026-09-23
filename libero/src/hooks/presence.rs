@@ -2,7 +2,9 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 
-use crate::platform::{TimerSubscription, prefers_reduced_motion, timer, transition_property};
+use crate::platform::{prefers_reduced_motion, transition_property};
+
+use super::timers::use_scheduled;
 
 /// How long past the exit's duration the fallback waits to unmount. Errs long:
 /// browsers send `transitionend` ~30ms late (measured 2026-09-16).
@@ -65,13 +67,11 @@ pub(crate) fn use_presence(open: bool, property: &'static str, exit: Option<Dura
     // Not `false`: the first render is the one a server sends, and
     // mounted-without-visible is the closed markup.
     let mut visible = use_signal(|| open);
-    // Dropping it cancels, so replacing or clearing it is the whole
-    // cancellation story, and the scope's own drop covers an unmount.
-    let mut fallback = use_hook(|| CopyValue::new(None::<Box<dyn TimerSubscription>>));
+    let fallback = use_scheduled(move |_| mounted.set(false));
 
     use_effect(use_reactive!(|open, exit| {
         if open {
-            fallback.set(None);
+            fallback.cancel();
             if mounted() {
                 visible.set(true);
             } else {
@@ -95,13 +95,7 @@ pub(crate) fn use_presence(open: bool, property: &'static str, exit: Option<Dura
             mounted.set(false);
             return;
         }
-        // The callback runs outside every scope; `mounted` is owned by this
-        // one, and the subscription dies with it, so it never outlives it.
-        let latch = move || {
-            let mut mounted = mounted;
-            mounted.set(false);
-        };
-        fallback.set(timer().map(|timer| timer.after(delay, Box::new(latch))));
+        fallback.after(delay.as_millis() as u64);
     }));
 
     Presence {

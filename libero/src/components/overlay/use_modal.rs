@@ -252,6 +252,11 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
     pub fn is_open(&self) -> bool {
         self.args.read().is_some()
     }
+
+    /// [`is_open`](Self::is_open) without subscribing, for callbacks that run outside a scope.
+    pub(crate) fn is_open_untracked(&self) -> bool {
+        self.args.peek().is_some()
+    }
 }
 
 impl<S: Default + 'static, R: Clone + 'static> ModalHandle<S, R> {

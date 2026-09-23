@@ -395,16 +395,21 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
 
 /// Ctrl/Cmd + `shortcut` toggles the palette. Closed, it listens filtered, so a
 /// text field keeps the chord; open, unfiltered, as focus sits in the search box.
+/// Two bindings and a guard on `open` per press, so no render reads `open`.
 fn use_shortcut(handle: SpotlightHandle, shortcut: Option<char>) {
     let layer = use_dismiss_layer();
-    let open = handle.is_open();
     // Both Ctrl and Cmd on every platform, not `mod`: a Linux keyboard may have a Meta key.
     let bindings = shortcut.into_iter().flat_map(|key| {
-        ["ctrl", "meta"].map(|modifier| {
-            Hotkey::new(format!("{modifier}+{key}"), move || handle.toggle())
-                .include_editable(open)
+        ["ctrl", "meta"].into_iter().flat_map(move |modifier| {
+            let chord = format!("{modifier}+{key}");
+            [
                 // Something else is open above the page: not ours to cover.
-                .when(move || open || !layer.any_open())
+                Hotkey::new(chord.clone(), move || handle.toggle())
+                    .when(move || !handle.modal.is_open_untracked() && !layer.any_open()),
+                Hotkey::new(chord, move || handle.toggle())
+                    .include_editable(true)
+                    .when(move || handle.modal.is_open_untracked()),
+            ]
         })
     });
     use_hotkeys(bindings);

@@ -1,9 +1,8 @@
-use std::time::Duration;
-
 use dioxus::prelude::*;
 
 use crate::{
-    platform::{TimerSubscription, hits_inline_boxes, timer},
+    hooks::{Scheduled, use_scheduled},
+    platform::{hits_inline_boxes, timer},
     sx::{StaticSx, sx},
 };
 
@@ -25,11 +24,10 @@ pub(super) static TRIGGER_WRAPPER_SX: StaticSx = StaticSx::new(|| {
 /// delays. `Tooltip` and `HoverCard` share it.
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct HoverIntent {
-    /// Root-owned: the timer's callback runs outside every scope, and writing
-    /// a signal is all it may do ([[codebase/platform/platform-timer]]).
     hovered: Signal<bool>,
-    /// Replacing or dropping the subscription cancels it.
-    pending: CopyValue<Option<Box<dyn TimerSubscription>>>,
+    /// The state the pending timer moves to.
+    target: CopyValue<bool>,
+    scheduled: Scheduled,
 }
 
 impl HoverIntent {
@@ -39,23 +37,17 @@ impl HoverIntent {
 
     /// Moves towards `target` after `delay` ms, cancelling any move under way.
     pub(super) fn hover(&self, target: bool, delay: u32) {
-        let mut pending = self.pending;
-        pending.set(None);
+        self.scheduled.cancel();
         if *self.hovered.peek() == target {
             return;
         }
         // A close waits at least a task: leaving the trigger for the portaled
         // box would otherwise unmount it before its own `mouseenter` runs.
         match (delay > 0 || !target).then(timer).flatten() {
-            Some(timer) => {
-                let hovered = self.hovered;
-                pending.set(Some(timer.after(
-                    Duration::from_millis(delay.into()),
-                    Box::new(move || {
-                        let mut hovered = hovered;
-                        hovered.set(target);
-                    }),
-                )));
+            Some(_) => {
+                let mut pending = self.target;
+                pending.set(target);
+                self.scheduled.after(delay.into());
             }
             None => {
                 let mut hovered = self.hovered;
@@ -67,20 +59,19 @@ impl HoverIntent {
     /// Sets it now, cancelling any move under way: a dismissal must not be
     /// undone by an open delay that was already counting.
     pub(super) fn set(&self, value: bool) {
-        let mut pending = self.pending;
-        pending.set(None);
+        self.scheduled.cancel();
         let mut hovered = self.hovered;
         hovered.set(value);
     }
 }
 
 pub(super) fn use_hover_intent() -> HoverIntent {
-    let hovered = use_hook(|| Signal::new_in_scope(false, ScopeId::ROOT));
-    let pending = use_hook(|| CopyValue::new(None::<Box<dyn TimerSubscription>>));
-    use_drop(move || {
-        let mut pending = pending;
-        pending.set(None);
-        hovered.manually_drop();
-    });
-    HoverIntent { hovered, pending }
+    let mut hovered = use_signal(|| false);
+    let target = use_hook(|| CopyValue::new(false));
+    let scheduled = use_scheduled(move |_| hovered.set(*target.peek()));
+    HoverIntent {
+        hovered,
+        target,
+        scheduled,
+    }
 }

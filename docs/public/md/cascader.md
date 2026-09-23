@@ -91,6 +91,9 @@ holds selects nothing and warns. The hidden input posts `Options::value()`.
   `Localization::cascader.back`) goes up one level, as `Left` does. It never
   takes focus, so focus stays on the trigger. With `any_level`, a first row
   "Select Europe" picks the parent and closes.
+- Below the `sm` breakpoint the dropdown is a full-width sheet at the foot of
+  the screen. It is not modal: no backdrop, no focus trap, and Escape or a
+  press outside closes it.
 
 ### You must
 

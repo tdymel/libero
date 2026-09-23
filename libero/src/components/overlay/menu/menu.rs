@@ -14,11 +14,12 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, PressMarker, Side,
-        TYPEAHEAD_RESET, Typeahead, current_localization, typeahead_match, use_dismiss,
-        use_element, use_popover_on, use_press_marker, use_theme, use_typeahead,
+        Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, PressMarker,
+        Scheduled, Side, TYPEAHEAD_RESET, Typeahead, current_localization, typeahead_match,
+        use_dismiss, use_element, use_popover_on, use_press_marker, use_scheduled, use_theme,
+        use_typeahead,
     },
-    platform::{ElementApi, TimerSubscription, logical_key, timer},
+    platform::{ElementApi, logical_key},
     sx::{StaticSx, sx},
     theme::{
         MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X, MENU_ITEM_RADIUS, MENU_LABEL_FONT,
@@ -540,32 +541,23 @@ fn use_level_focus(
     }));
 }
 
-/// The pointer resting on an item. The timer callback runs outside every scope,
-/// so it writes a root-owned signal and an effect acts ([[codebase/platform-timer]]).
-#[derive(Clone)]
+/// The pointer resting on an item, acting after the delay.
+#[derive(Clone, Copy)]
 struct HoverDelay {
-    fire: Signal<Option<HoverAction>>,
-    timer: Rc<RefCell<Option<Box<dyn TimerSubscription>>>>,
+    action: CopyValue<Option<HoverAction>>,
+    scheduled: Scheduled,
     delay: Duration,
 }
 
 impl HoverDelay {
     fn schedule(&self, action: HoverAction) {
-        let fire = self.fire;
-        // Replacing the subscription drops the old one, which cancels it.
-        *self.timer.borrow_mut() = timer().map(|timer| {
-            timer.after(
-                self.delay,
-                Box::new(move || {
-                    let mut fire = fire;
-                    fire.set(Some(action));
-                }),
-            )
-        });
+        let mut pending = self.action;
+        pending.set(Some(action));
+        self.scheduled.after(self.delay.as_millis() as u64);
     }
 
     fn cancel(&self) {
-        self.timer.borrow_mut().take();
+        self.scheduled.cancel();
     }
 
     /// The pointer entered item `index`, which opens submenu `opens`.
@@ -592,26 +584,21 @@ impl HoverDelay {
 }
 
 fn use_hover_delay(level: Level, delay: Duration) -> HoverDelay {
-    let fire = use_hook(|| Signal::new_in_scope(None::<HoverAction>, ScopeId::ROOT));
-    let timer: Rc<RefCell<Option<Box<dyn TimerSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let timer = timer.clone();
-        move || {
-            timer.borrow_mut().take();
-            fire.manually_drop();
-        }
-    });
-    use_effect(move || {
-        let Some(action) = fire() else {
+    let action = use_hook(|| CopyValue::new(None::<HoverAction>));
+    let scheduled = use_scheduled(move |_| {
+        let mut slot = action;
+        let Some(action) = slot.write().take() else {
             return;
         };
-        let (mut fire, mut open_child) = (fire, level.open_child);
-        fire.set(None);
+        let mut open_child = level.open_child;
         level.focus(action.focus);
         open_child.set(action.open);
     });
-    HoverDelay { fire, timer, delay }
+    HoverDelay {
+        action,
+        scheduled,
+        delay,
+    }
 }
 
 // Every prop is a value or a stable handle; a submenu's `items` never compares
@@ -751,10 +738,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         level,
         Duration::from_millis(theme.menu.submenu_delay.into()),
     );
-    let cancel_callback = use_callback({
-        let hover = hover.clone();
-        move |()| hover.cancel()
-    });
+    let cancel_callback = use_callback(move |()| hover.cancel());
 
     // Per submenu item, its anchor (this scope's) and box (the root's), kept
     // across renders so neither changes under the submenu.
@@ -790,7 +774,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
                     .map(|item| (!item.disabled).then(|| item.label.clone()))
                     .collect(),
             ),
-            hover: hover.clone(),
+            hover,
             tabbable: active().unwrap_or(first),
             expanded,
             level_id: level_id.clone(),
@@ -828,7 +812,6 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         let mut attributes = props.attributes.clone();
         attributes.extend(dismiss.floating_events());
         let onpointerenter = props.onpointerenter;
-        let hover = hover.clone();
         menu.element(&floating)
             .attr("id", level_id.clone())
             .attr("role", "menu")
@@ -962,7 +945,7 @@ fn menu_item(
         level_id,
         checks,
     } = draw;
-    let (level, tabbable) = (*level, *tabbable);
+    let (level, tabbable, hover) = (*level, *tabbable, *hover);
     let has_submenu = item.submenu_items().is_some();
     let check = item.check;
     let disabled = item.disabled;
@@ -985,7 +968,7 @@ fn menu_item(
     }
     let is_link = href.is_some();
     let onkeydown = {
-        let (typeahead, labels, hover) = (typeahead.clone(), labels.clone(), hover.clone());
+        let (typeahead, labels) = (typeahead.clone(), labels.clone());
         move |event: KeyboardEvent| {
             let space = matches!(logical_key(&event), Key::Character(ref text) if text == " ");
             if is_link && space && !has_shortcut_modifier(&event) && !typeahead.is_typing() {
@@ -996,12 +979,8 @@ fn menu_item(
             level.item_keydown(event, index, opens.is_some(), &typeahead, &labels, &hover)
         }
     };
-    let onmouseenter = {
-        let hover = hover.clone();
-        move |_: MouseEvent| hover.enter(level, index, opens)
-    };
+    let onmouseenter = move |_: MouseEvent| hover.enter(level, index, opens);
     let onclick = {
-        let hover = hover.clone();
         move |_: MouseEvent| {
             if disabled {
                 return;
