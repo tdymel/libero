@@ -395,6 +395,11 @@ impl Page {
         self.settle();
     }
 
+    /// The window's size, [`VIEWPORT`] until a [`resize`](Self::resize).
+    pub fn window_size(&self) -> (u32, u32) {
+        self.doc.inner.borrow().viewport().window_size
+    }
+
     /// Resizes the window, as the shell does on a resize event. `painted_*`
     /// still rasterise [`VIEWPORT`].
     pub fn resize(&mut self, width: u32, height: u32) {

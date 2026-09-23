@@ -8,13 +8,8 @@ LabelText
 combobox "Place" [expanded] [haspopup=listbox]
 status [atomic] [live=polite]
 paragraph
-listbox "Place"
-  option "Europe" [selected]
-    StaticText "Europe"
-  option "Asia" [disabled] [selected=false]
-    StaticText "Asia"
-  option "Oceania" [selected=false]
-    StaticText "Oceania"
+button "Back to Europe"
+  StaticText "Europe"
 listbox "Europe"
   option "France" [selected]
     StaticText "France"

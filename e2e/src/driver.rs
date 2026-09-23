@@ -515,7 +515,7 @@ mod native {
         }
 
         async fn viewport(&mut self) -> Result<(f64, f64)> {
-            let (width, height) = crate::native::VIEWPORT;
+            let (width, height) = self.page.window_size();
             Ok((f64::from(width), f64::from(height)))
         }
 

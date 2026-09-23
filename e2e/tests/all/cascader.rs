@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -39,11 +39,195 @@ e2e::scenario!(
     a_tap_focuses_the_search
 );
 
+const ROOTS: &str = "[data-slot=column]";
+const LAST: &str = "[data-slot=column]:last-child";
+const BACK: &str = "[data-slot=drill-back]";
+const EUROPE: &str = "[role=option][id$='-option-0-0']";
+const FRANCE: &str = "[role=option][id$='-option-1-0']";
+const LYON: &str = "[role=option][id$='-option-2-1']";
+
+/// Whether the viewport is below `sm` (48rem), where the list drills in (todo 1084).
+async fn is_narrow<D: Driver>(d: &mut D) -> Result<bool> {
+    Ok(d.viewport().await?.0 < 768.0)
+}
+
+/// Drawn and placed: the popover stays `visibility:hidden` until measured, and a tap before that misses.
+async fn shown<D: Driver>(d: &mut D, selector: &str) -> Result<bool> {
+    Ok(d.exists(selector).await?
+        && d.style(selector, "display").await? != "none"
+        && d.style(selector, "visibility").await? == "visible")
+}
+
+/// Todo 1084: narrow, a tap on a branch shows only its children under a back header;
+/// back returns to the roots; a leaf commits and closes. Wide, the columns stay side by side.
+pub async fn taps_walk_the_levels<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let narrow = is_narrow(d).await?;
+    // The emulator is a phone: its run must take the drill-in path.
+    anyhow::ensure!(
+        d.platform() != Platform::Android || narrow,
+        "a wide Android viewport"
+    );
+    d.click(TRIGGER).await?;
+    eventually(d, "the roots", async |d| shown(d, EUROPE).await).await?;
+    d.click(EUROPE).await?;
+    eventually(d, "Europe's children", async |d| shown(d, FRANCE).await).await?;
+    let roots_shown = shown(d, ROOTS).await?;
+    let back_shown = shown(d, BACK).await?;
+    if !narrow {
+        anyhow::ensure!(
+            roots_shown && !back_shown,
+            "wide: roots {roots_shown}, back {back_shown}"
+        );
+    } else {
+        anyhow::ensure!(
+            !roots_shown && back_shown,
+            "narrow: roots {roots_shown}, back {back_shown}"
+        );
+        eventually_text(d, &format!("{BACK} [data-slot=title]"), "Europe", "the tap").await?;
+        let name = d.attr(BACK, "aria-label").await?;
+        anyhow::ensure!(
+            name.as_deref() == Some("Back to Europe"),
+            "back's name {name:?}"
+        );
+        // The popup takes the trigger's width at least, not one 220px column.
+        let (column, trigger) = (d.rect(LAST).await?, d.rect(TRIGGER).await?);
+        anyhow::ensure!(
+            column.width + 2.0 >= trigger.width,
+            "{column:?} vs {trigger:?}"
+        );
+
+        d.click(BACK).await?;
+        eventually(d, "back to the roots", async |d| {
+            Ok(!d.exists(BACK).await? && shown(d, EUROPE).await?)
+        })
+        .await?;
+        anyhow::ensure!(!d.is_focused(BACK).await?, "back took focus");
+        d.click(EUROPE).await?;
+        eventually(d, "Europe's children again", async |d| {
+            shown(d, FRANCE).await
+        })
+        .await?;
+    }
+    d.click(FRANCE).await?;
+    eventually(d, "France's children", async |d| shown(d, LYON).await).await?;
+    d.click(LYON).await?;
+    eventually(d, "Lyon committed and closed", async |d| {
+        Ok(d.text("#picked").await? == "lyon"
+            && d.attr(TRIGGER, "aria-expanded").await?.as_deref() == Some("false"))
+    })
+    .await
+}
+
+e2e::scenario!(
+    taps_walk_the_cascader_levels,
+    "/cascader",
+    taps_walk_the_levels
+);
+
+/// The same walk in a 390px browser, below `sm`.
+#[test]
+fn a_phone_drills_into_one_level_at_a_time() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader", Viewport::Mobile).await.unwrap();
+        let mut driver = e2e::driver::Web { fixture };
+        taps_walk_the_levels(&mut driver, "/cascader")
+            .await
+            .unwrap();
+        driver.finish("a phone's cascader").await.unwrap();
+    });
+}
+
+/// The same walk in a 390px Blitz window: stylo matches the narrow rule too.
+#[cfg(feature = "native")]
+#[test]
+// Named `native_*`: the gate's native tier filters on `::native`.
+fn native_narrow_window_drills_in() {
+    let mut driver = e2e::driver::Native::open("/cascader");
+    driver.page.resize(390, 844);
+    e2e::futures::executor::block_on(taps_walk_the_levels(&mut driver, "/cascader")).unwrap();
+}
+
+/// Todo 1084: `any_level` on a phone, the first row picks the parent a tap only drilled into.
+#[test]
+fn a_phone_picks_a_branch_from_its_first_row() {
+    const PICK: &str = "[data-slot=pick-parent]";
+    block_on(async {
+        let fixture = Fixture::open("/cascader/any-level", Viewport::Mobile)
+            .await
+            .unwrap();
+        let mut d = e2e::driver::Web { fixture };
+        d.click(TRIGGER).await.unwrap();
+        eventually(&mut d, "the roots", async |d| shown(d, EUROPE).await)
+            .await
+            .unwrap();
+        d.click(EUROPE).await.unwrap();
+        d.click(FRANCE).await.unwrap();
+        eventually(&mut d, "France picked and opened", async |d| {
+            Ok(d.text("#picked").await? == "france" && shown(d, PICK).await?)
+        })
+        .await
+        .unwrap();
+        eventually_text(
+            &mut d,
+            &format!("{LAST} {PICK}"),
+            "Select France",
+            "the tap",
+        )
+        .await
+        .unwrap();
+        d.click(BACK).await.unwrap();
+        eventually(&mut d, "Select Europe", async |d| {
+            Ok(d.text(&format!("{LAST} {PICK}")).await? == "Select Europe")
+        })
+        .await
+        .unwrap();
+        d.click(&format!("{LAST} {PICK}")).await.unwrap();
+        eventually(&mut d, "Europe committed and closed", async |d| {
+            Ok(d.text("#picked").await? == "europe"
+                && d.attr(TRIGGER, "aria-expanded").await?.as_deref() == Some("false"))
+        })
+        .await
+        .unwrap();
+
+        d.finish("a phone's any-level cascader").await.unwrap();
+    });
+}
+
+/// Todo 1084: the hidden columns leave the tree, and the shown one keeps its name
+/// from its hidden parent row (accname follows `aria-labelledby` into hidden content).
+#[test]
+fn a_phone_names_the_one_column_by_its_parent() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        expect(page, "France|2|true", "ArrowRight into Europe", "mobile").await;
+        let tree = e2e::ax::snapshot(page, TRIGGER).await.unwrap();
+        assert!(tree.contains("listbox \"Europe\""), "{tree}");
+        assert!(tree.contains("France"), "{tree}");
+        let roots = e2e::ax::snapshot(page, "[id$='-listbox-0']").await;
+        assert!(
+            roots
+                .as_ref()
+                .map_or(true, |tree| !tree.contains("Oceania")),
+            "the hidden roots are in the tree: {roots:?}"
+        );
+        fixture
+            .console
+            .assert_clean("a phone's cascader tree")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("cascader", "/cascader")
         .focusable(TRIGGER)
-        .targets("[role=option]")
+        // The shown column: narrow, the earlier ones are `display:none` (todo 1084).
+        .targets("[data-slot=column]:last-child [role=option]")
         .state(
             "open",
             &[Step::TabTo(TRIGGER), Step::Press(keyboard::ARROW_DOWN)],
@@ -52,7 +236,8 @@ fn it_meets_the_baseline() {
         .state(
             "drilled",
             &[Step::Press(keyboard::ARROW_RIGHT)],
-            "[data-slot=column]:nth-child(2) [role=listbox]",
+            // Of type: narrow, the back header comes first.
+            "div[data-slot=column]:nth-of-type(2) [role=listbox]",
         )
         .run();
 }

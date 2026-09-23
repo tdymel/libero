@@ -22,10 +22,11 @@ use crate::{
         typeahead_match, use_element, use_field_list_layer, use_localization, use_popover_on,
         use_theme, use_typeahead,
     },
+    localization::{CascaderLabels, fill},
     platform::{ElementApi, blur_counts, logical_key},
     str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
-    theme::Size,
+    theme::{CssVar, Size},
 };
 
 use super::{
@@ -147,7 +148,57 @@ fn cascader_rows_sx() -> Sx {
     .selector("& [data-state~='committed']", sx().font_weight("700"))
 }
 
+/// `column_width`, set on each column's `style` so the narrow rule can override the width.
+const COLUMN_WIDTH: CssVar = CssVar::new("--lsx-cascader-column-width");
+
+/// Below the theme's `sm`, where two columns no longer fit a phone.
+fn narrow_query() -> String {
+    format!("not all and (min-width: {})", Size::Sm.breakpoint_value())
+}
+
+/// The narrow header: back to the parent's level. A `button` inherits neither font nor color.
+fn drill_back_sx() -> Sx {
+    sx().display("flex")
+        .align_items("center")
+        .gap("4px")
+        .width("100%")
+        .padding("4px 8px")
+        .border("none")
+        .border_bottom("1px solid")
+        .border_color("muted.2")
+        .background("transparent")
+        .color("inherit")
+        .font_family("inherit")
+        .font_size("inherit")
+        .font_weight("600")
+        .line_height("1.5")
+        .text_align("start")
+        .cursor("pointer")
+        .hover(sx().background("muted.1"))
+        .selector(
+            "& > [data-slot='back']",
+            sx().flex("0 0 auto")
+                .display("inline-flex")
+                .width("1em")
+                .height("1em")
+                .transform("rotate(90deg)")
+                .rtl(sx().transform("rotate(-90deg)")),
+        )
+        .selector(
+            "& > [data-slot='back'] > svg",
+            sx().width("1em").height("1em"),
+        )
+        .selector(
+            "& > [data-slot='title']",
+            sx().min_width("0")
+                .overflow("hidden")
+                .text_overflow("ellipsis")
+                .white_space("nowrap"),
+        )
+}
+
 /// One listbox per level, side by side, each scrolling on its own.
+/// Narrow, only the cursor's column shows, under a back header (todo 1084).
 static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
     cascader_rows_sx()
         .display("flex")
@@ -159,6 +210,7 @@ static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > [data-slot='column']",
             sx().flex("1 0 auto")
+                .width(COLUMN_WIDTH.value())
                 .min_width("0")
                 .display("flex")
                 .flex_direction("column"),
@@ -168,6 +220,27 @@ static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
             sx().border_left("1px solid")
                 .border_color("muted.2")
                 .rtl(sx().border_left("none").border_right("1px solid")),
+        )
+        .selector("& > [data-slot='drill-back']", sx().display("none"))
+        .selector("& [data-slot='pick-parent']", sx().display("none"))
+        .media(
+            narrow_query(),
+            sx().flex_direction("column")
+                .gap("0")
+                .selector("& > [data-slot='drill-back']", drill_back_sx())
+                .selector(
+                    "& > [data-slot='column']:not(:last-child)",
+                    sx().display("none"),
+                )
+                .selector(
+                    "& > [data-slot='column']",
+                    sx().width("auto").min_width(COLUMN_WIDTH.value()),
+                )
+                .selector(
+                    "& > [data-slot='column'] + [data-slot='column']",
+                    sx().border_left("none").rtl(sx().border_right("none")),
+                )
+                .selector("& [data-slot='pick-parent']", sx().display("flex")),
         )
 });
 
@@ -237,7 +310,9 @@ field_props! {
 #[component]
 pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let theme = use_theme();
-    let nothing_found = use_localization().combobox.nothing_found;
+    let words = use_localization();
+    let nothing_found = words.combobox.nothing_found;
+    let drill_labels = words.cascader;
     let size = props.size.copied_or(theme.cascader.size);
     let radius = props.radius.copied_or(theme.cascader.radius);
     let disabled = props.disabled.unwrap_or(false);
@@ -357,6 +432,8 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         any_level,
         size,
         radius,
+        labels: drill_labels,
+        state,
     };
     let body = use_cascader_body(
         rows,
@@ -858,6 +935,8 @@ struct CascaderRows {
     any_level: bool,
     size: Size,
     radius: Size,
+    labels: CascaderLabels,
+    state: ComboboxState,
 }
 
 impl CascaderRows {
@@ -946,6 +1025,57 @@ impl CascaderRows {
         }
     }
 
+    /// The narrow header over a child level: pops the cursor, as Left does.
+    /// Never focused (`tabindex=-1`, the box cancels `mousedown`): focus stays on the trigger.
+    fn drill_back(&self) -> Option<Element> {
+        let (_, parents) = self.cursor_now.split_last()?;
+        let parent = node_at(&self.nodes, parents)?;
+        let label = parent.label.clone();
+        let name = fill(self.labels.back, &[("label", &label)]);
+        let (mut cursor, back_to) = (self.cursor, parents.to_vec());
+        Some(rsx! {
+            button {
+                "data-slot": "drill-back",
+                r#type: "button",
+                tabindex: "-1",
+                "aria-label": name,
+                onclick: move |_| cursor.set(back_to.clone()),
+                span { "data-slot": "back", ChevronDownIcon {} }
+                span { "data-slot": "title", "{label}" }
+            }
+        })
+    }
+
+    /// Under `any_level`, the narrow list's first row picks the parent: a tap on it only drilled in.
+    /// Outside the keyboard's rows: Enter on the parent already picks it.
+    fn pick_parent(&self, level: usize) -> Option<Element> {
+        let parents = self.cursor_now.get(..level).filter(|_| level > 0)?;
+        let parent = node_at(&self.nodes, parents).filter(|_| self.any_level)?;
+        if disabled_at(&self.nodes, parents) {
+            return None;
+        }
+        let text = fill(self.labels.select, &[("label", &parent.label)]);
+        let is_committed = self.committed.as_slice() == parents;
+        let (commit, state, picked) = (self.commit.clone(), self.state, parents.to_vec());
+        Some(rsx! {
+            ComboboxOption {
+                key: "{level}-parent",
+                id: format!("{}-option-{level}-parent", self.id),
+                size: self.size,
+                radius: self.radius,
+                selected: false,
+                states: States::new().with("committed", is_committed),
+                "data-slot": "pick-parent",
+                onpick: move |_| match is_committed {
+                    // Re-picking would clear it under `allow_deselect`.
+                    true => state.close(),
+                    false => commit(picked.clone(), true),
+                },
+                span { "data-slot": "label", "{text}" }
+            }
+        })
+    }
+
     /// One column per level the cursor reached (the roots at least); never ahead of the cursor.
     fn columns(
         &self,
@@ -979,17 +1109,21 @@ impl CascaderRows {
                         self.row(indices, level, index, false)
                     })
                     .collect();
+                let pick_parent = (level + 1 == depth)
+                    .then(|| self.pick_parent(level))
+                    .flatten();
                 rsx! {
                     div {
                         key: "{level}",
                         "data-slot": "column",
-                        style: "width:{width}",
+                        style: "{COLUMN_WIDTH.name()}:{width}",
                         ScrollArea {
                             sx: sx().max_height(max_height),
                             scroll_position_y: scroll_y,
                             id: format!("{listbox_id}-{level}"),
                             "role": "listbox",
                             "aria-labelledby": labelled_by,
+                            {pick_parent}
                             for row in rows {
                                 {row}
                             }
@@ -998,6 +1132,7 @@ impl CascaderRows {
                 }
             })
             .collect();
+        let back = self.drill_back();
         strip
             .attr("id", listbox_id.to_string())
             .attr("role", "presentation")
@@ -1005,6 +1140,7 @@ impl CascaderRows {
                 HtmlTag::Div,
                 Vec::new(),
                 rsx! {
+                    {back}
                     for column in columns {
                         {column}
                     }
@@ -1439,6 +1575,40 @@ mod tests {
         let css = css.as_str();
 
         assert!(css.contains("flex:1 0 auto;"), "{css}");
+    }
+
+    /// Below `sm` only the cursor's column shows, under the back header; the width moves to `min-width`.
+    #[test]
+    fn a_narrow_screen_drills_into_one_column() {
+        let css = Stylesheet::from(&*CASCADER_COLUMNS_SX);
+        let css = css.as_str();
+        let narrow = css
+            .split_once("@media not all and (min-width: 48rem){")
+            .map(|(_, rest)| rest)
+            .unwrap_or_else(|| panic!("no narrow rule: {css}"));
+
+        assert!(
+            narrow.contains("[data-slot='column']:not(:last-child){display:none;}"),
+            "{narrow}"
+        );
+        assert!(
+            narrow.contains("[data-slot='drill-back']{display:flex;"),
+            "{narrow}"
+        );
+        assert!(
+            narrow.contains("min-width:var(--lsx-cascader-column-width);"),
+            "{narrow}"
+        );
+        // Wide, the header and the parent row stay hidden.
+        let (wide, _) = css.split_once("@media").unwrap();
+        assert!(
+            wide.contains("[data-slot='drill-back']{display:none;}"),
+            "{wide}"
+        );
+        assert!(
+            wide.contains("width:var(--lsx-cascader-column-width);"),
+            "{wide}"
+        );
     }
 
     /// `aria-controls` must name the column that holds the `aria-activedescendant` row.

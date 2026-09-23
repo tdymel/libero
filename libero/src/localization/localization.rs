@@ -47,6 +47,7 @@ pub struct Localization {
     pub marquee: MarqueeLabels,
     pub chips: ChipsLabels,
     pub combobox: ComboboxLabels,
+    pub cascader: CascaderLabels,
     pub tags_field: TagsFieldLabels,
     pub image: ImageLabels,
     pub code_block: CodeBlockLabels,
@@ -86,6 +87,7 @@ impl Localization {
         marquee: MarqueeLabels::ENGLISH,
         chips: ChipsLabels::ENGLISH,
         combobox: ComboboxLabels::ENGLISH,
+        cascader: CascaderLabels::ENGLISH,
         tags_field: TagsFieldLabels::ENGLISH,
         image: ImageLabels::ENGLISH,
         code_block: CodeBlockLabels::ENGLISH,
@@ -124,6 +126,7 @@ impl Localization {
         marquee: MarqueeLabels::GERMAN,
         chips: ChipsLabels::GERMAN,
         combobox: ComboboxLabels::GERMAN,
+        cascader: CascaderLabels::GERMAN,
         tags_field: TagsFieldLabels::GERMAN,
         image: ImageLabels::GERMAN,
         code_block: CodeBlockLabels::GERMAN,
@@ -144,9 +147,11 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 31] {
+    fn templates(words: &Localization) -> [&'static str; 33] {
         [
             words.common.remove,
+            words.cascader.back,
+            words.cascader.select,
             words.chips.added,
             words.chips.removed,
             words.chips.added_and_removed,

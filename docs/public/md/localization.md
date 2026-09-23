@@ -103,7 +103,7 @@ const: `CommonLabels`, `DateLocale`, `PaginationLabels`, `AvatarLabels`,
 `BurgerLabels`, `AnchorLabels`, `PinFieldLabels`, `ThemeToggleLabels`,
 `RepoButtonLabels`, `TldrLabels`, `DirectionToggleLabels`, `SpotlightLabels`, `CarouselLabels`, `NavLinkLabels`, `LightboxLabels`,
 `FloatingWindowLabels`, `NotificationsLabels`, `ScrollerLabels`,
-`StepperLabels`, `MarqueeLabels`, `ChipsLabels`, `ComboboxLabels`,
+`StepperLabels`, `MarqueeLabels`, `ChipsLabels`, `ComboboxLabels`, `CascaderLabels`,
 `TagsFieldLabels`, `ImageLabels`, `CodeBlockLabels`, `CopyButtonLabels`, `ColorLabels`,
 `PhoneFieldLabels`, `PasswordFieldLabels`, `NumberFieldLabels`,
 `FileFieldLabels`, `TextareaLabels`, `SliderLabels` and `MenuLabels`.

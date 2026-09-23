@@ -86,6 +86,11 @@ holds selects nothing and warns. The hidden input posts `Options::value()`.
 
 - In `"paths"`, and so while searching, `Left` and `Right` move the search
   box's caret.
+- Below the `sm` breakpoint (48rem), `"columns"` shows only the cursor's
+  level. A header names its parent, and its back button ("Back to Europe",
+  `Localization::cascader.back`) goes up one level, as `Left` does. It never
+  takes focus, so focus stays on the trigger. With `any_level`, a first row
+  "Select Europe" picks the parent and closes.
 
 ### You must
 
@@ -105,13 +110,13 @@ holds selects nothing and warns. The hidden input posts `Options::value()`.
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the value to select next, or `None` when the selection was cleared. |
 | `any_level` | `bool` | `false` | Lets a branch be picked as well as expanded, as its own value. Off, only a leaf commits. |
 | `allow_deselect` | `bool` | `false` | Picking the selected option again clears it. Off, a re-pick keeps the value. |
-| `layout` | `CascaderLayout` | `columns` | `"columns"` draws one list per level, `"paths"` one row per full path. A search always renders `"paths"`. Without `any_level` it lists only leaf paths. |
+| `layout` | `CascaderLayout` | `columns` | `"columns"` draws one list per level, `"paths"` one row per full path. A search always renders `"paths"`. Without `any_level` it lists only leaf paths. On a screen narrower than the `sm` breakpoint, `"columns"` shows one level at a time under a back header. |
 | `searchable` | `bool` | `false` | Puts a search box at the top of the list, which narrows it to the paths that match. |
 | `filter` | `Callback<CascaderFilterArgs<T>, bool>` | - | Narrows the paths while searching. Defaults to a case-insensitive `contains` over the joined path. |
 | `separator` | `String` | `" / "` | Between labels, in the trigger and in a `"paths"` row. |
 | `format_value` | `Callback<Vec<String>, String>` | - | Replaces the joined labels in the trigger. Gets the labels from root to option, and returns a `String` so the trigger can still cut it off with an ellipsis. |
 | `node` | `Callback<CascaderNodeArgs<T>, Element>` | `label` | Draws one row's content. The highlight, chevron and click stay the component's. |
-| `column_width` | `String` | `220px` | Width and minimum width of one column. A trigger wider than the open columns shares the rest among them. `"max-content"` fits the longest row. |
+| `column_width` | `String` | `220px` | Width and minimum width of one column. A trigger wider than the open columns shares the rest among them. `"max-content"` fits the longest row. On a narrow screen, the minimum width of the one level shown. |
 | `name` | `FieldName<Option<T>>` | - | Posts the selected value's `Options::value()` in a hidden input of that name. A path such as `Listing::FIELDS.category()` also binds the selection to the surrounding `Form`'s value when there is no `onchange`. |
 | `validate` | `Validators<Option<T>>` | - | Rules over the selected value, shown once the field loses focus or its form is submitted. |
 | `placeholder` | `String` | - | Shown while nothing is selected. |

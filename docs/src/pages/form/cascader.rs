@@ -100,7 +100,7 @@ pub fn CascaderPage() -> Element {
                         .doc("Picking the selected option again clears it. Off, a re-pick keeps the value."),
                     prop("layout", "CascaderLayout")
                         .default("columns")
-                        .doc("`\"columns\"` draws one list per level, `\"paths\"` one row per full path. A search always renders `\"paths\"`. Without `any_level` it lists only leaf paths."),
+                        .doc("`\"columns\"` draws one list per level, `\"paths\"` one row per full path. A search always renders `\"paths\"`. Without `any_level` it lists only leaf paths. On a screen narrower than the `sm` breakpoint, `\"columns\"` shows one level at a time under a back header."),
                     prop("searchable", "bool")
                         .default("false")
                         .doc("Puts a search box at the top of the list, which narrows it to the paths that match."),
@@ -116,7 +116,7 @@ pub fn CascaderPage() -> Element {
                         .doc("Draws one row's content. The highlight, chevron and click stay the component's."),
                     prop("column_width", "String")
                         .default("220px")
-                        .doc("Width and minimum width of one column. A trigger wider than the open columns shares the rest among them. `\"max-content\"` fits the longest row."),
+                        .doc("Width and minimum width of one column. A trigger wider than the open columns shares the rest among them. `\"max-content\"` fits the longest row. On a narrow screen, the minimum width of the one level shown."),
                     prop("name", "FieldName<Option<T>>")
                         .doc("Posts the selected value's `Options::value()` in a hidden input of that name. A path such as `Listing::FIELDS.category()` also binds the selection to the surrounding `Form`'s value when there is no `onchange`."),
                     prop("validate", "Validators<Option<T>>")
@@ -149,7 +149,10 @@ pub fn CascaderPage() -> Element {
                 .key(["Space"], "Open, unless searchable: as `Enter`.")
                 .key(["Tab", "Alt+Up"], "Open: picks the cursor's row if `Enter` would, and closes. `Tab` moves on.")
                 .key(["Escape"], "Open: closes and keeps the value.")
-                .handles(["In `\"paths\"`, and so while searching, `Left` and `Right` move the search box's caret."])
+                .handles([
+                    "In `\"paths\"`, and so while searching, `Left` and `Right` move the search box's caret.",
+                    "Below the `sm` breakpoint (48rem), `\"columns\"` shows only the cursor's level. A header names its parent, and its back button (\"Back to Europe\", `Localization::cascader.back`) goes up one level, as `Left` does. It never takes focus, so focus stays on the trigger. With `any_level`, a first row \"Select Europe\" picks the parent and closes.",
+                ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
             lead: rsx! {
                 Text {
