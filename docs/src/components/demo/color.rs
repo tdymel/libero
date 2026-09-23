@@ -21,10 +21,12 @@ const HUE_WHEEL: &str = "conic-gradient(red, yellow, lime, aqua, blue, magenta, 
 fn swatch(control: &Control, option: &str) -> (String, String) {
     match option {
         UNSET => {
-            let fill = control
-                .unset_swatch
-                .clone()
-                .unwrap_or_else(|| "surface".to_string());
+            let fill = match control.unset_swatch.as_deref() {
+                // currentColor inside the swatch button is the tick's own ink: paint it ink.
+                Some("currentColor") => "ink".to_string(),
+                Some(color) => color.to_string(),
+                None => "surface".to_string(),
+            };
             // An ink swatch needs a tick that reads on it.
             let tick = if fill == "ink" { "surface" } else { "ink" };
             (fill, tick.to_string())
