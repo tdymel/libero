@@ -85,7 +85,8 @@ Rating {
 ### Limits
 
 - At the default `md` size a whole star is a 28px target, a half star 14px
-  wide: halves rely on the drag and the keys.
+  wide: the row is one slider target, and a drag reaches any half.
+  `size: "xl"` makes each half 24px wide.
 - A solid custom icon shows the value by colour alone.
 
 ## Props

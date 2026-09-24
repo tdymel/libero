@@ -307,8 +307,10 @@ pub fn Rating(props: RatingProps) -> Element {
     });
     if let Some(name) = bound.name().filter(|_| !display) {
         // `Some(true)` or nothing: native writes `false` as a string.
+        // Keyed past the symbols' 0..count: mixed siblings panic the diff (1169).
         children.push(rsx! {
             input {
+                key: "{count}",
                 r#type: "hidden",
                 name: name.to_string(),
                 value: number_text(value, "."),

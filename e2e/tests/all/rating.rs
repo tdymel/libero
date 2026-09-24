@@ -154,6 +154,19 @@ async fn fixed<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 
 e2e::scenario!(read_only_ignores_presses_and_keys, "/rating", fixed);
 
+/// Todo 1169: a bound rating posts its picked value through the hidden input.
+async fn posts<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    click_symbol(d, "#review", 4, 0.5).await?;
+    becomes(d, "#review", 4.0, "a click on the fourth").await?;
+    d.click("#send").await?;
+    eventually(d, "the submit's read-out", async |d| {
+        Ok(d.text("#posted").await? == r#"stars=Text("4")"#)
+    })
+    .await
+}
+
+e2e::scenario!(a_bound_rating_posts_the_picked_value, "/rating/form", posts);
+
 /// Right to left, the rightmost symbol is the first, and ArrowLeft raises.
 async fn rtl<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let first = d.rect("#rtl > [data-slot=symbol]:nth-child(1)").await?;
