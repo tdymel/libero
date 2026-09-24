@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Pagination, Text},
+    components::{Code, Pagination, PaginationPart, Text},
     use_theme,
 };
 
@@ -50,6 +50,14 @@ pub fn PaginationPage() -> Element {
                 prop("with_edges", "bool").default("false").doc("Shows the first and last controls."),
                 prop("label", "Callback<PaginationLabel, String>")
                     .doc("Overrides every accessible name. Runs during render, so it can read a locale."),
+                prop("parts", "Parts<PaginationPart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+            ])
+            .parts("PaginationPart", vec![
+                (PaginationPart::List, "The list of controls."),
+                (PaginationPart::Page, "A page button. The current one has `aria-current=\"page\"`."),
+                (PaginationPart::Arrow, "The first, previous, next and last buttons."),
+                (PaginationPart::Ellipsis, "The `…` between page ranges."),
             ])],
             accessibility: a11y()
                 .handles([

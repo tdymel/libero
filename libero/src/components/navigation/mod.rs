@@ -11,9 +11,9 @@ pub use anchor::{Anchor, AnchorProps, AnchorUnderline};
 pub(crate) use anchor::{NewTabHint, wants_new_tab_hint};
 pub use burger::{Burger, BurgerProps};
 pub use menubar::{Menubar, MenubarMenu, MenubarProps};
-pub use nav_link::{NavLink, NavLinkProps};
+pub use nav_link::{NavLink, NavLinkPart, NavLinkProps};
 pub use pagination::{
-    Pagination, PaginationItem, PaginationLabel, PaginationProps, pagination_range,
+    Pagination, PaginationItem, PaginationLabel, PaginationPart, PaginationProps, pagination_range,
 };
 pub use stepper::{StepLabelPosition, StepState, Stepper, StepperProps};
 pub(crate) use tabs::{TabSpec, TabsView, render_tabs};

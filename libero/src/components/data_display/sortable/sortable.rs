@@ -9,7 +9,9 @@ use crate::{
     CssLayer,
     components::{
         accessibility::VisuallyHidden,
-        common::{Glyph, HtmlTag, Input, Orientation, States, base_props, focus_ring_sx},
+        common::{
+            Glyph, HtmlTag, Input, Orientation, Part, States, base_props, focus_ring_sx, parts_enum,
+        },
         layout::use_box,
     },
     context::IconSlot,
@@ -167,7 +169,23 @@ pub fn Sortable(props: SortableProps) -> Element {
     }
 }
 
+parts_enum! {
+    /// [`SortableItem`]'s inner parts, for its `parts` prop. Each is a direct
+    /// child, so a nested `Sortable` keeps its own styles.
+    pub enum SortableItemPart {
+        /// The drag handle.
+        Handle = "handle" => "& > [data-slot='handle']",
+        /// The wrapper round `children`.
+        Content = "content" => "& > [data-slot='content']",
+        /// The move up or back button.
+        MoveEarlier = "move-earlier" => "& > [data-slot='move-earlier']",
+        /// The move down or forward button.
+        MoveLater = "move-later" => "& > [data-slot='move-later']",
+    }
+}
+
 base_props! {
+    parts(SortableItemPart);
     pub struct SortableItemProps {
         /// The item's current position, from 0. Key it by its data, not this.
         index: usize,
@@ -201,6 +219,7 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
         .framework_sx(&SORTABLE_HANDLE_SX)
         .prepare()
         .element(&item.handle)
+        .attr("data-slot", SortableItemPart::Handle.slot())
         .attr("type", "button")
         .attr("aria-label", words.handle)
         .attr("aria-describedby", view.instructions.clone())
@@ -223,7 +242,7 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
             button {
                 class: move_class.clone(),
                 r#type: "button",
-                "data-slot": "move-earlier",
+                "data-slot": SortableItemPart::MoveEarlier.slot(),
                 "aria-label": earlier,
                 disabled: (item.first)(),
                 onmounted: item.earlier.mount(),
@@ -237,7 +256,7 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
             button {
                 class: move_class.clone(),
                 r#type: "button",
-                "data-slot": "move-later",
+                "data-slot": SortableItemPart::MoveLater.slot(),
                 "aria-label": later,
                 disabled: (item.last)(),
                 onmounted: item.later.mount(),
@@ -255,6 +274,7 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
         .framework_sx(&SORTABLE_ITEM_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .style(Some(item.style()))
         .prepare()
@@ -264,7 +284,7 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
             props.attributes,
             rsx! {
                 {handle}
-                div { class: content_class, {props.children} }
+                div { class: content_class, "data-slot": SortableItemPart::Content.slot(), {props.children} }
                 {moves}
             },
         )
@@ -273,7 +293,21 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Stylesheet;
+    use crate::{Stylesheet, components::common::part_table};
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<SortableItemPart>(),
+            [
+                ("handle", "& > [data-slot='handle']"),
+                ("content", "& > [data-slot='content']"),
+                ("move-earlier", "& > [data-slot='move-earlier']"),
+                ("move-later", "& > [data-slot='move-later']"),
+            ]
+        );
+    }
 
     #[test]
     fn the_neighbours_slide_only_while_sorting_and_never_under_reduced_motion() {

@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, CodeBlock, Text};
+use libero::components::{Code, CodeBlock, CodeBlockPart, Text};
 
 use super::code::LANGUAGE_DOC;
 
@@ -67,6 +67,14 @@ pub fn CodeBlockPage() -> Element {
                     .doc("Reads `source` as a unified diff. A leading `+` or `-` colors the row and stays out of what is copied. Wins over `highlight_lines`."),
                 prop("label", "String")
                     .doc("Names the block and describes its copy button, such as \"The booking card, Rust code\". Unset, the language, such as \"Rust code\"."),
+                prop("parts", "Parts<CodeBlockPart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+            ])
+            .parts("CodeBlockPart", vec![
+                (CodeBlockPart::Header, "The bar above the code, with `header`."),
+                (CodeBlockPart::Language, "The language name in the header."),
+                (CodeBlockPart::Copy, "The copy button, in the header or floating in the corner."),
+                (CodeBlockPart::Scroll, "The scrolling box round the code."),
             ])],
             accessibility: a11y()
                 .handles([

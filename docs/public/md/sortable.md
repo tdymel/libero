@@ -170,10 +170,24 @@ fn Fruit(index: usize, name: &'static str) -> Element {
 |---|---|---|---|
 | `index` | `usize` | required | The item's current position, from 0. Key the item by its data, not by this. |
 | `label` | `Option<String>` | `"Item {n}"` | Names the item in the announcements. Unset, `SortableLabels::item` with its position when it was lifted. |
+| `parts` | `Parts<SortableItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content, between the handle and the move buttons. |
 
 Like every component, both also take the shared props `sx`, `class`, `states`,
 and any extra HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `SortableItemPart::Handle` | `handle` | The drag handle. |
+| `SortableItemPart::Content` | `content` | The wrapper round the item's content. |
+| `SortableItemPart::MoveEarlier` | `move-earlier` | The move up or back button. |
+| `SortableItemPart::MoveLater` | `move-later` | The move down or forward button. |
 
 ## Data attributes
 

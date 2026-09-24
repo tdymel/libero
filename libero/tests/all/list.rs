@@ -105,12 +105,14 @@ fn list_icons_mark_items_and_stay_out_of_nested_lists() {
 
     assert_eq!(body.matches(r#"data-slot="icon""#).count(), 3, "{body}");
     assert_eq!(
-        body.matches(r#"aria-hidden="true">L</span>"#).count(),
+        body.matches(r#"aria-hidden="true" data-slot="icon">L</span>"#)
+            .count(),
         2,
         "{body}"
     );
     assert_eq!(
-        body.matches(r#"aria-hidden="true">I</span>"#).count(),
+        body.matches(r#"aria-hidden="true" data-slot="icon">I</span>"#)
+            .count(),
         1,
         "{body}"
     );

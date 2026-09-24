@@ -101,6 +101,7 @@ Barbara Liskov, Margaret Hamilton".
 | `radius` | `Size` | `xxl` | A step on the avatar's own radius scale, `2px` to `32px`. The default `xxl` is a circle. |
 | `variant` | `Variant` | `tonal` | The placeholder's look. Hidden once a picture loads. |
 | `color` | `ThemeAwareValue` | `primary` | The placeholder's tint. |
+| `parts` | `Parts<AvatarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Option<Element>` | `None` | Anything in place of the initials, such as an icon. |
 
 ### `AvatarGroup`
@@ -129,6 +130,16 @@ in full, or `"Ada Lovelace".into()` for a name alone.
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `AvatarPart::Image` | `image` | The picture, while it shows. The fallback has no wrapper: style it through `sx`. |
 
 ## Theme defaults
 

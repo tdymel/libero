@@ -10,8 +10,8 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::CopyButton,
         common::{
-            HtmlTag, Input, States, Variables, base_props, inset_focus_ring_sx, names_itself,
-            variables,
+            HtmlTag, Input, Part, States, Variables, base_props, inset_focus_ring_sx, names_itself,
+            parts_enum, variables,
         },
         layout::{Box, use_box},
     },
@@ -172,7 +172,23 @@ static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
 });
 
+parts_enum! {
+    /// [`CodeBlock`]'s inner parts, for its `parts` prop. Each is matched by
+    /// path, so a `CodeBlock` nested in another keeps its own styles.
+    pub enum CodeBlockPart {
+        /// The bar above the code, with `header`.
+        Header = "header" => "& > [data-slot='header']",
+        /// The language name in the header.
+        Language = "language" => "& > [data-slot='header'] > [data-slot='language']",
+        /// The copy button, in the header or floating in the corner.
+        Copy = "copy" => "& > [data-slot='copy'], & > [data-slot='header'] > [data-slot='copy']",
+        /// The scrolling box round the `<pre>`.
+        Scroll = "scroll" => "& > [data-slot='scroll']",
+    }
+}
+
 base_props! {
+    parts(CodeBlockPart);
     pub struct CodeBlockProps {
         #[props(into)]
         source: String,
@@ -410,6 +426,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .framework_sx(&CODE_BLOCK_CONTAINER_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .prepare()
         .attr("role", Some("group"))
@@ -485,6 +502,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .sx(&scroll_sx)
         .prepare()
         .element(&scroll_element)
+        .attr("data-slot", Some(CodeBlockPart::Scroll.slot()))
         .event("onresize", move |_: Event<ResizeData>| measure())
         // Code is LTR: bidi would reorder its operators on an RTL page (todo 735).
         .attr("dir", Some("ltr"))
@@ -516,10 +534,11 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         props.attributes,
         rsx! {
             if header {
-                div { class: header_class,
-                    span { {label} }
+                div { class: header_class, "data-slot": CodeBlockPart::Header.slot(),
+                    span { "data-slot": CodeBlockPart::Language.slot(), {label} }
                     if let Some(copy_source) = copy_source.clone() {
                         CopyButton {
+                            "data-slot": CodeBlockPart::Copy.slot(),
                             value: copy_source,
                             aria_label: labels.copy,
                             label: group_label.clone(),
@@ -530,6 +549,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
                 }
             } else if let Some(copy_source) = copy_source.clone() {
                 CopyButton {
+                    "data-slot": CodeBlockPart::Copy.slot(),
                     value: copy_source,
                     aria_label: labels.copy,
                     label: group_label.clone(),
@@ -545,6 +565,27 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<CodeBlockPart>(),
+            [
+                ("header", "& > [data-slot='header']"),
+                (
+                    "language",
+                    "& > [data-slot='header'] > [data-slot='language']"
+                ),
+                (
+                    "copy",
+                    "& > [data-slot='copy'], & > [data-slot='header'] > [data-slot='copy']"
+                ),
+                ("scroll", "& > [data-slot='scroll']"),
+            ]
+        );
+    }
 
     #[test]
     fn parse_highlighted_lines_accepts_singles_and_ranges() {

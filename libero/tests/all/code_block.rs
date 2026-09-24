@@ -94,7 +94,10 @@ fn a_block_without_a_language_shows_no_language_label() {
     let html = body(&render(app));
     assert!(html.contains("<button"), "{html}");
     assert!(!html.contains("Unrecognized language"), "{html}");
-    assert!(html.contains("<span></span>"), "{html}");
+    assert!(
+        html.contains(r#"<span data-slot="language"></span>"#),
+        "{html}"
+    );
 }
 
 /// Todo 668. No grammar still draws the diff's marker and spoken word, on the

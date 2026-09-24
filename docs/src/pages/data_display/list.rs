@@ -3,7 +3,7 @@ use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
 use dioxus::prelude::*;
-use libero::components::{Code, Icon, List, ListItem, Text};
+use libero::components::{Code, Icon, List, ListItem, ListItemPart, Text};
 
 /// The items, printed verbatim. Only the outer list carries `size`: nested indent comes from
 /// the parent's `& ul` rule.
@@ -44,7 +44,13 @@ pub fn ListPage() -> Element {
                     prop("icon", "Option<Element>")
                         .default("None")
                         .doc("This item's own icon, in place of the list's."),
+                    prop("parts", "Parts<ListItemPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                     prop("children", "Element").default("required").doc("The item's content."),
+                ])
+                .parts("ListItemPart", vec![
+                    (ListItemPart::Icon, "The icon wrapper, with an icon only."),
+                    (ListItemPart::Body, "The content beside the icon, with an icon only."),
                 ]),
             ],
             accessibility: a11y()

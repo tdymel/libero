@@ -202,6 +202,15 @@ macro_rules! parts_enum {
 
 pub(crate) use parts_enum;
 
+/// `(slot, selector)` per part, for the slot-table snapshot tests.
+#[cfg(test)]
+pub(crate) fn part_table<P: Part>() -> Vec<(&'static str, &'static str)> {
+    P::ALL
+        .iter()
+        .map(|part| (part.slot(), part.selector()))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

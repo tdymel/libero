@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, base_props},
+        common::{HtmlTag, Input, Part, States, base_props, parts_enum},
         layout::use_box,
     },
     sx::{StaticSx, sx},
@@ -19,7 +19,7 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
             .align_items("flex-start")
             .gap(SizeCss::SPACING.value(Size::Sm))
             .selector(
-                "& > [data-slot=\"icon\"]",
+                ListItemPart::Icon.selector(),
                 // One line box tall, so the icon centres on the first line.
                 sx().display("inline-flex")
                     .align_items("center")
@@ -27,13 +27,24 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
                     .height("1lh"),
             )
             .selector(
-                "& > [data-slot=\"body\"]",
+                ListItemPart::Body.selector(),
                 sx().flex("1 1 auto").min_width("0"),
             ),
     )
 });
 
+parts_enum! {
+    /// [`ListItem`]'s inner parts, for its `parts` prop. Present only with an
+    /// icon; each is a direct child, so a nested `List` keeps its own styles.
+    pub enum ListItemPart {
+        Icon = "icon" => "& > [data-slot='icon']",
+        /// The content beside the icon.
+        Body = "body" => "& > [data-slot='body']",
+    }
+}
+
 base_props! {
+    parts(ListItemPart);
     pub struct ListItemProps {
         /// Shown beside the first line. Overrides the list's `icon`.
         #[props(default)]
@@ -71,8 +82,8 @@ pub fn ListItem(props: ListItemProps) -> Element {
 
     let children = match icon {
         Some(icon) => rsx! {
-            span { "data-slot": "icon", "aria-hidden": "true", {icon} }
-            div { "data-slot": "body", {props.children} }
+            span { "data-slot": ListItemPart::Icon.slot(), "aria-hidden": "true", {icon} }
+            div { "data-slot": ListItemPart::Body.slot(), {props.children} }
         },
         None => props.children,
     };
@@ -81,7 +92,26 @@ pub fn ListItem(props: ListItemProps) -> Element {
         .framework_sx(&LIST_ITEM_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .prepare()
         .render(HtmlTag::Li, props.attributes, children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<ListItemPart>(),
+            [
+                ("icon", "& > [data-slot='icon']"),
+                ("body", "& > [data-slot='body']"),
+            ]
+        );
+    }
 }

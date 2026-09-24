@@ -4,9 +4,9 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            Glyph, HtmlTag, Input, SVG_FIT, States, Variables, Variant, VariantVars, base_color,
-            base_props, contrast_color, fill_color, svg_fit, svg_fit_sx, svg_fit_variables,
-            text_color, variables, variant_chrome_sx, variant_colors,
+            Glyph, HtmlTag, Input, Part, SVG_FIT, States, Variables, Variant, VariantVars,
+            base_color, base_props, contrast_color, fill_color, parts_enum, svg_fit, svg_fit_sx,
+            svg_fit_variables, text_color, variables, variant_chrome_sx, variant_colors,
         },
         layout::{Box, use_box},
     },
@@ -49,7 +49,7 @@ pub(super) fn avatar_sx() -> Sx {
         .line_height("1")
         .font_weight("600")
         .selector(
-            "& > img",
+            AvatarPart::Image.selector(),
             sx().width("100%").height("100%").object_fit("cover"),
         )
         // The person glyph, which has no size of its own.
@@ -115,7 +115,17 @@ pub(super) fn avatar_variables(
         )
 }
 
+parts_enum! {
+    /// [`Avatar`]'s inner parts, for its `parts` prop. The fallback is bare
+    /// content: style it through the root's `sx`.
+    pub enum AvatarPart {
+        /// The `<img>`, while a picture shows.
+        Image = "image" => "& > [data-slot='image']",
+    }
+}
+
 base_props! {
+    parts(AvatarPart);
     pub struct AvatarProps {
         /// The person; the accessible name unless `alt` replaces it.
         #[props(into)]
@@ -205,6 +215,7 @@ pub fn Avatar(props: AvatarProps) -> Element {
                 }
                 Box {
                     component: "img",
+                    "data-slot": AvatarPart::Image.slot(),
                     framework_sx: &AVATAR_IMAGE_SX,
                     states: image_states,
                     variables: image_variables,
@@ -231,6 +242,7 @@ pub fn Avatar(props: AvatarProps) -> Element {
         .framework_sx(&AVATAR_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .variables(&variables)
         .focus_ring(false)
@@ -244,7 +256,19 @@ pub fn Avatar(props: AvatarProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tokens::{Color, ColorShade, ColorValue};
+    use crate::{
+        components::common::part_table,
+        tokens::{Color, ColorShade, ColorValue},
+    };
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<AvatarPart>(),
+            [("image", "& > [data-slot='image']")]
+        );
+    }
 
     #[test]
     fn a_bare_theme_color_becomes_a_shade_plus_its_contrast() {

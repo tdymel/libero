@@ -82,11 +82,22 @@ fn Demo() -> Element {
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`). |
 | `target` | `String` | - | The link's `target` attribute. |
 | `icon` | `Element` | - | Drawn before the label. It never shrinks. |
+| `parts` | `Parts<ButtonPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The label, on one line. A long one is cut at the edge. |
 
 `Button` also takes the `<button>` HTML attributes (`type`, `form`, `name`,
 `value`, ...) and, like every component, the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ButtonPart::Icon` | `button-icon` | The `icon` wrapper. |
 
 ## Theme defaults
 

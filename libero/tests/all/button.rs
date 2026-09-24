@@ -119,7 +119,7 @@ fn the_icon_sits_in_its_own_slot_before_the_children() {
     let class = class.first().expect("a framework class");
     assert!(
         html.contains(&format!(
-            ".{class} > [data-slot='button-icon']{{display:inline-flex;"
+            ".{class} > span > [data-slot='button-icon']{{display:inline-flex;"
         )),
         "{html}"
     );

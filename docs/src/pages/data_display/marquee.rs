@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Chip, Code, Marquee, Text},
+    components::{Chip, Code, Marquee, MarqueePart, Text},
     sx::sx,
     use_theme,
 };
@@ -77,6 +77,13 @@ pub fn MarqueePage() -> Element {
                 prop("fade_edges", "bool")
                     .default("false")
                     .doc("Fades both ends into the surface color. Only right on a surface of that color."),
+                prop("parts", "Parts<MarqueePart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+            ])
+            .parts("MarqueePart", vec![
+                (MarqueePart::Track, "The moving row of copies."),
+                (MarqueePart::Group, "One copy of the children."),
+                (MarqueePart::Pause, "The pause toggle."),
             ])],
             accessibility: a11y()
                 .key(["Enter", "Space"], "On the pause toggle, a tab stop: pauses or resumes the motion.")

@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Avatar, AvatarGroup, AvatarSpec, Code, Input, Text};
+use libero::components::{Avatar, AvatarGroup, AvatarPart, AvatarSpec, Code, Input, Text};
 
 static AVATAR_IMAGE: Asset = asset!("/assets/avatar.svg");
 
@@ -126,6 +126,11 @@ pub fn AvatarPage() -> Element {
                     prop("children", "Option<Element>")
                         .default("None")
                         .doc("Anything in place of the initials, such as an icon."),
+                    prop("parts", "Parts<AvatarPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .parts("AvatarPart", vec![
+                    (AvatarPart::Image, "The picture, while it shows. The fallback has no wrapper: style it through `sx`."),
                 ]),
                 props("AvatarGroup", vec![
                     prop("people", "Vec<AvatarSpec>")

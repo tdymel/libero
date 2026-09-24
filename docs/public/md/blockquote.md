@@ -75,10 +75,23 @@ fn Demo() -> Element {
 | `attribution` | `Element` | - | Who said it, shown under the quote. For any join other than a comma, pass the whole line here. |
 | `work` | `String` | - | The title of the quoted work, such as a book or a talk. Follows `attribution` after a comma. |
 | `cite_url` | `String` | - | A URL naming the source. Only machines read it, browsers do not show it. |
+| `parts` | `Parts<BlockquotePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The quote. |
 
 Like every component, `Blockquote` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the `<figure>`.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `BlockquotePart::Quote` | `quote` | The tinted `<blockquote>`. |
+| `BlockquotePart::Caption` | `caption` | The `<figcaption>`, with `attribution` or `work`. |
+| `BlockquotePart::Work` | `work` | The `<cite>` holding `work`. |
 
 ## Theme defaults
 

@@ -94,10 +94,22 @@ fn Checklist() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `icon` | `Option<Element>` | `None` | This item's own icon, in place of the list's. |
+| `parts` | `Parts<ListItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content. |
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ListItemPart::Icon` | `icon` | The icon wrapper, with an icon only. |
+| `ListItemPart::Body` | `body` | The content beside the icon, with an icon only. |
 
 ## Theme defaults
 

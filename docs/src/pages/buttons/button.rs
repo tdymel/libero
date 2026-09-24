@@ -3,7 +3,7 @@ use crate::components::{
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Input, Text};
+use libero::components::{Button, ButtonPart, Code, Input, Text};
 
 fn is_link(values: &DemoValues) -> bool {
     values.str("link") == "true"
@@ -54,10 +54,15 @@ pub fn ButtonPage() -> Element {
                     .doc("The link's `target` attribute."),
                 prop("icon", "Element")
                     .doc("Drawn before the label. It never shrinks."),
+                prop("parts", "Parts<ButtonPart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 prop("children", "Element")
                     .default("required")
                     .doc("The label, on one line. A long one is cut at the edge."),
-            ]).extends("button")],
+            ]).extends("button")
+            .parts("ButtonPart", vec![
+                (ButtonPart::Icon, "The `icon` wrapper."),
+            ])],
             accessibility: a11y()
                 .handles([
                     "A label cut at the edge is still the full accessible name.",

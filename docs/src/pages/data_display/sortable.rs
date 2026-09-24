@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Orientation, Sortable, SortableItem, Text},
+    components::{Code, Orientation, Sortable, SortableItem, SortableItemPart, Text},
     hooks::SortableMove,
 };
 
@@ -69,7 +69,15 @@ pub fn SortablePage() -> Element {
                     prop("label", "Option<String>")
                         .default("\"Item {n}\"")
                         .doc("Names the item in the announcements. Unset, `SortableLabels::item` with its position when it was lifted."),
+                    prop("parts", "Parts<SortableItemPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                     prop("children", "Element").doc("The item's content, between the handle and the move buttons."),
+                ])
+                .parts("SortableItemPart", vec![
+                    (SortableItemPart::Handle, "The drag handle."),
+                    (SortableItemPart::Content, "The wrapper round the item's content."),
+                    (SortableItemPart::MoveEarlier, "The move up or back button."),
+                    (SortableItemPart::MoveLater, "The move down or forward button."),
                 ]),
             ],
             accessibility: a11y()

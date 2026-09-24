@@ -117,10 +117,23 @@ fn Demo() -> Element {
 | `opened` | `bool` | - | Whether `nested` shows. Setting it makes it controlled, so pair it with `onchange`. |
 | `default_opened` | `bool` | `false` | Whether `nested` shows at first, when `opened` is unset. |
 | `onchange` | `EventHandler<bool>` | - | Called with the new `opened` when the toggle is pressed. |
+| `parts` | `Parts<NavLinkPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The link's content. |
 
 Like every component, `NavLink` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `NavLinkPart::Body` | `body` | The column holding the label and the description, with `description` only. |
+| `NavLinkPart::Label` | `label` | The link's content, with `description` only. |
+| `NavLinkPart::Description` | `description` | The dimmed line under the label. |
 
 ## Theme defaults
 

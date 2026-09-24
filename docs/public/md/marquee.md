@@ -106,6 +106,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
+| `parts` | `Parts<MarqueePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | What scrolls, rendered once per copy. Interactive children work only in the first copy. |
 | `orientation` | `Orientation` | `horizontal` | The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies. |
 | `reverse` | `bool` | `false` | Scrolls towards the end instead of the start. |
@@ -120,6 +121,18 @@ fn Demo() -> Element {
 
 Like every component, `Marquee` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `MarqueePart::Track` | `track` | The moving row of copies. |
+| `MarqueePart::Group` | `group` | One copy of the children. |
+| `MarqueePart::Pause` | `pause` | The pause toggle. |
 
 ## Theme defaults
 

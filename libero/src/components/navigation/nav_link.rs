@@ -4,9 +4,9 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            Glyph, HtmlTag, Input, States, StyleAttributes, Variables, attr, base_props,
+            Glyph, HtmlTag, Input, Part, States, StyleAttributes, Variables, attr, base_props,
             disabled_look_sx, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx, on_tint_color,
-            use_style_attributes, variables,
+            parts_enum, parts_source, sx_source, use_style_attributes, variables, with_parts,
         },
         layout::{Collapse, box_style, use_box},
     },
@@ -97,11 +97,11 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         // Without `href` it has nothing to follow.
         .when("disabled", disabled_look_sx("not-allowed"))
         .selector(
-            "& > [data-nav-body]",
+            NavLinkPart::Body.selector(),
             sx().display("flex").flex_direction("column").min_width("0"),
         )
         .selector(
-            "& [data-nav-description]",
+            NavLinkPart::Description.selector(),
             sx().font_size(TEXT_FONT_SIZE.value(Size::Xs))
                 .color("text-dimmed"),
         )
@@ -112,11 +112,11 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .width("100%")
         .selector(
-            "& > [data-nav-row]",
+            "& > [data-slot='row']",
             sx().display("flex").align_items("stretch"),
         )
         .selector(
-            "& > [data-nav-row] > button",
+            "& > [data-slot='row'] > button",
             sx().display("inline-flex")
                 .align_items("center")
                 .justify_content("center")
@@ -141,17 +141,30 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
                 ),
         )
         .selector(
-            "& > [data-nav-row] > button[aria-expanded=\"true\"] > svg",
+            "& > [data-slot='row'] > button[aria-expanded=\"true\"] > svg",
             sx().transform("rotate(180deg)"),
         )
         .selector(
-            "& [data-nav-children]",
+            "& [data-slot='children']",
             sx().padding_left("lg")
                 .rtl(sx().padding_left("0").padding_right("lg")),
         )
 });
 
+parts_enum! {
+    /// [`NavLink`]'s inner parts, for its `parts` prop. Present only with a
+    /// `description`. The toggle and the nested links sit beside the link, out of reach.
+    pub enum NavLinkPart {
+        /// The column holding the label and the description.
+        Body = "body" => "& > [data-slot='body']",
+        /// The `children`.
+        Label = "label" => "& > [data-slot='body'] > [data-slot='label']",
+        Description = "description" => "& > [data-slot='body'] > [data-slot='description']",
+    }
+}
+
 base_props! {
+    parts(NavLinkPart);
     pub struct NavLinkProps {
         /// A plain path/URL or a typed route, same as `Anchor::to`.
         #[props(into)]
@@ -248,10 +261,15 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     }));
 
     // Above the branch, and no `InternalAnchor` scope, which would resolve it twice.
+    let mut merged = None;
     let style_attributes = use_style_attributes(
         &props.class,
         Some(&NAV_LINK_BASE_SX),
-        crate::components::common::sx_source(&props.sx),
+        with_parts(
+            parts_source(&props.parts),
+            sx_source(&props.sx),
+            &mut merged,
+        ),
         &states,
         &Input::None,
         Some(style),
@@ -264,11 +282,11 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         Some(description) => {
             join_described_by(&mut attributes, &description_id());
             rsx! {
-                span { "data-nav-body": true,
-                    span { {props.children} }
+                span { "data-slot": NavLinkPart::Body.slot(),
+                    span { "data-slot": NavLinkPart::Label.slot(), {props.children} }
                     span {
                         id: description_id(),
-                        "data-nav-description": true,
+                        "data-slot": NavLinkPart::Description.slot(),
                         "aria-hidden": "true",
                         "{description}"
                     }
@@ -319,7 +337,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         HtmlTag::Div,
         Vec::new(),
         rsx! {
-            div { "data-nav-row": true,
+            div { "data-slot": "row",
                 {link}
                 // APG disclosure. Named "Show links" plus the link's own name.
                 button {
@@ -335,7 +353,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
                 }
             }
             Collapse { id: panel_id(), open: opened,
-                div { "data-nav-children": true, {nested} }
+                div { "data-slot": "children", {nested} }
             }
         },
     )
@@ -395,6 +413,22 @@ fn join_described_by(attributes: &mut Vec<Attribute>, id: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            crate::components::common::part_table::<NavLinkPart>(),
+            [
+                ("body", "& > [data-slot='body']"),
+                ("label", "& > [data-slot='body'] > [data-slot='label']"),
+                (
+                    "description",
+                    "& > [data-slot='body'] > [data-slot='description']"
+                ),
+            ]
+        );
+    }
 
     #[test]
     fn a_fragment_on_the_route_still_matches_the_page() {

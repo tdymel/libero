@@ -56,6 +56,8 @@ pub use crate::sx::states::{States, states};
 pub use crate::sx::variables::{Variables, variables};
 pub use libero_macros::Options;
 pub use orientation::Orientation;
+#[cfg(test)]
+pub(crate) use parts::part_table;
 pub use parts::{Part, Parts, StaticParts};
 pub(crate) use parts::{parts_enum, parts_source};
 pub use polymorphic::HtmlTag;

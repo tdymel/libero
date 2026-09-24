@@ -4,7 +4,10 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{Glyph, HtmlTag, Input, Orientation, States, Variables, base_props, variables},
+        common::{
+            Glyph, HtmlTag, Input, Orientation, Part, States, Variables, base_props, parts_enum,
+            variables,
+        },
         layout::use_box,
     },
     context::IconSlot,
@@ -16,9 +19,18 @@ use crate::{
     },
 };
 
-const TRACK: &str = "& > [data-slot='track']";
-const COPIES: &str = "& > [data-slot='track'] > [data-slot='group']";
-const PAUSE: &str = "& > [data-slot='pause']";
+parts_enum! {
+    /// [`Marquee`]'s inner parts, for its `parts` prop. Each is matched by
+    /// path, so a nested `Marquee` keeps its own styles.
+    pub enum MarqueePart {
+        /// The moving row of copies.
+        Track = "track" => "& > [data-slot='track']",
+        /// One copy of the children; all but the first are `inert`.
+        Group = "group" => "& > [data-slot='track'] > [data-slot='group']",
+        /// The pause toggle.
+        Pause = "pause" => "& > [data-slot='pause']",
+    }
+}
 
 /// One copy plus one gap: the track plus the missing gap, over `repeat`.
 fn shift(axis: &str) -> String {
@@ -38,13 +50,18 @@ fn fade(side: &str) -> String {
 
 static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
     let offset = SizeCss::SPACING.value(Size::Xs);
+    let (track, copies, pause) = (
+        MarqueePart::Track.selector(),
+        MarqueePart::Group.selector(),
+        MarqueePart::Pause.selector(),
+    );
 
     // Reduced-motion guards sit in the selector they undo: a bare `@media` rule
     // loses on specificity. Under it: one copy, no fade, no toggle.
     let base = sx()
         .position("relative")
         .selector(
-            TRACK,
+            track,
             sx().display("flex")
                 .gap(MARQUEE_GAP.value())
                 .animation(format!(
@@ -54,17 +71,17 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
                 .media(REDUCED_MOTION, sx().animation("none")),
         )
         .selector(
-            COPIES,
+            copies,
             sx().display("flex")
                 .flex_shrink("0")
                 .gap(MARQUEE_GAP.value()),
         )
         .selector(
-            format!("{COPIES}:not(:first-child)"),
+            format!("{copies}:not(:first-child)"),
             sx().media(REDUCED_MOTION, sx().display("none")),
         )
         .selector(
-            PAUSE,
+            pause,
             sx().position("absolute")
                 .z_index("2")
                 .right(offset.clone())
@@ -79,13 +96,13 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
         .media(REDUCED_MOTION, sx().overflow_x("auto"))
         .var(MARQUEE_SHIFT, shift("X"))
-        .selector(TRACK, sx().width("max-content"))
+        .selector(track, sx().width("max-content"))
         .selector(
-            format!("{TRACK}:focus-within"),
+            format!("{track}:focus-within"),
             sx().width("auto").overflow_x("hidden"),
         )
         .selector(
-            PAUSE,
+            pause,
             sx().top("0")
                 .bottom("0")
                 .margin_top("auto")
@@ -97,13 +114,13 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .min_height("0")
         .media(REDUCED_MOTION, sx().overflow_y("auto"))
         .var(MARQUEE_SHIFT, shift("Y"))
-        .selector(TRACK, sx().flex_direction("column"))
+        .selector(track, sx().flex_direction("column"))
         .selector(
-            format!("{TRACK}:focus-within"),
+            format!("{track}:focus-within"),
             sx().max_height("100%").overflow_y("hidden"),
         )
-        .selector(COPIES, sx().flex_direction("column"))
-        .selector(PAUSE, sx().bottom(offset));
+        .selector(copies, sx().flex_direction("column"))
+        .selector(pause, sx().bottom(offset));
 
     // Between the track and the toggle. Off under reduced motion, where it
     // would cover the first copy.
@@ -139,11 +156,11 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("vertical", vertical)
         .when(
             "reverse",
-            sx().selector(TRACK, sx().animation_direction("reverse")),
+            sx().selector(track, sx().animation_direction("reverse")),
         )
         .when(
             "paused",
-            sx().selector(TRACK, sx().animation_play_state("paused")),
+            sx().selector(track, sx().animation_play_state("paused")),
         )
         .when(
             "pause-on-hover",
@@ -154,20 +171,18 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         // A focused link must be in view (2.4.11): the track stops at its start
         // and scrolls to it. Focusing the toggle keeps the motion.
-        .selector(
-            "& > [data-slot='track']:focus-within",
-            sx().animation("none"),
-        )
+        .selector(format!("{track}:focus-within"), sx().animation("none"))
         // The toggle could hide a focused link (2.4.11): transparent, not hidden, so Tab
         // still reaches it. A sibling rule, not `:has()`, which Blitz drops.
         .selector(
-            "& > [data-slot='track']:focus-within ~ [data-slot='pause']",
+            format!("{track}:focus-within ~ [data-slot='pause']"),
             sx().opacity("0").pointer_events("none"),
         )
         .when("fade-edges", fade_edges)
 });
 
 base_props! {
+    parts(MarqueePart);
     pub struct MarqueeProps {
         /// The scroll axis. A vertical marquee needs a height from the caller.
         #[props(default, into)]
@@ -277,6 +292,7 @@ pub fn Marquee(props: MarqueeProps) -> Element {
         .framework_sx(&MARQUEE_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .variables(&variables)
         .prepare()
@@ -284,11 +300,11 @@ pub fn Marquee(props: MarqueeProps) -> Element {
             HtmlTag::Div,
             props.attributes,
             rsx! {
-                div { "data-slot": "track",
+                div { "data-slot": MarqueePart::Track.slot(),
                     for copy in 0..repeat {
                         div {
                             key: "{copy}",
-                            "data-slot": "group",
+                            "data-slot": MarqueePart::Group.slot(),
                             "aria-hidden": (copy > 0).then_some("true"),
                             inert: (copy > 0).then_some(true),
                             {props.children.clone()}
@@ -297,7 +313,7 @@ pub fn Marquee(props: MarqueeProps) -> Element {
                 }
                 if pause_control {
                     ActionIcon {
-                        "data-slot": "pause",
+                        "data-slot": MarqueePart::Pause.slot(),
                         variant: "elevated",
                         size: "xs",
                         aria_label: labels.pause,
@@ -312,4 +328,23 @@ pub fn Marquee(props: MarqueeProps) -> Element {
                 }
             },
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<MarqueePart>(),
+            [
+                ("track", "& > [data-slot='track']"),
+                ("group", "& > [data-slot='track'] > [data-slot='group']"),
+                ("pause", "& > [data-slot='pause']"),
+            ]
+        );
+    }
 }

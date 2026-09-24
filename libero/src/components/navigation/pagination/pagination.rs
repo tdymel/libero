@@ -5,8 +5,8 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, States, Variables, base_color, base_props, contrast_color,
-            fill_color, focus_ring_sx, on_state_sx, variables,
+            Glyph, HtmlTag, Input, Part, States, Variables, base_color, base_props, contrast_color,
+            fill_color, focus_ring_sx, on_state_sx, parts_enum, variables,
         },
         layout::{BoxStyle, use_box},
     },
@@ -92,7 +92,22 @@ static PAGINATION_ELLIPSIS_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
 });
 
+parts_enum! {
+    /// [`Pagination`]'s inner parts, for its `parts` prop.
+    pub enum PaginationPart {
+        /// The `<ul>` of controls.
+        List = "list" => "& > [data-slot='list']",
+        /// A page number button; the current one has `aria-current="page"`.
+        Page = "page" => "& > [data-slot='list'] > li > [data-slot='page']",
+        /// The first, previous, next and last buttons.
+        Arrow = "arrow" => "& > [data-slot='list'] > li > [data-slot='arrow']",
+        /// The `…` between page ranges.
+        Ellipsis = "ellipsis" => "& > [data-slot='list'] > li > [data-slot='ellipsis']",
+    }
+}
+
 base_props! {
+    parts(PaginationPart);
     pub struct PaginationProps {
         /// Page count. `0` renders nothing.
         total: u32,
@@ -199,6 +214,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let nav = use_box()
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .variables(&variables.into())
         .prepare();
@@ -297,6 +313,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let list_element = list_box
         .clone()
         .element(&list)
+        .attr("data-slot", PaginationPart::List.slot())
         // Safari with VoiceOver drops list semantics from a `list-style: none` list.
         .attr("role", "list")
         .render(
@@ -320,6 +337,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
                                 PaginationItem::Ellipsis => {
                                     ellipsis
                                         .clone()
+                                        .attr("data-slot", PaginationPart::Ellipsis.slot())
                                         .render(HtmlTag::Span, vec![], rsx! { "…" })
                                 }
                                 PaginationItem::Page(number) => {
@@ -376,6 +394,7 @@ fn PaginationArrow(
     let icon = rsx! { Glyph { slot, icon } };
     rsx! {
         ActionIcon {
+            "data-slot": PaginationPart::Arrow.slot(),
             aria_label: name,
             // The page buttons' style; `size` and `radius` via `ActionIcon`'s props.
             sx: &PAGINATION_CONTROL_SX,
@@ -429,6 +448,7 @@ fn page_button(
     go: impl Fn(u32, bool) + 'static,
 ) -> Element {
     frame
+        .attr("data-slot", PaginationPart::Page.slot())
         .attr("type", "button")
         .attr("aria-label", label)
         .attr("aria-current", current.then_some("page"))
@@ -440,4 +460,27 @@ fn page_button(
             }
         })
         .render(HtmlTag::Button, vec![], rsx! { "{number}" })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<PaginationPart>(),
+            [
+                ("list", "& > [data-slot='list']"),
+                ("page", "& > [data-slot='list'] > li > [data-slot='page']"),
+                ("arrow", "& > [data-slot='list'] > li > [data-slot='arrow']"),
+                (
+                    "ellipsis",
+                    "& > [data-slot='list'] > li > [data-slot='ellipsis']"
+                ),
+            ]
+        );
+    }
 }

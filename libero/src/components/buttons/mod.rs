@@ -9,7 +9,7 @@ mod tldr;
 
 pub use action_icon::{ActionIcon, ActionIconProps};
 pub(crate) use button::button_variables;
-pub use button::{Button, ButtonProps};
+pub use button::{Button, ButtonPart, ButtonProps};
 pub use button_group::{ButtonGroup, ButtonGroupProps};
 pub use copy_button::{CopyButton, CopyButtonProps};
 pub use direction_toggle::{DirectionToggle, DirectionToggleProps};

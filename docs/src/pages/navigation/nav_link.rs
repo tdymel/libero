@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, NavLink, Text},
+    components::{Code, Flex, NavLink, NavLinkPart, Text},
     sx::sx,
     use_theme,
 };
@@ -60,7 +60,13 @@ pub fn NavLinkPage() -> Element {
                 prop("opened", "bool").doc("Whether `nested` shows. Setting it makes it controlled, so pair it with `onchange`."),
                 prop("default_opened", "bool").default("false").doc("Whether `nested` shows at first, when `opened` is unset."),
                 prop("onchange", "EventHandler<bool>").doc("Called with the new `opened` when the toggle is pressed."),
+                prop("parts", "Parts<NavLinkPart>").doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 prop("children", "Element").default("required").doc("The link's content."),
+            ])
+            .parts("NavLinkPart", vec![
+                (NavLinkPart::Body, "The column holding the label and the description, with `description` only."),
+                (NavLinkPart::Label, "The link's content, with `description` only."),
+                (NavLinkPart::Description, "The dimmed line under the label."),
             ])],
             accessibility: a11y()
                 .handles([

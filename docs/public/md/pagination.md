@@ -65,9 +65,23 @@ fn Demo() -> Element {
 | `with_controls` | `bool` | `true` | Shows the previous and next controls. |
 | `with_edges` | `bool` | `false` | Shows the first and last controls. |
 | `label` | `Callback<PaginationLabel, String>` | - | Overrides every accessible name. Runs during render, so it can read a locale. |
+| `parts` | `Parts<PaginationPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Pagination` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the `<nav>`.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `PaginationPart::List` | `list` | The list of controls. |
+| `PaginationPart::Page` | `page` | A page button. The current one has `aria-current="page"`. |
+| `PaginationPart::Arrow` | `arrow` | The first, previous, next and last buttons. |
+| `PaginationPart::Ellipsis` | `ellipsis` | The `…` between page ranges. |
 
 ## Theme defaults
 

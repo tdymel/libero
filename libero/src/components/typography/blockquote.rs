@@ -2,7 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, Variables, attr, base_props, variables},
+        common::{
+            HtmlTag, Input, Part, States, Variables, attr, base_props, parts_enum, variables,
+        },
         layout::use_box,
     },
     hooks::use_theme,
@@ -96,7 +98,20 @@ static FIGCAPTION_SX: StaticSx = StaticSx::new(|| {
         .per_size(|size| sx().font_size(format!("calc({} * 0.85)", TEXT_FONT_SIZE.value(size))))
 });
 
+parts_enum! {
+    /// [`Blockquote`]'s inner parts, for its `parts` prop. The root is the `<figure>`.
+    pub enum BlockquotePart {
+        /// The tinted `<blockquote>`.
+        Quote = "quote" => "& > [data-slot='quote']",
+        /// The `<figcaption>`, with `attribution` or `work`.
+        Caption = "caption" => "& > [data-slot='caption']",
+        /// The `<cite>` holding `work`.
+        Work = "work" => "& > [data-slot='caption'] > [data-slot='work']",
+    }
+}
+
 base_props! {
+    parts(BlockquotePart);
     pub struct BlockquoteProps {
         /// Body font size, line height, padding and the accent bar's width.
         #[props(default, into)]
@@ -156,6 +171,7 @@ pub fn Blockquote(props: BlockquoteProps) -> Element {
         .states(&quote_states)
         .variables(&quote_variables)
         .prepare()
+        .attr("data-slot", BlockquotePart::Quote.slot())
         .render(
             HtmlTag::Blockquote,
             props
@@ -179,19 +195,24 @@ pub fn Blockquote(props: BlockquoteProps) -> Element {
                 let work = work.clone();
                 cite_style
                     .clone()
+                    .attr("data-slot", BlockquotePart::Work.slot())
                     .render(HtmlTag::Cite, Vec::new(), rsx! { "{work}" })
             });
             // The spec's own example; the comma stays out of the `<cite>`.
             let separator = (attribution.is_some() && work.is_some()).then_some(", ");
-            Some(caption_style.render(
-                HtmlTag::Figcaption,
-                Vec::new(),
-                rsx! {
-                    {attribution.clone()}
-                    {separator}
-                    {work}
-                },
-            ))
+            Some(
+                caption_style
+                    .attr("data-slot", BlockquotePart::Caption.slot())
+                    .render(
+                        HtmlTag::Figcaption,
+                        Vec::new(),
+                        rsx! {
+                            {attribution.clone()}
+                            {separator}
+                            {work}
+                        },
+                    ),
+            )
         }
     };
 
@@ -202,7 +223,27 @@ pub fn Blockquote(props: BlockquoteProps) -> Element {
         .framework_sx(&FIGURE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .prepare()
         .render(HtmlTag::Figure, props.attributes, children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<BlockquotePart>(),
+            [
+                ("quote", "& > [data-slot='quote']"),
+                ("caption", "& > [data-slot='caption']"),
+                ("work", "& > [data-slot='caption'] > [data-slot='work']"),
+            ]
+        );
+    }
 }

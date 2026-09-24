@@ -5,10 +5,10 @@ use crate::{
         common::{
             BUTTON_COLOR_VAR, BUTTON_CONTAINER_VAR, BUTTON_CONTRAST_VAR, BUTTON_FILL_VAR,
             BUTTON_HOVER_VAR, BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR,
-            BUTTON_VARS, HtmlTag, Input, States, Variant, base_color, base_props, contrast_color,
-            disabled_look_sx, fill_color, focus_ring_sx, input_from_str, interactive_variant_sx,
-            literal_contrast, text_color, use_button_group, variables, variant_colors,
-            variant_selected_sx,
+            BUTTON_VARS, HtmlTag, Input, Part, States, Variant, base_color, base_props,
+            contrast_color, disabled_look_sx, fill_color, focus_ring_sx, input_from_str,
+            interactive_variant_sx, literal_contrast, parts_enum, text_color, use_button_group,
+            variables, variant_colors, variant_selected_sx,
         },
         feedback::Loader,
         layout::{render_anchor, use_box},
@@ -49,9 +49,7 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         // One line, never wider than its container (WCAG 1.4.10). No ellipsis: it would wrap the children.
         .max_width("100%")
         .min_width("0")
-        .selector("& > [data-slot='button-icon']", button_icon_sx())
-        // Inside the loading wrapper.
-        .selector("& > span > [data-slot='button-icon']", button_icon_sx());
+        .selector(ButtonPart::Icon.selector(), button_icon_sx());
 
     Variant::ALL
         .iter()
@@ -157,8 +155,17 @@ pub(crate) fn button_variables(
         .render()
 }
 
+parts_enum! {
+    /// [`Button`]'s inner parts, for its `parts` prop.
+    pub enum ButtonPart {
+        /// The `icon` wrapper; under `loading` it sits in the hidden label's wrapper.
+        Icon = "button-icon" => "& > [data-slot='button-icon'], & > span > [data-slot='button-icon']",
+    }
+}
+
 base_props! {
     extends(button);
+    parts(ButtonPart);
     pub struct ButtonProps {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -316,6 +323,7 @@ pub fn Button(props: ButtonProps) -> Element {
         .framework_sx(&BUTTON_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .style(style)
         .prepare();
@@ -323,7 +331,7 @@ pub fn Button(props: ButtonProps) -> Element {
     let label = rsx! {
         if let Some(icon) = props.icon {
             // Not `icon`: an `Alert`'s own slot is, and a button sits in one.
-            span { "data-slot": "button-icon", {icon} }
+            span { "data-slot": ButtonPart::Icon.slot(), {icon} }
         }
         {props.children}
     };
@@ -378,7 +386,22 @@ pub fn Button(props: ButtonProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tokens::{Color, ColorShade, ColorValue};
+    use crate::{
+        components::common::part_table,
+        tokens::{Color, ColorShade, ColorValue},
+    };
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<ButtonPart>(),
+            [(
+                "button-icon",
+                "& > [data-slot='button-icon'], & > span > [data-slot='button-icon']"
+            )]
+        );
+    }
 
     /// `Button` passes `base_color`'s output, already an explicit shade.
     #[test]

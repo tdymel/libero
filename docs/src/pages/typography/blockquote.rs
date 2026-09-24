@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Blockquote, Code, Text},
+    components::{Blockquote, BlockquotePart, Code, Text},
     use_theme,
 };
 
@@ -36,7 +36,14 @@ pub fn BlockquotePage() -> Element {
                     .doc("The title of the quoted work, such as a book or a talk. Follows `attribution` after a comma."),
                 prop("cite_url", "String")
                     .doc("A URL naming the source. Only machines read it, browsers do not show it."),
+                prop("parts", "Parts<BlockquotePart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 prop("children", "Element").default("required").doc("The quote."),
+            ])
+            .parts("BlockquotePart", vec![
+                (BlockquotePart::Quote, "The tinted `<blockquote>`."),
+                (BlockquotePart::Caption, "The `<figcaption>`, with `attribution` or `work`."),
+                (BlockquotePart::Work, "The `<cite>` holding `work`."),
             ])],
             accessibility: a11y()
                 .handles([
