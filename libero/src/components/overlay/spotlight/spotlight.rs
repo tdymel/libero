@@ -10,13 +10,13 @@ use crate::{
         },
         feedback::Loader,
         layout::{Box, ScrollArea},
-        overlay::Dialog,
+        overlay::{
+            Dialog,
+            use_modal::{ModalHandle, ModalScope, use_modal},
+        },
         typography::Kbd,
     },
-    hooks::{
-        Hotkey, ModalHandle, ModalScope, use_dismiss_layer, use_hotkeys, use_localization,
-        use_modal, use_theme,
-    },
+    hooks::{Hotkey, use_dismiss_layer, use_hotkeys, use_localization, use_theme},
     platform,
     sx::{StaticSx, sx},
     theme::{

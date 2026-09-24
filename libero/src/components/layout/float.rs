@@ -14,8 +14,6 @@ pub use crate::theme::Placement;
 
 input_from_str!(Placement);
 
-const FLOAT_OFFSET_X_VAR: CssVar = CssVar::new("--lsx-float-offset-x");
-const FLOAT_OFFSET_Y_VAR: CssVar = CssVar::new("--lsx-float-offset-y");
 const FLOAT_TRANSLATE_X_VAR: CssVar = CssVar::new("--lsx-float-translate-x");
 const FLOAT_TRANSLATE_Y_VAR: CssVar = CssVar::new("--lsx-float-translate-y");
 
@@ -25,9 +23,9 @@ static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
         .transform(format!(
             "translate(calc({} + {}), calc({} + {}))",
             FLOAT_TRANSLATE_X_VAR.value_or("0%"),
-            FLOAT_OFFSET_X_VAR.value_or(FLOAT_OFFSET_X.value()),
+            FLOAT_OFFSET_X.value(),
             FLOAT_TRANSLATE_Y_VAR.value_or("0%"),
-            FLOAT_OFFSET_Y_VAR.value_or(FLOAT_OFFSET_Y.value()),
+            FLOAT_OFFSET_Y.value(),
         ))
         .when("vertical-top", sx().top("0"))
         .when(
@@ -56,11 +54,11 @@ fn float_variables(props: &FloatProps) -> Variables {
     variables()
         // Through the spacing scale: `resolve(None)` dropped a size token silently.
         .with(
-            FLOAT_OFFSET_X_VAR,
+            FLOAT_OFFSET_X,
             props.offset_x.resolve(Some(SizeCss::SPACING)),
         )
         .with(
-            FLOAT_OFFSET_Y_VAR,
+            FLOAT_OFFSET_Y,
             props.offset_y.resolve(Some(SizeCss::SPACING)),
         )
         .with(Z_INDEX_FLOAT.override_var(), props.z_index.resolve(None))
@@ -197,7 +195,7 @@ mod tests {
             variables.to_string(),
             format!(
                 "{}:{};",
-                FLOAT_OFFSET_X_VAR.name(),
+                FLOAT_OFFSET_X.name(),
                 SizeCss::SPACING.value(Size::Md)
             )
         );
@@ -212,7 +210,7 @@ mod tests {
             variables.to_string(),
             format!(
                 "{}:calc(-1 * {});",
-                FLOAT_OFFSET_X_VAR.name(),
+                FLOAT_OFFSET_X.name(),
                 SizeCss::SPACING.value(Size::Md)
             )
         );
@@ -224,7 +222,7 @@ mod tests {
 
         assert_eq!(
             variables.to_string(),
-            format!("{}:-8px;", FLOAT_OFFSET_X_VAR.name())
+            format!("{}:-8px;", FLOAT_OFFSET_X.name())
         );
     }
 }

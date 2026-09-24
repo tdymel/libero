@@ -3,7 +3,6 @@ mod drawer;
 mod floating_window;
 mod hover_card;
 mod hover_intent;
-mod lightbox;
 mod menu;
 mod modal;
 mod overlay;
@@ -12,7 +11,8 @@ mod tooltip;
 // The hooks that render an overlay. Exported once, through `hooks`.
 pub(crate) mod use_drawer;
 pub(crate) mod use_floating_window;
-pub(crate) mod use_lightbox;
+// `use_lightbox` sits inside, beside the viewer it renders.
+pub(crate) mod lightbox;
 pub(crate) mod use_modal;
 
 pub use dialog::{Dialog, DialogProps};
@@ -21,7 +21,6 @@ pub use drawer::DrawerAnchor;
 pub(crate) use floating_window::FloatingWindow;
 pub use floating_window::{FloatingWindowOptions, WindowRect};
 pub use hover_card::{HoverCard, HoverCardProps};
-pub(crate) use lightbox::Lightbox;
 pub(crate) use menu::MenuFocus;
 pub use menu::{Menu, MenuEdge, MenuEntry, MenuItem, MenuProps, MenuState, use_menu};
 pub(crate) use modal::Modal;

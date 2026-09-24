@@ -53,7 +53,7 @@ pub trait NumberValue:
 }
 
 /// The digits after the point in `value`'s shortest form: 2 for `0.25`.
-fn decimals(value: impl Display) -> usize {
+pub(crate) fn decimals(value: impl Display) -> usize {
     value
         .to_string()
         .split_once('.')

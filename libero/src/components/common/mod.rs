@@ -40,6 +40,7 @@ pub(crate) use icons::{Glyph, draw_svg};
 pub(crate) use logical_text::LogicalTextAlign;
 pub(crate) use neighbour::neighbour;
 pub use number_value::NumberValue;
+pub(crate) use number_value::decimals;
 pub use option_list::{OptionItem, OptionList, OptionSource};
 pub use options::{OptionLabel, Options};
 // The derive and the trait share a name and one import, the way serde's do.

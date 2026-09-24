@@ -1,14 +1,6 @@
 //! The value scale, kept out of the component so it is testable without a DOM.
 
-use crate::utils::warn;
-
-/// Decimals `step` is written with - `0.1` -> 1. Rust's shortest-repr `f64`
-/// formatting is what makes this exact.
-pub(super) fn decimals(step: f64) -> usize {
-    format!("{step}")
-        .split_once('.')
-        .map_or(0, |(_, fraction)| fraction.len())
-}
+use crate::{components::common::decimals, utils::warn};
 
 /// Rounds away the drift `min + step * n` accumulates - the `0.1 + 0.2` problem.
 pub(super) fn round_to(value: f64, decimals: usize) -> f64 {

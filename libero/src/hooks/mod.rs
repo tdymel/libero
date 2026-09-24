@@ -91,9 +91,9 @@ pub(crate) use typeahead::{TYPEAHEAD_RESET, Typeahead, typeahead_match, use_type
 // The layer rule (`tests/all/architecture.rs`) exempts only this `use`.
 // archunit: ignore components::overlay
 pub use crate::components::overlay::{
+    lightbox::use_lightbox::{LightboxItem, LightboxOpening, LightboxOptions, use_lightbox},
     use_drawer::{DrawerOptions, use_drawer},
     use_floating_window::{FloatingWindowHandle, use_floating_window},
-    use_lightbox::{LightboxItem, LightboxOpening, LightboxOptions, use_lightbox},
     use_modal::{ModalHandle, ModalScope, Opening, OpeningFuture, use_modal, use_modal_close},
 };
 // The sortable hooks share `Sortable`'s context and orientation, so they live beside it.

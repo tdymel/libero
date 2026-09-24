@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
-use super::use_modal::{ModalHandle, ModalScope, use_modal};
-use crate::components::overlay::Lightbox;
+use super::Lightbox;
+use crate::components::overlay::use_modal::{ModalHandle, ModalScope, use_modal};
 
 /// One picture in a gallery.
 #[derive(Clone, Debug, Default, PartialEq)]
