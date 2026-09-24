@@ -1,6 +1,6 @@
 use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Anchor, Code, Text};
+use libero::components::{Anchor, AnchorPart, Code, Text};
 
 const HREF: &str = "https://dioxuslabs.com";
 const EXTERNAL_LABEL: &str = "Read the Dioxus docs";
@@ -34,6 +34,11 @@ pub fn AnchorPage() -> Element {
                     .default("hover")
                     .doc("When the underline draws, `always`, `hover` or `never`."),
                 prop("children", "Element").default("required").doc("The link's content."),
+                prop("parts", "Parts<AnchorPart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+            ])
+            .parts("AnchorPart", vec![
+                (AnchorPart::NewTab, "The new-tab icon after the text, with `target: \"_blank\"` only."),
             ])],
             accessibility: a11y()
                 .handles([

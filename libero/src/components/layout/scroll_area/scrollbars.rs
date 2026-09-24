@@ -2,10 +2,13 @@ use dioxus::{html::input_data::MouseButton, prelude::*};
 
 use super::{
     handle::{inline_x, physical_x},
-    scroll_area::thumb_color,
+    scroll_area::{SCROLLBARS_SLOT, ScrollAreaPart, thumb_color},
 };
 use crate::{
-    components::{common::HtmlTag, layout::use_box},
+    components::{
+        common::{HtmlTag, Part},
+        layout::use_box,
+    },
     hooks::{DragMove, DragOptions, ElementHandle, use_drag, use_element},
     platform::{ElementApi, when_laid_out},
     sx::{FORCED_COLORS, StaticSx, sx},
@@ -32,21 +35,21 @@ static DRAWN_BARS_SX: StaticSx = StaticSx::new(|| {
         .z_index("2147483647")
         .selector("& > [data-scrollbars-x]", layer())
         .selector(
-            "& [data-scrollbar]",
+            "& [data-slot='scrollbar']",
             sx().position("absolute")
                 .pointer_events("auto")
                 .with("visibility", "visible"),
         )
         .selector(
-            "& [data-scrollbar=vertical]",
+            "& [data-slot='scrollbar'][data-orientation='vertical']",
             sx().top("0").with("inset-inline-end", "0"),
         )
         .selector(
-            "& [data-scrollbar=horizontal]",
+            "& [data-slot='scrollbar'][data-orientation='horizontal']",
             sx().bottom("0").with("inset-inline-start", "0"),
         )
         .selector(
-            "& [data-thumb]",
+            "& [data-slot='thumb']",
             sx().position("absolute")
                 .box_sizing("border-box")
                 .padding("2px")
@@ -62,11 +65,11 @@ static DRAWN_BARS_SX: StaticSx = StaticSx::new(|| {
                 ),
         )
         .selector(
-            "& [data-scrollbar=vertical] > [data-thumb]",
+            "& [data-orientation='vertical'] > [data-slot='thumb']",
             sx().with("inset-inline", "0"),
         )
         .selector(
-            "& [data-scrollbar=horizontal] > [data-thumb]",
+            "& [data-orientation='horizontal'] > [data-slot='thumb']",
             sx().with("inset-block", "0"),
         )
 });
@@ -340,7 +343,7 @@ pub(super) fn ScrollAreaBars(
     // runs no scroll animation, which would never settle.
     let render = |tracks: Option<Element>| {
         layer
-            .attr("data-scrollbars", true)
+            .attr("data-slot", SCROLLBARS_SLOT)
             .attr("data-empty", tracks.is_none())
             .attr("aria-hidden", "true")
             .render(HtmlTag::Div, Vec::new(), tracks.unwrap_or_else(|| rsx! {}))
@@ -364,11 +367,12 @@ pub(super) fn ScrollAreaBars(
             style: "translate: {measured.left}px 0; {SCROLL_AREA_RANGE_X.name()}: {range_x}px",
             if let Some(bar) = drawn.y {
                 div {
-                    "data-scrollbar": "vertical",
+                    "data-slot": ScrollAreaPart::Scrollbar.slot(),
+                    "data-orientation": "vertical",
                     style: "bottom: {corner(drawn.x)}px; width: {thick}px",
                     onpointerdown: press(Axis::Y),
                     div {
-                        "data-thumb": true,
+                        "data-slot": ScrollAreaPart::Thumb.slot(),
                         style: "top: {bar.at}px; height: {bar.thumb}px",
                         onmounted: thumb_y.mount(),
                         onpointerdown: move |event: Event<PointerData>| {
@@ -383,11 +387,12 @@ pub(super) fn ScrollAreaBars(
             }
             if let Some(bar) = drawn.x {
                 div {
-                    "data-scrollbar": "horizontal",
+                    "data-slot": ScrollAreaPart::Scrollbar.slot(),
+                    "data-orientation": "horizontal",
                     style: "inset-inline-end: {corner(drawn.y)}px; height: {thick}px",
                     onpointerdown: press(Axis::X),
                     div {
-                        "data-thumb": true,
+                        "data-slot": ScrollAreaPart::Thumb.slot(),
                         style: "inset-inline-start: {bar.at}px; width: {bar.thumb}px",
                         onmounted: thumb_x.mount(),
                         onpointerdown: move |event: Event<PointerData>| {

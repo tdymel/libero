@@ -39,6 +39,16 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `BurgerPart::Glyph` | `glyph` | The middle bar. The outer two are its `::before` and `::after`. |
+
 ## Accessibility
 
 ### Libero handles
@@ -87,6 +97,7 @@ Burger { onclick: move |_| modal.open() }
 | `size` | `ThemeAwareValue` | `md` | The glyph's width and height. The button is one `spacing.xs` step larger. Below 24px it still takes presses in a 24x24 box. |
 | `color` | `ThemeAwareValue` | `currentColor` | The bars. Unset, they follow the button's `color`. |
 | `disabled` | `bool` | `false` | Disables the button. |
+| `parts` | `Parts<BurgerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Burger` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes, `aria-controls` among them.

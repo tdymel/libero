@@ -4,7 +4,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{Input, base_props, css_string, has_shortcut_modifier},
+        common::{
+            Input, base_props, css_string, has_shortcut_modifier, parts_enum, parts_under_sx,
+        },
         data_display::List,
     },
     hooks::{
@@ -236,7 +238,21 @@ fn focus_tree_item(root: &ElementHandle, target_id: &str) {
     let _ = root.query_selector(&selector).and_then(|el| el.focus());
 }
 
+parts_enum! {
+    /// [`Tree`]'s inner parts, for its `parts` prop. Descendant selectors: a
+    /// `Tree` nested in a row's content matches too.
+    pub enum TreePart {
+        /// A `treeitem` `<li>`: the row and its open subtree.
+        Row = "row" => "& [data-slot='row']",
+        /// The clickable line around `render_node`'s content.
+        Content = "content" => "& [data-slot='row'] > [data-slot='content']",
+        /// An open branch's child list.
+        Group = "group" => "& [data-slot='row'] > [data-slot='group']",
+    }
+}
+
 base_props! {
+    parts(TreePart);
     pub struct TreeProps<T: TreeValue> {
         /// Row gap and per-level indent, on `List`'s scale; set them apart through `sx`.
         #[props(default, into)]
@@ -327,7 +343,7 @@ pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
         TreeCore {
             attributes: props.attributes,
             class: props.class,
-            sx: props.sx,
+            sx: parts_under_sx(&props.parts, props.sx),
             states: props.states,
             size: props.size,
             guides: props.guides,
@@ -622,6 +638,20 @@ fn TreeCore(props: TreeCoreProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<TreePart>(),
+            [
+                ("row", "& [data-slot='row']"),
+                ("content", "& [data-slot='row'] > [data-slot='content']"),
+                ("group", "& [data-slot='row'] > [data-slot='group']"),
+            ]
+        );
+    }
 
     fn tree(ids: &[(&'static str, &[&'static str])]) -> Vec<TreeNodeErased> {
         let nodes = ids

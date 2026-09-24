@@ -61,6 +61,18 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ScrollerPart::Viewport` | `viewport` | The `ScrollArea` that scrolls, the named region. |
+| `ScrollerPart::Content` | `content` | The strip around the children. |
+| `ScrollerPart::Control` | `control` | Both step buttons. `data-state` holds `start` or `end`. |
+
 ## Accessibility
 
 ### Keyboard
@@ -92,6 +104,7 @@ fn Demo() -> Element {
 | `onedgechange` | `EventHandler<ScrollerEdges>` | - | Fires when the strip reaches or leaves an end, and once when it is first measured. `ScrollerEdges { at_start, at_end }`, both `true` when nothing overflows. |
 | `handle` | `ScrollerHandle` | - | From `use_scroller()`. Its `step_forward()` and `step_back()` move the strip as the controls do, for buttons of your own. |
 | `children` | `Element` | required | The strip. |
+| `parts` | `Parts<ScrollerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Scroller` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes, which go on the root.

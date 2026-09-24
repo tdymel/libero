@@ -81,6 +81,16 @@ fn Demo() -> Element {
 With `side: "top"` or `"bottom"`, `size` is a height, so the parent needs
 `direction: "column"`.
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `SidebarPart::Scroll` | `scroll` | The `ScrollArea` holding the content. It carries the panel's padding. |
+
 ## Accessibility
 
 ### Libero handles
@@ -101,6 +111,7 @@ With `side: "top"` or `"bottom"`, `size` is a height, so the parent needs
 | `size` | `Size` | `md` | The panel's width, or its height on a `top` or `bottom` side. |
 | `component` | `HtmlTag` | `aside` | The element to render, such as `nav` for a navigation panel. |
 | `children` | `Element` | required | The panel's content, scrolled by an inner `ScrollArea`. |
+| `parts` | `Parts<SidebarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 `SidebarSide` is `start`, `end`, `top` or `bottom`. `start` and `end` follow the text direction: `start` is the right edge under `dir="rtl"`.
 

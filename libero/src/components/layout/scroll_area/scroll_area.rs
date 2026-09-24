@@ -9,7 +9,7 @@ use crate::{
     components::{
         common::{
             FOCUSABLE_SELECTOR, HtmlTag, Input, States, Variables, base_props, input_from_str,
-            names_itself, variables,
+            names_itself, parts_enum, variables,
         },
         layout::use_box,
     },
@@ -41,6 +41,20 @@ const SCROLL_AREA_THUMB_VAR: CssVar = CssVar::new("--lsx-scroll-area-thumb-color
 /// Rows a `Virtualize` child skipped, as padding so the range spans the whole list.
 const SCROLL_AREA_LEADING_VAR: CssVar = CssVar::new("--lsx-scroll-area-leading");
 const SCROLL_AREA_TRAILING_VAR: CssVar = CssVar::new("--lsx-scroll-area-trailing");
+
+/// The drawn bars' `aria-hidden` layer, the root's first child. Plumbing, not a part.
+pub(super) const SCROLLBARS_SLOT: &str = "scrollbars";
+
+parts_enum! {
+    /// [`ScrollArea`]'s inner parts, for its `parts` prop. They exist only while the
+    /// area draws its own bars: `always` in a browser.
+    pub enum ScrollAreaPart {
+        /// A track; `data-orientation` is `vertical` or `horizontal`.
+        Scrollbar = "scrollbar" => "& > [data-slot='scrollbars'] > * > [data-slot='scrollbar']",
+        /// The thumb inside a track.
+        Thumb = "thumb" => "& > [data-slot='scrollbars'] > * > [data-slot='scrollbar'] > [data-slot='thumb']",
+    }
+}
 
 /// `Scroll` behaves as `Hover`: nothing here can yet fade the scrollbar out
 /// after an idle timeout. See `ScrollbarVisibility`.
@@ -169,6 +183,7 @@ impl EdgeState {
 }
 
 base_props! {
+    parts(ScrollAreaPart);
     pub struct ScrollAreaProps {
         /// `"vertical"` (default), `"horizontal"`, `"both"` or `"none"`.
         #[props(default, into)]
@@ -591,6 +606,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         )
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .variables(&variables)
         .prepare()
@@ -608,7 +624,28 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tokens::{Color, ColorShade, ColorValue, Size};
+    use crate::{
+        components::common::part_table,
+        tokens::{Color, ColorShade, ColorValue, Size},
+    };
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<ScrollAreaPart>(),
+            [
+                (
+                    "scrollbar",
+                    "& > [data-slot='scrollbars'] > * > [data-slot='scrollbar']"
+                ),
+                (
+                    "thumb",
+                    "& > [data-slot='scrollbars'] > * > [data-slot='scrollbar'] > [data-slot='thumb']"
+                ),
+            ]
+        );
+    }
 
     #[test]
     fn a_thumb_color_resolves_with_no_scale() {

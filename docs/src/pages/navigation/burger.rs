@@ -2,7 +2,7 @@ use crate::components::{
     Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Burger, Code, Flex, Input, Paper, Text};
+use libero::components::{Burger, BurgerPart, Code, Flex, Input, Paper, Text};
 use libero::sx::sx;
 
 /// The panel `aria-controls` names: with `open` set and no real target, `Burger` warns.
@@ -79,6 +79,11 @@ pub fn BurgerPage() -> Element {
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables the button."),
+                prop("parts", "Parts<BurgerPart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+            ])
+            .parts("BurgerPart", vec![
+                (BurgerPart::Glyph, "The middle bar. The outer two are its `::before` and `::after`."),
             ])],
             accessibility: a11y()
                 .handles([

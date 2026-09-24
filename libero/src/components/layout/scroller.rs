@@ -4,8 +4,8 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            Glyph, HtmlTag, Input, States, Variables, base_props, focus_ring_sx, input_from_str,
-            inset_focus_ring_sx, states, variables,
+            Glyph, HtmlTag, Input, Part, States, Variables, base_props, focus_ring_sx,
+            input_from_str, inset_focus_ring_sx, parts_enum, states, variables,
         },
         layout::{
             Box, ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, inline_x,
@@ -297,7 +297,20 @@ fn scroller_variables(fade: Option<&ThemeAwareValue>) -> Variables {
     )
 }
 
+parts_enum! {
+    /// [`Scroller`]'s inner parts, for its `parts` prop.
+    pub enum ScrollerPart {
+        /// The `ScrollArea` that scrolls, the named region.
+        Viewport = "viewport" => "& > [data-slot='viewport']",
+        /// The strip around the children, inside `ScrollArea`'s content box.
+        Content = "content" => "& > [data-slot='viewport'] > * > [data-slot='content']",
+        /// Both step buttons; `data-state` holds `start` or `end`.
+        Control = "control" => "& > [data-slot='control']",
+    }
+}
+
 base_props! {
+    parts(ScrollerPart);
     pub struct ScrollerProps {
         /// Names the scrollable region, which is a tab stop.
         #[props(into)]
@@ -557,6 +570,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         .framework_sx(&SCROLLER_CONTENT_SX)
         .prepare()
         .element(&strip_content)
+        .attr("data-slot", ScrollerPart::Content.slot())
         .event("onresize", resized)
         .render(HtmlTag::Div, Vec::new(), props.children)?;
 
@@ -569,6 +583,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             focusable: true,
             framework_sx: ScrollAreaBase(&SCROLLER_VIEWPORT_SX),
             states: viewport_states,
+            "data-slot": ScrollerPart::Viewport.slot(),
             id: viewport_id(),
             role: "region",
             aria_label: props.aria_label,
@@ -607,6 +622,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
                 r#type: "button",
                 framework_sx: &SCROLLER_CONTROL_SX,
                 states: control_states,
+                "data-slot": ScrollerPart::Control.slot(),
                 aria_controls: viewport_id.clone(),
                 aria_label: match forward {
                     true => labels.forward,
@@ -639,6 +655,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         .framework_sx(&SCROLLER_ROOT_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&root_states)
         .variables(&root_variables)
         .prepare()
@@ -661,7 +678,23 @@ pub fn Scroller(props: ScrollerProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::css::Stylesheet;
+    use crate::{components::common::part_table, css::Stylesheet};
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<ScrollerPart>(),
+            [
+                ("viewport", "& > [data-slot='viewport']"),
+                (
+                    "content",
+                    "& > [data-slot='viewport'] > * > [data-slot='content']"
+                ),
+                ("control", "& > [data-slot='control']"),
+            ]
+        );
+    }
 
     /// 1000px of content in a 400px viewport: a 600px range.
     #[test]

@@ -8,8 +8,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, base_props, disabled_look_sx, has_shortcut_modifier,
-            inset_focus_ring_sx,
+            HtmlTag, Input, Part, States, base_props, disabled_look_sx, has_shortcut_modifier,
+            inset_focus_ring_sx, parts_enum,
         },
         layout::use_box,
     },
@@ -27,10 +27,19 @@ use crate::{
 
 use crate::components::overlay::{Menu, MenuEdge, MenuEntry, MenuFocus, MenuState};
 
-const TRIGGER: &str = "& [data-menubar-index]";
+parts_enum! {
+    /// [`Menubar`]'s inner parts, for its `parts` prop. The menus are portaled,
+    /// out of the bar's reach.
+    pub enum MenubarPart {
+        /// A menu's trigger button, inside its `Menu` wrapper.
+        Trigger = "trigger" => "& [data-slot='trigger']",
+    }
+}
 
 // Triggers are styled from the bar, so a row of them costs one class.
 static MENUBAR_SX: StaticSx = StaticSx::new(|| {
+    let trigger = MenubarPart::Trigger.selector();
+
     MenubarDefaults::theme_vars()
         .display("flex")
         .flex_direction("row")
@@ -42,7 +51,7 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
         // no min-content measure spares Blitz a label broken per glyph (886).
         .selector("& > *", sx().min_width("0"))
         .selector(
-            TRIGGER,
+            trigger,
             sx().display("inline-flex")
                 .align_items("center")
                 .padding(format!(
@@ -65,21 +74,21 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
         )
         // Hover, focus and an open menu share one tint, as `Menu`'s items.
         .selector(
-            "& [data-menubar-index]:hover:not([aria-disabled=\"true\"])",
+            format!("{trigger}:hover:not([aria-disabled=\"true\"])"),
             sx().background("muted.1"),
         )
-        .selector("& [data-menubar-index]:focus", sx().background("muted.1"))
+        .selector(format!("{trigger}:focus"), sx().background("muted.1"))
         .selector(
-            "& [data-menubar-index][aria-expanded=\"true\"]",
+            format!("{trigger}[aria-expanded=\"true\"]"),
             sx().background("muted.1"),
         )
         // `appearance: none` and `border: 0` take the UA's ring with them.
         .selector(
-            "& [data-menubar-index]:focus-visible",
+            format!("{trigger}:focus-visible"),
             inset_focus_ring_sx("-2px"),
         )
         .selector(
-            "& [data-menubar-index][aria-disabled=\"true\"]",
+            format!("{trigger}[aria-disabled=\"true\"]"),
             disabled_look_sx("not-allowed"),
         )
 });
@@ -112,6 +121,7 @@ impl MenubarMenu {
 }
 
 base_props! {
+    parts(MenubarPart);
     pub struct MenubarProps {
         /// The top-level menus, in order.
         menus: Vec<MenubarMenu>,
@@ -406,6 +416,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                     r#type: "button",
                     "role": "menuitem",
                     tabindex: if index == tabbable { "0" } else { "-1" },
+                    "data-slot": MenubarPart::Trigger.slot(),
                     "data-menubar-index": "{index}",
                     "aria-disabled": disabled.then_some("true"),
                     onkeydown,
@@ -433,6 +444,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
         .framework_sx(&MENUBAR_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .prepare();
 
@@ -458,7 +470,17 @@ fn step(len: usize, from: usize, forward: bool, loop_focus: bool) -> Option<usiz
 
 #[cfg(test)]
 mod tests {
-    use super::step;
+    use super::{MenubarPart, step};
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<MenubarPart>(),
+            [("trigger", "& [data-slot='trigger']")]
+        );
+    }
 
     #[test]
     fn the_arrows_walk_every_trigger_and_wrap_only_when_asked() {

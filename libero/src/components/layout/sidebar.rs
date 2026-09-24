@@ -1,8 +1,9 @@
+use dioxus::dioxus_core::AttributeValue;
 use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, base_props, input_from_str},
+        common::{HtmlTag, Input, Part, States, base_props, input_from_str, parts_enum},
         layout::{ScrollArea, use_box},
     },
     hooks::use_theme,
@@ -42,7 +43,16 @@ static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
+parts_enum! {
+    /// [`Sidebar`]'s inner parts, for its `parts` prop.
+    pub enum SidebarPart {
+        /// The `ScrollArea` holding the content, with the panel's padding.
+        Scroll = "scroll" => "& > [data-slot='scroll']",
+    }
+}
+
 base_props! {
+    parts(SidebarPart);
     pub struct SidebarProps {
         /// The edge it borders and the axis `size` sizes; it does not place the panel.
         #[props(default, into)]
@@ -88,24 +98,46 @@ pub fn Sidebar(props: SidebarProps) -> Element {
         .into();
 
     // An overflowing sidebar's scroll area is a tab stop: it carries the panel's name.
-    let name: Vec<Attribute> = props
+    let mut scroll_attributes: Vec<Attribute> = props
         .attributes
         .iter()
         .filter(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"))
         .cloned()
         .collect();
+    scroll_attributes.push(Attribute::new(
+        "data-slot",
+        AttributeValue::Text(SidebarPart::Scroll.slot().to_string()),
+        None,
+        false,
+    ));
 
     use_box()
         .framework_sx(&SIDEBAR_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .prepare()
         .render(
             component,
             props.attributes,
             rsx! {
-                ScrollArea { sx: &SIDEBAR_SCROLL_SX, attributes: name, {props.children} }
+                ScrollArea { sx: &SIDEBAR_SCROLL_SX, attributes: scroll_attributes, {props.children} }
             },
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<SidebarPart>(),
+            [("scroll", "& > [data-slot='scroll']")]
+        );
+    }
 }

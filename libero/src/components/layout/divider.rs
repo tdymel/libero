@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        common::{HtmlTag, Input, Orientation, Variables, base_props, input_from_str, variables},
+        common::{
+            HtmlTag, Input, Orientation, Part, Variables, base_props, input_from_str, parts_enum,
+            variables,
+        },
         layout::use_box,
     },
     hooks::{use_css, use_id, use_theme},
@@ -141,7 +144,16 @@ static DIVIDER_LABEL_VERTICAL_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
 });
 
+parts_enum! {
+    /// [`Divider`]'s inner parts, for its `parts` prop.
+    pub enum DividerPart {
+        /// The label between the two line halves, with `children` only.
+        Label = "label" => "& > [data-slot='label']",
+    }
+}
+
 base_props! {
+    parts(DividerPart);
     pub struct DividerProps {
         /// `"horizontal"` (the default) or `"vertical"`.
         #[props(default, into)]
@@ -220,7 +232,9 @@ pub fn Divider(props: DividerProps) -> Element {
     let labelled_by = (has_label && !caller_owns_it).then_some(label_id.cloned());
 
     let label = match props.children {
-        Some(children) => rsx! { span { id: label_id, class: label_class, {children} } },
+        Some(children) => rsx! {
+            span { "data-slot": DividerPart::Label.slot(), id: label_id, class: label_class, {children} }
+        },
         None => rsx! {},
     };
 
@@ -228,6 +242,7 @@ pub fn Divider(props: DividerProps) -> Element {
         .framework_sx(&DIVIDER_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .variables(&variables)
         .prepare()
         // A default, so a caller's `role: "none"` makes the rule decorative.
@@ -241,7 +256,10 @@ pub fn Divider(props: DividerProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tokens::{Color, Size};
+    use crate::{
+        components::common::part_table,
+        tokens::{Color, Size},
+    };
 
     #[test]
     fn a_bare_color_is_tinted_to_the_divider_shade() {
@@ -292,5 +310,14 @@ mod tests {
     #[test]
     fn neither_set_emits_nothing() {
         assert_eq!(divider_variables(None, None).to_string(), "");
+    }
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<DividerPart>(),
+            [("label", "& > [data-slot='label']")]
+        );
     }
 }

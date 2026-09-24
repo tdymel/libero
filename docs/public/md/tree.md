@@ -122,6 +122,18 @@ fn Demo() -> Element {
 The expansion, the buttons and the selection readout are the example's own
 state, not part of `Tree`.
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `TreePart::Row` | `row` | A `treeitem`: the row and its open subtree. A `Tree` nested in a row's content matches too. |
+| `TreePart::Content` | `content` | The clickable line around `render_node`'s content. |
+| `TreePart::Group` | `group` | An open branch's list of children. |
+
 ## Accessibility
 
 ### Keyboard
@@ -161,6 +173,7 @@ state, not part of `Tree`.
 | `expanded` | `HashSet<String>` | - | The expanded ids, controlled. The tree follows it and asks for every change through `onexpandedchange`. Unset, the tree keeps its own. |
 | `current` | `String` | - | The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current`. |
 | `onexpandedchange` | `EventHandler<HashSet<String>>` | - | Called with the whole new set of expanded ids. Store it when `expanded` is set; without `expanded` it only notifies. |
+| `parts` | `Parts<TreePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.

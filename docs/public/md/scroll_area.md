@@ -98,6 +98,17 @@ fn Rows() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ScrollAreaPart::Scrollbar` | `scrollbar` | A track `always` draws in a browser. `data-orientation` is `vertical` or `horizontal`. |
+| `ScrollAreaPart::Thumb` | `thumb` | The thumb inside a track. |
+
 ## Accessibility
 
 ### Libero handles
@@ -136,6 +147,7 @@ fn Rows() -> Element {
 | `onleftreached` | `EventHandler<()>` | - | Fires once when the left edge is reached. |
 | `onrightreached` | `EventHandler<()>` | - | Fires once when the right edge is reached. |
 | `children` | `Element` | required | The scrollable content. |
+| `parts` | `Parts<ScrollAreaPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 `Virtualize` renders no element, so it takes no styling props.
 
@@ -185,8 +197,8 @@ The content box inside the root carries `virtualized` once it holds a
 `Virtualize`.
 
 Under `always` in a browser, the root's first child is the drawn bar: an
-`aria-hidden`, absolutely positioned `[data-scrollbars]` layer holding a
-`[data-scrollbar="vertical"]` or `"horizontal"` track, each with a
-`[data-thumb]`. It stays out of the content's flow, so a flex or grid root lays
+`aria-hidden`, absolutely positioned `[data-slot="scrollbars"]` layer holding a
+`[data-slot="scrollbar"]` track per axis, its `data-orientation` `vertical` or
+`horizontal`, each with a `[data-slot="thumb"]`. It stays out of the content's flow, so a flex or grid root lays
 out as without it. The root is `position: relative` then, a stacking context
 for the layer.

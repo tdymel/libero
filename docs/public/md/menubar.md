@@ -46,6 +46,16 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work. The menus open in a portal, outside the bar, so neither reaches them.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `MenubarPart::Trigger` | `trigger` | A menu's trigger button. `aria-expanded` is `true` while its menu is open. |
+
 ## Accessibility
 
 ### Keyboard
@@ -83,6 +93,7 @@ fn Demo() -> Element {
 | `align` | `Align` | `Start` | Where each menu lines up along that side. |
 | `size` | `Size` | `md` | The triggers' font and padding, and each menu's item size. |
 | `radius` | `Size` | `sm` | The triggers' and the menus' corner radius. |
+| `parts` | `Parts<MenubarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. The menus open in a portal, out of reach. |
 
 Like every component, `Menubar` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the bar.
@@ -121,4 +132,4 @@ bar's `loop_focus`.
 ## Data attributes
 
 State tokens on the bar's `data-state`: `size-<size>` and `radius-<size>`. Each
-trigger carries `data-menubar-index`.
+trigger carries `data-slot="trigger"` and `data-menubar-index`.

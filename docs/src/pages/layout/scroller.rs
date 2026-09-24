@@ -3,7 +3,9 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Chip, Code, Flex, Input, Scroller, ScrollerEdges, Text, use_scroller},
+    components::{
+        Button, Chip, Code, Flex, Input, Scroller, ScrollerEdges, ScrollerPart, Text, use_scroller,
+    },
     sx::sx,
     use_theme,
 };
@@ -169,6 +171,13 @@ pub fn ScrollerPage() -> Element {
                     prop("handle", "ScrollerHandle")
                         .doc("From `use_scroller()`. Its `step_forward()` and `step_back()` move the strip as the controls do, for buttons of your own."),
                     prop("children", "Element").doc("The strip."),
+                    prop("parts", "Parts<ScrollerPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .parts("ScrollerPart", vec![
+                    (ScrollerPart::Viewport, "The `ScrollArea` that scrolls, the named region."),
+                    (ScrollerPart::Content, "The strip around the children."),
+                    (ScrollerPart::Control, "Both step buttons. `data-state` holds `start` or `end`."),
                 ]),
             ],
             accessibility: a11y()

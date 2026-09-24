@@ -5,7 +5,10 @@ use crate::{
     CssLayer,
     components::{
         accessibility::VisuallyHidden,
-        common::{Glyph, Input, States, base_props, input_from_str, use_style_attributes},
+        common::{
+            Glyph, Input, Part, States, base_props, input_from_str, parts_enum, parts_source,
+            sx_source, use_style_attributes, with_parts,
+        },
     },
     context::IconSlot,
     hooks::{use_css, use_localization, use_theme},
@@ -70,12 +73,27 @@ pub(crate) fn NewTabHint(#[props(default)] in_text: bool) -> Element {
     };
     rsx! {
         {before}
-        span { class, "data-anchor-new-tab": "", "aria-hidden": "true", {inside}, Glyph { slot: IconSlot::ExternalLink, icon: lucide::external_link::outlined } }
+        span {
+            class,
+            "data-slot": AnchorPart::NewTab.slot(),
+            "aria-hidden": "true",
+            {inside}
+            Glyph { slot: IconSlot::ExternalLink, icon: lucide::external_link::outlined }
+        }
         VisuallyHidden { "{gap}{new_tab}" }
     }
 }
 
+parts_enum! {
+    /// [`Anchor`]'s inner parts, for its `parts` prop.
+    pub enum AnchorPart {
+        /// The new-tab icon after the text, with `target: "_blank"` only.
+        NewTab = "new-tab" => "& > [data-slot='new-tab']",
+    }
+}
+
 base_props! {
+    parts(AnchorPart);
     pub struct AnchorProps {
         #[props(default, into)]
         size: Input<Size>,
@@ -120,10 +138,15 @@ pub fn Anchor(props: AnchorProps) -> Element {
         .into();
 
     // Resolved here: an `InternalAnchor` scope would re-render with `children`.
+    let mut merged = None;
     let style_attributes = use_style_attributes(
         &props.class,
         Some(&ANCHOR_BASE_SX),
-        crate::components::common::sx_source(&props.sx),
+        with_parts(
+            parts_source(&props.parts),
+            sx_source(&props.sx),
+            &mut merged,
+        ),
         &states,
         &Input::None,
         None,
@@ -146,4 +169,19 @@ pub fn Anchor(props: AnchorProps) -> Element {
         props.attributes,
         children,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<AnchorPart>(),
+            [("new-tab", "& > [data-slot='new-tab']")]
+        );
+    }
 }

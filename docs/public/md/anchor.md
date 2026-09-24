@@ -45,6 +45,16 @@ fn Demo() -> Element {
 # #[component] fn GettingStarted() -> Element { rsx! {} }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `AnchorPart::NewTab` | `new-tab` | The new-tab icon after the text, with `target: "_blank"` only. |
+
 ## Accessibility
 
 ### Libero handles
@@ -69,6 +79,7 @@ fn Demo() -> Element {
 | `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
 | `underline` | `AnchorUnderline` | `hover` | When the underline draws, `always`, `hover` or `never`. |
 | `children` | `Element` | required | The link's content. |
+| `parts` | `Parts<AnchorPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Anchor` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

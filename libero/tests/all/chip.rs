@@ -208,7 +208,7 @@ fn a_blank_link_chip_adds_the_new_tab_hint_unless_opted_out() {
     assert!(html.contains("(opens in a new tab)"), "{html}");
     let text_end = html.find("Example").unwrap();
     assert!(
-        html.find("data-anchor-new-tab").unwrap() > text_end,
+        html.find("data-slot=\"new-tab\"").unwrap() > text_end,
         "{html}"
     );
     assert!(html.contains("<svg"), "{html}");

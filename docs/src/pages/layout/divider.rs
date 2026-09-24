@@ -3,7 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Divider, Input, Text},
+    components::{Box, Divider, DividerPart, Input, Text},
     sx::sx,
 };
 
@@ -51,6 +51,11 @@ pub fn DividerPage() -> Element {
                     .doc("Line color. A bare theme color like `blue` resolves to its shade 3."),
                 prop("children", "Element")
                     .doc("An optional label in the line."),
+                prop("parts", "Parts<DividerPart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+            ])
+            .parts("DividerPart", vec![
+                (DividerPart::Label, "The label between the two line halves, with `children` only."),
             ])],
             accessibility: a11y()
                 .handles(["The rule is a `separator`, named by its label. Your own `aria-label` or `aria-labelledby` wins."])

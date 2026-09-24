@@ -8,6 +8,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         Button, Code, Flex, SvgData, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs,
+        TreePart,
     },
     sx::sx,
     use_theme,
@@ -180,6 +181,13 @@ pub fn TreePage() -> Element {
                     ),
                     prop("onexpandedchange", "EventHandler<HashSet<String>>")
                         .doc("Called with the whole new set of expanded ids. Store it when `expanded` is set; without `expanded` it only notifies."),
+                    prop("parts", "Parts<TreePart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .parts("TreePart", vec![
+                    (TreePart::Row, "A `treeitem`: the row and its open subtree. A `Tree` nested in a row's content matches too."),
+                    (TreePart::Content, "The clickable line around `render_node`'s content."),
+                    (TreePart::Group, "An open branch's list of children."),
                 ]),
                 props("TreeNode<T>", vec![
                     prop("id", "String").default("required").doc("The node's unique id."),

@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Sidebar, Text},
+    components::{Code, Flex, Sidebar, SidebarPart, Text},
     sx::sx,
 };
 
@@ -40,6 +40,11 @@ pub fn SidebarPage() -> Element {
                 prop("size", "Size").default("md").doc("The panel's width, or its height on a `top` or `bottom` side."),
                 prop("component", "HtmlTag").default("aside").doc("The element to render, such as `nav` for a navigation panel."),
                 prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
+                prop("parts", "Parts<SidebarPart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+            ])
+            .parts("SidebarPart", vec![
+                (SidebarPart::Scroll, "The `ScrollArea` holding the content. It carries the panel's padding."),
             ])],
             accessibility: a11y()
                 .handles(["The root is an `aside`, the `complementary` landmark."])

@@ -4,8 +4,8 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Button, Code, Flex, Input, List, ListItem, ScrollArea, ScrollPositionEvent, Text,
-        Virtualize, use_scroll_area,
+        Box, Button, Code, Flex, Input, List, ListItem, ScrollArea, ScrollAreaPart,
+        ScrollPositionEvent, Text, Virtualize, use_scroll_area,
     },
     sx::sx,
     use_theme,
@@ -121,6 +121,12 @@ pub fn ScrollAreaPage() -> Element {
                 prop("onleftreached", "EventHandler<()>").doc("Fires once when the left edge is reached."),
                 prop("onrightreached", "EventHandler<()>").doc("Fires once when the right edge is reached."),
                 prop("children", "Element").doc("The scrollable content."),
+                prop("parts", "Parts<ScrollAreaPart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+            ])
+            .parts("ScrollAreaPart", vec![
+                (ScrollAreaPart::Scrollbar, "A track `always` draws in a browser. `data-orientation` is `vertical` or `horizontal`."),
+                (ScrollAreaPart::Thumb, "The thumb inside a track."),
             ]), props("Virtualize", vec![
                 prop("count", "usize")
                     .doc("Rows in the whole list, not only the rendered ones."),

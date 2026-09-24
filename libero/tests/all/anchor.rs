@@ -47,7 +47,7 @@ fn a_blank_target_adds_the_new_tab_hint_unless_opted_out() {
 
     let html = body(&render(blank));
     assert!(html.contains("(opens in a new tab)"), "{html}");
-    assert!(html.contains("data-anchor-new-tab"), "{html}");
+    assert!(html.contains("data-slot=\"new-tab\""), "{html}");
     assert!(html.contains("<svg"), "{html}");
     for app in [opted_out as fn() -> Element, same_tab] {
         let html = body(&render(app));

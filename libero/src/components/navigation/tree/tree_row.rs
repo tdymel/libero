@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::states,
-        common::{HtmlTag, focus_ring_sx},
+        common::{HtmlTag, Part, focus_ring_sx},
         data_display::List,
         layout::use_box,
     },
@@ -15,7 +15,7 @@ use crate::{
 };
 
 use super::{
-    tree::Expansion,
+    tree::{Expansion, TreePart},
     tree_node::{ErasedRenderNode, TreeNodeErased, TreeNodeRenderArgsErased},
 };
 
@@ -208,6 +208,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .framework_sx(&TREE_ROW_CONTENT_SX)
         .states(&content_states)
         .prepare()
+        .attr("data-slot", TreePart::Content.slot())
         .event("onclick", onclick)
         .render(HtmlTag::Div, Vec::new(), content);
 
@@ -219,6 +220,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
             if open {
                 List {
                     "role": "group",
+                    "data-slot": TreePart::Group.slot(),
                     size: props.size,
                     for (index , child) in node.children.iter().enumerate() {
                         TreeRow {
@@ -242,6 +244,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     };
 
     row.attr("role", "treeitem")
+        .attr("data-slot", TreePart::Row.slot())
         .attr("data-tree-id", node.id.to_string())
         // No selection model: without an explicit "false" Chrome announces the
         // tab-stop row as selected. `current` speaks through `aria-current`.

@@ -370,10 +370,10 @@ const PART: &str = r#"((id, part) => {
     return { top: b.top - a.top, left: b.left - a.left, right: a.right - b.right,
         bottom: a.bottom - b.bottom, width: b.width, height: b.height };
 })"#;
-const V_TRACK: &str = "[data-scrollbar=vertical]";
-const V_THUMB: &str = "[data-scrollbar=vertical] > [data-thumb]";
-const H_TRACK: &str = "[data-scrollbar=horizontal]";
-const H_THUMB: &str = "[data-scrollbar=horizontal] > [data-thumb]";
+const V_TRACK: &str = "[data-slot=scrollbar][data-orientation=vertical]";
+const V_THUMB: &str = "[data-slot=scrollbar][data-orientation=vertical] > [data-slot=thumb]";
+const H_TRACK: &str = "[data-slot=scrollbar][data-orientation=horizontal]";
+const H_THUMB: &str = "[data-slot=scrollbar][data-orientation=horizontal] > [data-slot=thumb]";
 
 /// A JS expression: `#id`'s `part` satisfies `test`, a JS expression over `p`.
 fn part(id: &str, part: &str, test: &str) -> String {
@@ -431,7 +431,7 @@ fn without_scroll_timelines_the_track_still_stays_put() {
         let page = &fixture.page;
         page.evaluate(
             "(() => { const s = document.createElement('style'); \
-             s.textContent = '[data-scrollbars],[data-scrollbars-x]{animation:none!important}'; \
+             s.textContent = '[data-slot=scrollbars],[data-scrollbars-x]{animation:none!important}'; \
              document.head.append(s); })()",
         )
         .await
@@ -480,8 +480,8 @@ fn always_draws_its_own_bar_pinned_to_the_corner() {
         let hidden: bool = page
             .evaluate(format!(
                 "getComputedStyle({AREA}).scrollbarWidth === 'none' \
-                 && {AREA}.querySelector('[data-scrollbars]').getAttribute('aria-hidden') === 'true' \
-                 && [...{AREA}.querySelectorAll('[data-scrollbars] *')].every(e => e.tabIndex < 0)"
+                 && {AREA}.querySelector('[data-slot=scrollbars]').getAttribute('aria-hidden') === 'true' \
+                 && [...{AREA}.querySelectorAll('[data-slot=scrollbars] *')].every(e => e.tabIndex < 0)"
             ))
             .await
             .unwrap()
@@ -530,7 +530,7 @@ fn always_draws_its_own_bar_pinned_to_the_corner() {
         .unwrap();
 
         let none: bool = page
-            .evaluate("!document.querySelector('#bars-hover [data-scrollbars]')")
+            .evaluate("!document.querySelector('#bars-hover [data-slot=scrollbars]')")
             .await
             .unwrap()
             .into_value()
@@ -703,7 +703,7 @@ fn both_axes_share_the_corner_and_rtl_starts_at_the_right() {
 fn the_drawn_thumb_has_contrast_and_shows_in_forced_colours() {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     const THUMB: &str =
-        "getComputedStyle(document.querySelector('#bars-v [data-thumb]')).backgroundColor";
+        "getComputedStyle(document.querySelector('#bars-v [data-slot=thumb]')).backgroundColor";
     block_on(async {
         let fixture = Fixture::open("/scroll-area/bars", Viewport::Desktop)
             .await

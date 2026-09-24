@@ -4,7 +4,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{HtmlTag, Input, States, Variables, base_props, variables},
+        common::{
+            HtmlTag, Input, Part, States, Variables, base_props, parts_enum, parts_under_sx,
+            variables,
+        },
         layout::use_box,
     },
     hooks::use_localization,
@@ -102,7 +105,16 @@ fn take_spread_label(attributes: &mut Vec<Attribute>) -> Option<String> {
     }
 }
 
+parts_enum! {
+    /// [`Burger`]'s inner parts, for its `parts` prop.
+    pub enum BurgerPart {
+        /// The middle bar; the outer two are its `::before` and `::after`.
+        Glyph = "glyph" => "& > [data-slot='glyph']",
+    }
+}
+
 base_props! {
+    parts(BurgerPart);
     pub struct BurgerProps {
         /// `Some(true)` draws the X; `None` emits no `aria-expanded`, for a non-disclosure.
         #[props(default)]
@@ -176,6 +188,7 @@ pub fn Burger(props: BurgerProps) -> Element {
         .states(&glyph_states)
         .variables(&glyph_variables)
         .prepare()
+        .attr("data-slot", BurgerPart::Glyph.slot())
         .render(HtmlTag::Span, Vec::new(), rsx! {});
 
     let onclick = props.onclick;
@@ -193,7 +206,7 @@ pub fn Burger(props: BurgerProps) -> Element {
             disabled: props.disabled,
             size: button_size,
             class: props.class,
-            sx: props.sx,
+            sx: parts_under_sx(&props.parts, props.sx),
             states: props.states,
             attributes,
             {glyph}
@@ -204,7 +217,16 @@ pub fn Burger(props: BurgerProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::css::Stylesheet;
+    use crate::{components::common::part_table, css::Stylesheet};
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<BurgerPart>(),
+            [("glyph", "& > [data-slot='glyph']")]
+        );
+    }
 
     #[test]
     fn an_unsized_burger_grows_the_button_around_the_themed_glyph() {

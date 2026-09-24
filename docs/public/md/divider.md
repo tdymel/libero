@@ -50,6 +50,16 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `DividerPart::Label` | `label` | The label between the two line halves, with `children` only. |
+
 ## Accessibility
 
 ### Libero handles
@@ -71,6 +81,7 @@ fn Demo() -> Element {
 | `spacing` | `ThemeAwareValue` | `none` | Margin on both sides of the rule, a spacing step or a CSS length. |
 | `color` | `ThemeAwareValue` | `muted.4` | Line color. A bare theme color like `blue` resolves to its shade 3. |
 | `children` | `Element` | - | An optional label in the line. |
+| `parts` | `Parts<DividerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Divider` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

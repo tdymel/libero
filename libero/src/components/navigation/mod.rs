@@ -7,10 +7,10 @@ mod stepper;
 mod tabs;
 mod tree;
 
-pub use anchor::{Anchor, AnchorProps, AnchorUnderline};
+pub use anchor::{Anchor, AnchorPart, AnchorProps, AnchorUnderline};
 pub(crate) use anchor::{NewTabHint, wants_new_tab_hint};
-pub use burger::{Burger, BurgerProps};
-pub use menubar::{Menubar, MenubarMenu, MenubarProps};
+pub use burger::{Burger, BurgerPart, BurgerProps};
+pub use menubar::{Menubar, MenubarMenu, MenubarPart, MenubarProps};
 pub use nav_link::{NavLink, NavLinkPart, NavLinkProps};
 pub use pagination::{
     Pagination, PaginationItem, PaginationLabel, PaginationPart, PaginationProps, pagination_range,
@@ -20,5 +20,5 @@ pub(crate) use tabs::{TabSpec, TabsView, render_tabs};
 pub use tabs::{Tabs, TabsActivation, TabsProps};
 pub use tree::{
     Tree, TreeItem, TreeItemContent, TreeItemContentProps, TreeItemProps, TreeLabel, TreeNode,
-    TreeNodeRenderArgs, TreeProps, TreeValue, default_tree_render,
+    TreeNodeRenderArgs, TreePart, TreeProps, TreeValue, default_tree_render,
 };

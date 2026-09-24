@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, MenuEntry, MenuItem, Menubar, MenubarMenu, Text},
+    components::{Code, Flex, MenuEntry, MenuItem, Menubar, MenubarMenu, MenubarPart, Text},
     hooks::{Align, Side},
 };
 
@@ -181,6 +181,11 @@ pub fn MenubarPage() -> Element {
                     prop("radius", "Size")
                         .default("sm")
                         .doc("The triggers' and the menus' corner radius."),
+                    prop("parts", "Parts<MenubarPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`. The menus open in a portal, out of reach."),
+                ])
+                .parts("MenubarPart", vec![
+                    (MenubarPart::Trigger, "A menu's trigger button. `aria-expanded` is `true` while its menu is open."),
                 ]),
                 props("MenubarMenu", vec![
                     prop("new(label, items)", "String, Vec<MenuEntry>")
