@@ -6,7 +6,7 @@ mod notifications;
 mod progress_bar;
 mod skeleton;
 
-pub use alert::{Alert, AlertProps};
+pub use alert::{Alert, AlertPart, AlertProps};
 pub use loader::{Loader, LoaderProps, LoaderVariant};
 pub use notifications::{
     NotificationData, NotificationHandle, NotificationId, NotificationLive, NotificationOptions,

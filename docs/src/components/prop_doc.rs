@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Table, Text, Title, column},
+    components::{Code, Flex, Part, Table, Text, Title, column},
     sx::sx,
 };
 
@@ -35,6 +35,14 @@ impl PropDoc {
     }
 }
 
+/// One row of a component's Style-API table: a part, its `data-slot`, what it is.
+#[derive(Clone, PartialEq)]
+struct PartDoc {
+    name: String,
+    slot: &'static str,
+    description: String,
+}
+
 /// One component's props: a page documents its subcomponents as further groups.
 #[derive(Clone, PartialEq)]
 pub struct PropGroup {
@@ -42,6 +50,7 @@ pub struct PropGroup {
     props: Vec<PropDoc>,
     base: bool,
     extends: String,
+    parts: Vec<PartDoc>,
 }
 
 /// Starts a Properties block for one component.
@@ -51,6 +60,7 @@ pub fn props(component: impl Into<String>, props: Vec<PropDoc>) -> PropGroup {
         props,
         base: true,
         extends: String::new(),
+        parts: Vec::new(),
     }
 }
 
@@ -75,6 +85,24 @@ impl PropGroup {
     /// `attributes` then takes their own attributes, not just the global ones.
     pub fn extends(mut self, tags: impl Into<String>) -> Self {
         self.extends = tags.into();
+        self
+    }
+
+    /// The Style-API table: every part of the component's part enum, with what it is.
+    /// The slot comes from the enum, so the table cannot drift from the markup.
+    pub fn parts<P: Part + std::fmt::Debug>(
+        mut self,
+        enum_name: &str,
+        parts: Vec<(P, &str)>,
+    ) -> Self {
+        self.parts = parts
+            .into_iter()
+            .map(|(part, description)| PartDoc {
+                name: format!("{enum_name}::{part:?}"),
+                slot: part.slot(),
+                description: description.to_string(),
+            })
+            .collect();
         self
     }
 }
@@ -122,6 +150,14 @@ pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
                         extends: group.extends,
                     }
                 }
+                if !group.parts.is_empty() {
+                    Flex {
+                        direction: "column",
+                        gap: "sm",
+                        Title { size: "md", component: if named { "h3" } else { "h2" }, "Style-API" }
+                        PartRows { name: format!("{} parts", group.component), parts: group.parts }
+                    }
+                }
             }
         }
     }
@@ -164,6 +200,38 @@ fn PropRows(name: String, properties: Vec<PropDoc>, base: bool, extends: String)
                 column("Description")
                     .value(|p: &PropDoc| p.description.clone())
                     .render(|p: &PropDoc| prose(&p.description)),
+            ],
+        }
+    }
+}
+
+#[component]
+fn PartRows(name: String, parts: Vec<PartDoc>) -> Element {
+    rsx! {
+        Text {
+            "Style a part with the "
+            Code { source: "parts" }
+            " prop, or address it as "
+            Code { source: "[data-slot='…']" }
+            " in your own CSS. The names are stable."
+        }
+        Table {
+            aria_label: name,
+            sx: sx().selector(
+                "& td",
+                sx().vertical_align("top").with("overflow-wrap", "anywhere"),
+            ),
+            data: parts,
+            columns: vec![
+                column("Part")
+                    .value(|p: &PartDoc| p.name.clone())
+                    .render(|p: &PartDoc| rsx! { Code { source: "{p.name}", language: "rust" } }),
+                column("data-slot")
+                    .value(|p: &PartDoc| p.slot.to_string())
+                    .render(|p: &PartDoc| rsx! { Code { source: "{p.slot}" } }),
+                column("Description")
+                    .value(|p: &PartDoc| p.description.clone())
+                    .render(|p: &PartDoc| prose(&p.description)),
             ],
         }
     }

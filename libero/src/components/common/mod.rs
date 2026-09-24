@@ -14,6 +14,7 @@ mod number_value;
 mod option_list;
 mod options;
 mod orientation;
+mod parts;
 mod polymorphic;
 mod rail;
 mod style_attributes;
@@ -55,10 +56,14 @@ pub use crate::sx::states::{States, states};
 pub use crate::sx::variables::{Variables, variables};
 pub use libero_macros::Options;
 pub use orientation::Orientation;
+pub use parts::{Part, Parts, StaticParts};
+pub(crate) use parts::{parts_enum, parts_source};
 pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
 pub(crate) use rail::{Rail, RailInset};
-pub(crate) use style_attributes::{ABSENT, StyleAttributes, use_style_attributes};
+pub(crate) use style_attributes::{
+    ABSENT, StyleAttributes, sx_source, use_style_attributes, with_parts,
+};
 pub(crate) use svg_fit::{SVG_FIT, svg_fit, svg_fit_sx, svg_fit_variables};
 pub(crate) use util::{attr, css_string};
 pub use variant::Variant;

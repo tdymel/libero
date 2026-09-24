@@ -22,7 +22,7 @@ macro_rules! field_props {
         }
     ) => {
         crate::components::common::base_props! {
-            @build [$($extra_extends)*]
+            @build [$($extra_extends)*] []
             $(#[$struct_meta])*
             $vis struct $name $(< $($generic: $bound),+ >)? {
                 $($fields)*

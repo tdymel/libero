@@ -17,22 +17,16 @@ pub(crate) struct StyleAttributes {
 }
 
 /// Resolves the styling props every `Box`-shaped component shares. A hook: call it before
-/// any early return.
+/// any early return. `sx` is the caller's, from [`sx_source`], [`with_parts`] for `parts`.
 pub(crate) fn use_style_attributes(
     class: &Input<ClassList>,
     framework_sx: Option<&'static StaticSx>,
-    sx: &Input<Sx>,
+    sx_source: Option<SxSource<'_>>,
     states: &Input<States>,
     variables: &Input<Variables>,
     style: Option<String>,
     focus_ring: bool,
 ) -> StyleAttributes {
-    // Not `sx.as_ref()`: it collapses the lifetime, so a `static` would be rehashed every render.
-    let sx_source = match sx {
-        Input::None => None,
-        Input::Value(sx) => Some(SxSource::Owned(sx)),
-        Input::Static(sx) => Some(SxSource::Static(sx)),
-    };
     let written = use_hook(|| Rc::new(RefCell::new(Written::default())));
     let class = use_box_css(
         class,
@@ -54,6 +48,31 @@ pub(crate) fn use_style_attributes(
             (Some(style), None) | (None, Some(style)) => Some(style),
             (None, None) => None,
         }),
+    }
+}
+
+/// The `sx` prop as a source. Not `sx.as_ref()`: it collapses the lifetime, so a
+/// `static` would be rehashed every render.
+pub(crate) fn sx_source(sx: &Input<Sx>) -> Option<SxSource<'_>> {
+    match sx {
+        Input::None => None,
+        Input::Value(sx) => Some(SxSource::Owned(sx)),
+        Input::Static(sx) => Some(SxSource::Static(sx)),
+    }
+}
+
+/// `parts` under the instance `sx`, so `sx` wins a tie. Only both set clones: one alone
+/// passes through, a `static` keeping its address identity.
+pub(crate) fn with_parts<'a>(
+    parts: Option<SxSource<'a>>,
+    sx: Option<SxSource<'a>>,
+    merged: &'a mut Option<Sx>,
+) -> Option<SxSource<'a>> {
+    match (parts, sx) {
+        (Some(parts), Some(sx)) => Some(SxSource::Owned(
+            merged.insert(parts.sx().clone().and(sx.sx().clone())),
+        )),
+        (parts, sx) => sx.or(parts),
     }
 }
 
@@ -119,7 +138,60 @@ fn custom_properties(style: &str) -> impl Iterator<Item = &str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Written, keep_dropped_vars};
+    use super::{Written, keep_dropped_vars, with_parts};
+    use crate::{css::Stylesheet, hooks::SxSource, sx::sx};
+
+    const TITLE: &str = "& [data-slot='title']";
+
+    #[test]
+    fn the_instance_sx_wins_a_tie_with_parts() {
+        let parts = sx().selector(TITLE, sx().color("red").font_weight("700"));
+        let instance = sx().selector(TITLE, sx().color("blue"));
+        let mut merged = None;
+
+        let source = with_parts(
+            Some(SxSource::Owned(&parts)),
+            Some(SxSource::Owned(&instance)),
+            &mut merged,
+        );
+        let css = Stylesheet::from(source.unwrap().sx()).as_str().to_string();
+
+        assert!(css.contains("blue") && css.contains("700"), "{css}");
+        assert!(!css.contains("red"), "{css}");
+    }
+
+    /// A changed part changes the merged content hash, so `use_box_css` re-registers.
+    #[test]
+    fn a_changed_part_changes_the_merged_hash() {
+        let instance = sx().padding("md");
+        let hash = |parts: &crate::sx::Sx| {
+            let mut merged = None;
+            with_parts(
+                Some(SxSource::Owned(parts)),
+                Some(SxSource::Owned(&instance)),
+                &mut merged,
+            )
+            .unwrap()
+            .sx()
+            .content_hash()
+        };
+        let red = sx().selector(TITLE, sx().color("red"));
+
+        assert_eq!(hash(&red), hash(&red.clone()));
+        assert_ne!(hash(&red), hash(&sx().selector(TITLE, sx().color("blue"))));
+    }
+
+    /// One side alone passes through uncloned, a `static` keeping its variant.
+    #[test]
+    fn a_single_side_passes_through() {
+        static PARTS: crate::sx::StaticSx = crate::sx::StaticSx::new(|| sx().color("red"));
+        let mut merged = None;
+
+        let source = with_parts(Some(SxSource::Static(&PARTS)), None, &mut merged);
+
+        assert!(matches!(source, Some(SxSource::Static(_))));
+        assert!(merged.is_none());
+    }
 
     /// A repeated style reuses the last result, and a later change still
     /// reverts what it dropped.

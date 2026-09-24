@@ -6,9 +6,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::common::{
-        ClassList, HtmlTag, Input, IntoChildren, States, StyleAttributes, Variables, attr,
-        base_props, render_polymorphic, use_style_attributes,
+        ClassList, HtmlTag, Input, IntoChildren, Part, Parts, States, StyleAttributes, Variables,
+        attr, base_props, parts_source, render_polymorphic, sx_source, use_style_attributes,
+        with_parts,
     },
+    hooks::SxSource,
     sx::{StaticSx, Sx},
 };
 
@@ -48,6 +50,7 @@ pub(crate) struct BoxBuilder<'a> {
     framework_sx: Option<&'static StaticSx>,
     class: Option<&'a Input<ClassList>>,
     sx: Option<&'a Input<Sx>>,
+    parts: Option<SxSource<'a>>,
     states: Option<&'a Input<States>>,
     variables: Option<&'a Input<Variables>>,
     style: Option<String>,
@@ -61,6 +64,7 @@ impl Default for BoxBuilder<'_> {
             framework_sx: None,
             class: None,
             sx: None,
+            parts: None,
             states: None,
             variables: None,
             style: None,
@@ -85,6 +89,13 @@ impl<'a> BoxBuilder<'a> {
     #[inline]
     pub fn sx(mut self, sx: &'a Input<Sx>) -> Self {
         self.sx = Some(sx);
+        self
+    }
+
+    /// The `parts` prop, merged under `sx`.
+    #[inline]
+    pub fn parts<P: Part>(mut self, parts: &'a Input<Parts<P>>) -> Self {
+        self.parts = parts_source(parts);
         self
     }
 
@@ -120,17 +131,18 @@ impl<'a> BoxBuilder<'a> {
     /// component with several return shapes runs it once, above the branch.
     pub fn prepare(self) -> BoxStyle {
         const NONE_CLASS: Input<ClassList> = Input::None;
-        const NONE_SX: Input<Sx> = Input::None;
         const NONE_STATES: Input<States> = Input::None;
         const NONE_VARIABLES: Input<Variables> = Input::None;
 
+        let mut merged = None;
+        let sx = with_parts(self.parts, self.sx.and_then(sx_source), &mut merged);
         BoxStyle {
             own: Vec::new(),
             fallback: Vec::new(),
             style: use_style_attributes(
                 self.class.unwrap_or(&NONE_CLASS),
                 self.framework_sx,
-                self.sx.unwrap_or(&NONE_SX),
+                sx,
                 self.states.unwrap_or(&NONE_STATES),
                 self.variables.unwrap_or(&NONE_VARIABLES),
                 self.style,
@@ -315,6 +327,7 @@ pub fn Box(props: BoxProps) -> Element {
         framework_sx: props.framework_sx,
         class: Some(&props.class),
         sx: Some(&props.sx),
+        parts: None,
         states: Some(&props.states),
         variables: Some(&props.variables),
         style: props.style,

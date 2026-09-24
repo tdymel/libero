@@ -123,7 +123,7 @@ pub fn Anchor(props: AnchorProps) -> Element {
     let style_attributes = use_style_attributes(
         &props.class,
         Some(&ANCHOR_BASE_SX),
-        &props.sx,
+        crate::components::common::sx_source(&props.sx),
         &states,
         &Input::None,
         None,

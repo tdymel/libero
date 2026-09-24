@@ -32,7 +32,7 @@ pub fn DataListItem(props: DataListItemProps) -> Element {
     let style = use_style_attributes(
         &props.class,
         None,
-        &props.sx,
+        crate::components::common::sx_source(&props.sx),
         &props.states,
         &Input::None,
         None,

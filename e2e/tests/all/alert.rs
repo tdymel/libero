@@ -2,7 +2,7 @@
 //! title that wraps rather than being cut.
 
 use e2e::browser::block_on;
-use e2e::passes::{contrast, keyboard};
+use e2e::passes::{contrast, keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const CLOSE: &str = "#dismissible [data-slot=close]";
@@ -47,6 +47,50 @@ fn a_long_title_wraps_rather_than_being_cut() {
         );
 
         fixture.console.assert_clean("the long title").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// `parts` reaches the inner parts, the instance `sx` wins a tie, a nested
+/// `Alert` is not reached, and a changed part restyles.
+#[test]
+fn parts_style_the_inner_parts() {
+    block_on(async {
+        let fixture = Fixture::open("/alert", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#styled-parts").await.unwrap();
+        let style = |selector: &str, property: &str| {
+            format!("getComputedStyle(document.querySelector('{selector}')).{property}")
+        };
+        let read = |js: String| async move {
+            page.evaluate(js)
+                .await
+                .unwrap()
+                .into_value::<String>()
+                .unwrap()
+        };
+
+        let title = "#styled-parts > [data-slot=body] > [data-slot=title]";
+        let message = "#styled-parts > [data-slot=body] > [data-slot=message]";
+        assert_eq!(read(style(title, "fontStyle")).await, "italic");
+        assert_eq!(read(style(title, "letterSpacing")).await, "4px");
+        assert_eq!(read(style(message, "paddingLeft")).await, "8px");
+        assert_eq!(
+            read(style("#nested [data-slot=title]", "fontStyle")).await,
+            "normal",
+            "a nested Alert took the outer one's parts"
+        );
+
+        pointer::click(page, "#toggle-parts").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} === '4px'", style(message, "paddingLeft")),
+            "the changed part restyles the message",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("styled parts").unwrap();
         fixture.close().await.unwrap();
     });
 }

@@ -5,8 +5,9 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, States, Variables, Variant, VariantVars, base_color, base_props,
-            contrast_color, fill_color, text_color, variables, variant_chrome_sx, variant_colors,
+            Glyph, HtmlTag, Input, Part, States, Variables, Variant, VariantVars, base_color,
+            base_props, contrast_color, fill_color, parts_enum, text_color, variables,
+            variant_chrome_sx, variant_colors,
         },
         layout::{paper_sx, use_box},
     },
@@ -48,7 +49,7 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
         .overflow("hidden")
         .and(AlertDefaults::theme_vars())
         .selector(
-            "& > [data-slot='icon']",
+            AlertPart::Icon.selector(),
             sx().display("flex")
                 .flex_shrink("0")
                 .align_items("center")
@@ -59,9 +60,12 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         // An empty icon would still take its size and the `gap`. `:empty`
         // ignores dioxus' placeholder, so an `if` that rendered nothing counts.
-        .selector("& > [data-slot='icon']:empty", sx().display("none"))
         .selector(
-            "& > [data-slot='body']",
+            format!("{}:empty", AlertPart::Icon.selector()),
+            sx().display("none"),
+        )
+        .selector(
+            AlertPart::Body.selector(),
             sx().display("flex")
                 .flex_direction("column")
                 .gap(ALERT_BODY_GAP.value())
@@ -71,7 +75,7 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
                 // Wraps, never an ellipsis: cut text is unreadable (WCAG 1.4.10).
                 .with("overflow-wrap", "anywhere"),
         )
-        .selector("& [data-slot='title']", sx().font_weight("600"));
+        .selector(AlertPart::Title.selector(), sx().font_weight("600"));
 
     // Chrome only, no `:hover`: an alert is not a click target.
     Variant::ALL.iter().fold(base, |base, &variant| {
@@ -128,7 +132,23 @@ fn alert_role(color: &ThemeAwareValue) -> &'static str {
     }
 }
 
+parts_enum! {
+    /// [`Alert`]'s inner parts, for its `parts` prop. Each is a direct child,
+    /// so a nested `Alert` in the message keeps its own styles.
+    pub enum AlertPart {
+        /// The leading glyph's wrapper.
+        Icon = "icon" => "& > [data-slot='icon']",
+        /// Title and message, beside the icon.
+        Body = "body" => "& > [data-slot='body']",
+        Title = "title" => "& > [data-slot='body'] > [data-slot='title']",
+        Message = "message" => "& > [data-slot='body'] > [data-slot='message']",
+        /// The close button, when `onclose` is set.
+        Close = "close" => "& > [data-slot='close']",
+    }
+}
+
 base_props! {
+    parts(AlertPart);
     pub struct AlertProps {
         /// The heading and accessible name.
         #[props(default, into)]
@@ -213,19 +233,19 @@ pub fn Alert(props: AlertProps) -> Element {
     let title = props.title.clone();
     let children = rsx! {
         if let Some(icon) = icon {
-            span { "data-slot": "icon", "aria-hidden": "true", {icon} }
+            span { "data-slot": AlertPart::Icon.slot(), "aria-hidden": "true", {icon} }
         }
-        div { "data-slot": "body",
+        div { "data-slot": AlertPart::Body.slot(),
             if let Some(title) = title {
-                span { "data-slot": "title", id: "{id}-title", "{title}" }
+                span { "data-slot": AlertPart::Title.slot(), id: "{id}-title", "{title}" }
             }
             if let Some(message) = message {
-                div { "data-slot": "message", id: "{id}-body", {message} }
+                div { "data-slot": AlertPart::Message.slot(), id: "{id}-body", {message} }
             }
         }
         if let Some(onclose) = onclose {
             ActionIcon {
-                "data-slot": "close",
+                "data-slot": AlertPart::Close.slot(),
                 // `currentColor` reads on every variant's ground, `Filled` too.
                 variant: "standard",
                 color: "currentColor",
@@ -241,6 +261,7 @@ pub fn Alert(props: AlertProps) -> Element {
         .framework_sx(&ALERT_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .variables(&variables)
         .prepare()
@@ -251,4 +272,29 @@ pub fn Alert(props: AlertProps) -> Element {
         .attr("aria-labelledby", title_id)
         .attr("aria-describedby", body_id)
         .render(HtmlTag::Div, props.attributes, children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        let table: Vec<_> = AlertPart::ALL
+            .iter()
+            .map(|part| (part.slot(), part.selector()))
+            .collect();
+
+        assert_eq!(
+            table,
+            [
+                ("icon", "& > [data-slot='icon']"),
+                ("body", "& > [data-slot='body']"),
+                ("title", "& > [data-slot='body'] > [data-slot='title']"),
+                ("message", "& > [data-slot='body'] > [data-slot='message']"),
+                ("close", "& > [data-slot='close']"),
+            ]
+        );
+    }
 }

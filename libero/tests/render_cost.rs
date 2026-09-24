@@ -677,6 +677,9 @@ fn wanted(label: &str) -> bool {
     })
 }
 
+static ALERT_PARTS: StaticParts<AlertPart> =
+    StaticParts::new(|| Parts::new().part(AlertPart::Title, libero::sx::sx().font_weight("700")));
+
 /// The cheapest component that can exist: one scope, one element, no styling.
 #[component]
 fn Leaf(children: Element) -> Element {
@@ -888,6 +891,10 @@ fn render_cost_per_component() {
         "FloatingWindow drag" { CostWindow { title: if flip() { "a" } else { "b" }, "x" } }
         "Overlay" { Overlay {} }
         "Paper" { Paper { "x" } }
+        "Alert" { Alert { title: "t", "x" } }
+        // `parts` built in render, as a caller writes it, then a `static`.
+        "Alert+parts" { Alert { title: "t", parts: Parts::new().part(AlertPart::Title, libero::sx::sx().font_weight("700")), "x" } }
+        "Alert+static parts" { Alert { title: "t", parts: &ALERT_PARTS, "x" } }
         "Dialog" { Dialog { "x" } }
         "Dialog+title" { Dialog { title: "t", close_button: true, "x" } }
         "Tooltip" { Tooltip { label: rsx! { "t" }, "x" } }

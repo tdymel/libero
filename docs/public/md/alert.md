@@ -81,10 +81,50 @@ fn Demo() -> Element {
 | `radius` | `Size` | `md` | Corner radius. A size step or any CSS length. |
 | `onclose` | `EventHandler<()>` | - | Shows the close button and fires when it is pressed. Unmount the alert to close it. |
 | `close_label` | `String` | `common.close` | The close button's accessible name. Unset, the localization's `common.close`, "Close" in English. |
+| `parts` | `Parts<AlertPart>` | - | Styles for the inner parts in the Style-API table, under `sx`: `Parts::new().part(AlertPart::Title, sx().font_weight("700"))`. |
 | `children` | `Element` | required | The message, read as the alert's description. |
 
 Like every component, `Alert` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
+
+### Style-API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. Each part is matched as a direct child, so an
+`Alert` nested in the message keeps its own styles. The instance `sx` wins a
+tie with `parts`.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `AlertPart::Icon` | `icon` | The icon wrapper. |
+| `AlertPart::Body` | `body` | The column holding the title and the message. |
+| `AlertPart::Title` | `title` | The title. |
+| `AlertPart::Message` | `message` | The message. |
+| `AlertPart::Close` | `close` | The close button. |
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Alert, AlertPart, Parts, StaticParts};
+use libero::sx::sx;
+
+// Built once, shared by every alert that passes it.
+static QUIET: StaticParts<AlertPart> =
+    StaticParts::new(|| Parts::new().part(AlertPart::Message, sx().color("gray.7")));
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Alert {
+            title: "Saved",
+            parts: Parts::new()
+                .part(AlertPart::Title, sx().font_weight("700"))
+                .part(AlertPart::Close, sx().color("error.6")),
+            "Your changes are live."
+        }
+        Alert { title: "Synced", parts: &QUIET, "Nothing to do." }
+    }
+}
+```
 
 ## Theme defaults
 
@@ -120,8 +160,4 @@ Like every component, `Alert` also takes the shared props `sx`, `class`,
 | Attribute | On |
 |---|---|
 | `data-state="filled"` / `tonal` / `elevated` / `outlined` / `standard` | The root, for the `variant` in effect. |
-| `data-slot="icon"` | The icon wrapper. |
-| `data-slot="body"` | The column holding the title and the message. |
-| `data-slot="title"` | The title. |
-| `data-slot="message"` | The message. |
-| `data-slot="close"` | The close button. |
+| `data-slot` | Each part, see [Style-API](#style-api). |

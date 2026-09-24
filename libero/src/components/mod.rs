@@ -15,7 +15,8 @@ pub use accessibility::*;
 pub use buttons::*;
 pub use common::{
     ClassList, HtmlTag, Input, NumberValue, OptionItem, OptionLabel, OptionList, OptionSource,
-    Options, Orientation, States, Variables, Variant, class_list, states, variables,
+    Options, Orientation, Part, Parts, States, StaticParts, Variables, Variant, class_list, states,
+    variables,
 };
 pub use data_display::*;
 pub use feedback::*;

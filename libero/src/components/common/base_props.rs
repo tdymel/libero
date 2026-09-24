@@ -38,8 +38,20 @@
 ///     }
 /// }
 /// ```
+///
+/// `parts(...)` adds a typed `parts` prop for the component's part enum. After `extends(...)`.
+///
+/// ```ignore
+/// # // Not compiled: `base_props!` is crate-internal, so a doc-test cannot name it.
+/// base_props! {
+///     parts(AlertPart);
+///     pub struct AlertProps {
+///         children: Element,
+///     }
+/// }
+/// ```
 macro_rules! base_props {
-    (@build [$($extra_extends:tt)*]
+    (@build [$($extra_extends:tt)*] [$($part:ty)?]
         $(#[$struct_meta:meta])*
         $vis:vis struct $name:ident $(< $($generic:ident : $bound:path),+ $(,)? >)? {
             $($fields:tt)*
@@ -51,6 +63,11 @@ macro_rules! base_props {
             // Own fields first: `PartialEq` bails on the never-equal `children`
             // before comparing the four expensive shared fields.
             $($fields)*
+            $(
+                /// Styles for the inner parts, under `sx`.
+                #[props(default, into)]
+                parts: Input<crate::components::common::Parts<$part>>,
+            )?
             #[props(extends = GlobalAttributes $($extra_extends)*)]
             attributes: Vec<Attribute>,
             #[props(default, into)]
@@ -62,12 +79,20 @@ macro_rules! base_props {
         }
     };
 
+    (extends($($extra_extends:ident),+ $(,)?); parts($part:ty); $($rest:tt)*) => {
+        crate::components::common::base_props!(@build [$(, extends = $extra_extends)+] [$part] $($rest)*);
+    };
+
     (extends($($extra_extends:ident),+ $(,)?); $($rest:tt)*) => {
-        crate::components::common::base_props!(@build [$(, extends = $extra_extends)+] $($rest)*);
+        crate::components::common::base_props!(@build [$(, extends = $extra_extends)+] [] $($rest)*);
+    };
+
+    (parts($part:ty); $($rest:tt)*) => {
+        crate::components::common::base_props!(@build [] [$part] $($rest)*);
     };
 
     ($($rest:tt)*) => {
-        crate::components::common::base_props!(@build [] $($rest)*);
+        crate::components::common::base_props!(@build [] [] $($rest)*);
     };
 }
 

@@ -1,7 +1,8 @@
-//! `Alert`: every severity in every variant, a dismissible one and a long title.
+//! `Alert`: every severity in every variant, a dismissible one, a long title and styled parts.
 
 use dioxus::prelude::*;
-use libero::components::{Alert, Button, Flex};
+use libero::components::{Alert, AlertPart, Button, Flex, Part, Parts};
+use libero::sx::sx;
 
 use crate::Routes;
 
@@ -13,6 +14,7 @@ const VARIANTS: [&str; 5] = ["filled", "tonal", "outlined", "elevated", "standar
 #[component]
 fn AlertPage() -> Element {
     let mut shown = use_signal(|| true);
+    let mut wide = use_signal(|| true);
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
@@ -28,6 +30,20 @@ fn AlertPage() -> Element {
             Alert { id: "long-title", color: "warning",
                 title: "Your subscription renews on the first of next month at the annual rate",
                 "Cancel before then to avoid the charge."
+            }
+            Button { id: "toggle-parts", variant: "outlined", onclick: move |_| wide.toggle(), "Toggle the message inset" }
+            Alert { id: "styled-parts",
+                title: "Styled parts",
+                parts: Parts::new()
+                    .part(AlertPart::Title, sx().font_style("italic").letter_spacing("2px"))
+                    .part(
+                        AlertPart::Message,
+                        sx().with("padding-left", if wide() { "8px" } else { "4px" }),
+                    ),
+                // The instance `sx` wins the tie on the title's letter spacing.
+                sx: sx().selector(AlertPart::Title.selector(), sx().letter_spacing("4px")),
+                "Parts styled."
+                Alert { id: "nested", title: "Nested", "Not reached." }
             }
             for color in COLORS {
                 for variant in VARIANTS {

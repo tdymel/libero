@@ -251,7 +251,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let style_attributes = use_style_attributes(
         &props.class,
         Some(&NAV_LINK_BASE_SX),
-        &props.sx,
+        crate::components::common::sx_source(&props.sx),
         &states,
         &Input::None,
         Some(style),

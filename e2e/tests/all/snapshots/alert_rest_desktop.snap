@@ -12,6 +12,14 @@ status "Card expiring" [atomic] [live=polite]
 alert "Your subscription renews on the first of next month at the annual rate" [atomic] [live=assertive]
   StaticText "Your subscription renews on the first of next month at the annual rate"
   StaticText "Cancel before then to avoid the charge."
+button "Toggle the message inset"
+  StaticText "Toggle the message inset"
+status "Styled parts" [atomic] [live=polite]
+  StaticText "Styled parts"
+  StaticText "Parts styled."
+  status "Nested" [atomic] [live=polite]
+    StaticText "Nested"
+    StaticText "Not reached."
 status "info filled" [atomic] [live=polite]
   StaticText "info filled"
   StaticText "The message."

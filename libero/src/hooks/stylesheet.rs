@@ -84,9 +84,18 @@ impl CssSource for &'static StaticSx {
 
 /// A caller's `sx` prop, built this render or a `static`. One type, since
 /// impls on both `&Sx` and `&'static Sx` would overlap.
+#[derive(Clone, Copy)]
 pub(crate) enum SxSource<'a> {
     Owned(&'a Sx),
     Static(&'static Sx),
+}
+
+impl<'a> SxSource<'a> {
+    pub(crate) fn sx(self) -> &'a Sx {
+        match self {
+            Self::Owned(sx) | Self::Static(sx) => sx,
+        }
+    }
 }
 
 impl CssSource for SxSource<'_> {

@@ -2,6 +2,7 @@
 //! Run one with `cargo test -p e2e --features native --test native switch::`.
 
 mod accessibility;
+mod alert;
 mod anchor;
 mod avatar;
 mod button;

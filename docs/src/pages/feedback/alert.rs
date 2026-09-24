@@ -4,7 +4,7 @@ use pictogram_icons_lucide as lucide;
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Alert, Button, Code, Flex, Text},
+    components::{Alert, AlertPart, Button, Code, Flex, Text},
     hooks::use_element,
     platform::ElementApi,
     use_theme,
@@ -45,9 +45,18 @@ pub fn AlertPage() -> Element {
                 prop("close_label", "String")
                     .default("common.close")
                     .doc("The close button's accessible name. Unset, the localization's `common.close`, \"Close\" in English."),
+                prop("parts", "Parts<AlertPart>")
+                    .doc("Styles for the inner parts in the Style-API table, under `sx`: `Parts::new().part(AlertPart::Title, sx().font_weight(\"700\"))`."),
                 prop("children", "Element")
                     .default("required")
                     .doc("The message, read as the alert's description."),
+            ])
+            .parts("AlertPart", vec![
+                (AlertPart::Icon, "The icon wrapper."),
+                (AlertPart::Body, "The column holding the title and the message."),
+                (AlertPart::Title, "The title."),
+                (AlertPart::Message, "The message."),
+                (AlertPart::Close, "The close button."),
             ])],
             accessibility: a11y()
                 .handles([

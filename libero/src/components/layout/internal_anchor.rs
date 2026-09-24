@@ -56,7 +56,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
     let style_attributes = use_style_attributes(
         &props.class,
         props.framework_sx,
-        &props.sx,
+        crate::components::common::sx_source(&props.sx),
         &props.states,
         &props.variables,
         props.style,
