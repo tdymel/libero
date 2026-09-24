@@ -3,11 +3,12 @@ use dioxus::prelude::*;
 use super::{
     ColorCode,
     color_code::round_alpha,
-    color_slider::{CHECKERBOARD, color_slider_sx, ltr_scale},
+    color_picker::ColorPickerPart,
+    color_slider::{CHECKERBOARD, ColorSliderPart, color_slider_sx, ltr_scale},
 };
 use crate::{
     components::{
-        common::{Input, base_props},
+        common::{Input, Part, base_props},
         form::SliderChangeEvent,
         form::slider::{SliderCore, SliderCoreValue},
     },
@@ -17,6 +18,7 @@ use crate::{
 };
 
 base_props! {
+    parts(ColorSliderPart);
     pub struct AlphaSliderProps {
         /// `0.0-1.0`. Controlled: pair it with `oninput`.
         value: f64,
@@ -96,6 +98,7 @@ pub(super) fn PickerAlphaSlider(
         disabled: None,
         aria_label,
         focusable: Some(focusable),
+        parts: Input::default(),
         attributes: Vec::new(),
         class: Input::default(),
         sx: Input::default(),
@@ -108,7 +111,7 @@ pub(super) fn PickerAlphaSlider(
 fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size);
-    let sx = color_slider_sx(&props.sx);
+    let sx = color_slider_sx(&props.sx, &props.parts);
 
     let oninput = props.oninput;
     let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
@@ -149,6 +152,7 @@ fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> E
             plain: true,
             focusable: props.focusable.unwrap_or(true),
             thumb_fill: Some(thumb_fill),
+            slot: ColorPickerPart::Alpha.slot(),
         }
     }
 }

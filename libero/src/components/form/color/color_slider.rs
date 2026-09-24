@@ -5,7 +5,7 @@ use dioxus::prelude::Attribute;
 
 use crate::{
     components::{
-        common::{Input, attr},
+        common::{Input, Parts, attr, parts_enum, parts_under_sx},
         form::slider::SLIDER_HIT,
     },
     sx::{StaticSx, Sx},
@@ -29,9 +29,24 @@ pub(super) fn ltr_scale(mut attributes: Vec<Attribute>) -> Vec<Attribute> {
     attributes
 }
 
+parts_enum! {
+    /// [`HueSlider`](super::HueSlider)'s and [`AlphaSlider`](super::AlphaSlider)'s
+    /// inner parts, for their `parts` prop.
+    pub enum ColorSliderPart {
+        /// The gradient rail.
+        Track = "track" => "& > [data-slot='track']",
+        /// The handle, filled with the color it points at.
+        Thumb = "thumb" => "& > [data-slot='track'] > * > [data-slot='thumb']",
+    }
+}
+
 /// The picker's scale on the slider's own root, so a lone slider sizes like
-/// one inside the picker. The caller's `sx` still wins.
-pub(super) fn color_slider_sx(caller: &Input<Sx>) -> Input<Sx> {
+/// one inside the picker. `parts` merge under the caller's `sx`, which still wins.
+pub(super) fn color_slider_sx(
+    caller: &Input<Sx>,
+    parts: &Input<Parts<ColorSliderPart>>,
+) -> Input<Sx> {
+    let caller = parts_under_sx(parts, caller.clone());
     match caller.as_ref() {
         Some(sx) => COLOR_SLIDER_SX.clone().and(sx.clone()).into(),
         // The same static every render, so the slider's props compare by
@@ -55,3 +70,42 @@ static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {
             ),
         )
 });
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        components::common::{Part, part_table},
+        sx::sx,
+    };
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<ColorSliderPart>(),
+            [
+                ("track", "& > [data-slot='track']"),
+                ("thumb", "& > [data-slot='track'] > * > [data-slot='thumb']"),
+            ]
+        );
+    }
+
+    #[test]
+    fn parts_merge_under_the_callers_sx_and_none_keeps_the_static() {
+        let parts: Input<Parts<ColorSliderPart>> = Parts::new()
+            .part(ColorSliderPart::Thumb, sx().color("red"))
+            .into();
+        let merged = color_slider_sx(&sx().color("blue").into(), &parts);
+
+        let expected = COLOR_SLIDER_SX.clone().and(
+            sx().selector(ColorSliderPart::Thumb.selector(), sx().color("red"))
+                .and(sx().color("blue")),
+        );
+        assert_eq!(merged.as_ref(), Some(&expected));
+        assert!(matches!(
+            color_slider_sx(&Input::None, &Input::None),
+            Input::Static(_)
+        ));
+    }
+}

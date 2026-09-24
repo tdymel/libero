@@ -103,6 +103,18 @@ fn CheckButton() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work. The fields take their own `parts`.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FormPart::Summary` | `summary` | The error summary, an `Alert`, shown after a blocked submit. |
+| `FormPart::SummaryTitle` | `title` | The summary's heading, with `summary_title`. |
+| `FormPart::SummaryList` | `list` | The summary's list of errors. |
+
 ## Accessibility
 
 ### Libero handles

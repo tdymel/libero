@@ -46,12 +46,12 @@ pub use chip::{Chip, ChipPart, ChipProps};
 pub(crate) use clear::{clear_button, use_refocus_on_close};
 pub use color::{
     AlphaSlider, AlphaSliderProps, ColorCode, ColorField, ColorFieldProps, ColorFormat,
-    ColorPicker, ColorPickerProps, ColorSwatch, ColorSwatchProps, HueSlider, HueSliderProps,
-    ParseColorError, Swatches,
+    ColorPicker, ColorPickerPart, ColorPickerProps, ColorSliderPart, ColorSwatch, ColorSwatchProps,
+    HueSlider, HueSliderProps, ParseColorError, Swatches,
 };
 pub(crate) use combobox::{CaretKeys, ComboboxCore, row_label};
 pub use combobox::{
-    Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxProps,
+    Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxPart, ComboboxProps,
     ComboboxState, use_combobox,
 };
 pub use date::*;
@@ -60,7 +60,7 @@ pub(crate) use field_props::{field_parts_enum, field_props};
 pub use field_status::FieldStatus;
 pub use fieldset::{Fieldset, FieldsetPart, FieldsetProps};
 pub use file_field::{FileField, FileFieldPart, FileFieldProps, Files};
-pub use form::{Form, FormProps, FormValue};
+pub use form::{Form, FormPart, FormProps, FormValue};
 pub use handle::{FormHandle, use_form, use_form_context};
 pub use native_select::{NativeSelect, NativeSelectProps};
 pub use number_field::{NumberField, NumberFieldProps};

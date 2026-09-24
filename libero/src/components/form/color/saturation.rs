@@ -3,10 +3,10 @@
 
 use dioxus::prelude::*;
 
-use super::ColorCode;
+use super::{ColorCode, color_picker::ColorPickerPart};
 use crate::{
     components::{
-        common::{HtmlTag, Input, Variables, has_shortcut_modifier, shadow_sx, variables},
+        common::{HtmlTag, Input, Part, Variables, has_shortcut_modifier, shadow_sx, variables},
         form::SliderChangeEvent,
         layout::use_box,
     },
@@ -219,6 +219,7 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
     };
 
     panel_style
+        .attr("data-slot", ColorPickerPart::Saturation.slot())
         .element(&panel_element)
         .event("onpointerdown", drag.onpointerdown)
         .event("onpointermove", drag.onpointermove)
@@ -259,6 +260,7 @@ fn SaturationThumb(
         ],
     );
     thumb_style
+        .attr("data-slot", ColorPickerPart::Thumb.slot())
         .attr("role", "slider")
         .attr("tabindex", if tab_stop { "0" } else { "-1" })
         .attr("aria-label", aria_label)

@@ -10,7 +10,10 @@ use super::{
 };
 use crate::{
     components::{
-        common::{Glyph, HtmlTag, Input, States, Variables, base_props, input_from_str, variables},
+        common::{
+            Glyph, HtmlTag, Input, Part, States, Variables, base_props, input_from_str, parts_enum,
+            variables,
+        },
         form::SliderChangeEvent,
         layout::use_box,
     },
@@ -50,13 +53,13 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
         .max_width("100%")
         .when("full-width", sx().width("100%"))
         .selector(
-            "& > [data-slot='body']",
+            ColorPickerPart::Body.selector(),
             sx().display("flex")
                 .align_items("center")
                 .gap(spacing.clone()),
         )
         .selector(
-            "& > [data-slot='body'] > [data-slot='sliders']",
+            ColorPickerPart::Sliders.selector(),
             sx().display("flex")
                 .flex_direction("column")
                 .gap(spacing.clone())
@@ -73,7 +76,7 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .background(format!("linear-gradient({live}, {live}), {CHECKERBOARD}")),
         )
         .selector(
-            "& > [data-slot='swatches']",
+            ColorPickerPart::Swatches.selector(),
             // Wraps, so a `full_width` picker fills its width with swatches.
             sx().display("flex")
                 .flex_wrap("wrap")
@@ -93,7 +96,34 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+parts_enum! {
+    /// [`ColorPicker`]'s inner parts, for its `parts` prop. Each is matched from
+    /// the root by child selectors.
+    pub enum ColorPickerPart {
+        /// The saturation and brightness panel.
+        Saturation = "saturation" => "& > [data-slot='saturation']",
+        /// The row under the panel: the sliders and the preview.
+        Body = "body" => "& > [data-slot='body']",
+        /// The hue and alpha sliders' column.
+        Sliders = "sliders" => "& > [data-slot='body'] > [data-slot='sliders']",
+        Hue = "hue" => "& > [data-slot='body'] > [data-slot='sliders'] > [data-slot='hue']",
+        /// With `with_alpha`.
+        Alpha = "alpha" => "& > [data-slot='body'] > [data-slot='sliders'] > [data-slot='alpha']",
+        /// Both sliders' gradient rails.
+        Track = "track" => "& > [data-slot='body'] > [data-slot='sliders'] > * > [data-slot='track']",
+        /// Every handle: the panel's and the sliders'.
+        Thumb = "thumb" => "& > [data-slot='saturation'] > [data-slot='thumb'], & > [data-slot='body'] > [data-slot='sliders'] > * > [data-slot='track'] > * > [data-slot='thumb']",
+        /// The current color beside the sliders, with `with_alpha`.
+        Preview = "preview" => "& > [data-slot='body'] > [data-slot='preview']",
+        /// The preset swatches' row.
+        Swatches = "swatches" => "& > [data-slot='swatches']",
+        /// One preset swatch.
+        Swatch = "swatch" => "& > [data-slot='swatches'] > [data-slot='swatch']",
+    }
+}
+
 base_props! {
+    parts(ColorPickerPart);
     pub struct ColorPickerProps {
         /// Controlled: pair it with `oninput`.
         value: ColorCode,
@@ -232,6 +262,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         .framework_sx(&COLOR_PICKER_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .variables(&root_variables)
         .prepare();
@@ -269,7 +300,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         });
         let preview = with_alpha.then(|| {
             rsx! {
-                div { "data-slot": "preview",
+                div { "data-slot": ColorPickerPart::Preview.slot(),
                     ColorSwatch { color: ColorCode::default(), size, radius }
                 }
             }
@@ -282,8 +313,8 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                 aria_label: props.saturation_label.clone().or_else(|| Some(labels.saturation.into())),
                 focusable,
             }
-            div { "data-slot": "body",
-                div { "data-slot": "sliders",
+            div { "data-slot": ColorPickerPart::Body.slot(),
+                div { "data-slot": ColorPickerPart::Sliders.slot(),
                     HueSlider {
                         value: value.hue(),
                         size,
@@ -381,6 +412,7 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
                 color,
                 size,
                 radius,
+                "data-slot": ColorPickerPart::Swatch.slot(),
                 aria_label: name,
                 aria_pressed: pressed.to_string(),
                 tabindex: (!focusable).then_some("-1"),
@@ -402,7 +434,7 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
         }
     });
     rsx! {
-        div { "data-slot": "swatches", {buttons} }
+        div { "data-slot": ColorPickerPart::Swatches.slot(), {buttons} }
     }
 }
 
@@ -411,5 +443,47 @@ fn swatch_color(color: ColorCode, with_alpha: bool) -> ColorCode {
     match with_alpha {
         true => color,
         false => color.opaque(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        let slots: Vec<_> = part_table::<ColorPickerPart>()
+            .into_iter()
+            .map(|(slot, _)| slot)
+            .collect();
+        assert_eq!(
+            slots,
+            [
+                "saturation",
+                "body",
+                "sliders",
+                "hue",
+                "alpha",
+                "track",
+                "thumb",
+                "preview",
+                "swatches",
+                "swatch",
+            ]
+        );
+    }
+
+    /// Every alternative of a selector starts at the root and ends on its slot.
+    #[test]
+    fn every_selector_targets_its_own_slot() {
+        for (slot, selector) in part_table::<ColorPickerPart>() {
+            let target = format!("[data-slot='{slot}']");
+            for alternative in selector.split(", ") {
+                assert!(alternative.starts_with("& > "), "{alternative}");
+                assert!(alternative.ends_with(&target), "{alternative}");
+            }
+        }
     }
 }

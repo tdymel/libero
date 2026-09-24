@@ -3,15 +3,59 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Checkbox, CheckboxPart, Chip, ChipPart, FieldPart, Fieldset, FieldsetPart, FileField,
-    FileFieldPart, Flex, MultiSelect, Parts, Select, SelectPart, Slider, SliderPart, TextField,
-    Textarea, TextareaPart,
+    Button, Checkbox, CheckboxPart, Chip, ChipPart, ColorCode, ColorPicker, ColorPickerPart,
+    ColorSliderPart, Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxPart, FieldPart,
+    Fieldset, FieldsetPart, FileField, FileFieldPart, Flex, Form, FormPart, HueSlider, MultiSelect,
+    OptionList, Parts, Rule, Select, SelectPart, Slider, SliderPart, Swatches, TextField, Textarea,
+    TextareaPart, not_empty, use_combobox,
 };
 use libero::sx::sx;
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/field-parts", || rsx! { FieldPartsPage {} })];
+pub const ROUTES: Routes = &[
+    ("/field-parts", || rsx! { FieldPartsPage {} }),
+    ("/form-parts", || rsx! { FormPartsPage {} }),
+];
+
+/// Form, Combobox and the color components, apart: their thumbs and labels
+/// would be found first on the page above.
+#[component]
+fn FormPartsPage() -> Element {
+    let state = use_combobox();
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            Form::<()> { id: "form", summary_title: "Fix these",
+                parts: Parts::new()
+                    .part(FormPart::Summary, sx().padding("13px"))
+                    .part(FormPart::SummaryTitle, sx().font_style("italic"))
+                    .part(FormPart::SummaryList, sx().letter_spacing("3px")),
+                TextField { label: "Email", validate: not_empty::<String>.error("Enter your email.") }
+                button { id: "submit", r#type: "submit", "Send" }
+            }
+            Combobox {
+                state,
+                options: OptionList::grouped().group("Fruit", ["Apple", "Pear"]),
+                option: move |row: ComboboxOptionArgs<&'static str>| rsx! {
+                    ComboboxOption { onpick: move |_| state.close(), "{row.value}" }
+                },
+                parts: Parts::new()
+                    .part(ComboboxPart::Option, sx().letter_spacing("3px"))
+                    .part(ComboboxPart::GroupLabel, sx().font_style("italic")),
+                Button { id: "trigger", attributes: state.a11y_attributes(), onclick: move |_| state.toggle(), "Fruit" }
+            }
+            ColorPicker { id: "picker", value: ColorCode::hex(0x228be6), with_alpha: true,
+                swatches: Swatches::new(vec![ColorCode::hex(0xfa5252)]),
+                parts: Parts::new()
+                    .part(ColorPickerPart::Thumb, sx().border_width("3px"))
+                    .part(ColorPickerPart::Swatch, sx().margin_top("5px")),
+            }
+            HueSlider { id: "hue", value: 120.0, oninput: move |_| {},
+                parts: Parts::new().part(ColorSliderPart::Track, sx().margin_top("7px")),
+            }
+        }
+    }
+}
 
 #[component]
 fn FieldPartsPage() -> Element {

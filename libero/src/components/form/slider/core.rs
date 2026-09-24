@@ -332,6 +332,9 @@ pub(in crate::components::form) struct SliderCoreProps {
     /// them - for a slider inside a dropdown whose trigger must keep focus.
     #[props(default = true)]
     focusable: bool,
+    /// The root's `data-slot`: `control` in a field, `hue`/`alpha` for a colour scale.
+    #[props(default = SliderPart::Control.slot())]
+    slot: &'static str,
 }
 
 /// What a value move changes. Only the thumbs' scope reads it, so the rest of
@@ -744,7 +747,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .states(&states)
         .variables(&root_variables)
         .prepare()
-        .attr("data-slot", SliderPart::Control.slot())
+        .attr("data-slot", props.slot)
         .attr("role", grouped.as_ref().map(|_| "group"))
         .attr("aria-labelledby", grouped)
         .element(&root_element)

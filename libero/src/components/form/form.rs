@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, base_props},
+        common::{HtmlTag, Input, Part, base_props, parts_enum},
         feedback::Alert,
         form::{
             Binding, Source, Validators,
@@ -49,8 +49,22 @@ static SUMMARY_LIST_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+parts_enum! {
+    /// [`Form`]'s inner parts, for its `parts` prop. The fields are the caller's
+    /// and take their own `parts`.
+    pub enum FormPart {
+        /// The error summary, an `Alert`, shown after a blocked submit.
+        Summary = "summary" => "& > [data-slot='summary']",
+        /// The summary's heading, with `summary_title`.
+        SummaryTitle = "title" => "& > [data-slot='summary'] > [data-slot='body'] > [data-slot='title']",
+        /// The summary's list of errors.
+        SummaryList = "list" => "& > [data-slot='summary'] > [data-slot='body'] > [data-slot='message'] > [data-slot='list']",
+    }
+}
+
 base_props! {
     extends(form);
+    parts(FormPart);
     pub struct FormProps<V: FormValue> {
         /// The whole form's value. Fields named by a path into it read and write
         /// their place. A different store remounts the fields.
@@ -191,12 +205,15 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
             Alert {
                 color: "error",
                 title: props.summary_title.clone(),
-                "data-slot": "summary",
+                "data-slot": FormPart::Summary.slot(),
                 // Stated so the focus target does not depend on `Alert`'s default.
                 role: "alert",
                 tabindex: "-1",
                 onmounted: summary_element.mount(),
-                Box { component: HtmlTag::Ul, framework_sx: &SUMMARY_LIST_SX,
+                Box {
+                    component: HtmlTag::Ul,
+                    framework_sx: &SUMMARY_LIST_SX,
+                    "data-slot": FormPart::SummaryList.slot(),
                     for item in items.iter() {
                         li {
                             match &item.target {
@@ -241,6 +258,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .framework_sx(&FORM_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .prepare()
         .element(&form_element)
@@ -252,4 +270,29 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .event("onclick", submit_click)
         .event("onkeydown", implicit_submit)
         .render(HtmlTag::Form, props.attributes, children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<FormPart>(),
+            [
+                ("summary", "& > [data-slot='summary']"),
+                (
+                    "title",
+                    "& > [data-slot='summary'] > [data-slot='body'] > [data-slot='title']"
+                ),
+                (
+                    "list",
+                    "& > [data-slot='summary'] > [data-slot='body'] > [data-slot='message'] > [data-slot='list']"
+                ),
+            ]
+        );
+    }
 }

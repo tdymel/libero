@@ -194,6 +194,22 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work. Like `sx`, `parts` styles the dropdown, so its parts
+are reached even though it is portaled. Rows sit in groups, so the row parts
+match at any depth inside the list.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ComboboxPart::Listbox` | `listbox` | The scrolling list of rows. |
+| `ComboboxPart::Group` | `group` | A group of rows that share a label, from an `OptionList`. |
+| `ComboboxPart::GroupLabel` | `group-label` | A group's heading. |
+| `ComboboxPart::Option` | `option` | A `ComboboxOption` row. |
+| `ComboboxPart::OptionLabel` | `label` | A row's `span { "data-slot": "label" }`, which ends in an ellipsis. |
+
 ## Accessibility
 
 ### Keyboard

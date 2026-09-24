@@ -2,11 +2,12 @@ use dioxus::prelude::*;
 
 use super::{
     ColorCode,
-    color_slider::{HUE_GRADIENT, color_slider_sx, ltr_scale},
+    color_picker::ColorPickerPart,
+    color_slider::{ColorSliderPart, HUE_GRADIENT, color_slider_sx, ltr_scale},
 };
 use crate::{
     components::{
-        common::{Input, base_props},
+        common::{Input, Part, base_props},
         form::SliderChangeEvent,
         form::slider::{SliderCore, SliderCoreValue},
     },
@@ -16,6 +17,7 @@ use crate::{
 };
 
 base_props! {
+    parts(ColorSliderPart);
     pub struct HueSliderProps {
         /// Degrees, `0-360`. Controlled: pair it with `oninput`.
         value: f64,
@@ -56,7 +58,7 @@ base_props! {
 pub fn HueSlider(props: HueSliderProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size);
-    let sx = color_slider_sx(&props.sx);
+    let sx = color_slider_sx(&props.sx, &props.parts);
 
     let oninput = props.oninput;
     let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
@@ -96,6 +98,7 @@ pub fn HueSlider(props: HueSliderProps) -> Element {
             plain: true,
             focusable: props.focusable.unwrap_or(true),
             thumb_fill: Some(ColorCode::hsva(props.value, 1.0, 1.0, 1.0).to_hex()),
+            slot: ColorPickerPart::Hue.slot(),
         }
     }
 }

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, base_props, forced_on_sx, inset_focus_ring_sx, option_id,
+            HtmlTag, Input, Part, States, base_props, forced_on_sx, inset_focus_ring_sx, option_id,
         },
         layout::use_box,
     },
@@ -11,6 +11,8 @@ use crate::{
     sx::{StaticSx, sx},
     theme::{ComboboxDefaults, Size},
 };
+
+use super::ComboboxPart;
 
 /// Shared with the rows. Signals: a provider runs once, so plain fields would freeze.
 #[derive(Clone, Copy, PartialEq)]
@@ -180,6 +182,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .states(&states)
         .prepare()
         .attr_default("id", id)
+        .attr_default("data-slot", ComboboxPart::Option.slot())
         .attr_default("role", "option")
         .attr("aria-selected", props.selected.map(|on| on.to_string()))
         // `disabled` is no `div` attribute, and the row must stay readable.
@@ -195,7 +198,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
 /// A default row's text, the element that can ellipsise. Shared by the pickers' own rows.
 pub(crate) fn row_label(label: String) -> Element {
     rsx! {
-        span { "data-slot": "label", "{label}" }
+        span { "data-slot": ComboboxPart::OptionLabel.slot(), "{label}" }
     }
 }
 

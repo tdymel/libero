@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{group_id, listbox_id},
+        common::{Part, group_id, listbox_id},
         feedback::Loader,
         layout::ScrollArea,
     },
@@ -10,7 +10,10 @@ use crate::{
     theme::Size,
 };
 
-use super::option::{ComboboxContext, ComboboxRowContext};
+use super::{
+    ComboboxPart,
+    option::{ComboboxContext, ComboboxRowContext},
+};
 
 /// Publishes the row's place to `ComboboxOption`. A `Signal` written in render: a provider runs once.
 #[component]
@@ -87,6 +90,7 @@ pub(super) fn ComboboxDropdown(
                     sx: sx().max_height(max_height),
                     scroll_position_y: scroll_y,
                     id: listbox_id(&id),
+                    "data-slot": ComboboxPart::Listbox.slot(),
                     "role": "listbox",
                     "aria-multiselectable": multiselectable.then_some("true"),
                     "aria-labelledby": labelled_by,
@@ -94,13 +98,14 @@ pub(super) fn ComboboxDropdown(
                         if let Some(label) = label {
                             div {
                                 key: "group-{start}",
+                                "data-slot": ComboboxPart::Group.slot(),
                                 role: "group",
                                 "aria-labelledby": group_id(&id, start),
                                 div {
                                     id: group_id(&id, start),
                                     // Already the group's name; would be read twice.
                                     role: "presentation",
-                                    "data-slot": "group-label",
+                                    "data-slot": ComboboxPart::GroupLabel.slot(),
                                     "{label}"
                                 }
                                 {drawn[start..end].iter().cloned()}

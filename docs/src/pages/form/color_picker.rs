@@ -4,6 +4,7 @@ use libero::components::{
     AlphaSlider, Code, ColorCode, ColorPicker, ColorSwatch, Flex, HueSlider, SliderChangeEvent,
     Swatches, Text,
 };
+use libero::components::{ColorPickerPart, ColorSliderPart};
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
@@ -117,6 +118,18 @@ pub fn ColorPickerPage() -> Element {
                     prop("saturation_label", "String").default("color.saturation").doc("Names the saturation panel's thumb. Unset, the localization's `color.saturation`."),
                     prop("hue_label", "String").default("color.hue").doc("Names the hue slider's thumb. Unset, the localization's `color.hue`."),
                     prop("alpha_label", "String").default("color.alpha").doc("Names the alpha slider's thumb. Unset, the localization's `color.alpha`."),
+                ])
+                .parts("ColorPickerPart", vec![
+                    (ColorPickerPart::Saturation, "The saturation and brightness panel."),
+                    (ColorPickerPart::Body, "The row under the panel: the sliders and the preview."),
+                    (ColorPickerPart::Sliders, "The column of the hue and alpha sliders."),
+                    (ColorPickerPart::Hue, "The hue slider."),
+                    (ColorPickerPart::Alpha, "The alpha slider, with `with_alpha`."),
+                    (ColorPickerPart::Track, "Both sliders' gradient tracks."),
+                    (ColorPickerPart::Thumb, "Every handle: the panel's and the sliders'."),
+                    (ColorPickerPart::Preview, "The current color beside the sliders, with `with_alpha`."),
+                    (ColorPickerPart::Swatches, "The row of preset swatches."),
+                    (ColorPickerPart::Swatch, "One preset swatch."),
                 ]),
                 props("HueSlider", vec![
                     prop("value", "f64").doc("The hue in degrees, 0 to 360. Pair it with `oninput`."),
@@ -125,6 +138,10 @@ pub fn ColorPickerPage() -> Element {
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the thumb out of the tab order."),
                     prop("aria_label", "String").doc("Names the thumb."),
+                ])
+                .parts("ColorSliderPart", vec![
+                    (ColorSliderPart::Track, "The gradient track."),
+                    (ColorSliderPart::Thumb, "The handle, filled with the color it points at."),
                 ]),
                 props("AlphaSlider", vec![
                     prop("value", "f64").doc("The alpha, 0.0 to 1.0. Pair it with `oninput`."),
@@ -134,6 +151,10 @@ pub fn ColorPickerPage() -> Element {
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the thumb out of the tab order."),
                     prop("aria_label", "String").doc("Names the thumb."),
+                ])
+                .parts("ColorSliderPart", vec![
+                    (ColorSliderPart::Track, "The gradient track over a checkerboard."),
+                    (ColorSliderPart::Thumb, "The handle, filled with the color at its alpha."),
                 ]),
                 props("ColorSwatch", vec![
                     prop("color", "ColorCode").doc("The color. A translucent one shows a checkerboard through."),

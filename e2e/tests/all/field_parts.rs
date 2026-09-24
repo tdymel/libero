@@ -2,6 +2,7 @@
 //! selectors, and a field nested in a slot keeps its own look.
 
 use e2e::browser::block_on;
+use e2e::passes::pointer;
 use e2e::{Fixture, Viewport, wait};
 
 #[test]
@@ -76,6 +77,67 @@ fn parts_style_the_inner_parts() {
         );
 
         fixture.console.assert_clean("field parts").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// `Form`'s summary, the portaled `Combobox` dropdown, `ColorPicker` and a lone
+/// `HueSlider`, each styled through `parts`.
+#[test]
+fn parts_reach_the_summary_the_dropdown_and_the_color_parts() {
+    block_on(async {
+        let fixture = Fixture::open("/form-parts", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#hue").await.unwrap();
+
+        pointer::click(page, "#submit").await.unwrap();
+        wait::for_visible(page, "#form > [data-slot=summary]")
+            .await
+            .unwrap();
+        pointer::click(page, "#trigger").await.unwrap();
+        wait::for_visible(page, "[data-slot=option]").await.unwrap();
+
+        let cases = [
+            ("#form > [data-slot=summary]", "paddingTop", "13px"),
+            ("#form [data-slot=title]", "fontStyle", "italic"),
+            ("#form [data-slot=list]", "letterSpacing", "3px"),
+            ("[data-slot=option]", "letterSpacing", "3px"),
+            ("[data-slot=group-label]", "fontStyle", "italic"),
+            (
+                "#picker > [data-slot=saturation] > [data-slot=thumb]",
+                "borderTopWidth",
+                "3px",
+            ),
+            (
+                "#picker [data-slot=hue] [data-slot=thumb]",
+                "borderTopWidth",
+                "3px",
+            ),
+            (
+                "#picker [data-slot=alpha] [data-slot=thumb]",
+                "borderTopWidth",
+                "3px",
+            ),
+            ("#picker [data-slot=swatch]", "marginTop", "5px"),
+            ("#hue > [data-slot=track]", "marginTop", "7px"),
+            ("#picker [data-slot=track]", "marginTop", "0px"),
+        ];
+        for (selector, property, expected) in cases {
+            let value = page
+                .evaluate(format!(
+                    "(() => {{ const el = document.querySelector({selector:?}); \
+                     return el ? getComputedStyle(el).{property} : 'missing'; }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value::<String>()
+                .unwrap();
+            assert_eq!(value, expected, "{selector} {property}");
+        }
+
+        fixture.console.assert_clean("form parts").unwrap();
         fixture.close().await.unwrap();
     });
 }

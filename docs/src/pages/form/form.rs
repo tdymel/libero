@@ -1,8 +1,8 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Checkbox, Code, FieldName, Fields, Fieldset, Flex, Form, PasswordField, Rule, Text,
-    TextField, Validators, is_email, min_length, not_empty, use_form, use_form_context,
+    Button, Checkbox, Code, FieldName, Fields, Fieldset, Flex, Form, FormPart, PasswordField, Rule,
+    Text, TextField, Validators, is_email, min_length, not_empty, use_form, use_form_context,
 };
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -146,7 +146,12 @@ pub fn FormPage() -> Element {
                     prop("children", "Element")
                         .default("required")
                         .doc("The fields, fieldsets and buttons."),
-                ]).extends("form"),
+                ]).extends("form")
+                .parts("FormPart", vec![
+                    (FormPart::Summary, "The error summary, an `Alert`, shown after a blocked submit."),
+                    (FormPart::SummaryTitle, "The summary's heading, with `summary_title`."),
+                    (FormPart::SummaryList, "The summary's list of errors."),
+                ]),
                 props("FormHandle", vec![
                     prop("validate()", "bool")
                         .doc("Checks like a submit without calling `onsubmit`. Every status shows, and with an error the summary appears and takes focus. `true` when nothing is an error."),

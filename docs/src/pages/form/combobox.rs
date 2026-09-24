@@ -4,8 +4,8 @@ use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, p
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Code, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, OptionList, Options,
-        Text, TextField, use_combobox,
+        Button, Code, Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxPart, Flex, OptionList,
+        Options, Text, TextField, use_combobox,
     },
     platform::{TimerSubscription, timer},
     sx::sx,
@@ -511,6 +511,13 @@ pub fn ComboboxPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Blocks the arrow keys. Disable the trigger too."),
+                ])
+                .parts("ComboboxPart", vec![
+                    (ComboboxPart::Listbox, "The scrolling list of rows."),
+                    (ComboboxPart::Group, "A group of rows that share a label, from an `OptionList`."),
+                    (ComboboxPart::GroupLabel, "A group's heading."),
+                    (ComboboxPart::Option, "A `ComboboxOption` row."),
+                    (ComboboxPart::OptionLabel, "A row's `span { \"data-slot\": \"label\" }`, which ends in an ellipsis."),
                 ]),
                 props("ComboboxOption", vec![
                     prop("selected", "bool")
