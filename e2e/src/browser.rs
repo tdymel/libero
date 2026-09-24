@@ -268,6 +268,13 @@ impl Fixture {
             .await
             .with_context(|| format!("go to {url}"))
             .inspect_err(|error| stage("navigating", at, error))?;
+        // An unhandled Alt+ArrowLeft goes Back in the active tab, any test's page
+        // once `frames::start` brought one to front: no `about:blank` to go back to.
+        page.execute(
+            chromiumoxide::cdp::browser_protocol::page::ResetNavigationHistoryParams::default(),
+        )
+        .await
+        .context("drop the about:blank history entry")?;
 
         let fixture = Fixture {
             page,

@@ -501,7 +501,6 @@ impl Page {
         const STEPS: u8 = 8;
         let (x, y) = self.centre(selector);
         self.press_apart(x, y);
-        self.dispatch(UiEvent::PointerDown(self.pointer(x, y, true)));
         for step in 1..=STEPS {
             let t = f32::from(step) / f32::from(STEPS);
             self.dispatch(UiEvent::PointerMove(self.pointer(
@@ -517,10 +516,9 @@ impl Page {
     /// button held, release.
     pub fn press_at(&mut self, x: f32, y: f32) {
         self.press_apart(x, y);
-        self.dispatch(UiEvent::PointerDown(self.pointer(x, y, true)));
     }
 
-    /// Sleeps until a press at `(x, y)` is no double press of the last drag's, so
+    /// Presses at `(x, y)` once that is no double press of the last drag's, so
     /// two drags on one handle (`Splitter` collapses on a double) need no sleep.
     /// `click` skips it: two clicks are how a test asks for a double.
     fn press_apart(&mut self, x: f32, y: f32) {
@@ -528,6 +526,8 @@ impl Page {
         if !gap.is_zero() {
             self.wait(gap);
         }
+        self.dispatch(UiEvent::PointerDown(self.pointer(x, y, true)));
+        // Stamped after the handler ran, so a slow dispatch cannot shrink the gap.
         self.last_press = Some((Instant::now(), x, y));
     }
 

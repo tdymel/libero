@@ -684,6 +684,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-rust")]
     fn an_unlabelled_block_is_named_after_its_language() {
         let html = render(|| {
             rsx! {
