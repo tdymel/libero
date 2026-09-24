@@ -2,13 +2,42 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Flex},
+    components::{Button, Flex, LightboxPart, Parts},
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
+    sx::sx,
 };
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/lightbox", || rsx! { LightboxPage {} })];
+pub const ROUTES: Routes = &[
+    ("/lightbox", || rsx! { LightboxPage {} }),
+    ("/lightbox-parts", || rsx! { LightboxPartsPage {} }),
+];
+
+/// `LightboxOptions::sx` styles the dialog, `parts` the caption and the thumbnails.
+#[component]
+fn LightboxPartsPage() -> Element {
+    let lightbox = use_lightbox(LightboxOptions {
+        aria_label: Some("Gallery".into()),
+        sx: sx().letter_spacing("2px").into(),
+        parts: Parts::new()
+            .part(LightboxPart::Caption, sx().font_style("italic"))
+            .part(LightboxPart::Thumbnail, sx().opacity("0.5"))
+            .into(),
+        ..LightboxOptions::default()
+    });
+
+    rsx! {
+        Button {
+            id: "open-lightbox",
+            variant: "outlined",
+            onclick: move |_| {
+                lightbox.open_with(gallery("parts"));
+            },
+            "Open the gallery"
+        }
+    }
+}
 
 static GALLERY: [Asset; 6] = [
     asset!("/assets/gallery/1.svg"),

@@ -57,7 +57,8 @@ fn Demo() -> Element {
 | `align` | `Align` | `Start` | Where each menu lines up along that side. |
 | `size` | `Size` | `md` | The triggers' font and padding, and each menu's item size. |
 | `radius` | `Size` | `sm` | The triggers' and the menus' corner radius. |
-| `parts` | `Parts<MenubarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. The menus open in a portal, out of reach. |
+| `menu_parts` | `Parts<MenuPart>` | - | Every menu's `parts`, the `Menu` page's Style API table. The menus open in a portal, out of the bar's `sx` and `parts`. |
+| `parts` | `Parts<MenubarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. The menus take `menu_parts`. |
 
 Like every component, `Menubar` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the bar.
@@ -75,7 +76,8 @@ Like every component, `Menubar` also takes the shared props `sx`, `class`,
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
 own CSS. The names are stable. [Styling](styling.md#style-api) explains how
-parts work. The menus open in a portal, outside the bar, so neither reaches them.
+parts work. The menus open in a portal, outside the bar: style them with
+`menu_parts`, which takes the [`Menu`](menu.md) parts.
 
 | Part | `data-slot` | Description |
 |---|---|---|

@@ -18,7 +18,7 @@ pub const ROUTES: Routes = &[
     ("/menu-parts", || rsx! { MenuPartsPage {} }),
 ];
 
-/// `parts` styles the labels on every level; `sx` only the top level's box.
+/// `parts` styles the labels on every level, `sx` every level's box.
 #[component]
 fn MenuPartsPage() -> Element {
     let menu = use_menu();

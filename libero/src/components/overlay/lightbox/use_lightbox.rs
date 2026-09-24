@@ -1,7 +1,13 @@
 use dioxus::prelude::*;
 
-use super::Lightbox;
-use crate::components::overlay::use_modal::{ModalHandle, ModalScope, use_modal};
+use super::{Lightbox, LightboxPart};
+use crate::{
+    components::{
+        common::{Input, Parts},
+        overlay::use_modal::{ModalHandle, ModalScope, use_modal},
+    },
+    sx::Sx,
+};
 
 /// One picture in a gallery.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -80,6 +86,10 @@ pub struct LightboxOptions {
     pub close_on_swipe_down: bool,
     /// Names the dialog. Defaults to the theme's `"Gallery"`.
     pub aria_label: Option<String>,
+    /// Styles the dialog box.
+    pub sx: Input<Sx>,
+    /// Styles the viewer's inner parts, under `sx`.
+    pub parts: Input<Parts<LightboxPart>>,
 }
 
 impl Default for LightboxOptions {
@@ -93,6 +103,8 @@ impl Default for LightboxOptions {
             preload: 1,
             close_on_swipe_down: true,
             aria_label: None,
+            sx: Input::None,
+            parts: Input::None,
         }
     }
 }

@@ -113,6 +113,8 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 | `highlight_first_on_query` | `bool` | `true` | Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row. |
 | `loading` | `bool` | `false` | The results are still coming. A loader replaces the rows, and a screen reader hears "Searching". |
 | `onquery` | `Callback<String>` | - | Called with the query on every keystroke. Set `loading` and start the search here. |
+| `sx` | `Sx` | - | Styles the dialog box. |
+| `parts` | `Parts<SpotlightPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 ### SpotlightAction
 
@@ -136,6 +138,27 @@ Every field has a builder method of the same name.
 | `close()` | `()` | Closes. |
 | `toggle()` | `()` | Opens or closes. |
 | `is_open()` | `bool` | Whether it is open. |
+
+## Style API
+
+Style a part with `SpotlightOptions::parts`, or address it as `[data-slot='…']`
+in your own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `SpotlightPart::Body` | `body` | Holds the search box, the list and the status line. |
+| `SpotlightPart::Search` | `search` | The search box. |
+| `SpotlightPart::List` | `list` | The `listbox`, a `ScrollArea`. |
+| `SpotlightPart::Group` | `group` | A named group of rows. |
+| `SpotlightPart::GroupLabel` | `group-label` | A group's visible name. |
+| `SpotlightPart::Option` | `option` | One action row. The highlighted one has `data-active`. |
+| `SpotlightPart::Icon` | `icon` | A row's icon. |
+| `SpotlightPart::Text` | `text` | The column holding the label and the description. |
+| `SpotlightPart::Label` | `label` | A row's label. |
+| `SpotlightPart::Description` | `description` | A row's second line. |
+| `SpotlightPart::Shortcut` | `shortcut` | A row's key hint, one `Kbd` per key. |
+| `SpotlightPart::Status` | `status` | The status line: "nothing found" or the loader. |
 
 ## Accessibility
 
@@ -176,4 +199,4 @@ Every field has a builder method of the same name.
 
 ## Data attributes
 
-The highlighted row carries `data-active`.
+The highlighted row carries `data-active`, and every part its `data-slot`.

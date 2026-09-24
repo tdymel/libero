@@ -133,7 +133,7 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 
 | Argument | Type | Default | Description |
 |---|---|---|---|
-| `render` | `impl FnMut(ModalScope<S, R>) -> Element` | required | Builds the content, usually a `Dialog`, while the modal is open. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component. |
+| `render` | `impl FnMut(ModalScope<S, R>) -> Element` | required | Builds the content, usually a `Dialog`, while the modal is open. Style it there: the `Dialog`'s own `sx` and `parts` reach it in the portal. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component. |
 
 ### `ModalHandle<S, R = ()>`
 

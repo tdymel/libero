@@ -16,7 +16,9 @@ use crate::{
     components::{
         accessibility::use_announcer,
         buttons::ActionIcon,
-        common::{Glyph, Input, Variables, use_name_warning, variables},
+        common::{
+            Glyph, Input, Part, Variables, parts_enum, recast_parts, use_name_warning, variables,
+        },
         data_display::{Carousel, CarouselJump, CarouselQuietWhenFits},
         layout::Box,
         overlay::{Dialog, use_modal::use_modal_close},
@@ -24,7 +26,39 @@ use crate::{
     context::IconSlot,
     hooks::{ElementHandle, id_selector, use_element, use_id, use_localization, use_theme},
     platform::ElementApi,
+    sx::{StaticSx, Sx},
 };
+
+parts_enum! {
+    /// The viewer's inner parts, for [`LightboxOptions::parts`]. A carousel sits
+    /// between the stage and its frames, so those are descendants.
+    pub enum LightboxPart {
+        /// The row of zoom and close buttons.
+        Toolbar = "toolbar" => "& > [data-slot='toolbar']",
+        ZoomOut = "zoom-out" => "& > [data-slot='toolbar'] > [data-slot='zoom-out']",
+        ZoomIn = "zoom-in" => "& > [data-slot='toolbar'] > [data-slot='zoom-in']",
+        Close = "close" => "& > [data-slot='toolbar'] > [data-slot='close']",
+        /// Everything under the toolbar: stage, caption, strip.
+        Body = "body" => "& > [data-slot='body']",
+        Stage = "stage" => "& > [data-slot='body'] > [data-slot='stage']",
+        /// One picture's box, which clips the zoom and draws the focus ring.
+        Frame = "frame" => "& > [data-slot='body'] > [data-slot='stage'] [data-slot='frame']",
+        Image = "image" => "& > [data-slot='body'] > [data-slot='stage'] [data-slot='frame'] > [data-slot='image']",
+        Caption = "caption" => "& > [data-slot='body'] > [data-slot='caption']",
+        /// The thumbnail strip.
+        Thumbnails = "thumbnails" => "& > [data-slot='body'] > [data-slot='thumbnails']",
+        /// One thumbnail button; the current one has `aria-current="true"`.
+        Thumbnail = "thumbnail" => "& > [data-slot='body'] > [data-slot='thumbnails'] [data-slot='thumbnail']",
+    }
+}
+
+/// `base` with the caller's `sx` over it.
+fn sx_over(base: &'static StaticSx, sx: &Input<Sx>) -> Input<Sx> {
+    match sx.as_ref() {
+        None => base.into(),
+        Some(sx) => Input::Value((**base).clone().and(sx.clone())),
+    }
+}
 
 /// The viewer [`crate::hooks::use_lightbox`] opens. Only rendered inside that
 /// hook's modal.
@@ -238,10 +272,12 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         Dialog {
             aria_label: label.clone(),
             close_button: false,
-            sx: &LIGHTBOX_DIALOG_SX,
-            Box { framework_sx: &LIGHTBOX_TOOLBAR_SX,
+            sx: sx_over(&LIGHTBOX_DIALOG_SX, &options.sx),
+            parts: recast_parts(options.parts.clone()),
+            Box { framework_sx: &LIGHTBOX_TOOLBAR_SX, "data-slot": LightboxPart::Toolbar.slot(),
                 if zoom_buttons {
                     ActionIcon {
+                        "data-slot": LightboxPart::ZoomOut.slot(),
                         variant: "standard",
                         color: "muted",
                         size: "sm",
@@ -253,6 +289,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         Glyph { slot: IconSlot::Minus, icon: lucide::minus::outlined }
                     }
                     ActionIcon {
+                        "data-slot": LightboxPart::ZoomIn.slot(),
                         variant: "standard",
                         color: "muted",
                         size: "sm",
@@ -266,6 +303,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                 // Focused on open, as `Dialog`'s own close button was: a zoom
                 // button first in the tab order would open disabled.
                 ActionIcon {
+                    "data-slot": LightboxPart::Close.slot(),
                     variant: "standard",
                     color: "muted",
                     size: "sm",
@@ -277,9 +315,11 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
             }
             Box {
                 framework_sx: &LIGHTBOX_BODY_SX,
+                "data-slot": LightboxPart::Body.slot(),
                 onmounted: stage.mount(),
                 Box {
                     framework_sx: &LIGHTBOX_STAGE_SX,
+                    "data-slot": LightboxPart::Stage.slot(),
                     // A window resize or a phone turned moves the pan bounds.
                     onresize: move |_: Event<ResizeData>| {
                         if let Some(&Slide { frame, picture }) = resized_pictures.borrow().get(*index.peek()) {
@@ -289,14 +329,23 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                     {stage_body}
                 }
                 if let Some(caption) = caption {
-                    Box { component: "p", id: caption_id(), framework_sx: &LIGHTBOX_CAPTION_SX, "{caption}" }
+                    Box {
+                        component: "p",
+                        id: caption_id(),
+                        framework_sx: &LIGHTBOX_CAPTION_SX,
+                        "data-slot": LightboxPart::Caption.slot(),
+                        "{caption}"
+                    }
                 }
                 if options.zoom {
                     span { id: keys_id(), hidden: true, "{localization.lightbox.keys}" }
                 }
                 {zooming.announcer.render()}
                 if show_thumbnails {
-                    Box { framework_sx: &LIGHTBOX_THUMBNAILS_SX, variables: thumbnails_variables,
+                    Box {
+                        framework_sx: &LIGHTBOX_THUMBNAILS_SX,
+                        variables: thumbnails_variables,
+                        "data-slot": LightboxPart::Thumbnails.slot(),
                         Carousel {
                             aria_label: localization.lightbox.thumbnails,
                             slides: thumbnails,

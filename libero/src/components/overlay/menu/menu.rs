@@ -663,9 +663,9 @@ struct MenuLevelProps {
     attributes: Vec<Attribute>,
     #[props(default)]
     class: Input<crate::components::common::ClassList>,
+    /// The root's, on every level, as `parts`.
     #[props(default)]
     sx: Input<crate::sx::Sx>,
-    /// The root's, on every level, unlike `sx`.
     #[props(default)]
     parts: Input<Parts<MenuPart>>,
     #[props(default)]
@@ -894,6 +894,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
                 loop_focus: props.loop_focus,
                 close_on_select: props.close_on_select,
                 depth: depth + 1,
+                sx: props.sx.clone(),
                 parts: props.parts.clone(),
             }
         }

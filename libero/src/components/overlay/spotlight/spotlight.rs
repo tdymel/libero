@@ -6,7 +6,8 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ComboboxState, inset_focus_ring_sx, navigation_chord, use_combobox, use_name_warning,
+            ComboboxState, Input, Part, Parts, inset_focus_ring_sx, navigation_chord, parts_enum,
+            recast_parts, use_combobox, use_name_warning,
         },
         feedback::Loader,
         layout::{Box, ScrollArea},
@@ -18,7 +19,7 @@ use crate::{
     },
     hooks::{Hotkey, use_dismiss_layer, use_hotkeys, use_localization, use_theme},
     platform,
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
     theme::{
         SPOTLIGHT_DESCRIPTION_COLOR, SPOTLIGHT_GROUP_COLOR, SPOTLIGHT_MAX_LIST_HEIGHT,
         SPOTLIGHT_PADDING, SPOTLIGHT_SEARCH_FONT_SIZE, SPOTLIGHT_TOP_OFFSET, SPOTLIGHT_WIDTH, Size,
@@ -29,6 +30,33 @@ use crate::{
 
 use super::action::{SpotlightAction, group_and_limit};
 
+parts_enum! {
+    /// The palette's inner parts, for [`SpotlightOptions::parts`]. The rows sit
+    /// inside the list's scroll viewport, so they are descendants.
+    pub enum SpotlightPart {
+        /// Holds the search box, the list and the status line.
+        Body = "body" => "& > [data-slot='body']",
+        /// The search `input`.
+        Search = "search" => "& > [data-slot='body'] > [data-slot='search']",
+        /// The `listbox`, a `ScrollArea`.
+        List = "list" => "& > [data-slot='body'] > [data-slot='list']",
+        /// A named group of rows.
+        Group = "group" => "& > [data-slot='body'] > [data-slot='list'] [data-slot='group']",
+        GroupLabel = "group-label" => "& > [data-slot='body'] > [data-slot='list'] [data-slot='group'] > [data-slot='group-label']",
+        /// One action row; the highlighted one has `data-active`.
+        Option = "option" => "& > [data-slot='body'] > [data-slot='list'] [data-slot='option']",
+        Icon = "icon" => "& > [data-slot='body'] > [data-slot='list'] [data-slot='option'] > [data-slot='icon']",
+        /// The label and description column.
+        Text = "text" => "& > [data-slot='body'] > [data-slot='list'] [data-slot='option'] > [data-slot='text']",
+        Label = "label" => "& > [data-slot='body'] > [data-slot='list'] [data-slot='option'] > [data-slot='text'] > [data-slot='label']",
+        Description = "description" => "& > [data-slot='body'] > [data-slot='list'] [data-slot='option'] > [data-slot='text'] > [data-slot='description']",
+        /// The key hint, one `Kbd` per key.
+        Shortcut = "shortcut" => "& > [data-slot='body'] > [data-slot='list'] [data-slot='option'] > [data-slot='shortcut']",
+        /// "Nothing found" and the loader.
+        Status = "status" => "& > [data-slot='body'] > [data-slot='status']",
+    }
+}
+
 // Rows are styled from here, the `Menu` shape. The keyboard's row tints darker
 // than hover and takes a ring, so it stands out under the pointer too.
 static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
@@ -36,7 +64,7 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
         .flex_direction("column")
         .gap(SPOTLIGHT_PADDING.value())
         .selector(
-            "& > input",
+            "& > [data-slot='search']",
             sx().width("100%")
                 .padding("12px")
                 .font("inherit")
@@ -48,9 +76,12 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .outline("none"),
         )
         // The input always holds focus: its indicator is the underline, not a ring.
-        .selector("& > input:focus", sx().border_bottom_color("primary.6"))
         .selector(
-            "& [data-spotlight-group-label]",
+            "& > [data-slot='search']:focus",
+            sx().border_bottom_color("primary.6"),
+        )
+        .selector(
+            "& [data-slot='group'] > [data-slot='group-label']",
             sx().padding("8px 12px 4px")
                 .font_size(Size::Xs)
                 .font_weight("600")
@@ -82,11 +113,11 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
             inset_focus_ring_sx("-2px"),
         )
         .selector(
-            "& [data-spotlight-icon]",
+            "& [data-slot='option'] > [data-slot='icon']",
             sx().display("inline-flex").align_items("center"),
         )
         .selector(
-            "& [data-spotlight-text]",
+            "& [data-slot='option'] > [data-slot='text']",
             sx().display("flex")
                 .flex_direction("column")
                 .flex("1")
@@ -94,14 +125,14 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .with("overflow-wrap", "anywhere"),
         )
         .selector(
-            "& [data-spotlight-shortcut]",
+            "& [data-slot='option'] > [data-slot='shortcut']",
             sx().display("inline-flex")
                 .align_items("center")
                 .gap("4px")
                 .white_space("nowrap"),
         )
         .selector(
-            "& [data-spotlight-description]",
+            "& [data-slot='text'] > [data-slot='description']",
             sx().font_size("0.8125rem")
                 .color(SPOTLIGHT_DESCRIPTION_COLOR.value()),
         )
@@ -138,6 +169,10 @@ pub struct SpotlightOptions {
     pub highlight_first_on_query: bool,
     /// Called with the new query on every keystroke, from the input event.
     pub onquery: Option<Callback<String>>,
+    /// Styles the dialog box.
+    pub sx: Input<Sx>,
+    /// Styles the palette's inner parts, under `sx`.
+    pub parts: Input<Parts<SpotlightPart>>,
 }
 
 impl Default for SpotlightOptions {
@@ -154,6 +189,8 @@ impl Default for SpotlightOptions {
             loading: false,
             highlight_first_on_query: true,
             onquery: None,
+            sx: Input::None,
+            parts: Input::None,
         }
     }
 }
@@ -329,9 +366,12 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                 sx: sx()
                     .align_self("flex-start")
                     .margin_top(SPOTLIGHT_TOP_OFFSET.value())
-                    .padding(SPOTLIGHT_PADDING.value()),
-                Box { framework_sx: &SPOTLIGHT_BODY_SX,
+                    .padding(SPOTLIGHT_PADDING.value())
+                    .and(options.sx.as_ref().cloned().unwrap_or_default()),
+                parts: recast_parts(options.parts.clone()),
+                Box { framework_sx: &SPOTLIGHT_BODY_SX, "data-slot": SpotlightPart::Body.slot(),
                     input {
+                        "data-slot": SpotlightPart::Search.slot(),
                         r#type: "text",
                         autocomplete: "off",
                         spellcheck: "false",
@@ -362,6 +402,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                     }
                     ScrollArea {
                         id: "{listbox}",
+                        "data-slot": SpotlightPart::List.slot(),
                         "role": "listbox",
                         "aria-label": "{aria_label}",
                         sx: sx().max_height(SPOTLIGHT_MAX_LIST_HEIGHT.value()),
@@ -371,7 +412,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                     }
                     // Always mounted, and outside the busy listbox some screen
                     // readers hold back, so "nothing found" and "loading" are heard.
-                    div { "role": "status",
+                    div { "role": "status", "data-slot": SpotlightPart::Status.slot(),
                         if loading {
                             Loader { size: Size::Sm }
                             VisuallyHidden { "{labels.loading}" }
@@ -447,6 +488,7 @@ fn spotlight_rows(
                     div {
                         key: "{generation}-{row}",
                         id: "{option_id}",
+                        "data-slot": SpotlightPart::Option.slot(),
                         "role": "option",
                         "aria-labelledby": "{option_id}-label",
                         "aria-describedby": (!described.is_empty()).then_some(described),
@@ -455,20 +497,20 @@ fn spotlight_rows(
                         onmousedown: move |event: MouseEvent| event.prevent_default(),
                         onclick: move |_| run(onclick),
                         if let Some(icon) = action.icon {
-                            span { "data-spotlight-icon": "", {icon} }
+                            span { "data-slot": SpotlightPart::Icon.slot(), {icon} }
                         }
-                        span { "data-spotlight-text": "",
-                            span { id: "{option_id}-label", "{action.label}" }
+                        span { "data-slot": SpotlightPart::Text.slot(),
+                            span { id: "{option_id}-label", "data-slot": SpotlightPart::Label.slot(), "{action.label}" }
                             if let Some(description) = action.description {
                                 span {
                                     id: "{option_id}-description",
-                                    "data-spotlight-description": "",
+                                    "data-slot": SpotlightPart::Description.slot(),
                                     "{description}"
                                 }
                             }
                         }
                         if let Some(shortcut) = action.shortcut {
-                            span { id: "{option_id}-shortcut", "data-spotlight-shortcut": "",
+                            span { id: "{option_id}-shortcut", "data-slot": SpotlightPart::Shortcut.slot(),
                                 for (position, key) in shortcut_keys(&shortcut).into_iter().enumerate() {
                                     if position > 0 {
                                         " + "
@@ -488,11 +530,12 @@ fn spotlight_rows(
                     div {
                         key: "group-{generation}-{group_index}",
                         "role": "group",
+                        "data-slot": SpotlightPart::Group.slot(),
                         "aria-labelledby": "{label_id}",
                         div {
                             id: "{label_id}",
                             "role": "presentation",
-                            "data-spotlight-group-label": "",
+                            "data-slot": SpotlightPart::GroupLabel.slot(),
                             "{group}"
                         }
                         {options_rows.into_iter()}
@@ -547,5 +590,48 @@ fn spotlight_key(
             }
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        let body = "& > [data-slot='body']";
+        let list = format!("{body} > [data-slot='list']");
+        let option = format!("{list} [data-slot='option']");
+        let expected: Vec<(&str, String)> = vec![
+            ("body", body.into()),
+            ("search", format!("{body} > [data-slot='search']")),
+            ("list", list.clone()),
+            ("group", format!("{list} [data-slot='group']")),
+            (
+                "group-label",
+                format!("{list} [data-slot='group'] > [data-slot='group-label']"),
+            ),
+            ("option", option.clone()),
+            ("icon", format!("{option} > [data-slot='icon']")),
+            ("text", format!("{option} > [data-slot='text']")),
+            (
+                "label",
+                format!("{option} > [data-slot='text'] > [data-slot='label']"),
+            ),
+            (
+                "description",
+                format!("{option} > [data-slot='text'] > [data-slot='description']"),
+            ),
+            ("shortcut", format!("{option} > [data-slot='shortcut']")),
+            ("status", format!("{body} > [data-slot='status']")),
+        ];
+        let table: Vec<(&str, String)> = part_table::<SpotlightPart>()
+            .into_iter()
+            .map(|(slot, selector)| (slot, selector.to_string()))
+            .collect();
+
+        assert_eq!(table, expected);
     }
 }

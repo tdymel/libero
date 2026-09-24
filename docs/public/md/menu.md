@@ -82,10 +82,11 @@ fn Demo() -> Element {
 | `radius` | `Size` | `sm` | The menu's corner radius. The items' corners follow it. |
 | `disabled` | `bool` | `false` | The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled. |
 | `onedge` | `Callback<MenuEdge>` | - | Called with ArrowLeft on the top level, or ArrowRight on an item without a submenu. `Menubar` uses it to move to the next menu. |
-| `parts` | `Parts<MenuPart>` | - | Styles for the inner parts in the Style API tab, on every menu level, submenus too. `sx` styles the top level's box only: `Parts::new().part(MenuPart::Label, sx().font_weight("500"))`. |
+| `parts` | `Parts<MenuPart>` | - | Styles for the inner parts in the Style API tab, on every menu level, submenus too, as `sx` does: `Parts::new().part(MenuPart::Label, sx().font_weight("500"))`. |
 
 Like every component, `Menu` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the menu.
+`style`, `states`, and any extra HTML attributes. They land on the menu; `sx`
+also on every submenu.
 
 ### MenuItem
 

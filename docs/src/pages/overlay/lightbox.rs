@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Image, Kbd, Text},
+    components::{Box, Code, Image, Kbd, LightboxPart, Text},
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     sx::{StaticSx, sx},
 };
@@ -139,7 +139,23 @@ pub fn LightboxPage() -> Element {
                     prop("preload", "usize").default("1").doc("Pictures on each side loaded at once. The rest load lazily."),
                     prop("close_on_swipe_down", "bool").default("true").doc("A downward touch swipe closes. Off while zoomed."),
                     prop("aria_label", "Option<String>").default("\"Gallery\"").doc("Names the dialog. Unset, the localization's label."),
-                ]).without_base_props(),
+                    prop("sx", "Sx").doc("Styles the dialog box."),
+                    prop("parts", "Parts<LightboxPart>").doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .without_base_props()
+                .parts("LightboxPart", vec![
+                    (LightboxPart::Toolbar, "The row of zoom and close buttons."),
+                    (LightboxPart::ZoomOut, "The zoom-out button."),
+                    (LightboxPart::ZoomIn, "The zoom-in button."),
+                    (LightboxPart::Close, "The close button."),
+                    (LightboxPart::Body, "Everything under the toolbar: the stage, the caption and the strip."),
+                    (LightboxPart::Stage, "The area the pictures show in."),
+                    (LightboxPart::Frame, "One picture's box. It clips the zoom and draws the focus ring."),
+                    (LightboxPart::Image, "One picture."),
+                    (LightboxPart::Caption, "The current picture's caption."),
+                    (LightboxPart::Thumbnails, "The thumbnail strip."),
+                    (LightboxPart::Thumbnail, "One thumbnail button. The current one has `aria-current=\"true\"`."),
+                ]),
                 props("LightboxItem", vec![
                     prop("src", "String").default("required").doc("The picture."),
                     prop("thumbnail_src", "Option<String>").default("follows src").doc("A smaller source for the strip."),

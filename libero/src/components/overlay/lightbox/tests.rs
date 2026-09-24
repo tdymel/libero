@@ -1,5 +1,5 @@
-use super::zoom::*;
-use crate::{hooks::DragPoint, platform::Dimensions};
+use super::{LightboxPart, zoom::*};
+use crate::{components::common::part_table, hooks::DragPoint, platform::Dimensions};
 
 const FRAME: Dimensions = Dimensions {
     width: 800.0,
@@ -240,4 +240,42 @@ fn only_a_long_mostly_downward_swipe_closes() {
     assert!(!swipe_closes(DragPoint { x: 0.0, y: 40.0 }));
     assert!(!swipe_closes(DragPoint { x: 200.0, y: 120.0 }));
     assert!(!swipe_closes(DragPoint { x: 0.0, y: -200.0 }));
+}
+
+/// The slot names are public: a rename here is a breaking change.
+#[test]
+fn the_part_table_is_stable() {
+    let body = "& > [data-slot='body']";
+    let frame = format!("{body} > [data-slot='stage'] [data-slot='frame']");
+    let expected: Vec<(&str, String)> = vec![
+        ("toolbar", "& > [data-slot='toolbar']".into()),
+        (
+            "zoom-out",
+            "& > [data-slot='toolbar'] > [data-slot='zoom-out']".into(),
+        ),
+        (
+            "zoom-in",
+            "& > [data-slot='toolbar'] > [data-slot='zoom-in']".into(),
+        ),
+        (
+            "close",
+            "& > [data-slot='toolbar'] > [data-slot='close']".into(),
+        ),
+        ("body", body.into()),
+        ("stage", format!("{body} > [data-slot='stage']")),
+        ("frame", frame.clone()),
+        ("image", format!("{frame} > [data-slot='image']")),
+        ("caption", format!("{body} > [data-slot='caption']")),
+        ("thumbnails", format!("{body} > [data-slot='thumbnails']")),
+        (
+            "thumbnail",
+            format!("{body} > [data-slot='thumbnails'] [data-slot='thumbnail']"),
+        ),
+    ];
+    let table: Vec<(&str, String)> = part_table::<LightboxPart>()
+        .into_iter()
+        .map(|(slot, selector)| (slot, selector.to_string()))
+        .collect();
+
+    assert_eq!(table, expected);
 }

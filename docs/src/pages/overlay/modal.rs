@@ -184,7 +184,7 @@ pub fn ModalPage() -> Element {
                 props("use_modal", vec![
                     prop("render", "impl FnMut(ModalScope<S, R>) -> Element")
                         .default("required")
-                        .doc("Builds the content, usually a `Dialog`, while the modal is open. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component."),
+                        .doc("Builds the content, usually a `Dialog`, while the modal is open. Style it there: the `Dialog`'s own `sx` and `parts` reach it in the portal. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component."),
                 ]).without_base_props(),
                 props("ModalHandle<S, R>", vec![
                     prop("open_with", "fn(impl Into<S>) -> Opening<R>")

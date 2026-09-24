@@ -7,3 +7,4 @@ pub(crate) mod use_lightbox;
 mod zoom;
 
 pub(crate) use lightbox::Lightbox;
+pub use lightbox::LightboxPart;

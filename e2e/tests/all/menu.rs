@@ -269,9 +269,9 @@ fn a_reopened_menu_starts_its_submenu_closed_on_fresh_items() {
     });
 }
 
-/// `parts` reaches the labels on the submenu level too; `sx` stays on the top box.
+/// `parts` reaches the labels on the submenu level too, `sx` its box.
 #[test]
-fn parts_style_every_level_and_sx_only_the_top_one() {
+fn parts_and_sx_style_every_level() {
     block_on(async {
         let fixture = Fixture::open("/menu-parts", Viewport::Desktop)
             .await
@@ -309,9 +309,8 @@ fn parts_style_every_level_and_sx_only_the_top_one() {
                 "a level missed the parts: {italic:?}"
             );
             anyhow::ensure!(
-                spacing.first().map(String::as_str) == Some("2px")
-                    && spacing.get(1).map(String::as_str) != Some("2px"),
-                "sx should style the top box only: {spacing:?}"
+                spacing == ["2px", "2px"],
+                "a level missed the sx: {spacing:?}"
             );
             Ok::<_, anyhow::Error>(())
         }

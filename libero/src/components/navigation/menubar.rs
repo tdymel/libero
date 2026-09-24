@@ -8,8 +8,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, States, base_props, disabled_look_sx, has_shortcut_modifier,
-            inset_focus_ring_sx, parts_enum,
+            HtmlTag, Input, Part, Parts, States, base_props, disabled_look_sx,
+            has_shortcut_modifier, inset_focus_ring_sx, parts_enum,
         },
         layout::use_box,
     },
@@ -25,11 +25,11 @@ use crate::{
     },
 };
 
-use crate::components::overlay::{Menu, MenuEdge, MenuEntry, MenuFocus, MenuState};
+use crate::components::overlay::{Menu, MenuEdge, MenuEntry, MenuFocus, MenuPart, MenuState};
 
 parts_enum! {
-    /// [`Menubar`]'s inner parts, for its `parts` prop. The menus are portaled,
-    /// out of the bar's reach.
+    /// [`Menubar`]'s inner parts, for its `parts` prop. The portaled menus take
+    /// [`MenuPart`]s through `menu_parts`.
     pub enum MenubarPart {
         /// A menu's trigger button, inside its `Menu` wrapper.
         Trigger = "trigger" => "& [data-slot='trigger']",
@@ -142,6 +142,9 @@ base_props! {
         /// The triggers' and the menus' corner radius.
         #[props(default, into)]
         radius: Input<Size>,
+        /// Every menu's `parts`: the menus are portaled, out of `parts`' reach.
+        #[props(default, into)]
+        menu_parts: Input<Parts<MenuPart>>,
     }
 }
 
@@ -412,6 +415,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                 loop_focus,
                 disabled,
                 onedge,
+                parts: props.menu_parts.clone(),
                 button {
                     r#type: "button",
                     "role": "menuitem",

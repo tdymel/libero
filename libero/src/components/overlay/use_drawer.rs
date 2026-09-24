@@ -6,7 +6,7 @@ use crate::{
         common::Input,
         overlay::{Drawer, DrawerAnchor},
     },
-    sx::ThemeAwareValue,
+    sx::{Sx, ThemeAwareValue},
     theme::Size,
 };
 
@@ -20,6 +20,8 @@ pub struct DrawerOptions {
     pub z_index: Input<ThemeAwareValue>,
     /// Names the panel, which is a dialog. Unset is a `warn()`.
     pub aria_label: Option<String>,
+    /// Styles the panel. It has no inner parts: its content is yours.
+    pub sx: Input<Sx>,
 }
 
 /// A drawer is [`use_modal`] with a docked panel around the content: same
@@ -61,6 +63,7 @@ where
                 size: options.size.clone(),
                 z_index: options.z_index.clone(),
                 aria_label: options.aria_label.clone(),
+                sx: options.sx.clone(),
                 {content}
             }
         }

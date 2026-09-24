@@ -260,7 +260,7 @@ pub fn MenuPage() -> Element {
                     prop("onedge", "Callback<MenuEdge>")
                         .doc("Called with ← on the top level, or → on an item without a submenu. `Menubar` uses it to move to the next menu."),
                     prop("parts", "Parts<MenuPart>")
-                        .doc("Styles for the inner parts in the Style API tab, on every menu level, submenus too. `sx` styles the top level's box only: `Parts::new().part(MenuPart::Label, sx().font_weight(\"500\"))`."),
+                        .doc("Styles for the inner parts in the Style API tab, on every menu level, submenus too, as `sx` does: `Parts::new().part(MenuPart::Label, sx().font_weight(\"500\"))`."),
                 ])
                 .parts("MenuPart", vec![
                     (MenuPart::Item, "A row: `menuitem`, `menuitemradio` or `menuitemcheckbox`."),

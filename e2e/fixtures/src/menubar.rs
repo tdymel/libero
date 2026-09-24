@@ -1,7 +1,8 @@
 //! `Menubar`, for the `RovingTabindex` archetype.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, MenuEntry, MenuItem, Menubar, MenubarMenu};
+use libero::components::{Flex, MenuEntry, MenuItem, MenuPart, Menubar, MenubarMenu, Parts};
+use libero::sx::sx;
 
 use crate::Routes;
 
@@ -9,7 +10,22 @@ pub const ROUTES: Routes = &[
     ("/menubar", || rsx! { MenubarPage {} }),
     ("/menubar-docs", || rsx! { MenubarDocsPage {} }),
     ("/menubar-shrink", || rsx! { MenubarShrinkPage {} }),
+    ("/menubar-parts", || rsx! { MenubarPartsPage {} }),
 ];
+
+/// `menu_parts` reaches the portaled menus' labels.
+#[component]
+fn MenubarPartsPage() -> Element {
+    let item = |name: &str| -> MenuEntry { MenuItem::new(name).onselect(|_| {}).into() };
+
+    rsx! {
+        Menubar {
+            aria_label: "Editor",
+            menus: vec![MenubarMenu::new("File", vec![item("New")])],
+            menu_parts: Parts::new().part(MenuPart::Label, sx().font_style("italic")),
+        }
+    }
+}
 
 /// `#drop`'s input event drops `View` and brings it back: no click, so an open
 /// menu stays open through it.

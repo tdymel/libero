@@ -88,6 +88,8 @@ pair. An index past the end shows the last picture.
 | `preload` | `usize` | `1` | Pictures on each side loaded at once. The rest load lazily. |
 | `close_on_swipe_down` | `bool` | `true` | A downward touch swipe closes. Off while zoomed. |
 | `aria_label` | `Option<String>` | `"Gallery"` | Names the dialog. Unset, the localization's label. |
+| `sx` | `Sx` | - | Styles the dialog box. |
+| `parts` | `Parts<LightboxPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 ### `LightboxItem`
 
@@ -106,6 +108,26 @@ pair. An index past the end shows the last picture.
 |---|---|---|
 | `items` | `Vec<LightboxItem>` | The gallery. |
 | `index` | `usize` | The picture to start on. |
+
+## Style API
+
+Style a part with `LightboxOptions::parts`, or address it as `[data-slot='…']`
+in your own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `LightboxPart::Toolbar` | `toolbar` | The row of zoom and close buttons. |
+| `LightboxPart::ZoomOut` | `zoom-out` | The zoom-out button. |
+| `LightboxPart::ZoomIn` | `zoom-in` | The zoom-in button. |
+| `LightboxPart::Close` | `close` | The close button. |
+| `LightboxPart::Body` | `body` | Everything under the toolbar: the stage, the caption and the strip. |
+| `LightboxPart::Stage` | `stage` | The area the pictures show in. |
+| `LightboxPart::Frame` | `frame` | One picture's box. It clips the zoom and draws the focus ring. |
+| `LightboxPart::Image` | `image` | One picture. |
+| `LightboxPart::Caption` | `caption` | The current picture's caption. |
+| `LightboxPart::Thumbnails` | `thumbnails` | The thumbnail strip. |
+| `LightboxPart::Thumbnail` | `thumbnail` | One thumbnail button. The current one has `aria-current="true"`. |
 
 ## Accessibility
 
@@ -173,4 +195,5 @@ State tokens on the pictures' and thumbnails' `data-state`, space separated.
 | `dragging` | On the picture showing, during a pan or swipe. |
 | `current` | On the current thumbnail. |
 
-Each frame carries `data-lightbox-frame="<index>"`.
+Each frame carries `data-lightbox-frame="<index>"`, and every part its
+`data-slot`.

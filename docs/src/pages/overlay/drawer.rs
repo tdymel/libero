@@ -88,6 +88,7 @@ pub fn DrawerPage() -> Element {
                     prop("size", "Input<Size>").default("md").doc("Width when docked start or end, height when docked top or bottom."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order of the panel."),
                     prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. Unset warns in a debug build."),
+                    prop("sx", "Input<Sx>").doc("Styles the panel. It has no inner parts: the content is yours to style."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()

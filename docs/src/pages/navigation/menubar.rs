@@ -181,8 +181,10 @@ pub fn MenubarPage() -> Element {
                     prop("radius", "Size")
                         .default("sm")
                         .doc("The triggers' and the menus' corner radius."),
+                    prop("menu_parts", "Parts<MenuPart>")
+                        .doc("Every menu's `parts`, the `Menu` page's Style API table. The menus open in a portal, out of the bar's `sx` and `parts`."),
                     prop("parts", "Parts<MenubarPart>")
-                        .doc("Styles for the inner parts in the Style API tab, under `sx`. The menus open in a portal, out of reach."),
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`. The menus take `menu_parts`."),
                 ])
                 .parts("MenubarPart", vec![
                     (MenubarPart::Trigger, "A menu's trigger button. `aria-expanded` is `true` while its menu is open."),

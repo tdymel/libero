@@ -21,12 +21,14 @@ pub use drawer::DrawerAnchor;
 pub(crate) use floating_window::FloatingWindow;
 pub use floating_window::{FloatingWindowOptions, FloatingWindowPart, WindowRect};
 pub use hover_card::{HoverCard, HoverCardProps};
+pub use lightbox::LightboxPart;
 pub(crate) use menu::MenuFocus;
 pub use menu::{Menu, MenuEdge, MenuEntry, MenuItem, MenuPart, MenuProps, MenuState, use_menu};
 pub(crate) use modal::Modal;
 pub use overlay::{Overlay, OverlayProps};
 pub use spotlight::{
-    SpotlightAction, SpotlightHandle, SpotlightOptions, spotlight_filter, use_spotlight,
+    SpotlightAction, SpotlightHandle, SpotlightOptions, SpotlightPart, spotlight_filter,
+    use_spotlight,
 };
 pub(crate) use tooltip::{PressFocus, TooltipPinned};
 pub use tooltip::{Tooltip, TooltipProps};

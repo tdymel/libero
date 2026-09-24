@@ -455,3 +455,32 @@ fn a_menu_starts_at_its_trigger_s_start_edge() {
         }
     });
 }
+
+/// `menu_parts` reaches the labels of a menu portaled out of the bar.
+#[test]
+fn menu_parts_style_the_portaled_menus() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar-parts", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, FIRST).await?;
+            wait::for_visible(page, "[role=menu] [data-slot=label]").await?;
+            let style: String = page
+                .evaluate(
+                    "getComputedStyle(document.querySelector('[role=menu] [data-slot=label]')).fontStyle",
+                )
+                .await?
+                .into_value()?;
+            anyhow::ensure!(style == "italic", "menu_parts missed the label: {style}");
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("menubar menu_parts");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}

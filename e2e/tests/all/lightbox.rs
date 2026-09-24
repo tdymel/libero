@@ -1000,3 +1000,37 @@ e2e::scenario!(
     native: skip("Blitz takes no multi-touch input"),
     desktop: skip("1126: no touch input under Xvfb")
 );
+
+/// `LightboxOptions::sx` reaches the portaled dialog, `parts` the caption and thumbnails.
+#[test]
+fn the_options_sx_and_parts_style_the_viewer() {
+    block_on(async {
+        let fixture = Fixture::open("/lightbox-parts", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_visible(page, "[role=dialog] [data-slot=caption]").await?;
+            let [spacing, caption, thumbnail]: [String; 3] = page
+                .evaluate(
+                    "(() => { const d = document.querySelector('[role=dialog]'); \
+                     return [getComputedStyle(d).letterSpacing, \
+                     getComputedStyle(d.querySelector('[data-slot=caption]')).fontStyle, \
+                     getComputedStyle(d.querySelector('[data-slot=thumbnail]')).opacity]; })()",
+                )
+                .await?
+                .into_value()?;
+            anyhow::ensure!(spacing == "2px", "sx missed the dialog: {spacing}");
+            anyhow::ensure!(caption == "italic", "parts missed the caption: {caption}");
+            anyhow::ensure!(thumbnail == "0.5", "parts missed a thumbnail: {thumbnail}");
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("lightbox parts");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}

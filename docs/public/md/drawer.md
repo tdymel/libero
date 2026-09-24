@@ -103,6 +103,7 @@ behave the same. See [Modal](modal.md).
 | `size` | `Input<Size>` | `md` | Width when docked start or end, height when docked top or bottom. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. Unset warns in a debug build. |
+| `sx` | `Input<Sx>` | - | Styles the panel. It has no inner parts: the content is yours to style. |
 
 ## Accessibility
 

@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 use super::{
+    lightbox::LightboxPart,
     styles::{
         LIGHTBOX_FRAME_SX, LIGHTBOX_IMAGE_SX, LIGHTBOX_THUMBNAIL_IMAGE_SX, LIGHTBOX_THUMBNAIL_SX,
         LIGHTBOX_TRANSFORM,
@@ -16,7 +17,7 @@ use super::{
 use crate::{
     components::{
         common::{
-            Input, SVG_FIT, States, Variables, has_shortcut_modifier, ring_overlay, states,
+            Input, Part, SVG_FIT, States, Variables, has_shortcut_modifier, ring_overlay, states,
             svg_fit, svg_fit_variables, variables,
         },
         layout::Box,
@@ -200,6 +201,7 @@ pub(super) fn lightbox_slide(
             framework_sx: &LIGHTBOX_FRAME_SX,
             states: frame_states,
             "data-lightbox-frame": i,
+            "data-slot": LightboxPart::Frame.slot(),
             onmounted: frame.mount(),
             onwheel: move |event: Event<WheelData>| {
                 if !zoomable || i != *index.peek() {
@@ -273,6 +275,7 @@ pub(super) fn lightbox_slide(
             Box {
                 component: "img",
                 framework_sx: &LIGHTBOX_IMAGE_SX,
+                "data-slot": LightboxPart::Image.slot(),
                 states: image_states,
                 variables: image_variables,
                 id: image_id(&base_id(), i),
@@ -400,6 +403,7 @@ pub(super) fn lightbox_thumbnails(
                     component: "button",
                     r#type: "button",
                     framework_sx: &LIGHTBOX_THUMBNAIL_SX,
+                    "data-slot": LightboxPart::Thumbnail.slot(),
                     states: thumbnail_states,
                     id: thumbnail_id(&base_id(), i),
                     aria_label: fill(thumbnail_label, &[("n", &(i + 1)), ("m", &count)]),

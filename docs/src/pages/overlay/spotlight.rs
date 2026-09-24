@@ -5,8 +5,8 @@ use pictogram_icons_lucide as lucide;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Code, Flex, Kbd, SpotlightAction, SpotlightOptions, Text, spotlight_filter,
-        use_spotlight,
+        Button, Code, Flex, Kbd, SpotlightAction, SpotlightOptions, SpotlightPart, Text,
+        spotlight_filter, use_spotlight,
     },
     platform::{TimerSubscription, timer},
 };
@@ -358,7 +358,24 @@ pub fn SpotlightPage() -> Element {
                     prop("highlight_first_on_query", "bool").default("true").doc("Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row."),
                     prop("loading", "bool").default("false").doc("The results are still coming. A loader replaces the rows, and a screen reader hears \"Searching\"."),
                     prop("onquery", "Callback<String>").doc("Called with the query on every keystroke. Set `loading` and start the search here."),
-                ]).without_base_props(),
+                    prop("sx", "Sx").doc("Styles the dialog box."),
+                    prop("parts", "Parts<SpotlightPart>").doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .without_base_props()
+                .parts("SpotlightPart", vec![
+                    (SpotlightPart::Body, "Holds the search box, the list and the status line."),
+                    (SpotlightPart::Search, "The search box."),
+                    (SpotlightPart::List, "The `listbox`, a `ScrollArea`."),
+                    (SpotlightPart::Group, "A named group of rows."),
+                    (SpotlightPart::GroupLabel, "A group's visible name."),
+                    (SpotlightPart::Option, "One action row. The highlighted one has `data-active`."),
+                    (SpotlightPart::Icon, "A row's icon."),
+                    (SpotlightPart::Text, "The column holding the label and the description."),
+                    (SpotlightPart::Label, "A row's label."),
+                    (SpotlightPart::Description, "A row's second line."),
+                    (SpotlightPart::Shortcut, "A row's key hint, one `Kbd` per key."),
+                    (SpotlightPart::Status, "The status line: \"nothing found\" or the loader."),
+                ]),
                 props("SpotlightAction", vec![
                     prop("label", "String").default("required").doc("The row's text, and the first thing `spotlight_filter` matches."),
                     prop("description", "String").doc("A second line, matched after the label."),
