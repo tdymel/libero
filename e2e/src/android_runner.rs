@@ -211,6 +211,18 @@ fn run_on(
 
 /// The `android` tests matching `filters`; with `ignored`, only the skipped ones.
 fn list(root: &Path, target_dir: &Path, filters: &[String], ignored: bool) -> Result<Vec<String>> {
+    list_arm("android", root, target_dir, filters, ignored)
+}
+
+/// The tests of the scenario arm `arm` (also its feature) matching `filters`.
+pub(super) fn list_arm(
+    arm: &str,
+    root: &Path,
+    target_dir: &Path,
+    filters: &[String],
+    ignored: bool,
+) -> Result<Vec<String>> {
+    let suffix = format!("::{arm}");
     let listed = Command::new(env!("CARGO"))
         .current_dir(root)
         .args([
@@ -219,7 +231,7 @@ fn list(root: &Path, target_dir: &Path, filters: &[String], ignored: bool) -> Re
             "-p",
             "e2e",
             "--features",
-            "android",
+            arm,
             "--test",
             "all",
             "--target-dir",
@@ -233,7 +245,7 @@ fn list(root: &Path, target_dir: &Path, filters: &[String], ignored: bool) -> Re
     Ok(String::from_utf8_lossy(&listed.stdout)
         .lines()
         .filter_map(|line| line.strip_suffix(": test"))
-        .filter(|name| name.ends_with("::android"))
+        .filter(|name| name.ends_with(&suffix))
         .filter(|name| filters.is_empty() || filters.iter().any(|f| name.contains(f.as_str())))
         .map(str::to_string)
         .collect())

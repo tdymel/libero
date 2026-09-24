@@ -2616,9 +2616,12 @@ name = "e2e-fixtures"
 version = "0.1.0"
 dependencies = [
  "dioxus",
+ "futures-channel",
+ "futures-util",
  "js-sys",
  "libero",
  "pictogram-icons-lucide",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
  "tracing-wasm",

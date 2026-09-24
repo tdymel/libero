@@ -276,6 +276,7 @@ fn Shell() -> Element {
                 navigator.push(path);
             }
         });
+        desktop_bridge();
     }
     let _ = generation;
     rsx! { Outlet::<Route> {} }
@@ -295,6 +296,51 @@ fn android_route_hook(mut generation: Signal<u64>) {
         while let Ok((path, next)) = hook.recv::<(String, u64)>().await {
             navigator.push(path);
             generation.set(next);
+        }
+    });
+}
+
+/// The e2e desktop driver (1126) reads the page through `E2E_BRIDGE`, a loopback
+/// TCP address: one JSON string of a JS body per line in, `{"ok": ..}` or `{"err": ..}` out.
+#[cfg(feature = "desktop")]
+fn desktop_bridge() {
+    use futures_util::StreamExt;
+    use std::io::{BufRead, BufReader, Write};
+
+    type Request = (String, std::sync::mpsc::Sender<String>);
+    use_future(|| async {
+        let Ok(address) = std::env::var("E2E_BRIDGE") else {
+            return;
+        };
+        let (requests, mut incoming) = futures_channel::mpsc::unbounded::<Request>();
+        // Blocking socket on its own thread: no tokio reactor is assumed here.
+        std::thread::spawn(move || {
+            let Ok(stream) = std::net::TcpStream::connect(&address) else {
+                return;
+            };
+            let Ok(mut out) = stream.try_clone() else {
+                return;
+            };
+            for line in BufReader::new(stream).lines().map_while(Result::ok) {
+                let (reply, answer) = std::sync::mpsc::channel();
+                if requests.unbounded_send((line, reply)).is_err() {
+                    return;
+                }
+                let Ok(answer) = answer.recv() else { return };
+                if writeln!(out, "{answer}").is_err() {
+                    return;
+                }
+            }
+        });
+        while let Some((line, reply)) = incoming.next().await {
+            let answer = match serde_json::from_str::<String>(&line) {
+                Ok(body) => match document::eval(&body).join::<serde_json::Value>().await {
+                    Ok(value) => serde_json::json!({ "ok": value }),
+                    Err(error) => serde_json::json!({ "err": error.to_string() }),
+                },
+                Err(error) => serde_json::json!({ "err": error.to_string() }),
+            };
+            let _ = reply.send(answer.to_string());
         }
     });
 }

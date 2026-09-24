@@ -9,6 +9,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::{Context, Result, bail};
 
 mod android_runner;
+mod desktop_runner;
 mod dx;
 mod http;
 mod process;
@@ -35,6 +36,9 @@ fn main() -> Result<()> {
     let mut passthrough: Vec<String> = std::env::args().skip(1).collect();
     if passthrough.first().is_some_and(|arg| arg == "android") {
         return android_runner::run(passthrough.split_off(1));
+    }
+    if passthrough.first().is_some_and(|arg| arg == "desktop") {
+        return desktop_runner::run(passthrough.split_off(1));
     }
     let sweep = passthrough.first().is_some_and(|arg| arg == "sweep");
     if sweep {

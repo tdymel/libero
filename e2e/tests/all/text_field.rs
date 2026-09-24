@@ -28,6 +28,25 @@ async fn fast_typing_keeps_every_letter<D: Driver>(d: &mut D, _route: &str) -> R
     eventually_text(d, "#echo", TEXT, "typing at 4 ms a key").await
 }
 
+/// The app upper-cases each input: a rewritten render must not drop letters
+/// typed after it (1051: "BTON" at 12 ms a key in the desktop WebView).
+async fn fast_typing_survives_a_rewrite<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("input").await?;
+    eventually_focused(d, "input", "a click").await?;
+    d.type_burst("button", 12).await?;
+    let settled = eventually(d, "the field to read BUTTON", async |d| {
+        Ok(d.value("input").await? == "BUTTON")
+    })
+    .await;
+    if settled.is_err() {
+        anyhow::bail!(
+            "after typing at 12 ms a key, the field reads {:?}",
+            d.value("input").await?
+        );
+    }
+    Ok(())
+}
+
 async fn the_reveal_shows_it<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const REVEAL: &str = "button[aria-label='Show password']";
     d.click("input").await?;
@@ -52,6 +71,12 @@ e2e::scenario!(
     fast_typing_into_a_text_field_keeps_every_letter,
     "/text-field/echo",
     fast_typing_keeps_every_letter
+);
+e2e::scenario!(
+    fast_typing_into_a_rewriting_field_keeps_every_letter,
+    "/text-field/upper",
+    fast_typing_survives_a_rewrite,
+    native: skip("Blitz has no live value read; 1051 is a WebView race")
 );
 e2e::scenario!(
     the_reveal_button_shows_a_password,

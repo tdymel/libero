@@ -1,7 +1,7 @@
 //! One scenario, several platforms (todo 822): a scenario is an `async fn`
 //! over any [`Driver`], and [`scenario!`](crate::scenario) runs it on the web
 //! backend (Chromium over CDP), with the `native` feature on Blitz, and with
-//! `android` in the emulator's WebView (964).
+//! `android` in the emulator's WebView (964), with `desktop` in wry's (1126).
 //!
 //! ```ignore
 //! async fn pages<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -22,6 +22,7 @@ pub enum Platform {
     Web,
     Native,
     Android,
+    Desktop,
 }
 
 /// A `getBoundingClientRect()` in CSS px.
@@ -183,8 +184,8 @@ pub async fn eventually_text<D: Driver>(
 }
 
 /// Runs `$body(&mut driver, $route)` as `$name::web`, with the `native`
-/// feature as `$name::native`, with `android` as `$name::android`. The web and
-/// Android runs also fail on a console error.
+/// feature as `$name::native`, with `android` as `$name::android`, with
+/// `desktop` as `$name::desktop`. All but native also fail on a console error.
 ///
 /// A backend gap is a named skip, listed by `--ignored`, never silent:
 /// `scenario!(name, "/route", body, native: skip("Blitz has no <summary> stop"));`
@@ -233,6 +234,15 @@ macro_rules! scenario {
                     driver.finish(stringify!($name)).await.unwrap();
                 });
             }
+
+            // Spike (1126): no skip syntax yet; the runner picks units by filter.
+            #[cfg(feature = "desktop")]
+            #[test]
+            fn desktop() {
+                let mut driver = $crate::driver::Desktop::open($route).unwrap();
+                $crate::futures::executor::block_on(super::$body(&mut driver, $route)).unwrap();
+                driver.finish(stringify!($name)).unwrap();
+            }
         }
     };
 }
@@ -252,3 +262,9 @@ pub use android::Android;
 
 #[cfg(feature = "android")]
 mod android;
+
+#[cfg(feature = "desktop")]
+pub use desktop::Desktop;
+
+#[cfg(feature = "desktop")]
+pub mod desktop;

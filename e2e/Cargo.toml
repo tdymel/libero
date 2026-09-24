@@ -78,6 +78,9 @@ native = [
 # The `android` scenario arm (964), against the emulator the runner's
 # `android` mode sets up: `cargo run -p e2e -- android [filter]`.
 android = []
+# The `desktop` scenario arm (1126): the fixture app in the desktop WebView under
+# Xvfb, driven by `xdotool`: `cargo run -p e2e -- desktop [filter]`.
+desktop = []
 
 # Blitz-only tests (paint, stylo, Blitz's event order), one binary as `all` is.
 [[test]]

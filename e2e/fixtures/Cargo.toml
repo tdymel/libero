@@ -11,12 +11,16 @@ dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = true
 # `/icon-provider`'s whole-set select (1133).
 libero = { path = "../../libero", features = ["icons-tabler"] }
 pictogram-icons-lucide = "0.4"
+# The desktop driver's bridge (1126): socket thread to the eval loop.
+futures-channel = { version = "0.3", optional = true }
+futures-util = { version = "0.3", optional = true }
+serde_json = { version = "1", optional = true }
 
 [features]
 # The Android fixtures APK (964): `dx build --platform android --features mobile`.
 mobile = ["dioxus/mobile"]
-# The desktop WebView (wry) build, opened at `E2E_ROUTE` (1026).
-desktop = ["dioxus/desktop"]
+# The desktop WebView (wry) build, opened at `E2E_ROUTE` (1026), read through `E2E_BRIDGE` (1126).
+desktop = ["dioxus/desktop", "dep:futures-channel", "dep:futures-util", "dep:serde_json"]
 
 # `perf::install`: counts dioxus-core's `render` spans per scope on `/perf/*`
 # pages. The versions dioxus-logger already pulls in.
