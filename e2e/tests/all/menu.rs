@@ -266,6 +266,61 @@ fn a_reopened_menu_starts_its_submenu_closed_on_fresh_items() {
     });
 }
 
+/// `parts` reaches the labels on the submenu level too; `sx` stays on the top box.
+#[test]
+fn parts_style_every_level_and_sx_only_the_top_one() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-parts", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.textContent.trim() === 'Share'",
+                "focus on Share",
+            )
+            .await?;
+            keyboard::press(page, keyboard::ARROW_RIGHT).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.textContent.trim() === 'Email'",
+                "focus on Email",
+            )
+            .await?;
+            let [italic, spacing]: [Vec<String>; 2] = page
+                .evaluate(
+                    "(() => { \
+                       const labels = [...document.querySelectorAll('[role=menu] [data-slot=label]')]; \
+                       const menus = [...document.querySelectorAll('[role=menu]')]; \
+                       return [ \
+                         labels.map(l => getComputedStyle(l).fontStyle), \
+                         menus.map(m => getComputedStyle(m).letterSpacing), \
+                       ]; })()",
+                )
+                .await?
+                .into_value()?;
+            anyhow::ensure!(
+                italic == ["italic", "italic"],
+                "a level missed the parts: {italic:?}"
+            );
+            anyhow::ensure!(
+                spacing.first().map(String::as_str) == Some("2px")
+                    && spacing.get(1).map(String::as_str) != Some("2px"),
+                "sx should style the top box only: {spacing:?}"
+            );
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("menu parts");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
 async fn reopen_the_submenu(page: &chromiumoxide::Page) -> anyhow::Result<()> {
     const SHARE: &str = "[role=menuitem][aria-haspopup=menu]";
     // A closed level may stay in the DOM, hidden.
@@ -322,7 +377,7 @@ fn the_arrows_work_after_a_click_on_a_group_name() {
         let outcome = async {
             pointer::click(page, TRIGGER).await?;
             wait::for_js_true(page, FOCUS_ON_CUT, "focus on Cut").await?;
-            pointer::click(page, "[data-menu-group-label]").await?;
+            pointer::click(page, "[data-slot=group-label]").await?;
             wait::for_js_true(
                 page,
                 "document.activeElement?.getAttribute('role') === 'menu'",
@@ -404,7 +459,7 @@ fn a_long_label_wraps_inside_the_viewport() {
                 page,
                 "(() => { \
                    const menu = document.querySelector('[role=menu]').getBoundingClientRect(); \
-                   const labels = [...document.querySelectorAll('[data-menu-label]')]; \
+                   const labels = [...document.querySelectorAll('[data-slot=label]')]; \
                    return menu.right <= innerWidth \
                      && document.documentElement.scrollWidth <= innerWidth \
                      && labels.every(l => l.scrollWidth <= l.clientWidth); \
@@ -539,7 +594,7 @@ fn a_lone_toggle_lines_up_and_a_disabled_shortcut_dims() {
                        const kbd = r => getComputedStyle(r.querySelector('kbd')).color \
                          + ' ' + getComputedStyle(r).opacity; \
                        return [ \
-                         rows.map(r => String(r.querySelector('[data-menu-label]').getBoundingClientRect().left)), \
+                         rows.map(r => String(r.querySelector('[data-slot=label]').getBoundingClientRect().left)), \
                          [kbd(rows[0]), kbd(rows[2])], \
                        ]; })()",
                 )

@@ -3,7 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Flex, Kbd, Menu, MenuEntry, MenuItem, Text, use_menu},
+    components::{Button, Code, Flex, Kbd, Menu, MenuEntry, MenuItem, MenuPart, Text, use_menu},
     hooks::{Align, Side},
 };
 
@@ -259,6 +259,18 @@ pub fn MenuPage() -> Element {
                         .doc("The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled."),
                     prop("onedge", "Callback<MenuEdge>")
                         .doc("Called with ← on the top level, or → on an item without a submenu. `Menubar` uses it to move to the next menu."),
+                    prop("parts", "Parts<MenuPart>")
+                        .doc("Styles for the inner parts in the Style API tab, on every menu level, submenus too. `sx` styles the top level's box only: `Parts::new().part(MenuPart::Label, sx().font_weight(\"500\"))`."),
+                ])
+                .parts("MenuPart", vec![
+                    (MenuPart::Item, "A row: `menuitem`, `menuitemradio` or `menuitemcheckbox`."),
+                    (MenuPart::GroupLabel, "A group's visible name."),
+                    (MenuPart::Check, "The check column, on every row of a level with a checkable item."),
+                    (MenuPart::Leading, "The item's `leading` content."),
+                    (MenuPart::Label, "The item's text."),
+                    (MenuPart::Trailing, "The item's `trailing` content."),
+                    (MenuPart::Shortcut, "The key hint, hidden from screen readers."),
+                    (MenuPart::Chevron, "A submenu item's arrow."),
                 ]),
                 props("MenuItem", vec![
                     prop("new(label)", "String")

@@ -12,13 +12,13 @@ use e2e::{Fixture, Suite, Viewport, passes::focus, passes::keyboard, passes::poi
 pub const TRIGGER: &str = "#open-window";
 pub const DIALOG: &str = "[role=dialog]";
 /// The title bar, which is also the keyboard move handle.
-pub const HANDLE: &str = "[role=dialog] [data-window-handle]";
+pub const HANDLE: &str = "[role=dialog] [data-slot=handle]";
 /// The corner grip, which is the resize handle.
 pub const SEPARATOR: &str = "[role=dialog] [role=separator]";
 /// The close button in the title bar.
-pub const CLOSE: &str = "[role=dialog] [data-window-title-bar] > button";
+pub const CLOSE: &str = "[role=dialog] [data-slot=title-bar] > [data-slot=close]";
 /// The title bar's menu button: Move, Resize, Reset (todo 570).
-pub const MENU: &str = "[role=dialog] [data-window-menu]";
+pub const MENU: &str = "[role=dialog] [data-slot=menu]";
 pub const MOVE_REPORT: &str = "#move-report";
 pub const RESIZE_REPORT: &str = "#resize-report";
 
@@ -291,14 +291,14 @@ async fn menu_adjust(page: &Page) -> Result<()> {
     .await?;
     // The buttons' row makes the window taller, and a placed window recentres.
     let showing = rect(page, DIALOG).await?;
-    pointer::click(page, "[data-window-steps] [aria-label='Move right']").await?;
+    pointer::click(page, "[data-slot=steps] [aria-label='Move right']").await?;
     let moved = wait_for_move(page, showing, (STEP, 0.0)).await?;
     assert_report(page, MOVE_REPORT, moved, "the Move right button").await?;
     // Escape leaves the buttons, not the window.
     keyboard::press(page, keyboard::ESCAPE).await?;
     expect_focus(page, MENU, "Escape to hand focus back to the menu button").await?;
     if page
-        .evaluate("!!document.querySelector('[data-window-steps]')")
+        .evaluate("!!document.querySelector('[data-slot=steps]')")
         .await?
         .into_value::<bool>()?
         || rect(page, DIALOG).await.is_err()
@@ -313,10 +313,10 @@ async fn menu_adjust(page: &Page) -> Result<()> {
         "Resize to focus the first step button",
     )
     .await?;
-    pointer::click(page, "[data-window-steps] [aria-label='Wider']").await?;
+    pointer::click(page, "[data-slot=steps] [aria-label='Wider']").await?;
     let wider = wait_for_size(page, (moved.2 + STEP, moved.3), "the Wider button").await?;
     assert_report(page, RESIZE_REPORT, wider, "the Wider button").await?;
-    pointer::click(page, "[data-window-steps] button:last-child").await?;
+    pointer::click(page, "[data-slot=steps] button:last-child").await?;
     expect_focus(page, MENU, "Done to hand focus back to the menu button").await?;
 
     choose(page, "Reset position and size").await?;
@@ -822,7 +822,7 @@ async fn the_menu_resizes_and_resets<D: Driver>(d: &mut D, _route: &str) -> Resu
     reported(d, RESIZE_REPORT, "the Wider button").await?;
     d.press(keyboard::ESCAPE).await?;
     eventually(d, "Escape to hide the step buttons", async |d| {
-        Ok(!d.exists("[data-window-steps]").await?)
+        Ok(!d.exists("[data-slot=steps]").await?)
     })
     .await?;
     assert!(

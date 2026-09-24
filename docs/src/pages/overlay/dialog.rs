@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Dialog, Text};
+use libero::components::{Button, Code, Dialog, DialogPart, Text};
 
 const CONTENT: &str = r#"Text { "notes.md has changes you have not saved." }"#;
 
@@ -68,7 +68,14 @@ pub fn DialogPage() -> Element {
                         .doc("Caps the width from the dialog scale. `md` is 510px."),
                     prop("variables", "Variables")
                         .doc("CSS variables layered onto the dialog's own, as `Drawer` does."),
+                    prop("parts", "Parts<DialogPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(DialogPart::Title, sx().font_size(\"lg\"))`."),
                     prop("children", "Element").default("required").doc("The dialog's content."),
+                ])
+                .parts("DialogPart", vec![
+                    (DialogPart::Header, "The row holding the title and the close button. Rendered only with a title or a close button."),
+                    (DialogPart::Title, "The title heading."),
+                    (DialogPart::Close, "The close button."),
                 ]),
             ],
             accessibility: a11y()

@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, Input, ProgressBar, Text};
+use libero::components::{Code, Input, ProgressBar, ProgressBarPart, Text};
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
@@ -30,6 +30,11 @@ pub fn ProgressBarPage() -> Element {
                     .doc("Corner of the track and the fill. On a thin track most steps draw the same pill."),
                 prop("aria_valuetext", "String")
                     .doc("Read instead of the rounded percentage, such as \"4.2 MB of 12 MB\"."),
+                prop("parts", "Parts<ProgressBarPart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(ProgressBarPart::Fill, sx().background(\"success.6\"))`."),
+            ])
+            .parts("ProgressBarPart", vec![
+                (ProgressBarPart::Fill, "The drawn share, or the indeterminate sweep. The root is the track."),
             ])],
             accessibility: a11y()
                 .handles([

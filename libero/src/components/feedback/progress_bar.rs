@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, Variables, base_color, base_props, names_itself,
-            use_name_warning, variables,
+            HtmlTag, Input, Part, States, Variables, base_color, base_props, names_itself,
+            parts_enum, use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -113,7 +113,16 @@ fn progress_bar_variables(color: &ThemeAwareValue, fill: Option<String>) -> Vari
         .with(PROGRESS_BAR_FILL, fill)
 }
 
+parts_enum! {
+    /// [`ProgressBar`]'s inner parts, for its `parts` prop. The root is the track.
+    pub enum ProgressBarPart {
+        /// The drawn share, or the indeterminate sweep.
+        Fill = "fill" => "& > [data-slot='fill']",
+    }
+}
+
 base_props! {
+    parts(ProgressBarPart);
     pub struct ProgressBarProps {
         /// Current progress, clamped into `min..=max`. `None` is indeterminate.
         #[props(into)]
@@ -193,6 +202,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .framework_sx(&PROGRESS_BAR_FILL_SX)
         .states(&states)
         .prepare()
+        .attr("data-slot", ProgressBarPart::Fill.slot())
         .attr("aria-hidden", "true")
         .render(HtmlTag::Div, Vec::new(), ());
 
@@ -200,6 +210,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .framework_sx(&PROGRESS_BAR_TRACK_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .variables(&vars)
         .prepare()
@@ -226,6 +237,17 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        let table: Vec<_> = ProgressBarPart::ALL
+            .iter()
+            .map(|part| (part.slot(), part.selector()))
+            .collect();
+
+        assert_eq!(table, [("fill", "& > [data-slot='fill']")]);
+    }
 
     #[test]
     fn the_fraction_maps_the_range_onto_zero_to_one() {

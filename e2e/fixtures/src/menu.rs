@@ -1,7 +1,10 @@
 //! `Menu`, for the overlay archetype.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Menu, MenuEntry, MenuItem, Text, use_menu};
+use libero::components::{
+    Button, Flex, Menu, MenuEntry, MenuItem, MenuPart, Parts, Text, use_menu,
+};
+use libero::sx::sx;
 
 use crate::Routes;
 
@@ -12,7 +15,29 @@ pub const ROUTES: Routes = &[
     ("/menu-choices", || rsx! { MenuChoicesPage {} }),
     ("/menu-row", || rsx! { MenuRowPage {} }),
     ("/menu-keep-open", || rsx! { MenuKeepOpenPage {} }),
+    ("/menu-parts", || rsx! { MenuPartsPage {} }),
 ];
+
+/// `parts` styles the labels on every level; `sx` only the top level's box.
+#[component]
+fn MenuPartsPage() -> Element {
+    let menu = use_menu();
+    let items = vec![
+        MenuItem::new("Share")
+            .submenu(vec![MenuItem::new("Email").onselect(|_| {}).into()])
+            .into(),
+    ];
+
+    rsx! {
+        Menu {
+            state: menu,
+            items,
+            parts: Parts::new().part(MenuPart::Label, sx().font_style("italic")),
+            sx: sx().letter_spacing("2px"),
+            Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+        }
+    }
+}
 
 /// One item that keeps the menu open, one that closes it.
 #[component]

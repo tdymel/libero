@@ -61,9 +61,20 @@ ProgressBar { aria_label: "Connecting", value: None }
 | `size` | `Size` | `md` | Track height, 3px at `xs` to 20px at `xxl`. |
 | `radius` | `Size` | `xl` | Corner of the track and the fill. On a thin track most steps draw the same pill. |
 | `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "4.2 MB of 12 MB". |
+| `parts` | `Parts<ProgressBarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(ProgressBarPart::Fill, sx().background("success.6"))`. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes, `aria_label` among them.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ProgressBarPart::Fill` | `fill` | The drawn share, or the indeterminate sweep. The root is the track. |
 
 ## Theme defaults
 
@@ -106,4 +117,5 @@ theme stylesheet.
 ## Data attributes
 
 `data-state` on the root and on the fill carries `size-*`, `radius-*`, and
-either `determinate` or `indeterminate`.
+either `determinate` or `indeterminate`. `data-slot="fill"` marks the fill, see
+[Style API](#style-api).

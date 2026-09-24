@@ -15,14 +15,14 @@ pub(crate) mod use_floating_window;
 pub(crate) mod lightbox;
 pub(crate) mod use_modal;
 
-pub use dialog::{Dialog, DialogProps};
+pub use dialog::{Dialog, DialogPart, DialogProps};
 pub(crate) use drawer::Drawer;
 pub use drawer::DrawerAnchor;
 pub(crate) use floating_window::FloatingWindow;
-pub use floating_window::{FloatingWindowOptions, WindowRect};
+pub use floating_window::{FloatingWindowOptions, FloatingWindowPart, WindowRect};
 pub use hover_card::{HoverCard, HoverCardProps};
 pub(crate) use menu::MenuFocus;
-pub use menu::{Menu, MenuEdge, MenuEntry, MenuItem, MenuProps, MenuState, use_menu};
+pub use menu::{Menu, MenuEdge, MenuEntry, MenuItem, MenuPart, MenuProps, MenuState, use_menu};
 pub(crate) use modal::Modal;
 pub use overlay::{Overlay, OverlayProps};
 pub use spotlight::{

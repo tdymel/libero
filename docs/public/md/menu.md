@@ -109,6 +109,7 @@ fn Demo() -> Element {
 | `radius` | `Size` | `sm` | The menu's corner radius. The items' corners follow it. |
 | `disabled` | `bool` | `false` | The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled. |
 | `onedge` | `Callback<MenuEdge>` | - | Called with ArrowLeft on the top level, or ArrowRight on an item without a submenu. `Menubar` uses it to move to the next menu. |
+| `parts` | `Parts<MenuPart>` | - | Styles for the inner parts in the Style API tab, on every menu level, submenus too. `sx` styles the top level's box only: `Parts::new().part(MenuPart::Label, sx().font_weight("500"))`. |
 
 Like every component, `Menu` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the menu.
@@ -128,6 +129,23 @@ Like every component, `Menu` also takes the shared props `sx`, `class`,
 | `radio` | `bool` | - | Makes the item one choice of several, with a check while `true`. Put the choices in one `Group` and keep one checked. A menu opens on its checked item. |
 | `checkbox` | `bool` | - | Makes the item an on/off setting, with a check while `true`. Flip it in `onselect`. An item is `radio` or `checkbox`, and the later call wins. |
 | `disabled` | `bool` | `false` | Stays in the arrow-key order but cannot be chosen, and typeahead skips it. |
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `MenuPart::Item` | `item` | A row: `menuitem`, `menuitemradio` or `menuitemcheckbox`. |
+| `MenuPart::GroupLabel` | `group-label` | A group's visible name. |
+| `MenuPart::Check` | `check` | The check column, on every row of a level with a checkable item. |
+| `MenuPart::Leading` | `leading` | The item's `leading` content. |
+| `MenuPart::Label` | `label` | The item's text. |
+| `MenuPart::Trailing` | `trailing` | The item's `trailing` content. |
+| `MenuPart::Shortcut` | `shortcut` | The key hint, hidden from screen readers. |
+| `MenuPart::Chevron` | `chevron` | A submenu item's arrow. |
 
 ## Theme defaults
 

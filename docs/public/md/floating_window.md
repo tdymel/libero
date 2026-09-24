@@ -110,8 +110,26 @@ handle, so the body can close its own window.
 | `sx` | `Input<Sx>` | - | Styles the window. `min_width`, `max_width`, `min_height` and `max_height` here limit a resize. The window never grows past the viewport. |
 | `onmove` | `Option<Callback<WindowRect>>` | - | Called after a drag, a keyboard or button move, or a Reset, in viewport pixels. |
 | `onresize` | `Option<Callback<WindowRect>>` | - | Called after a resize by pointer, keyboard or button, or a Reset. |
+| `parts` | `Input<Parts<FloatingWindowPart>>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(FloatingWindowPart::Body, sx().padding("lg"))`. |
 
 `WindowRect { x, y, width, height }` is in viewport pixels.
+
+## Style API
+
+Style a part with the `parts` option, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FloatingWindowPart::TitleBar` | `title-bar` | The row holding the move handle, the menu button and the close button. |
+| `FloatingWindowPart::Handle` | `handle` | The move handle around the title. |
+| `FloatingWindowPart::Title` | `title` | The title heading. |
+| `FloatingWindowPart::Menu` | `menu` | The Move, Resize and Reset menu's button. The menu itself is portaled and not reached. |
+| `FloatingWindowPart::Close` | `close` | The close button. |
+| `FloatingWindowPart::Steps` | `steps` | The step buttons Move or Resize shows. |
+| `FloatingWindowPart::Body` | `body` | The scrolling content. |
+| `FloatingWindowPart::Resize` | `resize` | The corner resize handle, when `resizable`. |
 
 ## Theme defaults
 

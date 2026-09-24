@@ -67,7 +67,7 @@ fn enter_on_a_link_item_opens_its_url() {
 #[test]
 fn a_mask_mark_paints_its_shape_in_the_icon_color() {
     let page = opened();
-    let (x, y, width, height) = page.rect("[data-menu-section=leading] span span");
+    let (x, y, width, height) = page.rect("[data-slot=leading] span span");
     assert!(width > 0.0, "the mask has no box");
     let at = |fx: f64| page.painted_pixel((x + width * fx) as u32, (y + height / 2.0) as u32);
     let (inked, empty) = (at(0.25), at(0.75));

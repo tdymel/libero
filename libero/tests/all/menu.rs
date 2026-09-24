@@ -222,7 +222,7 @@ fn a_checked_item_is_a_radio_that_says_so() {
     assert!(radios[0].contains(r#"tabindex="-1""#), "{}", radios[0]);
     assert!(radios[1].contains(r#"tabindex="0""#), "{}", radios[1]);
     // Settings keeps an empty slot too, so its label lines up (todo 641).
-    assert_eq!(html.matches("data-menu-check").count(), 3, "{html}");
+    assert_eq!(html.matches(r#"data-slot="check""#).count(), 3, "{html}");
     assert_eq!(
         html.matches("<svg").count(),
         1,
@@ -329,7 +329,7 @@ fn a_shortcut_is_announced_by_attribute_not_by_name() {
         "{}",
         cut[0]
     );
-    let hint = tags_with(&html, r#"data-menu-section="shortcut""#);
+    let hint = tags_with(&html, r#"data-slot="shortcut""#);
     assert_eq!(hint.len(), 1, "{html}");
     assert!(hint[0].contains(r#"aria-hidden="true""#), "{}", hint[0]);
     assert!(html.contains(">Ctrl+X<"), "{html}");

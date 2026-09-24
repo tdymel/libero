@@ -141,7 +141,7 @@ fn the_viewport_cap_survives_a_callers_max_width() {
 #[test]
 fn the_title_bar_is_the_keyboard_move_handle() {
     let html = render(plain_app);
-    let handle = tag_with(&html, "data-window-handle");
+    let handle = tag_with(&html, "data-slot=\"handle\"");
     assert_eq!(handle["tabindex"], "0", "{handle:?}");
     assert_eq!(handle["role"], "group", "{handle:?}");
     assert_eq!(handle["aria-label"], "Move window", "{handle:?}");
@@ -153,7 +153,7 @@ fn the_title_bar_is_the_keyboard_move_handle() {
 #[test]
 fn the_move_handle_is_described_by_its_arrow_key_hint() {
     let html = render(plain_app);
-    let handle = tag_with(&html, "data-window-handle");
+    let handle = tag_with(&html, "data-slot=\"handle\"");
     let hint = tag_with(&html, ">Use arrow keys to move the window<");
     assert_eq!(handle["aria-describedby"], hint["id"], "{html}");
     assert!(hint.contains_key("hidden"), "{hint:?}");
@@ -192,7 +192,7 @@ fn a_changed_title_redraws_the_title_bar() {
 #[test]
 fn a_pinned_window_has_no_move_handle_stop() {
     let html = render(pinned_app);
-    let handle = tag_with(&html, "data-window-handle");
+    let handle = tag_with(&html, "data-slot=\"handle\"");
     assert!(!handle.contains_key("tabindex"), "{handle:?}");
     assert!(!handle.contains_key("role"), "{handle:?}");
 }

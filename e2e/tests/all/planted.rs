@@ -790,7 +790,7 @@ fn a_floating_window_with_a_deaf_title_bar_never_moves() {
             "/floating-window",
             Some(
                 "document.addEventListener('keydown', e => { \
-                 if (e.target.closest('[data-window-handle]')) e.stopImmediatePropagation(); }, true)",
+                 if (e.target.closest('[data-slot=handle]')) e.stopImmediatePropagation(); }, true)",
             ),
             "the window to move by (10.0, 0.0)",
             |fixture| async move {
@@ -858,10 +858,10 @@ fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
         must_fail(
             "/floating-window",
             Some(&stylesheet(
-                "[data-window-title-bar] { gap: 0 !important; } \
-                 [data-window-title-bar] button { width: 16px !important; height: 16px !important; } \
-                 [data-window-title-bar] button::before { content: none !important; } \
-                 [data-window-handle] { flex: 0 0 8px !important; min-width: 0 !important; }",
+                "[data-slot=title-bar] { gap: 0 !important; } \
+                 [data-slot=title-bar] button { width: 16px !important; height: 16px !important; } \
+                 [data-slot=title-bar] button::before { content: none !important; } \
+                 [data-slot=handle] { flex: 0 0 8px !important; min-width: 0 !important; }",
             )),
             "spacing exception fails",
             |fixture| async move {
@@ -889,7 +889,7 @@ fn a_floating_window_with_faint_text_fails_the_contrast_pass_in_the_open_state()
         must_fail(
             "/floating-window",
             Some(&stylesheet(
-                "[role=dialog] [data-window-body] * { color: #dddddd !important; }",
+                "[role=dialog] [data-slot=body] * { color: #dddddd !important; }",
             )),
             "color-contrast",
             |fixture| async move {

@@ -6,8 +6,9 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            Glyph, HtmlTag, Input, LogicalTextAlign, States, base_props, disabled_look_sx,
-            has_shortcut_modifier, inset_focus_ring_sx, is_javascript_url,
+            Glyph, HtmlTag, Input, LogicalTextAlign, Part, Parts, States, base_props,
+            disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx, is_javascript_url,
+            parts_enum,
         },
         layout::{Divider, paper_sx, use_box},
         typography::Kbd,
@@ -33,12 +34,31 @@ use super::{
     state::{MenuFocus, MenuState, menu_id, trigger_id},
 };
 
-// Keyed on the index every row carries, whichever of the three item roles it has.
-const ITEM: &str = "& [data-menu-index]";
+parts_enum! {
+    /// [`Menu`]'s inner parts, for its `parts` prop. Every level's box takes them,
+    /// submenus too. An item sits in the box or in a group, so `Item` is a descendant.
+    pub enum MenuPart {
+        /// A `menuitem`, `menuitemradio` or `menuitemcheckbox` row.
+        Item = "item" => "& [data-slot='item']",
+        /// A group's visible name.
+        GroupLabel = "group-label" => "& [data-slot='group-label']",
+        /// The check column, on every row of a level with a checkable item.
+        Check = "check" => "& [data-slot='item'] > [data-slot='check']",
+        Leading = "leading" => "& [data-slot='item'] > [data-slot='leading']",
+        Label = "label" => "& [data-slot='item'] > [data-slot='label']",
+        Trailing = "trailing" => "& [data-slot='item'] > [data-slot='trailing']",
+        /// The key hint, hidden from screen readers.
+        Shortcut = "shortcut" => "& [data-slot='item'] > [data-slot='shortcut']",
+        /// A submenu item's arrow.
+        Chevron = "chevron" => "& [data-slot='item'] > [data-slot='chevron']",
+    }
+}
 
 // `paper_sx()` through `use_box`, for the popover's element and events. Items are
 // styled from here, `Tabs`' shape: one class for forty items, not forty `use_box`.
 static MENU_SX: StaticSx = StaticSx::new(|| {
+    let item = MenuPart::Item.selector();
+    let glyphs = "& [data-slot='item'] > :is([data-slot='chevron'], [data-slot='check'])";
     paper_sx()
         .and(MenuDefaults::theme_vars())
         .z_index(Z_INDEX_POPOVER.value())
@@ -53,7 +73,7 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
             sx().display("flex").flex_direction("column"),
         )
         .selector(
-            "& [data-menu-group-label]",
+            MenuPart::GroupLabel.selector(),
             sx().padding(format!("6px {}", MENU_ITEM_PAD_X.value()))
                 .font_size(MENU_LABEL_FONT.value())
                 .font_weight("600")
@@ -61,7 +81,7 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
                 .user_select("none"),
         )
         .selector(
-            ITEM,
+            item,
             sx().display("flex")
                 .align_items("center")
                 .gap("10px")
@@ -85,22 +105,22 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
         )
         // Hover and focus share a tint: focus follows the pointer.
         .selector(
-            "& [data-menu-index]:hover:not([aria-disabled=\"true\"])",
+            format!("{item}:hover:not([aria-disabled=\"true\"])"),
             sx().background("muted.1"),
         )
-        .selector("& [data-menu-index]:focus", sx().background("muted.1"))
+        .selector(format!("{item}:focus"), sx().background("muted.1"))
         // Inset: the box clips at its padding edge while it scrolls.
         .selector(
-            "& [data-menu-index]:focus-visible",
+            format!("{item}:focus-visible"),
             inset_focus_ring_sx("-2px"),
         )
         .selector(
-            "& [data-menu-index][aria-disabled=\"true\"]",
+            format!("{item}[aria-disabled=\"true\"]"),
             disabled_look_sx("not-allowed"),
         )
         // Wraps, never an ellipsis: cut text is unreadable (WCAG 1.4.10).
         .selector(
-            "& [data-menu-label]",
+            MenuPart::Label.selector(),
             sx().flex("1")
                 .min_width("0")
                 .padding("4px 0")
@@ -108,25 +128,26 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
                 .with("overflow-wrap", "anywhere"),
         )
         .selector(
-            "& [data-menu-section]",
+            "& [data-slot='item'] > :is([data-slot='leading'], [data-slot='trailing'], [data-slot='shortcut'])",
             sx().display("inline-flex").align_items("center"),
         )
         .selector(
-            "& :is([data-menu-chevron], [data-menu-check])",
+            glyphs,
             sx().display("inline-flex")
                 .width("1em")
                 .height("1em")
                 .with("margin-inline-end", "-4px"),
         )
-        .selector(
-            "& :is([data-menu-chevron], [data-menu-check]) svg",
-            sx().width("100%").height("100%"),
-        )
+        .selector(format!("{glyphs} svg"), sx().width("100%").height("100%"))
         // The submenu opens on the left under RTL, so the chevron points there.
-        .rtl(sx().selector("& [data-menu-chevron] svg", sx().transform("scaleX(-1)")))
+        .rtl(sx().selector(
+            format!("{} svg", MenuPart::Chevron.selector()),
+            sx().transform("scaleX(-1)"),
+        ))
 });
 
 base_props! {
+    parts(MenuPart);
     pub struct MenuProps {
         /// From [`use_menu`](super::use_menu).
         state: MenuState,
@@ -278,6 +299,7 @@ pub fn Menu(props: MenuProps) -> Element {
             attributes: props.attributes,
             class: props.class,
             sx: props.sx,
+            parts: props.parts,
             states: props.states,
         }
     }
@@ -643,6 +665,9 @@ struct MenuLevelProps {
     class: Input<crate::components::common::ClassList>,
     #[props(default)]
     sx: Input<crate::sx::Sx>,
+    /// The root's, on every level, unlike `sx`.
+    #[props(default)]
+    parts: Input<Parts<MenuPart>>,
     #[props(default)]
     states: Input<States>,
 }
@@ -804,6 +829,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         .framework_sx(&MENU_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .style(open.then(|| popover.style()).flatten())
         .prepare();
@@ -868,6 +894,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
                 loop_focus: props.loop_focus,
                 close_on_select: props.close_on_select,
                 depth: depth + 1,
+                parts: props.parts.clone(),
             }
         }
     }
@@ -898,7 +925,7 @@ fn draw_rows(
                         key: "group-{key}",
                         "role": "group",
                         "aria-labelledby": "{label_id}",
-                        div { id: "{label_id}", "data-menu-group-label": "", "{label}" }
+                        div { id: "{label_id}", "data-slot": MenuPart::GroupLabel.slot(), "{label}" }
                         {inner.into_iter()}
                     }
                 });
@@ -993,27 +1020,27 @@ fn menu_item(
     let content = rsx! {
         // On every row of a level with a checkable item, so labels line up.
         if check.is_some() || *checks {
-            span { "data-menu-check": "",
+            span { "data-slot": MenuPart::Check.slot(),
                 if check.is_some_and(Check::is_checked) {
                     Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
                 }
             }
         }
         if let Some(leading) = item.leading.clone() {
-            span { "data-menu-section": "leading", {leading} }
+            span { "data-slot": MenuPart::Leading.slot(), {leading} }
         }
-        span { "data-menu-label": "", "{item.label}" }
+        span { "data-slot": MenuPart::Label.slot(), "{item.label}" }
         if let Some(trailing) = item.trailing.clone() {
-            span { "data-menu-section": "trailing", {trailing} }
+            span { "data-slot": MenuPart::Trailing.slot(), {trailing} }
         }
         // Out of the name: `aria-keyshortcuts` announces it instead.
         if let Some(keys) = item.shortcut.as_deref() {
-            span { "data-menu-section": "shortcut", "aria-hidden": "true",
+            span { "data-slot": MenuPart::Shortcut.slot(), "aria-hidden": "true",
                 Kbd { {shortcut_hint(keys, &current_localization().menu)} }
             }
         }
         if has_submenu {
-            span { "data-menu-chevron": "", Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined } }
+            span { "data-slot": MenuPart::Chevron.slot(), Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined } }
         }
     };
     let onmounted = move |event| {
@@ -1036,6 +1063,7 @@ fn menu_item(
                 "aria-checked": check.map(|check| check.is_checked().to_string()),
                 "aria-keyshortcuts": item.shortcut.clone(),
                 tabindex,
+                "data-slot": MenuPart::Item.slot(),
                 "data-menu-index": "{index}",
                 "aria-disabled": disabled.then_some("true"),
                 onmounted,
@@ -1056,6 +1084,7 @@ fn menu_item(
             "aria-checked": check.map(|check| check.is_checked().to_string()),
             "aria-keyshortcuts": item.shortcut.clone(),
             tabindex,
+            "data-slot": MenuPart::Item.slot(),
             "data-menu-index": "{index}",
             "aria-disabled": disabled.then_some("true"),
             "aria-haspopup": has_submenu.then_some("menu"),
@@ -1067,5 +1096,33 @@ fn menu_item(
             onmouseenter,
             {content}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        let table: Vec<_> = MenuPart::ALL
+            .iter()
+            .map(|part| (part.slot(), part.selector()))
+            .collect();
+
+        assert_eq!(
+            table,
+            [
+                ("item", "& [data-slot='item']"),
+                ("group-label", "& [data-slot='group-label']"),
+                ("check", "& [data-slot='item'] > [data-slot='check']"),
+                ("leading", "& [data-slot='item'] > [data-slot='leading']"),
+                ("label", "& [data-slot='item'] > [data-slot='label']"),
+                ("trailing", "& [data-slot='item'] > [data-slot='trailing']"),
+                ("shortcut", "& [data-slot='item'] > [data-slot='shortcut']"),
+                ("chevron", "& [data-slot='item'] > [data-slot='chevron']"),
+            ]
+        );
     }
 }

@@ -11,7 +11,8 @@ use crate::{
     components::{
         buttons::{ActionIcon, Button},
         common::{
-            Glyph, HtmlTag, Input, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx,
+            Glyph, HtmlTag, Input, Part, Parts, focus_ring_sx, has_shortcut_modifier,
+            inset_focus_ring_sx, parts_enum,
         },
         layout::{Float, Placement, paper_sx, use_box},
         overlay::{Menu, MenuEntry, MenuItem, use_menu},
@@ -53,6 +54,8 @@ pub struct FloatingWindowOptions {
     pub z_index: Input<ThemeAwareValue>,
     /// On the window itself; its `min_*`/`max_*` clamp a resize, within the viewport.
     pub sx: Input<Sx>,
+    /// Styles for the inner parts, under `sx`.
+    pub parts: Input<Parts<FloatingWindowPart>>,
     /// After a drag, a keyboard or button move, or a Reset.
     pub onmove: Option<Callback<WindowRect>>,
     /// After a resize, by pointer, keyboard or button, or a Reset.
@@ -61,7 +64,27 @@ pub struct FloatingWindowOptions {
 
 static NEXT_WINDOW_ID: AtomicU64 = AtomicU64::new(0);
 
-// `paper_sx()`, with the parts keyed by data attributes under one class.
+parts_enum! {
+    /// A floating window's inner parts, for [`FloatingWindowOptions::parts`].
+    /// Matched as direct children, so a window's content cannot reach them.
+    pub enum FloatingWindowPart {
+        /// The row holding the move handle, the menu and the close button.
+        TitleBar = "title-bar" => "& > [data-slot='title-bar']",
+        /// The keyboard and pointer move handle around the title.
+        Handle = "handle" => "& > [data-slot='title-bar'] > [data-slot='handle']",
+        Title = "title" => "& > [data-slot='title-bar'] > [data-slot='handle'] > [data-slot='title']",
+        /// The Move/Resize/Reset menu's trigger.
+        Menu = "menu" => "& > [data-slot='title-bar'] [data-slot='menu']",
+        Close = "close" => "& > [data-slot='title-bar'] > [data-slot='close']",
+        /// The step buttons the menu's Move or Resize shows.
+        Steps = "steps" => "& > [data-slot='steps']",
+        Body = "body" => "& > [data-slot='body']",
+        /// The corner resize handle, when `resizable`.
+        Resize = "resize" => "& > [data-slot='resize']",
+    }
+}
+
+// `paper_sx()`, with the parts keyed by `data-slot` under one class.
 static WINDOW_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
         // The resize handle's containing block.
@@ -74,7 +97,7 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
         .overflow("hidden")
         .selector("&:focus-visible", focus_ring_sx())
         .selector(
-            "& > [data-window-title-bar]",
+            FloatingWindowPart::TitleBar.selector(),
             sx().display("flex")
                 .align_items("center")
                 .gap("sm")
@@ -86,7 +109,7 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
                 .border_bottom(format!("1px solid {}", PAPER_BORDER_COLOR.value())),
         )
         .selector(
-            "& > [data-window-title-bar] > [data-window-handle]",
+            FloatingWindowPart::Handle.selector(),
             sx().flex("1")
                 .min_width("0")
                 .min_height("1.5em")
@@ -95,11 +118,11 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
                 .selector("&:focus-visible", inset_focus_ring_sx("-2px")),
         )
         .selector(
-            "& > [data-window-title-bar] > [data-window-handle][tabindex]",
+            format!("{}[tabindex]", FloatingWindowPart::Handle.selector()),
             drag_handle_sx().cursor("move").user_select("none"),
         )
         .selector(
-            "& > [data-window-steps]",
+            FloatingWindowPart::Steps.selector(),
             sx().display("flex")
                 .flex_wrap("wrap")
                 .align_items("center")
@@ -112,14 +135,14 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
                 .border_bottom(format!("1px solid {}", PAPER_BORDER_COLOR.value())),
         )
         .selector(
-            "& > [data-window-body]",
+            FloatingWindowPart::Body.selector(),
             sx().flex("1 1 auto")
                 .min_height("0")
                 .overflow("auto")
                 .padding("sm"),
         )
         .selector(
-            "& > [role=\"separator\"]",
+            FloatingWindowPart::Resize.selector(),
             drag_handle_sx()
                 .position("absolute")
                 .right("0")
@@ -351,6 +374,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         pinned,
         z_index,
         sx: user_sx,
+        parts,
         onmove,
         onresize,
     } = props.options;
@@ -423,7 +447,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     });
     let ondone = use_callback(move |()| {
         adjusting.set(None);
-        if let Ok(trigger) = root.query_selector("[data-window-menu]") {
+        if let Ok(trigger) = root.query_selector("[data-slot='title-bar'] [data-slot='menu']") {
             let _ = trigger.focus();
         }
     });
@@ -494,6 +518,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     let window = use_box()
         .framework_sx(&WINDOW_SX)
         .sx(&user_sx)
+        .parts(&parts)
         .style(resized_style)
         .states(
             &crate::components::common::States::default()
@@ -543,9 +568,10 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                     onkeydown: move_key,
                 }
                 {steps}
-                div { "data-window-body": "", {props.children} }
+                div { "data-slot": FloatingWindowPart::Body.slot(), {props.children} }
                 if resizable {
                     div {
+                        "data-slot": FloatingWindowPart::Resize.slot(),
                         role: "separator",
                         tabindex: "0",
                         "aria-label": labels.resize_handle,
@@ -611,12 +637,17 @@ fn WindowTitleBar(
     .flatten()
     .collect();
     let mut trigger = menu.a11y_attributes();
-    trigger.push(Attribute::new("data-window-menu", "", None, false));
+    trigger.push(Attribute::new(
+        "data-slot",
+        FloatingWindowPart::Menu.slot(),
+        None,
+        false,
+    ));
     let (move_label, move_hint) = (labels.move_handle, labels.move_hint);
     rsx! {
-        div { "data-window-title-bar": "",
+        div { "data-slot": FloatingWindowPart::TitleBar.slot(),
             div {
-                "data-window-handle": "",
+                "data-slot": FloatingWindowPart::Handle.slot(),
                 // Focusable because it is the keyboard move handle, and named
                 // for that job; the heading inside it is the window's name.
                 role: if !pinned { "group" },
@@ -634,7 +665,13 @@ fn WindowTitleBar(
                     }
                 },
                 if let Some(title) = title {
-                    Title { id: title_id(), component: "h2", size: "sm", "{title}" }
+                    Title {
+                        "data-slot": FloatingWindowPart::Title.slot(),
+                        id: title_id(),
+                        component: "h2",
+                        size: "sm",
+                        "{title}"
+                    }
                 }
             }
             if !pinned {
@@ -653,6 +690,7 @@ fn WindowTitleBar(
                 }
             }
             ActionIcon {
+                "data-slot": FloatingWindowPart::Close.slot(),
                 variant: "standard",
                 color: "muted",
                 size: "sm",
@@ -710,7 +748,7 @@ fn WindowSteps(
     };
     rsx! {
         div {
-            "data-window-steps": "",
+            "data-slot": FloatingWindowPart::Steps.slot(),
             role: "group",
             "aria-label": name,
             onmounted: group.mount(),
@@ -1009,11 +1047,40 @@ fn keep_right_edge(
 mod tests {
     use dioxus::prelude::*;
 
-    use super::{FloatingWindow, FloatingWindowOptions, WindowBounds};
+    use super::{FloatingWindow, FloatingWindowOptions, FloatingWindowPart, Part, WindowBounds};
     use crate::{
         LiberoProvider,
         components::overlay::{Dialog, Modal},
     };
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        let table: Vec<_> = FloatingWindowPart::ALL
+            .iter()
+            .map(|part| (part.slot(), part.selector()))
+            .collect();
+
+        assert_eq!(
+            table,
+            [
+                ("title-bar", "& > [data-slot='title-bar']"),
+                (
+                    "handle",
+                    "& > [data-slot='title-bar'] > [data-slot='handle']"
+                ),
+                (
+                    "title",
+                    "& > [data-slot='title-bar'] > [data-slot='handle'] > [data-slot='title']"
+                ),
+                ("menu", "& > [data-slot='title-bar'] [data-slot='menu']"),
+                ("close", "& > [data-slot='title-bar'] > [data-slot='close']"),
+                ("steps", "& > [data-slot='steps']"),
+                ("body", "& > [data-slot='body']"),
+                ("resize", "& > [data-slot='resize']"),
+            ]
+        );
+    }
 
     /// Todo 527: rendered inline in a modal, not portaled, the window still
     /// cuts its content off from the modal's close.

@@ -5,8 +5,8 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, Variables, attr, base_props, names_itself, use_name_warning,
-            variables,
+            Glyph, HtmlTag, Input, Part, Variables, attr, base_props, names_itself, parts_enum,
+            use_name_warning, variables,
         },
         layout::{Box, paper_sx, use_box},
         typography::Title,
@@ -65,7 +65,19 @@ fn dialog_variables(props: &DialogProps) -> Variables {
         )
 }
 
+parts_enum! {
+    /// [`Dialog`]'s inner parts, for its `parts` prop. Matched as direct children,
+    /// so a dialog in the content keeps its own styles.
+    pub enum DialogPart {
+        /// The row holding the title and the close button.
+        Header = "header" => "& > [data-slot='header']",
+        Title = "title" => "& > [data-slot='header'] > [data-slot='title']",
+        Close = "close" => "& > [data-slot='header'] > [data-slot='close']",
+    }
+}
+
 base_props! {
+    parts(DialogPart);
     pub struct DialogProps {
         #[props(default, into)]
         aria_label: Option<String>,
@@ -174,6 +186,7 @@ pub fn Dialog(props: DialogProps) -> Element {
         .framework_sx(&DIALOG_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .variables(&variables)
         .prepare()
@@ -190,12 +203,19 @@ fn DialogHeader(
     close: Callback<()>,
 ) -> Element {
     rsx! {
-        Box { framework_sx: &DIALOG_HEADER_SX,
+        Box { framework_sx: &DIALOG_HEADER_SX, "data-slot": DialogPart::Header.slot(),
             if let Some(title) = title {
-                Title { id: title_id(), size: "xl", sx: &DIALOG_HEADER_TITLE_SX, "{title}" }
+                Title {
+                    "data-slot": DialogPart::Title.slot(),
+                    id: title_id(),
+                    size: "xl",
+                    sx: &DIALOG_HEADER_TITLE_SX,
+                    "{title}"
+                }
             }
             if close_button {
                 ActionIcon {
+                    "data-slot": DialogPart::Close.slot(),
                     variant: "standard",
                     color: "muted",
                     size: "sm",
@@ -205,5 +225,28 @@ fn DialogHeader(
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        let table: Vec<_> = DialogPart::ALL
+            .iter()
+            .map(|part| (part.slot(), part.selector()))
+            .collect();
+
+        assert_eq!(
+            table,
+            [
+                ("header", "& > [data-slot='header']"),
+                ("title", "& > [data-slot='header'] > [data-slot='title']"),
+                ("close", "& > [data-slot='header'] > [data-slot='close']"),
+            ]
+        );
     }
 }

@@ -1,7 +1,10 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Dialog, Flex, FloatingWindowOptions, Input, Text, WindowRect},
+    components::{
+        Button, Code, Dialog, Flex, FloatingWindowOptions, FloatingWindowPart, Input, Text,
+        WindowRect,
+    },
     hooks::{ModalScope, use_floating_window, use_modal},
     sx::sx,
 };
@@ -270,7 +273,19 @@ pub fn FloatingWindowPage() -> Element {
                     prop("sx", "Input<Sx>").doc("Styles the window. `min_width`, `max_width`, `min_height` and `max_height` here limit a resize. The window never grows past the viewport."),
                     prop("onmove", "Option<Callback<WindowRect>>").doc("Called after a drag, a keyboard or button move, or a Reset, in viewport pixels."),
                     prop("onresize", "Option<Callback<WindowRect>>").doc("Called after a resize by pointer, keyboard or button, or a Reset."),
-                ]).without_base_props(),
+                    prop("parts", "Input<Parts<FloatingWindowPart>>").doc("Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(FloatingWindowPart::Body, sx().padding(\"lg\"))`."),
+                ])
+                .without_base_props()
+                .parts("FloatingWindowPart", vec![
+                    (FloatingWindowPart::TitleBar, "The row holding the move handle, the menu button and the close button."),
+                    (FloatingWindowPart::Handle, "The move handle around the title."),
+                    (FloatingWindowPart::Title, "The title heading."),
+                    (FloatingWindowPart::Menu, "The Move, Resize and Reset menu's button. The menu itself is portaled and not reached."),
+                    (FloatingWindowPart::Close, "The close button."),
+                    (FloatingWindowPart::Steps, "The step buttons Move or Resize shows."),
+                    (FloatingWindowPart::Body, "The scrolling content."),
+                    (FloatingWindowPart::Resize, "The corner resize handle, when `resizable`."),
+                ]),
                 props("FloatingWindowHandle", vec![
                     prop("open()", "()").doc("Shows the window. Does nothing when it is open."),
                     prop("close()", "()").doc("Hides it and returns focus to what opened it, unless focus had already left the window."),

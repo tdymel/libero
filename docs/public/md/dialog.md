@@ -63,10 +63,23 @@ fn Demo() -> Element {
 | `radius` | `Size` | `md` | Corner radius from the radius scale. Other values go through `sx`. |
 | `size` | `ThemeAwareValue` | `md` | Caps the width from the dialog scale. `md` is 510px. |
 | `variables` | `Variables` | - | CSS variables layered onto the dialog's own, as `Drawer` does. |
+| `parts` | `Parts<DialogPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(DialogPart::Title, sx().font_size("lg"))`. |
 | `children` | `Element` | required | The dialog's content. |
 
 Like every component, `Dialog` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `DialogPart::Header` | `header` | The row holding the title and the close button. Rendered only with a title or a close button. |
+| `DialogPart::Title` | `title` | The title heading. |
+| `DialogPart::Close` | `close` | The close button. |
 
 ## Theme defaults
 

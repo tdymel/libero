@@ -358,7 +358,7 @@ fn focus_tabbed_into_a_lower_window_raises_it() {
             break;
         }
         page.tab();
-        menus += usize::from(page.is_focused("[data-window-menu]"));
+        menus += usize::from(page.is_focused("[data-slot=menu]"));
     }
     assert!(
         page.is_focused("#in-first"),
