@@ -107,14 +107,19 @@ mod scroll_area_swipe {
             tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
             frames::report("android_idle_control", frames::stop(&page).await.unwrap()).unwrap();
             frames::start(&page).await.unwrap();
-            for i in 0..12 {
-                let dy = if i % 2 == 0 { -100.0 } else { 100.0 };
-                driver.drag("#list-pane", 0.0, dy).await.unwrap();
+            // One way: drags back and forth ended where they began (todo 1163).
+            for _ in 0..12 {
+                driver.drag("#list-pane", 0.0, -100.0).await.unwrap();
             }
             let stats = frames::stop(&page).await.unwrap();
             frames::report("android_scroll_area_swipe", stats).unwrap();
             assert!(stats.count > 0, "no frames recorded: {stats:?}");
-            println!("first row {before} -> {}", first_row().await);
+            let after = first_row().await;
+            println!("first row {before} -> {after}");
+            assert!(
+                after.parse::<usize>().unwrap() > before.parse::<usize>().unwrap(),
+                "the swipe did not scroll: first row {before} -> {after}"
+            );
             driver.finish("frames").await.unwrap();
         });
     }

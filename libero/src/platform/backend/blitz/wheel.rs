@@ -7,7 +7,7 @@ use blitz_dom::BaseDocument;
 use dioxus::{html::geometry::WheelDelta, prelude::*};
 use dioxus_native_dom::NodeId;
 
-use super::{ancestors, anchor, resolved_style_value};
+use super::{ancestors, doc, resolved_style_value};
 
 /// How long a pause ends a gesture (Chromium and Firefox: a few hundred ms).
 const PAUSE_MS: u128 = 400;
@@ -26,30 +26,37 @@ struct Latch {
     y: f64,
 }
 
-thread_local! {
-    static LATCH: Cell<Option<Latch>> = const { Cell::new(None) };
+/// One document's latch: a thread-wide one carried a gesture into the next
+/// document wheeled at the same point (todo 1164).
+#[derive(Default)]
+pub(super) struct Watch {
+    latch: Cell<Option<Latch>>,
 }
 
 /// A wheel reaching the wrapper, before Blitz's default scroll.
 pub(super) fn wheeled(event: &Event<WheelData>) {
+    let Some(state) = doc() else {
+        return;
+    };
+    let latch = &state.wheel.latch;
     let point = event.client_coordinates();
     // Blitz hands on a finger's sign; flipped to the web's, positive scrolls down.
     let (dx, dy) = match event.delta() {
         WheelDelta::Pixels(delta) => (-delta.x, -delta.y),
         WheelDelta::Lines(delta) => (-delta.x * LINE, -delta.y * LINE),
         WheelDelta::Pages(_) => {
-            LATCH.set(None);
+            latch.set(None);
             return;
         }
     };
     if !event.default_action_enabled() || (dx == 0.0 && dy == 0.0) {
         return;
     }
-    let Some(anchor) = anchor() else {
+    let Some(anchor) = state.anchor() else {
         return;
     };
     let now = Instant::now();
-    let latched = LATCH.get().filter(|latch| {
+    let latched = latch.get().filter(|latch| {
         latch.x == point.x
             && latch.y == point.y
             && now.duration_since(latch.at).as_millis() < PAUSE_MS
@@ -82,7 +89,7 @@ pub(super) fn wheeled(event: &Event<WheelData>) {
             start
         }
     };
-    LATCH.set(Some(Latch {
+    latch.set(Some(Latch {
         scroller,
         at: now,
         x: point.x,

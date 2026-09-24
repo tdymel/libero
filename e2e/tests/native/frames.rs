@@ -34,16 +34,15 @@ fn list() -> Element {
 #[test]
 #[ignore = "frame-time report, run on request"]
 fn raster_time_of_a_scroll_area_under_the_wheel() {
-    // A row as the target: the wheel at the pane's centre scrolled nothing.
-    for (name, app, target) in [
+    for (name, app, ready) in [
         ("native_still", still as fn() -> Element, "#list-pane"),
         ("native_scroll_area", list, "[data-row='2']"),
     ] {
         let mut page = mount(app);
         // The pane's measure is a timer: the rows come a few polls late.
-        page.wait_for(|page| page.exists(target));
-        page.hover(target);
-        let times = page.time_raster_steps(target, STEPS, 40.0);
+        page.wait_for(|page| page.exists(ready));
+        page.hover("#list-pane");
+        let times = page.time_raster_steps("#list-pane", STEPS, 40.0);
         assert!(times.raster.count > 0, "no steps timed: {times:?}");
         assert!(
             !page.exists("[data-row='0']"),

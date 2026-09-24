@@ -174,6 +174,7 @@ struct Doc {
     focus: focus::Watch,
     resize: resize::Watch,
     baked: baked::Watch,
+    wheel: wheel::Watch,
     /// A `<style>` changed this poll. See [`SheetWatch`].
     sheets_changed: Cell<bool>,
     /// The document's shell provider is wrapped. See [`redraw`].
@@ -212,6 +213,7 @@ impl Doc {
             focus: focus::Watch::default(),
             resize: resize::Watch::default(),
             baked: baked::Watch::default(),
+            wheel: wheel::Watch::default(),
             sheets_changed: Cell::new(false),
             redraws_watched: Cell::new(false),
             animation_ticks: RefCell::new(None),

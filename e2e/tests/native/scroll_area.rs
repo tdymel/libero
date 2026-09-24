@@ -89,6 +89,26 @@ fn a_wheel_renders_the_rows_it_scrolls_to() {
     );
 }
 
+fn still() -> Element {
+    rsx! {
+        div { id: "list-pane", height: "120px", "Still" }
+    }
+}
+
+/// Todo 1164: a gesture latched in one document does not take the next one's
+/// wheel at the same point.
+#[test]
+fn a_wheel_latch_stays_in_its_document() {
+    let mut before = mount(still);
+    before.hover(PANE);
+    before.wheel(PANE, 40.0);
+    let mut page = mount(app);
+    page.wait_for(|page| last_row(page, |last| last < 29));
+    page.hover(PANE);
+    page.wheel(PANE, 40.0);
+    assert_eq!(page.scroll_top(&format!("{PANE} > *")), 40.0);
+}
+
 fn probed() -> Element {
     rsx! {
         div { id: "list-pane", height: "120px",
