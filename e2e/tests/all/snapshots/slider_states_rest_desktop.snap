@@ -5,7 +5,8 @@ expression: tree
 ---
 LabelText
   StaticText "Quality"
-slider "Quality" = 1 [valuemax=2] [valuemin=0]
+  StaticText "required"
+slider "Quality required" = 1 [valuemax=2] [valuemin=0]
 LabelText
   StaticText "Gain"
 slider "Gain" = 50 [valuemax=100] [valuemin=0]

@@ -308,6 +308,23 @@ fn the_thumbs_form_a_labelled_group() {
     });
 }
 
+/// Todo 1174: a required slider's name says so; the asterisk does not.
+#[test]
+fn a_required_slider_says_so_in_its_name() {
+    block_on(async {
+        let fixture = Fixture::open("/range-slider/required", Viewport::Desktop)
+            .await
+            .unwrap();
+        let tree = e2e::ax::snapshot(&fixture.page, "body").await.unwrap();
+        assert!(tree.contains("slider \"Volume required\""), "{tree}");
+        assert!(tree.contains("group \"Price required\""), "{tree}");
+        assert!(tree.contains("slider \"Price required Minimum\""), "{tree}");
+        assert!(tree.contains("slider \"Price required Maximum\""), "{tree}");
+        assert!(!tree.contains('*'), "{tree}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Alt+ArrowLeft is Back: neither thumb swallows a browser chord (todo 562).
 #[test]
 fn modifier_chords_are_left_to_the_browser() {

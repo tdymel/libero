@@ -295,6 +295,7 @@ pub fn SliderPage() -> Element {
                 .handles([
                     "`format` replaces `SliderValue::label` in the bubble, the captions and `aria-valuetext`, and runs during render, so it can read the locale from context.",
                     "On a discrete slider the mark captions are hidden from screen readers, since the thumb already names each value. On a continuous one they stay, since they can say more than the number.",
+                    "A `role=\"slider\"` takes no `aria-required`, so a `required` slider says the localization's `slider.required` word in its name instead, such as \"Volume required\". The asterisk stays hidden from screen readers.",
                 ])
                 .must([
                     "Without a `label`, set the `aria_label` prop. Put in `attributes`, it would name the wrapper instead of the thumb.",

@@ -150,6 +150,9 @@ explains how parts work.
 - On a discrete slider the mark captions are hidden from screen readers, since
   the thumb already names each value. On a continuous one they stay, since they
   can say more than the number.
+- A `role="slider"` takes no `aria-required`, so a `required` slider says the
+  localization's `slider.required` word in its name instead, such as "Volume
+  required". The asterisk stays hidden from screen readers.
 
 ### You must
 

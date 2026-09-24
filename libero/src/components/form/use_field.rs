@@ -7,6 +7,7 @@ use dioxus::{
 
 use crate::{
     components::{
+        accessibility::VisuallyHidden,
         common::{ClassList, HtmlTag, Input, Part, Parts, States, input_from_str, parts_source},
         form::{
             Binding, Caption, Disabled, FieldEntry, FieldName, FieldPart, FieldStatus, FormScope,
@@ -104,6 +105,7 @@ pub(crate) struct FieldBuilder<'a> {
     name: Option<&'a str>,
     hook: Option<Rc<FieldHook>>,
     required: bool,
+    required_word: Option<&'static str>,
     disabled: bool,
     inline: bool,
     card: bool,
@@ -133,6 +135,7 @@ impl Default for FieldBuilder<'_> {
             name: None,
             hook: None,
             required: false,
+            required_word: None,
             disabled: false,
             inline: false,
             card: false,
@@ -205,6 +208,14 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn required(mut self, required: bool) -> Self {
         self.required = required;
+        self
+    }
+
+    /// Says `word` in the label's accessible name when required, for a
+    /// control `aria-required` is not allowed on (`role="slider"`).
+    #[inline]
+    pub fn required_in_name(mut self, word: &'static str) -> Self {
+        self.required_word = Some(word);
         self
     }
 
@@ -469,7 +480,7 @@ impl<'a> FieldBuilder<'a> {
             label: label_node(
                 &id_value,
                 label,
-                self.required,
+                self.required.then_some(self.required_word),
                 self.labelled_by,
                 self.label_with_id,
                 activation.clone(),
@@ -976,10 +987,11 @@ pub(super) fn caption_content(caption: &Caption) -> Element {
     }
 }
 
+/// `required` is `Some` on a required field, with the word to say if any.
 fn label_node(
     id: &str,
     label: &Caption,
-    required: bool,
+    required: Option<Option<&'static str>>,
     labelled_by: bool,
     with_id: bool,
     activation: Option<Activation>,
@@ -993,10 +1005,13 @@ fn label_node(
     let named = (labelled_by || with_id).then(|| format!("{id}-label"));
     let points_at = (!labelled_by).then(|| id.to_string());
     let content = caption_content(label);
-    // `aria-required` already tells AT; the asterisk is decoration.
-    let asterisk = required.then(|| {
+    // `aria-required` (or the spoken word) tells AT; the asterisk is decoration.
+    let asterisk = required.map(|required_word| {
         rsx! {
             span { "aria-hidden": "true", "data-slot": FieldPart::Required.slot(), "*" }
+            if let Some(word) = required_word {
+                VisuallyHidden { " {word}" }
+            }
         }
     });
     let slot = FieldPart::Label.slot();

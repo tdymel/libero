@@ -299,6 +299,7 @@ pub fn RangeSliderPage() -> Element {
                     "The two thumbs sit in a `role=\"group\"` named by the label, and each is its own `role=\"slider\"`, as in the ARIA multi-thumb slider pattern. A single `Slider` is one slider and needs no group.",
                     "Each thumb is named by the label plus its own word, such as \"Price Minimum\" and \"Price Maximum\", from the localization's `slider.minimum` and `slider.maximum`.",
                     "On a discrete range the mark captions are hidden from screen readers, since the thumbs already name each value.",
+                    "A `role=\"slider\"` takes no `aria-required`, so a `required` range says the localization's `slider.required` word in each thumb's name instead, such as \"Price required Minimum\". The asterisk stays hidden from screen readers.",
                 ])
                 .must([
                     "Set `aria_label_from` and `aria_label_to` when those words do not fit.",

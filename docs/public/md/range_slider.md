@@ -163,6 +163,9 @@ explains how parts work.
   `slider.maximum`.
 - On a discrete range the mark captions are hidden from screen readers, since
   the thumbs already name each value.
+- A `role="slider"` takes no `aria-required`, so a `required` range says the
+  localization's `slider.required` word in each thumb's name instead, such as
+  "Price required Minimum". The asterisk stays hidden from screen readers.
 
 ### You must
 

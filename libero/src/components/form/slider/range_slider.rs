@@ -149,6 +149,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .rules(props.validate.check(&value))
         .bound(&bound)
         .required(required)
+        .required_in_name(labels.required)
         .disabled(disabled)
         .size(props.size.copied_or(theme.slider.size))
         .class(&props.class)
@@ -166,6 +167,13 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             .and_then(FieldStatus::message)
             .is_some();
     let control_sx = control_spacing(above, below);
+
+    // Unlabelled, each thumb's own name says required instead of the label.
+    let spoken = required && field.label_id().is_none();
+    let thumb_name = |name: String| match spoken {
+        true => format!("{name} {}", labels.required),
+        false => name,
+    };
 
     let (from, to) = &value;
     let control = rsx! {
@@ -185,8 +193,8 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             disabled: Some(bound.disabled(props.disabled)),
             readonly: props.readonly.unwrap_or(false),
             label: labelled.then_some(label),
-            aria_label: props.aria_label_from.unwrap_or_else(|| labels.minimum.to_string()),
-            aria_label_to: props.aria_label_to.unwrap_or_else(|| labels.maximum.to_string()),
+            aria_label: thumb_name(props.aria_label_from.unwrap_or_else(|| labels.minimum.to_string())),
+            aria_label_to: thumb_name(props.aria_label_to.unwrap_or_else(|| labels.maximum.to_string())),
             labelledby: field.label_id(),
             describedby: field.describedby(),
             invalid: field.invalid(),

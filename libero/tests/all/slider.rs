@@ -133,6 +133,7 @@ fn a_range_slider_names_its_thumbs_from_the_localization_unless_told() {
         slider: SliderLabels {
             minimum: "Ab",
             maximum: "Bis",
+            ..SliderLabels::GERMAN
         },
         ..Localization::GERMAN
     };
@@ -148,6 +149,49 @@ fn a_range_slider_names_its_thumbs_from_the_localization_unless_told() {
     assert!(html.contains(r#"aria-label="Ab""#), "{html}");
     assert!(html.contains(r#"aria-label="Höchstens""#), "{html}");
     assert!(!html.contains(r#"aria-label="Bis""#), "{html}");
+}
+
+/// A thumb takes no `aria-required` and the asterisk is `aria-hidden`, so the
+/// label's name says the localized word (todo 1174).
+#[test]
+fn a_required_slider_says_so_in_its_name() {
+    fn label_of(html: &str) -> &str {
+        let start = html.find(r#"data-slot="label""#).unwrap();
+        &html[start..start + html[start..].find("</label>").unwrap()]
+    }
+    fn fields(required: bool) -> Element {
+        rsx! {
+            LiberoProvider { localization: &Localization::GERMAN,
+                Slider { label: "Lautstärke", required, value: 40.0 }
+                RangeSlider { label: "Preis", required, value: (20.0, 80.0) }
+                Slider { aria_label: "Bass", required, value: 40.0 }
+                RangeSlider { required, value: (20.0, 80.0) }
+            }
+        }
+    }
+
+    let html = render(|| fields(true));
+    let label = label_of(&html);
+    assert!(
+        label.contains(r#"aria-hidden="true" data-slot="required""#),
+        "{label}"
+    );
+    assert!(label.contains("> erforderlich<"), "{label}");
+    let second = &html[html.find(r#"data-slot="label""#).unwrap() + 1..];
+    assert!(label_of(second).contains("> erforderlich<"), "{html}");
+    // No label to carry it: the thumbs' own names do.
+    assert!(html.contains(r#"aria-label="Bass erforderlich""#), "{html}");
+    assert!(
+        html.contains(r#"aria-label="Minimum erforderlich""#),
+        "{html}"
+    );
+    assert!(
+        html.contains(r#"aria-label="Maximum erforderlich""#),
+        "{html}"
+    );
+
+    let html = render(|| fields(false));
+    assert!(!html.contains("erforderlich"), "{html}");
 }
 
 /// The value bubble is a `role="tooltip"`, and a tooltip nothing points at

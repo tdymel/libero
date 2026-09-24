@@ -9,7 +9,7 @@ use crate::{
         common::Input,
         form::{FieldStatus, field_props, use_bound, use_field},
     },
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
     sx::ThemeAwareValue,
 };
 
@@ -128,6 +128,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
     });
 
     let required = props.required.unwrap_or(false);
+    let required_word = use_localization().slider.required;
 
     // The thumb carries `role="slider"`, and `for` names only a labelable
     // element - so the field hands its ids over rather than applying them.
@@ -140,6 +141,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         .rules(props.validate.check(&value))
         .bound(&bound)
         .required(required)
+        .required_in_name(required_word)
         .disabled(disabled)
         .size(props.size.copied_or(theme.slider.size))
         .class(&props.class)
@@ -178,7 +180,11 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             disabled: Some(bound.disabled(props.disabled)),
             readonly: props.readonly.unwrap_or(false),
             label: labelled.then_some(label),
-            aria_label: props.aria_label,
+            // Unlabelled, the thumb's own name says required instead of the label.
+            aria_label: props.aria_label.map(|name| match required && field.label_id().is_none() {
+                true => format!("{name} {required_word}"),
+                false => name,
+            }),
             labelledby: field.label_id(),
             describedby: field.describedby(),
             invalid: field.invalid(),
