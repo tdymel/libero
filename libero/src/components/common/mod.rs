@@ -4,8 +4,10 @@ mod closing_focus;
 mod color_variant;
 mod combobox_aria;
 mod combobox_state;
+mod focus_ring;
 mod focusable;
 mod icons;
+mod keys;
 mod logical_text;
 mod neighbour;
 mod number_value;
@@ -35,8 +37,13 @@ pub(crate) use color_variant::{
 };
 pub(crate) use combobox_aria::{group_id, listbox_id, option_id};
 pub use combobox_state::{ComboboxState, use_combobox};
+pub(crate) use focus_ring::{
+    borderless_on_state_sx, disabled_look_sx, focus_ring_sx, forced_on_sx, inset_focus_ring_sx,
+    on_ring_sx, on_start_bar_sx, on_state_sx, ring_overlay, ring_overlay_sx, shadow_sx,
+};
 pub(crate) use focusable::FOCUSABLE_SELECTOR;
 pub(crate) use icons::{Glyph, draw_svg};
+pub(crate) use keys::{NavigationChord, has_shortcut_modifier, navigation_chord};
 pub(crate) use logical_text::LogicalTextAlign;
 pub(crate) use neighbour::neighbour;
 pub use number_value::NumberValue;
@@ -53,11 +60,7 @@ pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attribute
 pub(crate) use rail::{Rail, RailInset};
 pub(crate) use style_attributes::{ABSENT, StyleAttributes, use_style_attributes};
 pub(crate) use svg_fit::{SVG_FIT, svg_fit, svg_fit_sx, svg_fit_variables};
-pub(crate) use util::{
-    NavigationChord, attr, borderless_on_state_sx, css_string, disabled_look_sx, focus_ring_sx,
-    forced_on_sx, has_shortcut_modifier, inset_focus_ring_sx, navigation_chord, on_ring_sx,
-    on_start_bar_sx, on_state_sx, ring_overlay, ring_overlay_sx, shadow_sx,
-};
+pub(crate) use util::{attr, css_string};
 pub use variant::Variant;
 pub(crate) use variant_chrome::{
     BUTTON_COLOR_VAR, BUTTON_CONTAINER_VAR, BUTTON_CONTRAST_VAR, BUTTON_FILL_VAR, BUTTON_HOVER_VAR,

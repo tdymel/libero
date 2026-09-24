@@ -74,7 +74,7 @@ pub struct Ring {
     /// A field frame shows focus by its border colour (`use_field_frame`'s `focus_within`).
     pub border_color: String,
     /// A `[data-ring]` overlay: the sibling drawing a field's or checkbox's keyboard ring
-    /// (`ring_overlay` in `components/common/util.rs`).
+    /// (`ring_overlay` in `components/common/focus_ring.rs`).
     pub overlay: bool,
     /// The first non-transparent background walking up, which the ring is drawn against.
     pub against: String,
