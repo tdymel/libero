@@ -88,6 +88,25 @@ impl DemoValues {
         });
     }
 
+    /// The values with each `options_from` control moved onto its current options,
+    /// or `None` when every one is on them already.
+    fn settled(&self, controls: &[Control]) -> Option<Self> {
+        let mut next = self.clone();
+        let mut moved = false;
+        for (index, control) in controls.iter().enumerate() {
+            if control.options_from.is_none() {
+                continue;
+            }
+            let value = &next.0[index].1;
+            let settled = control.resolved(&next).settle(value);
+            if settled != *value {
+                next.0[index].1 = settled;
+                moved = true;
+            }
+        }
+        moved.then_some(next)
+    }
+
     pub fn str(&self, name: &str) -> String {
         self.0
             .iter()
@@ -200,11 +219,12 @@ fn ToggleSegments(control: Control, value: String, onchange: EventHandler<String
 
 /// The shown controls, switches last so they share rows as one group. A stable sort keeps
 /// the page's order within each group.
-fn shown_controls<'a>(controls: &'a [Control], values: &DemoValues) -> Vec<(usize, &'a Control)> {
+fn shown_controls(controls: &[Control], values: &DemoValues) -> Vec<(usize, Control)> {
     let mut shown: Vec<_> = controls
         .iter()
         .enumerate()
         .filter(|(_, control)| !control.is_hidden(values))
+        .map(|(index, control)| (index, control.resolved(values)))
         .collect();
     shown.sort_by_key(|(_, control)| control.kind == ControlKind::Switch);
     shown
@@ -284,6 +304,16 @@ pub fn Demo(
     title: Option<String>,
 ) -> Element {
     let mut values = use_signal(|| DemoValues::defaults(&controls));
+    // An `options_from` control follows the control its options hang on: settled in this
+    // render, stored by the effect.
+    let settle = controls.clone();
+    use_effect(move || {
+        if let Some(next) = values().settled(&settle) {
+            values.set(next);
+        }
+    });
+    let stored = values();
+    let current = stored.settled(&controls).unwrap_or(stored);
     // Every page has several demos: "Copy code" alone would not say which (todo 1025).
     let code_label = match &title {
         Some(title) => format!("{component} demo, {title}, Rust code"),
@@ -304,7 +334,7 @@ pub fn Demo(
     };
     #[cfg(test)]
     use_hook(|| crate::snippets::record(&code));
-    let source = code.source(&values());
+    let source = code.source(&current);
     rsx! {
         Box {
             sx: sx()
@@ -331,7 +361,7 @@ pub fn Demo(
                         // being cut off; `safe` keeps its start reachable.
                         .justify_content("safe center")
                         .overflow_x("auto"),
-                    {render.call(DemoValues(values().0, Some(values)))}
+                    {render.call(DemoValues(current.0.clone(), Some(values)))}
                 }
                 // No props, no panel - the preview and the code block are
                 // the whole demo then.
@@ -372,7 +402,7 @@ pub fn Demo(
                         },
                         // `index` is from before the filter: it addresses `DemoValues`,
                         // which keeps hidden controls' values too.
-                        for (index, control) in shown_controls(&controls, &values()) {
+                        for (index, control) in shown_controls(&controls, &current) {
                             Flex {
                                 key: "{control.name}",
                                 direction: "column",
@@ -400,7 +430,7 @@ pub fn Demo(
                                         ColorControl {
                                             control: control.clone(),
                                             label: label(control.name),
-                                            value: values().str(control.name),
+                                            value: current.str(control.name),
                                             onchange: move |value: String| {
                                                 values.write().0[index].1 = value;
                                             },
@@ -413,7 +443,7 @@ pub fn Demo(
                                             min: 0.0,
                                             max: (control.options.len() - 1) as f64,
                                             step: 1.0,
-                                            value: control.step_of(&values().str(control.name)),
+                                            value: control.step_of(&current.str(control.name)),
                                             // The bubble shows the option, not the step index.
                                             format: {
                                                 let options = control.options.clone();
@@ -441,7 +471,7 @@ pub fn Demo(
                                                     .font_weight("600")
                                                     .font_size(TEXT_FONT_SIZE.value(Size::Sm)),
                                             ),
-                                            value: Some(values().str(control.name)),
+                                            value: Some(current.str(control.name)),
                                             options: control.options.clone(),
                                             option_label: {
                                                 let control = control.clone();
@@ -455,7 +485,7 @@ pub fn Demo(
                                     ControlKind::Switch => rsx! {
                                         Switch {
                                             aria_label: label(control.name),
-                                            checked: control.is_on(&values().str(control.name)),
+                                            checked: control.is_on(&current.str(control.name)),
                                             onchange: move |on: bool| {
                                                 values.write().0[index].1 = on.to_string();
                                             },
@@ -463,14 +493,14 @@ pub fn Demo(
                                     },
                                     // Too wide for the card, a select: a container query shows one,
                                     // and `display: none` keeps the other out of tab order and a11y tree.
-                                    ControlKind::Toggle if segments_need(control).is_some() => {
-                                        let needed = segments_need(control).unwrap_or_default();
+                                    ControlKind::Toggle if segments_need(&control).is_some() => {
+                                        let needed = segments_need(&control).unwrap_or_default();
                                         rsx! {
                                             Box {
                                                 sx: card_query(sx().display("none"), needed, sx().display("block")),
                                                 ToggleSegments {
                                                     control: control.clone(),
-                                                    value: values().str(control.name),
+                                                    value: current.str(control.name),
                                                     onchange: move |next: String| {
                                                         values.write().0[index].1 = next;
                                                     },
@@ -482,7 +512,7 @@ pub fn Demo(
                                                     size: "sm",
                                                     // The row's `Text` names it: no second label.
                                                     "aria-label": label(control.name),
-                                                    value: Some(values().str(control.name)),
+                                                    value: Some(current.str(control.name)),
                                                     options: control.options.clone(),
                                                     option_label: {
                                                         let control = control.clone();
@@ -498,7 +528,7 @@ pub fn Demo(
                                     ControlKind::Toggle => rsx! {
                                         ToggleSegments {
                                             control: control.clone(),
-                                            value: values().str(control.name),
+                                            value: current.str(control.name),
                                             onchange: move |next: String| {
                                                 values.write().0[index].1 = next;
                                             },
@@ -523,7 +553,27 @@ pub fn Demo(
 
 #[cfg(test)]
 mod tests {
-    use super::{Control, segments_need};
+    use super::{Control, DemoValues, segments_need};
+
+    /// A control whose options follow another's settles on the nearest one offered.
+    #[test]
+    fn a_dependent_control_settles_on_its_options() {
+        let controls = vec![
+            Control::toggle("count", ["3", "5"]).default("5"),
+            Control::slider("value", ["0"])
+                .options_from(|values| {
+                    let count: u32 = values.str("count").parse().unwrap_or(0);
+                    (0..=count).map(|step| step.to_string()).collect()
+                })
+                .default("4"),
+        ];
+        let values = DemoValues::defaults(&controls);
+        assert!(values.settled(&controls).is_none());
+        let settled = values.with("count", "3").settled(&controls).unwrap();
+        assert_eq!(settled.str("value"), "3");
+        let settled = values.with("value", "2.5").settled(&controls).unwrap();
+        assert_eq!(settled.str("value"), "2");
+    }
 
     /// Todo 866: the longest label sizes every segment, so four placements
     /// never fit the side column, while short labels keep the 88px floor.

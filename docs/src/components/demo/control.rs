@@ -52,6 +52,9 @@ pub struct Control {
     /// Whether a `ControlKind::Color` ends in a `ColorPicker` swatch. Off where the page builds
     /// tokens from the value (`{color}-contrast`), which a hex cannot name.
     pub custom: bool,
+    /// Options computed from the other controls, for a range one of them sets (Rating's
+    /// `value` up to its `count`). Replaces `options` in the panel.
+    pub options_from: Option<fn(&DemoValues) -> Vec<String>>,
 }
 
 /// `code` is a page-level constant, so whether one is set is all that can
@@ -67,6 +70,7 @@ impl PartialEq for Control {
             && self.hidden.is_some() == other.hidden.is_some()
             && self.unset_swatch == other.unset_swatch
             && self.custom == other.custom
+            && self.options_from.is_some() == other.options_from.is_some()
     }
 }
 
@@ -130,7 +134,40 @@ impl Control {
             hidden: None,
             unset_swatch: None,
             custom: kind == ControlKind::Color,
+            options_from: None,
         }
+    }
+
+    pub fn options_from(mut self, options: fn(&DemoValues) -> Vec<String>) -> Self {
+        self.options_from = Some(options);
+        self
+    }
+
+    /// This control with the options `values` give it.
+    pub fn resolved(&self, values: &DemoValues) -> Self {
+        let mut control = self.clone();
+        if let Some(options) = self.options_from {
+            control.options = options(values);
+        }
+        control
+    }
+
+    /// The option `value` settles on once it is not offered: the nearest number, else the last.
+    pub fn settle(&self, value: &str) -> String {
+        if self.options.iter().any(|option| option == value) {
+            return value.to_string();
+        }
+        let distance = |option: &String| match (option.parse::<f64>(), value.parse::<f64>()) {
+            (Ok(option), Ok(value)) => (option - value).abs(),
+            _ => f64::INFINITY,
+        };
+        self.options
+            .iter()
+            .min_by(|a, b| distance(a).total_cmp(&distance(b)))
+            .filter(|option| distance(option).is_finite())
+            .or(self.options.last())
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Which step a value sits at - `ControlKind::Slider` addresses its

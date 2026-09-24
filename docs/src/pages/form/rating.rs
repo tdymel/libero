@@ -3,10 +3,14 @@ use dioxus::prelude::*;
 use libero::components::RatingPart;
 use libero::components::{Code, Rating, Text};
 
-const VALUES: [&str; 21] = [
-    "0", "0.5", "1", "1.5", "2", "2.5", "3", "3.5", "4", "4.5", "5", "5.5", "6", "6.5", "7", "7.5",
-    "8", "8.5", "9", "9.5", "10",
-];
+/// The `value` steps up to `count`, in `fractions` steps per star.
+fn values_for(values: &DemoValues) -> Vec<String> {
+    let count: u32 = values.str("count").parse().unwrap_or(5);
+    let fractions: u32 = values.str("fractions").parse().unwrap_or(1);
+    (0..=count * fractions)
+        .map(|step| (f64::from(step) / f64::from(fractions)).to_string())
+        .collect()
+}
 
 #[component]
 pub fn RatingPage() -> Element {
@@ -130,12 +134,16 @@ pub fn RatingPage() -> Element {
                             count => vec![format!("count: {count}")],
                         }),
                     // `value` + `onchange` as a pair; the preview writes back here.
-                    Control::slider("value", VALUES).default("3.5").code(|_, _| {
-                        vec![
-                            "value: stars()".to_string(),
-                            "onchange: move |value| stars.set(value)".to_string(),
-                        ]
-                    }),
+                    // The snippet states' steps; the panel offers `values_for`.
+                    Control::slider("value", ["0", "3.5"])
+                        .options_from(values_for)
+                        .default("3.5")
+                        .code(|_, _| {
+                            vec![
+                                "value: stars()".to_string(),
+                                "onchange: move |value| stars.set(value)".to_string(),
+                            ]
+                        }),
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Your rating\"".to_string()],
