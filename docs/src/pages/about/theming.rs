@@ -181,9 +181,9 @@ pub fn ThemingPage() -> Element {
                 Text {
                     "The theme sets props, not a component's inner parts. To restyle a part, pass "
                     Code { source: "parts" }
-                    ", as "
-                    Anchor { to: Route::StylingPage {}, "Styling" }
-                    " explains under Style API."
+                    ", see "
+                    Anchor { to: Route::StylingPage {}, "Style API in Styling" }
+                    "."
                 }
             }
 

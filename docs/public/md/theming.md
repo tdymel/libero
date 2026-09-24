@@ -71,7 +71,7 @@ static THEME: Theme = Theme {
 ```
 
 The theme sets props, not a component's inner parts. To restyle a part, pass
-`parts`, see [Style API](styling.md#style-api).
+`parts`, see [Style API in Styling](styling.md#style-api).
 
 ## Light and dark
 

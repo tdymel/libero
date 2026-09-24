@@ -4,6 +4,7 @@ use libero::{
     sx::sx,
 };
 
+use super::DocSection;
 use crate::Route;
 
 /// One row of a docs page's Properties table.
@@ -179,16 +180,15 @@ pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
     let named = groups.len() > 1;
 
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xl",
+        DocSection {
+            title: "Style API",
             Text {
                 "Style a part with the "
                 Code { source: "parts" }
                 " prop, or address it as "
                 Code { source: "[data-slot='…']" }
                 " in your own CSS. The names are stable. "
-                Anchor { to: Route::StylingPage {}, "Styling" }
+                Anchor { to: Route::StylingPage {}, "Style API in Styling" }
                 " explains how parts work."
             }
             for group in groups {
@@ -196,7 +196,7 @@ pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
                     direction: "column",
                     gap: "sm",
                     if named {
-                        Title { size: "lg", component: "h2", "{group.component}" }
+                        Title { size: "lg", component: "h3", "{group.component}" }
                     }
                     PartRows { name: format!("{} parts", group.component), parts: group.parts }
                 }
