@@ -2,16 +2,21 @@ use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Kbd, Text, TextField},
-    hooks::{Hotkey, use_hotkeys},
+    hooks::{Hotkey, use_element, use_hotkeys},
 };
 
 /// The hook in one component, as `Shortcuts` renders it.
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut searches = use_signal(|| 0);
 let mut helps = use_signal(|| 0);
+let mut bolds = use_signal(|| 0);
+let editor = use_element();
 use_hotkeys([
     Hotkey::new("mod+k", move || searches += 1),
     Hotkey::new("alt+h", move || helps += 1).include_editable(true),
+    Hotkey::new("mod+b", move || bolds += 1)
+        .include_editable(true)
+        .within(editor),
 ]);
 
 rsx! {
@@ -19,6 +24,10 @@ rsx! {
         Text { "Search opened {searches} times" }
         Text { "Help opened {helps} times" }
         TextField { label: "Press Alt+H while typing" }
+        div { onmounted: editor.mount(), ..editor.attributes(),
+            TextField { label: "Press Mod+B in here" }
+        }
+        Text { "Bold pressed {bolds} times" }
     }
 }"#
     .to_string()
@@ -28,9 +37,14 @@ rsx! {
 fn Shortcuts() -> Element {
     let mut searches = use_signal(|| 0);
     let mut helps = use_signal(|| 0);
+    let mut bolds = use_signal(|| 0);
+    let editor = use_element();
     use_hotkeys([
         Hotkey::new("mod+k", move || searches += 1),
         Hotkey::new("alt+h", move || helps += 1).include_editable(true),
+        Hotkey::new("mod+b", move || bolds += 1)
+            .include_editable(true)
+            .within(editor),
     ]);
 
     rsx! {
@@ -38,6 +52,10 @@ fn Shortcuts() -> Element {
             Text { "Search opened {searches} times" }
             Text { "Help opened {helps} times" }
             TextField { label: "Press Alt+H while typing" }
+            div { onmounted: editor.mount(), ..editor.attributes(),
+                TextField { label: "Press Mod+B in here" }
+            }
+            Text { "Bold pressed {bolds} times" }
         }
     }
 }
@@ -52,6 +70,7 @@ pub fn UseHotkeysPage() -> Element {
             accessibility: a11y()
                 .key(["Cmd+K", "Ctrl+K"], "Runs the first demo shortcut: Cmd on macOS, Ctrl elsewhere.")
                 .key(["Alt+H"], "Runs the second one, also while typing in the field.")
+                .key(["Cmd+B", "Ctrl+B"], "Runs the third one, only with focus in the second field.")
                 .handles([
                     "A shortcut is not taken from a text field, a `textarea`, a `select` or editable content unless you ask with `include_editable`.",
                     "A press never fires mid-composition, so an IME is not cut off, and a held key runs the handler once.",
@@ -107,7 +126,15 @@ pub fn UseHotkeysPage() -> Element {
                     Code { source: ".when(guard)" }
                     " lets a press through only while the guard answers "
                     Code { source: "true" }
-                    ". A press a binding takes has its default action prevented. "
+                    ". "
+                    Code { source: ".within(element)" }
+                    " lets it through only with focus on or inside an element from "
+                    Code { source: "use_element" }
+                    "; call it again to add one, such as a popup the element portals out. "
+                    "Spread "
+                    Code { source: "..element.attributes()" }
+                    " on it, so a WebView finds it. "
+                    "A press a binding takes has its default action prevented; one it turns away keeps it. "
                     "Native Blitz hears presses that bubble out of the app, and a server render binds nothing."
                 }
                 Text {

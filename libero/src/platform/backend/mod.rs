@@ -145,6 +145,18 @@ pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
     return false;
 }
 
+/// A WebView answers `false`: it finds the focused element by its tags instead.
+pub(crate) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
+    #[cfg(not(any(target_arch = "wasm32", feature = "native")))]
+    let _ = mounted;
+    #[cfg(target_arch = "wasm32")]
+    return web::focus_is_in(mounted);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::focus_is_in(mounted);
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return false;
+}
+
 /// What the renderer needs mounted at the root, once, by `LiberoProvider`:
 /// Blitz's `blitz::Outlet`; a WebView starts its focus mirror before any press
 /// and its typed-value guard before any keystroke.

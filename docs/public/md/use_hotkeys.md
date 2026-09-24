@@ -15,9 +15,12 @@ elsewhere. Modifiers match exactly, so `mod+k` ignores `mod+shift+k`.
 
 Presses in text entry are skipped unless the binding calls
 `.include_editable(true)`. `.when(guard)` lets a press through only while the
-guard answers `true`. A press a binding takes has its default action prevented.
-Native Blitz hears presses that bubble out of the app, and a server render binds
-nothing.
+guard answers `true`. `.within(element)` lets it through only with focus on or
+inside an element from `use_element`; call it again to add one, such as a popup
+the element portals out. Spread `..element.attributes()` on it, so a WebView
+finds it. A press a binding takes has its default action prevented; one it turns
+away keeps it. Native Blitz hears presses that bubble out of the app, and a
+server render binds nothing.
 
 A hotkey lives as long as the component that calls the hook: it is bound when
 the component mounts and removed when it unmounts, such as when a route change
@@ -31,16 +34,21 @@ both run.
 use dioxus::prelude::*;
 use libero::{
     components::{Flex, Text, TextField},
-    hooks::{Hotkey, use_hotkeys},
+    hooks::{Hotkey, use_element, use_hotkeys},
 };
 
 #[component]
 fn Shortcuts() -> Element {
     let mut searches = use_signal(|| 0);
     let mut helps = use_signal(|| 0);
+    let mut bolds = use_signal(|| 0);
+    let editor = use_element();
     use_hotkeys([
         Hotkey::new("mod+k", move || searches += 1),
         Hotkey::new("alt+h", move || helps += 1).include_editable(true),
+        Hotkey::new("mod+b", move || bolds += 1)
+            .include_editable(true)
+            .within(editor),
     ]);
 
     rsx! {
@@ -48,6 +56,10 @@ fn Shortcuts() -> Element {
             Text { "Search opened {searches} times" }
             Text { "Help opened {helps} times" }
             TextField { label: "Press Alt+H while typing" }
+            div { onmounted: editor.mount(), ..editor.attributes(),
+                TextField { label: "Press Mod+B in here" }
+            }
+            Text { "Bold pressed {bolds} times" }
         }
     }
 }
@@ -61,6 +73,7 @@ impl Hotkey {
     pub fn new(chord: impl Into<String>, handler: impl FnMut() + 'static) -> Self
     pub fn include_editable(self, include: bool) -> Self
     pub fn when(self, guard: impl Fn() -> bool + 'static) -> Self
+    pub fn within(self, element: ElementHandle) -> Self
 }
 ```
 
@@ -69,6 +82,7 @@ impl Hotkey {
 | `Hotkey::new(chord, handler)` | A shortcut. The handler runs in your component's scope, once per press. |
 | `include_editable(bool)` | Also fire while typing in a text field, `textarea`, `select` or editable content. Off by default. |
 | `when(guard)` | Lets a press through only while `guard` answers `true`, checked at each press. A turned-away press keeps its default action. |
+| `within(element)` | Lets a press through only with focus on `element` or inside it. Repeat to add elements, such as a portaled popup. A press elsewhere keeps its default action. Spread `..element.attributes()` on it for a WebView. |
 
 Bindings are read again every render, so handlers see current state. A chord
 that parses to no key is ignored.
@@ -81,6 +95,7 @@ that parses to no key is ignored.
 |---|---|
 | `Cmd+K` or `Ctrl+K` | Runs the first demo shortcut: Cmd on macOS, Ctrl elsewhere. |
 | `Alt+H` | Runs the second one, also while typing in the field. |
+| `Cmd+B` or `Ctrl+B` | Runs the third one, only with focus in the second field. |
 
 ### Libero handles
 

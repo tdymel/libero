@@ -38,6 +38,16 @@ pub(super) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
         .is_some_and(element_is_rtl)
 }
 
+/// Whether `document.activeElement` is `mounted` or inside it.
+pub(super) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
+    let active = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.active_element());
+    mounted
+        .downcast::<web_sys::Element>()
+        .is_some_and(|element| active.is_some_and(|active| element.contains(Some(&active))))
+}
+
 /// The computed `direction`, for any node: an event's target as well.
 pub(super) fn element_is_rtl(element: &web_sys::Element) -> bool {
     web_sys::window()
@@ -1184,6 +1194,7 @@ impl WebKeyboard {
                     modifiers,
                     repeat: event.repeat(),
                     text_entry,
+                    scopes: Vec::new(),
                 });
                 if handled {
                     event.prevent_default();

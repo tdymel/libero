@@ -1,11 +1,42 @@
 //! `use_hotkeys`, as its docs page uses it: `mod+k` skipped in text entry, `ctrl+j` heard there.
 
 use dioxus::prelude::*;
-use libero::hooks::{Hotkey, use_hotkeys};
+use libero::hooks::{Hotkey, use_element, use_hotkeys};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/use-hotkeys", || rsx! { Hotkeys {} })];
+pub const ROUTES: Routes = &[
+    ("/use-hotkeys", || rsx! { Hotkeys {} }),
+    ("/use-hotkeys/within", || rsx! { Within {} }),
+];
+
+/// A bare `x` scoped to `#scope` and `#popup`, the latter standing in for a
+/// portal; `#typed` shows what `#outside-field` received.
+#[component]
+fn Within() -> Element {
+    let scope = use_element();
+    let popup = use_element();
+    let mut count = use_signal(|| 0);
+    let mut typed = use_signal(String::new);
+    use_hotkeys([Hotkey::new("x", move || count += 1)
+        .include_editable(true)
+        .within(scope)
+        .within(popup)]);
+
+    rsx! {
+        button { id: "outside", "Outside" }
+        input { id: "outside-field", oninput: move |event| typed.set(event.value()) }
+        div { id: "scope", onmounted: scope.mount(), ..scope.attributes(),
+            button { id: "inside", "Inside" }
+            input { id: "inside-field" }
+        }
+        div { id: "popup", onmounted: popup.mount(), ..popup.attributes(),
+            button { id: "in-popup", "In popup" }
+        }
+        p { id: "count", "{count}" }
+        p { id: "typed", "{typed}" }
+    }
+}
 
 #[component]
 fn Listener(mut open: Signal<u32>, mut typing: Signal<u32>) -> Element {

@@ -86,6 +86,12 @@ impl ElementHandle {
         self.mounted.peek().clone()
     }
 
+    /// [`mounted`](Self::mounted) that answers `None` once the owner dropped,
+    /// for a listener that may outlive it.
+    pub(crate) fn try_mounted(&self) -> Option<Rc<MountedData>> {
+        self.mounted.try_peek().ok()?.clone()
+    }
+
     /// Whether the element lays out right to left; `false` until it mounts.
     /// Not reactive, so a key handler can ask before it returns.
     pub(crate) fn is_rtl(&self) -> bool {

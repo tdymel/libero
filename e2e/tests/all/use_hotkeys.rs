@@ -1,5 +1,6 @@
 //! `use_hotkeys`: `mod+k` runs once per press and is skipped in text entry, an
-//! editable-including `ctrl+j` is not, and an unmounted listener stops.
+//! editable-including `ctrl+j` is not, and an unmounted listener stops. A
+//! `within` hotkey fires only with focus in its elements.
 
 use anyhow::Result;
 use e2e::driver::{Driver, eventually};
@@ -72,6 +73,49 @@ async fn unmounting_one_instance_leaves_the_other<D: Driver>(
     count_is(d, "#open", "1").await
 }
 
+const X: Key = Key {
+    key: "x",
+    code: "KeyX",
+    vk: 88,
+    text: Some("x"),
+};
+
+async fn within_fires_only_with_focus_in_scope<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#outside").await?;
+    d.press(X).await?;
+    d.idle().await;
+    count_is(d, "#count", "0").await?;
+    for (inside, count) in [("#inside", "1"), ("#inside-field", "2"), ("#in-popup", "3")] {
+        d.focus(inside).await?;
+        d.press(X).await?;
+        count_is(d, "#count", count).await?;
+    }
+    Ok(())
+}
+
+/// Taken inside first, so a WebView's "taken" chord must not follow it out.
+async fn a_press_outside_keeps_its_default<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#inside-field").await?;
+    d.press(X).await?;
+    count_is(d, "#count", "1").await?;
+    d.focus("#outside-field").await?;
+    for typed in ["x", "xx"] {
+        d.press(X).await?;
+        count_is(d, "#typed", typed).await?;
+    }
+    count_is(d, "#count", "1").await
+}
+
+e2e::scenario!(
+    a_scoped_hotkey_fires_only_with_focus_inside_its_elements,
+    "/use-hotkeys/within",
+    within_fires_only_with_focus_in_scope
+);
+e2e::scenario!(
+    a_press_outside_the_scope_keeps_its_default_action,
+    "/use-hotkeys/within",
+    a_press_outside_keeps_its_default
+);
 e2e::scenario!(
     unmounting_one_hotkey_instance_keeps_the_other_listening,
     "/use-hotkeys",

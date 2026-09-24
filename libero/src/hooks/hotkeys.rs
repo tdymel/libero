@@ -2,6 +2,7 @@ use std::{cell::RefCell, rc::Rc, str::FromStr};
 
 use dioxus::prelude::*;
 
+use crate::hooks::ElementHandle;
 use crate::platform::{KeyChord, KeySubscription, keyboard, mod_is_meta, warn_reserved_chord};
 
 /// One keyboard shortcut for [`use_hotkeys`]: a chord such as `"mod+k"` and what
@@ -16,6 +17,7 @@ pub struct Hotkey {
     handler: Box<dyn FnMut()>,
     include_editable: bool,
     guard: Option<Rc<dyn Fn() -> bool>>,
+    within: Vec<ElementHandle>,
 }
 
 impl Hotkey {
@@ -25,7 +27,36 @@ impl Hotkey {
             handler: Box::new(handler),
             include_editable: false,
             guard: None,
+            within: Vec::new(),
         }
+    }
+
+    /// Lets the shortcut through only while focus is on `element` or inside it.
+    /// Call it again to add an element, such as a popup `element` portals out:
+    /// focus in any of them counts. A press elsewhere keeps its default action.
+    ///
+    /// Spread `..element.attributes()` on the element, so a WebView finds it.
+    ///
+    /// ```rust
+    /// # use dioxus::prelude::*;
+    /// # use libero::hooks::{Hotkey, use_element, use_hotkeys};
+    /// # fn app() -> Element {
+    /// let editor = use_element();
+    /// let mut bold = use_signal(|| false);
+    /// use_hotkeys([Hotkey::new("mod+b", move || bold.toggle())
+    ///     .include_editable(true)
+    ///     .within(editor)]);
+    ///
+    /// rsx! {
+    ///     div { onmounted: editor.mount(), ..editor.attributes(),
+    ///         textarea {}
+    ///     }
+    /// }
+    /// # }
+    /// ```
+    pub fn within(mut self, element: ElementHandle) -> Self {
+        self.within.push(element);
+        self
     }
 
     /// Whether the shortcut also fires while typing in a text field, a
@@ -129,10 +160,24 @@ struct Entry {
     handler: Box<dyn FnMut()>,
     include_editable: bool,
     guard: Option<Rc<dyn Fn() -> bool>>,
+    within: Vec<ElementHandle>,
+}
+
+impl Entry {
+    /// No scope, or focus in one of its mounted elements.
+    fn in_scope(&self, pressed: &KeyChord) -> bool {
+        self.within.is_empty()
+            || self.within.iter().any(|element| {
+                element
+                    .try_mounted()
+                    .is_some_and(|mounted| pressed.within(&mounted, element.tag()))
+            })
+    }
 }
 
 /// Runs each [`Hotkey`]'s handler when its chord is pressed anywhere in the
-/// document, focus on `<body>` or in a portal included. Presses that start in
+/// document, focus on `<body>` or in a portal included, or only [within an
+/// element](Hotkey::within). Presses that start in
 /// text entry are ignored unless the hotkey [includes editable
 /// targets](Hotkey::include_editable); a press it takes has its default action
 /// prevented, held-key repeats included, while the handler runs once per
@@ -167,6 +212,7 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
             handler: binding.handler,
             include_editable: binding.include_editable,
             guard: binding.guard,
+            within: binding.within,
         })
         .collect();
     let bound = !entries.is_empty();
@@ -210,6 +256,7 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
                         .chord
                         .as_ref()
                         .is_some_and(|chord| chord.matches(&pressed))
+                    && entry.in_scope(&pressed)
                     && entry.guard.as_ref().is_none_or(|guard| guard())
             });
             let Some(index) = hit else {
@@ -263,6 +310,7 @@ mod tests {
             modifiers,
             repeat: false,
             text_entry: false,
+            scopes: Vec::new(),
         }
     }
 
@@ -330,6 +378,30 @@ mod tests {
         for held in [Modifiers::CONTROL, Modifiers::ALT, Modifiers::META] {
             assert!(!chord.matches(&pressed(Key::F8, held)));
         }
+    }
+
+    fn entry(within: Vec<ElementHandle>) -> Entry {
+        Entry {
+            chord: Chord::parse("mod+b", false),
+            handler: Box::new(|| {}),
+            include_editable: false,
+            guard: None,
+            within,
+        }
+    }
+
+    #[test]
+    fn a_scoped_hotkey_needs_focus_in_a_mounted_element() {
+        let mut dom = VirtualDom::new(|| rsx! {});
+        dom.rebuild_in_place();
+        // `ElementHandle::new` needs a scope.
+        dom.in_scope(ScopeId::ROOT, || {
+            let press = pressed(character("b"), Modifiers::CONTROL);
+            assert!(entry(Vec::new()).in_scope(&press));
+            let unmounted = ElementHandle::new();
+            assert!(!entry(vec![unmounted]).in_scope(&press));
+            assert!(!entry(vec![unmounted, ElementHandle::new()]).in_scope(&press));
+        });
     }
 
     #[test]

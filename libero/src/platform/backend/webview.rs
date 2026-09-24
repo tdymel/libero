@@ -811,8 +811,17 @@ static KEYBOARD: WebViewKeyboard = WebViewKeyboard;
 
 /// The answer crosses the IPC after the press is over, so the script prevents
 /// a chord once its subscription has taken it: from the second press on.
-const ON_KEY: &str = "const [skipTyping, clicked, seeded] = data;
+const ON_KEY: &str = "const [skipTyping, clicked, seeded, observe] = data;
     const taken = new Set(seeded);
+    // The tagged elements around the target, nearest first, for `Hotkey::within`.
+    const scopes = (target) => {
+        const found = [];
+        let at = target instanceof Element ? target.closest(`[${observe}]`) : null;
+        for (; at; at = at.parentElement?.closest(`[${observe}]`)) {
+            found.push(Number(at.getAttribute(observe)));
+        }
+        return found;
+    };
     const typing = (target) => {
         if (!(target instanceof Element)) return false;
         if (target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return true;
@@ -826,10 +835,11 @@ const ON_KEY: &str = "const [skipTyping, clicked, seeded] = data;
         const entry = typing(event.target);
         if (skipTyping && entry) return;
         const chord = [event.key, event.ctrlKey, event.shiftKey, event.altKey, event.metaKey];
-        // Per target kind: a chord taken outside text entry stays the field's inside it.
-        const name = chord.join(' ') + (entry ? ' typing' : '');
+        const inside = scopes(event.target);
+        // Per target kind and scope: a chord taken outside text entry stays the field's inside it.
+        const name = chord.join(' ') + (entry ? ' typing' : '') + (inside.length ? ' in ' + inside.join(',') : '');
         if (taken.has(name)) event.preventDefault();
-        dioxus.send([name, ...chord, event.repeat, entry]);
+        dioxus.send([name, ...chord, event.repeat, entry, inside]);
     };
     window.addEventListener('keydown', onKey);";
 
@@ -848,7 +858,7 @@ impl WebViewKeyboard {
             .unwrap_or_default();
         let slot = Rc::new(Slot::new());
         let script = eval_with(
-            json!([skip_text_entry, CLICKED_INPUT_TYPES, &taken]),
+            json!([skip_text_entry, CLICKED_INPUT_TYPES, &taken, OBSERVE_ATTR]),
             &format!(
                 "{ON_KEY}
                 {}
@@ -859,8 +869,8 @@ impl WebViewKeyboard {
         let task_slot = slot.clone();
         let task = spawn(async move {
             let mut script = script;
-            while let Ok((name, key, ctrl, shift, alt, meta, repeat, text_entry)) = script
-                .recv::<(String, String, bool, bool, bool, bool, bool, bool)>()
+            while let Ok((name, key, ctrl, shift, alt, meta, repeat, text_entry, scopes)) = script
+                .recv::<(String, String, bool, bool, bool, bool, bool, bool, Vec<u64>)>()
                 .await
             {
                 let key = key.parse().unwrap_or(Key::Unidentified);
@@ -875,6 +885,7 @@ impl WebViewKeyboard {
                     modifiers,
                     repeat,
                     text_entry,
+                    scopes,
                 }) {
                     continue;
                 }

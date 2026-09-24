@@ -455,6 +455,7 @@ fn keyed(event: &Event<KeyboardData>) {
             modifiers,
             repeat: event.is_auto_repeating(),
             text_entry: typing,
+            scopes: Vec::new(),
         };
         let handled = origin.run(|| callback(chord));
         if handled && skip_text_entry {
@@ -516,6 +517,18 @@ pub(super) fn rtl_target() -> bool {
     anchor.try_doc().is_some_and(|doc| {
         doc.get_focussed_node_id()
             .is_some_and(|id| node_is_rtl(&doc, id))
+    })
+}
+
+/// Whether the focused node is `mounted` or inside it.
+pub(super) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
+    let Some(handle) = mounted.downcast::<NodeHandle>() else {
+        return false;
+    };
+    let target = handle.node_id();
+    handle.try_doc().is_some_and(|doc| {
+        doc.get_focussed_node_id()
+            .is_some_and(|focus| ancestors(&doc, focus).any(|id| id == target))
     })
 }
 

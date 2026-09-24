@@ -1,4 +1,6 @@
-use dioxus::prelude::{Event, Key, KeyboardData, Modifiers};
+use std::rc::Rc;
+
+use dioxus::prelude::{Event, Key, KeyboardData, Modifiers, MountedData};
 
 use super::backend;
 
@@ -16,6 +18,16 @@ pub struct KeyChord {
     pub repeat: bool,
     /// Whether the press started in text entry; set on every press, filtered or not.
     pub(crate) text_entry: bool,
+    /// A WebView's observe tags around the target, nearest first; empty elsewhere.
+    pub(crate) scopes: Vec<u64>,
+}
+
+impl KeyChord {
+    /// Whether the press reached `mounted`'s subtree, the element tagged `tag` on
+    /// a WebView: focus is on it or inside it.
+    pub(crate) fn within(&self, mounted: &Rc<MountedData>, tag: Option<u64>) -> bool {
+        tag.is_some_and(|tag| self.scopes.contains(&tag)) || backend::focus_is_in(mounted)
+    }
 }
 
 /// Hearing a key press anywhere in the document, for a global shortcut: a root
