@@ -11,9 +11,14 @@ with a header and a `value` that reads one cell out of a row. The cell's type
 sets the sort order and alignment, so a numeric column sorts numerically and
 aligns right on its own.
 
-`sortable` turns a header into a button. The first click sorts ascending and
-the next flips it. `render` changes only what a cell draws, so a Role column
-rendered as a [Chip](chip.md) still sorts by its text.
+`sortable` turns a header into a button. The first click sorts ascending, the
+next flips it, and a third restores source order. `render` changes only what a
+cell draws, so a Role column rendered as a [Chip](chip.md) still sorts by its
+text.
+
+`default_sort` sorts the first render. To hold the sort yourself, for a
+server-side query or a saved view, pass `sort` and update it from
+`onsortchange`.
 
 ## Usage
 
@@ -116,6 +121,42 @@ fn Demo() -> Element {
 
 `align` on the column overrides the alignment the cell type chose.
 
+A controlled sort lives in your state. A `TableSort` names its column by the
+header text; an empty `Vec` is source order.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{SortDirection, Table, TableSort, column};
+
+#[derive(Clone, PartialEq)]
+struct Person {
+    name: String,
+    age: u32,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut sort = use_signal(|| vec![TableSort::new("Age", SortDirection::Descending)]);
+    let people = vec![
+        Person { name: "Ada".into(), age: 36 },
+        Person { name: "Grace".into(), age: 45 },
+    ];
+
+    rsx! {
+        Table {
+            aria_label: "People",
+            data: people,
+            columns: vec![
+                column("Name").value(|p: &Person| p.name.clone()).sortable(),
+                column("Age").value(|p: &Person| p.age).sortable(),
+            ],
+            sort: sort(),
+            onsortchange: move |next| sort.set(next),
+        }
+    }
+}
+```
+
 A table wider than its container takes `scroll: true`, and `empty` fills the
 body while `data` has no rows.
 
@@ -152,7 +193,7 @@ fn Demo() -> Element {
 |---|---|
 | `Tab` | With `scroll: true`: enters the scroll region, a tab stop. |
 | `Left` or `Right` or `Up` or `Down` | In the scroll region: scrolls the table. |
-| `Enter` or `Space` | On a sortable header, a button: sorts by that column. |
+| `Enter` or `Space` | On a sortable header, a button: sorts by that column, flips it, then unsorts. |
 
 ### Libero handles
 
@@ -181,6 +222,9 @@ fn Demo() -> Element {
 | `caption` | `Option<String>` | `None` | A visible title above the header row, and the table's accessible name. |
 | `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. |
 | `scroll` | `bool` | `false` | Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
+| `sort` | `Option<Vec<TableSort>>` | `None` | The sorted column, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. One column sorts, the first entry naming a sortable header. |
+| `default_sort` | `Vec<TableSort>` | `[]` | Seeds the sort once. Ignored when `sort` is set. |
+| `onsortchange` | `EventHandler<Vec<TableSort>>` | `None` | Called with the sort a header click asks for: ascending, then descending, then empty. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes, `aria_label` among them.

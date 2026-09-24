@@ -1,4 +1,4 @@
-//! `Table`: a header click sorts, a second flips it, and a custom cell body
+//! `Table`: a header click sorts, a second flips it, a third unsorts, and a custom cell body
 //! moves with its row. Plain cells draw their text inline (todo 29).
 
 use anyhow::Result;
@@ -97,6 +97,12 @@ fn a_header_click_sorts_and_flips_the_rows() {
         rows(page, "Cherry:3 left|Banana:0 left|Apple:12 left")
             .await
             .unwrap();
+        // The third click unsorts: source order, no `aria-sort`.
+        click(page).await.unwrap();
+        rows(page, "Cherry:3 left|Apple:12 left|Banana:0 left")
+            .await
+            .unwrap();
+        assert_eq!(count(page, "th[aria-sort]").await, 0.0);
 
         fixture.console.assert_clean("sorting a table").unwrap();
         fixture.close().await.unwrap();

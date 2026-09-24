@@ -5,7 +5,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Mark, Table, column},
+    components::{Mark, SortDirection, Table, TableSort, column},
 };
 
 #[test]
@@ -198,6 +198,66 @@ fn no_scroll_means_no_region_and_no_caption() {
 
     assert!(!body.contains("role=\"region\""));
     assert!(!body.contains("<caption"));
+}
+
+/// The first column's text per body row, in order.
+fn names(body: &str) -> Vec<&str> {
+    body.split("<tbody")
+        .nth(1)
+        .unwrap_or_default()
+        .split("<td")
+        .skip(1)
+        .map(|cell| &cell[cell.find('>').unwrap() + 1..cell.find("</td>").unwrap()])
+        .collect()
+}
+
+fn fruit(sort: Option<Vec<TableSort>>, default_sort: Vec<TableSort>) -> Element {
+    rsx! {
+        LiberoProvider {
+            Table {
+                aria_label: "Stock",
+                data: vec![Item { name: "Cherry" }, Item { name: "Apple" }, Item { name: "Banana" }],
+                columns: vec![column("Name").value(|item: &Item| item.name.to_string()).sortable()],
+                sort,
+                default_sort,
+                onsortchange: |_| {},
+            }
+        }
+    }
+}
+
+#[test]
+fn a_default_sort_orders_the_first_render() {
+    let html = render(|| {
+        fruit(
+            None,
+            vec![TableSort::new("Name", SortDirection::Descending)],
+        )
+    });
+    let body = body(&html);
+
+    assert_eq!(names(&body), ["Cherry", "Banana", "Apple"], "{body}");
+    assert!(body.contains("aria-sort=\"descending\""), "{body}");
+}
+
+#[test]
+fn a_controlled_sort_wins_over_the_default_even_when_unsorted() {
+    fn default() -> Vec<TableSort> {
+        vec![TableSort::new("Name", SortDirection::Descending)]
+    }
+
+    let sorted = render(|| {
+        fruit(
+            Some(vec![TableSort::new("Name", SortDirection::Ascending)]),
+            default(),
+        )
+    });
+    assert_eq!(names(&body(&sorted)), ["Apple", "Banana", "Cherry"]);
+
+    let unsorted = render(|| fruit(Some(Vec::new()), default()));
+    let body = body(&unsorted);
+    assert_eq!(names(&body), ["Cherry", "Apple", "Banana"]);
+    assert!(!body.contains("aria-sort"));
 }
 
 #[test]

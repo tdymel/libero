@@ -2,7 +2,9 @@ mod cell_value;
 mod column;
 mod core;
 mod table;
+mod use_table;
 
-pub use cell_value::{CellAlign, CellValue, SortKey};
+pub use cell_value::{CellAlign, CellValue, SortDirection, SortKey};
 pub use column::{Column, ColumnHeader, column};
+pub use core::TableSort;
 pub use table::{Table, TableProps};

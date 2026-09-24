@@ -30,7 +30,10 @@ pub use marquee::{Marquee, MarqueeProps};
 pub use pictogram::{Pictogram, PictogramProps, SvgData};
 pub use qr_code::{QrCode, QrCodeProps};
 pub use sortable::{Sortable, SortableItem, SortableItemProps, SortableProps};
-pub use table::{CellAlign, CellValue, Column, ColumnHeader, SortKey, Table, TableProps, column};
+pub use table::{
+    CellAlign, CellValue, Column, ColumnHeader, SortDirection, SortKey, Table, TableProps,
+    TableSort, column,
+};
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelineProps};
 
 pub(crate) use image::LinkedImageScope;

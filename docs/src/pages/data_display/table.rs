@@ -87,6 +87,9 @@ pub fn TablePage() -> Element {
                     prop("caption", "Option<String>").default("None").doc("A visible title above the header row, and the table's accessible name."),
                     prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
+                    prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted column, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. One column sorts, the first entry naming a sortable header."),
+                    prop("default_sort", "Vec<TableSort>").default("[]").doc("Seeds the sort once. Ignored when `sort` is set."),
+                    prop("onsortchange", "EventHandler<Vec<TableSort>>").default("None").doc("Called with the sort a header click asks for: ascending, then descending, then empty."),
                 ]),
                 props("column()", vec![
                     prop("header", "String").default("required").doc("The column's title, the argument to `column(..)`."),
@@ -100,7 +103,7 @@ pub fn TablePage() -> Element {
             accessibility: a11y()
                 .key(["Tab"], "With `scroll: true`: enters the scroll region, a tab stop.")
                 .key(["Left", "Right", "Up", "Down"], "In the scroll region: scrolls the table.")
-                .key(["Enter", "Space"], "On a sortable header, a button: sorts by that column.")
+                .key(["Enter", "Space"], "On a sortable header, a button: sorts by that column, flips it, then unsorts.")
                 .handles([
                     "An unnamed table warns in a debug build.",
                     "With `scroll: true` the wrapper is a `role=\"region\"` named like the table.",
@@ -128,11 +131,20 @@ pub fn TablePage() -> Element {
                 }
                 Text {
                     Code { source: "sortable" }
-                    " turns a header into a button. The first click sorts ascending and the "
-                    "next flips it. "
+                    " turns a header into a button. The first click sorts ascending, the "
+                    "next flips it, and a third restores source order. "
                     Code { source: "render" }
                     " changes only what a cell draws, so the Role column below still sorts "
                     "by its text."
+                }
+                Text {
+                    Code { source: "default_sort" }
+                    " sorts the first render. To hold the sort yourself, for a server-side "
+                    "query or a saved view, pass "
+                    Code { source: "sort" }
+                    " and update it from "
+                    Code { source: "onsortchange" }
+                    "."
                 }
             },
             Demo {

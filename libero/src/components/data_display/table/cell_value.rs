@@ -19,13 +19,6 @@ pub enum SortDirection {
 }
 
 impl SortDirection {
-    pub(super) const fn flipped(self) -> Self {
-        match self {
-            Self::Ascending => Self::Descending,
-            Self::Descending => Self::Ascending,
-        }
-    }
-
     pub(super) const fn aria_value(self) -> &'static str {
         match self {
             Self::Ascending => "ascending",

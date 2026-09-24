@@ -15,9 +15,9 @@ use crate::{
 };
 
 use super::{
-    cell_value::{SortDirection, SortKey},
     column::Column,
-    core::{CaptionSpec, HeaderSpec, RowSpec, active_sort, render_body, sorted_order},
+    core::{CaptionSpec, RowSpec, TableSort, active_sort, header_specs, render_body, row_order},
+    use_table::{TableConfig, use_table},
 };
 
 static TABLE_SX: StaticSx = StaticSx::new(|| {
@@ -127,6 +127,16 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Wraps the table in a named, focusable region that scrolls sideways.
     #[props(default)]
     scroll: bool,
+    /// The sorted column, empty for source order; set, the sort is controlled.
+    /// Only the first entry naming a sortable header applies.
+    #[props(default)]
+    sort: Option<Vec<TableSort>>,
+    /// Seeds the sort once. Ignored when `sort` is set.
+    #[props(default)]
+    default_sort: Vec<TableSort>,
+    /// The sort a header click asks for: ascending, descending, then empty.
+    #[props(default)]
+    onsortchange: Option<EventHandler<Vec<TableSort>>>,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -163,7 +173,11 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
 // Generic shim: only the projection below compiles per `T`.
 #[component]
 pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
-    let sort = use_signal(|| None::<(String, SortDirection)>);
+    let state = use_table(TableConfig {
+        sort: props.sort,
+        default_sort: props.default_sort,
+        onsortchange: props.onsortchange,
+    });
     let caption_id = use_id();
     use_name_warning(
         props.caption.is_some() || names_itself(&props.attributes),
@@ -173,29 +187,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let scroll = use_box().framework_sx(&TABLE_SCROLL_SX).prepare();
     let caption_box = use_box().framework_sx(&TABLE_CAPTION_SX).prepare();
 
-    let headers: Vec<HeaderSpec> = props
-        .columns
-        .iter()
-        .map(|column| HeaderSpec {
-            header: column.header.clone(),
-            align: column.align,
-            sortable: column.sortable,
-            row_header: column.row_header,
-        })
-        .collect();
+    let headers = header_specs(&props.columns);
+    let active = active_sort(&headers, &state.sort.read());
 
-    let active = active_sort(&headers, sort.read().as_ref());
-
-    let order = match active {
-        Some((index, direction)) => {
-            let sort_key = &props.columns[index].sort_key;
-            let keys: Vec<SortKey> = props.data.iter().map(|row| sort_key(row)).collect();
-            sorted_order(&keys, direction)
-        }
-        None => (0..props.data.len()).collect(),
-    };
-
-    let rows: Vec<RowSpec> = order
+    let rows: Vec<RowSpec> = row_order(&props.data, &props.columns, active)
         .into_iter()
         .map(|index| RowSpec {
             index,
@@ -251,7 +246,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .render(
             HtmlTag::Table,
             attributes,
-            render_body(caption, headers, rows, props.empty, active, sort),
+            render_body(caption, headers, rows, props.empty, active, state.sort),
         );
     let table = match before {
         Some(spec) => {
