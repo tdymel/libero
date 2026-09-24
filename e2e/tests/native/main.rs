@@ -62,6 +62,7 @@ mod sticky;
 mod svg_fit;
 mod switch;
 mod table;
+mod table_markup;
 mod theme_toggle;
 mod tooltip;
 mod transitions;
