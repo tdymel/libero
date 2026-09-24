@@ -33,7 +33,7 @@ fn side_labels_stack_below_the_marker_in_a_window_under_360px() {
     page.resize(320, 640);
     assert_eq!(page.computed(FIRST, "flex-direction"), "column");
     assert_eq!(
-        page.wrapped_text("#stepper [data-step-label]"),
+        page.wrapped_text("#stepper [data-slot=label]"),
         Vec::<String>::new()
     );
 }

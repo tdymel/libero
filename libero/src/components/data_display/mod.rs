@@ -18,12 +18,12 @@ mod timeline;
 pub use accordion::{Accordion, AccordionOpen, AccordionProps};
 pub use avatar::{Avatar, AvatarGroup, AvatarGroupProps, AvatarPart, AvatarProps, AvatarSpec};
 pub use badge::{Badge, BadgeProps};
-pub use carousel::{Carousel, CarouselAlign, CarouselProps};
+pub use carousel::{Carousel, CarouselAlign, CarouselPart, CarouselProps};
 pub(crate) use carousel::{CarouselJump, CarouselQuietWhenFits};
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
 pub use icon::{Icon, IconProps};
-pub use image::{Image, ImageFit, ImageLoading, ImageProps};
-pub use image_list::{ImageBar, ImageItem, ImageList, ImageListProps};
+pub use image::{Image, ImageFit, ImageLoading, ImagePart, ImageProps};
+pub use image_list::{ImageBar, ImageItem, ImageList, ImageListPart, ImageListProps};
 pub use indicator::{Indicator, IndicatorProps};
 pub use list::{List, ListItem, ListItemPart, ListItemProps, ListProps};
 pub use marquee::{Marquee, MarqueePart, MarqueeProps};
@@ -34,6 +34,6 @@ pub use table::{
     CellAlign, CellValue, Column, ColumnHeader, RowFn, SortDirection, SortKey, Table, TableProps,
     TableSort, column,
 };
-pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelineProps};
+pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelinePart, TimelineProps};
 
 pub(crate) use image::LinkedImageScope;

@@ -1,9 +1,9 @@
 use dioxus::prelude::*;
 
-use super::{numbered, state::CarouselView};
+use super::{CarouselPart, numbered, state::CarouselView};
 use crate::{
     components::{
-        common::{Input, States, focus_ring_sx, has_shortcut_modifier, states},
+        common::{Input, Part, States, focus_ring_sx, has_shortcut_modifier, states},
         layout::Box,
     },
     hooks::ElementHandle,
@@ -118,6 +118,7 @@ pub(super) fn CarouselIndicators(view: CarouselView) -> Element {
         Box {
             framework_sx: &CAROUSEL_INDICATORS_SX,
             states: strip_states,
+            "data-slot": CarouselPart::Indicators.slot(),
             role: "group",
             aria_label: labels.indicators,
             for index in low..=high {
@@ -126,6 +127,7 @@ pub(super) fn CarouselIndicators(view: CarouselView) -> Element {
                     component: "button",
                     r#type: "button",
                     framework_sx: &CAROUSEL_INDICATOR_SX,
+                    "data-slot": CarouselPart::Indicator.slot(),
                     states: states()
                         .with(orientation.state_name(), true)
                         .with("current", index == current()),

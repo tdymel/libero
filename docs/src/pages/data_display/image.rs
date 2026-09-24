@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Image, Input, Text},
+    components::{Code, Image, ImagePart, Input, Text},
     sx::sx,
     theme::Size,
     use_theme,
@@ -50,6 +50,11 @@ pub fn ImagePage() -> Element {
                     prop("loading", "ImageLoading")
                         .default("eager")
                         .doc("The `<img>`'s `loading`. `lazy` loads the picture only when it nears the viewport."),
+                    prop("parts", "Parts<ImagePart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`. With `zoomable` only."),
+                ])
+                .parts("ImagePart", vec![
+                    (ImagePart::Image, "The `<img>` inside the zoom button, with `zoomable` only: `sx` then styles the button."),
                 ]),
             ],
             accessibility: a11y()

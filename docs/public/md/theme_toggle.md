@@ -39,6 +39,21 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Without `themes` the toggle is the root itself, styled by `sx`; `Toggle`, `Picker` and `Chevron` exist only with `themes`. The theme-set menu is portaled and out of reach.
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ThemeTogglePart::Icon` | `icon` | The sun, moon or system glyph. |
+| `ThemeTogglePart::Toggle` | `toggle` | The scheme button beside the picker. |
+| `ThemeTogglePart::Picker` | `picker` | The button that opens the theme-set menu. |
+| `ThemeTogglePart::Chevron` | `chevron` | The picker's chevron. |
+
 ## Accessibility
 
 ### Libero handles
@@ -65,6 +80,7 @@ fn Demo() -> Element {
 | `with_system` | `bool` | `false` | Adds following the system to the cycle. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again. |
 | `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
+| `parts` | `Parts<ThemeTogglePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `ThemeToggle` also takes the shared props `sx`,
 `class`, `style`, `states`, and any extra HTML attributes.

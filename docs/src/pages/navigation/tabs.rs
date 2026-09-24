@@ -3,7 +3,9 @@ use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
 use dioxus::prelude::*;
-use libero::components::{Code, Icon, Input, OptionLabel, OptionList, Options, Tabs, Text};
+use libero::components::{
+    Code, Icon, Input, OptionLabel, OptionList, Options, Tabs, TabsPart, Text,
+};
 
 /// The enum is the tab strip, so the snippet has to show it.
 const SECTION_ENUM: &str = r#"#[derive(Clone, PartialEq, Options)]
@@ -98,6 +100,13 @@ pub fn TabsPage() -> Element {
                     prop("color", "ThemeAwareValue").default("primary").doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs share the row evenly instead of sizing to their label."),
                     prop("activation", "TabsActivation").default("Automatic").doc("`Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels."),
+                    prop("parts", "Parts<TabsPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .parts("TabsPart", vec![
+                    (TabsPart::List, "The `tablist` strip."),
+                    (TabsPart::Tab, "One tab. The selected one has `aria-selected=\"true\"`."),
+                    (TabsPart::Panel, "The selected tab's panel."),
                 ]),
                 props("OptionLabel", vec![
                     prop("name", "String").default("required").doc("The tab's visible text and accessible name."),

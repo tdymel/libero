@@ -57,6 +57,23 @@ fn Demo() -> Element {
 # fn address_valid() -> bool { true }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `StepperPart::List` | `list` | The `<ol>` of steps. |
+| `StepperPart::Step` | `step` | One step's `<li>`. Its `data-state` names the step's state. |
+| `StepperPart::Header` | `header` | The step's button, or a plain box when steps cannot be picked. |
+| `StepperPart::Marker` | `marker` | The number, check or cross. |
+| `StepperPart::Body` | `body` | Label and description. |
+| `StepperPart::Label` | `label` | The step's label. |
+| `StepperPart::Description` | `description` | The second line under the label. |
+| `StepperPart::Panel` | `panel` | The `panel` content: below the strip, or under each step when vertical. |
+
 ## Accessibility
 
 ### Libero handles
@@ -86,6 +103,7 @@ fn Demo() -> Element {
 | `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Below 360px wide, `side` draws as `below`. |
 | `size` | `Size` | `md` | Marker, type and spacing. |
 | `color` | `ThemeAwareValue` | `primary` | The current and completed markers, and the connectors behind them. |
+| `parts` | `Parts<StepperPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 It also takes `sx`, `class`, `states`, and any extra HTML attributes. An `id`
 seeds the ids of the steps.

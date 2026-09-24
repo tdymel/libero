@@ -1,10 +1,11 @@
 use dioxus::prelude::*;
 
+use super::tabs::TabsPart;
 use crate::{
     components::{
         common::{
-            ClassList, HtmlTag, Input, States, Variables, focus_ring_sx, has_shortcut_modifier,
-            inset_focus_ring_sx, neighbour, text_color, variables,
+            ClassList, HtmlTag, Input, Part, States, Variables, focus_ring_sx,
+            has_shortcut_modifier, inset_focus_ring_sx, neighbour, text_color, variables,
         },
         layout::use_box,
     },
@@ -227,6 +228,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                     id: "{list_id}",
                     role: "tablist",
                     "aria-orientation": "horizontal",
+                    "data-slot": TabsPart::List.slot(),
                     onmounted: list_element.mount(),
                     onfocusout: focus.focusout(0),
                     ..naming,
@@ -246,6 +248,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                             // An empty name leaves the content to name the tab.
                             "aria-label": (!tab.name.is_empty()).then(|| tab.name.clone()),
                             tabindex: if focusable && tab_stop == Some(index) { "0" } else { "-1" },
+                            "data-slot": TabsPart::Tab.slot(),
                             onkeydown: move |event| onkeydown.call((index, event)),
                             onfocus: move |_| focused.set(Some(index)),
                             onclick: {
@@ -267,6 +270,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                         role: "tabpanel",
                         "aria-labelledby": "{labelled_by}",
                         tabindex: (focusable && panel_stop).then_some("0"),
+                        "data-slot": TabsPart::Panel.slot(),
                         {panel}
                     }
                 }

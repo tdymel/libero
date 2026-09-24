@@ -6,7 +6,41 @@ use super::{
     state::*,
     track::CAROUSEL_TRACK_SX,
 };
-use crate::{css::Stylesheet, sx::REDUCED_MOTION};
+use crate::{
+    components::{CarouselPart, common::part_table},
+    css::Stylesheet,
+    sx::REDUCED_MOTION,
+};
+
+/// The slot names are public: a rename here is a breaking change.
+#[test]
+fn the_part_table_is_stable() {
+    assert_eq!(
+        part_table::<CarouselPart>(),
+        [
+            ("viewport", "& > [data-slot='viewport']"),
+            ("track", "& > [data-slot='viewport'] > [data-slot='track']"),
+            (
+                "slide",
+                "& > [data-slot='viewport'] > [data-slot='track'] > * > [data-slot='slide']"
+            ),
+            (
+                "controls",
+                "& > [data-slot='viewport'] > [data-slot='controls']"
+            ),
+            (
+                "control",
+                "& > [data-slot='viewport'] > [data-slot='controls'] > [data-slot='control']"
+            ),
+            ("indicators", "& > [data-slot='indicators']"),
+            (
+                "indicator",
+                "& > [data-slot='indicators'] > [data-slot='indicator']"
+            ),
+            ("pause", "& > [data-slot='pause']"),
+        ]
+    );
+}
 
 /// Six slides three-up run out of scroll at index 3, not 5 - the last
 /// three share the viewport.

@@ -3,9 +3,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            ClassList, HtmlTag, Input, SVG_FIT, States, Variables, base_props, css_string,
-            focus_ring_sx, input_from_str, states, svg_fit, svg_fit_sx, svg_fit_variables,
-            variables,
+            ClassList, HtmlTag, Input, Part, SVG_FIT, States, Variables, base_props, css_string,
+            focus_ring_sx, input_from_str, parts_enum, parts_under_sx, states, svg_fit, svg_fit_sx,
+            svg_fit_variables, variables,
         },
         layout::use_box,
     },
@@ -110,7 +110,16 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(focus_ring_sx())
 });
 
+parts_enum! {
+    /// [`Image`]'s inner part, with `zoomable` only: `sx` then styles the zoom button.
+    pub enum ImagePart {
+        /// The `<img>` inside the zoom button.
+        Image = "image" => "& > [data-slot='image']",
+    }
+}
+
 base_props! {
+    parts(ImagePart);
     pub struct ImageProps {
         #[props(into)]
         src: String,
@@ -290,6 +299,7 @@ pub fn Image(props: ImageProps) -> Element {
         .attr("src", src)
         .attr("alt", "")
         .attr("role", "presentation")
+        .attr("data-slot", ImagePart::Image.slot())
         .render(HtmlTag::Img, img_attributes, ());
 
     rsx! {
@@ -297,7 +307,7 @@ pub fn Image(props: ImageProps) -> Element {
             item,
             alt: alt.unwrap_or_default(),
             class: props.class,
-            sx: props.sx,
+            sx: parts_under_sx(&props.parts, props.sx),
             states: props.states,
             attributes,
             {image}
@@ -361,6 +371,15 @@ mod tests {
                 IMAGE_RADIUS.override_var().name(),
                 SizeCss::RADIUS.value(Size::Md)
             )
+        );
+    }
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            crate::components::common::part_table::<ImagePart>(),
+            [("image", "& > [data-slot='image']")]
         );
     }
 

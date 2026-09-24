@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Carousel, Input, Text},
+    components::{Box, Carousel, CarouselPart, Input, Text},
     sx::sx,
     use_theme,
 };
@@ -103,6 +103,18 @@ pub fn CarouselPage() -> Element {
                     prop("autoplay_delay", "u32")
                         .default(theme.carousel.autoplay_delay.to_string())
                         .doc("Milliseconds between advances."),
+                    prop("parts", "Parts<CarouselPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .parts("CarouselPart", vec![
+                    (CarouselPart::Viewport, "Holds the track and the controls, and clips the strip."),
+                    (CarouselPart::Track, "The scrolling strip, the tab stop."),
+                    (CarouselPart::Slide, "One slide. The current one also has `data-current=\"true\"`."),
+                    (CarouselPart::Controls, "The strip holding previous and next."),
+                    (CarouselPart::Control, "The previous or the next button."),
+                    (CarouselPart::Indicators, "The group of dots."),
+                    (CarouselPart::Indicator, "One dot."),
+                    (CarouselPart::Pause, "The autoplay toggle."),
                 ]),
             ],
             accessibility: a11y()

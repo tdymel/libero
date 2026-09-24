@@ -98,6 +98,18 @@ ImageList {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ImageListPart::Item` | `item` | One cell's `<li>`. |
+| `ImageListPart::Media` | `media` | The picture's box, or its link when the item has `to`. |
+| `ImageListPart::Bar` | `bar` | An `ImageBar` caption. |
+
 ## Accessibility
 
 ### Libero handles
@@ -128,6 +140,7 @@ ImageList {
 | `gap` | `Size` | `xs` | Between cells. |
 | `radius` | `Size` | `sm` | Each cell's corner radius. |
 | `ratio` | `f32` | `1.0`, from `theme.aspect_ratio` | Cell aspect ratio, such as `16.0 / 9.0`. Ignored by `masonry`. Under `quilted` it is the ratio of one cell, and a bigger cell scales from it. |
+| `parts` | `Parts<ImageListPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `ImageList` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the `<ul>`.

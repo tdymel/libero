@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{HtmlTag, Input, States, Variant, base_props, use_button_group},
+        common::{
+            HtmlTag, Input, Part, States, Variant, base_props, parts_enum, parts_under_sx,
+            use_button_group,
+        },
         data_display::Pictogram,
         layout::use_box,
     },
@@ -121,7 +124,18 @@ static STARS_SX: StaticSx = StaticSx::new(|| {
 static COUNT_SX: StaticSx =
     StaticSx::new(|| sx().when("ink", sx().color(NamedColorCss::INK.value())));
 
+parts_enum! {
+    /// [`RepoButton`]'s inner parts, children of the link that takes `sx`.
+    pub enum RepoButtonPart {
+        /// The host's logo.
+        Icon = "icon" => "& > [data-slot='icon']",
+        /// The star count, once known.
+        Count = "count" => "& > [data-slot='count']",
+    }
+}
+
 base_props! {
+    parts(RepoButtonPart);
     pub struct RepoButtonProps {
         /// `owner/repo`, as in the repository's URL; GitLab takes nested groups.
         repo: String,
@@ -213,23 +227,28 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
         Variant::Tonal => color == ThemeAwareValue::from(Color::Muted),
         _ => true,
     };
-    let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
-        HtmlTag::Span,
-        Vec::new(),
-        rsx! {
-            Pictogram {
-                icon: match host {
-                    RepoHost::GitHub => pictogram_icons_simple::github::regular,
-                    RepoHost::GitLab => pictogram_icons_simple::gitlab::regular,
-                },
-            }
-        },
-    );
+    let glyph = use_box()
+        .framework_sx(&GLYPH_SX)
+        .prepare()
+        .attr("data-slot", RepoButtonPart::Icon.slot())
+        .render(
+            HtmlTag::Span,
+            Vec::new(),
+            rsx! {
+                Pictogram {
+                    icon: match host {
+                        RepoHost::GitHub => pictogram_icons_simple::github::regular,
+                        RepoHost::GitLab => pictogram_icons_simple::gitlab::regular,
+                    },
+                }
+            },
+        );
     let count_states: Input<States> = States::new().with("ink", ink).into();
     let count_box = use_box()
         .framework_sx(&COUNT_SX)
         .states(&count_states)
-        .prepare();
+        .prepare()
+        .attr("data-slot", RepoButtonPart::Count.slot());
     // Not heard: the link's `aria-label` replaces its content in the name.
     let count_text = count.map(|count| {
         let shown = compact_count(count, separator);
@@ -254,7 +273,7 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
                 size: props.size.clone(),
                 radius: props.radius.clone(),
                 class: props.class.clone(),
-                sx: props.sx.clone(),
+                sx: parts_under_sx(&props.parts, props.sx.clone()),
                 states: props.states.clone(),
                 attributes: props.attributes.clone(),
                 {glyph}
@@ -267,6 +286,19 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<RepoButtonPart>(),
+            [
+                ("icon", "& > [data-slot='icon']"),
+                ("count", "& > [data-slot='count']"),
+            ]
+        );
+    }
 
     #[test]
     fn compact_count_steps_through_units() {

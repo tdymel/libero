@@ -104,6 +104,23 @@ Autoplay:
 Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: slides() }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `CarouselPart::Viewport` | `viewport` | Holds the track and the controls, and clips the strip. |
+| `CarouselPart::Track` | `track` | The scrolling strip, the tab stop. |
+| `CarouselPart::Slide` | `slide` | One slide. The current one also has `data-current="true"`. |
+| `CarouselPart::Controls` | `controls` | The strip holding previous and next. |
+| `CarouselPart::Control` | `control` | The previous or the next button. |
+| `CarouselPart::Indicators` | `indicators` | The group of dots. |
+| `CarouselPart::Indicator` | `indicator` | One dot. |
+| `CarouselPart::Pause` | `pause` | The autoplay toggle. |
+
 ## Accessibility
 
 ### Keyboard
@@ -145,6 +162,7 @@ Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: s
 | `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
 | `r#loop` | `bool` | `false` | Wraps around at both ends. The cloned slides at each end are `aria-hidden` and `inert`. |
+| `parts` | `Parts<CarouselPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Carousel` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

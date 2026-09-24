@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
 
-use super::core::{StepSpec, StepState, StepperView, derived_state, render_stepper};
+use super::core::{StepSpec, StepState, StepperPart, StepperView, derived_state, render_stepper};
 use crate::{
     components::common::{
-        ClassList, Input, OptionLabel, Options, Orientation, States, base_color, contrast_color,
-        fill_color, input_from_str, text_color,
+        ClassList, Input, OptionLabel, Options, Orientation, Parts, States, base_color,
+        contrast_color, fill_color, input_from_str, parts_under_sx, text_color,
     },
     hooks::{use_localization, use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},
@@ -58,6 +58,9 @@ pub struct StepperProps<T: Options> {
     class: Input<ClassList>,
     #[props(default, into)]
     sx: Input<Sx>,
+    /// Styles for the inner parts, keyed by [`StepperPart`]; `sx` wins a tie.
+    #[props(default, into)]
+    parts: Input<Parts<StepperPart>>,
     #[props(default, into)]
     states: Input<States>,
 }
@@ -179,11 +182,50 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
             color,
             completed_label: labels.completed,
             error_label: labels.error,
+            sx: parts_under_sx(&props.parts, props.sx),
             class: props.class,
-            sx: props.sx,
             states: props.states,
             attributes: props.attributes,
         },
         root(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::{Part, part_table};
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        let header = "& > [data-slot='list'] > [data-slot='step'] > [data-slot='header']";
+        let slots: Vec<_> = part_table::<StepperPart>()
+            .into_iter()
+            .map(|(slot, _)| slot)
+            .collect();
+
+        assert_eq!(
+            slots,
+            [
+                "list",
+                "step",
+                "header",
+                "marker",
+                "body",
+                "label",
+                "description",
+                "panel"
+            ]
+        );
+        assert_eq!(StepperPart::Header.selector(), header);
+        assert_eq!(
+            StepperPart::Label.selector(),
+            format!("{header} > [data-slot='body'] > [data-slot='label']")
+        );
+        assert_eq!(
+            StepperPart::Panel.selector(),
+            "& > [data-slot='panel'], & > [data-slot='list'] > [data-slot='step'] > * > * > [data-slot='panel']"
+        );
+    }
 }

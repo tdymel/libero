@@ -3,7 +3,8 @@ use dioxus::prelude::*;
 use super::core::{TabSpec, TabsView, render_tabs};
 use crate::{
     components::common::{
-        ClassList, Input, OptionLabel, OptionSource, Options, States, base_color, input_from_str,
+        ClassList, Input, OptionLabel, OptionSource, Options, Parts, States, base_color,
+        input_from_str, parts_enum, parts_under_sx,
     },
     hooks::{use_root_id, use_theme},
     str_enum::str_enum,
@@ -24,6 +25,18 @@ str_enum! {
 }
 
 input_from_str!(TabsActivation);
+
+parts_enum! {
+    /// [`Tabs`]' inner parts, for its `parts` prop. Direct paths, so tabs in a panel keep their own.
+    pub enum TabsPart {
+        /// The `tablist` strip.
+        List = "list" => "& > [data-slot='list']",
+        /// One tab button; the selected one has `aria-selected="true"`.
+        Tab = "tab" => "& > [data-slot='list'] > [data-slot='tab']",
+        /// The selected tab's panel.
+        Panel = "panel" => "& > [data-slot='panel']",
+    }
+}
 
 // Hand-written: `base_props!` is not generic.
 #[derive(Props, Clone, PartialEq)]
@@ -59,6 +72,9 @@ pub struct TabsProps<T: Options> {
     class: Input<ClassList>,
     #[props(default, into)]
     sx: Input<Sx>,
+    /// Styles for the inner parts, keyed by [`TabsPart`]; `sx` wins a tie.
+    #[props(default, into)]
+    parts: Input<Parts<TabsPart>>,
     #[props(default, into)]
     states: Input<States>,
 }
@@ -148,11 +164,30 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
             focusable: true,
             panel_stop: true,
             size: props.size.copied_or(theme.tabs.size),
+            sx: parts_under_sx(&props.parts, props.sx),
             class: props.class,
-            sx: props.sx,
             states: props.states,
             attributes: props.attributes,
         },
         root(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<TabsPart>(),
+            [
+                ("list", "& > [data-slot='list']"),
+                ("tab", "& > [data-slot='list'] > [data-slot='tab']"),
+                ("panel", "& > [data-slot='panel']"),
+            ]
+        );
+    }
 }

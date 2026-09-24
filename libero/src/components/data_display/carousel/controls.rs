@@ -2,14 +2,14 @@ use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use super::{
-    numbered,
+    CarouselPart, numbered,
     state::{CarouselView, snap_position},
 };
 use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
-        common::{Glyph, Input, Orientation, States, focus_ring_sx, shadow_sx, states},
+        common::{Glyph, Input, Orientation, Part, States, focus_ring_sx, shadow_sx, states},
         layout::Box,
     },
     context::IconSlot,
@@ -136,7 +136,10 @@ pub(super) fn CarouselControls(view: CarouselView) -> Element {
     let strip_states: Input<States> = states().with(setup.orientation.state_name(), true).into();
 
     rsx! {
-        Box { framework_sx: &CAROUSEL_CONTROLS_SX, states: strip_states,
+        Box {
+            framework_sx: &CAROUSEL_CONTROLS_SX,
+            states: strip_states,
+            "data-slot": CarouselPart::Controls.slot(),
             CarouselControl { view, forward: false, disabled: at_start }
             CarouselControl { view, forward: true, disabled: at_end }
         }
@@ -164,6 +167,7 @@ fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> E
         ActionIcon {
             sx: &CAROUSEL_CONTROL_SX,
             states: control_states,
+            "data-slot": CarouselPart::Control.slot(),
             aria_controls: track_id(),
             disabled: disabled(),
             focusable_when_disabled: true,
@@ -265,6 +269,7 @@ pub(super) fn carousel_pause_button(view: CarouselView, controls: bool) -> Eleme
             r#type: "button",
             framework_sx: &CAROUSEL_PAUSE_SX,
             states: pause_states,
+            "data-slot": CarouselPart::Pause.slot(),
             aria_label: labels.pause,
             aria_pressed: paused().to_string(),
             // The focus this press brings in would stop rotation before the

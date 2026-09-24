@@ -56,6 +56,18 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+With `zoomable` only: `sx` then styles the zoom button, and the picture is this part. Without it the `<img>` is the root.
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ImagePart::Image` | `image` | The `<img>` inside the zoom button. |
+
 ## Accessibility
 
 ### Keyboard
@@ -90,6 +102,7 @@ fn Demo() -> Element {
 | `decorative` | `bool` | `false` | Marks the picture as decoration, hidden from screen readers. Wins over `alt`, with a warning in a debug build. |
 | `zoomable` | `bool` | `false` | Opens the picture in a single-picture Lightbox on click. Ignored inside a linked `ImageItem`, with a warning. |
 | `loading` | `ImageLoading` | `eager` | The `<img>`'s `loading`. `lazy` loads the picture only when it nears the viewport. |
+| `parts` | `Parts<ImagePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 `ImageFit` takes `fill`, `contain`, `cover`, `none` or `scale-down`.
 `ImageLoading` takes `eager` or `lazy`.

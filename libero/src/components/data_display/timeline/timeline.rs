@@ -4,8 +4,8 @@ use super::event::TimelineEvent;
 use crate::{
     components::{
         common::{
-            ABSENT, HtmlTag, Input, LogicalTextAlign, Rail, RailInset, States, Variables,
-            base_props, input_from_str, variables,
+            ABSENT, HtmlTag, Input, LogicalTextAlign, Part, Rail, RailInset, States, Variables,
+            base_props, input_from_str, parts_enum, variables,
         },
         layout::use_box,
     },
@@ -172,7 +172,21 @@ static TIMELINE_BULLET_SX: StaticSx = StaticSx::new(|| {
 
 static TIMELINE_TITLE_SX: StaticSx = StaticSx::new(|| sx().font_weight("600"));
 
+parts_enum! {
+    /// [`Timeline`]'s inner parts, per [`TimelineEvent`]; a nested timeline keeps its own.
+    pub enum TimelinePart {
+        /// One event's `<li>`.
+        Item = "item" => "& > [data-slot='item']",
+        /// The dot, or the ring around `TimelineEvent::bullet`.
+        Bullet = "bullet" => "& > [data-slot='item'] > [data-slot='bullet']",
+        /// Title and content, beside the rail.
+        Body = "body" => "& > [data-slot='item'] > [data-slot='body']",
+        Title = "title" => "& > [data-slot='item'] > [data-slot='body'] > [data-slot='title']",
+    }
+}
+
 base_props! {
+    parts(TimelinePart);
     pub struct TimelineProps {
         /// The events, in render order.
         #[props(default)]
@@ -296,15 +310,16 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 .attr("data-state", bullet_states.data_state())
                 // The rail's drawing; the title is the text.
                 .attr("aria-hidden", "true")
+                .attr("data-slot", TimelinePart::Bullet.slot())
                 .render(HtmlTag::Span, Vec::new(), item.bullet.clone());
 
-            let title =
-                title_style
-                    .clone()
-                    .render(HtmlTag::Div, Vec::new(), item.title.render())?;
+            let title = title_style
+                .clone()
+                .attr("data-slot", TimelinePart::Title.slot())
+                .render(HtmlTag::Div, Vec::new(), item.title.render())?;
 
             let body = rsx! {
-                div {
+                div { "data-slot": TimelinePart::Body.slot(),
                     {title}
                     {item.content.clone()}
                 }
@@ -316,6 +331,7 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 .attr("style", item_variables.to_string())
                 // Only the current event; hidden text on every done one is noise.
                 .attr("aria-current", is_current.then_some("step"))
+                .attr("data-slot", TimelinePart::Item.slot())
                 .render(HtmlTag::Li, Vec::new(), vec![bullet, body])
         })
         .collect::<Vec<_>>();
@@ -324,9 +340,33 @@ pub fn Timeline(props: TimelineProps) -> Element {
         .framework_sx(&TIMELINE_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .variables(&root_variables)
         .prepare()
         .attr_default("role", "list")
         .render(HtmlTag::Ol, props.attributes, items)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<TimelinePart>(),
+            [
+                ("item", "& > [data-slot='item']"),
+                ("bullet", "& > [data-slot='item'] > [data-slot='bullet']"),
+                ("body", "& > [data-slot='item'] > [data-slot='body']"),
+                (
+                    "title",
+                    "& > [data-slot='item'] > [data-slot='body'] > [data-slot='title']"
+                ),
+            ]
+        );
+    }
 }

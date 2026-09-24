@@ -87,7 +87,7 @@ fn suite(name: &'static str, route: &'static str) -> Suite {
         .focusable("#next-0")
         .focusable("#stepper-step-0")
         .targets("#next-0")
-        .targets("button[data-step-header]")
+        .targets("button[data-slot=header]")
         .state(
             "second",
             &[Step::TabTo("#next-0"), Step::Press(keyboard::ENTER)],
@@ -119,12 +119,12 @@ fn under_rtl_the_vertical_rail_stays_under_the_markers() {
                 "(() => { const items = [...document.querySelectorAll('ol > li')].slice(0, -1); \
                  const off = items.map(li => { \
                    const box = li.getBoundingClientRect(); \
-                   const m = li.querySelector('[data-step-marker]').getBoundingClientRect(); \
+                   const m = li.querySelector('[data-slot=marker]').getBoundingClientRect(); \
                    const rail = getComputedStyle(li, '::before'); \
                    const x = box.left + parseFloat(rail.left) \
                      + (parseFloat(rail.borderLeftWidth) + parseFloat(rail.borderRightWidth)) / 2; \
                    return Math.abs(x - (m.left + m.width / 2)); }); \
-                 const c = getComputedStyle(document.querySelector('[data-step-content]')); \
+                 const c = getComputedStyle(document.querySelector('[data-slot=panel]')); \
                  return [off, c.paddingLeft + ' / ' + c.paddingRight]; })()",
             )
             .await
@@ -165,7 +165,7 @@ fn a_pending_ring_and_connector_part_at_3_to_1() {
     crate::boundary::assert_boundaries(
         "/stepper",
         "const item = document.querySelector('ol > li:nth-child(3)');
-         const ring = item.querySelector('[data-step-marker]');
+         const ring = item.querySelector('[data-slot=marker]');
          return [
              ['pending ring on the page', RATIO(CSS(ring, 'borderTopColor'), PAGE(item))],
              ['pending connector on the page', RATIO(CSS(item, 'borderTopColor', '::before'), PAGE(item))],
@@ -178,7 +178,7 @@ fn a_pending_ring_and_connector_part_at_3_to_1() {
 const WIDTHS: &str = "(() => {
     const steppers = ['#side', '#below', '#vertical', '#plain'].map(id => {
         const s = document.querySelector(id);
-        const right = Math.max(...[...s.querySelectorAll('[data-step-header]')]
+        const right = Math.max(...[...s.querySelectorAll('[data-slot=header]')]
             .map(h => h.getBoundingClientRect().right));
         return [s.scrollWidth, s.clientWidth, right];
     });
@@ -227,7 +227,7 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
 /// Words of the `#plain` stepper's labels and descriptions split across lines.
 const SPLIT_WORDS: &str = "(() => {
     const split = [];
-    for (const el of document.querySelectorAll('#plain [data-step-label] > :not([aria-hidden]), #plain [data-step-description], #plain [data-step-label]:not(:has(*))')) {
+    for (const el of document.querySelectorAll('#plain [data-slot=label] > :not([aria-hidden]), #plain [data-slot=description], #plain [data-slot=label]:not(:has(*))')) {
         const text = el.firstChild;
         if (!text || text.nodeType !== 3) continue;
         for (const m of text.data.matchAll(/\\S+/g)) {
@@ -304,8 +304,8 @@ fn the_current_marker_carries_the_on_state_ring() {
             .unwrap();
         crate::button::assert_on_marker(
             &fixture.page,
-            "#plain-step-1 [data-step-marker]",
-            "#plain-step-2 [data-step-marker]",
+            "#plain-step-1 [data-slot=marker]",
+            "#plain-step-2 [data-slot=marker]",
         )
         .await;
         fixture.close().await.unwrap();
@@ -341,7 +341,7 @@ fn completed_and_current_steps_show_in_forced_colours() {
                 "(() => { const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
-                 const marker = (i) => getComputedStyle(document.querySelector(`#plain-step-${i} [data-step-marker]`)); \
+                 const marker = (i) => getComputedStyle(document.querySelector(`#plain-step-${i} [data-slot=marker]`)); \
                  return [marker(0).backgroundColor, canvas, marker(1).borderTopColor, marker(2).borderTopColor]; })()",
             )
             .await
@@ -359,7 +359,7 @@ fn completed_and_current_steps_show_in_forced_colours() {
         // Todo 715: forcing drops the on-state `box-shadow`; an outline stands in.
         let outlines: [String; 2] = page
             .evaluate(
-                "[1, 2].map(i => getComputedStyle(document.querySelector(`#plain-step-${i} [data-step-marker]`)).outlineStyle)",
+                "[1, 2].map(i => getComputedStyle(document.querySelector(`#plain-step-${i} [data-slot=marker]`)).outlineStyle)",
             )
             .await
             .unwrap()

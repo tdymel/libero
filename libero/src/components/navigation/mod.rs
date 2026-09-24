@@ -15,9 +15,9 @@ pub use nav_link::{NavLink, NavLinkPart, NavLinkProps};
 pub use pagination::{
     Pagination, PaginationItem, PaginationLabel, PaginationPart, PaginationProps, pagination_range,
 };
-pub use stepper::{StepLabelPosition, StepState, Stepper, StepperProps};
+pub use stepper::{StepLabelPosition, StepState, Stepper, StepperPart, StepperProps};
 pub(crate) use tabs::{TabSpec, TabsView, render_tabs};
-pub use tabs::{Tabs, TabsActivation, TabsProps};
+pub use tabs::{Tabs, TabsActivation, TabsPart, TabsProps};
 pub use tree::{
     Tree, TreeItem, TreeItemContent, TreeItemContentProps, TreeItemProps, TreeLabel, TreeNode,
     TreeNodeRenderArgs, TreePart, TreeProps, TreeValue, default_tree_render,

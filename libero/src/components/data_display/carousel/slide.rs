@@ -1,12 +1,12 @@
 use dioxus::prelude::*;
 
 use super::{
-    numbered,
+    CarouselPart, numbered,
     state::{CarouselView, Nav, live_copy, outside_viewport},
 };
 use crate::{
     components::{
-        common::{Input, States, states},
+        common::{Input, Part, States, states},
         layout::Box,
     },
     platform::ElementApi,
@@ -144,6 +144,7 @@ fn CarouselSlide(
         Box {
             framework_sx: &CAROUSEL_SLIDE_SX,
             states: slide_states,
+            "data-slot": CarouselPart::Slide.slot(),
             role: live.then_some("group"),
             aria_roledescription: live.then_some("slide"),
             aria_label: live.then_some(label),

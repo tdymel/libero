@@ -128,6 +128,18 @@ fn Demo() -> Element {
 
 `FileIcon` is your own icon component. Any `svg` works, and `Icon` sizes it.
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `TabsPart::List` | `list` | The `tablist` strip. |
+| `TabsPart::Tab` | `tab` | One tab. The selected one has `aria-selected="true"`. |
+| `TabsPart::Panel` | `panel` | The selected tab's panel. |
+
 ## Accessibility
 
 ### Keyboard
@@ -166,6 +178,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs share the row evenly instead of sizing to their label. |
 | `activation` | `TabsActivation` | `Automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
+| `parts` | `Parts<TabsPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 `Tabs` also takes the shared props `sx`, `class`, `states`, and any extra HTML
 attributes.

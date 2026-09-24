@@ -7,8 +7,8 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, Orientation, Rail, RailInset,
-            States, Variables, focus_ring_sx, on_ring_sx, use_closing_focus, variables,
+            ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, Orientation, Part, Rail, RailInset,
+            States, Variables, focus_ring_sx, on_ring_sx, parts_enum, use_closing_focus, variables,
         },
         layout::{Collapse, use_box},
     },
@@ -59,9 +59,41 @@ fn rail() -> Rail {
     }
 }
 
+parts_enum! {
+    /// [`Stepper`](super::Stepper)'s inner parts, for its `parts` prop. Direct
+    /// paths, so a stepper in a step's panel keeps its own.
+    pub enum StepperPart {
+        /// The `<ol>` of steps.
+        List = "list" => "& > [data-slot='list']",
+        /// One step's `<li>`; its `data-state` names the step's state.
+        Step = "step" => "& > [data-slot='list'] > [data-slot='step']",
+        /// The step's button, or a plain box when steps are not clickable.
+        Header = "header" => "& > [data-slot='list'] > [data-slot='step'] > [data-slot='header']",
+        /// The number, check or cross.
+        Marker = "marker" => "& > [data-slot='list'] > [data-slot='step'] > [data-slot='header'] > [data-slot='marker']",
+        /// Label and description, beside or below the marker.
+        Body = "body" => "& > [data-slot='list'] > [data-slot='step'] > [data-slot='header'] > [data-slot='body']",
+        Label = "label" => "& > [data-slot='list'] > [data-slot='step'] > [data-slot='header'] > [data-slot='body'] > [data-slot='label']",
+        Description = "description" => "& > [data-slot='list'] > [data-slot='step'] > [data-slot='header'] > [data-slot='body'] > [data-slot='description']",
+        /// The `panel` content: below the strip, or under each step when vertical.
+        Panel = "panel" => "& > [data-slot='panel'], & > [data-slot='list'] > [data-slot='step'] > * > * > [data-slot='panel']",
+    }
+}
+
+/// `[data-slot='..']`, for the framework's own selectors.
+fn slot(part: StepperPart) -> String {
+    format!("[data-slot='{}']", part.slot())
+}
+
 /// `li[data-state~=".."]`, for a step in state `state`.
 fn step(state: &str) -> String {
     format!("& > ol > li[data-state~=\"{state}\"]")
+}
+
+/// The marker of a step in state `state`. `*`, not the header's slot: one more
+/// attribute would outrank the current-step ring rule, which ties with it now.
+fn step_marker(state: &str) -> String {
+    format!("{} > * > {}", step(state), slot(StepperPart::Marker))
 }
 
 static STEPPER_SX: StaticSx = StaticSx::new(|| {
@@ -81,6 +113,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         .font_weight("600")
         .line_height("1")
         .selector("& > svg", sx().width("60%").height("60%"));
+    let marker_slot = slot(StepperPart::Marker);
+    let body_slot = slot(StepperPart::Body);
 
     let header = sx()
         .position("relative")
@@ -101,19 +135,22 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         .with("overflow-wrap", "anywhere")
         // No min-content measure: Blitz kept a label broken per glyph from one (734).
         .min_width("0")
-        .selector("& [data-step-marker]", marker)
+        .selector(format!("& > {marker_slot}"), marker)
         // A marker tall and centred: one line sits on the marker's middle, more grow down.
         .selector(
-            "& [data-step-body]",
+            format!("& > {body_slot}"),
             sx().display("flex")
                 .flex_direction("column")
                 .justify_content("center")
                 .min_width("0")
                 .min_height(STEPPER_MARKER.value()),
         )
-        .selector("& [data-step-label]", sx().font_weight("500"))
         .selector(
-            "& [data-step-description]",
+            format!("& > {body_slot} > {}", slot(StepperPart::Label)),
+            sx().font_weight("500"),
+        )
+        .selector(
+            format!("& > {body_slot} > {}", slot(StepperPart::Description)),
             sx().font_size(STEPPER_DESCRIPTION_SIZE.value())
                 .color(STEPPER_DESCRIPTION_COLOR.value()),
         );
@@ -142,12 +179,13 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 .border_top(format!("{} solid {}", rail.line, rail.color)),
         )
         .selector(
-            "& > [data-stepper-content]",
+            format!("& > {}", slot(StepperPart::Panel)),
             sx().padding_top(STEPPER_CONTENT_PADDING.value()),
         );
 
+    let header_slot = slot(StepperPart::Header);
     let below = sx().selector(
-        "& > ol > li > [data-step-header]",
+        format!("& > ol > li > {header_slot}"),
         sx().flex_direction("column")
             .align_items("center")
             .text_align("center"),
@@ -177,8 +215,9 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                     .selector("&:not(:last-of-type)::before", sx().left("auto")),
             ),
         )
+        // Through `Collapse`'s two boxes, so a nested stepper's panel keeps its own.
         .selector(
-            "& > ol > li [data-step-content]",
+            format!("& > ol > li > * > * > {}", slot(StepperPart::Panel)),
             sx().padding_left(rail.content_inset(&STEPPER_GAP.value()))
                 .padding_top(STEPPER_CONTENT_PADDING.value())
                 .padding_bottom(STEPPER_CONTENT_PADDING.value())
@@ -208,55 +247,52 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             "& > ol > li[data-state~=\"line-active\"]",
             sx().var(STEPPER_CONNECTOR, STEPPER_COLOR.value()),
         )
-        .selector("& > ol > li > [data-step-header]", header)
+        .selector(format!("& > ol > li > {header_slot}"), header)
         .selector(
-            "& > ol > li > button[data-step-header]",
+            format!("& > ol > li > button{header_slot}"),
             sx().cursor("pointer"),
         )
         // Also on a non-clickable header, which the focus return focuses. Doubled
         // to outrank a `Button`'s ring whatever the order, as `Carousel`.
         .selector(
-            "& > ol > li > [data-step-header]:focus-visible:focus-visible",
+            format!("& > ol > li > {header_slot}:focus-visible:focus-visible"),
             focus_ring_sx().outline_offset("2px").border_radius("4px"),
         )
         .selector(
-            format!("{} [data-step-marker]", step("active")),
+            step_marker("active"),
             sx().border_color(STEPPER_COLOR.value())
                 .color(STEPPER_COLOR.value()),
         )
         .selector(
-            format!("{} [data-step-marker]", step("completed")),
+            step_marker("completed"),
             sx().background(STEPPER_FILL.value())
                 .border_color(STEPPER_FILL.value())
                 .color(STEPPER_COLOR_CONTRAST.value()),
         )
         .selector(
-            format!("{} [data-step-marker]", step("error")),
+            step_marker("error"),
             sx().background(STEPPER_ERROR.value())
                 .border_color(STEPPER_ERROR.value())
                 .color(STEPPER_ERROR_CONTRAST.value()),
         )
         // On-state ring, so current and pending differ in shape too.
         .selector(
-            "& > ol > li > [aria-current=\"step\"] [data-step-marker]",
+            format!("& > ol > li > [aria-current=\"step\"] > {marker_slot}"),
             on_ring_sx(None),
         )
         // Forced colours would flatten the completed fill and current ring into the rest.
         .media(
             FORCED_COLORS,
             sx().selector(
-                format!("{} [data-step-marker]", step("completed")),
+                step_marker("completed"),
                 sx().background("Highlight")
                     .border_color("Highlight")
                     .color("HighlightText"),
             )
-            .selector(
-                format!("{} [data-step-marker]", step("active")),
-                sx().border_color("Highlight"),
-            )
+            .selector(step_marker("active"), sx().border_color("Highlight"))
             // Forcing drops `box-shadow`; an outline survives it.
             .selector(
-                "& > ol > li > [aria-current=\"step\"] [data-step-marker]",
+                format!("& > ol > li > [aria-current=\"step\"] > {marker_slot}"),
                 sx().outline("1px solid currentColor")
                     .outline_offset("-3px"),
             ),
@@ -432,7 +468,7 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
                 id: "{root}-content-{current}",
                 role: "region",
                 "aria-labelledby": "{root}-step-{current}",
-                "data-stepper-content": "",
+                "data-slot": StepperPart::Panel.slot(),
                 {content}
             }
         },
@@ -457,7 +493,12 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
             attributes,
             rsx! {
                 // Safari with VoiceOver drops list semantics from a `list-style: none` list.
-                ol { role: "list", ..naming, {items.into_iter()} }
+                ol {
+                    role: "list",
+                    "data-slot": StepperPart::List.slot(),
+                    ..naming,
+                    {items.into_iter()}
+                }
                 {region}
             },
         )
@@ -501,11 +542,11 @@ fn StepItem(
     // Every part is a `span`: a `<button>` takes phrasing content only.
     let inner = rsx! {
         // Decorative; readers get the status text below.
-        span { "data-step-marker": "", "aria-hidden": "true", {marker} }
-        span { "data-step-body": "",
+        span { "data-slot": StepperPart::Marker.slot(), "aria-hidden": "true", {marker} }
+        span { "data-slot": StepperPart::Body.slot(),
             // Name and status in one text node: Chromium puts a space
             // between separate boxes, "Account , Completed" (todo 458).
-            span { "data-step-label": "",
+            span { "data-slot": StepperPart::Label.slot(),
                 if rich.is_some() || !status.is_empty() {
                     span { "aria-hidden": "true",
                         {rich.unwrap_or_else(|| rsx! { "{name}" })}
@@ -516,7 +557,7 @@ fn StepItem(
                 }
             }
             if let Some(description) = description {
-                span { "data-step-description": "", "{description}" }
+                span { "data-slot": StepperPart::Description.slot(), "{description}" }
             }
         }
     };
@@ -527,7 +568,7 @@ fn StepItem(
             button {
                 id: "{header_id}",
                 r#type: "button",
-                "data-step-header": "",
+                "data-slot": StepperPart::Header.slot(),
                 "aria-current": if is_current { "step" },
                 onclick: move |_| onstepclick.call(index),
                 {inner}
@@ -538,7 +579,7 @@ fn StepItem(
             span {
                 id: "{header_id}",
                 tabindex: "-1",
-                "data-step-header": "",
+                "data-slot": StepperPart::Header.slot(),
                 "aria-current": if is_current { "step" },
                 {inner}
             }
@@ -553,12 +594,17 @@ fn StepItem(
                 id: "{root}-content-{index}",
                 role: "region",
                 aria_labelledby: "{header_id}",
-                div { "data-step-content": "", {content} }
+                div { "data-slot": StepperPart::Panel.slot(), {content} }
             }
         }
     });
 
     rsx! {
-        li { "data-state": item_states.data_state(), {header} {body} }
+        li {
+            "data-slot": StepperPart::Step.slot(),
+            "data-state": item_states.data_state(),
+            {header}
+            {body}
+        }
     }
 }

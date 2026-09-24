@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, Input, RepoButton, RepoHost, Text};
+use libero::components::{Code, Input, RepoButton, RepoButtonPart, RepoHost, Text};
 
 #[component]
 pub fn RepoButtonPage() -> Element {
@@ -29,6 +29,12 @@ pub fn RepoButtonPage() -> Element {
                     .doc("Corner radius, independent of `size`."),
                 prop("aria_label", "String")
                     .doc("Replaces the whole built name: host, repository, star count and new-tab cue. Unset, the built name."),
+                prop("parts", "Parts<RepoButtonPart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+            ])
+            .parts("RepoButtonPart", vec![
+                (RepoButtonPart::Icon, "The host's logo."),
+                (RepoButtonPart::Count, "The star count, once it has loaded."),
             ])],
             accessibility: a11y()
                 .handles([

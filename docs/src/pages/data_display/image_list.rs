@@ -5,7 +5,8 @@ use pictogram_icons_lucide as lucide;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Box, Code, GridSpan, Image, ImageBar, ImageItem, ImageList, Input, Text,
+        ActionIcon, Box, Code, GridSpan, Image, ImageBar, ImageItem, ImageList, ImageListPart,
+        Input, Text,
     },
     sx::sx,
     theme::{Responsive, Theme, responsive},
@@ -254,6 +255,13 @@ pub fn ImageListPage() -> Element {
                     prop("ratio", "f32")
                         .default("1.0, from theme.aspect_ratio")
                         .doc("Cell aspect ratio, such as `16.0 / 9.0`. Ignored by `masonry`. Under `quilted` it is the ratio of one cell, and a bigger cell scales from it."),
+                    prop("parts", "Parts<ImageListPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .parts("ImageListPart", vec![
+                    (ImageListPart::Item, "One cell's `<li>`."),
+                    (ImageListPart::Media, "The picture's box, or its link when the item has `to`."),
+                    (ImageListPart::Bar, "An `ImageBar` caption."),
                 ]),
                 props("ImageItem", vec![
                     prop("new(content)", "Element").doc("The cell's content, usually an `Image` with `fit: \"cover\"`."),

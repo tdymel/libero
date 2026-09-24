@@ -1,12 +1,14 @@
 use dioxus::prelude::*;
 
 use super::{
-    CAROUSEL_HEIGHT,
+    CAROUSEL_HEIGHT, CarouselPart,
     state::{CarouselView, Nav},
 };
 use crate::{
     components::{
-        common::{Input, Orientation, States, has_shortcut_modifier, inset_focus_ring_sx, states},
+        common::{
+            Input, Orientation, Part, States, has_shortcut_modifier, inset_focus_ring_sx, states,
+        },
         layout::{ScrollArea, ScrollAreaBase, ScrollPositionEvent, scroll_area_base},
     },
     hooks::Drag,
@@ -145,6 +147,7 @@ pub(super) fn carousel_track(
             focusable: !empty && !setup.quiet,
             framework_sx: ScrollAreaBase(&CAROUSEL_TRACK_SX),
             states: track_states,
+            "data-slot": CarouselPart::Track.slot(),
             id: track_id(),
             // Named itself: landing inside does not reliably re-announce the region.
             role: (!empty).then_some("group"),

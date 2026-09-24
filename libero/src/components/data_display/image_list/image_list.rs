@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, Variables, base_props, input_from_str, inset_focus_ring_sx,
-            variables,
+            HtmlTag, Input, Part, States, Variables, base_props, input_from_str,
+            inset_focus_ring_sx, parts_enum, parts_under_sx, variables,
         },
         data_display::LinkedImageScope,
         layout::{InternalAnchor, use_box},
@@ -261,7 +261,20 @@ static IMAGE_LIST_BAR_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+parts_enum! {
+    /// [`ImageList`]'s inner parts, per [`ImageItem`].
+    pub enum ImageListPart {
+        /// One cell's `<li>`.
+        Item = "item" => "& > [data-slot='item']",
+        /// The picture's box, or its link with `ImageItem::to`.
+        Media = "media" => "& > [data-slot='item'] > [data-slot='media'], & > [data-slot='item'] > figure > [data-slot='media']",
+        /// The [`ImageBar`] caption.
+        Bar = "bar" => "& > [data-slot='item'] > figure > [data-slot='bar']",
+    }
+}
+
 base_props! {
+    parts(ImageListPart);
     pub struct ImageListProps {
         /// One cell each, in render order.
         #[props(default)]
@@ -378,11 +391,13 @@ pub fn ImageList(props: ImageListProps) -> Element {
                     framework_sx: Some(&IMAGE_LIST_MEDIA_LINK_SX),
                     states: media_states.clone(),
                     variables: media_variables.clone(),
+                    "data-slot": ImageListPart::Media.slot(),
                     LinkedImageScope { {item.content.clone()} }
                 }
             },
             None => media_style
                 .clone()
+                .attr("data-slot", ImageListPart::Media.slot())
                 .render(HtmlTag::Div, Vec::new(), item.content.clone()),
         };
 
@@ -399,6 +414,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
                         .with(scrim, bar.scrim && !scrim.is_empty())
                         .data_state(),
                 )
+                .attr("data-slot", ImageListPart::Bar.slot())
                 .render(HtmlTag::Figcaption, Vec::new(), bar.content.clone())
         });
         // A bar captions its picture: `figure` + `figcaption`, else the bare picture.
@@ -461,13 +477,15 @@ pub fn ImageList(props: ImageListProps) -> Element {
                 rows,
                 sx: cell_sx,
                 states: cell_states.clone(),
+                "data-slot": ImageListPart::Item.slot(),
                 {content}
             }
         }
     });
     let cells = cells.collect::<Vec<_>>();
 
-    let root_sx: Input<Sx> = match props.sx.as_ref() {
+    let caller_sx = parts_under_sx(&props.parts, props.sx.clone());
+    let root_sx: Input<Sx> = match caller_sx.as_ref() {
         None => Input::Static(&IMAGE_LIST_SX),
         Some(caller) => Input::Value(Sx::clone(&IMAGE_LIST_SX).and(caller.clone())),
     };
@@ -505,6 +523,23 @@ pub fn ImageList(props: ImageListProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<ImageListPart>(),
+            [
+                ("item", "& > [data-slot='item']"),
+                (
+                    "media",
+                    "& > [data-slot='item'] > [data-slot='media'], & > [data-slot='item'] > figure > [data-slot='media']"
+                ),
+                ("bar", "& > [data-slot='item'] > figure > [data-slot='bar']"),
+            ]
+        );
+    }
 
     #[test]
     fn a_divisor_of_twelve_is_left_alone() {

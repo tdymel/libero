@@ -1,6 +1,8 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Flex, Input, Options, StepState, Stepper, Text};
+use libero::components::{
+    Button, Code, Flex, Input, Options, StepState, Stepper, StepperPart, Text,
+};
 
 /// The steps are the enum, so the snippet is a lie without it.
 const STAGE_ENUM: &str = r#"#[derive(Clone, PartialEq, Options)]
@@ -103,6 +105,18 @@ pub fn StepperPage() -> Element {
                     prop("label_position", "StepLabelPosition").default("side").doc("`side` or `below` the marker. Ignored when vertical. Below 360px wide, `side` draws as `below`."),
                     prop("size", "Size").default("md").doc("Marker, type and spacing."),
                     prop("color", "ThemeAwareValue").default("primary").doc("The current and completed markers, and the connectors behind them."),
+                    prop("parts", "Parts<StepperPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .parts("StepperPart", vec![
+                    (StepperPart::List, "The `<ol>` of steps."),
+                    (StepperPart::Step, "One step's `<li>`. Its `data-state` names the step's state."),
+                    (StepperPart::Header, "The step's button, or a plain box when steps cannot be picked."),
+                    (StepperPart::Marker, "The number, check or cross."),
+                    (StepperPart::Body, "Label and description."),
+                    (StepperPart::Label, "The step's label."),
+                    (StepperPart::Description, "The second line under the label."),
+                    (StepperPart::Panel, "The `panel` content: below the strip, or under each step when vertical."),
                 ]),
             ],
             accessibility: a11y()

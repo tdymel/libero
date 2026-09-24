@@ -35,6 +35,17 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `RepoButtonPart::Icon` | `icon` | The host's logo. |
+| `RepoButtonPart::Count` | `count` | The star count, once it has loaded. |
+
 ## Accessibility
 
 ### Libero handles
@@ -64,6 +75,7 @@ fn Demo() -> Element {
 | `size` | `ThemeAwareValue` | `md` | Button size. The icon takes half of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | - | Replaces the whole built name: host, repository, star count and new-tab cue. Unset, the built name. |
+| `parts` | `Parts<RepoButtonPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `RepoButton` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the link.

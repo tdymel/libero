@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Input, Text, ThemeToggle},
+    components::{Code, Input, Text, ThemeToggle, ThemeTogglePart},
     theme::ThemeSet,
 };
 
@@ -35,6 +35,14 @@ pub fn ThemeTogglePage() -> Element {
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables and dims the button."),
+                prop("parts", "Parts<ThemeTogglePart>")
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`. `Toggle`, `Picker` and `Chevron` exist with `themes` only."),
+            ])
+            .parts("ThemeTogglePart", vec![
+                (ThemeTogglePart::Icon, "The sun, moon or system glyph."),
+                (ThemeTogglePart::Toggle, "The scheme button beside the picker. Without `themes`, the root is the toggle."),
+                (ThemeTogglePart::Picker, "The button that opens the theme-set menu."),
+                (ThemeTogglePart::Chevron, "The picker's chevron."),
             ])],
             accessibility: a11y()
                 .handles([

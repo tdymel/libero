@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::Pictogram;
-use libero::components::{Code, Text, Timeline, TimelineEvent, TimelineLine};
+use libero::components::{Code, Text, Timeline, TimelineEvent, TimelineLine, TimelinePart};
 use pictogram_icons_lucide as lucide;
 
 /// The four fixed events as printed, with the controls' bullets and line style.
@@ -127,6 +127,14 @@ pub fn TimelinePage() -> Element {
                     prop("gap", "Size")
                         .default("xl")
                         .doc("Space between events, which is also each connector's length."),
+                    prop("parts", "Parts<TimelinePart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .parts("TimelinePart", vec![
+                    (TimelinePart::Item, "One event's `<li>`."),
+                    (TimelinePart::Bullet, "The dot, or the ring around an event's `bullet`."),
+                    (TimelinePart::Body, "Title and content, beside the rail."),
+                    (TimelinePart::Title, "The event's title."),
                 ]),
                 props("TimelineEvent", vec![
                     prop("new(title)", "impl Into<OptionLabel>")

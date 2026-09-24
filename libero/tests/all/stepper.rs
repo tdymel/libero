@@ -49,7 +49,7 @@ fn states(html: &str) -> Vec<String> {
 
 fn headers(html: &str) -> Vec<BTreeMap<String, String>> {
     let body = body(html);
-    body.match_indices("data-step-header")
+    body.match_indices("data-slot=\"header\"")
         .map(|(at, _)| {
             let open = body[..at].rfind('<').unwrap();
             let tag = &body[open + 1..][..body[open + 1..].find(' ').unwrap()];
@@ -314,14 +314,14 @@ fn the_status_is_named_in_one_text_with_the_label() {
     }
     let body = body(&render(app));
     assert!(
-        body.contains("<span data-step-label=\"\"><span aria-hidden=\"true\">Account</span>"),
+        body.contains("<span data-slot=\"label\"><span aria-hidden=\"true\">Account</span>"),
         "{body}"
     );
     assert!(body.contains(">Account, Completed</span>"), "{body}");
     assert!(body.contains(">Shipping address, Error</span>"), "{body}");
     // A step with no status keeps its plain label.
     assert!(
-        body.contains("<span data-step-label=\"\">Review</span>"),
+        body.contains("<span data-slot=\"label\">Review</span>"),
         "{body}"
     );
 }
@@ -359,7 +359,7 @@ fn a_description_prints_and_an_empty_one_does_not() {
     }
     let html = render(app);
     assert_eq!(
-        body(&html).matches("data-step-description").count(),
+        body(&html).matches("data-slot=\"description\"").count(),
         1,
         "{html}"
     );

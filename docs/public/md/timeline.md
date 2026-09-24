@@ -91,6 +91,19 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `TimelinePart::Item` | `item` | One event's `<li>`. |
+| `TimelinePart::Bullet` | `bullet` | The dot, or the ring around an event's `bullet`. |
+| `TimelinePart::Body` | `body` | Title and content, beside the rail. |
+| `TimelinePart::Title` | `title` | The event's title. |
+
 ## Accessibility
 
 ### Libero handles
@@ -115,6 +128,7 @@ fn Demo() -> Element {
 | `bullet_size` | `Size` | `md` | Bullet diameter. |
 | `radius` | `Size` | `xl` | Bullet corner radius. `xl` is a dot. |
 | `gap` | `Size` | `xl` | Space between events, which is also each connector's length. |
+| `parts` | `Parts<TimelinePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 `TimelineEvent`
 

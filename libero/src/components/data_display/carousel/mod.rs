@@ -22,7 +22,8 @@ use self::{
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Orientation, States, Variables, base_props, input_from_str, variables,
+            HtmlTag, Input, Orientation, Part, States, Variables, base_props, input_from_str,
+            parts_enum, variables,
         },
         layout::{Box, use_box, use_scroll_area},
     },
@@ -89,7 +90,29 @@ fn carousel_variables(
         )
 }
 
+parts_enum! {
+    /// [`Carousel`]'s inner parts. Direct paths, so a carousel in a slide keeps its own.
+    pub enum CarouselPart {
+        /// Track and controls; clips the strip.
+        Viewport = "viewport" => "& > [data-slot='viewport']",
+        /// The scrolling strip, the tab stop.
+        Track = "track" => "& > [data-slot='viewport'] > [data-slot='track']",
+        /// One slide; the current one also has `data-current="true"`.
+        Slide = "slide" => "& > [data-slot='viewport'] > [data-slot='track'] > * > [data-slot='slide']",
+        /// The strip holding previous and next.
+        Controls = "controls" => "& > [data-slot='viewport'] > [data-slot='controls']",
+        /// The previous or next button.
+        Control = "control" => "& > [data-slot='viewport'] > [data-slot='controls'] > [data-slot='control']",
+        Indicators = "indicators" => "& > [data-slot='indicators']",
+        /// One dot.
+        Indicator = "indicator" => "& > [data-slot='indicators'] > [data-slot='indicator']",
+        /// The autoplay toggle.
+        Pause = "pause" => "& > [data-slot='pause']",
+    }
+}
+
 base_props! {
+    parts(CarouselPart);
     pub struct CarouselProps {
         /// The slides, in order.
         #[props(default)]
@@ -245,6 +268,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         .framework_sx(&CAROUSEL_ROOT_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&root_states)
         .variables(&variables)
         .prepare()
@@ -276,7 +300,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
             if props.autoplay && !empty {
                 {carousel_pause_button(view, controls)}
             }
-            Box { framework_sx: &CAROUSEL_VIEWPORT_SX,
+            Box { framework_sx: &CAROUSEL_VIEWPORT_SX, "data-slot": CarouselPart::Viewport.slot(),
                 {carousel_track(view, aria_label, props.draggable, drag, body)}
                 if controls {
                     CarouselControls { view }

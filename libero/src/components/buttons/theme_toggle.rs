@@ -4,7 +4,10 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{Glyph, HtmlTag, Input, Variant, base_props, use_button_group},
+        common::{
+            Glyph, HtmlTag, Input, Part, Variant, attr, base_props, parts_enum, parts_under_sx,
+            use_button_group,
+        },
         layout::use_box,
         overlay::{Menu, MenuEntry, MenuItem, use_menu},
     },
@@ -45,7 +48,22 @@ static SPLIT_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+parts_enum! {
+    /// [`ThemeToggle`]'s inner parts. Without `themes` the toggle is the root itself,
+    /// styled by `sx`; `Toggle`, `Picker` and `Chevron` exist only with `themes`.
+    pub enum ThemeTogglePart {
+        /// The toggle's sun, moon or system glyph.
+        Icon = "icon" => "& > [data-slot='icon'], & > [data-slot='toggle'] > [data-slot='icon']",
+        /// The scheme button beside the picker.
+        Toggle = "toggle" => "& > [data-slot='toggle']",
+        /// The button that opens the theme-set menu.
+        Picker = "picker" => "& > div > [data-slot='picker']",
+        Chevron = "chevron" => "& > div > [data-slot='picker'] > [data-slot='chevron']",
+    }
+}
+
 base_props! {
+    parts(ThemeTogglePart);
     pub struct ThemeToggleProps {
         #[props(default, into)]
         variant: Input<Variant>,
@@ -129,7 +147,11 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
         .unwrap_or_else(|| theme.theme_toggle.color.into());
     let disabled = props.disabled.or(group.disabled);
 
-    let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
+    let glyph = use_box()
+        .framework_sx(&GLYPH_SX)
+        .prepare()
+        .attr("data-slot", ThemeTogglePart::Icon.slot())
+        .render(
         HtmlTag::Span,
         Vec::new(),
         // Where a press goes: a sun switches to light.
@@ -145,16 +167,21 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
             }
         },
     );
-    let chevron = use_box().framework_sx(&GLYPH_SX).prepare().render(
-        HtmlTag::Span,
-        Vec::new(),
-        rsx! { Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } },
-    );
+    let chevron = use_box()
+        .framework_sx(&GLYPH_SX)
+        .prepare()
+        .attr("data-slot", ThemeTogglePart::Chevron.slot())
+        .render(
+            HtmlTag::Span,
+            Vec::new(),
+            rsx! { Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } },
+        );
     // A hook, so above the branch: the picker's wrapper is built either way.
     let split = use_box()
         .framework_sx(&SPLIT_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .prepare()
         .attr("role", "group")
@@ -171,7 +198,7 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
                 radius: props.radius.clone(),
                 disabled: props.disabled,
                 class: props.class.clone(),
-                sx: props.sx.clone(),
+                sx: parts_under_sx(&props.parts, props.sx.clone()),
                 states: props.states.clone(),
                 attributes: props.attributes.clone(),
                 {glyph}
@@ -194,11 +221,15 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
             .collect(),
     }];
 
+    let mut picker_attributes = menu.a11y_attributes();
+    picker_attributes.push(attr("data-slot", ThemeTogglePart::Picker.slot()));
+
     split.render(
         HtmlTag::Div,
         props.attributes.clone(),
         rsx! {
             ActionIcon {
+                "data-slot": ThemeTogglePart::Toggle.slot(),
                 aria_label,
                 onclick: move |_| press(&scheme, with_system),
                 variant: variant.clone(),
@@ -220,10 +251,36 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
                     size: props.size.clone(),
                     radius: props.radius.clone(),
                     disabled: props.disabled,
-                    attributes: menu.a11y_attributes(),
+                    attributes: picker_attributes,
                     {chevron}
                 }
             }
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_part_table_is_stable() {
+        assert_eq!(
+            part_table::<ThemeTogglePart>(),
+            [
+                (
+                    "icon",
+                    "& > [data-slot='icon'], & > [data-slot='toggle'] > [data-slot='icon']"
+                ),
+                ("toggle", "& > [data-slot='toggle']"),
+                ("picker", "& > div > [data-slot='picker']"),
+                (
+                    "chevron",
+                    "& > div > [data-slot='picker'] > [data-slot='chevron']"
+                ),
+            ]
+        );
+    }
 }
