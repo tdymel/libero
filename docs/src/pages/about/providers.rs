@@ -8,7 +8,7 @@ use libero::{
 };
 use pictogram_icons_lucide as lucide;
 
-// snippet: let day = libero::chrono::NaiveDate::from_ymd_opt(2026, 9, 14);
+// snippet: let day = libero::chrono::NaiveDate::from_ymd_opt(2026, 3, 14);
 const NESTED: &str = r#"rsx! {
     LiberoProvider {
         DatePicker { value: day, onchange: |_| {} }
@@ -32,7 +32,8 @@ const NESTED_ICONS: &str = r#"rsx! {
 
 #[component]
 pub fn ProvidersPage() -> Element {
-    let day = NaiveDate::from_ymd_opt(2026, 9, 14);
+    // March: "September" is the same word in German.
+    let day = NaiveDate::from_ymd_opt(2026, 3, 14);
 
     rsx! {
         DocPage {
@@ -78,7 +79,8 @@ pub fn ProvidersPage() -> Element {
                     Code { source: "localization" }
                     " and "
                     Code { source: "formats" }
-                    ". Everything outside keeps the outer ones. Both calendars below sit in one page."
+                    ". Everything outside keeps the outer ones. Both calendars below sit in one page: "
+                    "the outer one follows this site, English words and German formats, so only the words differ."
                 }
                 Flex { direction: "row", gap: "lg", wrap: "wrap", align: "start",
                     Paper { padding: "md",

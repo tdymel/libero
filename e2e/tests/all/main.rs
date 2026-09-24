@@ -66,6 +66,7 @@ mod multi_select;
 mod native_select;
 mod nav_link;
 mod negative;
+mod nested_provider;
 mod notifications;
 mod number_field;
 mod pagination;

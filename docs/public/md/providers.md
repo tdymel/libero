@@ -14,7 +14,9 @@ ones, and the nearest wins.
 ## Different providers in one page
 
 A `LiberoProvider` inside another gives its own subtree its own `localization`
-and `formats`. Everything outside keeps the outer ones.
+and `formats`. Everything outside keeps the outer ones. The live demo's outer
+calendar follows the site, English words and German formats, so only the words
+differ there.
 
 ```rust
 use dioxus::prelude::*;
@@ -27,7 +29,7 @@ use libero::{
 
 #[component]
 fn Calendars() -> Element {
-    let day = NaiveDate::from_ymd_opt(2026, 9, 14);
+    let day = NaiveDate::from_ymd_opt(2026, 3, 14);
 
     rsx! {
         LiberoProvider {
