@@ -65,6 +65,17 @@ fn Checklist() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ListItemPart::Icon` | `icon` | The icon wrapper, with an icon only. |
+| `ListItemPart::Body` | `body` | The content beside the icon, with an icon only. |
+
 ## Accessibility
 
 ### Libero handles
@@ -99,17 +110,6 @@ fn Checklist() -> Element {
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
-
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Styling](styling.md#style-api) explains how
-parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `ListItemPart::Icon` | `icon` | The icon wrapper, with an icon only. |
-| `ListItemPart::Body` | `body` | The content beside the icon, with an icon only. |
 
 ## Theme defaults
 

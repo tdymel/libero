@@ -61,6 +61,23 @@ let inspector = use_floating_window(
 );
 ```
 
+## Style API
+
+Style a part with the `parts` option, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FloatingWindowPart::TitleBar` | `title-bar` | The row holding the move handle, the menu button and the close button. |
+| `FloatingWindowPart::Handle` | `handle` | The move handle around the title. |
+| `FloatingWindowPart::Title` | `title` | The title heading. |
+| `FloatingWindowPart::Menu` | `menu` | The Move, Resize and Reset menu's button. The menu itself is portaled and not reached. |
+| `FloatingWindowPart::Close` | `close` | The close button. |
+| `FloatingWindowPart::Steps` | `steps` | The step buttons Move or Resize shows. |
+| `FloatingWindowPart::Body` | `body` | The scrolling content. |
+| `FloatingWindowPart::Resize` | `resize` | The corner resize handle, when `resizable`. |
+
 ## Accessibility
 
 ### Keyboard
@@ -113,23 +130,6 @@ handle, so the body can close its own window.
 | `parts` | `Input<Parts<FloatingWindowPart>>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(FloatingWindowPart::Body, sx().padding("lg"))`. |
 
 `WindowRect { x, y, width, height }` is in viewport pixels.
-
-## Style API
-
-Style a part with the `parts` option, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `FloatingWindowPart::TitleBar` | `title-bar` | The row holding the move handle, the menu button and the close button. |
-| `FloatingWindowPart::Handle` | `handle` | The move handle around the title. |
-| `FloatingWindowPart::Title` | `title` | The title heading. |
-| `FloatingWindowPart::Menu` | `menu` | The Move, Resize and Reset menu's button. The menu itself is portaled and not reached. |
-| `FloatingWindowPart::Close` | `close` | The close button. |
-| `FloatingWindowPart::Steps` | `steps` | The step buttons Move or Resize shows. |
-| `FloatingWindowPart::Body` | `body` | The scrolling content. |
-| `FloatingWindowPart::Resize` | `resize` | The corner resize handle, when `resizable`. |
 
 ## Theme defaults
 

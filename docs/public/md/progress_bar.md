@@ -35,6 +35,16 @@ indeterminate bar.
 ProgressBar { aria_label: "Connecting", value: None }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ProgressBarPart::Fill` | `fill` | The drawn share, or the indeterminate sweep. The root is the track. |
+
 ## Accessibility
 
 ### Libero handles
@@ -65,16 +75,6 @@ ProgressBar { aria_label: "Connecting", value: None }
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes, `aria_label` among them.
-
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `ProgressBarPart::Fill` | `fill` | The drawn share, or the indeterminate sweep. The root is the track. |
 
 ## Theme defaults
 

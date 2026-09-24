@@ -73,6 +73,18 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `MarqueePart::Track` | `track` | The moving row of copies. |
+| `MarqueePart::Group` | `group` | One copy of the children. |
+| `MarqueePart::Pause` | `pause` | The pause toggle. |
+
 ## Accessibility
 
 ### Keyboard
@@ -121,18 +133,6 @@ fn Demo() -> Element {
 
 Like every component, `Marquee` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
-
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Styling](styling.md#style-api) explains how
-parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `MarqueePart::Track` | `track` | The moving row of copies. |
-| `MarqueePart::Group` | `group` | One copy of the children. |
-| `MarqueePart::Pause` | `pause` | The pause toggle. |
 
 ## Theme defaults
 

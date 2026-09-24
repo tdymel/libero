@@ -51,6 +51,18 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `BlockquotePart::Quote` | `quote` | The tinted `<blockquote>`. |
+| `BlockquotePart::Caption` | `caption` | The `<figcaption>`, with `attribution` or `work`. |
+| `BlockquotePart::Work` | `work` | The `<cite>` holding `work`. |
+
 ## Accessibility
 
 ### Libero handles
@@ -80,18 +92,6 @@ fn Demo() -> Element {
 
 Like every component, `Blockquote` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the `<figure>`.
-
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Styling](styling.md#style-api) explains how
-parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `BlockquotePart::Quote` | `quote` | The tinted `<blockquote>`. |
-| `BlockquotePart::Caption` | `caption` | The `<figcaption>`, with `attribution` or `work`. |
-| `BlockquotePart::Work` | `work` | The `<cite>` holding `work`. |
 
 ## Theme defaults
 

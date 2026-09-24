@@ -23,9 +23,9 @@ pub const TLDR_PROMPT: &str = "Summarize and analyze the key insights from {url}
 enum DocTab {
     Usage,
     Properties,
-    Accessibility,
     #[option(label = "Style API")]
     StyleApi,
+    Accessibility,
 }
 
 /// A docs page: heading, lead paragraph, `DocSection`s. With `properties` or `accessibility`
@@ -64,32 +64,19 @@ pub fn DocPage(
         })
         .cloned()
         .collect();
-    // Three equal tabs with icons break "Accessibility" mid-word on a phone:
-    // drop the icons there and size each tab to its label. Four fit only with
-    // narrower padding; labels never wrap, a longer strip scrolls.
-    let crowded = tabs.len() > 2;
-    let narrow = "(max-width: 30rem)";
-    let icon_sx = match crowded {
-        true => sx().media(narrow, sx().display("none")),
-        false => sx(),
-    };
-    let tabs_sx = match crowded {
-        true => sx().media(
-            narrow,
-            sx().selector(
-                // Child combinators, or the Tabs page's own demo strip matches too.
-                "& > [role=tablist]",
-                sx().overflow_x("auto"),
-            )
-            .selector(
-                "& > [role=tablist] > [role=tab]",
-                sx().flex("1 1 auto")
-                    .white_space("nowrap")
-                    .padding_inline("sm"),
-            ),
-        ),
-        false => sx(),
-    };
+    // Equal tabs that never shrink below icon and label: the tablist scrolls instead.
+    // Child combinators, or the Tabs page's demo strip matches too.
+    let tabs_sx = sx()
+        .selector(
+            "& > [role=tablist] > [role=tab]",
+            sx().flex("1 0 0")
+                .min_width("max-content")
+                .white_space("nowrap"),
+        )
+        .media(
+            "(max-width: 30rem)",
+            sx().selector("& > [role=tablist] > [role=tab]", sx().padding_inline("sm")),
+        );
 
     rsx! {
         // Every route is a `DocPage`, so this names each one; `App`'s bare
@@ -169,7 +156,6 @@ pub fn DocPage(
                         selected.label(),
                         rsx! {
                             Icon { variant: "standard", size: "md",
-                                sx: icon_sx.clone(),
                                 match selected {
                                     DocTab::Usage => rsx! { Pictogram { icon: lucide::file::outlined } },
                                     DocTab::Properties => rsx! { Pictogram { icon: lucide::code::outlined } },

@@ -54,6 +54,20 @@ fn Demo() -> Element {
 # #[component] fn WarningGlyph() -> Element { rsx! {} }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `AlertPart::Icon` | `icon` | The icon wrapper. |
+| `AlertPart::Body` | `body` | The column holding the title and the message. |
+| `AlertPart::Title` | `title` | The title. |
+| `AlertPart::Message` | `message` | The message. |
+| `AlertPart::Close` | `close` | The close button. |
+
 ## Accessibility
 
 ### Libero handles
@@ -86,20 +100,6 @@ fn Demo() -> Element {
 
 Like every component, `Alert` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
-
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `AlertPart::Icon` | `icon` | The icon wrapper. |
-| `AlertPart::Body` | `body` | The column holding the title and the message. |
-| `AlertPart::Title` | `title` | The title. |
-| `AlertPart::Message` | `message` | The message. |
-| `AlertPart::Close` | `close` | The close button. |
 
 ## Theme defaults
 

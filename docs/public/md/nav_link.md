@@ -86,6 +86,18 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `NavLinkPart::Body` | `body` | The column holding the label and the description, with `description` only. |
+| `NavLinkPart::Label` | `label` | The link's content, with `description` only. |
+| `NavLinkPart::Description` | `description` | The dimmed line under the label. |
+
 ## Accessibility
 
 ### Libero handles
@@ -122,18 +134,6 @@ fn Demo() -> Element {
 
 Like every component, `NavLink` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
-
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Styling](styling.md#style-api) explains how
-parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `NavLinkPart::Body` | `body` | The column holding the label and the description, with `description` only. |
-| `NavLinkPart::Label` | `label` | The link's content, with `description` only. |
-| `NavLinkPart::Description` | `description` | The dimmed line under the label. |
 
 ## Theme defaults
 

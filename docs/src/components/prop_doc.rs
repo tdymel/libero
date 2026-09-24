@@ -4,7 +4,7 @@ use libero::{
     sx::sx,
 };
 
-use super::{DocSection, SectionLink};
+use super::SectionLink;
 use crate::Route;
 
 /// One row of a docs page's Properties table.
@@ -180,8 +180,9 @@ pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
     let named = groups.len() > 1;
 
     rsx! {
-        DocSection {
-            title: "Style API",
+        Flex {
+            direction: "column",
+            gap: "lg",
             Text {
                 "Style a part with the "
                 Code { source: "parts" }
@@ -196,7 +197,8 @@ pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
                     direction: "column",
                     gap: "sm",
                     if named {
-                        Title { size: "lg", component: "h3", "{group.component}" }
+                        // h2 directly under the page's h1, like the Properties tab.
+                        Title { size: "lg", component: "h2", "{group.component}" }
                     }
                     PartRows { name: format!("{} parts", group.component), parts: group.parts }
                 }

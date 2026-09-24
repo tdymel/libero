@@ -78,6 +78,19 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `CodeBlockPart::Header` | `header` | The bar above the code, with `header`. |
+| `CodeBlockPart::Language` | `language` | The language name in the header. |
+| `CodeBlockPart::Copy` | `copy` | The copy button, in the header or floating in the corner. |
+| `CodeBlockPart::Scroll` | `scroll` | The scrolling box round the code. |
+
 ## Accessibility
 
 ### Libero handles
@@ -113,19 +126,6 @@ fn Demo() -> Element {
 
 Like every component, `CodeBlock` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
-
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Styling](styling.md#style-api) explains how
-parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `CodeBlockPart::Header` | `header` | The bar above the code, with `header`. |
-| `CodeBlockPart::Language` | `language` | The language name in the header. |
-| `CodeBlockPart::Copy` | `copy` | The copy button, in the header or floating in the corner. |
-| `CodeBlockPart::Scroll` | `scroll` | The scrolling box round the code. |
 
 ## Theme defaults
 

@@ -36,6 +36,16 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ButtonPart::Icon` | `button-icon` | The `icon` wrapper. |
+
 ## Accessibility
 
 ### Libero handles
@@ -88,16 +98,6 @@ fn Demo() -> Element {
 `Button` also takes the `<button>` HTML attributes (`type`, `form`, `name`,
 `value`, ...) and, like every component, the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
-
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Styling](styling.md#style-api) explains how
-parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `ButtonPart::Icon` | `button-icon` | The `icon` wrapper. |
 
 ## Theme defaults
 
