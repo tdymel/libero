@@ -2,6 +2,10 @@
 //! repaint the badge.
 
 use anyhow::{Result, ensure};
+use chromiumoxide::Page;
+use chromiumoxide::cdp::browser_protocol::page::{
+    CaptureScreenshotFormat, CaptureScreenshotParams, Viewport as Clip,
+};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform};
 use e2e::passes::pointer;
@@ -95,6 +99,81 @@ e2e::scenario!(
     "/icon",
     svg_glyph
 );
+
+/// One CSS px of the page at a document point, as PNG bytes: equal bytes are equal pixels.
+async fn pixel(page: &Page, x: f64, y: f64) -> Result<Vec<u8>> {
+    let clip = Clip {
+        x: x.round(),
+        y: y.round(),
+        width: 1.0,
+        height: 1.0,
+        scale: 1.0,
+    };
+    let params = CaptureScreenshotParams::builder()
+        .format(CaptureScreenshotFormat::Png)
+        .clip(clip)
+        .build();
+    Ok(page.screenshot(params).await?)
+}
+
+/// Todo 1152: a `src` glyph is masked, so its hollow centre shows the page and its ring
+/// the colour; a WebView that drops the mask draws one solid box.
+async fn src_glyph_is_masked(page: &Page) -> Result<()> {
+    let [x, y, w, h]: [f64; 4] = page
+        .evaluate(
+            "(() => { const e = document.querySelector('#stencil span'); \
+             e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); \
+             return [r.left + scrollX, r.top + scrollY, r.width, r.height]; })()",
+        )
+        .await?
+        .into_value()?;
+    ensure!(w >= 24.0 && h >= 24.0, "stencil {w}x{h}");
+    let (cx, cy) = (x + w / 2.0, y + h / 2.0);
+    // The stencil is the page's last element: below it is bare page.
+    let page_bg = pixel(page, cx, y + h + 8.0).await?;
+    let corner = pixel(page, x + 1.0, y + 1.0).await?;
+    let centre = pixel(page, cx, cy).await?;
+    // The stroke runs at 9/24 of the box from the centre.
+    let ring = pixel(page, cx + w * 9.0 / 24.0, cy).await?;
+    if corner != page_bg || centre != page_bg {
+        let support: String = page
+            .evaluate(
+                "`mask-image ${CSS.supports('mask-image', 'url(x)')}, \
+                 -webkit-mask-image ${CSS.supports('-webkit-mask-image', 'url(x)')}, \
+                 ${navigator.userAgent}`",
+            )
+            .await?
+            .into_value()?;
+        anyhow::bail!("the corner or hollow centre is painted, the mask was dropped: {support}");
+    }
+    ensure!(ring != page_bg, "the ring is not painted");
+    Ok(())
+}
+
+/// Blitz paints the mask too: `native/menu_link.rs`.
+mod a_src_glyph_is_masked {
+    use e2e::{Fixture, Viewport, browser::block_on};
+
+    #[test]
+    fn web() {
+        block_on(async {
+            let fixture = Fixture::open("/icon", Viewport::Desktop).await.unwrap();
+            super::src_glyph_is_masked(&fixture.page).await.unwrap();
+            fixture.console.assert_clean("the icon fixture").unwrap();
+            fixture.close().await.unwrap();
+        });
+    }
+
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        e2e::android::block_on(async {
+            let driver = e2e::driver::Android::open("/icon").await.unwrap();
+            super::src_glyph_is_masked(driver.page()).await.unwrap();
+            driver.finish("a_src_glyph_is_masked").await.unwrap();
+        });
+    }
+}
 
 /// Todo 612: an unnamed icon is not in the accessibility tree; a named one is
 /// an image under its name.

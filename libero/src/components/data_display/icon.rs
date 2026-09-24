@@ -62,16 +62,19 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// An image as a stencil filled with `currentColor`, so it takes the icon's color.
+/// The `-webkit-` twins are for Chrome < 120, e.g. Android WebView 113 (1152).
 static ICON_MASK_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .width(ICON_GLYPH_VAR.value())
         .height(ICON_GLYPH_VAR.value())
         .background("currentColor")
+        .with("-webkit-mask", "center / contain no-repeat")
         .mask("center / contain no-repeat")
 });
 
 fn icon_mask_style(src: &str) -> String {
-    format!("mask-image:url({});", css_string(src))
+    let url = css_string(src);
+    format!("-webkit-mask-image:url({url});mask-image:url({url});")
 }
 
 #[component]
@@ -223,8 +226,20 @@ mod tests {
     fn a_source_url_is_quoted_into_the_mask() {
         assert_eq!(
             icon_mask_style("/a b\"c.svg"),
-            "mask-image:url(\"/a b\\\"c.svg\");"
+            "-webkit-mask-image:url(\"/a b\\\"c.svg\");mask-image:url(\"/a b\\\"c.svg\");"
         );
+    }
+
+    /// Chrome < 120 masks only through the prefixed shorthand (1152).
+    #[test]
+    fn the_mask_sx_carries_a_webkit_twin() {
+        let css = crate::css::Stylesheet::from(&ICON_MASK_SX);
+        let css = css.as_str();
+        assert!(
+            css.contains("-webkit-mask:center / contain no-repeat;"),
+            "{css}"
+        );
+        assert!(css.contains(";mask:center / contain no-repeat;"), "{css}");
     }
 
     #[test]

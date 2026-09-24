@@ -1,6 +1,6 @@
 //! A filled `Icon` in a theme colour, for its cached colour variables, and a
 //! named one beside the unnamed one (todo 612), a `standard` one (786), and
-//! one drawn from `SvgData` (1094).
+//! one drawn from `SvgData` (1094), and one masked from a `src` image (1152).
 
 use dioxus::prelude::*;
 use libero::components::{Button, Icon, SvgData};
@@ -25,8 +25,12 @@ fn IconPage() -> Element {
             svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
         }
         Icon { id: "pictogram", variant: "standard", color: "error", svg: RING }
+        Icon { id: "stencil", variant: "standard", size: "xl", color: "error", src: RING_SRC.to_string() }
     }
 }
+
+/// A ring with a hollow centre, so a mask that fails shows as a solid box (1152).
+static RING_SRC: Asset = asset!("/assets/ring.svg");
 
 const RING: SvgData = SvgData::new(
     r#"<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg>"#,
