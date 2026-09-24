@@ -1,0 +1,54 @@
+---
+source: e2e/src/suite.rs
+description: table_paged at desktop (rest)
+expression: tree
+---
+table "Fruit"
+  caption
+    StaticText "Fruit"
+  rowgroup
+    row
+      columnheader "Name"
+        button "Name"
+          StaticText "Name"
+      columnheader "Stock"
+        StaticText "Stock"
+  row
+    rowheader "Fig"
+      StaticText "Fig"
+    cell "1"
+      StaticText "1"
+  row
+    rowheader "Apple"
+      StaticText "Apple"
+    cell "2"
+      StaticText "2"
+  row
+    rowheader "Grape"
+      StaticText "Grape"
+    cell "3"
+      StaticText "3"
+LabelText
+  StaticText "Rows per page"
+combobox "Rows per page" = 3 [expanded=false] [haspopup=listbox]
+  StaticText "3"
+status [atomic] [live=polite]
+StaticText "1–3 of 7"
+status [atomic] [live=polite]
+navigation "Pages of Fruit"
+  list
+    listitem [level=1]
+      button "Go to previous page" [disabled]
+    listitem [level=1]
+      button "Page 1" [current=page]
+        StaticText "1"
+    listitem [level=1]
+      button "Go to page 2"
+        StaticText "2"
+    listitem [level=1]
+      button "Go to page 3"
+        StaticText "3"
+    listitem [level=1]
+      button "Go to next page"
+paragraph
+  StaticText "0"

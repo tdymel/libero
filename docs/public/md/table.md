@@ -30,6 +30,12 @@ list of `row_key`s, so it stays with its rows through a sort. Hold it yourself
 with `selection` and `onselectionchange`. `multi_sort` lets Shift-click, or a
 tap on a touch screen, sort by one more column.
 
+`page_sizes` pages the rows after sorting them, with a page-size picker, the
+shown range and page buttons under the table. `page` and `page_size` hold the
+state yourself, as `sort` does. For server-side data set `manual_sort` and
+`manual_pagination`, pass the current page as `data` and the total as
+`row_count`. Select-all covers the rows on every page.
+
 ## Usage
 
 ```rust
@@ -213,6 +219,74 @@ fn Demo() -> Element {
 }
 ```
 
+Ten rows a page, with a picker for 10, 25 or 50. A sort goes back to page 1,
+and a new page size keeps the first shown row in view.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Table, column};
+
+#[derive(Clone, PartialEq)]
+struct Item {
+    id: u32,
+}
+
+#[component]
+fn Demo() -> Element {
+    let items: Vec<Item> = (1..=95).map(|id| Item { id }).collect();
+
+    rsx! {
+        Table {
+            caption: "Items",
+            data: items,
+            columns: vec![column("Id").value(|i: &Item| i.id).sortable()],
+            page_sizes: vec![10, 25, 50],
+        }
+    }
+}
+```
+
+Server-side data: the table shows `data` as given and only reports what the
+reader asks for. Fetch the page for `sort`, `page` and `page_size`, and pass
+the total as `row_count`.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Table, TableSort, column};
+
+#[derive(Clone, PartialEq)]
+struct Item {
+    id: u32,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut sort = use_signal(Vec::<TableSort>::new);
+    let mut page = use_signal(|| 1u32);
+    let mut page_size = use_signal(|| 25usize);
+    // Your fetch, keyed by `sort()`, `page()` and `page_size()`.
+    let rows: Vec<Item> = Vec::new();
+
+    rsx! {
+        Table {
+            caption: "Items",
+            data: rows,
+            columns: vec![column("Id").value(|i: &Item| i.id).sortable()],
+            manual_sort: true,
+            manual_pagination: true,
+            row_count: 1200,
+            sort: sort(),
+            onsortchange: move |next| sort.set(next),
+            page: page(),
+            onpagechange: move |next| page.set(next),
+            page_size: page_size(),
+            onpagesizechange: move |next| page_size.set(next),
+            page_sizes: vec![25, 50, 100],
+        }
+    }
+}
+```
+
 A table wider than its container takes `scroll: true`, and `empty` fills the
 body while `data` has no rows. Without `empty` that row reads the localized
 `table.no_rows`, "No rows".
@@ -309,6 +383,16 @@ fn Demo() -> Element {
 | `row_attrs` | `RowFn<T, Vec<Attribute>>` | `None` | Extra attributes on a row's `tr`. |
 | `size` | `Size` | theme (md) | Cell padding and font size. |
 | `striped` | `bool` | `false` | Shades every other body row. |
+| `page` | `Option<u32>` | `None` | The shown page, 1-based. Set, the page is controlled: pair it with `onpagechange`. A page past the end shows the last one. |
+| `default_page` | `u32` | `1` | Seeds the page once. Ignored when `page` is set. |
+| `onpagechange` | `EventHandler<u32>` | `None` | Called with the page a page button asks for. A sort change asks for page 1, and a new page size for the page that keeps the first shown row. |
+| `page_size` | `Option<usize>` | `None` | Rows per page. Set, the size is controlled: pair it with `onpagesizechange`. Turns on pagination. |
+| `default_page_size` | `Option<usize>` | `None` | Seeds the page size once. Turns on pagination. |
+| `onpagesizechange` | `EventHandler<usize>` | `None` | Called with the size picked in the page-size picker. |
+| `page_sizes` | `Vec<usize>` | `[]` | The page-size picker's choices; empty hides the picker. Turns on pagination, the first one seeding the size. No cap. |
+| `manual_sort` | `bool` | `false` | `data` comes sorted, say from a server: a header click only reports through `onsortchange`. |
+| `manual_pagination` | `bool` | `false` | `data` is the current page only: the table draws the page controls and leaves the slicing to you. |
+| `row_count` | `Option<usize>` | data's length | Rows over all pages with `manual_pagination`, for the page count and the range text. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes, `aria_label` among them.
@@ -354,6 +438,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - `selectable` without `row_key` warns in a debug build.
 - `.row_header()` cells render as `th scope="row"`, so a screen reader reads
   that name as it moves down any other column. They look like the other cells.
+- Paginated, the page buttons sit in a `nav` named after the caption, the
+  page-size picker is labelled, and a page change announces the new range,
+  "4–6 of 7", politely. The first render announces nothing.
 
 ### You must
 
@@ -409,3 +496,4 @@ default `start`.
 | `aria-selected` | On every body row of a `selectable` table, `true` or `false`. |
 | `data-empty` | On the body row that holds `empty`. |
 | `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set. On a body row: its active `row_states`. |
+| `data-slot="range"` | On the paginated table's range text, "1–10 of 95". |

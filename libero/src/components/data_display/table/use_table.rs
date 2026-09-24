@@ -33,6 +33,11 @@ impl<V: Clone + PartialEq + 'static> StateSlice<V> {
         self.value.read().clone()
     }
 
+    /// `read` without subscribing.
+    pub fn peek(&self) -> V {
+        self.value.peek().clone()
+    }
+
     pub fn set(mut self, next: V) {
         if !self.controlled {
             self.value.set(next.clone());
@@ -76,6 +81,13 @@ pub(crate) struct TableConfig {
     pub selection: Option<Vec<String>>,
     pub default_selection: Vec<String>,
     pub onselectionchange: Option<EventHandler<Vec<String>>>,
+    pub page: Option<u32>,
+    pub default_page: u32,
+    pub onpagechange: Option<EventHandler<u32>>,
+    pub page_size: Option<usize>,
+    /// Seeds the page size; read only while paginated.
+    pub default_page_size: usize,
+    pub onpagesizechange: Option<EventHandler<usize>>,
 }
 
 /// A table's state, one slice per feature.
@@ -84,6 +96,9 @@ pub(crate) struct TableState {
     pub sort: StateSlice<Vec<TableSort>>,
     /// The selected rows' keys.
     pub selection: StateSlice<Vec<String>>,
+    /// 1-based.
+    pub page: StateSlice<u32>,
+    pub page_size: StateSlice<usize>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -99,5 +114,22 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.onselectionchange,
         "Table: a controlled `selection` without `onselectionchange` never changes.",
     );
-    TableState { sort, selection }
+    let page = use_state_slice(
+        config.page,
+        || config.default_page,
+        config.onpagechange,
+        "Table: a controlled `page` without `onpagechange` never changes.",
+    );
+    let page_size = use_state_slice(
+        config.page_size,
+        || config.default_page_size,
+        config.onpagesizechange,
+        "Table: a controlled `page_size` without `onpagesizechange` never changes.",
+    );
+    TableState {
+        sort,
+        selection,
+        page,
+        page_size,
+    }
 }

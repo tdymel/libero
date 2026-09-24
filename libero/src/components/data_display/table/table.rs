@@ -24,6 +24,7 @@ use super::{
         BodySpec, CaptionSpec, RowFn, RowSpec, TableSort, active_sort, header_specs, render_body,
         row_order,
     },
+    paging::{TablePager, clamp_page, page_rows, use_page_reset},
     selection::Selection,
     use_table::{TableConfig, use_table},
 };
@@ -200,6 +201,37 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Shades every other body row.
     #[props(default)]
     striped: bool,
+    /// The shown page, 1-based; set, the page is controlled. Clamped into range.
+    #[props(default)]
+    page: Option<u32>,
+    /// Seeds the page once. Ignored when `page` is set.
+    #[props(default = 1)]
+    default_page: u32,
+    /// The page a page button, a sort or a page-size pick asks for.
+    #[props(default)]
+    onpagechange: Option<EventHandler<u32>>,
+    /// Rows per page; set, the page size is controlled. Turns on pagination.
+    #[props(default)]
+    page_size: Option<usize>,
+    /// Seeds the page size once. Turns on pagination.
+    #[props(default)]
+    default_page_size: Option<usize>,
+    /// The size a pick in the page-size picker asks for.
+    #[props(default)]
+    onpagesizechange: Option<EventHandler<usize>>,
+    /// The page-size picker's choices; empty hides it. Turns on pagination,
+    /// the first one seeding the size.
+    #[props(default)]
+    page_sizes: Vec<usize>,
+    /// `data` comes sorted: a header click only asks via `onsortchange`.
+    #[props(default)]
+    manual_sort: bool,
+    /// `data` is the current page: the table only draws the page controls.
+    #[props(default)]
+    manual_pagination: bool,
+    /// Rows over all pages with `manual_pagination`. Unset, `data`'s length.
+    #[props(default)]
+    row_count: Option<usize>,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -243,6 +275,15 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         selection: props.selection,
         default_selection: props.default_selection,
         onselectionchange: props.onselectionchange,
+        page: props.page,
+        default_page: props.default_page,
+        onpagechange: props.onpagechange,
+        page_size: props.page_size,
+        default_page_size: props
+            .default_page_size
+            .or(props.page_sizes.first().copied())
+            .unwrap_or(10),
+        onpagesizechange: props.onpagesizechange,
     });
     let announcer = use_announcer();
     let touch = use_hook(|| CopyValue::new(false));
@@ -254,6 +295,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             );
         }
     });
+    let paginated = props.page_size.is_some()
+        || props.default_page_size.is_some()
+        || !props.page_sizes.is_empty();
+    use_page_reset(state);
     let caption_id = use_id();
     use_name_warning(
         props.caption.is_some() || names_itself(&props.attributes),
@@ -297,7 +342,36 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .iter()
         .position(|column| column.row_header)
         .unwrap_or(0);
-    let rows: Vec<RowSpec> = row_order(&data, &props.columns, &active)
+    // Sort, then page; a `manual_*` stage is the caller's.
+    let mut order = match props.manual_sort {
+        true => (0..data.len()).collect(),
+        false => row_order(&data, &props.columns, &active),
+    };
+    let pager = paginated.then(|| {
+        let total = match props.manual_pagination {
+            true => props.row_count.unwrap_or(data.len()),
+            false => data.len(),
+        };
+        let page_size = state.page_size.read().max(1);
+        let page = clamp_page(total, state.page.read(), page_size);
+        if !props.manual_pagination {
+            let shown = page_rows(total, page, page_size);
+            order.truncate(shown.end);
+            order.drain(..shown.start);
+        }
+        rsx! {
+            TablePager {
+                state,
+                total,
+                page,
+                page_size,
+                page_sizes: props.page_sizes,
+                caption: props.caption.clone(),
+                size,
+            }
+        }
+    });
+    let rows: Vec<RowSpec> = order
         .into_iter()
         .map(|index| {
             let row = &data[index];
@@ -419,25 +493,31 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 rsx! { "{spec.text}" },
             );
             // One box, so a flex row does not set them side by side.
-            match props.scroll {
+            match props.scroll || pager.is_some() {
                 true => rsx! {
                     {caption}
                     {table}
                 },
-                false => {
-                    return rsx! {
-                        div { {caption} {table} }
-                    };
-                }
+                false => rsx! {
+                    div { {caption} {table} }
+                },
             }
         }
         None => table,
     };
-    if !props.scroll {
-        return table;
+    let table = match props.scroll {
+        true => scroll.attr("role", "region").attr("tabindex", "0").render(
+            HtmlTag::Div,
+            region_name,
+            table,
+        ),
+        false => table,
+    };
+    match pager {
+        // Outside the scroll region, so the controls stay put while it scrolls.
+        Some(pager) => rsx! {
+            div { {table} {pager} }
+        },
+        None => table,
     }
-    scroll
-        .attr("role", "region")
-        .attr("tabindex", "0")
-        .render(HtmlTag::Div, region_name, table)
 }

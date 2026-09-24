@@ -101,6 +101,7 @@ mod spotlight;
 mod stepper;
 mod stylesheet;
 mod table;
+mod table_paging;
 mod tabs;
 mod tags_field;
 mod text;

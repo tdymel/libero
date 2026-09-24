@@ -30,6 +30,20 @@ pub struct TableLabels {
     /// A sorted header's place among several sorted columns. `{n}` is 1 for the
     /// column that sorts first.
     pub sort_order: &'static str,
+    /// The page-size picker's label.
+    pub rows_per_page: &'static str,
+    /// The shown rows: first and last row number, and the rows over all pages.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.range)(11, 20, 95), "11–20 of 95");
+    /// ```
+    pub range: fn(usize, usize, usize) -> String,
+    /// The page buttons' landmark, for a table without a caption.
+    pub pages: &'static str,
+    /// The same landmark, named after the table's caption.
+    pub pages_of: fn(&str) -> String,
 }
 
 /// `TableLabels::ENGLISH.select_row`. A named fn, so every copy compares equal.
@@ -58,6 +72,22 @@ fn german_selected(count: usize) -> String {
     }
 }
 
+fn english_range(from: usize, to: usize, total: usize) -> String {
+    format!("{from}–{to} of {total}")
+}
+
+fn german_range(from: usize, to: usize, total: usize) -> String {
+    format!("{from}–{to} von {total}")
+}
+
+fn english_pages_of(table: &str) -> String {
+    format!("Pages of {table}")
+}
+
+fn german_pages_of(table: &str) -> String {
+    format!("Seiten von {table}")
+}
+
 impl TableLabels {
     pub const ENGLISH: Self = Self {
         no_rows: "No rows",
@@ -65,6 +95,10 @@ impl TableLabels {
         select_row: english_select_row,
         selected: english_selected,
         sort_order: "sort order {n}",
+        rows_per_page: "Rows per page",
+        range: english_range,
+        pages: "Table pages",
+        pages_of: english_pages_of,
     };
 
     pub const GERMAN: Self = Self {
@@ -73,5 +107,9 @@ impl TableLabels {
         select_row: german_select_row,
         selected: german_selected,
         sort_order: "Sortierreihenfolge {n}",
+        rows_per_page: "Zeilen pro Seite",
+        range: german_range,
+        pages: "Tabellenseiten",
+        pages_of: german_pages_of,
     };
 }

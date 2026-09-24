@@ -104,6 +104,16 @@ pub fn TablePage() -> Element {
                     prop("row_attrs", "RowFn<T, Vec<Attribute>>").default("None").doc("Extra attributes on a row's `tr`."),
                     prop("size", "Size").default("theme (md)").doc("Cell padding and font size."),
                     prop("striped", "bool").default("false").doc("Shades every other body row."),
+                    prop("page", "Option<u32>").default("None").doc("The shown page, 1-based. Set, the page is controlled: pair it with `onpagechange`. A page past the end shows the last one."),
+                    prop("default_page", "u32").default("1").doc("Seeds the page once. Ignored when `page` is set."),
+                    prop("onpagechange", "EventHandler<u32>").default("None").doc("Called with the page a page button asks for. A sort change asks for page 1, and a new page size for the page that keeps the first shown row."),
+                    prop("page_size", "Option<usize>").default("None").doc("Rows per page. Set, the size is controlled: pair it with `onpagesizechange`. Turns on pagination."),
+                    prop("default_page_size", "Option<usize>").default("None").doc("Seeds the page size once. Turns on pagination."),
+                    prop("onpagesizechange", "EventHandler<usize>").default("None").doc("Called with the size picked in the page-size picker."),
+                    prop("page_sizes", "Vec<usize>").default("[]").doc("The page-size picker's choices; empty hides the picker. Turns on pagination, the first one seeding the size. No cap."),
+                    prop("manual_sort", "bool").default("false").doc("`data` comes sorted, say from a server: a header click only reports through `onsortchange`."),
+                    prop("manual_pagination", "bool").default("false").doc("`data` is the current page only: the table draws the page controls and leaves the slicing to you."),
+                    prop("row_count", "Option<usize>").default("data's length").doc("Rows over all pages with `manual_pagination`, for the page count and the range text."),
                 ]),
                 props("column()", vec![
                     prop("header", "String").default("required").doc("The column's title, the argument to `column(..)`."),
@@ -130,6 +140,7 @@ pub fn TablePage() -> Element {
                     "A tap on a touch screen has no Shift key, so with `multi_sort` a tap always adds the column.",
                     "`selectable` without `row_key` warns in a debug build.",
                     "`.row_header()` cells render as `th scope=\"row\"`, so a screen reader reads that name as it moves down any other column. They look like the other cells.",
+                    "Paginated, the page buttons sit in a `nav` named after the caption, the page-size picker is labelled, and a page change announces the new range, \"4–6 of 7\", politely. The first render announces nothing.",
                 ])
                 .must([
                     "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
@@ -193,6 +204,25 @@ pub fn TablePage() -> Element {
                     Code { source: "multi_sort" }
                     " lets Shift-click, or a tap on a touch screen, sort by one more column."
                 }
+                Text {
+                    Code { source: "page_sizes" }
+                    " pages the rows after sorting them, with a page-size picker, the shown "
+                    "range and page buttons under the table. "
+                    Code { source: "page" }
+                    " and "
+                    Code { source: "page_size" }
+                    " hold the state yourself, as "
+                    Code { source: "sort" }
+                    " does. For server-side data set "
+                    Code { source: "manual_sort" }
+                    " and "
+                    Code { source: "manual_pagination" }
+                    ", pass the current page as "
+                    Code { source: "data" }
+                    " and the total as "
+                    Code { source: "row_count" }
+                    ". Select-all covers the rows on every page."
+                }
             },
             Demo {
                 component: "Table",
@@ -215,6 +245,10 @@ pub fn TablePage() -> Element {
                         false => vec![],
                     }),
                     Control::switch("multi_sort"),
+                    Control::switch("paginate").code(|_, values| match values.str("paginate") == "true" {
+                        true => vec!["page_sizes: vec![2, 5, 10]".to_string()],
+                        false => vec![],
+                    }),
                     Control::switch("empty").code(|_, values| match no_rows(values) {
                         true => vec![r#"empty: rsx! { "No team members yet." }"#.to_string()],
                         false => vec![],
@@ -223,6 +257,8 @@ pub fn TablePage() -> Element {
                 wrap: Wrap(wrap_data),
                 render: move |values: DemoValues| rsx! {
                     Table {
+                        // A new table per switch: `page_sizes` seeds the page size once.
+                        key: "{values.str(\"paginate\")}",
                         caption: "Team members",
                         size: values.str("size"),
                         striped: values.str("striped") == "true",
@@ -230,6 +266,7 @@ pub fn TablePage() -> Element {
                         selectable: values.str("selectable") == "true",
                         multi_sort: values.str("multi_sort") == "true",
                         row_key: |p: &Person| p.name.clone(),
+                        page_sizes: if values.str("paginate") == "true" { vec![2, 5, 10] } else { vec![] },
                         empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
                         data: if no_rows(&values) { Vec::new() } else { people() },
                         columns: vec![

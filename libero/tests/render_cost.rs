@@ -607,9 +607,10 @@ const CLICK_SHAPES: &[Shape] = &[
     },
 ];
 
-/// One table of `ROWS` rows, two columns. A [`flip`] round either changes one
-/// row (`SORT` false) or the controlled sort's direction: every row redraws.
-fn table_large_app<const ROWS: usize, const SORT: bool>() -> Element {
+/// One table of `ROWS` rows, two columns, `PAGE` rows a page (`0`: unpaged).
+/// A [`flip`] round either changes one row (`SORT` false) or the controlled
+/// sort's direction: every shown row redraws.
+fn table_large_app<const ROWS: usize, const SORT: bool, const PAGE: usize>() -> Element {
     let data = use_hook(|| {
         let rows: Vec<u32> = (0..ROWS as u32).collect();
         let mut changed = rows.clone();
@@ -635,6 +636,7 @@ fn table_large_app<const ROWS: usize, const SORT: bool>() -> Element {
                 ],
                 sort: vec![TableSort::new("N", direction)],
                 onsortchange,
+                default_page_size: (PAGE > 0).then_some(PAGE),
             }
         }
     }
@@ -708,25 +710,49 @@ const TABLE_LARGE_SHAPES: &[Shape] = &[
     },
     Shape {
         name: "Table 1k",
-        app: table_large_app::<1_000, false>,
+        app: table_large_app::<1_000, false, 0>,
         count: 1,
         round: rerender_app,
     },
     Shape {
         name: "Table 1k sort",
-        app: table_large_app::<1_000, true>,
+        app: table_large_app::<1_000, true, 0>,
         count: 1,
         round: rerender_app,
     },
     Shape {
         name: "Table 10k",
-        app: table_large_app::<10_000, false>,
+        app: table_large_app::<10_000, false, 0>,
         count: 1,
         round: rerender_app,
     },
     Shape {
         name: "Table 10k sort",
-        app: table_large_app::<10_000, true>,
+        app: table_large_app::<10_000, true, 0>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 1k page",
+        app: table_large_app::<1_000, false, 25>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 1k sort page",
+        app: table_large_app::<1_000, true, 25>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 10k page",
+        app: table_large_app::<10_000, false, 25>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 10k sort page",
+        app: table_large_app::<10_000, true, 25>,
         count: 1,
         round: rerender_app,
     },

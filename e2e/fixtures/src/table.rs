@@ -1,6 +1,6 @@
 //! `Table` with a sortable text column and a custom-rendered one; a wide one
 //! in its scroll region under a caption; keyed, clickable, striped rows; selectable,
-//! multi-sorted rows; an empty one.
+//! multi-sorted rows; an empty one; a paged one.
 
 use dioxus::prelude::*;
 use libero::components::{SortDirection, States, Table, TableSort, column};
@@ -14,6 +14,7 @@ pub const ROUTES: Routes = &[
     ("/table/rows", || rsx! { RowsTablePage {} }),
     ("/table/empty", || rsx! { EmptyTablePage {} }),
     ("/table/select", || rsx! { SelectTablePage {} }),
+    ("/table/paged", || rsx! { PagedTablePage {} }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -158,6 +159,31 @@ fn SelectTablePage() -> Element {
         p { id: "selection", {selection.read().join(",")} }
         p { id: "sort", {sorted.join(",")} }
         p { id: "clicked", "{clicked}" }
+    }
+}
+
+/// Seven fruits, three a page, with a page-size picker; `#page` echoes `onpagechange`.
+#[component]
+fn PagedTablePage() -> Element {
+    let mut page = use_signal(|| 0u32);
+    let data: Vec<Fruit> = ["Fig", "Apple", "Grape", "Cherry", "Elder", "Banana", "Date"]
+        .into_iter()
+        .zip(1..)
+        .map(|(name, stock)| Fruit { name, stock })
+        .collect();
+    rsx! {
+        Table {
+            caption: "Fruit",
+            data,
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()).sortable().row_header(),
+                column("Stock").value(|fruit: &Fruit| fruit.stock),
+            ],
+            row_key: |fruit: &Fruit| fruit.name.to_string(),
+            page_sizes: vec![3, 5],
+            onpagechange: move |next| page.set(next),
+        }
+        p { id: "page", "{page}" }
     }
 }
 

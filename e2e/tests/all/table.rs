@@ -253,6 +253,43 @@ async fn wait_text(page: &Page, selector: &str, expected: &str) {
     .unwrap();
 }
 
+/// 1156-1b: page buttons turn the page, a sort goes back to page 1, and a new
+/// page size keeps the first shown row on screen.
+async fn the_pages_turn_sort_and_resize<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const RANGE: &str = "[data-slot=range]";
+    const LIVE: &str = "[data-slot=range] + [role=status]";
+    const FIRST: &str = "tbody th";
+    // Empty until a change: the first range is no news.
+    eventually_text(d, LIVE, "", "the first render").await?;
+    let shows = async |d: &mut D, range: &str, first: &str, after: &str| -> Result<()> {
+        eventually_text(d, RANGE, range, after).await?;
+        eventually_text(d, FIRST, first, after).await
+    };
+    shows(d, "1–3 of 7", "Fig", "the first page").await?;
+    d.click("button[aria-label=\"Go to next page\"]").await?;
+    shows(d, "4–6 of 7", "Cherry", "Next").await?;
+    eventually_text(d, "#page", "2", "onpagechange").await?;
+    eventually_text(d, LIVE, "4–6 of 7", "the page turn's announcement").await?;
+    d.click(SORT).await?;
+    shows(d, "1–3 of 7", "Apple", "a sort").await?;
+    eventually_text(d, "#page", "1", "a sort's page reset").await?;
+    d.click("button[aria-label=\"Go to page 3\"]").await?;
+    shows(d, "7–7 of 7", "Grape", "page 3").await?;
+    d.click("[role=combobox]").await?;
+    eventually(d, "the page sizes", async |d| {
+        d.exists("[role=listbox]").await
+    })
+    .await?;
+    d.click("[role=option]:nth-child(2)").await?;
+    shows(d, "6–7 of 7", "Fig", "5 a page").await
+}
+
+e2e::scenario!(
+    a_paged_table_turns_sorts_and_resizes,
+    "/table/paged",
+    the_pages_turn_sort_and_resize
+);
+
 /// 1156-0b: with `row_key`, a row prepended on top leaves the others' nodes alone.
 #[test]
 fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {
@@ -306,6 +343,11 @@ fn a_selectable_table_meets_the_baseline() {
 #[test]
 fn a_wide_table_meets_the_baseline() {
     Suite::new("table_wide", "/table/wide").run();
+}
+
+#[test]
+fn a_paged_table_meets_the_baseline() {
+    Suite::new("table_paged", "/table/paged").run();
 }
 
 #[test]
