@@ -1,5 +1,8 @@
 use crate::{
-    components::common::{disabled_look_sx, focus_ring_sx, inset_focus_ring_sx},
+    components::{
+        common::{Part, disabled_look_sx, focus_ring_sx, inset_focus_ring_sx},
+        form::ChronoPickerPart,
+    },
     sx::{FORCED_COLORS, StaticSx, sx},
     theme::{CHRONO_DAY, CHRONO_FONT_SIZE, ChronoPickerDefaults, Size, SizeCss},
 };
@@ -28,11 +31,11 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .gap("4px")
         .font_size(CHRONO_FONT_SIZE.value())
         .selector(
-            "& > [data-slot='header']",
+            ChronoPickerPart::Header.selector(),
             sx().display("flex").align_items("center").gap("4px"),
         )
         .selector(
-            "& [data-slot='title']",
+            ChronoPickerPart::Title.selector(),
             button
                 .clone()
                 .flex("1 1 0")
@@ -48,14 +51,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             sx().display("flex").gap("16px").align_items("flex-start"),
         )
         .selector(
-            "& [role='grid']",
-            sx().display("grid")
-                .grid_template_columns(format!("repeat(7, {day})")),
-        )
-        // Rows exist for assistive technology; the grid lays out the cells.
-        .selector("& [role='row']", sx().display("contents"))
-        .selector(
-            "& [role='columnheader']",
+            ChronoPickerPart::Weekday.selector(),
             sx().height(day.clone())
                 .display("flex")
                 .align_items("center")
@@ -63,25 +59,32 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
                 .font_size("0.85em")
                 .font_weight("500"),
         )
+        .selector(
+            "& [role='grid']",
+            sx().display("grid")
+                .grid_template_columns(format!("repeat(7, {day})")),
+        )
+        // Rows exist for assistive technology; the grid lays out the cells.
+        .selector("& [role='row']", sx().display("contents"))
         .selector("& [role='gridcell']", sx().display("flex"))
         .selector(
-            "& [data-slot='blank']",
+            ChronoPickerPart::Blank.selector(),
             sx().width(day.clone()).height(day.clone()),
         )
         .selector(
-            "& [data-slot='cells']",
+            ChronoPickerPart::Cells.selector(),
             sx().display("grid")
                 .grid_template_columns("repeat(3, 1fr)")
                 .gap("4px")
                 .width(format!("calc(7 * {day})")),
         )
         .selector(
-            "& [data-slot='day']",
+            ChronoPickerPart::Day.selector(),
             button.clone().width(day.clone()).height(day.clone()),
         )
         // The mini variant: one row of taller days, a month label over the number.
         .selector(
-            "& [data-slot='strip']",
+            ChronoPickerPart::Strip.selector(),
             sx().display("flex").align_items("center").gap("4px"),
         )
         .selector(
@@ -100,7 +103,7 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             sx().font_size("0.75em").opacity("0.7"),
         )
         .selector(
-            "& [data-slot='cell']",
+            ChronoPickerPart::Cell.selector(),
             button.width("100%").height(format!("calc(1.25 * {day})")),
         )
         .selector("& [data-outside]", sx().color("text-dimmed"))

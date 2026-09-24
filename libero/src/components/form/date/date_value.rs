@@ -4,7 +4,7 @@ use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use dioxus::prelude::*;
 
 use super::{
-    DateRange,
+    ChronoPickerPart, DateRange,
     calendar::{Calendar, DateLevel, Selection, first_of_month},
     chrono_field::refusal_message,
     duration::{DurationClock, bounds, duration_refusal},
@@ -13,7 +13,7 @@ use super::{
     time_picker::Clock,
 };
 use crate::{
-    components::common::{ClassList, Input, States},
+    components::common::{ClassList, Input, Parts, States},
     hooks::use_theme,
     sx::Sx,
     theme::{CalendarVariant, Size, TimePickerVariant},
@@ -67,6 +67,7 @@ pub struct PickerArgs<V: DateValue> {
     pub name: Option<String>,
     pub class: Input<ClassList>,
     pub sx: Input<Sx>,
+    pub parts: Input<Parts<ChronoPickerPart>>,
     pub states: Input<States>,
     pub attributes: Vec<Attribute>,
 }
@@ -284,6 +285,7 @@ impl Sealed for NaiveDate {
                 hidden: args.name.map(|name| (name, value.map(|day| day.to_string()).unwrap_or_default())),
                 class: args.class,
                 sx: args.sx,
+                parts: args.parts,
                 states: args.states,
                     attributes: args.attributes,
                 }
@@ -334,6 +336,7 @@ impl Sealed for NaiveTime {
                 name: args.name,
                 class: args.class,
                 sx: args.sx,
+                parts: args.parts,
                 states: args.states,
                 attributes: args.attributes,
             }
@@ -394,6 +397,7 @@ impl Sealed for TimeDelta {
                 name: args.name,
                 class: args.class,
                 sx: args.sx,
+                parts: args.parts,
                 states: args.states,
                 attributes: args.attributes,
             }
@@ -457,6 +461,7 @@ impl Sealed for NaiveDateTime {
                 name: args.name,
                 class: args.class,
                 sx: args.sx,
+                parts: args.parts,
                 states: args.states,
                 attributes: args.attributes,
             }
@@ -514,6 +519,7 @@ impl Sealed for DateRange<NaiveDate> {
                 hidden: args.name.map(|name| (name, value.map(|range| range.to_string()).unwrap_or_default())),
                 class: args.class,
                 sx: args.sx,
+                parts: args.parts,
                 states: args.states,
                 attributes: args.attributes,
             }
@@ -573,6 +579,7 @@ impl Sealed for DateRange<NaiveDateTime> {
                 name: args.name,
                 class: args.class,
                 sx: args.sx,
+                parts: args.parts,
                 states: args.states,
                 attributes: args.attributes,
             }

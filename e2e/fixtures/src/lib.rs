@@ -75,6 +75,7 @@ mod pagination;
 pub mod perf;
 mod phone_field;
 mod picker_dialog;
+mod picker_parts;
 mod pin_field;
 mod planted;
 mod popover;
@@ -194,6 +195,7 @@ const FIXTURES: &[Routes] = &[
     perf::ROUTES,
     phone_field::ROUTES,
     picker_dialog::ROUTES,
+    picker_parts::ROUTES,
     pin_field::ROUTES,
     planted::ROUTES,
     popover::ROUTES,

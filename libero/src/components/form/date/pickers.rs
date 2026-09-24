@@ -51,6 +51,7 @@ pub fn DatePicker(props: DatePickerProps) -> Element {
         name: props.name,
         class: props.class,
         sx: props.sx,
+        parts: props.parts,
         states: props.states,
         attributes: props.attributes,
     })
@@ -91,6 +92,7 @@ pub fn DateRangePicker(props: DateRangePickerProps) -> Element {
         name: props.name,
         class: props.class,
         sx: props.sx,
+        parts: props.parts,
         states: props.states,
         attributes: props.attributes,
     })
@@ -130,6 +132,7 @@ pub fn MonthPicker(props: MonthPickerProps) -> Element {
         name: props.name,
         class: props.class,
         sx: props.sx,
+        parts: props.parts,
         states: props.states,
         attributes: props.attributes,
     })
@@ -169,6 +172,7 @@ pub fn YearPicker(props: YearPickerProps) -> Element {
         name: props.name,
         class: props.class,
         sx: props.sx,
+        parts: props.parts,
         states: props.states,
         attributes: props.attributes,
     })

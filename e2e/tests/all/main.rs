@@ -73,6 +73,7 @@ mod pagination;
 mod perf;
 mod phone_field;
 mod picker_dialog;
+mod picker_parts;
 mod pin_field;
 mod planted;
 mod popover;

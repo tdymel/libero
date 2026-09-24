@@ -33,7 +33,7 @@ mod time_picker;
 
 pub use calendar::DateLevel;
 pub use chrono_field::{ChronoField, ChronoFieldProps};
-pub use chrono_picker::{ChronoPicker, ChronoPickerProps};
+pub use chrono_picker::{ChronoPicker, ChronoPickerPart, ChronoPickerProps};
 pub use date_value::DateValue;
 pub use fields::{
     DateField, DateFieldProps, DateRangeField, DateRangeFieldProps, DateTimeField,

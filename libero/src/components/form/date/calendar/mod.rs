@@ -9,14 +9,14 @@ use dioxus::prelude::*;
 use chrono::{Datelike, Days, Months, NaiveDate};
 
 use super::{
-    DateRange,
+    ChronoPickerPart, DateRange,
     fields::day_allowed,
     format::{date_formatter, format_date},
     today::use_today,
 };
 use crate::{
     components::{
-        common::{ClassList, HtmlTag, Input, States},
+        common::{ClassList, HtmlTag, Input, Part, Parts, States},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_formats, use_localization},
@@ -205,6 +205,8 @@ pub(super) struct CalendarProps {
     #[props(default)]
     sx: Input<Sx>,
     #[props(default)]
+    parts: Input<Parts<ChronoPickerPart>>,
+    #[props(default)]
     states: Input<States>,
     #[props(default)]
     attributes: Vec<Attribute>,
@@ -322,7 +324,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
             let months = (0..columns).map(|index| (index, add_months(first, index)));
             // Inline, see `Week`. Keyed by column, so paging diffs the grid in place.
             rsx! {
-                div { "data-slot": "header",
+                div { "data-slot": ChronoPickerPart::Header.slot(),
                     Nav {
                         label: names.previous_month,
                         disabled: min.is_some_and(|min| add_days(first, -1) < min),
@@ -336,7 +338,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                         button {
                             key: "{index}",
                             r#type: "button",
-                            "data-slot": "title",
+                            "data-slot": ChronoPickerPart::Title.slot(),
                             "aria-live": "polite",
                             tabindex: view.tabindex(true),
                             onclick: move |_| {
@@ -358,7 +360,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                     }
                 }
                 div {
-                    "data-slot": "months",
+                    "data-slot": ChronoPickerPart::Months.slot(),
                     onmouseleave: move |_| {
                         if awaits_end {
                             hover.set(None);
@@ -409,6 +411,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         .framework_sx(&CALENDAR_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .prepare();
     let hidden = props.hidden.map(|(name, value)| {

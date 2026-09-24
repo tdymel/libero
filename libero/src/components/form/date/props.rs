@@ -150,6 +150,7 @@ macro_rules! date_props {
     };
     (@munch picker [$name:ident $(< $generic:ident : $bound:path >)?] ($v:ty, $b:ty) [$($acc:tt)*]) => {
         $crate::components::common::base_props! {
+            parts($crate::components::form::date::ChronoPickerPart);
             pub struct $name $(< $generic: $bound >)? {
                 /// The picked value; strictly controlled. `None` picks nothing.
                 #[props(default)]

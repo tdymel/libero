@@ -54,6 +54,40 @@ The picker keeps the month it shows as its own state. It opens on `value`'s
 month, else today's. Today comes from the platform clock after mount on the
 web. A server render and native builds mark no day unless `today` is set.
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work. Every picker takes `ChronoPickerPart` and draws only
+the parts its value uses. A date field's dropdown is portaled, so the field's
+`parts` do not reach the picker in it.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ChronoPickerPart::Header` | `header` | Calendar: the row over a month, a year or a decade, with paging buttons and title. |
+| `ChronoPickerPart::Nav` | `nav` | Calendar: a paging button, in the header or beside the mini calendar's row. |
+| `ChronoPickerPart::Title` | `title` | Calendar: the month, year or decade heading, a button that climbs a level. |
+| `ChronoPickerPart::Months` | `months` | Days: the months side by side, or the mini calendar's row. |
+| `ChronoPickerPart::Weekday` | `weekday` | Days: a weekday name over a month's columns. |
+| `ChronoPickerPart::Day` | `day` | Days: a day button. |
+| `ChronoPickerPart::Month` | `month` | Mini calendar: the month over a day's number. |
+| `ChronoPickerPart::Blank` | `blank` | Days, `columns` over 1: an empty cell instead of a neighbour's day. |
+| `ChronoPickerPart::Cells` | `cells` | Months and years: their grid. |
+| `ChronoPickerPart::Cell` | `cell` | Months and years: a month or a year button. |
+| `ChronoPickerPart::Strip` | `strip` | Mini calendar: the row of days between its paging buttons. |
+| `ChronoPickerPart::Columns` | `columns` | Digital clock, duration: the columns. |
+| `ChronoPickerPart::Spin` | `spin` | Digital clock, duration: one column, a spinbutton. |
+| `ChronoPickerPart::Value` | `value` | Digital clock, duration: a column's value. |
+| `ChronoPickerPart::Neighbour` | `neighbour` | Digital clock, duration: the faded values above and below a column's value. |
+| `ChronoPickerPart::Separator` | `separator` | Digital clock: the `:` between columns. |
+| `ChronoPickerPart::Unit` | `unit` | Duration: the unit after each column. |
+| `ChronoPickerPart::Readout` | `readout` | Analog clock: the digits over the face, buttons that pick the hand. |
+| `ChronoPickerPart::Face` | `face` | Analog clock: the face, a slider. |
+| `ChronoPickerPart::Mark` | `mark` | Analog clock: a number on the face. |
+| `ChronoPickerPart::Ticks` | `ticks` | Analog clock: the ring of ticks for steps finer than the marks. |
+| `ChronoPickerPart::Hand` | `hand` | Analog clock: the hand. |
+| `ChronoPickerPart::Pivot` | `pivot` | Analog clock: the dot the hand turns on. |
+
 ## Accessibility
 
 ### Keyboard

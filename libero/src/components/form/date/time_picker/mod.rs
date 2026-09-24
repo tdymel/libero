@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 use chrono::{NaiveTime, Timelike};
 
 use super::{
+    ChronoPickerPart,
     date_value::{PickerArgs, PickerOptions, Sealed},
     format::uses_twelve_hours,
     parse_time::MIDNIGHT,
@@ -15,7 +16,7 @@ use super::{
 };
 use crate::{
     components::{
-        common::{ClassList, HtmlTag, Input, States, input_from_str},
+        common::{ClassList, HtmlTag, Input, Parts, States, input_from_str},
         layout::use_box,
     },
     hooks::{use_element, use_formats, use_localization, use_theme},
@@ -70,6 +71,7 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
         name: props.name,
         class: props.class,
         sx: props.sx,
+        parts: props.parts,
         states: props.states,
         attributes: props.attributes,
     })
@@ -91,6 +93,8 @@ pub(super) struct ClockProps {
     name: Option<String>,
     class: Input<ClassList>,
     sx: Input<Sx>,
+    #[props(default)]
+    parts: Input<Parts<ChronoPickerPart>>,
     states: Input<States>,
     attributes: Vec<Attribute>,
     /// Called once the last hand is picked, or Enter on the last column.
@@ -166,6 +170,7 @@ pub(super) fn Clock(props: ClockProps) -> Element {
         .framework_sx(&TIME_PICKER_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .prepare();
     let hidden = props.name.map(|name| {

@@ -1,6 +1,9 @@
 use crate::{
-    components::common::{
-        borderless_on_state_sx, disabled_look_sx, focus_ring_sx, inset_focus_ring_sx,
+    components::{
+        common::{
+            Part, borderless_on_state_sx, disabled_look_sx, focus_ring_sx, inset_focus_ring_sx,
+        },
+        form::ChronoPickerPart,
     },
     sx::{FORCED_COLORS, StaticSx, sx},
     theme::{CHRONO_DAY, CHRONO_FONT_SIZE, ChronoPickerDefaults, Size, SizeCss},
@@ -41,7 +44,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .white_space("nowrap"),
         )
         .selector(
-            "& [data-slot='spin']",
+            ChronoPickerPart::Spin.selector(),
             sx().display("flex")
                 .flex_direction("column")
                 .align_items("center")
@@ -56,11 +59,11 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .hover(sx().background("muted.1")),
         )
         .selector(
-            "& [data-slot='spin'] > [data-slot='value']",
+            ChronoPickerPart::Value.selector(),
             sx().font_size("1.75em").font_weight("500"),
         )
         .selector(
-            "& [data-slot='spin'] > [data-slot='neighbour']",
+            ChronoPickerPart::Neighbour.selector(),
             sx().min_height("1.25em").color("text-dimmed").cursor("pointer"),
         )
         .selector("& [data-slot='spin']:focus-visible", focus_ring_sx())
@@ -69,12 +72,12 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
             sx().color("primary.6"),
         )
         .selector(
-            "& [data-slot='separator']",
+            ChronoPickerPart::Separator.selector(),
             sx().font_size("1.75em").font_weight("500").color("text-dimmed"),
         )
         // A duration's unit after each column: `h`, `min`.
         .selector(
-            "& [data-slot='unit']",
+            ChronoPickerPart::Unit.selector(),
             sx().color("text-dimmed"),
         )
         .selector(
@@ -94,7 +97,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
             borderless_on_state_sx().focus_visible(focus_ring_sx()),
         )
         .selector(
-            "& [data-slot='face']",
+            ChronoPickerPart::Face.selector(),
             sx().position("relative")
                 .width(format!("calc(7 * {day})"))
                 .height(format!("calc(7 * {day})"))
@@ -106,7 +109,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .user_select("none"),
         )
         .selector(
-            "& [data-slot='mark']",
+            ChronoPickerPart::Mark.selector(),
             button
                 .clone()
                 .position("absolute")
@@ -121,7 +124,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         )
         // One tick per step where the marks are coarser than the step.
         .selector(
-            "& [data-slot='ticks']",
+            ChronoPickerPart::Ticks.selector(),
             sx().position("absolute")
                 .inset("4%")
                 .border_radius("50%")

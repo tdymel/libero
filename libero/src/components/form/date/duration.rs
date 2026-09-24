@@ -7,6 +7,7 @@ use chrono::{NaiveDate, TimeDelta};
 use dioxus::prelude::*;
 
 use super::{
+    ChronoPickerPart,
     parse::Unreadable,
     picker_field::{FieldValue, Formats},
     spin_column::{SpinAt, SpinColumn, SpinOption},
@@ -14,7 +15,7 @@ use super::{
 };
 use crate::{
     components::{
-        common::{ClassList, HtmlTag, Input, States},
+        common::{ClassList, HtmlTag, Input, Part, Parts, States},
         layout::use_box,
     },
     hooks::{use_element, use_localization, use_theme},
@@ -256,6 +257,7 @@ pub(super) struct DurationClockProps {
     name: Option<String>,
     class: Input<ClassList>,
     sx: Input<Sx>,
+    parts: Input<Parts<ChronoPickerPart>>,
     states: Input<States>,
     attributes: Vec<Attribute>,
 }
@@ -352,7 +354,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
                 onpick: pick,
                 ondone,
             }
-            span { "data-slot": "unit", "aria-hidden": "true", "{unit}" }
+            span { "data-slot": ChronoPickerPart::Unit.slot(),"aria-hidden": "true", "{unit}" }
         }
     };
     let hour_options = (0..=parts(max).0.min(MAX_HOURS))
@@ -390,7 +392,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
     // A duration has no cycle to round its hours; minutes and seconds wrap
     // without carrying into the hour.
     let body = rsx! {
-        div { "data-slot": "columns",
+        div { "data-slot": ChronoPickerPart::Columns.slot(),
             {column(COLUMNS[0], names.hours_label, names.hours_short, names.hours_value, hour_options, place(hours, true), hours, false, 10)}
             {column(COLUMNS[1], names.minutes_label, names.minutes_short, names.minutes_value, minute_options, place(minutes / step, minutes % step == 0), minutes, true, (15 / step).max(1) as usize)}
             {seconds_column}
@@ -406,6 +408,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
         .framework_sx(&TIME_PICKER_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .prepare();
     let hidden = props.name.map(|name| {

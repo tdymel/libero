@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 
 use chrono::Timelike;
 
-use crate::hooks::{Drag, ElementHandle};
+use crate::{
+    components::{common::Part, form::ChronoPickerPart},
+    hooks::{Drag, ElementHandle},
+};
 
 use super::view::{ClockView, Column, Hand, INNER_RING, OUTER_RING, TWO_DIGITS, at};
 use super::{SpinAt, SpinColumn, SpinOption};
@@ -90,7 +93,7 @@ impl ClockView {
                 .collect();
             let second = base.second() as usize;
             rsx! {
-                span { "data-slot": "separator", "aria-hidden": "true", ":" }
+                span { "data-slot": ChronoPickerPart::Separator.slot(), "aria-hidden": "true", ":" }
                 {column(Column::Seconds, names.seconds_label.to_string(), options, place(second, true), TWO_DIGITS[second], Some((names.seconds_value)(second as u32)), 15)}
             }
         });
@@ -120,9 +123,9 @@ impl ClockView {
         });
         let minutes_page = (15 / step).max(1) as usize;
         rsx! {
-            div { "data-slot": "columns",
+            div { "data-slot": ChronoPickerPart::Columns.slot(),
                 {column(Column::Hours, names.hours_label.to_string(), hours, place(hour_index, true), hour_text, None, 3)}
-                span { "data-slot": "separator", "aria-hidden": "true", ":" }
+                span { "data-slot": ChronoPickerPart::Separator.slot(), "aria-hidden": "true", ":" }
                 {column(Column::Minutes, names.minutes_label.to_string(), minutes, minutes_at, TWO_DIGITS[minute as usize], Some((names.minutes_value)(minute)), minutes_page)}
                 {seconds}
                 {meridiem}
@@ -225,7 +228,7 @@ impl ClockView {
                 "left: 50%; top: 50%; width: 2px; height: {radius}%; transform-origin: 50% 100%; transform: translate(-50%, -100%) rotate({degrees}deg)"
             );
             rsx! {
-                div { "data-slot": "hand", style }
+                div { "data-slot": ChronoPickerPart::Hand.slot(), style }
             }
         });
         let hour_text = value
@@ -258,7 +261,7 @@ impl ClockView {
         let ticks = (hand() != Hand::Hour && !step.is_multiple_of(5)).then(|| {
             let style = format!("--libero-clock-tick: {}deg", step * 6);
             rsx! {
-                div { "data-slot": "ticks", style, div {} }
+                div { "data-slot": ChronoPickerPart::Ticks.slot(), style, div {} }
             }
         });
         let halves = twelve.then(|| {
@@ -321,7 +324,7 @@ impl ClockView {
             ),
         };
         rsx! {
-            div { "data-slot": "readout",
+            div { "data-slot": ChronoPickerPart::Readout.slot(),
                 // The shown digits lead each name, so speech input can say them (2.5.3).
                 button {
                     r#type: "button",
@@ -346,7 +349,7 @@ impl ClockView {
                 {halves}
             }
             div {
-                "data-slot": "face",
+                "data-slot": ChronoPickerPart::Face.slot(),
                 role: "slider",
                 tabindex,
                 "aria-label": face_label,
@@ -363,7 +366,7 @@ impl ClockView {
                 {ticks}
                 {pointer}
                 div {
-                    "data-slot": "pivot",
+                    "data-slot": ChronoPickerPart::Pivot.slot(),
                     style: "left: 50%; top: 50%; width: 6px; height: 6px; border-radius: 50%; transform: translate(-50%, -50%)",
                 }
                 ClockMarks { marks }
@@ -406,7 +409,7 @@ fn ClockMarks(marks: Vec<Mark>) -> Element {
         rsx! {
             span {
                 key: "{label}",
-                "data-slot": "mark",
+                "data-slot": ChronoPickerPart::Mark.slot(),
                 "data-selected": selected.then_some("true"),
                 "data-disabled": disabled.then_some("true"),
                 style,

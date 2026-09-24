@@ -6,7 +6,8 @@ use chrono::{Datelike, NaiveDate};
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{Glyph, Input, Variant},
+        common::{Glyph, Input, Part, Variant},
+        form::ChronoPickerPart,
     },
     context::IconSlot,
     hooks::{use_formats, use_localization},
@@ -72,7 +73,7 @@ impl View {
                     "aria-selected": picked.to_string(),
                     button {
                         r#type: "button",
-                        "data-slot": "day",
+                        "data-slot": ChronoPickerPart::Day.slot(),
                         "data-date": "{day}",
                         "data-today": (today == Some(day)).then_some("true"),
                         "aria-current": (today == Some(day)).then_some("date"),
@@ -86,17 +87,17 @@ impl View {
                             active.set(Some(day));
                             onpick.call(day);
                         },
-                        span { "data-slot": "month", {format_date(day, "MMM", names)} }
+                        span { "data-slot": ChronoPickerPart::Month.slot(),{format_date(day, "MMM", names)} }
                         span { "{day.day()}" }
                     }
                 }
             }
         };
         rsx! {
-            div { "data-slot": "strip",
+            div { "data-slot": ChronoPickerPart::Strip.slot(),
                 {self.nav(names.previous_days, min.is_some_and(|min| add_days(start, -1) < min), add_days(start, -days), false)}
                 // The slot a field's dropdown looks for to hand focus in.
-                div { "data-slot": "months",
+                div { "data-slot": ChronoPickerPart::Months.slot(),
                     div {
                         role: "grid",
                         "aria-label": format_date(start, formats.month_heading, names),
@@ -150,7 +151,7 @@ impl View {
                     r#type: "button",
                     role: "gridcell",
                     "aria-selected": if picked { "true" } else { "false" },
-                    "data-slot": "cell",
+                    "data-slot": ChronoPickerPart::Cell.slot(),
                     "data-date": "{month}",
                     "data-selected": picked.then_some("true"),
                     "data-today": is_today.then_some("true"),
@@ -174,11 +175,11 @@ impl View {
             }
         };
         rsx! {
-            div { "data-slot": "header",
+            div { "data-slot": ChronoPickerPart::Header.slot(),
                 {self.nav(names.previous_year, min.is_some_and(|min| year <= min.year()), add_months(first, -12), false)}
                 button {
                     r#type: "button",
-                    "data-slot": "title",
+                    "data-slot": ChronoPickerPart::Title.slot(),
                     "aria-live": "polite",
                     tabindex: self.tabindex(true),
                     onclick: move |_| {
@@ -191,7 +192,7 @@ impl View {
                 {self.nav(names.next_year, max.is_some_and(|max| year >= max.year()), add_months(first, 12), true)}
             }
             div {
-                "data-slot": "cells",
+                "data-slot": ChronoPickerPart::Cells.slot(),
                 role: "grid",
                 "aria-label": "{year}",
                 onkeydown: move |event| self.cell_keydown(event, cell_stop),
@@ -242,7 +243,7 @@ impl View {
                     r#type: "button",
                     role: "gridcell",
                     "aria-selected": if picked { "true" } else { "false" },
-                    "data-slot": "cell",
+                    "data-slot": ChronoPickerPart::Cell.slot(),
                     "data-date": "{year_start}",
                     "data-outside": outside.then_some("true"),
                     "data-selected": picked.then_some("true"),
@@ -265,11 +266,11 @@ impl View {
             }
         };
         rsx! {
-            div { "data-slot": "header",
+            div { "data-slot": ChronoPickerPart::Header.slot(),
                 {self.nav(names.previous_decade, min.is_some_and(|min| decade <= min.year()), add_months(first, -120), false)}
                 button {
                     r#type: "button",
-                    "data-slot": "title",
+                    "data-slot": ChronoPickerPart::Title.slot(),
                     "aria-live": "polite",
                     disabled: true,
                     "{decade} – {decade + 9}"
@@ -277,7 +278,7 @@ impl View {
                 {self.nav(names.next_decade, max.is_some_and(|max| decade + 9 >= max.year()), add_months(first, 120), true)}
             }
             div {
-                "data-slot": "cells",
+                "data-slot": ChronoPickerPart::Cells.slot(),
                 role: "grid",
                 "aria-label": "{decade} – {decade + 9}",
                 onkeydown: move |event| self.cell_keydown(event, cell_stop),
@@ -364,7 +365,7 @@ pub(super) fn Week(props: WeekProps) -> Element {
     rsx! {
         div { role: "row",
             for offset in 0..lead {
-                div { key: "{offset}", role: "gridcell", "data-slot": "blank" }
+                div { key: "{offset}", role: "gridcell", "data-slot": ChronoPickerPart::Blank.slot() }
             }
             for (offset, day, outside, picked, in_range) in (lead..7 - trail).map(cell) {
                 div {
@@ -373,7 +374,7 @@ pub(super) fn Week(props: WeekProps) -> Element {
                     "aria-selected": if picked { "true" } else { "false" },
                     button {
                         r#type: "button",
-                        "data-slot": "day",
+                        "data-slot": ChronoPickerPart::Day.slot(),
                         "data-date": "{day}",
                         "data-outside": outside.then_some("true"),
                         "data-today": (today == Some(day)).then_some("true"),
@@ -402,7 +403,7 @@ pub(super) fn Week(props: WeekProps) -> Element {
                 }
             }
             for offset in 7 - trail..7 {
-                div { key: "{offset}", role: "gridcell", "data-slot": "blank" }
+                div { key: "{offset}", role: "gridcell", "data-slot": ChronoPickerPart::Blank.slot() }
             }
         }
     }
@@ -418,6 +419,7 @@ pub(super) fn Weekdays(first_weekday: usize) -> Element {
                 div {
                     key: "{index}",
                     role: "columnheader",
+                    "data-slot": ChronoPickerPart::Weekday.slot(),
                     "aria-label": names.weekdays[(first_weekday + index) % 7],
                     {names.weekdays_min[(first_weekday + index) % 7]}
                 }
@@ -443,6 +445,7 @@ pub(super) fn Nav(props: NavProps) -> Element {
     let (targets, forward, mut paged) = (props.targets, props.forward, props.paged);
     rsx! {
         ActionIcon {
+            "data-slot": ChronoPickerPart::Nav.slot(),
             aria_label: props.label,
             sx: &NAV_SX,
             variant: Input::Value(Variant::Standard),

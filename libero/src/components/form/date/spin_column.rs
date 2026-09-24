@@ -3,7 +3,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::common::has_shortcut_modifier,
+    components::{
+        common::{Part, has_shortcut_modifier},
+        form::ChronoPickerPart,
+    },
     hooks::{DragMove, DragOptions, DragStart, use_drag, use_element},
     platform,
 };
@@ -311,7 +314,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
     let neighbour = move |delta: isize, text: &'static str| {
         rsx! {
             span {
-                "data-slot": "neighbour",
+                "data-slot": ChronoPickerPart::Neighbour.slot(),
                 "aria-hidden": "true",
                 onpointerdown: move |_| pressed.set((!text.is_empty()).then_some(delta)),
                 "{text}"
@@ -320,7 +323,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
     };
     rsx! {
         div {
-            "data-slot": "spin",
+            "data-slot": ChronoPickerPart::Spin.slot(),
             "data-column": column,
             role: "spinbutton",
             tabindex: if focusable { "0" } else { "-1" },
@@ -338,7 +341,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
             onpointerup: drag.onpointerup,
             onpointercancel: drag.onpointercancel,
             {neighbour(-1, before)}
-            span { "data-slot": "value", "{text}" }
+            span { "data-slot": ChronoPickerPart::Value.slot(), "{text}" }
             {neighbour(1, after)}
         }
     }

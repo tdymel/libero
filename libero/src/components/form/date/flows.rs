@@ -4,7 +4,7 @@ use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use dioxus::prelude::*;
 
 use super::{
-    DatePicker, DateRange,
+    ChronoPickerPart, DatePicker, DateRange,
     calendar::{Calendar, Selection},
     parse_time::MIDNIGHT,
     picker_field::FieldValue,
@@ -14,7 +14,7 @@ use super::{
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        common::{ClassList, HtmlTag, Input, States, base_color},
+        common::{ClassList, HtmlTag, Input, Parts, States, base_color},
         layout::use_box,
         navigation::{TabSpec, TabsView, render_tabs},
     },
@@ -175,6 +175,7 @@ fn step_tabs(
 fn flow_root(
     class: &Input<ClassList>,
     sx: &Input<Sx>,
+    parts: &Input<Parts<ChronoPickerPart>>,
     states: &Input<States>,
     attributes: Vec<Attribute>,
     root: &ElementHandle,
@@ -183,6 +184,7 @@ fn flow_root(
     use_box()
         .class(class)
         .sx(sx)
+        .parts(parts)
         .states(states)
         .style(Some(FLOW_STYLE.to_string()))
         .prepare()
@@ -241,6 +243,8 @@ pub(super) struct DateTimeFlowProps {
     class: Input<ClassList>,
     #[props(default)]
     sx: Input<Sx>,
+    #[props(default)]
+    parts: Input<Parts<ChronoPickerPart>>,
     #[props(default)]
     states: Input<States>,
     #[props(default)]
@@ -333,6 +337,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
     flow_root(
         &props.class,
         &props.sx,
+        &props.parts,
         &props.states,
         props.attributes,
         &root,
@@ -363,6 +368,8 @@ pub(super) struct DateTimeRangeFlowProps {
     class: Input<ClassList>,
     #[props(default)]
     sx: Input<Sx>,
+    #[props(default)]
+    parts: Input<Parts<ChronoPickerPart>>,
     #[props(default)]
     states: Input<States>,
     #[props(default)]
@@ -533,6 +540,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     flow_root(
         &props.class,
         &props.sx,
+        &props.parts,
         &props.states,
         props.attributes,
         &root,
