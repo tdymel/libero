@@ -48,8 +48,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # `native` pulls Blitz's font stack, whose `yeslogic-fontconfig-sys` finds fontconfig by pkg-config.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev
+      # `native` pulls Blitz's font stack (fontconfig, by pkg-config) and libero's `dbus` crate.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libdbus-1-dev
       - uses: ./.github/actions/setup
         with:
           components: clippy
@@ -97,8 +97,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Blitz's font stack links fontconfig.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev fonts-dejavu-core xvfb
+      # Blitz's font stack links fontconfig; libero's `dbus` crate needs libdbus.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libdbus-1-dev fonts-dejavu-core xvfb
       - uses: ./.github/actions/setup
         with:
           components: clippy
