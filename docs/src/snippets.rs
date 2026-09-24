@@ -385,6 +385,56 @@ fn bare(name: &str) -> &str {
     name.split('(').next().unwrap_or(name)
 }
 
+/// The `(part, data-slot)` rows of a mirror's `## Style API` tables.
+fn md_parts(md: &str) -> BTreeSet<(String, String)> {
+    let mut section = "";
+    let mut rows = BTreeSet::new();
+    for line in md.lines() {
+        if let Some(heading) = line.strip_prefix("## ") {
+            section = heading.trim();
+        } else if section == "Style API"
+            && let Some(row) = line.strip_prefix("| `")
+            && let [part, _, slot, ..] = row.split('`').collect::<Vec<_>>()[..]
+        {
+            rows.insert((part.to_string(), slot.to_string()));
+        }
+    }
+    rows
+}
+
+/// The page's Style API tab and its mirror's `## Style API` list the same parts and slots.
+#[test]
+fn md_mirrors_list_the_parts_of_their_page() {
+    let public = Path::new(env!("CARGO_MANIFEST_DIR")).join("public");
+    let mut problems = Vec::new();
+    for route in Route::static_routes() {
+        for (markdown, groups) in pages_of(route.clone()) {
+            let Some(markdown) = markdown else { continue };
+            let Ok(md) = std::fs::read_to_string(public.join(markdown.trim_start_matches('/')))
+            else {
+                continue;
+            };
+            let page: BTreeSet<(String, String)> = groups
+                .iter()
+                .flat_map(|group| group.part_slots())
+                .map(|(part, slot)| (part.to_string(), slot.to_string()))
+                .collect();
+            let mirrored = md_parts(&md);
+            for (part, slot) in page.difference(&mirrored) {
+                problems.push(format!("{markdown}: lacks `{part}` / `{slot}`"));
+            }
+            for (part, slot) in mirrored.difference(&page) {
+                problems.push(format!(
+                    "{markdown}: `{part}` / `{slot}` is not on the {route} page"
+                ));
+            }
+        }
+    }
+    problems.sort();
+    problems.dedup();
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
 /// The names in a mirror's `## Props` and `## API` tables, per `###` group; `""` names the
 /// `## Props` ones before any. `## API` files options structs and handles by heading; a handle may also have a `## ` section
 /// or a table headed by its type.

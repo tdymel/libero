@@ -70,6 +70,9 @@ static THEME: Theme = Theme {
 };
 ```
 
+The theme sets props, not a component's inner parts. To restyle a part, pass
+`parts`, see [Style API](styling.md#style-api).
+
 ## Light and dark
 
 A `ThemeSet` pairs a light theme with a dark one. The default pairs

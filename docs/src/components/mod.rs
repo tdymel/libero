@@ -15,4 +15,4 @@ pub use demo::{
 pub use doc_page::{DocPage, SITE, TLDR_PROMPT};
 pub use doc_section::DocSection;
 pub use pictogram_note::PictogramNote;
-pub use prop_doc::{PropGroup, PropertyTable, prop, props};
+pub use prop_doc::{PartsPanel, PropGroup, PropertyTable, prop, props};

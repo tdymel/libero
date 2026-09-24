@@ -1,8 +1,10 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Part, Table, Text, Title, column},
+    components::{Anchor, Code, Flex, Part, Table, Text, Title, column},
     sx::sx,
 };
+
+use crate::Route;
 
 /// One row of a docs page's Properties table.
 #[derive(Clone, PartialEq)]
@@ -35,7 +37,7 @@ impl PropDoc {
     }
 }
 
-/// One row of a component's Style-API table: a part, its `data-slot`, what it is.
+/// One row of a component's Style API table: a part, its `data-slot`, what it is.
 #[derive(Clone, PartialEq)]
 struct PartDoc {
     name: String,
@@ -75,6 +77,18 @@ impl PropGroup {
         self.props.iter().map(|prop| prop.name.as_str())
     }
 
+    /// `(part, data-slot)` per row of the Style API table.
+    #[cfg(test)]
+    pub fn part_slots(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.parts
+            .iter()
+            .map(|part| (part.name.as_str(), part.slot))
+    }
+
+    pub fn has_parts(&self) -> bool {
+        !self.parts.is_empty()
+    }
+
     /// For a type that is not a `base_props!` component - a builder, say.
     pub fn without_base_props(mut self) -> Self {
         self.base = false;
@@ -88,7 +102,7 @@ impl PropGroup {
         self
     }
 
-    /// The Style-API table: every part of the component's part enum, with what it is.
+    /// Fills the Style API tab: every part of the component's part enum, with what it is.
     /// The slot comes from the enum, so the table cannot drift from the markup.
     pub fn parts<P: Part + std::fmt::Debug>(
         mut self,
@@ -150,13 +164,41 @@ pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
                         extends: group.extends,
                     }
                 }
-                if !group.parts.is_empty() {
-                    Flex {
-                        direction: "column",
-                        gap: "sm",
-                        Title { size: "md", component: if named { "h3" } else { "h2" }, "Style-API" }
-                        PartRows { name: format!("{} parts", group.component), parts: group.parts }
+            }
+        }
+    }
+}
+
+/// The Style API tab: one parts table per component that has parts.
+#[component]
+pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
+    let groups: Vec<PropGroup> = properties
+        .into_iter()
+        .filter(|group| !group.parts.is_empty())
+        .collect();
+    let named = groups.len() > 1;
+
+    rsx! {
+        Flex {
+            direction: "column",
+            gap: "xl",
+            Text {
+                "Style a part with the "
+                Code { source: "parts" }
+                " prop, or address it as "
+                Code { source: "[data-slot='…']" }
+                " in your own CSS. The names are stable. "
+                Anchor { to: Route::StylingPage {}, "Styling" }
+                " explains how parts work."
+            }
+            for group in groups {
+                Flex {
+                    direction: "column",
+                    gap: "sm",
+                    if named {
+                        Title { size: "lg", component: "h2", "{group.component}" }
                     }
+                    PartRows { name: format!("{} parts", group.component), parts: group.parts }
                 }
             }
         }
@@ -208,13 +250,6 @@ fn PropRows(name: String, properties: Vec<PropDoc>, base: bool, extends: String)
 #[component]
 fn PartRows(name: String, parts: Vec<PartDoc>) -> Element {
     rsx! {
-        Text {
-            "Style a part with the "
-            Code { source: "parts" }
-            " prop, or address it as "
-            Code { source: "[data-slot='…']" }
-            " in your own CSS. The names are stable."
-        }
         Table {
             aria_label: name,
             sx: sx().selector(

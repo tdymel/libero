@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::sx::{Sx, StaticSx, bp, sx};`
 Index: [index.md](index.md) lists every other page
-Description: The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and `StaticSx`.
+Description: The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers, `StaticSx` and the `parts` Style API.
 
 Every component takes the same styling props. `sx()` is not an inline style.
 Identical declarations share one `lsx-*` class, emitted once, so a thousand rows
@@ -264,6 +264,48 @@ fn Demo() -> Element {
             states: States::new().active("selected"),
             "One class, built once"
         }
+    }
+}
+```
+
+## Style API
+
+`sx` styles a component's root. To reach an element inside it, a multi-part
+component names its parts in an enum, such as `AlertPart`, and takes a `parts`
+prop keyed by it. The component's page lists its parts in a "Style API" tab.
+
+- Each part carries a `data-slot` attribute. The names are a stable contract,
+  so your own CSS can match `[data-slot='title']` too.
+- A part is matched as a child of the root, through each part above it
+  (`& > [data-slot='body'] > [data-slot='title']`), never as any descendant. A
+  component of the same kind nested inside keeps its own styles.
+- `parts` compiles into the root's `sx` class, so it beats the component's own
+  styling like `sx` does. Where the instance `sx` sets the same property on the
+  same part, `sx` wins.
+- `StaticParts` builds the parts once per process, as `StaticSx` does for `sx`.
+- Parts a component renders in a portal (a `Select`'s list, a `Dialog`, a
+  `Menu`, a `Tooltip`) sit outside its root, so `parts` cannot reach them.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Alert, AlertPart, Parts, StaticParts};
+use libero::sx::sx;
+
+// Built once, shared by every alert that passes it.
+static QUIET: StaticParts<AlertPart> =
+    StaticParts::new(|| Parts::new().part(AlertPart::Message, sx().color("gray.7")));
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Alert {
+            title: "Saved",
+            parts: Parts::new()
+                .part(AlertPart::Title, sx().font_weight("700"))
+                .part(AlertPart::Close, sx().color("error.6")),
+            "Your changes are live."
+        }
+        Alert { title: "Synced", parts: &QUIET, "Nothing to do." }
     }
 }
 ```

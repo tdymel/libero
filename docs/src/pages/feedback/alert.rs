@@ -46,7 +46,7 @@ pub fn AlertPage() -> Element {
                     .default("common.close")
                     .doc("The close button's accessible name. Unset, the localization's `common.close`, \"Close\" in English."),
                 prop("parts", "Parts<AlertPart>")
-                    .doc("Styles for the inner parts in the Style-API table, under `sx`: `Parts::new().part(AlertPart::Title, sx().font_weight(\"700\"))`."),
+                    .doc("Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(AlertPart::Title, sx().font_weight(\"700\"))`."),
                 prop("children", "Element")
                     .default("required")
                     .doc("The message, read as the alert's description."),

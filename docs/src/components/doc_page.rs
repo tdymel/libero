@@ -6,7 +6,7 @@ use libero::{
 };
 use pictogram_icons_lucide as lucide;
 
-use super::{A11yDoc, A11yPanel, PropGroup, PropertyTable};
+use super::{A11yDoc, A11yPanel, PartsPanel, PropGroup, PropertyTable};
 use crate::{Route, nav::neighbours};
 use pictogram_icons_simple as simple;
 
@@ -24,10 +24,13 @@ enum DocTab {
     Usage,
     Properties,
     Accessibility,
+    #[option(label = "Style API")]
+    StyleApi,
 }
 
 /// A docs page: heading, lead paragraph, `DocSection`s. With `properties` or `accessibility`
-/// set, the sections move into a "Usage" tab beside those tabs.
+/// set, the sections move into a "Usage" tab beside those tabs. A `PropGroup` with
+/// `.parts(...)` adds a "Style API" tab.
 #[component]
 pub fn DocPage(
     title: String,
@@ -57,11 +60,13 @@ pub fn DocPage(
             DocTab::Usage => true,
             DocTab::Properties => !properties.is_empty(),
             DocTab::Accessibility => accessibility.is_some(),
+            DocTab::StyleApi => properties.iter().any(PropGroup::has_parts),
         })
         .cloned()
         .collect();
     // Three equal tabs with icons break "Accessibility" mid-word on a phone:
-    // drop the icons there and size each tab to its label.
+    // drop the icons there and size each tab to its label. Four fit only with
+    // narrower padding; labels never wrap, a longer strip scrolls.
     let crowded = tabs.len() > 2;
     let narrow = "(max-width: 30rem)";
     let icon_sx = match crowded {
@@ -73,8 +78,14 @@ pub fn DocPage(
             narrow,
             sx().selector(
                 // Child combinators, or the Tabs page's own demo strip matches too.
+                "& > [role=tablist]",
+                sx().overflow_x("auto"),
+            )
+            .selector(
                 "& > [role=tablist] > [role=tab]",
-                sx().flex("1 1 auto"),
+                sx().flex("1 1 auto")
+                    .white_space("nowrap")
+                    .padding_inline("sm"),
             ),
         ),
         false => sx(),
@@ -163,6 +174,7 @@ pub fn DocPage(
                                     DocTab::Usage => rsx! { Pictogram { icon: lucide::file::outlined } },
                                     DocTab::Properties => rsx! { Pictogram { icon: lucide::code::outlined } },
                                     DocTab::Accessibility => rsx! { Pictogram { icon: lucide::accessibility::outlined } },
+                                    DocTab::StyleApi => rsx! { Pictogram { icon: lucide::palette::outlined } },
                                 }
                             }
                             "{selected.label()}"
@@ -179,6 +191,9 @@ pub fn DocPage(
                         },
                         DocTab::Accessibility => rsx! {
                             A11yPanel { doc: accessibility.clone().unwrap_or_default() }
+                        },
+                        DocTab::StyleApi => rsx! {
+                            PartsPanel { properties: properties.clone() }
                         },
                     },
                 }

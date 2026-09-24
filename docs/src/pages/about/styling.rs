@@ -135,6 +135,20 @@ rsx! {
     }
 }"#;
 
+const PARTS: &str = r#"static QUIET: StaticParts<AlertPart> =
+    StaticParts::new(|| Parts::new().part(AlertPart::Message, sx().color("gray.7")));
+
+rsx! {
+    Alert {
+        title: "Saved",
+        parts: Parts::new()
+            .part(AlertPart::Title, sx().font_weight("700"))
+            .part(AlertPart::Close, sx().color("error.6")),
+        "Your changes are live."
+    }
+    Alert { title: "Synced", parts: &QUIET, "Nothing to do." }
+}"#;
+
 // snippet: let mut open = use_signal(|| false);
 const ESCAPE_HATCHES: &str = r#"Box {
     class: "prose",
@@ -411,6 +425,56 @@ pub fn StylingPage() -> Element {
                     " inside libero is one, and your own components should copy that."
                 }
                 CodeBlock { source: STATIC_SX, language: "rust" }
+            }
+
+            DocSection {
+                title: "Style API",
+                Text {
+                    Code { source: "sx" }
+                    " styles a component's root. To reach an element inside it, a multi-part "
+                    "component names its parts in an enum, such as "
+                    Code { source: "AlertPart" }
+                    ", and takes a "
+                    Code { source: "parts" }
+                    " prop keyed by it. The component's page lists its parts in a Style API tab."
+                }
+                Text {
+                    "Each part carries a "
+                    Code { source: "data-slot" }
+                    " attribute. The names are a stable contract, so your own CSS can match "
+                    Code { source: "[data-slot='title']" }
+                    " too. A part is matched as a child of the root, through each part above it, "
+                    "never as any descendant: a component of the same kind nested inside keeps "
+                    "its own styles."
+                }
+                Text {
+                    Code { source: "parts" }
+                    " compiles into the root's "
+                    Code { source: "sx" }
+                    " class, so it beats the component's own styling. Where the instance "
+                    Code { source: "sx" }
+                    " styles the same part, "
+                    Code { source: "sx" }
+                    " wins. "
+                    Code { source: "StaticParts" }
+                    " builds the parts once, as "
+                    Code { source: "StaticSx" }
+                    " does."
+                }
+                CodeBlock { source: PARTS, language: "rust" }
+                Text {
+                    "Parts a component renders in a portal (a "
+                    Code { source: "Select" }
+                    "'s list, a "
+                    Code { source: "Dialog" }
+                    ", a "
+                    Code { source: "Menu" }
+                    ", a "
+                    Code { source: "Tooltip" }
+                    ") sit outside its root, so "
+                    Code { source: "parts" }
+                    " cannot reach them."
+                }
             }
         }
     }
