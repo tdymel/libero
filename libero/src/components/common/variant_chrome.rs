@@ -140,17 +140,25 @@ pub(crate) struct VariantColors {
     pub on_state: Option<String>,
 }
 
-/// Which shades a variant tints with; tinted variants pin absolute shades.
-pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> VariantColors {
-    let filled = variant == Variant::Filled;
+/// [`VariantColors`]' `container` and `on_container` alone, for a surface without states.
+pub(crate) fn variant_container_colors(
+    variant: Variant,
+    base: &ThemeAwareValue,
+) -> (Option<String>, Option<String>) {
     // Only `Tonal` paints a container; `Elevated` sits on the surface itself.
-    let (container, on_container) = match variant {
+    match variant {
         Variant::Tonal => (
             shade_color(base, TONAL_CONTAINER),
             contrast_shade_color(base, TONAL_CONTAINER),
         ),
         _ => (None, None),
-    };
+    }
+}
+
+/// Which shades a variant tints with; tinted variants pin absolute shades.
+pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> VariantColors {
+    let filled = variant == Variant::Filled;
+    let (container, on_container) = variant_container_colors(variant, base);
 
     let (hover, selected) = match variant {
         Variant::Tonal => (

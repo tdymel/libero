@@ -7,7 +7,7 @@ use crate::{
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, Variant, VariantVars, base_color,
             base_props, contrast_color, fill_color, parts_enum, text_color, variables,
-            variant_chrome_sx, variant_colors,
+            variant_chrome_sx, variant_container_colors,
         },
         layout::{paper_sx, use_box},
     },
@@ -102,14 +102,15 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
 
 fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant) -> Variables {
     let contrast = contrast_color(base);
-    let colors = variant_colors(variant, base);
+    // Not `variant_colors`: its hover and selected shades are unused here.
+    let (container, on_container) = variant_container_colors(variant, base);
 
     variables()
         .with(ALERT_COLOR_VAR, text_color(base))
         .with(ALERT_FILL_VAR, fill_color(base))
         .with(ALERT_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
-        .with(ALERT_CONTAINER_VAR, colors.container)
-        .with(ALERT_ON_CONTAINER_VAR, colors.on_container)
+        .with(ALERT_CONTAINER_VAR, container)
+        .with(ALERT_ON_CONTAINER_VAR, on_container)
         .with(
             ALERT_RADIUS.override_var(),
             props
