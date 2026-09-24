@@ -57,6 +57,27 @@ fn Demo() -> Element {
 # fn address_valid() -> bool { true }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `Option<T>` | required | The current step. `None` means every step is finished. |
+| `panel` | `Callback<T, Element>` | - | A step's body. Horizontal shows it below the strip, vertical under its own step. A closed step's content is not mounted. |
+| `options` | `Vec<T>` | `T::options()` | The steps to show, in order. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a step's label. `OptionLabel::rich` draws it as rsx and keeps a text name. |
+| `option_description` | `Callback<T, String>` | - | A second line under a step's label. An empty string prints none. |
+| `state` | `Callback<T, Option<StepState>>` | derived | Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`. |
+| `onstepclick` | `EventHandler<T>` | - | Called with the picked step. Without it the steps are plain text with no tab stops. |
+| `allow_next_steps` | `bool` | `false` | With `onstepclick`, lets steps not reached yet be picked too. |
+| `orientation` | `Orientation` | `horizontal` | `vertical` puts each step's content under the step itself. |
+| `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Below 360px wide, `side` draws as `below`. |
+| `size` | `Size` | `md` | Marker, type and spacing. |
+| `color` | `ThemeAwareValue` | `primary` | The current and completed markers, and the connectors behind them. |
+| `parts` | `Parts<StepperPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+It also takes `sx`, `class`, `states`, and any extra HTML attributes. An `id`
+seeds the ids of the steps.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -86,27 +107,6 @@ explains how parts work.
 
 - Name the steps with `aria_label` or `aria_labelledby`.
 - Give a rich label a name that contains its visible text.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `value` | `Option<T>` | required | The current step. `None` means every step is finished. |
-| `panel` | `Callback<T, Element>` | - | A step's body. Horizontal shows it below the strip, vertical under its own step. A closed step's content is not mounted. |
-| `options` | `Vec<T>` | `T::options()` | The steps to show, in order. |
-| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a step's label. `OptionLabel::rich` draws it as rsx and keeps a text name. |
-| `option_description` | `Callback<T, String>` | - | A second line under a step's label. An empty string prints none. |
-| `state` | `Callback<T, Option<StepState>>` | derived | Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`. |
-| `onstepclick` | `EventHandler<T>` | - | Called with the picked step. Without it the steps are plain text with no tab stops. |
-| `allow_next_steps` | `bool` | `false` | With `onstepclick`, lets steps not reached yet be picked too. |
-| `orientation` | `Orientation` | `horizontal` | `vertical` puts each step's content under the step itself. |
-| `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Below 360px wide, `side` draws as `below`. |
-| `size` | `Size` | `md` | Marker, type and spacing. |
-| `color` | `ThemeAwareValue` | `primary` | The current and completed markers, and the connectors behind them. |
-| `parts` | `Parts<StepperPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-It also takes `sx`, `class`, `states`, and any extra HTML attributes. An `id`
-seeds the ids of the steps.
 
 ## Theme defaults
 

@@ -45,22 +45,6 @@ fn Demo() -> Element {
 
 With both `icon` and `children` set, `icon` wins and a debug build warns.
 
-## Accessibility
-
-### Libero handles
-
-- Below 24px (a length such as `"20px"`) the button still takes presses in a
-  24x24 box centred on it.
-- `focusable_when_disabled` keeps a disabled button in the Tab order, with
-  `aria-disabled`.
-
-### You must
-
-- Name the button with `aria_label`: the icon gives a screen reader nothing to
-  read.
-- Below 24px, keep other targets clear of that 24x24 box, or the one drawn
-  later takes the overlap.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -83,6 +67,22 @@ With both `icon` and `children` set, `icon` wins and a debug build warns.
 
 Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
+
+## Accessibility
+
+### Libero handles
+
+- Below 24px (a length such as `"20px"`) the button still takes presses in a
+  24x24 box centred on it.
+- `focusable_when_disabled` keeps a disabled button in the Tab order, with
+  `aria-disabled`.
+
+### You must
+
+- Name the button with `aria_label`: the icon gives a screen reader nothing to
+  read.
+- Below 24px, keep other targets clear of that 24x24 box, or the one drawn
+  later takes the overlap.
 
 ## Theme defaults
 

@@ -65,6 +65,48 @@ RadioGroup {
 }
 ```
 
+## Props
+
+### `RadioGroup`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` selects nothing, as for an unanswered question. |
+| `onchange` | `EventHandler<T>` | - | Called with the option to select next. |
+| `name` | `FieldName<Option<T>>` | - | What the group posts as. A path such as `Survey::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the group loses focus or its form is submitted. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single options. Named groups are drawn flat, without headings. |
+| `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Runs during render, so it can read a locale from context. |
+| `option_description` | `Callback<T, String>` | - | A line under each option's label. An empty string renders none. |
+| `variant` | `ChoiceVariant` | `plain` | `card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height. |
+| `orientation` | `Orientation` | `vertical` | `horizontal` lays the options out in a row, for two or three short ones. |
+| `color` | `ThemeAwareValue` | `primary` | Ring and dot color of the selected option. |
+| `size` | `Size` | `md` | Size of the circles and their labels. |
+| `label` | `Caption` | - | The question, and the group's name. |
+| `description` | `Caption` | - | Between the question and the options. How to choose. |
+| `helper` | `Caption` | - | Under the options. What the choice changes. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Sets `aria-required` on the group and marks the label. |
+| `disabled` | `bool` | `false` | Disables every option and dims the group. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. Chromium does not announce read-only on a group, so say it in the label or description where it matters. |
+
+### `Radio`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `checked` | `bool` | - | Whether it is selected. Pair it with `onselect`. |
+| `onselect` | `EventHandler<()>` | - | Fires when this radio is picked. Never when another one is. |
+| `name` | `String` | - | Shared by every radio in one group, which makes them exclusive. `RadioGroup` sets it. |
+| `tabindex` | `String` | - | Which radio is the group's tab stop. `RadioGroup` sets it. |
+| `color` | `ThemeAwareValue` | `primary` | Ring and dot color when selected. |
+| `aria_label` | `String` | - | Names the radio when it has no `label`. |
+| `readonly` | `bool` | `false` | Refuses the pick. ARIA has no read-only radio, so only `RadioGroup` can announce it. |
+| `variant` | `ChoiceVariant` | `plain` | `card` draws the radio as a bordered surface you can click anywhere. |
+
+`Radio` also takes the field props `label`, `description`, `helper`, `status`,
+`size`, `disabled` and `required`. Both take the shared `sx`, `class`, `style`,
+`states` and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -111,48 +153,6 @@ explains how parts work.
 
 - Without a visible `label`, spread `"aria-label"`, since the option labels do
   not say what the question is.
-
-## Props
-
-### `RadioGroup`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` selects nothing, as for an unanswered question. |
-| `onchange` | `EventHandler<T>` | - | Called with the option to select next. |
-| `name` | `FieldName<Option<T>>` | - | What the group posts as. A path such as `Survey::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
-| `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the group loses focus or its form is submitted. |
-| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single options. Named groups are drawn flat, without headings. |
-| `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Runs during render, so it can read a locale from context. |
-| `option_description` | `Callback<T, String>` | - | A line under each option's label. An empty string renders none. |
-| `variant` | `ChoiceVariant` | `plain` | `card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height. |
-| `orientation` | `Orientation` | `vertical` | `horizontal` lays the options out in a row, for two or three short ones. |
-| `color` | `ThemeAwareValue` | `primary` | Ring and dot color of the selected option. |
-| `size` | `Size` | `md` | Size of the circles and their labels. |
-| `label` | `Caption` | - | The question, and the group's name. |
-| `description` | `Caption` | - | Between the question and the options. How to choose. |
-| `helper` | `Caption` | - | Under the options. What the choice changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `aria-required` on the group and marks the label. |
-| `disabled` | `bool` | `false` | Disables every option and dims the group. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. Chromium does not announce read-only on a group, so say it in the label or description where it matters. |
-
-### `Radio`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `checked` | `bool` | - | Whether it is selected. Pair it with `onselect`. |
-| `onselect` | `EventHandler<()>` | - | Fires when this radio is picked. Never when another one is. |
-| `name` | `String` | - | Shared by every radio in one group, which makes them exclusive. `RadioGroup` sets it. |
-| `tabindex` | `String` | - | Which radio is the group's tab stop. `RadioGroup` sets it. |
-| `color` | `ThemeAwareValue` | `primary` | Ring and dot color when selected. |
-| `aria_label` | `String` | - | Names the radio when it has no `label`. |
-| `readonly` | `bool` | `false` | Refuses the pick. ARIA has no read-only radio, so only `RadioGroup` can announce it. |
-| `variant` | `ChoiceVariant` | `plain` | `card` draws the radio as a bordered surface you can click anywhere. |
-
-`Radio` also takes the field props `label`, `description`, `helper`, `status`,
-`size`, `disabled` and `required`. Both take the shared `sx`, `class`, `style`,
-`states` and any extra HTML attributes.
 
 ## Theme defaults
 

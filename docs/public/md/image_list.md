@@ -98,36 +98,6 @@ ImageList {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `ImageListPart::Item` | `item` | One cell's `<li>`. |
-| `ImageListPart::Media` | `media` | The picture's box, or its link when the item has `to`. |
-| `ImageListPart::Bar` | `bar` | An `ImageBar` caption. |
-
-## Accessibility
-
-### Libero handles
-
-- Each picture's name is its own `alt`.
-- A cell with a bar is a `figure`, and the bar is its caption.
-- `ImageItem::to` makes the picture the link and stretches it over the tile, so
-  the link's name is the image's `alt`. The bar sits above the link, so a
-  control in it still works.
-- The scrim never drops below 60% black, so the bar's white text holds at least
-  5.7:1 even over a white picture. A `below` bar has no scrim and always reads.
-
-### You must
-
-- Give a linked picture an `alt`: a decorative image leaves the link unnamed.
-- Check the contrast of text you dim yourself in a bar: it can still fall
-  short.
-
 ## Props
 
 ### `ImageList`
@@ -166,6 +136,36 @@ A builder, like `Table::column()`.
 | `scrim(on)` | `bool` | The dark gradient behind an overlay bar and its light text color. Off leaves a bare transparent strip. A `below` bar has none. |
 
 `ImageItem` holds `Element`s, so the list re-renders whenever its parent does.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ImageListPart::Item` | `item` | One cell's `<li>`. |
+| `ImageListPart::Media` | `media` | The picture's box, or its link when the item has `to`. |
+| `ImageListPart::Bar` | `bar` | An `ImageBar` caption. |
+
+## Accessibility
+
+### Libero handles
+
+- Each picture's name is its own `alt`.
+- A cell with a bar is a `figure`, and the bar is its caption.
+- `ImageItem::to` makes the picture the link and stretches it over the tile, so
+  the link's name is the image's `alt`. The bar sits above the link, so a
+  control in it still works.
+- The scrim never drops below 60% black, so the bar's white text holds at least
+  5.7:1 even over a white picture. A `below` bar has no scrim and always reads.
+
+### You must
+
+- Give a linked picture an `alt`: a decorative image leaves the link unnamed.
+- Check the contrast of text you dim yourself in a bar: it can still fall
+  short.
 
 ## Theme defaults
 

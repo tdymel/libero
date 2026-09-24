@@ -61,6 +61,33 @@ let inspector = use_floating_window(
 );
 ```
 
+## API
+
+`use_floating_window(options, render) -> FloatingWindowHandle`. `render` gets the
+handle, so the body can close its own window.
+
+| `FloatingWindowHandle` | Description |
+|---|---|
+| `open()` | Shows the window. Does nothing when it is open. |
+| `close()` | Hides it and returns focus to what opened it, unless focus had already left the window. |
+| `toggle()` | Opens or closes it. |
+| `is_open()` | Whether it is open. Reading it subscribes. |
+
+| `FloatingWindowOptions` field | Type | Default | Description |
+|---|---|---|---|
+| `title` | `Option<String>` | - | The title bar's heading, and the window's accessible name. |
+| `aria_label` | `Option<String>` | - | Names the window instead of `title`. |
+| `placement` | `Input<Placement>` | `center-center` | Where it first appears. Once dragged, it stays where it was put, inside the viewport. |
+| `resizable` | `bool` | `false` | Draws the corner resize handle. |
+| `pinned` | `bool` | `false` | Keeps it at `placement`, with no drag, keyboard move or Move menu item. |
+| `z_index` | `Input<ThemeAwareValue>` | - | Overrides the stacking. Unset, windows sit below overlays and modals. |
+| `sx` | `Input<Sx>` | - | Styles the window. `min_width`, `max_width`, `min_height` and `max_height` here limit a resize. The window never grows past the viewport. |
+| `onmove` | `Option<Callback<WindowRect>>` | - | Called after a drag, a keyboard or button move, or a Reset, in viewport pixels. |
+| `onresize` | `Option<Callback<WindowRect>>` | - | Called after a resize by pointer, keyboard or button, or a Reset. |
+| `parts` | `Input<Parts<FloatingWindowPart>>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(FloatingWindowPart::Body, sx().padding("lg"))`. |
+
+`WindowRect { x, y, width, height }` is in viewport pixels.
+
 ## Style API
 
 Style a part with the `parts` option, or address it as `[data-slot='…']` in your
@@ -103,33 +130,6 @@ explains how parts work.
 
 - Pick a `placement` that does not cover the page's controls: the page behind
   a window still takes Tab.
-
-## API
-
-`use_floating_window(options, render) -> FloatingWindowHandle`. `render` gets the
-handle, so the body can close its own window.
-
-| `FloatingWindowHandle` | Description |
-|---|---|
-| `open()` | Shows the window. Does nothing when it is open. |
-| `close()` | Hides it and returns focus to what opened it, unless focus had already left the window. |
-| `toggle()` | Opens or closes it. |
-| `is_open()` | Whether it is open. Reading it subscribes. |
-
-| `FloatingWindowOptions` field | Type | Default | Description |
-|---|---|---|---|
-| `title` | `Option<String>` | - | The title bar's heading, and the window's accessible name. |
-| `aria_label` | `Option<String>` | - | Names the window instead of `title`. |
-| `placement` | `Input<Placement>` | `center-center` | Where it first appears. Once dragged, it stays where it was put, inside the viewport. |
-| `resizable` | `bool` | `false` | Draws the corner resize handle. |
-| `pinned` | `bool` | `false` | Keeps it at `placement`, with no drag, keyboard move or Move menu item. |
-| `z_index` | `Input<ThemeAwareValue>` | - | Overrides the stacking. Unset, windows sit below overlays and modals. |
-| `sx` | `Input<Sx>` | - | Styles the window. `min_width`, `max_width`, `min_height` and `max_height` here limit a resize. The window never grows past the viewport. |
-| `onmove` | `Option<Callback<WindowRect>>` | - | Called after a drag, a keyboard or button move, or a Reset, in viewport pixels. |
-| `onresize` | `Option<Callback<WindowRect>>` | - | Called after a resize by pointer, keyboard or button, or a Reset. |
-| `parts` | `Input<Parts<FloatingWindowPart>>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(FloatingWindowPart::Body, sx().padding("lg"))`. |
-
-`WindowRect { x, y, width, height }` is in viewport pixels.
 
 ## Theme defaults
 

@@ -148,38 +148,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `SegmentedControlPart::Label` | `label` | The label above the control. |
-| `SegmentedControlPart::Required` | `required` | The required asterisk, in the label. |
-| `SegmentedControlPart::Description` | `description` | The caption between the label and the control. |
-| `SegmentedControlPart::Control` | `control` | The connected strip. |
-| `SegmentedControlPart::Segment` | `segment` | One segment's visible label. |
-| `SegmentedControlPart::Helper` | `helper` | The caption under the control. |
-| `SegmentedControlPart::Status` | `status` | The validation message. |
-
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Tab` | Enters and leaves the whole control. |
-| `Left`, `Right`, `Up` or `Down` | Move the selection. |
-| `Space` | Picks the focused segment. |
-| `Enter` | Outside a `Form`: picks the focused segment. Inside one: submits the form, as on a native radio. |
-
-### You must
-
-- Without a visible label, spread `"aria-label"`, since the segments name the
-  options, not the question.
-
 ## Props
 
 ### SegmentedControl
@@ -222,6 +190,38 @@ Like every component, `SegmentedControl` also takes the shared props `sx`,
 `class`, `style`, `states`, and any extra HTML attributes. `sx`, `class` and
 `states` land on the field's wrapper, and the attributes on the
 `radiogroup`.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `SegmentedControlPart::Label` | `label` | The label above the control. |
+| `SegmentedControlPart::Required` | `required` | The required asterisk, in the label. |
+| `SegmentedControlPart::Description` | `description` | The caption between the label and the control. |
+| `SegmentedControlPart::Control` | `control` | The connected strip. |
+| `SegmentedControlPart::Segment` | `segment` | One segment's visible label. |
+| `SegmentedControlPart::Helper` | `helper` | The caption under the control. |
+| `SegmentedControlPart::Status` | `status` | The validation message. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Tab` | Enters and leaves the whole control. |
+| `Left`, `Right`, `Up` or `Down` | Move the selection. |
+| `Space` | Picks the focused segment. |
+| `Enter` | Outside a `Form`: picks the focused segment. Inside one: submits the form, as on a native radio. |
+
+### You must
+
+- Without a visible label, spread `"aria-label"`, since the segments name the
+  options, not the question.
 
 ## Theme defaults
 

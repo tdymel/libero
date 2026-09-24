@@ -84,20 +84,6 @@ fn Filters() -> Element {
 and Blitz have and a webview does not. There it remembers nothing, so name the
 trigger with `remember(event)` instead.
 
-## Accessibility
-
-### Libero handles
-
-- `restore()` puts focus back on the remembered element. In the demo, Tab into
-  the panel, then press Apply or Escape, and focus lands on Filters again.
-  [Collapse](collapse.md) shows the same return on an animated panel.
-
-### Limits
-
-- Some browsers do not focus a button on a mouse click, so a panel opened
-  with the mouse may remember the body. That only matters to a keyboard user,
-  and for them the trigger has focus.
-
 ## API
 
 ```rust,ignore
@@ -113,3 +99,17 @@ pub fn use_focus_return() -> FocusReturn
 
 `FocusReturn` is `Copy`. `restore()` focuses in a spawned task, after the
 closing event has finished, so it is safe to call from that event's handler.
+
+## Accessibility
+
+### Libero handles
+
+- `restore()` puts focus back on the remembered element. In the demo, Tab into
+  the panel, then press Apply or Escape, and focus lands on Filters again.
+  [Collapse](collapse.md) shows the same return on an animated panel.
+
+### Limits
+
+- Some browsers do not focus a button on a mouse click, so a panel opened
+  with the mouse may remember the body. That only matters to a keyboard user,
+  and for them the trigger has focus.

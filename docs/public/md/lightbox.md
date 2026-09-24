@@ -60,31 +60,6 @@ fn Demo(photos: Vec<Photo>) -> Element {
 }
 ```
 
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `z` | On the picture: steps through 2x, 4x and 8x and back to fitted. |
-| `+` or `-` | On the picture: zooms in finer steps. |
-| `Left`, `Right`, `Up` or `Down` | On the picture: pans. At the edge of a pan, moves to the next picture. |
-| `Left`, `Right`, `Home` or `End` | In the thumbnail strip: moves along the strip and changes the picture with it. |
-| `Escape` | Closes the viewer. |
-
-### Libero handles
-
-- Focus returns to the thumbnail that opened it.
-- With `zoom` on, the picture showing is a tab stop that takes the zoom and
-  pan keys. Its description lists them, and a status message reads each new
-  zoom level.
-- At the edge of a pan the arrows move to the next picture, so the keyboard
-  never gets stuck.
-
-### You must
-
-- Give every picture its own `alt`.
-
 ## API
 
 ### `use_lightbox`
@@ -131,6 +106,31 @@ pair. An index past the end shows the last picture.
 |---|---|---|
 | `items` | `Vec<LightboxItem>` | The gallery. |
 | `index` | `usize` | The picture to start on. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `z` | On the picture: steps through 2x, 4x and 8x and back to fitted. |
+| `+` or `-` | On the picture: zooms in finer steps. |
+| `Left`, `Right`, `Up` or `Down` | On the picture: pans. At the edge of a pan, moves to the next picture. |
+| `Left`, `Right`, `Home` or `End` | In the thumbnail strip: moves along the strip and changes the picture with it. |
+| `Escape` | Closes the viewer. |
+
+### Libero handles
+
+- Focus returns to the thumbnail that opened it.
+- With `zoom` on, the picture showing is a tab stop that takes the zoom and
+  pan keys. Its description lists them, and a status message reads each new
+  zoom level.
+- At the edge of a pan the arrows move to the next picture, so the keyboard
+  never gets stuck.
+
+### You must
+
+- Give every picture its own `alt`.
 
 ## Theme defaults
 

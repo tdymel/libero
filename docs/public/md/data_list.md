@@ -40,18 +40,6 @@ fn Demo() -> Element {
 `orientation: "horizontal"` makes the `<dl>` a two-column grid, with terms in
 the first column and every description in the second.
 
-## Accessibility
-
-### Libero handles
-
-- Each term is a `<dt>` and its descriptions one `<dd>`, so a screen reader
-  pairs them.
-
-### You must
-
-- Put each `DataListItem` directly inside the `DataList`. A wrapper element
-  between them breaks the pairing of term and description.
-
 ## Props
 
 ### DataList
@@ -71,6 +59,18 @@ the first column and every description in the second.
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
+
+## Accessibility
+
+### Libero handles
+
+- Each term is a `<dt>` and its descriptions one `<dd>`, so a screen reader
+  pairs them.
+
+### You must
+
+- Put each `DataListItem` directly inside the `DataList`. A wrapper element
+  between them breaks the pairing of term and description.
 
 ## Theme defaults
 

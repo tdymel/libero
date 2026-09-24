@@ -113,6 +113,41 @@ MultiSelect {
 }
 ```
 
+## Props
+
+### `MultiSelect`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
+| `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
+| `value` | `Vec<T>` | - | The selection, in the order it was picked. Pair it with `onchange`. Empty shows `placeholder`. |
+| `onchange` | `EventHandler<Vec<T>>` | - | Called with the whole next selection. |
+| `name` | `FieldName<Vec<T>>` | - | Posts each selected option's `Options::value()` under this name. A path such as `Order::FIELDS.toppings()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `validate` | `Validators<Vec<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. |
+| `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. `selected` on the args is there for a checkmark. |
+| `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value in the trigger, remove control included. `remove` on the args drops that value. |
+| `placeholder` | `String` | - | Shown while `value` is empty. |
+| `clearable` | `bool` | `false` | Shows an x in place of the chevron that empties the selection. |
+| `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query survives a pick and is cleared when the list closes. |
+| `filter` | `Callback<SelectFilterArgs<T>, bool>` | `contains` | Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. |
+| `search_placeholder` | `String` | - | What the empty search box says. |
+| `label` | `Caption` | - | The caption above the control, and the select's name. |
+| `description` | `Caption` | - | Between the label and the control. What to pick. |
+| `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
+| `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |
+
+`SelectOptionArgs<T>` carries `value`, `index`, `selected` and `disabled`.
+`SelectionArgs<T>` carries `value` and `remove`. `SelectFilterArgs<T>` carries
+`value` and `query`.
+
+Like every component, it also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes. The attributes land on the trigger.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -152,41 +187,6 @@ explains how parts work.
 - Disabled options are read out but skipped.
 - With `searchable` the search box takes over typing and holds the focus while
   the list is open.
-
-## Props
-
-### `MultiSelect`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
-| `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
-| `value` | `Vec<T>` | - | The selection, in the order it was picked. Pair it with `onchange`. Empty shows `placeholder`. |
-| `onchange` | `EventHandler<Vec<T>>` | - | Called with the whole next selection. |
-| `name` | `FieldName<Vec<T>>` | - | Posts each selected option's `Options::value()` under this name. A path such as `Order::FIELDS.toppings()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
-| `validate` | `Validators<Vec<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
-| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. |
-| `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. `selected` on the args is there for a checkmark. |
-| `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value in the trigger, remove control included. `remove` on the args drops that value. |
-| `placeholder` | `String` | - | Shown while `value` is empty. |
-| `clearable` | `bool` | `false` | Shows an x in place of the chevron that empties the selection. |
-| `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query survives a pick and is cleared when the list closes. |
-| `filter` | `Callback<SelectFilterArgs<T>, bool>` | `contains` | Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. |
-| `search_placeholder` | `String` | - | What the empty search box says. |
-| `label` | `Caption` | - | The caption above the control, and the select's name. |
-| `description` | `Caption` | - | Between the label and the control. What to pick. |
-| `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
-| `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |
-
-`SelectOptionArgs<T>` carries `value`, `index`, `selected` and `disabled`.
-`SelectionArgs<T>` carries `value` and `remove`. `SelectFilterArgs<T>` carries
-`value` and `query`.
-
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes. The attributes land on the trigger.
 
 ## Theme defaults
 

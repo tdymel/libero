@@ -63,28 +63,6 @@ fn HoldToCount() -> Element {
 }
 ```
 
-## Accessibility
-
-### Libero handles
-
-- A tap that ends before the delay runs no callback and keeps its click.
-- The press is dropped when the pointer moves beyond the tolerance, leaves, is
-  cancelled (a touch that starts to scroll), or a second finger lands.
-- The browser's own long-press menu is suppressed only after the press fired,
-  and the click that follows the release is reported so you can skip it.
-
-### You must
-
-- Offer the same action without holding: a long press is a gesture with no
-  keyboard or switch equivalent (WCAG 2.5.1, 2.1.1). Put it on a context menu,
-  a key such as Shift+F10, or a visible button.
-- Announce what the press did with a live region, as the demo does.
-
-### Limits
-
-- It reacts to pointer events only. Keyboard and screen reader activation arrive
-  as clicks and do not count as a press.
-
 ## API
 
 ```rust,ignore
@@ -112,3 +90,25 @@ pub struct LongPressOptions {
 
 `LongPress` is `Copy`. Pass the same `LongPressOptions` each render; the delay
 of the newest render is the one used.
+
+## Accessibility
+
+### Libero handles
+
+- A tap that ends before the delay runs no callback and keeps its click.
+- The press is dropped when the pointer moves beyond the tolerance, leaves, is
+  cancelled (a touch that starts to scroll), or a second finger lands.
+- The browser's own long-press menu is suppressed only after the press fired,
+  and the click that follows the release is reported so you can skip it.
+
+### You must
+
+- Offer the same action without holding: a long press is a gesture with no
+  keyboard or switch equivalent (WCAG 2.5.1, 2.1.1). Put it on a context menu,
+  a key such as Shift+F10, or a visible button.
+- Announce what the press did with a live region, as the demo does.
+
+### Limits
+
+- It reacts to pointer events only. Keyboard and screen reader activation arrive
+  as clicks and do not count as a press.

@@ -33,41 +33,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `FieldPart::Label` | `label` | The label above the control. |
-| `FieldPart::Required` | `required` | The required asterisk, in the label. |
-| `FieldPart::Description` | `description` | The caption between the label and the control. |
-| `FieldPart::Frame` | `frame` | The bordered box around the control. |
-| `FieldPart::Leading` | `leading` | The slot before the control: an icon, a prefix. |
-| `FieldPart::Control` | `control` | The element the label names. |
-| `FieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
-| `FieldPart::Helper` | `helper` | The caption under the control. |
-| `FieldPart::Status` | `status` | The validation message. |
-
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Down` | Moves focus into the picker, onto the saturation area or the first swatch, where the [ColorPicker](color_picker.md#accessibility) keys apply. |
-| `Escape` | Moves focus back to the text. |
-| `Tab` or `Shift+Tab` | Past either end of the dropdown: leaves the field. |
-
-### Libero handles
-
-- Focus opens the dropdown and stays in the text, so typing works at once.
-- A swatch that closes the dropdown moves focus back to the text.
-- Focus leaving both the text and the dropdown closes it.
-- A mouse click in the dropdown leaves focus in the text.
-
 ## Props
 
 ### `ColorField`
@@ -102,6 +67,41 @@ explains how parts work.
 `ColorField` also takes the `<input>` HTML attributes and, like every
 component, the shared props `sx`, `class`, `style`, `states`, and any extra
 HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FieldPart::Label` | `label` | The label above the control. |
+| `FieldPart::Required` | `required` | The required asterisk, in the label. |
+| `FieldPart::Description` | `description` | The caption between the label and the control. |
+| `FieldPart::Frame` | `frame` | The bordered box around the control. |
+| `FieldPart::Leading` | `leading` | The slot before the control: an icon, a prefix. |
+| `FieldPart::Control` | `control` | The element the label names. |
+| `FieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
+| `FieldPart::Helper` | `helper` | The caption under the control. |
+| `FieldPart::Status` | `status` | The validation message. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Down` | Moves focus into the picker, onto the saturation area or the first swatch, where the [ColorPicker](color_picker.md#accessibility) keys apply. |
+| `Escape` | Moves focus back to the text. |
+| `Tab` or `Shift+Tab` | Past either end of the dropdown: leaves the field. |
+
+### Libero handles
+
+- Focus opens the dropdown and stays in the text, so typing works at once.
+- A swatch that closes the dropdown moves focus back to the text.
+- Focus leaving both the text and the dropdown closes it.
+- A mouse click in the dropdown leaves focus in the text.
 
 ## Theme defaults
 

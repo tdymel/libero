@@ -24,6 +24,17 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `xxl` | Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set. |
+| `component` | `HtmlTag` | follows `size` | The heading tag. The size's look stays. |
+| `children` | `Element` | required | The heading text. |
+
+Like every component, `Title` also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -48,17 +59,6 @@ fn Demo() -> Element {
     }
 }
 ```
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `xxl` | Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set. |
-| `component` | `HtmlTag` | follows `size` | The heading tag. The size's look stays. |
-| `children` | `Element` | required | The heading text. |
-
-Like every component, `Title` also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

@@ -78,6 +78,24 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `source` | `String` | required | The text. Highlighted when `language` names a grammar this build compiles in. |
+| `language` | `Language` | - | One of 30 grammars, each behind its own `code-lang-*` feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` work too. The default features cover `rust`, `bash`, `css` and a few more. An unknown name, or one whose feature is off, renders plain text. |
+| `header` | `bool` | `true` | A bar above the code naming the language, or saying it is unknown. |
+| `copyable` | `bool` | `true` | Shows a [`CopyButton`](copy_button.md). Without `header`, it floats in the top-right corner. |
+| `max_lines` | `u32` | - | Caps the height at about this many lines and scrolls the rest. Unset, the block grows to fit. |
+| `line_numbers` | `bool` | `true` | Shows the line-number gutter. |
+| `highlight_lines` | `String` | - | Lines to emphasize, counted from 1, such as `"1,5-7,10"`. Malformed parts are skipped. |
+| `diff` | `bool` | `false` | Reads `source` as a unified diff. A leading `+` or `-` colors the row and stays out of what is copied. Wins over `highlight_lines`. |
+| `label` | `String` | - | Names the block and describes its copy button, such as "The booking card, Rust code". Unset, the language, such as "Rust code". |
+| `parts` | `Parts<CodeBlockPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+Like every component, `CodeBlock` also takes the shared props `sx`, `class`,
+`states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -108,24 +126,6 @@ parts work.
   is, such as "The booking form, Rust code".
 - A line in `highlight_lines` is marked only by color and a bar, so say in the
   text why it matters.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `source` | `String` | required | The text. Highlighted when `language` names a grammar this build compiles in. |
-| `language` | `Language` | - | One of 30 grammars, each behind its own `code-lang-*` feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` work too. The default features cover `rust`, `bash`, `css` and a few more. An unknown name, or one whose feature is off, renders plain text. |
-| `header` | `bool` | `true` | A bar above the code naming the language, or saying it is unknown. |
-| `copyable` | `bool` | `true` | Shows a [`CopyButton`](copy_button.md). Without `header`, it floats in the top-right corner. |
-| `max_lines` | `u32` | - | Caps the height at about this many lines and scrolls the rest. Unset, the block grows to fit. |
-| `line_numbers` | `bool` | `true` | Shows the line-number gutter. |
-| `highlight_lines` | `String` | - | Lines to emphasize, counted from 1, such as `"1,5-7,10"`. Malformed parts are skipped. |
-| `diff` | `bool` | `false` | Reads `source` as a unified diff. A leading `+` or `-` colors the row and stays out of what is copied. Wins over `highlight_lines`. |
-| `label` | `String` | - | Names the block and describes its copy button, such as "The booking card, Rust code". Unset, the language, such as "Rust code". |
-| `parts` | `Parts<CodeBlockPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-Like every component, `CodeBlock` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

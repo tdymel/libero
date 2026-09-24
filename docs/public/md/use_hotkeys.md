@@ -53,6 +53,26 @@ fn Shortcuts() -> Element {
 }
 ```
 
+## API
+
+```rust,ignore
+pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>)
+impl Hotkey {
+    pub fn new(chord: impl Into<String>, handler: impl FnMut() + 'static) -> Self
+    pub fn include_editable(self, include: bool) -> Self
+    pub fn when(self, guard: impl Fn() -> bool + 'static) -> Self
+}
+```
+
+| Method | Description |
+|---|---|
+| `Hotkey::new(chord, handler)` | A shortcut. The handler runs in your component's scope, once per press. |
+| `include_editable(bool)` | Also fire while typing in a text field, `textarea`, `select` or editable content. Off by default. |
+| `when(guard)` | Lets a press through only while `guard` answers `true`, checked at each press. A turned-away press keeps its default action. |
+
+Bindings are read again every render, so handlers see current state. A chord
+that parses to no key is ignored.
+
 ## Accessibility
 
 ### Keyboard
@@ -82,23 +102,3 @@ fn Shortcuts() -> Element {
 ### Limits
 
 - A WebView prevents a chord's default action only from the second press of it.
-
-## API
-
-```rust,ignore
-pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>)
-impl Hotkey {
-    pub fn new(chord: impl Into<String>, handler: impl FnMut() + 'static) -> Self
-    pub fn include_editable(self, include: bool) -> Self
-    pub fn when(self, guard: impl Fn() -> bool + 'static) -> Self
-}
-```
-
-| Method | Description |
-|---|---|
-| `Hotkey::new(chord, handler)` | A shortcut. The handler runs in your component's scope, once per press. |
-| `include_editable(bool)` | Also fire while typing in a text field, `textarea`, `select` or editable content. Off by default. |
-| `when(guard)` | Lets a press through only while `guard` answers `true`, checked at each press. A turned-away press keeps its default action. |
-
-Bindings are read again every render, so handlers see current state. A chord
-that parses to no key is ignored.

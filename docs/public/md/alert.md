@@ -54,6 +54,23 @@ fn Demo() -> Element {
 # #[component] fn WarningGlyph() -> Element { rsx! {} }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `title` | `String` | - | The heading and the alert's accessible name. Text only. |
+| `icon` | `Option<Element>` | - | A leading icon of your own, hidden from screen readers. |
+| `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
+| `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. |
+| `radius` | `Size` | `md` | Corner radius. A size step or any CSS length. |
+| `onclose` | `EventHandler<()>` | - | Shows the close button and fires when it is pressed. Unmount the alert to close it. |
+| `close_label` | `String` | `common.close` | The close button's accessible name. Unset, the localization's `common.close`, "Close" in English. |
+| `parts` | `Parts<AlertPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(AlertPart::Title, sx().font_weight("700"))`. |
+| `children` | `Element` | required | The message, read as the alert's description. |
+
+Like every component, `Alert` also takes the shared props `sx`, `class`,
+`states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -83,23 +100,6 @@ explains how parts work.
 - Prefer `tonal` or `filled` for an error: `outlined` has no tint.
 - Move the focus somewhere sensible in `onclose`: closing removes the focused
   close button.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `title` | `String` | - | The heading and the alert's accessible name. Text only. |
-| `icon` | `Option<Element>` | - | A leading icon of your own, hidden from screen readers. |
-| `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
-| `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. |
-| `radius` | `Size` | `md` | Corner radius. A size step or any CSS length. |
-| `onclose` | `EventHandler<()>` | - | Shows the close button and fires when it is pressed. Unmount the alert to close it. |
-| `close_label` | `String` | `common.close` | The close button's accessible name. Unset, the localization's `common.close`, "Close" in English. |
-| `parts` | `Parts<AlertPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(AlertPart::Title, sx().font_weight("700"))`. |
-| `children` | `Element` | required | The message, read as the alert's description. |
-
-Like every component, `Alert` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

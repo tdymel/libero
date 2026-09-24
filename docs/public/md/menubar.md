@@ -46,6 +46,31 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `menus` | `Vec<MenubarMenu>` | required | The top-level menus, in order. |
+| `aria_label` | `String` | required | The bar's accessible name. |
+| `loop_focus` | `bool` | `true` | Whether the arrow keys wrap at the ends, along the bar and down each menu. |
+| `side` | `Side` | `Bottom` | Which side of its trigger every menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
+| `align` | `Align` | `Start` | Where each menu lines up along that side. |
+| `size` | `Size` | `md` | The triggers' font and padding, and each menu's item size. |
+| `radius` | `Size` | `sm` | The triggers' and the menus' corner radius. |
+| `parts` | `Parts<MenubarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. The menus open in a portal, out of reach. |
+
+Like every component, `Menubar` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. They land on the bar.
+
+### `MenubarMenu`
+
+`MenubarMenu::new(label, items)`, plus `.disabled(bool)`.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `new(label, items)` | `String, Vec<MenuEntry>` | required | The trigger's text, which typeahead on the bar matches, and `Menu`'s items. |
+| `disabled` | `bool` | `false` | The trigger stays in view and in the arrow order, and opens nothing. |
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -81,31 +106,6 @@ parts work. The menus open in a portal, outside the bar, so neither reaches them
 ### You must
 
 - Name the bar with `aria_label`. It is required.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `menus` | `Vec<MenubarMenu>` | required | The top-level menus, in order. |
-| `aria_label` | `String` | required | The bar's accessible name. |
-| `loop_focus` | `bool` | `true` | Whether the arrow keys wrap at the ends, along the bar and down each menu. |
-| `side` | `Side` | `Bottom` | Which side of its trigger every menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
-| `align` | `Align` | `Start` | Where each menu lines up along that side. |
-| `size` | `Size` | `md` | The triggers' font and padding, and each menu's item size. |
-| `radius` | `Size` | `sm` | The triggers' and the menus' corner radius. |
-| `parts` | `Parts<MenubarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. The menus open in a portal, out of reach. |
-
-Like every component, `Menubar` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the bar.
-
-### `MenubarMenu`
-
-`MenubarMenu::new(label, items)`, plus `.disabled(bool)`.
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `new(label, items)` | `String, Vec<MenuEntry>` | required | The trigger's text, which typeahead on the bar matches, and `Menu`'s items. |
-| `disabled` | `bool` | `false` | The trigger stays in view and in the arrow order, and opens nothing. |
 
 ## Theme defaults
 

@@ -78,29 +78,6 @@ if details.open_with(order).await == Some(true) {
 }
 ```
 
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Escape` | Closes the drawer, as a backdrop click does. |
-| `Tab` or `Shift+Tab` | Moves the focus within the panel. It does not leave while the drawer shows. |
-
-### Libero handles
-
-- Focus moves into the panel, and back to the trigger once it closes, as with
-  `use_modal`.
-- A dismissal settles the `Opening` with `None`, so a result handler never
-  runs on it.
-- An unset `aria_label` warns in a debug build.
-
-### You must
-
-- Set `DrawerOptions::aria_label`, since the panel is a dialog with no name of
-  its own.
-- Give its content a way to close it: it has no header close button.
-
 ## API
 
 ### `use_drawer`
@@ -126,6 +103,29 @@ behave the same. See [Modal](modal.md).
 | `size` | `Input<Size>` | `md` | Width when docked start or end, height when docked top or bottom. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. Unset warns in a debug build. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Escape` | Closes the drawer, as a backdrop click does. |
+| `Tab` or `Shift+Tab` | Moves the focus within the panel. It does not leave while the drawer shows. |
+
+### Libero handles
+
+- Focus moves into the panel, and back to the trigger once it closes, as with
+  `use_modal`.
+- A dismissal settles the `Opening` with `None`, so a result handler never
+  runs on it.
+- An unset `aria_label` warns in a debug build.
+
+### You must
+
+- Set `DrawerOptions::aria_label`, since the panel is a dialog with no name of
+  its own.
+- Give its content a way to close it: it has no header close button.
 
 ## Theme defaults
 

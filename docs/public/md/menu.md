@@ -67,6 +67,42 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `state` | `MenuState` | required | From `use_menu()`. Holds the open state and wires the trigger to the menu. |
+| `items` | `Vec<MenuEntry>` | required | The menu, in order. `MenuEntry::Item`, `MenuEntry::Group { label, items }` for a named section, and `MenuEntry::Separator`. |
+| `children` | `Element` | required | The trigger, carrying `menu.a11y_attributes()`. It needs no click or key handler of its own. |
+| `side` | `Side` | `Bottom` | Which side of the trigger the menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
+| `align` | `Align` | `Start` | Where the menu lines up along that side. |
+| `close_on_select` | `bool` | `true` | Whether choosing an item closes the menu. |
+| `loop_focus` | `bool` | `true` | Whether the arrow keys wrap from the last item to the first. |
+| `size` | `Size` | `md` | Item height and font size. |
+| `radius` | `Size` | `sm` | The menu's corner radius. The items' corners follow it. |
+| `disabled` | `bool` | `false` | The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled. |
+| `onedge` | `Callback<MenuEdge>` | - | Called with ArrowLeft on the top level, or ArrowRight on an item without a submenu. `Menubar` uses it to move to the next menu. |
+| `parts` | `Parts<MenuPart>` | - | Styles for the inner parts in the Style API tab, on every menu level, submenus too. `sx` styles the top level's box only: `Parts::new().part(MenuPart::Label, sx().font_weight("500"))`. |
+
+Like every component, `Menu` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. They land on the menu.
+
+### MenuItem
+
+| Method | Type | Default | Description |
+|---|---|---|---|
+| `new(label)` | `String` | required | The visible text, the accessible name, and what typeahead matches. |
+| `onselect` | `FnMut(())` | - | Runs when the item is chosen by a click, Enter or Space. |
+| `submenu` | `Vec<MenuEntry>` | - | Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins. |
+| `href` | `String` | - | Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`. |
+| `keep_open` | `()` | - | Choosing the item leaves the menu open, and focus stays on it, whatever the menu's `close_on_select` says. `close_on_select(bool)` overrides it either way. |
+| `leading` | `Element` | - | Before the label, such as an icon. Nothing interactive, since it sits inside the item's button. |
+| `trailing` | `Element` | - | At the far end, such as a badge. It joins the accessible name. Nothing interactive. |
+| `shortcut` | `&str` | - | The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`"Control+X"`). Drawn as a hint ("Ctrl+X") and kept out of the name. `Control`, `Shift`, `Alt` and `Meta` are drawn in the localization's `menu` words ("Strg+Umschalt+S" in German). You bind the key yourself. |
+| `radio` | `bool` | - | Makes the item one choice of several, with a check while `true`. Put the choices in one `Group` and keep one checked. A menu opens on its checked item. |
+| `checkbox` | `bool` | - | Makes the item an on/off setting, with a check while `true`. Flip it in `onselect`. An item is `radio` or `checkbox`, and the later call wins. |
+| `disabled` | `bool` | `false` | Stays in the arrow-key order but cannot be chosen, and typeahead skips it. |
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -110,42 +146,6 @@ explains how parts work.
 
 - Put a shortcut hint in `shortcut`, not `trailing`. A screen reader then
   hears it as `aria-keyshortcuts`, not as part of the item's name.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `state` | `MenuState` | required | From `use_menu()`. Holds the open state and wires the trigger to the menu. |
-| `items` | `Vec<MenuEntry>` | required | The menu, in order. `MenuEntry::Item`, `MenuEntry::Group { label, items }` for a named section, and `MenuEntry::Separator`. |
-| `children` | `Element` | required | The trigger, carrying `menu.a11y_attributes()`. It needs no click or key handler of its own. |
-| `side` | `Side` | `Bottom` | Which side of the trigger the menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
-| `align` | `Align` | `Start` | Where the menu lines up along that side. |
-| `close_on_select` | `bool` | `true` | Whether choosing an item closes the menu. |
-| `loop_focus` | `bool` | `true` | Whether the arrow keys wrap from the last item to the first. |
-| `size` | `Size` | `md` | Item height and font size. |
-| `radius` | `Size` | `sm` | The menu's corner radius. The items' corners follow it. |
-| `disabled` | `bool` | `false` | The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled. |
-| `onedge` | `Callback<MenuEdge>` | - | Called with ArrowLeft on the top level, or ArrowRight on an item without a submenu. `Menubar` uses it to move to the next menu. |
-| `parts` | `Parts<MenuPart>` | - | Styles for the inner parts in the Style API tab, on every menu level, submenus too. `sx` styles the top level's box only: `Parts::new().part(MenuPart::Label, sx().font_weight("500"))`. |
-
-Like every component, `Menu` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the menu.
-
-### MenuItem
-
-| Method | Type | Default | Description |
-|---|---|---|---|
-| `new(label)` | `String` | required | The visible text, the accessible name, and what typeahead matches. |
-| `onselect` | `FnMut(())` | - | Runs when the item is chosen by a click, Enter or Space. |
-| `submenu` | `Vec<MenuEntry>` | - | Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins. |
-| `href` | `String` | - | Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`. |
-| `keep_open` | `()` | - | Choosing the item leaves the menu open, and focus stays on it, whatever the menu's `close_on_select` says. `close_on_select(bool)` overrides it either way. |
-| `leading` | `Element` | - | Before the label, such as an icon. Nothing interactive, since it sits inside the item's button. |
-| `trailing` | `Element` | - | At the far end, such as a badge. It joins the accessible name. Nothing interactive. |
-| `shortcut` | `&str` | - | The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`"Control+X"`). Drawn as a hint ("Ctrl+X") and kept out of the name. `Control`, `Shift`, `Alt` and `Meta` are drawn in the localization's `menu` words ("Strg+Umschalt+S" in German). You bind the key yourself. |
-| `radio` | `bool` | - | Makes the item one choice of several, with a check while `true`. Put the choices in one `Group` and keep one checked. A menu opens on its checked item. |
-| `checkbox` | `bool` | - | Makes the item an on/off setting, with a check while `true`. Flip it in `onselect`. An item is `radio` or `checkbox`, and the later call wins. |
-| `disabled` | `bool` | `false` | Stays in the arrow-key order but cannot be chosen, and typeahead skips it. |
 
 ## Theme defaults
 

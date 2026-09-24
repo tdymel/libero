@@ -115,30 +115,6 @@ let id = uploads.show_with(
 uploads.update(id, Upload { file: "archive.zip", percent: 40.0 });
 ```
 
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `F8` | Focuses the newest notification from anywhere. The host's `hotkey` sets the key. |
-
-### Libero handles
-
-- Showing one takes no focus. `live` picks a polite or an assertive
-  announcement.
-- Without the hotkey, a close button comes after the rest of the page in `Tab`
-  order.
-- A focused notification never closes on its own.
-- Closing the focused one moves focus to the next close button in its stack,
-  and back to where `F8` was pressed once the stack is empty.
-
-### You must
-
-- Give one with an action, such as Undo, `AutoClose::Never`: it is safer.
-- In your own template, draw the close button yourself: read `s.closable()`
-  and give the button an `aria_label`, as the Card option does.
-
 ## API
 
 ### `use_notifications` / `use_notifications_with`
@@ -208,6 +184,30 @@ The host.
 | `contained` | `bool` | `false` | Draws the stacks in this host's own box and gives the handles below it their own queue. Read once, at mount. |
 | `hotkey` | `Key` | `F8` | Focuses the newest notification from anywhere, pressed without Ctrl, Alt or Meta. |
 | `children` | `Element` | - | Rendered inside a contained host. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `F8` | Focuses the newest notification from anywhere. The host's `hotkey` sets the key. |
+
+### Libero handles
+
+- Showing one takes no focus. `live` picks a polite or an assertive
+  announcement.
+- Without the hotkey, a close button comes after the rest of the page in `Tab`
+  order.
+- A focused notification never closes on its own.
+- Closing the focused one moves focus to the next close button in its stack,
+  and back to where `F8` was pressed once the stack is empty.
+
+### You must
+
+- Give one with an action, such as Undo, `AutoClose::Never`: it is safer.
+- In your own template, draw the close button yourself: read `s.closable()`
+  and give the button an `aria_label`, as the Card option does.
 
 ## Theme defaults
 

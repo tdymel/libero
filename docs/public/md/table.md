@@ -284,46 +284,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Tab` | With `scroll: true`: enters the scroll region, a tab stop. |
-| `Left` or `Right` or `Up` or `Down` | In the scroll region: scrolls the table. |
-| `Enter` or `Space` | On a sortable header, a button: sorts by that column, flips it, then unsorts. |
-| `Shift+Enter` or `Shift+Space` | With `multi_sort`, on a sortable header: adds that column after the sorted ones. |
-| `Space` | On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row. |
-
-### Libero handles
-
-- An unnamed table warns in a debug build.
-- With `scroll: true` the wrapper is a `role="region"` named like the table.
-- Only sorted headers carry `aria-sort`. With several, each sort button's name
-  adds its place, "sort order 2".
-- Each row's checkbox is named "Select" plus its row header's text, else its
-  first cell's. The header checkbox reads mixed while some rows are selected.
-- A selected row carries `aria-selected="true"`, and a polite live region says
-  the new count, "2 rows selected", after each change.
-- A tap on a touch screen has no Shift key, so with `multi_sort` a tap always
-  adds the column.
-- `selectable` without `row_key` warns in a debug build.
-- `.row_header()` cells render as `th scope="row"`, so a screen reader reads
-  that name as it moves down any other column. They look like the other cells.
-
-### You must
-
-- Name every table. `caption` shows a title and names it, `aria_labelledby`
-  points at a heading already on the page, and `aria_label` names it without
-  text.
-- Set `scroll: true` on a table wider than its container.
-- Mark the column that names a row with `.row_header()`.
-- With `onrowclick`, also put a button or link for that action in a cell. A
-  row is not a tab stop, so a keyboard cannot click it.
-- With `selectable`, give the rows a `.row_header()` column, so each checkbox
-  is named by something unique.
-
 ## Props
 
 ### Table
@@ -366,6 +326,46 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
 
 `column()` is a builder, not a component, so it takes no shared props.
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Tab` | With `scroll: true`: enters the scroll region, a tab stop. |
+| `Left` or `Right` or `Up` or `Down` | In the scroll region: scrolls the table. |
+| `Enter` or `Space` | On a sortable header, a button: sorts by that column, flips it, then unsorts. |
+| `Shift+Enter` or `Shift+Space` | With `multi_sort`, on a sortable header: adds that column after the sorted ones. |
+| `Space` | On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row. |
+
+### Libero handles
+
+- An unnamed table warns in a debug build.
+- With `scroll: true` the wrapper is a `role="region"` named like the table.
+- Only sorted headers carry `aria-sort`. With several, each sort button's name
+  adds its place, "sort order 2".
+- Each row's checkbox is named "Select" plus its row header's text, else its
+  first cell's. The header checkbox reads mixed while some rows are selected.
+- A selected row carries `aria-selected="true"`, and a polite live region says
+  the new count, "2 rows selected", after each change.
+- A tap on a touch screen has no Shift key, so with `multi_sort` a tap always
+  adds the column.
+- `selectable` without `row_key` warns in a debug build.
+- `.row_header()` cells render as `th scope="row"`, so a screen reader reads
+  that name as it moves down any other column. They look like the other cells.
+
+### You must
+
+- Name every table. `caption` shows a title and names it, `aria_labelledby`
+  points at a heading already on the page, and `aria_label` names it without
+  text.
+- Set `scroll: true` on a table wider than its container.
+- Mark the column that names a row with `.row_header()`.
+- With `onrowclick`, also put a button or link for that action in a cell. A
+  row is not a tab stop, so a keyboard cannot click it.
+- With `selectable`, give the rows a `.row_header()` column, so each checkbox
+  is named by something unique.
 
 ## Theme defaults
 

@@ -70,33 +70,6 @@ fn Demo() -> Element {
 That renders three avatars and a `+3` chip labelled "3 more: Radia Perlman,
 Barbara Liskov, Margaret Hamilton".
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Styling](styling.md#style-api) explains how
-parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `AvatarPart::Image` | `image` | The picture, while it shows. The fallback has no wrapper: style it through `sx`. |
-
-## Accessibility
-
-### Libero handles
-
-- `name` is the accessible name, so a screen reader says "Ada Lovelace" rather
-  than the initials.
-- A decorative avatar is hidden whole.
-- The group's `+N` chip is focusable, and its label lists the hidden names. Its
-  words come from the `avatar` labels of the [localization](localization.md).
-  `{n}` is the hidden count and `{names}` their names, for example
-  `AvatarLabels { count: "+{n}", more: "{n} weitere: {names}" }`.
-
-### You must
-
-- Pass `alt: ""` where the name shows beside the avatar, or it is read twice.
-- Put nothing focusable in a decorative avatar.
-
 ## Props
 
 ### `Avatar`
@@ -140,6 +113,33 @@ in full, or `"Ada Lovelace".into()` for a name alone.
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `AvatarPart::Image` | `image` | The picture, while it shows. The fallback has no wrapper: style it through `sx`. |
+
+## Accessibility
+
+### Libero handles
+
+- `name` is the accessible name, so a screen reader says "Ada Lovelace" rather
+  than the initials.
+- A decorative avatar is hidden whole.
+- The group's `+N` chip is focusable, and its label lists the hidden names. Its
+  words come from the `avatar` labels of the [localization](localization.md).
+  `{n}` is the hidden count and `{names}` their names, for example
+  `AvatarLabels { count: "+{n}", more: "{n} weitere: {names}" }`.
+
+### You must
+
+- Pass `alt: ""` where the name shows beside the avatar, or it is read twice.
+- Put nothing focusable in a decorative avatar.
 
 ## Theme defaults
 

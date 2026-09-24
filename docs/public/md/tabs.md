@@ -128,6 +128,36 @@ fn Demo() -> Element {
 
 `FileIcon` is your own icon component. Any `svg` works, and `Icon` sizes it.
 
+## Props
+
+### Tabs
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `T` | required | The selected tab. Pair it with `onchange`. |
+| `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. |
+| `panel` | `Callback<T, Element>` | - | The body of the selected tab. Only the selected panel is built. |
+| `options` | `OptionSource<T>` | `T::options()` | The tabs to show. A `Vec<T>` converts, and an `OptionList<T>` can disable single tabs. Groups draw flattened. A source still loading draws no tabs. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so it can read a locale. |
+| `size` | `Size` | `md` | Tab strip size. |
+| `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
+| `full_width` | `bool` | `false` | Tabs share the row evenly instead of sizing to their label. |
+| `activation` | `TabsActivation` | `Automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
+| `parts` | `Parts<TabsPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+`Tabs` also takes the shared props `sx`, `class`, `states`, and any extra HTML
+attributes.
+
+### OptionLabel
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `String` | required | The tab's visible text and accessible name. |
+| `content` | `Element` | - | Drawn in place of the name, such as an icon, via `OptionLabel::rich`. `name` still names the tab. Keep it inline: an `Icon` fits, a `Flex` does not. |
+
+`OptionLabel` is a value, not a component, and takes no shared props. A string
+converts into one (`"Konto".into()`).
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -162,36 +192,6 @@ explains how parts work.
 - If you remove the focused tab from `options`, move the focus back to the
   strip yourself.
 
-
-## Props
-
-### Tabs
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `value` | `T` | required | The selected tab. Pair it with `onchange`. |
-| `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. |
-| `panel` | `Callback<T, Element>` | - | The body of the selected tab. Only the selected panel is built. |
-| `options` | `OptionSource<T>` | `T::options()` | The tabs to show. A `Vec<T>` converts, and an `OptionList<T>` can disable single tabs. Groups draw flattened. A source still loading draws no tabs. |
-| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so it can read a locale. |
-| `size` | `Size` | `md` | Tab strip size. |
-| `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
-| `full_width` | `bool` | `false` | Tabs share the row evenly instead of sizing to their label. |
-| `activation` | `TabsActivation` | `Automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
-| `parts` | `Parts<TabsPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-`Tabs` also takes the shared props `sx`, `class`, `states`, and any extra HTML
-attributes.
-
-### OptionLabel
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `name` | `String` | required | The tab's visible text and accessible name. |
-| `content` | `Element` | - | Drawn in place of the name, such as an icon, via `OptionLabel::rich`. `name` still names the tab. Keep it inline: an `Icon` fits, a `Flex` does not. |
-
-`OptionLabel` is a value, not a component, and takes no shared props. A string
-converts into one (`"Konto".into()`).
 
 ## Theme defaults
 

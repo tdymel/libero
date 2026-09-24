@@ -28,6 +28,16 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `color` | `ThemeAwareValue` | `warning`, tinted | A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. |
+| `children` | `Element` | required | The highlighted content. |
+
+Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -44,16 +54,6 @@ fn Demo() -> Element {
   its contrast.
 - Say in the text why a highlight matters. Not every screen reader announces
   `<mark>`.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `color` | `ThemeAwareValue` | `warning`, tinted | A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. |
-| `children` | `Element` | required | The highlighted content. |
-
-Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

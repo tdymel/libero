@@ -39,6 +39,23 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
+| `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
+| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes 55% of it. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
+| `themes` | `&'static [&'static ThemeSet]` | - | Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both. |
+| `with_system` | `bool` | `false` | Adds following the system to the cycle. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again. |
+| `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does. |
+| `disabled` | `bool` | `false` | Disables and dims the button. |
+| `parts` | `Parts<ThemeTogglePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+Like every component, `ThemeToggle` also takes the shared props `sx`,
+`class`, `style`, `states`, and any extra HTML attributes.
+
 ## Style API
 
 Without `themes` the toggle is the root itself, styled by `sx`; `Toggle`, `Picker` and `Chevron` exist only with `themes`. The theme-set menu is portaled and out of reach.
@@ -67,23 +84,6 @@ explains how parts work.
 ### You must
 
 - With `label`, return what the press does, not the current scheme.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
-| `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes 55% of it. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
-| `themes` | `&'static [&'static ThemeSet]` | - | Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both. |
-| `with_system` | `bool` | `false` | Adds following the system to the cycle. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again. |
-| `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does. |
-| `disabled` | `bool` | `false` | Disables and dims the button. |
-| `parts` | `Parts<ThemeTogglePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-Like every component, `ThemeToggle` also takes the shared props `sx`,
-`class`, `style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

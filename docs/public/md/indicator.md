@@ -51,6 +51,21 @@ fn Demo(unread: u32) -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `label` | `Option<u32>` | `None` | The count. `None` is the bare dot. A number, so `max` can cap it. |
+| `max` | `Option<u32>` | `99` | Above it, the label renders as `{max}+`. Falls back to the theme's cap. |
+| `size` | `Size` | `md` | The dot's diameter, and the height of a labelled one, from 6px to 22px. |
+| `color` | `ThemeAwareValue` | `error` | The fill, a theme color name or a CSS color. A theme color also sets a label color that reads on it. |
+| `radius` | `Size` | `xxl` | A step on the indicator's own radius scale, `1px` to `6px`. The default `xxl` is round at every size. |
+| `with_border` | `bool` | `false` | A ring in the surface color, so the dot reads on top of a picture. |
+| `processing` | `bool` | `false` | A ping behind the dot that repeats until you set it back to `false`. Stops under `prefers-reduced-motion`. |
+
+Like every component, `Indicator` also takes the shared props `sx`, `class`,
+`states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -68,21 +83,6 @@ fn Demo(unread: u32) -> Element {
 - `processing` pings until you turn it off. Set it back to `false` when the
   work ends, since motion that never stops fails WCAG 2.2.2.
 - With a CSS color, check the contrast yourself.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `label` | `Option<u32>` | `None` | The count. `None` is the bare dot. A number, so `max` can cap it. |
-| `max` | `Option<u32>` | `99` | Above it, the label renders as `{max}+`. Falls back to the theme's cap. |
-| `size` | `Size` | `md` | The dot's diameter, and the height of a labelled one, from 6px to 22px. |
-| `color` | `ThemeAwareValue` | `error` | The fill, a theme color name or a CSS color. A theme color also sets a label color that reads on it. |
-| `radius` | `Size` | `xxl` | A step on the indicator's own radius scale, `1px` to `6px`. The default `xxl` is round at every size. |
-| `with_border` | `bool` | `false` | A ring in the surface color, so the dot reads on top of a picture. |
-| `processing` | `bool` | `false` | A ping behind the dot that repeats until you set it back to `false`. Stops under `prefers-reduced-motion`. |
-
-Like every component, `Indicator` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

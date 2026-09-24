@@ -161,6 +161,31 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+### `NativeSelect`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | Height, padding and font size. |
+| `radius` | `Size` | `sm` | Corner radius. |
+| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing. |
+| `onchange` | `EventHandler<T>` | - | Called with the option to select next. Never for the placeholder, which cannot be picked. |
+| `name` | `FieldName<Option<T>>` | - | What the select posts as. A path such as `Order::FIELDS.size()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList` adds disabled options and named groups. A pending source draws no options. |
+| `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Returns a `String`, since an `<option>` holds only text. |
+| `placeholder` | `String` | - | Shown while `value` is `None`, as a first entry that cannot be picked. |
+| `label` | `Caption` | - | The caption above the control, and the select's name. A string or an `Element`. |
+| `description` | `Caption` | - | Between the label and the control. What to pick. |
+| `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. An untouched select is not announced invalid. `validate` or the surrounding `Form` enforces it. |
+| `disabled` | `bool` | `false` | Disables and dims the field. A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that. |
+
+Like every component, it also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -188,31 +213,6 @@ explains how parts work.
 
 - Without a visible `label`, set `aria_label`. A select with no name is a
   defect.
-
-## Props
-
-### `NativeSelect`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | Height, padding and font size. |
-| `radius` | `Size` | `sm` | Corner radius. |
-| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing. |
-| `onchange` | `EventHandler<T>` | - | Called with the option to select next. Never for the placeholder, which cannot be picked. |
-| `name` | `FieldName<Option<T>>` | - | What the select posts as. A path such as `Order::FIELDS.size()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
-| `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
-| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList` adds disabled options and named groups. A pending source draws no options. |
-| `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Returns a `String`, since an `<option>` holds only text. |
-| `placeholder` | `String` | - | Shown while `value` is `None`, as a first entry that cannot be picked. |
-| `label` | `Caption` | - | The caption above the control, and the select's name. A string or an `Element`. |
-| `description` | `Caption` | - | Between the label and the control. What to pick. |
-| `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `aria-required` and marks the label. An untouched select is not announced invalid. `validate` or the surrounding `Form` enforces it. |
-| `disabled` | `bool` | `false` | Disables and dims the field. A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that. |
-
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

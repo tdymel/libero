@@ -42,19 +42,6 @@ With `standard`, which draws no container, the svg fills the box. Every other
 variant insets it to 60% of the box, clear of the container's edges. Set
 `--lsx-icon-glyph` in `sx` to pick another share.
 
-## Accessibility
-
-### Libero handles
-
-- An icon is hidden from screen readers (`aria-hidden="true"`).
-- `aria_label` or `aria_labelledby` makes it `role="img"`.
-
-### You must
-
-- Name an icon that means something with `aria_label` or `aria_labelledby`. A
-  `<title>` inside the svg does not name it, since it is hidden with the rest.
-- For a clickable icon, use [`ActionIcon`](action_icon.md).
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -71,6 +58,19 @@ variant insets it to 60% of the box, clear of the container's edges. Set
 
 Like every component, `Icon` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
+
+## Accessibility
+
+### Libero handles
+
+- An icon is hidden from screen readers (`aria-hidden="true"`).
+- `aria_label` or `aria_labelledby` makes it `role="img"`.
+
+### You must
+
+- Name an icon that means something with `aria_label` or `aria_labelledby`. A
+  `<title>` inside the svg does not name it, since it is hidden with the rest.
+- For a clickable icon, use [`ActionIcon`](action_icon.md).
 
 ## Theme defaults
 

@@ -42,6 +42,7 @@ fn parts_style_the_inner_parts() {
             ("[data-slot=thumb]", "borderTopWidth", "3px"),
             ("#file", "letterSpacing", "3px"),
             ("#chip > [data-slot=chip-icon]", "paddingLeft", "6px"),
+            ("#link-chip > [data-slot=new-tab]", "paddingLeft", "4px"),
             ("#fieldset > [data-slot=legend]", "fontStyle", "italic"),
         ];
         for (selector, property, expected) in cases {

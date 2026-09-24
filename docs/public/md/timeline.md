@@ -91,32 +91,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `TimelinePart::Item` | `item` | One event's `<li>`. |
-| `TimelinePart::Bullet` | `bullet` | The dot, or the ring around an event's `bullet`. |
-| `TimelinePart::Body` | `body` | Title and content, beside the rail. |
-| `TimelinePart::Title` | `title` | The event's title. |
-
-## Accessibility
-
-### Libero handles
-
-- The list gives a screen reader the position and count the rail shows.
-- Bullets are `aria-hidden`, and the title is the text. A custom `.bullet(..)`
-  is hidden too.
-
-### You must
-
-- Never put anything focusable in a `.bullet(..)`. It would stay a tab stop with
-  no name. Interactive content belongs in `.content(..)`.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -142,6 +116,32 @@ explains how parts work.
 
 Like every component, `Timeline` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `TimelinePart::Item` | `item` | One event's `<li>`. |
+| `TimelinePart::Bullet` | `bullet` | The dot, or the ring around an event's `bullet`. |
+| `TimelinePart::Body` | `body` | Title and content, beside the rail. |
+| `TimelinePart::Title` | `title` | The event's title. |
+
+## Accessibility
+
+### Libero handles
+
+- The list gives a screen reader the position and count the rail shows.
+- Bullets are `aria-hidden`, and the title is the text. A custom `.bullet(..)`
+  is hidden too.
+
+### You must
+
+- Never put anything focusable in a `.bullet(..)`. It would stay a tab stop with
+  no name. Interactive content belongs in `.content(..)`.
 
 ## Theme defaults
 

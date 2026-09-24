@@ -74,6 +74,26 @@ Form {
 }
 ```
 
+## Props
+
+### `Fieldset`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `label` | `Caption` | - | The group's caption, rendered as its `<legend>`. |
+| `description` | `Caption` | - | Under the label. |
+| `helper` | `Caption` | - | Under the fields. |
+| `status` | `FieldStatus` | `Valid` | The group's own status, under the fields. A bare `&str` is an error. |
+| `value` | `Store<V>` | - | The group's own value, for a fieldset outside a `Form`. A fieldset with no `value`, `path` or rules needs `Fieldset::<()>` so Rust can infer its type. |
+| `validate` | `Validators<V>` | - | Rules over the group's value, one or an array. A rule with `.on(..)` shows on the fields it names. One without shows under the fields once any field in the group was touched. |
+| `path` | `FieldName<V>` | - | Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it. |
+| `disabled` | `bool` | `false` | Disables every field inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it. |
+| `children` | `Element` | required | The fields. |
+
+`Fieldset` also takes the `<fieldset>` HTML attributes and, like every
+component, the shared props `sx`, `class`, `style`, `states`, and any extra
+HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -99,26 +119,6 @@ explains how parts work.
 ### You must
 
 - Give the group a `label`, so screen readers announce what its fields are for.
-
-## Props
-
-### `Fieldset`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `label` | `Caption` | - | The group's caption, rendered as its `<legend>`. |
-| `description` | `Caption` | - | Under the label. |
-| `helper` | `Caption` | - | Under the fields. |
-| `status` | `FieldStatus` | `Valid` | The group's own status, under the fields. A bare `&str` is an error. |
-| `value` | `Store<V>` | - | The group's own value, for a fieldset outside a `Form`. A fieldset with no `value`, `path` or rules needs `Fieldset::<()>` so Rust can infer its type. |
-| `validate` | `Validators<V>` | - | Rules over the group's value, one or an array. A rule with `.on(..)` shows on the fields it names. One without shows under the fields once any field in the group was touched. |
-| `path` | `FieldName<V>` | - | Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it. |
-| `disabled` | `bool` | `false` | Disables every field inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it. |
-| `children` | `Element` | required | The fields. |
-
-`Fieldset` also takes the `<fieldset>` HTML attributes and, like every
-component, the shared props `sx`, `class`, `style`, `states`, and any extra
-HTML attributes.
 
 ## Theme defaults
 

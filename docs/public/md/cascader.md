@@ -64,6 +64,46 @@ Values must be unique across the whole tree, not just among siblings. The
 cascader finds its value by searching the tree with `==`, and a value no option
 holds selects nothing and warns. The hidden input posts `Options::value()`.
 
+## Props
+
+### `Cascader`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | Height, padding and font size of the frame and its rows. |
+| `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
+| `data` | `Vec<CascaderOption<T>>` | - | The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree. |
+| `value` | `Option<T>` | - | The selected option's value. Pair it with `onchange`. The cascader finds the path to it in `data`, and a value no option holds selects nothing. |
+| `onchange` | `EventHandler<Option<T>>` | - | Called with the value to select next, or `None` when the selection was cleared. |
+| `any_level` | `bool` | `false` | Lets a branch be picked as well as expanded, as its own value. Off, only a leaf commits. |
+| `allow_deselect` | `bool` | `false` | Picking the selected option again clears it. Off, a re-pick keeps the value. |
+| `layout` | `CascaderLayout` | `columns` | `"columns"` draws one list per level, `"paths"` one row per full path. A search always renders `"paths"`. Without `any_level` it lists only leaf paths. On a screen narrower than the `sm` breakpoint, `"columns"` shows one level at a time under a back header. |
+| `searchable` | `bool` | `false` | Puts a search box at the top of the list, which narrows it to the paths that match. |
+| `filter` | `Callback<CascaderFilterArgs<T>, bool>` | - | Narrows the paths while searching. Defaults to a case-insensitive `contains` over the joined path. |
+| `separator` | `String` | `" / "` | Between labels, in the trigger and in a `"paths"` row. |
+| `format_value` | `Callback<Vec<String>, String>` | - | Replaces the joined labels in the trigger. Gets the labels from root to option, and returns a `String` so the trigger can still cut it off with an ellipsis. |
+| `node` | `Callback<CascaderNodeArgs<T>, Element>` | `label` | Draws one row's content. The highlight, chevron and click stay the component's. |
+| `column_width` | `String` | `220px` | Width and minimum width of one column. A trigger wider than the open columns shares the rest among them. `"max-content"` fits the longest row. On a narrow screen, the minimum width of the one level shown. |
+| `name` | `FieldName<Option<T>>` | - | Posts the selected value's `Options::value()` in a hidden input of that name. A path such as `Listing::FIELDS.category()` also binds the selection to the surrounding `Form`'s value when there is no `onchange`. |
+| `validate` | `Validators<Option<T>>` | - | Rules over the selected value, shown once the field loses focus or its form is submitted. |
+| `placeholder` | `String` | - | Shown while nothing is selected. |
+| `search_placeholder` | `String` | - | What the search box says while empty. |
+| `clearable` | `bool` | `false` | Shows an x in place of the chevron while a value is selected. |
+| `label` | `Caption` | - | The caption above the control, and the field's name. |
+| `description` | `Caption` | - | Between the label and the control. What to pick. |
+| `helper` | `Caption` | - | Under the control. What the choice changes. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
+| `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
+
+`CascaderNodeArgs<T>` carries `value`, `label`, `level`, `expanded` and
+`selected`. `CascaderFilterArgs<T>` carries `query`, `label` and `path`, the
+values from root to option.
+
+Like every component, it also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes. The attributes land on the trigger.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -117,46 +157,6 @@ explains how parts work.
 
 - Without a `label`, set `aria_label`. Otherwise screen readers announce an
   unnamed combobox.
-
-## Props
-
-### `Cascader`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | Height, padding and font size of the frame and its rows. |
-| `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
-| `data` | `Vec<CascaderOption<T>>` | - | The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree. |
-| `value` | `Option<T>` | - | The selected option's value. Pair it with `onchange`. The cascader finds the path to it in `data`, and a value no option holds selects nothing. |
-| `onchange` | `EventHandler<Option<T>>` | - | Called with the value to select next, or `None` when the selection was cleared. |
-| `any_level` | `bool` | `false` | Lets a branch be picked as well as expanded, as its own value. Off, only a leaf commits. |
-| `allow_deselect` | `bool` | `false` | Picking the selected option again clears it. Off, a re-pick keeps the value. |
-| `layout` | `CascaderLayout` | `columns` | `"columns"` draws one list per level, `"paths"` one row per full path. A search always renders `"paths"`. Without `any_level` it lists only leaf paths. On a screen narrower than the `sm` breakpoint, `"columns"` shows one level at a time under a back header. |
-| `searchable` | `bool` | `false` | Puts a search box at the top of the list, which narrows it to the paths that match. |
-| `filter` | `Callback<CascaderFilterArgs<T>, bool>` | - | Narrows the paths while searching. Defaults to a case-insensitive `contains` over the joined path. |
-| `separator` | `String` | `" / "` | Between labels, in the trigger and in a `"paths"` row. |
-| `format_value` | `Callback<Vec<String>, String>` | - | Replaces the joined labels in the trigger. Gets the labels from root to option, and returns a `String` so the trigger can still cut it off with an ellipsis. |
-| `node` | `Callback<CascaderNodeArgs<T>, Element>` | `label` | Draws one row's content. The highlight, chevron and click stay the component's. |
-| `column_width` | `String` | `220px` | Width and minimum width of one column. A trigger wider than the open columns shares the rest among them. `"max-content"` fits the longest row. On a narrow screen, the minimum width of the one level shown. |
-| `name` | `FieldName<Option<T>>` | - | Posts the selected value's `Options::value()` in a hidden input of that name. A path such as `Listing::FIELDS.category()` also binds the selection to the surrounding `Form`'s value when there is no `onchange`. |
-| `validate` | `Validators<Option<T>>` | - | Rules over the selected value, shown once the field loses focus or its form is submitted. |
-| `placeholder` | `String` | - | Shown while nothing is selected. |
-| `search_placeholder` | `String` | - | What the search box says while empty. |
-| `clearable` | `bool` | `false` | Shows an x in place of the chevron while a value is selected. |
-| `label` | `Caption` | - | The caption above the control, and the field's name. |
-| `description` | `Caption` | - | Between the label and the control. What to pick. |
-| `helper` | `Caption` | - | Under the control. What the choice changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
-| `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
-
-`CascaderNodeArgs<T>` carries `value`, `label`, `level`, `expanded` and
-`selected`. `CascaderFilterArgs<T>` carries `query`, `label` and `path`, the
-values from root to option.
-
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes. The attributes land on the trigger.
 
 ## Theme defaults
 

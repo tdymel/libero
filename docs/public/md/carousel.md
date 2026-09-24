@@ -104,6 +104,31 @@ Autoplay:
 Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: slides() }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `slides` | `Vec<Element>` | `[]` | The slides, in order. |
+| `slide_label` | `Callback<usize, String>` | `{n} of {m}` | Each slide's accessible name. |
+| `index` | `usize` | uncontrolled | The current slide. Set it and the carousel follows. |
+| `onindexchange` | `EventHandler<usize>` | - | Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here. |
+| `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. |
+| `gap` | `Size` | `md` | Between slides. |
+| `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach. |
+| `orientation` | `Orientation` | `horizontal` | Scroll axis. |
+| `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`. |
+| `controls` | `bool` | `true` | Previous and next buttons. |
+| `indicators` | `bool` | `false` | The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1. |
+| `aria_label` | `String` | localization `label` | Names the region. Unset, it falls back to the localization's label and warns. |
+| `draggable` | `bool` | `false` | Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track. |
+| `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. |
+| `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
+| `r#loop` | `bool` | `false` | Wraps around at both ends. The cloned slides at each end are `aria-hidden` and `inert`. |
+| `parts` | `Parts<CarouselPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+Like every component, `Carousel` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -141,31 +166,6 @@ explains how parts work.
 ### You must
 
 - Set `aria_label` to name the region.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `slides` | `Vec<Element>` | `[]` | The slides, in order. |
-| `slide_label` | `Callback<usize, String>` | `{n} of {m}` | Each slide's accessible name. |
-| `index` | `usize` | uncontrolled | The current slide. Set it and the carousel follows. |
-| `onindexchange` | `EventHandler<usize>` | - | Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here. |
-| `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. |
-| `gap` | `Size` | `md` | Between slides. |
-| `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach. |
-| `orientation` | `Orientation` | `horizontal` | Scroll axis. |
-| `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`. |
-| `controls` | `bool` | `true` | Previous and next buttons. |
-| `indicators` | `bool` | `false` | The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1. |
-| `aria_label` | `String` | localization `label` | Names the region. Unset, it falls back to the localization's label and warns. |
-| `draggable` | `bool` | `false` | Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track. |
-| `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. |
-| `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
-| `r#loop` | `bool` | `false` | Wraps around at both ends. The cloned slides at each end are `aria-hidden` and `inert`. |
-| `parts` | `Parts<CarouselPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-Like every component, `Carousel` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

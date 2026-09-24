@@ -81,6 +81,21 @@ fn Demo() -> Element {
 With `side: "top"` or `"bottom"`, `size` is a height, so the parent needs
 `direction: "column"`.
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `side` | `SidebarSide` | `start` | The edge that gets the border, and whether `size` is a width or a height. It does not move the panel, so put it at the matching end of the DOM. |
+| `size` | `Size` | `md` | The panel's width, or its height on a `top` or `bottom` side. |
+| `component` | `HtmlTag` | `aside` | The element to render, such as `nav` for a navigation panel. |
+| `children` | `Element` | required | The panel's content, scrolled by an inner `ScrollArea`. |
+| `parts` | `Parts<SidebarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+`SidebarSide` is `start`, `end`, `top` or `bottom`. `start` and `end` follow the text direction: `start` is the right edge under `dir="rtl"`.
+
+Like every component, `Sidebar` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -102,21 +117,6 @@ parts work.
 - Pass `component: "nav"` for the site navigation.
 - Give it an `aria_label` when the page has more than one landmark of that
   kind.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `side` | `SidebarSide` | `start` | The edge that gets the border, and whether `size` is a width or a height. It does not move the panel, so put it at the matching end of the DOM. |
-| `size` | `Size` | `md` | The panel's width, or its height on a `top` or `bottom` side. |
-| `component` | `HtmlTag` | `aside` | The element to render, such as `nav` for a navigation panel. |
-| `children` | `Element` | required | The panel's content, scrolled by an inner `ScrollArea`. |
-| `parts` | `Parts<SidebarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-`SidebarSide` is `start`, `end`, `top` or `bottom`. `start` and `end` follow the text direction: `start` is the right edge under `dir="rtl"`.
-
-Like every component, `Sidebar` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

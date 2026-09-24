@@ -179,6 +179,8 @@ parts_enum! {
         Icon = "chip-icon" => "& > [data-slot='chip-icon'], & > label > [data-slot='chip-icon']",
         /// The slot after the label, with `trailing`.
         Trailing = "chip-trailing" => "& > [data-slot='chip-trailing']",
+        /// The new-tab icon after the label, on a `to` chip with `target: "_blank"` only.
+        NewTab = "new-tab" => "& > [data-slot='new-tab']",
     }
 }
 

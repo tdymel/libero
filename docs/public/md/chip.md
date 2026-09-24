@@ -125,34 +125,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `ChipPart::Icon` | `chip-icon` | The leading glyph's wrapper. |
-| `ChipPart::Trailing` | `chip-trailing` | The slot after the label, with `trailing`. |
-
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Space` | Toggles a selectable chip. |
-
-### Libero handles
-
-- A `readonly` chip keeps its tab stop and ignores the toggle.
-
-### You must
-
-- Keep `children` to text and `Icon`: a selectable chip is a `<label>`, which
-  takes the clicks of any control inside it.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -177,6 +149,35 @@ explains how parts work.
 
 Like every component, `Chip` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ChipPart::Icon` | `chip-icon` | The leading glyph's wrapper. |
+| `ChipPart::Trailing` | `chip-trailing` | The slot after the label, with `trailing`. |
+| `ChipPart::NewTab` | `new-tab` | The new-tab icon after the label, on a `to` chip with `target: "_blank"` only. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Space` | Toggles a selectable chip. |
+
+### Libero handles
+
+- A `readonly` chip keeps its tab stop and ignores the toggle.
+
+### You must
+
+- Keep `children` to text and `Icon`: a selectable chip is a `<label>`, which
+  takes the clicks of any control inside it.
 
 ## Theme defaults
 

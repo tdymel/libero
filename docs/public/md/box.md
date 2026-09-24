@@ -60,17 +60,6 @@ default features. The other 28 (document metadata, embedded and media content,
 render as a `div` without it. See
 [getting_started.md](getting_started.md#feature-flags).
 
-## Accessibility
-
-### Libero handles
-
-- `Box` adds no roles, so the semantics are whatever tag `component` names.
-
-### You must
-
-- Use `component: "button"` for something clickable: a clickable `div` has no
-  keyboard support.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -86,6 +75,17 @@ render as a `div` without it. See
 Like every component, `Box` also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes. It also takes the `img`, `a` and
 `button` attributes, such as `src`, `href` and `target`.
+
+## Accessibility
+
+### Libero handles
+
+- `Box` adds no roles, so the semantics are whatever tag `component` names.
+
+### You must
+
+- Use `component: "button"` for something clickable: a clickable `div` has no
+  keyboard support.
 
 ## Theme defaults
 

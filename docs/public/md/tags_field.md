@@ -40,6 +40,42 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+### `TagsField`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | Height, padding, font size and the chips' size. A chip is one step smaller than the field. |
+| `radius` | `Size` | `sm` | Corner radius of the frame and the list, independent of `size`. |
+| `value` | `Vec<String>` | `[]` | The tags, in order, strictly controlled. Pair it with `onchange`. |
+| `onchange` | `EventHandler<Vec<String>>` | - | Called with the whole list the caller should hold next. |
+| `suggestions` | `Vec<String>` | - | Adds a dropdown of tags to pick. Tags already held are not offered. |
+| `split_chars` | `Vec<String>` | `[","]` | Each one commits the text before it, typed or pasted. |
+| `allow_duplicates` | `bool` | `false` | Lets the same tag be added twice. Off, tags are compared trimmed and case-insensitive. |
+| `max_tags` | `usize` | - | The most tags the field accepts. A paste fills the room that is left and refuses the rest. |
+| `tag_rules` | `Callback<String, bool>` | - | Accepts or refuses one tag before it is added. A refused tag stays in the input, and no message shows. |
+| `onrefuse` | `EventHandler<String>` | - | A tag was refused, as a duplicate, past `max_tags`, or by `tag_rules`. Use it to say why, such as through `helper`. |
+| `validate` | `Validators<Vec<String>>` | - | Rules over the whole list, shown once the field loses focus or its form is submitted. |
+| `name` | `FieldName<Vec<String>>` | - | Posts each tag under this name. A path such as `Article::FIELDS.topics()` also binds the list to the surrounding `Form`'s value when the field has no `onchange`. |
+| `placeholder` | `String` | - | Shown while there are no tags. |
+| `clearable` | `bool` | `false` | Shows an x at the end of the frame that empties the field. |
+| `tag` | `Callback<SelectionArgs<String>, Element>` | `Chip` | Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: "-1"`. |
+| `label` | `Caption` | - | The field's caption, above the control. |
+| `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry affects. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `disabled` | `bool` | `false` | Takes the input out of the tab order and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
+
+`SelectionArgs<String>` carries `value` and `remove`, as it does for
+`MultiSelect` and `FileField`.
+
+`TagsField` also takes the `<input>` HTML attributes and, like every component,
+the shared props `sx`, `class`, `style`, `states`, and any extra HTML
+attributes. They land on the input.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -81,42 +117,6 @@ explains how parts work.
 
 - A custom `tag` must make its remove control a button with `tabindex: "-1"`.
   The arrow keys focus it, and without the tabindex each tag adds a tab stop.
-
-## Props
-
-### `TagsField`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | Height, padding, font size and the chips' size. A chip is one step smaller than the field. |
-| `radius` | `Size` | `sm` | Corner radius of the frame and the list, independent of `size`. |
-| `value` | `Vec<String>` | `[]` | The tags, in order, strictly controlled. Pair it with `onchange`. |
-| `onchange` | `EventHandler<Vec<String>>` | - | Called with the whole list the caller should hold next. |
-| `suggestions` | `Vec<String>` | - | Adds a dropdown of tags to pick. Tags already held are not offered. |
-| `split_chars` | `Vec<String>` | `[","]` | Each one commits the text before it, typed or pasted. |
-| `allow_duplicates` | `bool` | `false` | Lets the same tag be added twice. Off, tags are compared trimmed and case-insensitive. |
-| `max_tags` | `usize` | - | The most tags the field accepts. A paste fills the room that is left and refuses the rest. |
-| `tag_rules` | `Callback<String, bool>` | - | Accepts or refuses one tag before it is added. A refused tag stays in the input, and no message shows. |
-| `onrefuse` | `EventHandler<String>` | - | A tag was refused, as a duplicate, past `max_tags`, or by `tag_rules`. Use it to say why, such as through `helper`. |
-| `validate` | `Validators<Vec<String>>` | - | Rules over the whole list, shown once the field loses focus or its form is submitted. |
-| `name` | `FieldName<Vec<String>>` | - | Posts each tag under this name. A path such as `Article::FIELDS.topics()` also binds the list to the surrounding `Form`'s value when the field has no `onchange`. |
-| `placeholder` | `String` | - | Shown while there are no tags. |
-| `clearable` | `bool` | `false` | Shows an x at the end of the frame that empties the field. |
-| `tag` | `Callback<SelectionArgs<String>, Element>` | `Chip` | Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: "-1"`. |
-| `label` | `Caption` | - | The field's caption, above the control. |
-| `description` | `Caption` | - | Between the label and the control. What to enter. |
-| `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry affects. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
-| `disabled` | `bool` | `false` | Takes the input out of the tab order and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
-
-`SelectionArgs<String>` carries `value` and `remove`, as it does for
-`MultiSelect` and `FileField`.
-
-`TagsField` also takes the `<input>` HTML attributes and, like every component,
-the shared props `sx`, `class`, `style`, `states`, and any extra HTML
-attributes. They land on the input.
 
 ## Theme defaults
 

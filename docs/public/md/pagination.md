@@ -35,6 +35,28 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `total` | `u32` | required | Page count. `0` renders nothing. |
+| `page` | `u32` | required | The current page, 1-based and clamped into range. |
+| `onchange` | `EventHandler<u32>` | - | Asks for a new page. Without it the page never changes, and the component warns. |
+| `aria_label` | `String` | required | Names the `<nav>` landmark, so two paginations on one page can be told apart. |
+| `siblings` | `u8` | `1` | Pages on each side of the current one. The row is always `2·siblings + 2·boundaries + 3` items wide, and an ellipsis never stands for a single page. |
+| `boundaries` | `u8` | `1` | Pages pinned at each end. `0` counts as 1. |
+| `size` | `Size` | `md` | Control box and font size. |
+| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
+| `color` | `ThemeAwareValue` | `primary` | Fill of the current page. Its text takes the matching `-contrast` color. |
+| `disabled` | `bool` | `false` | Disables every control. |
+| `with_controls` | `bool` | `true` | Shows the previous and next controls. |
+| `with_edges` | `bool` | `false` | Shows the first and last controls. |
+| `label` | `Callback<PaginationLabel, String>` | - | Overrides every accessible name. Runs during render, so it can read a locale. |
+| `parts` | `Parts<PaginationPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+Like every component, `Pagination` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. They land on the `<nav>`.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -60,28 +82,6 @@ parts work.
 
 - Keep `theme.pagination.gap` above zero: at `xs` the controls are 22px and
   meet the 24px target size only through the gap.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `total` | `u32` | required | Page count. `0` renders nothing. |
-| `page` | `u32` | required | The current page, 1-based and clamped into range. |
-| `onchange` | `EventHandler<u32>` | - | Asks for a new page. Without it the page never changes, and the component warns. |
-| `aria_label` | `String` | required | Names the `<nav>` landmark, so two paginations on one page can be told apart. |
-| `siblings` | `u8` | `1` | Pages on each side of the current one. The row is always `2·siblings + 2·boundaries + 3` items wide, and an ellipsis never stands for a single page. |
-| `boundaries` | `u8` | `1` | Pages pinned at each end. `0` counts as 1. |
-| `size` | `Size` | `md` | Control box and font size. |
-| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
-| `color` | `ThemeAwareValue` | `primary` | Fill of the current page. Its text takes the matching `-contrast` color. |
-| `disabled` | `bool` | `false` | Disables every control. |
-| `with_controls` | `bool` | `true` | Shows the previous and next controls. |
-| `with_edges` | `bool` | `false` | Shows the first and last controls. |
-| `label` | `Callback<PaginationLabel, String>` | - | Overrides every accessible name. Runs during render, so it can read a locale. |
-| `parts` | `Parts<PaginationPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-Like every component, `Pagination` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the `<nav>`.
 
 ## Theme defaults
 

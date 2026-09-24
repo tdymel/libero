@@ -65,6 +65,28 @@ fn Checklist() -> Element {
 }
 ```
 
+## Props
+
+### List
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | Item gap and nested-list indent, together. |
+| `ordered` | `bool` | `false` | An `ol` with visible numbers, for items whose order matters. |
+| `icon` | `Option<Element>` | `None` | Shown at the start of every item, beside its first line. Hidden from screen readers. |
+| `children` | `Element` | required | The list's items. |
+
+### ListItem
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `icon` | `Option<Element>` | `None` | This item's own icon, in place of the list's. |
+| `parts` | `Parts<ListItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+| `children` | `Element` | required | The item's content. |
+
+Like every component, both also take the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -88,28 +110,6 @@ parts work.
   the list and its item count for a screen reader.
 - When an icon carries meaning, such as done or missing, say it in the item's
   text too.
-
-## Props
-
-### List
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | Item gap and nested-list indent, together. |
-| `ordered` | `bool` | `false` | An `ol` with visible numbers, for items whose order matters. |
-| `icon` | `Option<Element>` | `None` | Shown at the start of every item, beside its first line. Hidden from screen readers. |
-| `children` | `Element` | required | The list's items. |
-
-### ListItem
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `icon` | `Option<Element>` | `None` | This item's own icon, in place of the list's. |
-| `parts` | `Parts<ListItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-| `children` | `Element` | required | The item's content. |
-
-Like every component, both also take the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

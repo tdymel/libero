@@ -41,6 +41,16 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `children` | `Element` | required | The content that keeps the focus. |
+
+Like every component, `FocusTrap` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. `FocusTrapInitialFocus` takes
+no props at all.
+
 ## Accessibility
 
 ### Keyboard
@@ -77,16 +87,6 @@ fn Demo() -> Element {
     }
 }
 ```
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `children` | `Element` | required | The content that keeps the focus. |
-
-Like every component, `FocusTrap` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. `FocusTrapInitialFocus` takes
-no props at all.
 
 ## Theme defaults
 

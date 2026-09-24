@@ -40,15 +40,6 @@ like a `2px` corner or no shadow, goes through `sx`.
 Paper { sx: sx().padding("lg").box_shadow("none"), "Flat" }
 ```
 
-## Accessibility
-
-### You must
-
-- Give a `Paper` rendered as a `section` or `aside` an `aria-label`: it is a
-  landmark.
-- Put nothing interactive inside a `Paper` rendered as an `a`: the whole
-  surface is one link, named by its contents.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -68,6 +59,15 @@ Like every component, `Paper` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes, `href`, `target` and `rel`
 included for the `component: "a"` form. A caller's `role` or `aria-label`
 reaches the element untouched.
+
+## Accessibility
+
+### You must
+
+- Give a `Paper` rendered as a `section` or `aside` an `aria-label`: it is a
+  landmark.
+- Put nothing interactive inside a `Paper` rendered as an `a`: the whole
+  surface is one link, named by its contents.
 
 ## Theme defaults
 

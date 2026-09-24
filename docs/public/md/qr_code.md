@@ -32,6 +32,17 @@ fn Demo() -> Element {
 survives more damage but makes a denser code, so a printed sticker wants a high
 level and a screen does not.
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `data` | `String` | required | The payload encoded into the code. |
+| `robustness` | `QrRobustness` | `medium` | How much damage the code survives. Higher levels make a denser code. |
+| `aria_label` | `String` | required | The code's accessible name. Say where it leads. |
+
+Like every component, `QrCode` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -44,17 +55,6 @@ level and a screen does not.
   QR code. A screen reader user cannot scan it, so the label is the only way to
   the payload.
 - Next to a real link, the link serves better.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `data` | `String` | required | The payload encoded into the code. |
-| `robustness` | `QrRobustness` | `medium` | How much damage the code survives. Higher levels make a denser code. |
-| `aria_label` | `String` | required | The code's accessible name. Say where it leads. |
-
-Like every component, `QrCode` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

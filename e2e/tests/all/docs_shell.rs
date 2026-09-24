@@ -96,3 +96,30 @@ fn a_section_navigation_lands_on_the_section() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 1175: a deep link's fragment lands on its section on a fresh load.
+#[test]
+fn a_fragment_load_lands_on_the_section() {
+    block_on(async {
+        let fixture = Fixture::open("/docs-shell/fragment", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "(() => { const far = document.querySelector('#far'); \
+               if (!far || document.activeElement !== far.firstElementChild) return false; \
+               const gap = far.getBoundingClientRect().top \
+                 - document.querySelector('#page-area').getBoundingClientRect().top; \
+               return gap >= 0 && gap <= 40; })()",
+            "the far section at the top, its heading focused",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("the fragment fixture")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

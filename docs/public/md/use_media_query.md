@@ -50,6 +50,21 @@ fn Layout() -> Element {
 }
 ```
 
+## API
+
+```rust,ignore
+pub fn use_media_query(query: &str) -> ReadSignal<bool>
+pub fn use_is_mobile() -> ReadSignal<bool>
+```
+
+| Platform | Answer |
+|---|---|
+| Web | `matchMedia`, live. |
+| WebView (desktop, Android) | `matchMedia` over the page's script, after its first reply. |
+| Native Blitz, server render | `false`, always. |
+
+Call both hooks unconditionally, in the same order every render.
+
 ## Accessibility
 
 ### Libero handles
@@ -69,18 +84,3 @@ fn Layout() -> Element {
 - The first render answers `false` and the real answer lands after mount, so a
   layout chosen by the hook flashes its default once. Native Blitz has no media
   queries and always answers `false`.
-
-## API
-
-```rust,ignore
-pub fn use_media_query(query: &str) -> ReadSignal<bool>
-pub fn use_is_mobile() -> ReadSignal<bool>
-```
-
-| Platform | Answer |
-|---|---|
-| Web | `matchMedia`, live. |
-| WebView (desktop, Android) | `matchMedia` over the page's script, after its first reply. |
-| Native Blitz, server render | `false`, always. |
-
-Call both hooks unconditionally, in the same order every render.

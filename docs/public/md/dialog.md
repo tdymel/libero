@@ -38,6 +38,24 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `aria_label` | `String` | - | The dialog's accessible name. Wins over `title`. |
+| `title` | `String` | - | Heading, and the accessible name unless `aria_label` is set. |
+| `close_button` | `bool` | in a modal, or with `onclose` | Header close button. Inside a modal it closes the modal, outside one it calls `onclose`. |
+| `onclose` | `EventHandler<()>` | - | Called by the close button outside a modal. |
+| `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close cart". Unset, the localization's `common.close`. |
+| `radius` | `Size` | `md` | Corner radius from the radius scale. Other values go through `sx`. |
+| `size` | `ThemeAwareValue` | `md` | Caps the width from the dialog scale. `md` is 510px. |
+| `variables` | `Variables` | - | CSS variables layered onto the dialog's own, as `Drawer` does. |
+| `parts` | `Parts<DialogPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(DialogPart::Title, sx().font_size("lg"))`. |
+| `children` | `Element` | required | The dialog's content. |
+
+Like every component, `Dialog` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -62,24 +80,6 @@ explains how parts work.
 - Open it in a modal: the focus trap, Escape and backdrop dismissal come from
   the modal. A `Dialog` on its own has none of them.
 - Outside a modal, give a close button `onclose`, or it closes nothing.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `aria_label` | `String` | - | The dialog's accessible name. Wins over `title`. |
-| `title` | `String` | - | Heading, and the accessible name unless `aria_label` is set. |
-| `close_button` | `bool` | in a modal, or with `onclose` | Header close button. Inside a modal it closes the modal, outside one it calls `onclose`. |
-| `onclose` | `EventHandler<()>` | - | Called by the close button outside a modal. |
-| `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close cart". Unset, the localization's `common.close`. |
-| `radius` | `Size` | `md` | Corner radius from the radius scale. Other values go through `sx`. |
-| `size` | `ThemeAwareValue` | `md` | Caps the width from the dialog scale. `md` is 510px. |
-| `variables` | `Variables` | - | CSS variables layered onto the dialog's own, as `Drawer` does. |
-| `parts` | `Parts<DialogPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(DialogPart::Title, sx().font_size("lg"))`. |
-| `children` | `Element` | required | The dialog's content. |
-
-Like every component, `Dialog` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

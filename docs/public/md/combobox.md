@@ -194,48 +194,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work. Like `sx`, `parts` styles the dropdown, so its parts
-are reached even though it is portaled. Rows sit in groups, so the row parts
-match at any depth inside the list.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `ComboboxPart::Listbox` | `listbox` | The scrolling list of rows. |
-| `ComboboxPart::Group` | `group` | A group of rows that share a label, from an `OptionList`. |
-| `ComboboxPart::GroupLabel` | `group-label` | A group's heading. |
-| `ComboboxPart::Option` | `option` | A `ComboboxOption` row. |
-| `ComboboxPart::OptionLabel` | `label` | A row's `span { "data-slot": "label" }`, which ends in an ellipsis. |
-
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Down` | Opens the list, and moves the highlight down. |
-| `Up` | Moves the highlight up. |
-| `Home` or `End` | Jumps to the first or last row. |
-| `Enter` | Picks the highlighted row. |
-| `Escape` or `Tab` | Close the list. |
-
-### Libero handles
-
-- Focus stays on your trigger, so typing keeps working.
-
-### You must
-
-- Spread `state.a11y_attributes()` on your trigger, or screen readers cannot
-  tie the list to it.
-- Close the list on your trigger's blur, or an enclosing `Modal` stops hearing
-  Escape while the list stays open.
-- Name the trigger: it becomes a `combobox`, which takes no name from its
-  content. Point a button trigger's `aria-labelledby` at a visible label, and
-  give a text field a `label`.
-
 ## Props
 
 ### `Combobox`
@@ -290,6 +248,48 @@ From `use_combobox()`. It is `Copy`, so it goes into event handlers by value.
 | `size` | `Size` | the `Combobox`'s | Row height and font size. |
 | `radius` | `Size` | the `Combobox`'s | Corner radius, reduced so the row nests inside the dropdown. |
 | `children` | `Element` | required | The row's content. |
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work. Like `sx`, `parts` styles the dropdown, so its parts
+are reached even though it is portaled. Rows sit in groups, so the row parts
+match at any depth inside the list.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ComboboxPart::Listbox` | `listbox` | The scrolling list of rows. |
+| `ComboboxPart::Group` | `group` | A group of rows that share a label, from an `OptionList`. |
+| `ComboboxPart::GroupLabel` | `group-label` | A group's heading. |
+| `ComboboxPart::Option` | `option` | A `ComboboxOption` row. |
+| `ComboboxPart::OptionLabel` | `label` | A row's `span { "data-slot": "label" }`, which ends in an ellipsis. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Down` | Opens the list, and moves the highlight down. |
+| `Up` | Moves the highlight up. |
+| `Home` or `End` | Jumps to the first or last row. |
+| `Enter` | Picks the highlighted row. |
+| `Escape` or `Tab` | Close the list. |
+
+### Libero handles
+
+- Focus stays on your trigger, so typing keeps working.
+
+### You must
+
+- Spread `state.a11y_attributes()` on your trigger, or screen readers cannot
+  tie the list to it.
+- Close the list on your trigger's blur, or an enclosing `Modal` stops hearing
+  Escape while the list stays open.
+- Name the trigger: it becomes a `combobox`, which takes no name from its
+  content. Point a button trigger's `aria-labelledby` at a visible label, and
+  give a text field a `label`.
 
 ## Theme defaults
 

@@ -73,6 +73,26 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `parts` | `Parts<MarqueePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+| `children` | `Element` | required | What scrolls, rendered once per copy. Interactive children work only in the first copy. |
+| `orientation` | `Orientation` | `horizontal` | The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies. |
+| `reverse` | `bool` | `false` | Scrolls towards the end instead of the start. |
+| `duration` | `u32` | `40000` | Milliseconds per full cycle. The same number moves a longer strip faster. |
+| `gap` | `Size` | `md` | Between copies, and between the last and the first. |
+| `repeat` | `u8` | `4` | Copies in a row. Raise it when a gap crosses the view. Anything below 2 renders 2. |
+| `pause_on_hover` | `bool` | `false` | Pauses under the pointer. Not enough on its own, since a keyboard or a touch screen cannot hover. |
+| `paused` | `Option<bool>` | `None` | Controlled when set, so pair it with `onpausechange`. `None` leaves the state to the built-in toggle. |
+| `onpausechange` | `EventHandler<bool>` | `None` | The built-in toggle was pressed, with the state it asks for. |
+| `pause_control` | `bool` | `true` | Renders the pause toggle. Turn it off only when the page offers its own control through `paused`. |
+| `fade_edges` | `bool` | `false` | Fades both ends into the surface color, `--lsx-paper-background`. Only right on a surface of that color. |
+
+Like every component, `Marquee` also takes the shared props `sx`, `class`,
+`states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -113,26 +133,6 @@ parts work.
   `paused` and `onpausechange`. `paused` is controlled when set: the toggle then
   only reports through `onpausechange`, and without the handler it does
   nothing.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `parts` | `Parts<MarqueePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-| `children` | `Element` | required | What scrolls, rendered once per copy. Interactive children work only in the first copy. |
-| `orientation` | `Orientation` | `horizontal` | The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies. |
-| `reverse` | `bool` | `false` | Scrolls towards the end instead of the start. |
-| `duration` | `u32` | `40000` | Milliseconds per full cycle. The same number moves a longer strip faster. |
-| `gap` | `Size` | `md` | Between copies, and between the last and the first. |
-| `repeat` | `u8` | `4` | Copies in a row. Raise it when a gap crosses the view. Anything below 2 renders 2. |
-| `pause_on_hover` | `bool` | `false` | Pauses under the pointer. Not enough on its own, since a keyboard or a touch screen cannot hover. |
-| `paused` | `Option<bool>` | `None` | Controlled when set, so pair it with `onpausechange`. `None` leaves the state to the built-in toggle. |
-| `onpausechange` | `EventHandler<bool>` | `None` | The built-in toggle was pressed, with the state it asks for. |
-| `pause_control` | `bool` | `true` | Renders the pause toggle. Turn it off only when the page offers its own control through `paused`. |
-| `fade_edges` | `bool` | `false` | Fades both ends into the surface color, `--lsx-paper-background`. Only right on a surface of that color. |
-
-Like every component, `Marquee` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

@@ -35,6 +35,22 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `repo` | `String` | - | Required. `owner/repo`, as in the repository's URL. GitLab takes nested groups too. |
+| `host` | `RepoHost` | `GitHub` | Where the repository lives: `RepoHost::GitHub` or `RepoHost::GitLab`. |
+| `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
+| `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
+| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes half of it. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
+| `aria_label` | `String` | - | Replaces the whole built name: host, repository, star count and new-tab cue. Unset, the built name. |
+| `parts` | `Parts<RepoButtonPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+Like every component, `RepoButton` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. They land on the link.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -63,22 +79,6 @@ explains how parts work.
 
 - With your own `aria_label`, name the repository and say that it opens in a
   new tab.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `repo` | `String` | - | Required. `owner/repo`, as in the repository's URL. GitLab takes nested groups too. |
-| `host` | `RepoHost` | `GitHub` | Where the repository lives: `RepoHost::GitHub` or `RepoHost::GitLab`. |
-| `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
-| `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes half of it. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
-| `aria_label` | `String` | - | Replaces the whole built name: host, repository, star count and new-tab cue. Unset, the built name. |
-| `parts` | `Parts<RepoButtonPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-Like every component, `RepoButton` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the link.
 
 ## Theme defaults
 

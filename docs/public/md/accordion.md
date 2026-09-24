@@ -48,6 +48,21 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `open` | `AccordionOpen<T>` | `One(None)` | Which sections are open. `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Controlled, so pair it with `onchange`. An `Option<T>` or a `Vec<T>` converts into one. |
+| `onchange` | `EventHandler<AccordionOpen<T>>` | `None` | Called with the whole new open set, in the same mode, ready to store. |
+| `panel` | `Callback<T, Element>` | `None` | A section's body. A closed panel is not mounted, so it keeps no state. |
+| `options` | `OptionSource<T>` | `T::options()` | The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. Groups are drawn flat. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a section. `OptionLabel::rich` draws the trigger as rsx and still names it. |
+| `heading` | `HtmlTag` | `h3` | The heading around each trigger, `h1` to `h6`. |
+| `size` | `Size` | `md` | Type and padding of the triggers and panels. |
+
+Like every component, `Accordion` also takes the shared props `sx`, `class`,
+`states`, and any extra HTML attributes. An `id` seeds the ids of its parts.
+
 ## Accessibility
 
 ### Keyboard
@@ -73,21 +88,6 @@ fn Demo() -> Element {
 ### Limits
 
 - A `Many` accordion with a dozen open sections makes a long landmark list.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `open` | `AccordionOpen<T>` | `One(None)` | Which sections are open. `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Controlled, so pair it with `onchange`. An `Option<T>` or a `Vec<T>` converts into one. |
-| `onchange` | `EventHandler<AccordionOpen<T>>` | `None` | Called with the whole new open set, in the same mode, ready to store. |
-| `panel` | `Callback<T, Element>` | `None` | A section's body. A closed panel is not mounted, so it keeps no state. |
-| `options` | `OptionSource<T>` | `T::options()` | The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. Groups are drawn flat. |
-| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a section. `OptionLabel::rich` draws the trigger as rsx and still names it. |
-| `heading` | `HtmlTag` | `h3` | The heading around each trigger, `h1` to `h6`. |
-| `size` | `Size` | `md` | Type and padding of the triggers and panels. |
-
-Like every component, `Accordion` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes. An `id` seeds the ids of its parts.
 
 ## Theme defaults
 

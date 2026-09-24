@@ -70,6 +70,23 @@ first. A drag sends `Start`, then `Change`, then `End`. A key press or
 double-click sends `Change` then `End`, so saving the layout on `End` catches
 every resize.
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `orientation` | `Orientation` | `vertical` | The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them. |
+| `initial_size` | `f64` | required | Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it. |
+| `min_size` | `f64` | `10` | The smallest size of either pane in percent, at most 50. |
+| `divider_size` | `Size` | `sm` | Thickness of the divider line. |
+| `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is grey. |
+| `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' sizes in percent. A key press or double-click sends `Change` then `End`. |
+| `aria_label` | `String` | - | Names the divider after the pane it resizes. A debug build warns without it. |
+| `panel_a` | `Element` | required | The start or top pane. |
+| `panel_b` | `Element` | required | The end or bottom pane. |
+
+Like every component, `Splitter` also takes the shared props `sx`, `class`,
+`states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Keyboard
@@ -99,23 +116,6 @@ every resize.
 - Keep a pane's scrollbar or edge buttons out of the 12px gutter next to the
   divider, which gets no press there. For example, use `padding: 12px` on
   that side.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `orientation` | `Orientation` | `vertical` | The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them. |
-| `initial_size` | `f64` | required | Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it. |
-| `min_size` | `f64` | `10` | The smallest size of either pane in percent, at most 50. |
-| `divider_size` | `Size` | `sm` | Thickness of the divider line. |
-| `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is grey. |
-| `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' sizes in percent. A key press or double-click sends `Change` then `End`. |
-| `aria_label` | `String` | - | Names the divider after the pane it resizes. A debug build warns without it. |
-| `panel_a` | `Element` | required | The start or top pane. |
-| `panel_b` | `Element` | required | The end or bottom pane. |
-
-Like every component, `Splitter` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

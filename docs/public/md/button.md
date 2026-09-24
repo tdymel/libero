@@ -36,6 +36,31 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. Under a gradient, its first stop. |
+| `variant` | `Variant` | `filled` | Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop. |
+| `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
+| `radius` | `Size` | `md` | Corner radius, independent of `size`. |
+| `size` | `Size` | `md` | Height, padding and font size. |
+| `full_width` | `bool` | `false` | Stretches the button to fill its container. |
+| `selected` | `bool` | - | Makes it a toggle button with the selected look. Leave it unset for a plain action. |
+| `disabled` | `bool` | `false` | Disables and dims the button. |
+| `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses. |
+| `loading` | `bool` | `false` | Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width. Ignored on a link. |
+| `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
+| `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`). |
+| `target` | `String` | - | The link's `target` attribute. |
+| `icon` | `Element` | - | Drawn before the label. It never shrinks. |
+| `parts` | `Parts<ButtonPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+| `children` | `Element` | required | The label, on one line. A long one is cut at the edge. |
+
+`Button` also takes the `<button>` HTML attributes (`type`, `form`, `name`,
+`value`, ...) and, like every component, the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -73,31 +98,6 @@ fn Demo() -> Element {
     }
 }
 ```
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. Under a gradient, its first stop. |
-| `variant` | `Variant` | `filled` | Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop. |
-| `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
-| `radius` | `Size` | `md` | Corner radius, independent of `size`. |
-| `size` | `Size` | `md` | Height, padding and font size. |
-| `full_width` | `bool` | `false` | Stretches the button to fill its container. |
-| `selected` | `bool` | - | Makes it a toggle button with the selected look. Leave it unset for a plain action. |
-| `disabled` | `bool` | `false` | Disables and dims the button. |
-| `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses. |
-| `loading` | `bool` | `false` | Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width. Ignored on a link. |
-| `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
-| `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`). |
-| `target` | `String` | - | The link's `target` attribute. |
-| `icon` | `Element` | - | Drawn before the label. It never shrinks. |
-| `parts` | `Parts<ButtonPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-| `children` | `Element` | required | The label, on one line. A long one is cut at the edge. |
-
-`Button` also takes the `<button>` HTML attributes (`type`, `form`, `name`,
-`value`, ...) and, like every component, the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

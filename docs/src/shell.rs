@@ -41,6 +41,7 @@ pub(crate) fn AppShell() -> Element {
     let section = use_context_provider(|| heading_focus::PendingSection(Signal::new(None))).0;
     heading_focus::use_scroll_reset(route.clone(), area, content, section);
     heading_focus::use_heading_focus(route.clone(), content, section);
+    heading_focus::use_fragment_landing(area, content);
     // Any route change closes the drawer (search, pager, TLDR, body link, back); focus stays put.
     use_effect(use_reactive!(|route| {
         let _ = route;

@@ -240,7 +240,10 @@ mod tests {
             table::<SegmentedControlPart>(),
             caption(&["control", "segment"])
         );
-        assert_eq!(table::<ChipPart>(), ["chip-icon", "chip-trailing"]);
+        assert_eq!(
+            table::<ChipPart>(),
+            ["chip-icon", "chip-trailing", "new-tab"]
+        );
         assert_eq!(
             table::<FieldsetPart>(),
             ["legend", "description", "helper", "status"]

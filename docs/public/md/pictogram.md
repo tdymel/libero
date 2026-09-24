@@ -56,6 +56,16 @@ Attributes merge by name, a later one replacing an earlier one:
 `stroke` and the other svg props are svg attributes, which the stylesheet
 beats: inside `Icon` or `ActionIcon` the host's CSS still sizes the glyph.
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `icon` | `SvgData` | required | The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!("x.svg"))`. |
+| `aria_label` | `Option<String>` | `None` | Names the glyph: `role="img"` instead of `aria-hidden`. Leave unset next to a text label. |
+
+`Pictogram` also takes every svg attribute (`stroke_width`, `width`, `class`,
+...), and any other attribute by its name in quotes (`"aria-labelledby": "logo-title"`).
+
 ## Accessibility
 
 ### Libero handles
@@ -69,13 +79,3 @@ beats: inside `Icon` or `ActionIcon` the host's CSS still sizes the glyph.
 - Name a pictogram that means something on its own with `aria_label`. One
   next to a text label stays hidden.
 - For a clickable glyph, use `ActionIcon { icon }`.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `icon` | `SvgData` | required | The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!("x.svg"))`. |
-| `aria_label` | `Option<String>` | `None` | Names the glyph: `role="img"` instead of `aria-hidden`. Leave unset next to a text label. |
-
-`Pictogram` also takes every svg attribute (`stroke_width`, `width`, `class`,
-...), and any other attribute by its name in quotes (`"aria-labelledby": "logo-title"`).

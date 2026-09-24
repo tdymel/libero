@@ -123,6 +123,45 @@ fn Demo() -> Element {
 form.getAll("price") // ["20", "80"]
 ```
 
+## Props
+
+### `RangeSlider`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | Track, thumb and font size. |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
+| `value` | `Option<(V, V)>` | - | The two ends, in track order. Pair it with `oninput`, or bind it with a path `name` inside a `Form`. |
+| `oninput` | `EventHandler<SliderChangeEvent<(V, V)>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new pair. A key press sends `Change`, then `End`. |
+| `min` | `V` | `first option, or 0.0` | Lower bound of the track, in the value's own type. |
+| `max` | `V` | `last option, or 100.0` | Upper bound of the track, in the value's own type. |
+| `step` | `V::Step` | - | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps. |
+| `min_range` | `V::Step` | `0` | The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross. |
+| `format` | `Callback<V, String>` | `bare value, or SliderValue::label` | Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes. |
+| `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. |
+| `aria_label_from` | `String` | `slider.minimum` | Names the lower thumb. Unset, the localization's `slider.minimum`, "Minimum" in English. |
+| `aria_label_to` | `String` | `slider.maximum` | Names the upper thumb. Unset, the localization's `slider.maximum`, "Maximum" in English. |
+| `name` | `FieldName<(V, V)>` | - | Posts the pair as two hidden inputs of that name, in track order. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`. |
+| `validate` | `Validators<(V, V)>` | - | Rules over the pair, shown once the slider loses focus or its form is submitted. |
+| `label` | `Caption` | - | The caption above the track. Both thumbs' names start with it. |
+| `description` | `Caption` | - | Between the label and the track. What the range means. |
+| `helper` | `Caption` | - | Under the track, below the mark captions. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value. |
+| `disabled` | `bool` | `false` | Takes the thumbs out of the tab order and dims the slider. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead. |
+
+### `SliderMark`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `V` | - | Where the tick sits on the track. |
+| `label` | `String` | - | Caption below the tick. Leave it out for a bare tick. |
+
+Like every component, `RangeSlider` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. The attributes land on the
+field wrapper.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -172,45 +211,6 @@ explains how parts work.
 - Set `aria_label_from` and `aria_label_to` when those words do not fit.
 - Set `format` when a bare number does not say the unit. To translate a
   discrete range, pass `format`, as on a `Slider`.
-
-## Props
-
-### `RangeSlider`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | Track, thumb and font size. |
-| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
-| `value` | `Option<(V, V)>` | - | The two ends, in track order. Pair it with `oninput`, or bind it with a path `name` inside a `Form`. |
-| `oninput` | `EventHandler<SliderChangeEvent<(V, V)>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new pair. A key press sends `Change`, then `End`. |
-| `min` | `V` | `first option, or 0.0` | Lower bound of the track, in the value's own type. |
-| `max` | `V` | `last option, or 100.0` | Upper bound of the track, in the value's own type. |
-| `step` | `V::Step` | - | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps. |
-| `min_range` | `V::Step` | `0` | The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross. |
-| `format` | `Callback<V, String>` | `bare value, or SliderValue::label` | Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes. |
-| `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. |
-| `aria_label_from` | `String` | `slider.minimum` | Names the lower thumb. Unset, the localization's `slider.minimum`, "Minimum" in English. |
-| `aria_label_to` | `String` | `slider.maximum` | Names the upper thumb. Unset, the localization's `slider.maximum`, "Maximum" in English. |
-| `name` | `FieldName<(V, V)>` | - | Posts the pair as two hidden inputs of that name, in track order. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`. |
-| `validate` | `Validators<(V, V)>` | - | Rules over the pair, shown once the slider loses focus or its form is submitted. |
-| `label` | `Caption` | - | The caption above the track. Both thumbs' names start with it. |
-| `description` | `Caption` | - | Between the label and the track. What the range means. |
-| `helper` | `Caption` | - | Under the track, below the mark captions. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value. |
-| `disabled` | `bool` | `false` | Takes the thumbs out of the tab order and dims the slider. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead. |
-
-### `SliderMark`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `value` | `V` | - | Where the tick sits on the track. |
-| `label` | `String` | - | Caption below the tick. Leave it out for a bare tick. |
-
-Like every component, `RangeSlider` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. The attributes land on the
-field wrapper.
 
 ## Theme defaults
 

@@ -55,30 +55,6 @@ fn Reveal() -> Element {
 }
 ```
 
-## Accessibility
-
-### Libero handles
-
-- The observer is dropped when the component unmounts, and replaced when an
-  option changes, so one element never has two.
-
-### You must
-
-- Keep content that matters in the document and reachable by keyboard;
-  `use_intersection` only reports, it hides nothing. An infinite list still
-  needs a "Load more" button.
-- Gate reveal animations on the reader's motion setting (`use_accessibility`).
-
-### Limits
-
-- The web and a WebView (desktop, Android) use an `IntersectionObserver`. A
-  WebView finds the element by `attributes`, so spread them on it; without them
-  nothing is observed there. A `root` needs `root.attributes()` spread on it
-  the same way; without them a WebView observes against the viewport (a
-  warning in debug builds). On Blitz and in a server render `entry`
-  stays `None`: treat `None` as "unknown" and show lazy content, rather than
-  waiting for a sighting that never comes.
-
 ## API
 
 ```rust,ignore
@@ -118,3 +94,27 @@ pub struct InViewport {
 | `IntersectionEntry::ratio` | `f64` | The visible share of the element's box, 0 to 1. |
 
 `Intersection` and `InViewport` are `Clone`. Changing an option re-observes the element.
+
+## Accessibility
+
+### Libero handles
+
+- The observer is dropped when the component unmounts, and replaced when an
+  option changes, so one element never has two.
+
+### You must
+
+- Keep content that matters in the document and reachable by keyboard;
+  `use_intersection` only reports, it hides nothing. An infinite list still
+  needs a "Load more" button.
+- Gate reveal animations on the reader's motion setting (`use_accessibility`).
+
+### Limits
+
+- The web and a WebView (desktop, Android) use an `IntersectionObserver`. A
+  WebView finds the element by `attributes`, so spread them on it; without them
+  nothing is observed there. A `root` needs `root.attributes()` spread on it
+  the same way; without them a WebView observes against the viewport (a
+  warning in debug builds). On Blitz and in a server render `entry`
+  stays `None`: treat `None` as "unknown" and show lazy content, rather than
+  waiting for a sighting that never comes.

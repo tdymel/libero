@@ -24,6 +24,17 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `variant` | `LoaderVariant` | `oval` | The shape: `oval`, `bars` or `dots`. |
+| `size` | `Size` | `md` | The edge of the square, 18px at `xs` to 72px at `xxl`. |
+| `color` | `ThemeAwareValue` | `primary` | A theme color name or any CSS color. |
+
+Like every component, `Loader` also takes the shared props `sx`, `class`,
+`states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -83,17 +94,6 @@ fn Results() -> Element {
 # async fn search() -> Vec<String> { Vec::new() }
 # #[component] fn ResultList(rows: Vec<String>) -> Element { rsx! {} }
 ```
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `variant` | `LoaderVariant` | `oval` | The shape: `oval`, `bars` or `dots`. |
-| `size` | `Size` | `md` | The edge of the square, 18px at `xs` to 72px at `xxl`. |
-| `color` | `ThemeAwareValue` | `primary` | A theme color name or any CSS color. |
-
-Like every component, `Loader` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

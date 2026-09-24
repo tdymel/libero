@@ -61,6 +61,24 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `aria_label` | `String` | required | Names the strip, which is a tab stop. |
+| `scroll_amount` | `u32` | `200` | Pixels one control press scrolls. |
+| `controls` | `ScrollerControls` | `auto` | `auto` shows each control while there is content that way. `always` keeps both, dimmed at their end. `never` shows neither. |
+| `control_size` | `Size` | `md` | Width of each control and its glyph. |
+| `fade_color` | `ThemeAwareValue` | paper background | The colour the content fades into under a control. Set it to the surface the strip sits on. |
+| `draggable` | `bool` | `false` | Lets the mouse drag the strip. Touch and trackpad scroll it either way. |
+| `onedgechange` | `EventHandler<ScrollerEdges>` | - | Fires when the strip reaches or leaves an end, and once when it is first measured. `ScrollerEdges { at_start, at_end }`, both `true` when nothing overflows. |
+| `handle` | `ScrollerHandle` | - | From `use_scroller()`. Its `step_forward()` and `step_back()` move the strip as the controls do, for buttons of your own. |
+| `children` | `Element` | required | The strip. |
+| `parts` | `Parts<ScrollerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+Like every component, `Scroller` also takes the shared props `sx`, `class`,
+`states`, and any extra HTML attributes, which go on the root.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -90,24 +108,6 @@ parts work.
 
 - Name the strip with `aria_label`. It is required, as the strip is a tab
   stop.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `aria_label` | `String` | required | Names the strip, which is a tab stop. |
-| `scroll_amount` | `u32` | `200` | Pixels one control press scrolls. |
-| `controls` | `ScrollerControls` | `auto` | `auto` shows each control while there is content that way. `always` keeps both, dimmed at their end. `never` shows neither. |
-| `control_size` | `Size` | `md` | Width of each control and its glyph. |
-| `fade_color` | `ThemeAwareValue` | paper background | The colour the content fades into under a control. Set it to the surface the strip sits on. |
-| `draggable` | `bool` | `false` | Lets the mouse drag the strip. Touch and trackpad scroll it either way. |
-| `onedgechange` | `EventHandler<ScrollerEdges>` | - | Fires when the strip reaches or leaves an end, and once when it is first measured. `ScrollerEdges { at_start, at_end }`, both `true` when nothing overflows. |
-| `handle` | `ScrollerHandle` | - | From `use_scroller()`. Its `step_forward()` and `step_back()` move the strip as the controls do, for buttons of your own. |
-| `children` | `Element` | required | The strip. |
-| `parts` | `Parts<ScrollerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-Like every component, `Scroller` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes, which go on the root.
 
 ## Theme defaults
 

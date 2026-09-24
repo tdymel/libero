@@ -34,13 +34,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-### You must
-
-- Keep nothing meaningful at the child's edges: they get cropped.
-- Give an image `alt` text that describes what the reader can see.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -50,6 +43,13 @@ fn Demo() -> Element {
 
 Like every component, `AspectRatio` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
+
+## Accessibility
+
+### You must
+
+- Keep nothing meaningful at the child's edges: they get cropped.
+- Give an image `alt` text that describes what the reader can see.
 
 ## Theme defaults
 

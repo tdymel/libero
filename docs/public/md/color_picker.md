@@ -56,52 +56,6 @@ color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
 # }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work. `ColorSwatch` is one element and has no parts.
-
-### `ColorPicker`
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `ColorPickerPart::Saturation` | `saturation` | The saturation and brightness panel. |
-| `ColorPickerPart::Body` | `body` | The row under the panel: the sliders and the preview. |
-| `ColorPickerPart::Sliders` | `sliders` | The column of the hue and alpha sliders. |
-| `ColorPickerPart::Hue` | `hue` | The hue slider. |
-| `ColorPickerPart::Alpha` | `alpha` | The alpha slider, with `with_alpha`. |
-| `ColorPickerPart::Track` | `track` | Both sliders' gradient tracks. |
-| `ColorPickerPart::Thumb` | `thumb` | Every handle: the panel's and the sliders'. |
-| `ColorPickerPart::Preview` | `preview` | The current color beside the sliders, with `with_alpha`. |
-| `ColorPickerPart::Swatches` | `swatches` | The row of preset swatches. |
-| `ColorPickerPart::Swatch` | `swatch` | One preset swatch. |
-
-### `HueSlider` and `AlphaSlider`
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `ColorSliderPart::Track` | `track` | The gradient track. |
-| `ColorSliderPart::Thumb` | `thumb` | The handle, filled with the color it points at. |
-
-## Accessibility
-
-### Libero handles
-
-- Each thumb is a slider with the usual keys.
-- The saturation panel meets the 24px target size of WCAG 2.5.8 at every size.
-- The swatch equal to the value is pressed and checked.
-
-### You must
-
-- Name swatches with `Swatches::labelled`. By default they are named by their
-  hex, which a screen reader spells out.
-
-### Limits
-
-- The hue and alpha tracks meet the 24px target size of WCAG 2.5.8 from `md`
-  up, not at `sm` or `xs`.
-
 ## Props
 
 ### `ColorPicker`
@@ -162,6 +116,52 @@ explains how parts work. `ColorSwatch` is one element and has no parts.
 Like every component, each of them also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. The attributes land on the
 root.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work. `ColorSwatch` is one element and has no parts.
+
+### `ColorPicker`
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ColorPickerPart::Saturation` | `saturation` | The saturation and brightness panel. |
+| `ColorPickerPart::Body` | `body` | The row under the panel: the sliders and the preview. |
+| `ColorPickerPart::Sliders` | `sliders` | The column of the hue and alpha sliders. |
+| `ColorPickerPart::Hue` | `hue` | The hue slider. |
+| `ColorPickerPart::Alpha` | `alpha` | The alpha slider, with `with_alpha`. |
+| `ColorPickerPart::Track` | `track` | Both sliders' gradient tracks. |
+| `ColorPickerPart::Thumb` | `thumb` | Every handle: the panel's and the sliders'. |
+| `ColorPickerPart::Preview` | `preview` | The current color beside the sliders, with `with_alpha`. |
+| `ColorPickerPart::Swatches` | `swatches` | The row of preset swatches. |
+| `ColorPickerPart::Swatch` | `swatch` | One preset swatch. |
+
+### `HueSlider` and `AlphaSlider`
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ColorSliderPart::Track` | `track` | The gradient track. |
+| `ColorSliderPart::Thumb` | `thumb` | The handle, filled with the color it points at. |
+
+## Accessibility
+
+### Libero handles
+
+- Each thumb is a slider with the usual keys.
+- The saturation panel meets the 24px target size of WCAG 2.5.8 at every size.
+- The swatch equal to the value is pressed and checked.
+
+### You must
+
+- Name swatches with `Swatches::labelled`. By default they are named by their
+  hex, which a screen reader spells out.
+
+### Limits
+
+- The hue and alpha tracks meet the 24px target size of WCAG 2.5.8 from `md`
+  up, not at `sm` or `xs`.
 
 ## Theme defaults
 

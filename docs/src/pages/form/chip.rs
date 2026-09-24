@@ -55,6 +55,7 @@ pub fn ChipPage() -> Element {
             .parts("ChipPart", vec![
                 (ChipPart::Icon, "The leading glyph's wrapper."),
                 (ChipPart::Trailing, "The slot after the label, with `trailing`."),
+                (ChipPart::NewTab, "The new-tab icon after the label, on a `to` chip with `target: \"_blank\"` only."),
             ])],
             accessibility: a11y()
                 .key(["Space"], "Toggles a selectable chip.")

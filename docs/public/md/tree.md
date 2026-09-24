@@ -122,42 +122,6 @@ fn Demo() -> Element {
 The expansion, the buttons and the selection readout are the example's own
 state, not part of `Tree`.
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Styling](styling.md#style-api) explains how
-parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `TreePart::Row` | `row` | A `treeitem`: the row and its open subtree. A `Tree` nested in a row's content matches too. |
-| `TreePart::Content` | `content` | The clickable line around `render_node`'s content. |
-| `TreePart::Group` | `group` | An open branch's list of children. |
-
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Tab` | Enters the tree, one tab stop. |
-| `Up` or `Down` | Moves between visible rows. |
-| `Left` or `Right` | Collapses and expands, or jumps to the parent and first child. |
-| `Home` or `End` | Jumps to the first or last row. |
-
-### Libero handles
-
-- Typing jumps to the next row whose `tree_label` matches.
-- A disabled node is still reachable, but nothing activates, expands or
-  collapses it.
-- `TreeItem` takes `args.tabindex` for you.
-
-### You must
-
-- Name the tree with `aria_label`. It is required.
-- Pass `args.tabindex` to any link or button `render_node` draws, or it adds a
-  tab stop the arrow keys never reach.
-
 ## Props
 
 ### `Tree<T>`
@@ -224,6 +188,42 @@ A button laid out like `TreeItemContent`, chevron included.
 | `trailing_icon` | `SvgData` | - | Drawn at the row's end. |
 | `trailing` | `Element` | - | After `trailing_icon`, such as a count. Never interactive: it sits in the button. |
 | `children` | `Element` | required | The label. |
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `TreePart::Row` | `row` | A `treeitem`: the row and its open subtree. A `Tree` nested in a row's content matches too. |
+| `TreePart::Content` | `content` | The clickable line around `render_node`'s content. |
+| `TreePart::Group` | `group` | An open branch's list of children. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Tab` | Enters the tree, one tab stop. |
+| `Up` or `Down` | Moves between visible rows. |
+| `Left` or `Right` | Collapses and expands, or jumps to the parent and first child. |
+| `Home` or `End` | Jumps to the first or last row. |
+
+### Libero handles
+
+- Typing jumps to the next row whose `tree_label` matches.
+- A disabled node is still reachable, but nothing activates, expands or
+  collapses it.
+- `TreeItem` takes `args.tabindex` for you.
+
+### You must
+
+- Name the tree with `aria_label`. It is required.
+- Pass `args.tabindex` to any link or button `render_node` draws, or it adds a
+  tab stop the arrow keys never reach.
 
 ## Theme defaults
 

@@ -54,6 +54,37 @@ The picker keeps the month it shows as its own state. It opens on `value`'s
 month, else today's. Today comes from the platform clock after mount on the
 web. A server render and native builds mark no day unless `today` is set.
 
+## Props
+
+### `ChronoPicker<V: DateValue>`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `Option<V>` | - | The picked value. Its type picks what the picker draws. Pair it with `onchange`. |
+| `onchange` | `EventHandler<Option<V>>` | - | Called with the value to hold next. |
+| `level` | `DateLevel` | `Day` | Picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for other values. |
+| `min` | `V::Bound` | - | The earliest value that can be picked. For a range, the earliest end. |
+| `max` | `V::Bound` | - | The latest value that can be picked. For a range, the latest end. |
+| `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that cannot be picked, on top of `min` and `max`. |
+| `allow_deselect` | `bool` | `false` | Clicking the picked day again clears it. Only for a day. |
+| `columns` | `usize` | `1, or 2 for a range` | Months side by side, for a day or a range of days. |
+| `calendar` | `CalendarVariant` | `full` | A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time. |
+| `days` | `usize` | `7` | Days in the mini calendar's row. |
+| `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |
+| `with_seconds` | `bool` | `false` | A seconds column. Digital only. |
+| `step` | `u8` | `5` | Minutes between the offered minutes. |
+| `twelve_hour` | `bool` | `formats` | A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one. |
+| `today` | `NaiveDate` | - | The day marked as today. Unset, the platform clock answers after mount on the web. Elsewhere no day is marked. |
+| `size` | `Size` | `md` | Cell, option and font size. |
+| `name` | `String` | - | Posts the value as ISO 8601 in a hidden input of that name. |
+| `focusable` | `bool` | `true` | `false` keeps the picker out of the tab order, for a picker inside a dropdown whose input keeps focus. |
+
+Props that only some value types use are ignored by the rest, with a warning in
+debug builds.
+
+Like every component, it also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes. The attributes land on the root.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -130,37 +161,6 @@ the parts its value uses. A date field's dropdown is portaled, so the field's
 - A date-time range has three tabs: the days, the start time and the end time.
   Each shows its value once picked, such as `12–14 Oct` or `09:00`, and moves on
   to the next when complete. The start and the end may be on different days.
-
-## Props
-
-### `ChronoPicker<V: DateValue>`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `value` | `Option<V>` | - | The picked value. Its type picks what the picker draws. Pair it with `onchange`. |
-| `onchange` | `EventHandler<Option<V>>` | - | Called with the value to hold next. |
-| `level` | `DateLevel` | `Day` | Picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for other values. |
-| `min` | `V::Bound` | - | The earliest value that can be picked. For a range, the earliest end. |
-| `max` | `V::Bound` | - | The latest value that can be picked. For a range, the latest end. |
-| `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that cannot be picked, on top of `min` and `max`. |
-| `allow_deselect` | `bool` | `false` | Clicking the picked day again clears it. Only for a day. |
-| `columns` | `usize` | `1, or 2 for a range` | Months side by side, for a day or a range of days. |
-| `calendar` | `CalendarVariant` | `full` | A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time. |
-| `days` | `usize` | `7` | Days in the mini calendar's row. |
-| `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |
-| `with_seconds` | `bool` | `false` | A seconds column. Digital only. |
-| `step` | `u8` | `5` | Minutes between the offered minutes. |
-| `twelve_hour` | `bool` | `formats` | A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one. |
-| `today` | `NaiveDate` | - | The day marked as today. Unset, the platform clock answers after mount on the web. Elsewhere no day is marked. |
-| `size` | `Size` | `md` | Cell, option and font size. |
-| `name` | `String` | - | Posts the value as ISO 8601 in a hidden input of that name. |
-| `focusable` | `bool` | `true` | `false` keeps the picker out of the tab order, for a picker inside a dropdown whose input keeps focus. |
-
-Props that only some value types use are ignored by the rest, with a warning in
-debug builds.
-
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes. The attributes land on the root.
 
 ## Theme defaults
 

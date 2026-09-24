@@ -39,6 +39,36 @@ fn Demo() -> Element {
 # fn submit(_code: String) {}
 ```
 
+## Props
+
+### `PinField`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size. |
+| `radius` | `Size` | `sm` | Corner radius of each cell, independent of `size`. |
+| `length` | `usize` | `4` | How many cells. |
+| `kind` | `PinKind` | `numeric` | `numeric` or `alphanumeric`. Any other character is ignored as it is typed. |
+| `value` | `Option<String>` | - | The pin so far, one character per filled cell. Leave it out and the field keeps its own pin. |
+| `oninput` | `EventHandler<String>` | - | Fires for every accepted character with the pin the field should hold next. |
+| `validate` | `Validators<String>` | - | Rules over the pin, shown once the field loses focus or its form is submitted. |
+| `oncomplete` | `EventHandler<String>` | - | Fires once when the last empty cell fills. Clearing a cell arms it again. |
+| `mask` | `bool` | `false` | Hides the characters as in a password field. The value is unaffected. |
+| `one_time_code` | `bool` | `true` | Lets a phone offer the code it just received. |
+| `separator` | `Element` | - | Rendered between the cells, such as a dash. |
+| `name` | `FieldName<String>` | - | What the pin posts as. A path such as `Login::FIELDS.code()` also binds the pin to the surrounding `Form`'s value when the field has no `oninput`. |
+| `autofocus` | `bool` | `false` | Focuses the first cell on mount. |
+| `label` | `Caption` | - | The field's caption, above the cells. It names the group of cells. |
+| `description` | `Caption` | - | Between the label and the cells. Where the code came from. |
+| `helper` | `Caption` | - | Under the cells. How long the code lasts, how to get another. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `disabled` | `bool` | `false` | Disables and dims every cell. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
+
+Like every component, it also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -74,36 +104,6 @@ explains how parts work.
 ### You must
 
 - Give the field a `label`, which names the whole group.
-
-## Props
-
-### `PinField`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size. |
-| `radius` | `Size` | `sm` | Corner radius of each cell, independent of `size`. |
-| `length` | `usize` | `4` | How many cells. |
-| `kind` | `PinKind` | `numeric` | `numeric` or `alphanumeric`. Any other character is ignored as it is typed. |
-| `value` | `Option<String>` | - | The pin so far, one character per filled cell. Leave it out and the field keeps its own pin. |
-| `oninput` | `EventHandler<String>` | - | Fires for every accepted character with the pin the field should hold next. |
-| `validate` | `Validators<String>` | - | Rules over the pin, shown once the field loses focus or its form is submitted. |
-| `oncomplete` | `EventHandler<String>` | - | Fires once when the last empty cell fills. Clearing a cell arms it again. |
-| `mask` | `bool` | `false` | Hides the characters as in a password field. The value is unaffected. |
-| `one_time_code` | `bool` | `true` | Lets a phone offer the code it just received. |
-| `separator` | `Element` | - | Rendered between the cells, such as a dash. |
-| `name` | `FieldName<String>` | - | What the pin posts as. A path such as `Login::FIELDS.code()` also binds the pin to the surrounding `Form`'s value when the field has no `oninput`. |
-| `autofocus` | `bool` | `false` | Focuses the first cell on mount. |
-| `label` | `Caption` | - | The field's caption, above the cells. It names the group of cells. |
-| `description` | `Caption` | - | Between the label and the cells. Where the code came from. |
-| `helper` | `Caption` | - | Under the cells. How long the code lasts, how to get another. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
-| `disabled` | `bool` | `false` | Disables and dims every cell. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
-
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

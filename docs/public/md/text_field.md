@@ -43,6 +43,35 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+### `TextField`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | Height, padding and font size. |
+| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
+| `value` | `Option<String>` | - | The text in the field. Leave it out and the input keeps its own text. |
+| `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the text the field should hold next. |
+| `validate` | `Validators<String>` | - | Rules over the text, shown once the field loses focus or its form is submitted. |
+| `name` | `FieldName<String>` | - | What the field posts as. A path such as `Signup::FIELDS.email()` also binds the text to the surrounding `Form`'s value when the field has no `oninput`. |
+| `placeholder` | `String` | - | Shown while the field is empty. |
+| `leading` | `Element` | - | Inside the frame, before the control, such as a search icon or a currency sign. |
+| `trailing` | `Element` | - | Inside the frame, after the control, such as a clear button or a unit. |
+| `describe_leading` | `bool` | `false` | Set it when `leading` is text that belongs to the value, such as `@`, so a screen reader reads it with the input. Not for an icon or a button. |
+| `describe_trailing` | `bool` | `false` | The same for `trailing`, such as `kg` or a `12/20` counter. |
+| `label` | `Caption` | - | The field's caption, above the control. It names the field. Takes a string or an `Element`. |
+| `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `helper` | `Caption` | - | Under the control. Formatting rules, limits or a counter. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `disabled` | `bool` | `false` | Disables and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
+
+`TextField` also takes the `<input>` HTML attributes (`maxlength`,
+`autocomplete`, `type`, ...) and, like every component, the shared props `sx`,
+`class`, `style`, `states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -77,35 +106,6 @@ explains how parts work.
 - A `leading` or `trailing` slot is not read with the input. When it is text
   that belongs to the value, such as a unit or a counter, set
   `describe_leading` or `describe_trailing`.
-
-## Props
-
-### `TextField`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | Height, padding and font size. |
-| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
-| `value` | `Option<String>` | - | The text in the field. Leave it out and the input keeps its own text. |
-| `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the text the field should hold next. |
-| `validate` | `Validators<String>` | - | Rules over the text, shown once the field loses focus or its form is submitted. |
-| `name` | `FieldName<String>` | - | What the field posts as. A path such as `Signup::FIELDS.email()` also binds the text to the surrounding `Form`'s value when the field has no `oninput`. |
-| `placeholder` | `String` | - | Shown while the field is empty. |
-| `leading` | `Element` | - | Inside the frame, before the control, such as a search icon or a currency sign. |
-| `trailing` | `Element` | - | Inside the frame, after the control, such as a clear button or a unit. |
-| `describe_leading` | `bool` | `false` | Set it when `leading` is text that belongs to the value, such as `@`, so a screen reader reads it with the input. Not for an icon or a button. |
-| `describe_trailing` | `bool` | `false` | The same for `trailing`, such as `kg` or a `12/20` counter. |
-| `label` | `Caption` | - | The field's caption, above the control. It names the field. Takes a string or an `Element`. |
-| `description` | `Caption` | - | Between the label and the control. What to enter. |
-| `helper` | `Caption` | - | Under the control. Formatting rules, limits or a counter. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
-| `disabled` | `bool` | `false` | Disables and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
-
-`TextField` also takes the `<input>` HTML attributes (`maxlength`,
-`autocomplete`, `type`, ...) and, like every component, the shared props `sx`,
-`class`, `style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

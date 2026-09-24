@@ -49,14 +49,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-### You must
-
-- For a modal backdrop, use a [`Dialog`](dialog.md) in [`use_modal`](modal.md),
-  which brings its own overlay. An overlay does not trap focus or hide the
-  page from a screen reader.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -69,6 +61,14 @@ fn Demo() -> Element {
 
 Like every component, `Overlay` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
+
+## Accessibility
+
+### You must
+
+- For a modal backdrop, use a [`Dialog`](dialog.md) in [`use_modal`](modal.md),
+  which brings its own overlay. An overlay does not trap focus or hide the
+  page from a screen reader.
 
 ## Theme defaults
 

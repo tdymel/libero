@@ -29,14 +29,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-### You must
-
-- Use `component: "main"` or `"section"` when the region is a landmark.
-- Name a `section` (`aria-label` or `aria-labelledby`) for it to count as a
-  landmark.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -48,6 +40,14 @@ fn Demo() -> Element {
 
 Like every component, `Container` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
+
+## Accessibility
+
+### You must
+
+- Use `component: "main"` or `"section"` when the region is a landmark.
+- Name a `section` (`aria-label` or `aria-labelledby`) for it to count as a
+  landmark.
 
 ## Theme defaults
 

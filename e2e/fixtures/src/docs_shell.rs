@@ -71,10 +71,34 @@ pub fn use_heading_focus<T: Clone + PartialEq + 'static>(
     }));
 }
 
+/// Lands a fresh load's fragment `id` on that section, scroll and heading focus. The
+/// docs read `id` above their `Router`, which drops it; here the page passes it.
+pub fn use_fragment_landing(
+    area: ScrollAreaHandle,
+    content: ElementHandle,
+    id: Option<&'static str>,
+) {
+    let mut done = use_hook(|| CopyValue::new(false));
+    use_effect(move || {
+        if *done.peek() || !content.is_mounted() {
+            return;
+        }
+        done.set(true);
+        let Some(id) = id else {
+            return;
+        };
+        scroll_to_section(area, content, id);
+        let _ = content
+            .query_selector(&format!("#{id} > :first-child"))
+            .and_then(|heading| heading.focus());
+    });
+}
+
 pub const ROUTES: Routes = &[
     ("/docs-shell/heading", || rsx! { HeadingPage {} }),
     ("/docs-shell/scroll", || rsx! { ScrollPage {} }),
     ("/docs-shell/section", || rsx! { SectionPage {} }),
+    ("/docs-shell/fragment", || rsx! { FragmentPage {} }),
 ];
 
 /// Two "pages" behind one signal: the hook only needs a value that changes.
@@ -144,6 +168,30 @@ fn SectionPage() -> Element {
                                 h2 { tabindex: "-1", "Far" }
                                 div { height: "1500px" }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// A `#far` section below the fold, landed on at the first render (todo 1175).
+#[component]
+fn FragmentPage() -> Element {
+    let area = use_scroll_area();
+    let content = use_element();
+    use_fragment_landing(area, content, Some("far"));
+    rsx! {
+        div { height: "300px",
+            ScrollArea { id: "page-area", handle: area, "aria-label": "Page",
+                div { display: "contents", onmounted: content.mount(),
+                    main {
+                        h1 { tabindex: "-1", "Fragment" }
+                        div { height: "1500px" }
+                        section { id: "far",
+                            h2 { tabindex: "-1", "Far" }
+                            div { height: "1500px" }
                         }
                     }
                 }

@@ -50,6 +50,21 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `orientation` | `Orientation` | `horizontal` | The direction of the rule. |
+| `size` | `Size` | `xs` | Line thickness. |
+| `label_position` | `LabelPosition` | `center` | Where the label sits along the rule: `center`, `start` or `end`. |
+| `spacing` | `ThemeAwareValue` | `none` | Margin on both sides of the rule, a spacing step or a CSS length. |
+| `color` | `ThemeAwareValue` | `muted.4` | Line color. A bare theme color like `blue` resolves to its shade 3. |
+| `children` | `Element` | - | An optional label in the line. |
+| `parts` | `Parts<DividerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+Like every component, `Divider` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -70,21 +85,6 @@ parts work.
 ### You must
 
 - Pass `role: "none"` for a purely visual rule.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `orientation` | `Orientation` | `horizontal` | The direction of the rule. |
-| `size` | `Size` | `xs` | Line thickness. |
-| `label_position` | `LabelPosition` | `center` | Where the label sits along the rule: `center`, `start` or `end`. |
-| `spacing` | `ThemeAwareValue` | `none` | Margin on both sides of the rule, a spacing step or a CSS length. |
-| `color` | `ThemeAwareValue` | `muted.4` | Line color. A bare theme color like `blue` resolves to its shade 3. |
-| `children` | `Element` | - | An optional label in the line. |
-| `parts` | `Parts<DividerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-Like every component, `Divider` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

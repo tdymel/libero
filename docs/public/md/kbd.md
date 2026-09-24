@@ -29,6 +29,16 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `sm` | Font size. The rest of the look comes from the theme. |
+| `children` | `Element` | required | The key label. |
+
+Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -40,16 +50,6 @@ fn Demo() -> Element {
 - Put the separator in the text around the keys. A screen reader reads
   `Kbd { "Ctrl" } " + " Kbd { "S" }` as "Ctrl plus S", but one
   `Kbd { "Ctrl+S" }` as a single token.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `sm` | Font size. The rest of the look comes from the theme. |
-| `children` | `Element` | required | The key label. |
-
-Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

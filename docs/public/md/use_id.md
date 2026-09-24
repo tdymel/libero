@@ -46,6 +46,15 @@ fn Faq() -> Element {
 }
 ```
 
+## API
+
+```rust,ignore
+pub fn use_id() -> Signal<String>
+```
+
+The id reads `lsx-N`, from a counter shared by the whole process. Read it with
+`id()` where an attribute wants a `String`.
+
 ## Accessibility
 
 ### Libero handles
@@ -58,12 +67,3 @@ fn Faq() -> Element {
 
 - Pass the id to `aria_controls`, `aria_labelledby`, `aria_describedby` or a
   label's `r#for`: an id is how they find their element.
-
-## API
-
-```rust,ignore
-pub fn use_id() -> Signal<String>
-```
-
-The id reads `lsx-N`, from a counter shared by the whole process. Read it with
-`id()` where an attribute wants a `String`.

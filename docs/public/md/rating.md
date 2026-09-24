@@ -53,6 +53,37 @@ Rating {
 }
 ```
 
+## Props
+
+### `Rating`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `f64` | `0` | The rating, from 0 (unrated) to `count`. Pair it with `onchange`, or bind it with `name` in a `Form`. A value between steps draws as it is, so an average of 4.3 shows 4.3 stars. |
+| `onchange` | `EventHandler<f64>` | - | Called with the value `value` should take next: on a click or tap, along a sideways drag, and on each key. With `0` when `clearable` clears it. |
+| `onhover` | `EventHandler<Option<f64>>` | - | The value under a mouse or pen, and `None` once it leaves or presses. The stars show it in place of `value` meanwhile. A touch has no hover. |
+| `count` | `u8` | `5` | Number of stars. |
+| `fractions` | `u8` | `1` | Steps per star: `1` picks whole stars, `2` halves. Each step is a hit zone of its own. |
+| `clearable` | `bool` | `false` | Picking the current value again resets it to 0, and Home or the arrows can go below the first step. Without it, the first step is the lowest a user can pick. |
+| `icon` | `SvgData` | `IconSlot::Star` | The symbol, drawn empty and filled in `currentColor`. A stroked glyph turns solid when filled; a solid one only changes colour. |
+| `color` | `ThemeAwareValue` | `warning` | The filled stars' colour; `theme.rating.color` when unset. Empty stars are `muted`. |
+| `size` | `Size` | `md` | Star size and the gap between stars. |
+| `format` | `Callback<f64, String>` | - | What a screen reader says for the value. Runs during render, so it can translate. The localization's `rating.value` ("3.5 of 5") when unset. |
+| `focusable` | `bool` | `true` | `false` only shows a value: an image named by the label and the value, with no tab stop, no pointer input and nothing posted. |
+| `name` | `FieldName<f64>` | - | What the rating posts as. A path such as `Review::FIELDS.stars()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `validate` | `Validators<f64>` | - | Rules over the value, shown once the rating loses focus or its form is submitted. |
+| `label` | `Caption` | - | The caption above the stars, and the slider's name. |
+| `description` | `Caption` | - | Under the label. |
+| `helper` | `Caption` | - | Under the stars. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider. |
+| `disabled` | `bool` | `false` | Dims the stars and drops them from the tab order. |
+| `readonly` | `bool` | `false` | Focusable, announced and posted, but neither pointer nor keys change it. |
+| `aria_label` | `String` | - | Names the rating when it has no `label`. |
+
+Like every component, it also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -106,37 +137,6 @@ explains how parts work.
   wide: the row is one slider target, and a drag reaches any half.
   `size: "xl"` makes each half 24px wide.
 - A solid custom icon shows the value by colour alone.
-
-## Props
-
-### `Rating`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `value` | `f64` | `0` | The rating, from 0 (unrated) to `count`. Pair it with `onchange`, or bind it with `name` in a `Form`. A value between steps draws as it is, so an average of 4.3 shows 4.3 stars. |
-| `onchange` | `EventHandler<f64>` | - | Called with the value `value` should take next: on a click or tap, along a sideways drag, and on each key. With `0` when `clearable` clears it. |
-| `onhover` | `EventHandler<Option<f64>>` | - | The value under a mouse or pen, and `None` once it leaves or presses. The stars show it in place of `value` meanwhile. A touch has no hover. |
-| `count` | `u8` | `5` | Number of stars. |
-| `fractions` | `u8` | `1` | Steps per star: `1` picks whole stars, `2` halves. Each step is a hit zone of its own. |
-| `clearable` | `bool` | `false` | Picking the current value again resets it to 0, and Home or the arrows can go below the first step. Without it, the first step is the lowest a user can pick. |
-| `icon` | `SvgData` | `IconSlot::Star` | The symbol, drawn empty and filled in `currentColor`. A stroked glyph turns solid when filled; a solid one only changes colour. |
-| `color` | `ThemeAwareValue` | `warning` | The filled stars' colour; `theme.rating.color` when unset. Empty stars are `muted`. |
-| `size` | `Size` | `md` | Star size and the gap between stars. |
-| `format` | `Callback<f64, String>` | - | What a screen reader says for the value. Runs during render, so it can translate. The localization's `rating.value` ("3.5 of 5") when unset. |
-| `focusable` | `bool` | `true` | `false` only shows a value: an image named by the label and the value, with no tab stop, no pointer input and nothing posted. |
-| `name` | `FieldName<f64>` | - | What the rating posts as. A path such as `Review::FIELDS.stars()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
-| `validate` | `Validators<f64>` | - | Rules over the value, shown once the rating loses focus or its form is submitted. |
-| `label` | `Caption` | - | The caption above the stars, and the slider's name. |
-| `description` | `Caption` | - | Under the label. |
-| `helper` | `Caption` | - | Under the stars. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider. |
-| `disabled` | `bool` | `false` | Dims the stars and drops them from the tab order. |
-| `readonly` | `bool` | `false` | Focusable, announced and posted, but neither pointer nor keys change it. |
-| `aria_label` | `String` | - | Names the rating when it has no `label`. |
-
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

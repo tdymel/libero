@@ -99,6 +99,40 @@ Each group is a `role="group"` named by its heading. Your order is kept, so a
 group label used again after another group draws its heading again. A disabled
 option is read out, and the arrows, typeahead and clicks skip it.
 
+## Props
+
+### `Select`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
+| `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
+| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder`. |
+| `onchange` | `EventHandler<Option<T>>` | - | Called with the option to select next, or `None` from the clear button. |
+| `name` | `FieldName<Option<T>>` | - | Posts the selected option's `Options::value()` under this name. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. |
+| `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight, selection and click stay the component's. |
+| `selection` | `Callback<T, Element>` | `T::label()` | Draws the selected value inside the trigger. |
+| `placeholder` | `String` | - | Shown while `value` is `None`. |
+| `clearable` | `bool` | `false` | Shows an x in place of the chevron while something is selected. The only way `onchange` gets `None`. |
+| `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query is cleared when the list closes. |
+| `filter` | `Callback<SelectFilterArgs<T>, bool>` | `contains` | Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. |
+| `search_placeholder` | `String` | - | What the empty search box says. |
+| `label` | `Caption` | - | The caption above the control, and the select's name. |
+| `description` | `Caption` | - | Between the label and the control. What to pick. |
+| `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
+| `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |
+
+`SelectOptionArgs<T>` carries `value`, `index`, `selected` and `disabled`.
+`SelectFilterArgs<T>` carries `value` and `query`.
+
+Like every component, it also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes. The attributes land on the trigger.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -136,40 +170,6 @@ explains how parts work.
 - Disabled options are read out but skipped.
 - With `searchable` the search box takes over typing and holds the focus while
   the list is open.
-
-## Props
-
-### `Select`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
-| `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
-| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder`. |
-| `onchange` | `EventHandler<Option<T>>` | - | Called with the option to select next, or `None` from the clear button. |
-| `name` | `FieldName<Option<T>>` | - | Posts the selected option's `Options::value()` under this name. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
-| `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
-| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. |
-| `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight, selection and click stay the component's. |
-| `selection` | `Callback<T, Element>` | `T::label()` | Draws the selected value inside the trigger. |
-| `placeholder` | `String` | - | Shown while `value` is `None`. |
-| `clearable` | `bool` | `false` | Shows an x in place of the chevron while something is selected. The only way `onchange` gets `None`. |
-| `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query is cleared when the list closes. |
-| `filter` | `Callback<SelectFilterArgs<T>, bool>` | `contains` | Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. |
-| `search_placeholder` | `String` | - | What the empty search box says. |
-| `label` | `Caption` | - | The caption above the control, and the select's name. |
-| `description` | `Caption` | - | Between the label and the control. What to pick. |
-| `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
-| `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |
-
-`SelectOptionArgs<T>` carries `value`, `index`, `selected` and `disabled`.
-`SelectFilterArgs<T>` carries `value` and `query`.
-
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes. The attributes land on the trigger.
 
 ## Theme defaults
 

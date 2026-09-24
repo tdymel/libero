@@ -45,6 +45,21 @@ fn Demo() -> Element {
 # #[component] fn GettingStarted() -> Element { rsx! {} }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | Text size. |
+| `to` | `NavigationTarget` | required | A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `"_blank"`, an internal target navigates without a page reload. A `javascript:` URL runs script on click, so check the scheme of any URL from user data. |
+| `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)". |
+| `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
+| `underline` | `AnchorUnderline` | `hover` | When the underline draws, `always`, `hover` or `never`. |
+| `children` | `Element` | required | The link's content. |
+| `parts` | `Parts<AnchorPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+Like every component, `Anchor` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -68,21 +83,6 @@ parts work.
 - Make the link text say where the link goes: it is the accessible name.
 - Keep the underline on a link inside a paragraph: with `underline: "never"`
   it stands out by color alone.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | Text size. |
-| `to` | `NavigationTarget` | required | A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `"_blank"`, an internal target navigates without a page reload. A `javascript:` URL runs script on click, so check the scheme of any URL from user data. |
-| `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)". |
-| `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
-| `underline` | `AnchorUnderline` | `hover` | When the underline draws, `always`, `hover` or `never`. |
-| `children` | `Element` | required | The link's content. |
-| `parts` | `Parts<AnchorPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-Like every component, `Anchor` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

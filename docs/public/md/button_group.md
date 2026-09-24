@@ -36,6 +36,21 @@ fn Demo() -> Element {
 # #[component] fn CheckmarkIcon() -> Element { rsx! {} }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `orientation` | `Orientation` | `horizontal` | `"vertical"` stacks the buttons, each as wide as the widest. |
+| `variant` | `Variant` | - | Default `variant` of the buttons inside. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider. |
+| `color` | `ThemeAwareValue` | - | Default `color` of the buttons inside. |
+| `size` | `Size` | - | Default `size` of the buttons inside. |
+| `radius` | `Size` | - | The group's outer corners. The corners between two buttons are always square. |
+| `disabled` | `bool` | - | Disables every button inside that does not set `disabled` itself. |
+| `children` | `Element` | `required` | `Button`s, `ActionIcon`s, and components built on them, such as `ThemeToggle`. |
+
+Like every component, `ButtonGroup` also takes the shared props `sx`,
+`class`, `style`, `states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -56,21 +71,6 @@ fn Demo() -> Element {
   which is a radio group.
 - A child hidden with `display: none` still counts as first or last and squares its
   neighbour's outer corners; render a conditional control only when shown.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `orientation` | `Orientation` | `horizontal` | `"vertical"` stacks the buttons, each as wide as the widest. |
-| `variant` | `Variant` | - | Default `variant` of the buttons inside. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider. |
-| `color` | `ThemeAwareValue` | - | Default `color` of the buttons inside. |
-| `size` | `Size` | - | Default `size` of the buttons inside. |
-| `radius` | `Size` | - | The group's outer corners. The corners between two buttons are always square. |
-| `disabled` | `bool` | - | Disables every button inside that does not set `disabled` itself. |
-| `children` | `Element` | `required` | `Button`s, `ActionIcon`s, and components built on them, such as `ThemeToggle`. |
-
-Like every component, `ButtonGroup` also takes the shared props `sx`,
-`class`, `style`, `states`, and any extra HTML attributes.
 
 ## CSS variables
 

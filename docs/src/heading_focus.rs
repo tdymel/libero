@@ -33,6 +33,42 @@ pub fn use_scroll_reset<T: Clone + PartialEq + 'static>(
     }));
 }
 
+/// A fresh load's `#id` fragment (todo 1175).
+#[derive(Clone)]
+struct LoadFragment(Option<String>);
+
+/// Above the `Router`: it replaces the URL without the fragment as it starts.
+pub fn use_load_fragment() {
+    use_context_provider(|| LoadFragment(fragment(&history().current_route())));
+}
+
+fn fragment(route: &str) -> Option<String> {
+    route
+        .split_once('#')
+        .map(|(_, id)| id.to_string())
+        .filter(|id| !id.is_empty())
+}
+
+/// Lands the [`use_load_fragment`] fragment on its `DocSection`, scroll and heading
+/// focus, as a [`SectionLink`](crate::components::SectionLink) does.
+pub fn use_fragment_landing(area: ScrollAreaHandle, content: ElementHandle) {
+    let id = try_use_context::<LoadFragment>().and_then(|fragment| fragment.0);
+    let mut done = use_hook(|| CopyValue::new(false));
+    use_effect(move || {
+        if *done.peek() || !content.is_mounted() {
+            return;
+        }
+        done.set(true);
+        let Some(id) = id.as_deref() else {
+            return;
+        };
+        scroll_to_section(area, content, id);
+        let _ = content
+            .query_selector(&format!("#{id} > :first-child"))
+            .and_then(|heading| heading.focus());
+    });
+}
+
 /// The section's top below `main`'s is its offset in the area. A WebView has no
 /// subtree queries: the page starts at the top there.
 fn scroll_to_section(area: ScrollAreaHandle, content: ElementHandle, id: &str) {
@@ -74,4 +110,20 @@ pub fn use_heading_focus<T: Clone + PartialEq + 'static>(
                 .and_then(|h| h.focus());
         }
     }));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fragment;
+
+    #[test]
+    fn fragment_is_the_part_after_the_hash() {
+        assert_eq!(
+            fragment("/about/styling#style-api").as_deref(),
+            Some("style-api")
+        );
+        assert_eq!(fragment("/about/styling?x=1#a").as_deref(), Some("a"));
+        assert_eq!(fragment("/about/styling#"), None);
+        assert_eq!(fragment("/about/styling"), None);
+    }
 }

@@ -94,41 +94,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `FieldPart::Label` | `label` | The label above the control. |
-| `FieldPart::Required` | `required` | The required asterisk, in the label. |
-| `FieldPart::Description` | `description` | The caption between the label and the control. |
-| `FieldPart::Frame` | `frame` | The bordered box around the control. |
-| `FieldPart::Control` | `control` | The element the label names. |
-| `FieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
-| `FieldPart::Helper` | `helper` | The caption under the control. |
-| `FieldPart::Status` | `status` | The validation message. |
-
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Up` or `Down` | Step the value, with or without `steppers`. |
-| `PageUp` or `PageDown` | Step the value ten steps. |
-
-### Libero handles
-
-- The stepper buttons are not tab stops, since the arrow keys do the same from
-  the field.
-
-### You must
-
-- Leave `label` unset only when something else names the field.
-
 ## Props
 
 ### `NumberField<T: NumberValue>`
@@ -171,6 +136,41 @@ HTML attributes.
 | `step_up` | `fn(self, Self) -> Self` | `Add` | One step up. Override it for a wrapping angle or a logarithmic step. |
 | `step_down` | `fn(self, Self) -> Self` | `Sub` | One step down. |
 | `clamp_between` | `fn(self, Option<Self>, Option<Self>) -> Self` | `PartialOrd` | The value pulled into the field's range. |
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FieldPart::Label` | `label` | The label above the control. |
+| `FieldPart::Required` | `required` | The required asterisk, in the label. |
+| `FieldPart::Description` | `description` | The caption between the label and the control. |
+| `FieldPart::Frame` | `frame` | The bordered box around the control. |
+| `FieldPart::Control` | `control` | The element the label names. |
+| `FieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
+| `FieldPart::Helper` | `helper` | The caption under the control. |
+| `FieldPart::Status` | `status` | The validation message. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Up` or `Down` | Step the value, with or without `steppers`. |
+| `PageUp` or `PageDown` | Step the value ten steps. |
+
+### Libero handles
+
+- The stepper buttons are not tab stops, since the arrow keys do the same from
+  the field.
+
+### You must
+
+- Leave `label` unset only when something else names the field.
 
 ## Theme defaults
 

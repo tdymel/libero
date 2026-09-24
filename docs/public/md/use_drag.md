@@ -87,19 +87,6 @@ stop itself. Natively, or to focus something else, focus it in `onstart`. Blitz
 and a webview have no pointer capture; Blitz follows the pointer instead, and in
 a webview the drag stops once the pointer leaves the capture element.
 
-## Accessibility
-
-### Libero handles
-
-- A right or middle button never starts a drag, and a second finger is
-  ignored.
-
-### You must
-
-- Give anything a drag sets a second way in: a pointer is not a keyboard. The
-  demo's knob is a focusable, named slider that takes the arrow keys, Home and
-  End.
-
 ## API
 
 ```rust,ignore
@@ -120,3 +107,16 @@ pub fn drag_handle_sx() -> Sx
 `onpointerdown`, `onpointermove`, `onpointerup`, `onpointercancel`, each a
 `Callback<Event<PointerData>>`. `DragPoint` has `x` and `y` in client
 coordinates. `drag_handle_sx()` sets `touch-action: none`.
+
+## Accessibility
+
+### Libero handles
+
+- A right or middle button never starts a drag, and a second finger is
+  ignored.
+
+### You must
+
+- Give anything a drag sets a second way in: a pointer is not a keyboard. The
+  demo's knob is a focusable, named slider that takes the arrow keys, Home and
+  End.

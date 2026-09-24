@@ -39,6 +39,18 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `kind` | `TransitionKind` | `Fade` | How the children move in and out: `Fade`, `FadeUp`, `FadeDown`, `Scale`, `SlideUp`, `SlideDown`, `SlideLeft`, `SlideRight` or `Pop`. All of them also fade. The slides travel the children's own size, in physical directions. |
+| `open` | `bool` | `true` | Omitted, the children animate in once on mount and never exit. Passed, they enter and exit as it flips; the first value does not animate. You own this state. |
+| `duration` | `u32` | `200` | Animation length in milliseconds. `0` turns the animation off. |
+| `children` | `Element` | required | The content that animates. It is unmounted once the exit ends. |
+
+Like every component, `Transition` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -53,18 +65,6 @@ fn Demo() -> Element {
   [`use_focus_return`](use_focus_return.md).
 - Do not hide content that must be announced behind an omitted `open` on the
   server: it renders in its from-state until the page hydrates.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `kind` | `TransitionKind` | `Fade` | How the children move in and out: `Fade`, `FadeUp`, `FadeDown`, `Scale`, `SlideUp`, `SlideDown`, `SlideLeft`, `SlideRight` or `Pop`. All of them also fade. The slides travel the children's own size, in physical directions. |
-| `open` | `bool` | `true` | Omitted, the children animate in once on mount and never exit. Passed, they enter and exit as it flips; the first value does not animate. You own this state. |
-| `duration` | `u32` | `200` | Animation length in milliseconds. `0` turns the animation off. |
-| `children` | `Element` | required | The content that animates. It is unmounted once the exit ends. |
-
-Like every component, `Transition` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

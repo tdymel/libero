@@ -121,27 +121,6 @@ fn CloseIfModal() -> Element {
 }
 ```
 
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Escape` | Dismisses the modal, as a backdrop click does. |
-| `Tab` or `Shift+Tab` | Moves the focus within the modal. It does not leave while the modal shows. |
-
-### Libero handles
-
-- Focus moves into the modal, and back to the trigger once it closes.
-- The focus trap, Escape and backdrop dismissal come from the modal. A `Dialog`
-  on its own has none of them.
-- A dismissal settles the `Opening` with `None`, so a handler written for an
-  answer never runs on it.
-
-### You must
-
-- Name the `Dialog` with its `title`, or `aria_label`.
-
 ## API
 
 ### `use_modal`
@@ -190,6 +169,27 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 
 A floating window provides an empty `ModalContext`, so its content is not
 modal.
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Escape` | Dismisses the modal, as a backdrop click does. |
+| `Tab` or `Shift+Tab` | Moves the focus within the modal. It does not leave while the modal shows. |
+
+### Libero handles
+
+- Focus moves into the modal, and back to the trigger once it closes.
+- The focus trap, Escape and backdrop dismissal come from the modal. A `Dialog`
+  on its own has none of them.
+- A dismissal settles the `Opening` with `None`, so a handler written for an
+  answer never runs on it.
+
+### You must
+
+- Name the `Dialog` with its `title`, or `aria_label`.
 
 ## Theme defaults
 

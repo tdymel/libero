@@ -67,6 +67,18 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `open` | `bool` | required | Whether the panel is expanded. You own this state. |
+| `keep_mounted` | `bool` | `true` | Keeps the children in the DOM while closed, out of the focus order and hidden from screen readers, so a half-typed form survives. `false` removes them once the panel has closed. |
+| `duration` | `u32` | `200` | Animation length in milliseconds. `0` turns the animation off. |
+| `children` | `Element` | required | The content that grows and shrinks. |
+
+Like every component, `Collapse` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -81,18 +93,6 @@ fn Demo() -> Element {
 - Return focus yourself when the panel closes from inside: use
   [`use_focus_return`](use_focus_return.md), with `remember_active()` on every
   open and `restore()` where the panel closes.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `open` | `bool` | required | Whether the panel is expanded. You own this state. |
-| `keep_mounted` | `bool` | `true` | Keeps the children in the DOM while closed, out of the focus order and hidden from screen readers, so a half-typed form survives. `false` removes them once the panel has closed. |
-| `duration` | `u32` | `200` | Animation length in milliseconds. `0` turns the animation off. |
-| `children` | `Element` | required | The content that grows and shrinks. |
-
-Like every component, `Collapse` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

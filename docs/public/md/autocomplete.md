@@ -86,40 +86,6 @@ Autocomplete {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `FieldPart::Label` | `label` | The label above the control. |
-| `FieldPart::Required` | `required` | The required asterisk, in the label. |
-| `FieldPart::Description` | `description` | The caption between the label and the control. |
-| `FieldPart::Frame` | `frame` | The bordered box around the control. |
-| `FieldPart::Leading` | `leading` | The slot before the control: an icon, a prefix. |
-| `FieldPart::Control` | `control` | The element the label names. |
-| `FieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
-| `FieldPart::Helper` | `helper` | The caption under the control. |
-| `FieldPart::Status` | `status` | The validation message. |
-
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Down` | Opens the list. Typing opens it too. |
-| `Up`, `Down`, `Home` or `End` | Move the highlight. |
-| `Enter` | Picks the highlighted row. |
-| `Escape` or `Tab` | Close the list. |
-
-### Libero handles
-
-- Nothing is highlighted until you arrow onto a row, so Enter on text that
-  matches nothing still submits the form.
-
 ## Props
 
 ### `Autocomplete`
@@ -157,6 +123,40 @@ explains how parts work.
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes. The attributes land on the input.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FieldPart::Label` | `label` | The label above the control. |
+| `FieldPart::Required` | `required` | The required asterisk, in the label. |
+| `FieldPart::Description` | `description` | The caption between the label and the control. |
+| `FieldPart::Frame` | `frame` | The bordered box around the control. |
+| `FieldPart::Leading` | `leading` | The slot before the control: an icon, a prefix. |
+| `FieldPart::Control` | `control` | The element the label names. |
+| `FieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
+| `FieldPart::Helper` | `helper` | The caption under the control. |
+| `FieldPart::Status` | `status` | The validation message. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Down` | Opens the list. Typing opens it too. |
+| `Up`, `Down`, `Home` or `End` | Move the highlight. |
+| `Enter` | Picks the highlighted row. |
+| `Escape` or `Tab` | Close the list. |
+
+### Libero handles
+
+- Nothing is highlighted until you arrow onto a row, so Enter on text that
+  matches nothing still submits the form.
 
 ## Theme defaults
 

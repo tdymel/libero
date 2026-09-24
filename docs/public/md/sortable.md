@@ -113,6 +113,29 @@ fn Fruit(index: usize, name: &'static str) -> Element {
 }
 ```
 
+## Props
+
+### Sortable
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `orientation` | `Orientation` | `vertical` | `vertical` stacks the items, `horizontal` puts them in a row. |
+| `onreorder` | `EventHandler<SortableMove>` | required | Fires on drop, or on a move button, when an item changed place. Apply the move to your data with `SortableMove::apply`; until then the list keeps its old order. |
+| `move_buttons` | `bool` | `true` | Each item's two buttons that move it one slot without dragging (WCAG 2.5.7). Hidden, offer another way to reorder without a drag. |
+| `children` | `Element` | required | The `SortableItem`s. |
+
+### SortableItem
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `index` | `usize` | required | The item's current position, from 0. Key the item by its data, not by this. |
+| `label` | `Option<String>` | `"Item {n}"` | Names the item in the announcements. Unset, `SortableLabels::item` with its position when it was lifted. |
+| `parts` | `Parts<SortableItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+| `children` | `Element` | required | The item's content, between the handle and the move buttons. |
+
+Like every component, both also take the shared props `sx`, `class`, `states`,
+and any extra HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -165,29 +188,6 @@ parts work.
   ("Item 2").
 - With `move_buttons: false`, give the reader another way to reorder without
   dragging, such as a menu.
-
-## Props
-
-### Sortable
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `orientation` | `Orientation` | `vertical` | `vertical` stacks the items, `horizontal` puts them in a row. |
-| `onreorder` | `EventHandler<SortableMove>` | required | Fires on drop, or on a move button, when an item changed place. Apply the move to your data with `SortableMove::apply`; until then the list keeps its old order. |
-| `move_buttons` | `bool` | `true` | Each item's two buttons that move it one slot without dragging (WCAG 2.5.7). Hidden, offer another way to reorder without a drag. |
-| `children` | `Element` | required | The `SortableItem`s. |
-
-### SortableItem
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `index` | `usize` | required | The item's current position, from 0. Key the item by its data, not by this. |
-| `label` | `Option<String>` | `"Item {n}"` | Names the item in the announcements. Unset, `SortableLabels::item` with its position when it was lifted. |
-| `parts` | `Parts<SortableItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-| `children` | `Element` | required | The item's content, between the handle and the move buttons. |
-
-Like every component, both also take the shared props `sx`, `class`, `states`,
-and any extra HTML attributes.
 
 ## Data attributes
 

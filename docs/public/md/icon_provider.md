@@ -140,6 +140,12 @@ What a slot cannot change:
 `Star` is filled in `currentColor` for a rating's value: a stroked glyph turns
 solid, a solid one only changes colour.
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `icons` | `IconSet` | required | The slots to swap. An empty slot keeps the outer provider's glyph, then libero's lucide default. |
+
 ## Accessibility
 
 ### Libero handles
@@ -151,9 +157,3 @@ solid, a solid one only changes colour.
 
 - Pick a glyph that means the same as the one it replaces: a chevron for
   `ChevronDown`, a check for `CheckboxCheck`.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `icons` | `IconSet` | required | The slots to swap. An empty slot keeps the outer provider's glyph, then libero's lucide default. |

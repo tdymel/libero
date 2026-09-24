@@ -63,20 +63,6 @@ fn Autosave() -> Element {
 }
 ```
 
-## Accessibility
-
-### Libero handles
-
-- A pending update is dropped when the component unmounts.
-
-### You must
-
-- Announce results that arrive late from a debounced search in a live region
-  (`role="status"`); a screen reader user gets no other sign that the list
-  changed.
-- Keep the field itself bound to the live signal, as the demo does: delaying the
-  text a person is typing makes the field lag behind their keys.
-
 ## API
 
 ```rust,ignore
@@ -96,3 +82,17 @@ pub fn use_throttled_callback<A: 'static>(callback: impl FnMut(A) + 'static, ms:
 A pending trailing call is dropped when the component unmounts. Call every hook
 unconditionally, in the same order every render; the delay is read when a change
 arrives, so a new `ms` applies from the next one.
+
+## Accessibility
+
+### Libero handles
+
+- A pending update is dropped when the component unmounts.
+
+### You must
+
+- Announce results that arrive late from a debounced search in a live region
+  (`role="status"`); a screen reader user gets no other sign that the list
+  changed.
+- Keep the field itself bound to the live signal, as the demo does: delaying the
+  text a person is typing makes the field lag behind their keys.

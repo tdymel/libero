@@ -62,50 +62,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `FileFieldPart::Label` | `label` | The label above the control. |
-| `FileFieldPart::Required` | `required` | The required asterisk, in the label. |
-| `FileFieldPart::Description` | `description` | The caption between the label and the control. |
-| `FileFieldPart::Frame` | `frame` | The `Input` variant's bordered box. |
-| `FileFieldPart::Control` | `control` | The group holding the Browse button: inside the frame, or the dropzone's surface. |
-| `FileFieldPart::Browse` | `browse` | The Browse button. |
-| `FileFieldPart::Chip` | `chip` | One picked file's chip, `Input` variant. |
-| `FileFieldPart::Trailing` | `trailing` | The loader and the clear button, `Input` variant. |
-| `FileFieldPart::Card` | `card` | One picked file's card under the surface, `Dropzone` variant. |
-| `FileFieldPart::Helper` | `helper` | The caption under the control. |
-| `FileFieldPart::Status` | `status` | The validation message. |
-
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Enter` or `Space` | On the Browse button: opens the picker. A click anywhere on the field opens it too. |
-| `Left` or `Right` | `input` variant: moves along the files. |
-| `Home` or `End` | `input` variant: jumps to the first or last file. |
-| `Backspace` or `Delete` | `input` variant: removes the focused file. |
-| `Left` | On the Browse button: moves to the last file. |
-| `Backspace` | On the Browse button: removes the last file. |
-
-### Libero handles
-
-- The field is a group named by its label, holding the picked files and a
-  Browse button.
-- In the `input` variant the files are one tab stop.
-- In the `dropzone` variant each card's remove button is its own tab stop.
-
-### You must
-
-- Without a `label`, pass `aria_label`, which names the Browse button.
-
 ## Props
 
 ### `FileField`
@@ -152,6 +108,50 @@ Like every component, `FileField` also takes the shared props `sx`, `class`,
 | `one()` | `Option<FileData>` | The first file, a single-file field's whole value. |
 | `into_vec()` | `Vec<FileData>` | Every file. |
 | `deref` | `&[FileData]` | So `len`, `iter` and `is_empty` work directly. |
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FileFieldPart::Label` | `label` | The label above the control. |
+| `FileFieldPart::Required` | `required` | The required asterisk, in the label. |
+| `FileFieldPart::Description` | `description` | The caption between the label and the control. |
+| `FileFieldPart::Frame` | `frame` | The `Input` variant's bordered box. |
+| `FileFieldPart::Control` | `control` | The group holding the Browse button: inside the frame, or the dropzone's surface. |
+| `FileFieldPart::Browse` | `browse` | The Browse button. |
+| `FileFieldPart::Chip` | `chip` | One picked file's chip, `Input` variant. |
+| `FileFieldPart::Trailing` | `trailing` | The loader and the clear button, `Input` variant. |
+| `FileFieldPart::Card` | `card` | One picked file's card under the surface, `Dropzone` variant. |
+| `FileFieldPart::Helper` | `helper` | The caption under the control. |
+| `FileFieldPart::Status` | `status` | The validation message. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Enter` or `Space` | On the Browse button: opens the picker. A click anywhere on the field opens it too. |
+| `Left` or `Right` | `input` variant: moves along the files. |
+| `Home` or `End` | `input` variant: jumps to the first or last file. |
+| `Backspace` or `Delete` | `input` variant: removes the focused file. |
+| `Left` | On the Browse button: moves to the last file. |
+| `Backspace` | On the Browse button: removes the last file. |
+
+### Libero handles
+
+- The field is a group named by its label, holding the picked files and a
+  Browse button.
+- In the `input` variant the files are one tab stop.
+- In the `dropzone` variant each card's remove button is its own tab stop.
+
+### You must
+
+- Without a `label`, pass `aria_label`, which names the Browse button.
 
 ## Theme defaults
 

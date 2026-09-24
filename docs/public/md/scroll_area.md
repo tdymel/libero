@@ -98,36 +98,6 @@ fn Rows() -> Element {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Styling](styling.md#style-api) explains how
-parts work.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `ScrollAreaPart::Scrollbar` | `scrollbar` | A track `always` draws in a browser. `data-orientation` is `vertical` or `horizontal`. |
-| `ScrollAreaPart::Thumb` | `thumb` | The thumb inside a track. |
-
-## Accessibility
-
-### Libero handles
-
-- Tab reaches focusable content inside the area as usual.
-- When the content has nothing to focus, like a block of text, the area
-  itself becomes a tab stop while it overflows, so the arrow keys can scroll
-  it. The Usage example is one. `focusable: true` keeps the stop always.
-- A debug build warns about a tab stop without a name.
-- The bar `always` draws is hidden from screen readers and takes no focus:
-  the area itself scrolls by keyboard, wheel and touch. Forced colours paint
-  its thumb in the system text colour.
-
-### You must
-
-- Name the area with `aria_label` or `aria_labelledby`.
-- Use `scrollbars: "none"` only where something else scrolls: it puts the
-  clipped content out of reach.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -163,6 +133,36 @@ Like every component, `ScrollArea` also takes the shared props `sx`, `class`,
 
 `ScrollPositionEvent` is `Start(x, y)`, `Change(x, y)` or `End(x, y)`, in
 percent.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Styling](styling.md#style-api) explains how
+parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ScrollAreaPart::Scrollbar` | `scrollbar` | A track `always` draws in a browser. `data-orientation` is `vertical` or `horizontal`. |
+| `ScrollAreaPart::Thumb` | `thumb` | The thumb inside a track. |
+
+## Accessibility
+
+### Libero handles
+
+- Tab reaches focusable content inside the area as usual.
+- When the content has nothing to focus, like a block of text, the area
+  itself becomes a tab stop while it overflows, so the arrow keys can scroll
+  it. The Usage example is one. `focusable: true` keeps the stop always.
+- A debug build warns about a tab stop without a name.
+- The bar `always` draws is hidden from screen readers and takes no focus:
+  the area itself scrolls by keyboard, wheel and touch. Forced colours paint
+  its thumb in the system text colour.
+
+### You must
+
+- Name the area with `aria_label` or `aria_labelledby`.
+- Use `scrollbars: "none"` only where something else scrolls: it puts the
+  clipped content out of reach.
 
 ## Theme defaults
 

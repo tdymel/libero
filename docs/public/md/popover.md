@@ -149,6 +149,38 @@ drifts. No backend tracks a resize, so use `remeasure`. A press outside needs
 to know where focus is. The web and Blitz can tell, a WebView cannot, so there
 only Escape and your own handlers close the box.
 
+## PopoverOptions
+
+`PopoverOptions::new(gap, padding)` takes the theme's values, so it is not
+`Default`. Every other field has a builder method of the same name.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `side` | `Side` | `Bottom` | The preferred side of the anchor. Flipping may override it. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
+| `align` | `Align` | `Start` | Where the box lines up along that side. Across `Top`/`Bottom` it follows the direction too. |
+| `gap` | `f64` | `theme.popover.gap` | Pixels between the anchor and the box. |
+| `padding` | `f64` | `theme.popover.padding` | How close to a viewport edge the box may come before it flips or shifts. The box is never wider than the viewport less this on both sides. |
+| `flip` | `bool` | `true` | Moves to the opposite side when the preferred one has no room. |
+| `shift` | `bool` | `true` | Slides along the side to stay on screen when flipping does not help. |
+| `width` | `PopoverWidth` | `Auto` | `Auto` follows the content, `Match` takes the anchor's width, and `Min` is at least the anchor's width. |
+| `remeasure` | `u64` | `0` | Changing it measures the box again. Use it for an anchor that resizes while the box is open. |
+| `dismiss` | `bool` | `false` | Escape and a press outside close the box, through `on_dismiss`. Spread `anchor_events()` on the trigger and `floating_events()` on the box. |
+
+## PopoverHandle
+
+`use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -> PopoverHandle`
+
+| Method | Type | Description |
+|---|---|---|
+| `floating()` | `&ElementHandle` | Mount it on the box. Nothing is placed until it is attached. |
+| `placed()` | `bool` | Whether the box has been measured. `false` on the render that opens it. |
+| `placement()` | `Placement` | The side and align the box landed on, after flipping. |
+| `style()` | `Option<String>` | The box's `style`, with its position and width. |
+| `show(content)` | `Option<Element>` | Renders the box. `None` removes it. |
+| `on_dismiss(f)` | `impl FnMut()` | What Escape and a press outside call, with `dismiss` on. Call it on every render. |
+| `anchor_events()` | `Vec<Attribute>` | Spread on the trigger, with `dismiss` on. |
+| `floating_events()` | `Vec<Attribute>` | Spread on the box, with `dismiss` on. |
+
 ## Accessibility
 
 ### Keyboard
@@ -181,38 +213,6 @@ only Escape and your own handlers close the box.
 
 - Safari does not focus a button on click, so there a press outside a box
   opened by pointer does not close it.
-
-## PopoverOptions
-
-`PopoverOptions::new(gap, padding)` takes the theme's values, so it is not
-`Default`. Every other field has a builder method of the same name.
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `side` | `Side` | `Bottom` | The preferred side of the anchor. Flipping may override it. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
-| `align` | `Align` | `Start` | Where the box lines up along that side. Across `Top`/`Bottom` it follows the direction too. |
-| `gap` | `f64` | `theme.popover.gap` | Pixels between the anchor and the box. |
-| `padding` | `f64` | `theme.popover.padding` | How close to a viewport edge the box may come before it flips or shifts. The box is never wider than the viewport less this on both sides. |
-| `flip` | `bool` | `true` | Moves to the opposite side when the preferred one has no room. |
-| `shift` | `bool` | `true` | Slides along the side to stay on screen when flipping does not help. |
-| `width` | `PopoverWidth` | `Auto` | `Auto` follows the content, `Match` takes the anchor's width, and `Min` is at least the anchor's width. |
-| `remeasure` | `u64` | `0` | Changing it measures the box again. Use it for an anchor that resizes while the box is open. |
-| `dismiss` | `bool` | `false` | Escape and a press outside close the box, through `on_dismiss`. Spread `anchor_events()` on the trigger and `floating_events()` on the box. |
-
-## PopoverHandle
-
-`use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -> PopoverHandle`
-
-| Method | Type | Description |
-|---|---|---|
-| `floating()` | `&ElementHandle` | Mount it on the box. Nothing is placed until it is attached. |
-| `placed()` | `bool` | Whether the box has been measured. `false` on the render that opens it. |
-| `placement()` | `Placement` | The side and align the box landed on, after flipping. |
-| `style()` | `Option<String>` | The box's `style`, with its position and width. |
-| `show(content)` | `Option<Element>` | Renders the box. `None` removes it. |
-| `on_dismiss(f)` | `impl FnMut()` | What Escape and a press outside call, with `dismiss` on. Call it on every render. |
-| `anchor_events()` | `Vec<Attribute>` | Spread on the trigger, with `dismiss` on. |
-| `floating_events()` | `Vec<Attribute>` | Spread on the box, with `dismiss` on. |
 
 ## Theme defaults
 

@@ -44,6 +44,24 @@ fn Demo() -> Element {
 `side` and `align` take the popover's enums, `libero::hooks::{Side, Align}`,
 such as `side: Side::Top, align: Align::Center`.
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `content` | `Element` | required | What the card shows. Links and buttons are fine. |
+| `children` | `Element` | required | The trigger. It must hold a link or a button, since focus is the keyboard's only way to open the card. |
+| `side` | `Side` | `Bottom` | Which side of the trigger the card opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
+| `align` | `Align` | `Start` | Where the card lines up along that side. |
+| `open_delay` | `u32` | `0` | Milliseconds the pointer must rest on the trigger before the card opens. |
+| `close_delay` | `u32` | `150` | Milliseconds the card waits after the pointer leaves. The pointer needs this time to reach the card, so `0` makes it unreachable. |
+| `open` | `bool` | unset | Forces the card open or closed. Unset, hover and focus decide. A card forced open cannot be dismissed. |
+| `radius` | `Size` | `sm` | The card's corner radius. |
+| `shadow` | `Size` | `md` | The card's elevation. |
+| `disabled` | `bool` | `false` | Renders `children` alone, with no card. |
+
+Like every component, `HoverCard` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. They land on the card.
+
 ## Accessibility
 
 ### Keyboard
@@ -77,24 +95,6 @@ such as `side: Side::Top, align: Align::Center`.
 - On desktop and mobile, Escape works only while focus is on the trigger or
   in the card, so a card the pointer opened cannot be dismissed from the
   keyboard there (WCAG 1.4.13).
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `content` | `Element` | required | What the card shows. Links and buttons are fine. |
-| `children` | `Element` | required | The trigger. It must hold a link or a button, since focus is the keyboard's only way to open the card. |
-| `side` | `Side` | `Bottom` | Which side of the trigger the card opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
-| `align` | `Align` | `Start` | Where the card lines up along that side. |
-| `open_delay` | `u32` | `0` | Milliseconds the pointer must rest on the trigger before the card opens. |
-| `close_delay` | `u32` | `150` | Milliseconds the card waits after the pointer leaves. The pointer needs this time to reach the card, so `0` makes it unreachable. |
-| `open` | `bool` | unset | Forces the card open or closed. Unset, hover and focus decide. A card forced open cannot be dismissed. |
-| `radius` | `Size` | `sm` | The card's corner radius. |
-| `shadow` | `Size` | `md` | The card's elevation. |
-| `disabled` | `bool` | `false` | Renders `children` alone, with no card. |
-
-Like every component, `HoverCard` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the card.
 
 ## Theme defaults
 

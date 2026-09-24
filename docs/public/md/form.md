@@ -103,37 +103,6 @@ fn CheckButton() -> Element {
 }
 ```
 
-## Style API
-
-Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
-own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
-explains how parts work. The fields take their own `parts`.
-
-| Part | `data-slot` | Description |
-|---|---|---|
-| `FormPart::Summary` | `summary` | The error summary, an `Alert`, shown after a blocked submit. |
-| `FormPart::SummaryTitle` | `title` | The summary's heading, with `summary_title`. |
-| `FormPart::SummaryList` | `list` | The summary's list of errors. |
-
-## Accessibility
-
-### Libero handles
-
-- A form becomes a `form` landmark only once it has a name. A form without a
-  name is still valid.
-
-### You must
-
-- Name the form when the page holds more than one form, or when the form is the
-  page's main task, such as a checkout. Pass `aria-labelledby` pointing at a
-  visible heading, or `aria-label`.
-- Join intro text through `aria-describedby`, if any.
-
-```rust,ignore
-h2 { id: "checkout-title", "Checkout" }
-Form { "aria-labelledby": "checkout-title", value: order, /* .. */ }
-```
-
 ## Props
 
 ### `Form`
@@ -167,6 +136,37 @@ any extra HTML attributes.
 |---|---|---|---|
 | `validate` | `Validators<T>` | - | Rules over the field's own value, one or an array. Shown once the field loses focus or its form is submitted. |
 | `name` | `FieldName<T>` | - | What the field posts as, and how rules address it. A path from `#[derive(Fields)]` also binds the field to the form's value, unless the field has a handler of its own. `T` is the field's value type. |
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work. The fields take their own `parts`.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FormPart::Summary` | `summary` | The error summary, an `Alert`, shown after a blocked submit. |
+| `FormPart::SummaryTitle` | `title` | The summary's heading, with `summary_title`. |
+| `FormPart::SummaryList` | `list` | The summary's list of errors. |
+
+## Accessibility
+
+### Libero handles
+
+- A form becomes a `form` landmark only once it has a name. A form without a
+  name is still valid.
+
+### You must
+
+- Name the form when the page holds more than one form, or when the form is the
+  page's main task, such as a checkout. Pass `aria-labelledby` pointing at a
+  visible heading, or `aria-label`.
+- Join intro text through `aria-describedby`, if any.
+
+```rust,ignore
+h2 { id: "checkout-title", "Checkout" }
+Form { "aria-labelledby": "checkout-title", value: order, /* .. */ }
+```
 
 ## Theme defaults
 

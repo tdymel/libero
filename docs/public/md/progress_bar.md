@@ -35,6 +35,22 @@ indeterminate bar.
 ProgressBar { aria_label: "Connecting", value: None }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `Option<f64>` | required | Current progress, clamped into `min..=max`. `None` makes it indeterminate. |
+| `min` | `f64` | `0.0` | Range start. |
+| `max` | `f64` | `100.0` | Range end. At or below `min` the bar draws empty. |
+| `color` | `ThemeAwareValue` | `primary` | The fill. A theme color name or any CSS color. |
+| `size` | `Size` | `md` | Track height, 3px at `xs` to 20px at `xxl`. |
+| `radius` | `Size` | `xl` | Corner of the track and the fill. On a thin track most steps draw the same pill. |
+| `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "4.2 MB of 12 MB". |
+| `parts` | `Parts<ProgressBarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(ProgressBarPart::Fill, sx().background("success.6"))`. |
+
+Like every component, it also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes, `aria_label` among them.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -59,22 +75,6 @@ explains how parts work.
   caption.
 - The bar is not a live region. To announce progress, update a separate status
   line at milestones, not on every tick.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `value` | `Option<f64>` | required | Current progress, clamped into `min..=max`. `None` makes it indeterminate. |
-| `min` | `f64` | `0.0` | Range start. |
-| `max` | `f64` | `100.0` | Range end. At or below `min` the bar draws empty. |
-| `color` | `ThemeAwareValue` | `primary` | The fill. A theme color name or any CSS color. |
-| `size` | `Size` | `md` | Track height, 3px at `xs` to 20px at `xxl`. |
-| `radius` | `Size` | `xl` | Corner of the track and the fill. On a thin track most steps draw the same pill. |
-| `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "4.2 MB of 12 MB". |
-| `parts` | `Parts<ProgressBarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(ProgressBarPart::Fill, sx().background("success.6"))`. |
-
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes, `aria_label` among them.
 
 ## Theme defaults
 

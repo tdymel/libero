@@ -35,25 +35,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-### Libero handles
-
-- An always-mounted `role="status"` region says "Copied", or that the copy
-  failed, once the platform answers. A second copy announces again.
-- The icon and the status reset when the pointer or the focus leaves.
-- Unset, `aria_label` is the localization's `copy`. The words are
-  `CopyButtonLabels`.
-- `label` becomes the button's description through a hidden element, so the
-  name stays short: "Copy, Add libero to your project".
-
-### You must
-
-- Name it after what it copies with `aria_label`, such as "Copy link", or keep
-  the short name and say what it copies with `label`.
-- For a copy control of your own on `use_clipboard()`, say the result in a
-  status region that is already mounted.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -72,6 +53,25 @@ Like every component, `CopyButton` also takes the shared props `sx`, `class`,
 
 The words are `CopyButtonLabels` in the [localization](localization.md): `copy`
 (the name), `copied` and `copy_failed` (what the status says).
+
+## Accessibility
+
+### Libero handles
+
+- An always-mounted `role="status"` region says "Copied", or that the copy
+  failed, once the platform answers. A second copy announces again.
+- The icon and the status reset when the pointer or the focus leaves.
+- Unset, `aria_label` is the localization's `copy`. The words are
+  `CopyButtonLabels`.
+- `label` becomes the button's description through a hidden element, so the
+  name stays short: "Copy, Add libero to your project".
+
+### You must
+
+- Name it after what it copies with `aria_label`, such as "Copy link", or keep
+  the short name and say what it copies with `label`.
+- For a copy control of your own on `use_clipboard()`, say the result in a
+  status region that is already mounted.
 
 ## CSS variables
 

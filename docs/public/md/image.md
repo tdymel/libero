@@ -56,6 +56,27 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `src` | `String` | required | The image source. |
+| `fallback_src` | `Option<String>` | `None` | Shown in place of `src` once it fails to load. |
+| `zoomed_src` | `Option<String>` | `None` | A larger source for the zoom overlay. Falls back to `src`. |
+| `fit` | `ImageFit` | `cover` | Maps onto `object-fit`. |
+| `radius` | `Size` | `0` | Corner radius, a step on the radius scale. Any other value goes through `sx`. |
+| `alt` | `Option<String>` | `None` | What the picture shows. A debug build warns when neither `alt` nor `decorative` is set. |
+| `decorative` | `bool` | `false` | Marks the picture as decoration, hidden from screen readers. Wins over `alt`, with a warning in a debug build. |
+| `zoomable` | `bool` | `false` | Opens the picture in a single-picture Lightbox on click. Ignored inside a linked `ImageItem`, with a warning. |
+| `loading` | `ImageLoading` | `eager` | The `<img>`'s `loading`. `lazy` loads the picture only when it nears the viewport. |
+| `parts` | `Parts<ImagePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+
+`ImageFit` takes `fill`, `contain`, `cover`, `none` or `scale-down`.
+`ImageLoading` takes `eager` or `lazy`.
+
+Like every component, `Image` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
+
 ## Style API
 
 With `zoomable` only: `sx` then styles the zoom button, and the picture is this part. Without it the `<img>` is the root.
@@ -88,27 +109,6 @@ explains how parts work.
 ### You must
 
 - Give every image an `alt`, or set `decorative` for one that carries nothing.
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `src` | `String` | required | The image source. |
-| `fallback_src` | `Option<String>` | `None` | Shown in place of `src` once it fails to load. |
-| `zoomed_src` | `Option<String>` | `None` | A larger source for the zoom overlay. Falls back to `src`. |
-| `fit` | `ImageFit` | `cover` | Maps onto `object-fit`. |
-| `radius` | `Size` | `0` | Corner radius, a step on the radius scale. Any other value goes through `sx`. |
-| `alt` | `Option<String>` | `None` | What the picture shows. A debug build warns when neither `alt` nor `decorative` is set. |
-| `decorative` | `bool` | `false` | Marks the picture as decoration, hidden from screen readers. Wins over `alt`, with a warning in a debug build. |
-| `zoomable` | `bool` | `false` | Opens the picture in a single-picture Lightbox on click. Ignored inside a linked `ImageItem`, with a warning. |
-| `loading` | `ImageLoading` | `eager` | The `<img>`'s `loading`. `lazy` loads the picture only when it nears the viewport. |
-| `parts` | `Parts<ImagePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-
-`ImageFit` takes `fill`, `contain`, `cover`, `none` or `scale-down`.
-`ImageLoading` takes `eager` or `lazy`.
-
-Like every component, `Image` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 

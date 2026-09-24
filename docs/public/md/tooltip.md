@@ -49,6 +49,27 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `label` | `Element` | required | The bubble's content. |
+| `side` | `Side` | `top` | The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
+| `gap` | `Size` | `xs` | Distance to the trigger. The pointer can cross it without closing the bubble. |
+| `size` | `Size` | `sm` | Font size of the bubble. |
+| `z_index` | `ThemeAwareValue` | the popover layer | Overrides the stacking level, for a bubble hidden by another overlay. |
+| `open_delay` | `u32` | `0` | Milliseconds the pointer must rest before the bubble appears. |
+| `close_delay` | `u32` | `0` | Milliseconds the bubble stays after the pointer leaves. |
+| `open` | `bool` | unset | Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape. |
+| `disabled` | `bool` | `false` | Renders `children` alone, with no wrapper and no bubble. |
+| `label_id` | `String` | - | The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too. |
+| `children` | `Element` | required | The trigger. |
+
+The defaults come from `TooltipDefaults` on the theme.
+
+Like every component, `Tooltip` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. They land on the bubble.
+
 ## Accessibility
 
 ### Keyboard
@@ -81,27 +102,6 @@ fn Demo() -> Element {
     }
 }
 ```
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `label` | `Element` | required | The bubble's content. |
-| `side` | `Side` | `top` | The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
-| `gap` | `Size` | `xs` | Distance to the trigger. The pointer can cross it without closing the bubble. |
-| `size` | `Size` | `sm` | Font size of the bubble. |
-| `z_index` | `ThemeAwareValue` | the popover layer | Overrides the stacking level, for a bubble hidden by another overlay. |
-| `open_delay` | `u32` | `0` | Milliseconds the pointer must rest before the bubble appears. |
-| `close_delay` | `u32` | `0` | Milliseconds the bubble stays after the pointer leaves. |
-| `open` | `bool` | unset | Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape. |
-| `disabled` | `bool` | `false` | Renders `children` alone, with no wrapper and no bubble. |
-| `label_id` | `String` | - | The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too. |
-| `children` | `Element` | required | The trigger. |
-
-The defaults come from `TooltipDefaults` on the theme.
-
-Like every component, `Tooltip` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the bubble.
 
 ## Theme defaults
 

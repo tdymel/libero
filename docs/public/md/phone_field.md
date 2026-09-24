@@ -45,6 +45,37 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+### `PhoneField`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `size` | `Size` | `md` | Height, padding and font size. |
+| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
+| `value` | `Option<String>` | - | The number in E.164, such as `"+12133734253"`. Leave it out and the field keeps its own text. |
+| `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the E.164 the field should hold next, or an empty string once nothing is typed. |
+| `country` | `String` | `theme.phone_field.country` | The country the field starts on, ISO 3166-1 alpha-2, `US` by default. A pick wins over it until the prop changes. A `value` with another country's dial code wins over both. |
+| `oncountrychange` | `EventHandler<String>` | - | The user picked another country. `oninput` fires at the same time with the number under the new dial code. |
+| `country_select` | `bool` | `theme.phone_field.country_select` | Shows the country picker. Off pins the country and shows its dial code as plain text. |
+| `country_label` | `Callback<String, String>` | - | Overrides the name of a country. Unset, the name comes from the localization's `phone_field.country_names`, which ships in German, else English. It runs during render, so it can read a locale from context. |
+| `countries` | `Vec<String>` | - | Narrows the list to these ISO codes, in the order given. |
+| `flag` | `Callback<String, Element>` | - | Draws a flag beside a country, in the picker and in the list. The library ships none. Hide it from screen readers, since the country's name is already read. |
+| `validate` | `Validators<String>` | - | Rules over the E.164, shown once the field loses focus or its form is submitted. The field checks nothing on its own. |
+| `name` | `FieldName<String>` | - | What the field posts as, the E.164. A path such as `Signup::FIELDS.phone()` also binds the number to the surrounding `Form`'s value when the field has no `oninput`. |
+| `placeholder` | `String` | - | Shown while the field is empty. |
+| `label` | `Caption` | - | The field's caption, above the control. It names the input. |
+| `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `helper` | `Caption` | - | Under the control. The format, or an example. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `disabled` | `bool` | `false` | Disables and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. The country button stays focusable and opens nothing. |
+
+`PhoneField` also takes the `<input>` HTML attributes and, like every
+component, the shared props `sx`, `class`, `style`, `states`, and any extra
+HTML attributes.
+
 ## Style API
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
@@ -80,37 +111,6 @@ explains how parts work.
 ### Libero handles
 
 - The country picker is a second tab stop.
-
-## Props
-
-### `PhoneField`
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `size` | `Size` | `md` | Height, padding and font size. |
-| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
-| `value` | `Option<String>` | - | The number in E.164, such as `"+12133734253"`. Leave it out and the field keeps its own text. |
-| `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the E.164 the field should hold next, or an empty string once nothing is typed. |
-| `country` | `String` | `theme.phone_field.country` | The country the field starts on, ISO 3166-1 alpha-2, `US` by default. A pick wins over it until the prop changes. A `value` with another country's dial code wins over both. |
-| `oncountrychange` | `EventHandler<String>` | - | The user picked another country. `oninput` fires at the same time with the number under the new dial code. |
-| `country_select` | `bool` | `theme.phone_field.country_select` | Shows the country picker. Off pins the country and shows its dial code as plain text. |
-| `country_label` | `Callback<String, String>` | - | Overrides the name of a country. Unset, the name comes from the localization's `phone_field.country_names`, which ships in German, else English. It runs during render, so it can read a locale from context. |
-| `countries` | `Vec<String>` | - | Narrows the list to these ISO codes, in the order given. |
-| `flag` | `Callback<String, Element>` | - | Draws a flag beside a country, in the picker and in the list. The library ships none. Hide it from screen readers, since the country's name is already read. |
-| `validate` | `Validators<String>` | - | Rules over the E.164, shown once the field loses focus or its form is submitted. The field checks nothing on its own. |
-| `name` | `FieldName<String>` | - | What the field posts as, the E.164. A path such as `Signup::FIELDS.phone()` also binds the number to the surrounding `Form`'s value when the field has no `oninput`. |
-| `placeholder` | `String` | - | Shown while the field is empty. |
-| `label` | `Caption` | - | The field's caption, above the control. It names the input. |
-| `description` | `Caption` | - | Between the label and the control. What to enter. |
-| `helper` | `Caption` | - | Under the control. The format, or an example. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
-| `disabled` | `bool` | `false` | Disables and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. The country button stays focusable and opens nothing. |
-
-`PhoneField` also takes the `<input>` HTML attributes and, like every
-component, the shared props `sx`, `class`, `style`, `states`, and any extra
-HTML attributes.
 
 ## Theme defaults
 

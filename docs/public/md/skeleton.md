@@ -105,6 +105,21 @@ fn Card() -> Element {
 The grace runs once, from mount. A card that fetches again starts a new timer
 and sets `slow` back to `false`.
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `visible` | `bool` | `true` | Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children. |
+| `height` | `ThemeAwareValue` | - | A CSS length. Unset, the children's height. |
+| `width` | `ThemeAwareValue` | `100%` | A CSS length. Ignored with `circle`. |
+| `circle` | `bool` | `false` | A circle as wide as `height`. Without `height`, as wide as the children. |
+| `radius` | `Size` | `sm` | Corner radius. Ignored with `circle`. |
+| `animate` | `bool` | `true` | Runs the pulse. With reduced motion it stops half-way. |
+| `children` | `Element` | - | The real content, when the skeleton wraps it. |
+
+Like every component, `Skeleton` also takes the shared props `sx`, `class`,
+`states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -143,21 +158,6 @@ fn Card() -> Element {
 # async fn load_profile() -> Profile { Profile }
 # #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
 ```
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `visible` | `bool` | `true` | Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children. |
-| `height` | `ThemeAwareValue` | - | A CSS length. Unset, the children's height. |
-| `width` | `ThemeAwareValue` | `100%` | A CSS length. Ignored with `circle`. |
-| `circle` | `bool` | `false` | A circle as wide as `height`. Without `height`, as wide as the children. |
-| `radius` | `Size` | `sm` | Corner radius. Ignored with `circle`. |
-| `animate` | `bool` | `true` | Runs the pulse. With reduced motion it stops half-way. |
-| `children` | `Element` | - | The real content, when the skeleton wraps it. |
-
-Like every component, `Skeleton` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

@@ -32,6 +32,16 @@ fn Demo() -> Element {
 }
 ```
 
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `focusable` | `bool` | `false` | Shows the content while focus is inside it, for a skip link. |
+| `children` | `Element` | required | The screen-reader-only content. |
+
+Like every component, `VisuallyHidden` also takes the shared props `sx`, `class`,
+`states`, and any extra HTML attributes.
+
 ## Accessibility
 
 ### Libero handles
@@ -56,16 +66,6 @@ VisuallyHidden {
     Anchor { to: "#main", "Skip to content" }
 }
 ```
-
-## Props
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `focusable` | `bool` | `false` | Shows the content while focus is inside it, for a skip link. |
-| `children` | `Element` | required | The screen-reader-only content. |
-
-Like every component, `VisuallyHidden` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
 
 ## Theme defaults
 

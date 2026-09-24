@@ -65,6 +65,26 @@ fn Stopwatch() -> Element {
 }
 ```
 
+## API
+
+```rust,ignore
+pub fn use_timeout(callback: impl FnMut() + 'static, ms: u64) -> TimeoutHandle
+pub fn use_interval(callback: impl FnMut() + 'static, ms: u64) -> IntervalHandle
+```
+
+| Method | Returns | Description |
+|---|---|---|
+| `TimeoutHandle::start()` | `()` | Starts the countdown, or restarts one under way. |
+| `TimeoutHandle::stop()` | `()` | Cancels a countdown; the callback does not run. |
+| `TimeoutHandle::pending()` | `bool` | Whether a countdown is under way. Reactive. |
+| `IntervalHandle::start()` | `()` | Starts ticking, or restarts the period of one under way. |
+| `IntervalHandle::stop()` | `()` | Stops ticking. |
+| `IntervalHandle::toggle()` | `()` | Stops a running interval, starts a stopped one. |
+| `IntervalHandle::active()` | `bool` | Whether it is ticking. Reactive. |
+
+Both handles are `Copy`. The callback of the newest render is the one that
+runs, so it sees current state.
+
 ## Accessibility
 
 ### Libero handles
@@ -86,23 +106,3 @@ fn Stopwatch() -> Element {
 - A tick that lands while the component is still rendering the previous one is
   skipped, so a callback that counts should read a clock, not add one per tick,
   if the count must stay exact.
-
-## API
-
-```rust,ignore
-pub fn use_timeout(callback: impl FnMut() + 'static, ms: u64) -> TimeoutHandle
-pub fn use_interval(callback: impl FnMut() + 'static, ms: u64) -> IntervalHandle
-```
-
-| Method | Returns | Description |
-|---|---|---|
-| `TimeoutHandle::start()` | `()` | Starts the countdown, or restarts one under way. |
-| `TimeoutHandle::stop()` | `()` | Cancels a countdown; the callback does not run. |
-| `TimeoutHandle::pending()` | `bool` | Whether a countdown is under way. Reactive. |
-| `IntervalHandle::start()` | `()` | Starts ticking, or restarts the period of one under way. |
-| `IntervalHandle::stop()` | `()` | Stops ticking. |
-| `IntervalHandle::toggle()` | `()` | Stops a running interval, starts a stopped one. |
-| `IntervalHandle::active()` | `bool` | Whether it is ticking. Reactive. |
-
-Both handles are `Copy`. The callback of the newest render is the one that
-runs, so it sees current state.

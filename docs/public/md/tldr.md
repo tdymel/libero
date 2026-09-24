@@ -55,33 +55,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-### Keyboard
-
-| Key | Action |
-|---|---|
-| `Enter` or `Space` or `ArrowDown` | On the trigger: opens the menu on its first link. |
-| `ArrowUp` | On the trigger: opens the menu on its last link. |
-| `ArrowDown` or `ArrowUp` | Moves between the links. |
-| `Enter` or `Space` | On a link: follows it in a new tab and closes the menu. |
-| `Escape` | Closes the menu and returns focus to the trigger. |
-
-### Libero handles
-
-- It is `Menu`'s menu button: the trigger has `aria-haspopup` and
-  `aria-expanded`, the links sit in a group named "Summarize with".
-- Each link is an `<a role="menuitem">` with a real `href`, so middle-click and
-  the context menu work. It opens in a new tab, `rel="noopener noreferrer"`.
-- The provider marks are hidden from assistive technology; the provider's name
-  is the link's name.
-- The icon-only trigger is named "Summarize with AI". Every word comes from
-  `TldrLabels` in the localization.
-
-### You must
-
-- Give a custom provider a name that says which service it opens.
-
 ## Props
 
 | Prop | Type | Default | Description |
@@ -120,6 +93,33 @@ and `prompt`. Provider names are brand names and are not translated.
 The marks are Lobe Icons' monochrome ones (MIT, Copyright (c) 2023 LobeHub),
 from `pictogram-icons-lobe`. They are trademarks of their owners, shown only to name the service a
 link opens.
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Enter` or `Space` or `ArrowDown` | On the trigger: opens the menu on its first link. |
+| `ArrowUp` | On the trigger: opens the menu on its last link. |
+| `ArrowDown` or `ArrowUp` | Moves between the links. |
+| `Enter` or `Space` | On a link: follows it in a new tab and closes the menu. |
+| `Escape` | Closes the menu and returns focus to the trigger. |
+
+### Libero handles
+
+- It is `Menu`'s menu button: the trigger has `aria-haspopup` and
+  `aria-expanded`, the links sit in a group named "Summarize with".
+- Each link is an `<a role="menuitem">` with a real `href`, so middle-click and
+  the context menu work. It opens in a new tab, `rel="noopener noreferrer"`.
+- The provider marks are hidden from assistive technology; the provider's name
+  is the link's name.
+- The icon-only trigger is named "Summarize with AI". Every word comes from
+  `TldrLabels` in the localization.
+
+### You must
+
+- Give a custom provider a name that says which service it opens.
 
 ## Theme defaults
 
