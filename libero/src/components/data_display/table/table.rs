@@ -1,9 +1,10 @@
-use std::rc::Rc;
+use std::{collections::HashSet, rc::Rc};
 
 use dioxus::prelude::*;
 
 use crate::{
     components::{
+        accessibility::use_announcer,
         common::{
             ClassList, HtmlTag, Input, LogicalTextAlign, States, attr, inset_focus_ring_sx,
             names_itself, use_name_warning,
@@ -13,7 +14,8 @@ use crate::{
     hooks::{listener, use_id, use_localization, use_theme},
     platform::{lays_out_captions, widens_sized_tables},
     sx::{StaticSx, Sx, sx},
-    theme::{Size, TableDefaults},
+    theme::{CHECKBOX_BOX_SIZE, Size, TABLE_PAD_X, TableDefaults},
+    utils::warn,
 };
 
 use super::{
@@ -22,6 +24,7 @@ use super::{
         BodySpec, CaptionSpec, RowFn, RowSpec, TableSort, active_sort, header_specs, render_body,
         row_order,
     },
+    selection::Selection,
     use_table::{TableConfig, use_table},
 };
 
@@ -102,6 +105,22 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& th[data-align=\"end\"] button",
         sx().justify_content("end"),
     )
+    .selector(
+        "& th button [data-sort-order]",
+        sx().font_size("0.75em").font_weight("600").opacity("0.75"),
+    )
+    // As wide as its box and padding, spelled out: Blitz sizes a `width: 1px`
+    // cell below its content.
+    .per_size(|size| {
+        sx().selector(
+            "& [data-select]",
+            sx().box_sizing("border-box").width(format!(
+                "calc({} + 2 * {})",
+                CHECKBOX_BOX_SIZE.value(size),
+                TABLE_PAD_X.value()
+            )),
+        )
+    })
     .when(
         "row-click",
         sx().selector("& tbody tr:not([data-empty])", sx().cursor("pointer")),
@@ -145,6 +164,22 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// The sort a header click asks for: ascending, descending, then empty.
     #[props(default)]
     onsortchange: Option<EventHandler<Vec<TableSort>>>,
+    /// Sorts by several columns: Shift, Ctrl or Cmd click, or any tap on a touch
+    /// screen, adds a column after the sorted ones; a plain click sorts by it alone.
+    #[props(default)]
+    multi_sort: bool,
+    /// Adds a checkbox column, with a select-all box in its header.
+    #[props(default)]
+    selectable: bool,
+    /// The selected rows' `row_key`s; set, the selection is controlled.
+    #[props(default)]
+    selection: Option<Vec<String>>,
+    /// Seeds the selection once. Ignored when `selection` is set.
+    #[props(default)]
+    default_selection: Vec<String>,
+    /// The selection a checkbox asks for. Select-all keeps keys of rows not in `data`.
+    #[props(default)]
+    onselectionchange: Option<EventHandler<Vec<String>>>,
     /// A row's identity, unique per row: its DOM node follows it through a sort
     /// or a data change. Unset, the row's index in `data`.
     #[props(default, into)]
@@ -205,6 +240,19 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         sort: props.sort,
         default_sort: props.default_sort,
         onsortchange: props.onsortchange,
+        selection: props.selection,
+        default_selection: props.default_selection,
+        onselectionchange: props.onselectionchange,
+    });
+    let announcer = use_announcer();
+    let touch = use_hook(|| CopyValue::new(false));
+    use_hook(|| {
+        if props.selectable && !props.row_key.is_set() {
+            warn(
+                "Table: `selectable` without `row_key` keys the selection by row index, so it \
+                 moves to other rows when `data` changes.",
+            );
+        }
     });
     let caption_id = use_id();
     use_name_warning(
@@ -222,13 +270,41 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .prepare();
 
     let headers = header_specs(&props.columns);
-    let active = active_sort(&headers, &state.sort.read());
+    let active = active_sort(&headers, &state.sort.read(), props.multi_sort);
 
     let data = Rc::new(props.data);
-    let rows: Vec<RowSpec> = row_order(&data, &props.columns, active)
+    let key_of = |index: usize| {
+        props
+            .row_key
+            .call(&data[index])
+            .unwrap_or_else(|| index.to_string())
+    };
+    let selection = props.selectable.then(|| Selection {
+        slice: state.selection,
+        keys: (0..data.len()).map(key_of).collect(),
+        announcer,
+        labels,
+        size,
+    });
+    let selected_keys = match props.selectable {
+        true => state.selection.read(),
+        false => Vec::new(),
+    };
+    let selected: HashSet<&str> = selected_keys.iter().map(String::as_str).collect();
+    // A row's checkbox is named by its row header, else its first cell.
+    let name_column = props
+        .columns
+        .iter()
+        .position(|column| column.row_header)
+        .unwrap_or(0);
+    let rows: Vec<RowSpec> = row_order(&data, &props.columns, &active)
         .into_iter()
         .map(|index| {
             let row = &data[index];
+            let key = match &selection {
+                Some(selection) => selection.keys[index].clone(),
+                None => key_of(index),
+            };
             let mut attributes = props.row_attrs.call(row).unwrap_or_default();
             if let Some(onrowclick) = props.onrowclick {
                 let data = data.clone();
@@ -236,8 +312,20 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     onrowclick.call(data[index].clone());
                 }));
             }
+            let is_selected = selection.as_ref().map(|_| selected.contains(key.as_str()));
+            let select = selection.as_ref().map(|selection| {
+                let name = props
+                    .columns
+                    .get(name_column)
+                    .map(|column| (column.text)(row))
+                    .filter(|name| !name.is_empty())
+                    .unwrap_or_else(|| key.clone());
+                selection.row_cell(key.clone(), &name, is_selected == Some(true))
+            });
             RowSpec {
-                key: props.row_key.call(row).unwrap_or_else(|| index.to_string()),
+                key,
+                selected: is_selected,
+                select,
                 states: props
                     .row_states
                     .call(row)
@@ -308,8 +396,21 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 empty,
                 active,
                 sort: state.sort,
+                touch: props.multi_sort.then_some(touch),
+                sort_order: labels.sort_order,
+                select_all: selection
+                    .as_ref()
+                    .map(|selection| selection.header_cell(&selected)),
             }),
         );
+    // The selection's live region: valid in no part of a table, so beside it.
+    let table = match props.selectable {
+        true => rsx! {
+            {table}
+            {announcer.render()}
+        },
+        false => table,
+    };
     let table = match before {
         Some(spec) => {
             let caption = caption_box.render(

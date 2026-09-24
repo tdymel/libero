@@ -13,6 +13,7 @@ pub const TABLE_PAD_Y: CssVar = CssVar::new("--lsx-table-pad-y");
 pub const TABLE_BORDER_COLOR: CssVar = CssVar::new("--lsx-table-border-color");
 pub const TABLE_HOVER: CssVar = CssVar::new("--lsx-table-hover");
 pub const TABLE_STRIPE: CssVar = CssVar::new("--lsx-table-stripe");
+pub const TABLE_SELECTED: CssVar = CssVar::new("--lsx-table-selected");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TableSizeLevel {
@@ -31,6 +32,8 @@ pub struct TableDefaults {
     pub hover_color: ColorValue,
     /// Every other body row's background, when `striped`.
     pub stripe_color: ColorValue,
+    /// A selected row's background, hovered or not.
+    pub selected_color: ColorValue,
 }
 
 impl TableDefaults {
@@ -71,6 +74,7 @@ impl TableDefaults {
         border_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
         hover_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
         stripe_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
+        selected_color: ColorValue::Shade(Color::Primary, ColorShade::S1),
     };
 
     fn border() -> String {
@@ -99,9 +103,14 @@ impl TableDefaults {
             .when(
                 "striped",
                 sx().selector(
-                    "& tbody tr:nth-child(even):not(:hover)",
+                    "& tbody tr:nth-child(even):not(:hover):not([aria-selected=\"true\"])",
                     sx().background(TABLE_STRIPE.value()),
                 ),
+            )
+            // After the hover, which it outranks by order alone.
+            .selector(
+                "& tbody tr[aria-selected=\"true\"]",
+                sx().background(TABLE_SELECTED.value()),
             )
     }
 }
@@ -112,6 +121,7 @@ impl ToCssDeclarations for TableDefaults {
             TABLE_BORDER_COLOR.declare(self.border_color.value()),
             TABLE_HOVER.declare(self.hover_color.value()),
             TABLE_STRIPE.declare(self.stripe_color.value()),
+            TABLE_SELECTED.declare(self.selected_color.value()),
         ];
         for size in Size::ALL {
             let level = self.sizes.get(size);

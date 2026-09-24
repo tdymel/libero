@@ -640,8 +640,72 @@ fn table_large_app<const ROWS: usize, const SORT: bool>() -> Element {
     }
 }
 
+/// [`table_large_app`] with a checkbox per row: a round selects or clears row 0.
+fn table_select_app<const ROWS: usize>() -> Element {
+    let data = use_hook(|| (0..ROWS as u32).collect::<Vec<u32>>());
+    let onselectionchange = use_callback(|_: Vec<String>| {});
+    let selection = match flip() {
+        true => vec!["0".to_string()],
+        false => Vec::new(),
+    };
+    rsx! {
+        LiberoProvider {
+            Table {
+                data: data.clone(),
+                columns: vec![
+                    column("Name").value(|n: &u32| format!("Row {n}")).row_header(),
+                    column("N").value(|n: &u32| *n).sortable(),
+                ],
+                row_key: |n: &u32| n.to_string(),
+                selectable: true,
+                selection,
+                onselectionchange,
+            }
+        }
+    }
+}
+
+/// [`table_large_app`] sorted by two columns, ties on the first: a round flips the second.
+fn table_multi_sort_app<const ROWS: usize>() -> Element {
+    let data = use_hook(|| (0..ROWS as u32).collect::<Vec<u32>>());
+    let onsortchange = use_callback(|_: Vec<TableSort>| {});
+    let direction = match flip() {
+        true => SortDirection::Descending,
+        false => SortDirection::Ascending,
+    };
+    rsx! {
+        LiberoProvider {
+            Table {
+                data: data.clone(),
+                columns: vec![
+                    column("Tens").value(|n: &u32| n / 10).sortable(),
+                    column("N").value(|n: &u32| *n).sortable(),
+                ],
+                multi_sort: true,
+                sort: vec![
+                    TableSort::new("Tens", SortDirection::Ascending),
+                    TableSort::new("N", direction),
+                ],
+                onsortchange,
+            }
+        }
+    }
+}
+
 /// Large-N baselines, one table each, so the time is per table, not per row.
 const TABLE_LARGE_SHAPES: &[Shape] = &[
+    Shape {
+        name: "Table 1k select",
+        app: table_select_app::<1_000>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 1k multi-sort",
+        app: table_multi_sort_app::<1_000>,
+        count: 1,
+        round: rerender_app,
+    },
     Shape {
         name: "Table 1k",
         app: table_large_app::<1_000, false>,

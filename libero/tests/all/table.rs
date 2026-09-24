@@ -365,3 +365,116 @@ fn an_empty_table_says_so_in_the_active_language() {
     }));
     assert!(german.contains(">Keine Zeilen</td>"), "{german}");
 }
+
+fn selectable(selection: Vec<String>) -> Element {
+    rsx! {
+        LiberoProvider {
+            Table {
+                aria_label: "Stock",
+                selectable: true,
+                default_selection: selection,
+                data: vec![
+                    Stock { id: 7, name: "Apple", cents: 120 },
+                    Stock { id: 9, name: "Pear", cents: 5 },
+                ],
+                columns: vec![
+                    column("Name").value(|s: &Stock| s.name.to_string()).row_header(),
+                    column("Price").value(|s: &Stock| s.cents),
+                ],
+                row_key: |s: &Stock| s.id.to_string(),
+            }
+        }
+    }
+}
+
+#[test]
+fn a_selectable_table_marks_selected_rows_and_mixes_select_all() {
+    let body = body(&render(|| selectable(vec!["9".into()])));
+
+    assert_eq!(
+        body.matches("aria-label=\"Select all rows\"").count(),
+        1,
+        "{body}"
+    );
+    assert!(body.contains("aria-label=\"Select Apple\""), "{body}");
+    assert!(body.contains("aria-label=\"Select Pear\""), "{body}");
+    assert_eq!(body.matches("aria-selected=\"true\"").count(), 1, "{body}");
+    assert_eq!(body.matches("aria-selected=\"false\"").count(), 1, "{body}");
+    assert_eq!(body.matches("aria-checked=\"mixed\"").count(), 1, "{body}");
+    assert_eq!(body.matches("role=\"status\"").count(), 1, "{body}");
+    assert_eq!(body.matches("<th scope=\"col\"").count(), 3, "{body}");
+}
+
+#[test]
+fn select_all_is_checked_only_with_every_row_selected() {
+    let all = body(&render(|| {
+        selectable(vec!["7".into(), "9".into(), "x".into()])
+    }));
+    assert!(!all.contains("aria-checked=\"mixed\""), "{all}");
+    assert_eq!(all.matches("aria-selected=\"true\"").count(), 2, "{all}");
+
+    let none = body(&render(|| selectable(Vec::new())));
+    assert!(!none.contains("aria-checked=\"mixed\""), "{none}");
+    assert!(!none.contains("aria-selected=\"true\""), "{none}");
+}
+
+#[test]
+fn a_table_without_selectable_has_no_checkbox_column() {
+    let body = body(&render(|| stock(None, false)));
+
+    assert!(!body.contains("aria-selected"), "{body}");
+    assert!(!body.contains("data-select"), "{body}");
+    assert!(!body.contains("role=\"status\""), "{body}");
+}
+
+fn ranked(multi_sort: bool) -> Element {
+    rsx! {
+        LiberoProvider {
+            Table {
+                aria_label: "Stock",
+                multi_sort,
+                default_sort: vec![
+                    TableSort::new("Price", SortDirection::Descending),
+                    TableSort::new("Name", SortDirection::Ascending),
+                ],
+                data: vec![
+                    Stock { id: 1, name: "Pear", cents: 5 },
+                    Stock { id: 2, name: "Apple", cents: 120 },
+                    Stock { id: 3, name: "Fig", cents: 5 },
+                ],
+                columns: vec![
+                    column("Name").value(|s: &Stock| s.name.to_string()).sortable(),
+                    column("Price").value(|s: &Stock| s.cents).sortable(),
+                ],
+            }
+        }
+    }
+}
+
+#[test]
+fn multi_sort_orders_by_every_sorted_column_and_ranks_the_headers() {
+    let body = body(&render(|| ranked(true)));
+
+    let (apple, fig, pear) = (
+        body.find("Apple").unwrap(),
+        body.find("Fig").unwrap(),
+        body.find("Pear").unwrap(),
+    );
+    assert!(apple < fig && fig < pear, "{body}");
+    assert_eq!(body.matches("aria-sort=").count(), 2, "{body}");
+    assert!(
+        body.contains("sort order 1") && body.contains("sort order 2"),
+        "{body}"
+    );
+    assert_eq!(body.matches("data-sort-order").count(), 2, "{body}");
+}
+
+#[test]
+fn without_multi_sort_only_the_first_entry_sorts() {
+    let body = body(&render(|| ranked(false)));
+
+    let (fig, pear) = (body.find("Fig").unwrap(), body.find("Pear").unwrap());
+    assert!(pear < fig, "{body}");
+    assert_eq!(body.matches("aria-sort=").count(), 1, "{body}");
+    assert!(!body.contains("data-sort-order"), "{body}");
+}

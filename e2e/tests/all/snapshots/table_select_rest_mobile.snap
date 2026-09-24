@@ -1,0 +1,56 @@
+---
+source: e2e/src/suite.rs
+description: table_select at mobile (rest)
+expression: tree
+---
+table "Fruit"
+  rowgroup
+    row
+      columnheader "Select all rows"
+        checkbox "Select all rows" [checked=mixed]
+      columnheader "Name"
+        button "Name"
+          StaticText "Name"
+      columnheader "Stock"
+        button "Stock"
+          StaticText "Stock"
+  row
+    cell "Select Cherry"
+      checkbox "Select Cherry" [checked=false]
+    rowheader "Cherry"
+      StaticText "Cherry"
+    cell "3"
+      StaticText "3"
+  row
+    cell "Select Apple"
+      checkbox "Select Apple" [checked]
+    rowheader "Apple"
+      StaticText "Apple"
+    cell "12"
+      StaticText "12"
+  row
+    cell "Select Banana"
+      checkbox "Select Banana" [checked=false]
+    rowheader "Banana"
+      StaticText "Banana"
+    cell "0"
+      StaticText "0"
+  row
+    cell "Select Date"
+      checkbox "Select Date" [checked=false]
+    rowheader "Date"
+      StaticText "Date"
+    cell "3"
+      StaticText "3"
+  row
+    cell "Select Elder"
+      checkbox "Select Elder" [checked=false]
+    rowheader "Elder"
+      StaticText "Elder"
+    cell "12"
+      StaticText "12"
+status [atomic] [live=polite]
+paragraph
+  StaticText "Apple"
+paragraph
+paragraph

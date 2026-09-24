@@ -73,12 +73,17 @@ pub(crate) struct TableConfig {
     pub sort: Option<Vec<TableSort>>,
     pub default_sort: Vec<TableSort>,
     pub onsortchange: Option<EventHandler<Vec<TableSort>>>,
+    pub selection: Option<Vec<String>>,
+    pub default_selection: Vec<String>,
+    pub onselectionchange: Option<EventHandler<Vec<String>>>,
 }
 
 /// A table's state, one slice per feature.
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct TableState {
     pub sort: StateSlice<Vec<TableSort>>,
+    /// The selected rows' keys.
+    pub selection: StateSlice<Vec<String>>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -88,5 +93,11 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.onsortchange,
         "Table: a controlled `sort` without `onsortchange` never changes.",
     );
-    TableState { sort }
+    let selection = use_state_slice(
+        config.selection,
+        || config.default_selection,
+        config.onselectionchange,
+        "Table: a controlled `selection` without `onselectionchange` never changes.",
+    );
+    TableState { sort, selection }
 }

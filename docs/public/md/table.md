@@ -25,6 +25,11 @@ server-side query or a saved view, pass `sort` and update it from
 added, removed or sorted. `size` sets the cell padding and font size, and
 `striped` shades every other row.
 
+`selectable` adds a checkbox per row and a select-all box. The selection is a
+list of `row_key`s, so it stays with its rows through a sort. Hold it yourself
+with `selection` and `onselectionchange`. `multi_sort` lets Shift-click, or a
+tap on a touch screen, sort by one more column.
+
 ## Usage
 
 ```rust
@@ -237,6 +242,48 @@ fn Demo() -> Element {
 }
 ```
 
+`selectable` with a controlled `selection` of `row_key`s, and `multi_sort`:
+Shift-click a second header to break ties of the first. Each sorted header
+shows its place.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{SortDirection, Table, TableSort, column};
+
+#[derive(Clone, PartialEq)]
+struct Person {
+    id: u32,
+    name: String,
+    role: String,
+}
+
+#[component]
+fn Demo() -> Element {
+    let people: Vec<Person> = Vec::new();
+    let mut selection = use_signal(Vec::<String>::new);
+
+    rsx! {
+        Table {
+            caption: "Team members",
+            data: people,
+            columns: vec![
+                column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
+                column("Role").value(|p: &Person| p.role.clone()).sortable(),
+            ],
+            row_key: |p: &Person| p.id.to_string(),
+            selectable: true,
+            selection: selection(),
+            onselectionchange: move |next| selection.set(next),
+            multi_sort: true,
+            default_sort: vec![
+                TableSort::new("Role", SortDirection::Ascending),
+                TableSort::new("Name", SortDirection::Ascending),
+            ],
+        }
+    }
+}
+```
+
 ## Accessibility
 
 ### Keyboard
@@ -246,12 +293,22 @@ fn Demo() -> Element {
 | `Tab` | With `scroll: true`: enters the scroll region, a tab stop. |
 | `Left` or `Right` or `Up` or `Down` | In the scroll region: scrolls the table. |
 | `Enter` or `Space` | On a sortable header, a button: sorts by that column, flips it, then unsorts. |
+| `Shift+Enter` or `Shift+Space` | With `multi_sort`, on a sortable header: adds that column after the sorted ones. |
+| `Space` | On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row. |
 
 ### Libero handles
 
 - An unnamed table warns in a debug build.
 - With `scroll: true` the wrapper is a `role="region"` named like the table.
-- Only the sorted header carries `aria-sort`.
+- Only sorted headers carry `aria-sort`. With several, each sort button's name
+  adds its place, "sort order 2".
+- Each row's checkbox is named "Select" plus its row header's text, else its
+  first cell's. The header checkbox reads mixed while some rows are selected.
+- A selected row carries `aria-selected="true"`, and a polite live region says
+  the new count, "2 rows selected", after each change.
+- A tap on a touch screen has no Shift key, so with `multi_sort` a tap always
+  adds the column.
+- `selectable` without `row_key` warns in a debug build.
 - `.row_header()` cells render as `th scope="row"`, so a screen reader reads
   that name as it moves down any other column. They look like the other cells.
 
@@ -264,6 +321,8 @@ fn Demo() -> Element {
 - Mark the column that names a row with `.row_header()`.
 - With `onrowclick`, also put a button or link for that action in a cell. A
   row is not a tab stop, so a keyboard cannot click it.
+- With `selectable`, give the rows a `.row_header()` column, so each checkbox
+  is named by something unique.
 
 ## Props
 
@@ -276,9 +335,14 @@ fn Demo() -> Element {
 | `caption` | `Option<String>` | `None` | A visible title above the header row, and the table's accessible name. |
 | `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". |
 | `scroll` | `bool` | `false` | Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
-| `sort` | `Option<Vec<TableSort>>` | `None` | The sorted column, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. One column sorts, the first entry naming a sortable header. |
+| `sort` | `Option<Vec<TableSort>>` | `None` | The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header. |
 | `default_sort` | `Vec<TableSort>` | `[]` | Seeds the sort once. Ignored when `sort` is set. |
 | `onsortchange` | `EventHandler<Vec<TableSort>>` | `None` | Called with the sort a header click asks for: ascending, then descending, then empty. |
+| `multi_sort` | `bool` | `false` | Sorts by several columns, the first entry first. Shift, Ctrl or Cmd with a header click, or any tap on a touch screen, adds the column after the sorted ones, then flips and removes it. A plain click sorts by that column alone. Each sorted header shows its place. |
+| `selectable` | `bool` | `false` | Adds a checkbox column, with a select-all box in its header. Set `row_key` with it, or the selection sticks to positions in `data`. |
+| `selection` | `Option<Vec<String>>` | `None` | The selected rows' `row_key`s. Set, the selection is controlled: pair it with `onselectionchange`. It survives a sort. |
+| `default_selection` | `Vec<String>` | `[]` | Seeds the selection once. Ignored when `selection` is set. |
+| `onselectionchange` | `EventHandler<Vec<String>>` | `None` | Called with the selection a checkbox asks for. Select-all covers every row of `data` and keeps keys of rows not in it, say from another page of a server. |
 | `row_key` | `RowFn<T, String>` | the row's index | A row's identity, unique per row, from a `\|row: &T\| ..` closure. Its DOM node follows it through a sort or a data change, so focus and state inside a row stay with it. |
 | `onrowclick` | `EventHandler<T>` | `None` | Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action. |
 | `row_states` | `RowFn<T, States>` | `None` | A row's states, rendered as its `data-state`. Style them with `sx().selector("& tbody tr", sx().when(..))`. |
@@ -314,6 +378,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `border_color` | `ColorValue` | Color of the header and row rules. |
 | `hover_color` | `ColorValue` | Row background while hovered. |
 | `stripe_color` | `ColorValue` | Every other body row's background with `striped`. |
+| `selected_color` | `ColorValue` | A selected row's background, hovered or not, `primary.1`. |
 
 ## CSS variables
 
@@ -326,6 +391,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `--lsx-table-border-color` | Color of the `1px` header and row rules. |
 | `--lsx-table-hover` | `background` of a hovered body row. |
 | `--lsx-table-stripe` | `background` of every other body row with `striped`. |
+| `--lsx-table-selected` | `background` of a selected body row. |
 
 ## Data attributes
 
@@ -337,6 +403,9 @@ default `start`.
 | `data-align="center"` | The column's alignment is `center`. |
 | `data-align="end"` | The column's alignment is `end`, as for every numeric cell type. |
 | `data-sortable` | On a sortable header. |
-| `aria-sort` | On the sorted header only, `ascending` or `descending`. |
+| `aria-sort` | On sorted headers only, `ascending` or `descending`. |
+| `data-sort-order` | On the place badge inside a sorted header's button, with two or more sorted columns. |
+| `data-select` | On the checkbox column's `th` and `td`s. |
+| `aria-selected` | On every body row of a `selectable` table, `true` or `false`. |
 | `data-empty` | On the body row that holds `empty`. |
 | `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set. On a body row: its active `row_states`. |

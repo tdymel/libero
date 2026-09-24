@@ -67,7 +67,7 @@ const DOCS_CRATES: [(&str, &str); 6] = [
 /// directory, or `base` for `BASE_FILES`.
 const CATEGORY_TIERS: [(&str, &[&str]); 5] = [
     // Composites of the tiers below: `ThemeToggle` opens a `Menu`.
-    ("composite", &["buttons", "navigation", "form"]),
+    ("composite", &["buttons", "navigation", "form", "table"]),
     // `Lightbox` is a `Carousel`; `Dialog` has a `Title`.
     ("overlay", &["overlay"]),
     ("content", &["typography", "feedback", "data_display"]),
@@ -89,6 +89,12 @@ const BASE_FILES: [&str; 7] = [
     "libero/src/components/overlay/tooltip.rs",
     // `Tooltip`'s pointer delays, shared with `HoverCard`.
     "libero/src/components/overlay/hover_intent.rs",
+];
+
+/// Units a tier above their folder's, declared by directory as `BASE_FILES` are by file.
+const COMPOSITE_UNITS: [(&str, &str); 1] = [
+    // Its pager is a `Select` and a `Pagination` (1156-1b); the move waits for 1160.
+    ("table", "libero/src/components/data_display/table/"),
 ];
 
 const CATEGORY: &str = r"^libero/src/components/([a-z_]+)/";
@@ -190,10 +196,17 @@ fn components_import_from_the_category_not_the_flat_re_export() {
     );
 }
 
-/// A component file's unit: `base` for `BASE_FILES`, its category otherwise.
+/// A component file's unit: `base` for `BASE_FILES`, a `COMPOSITE_UNITS` name,
+/// its category otherwise.
 fn unit_of(categories: &SliceProjection, file: &str) -> Option<String> {
     if BASE_FILES.contains(&file) {
         return Some("base".to_owned());
+    }
+    if let Some((unit, _)) = COMPOSITE_UNITS
+        .iter()
+        .find(|(_, dir)| file.starts_with(dir))
+    {
+        return Some((*unit).to_owned());
     }
     categories.label_for(file)
 }
@@ -236,6 +249,16 @@ fn category_edges() -> Vec<ProjectedEdge> {
             if let Some(file) = item.and_then(|item| reexports.get(&(target, item))) {
                 target = file;
             }
+        }
+        // Its category's `mod.rs` re-exporting a composite unit does not use it.
+        let reexported = COMPOSITE_UNITS.iter().any(|(_, dir)| {
+            target.starts_with(dir)
+                && source
+                    .strip_suffix("mod.rs")
+                    .is_some_and(|parent| !source.starts_with(dir) && dir.starts_with(parent))
+        });
+        if reexported {
+            continue;
         }
         let (Some(from), Some(to)) = (unit_of(&categories, source), unit_of(&categories, target))
         else {

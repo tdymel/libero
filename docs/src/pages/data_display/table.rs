@@ -90,9 +90,14 @@ pub fn TablePage() -> Element {
                     prop("caption", "Option<String>").default("None").doc("A visible title above the header row, and the table's accessible name."),
                     prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\"."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
-                    prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted column, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. One column sorts, the first entry naming a sortable header."),
+                    prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header."),
                     prop("default_sort", "Vec<TableSort>").default("[]").doc("Seeds the sort once. Ignored when `sort` is set."),
                     prop("onsortchange", "EventHandler<Vec<TableSort>>").default("None").doc("Called with the sort a header click asks for: ascending, then descending, then empty."),
+                    prop("multi_sort", "bool").default("false").doc("Sorts by several columns, the first entry first. Shift, Ctrl or Cmd with a header click, or any tap on a touch screen, adds the column after the sorted ones, then flips and removes it. A plain click sorts by that column alone. Each sorted header shows its place."),
+                    prop("selectable", "bool").default("false").doc("Adds a checkbox column, with a select-all box in its header. Set `row_key` with it, or the selection sticks to positions in `data`."),
+                    prop("selection", "Option<Vec<String>>").default("None").doc("The selected rows' `row_key`s. Set, the selection is controlled: pair it with `onselectionchange`. It survives a sort."),
+                    prop("default_selection", "Vec<String>").default("[]").doc("Seeds the selection once. Ignored when `selection` is set."),
+                    prop("onselectionchange", "EventHandler<Vec<String>>").default("None").doc("Called with the selection a checkbox asks for. Select-all covers every row of `data` and keeps keys of rows not in it, say from another page of a server."),
                     prop("row_key", "RowFn<T, String>").default("the row's index").doc("A row's identity, unique per row, from a `|row: &T| ..` closure. Its DOM node follows it through a sort or a data change, so focus and state inside a row stay with it."),
                     prop("onrowclick", "EventHandler<T>").default("None").doc("Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action."),
                     prop("row_states", "RowFn<T, States>").default("None").doc("A row's states, rendered as its `data-state`. Style them with `sx().selector(\"& tbody tr\", sx().when(..))`."),
@@ -114,10 +119,16 @@ pub fn TablePage() -> Element {
                 .key(["Tab"], "With `scroll: true`: enters the scroll region, a tab stop.")
                 .key(["Left", "Right", "Up", "Down"], "In the scroll region: scrolls the table.")
                 .key(["Enter", "Space"], "On a sortable header, a button: sorts by that column, flips it, then unsorts.")
+                .key(["Shift+Enter", "Shift+Space"],"With `multi_sort`, on a sortable header: adds that column after the sorted ones.")
+                .key(["Space"], "On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row.")
                 .handles([
                     "An unnamed table warns in a debug build.",
                     "With `scroll: true` the wrapper is a `role=\"region\"` named like the table.",
-                    "Only the sorted header carries `aria-sort`.",
+                    "Only sorted headers carry `aria-sort`. With several, each sort button's name adds its place, \"sort order 2\".",
+                    "Each row's checkbox is named \"Select\" plus its row header's text, else its first cell's. The header checkbox reads mixed while some rows are selected.",
+                    "A selected row carries `aria-selected=\"true\"`, and a polite live region says the new count, \"2 rows selected\", after each change.",
+                    "A tap on a touch screen has no Shift key, so with `multi_sort` a tap always adds the column.",
+                    "`selectable` without `row_key` warns in a debug build.",
                     "`.row_header()` cells render as `th scope=\"row\"`, so a screen reader reads that name as it moves down any other column. They look like the other cells.",
                 ])
                 .must([
@@ -125,6 +136,7 @@ pub fn TablePage() -> Element {
                     "Set `scroll: true` on a table wider than its container.",
                     "Mark the column that names a row with `.row_header()`.",
                     "With `onrowclick`, also put a button or link for that action in a cell. A row is not a tab stop, so a keyboard cannot click it.",
+                    "With `selectable`, give the rows a `.row_header()` column, so each checkbox is named by something unique.",
                 ]),
             lead: rsx! {
                 Text {
@@ -169,6 +181,18 @@ pub fn TablePage() -> Element {
                     Code { source: "striped" }
                     " shades every other row."
                 }
+                Text {
+                    Code { source: "selectable" }
+                    " adds a checkbox per row and a select-all box. The selection is a list of "
+                    Code { source: "row_key" }
+                    "s, so it stays with its rows through a sort. Hold it yourself with "
+                    Code { source: "selection" }
+                    " and "
+                    Code { source: "onselectionchange" }
+                    ". "
+                    Code { source: "multi_sort" }
+                    " lets Shift-click, or a tap on a touch screen, sort by one more column."
+                }
             },
             Demo {
                 component: "Table",
@@ -183,6 +207,14 @@ pub fn TablePage() -> Element {
                         .default("md"),
                     Control::switch("striped"),
                     Control::switch("scroll"),
+                    Control::switch("selectable").code(|_, values| match values.str("selectable") == "true" {
+                        true => vec![
+                            "selectable: true".to_string(),
+                            "row_key: |p: &Person| p.name.clone()".to_string(),
+                        ],
+                        false => vec![],
+                    }),
+                    Control::switch("multi_sort"),
                     Control::switch("empty").code(|_, values| match no_rows(values) {
                         true => vec![r#"empty: rsx! { "No team members yet." }"#.to_string()],
                         false => vec![],
@@ -195,6 +227,9 @@ pub fn TablePage() -> Element {
                         size: values.str("size"),
                         striped: values.str("striped") == "true",
                         scroll: values.str("scroll") == "true",
+                        selectable: values.str("selectable") == "true",
+                        multi_sort: values.str("multi_sort") == "true",
+                        row_key: |p: &Person| p.name.clone(),
                         empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
                         data: if no_rows(&values) { Vec::new() } else { people() },
                         columns: vec![

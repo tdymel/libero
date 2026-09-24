@@ -4,7 +4,7 @@
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text, linger};
 use e2e::passes::{focus, keyboard};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -96,6 +96,163 @@ e2e::scenario!(
     the_rows_report_and_show_their_look
 );
 
+/// The checkbox box of body row `n` (1-based), or of the header with 0.
+fn select_box(n: usize) -> String {
+    match n {
+        0 => "thead th[data-select] span[aria-hidden]".to_string(),
+        n => format!("tbody tr:nth-child({n}) td[data-select] span[aria-hidden]"),
+    }
+}
+
+const STOCK: &str = "th[data-sortable]:nth-child(3) button";
+const NAME: &str = "th[data-sortable]:nth-child(2) button";
+
+/// 1156-1a/1c: a row's box selects it without a row click, select-all mixes and
+/// fills, the selection follows its rows through a sort; a tap on touch adds a
+/// sorted column, a click on a pointer replaces it.
+async fn rows_select_and_sort<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#selection", "Apple", "the seeded selection").await?;
+    if d.attr("thead input", "aria-checked").await?.as_deref() != Some("mixed") {
+        bail!("select-all is not mixed with one row selected");
+    }
+    // Source order: Cherry, Apple, Banana, Date, Elder.
+    d.click(&select_box(3)).await?;
+    eventually_text(d, "#selection", "Apple,Banana", "a row's box").await?;
+    if !d.text("#clicked").await?.is_empty() {
+        bail!("a row's box also clicked its row");
+    }
+
+    d.click(STOCK).await?;
+    eventually_text(d, "#sort", "Stock ascending", "a Stock click").await?;
+    // Banana (0) first now, still selected; Cherry (3) next, not.
+    eventually(d, "the selection to follow its rows", async |d| {
+        Ok(d.attr("tbody tr:nth-child(1)", "aria-selected")
+            .await?
+            .as_deref()
+            == Some("true")
+            && d.attr("tbody tr:nth-child(2)", "aria-selected")
+                .await?
+                .as_deref()
+                == Some("false"))
+    })
+    .await?;
+    let selected = d.style("tbody tr:nth-child(1)", "background-color").await?;
+    let plain = d.style("tbody tr:nth-child(2)", "background-color").await?;
+    if selected == plain {
+        bail!("a selected row looks like the others: {selected}");
+    }
+
+    d.click(NAME).await?;
+    let expected = match d.platform() {
+        Platform::Android => "Stock ascending,Name ascending",
+        _ => "Name ascending",
+    };
+    eventually_text(d, "#sort", expected, "a Name click").await?;
+
+    d.click(&select_box(0)).await?;
+    eventually_text(
+        d,
+        "#selection",
+        "Apple,Banana,Cherry,Date,Elder",
+        "select-all",
+    )
+    .await?;
+    if d.attr("thead input", "aria-checked").await?.is_some() {
+        bail!("select-all still mixed with every row selected");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    rows_select_by_box_and_keep_it_through_a_sort,
+    "/table/select",
+    rows_select_and_sort
+);
+
+/// 1156-1c: Shift adds a column after the sorted ones and ranks both headers.
+#[test]
+fn a_shift_click_adds_a_sorted_column() {
+    block_on(async {
+        let fixture = Fixture::open("/table/select", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        click_with(page, STOCK, 0).await;
+        wait_text(page, "#sort", "Stock ascending").await;
+        click_with(page, NAME, SHIFT).await;
+        wait_text(page, "#sort", "Stock ascending,Name ascending").await;
+        // Ties on Stock break by Name: Cherry before Date, Apple before Elder.
+        rows(page, ":Banana:0|:Cherry:3|:Date:3|:Apple:12|:Elder:12")
+            .await
+            .unwrap();
+        assert_eq!(count(page, "[aria-sort]").await, 2.0);
+        assert_eq!(count(page, "[data-sort-order]").await, 2.0);
+        let snapshot = ax::snapshot(page, "table").await.unwrap();
+        assert!(snapshot.contains("sort order 2"), "{snapshot}");
+
+        click_with(page, STOCK, SHIFT).await;
+        wait_text(page, "#sort", "Stock descending,Name ascending").await;
+        click_with(page, STOCK, SHIFT).await;
+        wait_text(page, "#sort", "Name ascending").await;
+        assert_eq!(count(page, "[data-sort-order]").await, 0.0);
+
+        // The keyboard's way: Shift+Enter on a focused header adds it too.
+        page.find_element(STOCK)
+            .await
+            .unwrap()
+            .focus()
+            .await
+            .unwrap();
+        keyboard::press_shift(page, keyboard::ENTER).await.unwrap();
+        wait_text(page, "#sort", "Name ascending,Stock ascending").await;
+
+        fixture.console.assert_clean("multi-sorting").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+const SHIFT: i64 = 8;
+
+/// A mouse click at `selector`'s centre with CDP `modifiers` held.
+async fn click_with(page: &Page, selector: &str, modifiers: i64) {
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchMouseEventParams, DispatchMouseEventType, MouseButton,
+    };
+    let point = page
+        .find_element(selector)
+        .await
+        .unwrap()
+        .clickable_point()
+        .await
+        .unwrap();
+    for kind in [
+        DispatchMouseEventType::MousePressed,
+        DispatchMouseEventType::MouseReleased,
+    ] {
+        let event = DispatchMouseEventParams::builder()
+            .r#type(kind)
+            .x(point.x)
+            .y(point.y)
+            .button(MouseButton::Left)
+            .click_count(1)
+            .modifiers(modifiers)
+            .build()
+            .unwrap();
+        page.execute(event).await.unwrap();
+    }
+}
+
+async fn wait_text(page: &Page, selector: &str, expected: &str) {
+    wait::for_js_true(
+        page,
+        &format!("document.querySelector({selector:?}).textContent === {expected:?}"),
+        &format!("{selector} to read {expected}"),
+    )
+    .await
+    .unwrap();
+}
+
 /// 1156-0b: with `row_key`, a row prepended on top leaves the others' nodes alone.
 #[test]
 fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {
@@ -132,6 +289,16 @@ fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {
 fn it_meets_the_baseline() {
     Suite::new("table", "/table")
         .focusable(SORT)
+        .targets(SORT)
+        .run();
+}
+
+#[test]
+fn a_selectable_table_meets_the_baseline() {
+    Suite::new("table_select", "/table/select")
+        .focusable("tbody td[data-select] input")
+        // The box's control, so its own hidden input is no neighbour (as on `Checkbox`).
+        .targets_spaced("td[data-select] span:has(> input)")
         .targets(SORT)
         .run();
 }

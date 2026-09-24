@@ -1,6 +1,7 @@
 mod cell_value;
 mod column;
 mod core;
+mod selection;
 mod table;
 mod use_table;
 

@@ -1,8 +1,9 @@
 //! `Table` with a sortable text column and a custom-rendered one; a wide one
-//! in its scroll region under a caption; keyed, clickable, striped rows; an empty one.
+//! in its scroll region under a caption; keyed, clickable, striped rows; selectable,
+//! multi-sorted rows; an empty one.
 
 use dioxus::prelude::*;
-use libero::components::{States, Table, column};
+use libero::components::{SortDirection, States, Table, TableSort, column};
 use libero::sx::sx;
 
 use crate::Routes;
@@ -12,6 +13,7 @@ pub const ROUTES: Routes = &[
     ("/table/wide", || rsx! { WideTablePage {} }),
     ("/table/rows", || rsx! { RowsTablePage {} }),
     ("/table/empty", || rsx! { EmptyTablePage {} }),
+    ("/table/select", || rsx! { SelectTablePage {} }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -102,6 +104,59 @@ fn RowsTablePage() -> Element {
             onrowclick: move |fruit: Fruit| clicked.set(fruit.name.to_string()),
             sx: sx().selector("& tbody tr", sx().when("sold-out", sx().color("red"))),
         }
+        p { id: "clicked", "{clicked}" }
+    }
+}
+
+/// Selectable, multi-sortable rows with stock ties; the selection, sort and last
+/// row click printed below.
+#[component]
+fn SelectTablePage() -> Element {
+    let mut selection = use_signal(|| vec!["Apple".to_string()]);
+    let mut sort = use_signal(Vec::<TableSort>::new);
+    let mut clicked = use_signal(String::new);
+    let data = || {
+        let mut data = fruit();
+        data.push(Fruit {
+            name: "Date",
+            stock: 3,
+        });
+        data.push(Fruit {
+            name: "Elder",
+            stock: 12,
+        });
+        data
+    };
+    let sorted: Vec<String> = sort
+        .read()
+        .iter()
+        .map(|entry| {
+            let direction = match entry.direction {
+                SortDirection::Ascending => "ascending",
+                SortDirection::Descending => "descending",
+            };
+            format!("{} {direction}", entry.column)
+        })
+        .collect();
+    rsx! {
+        Table {
+            aria_label: "Fruit",
+            selectable: true,
+            selection: selection(),
+            onselectionchange: move |next| selection.set(next),
+            multi_sort: true,
+            sort: sort(),
+            onsortchange: move |next| sort.set(next),
+            data: data(),
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()).sortable().row_header(),
+                column("Stock").value(|fruit: &Fruit| fruit.stock).sortable(),
+            ],
+            row_key: |fruit: &Fruit| fruit.name.to_string(),
+            onrowclick: move |fruit: Fruit| clicked.set(fruit.name.to_string()),
+        }
+        p { id: "selection", {selection.read().join(",")} }
+        p { id: "sort", {sorted.join(",")} }
         p { id: "clicked", "{clicked}" }
     }
 }
