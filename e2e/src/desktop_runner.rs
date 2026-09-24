@@ -9,7 +9,11 @@ use anyhow::{Context, Result, bail};
 use super::android_runner::list_arm;
 use super::{Guard, own_target_dir, workspace_root};
 
-pub fn run(filters: Vec<String>) -> Result<()> {
+/// `--ignored` runs only the `desktop: skip` scenarios, e.g. to see 1051 still red.
+pub fn run(mut filters: Vec<String>) -> Result<()> {
+    let before = filters.len();
+    filters.retain(|filter| filter != "--ignored");
+    let ignored = filters.len() != before;
     for tool in ["xvfb-run", "xdotool"] {
         let found = Command::new("which").arg(tool).output()?;
         if !found.status.success() {
@@ -45,7 +49,7 @@ pub fn run(filters: Vec<String>) -> Result<()> {
         bail!("the desktop fixture app failed to build");
     }
 
-    let names = list_arm("desktop", &root, &target_dir, &filters, false)?;
+    let names = list_arm("desktop", &root, &target_dir, &filters, ignored)?;
     if names.is_empty() {
         bail!("no desktop scenario matches {filters:?}");
     }
@@ -68,6 +72,7 @@ pub fn run(filters: Vec<String>) -> Result<()> {
         ])
         .arg(&target_dir)
         .args(["--", "--exact", "--test-threads=1", "--format", "pretty"])
+        .args(ignored.then_some("--ignored"))
         .args(&names)
         // `e2e::driver::desktop::APP_ENV`: the runner is built without the feature.
         .env("E2E_DESKTOP_APP", target_dir.join("debug/e2e-fixtures"))

@@ -997,5 +997,6 @@ e2e::scenario!(
     a_pinch_zooms_the_picture,
     "/lightbox",
     pinch_zooms,
-    native: skip("Blitz takes no multi-touch input")
+    native: skip("Blitz takes no multi-touch input"),
+    desktop: skip("1126: no touch input under Xvfb")
 );

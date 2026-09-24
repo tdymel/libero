@@ -68,7 +68,8 @@ e2e::scenario!(
     a_digit_retyped_without_a_key_leaves_no_drifted_cell,
     "/pin-field/echo",
     retyped_text_without_a_key,
-    native: skip("no text without a key on Blitz")
+    native: skip("no text without a key on Blitz"),
+    desktop: skip("1126: no text without a key (no IME path) under xdotool")
 );
 
 /// Todo 507: every cell is named, so axe `label` holds.

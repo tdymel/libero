@@ -82,7 +82,8 @@ e2e::scenario!(
     under_rtl_rightwards_shrinks_pane_a,
     "/splitter/rtl",
     rtl_rightwards_shrinks,
-    android: skip("963: is_rtl reads false on the WebView")
+    android: skip("963: is_rtl reads false on the WebView"),
+    desktop: skip("963: is_rtl reads false on the WebView")
 );
 e2e::scenario!(
     the_arrows_and_home_end_move_a_focused_divider,
@@ -143,7 +144,8 @@ async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_vertical_swipe_over_a_vertical_divider_scrolls_the_page_and_a_sideways_drag_moves_it,
     "/splitter/scroll",
-    a_swipe_scrolls
+    a_swipe_scrolls,
+    desktop: skip("1179: no pointer capture on the WebView, a release off the divider is lost")
 );
 
 #[test]

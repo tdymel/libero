@@ -42,13 +42,15 @@ e2e::scenario!(
     a_modal_opened_by_click_returns_focus_to_its_trigger,
     "/focus-return/modal",
     click_opened,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     a_modal_opened_by_keyboard_still_returns_focus_to_its_trigger,
     "/focus-return/modal",
     key_opened,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 
 async fn focused(page: &chromiumoxide::Page) -> String {

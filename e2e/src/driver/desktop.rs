@@ -1,5 +1,5 @@
-//! The desktop WebView (wry/WebKitGTK, 1126) has no DevTools socket: each
-//! [`Desktop`] launches the fixture app at its route, reads the page through the
+//! The desktop WebView (wry/WebKitGTK, 1126) has no DevTools socket: a
+//! [`Desktop`] launches the fixture app once per unit, reads the page through the
 //! app's `E2E_BRIDGE` (an `eval` loop over loopback TCP) and drives it with real
 //! X input from `xdotool`. Run by `cargo run -p e2e -- desktop`, under Xvfb.
 
@@ -8,6 +8,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
@@ -29,7 +30,11 @@ const CONSOLE_HOOK: &str = "window.__e2eErrors = [];
     addEventListener('error', e => __e2eErrors.push(String(e.message)));
     addEventListener('unhandledrejection', e => __e2eErrors.push(String(e.reason)));";
 
-/// One fixture app in its own window; dropped, it is killed.
+/// The app the last scenario finished cleanly in; the next scenario of its unit reuses it.
+static IDLE: Mutex<Option<Desktop>> = Mutex::new(None);
+
+/// One fixture app in its own window; dropped, it is killed, so a failed
+/// scenario's app is never reused.
 pub struct Desktop {
     app: Child,
     reader: BufReader<TcpStream>,
@@ -38,10 +43,37 @@ pub struct Desktop {
     /// The viewport's origin in window px: the menu bar sits above the WebView.
     origin: (f64, f64),
     scale: f64,
+    /// The test module path minus the scenario: one app per unit (~5 s a launch).
+    unit: String,
 }
 
 impl Desktop {
-    pub fn open(route: &str) -> Result<Self> {
+    /// `route` in the app of `module`'s unit, launched if the last scenario
+    /// ran in another unit or failed; `window.__route` remounts the fixture.
+    pub fn open(module: &str, route: &str) -> Result<Self> {
+        let unit = module.rsplit_once("::").map_or(module, |(unit, _)| unit);
+        let idle = IDLE.lock().unwrap_or_else(PoisonError::into_inner).take();
+        let mut desktop = match idle {
+            Some(desktop) if desktop.unit == unit => {
+                // Past GTK's double-click time: the last scenario's clicks would count
+                // towards the first one here (a splitter drag read as a double-click).
+                std::thread::sleep(Duration::from_millis(500));
+                desktop
+            }
+            stale => {
+                drop(stale);
+                Self::launch(unit)?
+            }
+        };
+        // Pointer back to the calibration corner: no hover left from the last scenario.
+        desktop.run("document.activeElement?.blur(); scrollTo(0, 0); __e2eErrors = []")?;
+        desktop.park_pointer()?;
+        let generation: u64 = desktop.json(&format!("window.__route({route:?})"))?;
+        desktop.wait_for(&format!("[data-fixture-generation=\"{generation}\"]"))?;
+        Ok(desktop)
+    }
+
+    fn launch(unit: &str) -> Result<Self> {
         let binary = std::env::var_os(APP_ENV).with_context(|| {
             format!("{APP_ENV} is unset: run `cargo run -p e2e -- desktop`, which starts Xvfb")
         })?;
@@ -53,7 +85,6 @@ impl Desktop {
             .join("desktop-app.log");
         let log = File::options().create(true).append(true).open(&log)?;
         let mut app = Command::new(binary)
-            .env("E2E_ROUTE", route)
             .env("E2E_BRIDGE", listener.local_addr()?.to_string())
             .stdout(Stdio::from(log.try_clone()?))
             .stderr(Stdio::from(log))
@@ -86,8 +117,11 @@ impl Desktop {
             window: String::new(),
             origin: (0.0, 0.0),
             scale: 1.0,
+            unit: unit.to_string(),
         };
         desktop.wait_for("[data-fixture-ready]")?;
+        // `Shell` installs the route hook in an effect, after the marker mounts.
+        desktop.wait_until("typeof window.__route === 'function'")?;
         desktop.run(CONSOLE_HOOK)?;
         desktop.window = desktop.find_window()?;
         desktop.scale = desktop.json("devicePixelRatio")?;
@@ -96,13 +130,14 @@ impl Desktop {
         Ok(desktop)
     }
 
-    /// The console stayed clean since [`Desktop::open`]; closes the app.
+    /// The console stayed clean since [`Desktop::open`]; keeps the app for the
+    /// unit's next scenario.
     pub fn finish(mut self, what: &str) -> Result<()> {
         let errors: Vec<String> = self.json("__e2eErrors")?;
         if !errors.is_empty() {
             bail!("{what}: console errors in the desktop WebView: {errors:?}");
         }
-        let _ = self.app.kill();
+        *IDLE.lock().unwrap_or_else(PoisonError::into_inner) = Some(self);
         Ok(())
     }
 
@@ -118,7 +153,8 @@ impl Desktop {
         let mut answer: serde_json::Value =
             serde_json::from_str(&line).context("the bridge closed")?;
         if let Some(error) = answer.get("err") {
-            bail!("desktop eval failed: {error}");
+            let running: String = body.chars().skip(6).take(120).collect();
+            bail!("desktop eval failed: {error}, running {running}");
         }
         let value = answer["ok"].take();
         if let Some(error) = value.get("__e2eError") {
@@ -139,10 +175,14 @@ impl Desktop {
     }
 
     fn wait_for(&mut self, selector: &str) -> Result<()> {
+        self.wait_until(&format!("{} !== null", element(selector)))
+    }
+
+    fn wait_until(&mut self, expression: &str) -> Result<()> {
         let started = Instant::now();
-        while !self.json::<bool>(&format!("{} !== null", element(selector)))? {
+        while !self.json::<bool>(expression)? {
             if started.elapsed() > LAUNCH {
-                bail!("{selector} did not mount within {LAUNCH:?}");
+                bail!("{expression} did not hold within {LAUNCH:?}");
             }
             std::thread::sleep(Duration::from_millis(50));
         }
@@ -171,6 +211,23 @@ impl Desktop {
     /// point, read back as `clientX/Y`. Bottom-left, away from the fixture.
     fn calibrate(&mut self) -> Result<()> {
         self.run("window.__e2eMove = null; addEventListener('mousemove', e => { __e2eMove = [e.clientX, e.clientY]; })")?;
+        let at = self.park_pointer()?;
+        let started = Instant::now();
+        let seen = loop {
+            if let Some((x, y)) = self.json::<Option<(f64, f64)>>("__e2eMove")? {
+                break (x, y);
+            }
+            if started.elapsed() > Duration::from_secs(5) {
+                bail!("the WebView saw no pointer move");
+            }
+            std::thread::sleep(Duration::from_millis(25));
+        };
+        self.origin = (at.0 - seen.0 * self.scale, at.1 - seen.1 * self.scale);
+        Ok(())
+    }
+
+    /// Moves the pointer to the window's bottom-left corner; that point in window px.
+    fn park_pointer(&self) -> Result<(f64, f64)> {
         let geometry = xdotool(&["getwindowgeometry", "--shell", &self.window])?;
         let height: f64 = geometry
             .lines()
@@ -185,18 +242,7 @@ impl Desktop {
             &at.0.to_string(),
             &at.1.to_string(),
         ])?;
-        let started = Instant::now();
-        let seen = loop {
-            if let Some((x, y)) = self.json::<Option<(f64, f64)>>("__e2eMove")? {
-                break (x, y);
-            }
-            if started.elapsed() > Duration::from_secs(5) {
-                bail!("the WebView saw no pointer move");
-            }
-            std::thread::sleep(Duration::from_millis(25));
-        };
-        self.origin = (at.0 - seen.0 * self.scale, at.1 - seen.1 * self.scale);
-        Ok(())
+        Ok(at)
     }
 
     /// A CSS-px viewport point in window px, as `xdotool --window` takes it.

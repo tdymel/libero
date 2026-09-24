@@ -787,7 +787,7 @@ async fn the_separator_clamps<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
         );
     }
     // The bounds come from `computed_px`, `Unsupported` on the WebView floor (958).
-    if d.platform() == Platform::Android {
+    if matches!(d.platform(), Platform::Android | Platform::Desktop) {
         return Ok(());
     }
     assert_eq!(
@@ -896,7 +896,7 @@ async fn a_resize_beats_the_callers_size<D: Driver>(d: &mut D, _route: &str) -> 
     .await?;
     reported(d, RESIZE_REPORT, "the pointer resize").await?;
     // The menu's roving keys need element identity on the WebView (958).
-    if d.platform() == Platform::Android {
+    if matches!(d.platform(), Platform::Android | Platform::Desktop) {
         return Ok(());
     }
     d.focus(MENU).await?;
@@ -917,19 +917,22 @@ async fn a_resize_beats_the_callers_size<D: Driver>(d: &mut D, _route: &str) -> 
 e2e::scenario!(
     a_resize_wins_over_the_callers_sx_size,
     "/floating-window-sized",
-    a_resize_beats_the_callers_size
+    a_resize_beats_the_callers_size,
+    desktop: skip("1179: no pointer capture on the WebView, the drag loses the separator")
 );
 e2e::scenario!(
     enter_opens_it_with_focus_inside_and_escape_hands_it_back,
     "/floating-window",
     enter_and_escape,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     f6_moves_focus_between_the_window_and_the_page,
     "/floating-window",
     f6_round_trips,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     a_drag_past_the_edge_keeps_it_in_the_viewport,
@@ -950,7 +953,8 @@ e2e::scenario!(
     the_title_bar_menu_resizes_and_resets,
     "/floating-window",
     the_menu_resizes_and_resets,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     a_title_bar_drag_moves_it_with_the_pointer,
@@ -961,5 +965,6 @@ e2e::scenario!(
     drags_leave_their_handle_focused,
     "/floating-window",
     drags_leave_the_handle_focused,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );

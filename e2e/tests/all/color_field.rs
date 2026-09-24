@@ -251,5 +251,6 @@ e2e::scenario!(
     arrow_down_enters_the_colour_dialog_and_escape_returns,
     "/color-field/alpha",
     arrow_down_enters_and_escape_returns,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );

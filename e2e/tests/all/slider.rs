@@ -75,7 +75,8 @@ e2e::scenario!(
     a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release,
     "/slider/drag",
     held_thumb,
-    native: skip("996: Blitz has no touch input")
+    native: skip("996: Blitz has no touch input"),
+    desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(
     the_thumb_moves_with_the_value,
@@ -149,7 +150,8 @@ async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_vertical_swipe_scrolls_the_page_and_a_sideways_drag_or_a_tap_moves_it,
     "/slider/scroll",
-    a_swipe_scrolls
+    a_swipe_scrolls,
+    desktop: skip("1179: no pointer capture on the WebView, a release off the thumb is lost")
 );
 
 /// Todo 483: the label focuses the thumb it names by id.

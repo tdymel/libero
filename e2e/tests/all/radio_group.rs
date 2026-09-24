@@ -197,7 +197,8 @@ e2e::scenario!(
     a_readonly_click_keeps_focus_on_the_checked_option,
     "/radio-group/readonly",
     a_readonly_click_keeps_focus,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 
 /// The rows really are under 24px, so `targets_spaced` is needed; if they ever grow full
@@ -315,7 +316,8 @@ e2e::scenario!(
     the_arrows_move_and_select_in_a_radio_group,
     "/radio-group/echo",
     the_arrows_move_and_select,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     a_click_on_an_option_label_selects_it,

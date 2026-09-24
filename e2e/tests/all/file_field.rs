@@ -80,7 +80,8 @@ e2e::scenario!(
     browse_picks_a_file_and_rust_reads_it,
     "/file-field/pick",
     picks_and_reads,
-    native: skip("rfd opens the desktop portal's dialog, which no driver answers")
+    native: skip("rfd opens the desktop portal's dialog, which no driver answers"),
+    desktop: skip("1126: the GTK file chooser is not driven")
 );
 
 /// WCAG 1.4.11: the dashed border is all that shows the dropzone's extent

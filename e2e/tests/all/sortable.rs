@@ -259,7 +259,8 @@ e2e::scenario!(
 e2e::scenario!(
     a_click_on_a_hook_handle_clicks_and_a_drag_does_not,
     "/sortable/hook",
-    a_click_stays_a_click
+    a_click_stays_a_click,
+    desktop: skip("1179: no pointer capture on the WebView, the drag's release clicks the handle")
 );
 e2e::scenario!(
     space_lifts_the_arrows_move_and_space_drops_with_each_step_announced,

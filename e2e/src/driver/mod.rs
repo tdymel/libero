@@ -189,25 +189,23 @@ pub async fn eventually_text<D: Driver>(
 ///
 /// A backend gap is a named skip, listed by `--ignored`, never silent:
 /// `scenario!(name, "/route", body, native: skip("Blitz has no <summary> stop"));`
-/// `android: skip("958 ...")` does the same for Android; both may follow each other.
+/// `android: skip("958 ...")` and `desktop: skip("1126 ...")` do the same for
+/// Android and the desktop WebView; the skips may follow each other in any order.
 #[macro_export]
 macro_rules! scenario {
-    ($name:ident, $route:expr, $body:ident) => {
-        $crate::scenario!(@web $name, $route, $body, #[test]);
+    (@skip $name:ident, $route:expr, $body:ident, $n:tt $a:tt $d:tt; native: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] $a $d; $($($rest)*)?);
     };
-    ($name:ident, $route:expr, $body:ident, native: skip($reason:literal)) => {
-        $crate::scenario!(@web $name, $route, $body, #[test] #[ignore = $reason]);
+    (@skip $name:ident, $route:expr, $body:ident, $n:tt $a:tt $d:tt; android: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $n [#[test] #[ignore = $reason]] $d; $($($rest)*)?);
     };
-    ($name:ident, $route:expr, $body:ident, android: skip($reason:literal)) => {
-        $crate::scenario!(@all $name, $route, $body, [#[test]], [#[test] #[ignore = $reason]]);
+    (@skip $name:ident, $route:expr, $body:ident, $n:tt $a:tt $d:tt; desktop: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $n $a [#[test] #[ignore = $reason]]; $($($rest)*)?);
     };
-    ($name:ident, $route:expr, $body:ident, native: skip($native:literal), android: skip($android:literal)) => {
-        $crate::scenario!(@all $name, $route, $body, [#[test] #[ignore = $native]], [#[test] #[ignore = $android]]);
+    (@skip $name:ident, $route:expr, $body:ident, $n:tt $a:tt $d:tt;) => {
+        $crate::scenario!(@all $name, $route, $body, $n, $a, $d);
     };
-    (@web $name:ident, $route:expr, $body:ident, $(#[$native:meta])*) => {
-        $crate::scenario!(@all $name, $route, $body, [$(#[$native])*], [#[test]]);
-    };
-    (@all $name:ident, $route:expr, $body:ident, [$(#[$native:meta])*], [$(#[$android:meta])*]) => {
+    (@all $name:ident, $route:expr, $body:ident, [$(#[$native:meta])*], [$(#[$android:meta])*], [$(#[$desktop:meta])*]) => {
         mod $name {
             #[test]
             fn web() {
@@ -235,15 +233,17 @@ macro_rules! scenario {
                 });
             }
 
-            // Spike (1126): no skip syntax yet; the runner picks units by filter.
             #[cfg(feature = "desktop")]
-            #[test]
+            $(#[$desktop])*
             fn desktop() {
-                let mut driver = $crate::driver::Desktop::open($route).unwrap();
+                let mut driver = $crate::driver::Desktop::open(module_path!(), $route).unwrap();
                 $crate::futures::executor::block_on(super::$body(&mut driver, $route)).unwrap();
                 driver.finish(stringify!($name)).unwrap();
             }
         }
+    };
+    ($name:ident, $route:expr, $body:ident $(, $($skips:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, [#[test]] [#[test]] [#[test]]; $($($skips)*)?);
     };
 }
 

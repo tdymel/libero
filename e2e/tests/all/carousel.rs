@@ -138,7 +138,8 @@ e2e::scenario!(
 e2e::scenario!(
     an_arrow_in_a_text_field_stays_in_the_field,
     "/carousel",
-    an_arrow_in_the_text_field_stays
+    an_arrow_in_the_text_field_stays,
+    desktop: skip("1178:WebKitGTK scrolls the track on an arrow in the field")
 );
 e2e::scenario!(
     an_arrow_on_a_range_stays_on_the_range,

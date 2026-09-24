@@ -271,8 +271,8 @@ struct Generation(Signal<u64>);
 #[component]
 fn Shell() -> Element {
     let generation = use_context_provider(|| Generation(Signal::new(0)));
-    #[cfg(target_os = "android")]
-    android_route_hook(generation.0);
+    #[cfg(any(target_os = "android", feature = "desktop"))]
+    route_hook(generation.0);
     // The desktop WebView has no DevTools socket to navigate through.
     #[cfg(feature = "desktop")]
     {
@@ -288,10 +288,10 @@ fn Shell() -> Element {
     rsx! { Outlet::<Route> {} }
 }
 
-/// wry keeps routes in memory, so the e2e Android driver (964) navigates by
-/// `window.__route(path)`, which returns the generation to wait for.
-#[cfg(target_os = "android")]
-fn android_route_hook(mut generation: Signal<u64>) {
+/// wry keeps routes in memory, so the e2e Android (964) and desktop (1126) drivers
+/// navigate by `window.__route(path)`, which returns the generation to wait for.
+#[cfg(any(target_os = "android", feature = "desktop"))]
+fn route_hook(mut generation: Signal<u64>) {
     let navigator = navigator();
     use_future(move || async move {
         let mut hook = document::eval(
@@ -338,10 +338,23 @@ fn desktop_bridge() {
                 }
             }
         });
+        // One long-lived eval: a fresh one per body at times failed with
+        // `EvalError::Finished` right after a navigation (1126).
+        let mut channel = document::eval(
+            "const run = (async () => {}).constructor;
+             while (true) {
+                 const body = await dioxus.recv();
+                 try { dioxus.send({ ok: (await run(body)()) ?? null }); }
+                 catch (e) { dioxus.send({ err: String(e) }); }
+             }",
+        );
         while let Some((line, reply)) = incoming.next().await {
             let answer = match serde_json::from_str::<String>(&line) {
-                Ok(body) => match document::eval(&body).join::<serde_json::Value>().await {
-                    Ok(value) => serde_json::json!({ "ok": value }),
+                Ok(body) => match channel.send(body) {
+                    Ok(()) => match channel.recv::<serde_json::Value>().await {
+                        Ok(answer) => answer,
+                        Err(error) => serde_json::json!({ "err": error.to_string() }),
+                    },
                     Err(error) => serde_json::json!({ "err": error.to_string() }),
                 },
                 Err(error) => serde_json::json!({ "err": error.to_string() }),

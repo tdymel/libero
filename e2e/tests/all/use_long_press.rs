@@ -58,12 +58,14 @@ async fn a_click_is_a_tap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_held_touch_fires_the_callback_once_and_swallows_the_click,
     "/use-long-press/basic",
-    a_held_touch_fires_once
+    a_held_touch_fires_once,
+    desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(
     a_short_touch_still_clicks,
     "/use-long-press/basic",
-    a_short_touch_is_a_tap
+    a_short_touch_is_a_tap,
+    desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(
     a_plain_click_never_counts_as_a_press,

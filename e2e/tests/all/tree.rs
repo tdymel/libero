@@ -45,13 +45,15 @@ e2e::scenario!(
     the_chevron_turns_when_the_branch_expands,
     "/tree/chevron",
     chevron_turns,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     enter_on_a_leaf_clicks_its_link,
     "/tree/activate",
     enter_clicks_the_link,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 
 const STAR: keyboard::Key = keyboard::Key {
@@ -261,7 +263,8 @@ e2e::scenario!(
     a_controlled_tree_follows_its_caller,
     "/tree/controlled",
     controlled,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 
 /// Todos 1135/1136: the guide runs under the branch's chevron on the inline-start
