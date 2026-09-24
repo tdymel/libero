@@ -72,6 +72,9 @@ pub enum IconSlot {
     TextDirectionRtl,
     /// The TL;DR trigger.
     Sparkles,
+    /// A rating's symbol, filled with `currentColor` for the value: a stroked glyph
+    /// turns solid, a solid one only changes colour.
+    Star,
     /// A sortable item's drag handle.
     Grip,
 }

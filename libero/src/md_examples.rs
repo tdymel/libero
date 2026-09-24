@@ -117,6 +117,7 @@ md_pages! {
     QrCode => "qr_code",
     RadioGroup => "radio_group",
     RangeSlider => "range_slider",
+    Rating => "rating",
     RepoButton => "repo_button",
     ScrollArea => "scroll_area",
     Scroller => "scroller",

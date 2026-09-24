@@ -20,6 +20,7 @@ mod phone_field;
 mod pin_field;
 mod radio;
 mod radio_group;
+mod rating;
 mod removable_chip;
 mod segmented_control;
 mod select;
@@ -66,6 +67,7 @@ pub use phone_field::{PhoneField, PhoneFieldProps};
 pub use pin_field::{PinField, PinFieldProps, PinKind};
 pub use radio::{Radio, RadioProps};
 pub use radio_group::{RadioGroup, RadioGroupProps};
+pub use rating::{Rating, RatingProps};
 pub(crate) use removable_chip::{removable_chip, use_chip_announcer};
 pub use segmented_control::{SegmentedControl, SegmentedControlProps};
 pub use select::{

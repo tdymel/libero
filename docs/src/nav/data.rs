@@ -121,6 +121,7 @@ fn aliases(label: &str) -> &'static [&'static str] {
         "SegmentedControl" => &["segmented button", "button group", "toggle group"],
         "Slider" => &["range", "track"],
         "RangeSlider" => &["range", "two thumb", "min max"],
+        "Rating" => &["stars", "star rating", "review score"],
         "ColorField" => &["color input", "colour"],
         "ColorPicker" => &["colour picker", "eyedropper", "swatch"],
         "ChronoField" => &[
@@ -313,6 +314,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::SegmentedControlPage {}, "SegmentedControl"),
                 page(Route::SliderPage {}, "Slider"),
                 page(Route::RangeSliderPage {}, "RangeSlider"),
+                page(Route::RatingPage {}, "Rating"),
                 page(Route::ColorFieldPage {}, "ColorField"),
                 page(Route::ColorPickerPage {}, "ColorPicker"),
                 page(Route::ChronoFieldPage {}, "ChronoField"),

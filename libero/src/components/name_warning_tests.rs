@@ -7,8 +7,8 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup, ScrollArea,
-        SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, use_spotlight,
+        ActionIcon, Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup, Rating,
+        ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     utils::take_warnings,
@@ -144,6 +144,26 @@ fn an_unnamed_slider_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { Slider::<f64> { value: 5.0, aria_label: "Volume" } } },
         "Slider: no `"
+    ));
+}
+
+#[test]
+fn an_unnamed_rating_warns_and_a_fixed_one_says_it_cannot_change() {
+    assert!(warns(
+        || rsx! { LiberoProvider { Rating { value: 3.0, readonly: true } } },
+        "Rating: no `"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Rating { value: 3.0, readonly: true, label: "Stars" } } },
+        "Rating: no `"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Rating { value: 3.0, focusable: false, aria_label: "Average" } } },
+        "Rating:"
+    ));
+    assert!(warns(
+        || rsx! { LiberoProvider { Rating { value: 3.0, aria_label: "Stars" } } },
+        "Rating: without `onchange`"
     ));
 }
 

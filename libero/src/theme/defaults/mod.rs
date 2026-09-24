@@ -65,6 +65,7 @@ mod popover;
 mod progress_bar;
 mod qr_code;
 mod radio;
+mod rating;
 mod repo_button;
 mod ripple;
 mod scroll_area;
@@ -281,6 +282,9 @@ pub use progress_bar::{
 };
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
 pub use radio::{RADIO_CIRCLE, RADIO_CIRCLE_SIZE, RadioDefaults};
+pub use rating::{
+    RATING_GAP, RATING_GAP_SIZE, RATING_GLYPH, RATING_GLYPH_SIZE, RatingDefaults, RatingSizeLevel,
+};
 pub use repo_button::RepoButtonDefaults;
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_CLIP_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
 pub(crate) use scroll_area::{SCROLL_AREA_KEYFRAMES, SCROLL_AREA_RANGE_X, SCROLL_AREA_RANGE_Y};

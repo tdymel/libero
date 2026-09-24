@@ -86,6 +86,7 @@ mod phone_field;
 mod polymorphic_tiers;
 mod progress_bar;
 mod qr_code;
+mod rating;
 mod repo_button;
 mod rsx_wrapping;
 mod scroll_area;

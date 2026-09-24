@@ -75,6 +75,7 @@ fetch only the file you need.
 - [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected, with the field slots.
 - [Slider](slider.md): A value dragged along a track, continuous over `f64` or discrete over an ordered enum that derives `SliderValue`.
 - [RangeSlider](range_slider.md): Two thumbs on one track, for a span instead of a point, over the same values as `Slider`.
+- [Rating](rating.md): A row of stars picking a value, whole or in halves, by click, sideways drag or arrow keys; read-only or display-only.
 - [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
 - [ColorPicker](color_picker.md): A saturation panel and a hue slider, with an optional alpha slider and preset swatches, over one `ColorCode`. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
 - [ChronoField](chrono_field.md): A text field for every date and time value, typed leniently, with the matching `ChronoPicker` in a dropdown.

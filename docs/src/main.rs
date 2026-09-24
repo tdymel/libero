@@ -193,6 +193,8 @@ pub(crate) enum Route {
     RadioGroupPage {},
     #[route("/form/range-slider")]
     RangeSliderPage {},
+    #[route("/form/rating")]
+    RatingPage {},
     #[route("/form/segmented-control")]
     SegmentedControlPage {},
     #[route("/form/select")]

@@ -60,6 +60,7 @@ pub struct Localization {
     pub file_field: FileFieldLabels,
     pub textarea: TextareaLabels,
     pub slider: SliderLabels,
+    pub rating: RatingLabels,
     pub menu: MenuLabels,
 }
 
@@ -101,6 +102,7 @@ impl Localization {
         file_field: FileFieldLabels::ENGLISH,
         textarea: TextareaLabels::ENGLISH,
         slider: SliderLabels::ENGLISH,
+        rating: RatingLabels::ENGLISH,
         menu: MenuLabels::ENGLISH,
     };
 
@@ -141,6 +143,7 @@ impl Localization {
         file_field: FileFieldLabels::GERMAN,
         textarea: TextareaLabels::GERMAN,
         slider: SliderLabels::GERMAN,
+        rating: RatingLabels::GERMAN,
         menu: MenuLabels::GERMAN,
     };
 }
@@ -150,9 +153,10 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 38] {
+    fn templates(words: &Localization) -> [&'static str; 39] {
         [
             words.common.remove,
+            words.rating.value,
             words.cascader.back,
             words.cascader.select,
             words.chips.added,
@@ -219,6 +223,7 @@ mod tests {
             ("s", &40),
             ("v", &60),
             ("value", &90),
+            ("count", &5),
             ("name", &"Germany"),
             ("iso", &"DE"),
             ("dial", &49),

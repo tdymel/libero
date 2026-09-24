@@ -63,6 +63,7 @@ icon_set!(lucide: [outlined => lucide_outlined] {
     TextDirectionLtr => pilcrow_right,
     TextDirectionRtl => pilcrow_left,
     Sparkles => sparkles,
+    Star => star,
     Grip => grip_vertical,
 });
 
@@ -103,6 +104,7 @@ icon_set!(material: [
     TextDirectionLtr => editor_format_textdirection_l_to_r,
     TextDirectionRtl => editor_format_textdirection_r_to_l,
     Sparkles => image_auto_awesome,
+    Star => toggle_star,
     Grip => action_drag_indicator,
 });
 
@@ -137,6 +139,7 @@ icon_set!(tabler: [outlined => tabler_outlined] {
     TextDirectionLtr => text_direction_ltr,
     TextDirectionRtl => text_direction_rtl,
     Sparkles => sparkles,
+    Star => star,
     Grip => grip_vertical,
 });
 
@@ -170,6 +173,7 @@ icon_set!(bootstrap: [outlined => bootstrap_outlined] {
     Play => play,
     Pause => pause,
     Sparkles => stars,
+    Star => star,
     Grip => grip_vertical,
 });
 
@@ -210,6 +214,7 @@ icon_set!(phosphor: [
     Play => play,
     Pause => pause,
     Sparkles => sparkle,
+    Star => star,
     Grip => dots_six_vertical,
 });
 
