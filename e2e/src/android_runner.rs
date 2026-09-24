@@ -318,8 +318,21 @@ fn launch(serial: &str) -> Result<u16> {
     // Gesture navigation takes a swipe from a screen edge as Back and closes the app (992).
     const BUTTONS: &str = "com.android.internal.systemui.navbar.threebutton";
     let overlays = adb(serial, &["shell", "cmd", "overlay", "list"])?;
-    if !overlays.contains(&format!("[x] {BUTTONS}")) {
-        adb(serial, &["shell", "cmd", "overlay", "enable", BUTTONS])?;
+    // Exclusive: beside a still enabled `gestural` the window keeps its 24dp insets under
+    // the 48dp bar, which takes taps on the WebView's bottom 24px (1149).
+    let enabled = |name: &str| overlays.lines().any(|l| l.trim() == format!("[x] {name}"));
+    if !enabled(BUTTONS) || enabled("com.android.internal.systemui.navbar.gestural") {
+        adb(
+            serial,
+            &[
+                "shell",
+                "cmd",
+                "overlay",
+                "enable-exclusive",
+                "--category",
+                BUTTONS,
+            ],
+        )?;
         // System UI swaps the bar asynchronously; a swipe before it lands still goes Back.
         std::thread::sleep(Duration::from_secs(3));
     }
