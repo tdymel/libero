@@ -14,7 +14,7 @@ const AREA: &str = "#page-area";
 fn app() -> Element {
     let mut page = use_signal(|| "A");
     let area = use_scroll_area();
-    use_scroll_reset(page(), area);
+    use_scroll_reset(page(), area, use_element(), use_signal(|| None));
     rsx! {
         Button { id: "to-b", onclick: move |_| page.set("B"), "Page B" }
         div { height: "200px",
@@ -70,7 +70,7 @@ fn a_wheel_over_the_page_scrolls_the_page_and_leaves_the_header() {
 fn titled() -> Element {
     let mut page = use_signal(|| "A");
     let content = use_element();
-    use_heading_focus(page(), content);
+    use_heading_focus(page(), content, use_signal(|| None));
     rsx! {
         Button { id: "to-b", onclick: move |_| page.set("B"), "Page B" }
         div { onmounted: content.mount(),
@@ -96,6 +96,60 @@ fn a_focused_heading_draws_no_ring() {
     assert!(page.is_focused("#title"), "focus on {}", page.focus_owner());
     assert_eq!(page.computed("#title", "outline-style"), "none");
     assert_eq!(page.computed("#title", "box-shadow"), "none");
+}
+
+/// Page B's `#far` section below the fold, landed on as the docs' `SectionLink` does.
+fn sectioned() -> Element {
+    let mut page = use_signal(|| "A");
+    let mut section = use_signal(|| None);
+    let area = use_scroll_area();
+    let content = use_element();
+    use_scroll_reset(page(), area, content, section);
+    use_heading_focus(page(), content, section);
+    rsx! {
+        Button {
+            id: "to-far",
+            onclick: move |_| {
+                section.set(Some("far".to_string()));
+                page.set("B");
+            },
+            "Page B, far section"
+        }
+        div { height: "300px",
+            ScrollArea { id: "page-area", handle: area,
+                div { onmounted: content.mount(),
+                    main {
+                        h1 { tabindex: "-1", "Page {page}" }
+                        div { height: "1500px" }
+                        if page() == "B" {
+                            section { id: "far",
+                                h2 { id: "far-title", tabindex: "-1", "Far" }
+                                div { height: "1500px" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Todo 1170: the section lands near the area's top, focus on its heading.
+#[test]
+fn a_section_link_lands_on_the_section() {
+    let mut page = mount(sectioned);
+    page.click("#to-far");
+    let gap = page.rect("#far").1 - page.rect(AREA).1;
+    assert!(
+        (0.0..=40.0).contains(&gap),
+        "section {gap}px below the top: {}",
+        page.tree()
+    );
+    assert!(
+        page.is_focused("#far-title"),
+        "focus on {}",
+        page.focus_owner()
+    );
 }
 
 #[test]

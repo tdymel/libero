@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Code, Flex, Part, Table, Text, Title, column},
+    components::{Code, Flex, Part, Table, Text, Title, column},
     sx::sx,
 };
 
-use super::DocSection;
+use super::{DocSection, SectionLink};
 use crate::Route;
 
 /// One row of a docs page's Properties table.
@@ -188,7 +188,7 @@ pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
                 " prop, or address it as "
                 Code { source: "[data-slot='…']" }
                 " in your own CSS. The names are stable. "
-                Anchor { to: Route::StylingPage {}, "Style API in Styling" }
+                SectionLink { to: Route::StylingPage {}, section: "style-api", "Style API in Styling" }
                 " explains how parts work."
             }
             for group in groups {

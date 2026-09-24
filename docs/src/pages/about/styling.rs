@@ -428,6 +428,7 @@ pub fn StylingPage() -> Element {
             }
 
             DocSection {
+                id: "style-api",
                 title: "Style API",
                 Text {
                     Code { source: "sx" }

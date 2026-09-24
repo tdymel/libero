@@ -10,24 +10,63 @@ use libero::{
 
 use crate::Routes;
 
-/// Scrolls `area` back to the top whenever `location` changes.
-pub fn use_scroll_reset<T: Clone + PartialEq + 'static>(location: T, area: ScrollAreaHandle) {
+/// Room above a section's heading once it is scrolled to.
+const SECTION_MARGIN: f64 = 16.0;
+
+/// Scrolls `area` back to the top whenever `location` changes, or to the pending section.
+pub fn use_scroll_reset<T: Clone + PartialEq + 'static>(
+    location: T,
+    area: ScrollAreaHandle,
+    content: ElementHandle,
+    section: Signal<Option<String>>,
+) {
     let mut last = use_hook(|| CopyValue::new(location.clone()));
     use_effect(use_reactive!(|location| {
         if *last.peek() != location {
             last.set(location);
-            area.scroll_to(0.0, 0.0);
+            match section.peek().as_deref() {
+                Some(id) => scroll_to_section(area, content, id),
+                None => area.scroll_to(0.0, 0.0),
+            }
         }
     }));
 }
 
-/// Focuses the `main h1` inside `content` whenever `location` changes, never on the first render.
-pub fn use_heading_focus<T: Clone + PartialEq + 'static>(location: T, content: ElementHandle) {
+fn scroll_to_section(area: ScrollAreaHandle, content: ElementHandle, id: &str) {
+    let (Ok(target), Ok(main)) = (
+        content.query_selector(&format!("#{id}")),
+        content.query_selector("main"),
+    ) else {
+        return area.scroll_to(0.0, 0.0);
+    };
+    let (target, main) = (target.client_offset(), main.client_offset());
+    spawn(async move {
+        match (target.await, main.await) {
+            (Ok((_, y)), Ok((_, top))) => area.scroll_to(0.0, y - top - SECTION_MARGIN),
+            _ => area.scroll_to(0.0, 0.0),
+        }
+    });
+}
+
+/// Focuses the `main h1` inside `content` whenever `location` changes, or the pending
+/// section's heading, never on the first render.
+pub fn use_heading_focus<T: Clone + PartialEq + 'static>(
+    location: T,
+    content: ElementHandle,
+    mut section: Signal<Option<String>>,
+) {
     let mut last = use_hook(|| CopyValue::new(location.clone()));
     use_effect(use_reactive!(|location| {
         if *last.peek() != location {
             last.set(location);
-            let _ = content.query_selector("main h1").and_then(|h1| h1.focus());
+            let heading = section.write().take().and_then(|id| {
+                content
+                    .query_selector(&format!("#{id} > :first-child"))
+                    .ok()
+            });
+            let _ = heading
+                .map_or_else(|| content.query_selector("main h1"), Ok)
+                .and_then(|h| h.focus());
         }
     }));
 }
@@ -35,6 +74,7 @@ pub fn use_heading_focus<T: Clone + PartialEq + 'static>(location: T, content: E
 pub const ROUTES: Routes = &[
     ("/docs-shell/heading", || rsx! { HeadingPage {} }),
     ("/docs-shell/scroll", || rsx! { ScrollPage {} }),
+    ("/docs-shell/section", || rsx! { SectionPage {} }),
 ];
 
 /// Two "pages" behind one signal: the hook only needs a value that changes.
@@ -42,7 +82,8 @@ pub const ROUTES: Routes = &[
 fn HeadingPage() -> Element {
     let mut page = use_signal(|| "A");
     let content = use_element();
-    use_heading_focus(page(), content);
+    let section = use_signal(|| None);
+    use_heading_focus(page(), content, section);
     rsx! {
         nav { aria_label: "Pages",
             Button { id: "to-a", onclick: move |_| page.set("A"), "Page A" }
@@ -61,13 +102,51 @@ fn HeadingPage() -> Element {
 fn ScrollPage() -> Element {
     let mut page = use_signal(|| "A");
     let area = use_scroll_area();
-    use_scroll_reset(page(), area);
+    let content = use_element();
+    use_scroll_reset(page(), area, content, use_signal(|| None));
     rsx! {
         Button { id: "to-b", onclick: move |_| page.set("B"), "Page B" }
         div { height: "200px",
             ScrollArea { id: "page-area", handle: area, "aria-label": "Page",
                 h1 { "Page {page}" }
                 div { height: "2000px" }
+            }
+        }
+    }
+}
+
+/// Page B's `#far` section below the fold, landed on as the docs' `SectionLink` does.
+#[component]
+fn SectionPage() -> Element {
+    let mut page = use_signal(|| "A");
+    let mut section = use_signal(|| None);
+    let area = use_scroll_area();
+    let content = use_element();
+    use_scroll_reset(page(), area, content, section);
+    use_heading_focus(page(), content, section);
+    rsx! {
+        Button {
+            id: "to-far",
+            onclick: move |_| {
+                section.set(Some("far".to_string()));
+                page.set("B");
+            },
+            "Page B, far section"
+        }
+        div { height: "300px",
+            ScrollArea { id: "page-area", handle: area, "aria-label": "Page",
+                div { display: "contents", onmounted: content.mount(),
+                    main {
+                        h1 { tabindex: "-1", "Page {page}" }
+                        div { height: "1500px" }
+                        if page() == "B" {
+                            section { id: "far",
+                                h2 { tabindex: "-1", "Far" }
+                                div { height: "1500px" }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

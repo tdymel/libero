@@ -68,3 +68,31 @@ fn a_navigation_starts_the_new_page_at_the_top() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 1170: a section link lands its section near the area's top, focus on its heading.
+#[test]
+fn a_section_navigation_lands_on_the_section() {
+    block_on(async {
+        let fixture = Fixture::open("/docs-shell/section", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#to-far").await.unwrap();
+        page.evaluate("document.querySelector('#to-far').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const far = document.querySelector('#far'); \
+               if (!far || document.activeElement !== far.firstElementChild) return false; \
+               const gap = far.getBoundingClientRect().top \
+                 - document.querySelector('#page-area').getBoundingClientRect().top; \
+               return gap >= 0 && gap <= 40; })()",
+            "the far section at the top, its heading focused",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the section fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

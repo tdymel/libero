@@ -1,7 +1,7 @@
 use crate::Route;
-use crate::components::{DocPage, DocSection};
+use crate::components::{DocPage, DocSection, SectionLink};
 use dioxus::prelude::*;
-use libero::components::{Anchor, Code, CodeBlock, Table, Text, column};
+use libero::components::{Code, CodeBlock, Table, Text, column};
 
 /// A part of the theme, its fields, and what it changes.
 type Part = (&'static str, &'static str, &'static str);
@@ -182,7 +182,7 @@ pub fn ThemingPage() -> Element {
                     "The theme sets props, not a component's inner parts. To restyle a part, pass "
                     Code { source: "parts" }
                     ", see "
-                    Anchor { to: Route::StylingPage {}, "Style API in Styling" }
+                    SectionLink { to: Route::StylingPage {}, section: "style-api", "Style API in Styling" }
                     "."
                 }
             }

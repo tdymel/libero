@@ -13,6 +13,6 @@ pub use demo::{
     not_gradient_variant, or_unset,
 };
 pub use doc_page::{DocPage, SITE, TLDR_PROMPT};
-pub use doc_section::DocSection;
+pub use doc_section::{DocSection, SectionLink};
 pub use pictogram_note::PictogramNote;
 pub use prop_doc::{PartsPanel, PropGroup, PropertyTable, prop, props};
