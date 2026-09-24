@@ -260,7 +260,7 @@ pub fn SliderPage() -> Element {
                         .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Sets `aria-required` on the thumb and marks the label."),
+                        .doc("Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Takes the thumb out of the tab order and dims the slider."),

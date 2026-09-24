@@ -4,7 +4,7 @@
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
 use libero::{
-    components::{Slider, SliderChangeEvent},
+    components::{RangeSlider, Slider, SliderChangeEvent},
     sx::sx,
     theme::Size,
 };
@@ -174,4 +174,33 @@ fn a_drag_over_text_selects_none_of_it() {
         page.release_at(ex, ey);
         assert_eq!(rows(&page), 0, "a drag towards {text} selected it");
     }
+}
+
+fn range() -> Element {
+    rsx! {
+        RangeSlider { label: "Price", value: Some((20.0, 80.0)), sx: sx().width("400px") }
+    }
+}
+
+/// The two thumbs sit in a `group` the label names on the web (todo 1151).
+#[test]
+fn a_range_slider_is_a_group_of_two_sliders_in_the_ax_tree() {
+    let page = mount(range);
+    assert_eq!(
+        page.accessible("[role=group]").0,
+        "Group",
+        "{}",
+        page.tree()
+    );
+    for thumb in ["[aria-label=Minimum]", "[aria-label=Maximum]"] {
+        assert_eq!(page.accessible(thumb).0, "Slider", "{}", page.tree());
+    }
+}
+
+/// Blitz maps `role` only: no `aria-labelledby`, `aria-label` or `aria-value*`.
+#[test]
+#[ignore = "needs Blitz: aria-labelledby is not mapped into the AX tree"]
+fn the_label_names_the_range_slider_group_in_the_ax_tree() {
+    let page = mount(range);
+    assert_eq!(page.accessible("[role=group]").1, "Price");
 }

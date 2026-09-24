@@ -882,6 +882,26 @@ impl Page {
             .unwrap_or_else(|| format!("#{id} (gone)"))
     }
 
+    /// The first match's role and name in Blitz's accessibility tree, the role as
+    /// accesskit's `Debug` name. Blitz names a node only by its own text children.
+    pub fn accessible(&self, selector: &str) -> (String, String) {
+        let id = self.node(selector).as_u64();
+        let tree = self.doc.inner.borrow().build_accessibility_tree();
+        let find = |id: u64| {
+            tree.nodes
+                .iter()
+                .find(|(at, _)| at.0 == id)
+                .map(|(_, node)| node)
+        };
+        let node = find(id).unwrap_or_else(|| panic!("{selector:?} is not in the AX tree"));
+        let name = node
+            .labelled_by()
+            .iter()
+            .filter_map(|by| find(by.0).and_then(|text| text.value()))
+            .collect();
+        (format!("{:?}", node.role()), name)
+    }
+
     /// The element tree, one per line, for a failing assertion's message.
     pub fn tree(&self) -> String {
         let doc = self.doc.inner.borrow();
