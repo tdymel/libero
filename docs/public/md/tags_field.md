@@ -40,6 +40,24 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `TagsFieldPart::Label` | `label` | The label above the control. |
+| `TagsFieldPart::Required` | `required` | The required asterisk, in the label. |
+| `TagsFieldPart::Description` | `description` | The caption between the label and the control. |
+| `TagsFieldPart::Frame` | `frame` | The bordered box around the control. |
+| `TagsFieldPart::Control` | `control` | The element the label names. |
+| `TagsFieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
+| `TagsFieldPart::Tag` | `tag` | One tag's chip, before the draft input. |
+| `TagsFieldPart::Helper` | `helper` | The caption under the control. |
+| `TagsFieldPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

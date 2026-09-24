@@ -5,13 +5,13 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ComboboxState, Glyph, HtmlTag, Input, States, attr, focus_ring_sx,
+            ComboboxState, Glyph, HtmlTag, Input, Part, States, attr, focus_ring_sx,
             has_shortcut_modifier, navigation_chord, ring_overlay,
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, PreparedField, clear_button, field_control_sx,
-            field_props, use_chip_announcer, use_field, use_field_frame, use_refocus_on_close,
-            with_drawn_placeholder,
+            field_parts_enum, field_props, use_chip_announcer, use_field, use_field_frame,
+            use_refocus_on_close, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -36,7 +36,7 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .user_select("none")
         .selector(
-            "& > [data-slot='value']",
+            format!("& > [data-slot='{}']", SelectPart::Value.slot()),
             sx().flex("1 1 auto")
                 .min_width("0")
                 .overflow("hidden")
@@ -80,7 +80,7 @@ static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         // Carries the `aria-activedescendant` id. `min-width: 0` lets a long chip ellipsise.
         .selector(
-            "& > [data-slot='chip']",
+            format!("& > [data-slot='{}']", SelectPart::Chip.slot()),
             sx().display("inline-flex").max_width("100%").min_width("0"),
         )
         // A flex line of its own, or the button hangs off the label's baseline.
@@ -90,7 +90,10 @@ static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
         )
         // The keyboard's chip; the only mark, as the trigger keeps focus. On the drawn chip, for its radius.
         .selector(
-            "& > [data-slot='chip'][data-cursor='true'] > *",
+            format!(
+                "& > [data-slot='{}'][data-cursor='true'] > *",
+                SelectPart::Chip.slot()
+            ),
             focus_ring_sx(),
         )
         .when("disabled", sx().cursor("not-allowed"))
@@ -170,7 +173,19 @@ pub(crate) fn use_picked(picked: Picked) -> Signal<Picked> {
     signal
 }
 
+field_parts_enum! {
+    /// [`Select`](super::Select)'s and [`MultiSelect`](super::MultiSelect)'s
+    /// inner parts, for their `parts` prop: a field's, the value and the chips.
+    pub enum SelectPart framed {
+        /// The picked value or the placeholder, in the trigger.
+        Value = "value" => "& > * > [data-slot='frame'] > [data-slot='control'] > [data-slot='value'], & > * > [data-slot='frame'] > * > [data-slot='control'] > [data-slot='value']",
+        /// A picked value's chip, `MultiSelect` only.
+        Chip = "chip" => "& > * > [data-slot='frame'] > * > [data-slot='chip']",
+    }
+}
+
 field_props! {
+    parts(SelectPart);
     pub(crate) struct SelectCoreProps {
         /// Drawn only while open: an empty list compares equal, so a closed select skips a render.
         rows: Vec<Element>,
@@ -296,6 +311,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -424,7 +440,9 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     // The open search box is the combobox; a role-less trigger may not carry `aria-required`.
     let control = match searching {
-        true => control.attr("id", field.id().to_string()),
+        true => control
+            .attr("data-slot", SelectPart::Control.slot())
+            .attr("id", field.id().to_string()),
         false => field
             .aria(control)
             .attr("aria-labelledby", field.label_id()),
@@ -977,7 +995,7 @@ fn select_value_content(
 
 fn placeholder_value(placeholder: &str) -> Element {
     rsx! {
-        span { "data-slot": "value", "data-placeholder": "true", "{placeholder}" }
+        span { "data-slot": SelectPart::Value.slot(), "data-placeholder": "true", "{placeholder}" }
     }
 }
 
@@ -996,7 +1014,7 @@ fn SelectValue(
                 cursor: None,
                 id_prefix: String::new(),
             });
-            rsx! { span { "data-slot": "value", {drawn} } }
+            rsx! { span { "data-slot": SelectPart::Value.slot(), {drawn} } }
         }
         None => placeholder_value(&placeholder),
     }

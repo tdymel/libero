@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::RatingPart;
 use libero::components::{Code, Rating, Text};
 
 const VALUES: [&str; 21] = [
@@ -61,6 +62,17 @@ pub fn RatingPage() -> Element {
                     .default("false")
                     .doc("Focusable, announced and posted, but neither pointer nor keys change it."),
                 prop("aria_label", "String").doc("Names the rating when it has no `label`."),
+            ])
+            .parts("RatingPart", vec![
+                (RatingPart::Label, "The label above the control."),
+                (RatingPart::Required, "The required asterisk, in the label."),
+                (RatingPart::Description, "The caption between the label and the control."),
+                (RatingPart::Control, "The row of symbols."),
+                (RatingPart::Symbol, "One symbol with its hit area."),
+                (RatingPart::Glyph, "A symbol's empty glyph, under its fill."),
+                (RatingPart::Fill, "A symbol's filled share, in the rating's colour."),
+                (RatingPart::Helper, "The caption under the control."),
+                (RatingPart::Status, "The validation message."),
             ])],
             accessibility: a11y()
                 .key(["ArrowRight", "ArrowUp"], "One step up: a half with `fractions: 2`. Right to left, ArrowLeft goes up instead.")

@@ -30,6 +30,7 @@ mod docs_shell;
 mod drawer;
 mod elevation;
 mod field_frame;
+mod field_parts;
 mod field_value;
 mod file_field;
 mod floating_window;

@@ -5,7 +5,7 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{Glyph, HtmlTag, Input, navigation_chord},
+        common::{Glyph, HtmlTag, Input, Part, navigation_chord},
         feedback::Loader,
         form::{SelectionArgs, removable_chip},
         layout::BoxStyle,
@@ -18,6 +18,7 @@ use crate::{
     theme::{FileFieldVariant, Size},
 };
 
+use super::file_field::FileFieldPart;
 use super::files::{Files, format_size};
 
 /// What the next render owes the keyboard, once the control focus was on has
@@ -129,7 +130,12 @@ impl FileRows {
         };
         match self.cards {
             true => rsx! {
-                li { key: "{index}", class: self.card_class.clone(), {content} }
+                li {
+                    key: "{index}",
+                    class: self.card_class.clone(),
+                    "data-slot": FileFieldPart::Card.slot(),
+                    {content}
+                }
             },
             false => {
                 let keys = self.keys.clone();
@@ -146,7 +152,7 @@ impl FileRows {
                     li {
                         key: "{index}",
                         class: self.chip_class.clone(),
-                        "data-slot": "chip",
+                        "data-slot": FileFieldPart::Chip.slot(),
                         id,
                         tabindex: stop,
                         // Keeps a press on an x (a caller's too) from taking

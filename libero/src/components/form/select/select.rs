@@ -11,7 +11,7 @@ use crate::{
     utils::warn,
 };
 
-use super::core::{Picked, SelectCore, SelectionDraw, SelectionRenderArgs, use_picked};
+use super::core::{Picked, SelectCore, SelectPart, SelectionDraw, SelectionRenderArgs, use_picked};
 
 /// One row's content, handed to `option`. The row itself (highlight, `aria-selected`, click) is the component's.
 #[derive(Clone, PartialEq)]
@@ -42,6 +42,7 @@ pub struct SelectFilterArgs<T> {
 }
 
 field_props! {
+    parts(SelectPart);
     pub struct SelectProps<T: Options> {
         /// Strictly controlled: pair it with `onchange`. `None` shows `placeholder`.
         #[props(default)]
@@ -221,6 +222,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             required: props.required,
             class: props.class,
             sx: props.sx,
+            parts: props.parts,
             states: props.states,
             attributes: props.attributes,
         }

@@ -65,6 +65,38 @@ RadioGroup {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+`RadioGroup`:
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `RadioGroupPart::Label` | `label` | The label above the control. |
+| `RadioGroupPart::Required` | `required` | The required asterisk, in the label. |
+| `RadioGroupPart::Description` | `description` | The caption between the label and the control. |
+| `RadioGroupPart::Control` | `control` | The `radiogroup` holding the options. |
+| `RadioGroupPart::Circle` | `circle` | Each option's ring. |
+| `RadioGroupPart::Dot` | `dot` | Each option's checked mark. |
+| `RadioGroupPart::Helper` | `helper` | The caption under the control. |
+| `RadioGroupPart::Status` | `status` | The validation message. |
+
+`Radio`:
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `RadioPart::Label` | `label` | The label beside the control. |
+| `RadioPart::Required` | `required` | The required asterisk, in the label. |
+| `RadioPart::Description` | `description` | The caption between the label and the control. |
+| `RadioPart::Control` | `control` | Holds the hidden input and the circle, beside the label. |
+| `RadioPart::Circle` | `circle` | The drawn ring. |
+| `RadioPart::Dot` | `dot` | The checked mark. |
+| `RadioPart::Helper` | `helper` | The caption under the control. |
+| `RadioPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

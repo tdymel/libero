@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
+use libero::components::SliderPart;
 use libero::{
     components::{
         Code, FieldStatus, Flex, RangeSlider, SliderChangeEvent, SliderMark, SliderValue, Text,
@@ -270,6 +271,19 @@ pub fn RangeSliderPage() -> Element {
                     prop("readonly", "bool")
                         .default("false")
                         .doc("Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead."),
+                ])
+                .parts("SliderPart", vec![
+                    (SliderPart::Label, "The label above the control."),
+                    (SliderPart::Required, "The required asterisk, in the label."),
+                    (SliderPart::Description, "The caption between the label and the control."),
+                    (SliderPart::Control, "The slider under the label: the track and the room around it."),
+                    (SliderPart::Track, "The rail the thumbs run along."),
+                    (SliderPart::Bar, "The filled stretch of the track."),
+                    (SliderPart::Mark, "One tick on the track."),
+                    (SliderPart::MarkLabel, "A tick's caption."),
+                    (SliderPart::Thumb, "The handle; a range has two."),
+                    (SliderPart::Helper, "The caption under the control."),
+                    (SliderPart::Status, "The validation message."),
                 ]),
                 props("SliderMark", vec![
                     prop("value", "V").doc("Where the tick sits on the track."),

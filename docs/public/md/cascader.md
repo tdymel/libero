@@ -64,6 +64,24 @@ Values must be unique across the whole tree, not just among siblings. The
 cascader finds its value by searching the tree with `==`, and a value no option
 holds selects nothing and warns. The hidden input posts `Options::value()`.
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `CascaderPart::Label` | `label` | The label above the control. |
+| `CascaderPart::Required` | `required` | The required asterisk, in the label. |
+| `CascaderPart::Description` | `description` | The caption between the label and the control. |
+| `CascaderPart::Frame` | `frame` | The bordered box around the control. |
+| `CascaderPart::Control` | `control` | The element the label names. |
+| `CascaderPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
+| `CascaderPart::Value` | `value` | The joined path or the placeholder, in the trigger. |
+| `CascaderPart::Helper` | `helper` | The caption under the control. |
+| `CascaderPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

@@ -5,7 +5,7 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{Glyph, HtmlTag, attr},
+        common::{Glyph, HtmlTag, Part, attr},
         form::{ComboboxState, field_control_sx},
         layout::BoxStyle,
     },
@@ -15,7 +15,7 @@ use crate::{
     sx::{StaticSx, sx},
 };
 
-use super::keys::CascaderKeys;
+use super::{core::CascaderPart, keys::CascaderKeys};
 
 /// The chevron sits inside the control, not the frame's trailing slot, so clicking it opens the list.
 pub(super) static CASCADER_TRIGGER_SX: StaticSx = StaticSx::new(|| {
@@ -28,7 +28,7 @@ pub(super) static CASCADER_TRIGGER_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .user_select("none")
         .selector(
-            "& > [data-slot='value']",
+            format!("& > [data-slot='{}']", CascaderPart::Value.slot()),
             sx().flex("1 1 auto")
                 .min_width("0")
                 .overflow("hidden")
@@ -75,12 +75,12 @@ fn trigger_aria(
 fn value_slot(display: &str, placeholder: Option<&str>) -> Element {
     match display.is_empty() {
         false => rsx! {
-            span { "data-slot": "value", "{display}" }
+            span { "data-slot": CascaderPart::Value.slot(), "{display}" }
         },
         true => {
             let placeholder = placeholder.unwrap_or_default();
             rsx! {
-                span { "data-slot": "value", "data-placeholder": "true", "{placeholder}" }
+                span { "data-slot": CascaderPart::Value.slot(), "data-placeholder": "true", "{placeholder}" }
             }
         }
     }

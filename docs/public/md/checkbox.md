@@ -56,6 +56,22 @@ Checkbox {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `CheckboxPart::Label` | `label` | The label beside the control. |
+| `CheckboxPart::Required` | `required` | The required asterisk, in the label. |
+| `CheckboxPart::Description` | `description` | The caption between the label and the control. |
+| `CheckboxPart::Control` | `control` | Holds the hidden input and the box, beside the label. |
+| `CheckboxPart::Box` | `box` | The drawn square and its mark. |
+| `CheckboxPart::Helper` | `helper` | The caption under the control. |
+| `CheckboxPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

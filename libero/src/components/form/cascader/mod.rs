@@ -12,5 +12,5 @@ mod tests;
 mod trigger;
 
 pub use cascader::{Cascader, CascaderFilterArgs, CascaderNodeArgs, CascaderProps};
-pub use core::CascaderLayout;
+pub use core::{CascaderLayout, CascaderPart};
 pub use option::CascaderOption;

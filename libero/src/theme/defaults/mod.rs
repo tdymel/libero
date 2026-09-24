@@ -182,6 +182,7 @@ pub use dialog::{DIALOG_SIZE, DialogDefaults};
 pub use direction_toggle::DirectionToggleDefaults;
 pub use divider::{DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefaults};
 pub use drawer::{DRAWER_SIZE, DrawerDefaults};
+pub(crate) use field::FIELD_CAPTIONS;
 pub use field::{
     ChoiceVariant, FIELD_CAPTION_FONT_SIZE, FIELD_CARD_PADDING, FIELD_FONT_SIZE, FIELD_FRAME_GAP,
     FIELD_GAP, FIELD_HEIGHT, FIELD_LABEL_FONT_SIZE, FIELD_PADDING_X, FIELD_PADDING_Y,

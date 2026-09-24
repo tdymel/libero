@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::FileFieldPart;
 use libero::components::{Code, FieldStatus, FileField, Files, Flex, Text};
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
@@ -74,6 +75,19 @@ pub fn FileFieldPage() -> Element {
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables picking and dropping, and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ])
+                .parts("FileFieldPart", vec![
+                    (FileFieldPart::Label, "The label above the control."),
+                    (FileFieldPart::Required, "The required asterisk, in the label."),
+                    (FileFieldPart::Description, "The caption between the label and the control."),
+                    (FileFieldPart::Frame, "The `Input` variant's bordered box."),
+                    (FileFieldPart::Control, "The group holding the Browse button: inside the frame, or the dropzone's surface."),
+                    (FileFieldPart::Browse, "The Browse button."),
+                    (FileFieldPart::Chip, "One picked file's chip, `Input` variant."),
+                    (FileFieldPart::Trailing, "The loader and the clear button, `Input` variant."),
+                    (FileFieldPart::Card, "One picked file's card under the surface, `Dropzone` variant."),
+                    (FileFieldPart::Helper, "The caption under the control."),
+                    (FileFieldPart::Status, "The validation message."),
                 ]),
                 props("SelectionArgs", vec![
                     prop("value", "FileData").doc("The file this call draws."),

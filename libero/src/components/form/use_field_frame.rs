@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, focus_ring_sx, ring_overlay, ring_overlay_sx},
+        common::{HtmlTag, Input, Part, States, focus_ring_sx, ring_overlay, ring_overlay_sx},
+        form::FieldPart,
         layout::{BoxStyle, use_box},
     },
     platform::{
@@ -53,8 +54,9 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                 .cursor("not-allowed")
                 .background("muted.1"),
         )
+        // `:where`: the specificity of a bare `[data-slot]`.
         .selector(
-            "& > [data-slot]",
+            "& > [data-slot]:where(:not([data-slot='control']))",
             sx().display("flex")
                 .align_items("center")
                 .flex("0 0 auto")
@@ -242,6 +244,7 @@ impl<'a> FieldFrameBuilder<'a> {
         let mut frame = frame
             .prepare()
             .attr("data-frame", true)
+            .attr("data-slot", FieldPart::Frame.slot())
             .event("onmousedown", {
                 let pending = pending.clone();
                 move |event: MouseEvent| {
@@ -289,7 +292,7 @@ impl<'a> FieldFrameBuilder<'a> {
             frame,
             leading: self
                 .leading
-                .map(|leading| slot("leading", leading_id, leading)),
+                .map(|leading| slot(FieldPart::Leading.slot(), leading_id, leading)),
             placeholder: self
                 .placeholder
                 .filter(|_| !draws_placeholders())
@@ -297,7 +300,7 @@ impl<'a> FieldFrameBuilder<'a> {
             multiline: self.multiline,
             trailing: self
                 .trailing
-                .map(|trailing| slot("trailing", trailing_id, trailing)),
+                .map(|trailing| slot(FieldPart::Trailing.slot(), trailing_id, trailing)),
         }
     }
 }

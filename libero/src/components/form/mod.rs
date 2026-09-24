@@ -38,10 +38,11 @@ pub use autocomplete::{
 };
 pub use caption::Caption;
 pub use cascader::{
-    Cascader, CascaderFilterArgs, CascaderLayout, CascaderNodeArgs, CascaderOption, CascaderProps,
+    Cascader, CascaderFilterArgs, CascaderLayout, CascaderNodeArgs, CascaderOption, CascaderPart,
+    CascaderProps,
 };
-pub use checkbox::{Checkbox, CheckboxProps};
-pub use chip::{Chip, ChipProps};
+pub use checkbox::{Checkbox, CheckboxPart, CheckboxProps};
+pub use chip::{Chip, ChipPart, ChipProps};
 pub(crate) use clear::{clear_button, use_refocus_on_close};
 pub use color::{
     AlphaSlider, AlphaSliderProps, ColorCode, ColorField, ColorFieldProps, ColorFormat,
@@ -54,34 +55,35 @@ pub use combobox::{
     ComboboxState, use_combobox,
 };
 pub use date::*;
-pub(crate) use field_props::field_props;
+pub use field_props::FieldPart;
+pub(crate) use field_props::{field_parts_enum, field_props};
 pub use field_status::FieldStatus;
-pub use fieldset::{Fieldset, FieldsetProps};
-pub use file_field::{FileField, FileFieldProps, Files};
+pub use fieldset::{Fieldset, FieldsetPart, FieldsetProps};
+pub use file_field::{FileField, FileFieldPart, FileFieldProps, Files};
 pub use form::{Form, FormProps, FormValue};
 pub use handle::{FormHandle, use_form, use_form_context};
 pub use native_select::{NativeSelect, NativeSelectProps};
 pub use number_field::{NumberField, NumberFieldProps};
 pub use password_field::{PasswordField, PasswordFieldProps};
-pub use phone_field::{PhoneField, PhoneFieldProps};
+pub use phone_field::{PhoneField, PhoneFieldPart, PhoneFieldProps};
 pub use pin_field::{PinField, PinFieldProps, PinKind};
-pub use radio::{Radio, RadioProps};
-pub use radio_group::{RadioGroup, RadioGroupProps};
-pub use rating::{Rating, RatingProps};
+pub use radio::{Radio, RadioPart, RadioProps};
+pub use radio_group::{RadioGroup, RadioGroupPart, RadioGroupProps};
+pub use rating::{Rating, RatingPart, RatingProps};
 pub(crate) use removable_chip::{removable_chip, use_chip_announcer};
-pub use segmented_control::{SegmentedControl, SegmentedControlProps};
+pub use segmented_control::{SegmentedControl, SegmentedControlPart, SegmentedControlProps};
 pub use select::{
-    MultiSelect, MultiSelectProps, Select, SelectFilterArgs, SelectOptionArgs, SelectProps,
-    SelectionArgs,
+    MultiSelect, MultiSelectProps, Select, SelectFilterArgs, SelectOptionArgs, SelectPart,
+    SelectProps, SelectionArgs,
 };
 pub use slider::{
-    RangeSlider, RangeSliderProps, Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep,
-    SliderValue,
+    RangeSlider, RangeSliderProps, Slider, SliderChangeEvent, SliderMark, SliderPart, SliderProps,
+    SliderStep, SliderValue,
 };
-pub use switch::{Switch, SwitchProps};
-pub use tags_field::{TagsField, TagsFieldProps};
+pub use switch::{Switch, SwitchPart, SwitchProps};
+pub use tags_field::{TagsField, TagsFieldPart, TagsFieldProps};
 pub use text_field::{TextField, TextFieldProps};
-pub use textarea::{Textarea, TextareaProps};
+pub use textarea::{Textarea, TextareaPart, TextareaProps};
 pub(crate) use use_field::{Activation, PreparedField, Setter, use_bound, use_field};
 pub(crate) use use_field_frame::{
     FIELD_CONTROL_SX, LiveControl, LiveSlot, PreparedFrame, SLOT_BUTTON_SX, field_control_sx,

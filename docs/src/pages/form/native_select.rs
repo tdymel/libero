@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::FieldPart;
 use libero::components::{Code, FieldStatus, NativeSelect, OptionList, Options, Text};
 
 /// The enum is the option list, so the snippet has to show it.
@@ -73,6 +74,16 @@ pub fn NativeSelectPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables and dims the field. A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that."),
+                ])
+                .parts("FieldPart", vec![
+                    (FieldPart::Label, "The label above the control."),
+                    (FieldPart::Required, "The required asterisk, in the label."),
+                    (FieldPart::Description, "The caption between the label and the control."),
+                    (FieldPart::Frame, "The bordered box around the control."),
+                    (FieldPart::Control, "The element the label names."),
+                    (FieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
+                    (FieldPart::Helper, "The caption under the control."),
+                    (FieldPart::Status, "The validation message."),
                 ]),
             ],
             accessibility: a11y()

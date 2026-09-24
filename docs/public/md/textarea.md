@@ -34,6 +34,24 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `TextareaPart::Label` | `label` | The label above the control. |
+| `TextareaPart::Required` | `required` | The required asterisk, in the label. |
+| `TextareaPart::Description` | `description` | The caption between the label and the control. |
+| `TextareaPart::Frame` | `frame` | The bordered box around the control. |
+| `TextareaPart::Control` | `control` | The element the label names. |
+| `TextareaPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
+| `TextareaPart::Counter` | `counter` | The `12/200` badge in the frame's corner, with `counter`. |
+| `TextareaPart::Helper` | `helper` | The caption under the control. |
+| `TextareaPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Libero handles

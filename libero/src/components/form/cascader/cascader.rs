@@ -13,7 +13,8 @@ use crate::{
 
 use super::{
     core::{
-        CascaderCore, CascaderLayout, CascaderMatch, CascaderRender, CascaderRowArgs, CascaderTree,
+        CascaderCore, CascaderLayout, CascaderMatch, CascaderPart, CascaderRender, CascaderRowArgs,
+        CascaderTree,
     },
     option::{CascaderOption, erase, indices_for_value, options_at},
 };
@@ -45,6 +46,7 @@ pub struct CascaderFilterArgs<T> {
 }
 
 field_props! {
+    parts(CascaderPart);
     pub struct CascaderProps<T: Options> {
         /// The tree. Values must be unique across the whole tree, not just among siblings.
         data: Vec<CascaderOption<T>>,
@@ -251,6 +253,7 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
             required: props.required,
             class: props.class,
             sx: props.sx,
+            parts: props.parts,
             states: props.states,
             attributes: props.attributes,
         }

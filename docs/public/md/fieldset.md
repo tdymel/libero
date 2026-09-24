@@ -74,6 +74,19 @@ Form {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FieldsetPart::Legend` | `legend` | The `<legend>`, from `label`. |
+| `FieldsetPart::Description` | `description` | The caption under the legend. |
+| `FieldsetPart::Helper` | `helper` | The caption under the fields. |
+| `FieldsetPart::Status` | `status` | The group's status, under the fields. |
+
 ## Accessibility
 
 ### Libero handles

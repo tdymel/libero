@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::PhoneFieldPart;
 use libero::{
     components::{Code, FieldStatus, Flex, PhoneField, Text},
     sx::sx,
@@ -80,6 +81,19 @@ pub fn PhoneFieldPage() -> Element {
                     prop("readonly", "bool")
                         .default("false")
                         .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. The country button stays focusable and opens nothing."),
+                ])
+                .parts("PhoneFieldPart", vec![
+                    (PhoneFieldPart::Label, "The label above the control."),
+                    (PhoneFieldPart::Required, "The required asterisk, in the label."),
+                    (PhoneFieldPart::Description, "The caption between the label and the control."),
+                    (PhoneFieldPart::Frame, "The bordered box around the control."),
+                    (PhoneFieldPart::Leading, "The slot before the control: an icon, a prefix."),
+                    (PhoneFieldPart::Control, "The element the label names."),
+                    (PhoneFieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
+                    (PhoneFieldPart::Country, "The country button in the leading slot, with `country_select`."),
+                    (PhoneFieldPart::Dial, "The dial code: in the country button, or alone without `country_select`."),
+                    (PhoneFieldPart::Helper, "The caption under the control."),
+                    (PhoneFieldPart::Status, "The validation message."),
                 ]).extends("input"),
             ],
             accessibility: a11y()

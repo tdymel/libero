@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::SelectPart;
 use libero::{
     components::{
         ActionIcon, Chip, FieldStatus, MultiSelect, OptionItem, OptionList, Options,
@@ -299,6 +300,18 @@ pub fn MultiSelectPage() -> Element {
                     prop("required", "bool").default("false").doc("Sets `aria-required` and marks the label."),
                     prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead."),
+                ])
+                .parts("SelectPart", vec![
+                    (SelectPart::Label, "The label above the control."),
+                    (SelectPart::Required, "The required asterisk, in the label."),
+                    (SelectPart::Description, "The caption between the label and the control."),
+                    (SelectPart::Frame, "The bordered box around the control."),
+                    (SelectPart::Control, "The element the label names."),
+                    (SelectPart::Trailing, "The slot after the control: a chevron, a toggle."),
+                    (SelectPart::Value, "The placeholder, in the trigger, while nothing is picked."),
+                    (SelectPart::Chip, "A picked value's chip."),
+                    (SelectPart::Helper, "The caption under the control."),
+                    (SelectPart::Status, "The validation message."),
                 ]),
             ],
             accessibility: a11y()

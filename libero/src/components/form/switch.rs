@@ -5,10 +5,10 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            HtmlTag, Input, States, base_color, contrast_color, fill_color, focus_ring_sx,
+            HtmlTag, Input, Part, States, base_color, contrast_color, fill_color, focus_ring_sx,
             names_itself, ring_overlay, ring_overlay_sx, use_name_warning, variables,
         },
-        form::{field_props, use_bound, use_field, use_form_context},
+        form::{field_parts_enum, field_props, use_bound, use_field, use_form_context},
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_element, use_form_owner, use_theme},
@@ -117,7 +117,21 @@ fn switch_variables(checked: bool, base: &ThemeAwareValue) -> String {
         .render()
 }
 
+field_parts_enum! {
+    /// [`Switch`]'s inner parts, for its `parts` prop: a field's, the control,
+    /// its track and thumb.
+    pub enum SwitchPart {
+        /// Holds the hidden input and the track, beside the label.
+        Control = "control" => "& > [data-slot='control']",
+        /// The pill the thumb slides along.
+        Track = "track" => "& > [data-slot='control'] > [data-slot='track']",
+        /// The sliding knob.
+        Thumb = "thumb" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='thumb']",
+    }
+}
+
 field_props! {
+    parts(SwitchPart);
     extends(input);
     pub struct SwitchProps {
         /// The track colour when checked.
@@ -223,6 +237,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -275,6 +290,7 @@ pub fn Switch(props: SwitchProps) -> Element {
     let track = rsx! {
         span {
             class: track_class,
+            "data-slot": SwitchPart::Track.slot(),
             "aria-hidden": "true",
             // A card takes the click itself. Focuses the input as a native
             // click would, so its blur shows the rules.
@@ -286,13 +302,17 @@ pub fn Switch(props: SwitchProps) -> Element {
                     }
                 }
             },
-            span { class: thumb_class }
+            span { class: thumb_class, "data-slot": SwitchPart::Thumb.slot() }
         }
     };
 
-    field.render(control.render(
-        HtmlTag::Span,
-        Vec::new(),
-        vec![input, track, ring_overlay()],
-    ))
+    field.render(
+        control
+            .attr("data-slot", SwitchPart::Control.slot())
+            .render(
+                HtmlTag::Span,
+                Vec::new(),
+                vec![input, track, ring_overlay()],
+            ),
+    )
 }

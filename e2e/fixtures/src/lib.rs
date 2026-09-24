@@ -35,6 +35,7 @@ pub mod docs_shell;
 mod drawer;
 mod elevation;
 mod field_frame;
+mod field_parts;
 mod field_value;
 mod file_field;
 mod floating_window;
@@ -153,6 +154,7 @@ const FIXTURES: &[Routes] = &[
     elevation::ROUTES,
     gradient::ROUTES,
     field_frame::ROUTES,
+    field_parts::ROUTES,
     field_value::ROUTES,
     file_field::ROUTES,
     floating_window::ROUTES,

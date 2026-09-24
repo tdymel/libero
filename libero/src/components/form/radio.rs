@@ -5,10 +5,10 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            HtmlTag, Input, States, base_color, fill_color, focus_ring_sx, names_itself,
+            HtmlTag, Input, Part, States, base_color, fill_color, focus_ring_sx, names_itself,
             ring_overlay, ring_overlay_sx, use_name_warning, variables,
         },
-        form::{field_props, use_field},
+        form::{field_parts_enum, field_props, use_field},
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_element, use_theme},
@@ -85,7 +85,21 @@ fn radio_variables(checked: bool, base: &ThemeAwareValue) -> String {
         .render()
 }
 
+field_parts_enum! {
+    /// [`Radio`]'s inner parts, for its `parts` prop: a field's, the control,
+    /// its circle and dot.
+    pub enum RadioPart {
+        /// Holds the hidden input and the circle, beside the label.
+        Control = "control" => "& > [data-slot='control']",
+        /// The drawn ring.
+        Circle = "circle" => "& > [data-slot='control'] > [data-slot='circle']",
+        /// The checked mark, scaled to nothing while unchecked.
+        Dot = "dot" => "& > [data-slot='control'] > [data-slot='circle'] > [data-slot='dot']",
+    }
+}
+
 field_props! {
+    parts(RadioPart);
     extends(input);
     without(radius);
     pub struct RadioProps {
@@ -177,6 +191,7 @@ pub fn Radio(props: RadioProps) -> Element {
         .size(size)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -227,6 +242,7 @@ pub fn Radio(props: RadioProps) -> Element {
     let circle = rsx! {
         span {
             class: circle_class,
+            "data-slot": RadioPart::Circle.slot(),
             "aria-hidden": "true",
             // Focuses the input as a native click would.
             onclick: move |_| {
@@ -237,11 +253,11 @@ pub fn Radio(props: RadioProps) -> Element {
                     }
                 }
             },
-            span { class: dot_class }
+            span { class: dot_class, "data-slot": RadioPart::Dot.slot() }
         }
     };
 
-    field.render(control.render(
+    field.render(control.attr("data-slot", RadioPart::Control.slot()).render(
         HtmlTag::Span,
         Vec::new(),
         vec![input, circle, ring_overlay()],

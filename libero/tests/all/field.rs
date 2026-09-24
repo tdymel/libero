@@ -55,6 +55,13 @@ fn every_slot_renders_and_the_control_names_all_three_descriptions() {
     assert!(body.contains(r#"aria-hidden="true""#));
 }
 
+/// A caption or frame slot was drawn. The label, frame and control always carry one.
+fn fills_a_slot(body: &str) -> bool {
+    ["description", "helper", "status", "leading", "trailing"]
+        .iter()
+        .any(|slot| body.contains(&format!(r#"data-slot="{slot}""#)))
+}
+
 #[test]
 fn a_bare_field_carries_no_description_and_no_invalid_state() {
     fn app() -> Element {
@@ -71,7 +78,7 @@ fn a_bare_field_carries_no_description_and_no_invalid_state() {
     assert!(!input.contains_key("aria-describedby"), "{input:?}");
     assert!(!input.contains_key("aria-invalid"), "{input:?}");
     assert!(!input.contains_key("aria-required"), "{input:?}");
-    assert!(!body.contains("data-slot"), "{body}");
+    assert!(!fills_a_slot(&body), "{body}");
 }
 
 #[test]
@@ -323,7 +330,7 @@ fn a_field_with_no_slots_renders_an_empty_frame() {
 
     // The frame is always there - it carries the border every field shares -
     // but it costs no node for a slot nothing filled.
-    assert!(!body.contains("data-slot"), "{body}");
+    assert!(!fills_a_slot(&body), "{body}");
     // The control is inside the frame, not a sibling of the label.
     assert!(body.contains("</label><div"), "{body}");
 }
@@ -676,7 +683,7 @@ fn a_number_field_has_no_steppers_until_asked() {
     let body = body(&render(app));
 
     assert!(!body.contains("<button"), "{body}");
-    assert!(!body.contains("data-slot"), "{body}");
+    assert!(!fills_a_slot(&body), "{body}");
     // The keys still step it - that is what `role="spinbutton"` promises.
     assert_eq!(attributes_of(&body, "input")["role"], "spinbutton");
 }
@@ -697,7 +704,7 @@ fn a_password_field_can_drop_its_reveal_button() {
     let body = body(&render(app));
 
     assert!(!body.contains("<button"), "{body}");
-    assert!(!body.contains("data-slot"), "{body}");
+    assert!(!fills_a_slot(&body), "{body}");
     assert_eq!(attributes_of(&body, "input")["type"], "password");
 }
 

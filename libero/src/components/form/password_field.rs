@@ -102,6 +102,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
             placeholder: props.placeholder,
             class: props.class,
             sx: props.sx,
+            parts: props.parts,
             states: props.states,
             attributes: props.attributes,
             trailing: reveal_button.then(|| rsx! {

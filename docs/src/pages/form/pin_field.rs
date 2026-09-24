@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::FieldPart;
 use libero::components::{Code, FieldStatus, Flex, PinField, Text};
 
 #[component]
@@ -40,6 +41,15 @@ pub fn PinFieldPage() -> Element {
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables and dims every cell."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ])
+                .parts("FieldPart", vec![
+                    (FieldPart::Label, "The label above the control."),
+                    (FieldPart::Required, "The required asterisk, in the label."),
+                    (FieldPart::Description, "The caption between the label and the control."),
+                    (FieldPart::Frame, "Each cell's box."),
+                    (FieldPart::Control, "Each cell's input."),
+                    (FieldPart::Helper, "The caption under the control."),
+                    (FieldPart::Status, "The validation message."),
                 ]),
             ],
             accessibility: a11y()

@@ -5,11 +5,11 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::use_announcer,
-        common::{ComboboxState, HtmlTag, Input, ring_overlay, use_combobox},
+        common::{ComboboxState, HtmlTag, Input, Part, ring_overlay, use_combobox},
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, SelectionArgs, clear_button, field_control_sx,
-            field_props, removable_chip, row_label, use_bound, use_chip_announcer, use_field,
-            use_field_frame,
+            field_parts_enum, field_props, removable_chip, row_label, use_bound,
+            use_chip_announcer, use_field, use_field_frame,
         },
         layout::{BoxStyle, use_box},
     },
@@ -34,7 +34,7 @@ static TAGS_VALUE_SX: StaticSx = StaticSx::new(|| {
         // `min-width: 0`, or a long tag's chip is floored at its whole label
         // before the chip's own ellipsis can apply.
         .selector(
-            "& > [data-slot='tag']",
+            format!("& > [data-slot='{}']", TagsFieldPart::Tag.slot()),
             sx().display("inline-flex").max_width("100%").min_width("0"),
         )
         // A flex line of its own, or the x hangs off the label's baseline.
@@ -48,7 +48,16 @@ static TAGS_VALUE_SX: StaticSx = StaticSx::new(|| {
 /// line instead of being squeezed beside the chips.
 static TAGS_INPUT_SX: StaticSx = StaticSx::new(|| field_control_sx().flex("1 1 60px"));
 
+field_parts_enum! {
+    /// [`TagsField`]'s inner parts, for its `parts` prop: a field's, and the tags.
+    pub enum TagsFieldPart framed {
+        /// One tag's chip, before the draft input.
+        Tag = "tag" => "& > [data-slot='frame'] > * > [data-slot='tag'], & > * > [data-slot='frame'] > * > [data-slot='tag']",
+    }
+}
+
 field_props! {
+    parts(TagsFieldPart);
     extends(input);
     pub struct TagsFieldProps {
         /// The tags, in order. Strictly controlled - pair it with `onchange`.
@@ -171,6 +180,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -539,7 +549,7 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
         for (index , (chip , remove)) in chips.enumerate() {
             span {
                 key: "{index}",
-                "data-slot": "tag",
+                "data-slot": TagsFieldPart::Tag.slot(),
                 "data-tag-index": "{index}",
                 // The default chip's guard, so a caller's `tag` has it too: a
                 // press on its x must not strand the focus on the body.

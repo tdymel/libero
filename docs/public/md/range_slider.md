@@ -123,6 +123,26 @@ fn Demo() -> Element {
 form.getAll("price") // ["20", "80"]
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `SliderPart::Label` | `label` | The label above the control. |
+| `SliderPart::Required` | `required` | The required asterisk, in the label. |
+| `SliderPart::Description` | `description` | The caption between the label and the control. |
+| `SliderPart::Control` | `control` | The slider under the label: the track and the room around it. |
+| `SliderPart::Track` | `track` | The rail the thumbs run along. |
+| `SliderPart::Bar` | `bar` | The filled stretch of the track. |
+| `SliderPart::Mark` | `mark` | One tick on the track. |
+| `SliderPart::MarkLabel` | `mark-label` | A tick's caption. |
+| `SliderPart::Thumb` | `thumb` | The handle; a range has two. |
+| `SliderPart::Helper` | `helper` | The caption under the control. |
+| `SliderPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

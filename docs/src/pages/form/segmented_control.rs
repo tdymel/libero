@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, or_unset, prop, props};
 use libero::components::Pictogram;
+use libero::components::SegmentedControlPart;
 use pictogram_icons_lucide as lucide;
 
 use dioxus::prelude::*;
@@ -161,6 +162,15 @@ pub fn SegmentedControlPage() -> Element {
                     prop("readonly", "bool")
                         .default("false")
                         .doc("Focusable and posted with the form, but not editable. `disabled` drops the control from the tab order and the post instead."),
+                ])
+                .parts("SegmentedControlPart", vec![
+                    (SegmentedControlPart::Label, "The label above the control."),
+                    (SegmentedControlPart::Required, "The required asterisk, in the label."),
+                    (SegmentedControlPart::Description, "The caption between the label and the control."),
+                    (SegmentedControlPart::Control, "The connected strip."),
+                    (SegmentedControlPart::Segment, "One segment's visible label."),
+                    (SegmentedControlPart::Helper, "The caption under the control."),
+                    (SegmentedControlPart::Status, "The validation message."),
                 ]),
                 props("OptionLabel", vec![
                     prop("name", "String").doc("The segment's accessible name, and its text when there is no `content`."),

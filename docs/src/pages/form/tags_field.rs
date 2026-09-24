@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::TagsFieldPart;
 use libero::{
     components::{ActionIcon, Chip, Code, FieldStatus, SelectionArgs, TagsField, Text},
     sx::sx,
@@ -122,6 +123,17 @@ pub fn TagsFieldPage() -> Element {
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Takes the input out of the tab order and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ])
+                .parts("TagsFieldPart", vec![
+                    (TagsFieldPart::Label, "The label above the control."),
+                    (TagsFieldPart::Required, "The required asterisk, in the label."),
+                    (TagsFieldPart::Description, "The caption between the label and the control."),
+                    (TagsFieldPart::Frame, "The bordered box around the control."),
+                    (TagsFieldPart::Control, "The element the label names."),
+                    (TagsFieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
+                    (TagsFieldPart::Tag, "One tag's chip, before the draft input."),
+                    (TagsFieldPart::Helper, "The caption under the control."),
+                    (TagsFieldPart::Status, "The validation message."),
                 ]).extends("input"),
             ],
             accessibility: a11y()

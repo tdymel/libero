@@ -8,5 +8,5 @@ mod surface;
 #[cfg(test)]
 mod tests;
 
-pub use file_field::{FileField, FileFieldProps};
+pub use file_field::{FileField, FileFieldPart, FileFieldProps};
 pub use files::Files;

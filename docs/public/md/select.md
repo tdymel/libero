@@ -99,6 +99,24 @@ Each group is a `role="group"` named by its heading. Your order is kept, so a
 group label used again after another group draws its heading again. A disabled
 option is read out, and the arrows, typeahead and clicks skip it.
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `SelectPart::Label` | `label` | The label above the control. |
+| `SelectPart::Required` | `required` | The required asterisk, in the label. |
+| `SelectPart::Description` | `description` | The caption between the label and the control. |
+| `SelectPart::Frame` | `frame` | The bordered box around the control. |
+| `SelectPart::Control` | `control` | The element the label names. |
+| `SelectPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
+| `SelectPart::Value` | `value` | The picked value or the placeholder, in the trigger. |
+| `SelectPart::Helper` | `helper` | The caption under the control. |
+| `SelectPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

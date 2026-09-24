@@ -1,4 +1,4 @@
 mod rating;
 mod value;
 
-pub use rating::{Rating, RatingProps};
+pub use rating::{Rating, RatingPart, RatingProps};

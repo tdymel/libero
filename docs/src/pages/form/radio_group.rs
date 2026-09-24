@@ -1,6 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, OptionList, Options, RadioGroup, Text};
+use libero::components::{RadioGroupPart, RadioPart};
 
 /// The enum is the option list, so the snippet has to show it.
 const PLAN_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -114,6 +115,16 @@ pub fn RadioGroupPage() -> Element {
                     prop("readonly", "bool")
                         .default("false")
                         .doc("Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. Chromium does not announce read-only on a group, so say it in the label or description where it matters."),
+                ])
+                .parts("RadioGroupPart", vec![
+                    (RadioGroupPart::Label, "The label above the control."),
+                    (RadioGroupPart::Required, "The required asterisk, in the label."),
+                    (RadioGroupPart::Description, "The caption between the label and the control."),
+                    (RadioGroupPart::Control, "The `radiogroup` holding the options."),
+                    (RadioGroupPart::Circle, "Each option's ring."),
+                    (RadioGroupPart::Dot, "Each option's checked mark."),
+                    (RadioGroupPart::Helper, "The caption under the control."),
+                    (RadioGroupPart::Status, "The validation message."),
                 ]),
                 props("Radio", vec![
                     prop("checked", "bool")
@@ -135,6 +146,16 @@ pub fn RadioGroupPage() -> Element {
                     prop("variant", "ChoiceVariant")
                         .default("plain")
                         .doc("`card` draws the radio as a bordered surface you can click anywhere."),
+                ])
+                .parts("RadioPart", vec![
+                    (RadioPart::Label, "The label beside the control."),
+                    (RadioPart::Required, "The required asterisk, in the label."),
+                    (RadioPart::Description, "The caption between the label and the control."),
+                    (RadioPart::Control, "Holds the hidden input and the circle, beside the label."),
+                    (RadioPart::Circle, "The drawn ring."),
+                    (RadioPart::Dot, "The checked mark."),
+                    (RadioPart::Helper, "The caption under the control."),
+                    (RadioPart::Status, "The validation message."),
                 ]),
             ],
             accessibility: a11y()

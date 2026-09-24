@@ -125,6 +125,17 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ChipPart::Icon` | `chip-icon` | The leading glyph's wrapper. |
+| `ChipPart::Trailing` | `chip-trailing` | The slot after the label, with `trailing`. |
+
 ## Accessibility
 
 ### Keyboard

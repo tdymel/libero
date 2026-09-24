@@ -59,7 +59,7 @@ pub use orientation::Orientation;
 #[cfg(test)]
 pub(crate) use parts::part_table;
 pub use parts::{Part, Parts, StaticParts};
-pub(crate) use parts::{parts_enum, parts_source};
+pub(crate) use parts::{parts_enum, parts_source, parts_under_sx, recast_parts};
 pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
 pub(crate) use rail::{Rail, RailInset};

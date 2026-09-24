@@ -5,10 +5,11 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input, input_from_str},
+        common::{HtmlTag, Input, Part, input_from_str},
         form::{
-            ComboboxState, clear_button, combobox::nothing_found_row, field_props, use_combobox,
-            use_field, use_field_frame, use_refocus_on_close, with_drawn_placeholder,
+            ComboboxState, clear_button, combobox::nothing_found_row, field_parts_enum,
+            field_props, use_combobox, use_field, use_field_frame, use_refocus_on_close,
+            with_drawn_placeholder,
         },
         layout::use_box,
     },
@@ -87,7 +88,17 @@ pub(super) fn narrow_query() -> String {
     format!("not all and (min-width: {})", Size::Sm.breakpoint_value())
 }
 
+field_parts_enum! {
+    /// [`Cascader`](super::Cascader)'s inner parts, for its `parts` prop: a
+    /// field's, and the value.
+    pub enum CascaderPart framed {
+        /// The joined path or the placeholder, in the trigger.
+        Value = "value" => "& > * > [data-slot='frame'] > [data-slot='control'] > [data-slot='value']",
+    }
+}
+
 field_props! {
+    parts(CascaderPart);
     pub(crate) struct CascaderCoreProps {
         /// Wrapped fresh each render on purpose: never equal, so a stale `node` or `filter` can't
         /// survive memoization ([[codebase/dioxus-memoization-traps]]).
@@ -200,6 +211,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -336,7 +348,9 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     // ---- the trigger --------------------------------------------------
     // The open search box is the combobox; a role-less trigger may not carry `aria-required`.
     let control = match searchable && opened {
-        true => control.attr("id", field.id().to_string()),
+        true => control
+            .attr("data-slot", CascaderPart::Control.slot())
+            .attr("id", field.id().to_string()),
         false => field
             .aria(control)
             .attr("aria-labelledby", field.label_id()),

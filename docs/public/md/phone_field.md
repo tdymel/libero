@@ -45,6 +45,26 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `PhoneFieldPart::Label` | `label` | The label above the control. |
+| `PhoneFieldPart::Required` | `required` | The required asterisk, in the label. |
+| `PhoneFieldPart::Description` | `description` | The caption between the label and the control. |
+| `PhoneFieldPart::Frame` | `frame` | The bordered box around the control. |
+| `PhoneFieldPart::Leading` | `leading` | The slot before the control: an icon, a prefix. |
+| `PhoneFieldPart::Control` | `control` | The element the label names. |
+| `PhoneFieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
+| `PhoneFieldPart::Country` | `country` | The country button in the leading slot, with `country_select`. |
+| `PhoneFieldPart::Dial` | `dial` | The dial code: in the country button, or alone without `country_select`. |
+| `PhoneFieldPart::Helper` | `helper` | The caption under the control. |
+| `PhoneFieldPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

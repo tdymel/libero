@@ -10,7 +10,8 @@ use crate::{
         common::{Glyph, HtmlTag, Input, States, input_from_str},
         feedback::Loader,
         form::{
-            SelectionArgs, field_props, slot_icon_size, use_bound, use_chip_announcer, use_field,
+            SelectionArgs, field_parts_enum, field_props, slot_icon_size, use_bound,
+            use_chip_announcer, use_field,
         },
         layout::{BoxStyle, use_box},
     },
@@ -35,7 +36,28 @@ use super::surface::{
 
 input_from_str!(FileFieldVariant);
 
+field_parts_enum! {
+    /// [`FileField`]'s inner parts, for its `parts` prop. The frame parts are
+    /// the `Input` variant's, the cards the `Dropzone`'s.
+    pub enum FileFieldPart {
+        /// The `Input` variant's bordered box.
+        Frame = "frame" => "& > [data-slot='frame']",
+        /// The group holding the Browse button: inside the frame, or the
+        /// dropzone's surface.
+        Control = "control" => "& > [data-slot='frame'] > [data-slot='control'], & > [data-slot='control']",
+        /// The Browse button: the rest of the line, or the whole surface.
+        Browse = "browse" => "& > [data-slot='frame'] > [data-slot='control'] > [data-slot='browse'], & > [data-slot='control'] > [data-slot='browse']",
+        /// One picked file's chip, `Input` variant.
+        Chip = "chip" => "& > [data-slot='frame'] > [data-slot='control'] > [data-slot='value'] > [data-slot='chip']",
+        /// The loader and clear button after the control, `Input` variant.
+        Trailing = "trailing" => "& > [data-slot='frame'] > [data-slot='trailing']",
+        /// One picked file's card under the surface, `Dropzone` variant.
+        Card = "card" => "& > [role='list'] > [data-slot='card']",
+    }
+}
+
 field_props! {
+    parts(FileFieldPart);
     pub struct FileFieldProps {
         /// Controlled: pair it with `onchange`. Takes a `FileData`, an
         /// `Option` or a `Vec` of them.
@@ -186,6 +208,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .radius(radius)
         .class(&props.class)
         .sx(&field_sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();

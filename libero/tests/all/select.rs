@@ -119,7 +119,7 @@ mod select_listbox {
         );
 
         let label_id = html
-            .split(r#"<label id=""#)
+            .split(r#"<label data-slot="label" id=""#)
             .nth(1)
             .and_then(|rest| rest.split('"').next())
             .expect("the label carries an id");

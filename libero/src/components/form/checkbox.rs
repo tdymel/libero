@@ -6,10 +6,11 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            Glyph, HtmlTag, Input, States, base_color, contrast_color, fill_color, focus_ring_sx,
-            names_itself, ring_overlay, ring_overlay_sx, use_name_warning, variables,
+            Glyph, HtmlTag, Input, Part, States, base_color, contrast_color, fill_color,
+            focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx, use_name_warning,
+            variables,
         },
-        form::{field_props, use_bound, use_field},
+        form::{field_parts_enum, field_props, use_bound, use_field},
         layout::use_box,
     },
     context::IconSlot,
@@ -91,7 +92,19 @@ fn checkbox_variables(on: bool, base: &ThemeAwareValue) -> String {
         .render()
 }
 
+field_parts_enum! {
+    /// [`Checkbox`]'s inner parts, for its `parts` prop: a field's, the
+    /// control and its box.
+    pub enum CheckboxPart {
+        /// Holds the hidden input and the box, beside the label.
+        Control = "control" => "& > [data-slot='control']",
+        /// The drawn square and its mark.
+        Box = "box" => "& > [data-slot='control'] > [data-slot='box']",
+    }
+}
+
 field_props! {
+    parts(CheckboxPart);
     extends(input);
     pub struct CheckboxProps {
         /// The box's colour when checked.
@@ -200,6 +213,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -257,6 +271,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     let box_node = rsx! {
         span {
             class: box_class,
+            "data-slot": CheckboxPart::Box.slot(),
             "aria-hidden": "true",
             // Focuses the input as a native click would, so its blur shows the rules.
             onclick: move |_| {
@@ -272,9 +287,13 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         }
     };
 
-    field.render(control.render(
-        HtmlTag::Span,
-        Vec::new(),
-        vec![input, box_node, ring_overlay()],
-    ))
+    field.render(
+        control
+            .attr("data-slot", CheckboxPart::Control.slot())
+            .render(
+                HtmlTag::Span,
+                Vec::new(),
+                vec![input, box_node, ring_overlay()],
+            ),
+    )
 }

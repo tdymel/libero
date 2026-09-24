@@ -123,7 +123,10 @@ pub(super) fn padding_press(
         return None;
     }
     let is_control = |child: &web_sys::Element| {
-        !child.has_attribute("data-slot") && !child.has_attribute("data-ring")
+        child
+            .get_attribute("data-slot")
+            .is_none_or(|slot| slot == "control")
+            && !child.has_attribute("data-ring")
     };
     // The frame's own child the press is in, if any: the control's is its own.
     let mut at = target;

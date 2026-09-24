@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::CheckboxPart;
 use libero::components::{Checkbox, Code, FieldStatus, Text};
 
 fn describes(values: &DemoValues) -> bool {
@@ -56,6 +57,15 @@ pub fn CheckboxPage() -> Element {
                     prop("variant", "ChoiceVariant")
                         .default("plain")
                         .doc("`card` draws the checkbox as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles."),
+                ])
+                .parts("CheckboxPart", vec![
+                    (CheckboxPart::Label, "The label beside the control."),
+                    (CheckboxPart::Required, "The required asterisk, in the label."),
+                    (CheckboxPart::Description, "The caption between the label and the control."),
+                    (CheckboxPart::Control, "Holds the hidden input and the box, beside the label."),
+                    (CheckboxPart::Box, "The drawn square and its mark."),
+                    (CheckboxPart::Helper, "The caption under the control."),
+                    (CheckboxPart::Status, "The validation message."),
                 ]),
             ],
             accessibility: a11y()

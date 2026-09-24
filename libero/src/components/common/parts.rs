@@ -67,6 +67,29 @@ pub(crate) fn parts_source<P: Part>(parts: &Input<Parts<P>>) -> Option<SxSource<
     }
 }
 
+/// `parts` for a component of another enum whose shared parts match by
+/// selector, e.g. a `FieldPart` for a `Select`. A `static` is cloned.
+pub(crate) fn recast_parts<P: Part, Q: Part>(parts: Input<Parts<P>>) -> Input<Parts<Q>> {
+    let recast = |sx: Sx| Parts {
+        sx,
+        part: PhantomData,
+    };
+    match parts {
+        Input::None => Input::None,
+        Input::Value(parts) => Input::Value(recast(parts.sx)),
+        Input::Static(parts) => Input::Value(recast(parts.sx.clone())),
+    }
+}
+
+/// `parts` merged under `sx`, for a component that hands both to one taking `sx` only.
+pub(crate) fn parts_under_sx<P: Part>(parts: &Input<Parts<P>>, sx: Input<Sx>) -> Input<Sx> {
+    let Some(parts) = parts.as_ref() else {
+        return sx;
+    };
+    let sx = sx.as_ref().cloned().unwrap_or_default();
+    Input::Value(parts.sx.clone().and(sx))
+}
+
 impl<P: Part> Default for Parts<P> {
     fn default() -> Self {
         Self::new()

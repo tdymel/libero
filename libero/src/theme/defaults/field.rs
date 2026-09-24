@@ -13,6 +13,11 @@ pub const FIELD_GAP: CssVar = CssVar::new("--lsx-field-gap");
 pub const FIELD_FRAME_GAP: CssVar = CssVar::new("--lsx-field-frame-gap");
 pub const FIELD_CARD_PADDING: SizeCss = SizeCss::new("--lsx-field-card-padding-");
 
+/// A field wrapper's caption slots, not the label, the frame or the control.
+/// `:where` keeps the specificity of a bare `[data-slot]`.
+pub(crate) const FIELD_CAPTIONS: &str =
+    "& > [data-slot]:where(:not([data-slot='label'], [data-slot='frame'], [data-slot='control']))";
+
 str_enum! {
     /// How a checkable field draws its wrapper. `Card` makes the whole field a
     /// bordered surface and its hit area.
@@ -118,7 +123,7 @@ impl FieldDefaults {
             sx().font_size(FIELD_LABEL_FONT_SIZE.value(size)),
         )
         .selector(
-            "& > [data-slot]",
+            FIELD_CAPTIONS,
             sx().font_size(FIELD_CAPTION_FONT_SIZE.value(size)),
         )
     }

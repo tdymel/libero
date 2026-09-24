@@ -8,10 +8,11 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            HtmlTag, Input, States, Variant, VariantColors, VariantVars, base_color, base_props,
-            contrast_color, contrast_shade_color, disabled_look_sx, fill_color, focus_ring_sx,
-            interactive_variant_sx, on_ring_sx, on_state_sx, ring_overlay, ring_overlay_sx,
-            shade_color, text_color, variables, variant_colors,
+            HtmlTag, Input, Part, States, Variant, VariantColors, VariantVars, base_color,
+            base_props, contrast_color, contrast_shade_color, disabled_look_sx, fill_color,
+            focus_ring_sx, interactive_variant_sx, on_ring_sx, on_state_sx, parts_enum,
+            parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, text_color, variables,
+            variant_colors,
         },
         form::{Activation, use_bound},
         layout::{InternalAnchor, use_box},
@@ -61,8 +62,7 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .font_family("inherit")
         .text_decoration("none")
         // The `icon` slot never shrinks, on the root or in a checkbox chip's label.
-        .selector("& > [data-slot='chip-icon']", chip_icon_sx())
-        .selector("& > label > [data-slot='chip-icon']", chip_icon_sx());
+        .selector(ChipPart::Icon.selector(), chip_icon_sx());
 
     Variant::ALL
         .iter()
@@ -171,7 +171,19 @@ fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> St
         .render()
 }
 
+parts_enum! {
+    /// [`Chip`]'s inner parts, for its `parts` prop. Each is a child of the
+    /// root or of a checkbox chip's label, so a chip in `trailing` keeps its own.
+    pub enum ChipPart {
+        /// The leading glyph's wrapper.
+        Icon = "chip-icon" => "& > [data-slot='chip-icon'], & > label > [data-slot='chip-icon']",
+        /// The slot after the label, with `trailing`.
+        Trailing = "chip-trailing" => "& > [data-slot='chip-trailing']",
+    }
+}
+
 base_props! {
+    parts(ChipPart);
     pub struct ChipProps {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -303,6 +315,7 @@ pub fn Chip(props: ChipProps) -> Element {
         .framework_sx(&CHIP_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .style(style.clone())
         .prepare();
@@ -313,7 +326,7 @@ pub fn Chip(props: ChipProps) -> Element {
     // Children unwrapped, so an icon among them keeps the gap and centring.
     let labelled = rsx! {
         if let Some(icon) = props.icon {
-            span { "data-slot": "chip-icon", {icon} }
+            span { "data-slot": ChipPart::Icon.slot(), {icon} }
         }
         {props.children}
     };
@@ -334,7 +347,7 @@ pub fn Chip(props: ChipProps) -> Element {
             // Not `trailing`: a field frame's own slot is, and a chip sits in one.
             span {
                 class: trailing_class,
-                "data-slot": "chip-trailing",
+                "data-slot": ChipPart::Trailing.slot(),
                 onmounted: trailing_slot.mount(),
                 onclick: mark_trailing,
                 {trailing}
@@ -366,7 +379,7 @@ pub fn Chip(props: ChipProps) -> Element {
                     to,
                     target: props.target,
                     class: props.class,
-                    sx: props.sx,
+                    sx: parts_under_sx(&props.parts, props.sx),
                     framework_sx: &CHIP_BASE_SX,
                     states,
                     style,

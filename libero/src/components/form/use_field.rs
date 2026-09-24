@@ -7,19 +7,19 @@ use dioxus::{
 
 use crate::{
     components::{
-        common::{ClassList, HtmlTag, Input, States, input_from_str},
+        common::{ClassList, HtmlTag, Input, Part, Parts, States, input_from_str, parts_source},
         form::{
-            Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, Validators,
-            worst,
+            Binding, Caption, Disabled, FieldEntry, FieldName, FieldPart, FieldStatus, FormScope,
+            Validators, worst,
         },
         layout::{BoxStyle, use_box},
     },
-    hooks::{ElementHandle, use_root_id, use_silent_focus_out},
+    hooks::{ElementHandle, SxSource, use_root_id, use_silent_focus_out},
     platform::{ElementApi, nested_interactive, next_task},
     sx::{StaticSx, Sx, sx},
     theme::{
-        ChoiceVariant, FIELD_CARD_PADDING, FIELD_FRAME_GAP, FieldDefaults, PAPER_BACKGROUND,
-        PAPER_BORDER_COLOR, PAPER_RADIUS, Size,
+        ChoiceVariant, FIELD_CAPTIONS, FIELD_CARD_PADDING, FIELD_FRAME_GAP, FieldDefaults,
+        PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, Size,
     },
 };
 
@@ -31,7 +31,7 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
     FieldDefaults::theme_vars()
         .display("flex")
         .flex_direction("column")
-        .selector("& > [data-slot]", sx().color("muted.7"))
+        .selector(FIELD_CAPTIONS, sx().color("muted.7"))
         .selector(
             "& label > [data-slot='required']",
             sx().color("error.7")
@@ -47,7 +47,10 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
                 .grid_template_columns("auto 1fr")
                 .align_items("center")
                 .column_gap(FIELD_FRAME_GAP.value())
-                .selector("& > label, & > [data-slot]", sx().grid_column("2")),
+                .selector(
+                    format!("& > label, {FIELD_CAPTIONS}"),
+                    sx().grid_column("2"),
+                ),
         )
         // The inline layout as a `Paper` surface that is all hit area. No
         // `--lsx-focus-contrast`: the ring sits outside the card.
@@ -74,7 +77,7 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
         .when(
             "disabled",
             sx().color("muted.6")
-                .selector("& > [data-slot]", sx().color("muted.6")),
+                .selector(FIELD_CAPTIONS, sx().color("muted.6")),
         )
         .when(
             "warning",
@@ -113,6 +116,7 @@ pub(crate) struct FieldBuilder<'a> {
     radius: Size,
     class: Option<&'a Input<ClassList>>,
     sx: Option<&'a Input<Sx>>,
+    parts: Option<SxSource<'a>>,
     states: Option<&'a Input<States>>,
     attributes: &'a [Attribute],
 }
@@ -141,6 +145,7 @@ impl Default for FieldBuilder<'_> {
             radius: Size::Sm,
             class: None,
             sx: None,
+            parts: None,
             states: None,
             attributes: &[],
         }
@@ -299,6 +304,13 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
+    /// The `parts` prop, merged into the wrapper's `sx`.
+    #[inline]
+    pub fn parts<P: Part>(mut self, parts: &'a Input<Parts<P>>) -> Self {
+        self.parts = parts_source(parts);
+        self
+    }
+
     #[inline]
     pub fn states(mut self, states: &'a Input<States>) -> Self {
         self.states = Some(states);
@@ -409,7 +421,7 @@ impl<'a> FieldBuilder<'a> {
         if let Some(sx) = self.sx {
             wrapper = wrapper.sx(sx);
         }
-        let mut wrapper = wrapper.prepare();
+        let mut wrapper = wrapper.parts_source(self.parts).prepare();
         let activation = self.activation.map(|mut activation| {
             activation.card = self.card;
             activation
@@ -464,8 +476,8 @@ impl<'a> FieldBuilder<'a> {
                 root.filter(|_| focuses),
             ),
             labelled_by: (self.labelled_by || self.label_with_id) && !label.is_none(),
-            description: slot_node("description", &id_value, description),
-            helper: slot_node("helper", &id_value, helper),
+            description: slot_node(FieldPart::Description.slot(), &id_value, description),
+            helper: slot_node(FieldPart::Helper.slot(), &id_value, helper),
             status: status_node(&id_value, status),
             id: id_value,
             text_slots: self.text_slots,
@@ -708,10 +720,15 @@ impl PreparedField {
         self.invalid
     }
 
-    /// The a11y wiring, onto the control's already-prepared styling - and,
+    /// The a11y wiring and the `control` slot, onto the control's already-prepared styling - and,
     /// under [`FieldBuilder::activates`], the input's activation.
     pub fn aria(&self, control: BoxStyle) -> BoxStyle {
+        // An inline field's input is hidden; its visible wrapper carries the slot.
         let control = control
+            .attr(
+                "data-slot",
+                (!self.inline).then_some(FieldPart::Control.slot()),
+            )
             .attr("id", self.id.clone())
             .attr("aria-describedby", self.describedby.clone())
             .attr("aria-invalid", self.invalid.then_some("true"))
@@ -979,14 +996,16 @@ fn label_node(
     // `aria-required` already tells AT; the asterisk is decoration.
     let asterisk = required.then(|| {
         rsx! {
-            span { "aria-hidden": "true", "data-slot": "required", "*" }
+            span { "aria-hidden": "true", "data-slot": FieldPart::Required.slot(), "*" }
         }
     });
+    let slot = FieldPart::Label.slot();
     // One arm per listener, because a listener cannot be optional and most
     // labels need none.
     Some(match (activation, focuses) {
         (Some(activation), _) => rsx! {
             label {
+                "data-slot": slot,
                 id: named,
                 r#for: points_at,
                 onclick: activation.label_click(),
@@ -996,6 +1015,7 @@ fn label_node(
         },
         (None, Some(root)) => rsx! {
             label {
+                "data-slot": slot,
                 id: named.clone(),
                 onclick: focus_labelled(root, named.unwrap_or_default()),
                 {content}
@@ -1003,7 +1023,7 @@ fn label_node(
             }
         },
         (None, None) => rsx! {
-            label { id: named, r#for: points_at,
+            label { "data-slot": slot, id: named, r#for: points_at,
                 {content}
                 {asterisk}
             }
@@ -1045,6 +1065,6 @@ pub(super) fn status_node(id: &str, status: Option<&FieldStatus>) -> Option<Elem
     let message = status.and_then(FieldStatus::message)?;
 
     Some(rsx! {
-        span { "data-slot": "status", id: "{id}-status", "{message}" }
+        span { "data-slot": FieldPart::Status.slot(), id: "{id}-status", "{message}" }
     })
 }

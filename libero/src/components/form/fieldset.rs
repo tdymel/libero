@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, base_props},
+        common::{HtmlTag, Input, Part, base_props, parts_enum},
         form::{
             Binding, Caption, Disabled, FieldName, FieldStatus, FormScope, FormValue, Source,
             Validators, issues_of,
@@ -39,8 +39,9 @@ static FIELDSET_SX: StaticSx = StaticSx::new(|| {
                 .font_weight("600")
                 .font_size(FIELD_LABEL_FONT_SIZE.value(Size::Md)),
         )
+        // `:where`: the specificity of a bare `[data-slot]`.
         .selector(
-            "& > [data-slot]",
+            "& > [data-slot]:where(:not([data-slot='legend']))",
             sx().color("muted.7")
                 .font_size(FIELD_CAPTION_FONT_SIZE.value(Size::Md)),
         )
@@ -54,8 +55,22 @@ static FIELDSET_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+parts_enum! {
+    /// [`Fieldset`]'s inner parts, for its `parts` prop. Each is a direct
+    /// child, so a nested `Fieldset` keeps its own.
+    pub enum FieldsetPart {
+        /// The `<legend>`, from `label`.
+        Legend = "legend" => "& > [data-slot='legend']",
+        Description = "description" => "& > [data-slot='description']",
+        Helper = "helper" => "& > [data-slot='helper']",
+        /// The group's status, under the fields.
+        Status = "status" => "& > [data-slot='status']",
+    }
+}
+
 base_props! {
     extends(fieldset);
+    parts(FieldsetPart);
     pub struct FieldsetProps<V: FormValue> {
         /// The group's own value, for a fieldset outside a `Form`.
         #[props(default)]
@@ -176,14 +191,18 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     );
     let legend = (!props.label.is_none()).then(|| {
         let content = caption_content(&props.label);
-        rsx! { legend { {content} } }
+        rsx! { legend { "data-slot": FieldsetPart::Legend.slot(), {content} } }
     });
 
     let mut children = Vec::with_capacity(5);
     children.extend(legend);
-    children.extend(slot_node("description", &id, &props.description));
+    children.extend(slot_node(
+        FieldsetPart::Description.slot(),
+        &id,
+        &props.description,
+    ));
     children.push(props.children);
-    children.extend(slot_node("helper", &id, &props.helper));
+    children.extend(slot_node(FieldsetPart::Helper.slot(), &id, &props.helper));
     children.extend(status_node(&id, Some(&status)));
 
     let mut states = props.states.as_ref().cloned().unwrap_or_default();
@@ -196,6 +215,7 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         .framework_sx(&FIELDSET_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&states)
         .prepare()
         .attr("id", id.clone())

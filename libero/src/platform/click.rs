@@ -71,7 +71,7 @@ impl DoublePress {
 }
 
 /// The control a press on a frame's padding belongs to: the first tab stop in
-/// `boundary`'s child that is no `[data-slot]` or `[data-ring]`.
+/// `boundary`'s child that is no `[data-slot]` but `control`, nor `[data-ring]`.
 ///
 /// `None` when the press hit that control or anything interactive, and off wasm32.
 pub(crate) fn padding_press(

@@ -99,6 +99,13 @@ impl<'a> BoxBuilder<'a> {
         self
     }
 
+    /// [`parts`](Self::parts), already resolved by a builder that holds it.
+    #[inline]
+    pub fn parts_source(mut self, parts: Option<SxSource<'a>>) -> Self {
+        self.parts = parts;
+        self
+    }
+
     #[inline]
     pub fn states(mut self, states: &'a Input<States>) -> Self {
         self.states = Some(states);

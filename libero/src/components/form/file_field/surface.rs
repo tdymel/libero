@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input, States, ring_overlay},
+        common::{HtmlTag, Input, Part, States, ring_overlay},
         feedback::Loader,
         form::{PreparedField, clear_button, use_field_frame},
         layout::{BoxStyle, use_box},
@@ -16,6 +16,7 @@ use crate::{
     theme::Size,
 };
 
+use super::file_field::FileFieldPart;
 use super::files::Files;
 use super::rows::{ChipKeys, card_list, chip_list};
 use super::styles::{FILE_BROWSE_SX, FILE_CONTROL_SX, FILE_DROPZONE_BROWSE_SX, FILE_DROPZONE_SX};
@@ -117,7 +118,7 @@ impl Surface {
             .attr("id", id)
             // What a click on the label looks for.
             .attr("tabindex", "0")
-            .attr("data-slot", "browse")
+            .attr("data-slot", FileFieldPart::Browse.slot())
             .attr("aria-labelledby", named)
             .attr(
                 "aria-describedby",
@@ -143,6 +144,7 @@ impl Surface {
         let dragging_over = dragging.clone();
         let dragging_off = dragging.clone();
         group
+            .attr("data-slot", FileFieldPart::Control.slot())
             .attr("role", "group")
             .attr("aria-labelledby", labelledby)
             .attr("aria-busy", loading.then_some("true"))

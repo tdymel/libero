@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
 
-use super::core::{SegmentSpec, SegmentedControlView, render_segmented_control};
+use super::core::{
+    SegmentSpec, SegmentedControlPart, SegmentedControlView, render_segmented_control,
+};
 use crate::{
     components::{
         buttons::button_variables,
@@ -17,6 +19,7 @@ use crate::{
 };
 
 field_props! {
+    parts(SegmentedControlPart);
     pub struct SegmentedControlProps<T: Options> {
         /// Controlled: pair it with `onchange`. Optional only so a `Form`-bound
         /// control can leave it out.
@@ -140,6 +143,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&field_states)
         .attributes(&props.attributes)
         .prepare();

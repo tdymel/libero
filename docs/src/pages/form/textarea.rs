@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::TextareaPart;
 use libero::components::{Code, FieldStatus, Text, Textarea};
 
 #[component]
@@ -51,6 +52,17 @@ pub fn TextareaPage() -> Element {
                     prop("readonly", "bool")
                         .default("false")
                         .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ])
+                .parts("TextareaPart", vec![
+                    (TextareaPart::Label, "The label above the control."),
+                    (TextareaPart::Required, "The required asterisk, in the label."),
+                    (TextareaPart::Description, "The caption between the label and the control."),
+                    (TextareaPart::Frame, "The bordered box around the control."),
+                    (TextareaPart::Control, "The element the label names."),
+                    (TextareaPart::Trailing, "The slot after the control: a chevron, a toggle."),
+                    (TextareaPart::Counter, "The `12/200` badge in the frame's corner, with `counter`."),
+                    (TextareaPart::Helper, "The caption under the control."),
+                    (TextareaPart::Status, "The validation message."),
                 ]).extends("textarea"),
             ],
             accessibility: a11y()

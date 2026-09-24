@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::ChipPart;
 use libero::components::{Chip, Code, Input, Text};
 
 #[component]
@@ -50,6 +51,10 @@ pub fn ChipPage() -> Element {
                     .doc("Drawn after the label, with a gap, such as a remove button. It never shrinks. Not on an `onclick` or `to` chip, which is a button already."),
                 prop("children", "Element")
                     .doc("The label, cut at the chip's edge. Text and `Icon` only."),
+            ])
+            .parts("ChipPart", vec![
+                (ChipPart::Icon, "The leading glyph's wrapper."),
+                (ChipPart::Trailing, "The slot after the label, with `trailing`."),
             ])],
             accessibility: a11y()
                 .key(["Space"], "Toggles a selectable chip.")

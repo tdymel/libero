@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::core::SliderCore;
+use super::core::{SliderCore, SliderPart};
 use super::scale::{Scale, control_spacing};
 use super::slider_value::{SliderChangeEvent, SliderMark, SliderValue};
 use super::value::SliderCoreValue;
@@ -14,6 +14,7 @@ use crate::{
 };
 
 field_props! {
+    parts(SliderPart);
     without(radius);
     pub struct SliderProps<V: SliderValue> {
         /// Controlled: pair it with `oninput`, or bind a path `name` in a `Form`.
@@ -143,6 +144,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         .size(props.size.copied_or(theme.slider.size))
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();

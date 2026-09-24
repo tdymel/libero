@@ -5,10 +5,10 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{ComboboxState, Glyph, HtmlTag, Input, use_combobox},
+        common::{ComboboxState, Glyph, HtmlTag, Input, Part, use_combobox},
         form::{
-            CaretKeys, ComboboxCore, ComboboxOption, FIELD_CONTROL_SX, field_props, use_bound,
-            use_field, use_field_frame, with_drawn_placeholder,
+            CaretKeys, ComboboxCore, ComboboxOption, FIELD_CONTROL_SX, field_parts_enum,
+            field_props, use_bound, use_field, use_field_frame, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -50,7 +50,10 @@ static PICKER_SX: StaticSx = StaticSx::new(|| {
                 .height("1em")
                 .color("muted.6"),
         )
-        .selector("& > [data-slot='dial']", sx().color("text-dimmed"))
+        .selector(
+            format!("& > [data-slot='{}']", PhoneFieldPart::Dial.slot()),
+            sx().color("text-dimmed"),
+        )
         .when("disabled", sx().cursor("not-allowed"))
 });
 
@@ -101,7 +104,19 @@ static ROW_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+field_parts_enum! {
+    /// [`PhoneField`]'s inner parts, for its `parts` prop: a field's, the
+    /// country button and the dial code.
+    pub enum PhoneFieldPart framed {
+        /// The country button in the leading slot, with `country_select`.
+        Country = "country" => "& > [data-slot='frame'] > [data-slot='leading'] > * > [data-slot='country']",
+        /// The `+49`: in the country button, or alone without `country_select`.
+        Dial = "dial" => "& > [data-slot='frame'] > [data-slot='leading'] > * > [data-slot='country'] > [data-slot='dial'], & > [data-slot='frame'] > [data-slot='leading'] > [data-slot='dial']",
+    }
+}
+
 field_props! {
+    parts(PhoneFieldPart);
     extends(input);
     pub struct PhoneFieldProps {
         /// The number in E.164 (`"+12133734253"`); `None` leaves it uncontrolled.
@@ -218,6 +233,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -384,6 +400,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         (false, Some(captions)) => Some(format!("{dial_id} {captions}")),
     };
     let control = control
+        .attr("data-slot", PhoneFieldPart::Control.slot())
         .attr("id", field.id().to_string())
         .attr("aria-describedby", describedby)
         .attr("aria-invalid", field.invalid().then_some("true"))
@@ -568,6 +585,7 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
     let picker_flag = flag.map(|flag| flag.call(country.iso.to_string()));
     picker_box
         .element(&element)
+        .attr("data-slot", PhoneFieldPart::Country.slot())
         // A button inside a form submits it unless it says otherwise.
         .attr_default("type", "button")
         // What names the listbox.
@@ -611,7 +629,7 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
             rsx! {
                 {picker_flag}
                 span { "data-slot": "iso", "{country.iso}" }
-                span { "data-slot": "dial", "+{country.dial}" }
+                span { "data-slot": PhoneFieldPart::Dial.slot(), "+{country.dial}" }
                 Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
             },
         )
@@ -688,11 +706,12 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 {picker}
             }
         }),
-        false => Some(prefix_box.attr("id", dial_id).render(
-            HtmlTag::Span,
-            Vec::new(),
-            rsx! { "+{dial}" },
-        )),
+        false => Some(
+            prefix_box
+                .attr("data-slot", PhoneFieldPart::Dial.slot())
+                .attr("id", dial_id)
+                .render(HtmlTag::Span, Vec::new(), rsx! { "+{dial}" }),
+        ),
     }
 }
 

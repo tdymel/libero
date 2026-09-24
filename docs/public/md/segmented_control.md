@@ -148,6 +148,22 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `SegmentedControlPart::Label` | `label` | The label above the control. |
+| `SegmentedControlPart::Required` | `required` | The required asterisk, in the label. |
+| `SegmentedControlPart::Description` | `description` | The caption between the label and the control. |
+| `SegmentedControlPart::Control` | `control` | The connected strip. |
+| `SegmentedControlPart::Segment` | `segment` | One segment's visible label. |
+| `SegmentedControlPart::Helper` | `helper` | The caption under the control. |
+| `SegmentedControlPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

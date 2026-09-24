@@ -5,10 +5,10 @@ use super::value::{fill, number_text, sane, stepped, value_at, zone_value};
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, Variables, base_color, draw_svg, has_shortcut_modifier,
+            HtmlTag, Input, Part, States, Variables, base_color, draw_svg, has_shortcut_modifier,
             names_itself, use_name_warning, variables,
         },
-        form::{field_props, use_bound, use_field},
+        form::{field_parts_enum, field_props, use_bound, use_field},
         layout::use_box,
     },
     context::IconSlot,
@@ -38,29 +38,29 @@ static RATING_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         // Half the gap each side: the hit area spans it, so zones meet.
         .selector(
-            "& > [data-slot='symbol']",
+            format!("& > [data-slot='{}']", RatingPart::Symbol.slot()),
             sx().position("relative")
                 .display("block")
                 .padding(format!("0 calc({} / 2)", RATING_GAP.value())),
         )
         // Empty glyph and fill share one cell; `start` follows the direction.
         .selector(
-            "& [data-slot='glyph']",
+            format!("& [data-slot='{}']", RatingPart::Glyph.slot()),
             sx().display("grid")
                 .width(glyph.clone())
                 .height(glyph.clone())
                 .color("muted"),
         )
         .selector(
-            "& [data-slot='glyph'] > *",
+            format!("& [data-slot='{}'] > *", RatingPart::Glyph.slot()),
             sx().grid_row("1").grid_column("1"),
         )
         .selector(
-            "& [data-slot='glyph'] svg",
+            format!("& [data-slot='{}'] svg", RatingPart::Glyph.slot()),
             sx().display("block").width(glyph.clone()).height(glyph),
         )
         .selector(
-            "& [data-slot='fill']",
+            format!("& [data-slot='{}']", RatingPart::Fill.slot()),
             sx().justify_self("start")
                 .height("100%")
                 .overflow("hidden")
@@ -80,7 +80,22 @@ static RATING_SX: StaticSx = StaticSx::new(|| {
         .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
 
+field_parts_enum! {
+    /// [`Rating`]'s inner parts, for its `parts` prop: a field's, and the symbols.
+    pub enum RatingPart {
+        /// The row of symbols, the slider or image.
+        Control = "control" => "& > [data-slot='control']",
+        /// One symbol with its hit area.
+        Symbol = "symbol" => "& > [data-slot='control'] > [data-slot='symbol']",
+        /// A symbol's empty glyph, under its fill.
+        Glyph = "glyph" => "& > [data-slot='control'] > [data-slot='symbol'] > [data-slot='glyph']",
+        /// A symbol's filled share, in the rating's colour.
+        Fill = "fill" => "& > [data-slot='control'] > [data-slot='symbol'] > [data-slot='glyph'] > [data-slot='fill']",
+    }
+}
+
 field_props! {
+    parts(RatingPart);
     without(radius);
     pub struct RatingProps {
         /// Controlled: pair it with `onchange`, or bind a path `name` in a `Form`.
@@ -263,6 +278,7 @@ pub fn Rating(props: RatingProps) -> Element {
         .size(size)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -320,7 +336,10 @@ pub fn Rating(props: RatingProps) -> Element {
     }
 
     let id = field.id().to_string();
-    let style = style.element(&root).attr("id", id.clone());
+    let style = style
+        .element(&root)
+        .attr("data-slot", RatingPart::Control.slot())
+        .attr("id", id.clone());
     let control = if display {
         // The label, then the value: "Average 4.3 of 5".
         let (label, labelledby) = match (field.label_id(), &props.aria_label) {
@@ -540,7 +559,7 @@ fn render_symbols(view: Symbols) -> Vec<Element> {
             let fill_part = (filled > 0.0).then(|| {
                 let width = filled * 100.0;
                 rsx! {
-                    span { "data-slot": "fill", style: "width: {width}%",
+                    span { "data-slot": RatingPart::Fill.slot(), style: "width: {width}%",
                         {draw_svg(&view.icon, filled_attributes())}
                     }
                 }
@@ -568,8 +587,8 @@ fn render_symbols(view: Symbols) -> Vec<Element> {
                 }
             });
             rsx! {
-                span { key: "{index}", "data-slot": "symbol",
-                    span { "data-slot": "glyph",
+                span { key: "{index}", "data-slot": RatingPart::Symbol.slot(),
+                    span { "data-slot": RatingPart::Glyph.slot(),
                         {draw_svg(&view.icon, Vec::new())}
                         {fill_part}
                     }

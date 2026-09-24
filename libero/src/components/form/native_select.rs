@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, OptionSource, Options},
+        common::{HtmlTag, Input, OptionSource, Options, recast_parts},
         form::{
             LiveControl, Select, SelectOptionArgs, field_control_sx, field_props, row_label,
             use_bound, use_field, use_field_frame,
@@ -187,6 +187,7 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -333,6 +334,7 @@ fn listbox<T: Options>(props: NativeSelectProps<T>) -> Element {
             required: props.required,
             class: props.class,
             sx: props.sx,
+            parts: recast_parts(props.parts),
             states: props.states,
             attributes: props.attributes,
         }

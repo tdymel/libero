@@ -39,6 +39,22 @@ fn Demo() -> Element {
 # fn submit(_code: String) {}
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FieldPart::Label` | `label` | The label above the control. |
+| `FieldPart::Required` | `required` | The required asterisk, in the label. |
+| `FieldPart::Description` | `description` | The caption between the label and the control. |
+| `FieldPart::Frame` | `frame` | Each cell's box. |
+| `FieldPart::Control` | `control` | Each cell's input. |
+| `FieldPart::Helper` | `helper` | The caption under the control. |
+| `FieldPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

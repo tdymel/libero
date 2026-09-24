@@ -331,7 +331,7 @@ async fn in_control(page: &Page, frame: &str) -> Result<()> {
             "(() => {{ const frame = document.querySelector({frame:?}); \
              const el = document.activeElement; \
              return el !== frame && frame.contains(el) \
-             && !el.closest('[data-slot]:not([data-slot=browse])'); }})()"
+             && !el.closest('[data-slot]:not([data-slot=browse], [data-slot=control], [data-slot=frame])'); }})()"
         ),
         &format!("the focus in {frame}'s control"),
     )

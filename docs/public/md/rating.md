@@ -53,6 +53,24 @@ Rating {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `RatingPart::Label` | `label` | The label above the control. |
+| `RatingPart::Required` | `required` | The required asterisk, in the label. |
+| `RatingPart::Description` | `description` | The caption between the label and the control. |
+| `RatingPart::Control` | `control` | The row of symbols. |
+| `RatingPart::Symbol` | `symbol` | One symbol with its hit area. |
+| `RatingPart::Glyph` | `glyph` | A symbol's empty glyph, under its fill. |
+| `RatingPart::Fill` | `fill` | A symbol's filled share, in the rating's colour. |
+| `RatingPart::Helper` | `helper` | The caption under the control. |
+| `RatingPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

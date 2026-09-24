@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::FieldsetPart;
 use libero::components::{Code, FieldStatus, Fields, Fieldset, Input, Rule, Text, TextField};
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -106,6 +107,12 @@ pub fn FieldsetPage() -> Element {
                     .default("false")
                     .doc("Disables every field inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it."),
                 prop("children", "Element").default("required").doc("The fields."),
+            ])
+            .parts("FieldsetPart", vec![
+                (FieldsetPart::Legend, "The `<legend>`, from `label`."),
+                (FieldsetPart::Description, "The caption under the legend."),
+                (FieldsetPart::Helper, "The caption under the fields."),
+                (FieldsetPart::Status, "The group's status, under the fields."),
             ]).extends("fieldset")],
             accessibility: a11y()
                 .handles([

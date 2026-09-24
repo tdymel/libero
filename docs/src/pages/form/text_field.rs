@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::FieldPart;
 use libero::components::{Code, FieldStatus, Text, TextField};
 
 #[component]
@@ -55,6 +56,17 @@ pub fn TextFieldPage() -> Element {
                     prop("readonly", "bool")
                         .default("false")
                         .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ])
+                .parts("FieldPart", vec![
+                    (FieldPart::Label, "The label above the control."),
+                    (FieldPart::Required, "The required asterisk, in the label."),
+                    (FieldPart::Description, "The caption between the label and the control."),
+                    (FieldPart::Frame, "The bordered box around the control."),
+                    (FieldPart::Leading, "The slot before the control: an icon, a prefix."),
+                    (FieldPart::Control, "The element the label names."),
+                    (FieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
+                    (FieldPart::Helper, "The caption under the control."),
+                    (FieldPart::Status, "The validation message."),
                 ]).extends("input"),
             ],
             accessibility: a11y()

@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::components::SwitchPart;
 use libero::components::{Code, FieldStatus, Switch, Text};
 
 fn describes(values: &DemoValues) -> bool {
@@ -52,6 +53,16 @@ pub fn SwitchPage() -> Element {
                 prop("variant", "ChoiceVariant")
                     .default("plain")
                     .doc("`card` draws the switch as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles."),
+            ])
+            .parts("SwitchPart", vec![
+                (SwitchPart::Label, "The label beside the control."),
+                (SwitchPart::Required, "The required asterisk, in the label."),
+                (SwitchPart::Description, "The caption between the label and the control."),
+                (SwitchPart::Control, "Holds the hidden input and the track, beside the label."),
+                (SwitchPart::Track, "The pill the thumb slides along."),
+                (SwitchPart::Thumb, "The sliding knob."),
+                (SwitchPart::Helper, "The caption under the control."),
+                (SwitchPart::Status, "The validation message."),
             ])],
             accessibility: a11y()
                 .key(["Space"], "Toggles the switch.")

@@ -4,7 +4,7 @@ use crate::components::form::use_bound;
 
 use crate::{
     components::{
-        common::{Input, OptionSource, Options, use_combobox},
+        common::{Input, OptionSource, Options, Part, use_combobox},
         form::{field_props, removable_chip},
     },
     hooks::{use_localization, use_theme},
@@ -12,11 +12,12 @@ use crate::{
 };
 
 use super::{
-    core::{Picked, SelectCore, SelectionDraw, SelectionRenderArgs, use_picked},
+    core::{Picked, SelectCore, SelectPart, SelectionDraw, SelectionRenderArgs, use_picked},
     select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_open_rows, use_search_mask},
 };
 
 field_props! {
+    parts(SelectPart);
     pub struct MultiSelectProps<T: Options> {
         /// Strictly controlled: pair it with `onchange`. Empty shows `placeholder`.
         #[props(default)]
@@ -138,7 +139,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             for (index, chip) in chips.enumerate() {
                 span {
                     key: "{index}",
-                    "data-slot": "chip",
+                    "data-slot": SelectPart::Chip.slot(),
                     id: "{args.id_prefix}-{index}",
                     "data-cursor": (args.cursor == Some(index)).then_some("true"),
                     {chip}
@@ -230,6 +231,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             required: props.required,
             class: props.class,
             sx: props.sx,
+            parts: props.parts,
             states: props.states,
             attributes: props.attributes,
         }

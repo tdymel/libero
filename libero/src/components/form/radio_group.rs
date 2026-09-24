@@ -3,10 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, OptionSource, Options, Orientation, States, has_shortcut_modifier,
-            names_itself, neighbour, use_name_warning,
+            HtmlTag, Input, OptionSource, Options, Orientation, Part, States,
+            has_shortcut_modifier, names_itself, neighbour, use_name_warning,
         },
-        form::{Radio, field_props, use_bound, use_field},
+        form::{Radio, field_parts_enum, field_props, use_bound, use_field},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
@@ -40,7 +40,21 @@ fn focus_option(root: &ElementHandle, index: usize) {
     let _ = root.query_selector(&selector).and_then(|el| el.focus());
 }
 
+field_parts_enum! {
+    /// [`RadioGroup`]'s inner parts, for its `parts` prop: a field's, the
+    /// group, and every option's circle and dot.
+    pub enum RadioGroupPart {
+        /// The `radiogroup` holding the options.
+        Control = "control" => "& > [data-slot='control']",
+        /// Each option's ring.
+        Circle = "circle" => "& > [data-slot='control'] > * > [data-slot='control'] > [data-slot='circle']",
+        /// Each option's checked mark.
+        Dot = "dot" => "& > [data-slot='control'] > * > [data-slot='control'] > [data-slot='circle'] > [data-slot='dot']",
+    }
+}
+
 field_props! {
+    parts(RadioGroupPart);
     without(radius);
     pub struct RadioGroupProps<T: Options> {
         /// Strictly controlled; `None` selects nothing.
@@ -138,6 +152,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .size(size)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -253,6 +268,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     });
 
     let group = group
+        .attr("data-slot", RadioGroupPart::Control.slot())
         .attr("role", "radiogroup")
         .attr("aria-readonly", readonly.then_some("true"))
         .attr("aria-labelledby", label_id)

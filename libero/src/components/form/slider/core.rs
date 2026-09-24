@@ -6,9 +6,10 @@ use crate::{
     CssLayer,
     components::{
         common::{
-            ClassList, HtmlTag, Input, States, Variables, base_color, has_shortcut_modifier,
+            ClassList, HtmlTag, Input, Part, States, Variables, base_color, has_shortcut_modifier,
             shadow_sx, variables,
         },
+        form::field_parts_enum,
         layout::use_box,
         overlay::{PressFocus, Tooltip, TooltipPinned},
     },
@@ -52,6 +53,25 @@ fn along_track(fraction: CssVar) -> String {
         "calc({thumb} / 2 + {} * (100% - {thumb}))",
         fraction.value_or("0")
     )
+}
+
+field_parts_enum! {
+    /// [`Slider`](super::Slider)'s and [`RangeSlider`](super::RangeSlider)'s
+    /// inner parts, for their `parts` prop: a field's, and the slider's own.
+    pub enum SliderPart {
+        /// The slider under the label: the track and the room around it.
+        Control = "control" => "& > [data-slot='control']",
+        /// The rail the thumbs run along.
+        Track = "track" => "& > [data-slot='control'] > [data-slot='track']",
+        /// The filled stretch of the track.
+        Bar = "bar" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='bar']",
+        /// One tick on the track.
+        Mark = "mark" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='mark']",
+        /// A tick's caption.
+        MarkLabel = "mark-label" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='mark-label']",
+        /// The handle; a range has two.
+        Thumb = "thumb" => "& > [data-slot='control'] > [data-slot='track'] [data-slot='thumb']",
+    }
 }
 
 const PLAIN_THUMB_SHADOW: &str = "0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.2)";
@@ -724,6 +744,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .states(&states)
         .variables(&root_variables)
         .prepare()
+        .attr("data-slot", SliderPart::Control.slot())
         .attr("role", grouped.as_ref().map(|_| "group"))
         .attr("aria-labelledby", grouped)
         .element(&root_element)
@@ -737,6 +758,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
             rsx! {
                 div {
                     class: track_class,
+                    "data-slot": SliderPart::Track.slot(),
                     style: track_style,
                     onmounted: track_element.mount(),
                     SliderThumbs {
@@ -854,6 +876,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             rsx! {
                 span {
                     class: mark_label_class.clone(),
+                    "data-slot": SliderPart::MarkLabel.slot(),
                     style: "{at}",
                     "aria-hidden": captions_hidden,
                     {label}
@@ -861,7 +884,12 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             }
         });
         rsx! {
-            span { class: mark_class.clone(), "data-state": filled, style: "{at}" }
+            span {
+                class: mark_class.clone(),
+                "data-slot": SliderPart::Mark.slot(),
+                "data-state": filled,
+                style: "{at}",
+            }
             {caption}
         }
     });
@@ -898,6 +926,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
 
         let thumb = thumb_style
             .clone()
+            .attr("data-slot", SliderPart::Thumb.slot())
             .attr("role", "slider")
             .attr(
                 "tabindex",
@@ -983,7 +1012,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
     let bar_style = bar_variables(bar);
     rsx! {
         if !props.plain {
-            div { class: bar_class, style: bar_style }
+            div { class: bar_class, "data-slot": SliderPart::Bar.slot(), style: bar_style }
         }
         {marks}
         {thumbs}

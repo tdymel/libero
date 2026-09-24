@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
+use libero::components::CascaderPart;
 use libero::{
     components::{Cascader, CascaderOption, Code, FieldStatus, Flex, Text},
     sx::sx,
@@ -135,6 +136,17 @@ pub fn CascaderPage() -> Element {
                     prop("required", "bool").default("false").doc("Sets `aria-required` and marks the label."),
                     prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
+                ])
+                .parts("CascaderPart", vec![
+                    (CascaderPart::Label, "The label above the control."),
+                    (CascaderPart::Required, "The required asterisk, in the label."),
+                    (CascaderPart::Description, "The caption between the label and the control."),
+                    (CascaderPart::Frame, "The bordered box around the control."),
+                    (CascaderPart::Control, "The element the label names."),
+                    (CascaderPart::Trailing, "The slot after the control: a chevron, a toggle."),
+                    (CascaderPart::Value, "The joined path or the placeholder, in the trigger."),
+                    (CascaderPart::Helper, "The caption under the control."),
+                    (CascaderPart::Status, "The validation message."),
                 ]),
             ],
             accessibility: a11y()

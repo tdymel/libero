@@ -5,8 +5,11 @@ use crate::{
     CssLayer,
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input},
-        form::{FormScope, field_control_sx, field_props, use_bound, use_field, use_field_frame},
+        common::{HtmlTag, Input, Part},
+        form::{
+            FormScope, field_control_sx, field_parts_enum, field_props, use_bound, use_field,
+            use_field_frame,
+        },
         layout::use_box,
     },
     hooks::{use_css, use_element, use_form_owner, use_localization, use_theme},
@@ -27,7 +30,17 @@ static TEXTAREA_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .selector("&[data-counter]", sx().margin_bottom("1.25rem"))
 });
 
+field_parts_enum! {
+    /// [`Textarea`]'s inner parts, for its `parts` prop: a field's, and the counter.
+    pub enum TextareaPart framed {
+        /// The `12/200` badge in the frame's corner, with `counter`. Beside the
+        /// control, so one level deeper too where the renderer draws no placeholder.
+        Counter = "counter" => "& > [data-slot='frame'] > [data-slot='counter'], & > [data-slot='frame'] > * > [data-slot='counter']",
+    }
+}
+
 field_props! {
+    parts(TextareaPart);
     extends(textarea);
     pub struct TextareaProps {
         /// The text. `None` leaves the `<textarea>` uncontrolled.
@@ -144,6 +157,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -185,7 +199,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
         let badge = rsx! {
             div {
                 class: counter_class,
-                "data-slot": "counter",
+                "data-slot": TextareaPart::Counter.slot(),
                 // The live region beside the frame says it in words.
                 "aria-hidden": "true",
                 "{used}/{max}"

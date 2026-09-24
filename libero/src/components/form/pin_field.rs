@@ -4,9 +4,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, input_from_str, navigation_chord},
+        common::{HtmlTag, Input, Part, States, input_from_str, navigation_chord},
         form::{
-            FIELD_CONTROL_SX, PreparedFrame, field_props, use_bound, use_field, use_field_frame,
+            FIELD_CONTROL_SX, FieldPart, PreparedFrame, field_props, use_bound, use_field,
+            use_field_frame,
         },
         layout::{BoxStyle, use_box},
     },
@@ -139,6 +140,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
@@ -628,6 +630,7 @@ fn PinCell(
     let keys = editor;
     let input = control
         .element(&handle)
+        .attr("data-slot", FieldPart::Control.slot())
         .attr("id", format!("{id}-{}", index + 1))
         .attr("type", input_type)
         .attr("inputmode", (kind == PinKind::Numeric).then_some("numeric"))

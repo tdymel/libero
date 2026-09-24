@@ -45,6 +45,23 @@ Switch {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `SwitchPart::Label` | `label` | The label beside the control. |
+| `SwitchPart::Required` | `required` | The required asterisk, in the label. |
+| `SwitchPart::Description` | `description` | The caption between the label and the control. |
+| `SwitchPart::Control` | `control` | Holds the hidden input and the track, beside the label. |
+| `SwitchPart::Track` | `track` | The pill the thumb slides along. |
+| `SwitchPart::Thumb` | `thumb` | The sliding knob. |
+| `SwitchPart::Helper` | `helper` | The caption under the control. |
+| `SwitchPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard

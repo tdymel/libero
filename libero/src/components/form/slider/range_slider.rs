@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::core::SliderCore;
+use super::core::{SliderCore, SliderPart};
 use super::scale::{Scale, control_spacing};
 use super::slider_value::{SliderChangeEvent, SliderMark, SliderStep, SliderValue};
 use super::value::SliderCoreValue;
@@ -14,6 +14,7 @@ use crate::{
 };
 
 field_props! {
+    parts(SliderPart);
     without(radius);
     pub struct RangeSliderProps<V: SliderValue> {
         /// The two ends in track order. Controlled: pair it with `oninput`, or
@@ -152,6 +153,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .size(props.size.copied_or(theme.slider.size))
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();

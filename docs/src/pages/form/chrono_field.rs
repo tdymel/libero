@@ -6,6 +6,7 @@ use super::date_common::{
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
+use libero::components::FieldPart;
 use libero::components::{
     ChronoField, Code, DateLevel, DateRange, Flex, Rule, Text, Validators, not_empty,
 };
@@ -102,6 +103,16 @@ pub fn ChronoFieldPage() -> Element {
                     prop("required", "bool").default("false").doc("Sets `required` on the input and marks the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
+                ])
+                .parts("FieldPart", vec![
+                    (FieldPart::Label, "The label above the control."),
+                    (FieldPart::Required, "The required asterisk, in the label."),
+                    (FieldPart::Description, "The caption between the label and the control."),
+                    (FieldPart::Frame, "The bordered box around the control."),
+                    (FieldPart::Control, "The element the label names."),
+                    (FieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
+                    (FieldPart::Helper, "The caption under the control."),
+                    (FieldPart::Status, "The validation message."),
                 ]),
             ],
             accessibility: a11y()

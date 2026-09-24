@@ -17,12 +17,12 @@ use crate::{
     components::{
         accessibility::use_announcer,
         common::{
-            ClassList, FOCUSABLE_SELECTOR, HtmlTag, Input, NavigationChord, States,
+            ClassList, FOCUSABLE_SELECTOR, HtmlTag, Input, NavigationChord, Parts, States,
             navigation_chord,
         },
         form::{
-            Caption, FIELD_CONTROL_SX, FieldName, FieldStatus, Validators, use_bound, use_field,
-            use_field_frame,
+            Caption, FIELD_CONTROL_SX, FieldName, FieldPart, FieldStatus, Validators, use_bound,
+            use_field, use_field_frame,
         },
         layout::{paper_sx, use_box},
     },
@@ -228,6 +228,7 @@ pub(super) struct PickerField<'a, V: 'static> {
     pub readonly: Option<bool>,
     pub class: &'a Input<ClassList>,
     pub sx: &'a Input<Sx>,
+    pub parts: &'a Input<Parts<FieldPart>>,
     pub states: &'a Input<States>,
     pub attributes: Vec<Attribute>,
 }
@@ -262,6 +263,7 @@ macro_rules! picker_field {
             readonly: $props.readonly,
             class: &$props.class,
             sx: &$props.sx,
+            parts: &$props.parts,
             states: &$props.states,
             attributes: $props.attributes,
         }
@@ -356,6 +358,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .radius(radius)
         .class(field.class)
         .sx(field.sx)
+        .parts(field.parts)
         .states(field.states)
         .attributes(&field.attributes)
         .prepare();

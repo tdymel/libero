@@ -2,12 +2,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
+        common::Part,
         common::{
             BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, HtmlTag,
             Orientation, States, Variant, disabled_look_sx, focus_ring_sx, has_shortcut_modifier,
             interactive_variant_sx, neighbour, variant_selected_sx,
         },
-        form::Activation,
+        form::{Activation, field_parts_enum},
         layout::use_box,
     },
     hooks::ElementHandle,
@@ -19,6 +20,17 @@ use crate::{
 /// The segment itself. A `<label>`, because the radio it wraps is what
 /// carries the semantics.
 const SEGMENT: &str = "& > label";
+
+field_parts_enum! {
+    /// [`SegmentedControl`](super::SegmentedControl)'s inner parts, for its
+    /// `parts` prop: a field's, the strip and its segments.
+    pub enum SegmentedControlPart {
+        /// The connected strip.
+        Control = "control" => "& > [data-slot='control']",
+        /// One segment's visible label.
+        Segment = "segment" => "& > [data-slot='control'] > [data-slot='segment']",
+    }
+}
 
 static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
     // Nested two `when`s deep, these outrank the radius rule, which is one
@@ -364,6 +376,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
             }
             label {
                 r#for: "{root}-segment-{index}",
+                "data-slot": SegmentedControlPart::Segment.slot(),
                 "data-state": segment_state(&segment_states, segment.disabled, selected == Some(index)),
                 // The whole name, where an ellipsis cuts the visible one.
                 title: segment.name.clone(),
@@ -394,6 +407,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         .prepare()
         .element(&element)
         .event("onfocusin", focusin)
+        .attr("data-slot", SegmentedControlPart::Control.slot())
         .attr_default("role", "radiogroup")
         .attr("aria-labelledby", labelledby)
         .attr("aria-describedby", describedby)

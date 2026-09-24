@@ -159,6 +159,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .parts(&props.parts)
         .states(&props.states)
         .attributes(&props.attributes)
         .text_slots(

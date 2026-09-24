@@ -62,6 +62,26 @@ fn Demo() -> Element {
 }
 ```
 
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `FileFieldPart::Label` | `label` | The label above the control. |
+| `FileFieldPart::Required` | `required` | The required asterisk, in the label. |
+| `FileFieldPart::Description` | `description` | The caption between the label and the control. |
+| `FileFieldPart::Frame` | `frame` | The `Input` variant's bordered box. |
+| `FileFieldPart::Control` | `control` | The group holding the Browse button: inside the frame, or the dropzone's surface. |
+| `FileFieldPart::Browse` | `browse` | The Browse button. |
+| `FileFieldPart::Chip` | `chip` | One picked file's chip, `Input` variant. |
+| `FileFieldPart::Trailing` | `trailing` | The loader and the clear button, `Input` variant. |
+| `FileFieldPart::Card` | `card` | One picked file's card under the surface, `Dropzone` variant. |
+| `FileFieldPart::Helper` | `helper` | The caption under the control. |
+| `FileFieldPart::Status` | `status` | The validation message. |
+
 ## Accessibility
 
 ### Keyboard
