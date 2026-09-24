@@ -1,10 +1,10 @@
 //! `Table`: a header click sorts, a second flips it, a third unsorts, and a custom cell body
 //! moves with its row. Plain cells draw their text inline (todo 29).
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, linger};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text, linger};
 use e2e::passes::{focus, keyboard};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -66,6 +66,67 @@ e2e::scenario!(
     the_tabbed_last_header_shows,
     android: skip("958: element identity on the WebView")
 );
+
+/// 1156-0b/0c: a row click reports its row; states, stripes, `sm` padding and
+/// a formatted cell all show.
+async fn the_rows_report_and_show_their_look<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const APPLE: &str = "tr[data-name=\"Apple\"]";
+    // Before any click, so no row is hovered: the hover wins over a stripe.
+    let clear = d.style("tbody tr:nth-child(1)", "background-color").await?;
+    let stripe = d.style("tbody tr:nth-child(2)", "background-color").await?;
+    if clear == stripe {
+        bail!("the second row is not striped: {stripe}");
+    }
+    let padding = d.style("tbody td", "padding-top").await?;
+    if padding != "6px" {
+        bail!("an sm cell's padding is {padding}");
+    }
+    let color = d.style("tr[data-state~=\"sold-out\"] td", "color").await?;
+    if color != "rgb(255, 0, 0)" {
+        bail!("the sold-out row's state did not style it: {color}");
+    }
+    eventually_text(d, &format!("{APPLE} td"), "12 kg", "formatting").await?;
+    d.click(&format!("{APPLE} td")).await?;
+    eventually_text(d, "#clicked", "Apple", "a row click").await
+}
+
+e2e::scenario!(
+    a_row_click_reports_its_row,
+    "/table/rows",
+    the_rows_report_and_show_their_look
+);
+
+/// 1156-0b: with `row_key`, a row prepended on top leaves the others' nodes alone.
+#[test]
+fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {
+    block_on(async {
+        let fixture = Fixture::open("/table/rows", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        page.evaluate("document.querySelector('tr[data-name=\"Apple\"]').marked = true")
+            .await
+            .unwrap();
+        page.find_element("#prepend")
+            .await
+            .unwrap()
+            .click()
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('tbody tr').dataset.name === 'Apricot' \
+             && document.querySelector('tr[data-name=\"Apple\"]').marked === true",
+            "Apricot on top, Apple on its own node",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("prepending a row").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
 
 #[test]
 fn it_meets_the_baseline() {

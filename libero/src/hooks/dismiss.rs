@@ -712,7 +712,7 @@ fn focus_inside_of(answers: impl IntoIterator<Item = Option<bool>>) -> Option<bo
 
 /// One event attribute, built by hand. Through `EventHandlerValue`: a bare
 /// `AttributeValue::listener::<T>` type-checks and panics on the first event.
-fn listener<T>(name: &'static str, handler: impl FnMut(Event<T>) + 'static) -> Attribute
+pub(crate) fn listener<T>(name: &'static str, handler: impl FnMut(Event<T>) + 'static) -> Attribute
 where
     T: for<'a> From<&'a PlatformEventData> + 'static,
 {

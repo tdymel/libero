@@ -29,7 +29,7 @@ fn people() -> Vec<Person> {
     ]
 }
 
-// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, bonus: f64 }
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, bonus: Option<f64> }
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const COLUMNS: &str = r#"columns: vec![
@@ -38,7 +38,10 @@ const COLUMNS: &str = r#"columns: vec![
             .value(|p: &Person| p.role.clone())
             .sortable()
             .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-        column("Bonus").value(|p: &Person| p.bonus).sortable(),
+        column("Bonus")
+            .value(|p: &Person| p.bonus)
+            .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+            .sortable(),
     ]"#;
 
 /// The rows are the fixture, and the snippet only compiles with them, so the
@@ -85,17 +88,24 @@ pub fn TablePage() -> Element {
                     prop("data", "Vec<T>").default("required").doc("One row each, in source order until a column is sorted."),
                     prop("columns", "Vec<Column<T>>").default("required").doc("Built with `column(..)`."),
                     prop("caption", "Option<String>").default("None").doc("A visible title above the header row, and the table's accessible name."),
-                    prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty."),
+                    prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\"."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted column, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. One column sorts, the first entry naming a sortable header."),
                     prop("default_sort", "Vec<TableSort>").default("[]").doc("Seeds the sort once. Ignored when `sort` is set."),
                     prop("onsortchange", "EventHandler<Vec<TableSort>>").default("None").doc("Called with the sort a header click asks for: ascending, then descending, then empty."),
+                    prop("row_key", "RowFn<T, String>").default("the row's index").doc("A row's identity, unique per row, from a `|row: &T| ..` closure. Its DOM node follows it through a sort or a data change, so focus and state inside a row stay with it."),
+                    prop("onrowclick", "EventHandler<T>").default("None").doc("Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action."),
+                    prop("row_states", "RowFn<T, States>").default("None").doc("A row's states, rendered as its `data-state`. Style them with `sx().selector(\"& tbody tr\", sx().when(..))`."),
+                    prop("row_attrs", "RowFn<T, Vec<Attribute>>").default("None").doc("Extra attributes on a row's `tr`."),
+                    prop("size", "Size").default("theme (md)").doc("Cell padding and font size."),
+                    prop("striped", "bool").default("false").doc("Shades every other body row."),
                 ]),
                 props("column()", vec![
                     prop("header", "String").default("required").doc("The column's title, the argument to `column(..)`."),
                     prop("value", "fn(&T) -> V").default("required").doc("Reads one cell out of a row. `V` sets the sort order and alignment. Text sorts as text and aligns left, numbers sort numerically and align right, and `Option<V>` renders `None` empty and sorts it last. Your own type joins them with one `impl CellValue`."),
                     prop("sortable", "bool").default("false").doc("Turns the header into a sort button."),
                     prop("render", "fn(&T) -> Element").default("None").doc("Replaces the cell body. Sorting still uses `value`."),
+                    prop("format", "fn(&T) -> String").default("None").doc("Replaces the cell text, say a price with its currency. Sorting and alignment still follow `value`."),
                     prop("align", "CellAlign").default("follows the cell type").doc("Overrides the alignment the cell type chose."),
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
                 ]).without_base_props(),
@@ -114,6 +124,7 @@ pub fn TablePage() -> Element {
                     "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
                     "Set `scroll: true` on a table wider than its container.",
                     "Mark the column that names a row with `.row_header()`.",
+                    "With `onrowclick`, also put a button or link for that action in a cell. A row is not a tab stop, so a keyboard cannot click it.",
                 ]),
             lead: rsx! {
                 Text {
@@ -135,7 +146,10 @@ pub fn TablePage() -> Element {
                     "next flips it, and a third restores source order. "
                     Code { source: "render" }
                     " changes only what a cell draws, so the Role column below still sorts "
-                    "by its text."
+                    "by its text. "
+                    Code { source: "format" }
+                    " does the same for the cell's text: the Bonus column prints a percent "
+                    "and still sorts by number."
                 }
                 Text {
                     Code { source: "default_sort" }
@@ -145,6 +159,15 @@ pub fn TablePage() -> Element {
                     " and update it from "
                     Code { source: "onsortchange" }
                     "."
+                }
+                Text {
+                    Code { source: "row_key" }
+                    " gives each row an identity, so its DOM node follows it when rows "
+                    "are added, removed or sorted. "
+                    Code { source: "size" }
+                    " sets the cell padding and font size, and "
+                    Code { source: "striped" }
+                    " shades every other row."
                 }
             },
             Demo {
@@ -156,6 +179,9 @@ pub fn TablePage() -> Element {
                     COLUMNS.to_string(),
                 ],
                 controls: vec![
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("md"),
+                    Control::switch("striped"),
                     Control::switch("scroll"),
                     Control::switch("empty").code(|_, values| match no_rows(values) {
                         true => vec![r#"empty: rsx! { "No team members yet." }"#.to_string()],
@@ -166,6 +192,8 @@ pub fn TablePage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     Table {
                         caption: "Team members",
+                        size: values.str("size"),
+                        striped: values.str("striped") == "true",
                         scroll: values.str("scroll") == "true",
                         empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
                         data: if no_rows(&values) { Vec::new() } else { people() },
@@ -175,7 +203,10 @@ pub fn TablePage() -> Element {
                                 .value(|p: &Person| p.role.clone())
                                 .sortable()
                                 .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-                            column("Bonus").value(|p: &Person| p.bonus).sortable(),
+                            column("Bonus")
+                                .value(|p: &Person| p.bonus)
+                                .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+                                .sortable(),
                         ],
                     }
                 },

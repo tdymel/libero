@@ -62,6 +62,7 @@ pub struct Localization {
     pub slider: SliderLabels,
     pub rating: RatingLabels,
     pub menu: MenuLabels,
+    pub table: TableLabels,
 }
 
 impl Localization {
@@ -104,6 +105,7 @@ impl Localization {
         slider: SliderLabels::ENGLISH,
         rating: RatingLabels::ENGLISH,
         menu: MenuLabels::ENGLISH,
+        table: TableLabels::ENGLISH,
     };
 
     /// Hand it to `LiberoProvider { localization }`; German dates are `Formats::GERMAN`.
@@ -145,6 +147,7 @@ impl Localization {
         slider: SliderLabels::GERMAN,
         rating: RatingLabels::GERMAN,
         menu: MenuLabels::GERMAN,
+        table: TableLabels::GERMAN,
     };
 }
 

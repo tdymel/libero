@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -8,15 +10,18 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::use_id,
+    hooks::{listener, use_id, use_localization, use_theme},
     platform::{lays_out_captions, widens_sized_tables},
     sx::{StaticSx, Sx, sx},
-    theme::{TABLE_FONT_SIZE, TableDefaults},
+    theme::{Size, TableDefaults},
 };
 
 use super::{
     column::Column,
-    core::{CaptionSpec, RowSpec, TableSort, active_sort, header_specs, render_body, row_order},
+    core::{
+        BodySpec, CaptionSpec, RowFn, RowSpec, TableSort, active_sort, header_specs, render_body,
+        row_order,
+    },
     use_table::{TableConfig, use_table},
 };
 
@@ -97,6 +102,10 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& th[data-align=\"end\"] button",
         sx().justify_content("end"),
     )
+    .when(
+        "row-click",
+        sx().selector("& tbody tr:not([data-empty])", sx().cursor("pointer")),
+    )
 });
 
 fn caption_sx() -> Sx {
@@ -106,9 +115,8 @@ fn caption_sx() -> Sx {
 }
 
 /// The caption drawn before the table where Blitz skips `<caption>`, with the
-/// table's font size the web caption inherits.
-static TABLE_CAPTION_SX: StaticSx =
-    StaticSx::new(|| caption_sx().font_size(TABLE_FONT_SIZE.value()));
+/// font size and padding the web caption inherits from the table.
+static TABLE_CAPTION_SX: StaticSx = StaticSx::new(|| caption_sx().per_size(TableDefaults::size_sx));
 
 static TABLE_SCROLL_SX: StaticSx = StaticSx::new(|| sx().overflow_x("auto").max_width("100%"));
 
@@ -137,6 +145,26 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// The sort a header click asks for: ascending, descending, then empty.
     #[props(default)]
     onsortchange: Option<EventHandler<Vec<TableSort>>>,
+    /// A row's identity, unique per row: its DOM node follows it through a sort
+    /// or a data change. Unset, the row's index in `data`.
+    #[props(default, into)]
+    row_key: RowFn<T, String>,
+    /// Called with the clicked row. Pointer only: give keyboard users a button
+    /// or link in a cell for the same action.
+    #[props(default)]
+    onrowclick: Option<EventHandler<T>>,
+    /// A row's states, as its `data-state`, for `sx().selector("& tbody tr", sx().when(..))`.
+    #[props(default, into)]
+    row_states: RowFn<T, States>,
+    /// Extra attributes on a row's `tr`.
+    #[props(default, into)]
+    row_attrs: RowFn<T, Vec<Attribute>>,
+    /// Cell padding and font size.
+    #[props(default, into)]
+    size: Input<Size>,
+    /// Shades every other body row.
+    #[props(default)]
+    striped: bool,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -184,27 +212,46 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         "Table: no `caption`, `aria_label` or `aria-labelledby`, so it is announced without a \
          name.",
     );
+    let size = props.size.copied_or(use_theme().table.size);
+    let labels = use_localization().table;
     let scroll = use_box().framework_sx(&TABLE_SCROLL_SX).prepare();
-    let caption_box = use_box().framework_sx(&TABLE_CAPTION_SX).prepare();
+    let size_states: Input<States> = States::new().with(size.state_name(), true).into();
+    let caption_box = use_box()
+        .framework_sx(&TABLE_CAPTION_SX)
+        .states(&size_states)
+        .prepare();
 
     let headers = header_specs(&props.columns);
     let active = active_sort(&headers, &state.sort.read());
 
-    let rows: Vec<RowSpec> = row_order(&props.data, &props.columns, active)
+    let data = Rc::new(props.data);
+    let rows: Vec<RowSpec> = row_order(&data, &props.columns, active)
         .into_iter()
-        .map(|index| RowSpec {
-            index,
-            cells: props
-                .columns
-                .iter()
-                .map(|column| {
-                    let row = &props.data[index];
-                    match &column.render {
+        .map(|index| {
+            let row = &data[index];
+            let mut attributes = props.row_attrs.call(row).unwrap_or_default();
+            if let Some(onrowclick) = props.onrowclick {
+                let data = data.clone();
+                attributes.push(listener("onclick", move |_: Event<MouseData>| {
+                    onrowclick.call(data[index].clone());
+                }));
+            }
+            RowSpec {
+                key: props.row_key.call(row).unwrap_or_else(|| index.to_string()),
+                states: props
+                    .row_states
+                    .call(row)
+                    .and_then(|states| states.data_state()),
+                attributes,
+                cells: props
+                    .columns
+                    .iter()
+                    .map(|column| match &column.render {
                         Some(render) => (String::new(), Some(render(row))),
                         None => ((column.text)(row), None),
-                    }
-                })
-                .collect(),
+                    })
+                    .collect(),
+            }
         })
         .collect();
 
@@ -237,16 +284,31 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         attributes.push(attr("aria-labelledby", spec.id.clone()));
     }
 
+    let states: Input<States> = props
+        .states
+        .unwrap_or_default()
+        .with(size.state_name(), true)
+        .with("striped", props.striped)
+        .with("row-click", props.onrowclick.is_some())
+        .into();
+    let empty = props.empty.unwrap_or_else(|| rsx! { "{labels.no_rows}" });
     let table = use_box()
         .framework_sx(&TABLE_SX)
         .class(&props.class)
         .sx(&props.sx)
-        .states(&props.states)
+        .states(&states)
         .prepare()
         .render(
             HtmlTag::Table,
             attributes,
-            render_body(caption, headers, rows, props.empty, active, state.sort),
+            render_body(BodySpec {
+                caption,
+                headers,
+                rows,
+                empty,
+                active,
+                sort: state.sort,
+            }),
         );
     let table = match before {
         Some(spec) => {

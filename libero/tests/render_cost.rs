@@ -607,6 +607,67 @@ const CLICK_SHAPES: &[Shape] = &[
     },
 ];
 
+/// One table of `ROWS` rows, two columns. A [`flip`] round either changes one
+/// row (`SORT` false) or the controlled sort's direction: every row redraws.
+fn table_large_app<const ROWS: usize, const SORT: bool>() -> Element {
+    let data = use_hook(|| {
+        let rows: Vec<u32> = (0..ROWS as u32).collect();
+        let mut changed = rows.clone();
+        changed[0] = ROWS as u32;
+        (rows, changed)
+    });
+    let onsortchange = use_callback(|_: Vec<TableSort>| {});
+    let rows = match !SORT && flip() {
+        true => data.1.clone(),
+        false => data.0.clone(),
+    };
+    let direction = match SORT && flip() {
+        true => SortDirection::Descending,
+        false => SortDirection::Ascending,
+    };
+    rsx! {
+        LiberoProvider {
+            Table {
+                data: rows,
+                columns: vec![
+                    column("Name").value(|n: &u32| format!("Row {n}")).row_header(),
+                    column("N").value(|n: &u32| *n).sortable(),
+                ],
+                sort: vec![TableSort::new("N", direction)],
+                onsortchange,
+            }
+        }
+    }
+}
+
+/// Large-N baselines, one table each, so the time is per table, not per row.
+const TABLE_LARGE_SHAPES: &[Shape] = &[
+    Shape {
+        name: "Table 1k",
+        app: table_large_app::<1_000, false>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 1k sort",
+        app: table_large_app::<1_000, true>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 10k",
+        app: table_large_app::<10_000, false>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 10k sort",
+        app: table_large_app::<10_000, true>,
+        count: 1,
+        round: rerender_app,
+    },
+];
+
 /// Items per `Sortable` list, as long as the e2e fixture's long list.
 const SORTABLE_ITEMS: usize = 40;
 
@@ -920,6 +981,7 @@ fn render_cost_per_component() {
         .chain(NOTIFICATION_SHAPES)
         .chain(CLICK_SHAPES)
         .chain(SORTABLE_SHAPES)
+        .chain(TABLE_LARGE_SHAPES)
         .filter(|shape| wanted(shape.name))
         .copied()
         .collect();

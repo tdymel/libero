@@ -78,6 +78,21 @@ impl<T> Column<T> {
         self
     }
 
+    /// Replaces the cell text. Sorting still uses `value`, so a formatted
+    /// number or date keeps its order.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # struct Item { cents: u64 }
+    /// column("Price")
+    ///     .value(|i: &Item| i.cents)
+    ///     .format(|i: &Item| format!("${}.{:02}", i.cents / 100, i.cents % 100));
+    /// ```
+    pub fn format(mut self, format: impl Fn(&T) -> String + 'static) -> Self {
+        self.text = Rc::new(format);
+        self
+    }
+
     /// Overrides the alignment `V` chose.
     pub fn align(mut self, align: impl Into<CellAlign>) -> Self {
         self.align = align.into();
@@ -132,6 +147,17 @@ mod tests {
             .render(|_: &u32| rsx! { "x" });
 
         assert_eq!((column.sort_key)(&7), SortKey::Num(7.0));
+    }
+
+    #[test]
+    fn a_format_changes_the_text_but_not_the_sort_key() {
+        let column = column("N")
+            .value(|row: &u32| *row)
+            .format(|row: &u32| format!("#{row}"));
+
+        assert_eq!((column.text)(&9), "#9");
+        assert_eq!((column.sort_key)(&9), SortKey::Num(9.0));
+        assert_eq!(column.align, CellAlign::End);
     }
 
     #[test]

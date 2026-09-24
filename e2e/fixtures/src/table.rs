@@ -1,14 +1,16 @@
 //! `Table` with a sortable text column and a custom-rendered one; a wide one
-//! in its scroll region under a caption; an empty one.
+//! in its scroll region under a caption; keyed, clickable, striped rows; an empty one.
 
 use dioxus::prelude::*;
-use libero::components::{Table, column};
+use libero::components::{States, Table, column};
+use libero::sx::sx;
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/table", || rsx! { TablePage {} }),
     ("/table/wide", || rsx! { WideTablePage {} }),
+    ("/table/rows", || rsx! { RowsTablePage {} }),
     ("/table/empty", || rsx! { EmptyTablePage {} }),
 ];
 
@@ -67,6 +69,40 @@ fn WideTablePage() -> Element {
         .collect();
     rsx! {
         Table { caption: "Fruit catalogue", scroll: true, data: fruit(), columns }
+    }
+}
+
+/// Keyed, clickable, striped rows at `sm`; the sold-out row marked by a state.
+/// `#prepend` adds a row on top, which the keys keep off the others' nodes.
+#[component]
+fn RowsTablePage() -> Element {
+    let mut clicked = use_signal(String::new);
+    let mut data = use_signal(fruit);
+    rsx! {
+        button {
+            id: "prepend",
+            onclick: move |_| data.write().insert(0, Fruit { name: "Apricot", stock: 7 }),
+            "Prepend"
+        }
+        Table {
+            aria_label: "Fruit",
+            size: "sm",
+            striped: true,
+            data: data(),
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()).sortable().row_header(),
+                column("Stock")
+                    .value(|fruit: &Fruit| fruit.stock)
+                    .format(|fruit: &Fruit| format!("{} kg", fruit.stock))
+                    .sortable(),
+            ],
+            row_key: |fruit: &Fruit| fruit.name.to_string(),
+            row_states: |fruit: &Fruit| States::new().with("sold-out", fruit.stock == 0),
+            row_attrs: |fruit: &Fruit| vec![Attribute::new("data-name", fruit.name, None, false)],
+            onrowclick: move |fruit: Fruit| clicked.set(fruit.name.to_string()),
+            sx: sx().selector("& tbody tr", sx().when("sold-out", sx().color("red"))),
+        }
+        p { id: "clicked", "{clicked}" }
     }
 }
 

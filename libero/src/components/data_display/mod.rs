@@ -31,7 +31,7 @@ pub use pictogram::{Pictogram, PictogramProps, SvgData};
 pub use qr_code::{QrCode, QrCodeProps};
 pub use sortable::{Sortable, SortableItem, SortableItemProps, SortableProps};
 pub use table::{
-    CellAlign, CellValue, Column, ColumnHeader, SortDirection, SortKey, Table, TableProps,
+    CellAlign, CellValue, Column, ColumnHeader, RowFn, SortDirection, SortKey, Table, TableProps,
     TableSort, column,
 };
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelineProps};

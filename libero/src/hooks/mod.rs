@@ -47,8 +47,8 @@ pub use debounce::{
 };
 pub use direction::{DirectionHandle, use_direction};
 pub(crate) use dismiss::{
-    DismissHandle, DismissOptions, PressMarker, escape_closes, use_dismiss, use_dismiss_layer,
-    use_escape_dismiss, use_field_list_layer, use_press_marker,
+    DismissHandle, DismissOptions, PressMarker, escape_closes, listener, use_dismiss,
+    use_dismiss_layer, use_escape_dismiss, use_field_list_layer, use_press_marker,
 };
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
 pub(crate) use drag::{sideways_drag_sx, use_distance_drag, use_drag_with, use_sideways_drag};

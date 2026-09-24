@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
@@ -26,6 +28,50 @@ impl TableSort {
             column: column.into(),
             direction,
         }
+    }
+}
+
+/// A per-row closure for a [`Table`](super::Table) prop, as `row_key`, or none
+/// by default. Compares equal to any other, as a column's closures do.
+///
+/// ```rust
+/// # use libero::components::RowFn;
+/// # struct User { id: u64 }
+/// let key: RowFn<User, String> = (|u: &User| u.id.to_string()).into();
+/// ```
+pub struct RowFn<T, R>(Option<RowClosure<T, R>>);
+
+type RowClosure<T, R> = Rc<dyn Fn(&T) -> R>;
+
+impl<T, R> RowFn<T, R> {
+    /// `None` when unset.
+    pub(super) fn call(&self, row: &T) -> Option<R> {
+        self.0.as_ref().map(|f| f(row))
+    }
+}
+
+impl<T, R, F: Fn(&T) -> R + 'static> From<F> for RowFn<T, R> {
+    fn from(f: F) -> Self {
+        Self(Some(Rc::new(f)))
+    }
+}
+
+// Hand-written: a derive would demand `T: Default`, `T: Clone` and `R: Clone`.
+impl<T, R> Default for RowFn<T, R> {
+    fn default() -> Self {
+        Self(None)
+    }
+}
+
+impl<T, R> Clone for RowFn<T, R> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<T, R> PartialEq for RowFn<T, R> {
+    fn eq(&self, _: &Self) -> bool {
+        true
     }
 }
 
@@ -79,9 +125,13 @@ pub(super) fn next_sort(
     vec![TableSort::new(header, direction)]
 }
 
-/// A row's cells, keyed by its index in `data`. A cell is its text, or a caller's body.
+/// A row's cells and its DOM key: the caller's `row_key`, else its index in
+/// `data`. A cell is its text, or a caller's body.
 pub(super) struct RowSpec {
-    pub index: usize,
+    pub key: String,
+    /// The row's `data-state`.
+    pub states: Option<String>,
+    pub attributes: Vec<Attribute>,
     pub cells: Vec<(String, Option<Element>)>,
 }
 
@@ -129,16 +179,28 @@ pub(super) struct CaptionSpec {
     pub id: String,
 }
 
-pub(super) fn render_body(
-    caption: Option<CaptionSpec>,
-    headers: Vec<HeaderSpec>,
-    rows: Vec<RowSpec>,
-    empty: Option<Element>,
-    active: Option<(usize, SortDirection)>,
-    sort: StateSlice<Vec<TableSort>>,
-) -> Element {
+/// Everything inside the `<table>`, with `T` gone.
+pub(super) struct BodySpec {
+    pub caption: Option<CaptionSpec>,
+    pub headers: Vec<HeaderSpec>,
+    pub rows: Vec<RowSpec>,
+    /// The empty row's body: the caller's `empty`, else the localized text.
+    pub empty: Element,
+    pub active: Option<(usize, SortDirection)>,
+    pub sort: StateSlice<Vec<TableSort>>,
+}
+
+pub(super) fn render_body(body: BodySpec) -> Element {
+    let BodySpec {
+        caption,
+        headers,
+        rows,
+        empty,
+        active,
+        sort,
+    } = body;
     let columns = headers.len().max(1);
-    let empty = empty.filter(|_| rows.is_empty());
+    let empty = rows.is_empty().then_some(empty);
     rsx! {
         if let Some(spec) = caption {
             caption { id: spec.id, "{spec.text}" }
@@ -184,7 +246,9 @@ pub(super) fn render_body(
             }
             for row in rows {
                 tr {
-                    key: "{row.index}",
+                    key: "{row.key}",
+                    "data-state": row.states,
+                    ..row.attributes,
                     for (index , (text , body)) in row.cells.into_iter().enumerate() {
                         if headers.get(index).is_some_and(|spec| spec.row_header) {
                             th {

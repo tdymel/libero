@@ -14,11 +14,16 @@ aligns right on its own.
 `sortable` turns a header into a button. The first click sorts ascending, the
 next flips it, and a third restores source order. `render` changes only what a
 cell draws, so a Role column rendered as a [Chip](chip.md) still sorts by its
-text.
+text. `format` does the same for the cell's text: the Bonus column prints a
+percent and still sorts by number.
 
 `default_sort` sorts the first render. To hold the sort yourself, for a
 server-side query or a saved view, pass `sort` and update it from
 `onsortchange`.
+
+`row_key` gives each row an identity, so its DOM node follows it when rows are
+added, removed or sorted. `size` sets the cell padding and font size, and
+`striped` shades every other row.
 
 ## Usage
 
@@ -51,7 +56,10 @@ fn Demo() -> Element {
                     .value(|p: &Person| p.role.clone())
                     .sortable()
                     .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-                column("Bonus").value(|p: &Person| p.bonus).sortable(),
+                column("Bonus")
+                    .value(|p: &Person| p.bonus)
+                    .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+                    .sortable(),
             ],
         }
     }
@@ -157,8 +165,52 @@ fn Demo() -> Element {
 }
 ```
 
+Rows keyed by an id, a click on a row, and a state that styles some rows.
+`onrowclick` is for the pointer only: keep a button or link in a cell for the
+keyboard.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{States, Table, column};
+use libero::sx::sx;
+
+#[derive(Clone, PartialEq)]
+struct Order {
+    id: u64,
+    item: String,
+    late: bool,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut open = use_signal(|| None::<u64>);
+    let orders = vec![
+        Order { id: 41, item: "Desk".into(), late: false },
+        Order { id: 42, item: "Lamp".into(), late: true },
+    ];
+
+    rsx! {
+        Table {
+            aria_label: "Orders",
+            size: "sm",
+            striped: true,
+            data: orders,
+            columns: vec![
+                column("Order").value(|o: &Order| o.id).row_header(),
+                column("Item").value(|o: &Order| o.item.clone()).sortable(),
+            ],
+            row_key: |o: &Order| o.id.to_string(),
+            row_states: |o: &Order| States::new().with("late", o.late),
+            onrowclick: move |o: Order| open.set(Some(o.id)),
+            sx: sx().selector("& tbody tr", sx().when("late", sx().color("red.7"))),
+        }
+    }
+}
+```
+
 A table wider than its container takes `scroll: true`, and `empty` fills the
-body while `data` has no rows.
+body while `data` has no rows. Without `empty` that row reads the localized
+`table.no_rows`, "No rows".
 
 ```rust
 use dioxus::prelude::*;
@@ -210,6 +262,8 @@ fn Demo() -> Element {
   text.
 - Set `scroll: true` on a table wider than its container.
 - Mark the column that names a row with `.row_header()`.
+- With `onrowclick`, also put a button or link for that action in a cell. A
+  row is not a tab stop, so a keyboard cannot click it.
 
 ## Props
 
@@ -220,11 +274,17 @@ fn Demo() -> Element {
 | `data` | `Vec<T>` | required | One row each, in source order until a column is sorted. |
 | `columns` | `Vec<Column<T>>` | required | Built with `column(..)`. |
 | `caption` | `Option<String>` | `None` | A visible title above the header row, and the table's accessible name. |
-| `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. |
+| `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". |
 | `scroll` | `bool` | `false` | Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 | `sort` | `Option<Vec<TableSort>>` | `None` | The sorted column, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. One column sorts, the first entry naming a sortable header. |
 | `default_sort` | `Vec<TableSort>` | `[]` | Seeds the sort once. Ignored when `sort` is set. |
 | `onsortchange` | `EventHandler<Vec<TableSort>>` | `None` | Called with the sort a header click asks for: ascending, then descending, then empty. |
+| `row_key` | `RowFn<T, String>` | the row's index | A row's identity, unique per row, from a `\|row: &T\| ..` closure. Its DOM node follows it through a sort or a data change, so focus and state inside a row stay with it. |
+| `onrowclick` | `EventHandler<T>` | `None` | Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action. |
+| `row_states` | `RowFn<T, States>` | `None` | A row's states, rendered as its `data-state`. Style them with `sx().selector("& tbody tr", sx().when(..))`. |
+| `row_attrs` | `RowFn<T, Vec<Attribute>>` | `None` | Extra attributes on a row's `tr`. |
+| `size` | `Size` | theme (md) | Cell padding and font size. |
+| `striped` | `bool` | `false` | Shades every other body row. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes, `aria_label` among them.
@@ -237,6 +297,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `value` | `fn(&T) -> V` | required | Reads one cell out of a row. `V`'s `CellValue` impl sets the sort order and alignment. |
 | `sortable` | `bool` | `false` | Turns the header into a sort button. |
 | `render` | `fn(&T) -> Element` | `None` | Replaces the cell body. Sorting still uses `value`. |
+| `format` | `fn(&T) -> String` | `None` | Replaces the cell text, say a price with its currency. Sorting and alignment still follow `value`. |
 | `align` | `CellAlign` | follows the cell type | Overrides the alignment the cell type chose. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
 
@@ -244,25 +305,27 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 
 ## Theme defaults
 
-`TableDefaults` on the theme. Flat values, since `Table` has no `size` prop.
+`TableDefaults` on the theme.
 
 | Field | Type | Description |
 |---|---|---|
-| `padding_x` | `u8` | Horizontal cell padding, in px. |
-| `padding_y` | `u8` | Vertical cell padding, in px. |
-| `font_size` | `u16` | Table font size, in px. |
+| `size` | `Size` | The size when the prop is unset, `Md`. |
+| `sizes` | `Sizes<TableSizeLevel>` | Per size: `font_size`, `padding_x` and `padding_y` of every cell. `Md` is 14px, 12px and 10px. |
 | `border_color` | `ColorValue` | Color of the header and row rules. |
 | `hover_color` | `ColorValue` | Row background while hovered. |
+| `stripe_color` | `ColorValue` | Every other body row's background with `striped`. |
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
-| `--lsx-table-padding-x` | Horizontal padding on every `th`/`td`. |
-| `--lsx-table-padding-y` | Vertical padding on every `th`/`td`. |
-| `--lsx-table-font-size` | `font-size` of the table. |
+| `--lsx-table-font-size-{size}` | `font-size` of the table at that size. |
+| `--lsx-table-padding-x-{size}` | Horizontal padding on every `th`/`td` at that size. |
+| `--lsx-table-padding-y-{size}` | Vertical padding on every `th`/`td` at that size. |
+| `--lsx-table-pad-x`, `--lsx-table-pad-y` | The padding resolved on the table for its size. |
 | `--lsx-table-border-color` | Color of the `1px` header and row rules. |
 | `--lsx-table-hover` | `background` of a hovered body row. |
+| `--lsx-table-stripe` | `background` of every other body row with `striped`. |
 
 ## Data attributes
 
@@ -276,3 +339,4 @@ default `start`.
 | `data-sortable` | On a sortable header. |
 | `aria-sort` | On the sorted header only, `ascending` or `descending`. |
 | `data-empty` | On the body row that holds `empty`. |
+| `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set. On a body row: its active `row_states`. |

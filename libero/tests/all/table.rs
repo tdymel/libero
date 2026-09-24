@@ -5,7 +5,9 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Mark, SortDirection, Table, TableSort, column},
+    components::{Mark, SortDirection, States, Table, TableSort, column},
+    localization::Localization,
+    theme::Size,
 };
 
 #[test]
@@ -285,4 +287,81 @@ fn the_empty_slot_spans_every_column_only_without_rows() {
     let full = body(&render(|| table(vec![Item { name: "Apple" }])));
     assert!(!full.contains("Nothing in stock"));
     assert!(!full.contains("data-empty"));
+}
+
+#[derive(Clone, PartialEq)]
+struct Stock {
+    id: u32,
+    name: &'static str,
+    cents: u32,
+}
+
+fn stock(size: Option<Size>, striped: bool) -> Element {
+    rsx! {
+        LiberoProvider {
+            Table {
+                aria_label: "Stock",
+                data: vec![
+                    Stock { id: 7, name: "Apple", cents: 120 },
+                    Stock { id: 9, name: "Pear", cents: 5 },
+                ],
+                columns: vec![
+                    column("Name").value(|s: &Stock| s.name.to_string()),
+                    column("Price")
+                        .value(|s: &Stock| s.cents)
+                        .format(|s: &Stock| format!("${}.{:02}", s.cents / 100, s.cents % 100)),
+                ],
+                row_key: |s: &Stock| s.id.to_string(),
+                row_states: |s: &Stock| States::new().with("cheap", s.cents < 100),
+                row_attrs: |s: &Stock| vec![Attribute::new("data-id", s.id.to_string(), None, false)],
+                size,
+                striped,
+            }
+        }
+    }
+}
+
+#[test]
+fn rows_carry_their_states_and_attributes_and_cells_their_format() {
+    let body = body(&render(|| stock(None, false)));
+
+    assert!(body.contains("$1.20") && body.contains("$0.05"), "{body}");
+    assert_eq!(body.matches("data-state=\"cheap\"").count(), 1, "{body}");
+    assert!(
+        body.contains("data-id=\"7\"") && body.contains("data-id=\"9\""),
+        "{body}"
+    );
+}
+
+#[test]
+fn size_and_stripes_are_table_states() {
+    let html = render(|| stock(None, false));
+    assert_eq!(attributes_of(&html, "table")["data-state"], "size-md");
+
+    let html = render(|| stock(Some(Size::Sm), true));
+    assert_eq!(
+        attributes_of(&html, "table")["data-state"],
+        "size-sm striped"
+    );
+}
+
+#[test]
+fn an_empty_table_says_so_in_the_active_language() {
+    fn table() -> Element {
+        rsx! {
+            Table {
+                aria_label: "Stock",
+                data: Vec::<Item>::new(),
+                columns: vec![column("Name").value(|item: &Item| item.name.to_string())],
+            }
+        }
+    }
+
+    let english = body(&render(|| rsx! { LiberoProvider { {table()} } }));
+    assert!(english.contains(">No rows</td>"), "{english}");
+
+    let german = body(&render(|| {
+        rsx! { LiberoProvider { localization: &Localization::GERMAN, {table()} } }
+    }));
+    assert!(german.contains(">Keine Zeilen</td>"), "{german}");
 }
