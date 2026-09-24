@@ -17,6 +17,10 @@ glyph's own.
 passes straight in: `pictogram_icons_lucide::house::outlined`. For your own
 glyph, `SvgData::new(include_str!("logo.svg"))` splits the file at compile time.
 
+Take icon crates from pictogram's 0.4 line, the one libero builds on. A 0.5
+crate brings a second `SvgData` type: its icons fail with a type mismatch that
+does not name the version.
+
 ## Usage
 
 ```rust

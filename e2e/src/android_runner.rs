@@ -8,7 +8,12 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 
-use super::{Guard, dx, free_port, own_target_dir, stop, workspace_root};
+use super::{
+    dx::{dx, workspace_root},
+    http::free_port,
+    own_target_dir,
+    process::{Guard, stop},
+};
 
 const PACKAGE: &str = "dev.libero.fixtures";
 const ACTIVITY: &str = "dev.libero.fixtures/dev.dioxus.main.MainActivity";

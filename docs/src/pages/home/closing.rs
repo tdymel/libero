@@ -6,7 +6,7 @@ use libero::{
 };
 
 use super::cta_row_sx;
-use crate::{GITHUB, Route};
+use crate::{Route, site::GITHUB};
 
 /// The way in once more, and the page's footer line.
 #[component]

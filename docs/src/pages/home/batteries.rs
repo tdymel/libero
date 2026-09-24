@@ -7,7 +7,7 @@ use libero::{
 use pictogram_icons_lucide as lucide;
 
 use super::SectionTitle;
-use crate::GITHUB;
+use crate::site::GITHUB;
 
 /// The core batteries, one card each.
 #[component]

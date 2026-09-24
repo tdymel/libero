@@ -7,7 +7,7 @@ use libero::{
 };
 
 use super::{cta_row_sx, tint};
-use crate::{GITHUB, Route};
+use crate::{Route, site::GITHUB};
 
 const PLATFORMS: [&str; 4] = ["Web", "Desktop", "Android", "iOS"];
 

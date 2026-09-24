@@ -57,6 +57,11 @@ pub fn PictogramPage() -> Element {
                     Code { source: "currentColor" }
                     ", so it takes the text color. Your attributes win over the glyph's own."
                 }
+                Text {
+                    "Take icon crates from pictogram's 0.4 line, the one libero builds on. A 0.5 crate brings a second "
+                    Code { source: "SvgData" }
+                    " type: its icons fail with a type mismatch that does not name the version."
+                }
             },
             Demo {
                 component: "Pictogram",

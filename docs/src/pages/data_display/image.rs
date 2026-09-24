@@ -112,9 +112,9 @@ pub fn ImagePage() -> Element {
                     Image {
                         src: match values.str("broken_src").as_str() {
                             "true" => MISSING_SRC.to_string(),
-                            _ => crate::SAMPLE_IMAGE.to_string(),
+                            _ => crate::site::SAMPLE_IMAGE.to_string(),
                         },
-                        fallback_src: crate::FALLBACK_IMAGE.to_string(),
+                        fallback_src: crate::site::FALLBACK_IMAGE.to_string(),
                         alt: "A stylised landscape",
                         fit: values.str("fit"),
                         radius: match values.str("radius").as_str() {
