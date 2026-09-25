@@ -1,6 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, Table, Text, column};
+use libero::sx::sx;
 
 #[derive(Clone, PartialEq)]
 struct Person {
@@ -70,6 +71,9 @@ struct Person {{
 {code}"#
     )
 }
+
+/// Wider than the preview at any width, so `scroll` has something to scroll.
+const SCROLL_WIDTH: &str = "640px";
 
 /// The `empty` switch empties `data` too, or the slot would never show.
 fn no_rows(values: &DemoValues) -> bool {
@@ -223,6 +227,13 @@ pub fn TablePage() -> Element {
                     Code { source: "row_count" }
                     ". Select-all covers the rows on every page."
                 }
+                Text {
+                    Code { source: "scroll" }
+                    " wraps a table wider than its container in a region that scrolls "
+                    "sideways. The demo's switch also sets "
+                    Code { source: "sx().min_width(\"640px\")" }
+                    ", so the three columns overflow at any width."
+                }
             },
             Demo {
                 component: "Table",
@@ -236,7 +247,13 @@ pub fn TablePage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::switch("striped"),
-                    Control::switch("scroll"),
+                    Control::switch("scroll").code(|_, values| match values.str("scroll") == "true" {
+                        true => vec![
+                            "scroll: true".to_string(),
+                            format!("sx: sx().min_width({SCROLL_WIDTH:?})"),
+                        ],
+                        false => vec![],
+                    }),
                     Control::switch("selectable").code(|_, values| match values.str("selectable") == "true" {
                         true => vec![
                             "selectable: true".to_string(),
@@ -263,6 +280,10 @@ pub fn TablePage() -> Element {
                         size: values.str("size"),
                         striped: values.str("striped") == "true",
                         scroll: values.str("scroll") == "true",
+                        sx: match values.str("scroll") == "true" {
+                            true => sx().min_width(SCROLL_WIDTH),
+                            false => sx(),
+                        },
                         selectable: values.str("selectable") == "true",
                         multi_sort: values.str("multi_sort") == "true",
                         row_key: |p: &Person| p.name.clone(),

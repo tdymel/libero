@@ -72,7 +72,8 @@ impl TableDefaults {
             },
         ),
         border_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
-        hover_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
+        // One step past the stripe, so a hovered striped row still changes.
+        hover_color: ColorValue::Shade(Color::Muted, ColorShade::S2),
         stripe_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
         selected_color: ColorValue::Shade(Color::Primary, ColorShade::S1),
     };

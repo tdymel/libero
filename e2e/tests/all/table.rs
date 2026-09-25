@@ -77,6 +77,13 @@ async fn the_rows_report_and_show_their_look<D: Driver>(d: &mut D, _route: &str)
     if clear == stripe {
         bail!("the second row is not striped: {stripe}");
     }
+    // 1156 follow-up: a hovered stripe takes its own shade.
+    d.hover("tbody tr:nth-child(2) td").await?;
+    eventually(d, "a hovered striped row to change", async |d| {
+        let hovered = d.style("tbody tr:nth-child(2)", "background-color").await?;
+        Ok(hovered != stripe && hovered != clear)
+    })
+    .await?;
     let padding = d.style("tbody td", "padding-top").await?;
     if padding != "6px" {
         bail!("an sm cell's padding is {padding}");

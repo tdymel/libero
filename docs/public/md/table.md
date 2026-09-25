@@ -36,6 +36,10 @@ state yourself, as `sort` does. For server-side data set `manual_sort` and
 `manual_pagination`, pass the current page as `data` and the total as
 `row_count`. Select-all covers the rows on every page.
 
+`scroll` wraps a table wider than its container in a region that scrolls
+sideways. The demo's switch also sets `sx().min_width("640px")`, so the three
+columns overflow at any width.
+
 ## Usage
 
 ```rust
@@ -463,8 +467,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `size` | `Size` | The size when the prop is unset, `Md`. |
 | `sizes` | `Sizes<TableSizeLevel>` | Per size: `font_size`, `padding_x` and `padding_y` of every cell. `Md` is 14px, 12px and 10px. |
 | `border_color` | `ColorValue` | Color of the header and row rules. |
-| `hover_color` | `ColorValue` | Row background while hovered. |
-| `stripe_color` | `ColorValue` | Every other body row's background with `striped`. |
+| `hover_color` | `ColorValue` | Row background while hovered, `muted.2`: one step past the stripe. |
+| `stripe_color` | `ColorValue` | Every other body row's background with `striped`, `muted.1`. |
 | `selected_color` | `ColorValue` | A selected row's background, hovered or not, `primary.1`. |
 
 ## CSS variables

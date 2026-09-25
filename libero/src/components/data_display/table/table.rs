@@ -331,6 +331,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         labels,
         size,
     });
+    // Stable, so a row's box memoizes when its row did not change.
+    let current = selection.clone();
+    let toggle = use_callback(move |(key, on): (String, bool)| {
+        if let Some(selection) = &current {
+            selection.toggle(&key, on);
+        }
+    });
     let selected_keys = match props.selectable {
         true => state.selection.read(),
         false => Vec::new(),
@@ -394,7 +401,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     .map(|column| (column.text)(row))
                     .filter(|name| !name.is_empty())
                     .unwrap_or_else(|| key.clone());
-                selection.row_cell(key.clone(), &name, is_selected == Some(true))
+                selection.row_cell(key.clone(), &name, is_selected == Some(true), toggle)
             });
             RowSpec {
                 key,

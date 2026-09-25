@@ -50,20 +50,50 @@ impl Selection {
         }
     }
 
-    /// `name` names the row in its box's label.
-    pub fn row_cell(&self, key: String, name: &str, selected: bool) -> Element {
-        let this = self.clone();
+    /// Turns the row of `key` on or off, for [`Self::row_cell`]'s stable `toggle`.
+    pub fn toggle(&self, key: &str, on: bool) {
+        self.set(toggle_row(&self.slice.read(), key, on));
+    }
+
+    /// `name` names the row in its box's label; `toggle` is [`Self::toggle`] behind a `use_callback`.
+    pub fn row_cell(
+        &self,
+        key: String,
+        name: &str,
+        selected: bool,
+        toggle: Callback<(String, bool)>,
+    ) -> Element {
         rsx! {
-            td {
-                "data-select": true,
-                // The box is not a row click.
-                onclick: |event| event.stop_propagation(),
-                Checkbox {
-                    aria_label: (self.labels.select_row)(name),
-                    size: self.size,
-                    checked: selected,
-                    onchange: move |on| this.set(toggle_row(&this.slice.read(), &key, on)),
-                }
+            RowSelect {
+                row: key,
+                aria_label: (self.labels.select_row)(name),
+                size: self.size,
+                checked: selected,
+                toggle,
+            }
+        }
+    }
+}
+
+/// A row's box, its own scope so an unchanged row skips its `Checkbox` render (todo 1181).
+#[component]
+fn RowSelect(
+    row: String,
+    aria_label: String,
+    size: Size,
+    checked: bool,
+    toggle: Callback<(String, bool)>,
+) -> Element {
+    rsx! {
+        td {
+            "data-select": true,
+            // The box is not a row click.
+            onclick: |event| event.stop_propagation(),
+            Checkbox {
+                aria_label,
+                size,
+                checked,
+                onchange: move |on| toggle((row.clone(), on)),
             }
         }
     }
