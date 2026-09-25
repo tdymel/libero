@@ -10,6 +10,8 @@ use libero::{
 };
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
+const MIN_VALUES: [&str; 4] = ["auto", "0.5", "10.0", "50.0"];
+const MAX_VALUES: [&str; 4] = ["auto", "3.0", "50.0", "200.0"];
 
 /// The demo's own discrete type, so the code block can show the derive that
 /// makes it one - the preview slides over exactly this enum.
@@ -122,6 +124,43 @@ fn number_code(control: &Control, values: &DemoValues) -> Vec<String> {
 
 fn number(values: &DemoValues, name: &str) -> Option<f64> {
     values.str(name).parse::<f64>().ok()
+}
+
+/// `min` offers the qualities below `max`, and `max` those above `min`: the bounds never cross.
+fn min_options(values: &DemoValues) -> Vec<String> {
+    let max = Quality::parse(&values.str("max")) as usize;
+    Quality::ALL[..max]
+        .iter()
+        .map(|quality| quality.to_string())
+        .collect()
+}
+
+fn max_options(values: &DemoValues) -> Vec<String> {
+    let min = Quality::parse(&values.str("min")) as usize;
+    Quality::ALL[min + 1..]
+        .iter()
+        .map(|quality| quality.to_string())
+        .collect()
+}
+
+/// The continuous twins of `min_options` and `max_options`; `auto` is 0 and 100.
+fn min_value_options(values: &DemoValues) -> Vec<String> {
+    let max = number(values, "max_value").unwrap_or(100.0);
+    within(&MIN_VALUES, |min| min < max)
+}
+
+fn max_value_options(values: &DemoValues) -> Vec<String> {
+    let min = number(values, "min_value").unwrap_or(0.0);
+    within(&MAX_VALUES, |max| max > min)
+}
+
+/// `auto`, and the numbers `keep` accepts.
+fn within(options: &[&str], keep: impl Fn(f64) -> bool) -> Vec<String> {
+    options
+        .iter()
+        .filter(|option| option.parse().map_or(true, &keep))
+        .map(|option| option.to_string())
+        .collect()
 }
 
 /// Ticks at both ends and the midpoint of the *current* range - a mark at 50
@@ -328,19 +367,23 @@ pub fn SliderPage() -> Element {
                     Control::slider("size", SIZES).default(theme.slider.size.as_str()),
                     Control::color("color"),
                     Control::slider("min", Quality::ALL)
+                        .options_from(min_options)
                         .code(bound_code)
                         .hidden_when(continuous),
                     Control::slider("max", Quality::ALL)
+                        .options_from(max_options)
                         .default("ultra")
                         .code(bound_code)
                         .hidden_when(continuous),
                     Control::slider("step", ["1", "2", "3"])
                         .code(stride_code)
                         .hidden_when(continuous),
-                    Control::slider("min_value", ["auto", "0.5", "10.0", "50.0"])
+                    Control::slider("min_value", MIN_VALUES)
+                        .options_from(min_value_options)
                         .code(number_code)
                         .hidden_when(discrete),
-                    Control::slider("max_value", ["auto", "3.0", "50.0", "200.0"])
+                    Control::slider("max_value", MAX_VALUES)
+                        .options_from(max_value_options)
                         .code(number_code)
                         .hidden_when(discrete),
                     Control::slider("step_value", ["auto", "0.1", "5.0", "10.0", "25.0"])
@@ -471,5 +514,25 @@ pub fn SliderPage() -> Element {
                 wrap: Wrap(wrap_readout),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 1185: each bound offers only the options on its side of the other.
+    #[test]
+    fn the_bounds_never_cross() {
+        let values = DemoValues::defaults(&[
+            Control::slider("min", Quality::ALL).default("medium"),
+            Control::slider("max", Quality::ALL).default("high"),
+            Control::slider("min_value", MIN_VALUES).default("10.0"),
+            Control::slider("max_value", MAX_VALUES).default("50.0"),
+        ]);
+        assert_eq!(min_options(&values), ["low", "medium"]);
+        assert_eq!(max_options(&values), ["high", "ultra"]);
+        assert_eq!(min_value_options(&values), ["auto", "0.5", "10.0"]);
+        assert_eq!(max_value_options(&values), ["auto", "50.0", "200.0"]);
     }
 }

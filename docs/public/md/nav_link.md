@@ -91,7 +91,8 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `to` | `NavigationTarget` | required | A path, a URL or a typed route, as in `Anchor::to`. |
-| `target` | `String` | - | The link's `target` attribute. |
+| `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)". |
+| `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
 | `color` | `ThemeAwareValue` | `primary` | Colours the active link's tint and start bar. Only the color family counts: the tint is its lightest shade. |
 | `active` | `bool` | follows the route | Unset, it compares `to` with the current route, which needs an internal target and a router. Set it for a section's parent item, or where there is no route to compare. |
 | `disabled` | `bool` | `false` | Dims the link and stops navigation. |
@@ -118,6 +119,7 @@ parts work.
 | `NavLinkPart::Body` | `body` | The column holding the label and the description, with `description` only. |
 | `NavLinkPart::Label` | `label` | The link's content, with `description` only. |
 | `NavLinkPart::Description` | `description` | The dimmed line under the label. |
+| `NavLinkPart::NewTab` | `new-tab` | The new-tab icon after the label, with `target: "_blank"` only. |
 
 ## Accessibility
 
@@ -130,6 +132,8 @@ parts work.
   localized "Show links" plus the link's name ("Show links Docs").
 - Enter or Space on the disclosure button toggles the panel, and the link
   still navigates.
+- A `target: "_blank"` link draws a small external icon and reads a hidden
+  "(opens in a new tab)". `new_tab_hint: false` drops both.
 
 ### You must
 

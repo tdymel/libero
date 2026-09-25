@@ -9,6 +9,7 @@ use crate::{
             parts_enum, parts_source, sx_source, use_style_attributes, variables, with_parts,
         },
         layout::{Collapse, box_style, use_box},
+        navigation::{NewTabHint, wants_new_tab_hint},
     },
     context::IconSlot,
     hooks::{
@@ -152,7 +153,7 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
 });
 
 parts_enum! {
-    /// [`NavLink`]'s inner parts, for its `parts` prop. Present only with a
+    /// [`NavLink`]'s inner parts, for its `parts` prop. All but `NewTab` only with a
     /// `description`. The toggle and the nested links sit beside the link, out of reach.
     pub enum NavLinkPart {
         /// The column holding the label and the description.
@@ -160,6 +161,8 @@ parts_enum! {
         /// The `children`.
         Label = "label" => "& > [data-slot='body'] > [data-slot='label']",
         Description = "description" => "& > [data-slot='body'] > [data-slot='description']",
+        /// The new-tab icon after the label, with `target: "_blank"` only.
+        NewTab = "new-tab" => "& > [data-slot='new-tab']",
     }
 }
 
@@ -171,6 +174,9 @@ base_props! {
         to: NavigationTarget,
         #[props(default)]
         target: Option<String>,
+        /// With `target: "_blank"`, an icon and a hidden "(opens in a new tab)".
+        #[props(default = true)]
+        new_tab_hint: bool,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Marks the current page. Unset, `to` is compared against the router's route.
@@ -294,6 +300,14 @@ pub fn NavLink(props: NavLinkProps) -> Element {
             }
         }
         None => props.children,
+    };
+    // A disabled link opens nothing.
+    let hint = !disabled && wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint);
+    let body = rsx! {
+        {body}
+        if hint {
+            NewTabHint {}
+        }
     };
     // A hook, so above the branch.
     let group_style = use_box().framework_sx(&NAV_GROUP_SX).prepare();
@@ -426,6 +440,7 @@ mod tests {
                     "description",
                     "& > [data-slot='body'] > [data-slot='description']"
                 ),
+                ("new-tab", "& > [data-slot='new-tab']"),
             ]
         );
     }

@@ -97,7 +97,8 @@ fn a_section_navigation_lands_on_the_section() {
     });
 }
 
-/// Todo 1175: a deep link's fragment lands on its section on a fresh load.
+/// Todo 1175: a deep link's fragment lands on its section on a fresh load, and stays in
+/// the URL for a reload (1184).
 #[test]
 fn a_fragment_load_lands_on_the_section() {
     block_on(async {
@@ -116,6 +117,9 @@ fn a_fragment_load_lands_on_the_section() {
         )
         .await
         .unwrap();
+        wait::for_js_true(page, "location.hash === '#far'", "the fragment in the URL")
+            .await
+            .unwrap();
         fixture
             .console
             .assert_clean("the fragment fixture")

@@ -66,7 +66,20 @@ pub fn use_fragment_landing(area: ScrollAreaHandle, content: ElementHandle) {
         let _ = content
             .query_selector(&format!("#{id} > :first-child"))
             .and_then(|heading| heading.focus());
+        #[cfg(target_arch = "wasm32")]
+        restore_fragment(id);
     });
+}
+
+/// Puts the fragment the router dropped back into the URL, so a reload lands here too (todo 1184).
+/// Sent, not formatted in: the id comes from the URL.
+#[cfg(target_arch = "wasm32")]
+fn restore_fragment(id: &str) {
+    let eval = document::eval(
+        "const id = await dioxus.recv();
+        history.replaceState(history.state, '', location.pathname + location.search + '#' + id);",
+    );
+    let _ = eval.send(id);
 }
 
 /// The section's top below `main`'s is its offset in the area. A WebView has no

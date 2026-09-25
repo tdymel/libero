@@ -1,4 +1,4 @@
-use crate::common::{attributes_of, render};
+use crate::common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::NavLink};
@@ -37,6 +37,40 @@ fn an_active_disabled_nav_link_keeps_aria_current() {
 
     assert_eq!(attributes["aria-current"], "page");
     assert_eq!(attributes["aria-disabled"], "true");
+}
+
+/// Todo 1183: a new tab is announced and drawn, as on `Anchor`, unless opted out or disabled.
+#[test]
+fn a_blank_target_adds_the_new_tab_hint_unless_opted_out() {
+    fn blank() -> Element {
+        rsx! {
+            LiberoProvider {
+                NavLink { to: "https://example.com", target: "_blank", "Example" }
+            }
+        }
+    }
+    fn opted_out() -> Element {
+        rsx! {
+            LiberoProvider {
+                NavLink { to: "https://example.com", target: "_blank", new_tab_hint: false, "Example" }
+            }
+        }
+    }
+    fn disabled() -> Element {
+        rsx! {
+            LiberoProvider {
+                NavLink { to: "https://example.com", target: "_blank", disabled: true, "Example" }
+            }
+        }
+    }
+
+    let html = body(&render(blank));
+    assert!(html.contains("(opens in a new tab)"), "{html}");
+    assert!(html.contains("data-slot=\"new-tab\""), "{html}");
+    for app in [opted_out as fn() -> Element, disabled] {
+        let html = body(&render(app));
+        assert!(!html.contains("new tab"), "{html}");
+    }
 }
 
 /// The description is the link's description, not part of its name (580).

@@ -10,6 +10,8 @@ use libero::{
 };
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
+const MIN_VALUES: [&str; 4] = ["auto", "0.0", "10.0", "50.0"];
+const MAX_VALUES: [&str; 4] = ["auto", "50.0", "100.0", "200.0"];
 
 /// The demo's own discrete type - a range slides over the same values a
 /// single-thumb `Slider` does.
@@ -120,6 +122,43 @@ fn min_range_code(control: &Control, values: &DemoValues) -> Vec<String> {
 
 fn number(values: &DemoValues, name: &str) -> Option<f64> {
     values.str(name).parse::<f64>().ok()
+}
+
+/// `min` offers the qualities below `max`, and `max` those above `min`: the bounds never cross.
+fn min_options(values: &DemoValues) -> Vec<String> {
+    let max = Quality::parse(&values.str("max")) as usize;
+    Quality::ALL[..max]
+        .iter()
+        .map(|quality| quality.to_string())
+        .collect()
+}
+
+fn max_options(values: &DemoValues) -> Vec<String> {
+    let min = Quality::parse(&values.str("min")) as usize;
+    Quality::ALL[min + 1..]
+        .iter()
+        .map(|quality| quality.to_string())
+        .collect()
+}
+
+/// The continuous twins of `min_options` and `max_options`; `auto` is 0 and 100.
+fn min_value_options(values: &DemoValues) -> Vec<String> {
+    let max = number(values, "max_value").unwrap_or(100.0);
+    within(&MIN_VALUES, |min| min < max)
+}
+
+fn max_value_options(values: &DemoValues) -> Vec<String> {
+    let min = number(values, "min_value").unwrap_or(0.0);
+    within(&MAX_VALUES, |max| max > min)
+}
+
+/// `auto`, and the numbers `keep` accepts.
+fn within(options: &[&str], keep: impl Fn(f64) -> bool) -> Vec<String> {
+    options
+        .iter()
+        .filter(|option| option.parse().map_or(true, &keep))
+        .map(|option| option.to_string())
+        .collect()
 }
 
 /// Ticks at both ends and the midpoint of the *current* range - a mark at 50
@@ -331,19 +370,23 @@ pub fn RangeSliderPage() -> Element {
                     Control::slider("size", SIZES).default(theme.slider.size.as_str()),
                     Control::color("color"),
                     Control::slider("min", Quality::ALL)
+                        .options_from(min_options)
                         .code(bound_code)
                         .hidden_when(continuous),
                     Control::slider("max", Quality::ALL)
+                        .options_from(max_options)
                         .default("ultra")
                         .code(bound_code)
                         .hidden_when(continuous),
                     Control::slider("min_range", ["0", "1", "2"])
                         .code(min_range_code)
                         .hidden_when(continuous),
-                    Control::slider("min_value", ["auto", "0.0", "10.0", "50.0"])
+                    Control::slider("min_value", MIN_VALUES)
+                        .options_from(min_value_options)
                         .code(number_code)
                         .hidden_when(discrete),
-                    Control::slider("max_value", ["auto", "50.0", "100.0", "200.0"])
+                    Control::slider("max_value", MAX_VALUES)
+                        .options_from(max_value_options)
                         .code(number_code)
                         .hidden_when(discrete),
                     Control::slider("step_value", ["auto", "0.5", "5.0", "10.0", "25.0"])

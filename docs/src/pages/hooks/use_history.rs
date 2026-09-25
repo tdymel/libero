@@ -20,12 +20,14 @@ rsx! {
             Button {
                 variant: "outlined",
                 disabled: !note.can_undo(),
+                focusable_when_disabled: true,
                 onclick: move |_| { note.undo(); },
                 "Undo"
             }
             Button {
                 variant: "outlined",
                 disabled: !note.can_redo(),
+                focusable_when_disabled: true,
                 onclick: move |_| { note.redo(); },
                 "Redo"
             }
@@ -55,6 +57,7 @@ fn UndoableNote() -> Element {
                 Button {
                     variant: "outlined",
                     disabled: !note.can_undo(),
+                    focusable_when_disabled: true,
                     onclick: move |_| {
                         note.undo();
                     },
@@ -63,6 +66,7 @@ fn UndoableNote() -> Element {
                 Button {
                     variant: "outlined",
                     disabled: !note.can_redo(),
+                    focusable_when_disabled: true,
                     onclick: move |_| {
                         note.redo();
                     },
@@ -91,7 +95,7 @@ pub fn UseHistoryPage() -> Element {
                 ])
                 .must([
                     "Offer undo and redo from the keyboard as well, e.g. Ctrl+Z and Ctrl+Shift+Z on your own element; a button alone leaves a keyboard user tabbing away from the field.",
-                    "Keep the Undo and Redo buttons focusable in the tab order and named by their text or `aria-label`.",
+                    "Keep the Undo and Redo buttons focusable in the tab order, even at the end of the stack (`focusable_when_disabled`), and named by their text or `aria-label`.",
                 ]),
             lead: rsx! {
                 Text {
