@@ -64,6 +64,8 @@ parts work.
 | `Tab` | Enters the bar on the control focused last, the first one at the start, and leaves it. |
 | `Left` or `Right` | Moves to the previous or next control, disabled ones included. Swapped under right-to-left text. Up and Down in a vertical bar. |
 | `Home` or `End` | Goes to the first or last control. |
+| `Alt` + `F10` | With `focus_from`, moves from that element to the bar's tab stop. |
+| `Escape` | After Alt+F10, hands focus back to where it was. |
 
 ### Libero handles
 
@@ -72,9 +74,18 @@ parts work.
 - The bar is one tab stop: the controls inside get a roving `tabindex`.
 - A disabled `Button`, `ActionIcon` or `Select` inside stays focusable with
   `aria-disabled`, so a keyboard user finds it; `focusable_when_disabled: false`
-  opts out.
+  opts out. A disabled field stays focusable too, read-only with
+  `aria-disabled`.
 - A key a control uses itself stays its own: `Select` opens on Home, End and Up,
-  a text field keeps its caret.
+  a slider keeps its arrows.
+- `Checkbox`, `Switch`, `SegmentedControl`, `TextField` and `NumberField` join
+  the arrow order. A `SegmentedControl` moves through its segments and passes
+  the arrow on past its last one.
+- A text field keeps Left and Right until the caret sits at its start or end
+  with nothing selected; then the arrow moves on. Home and End stay the
+  field's.
+- `NumberField`'s Up and Down stay its stepper, in a vertical bar too; its
+  stepper buttons stay out of the arrow order.
 - `ToolbarGroup` is a `role="group"`; `ToolbarSeparator` a `role="separator"`
   across the bar.
 
@@ -86,8 +97,12 @@ parts work.
 
 ### Limits
 
-- Only `Button`, `ActionIcon` and `Select` (and what is built on them) join the
-  arrow order. Another focusable element inside stays its own tab stop.
+- Only `Button`, `ActionIcon`, `Select`, `Checkbox`, `Switch`,
+  `SegmentedControl`, `TextField` and `NumberField` (and what is built on them)
+  join the arrow order. Another focusable element inside stays its own tab
+  stop.
+- In a WebView (Android, desktop) the arrow keys and Alt+F10 do nothing yet,
+  and a text field keeps its arrows.
 
 ## Props
 
@@ -95,8 +110,9 @@ parts work.
 |---|---|---|---|
 | `orientation` | `Orientation` | `horizontal` | `"vertical"` stacks the controls; Up and Down move instead of Left and Right. |
 | `loop_focus` | `bool` | `true` | Whether the arrow keys wrap at the ends. |
+| `focus_from` | `Option<ElementHandle>` | - | The element the bar serves, such as an editor: Alt+F10 inside it moves focus to the bar, Escape in the bar hands it back. Spread its `attributes()`. |
 | `parts` | `Parts<ToolbarPart>` | - | Styles for the groups and separators, under `sx`. |
-| `children` | `Element` | `required` | `Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, `ToolbarGroup`s and `ToolbarSeparator`s. |
+| `children` | `Element` | `required` | `Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, fields, `ToolbarGroup`s and `ToolbarSeparator`s. |
 
 Like every component, `Toolbar` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

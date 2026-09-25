@@ -32,11 +32,13 @@ pub fn ToolbarPage() -> Element {
                     prop("loop_focus", "bool")
                         .default("true")
                         .doc("Whether the arrow keys wrap at the ends."),
+                    prop("focus_from", "Option<ElementHandle>")
+                        .doc("The element the bar serves, such as an editor: Alt+F10 inside it moves focus to the bar, Escape in the bar hands it back. Spread its `attributes()`."),
                     prop("parts", "Parts<ToolbarPart>")
                         .doc("Styles for the groups and separators, under `sx`."),
                     prop("children", "Element")
                         .default("required")
-                        .doc("`Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, `ToolbarGroup`s and `ToolbarSeparator`s."),
+                        .doc("`Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, fields, `ToolbarGroup`s and `ToolbarSeparator`s."),
                 ])
                 .parts("ToolbarPart", vec![
                     (ToolbarPart::Group, "A `ToolbarGroup`, laid out along the bar."),
@@ -53,11 +55,16 @@ pub fn ToolbarPage() -> Element {
                 .key(["Tab"], "Enters the bar on the control focused last, the first one at the start, and leaves it.")
                 .key(["Left", "Right"], "Moves to the previous or next control, disabled ones included. Swapped under right-to-left text. Up and Down in a vertical bar.")
                 .key(["Home", "End"], "Goes to the first or last control.")
+                .key(["Alt", "F10"], "With `focus_from`, moves from that element to the bar's tab stop.")
+                .key(["Escape"], "After Alt+F10, hands focus back to where it was.")
                 .handles([
                     "The root is a `role=\"toolbar\"`, with `aria-orientation=\"vertical\"` when vertical.",
                     "The bar is one tab stop: the controls inside get a roving `tabindex`.",
-                    "A disabled `Button`, `ActionIcon` or `Select` inside stays focusable with `aria-disabled`, so a keyboard user finds it; `focusable_when_disabled: false` opts out.",
-                    "A key a control uses itself stays its own: `Select` opens on Home, End and Up, a text field keeps its caret.",
+                    "A disabled `Button`, `ActionIcon` or `Select` inside stays focusable with `aria-disabled`, so a keyboard user finds it; `focusable_when_disabled: false` opts out. A disabled field stays focusable too, read-only with `aria-disabled`.",
+                    "A key a control uses itself stays its own: `Select` opens on Home, End and Up, a slider keeps its arrows.",
+                    "`Checkbox`, `Switch`, `SegmentedControl`, `TextField` and `NumberField` join the arrow order. A `SegmentedControl` moves through its segments and passes the arrow on past its last one.",
+                    "A text field keeps Left and Right until the caret sits at its start or end with nothing selected; then the arrow moves on. Home and End stay the field's.",
+                    "`NumberField`'s Up and Down stay its stepper, in a vertical bar too; its stepper buttons stay out of the arrow order.",
                     "`ToolbarGroup` is a `role=\"group\"`; `ToolbarSeparator` a `role=\"separator\"` across the bar.",
                 ])
                 .must([
@@ -65,7 +72,8 @@ pub fn ToolbarPage() -> Element {
                     "Name each `ToolbarGroup` with `aria-label`.",
                 ])
                 .limits([
-                    "Only `Button`, `ActionIcon` and `Select` (and what is built on them) join the arrow order. Another focusable element inside stays its own tab stop.",
+                    "Only `Button`, `ActionIcon`, `Select`, `Checkbox`, `Switch`, `SegmentedControl`, `TextField` and `NumberField` (and what is built on them) join the arrow order. Another focusable element inside stays its own tab stop.",
+                    "In a WebView (Android, desktop) the arrow keys and Alt+F10 do nothing yet, and a text field keeps its arrows.",
                 ]),
             lead: rsx! {
                 Text {

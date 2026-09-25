@@ -60,6 +60,7 @@ pub(crate) use focus_within::{FocusChange, FocusWithin, use_focus_within};
 pub(crate) use formats::current_formats;
 pub use formats::{FormatsHandle, use_formats, use_formats_handle};
 pub use history::{HistoryHandle, UndoHistory, use_history};
+pub(crate) use hotkeys::chord_keys;
 pub use hotkeys::{Hotkey, use_hotkeys};
 pub use icons::use_icon;
 pub use id::use_id;

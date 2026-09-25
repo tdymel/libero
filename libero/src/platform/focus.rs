@@ -10,6 +10,16 @@ pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
     backend::focus_pressed(event, within);
 }
 
+/// Whether focus is on `mounted` or inside it; a WebView answers `false`.
+pub(crate) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
+    backend::focus_is_in(mounted)
+}
+
+/// Whether `inner` is `outer` or inside it; a WebView answers `false`.
+pub(crate) fn element_contains(outer: &Rc<MountedData>, inner: &Rc<MountedData>) -> bool {
+    backend::element_contains(outer, inner)
+}
+
 /// Focus moves a renderer makes without firing any focus event.
 pub(crate) trait SilentFocusApi {
     /// Calls `callback` after such a move has landed, until the returned

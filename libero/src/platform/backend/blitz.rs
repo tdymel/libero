@@ -509,6 +509,19 @@ pub(super) fn arrow_target() -> bool {
     focused_element().is_some_and(|(tag, kind, _)| takes_arrows(&tag, kind.as_deref()))
 }
 
+pub(super) fn caret_edges() -> Option<(bool, bool)> {
+    let anchor = anchor()?;
+    let doc = anchor.try_doc()?;
+    let node = doc.get_node(doc.get_focussed_node_id()?)?;
+    let editor = &node.element_data()?.text_input_data()?.editor;
+    let range = editor.raw_selection().text_range();
+    let collapsed = range.is_empty();
+    Some((
+        collapsed && range.start == 0,
+        collapsed && range.end == editor.raw_text().len(),
+    ))
+}
+
 /// [`node_is_rtl`] on the focused node, where Blitz sends a key press.
 pub(super) fn rtl_target() -> bool {
     let Some(anchor) = anchor() else {
@@ -530,6 +543,19 @@ pub(super) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
         doc.get_focussed_node_id()
             .is_some_and(|focus| ancestors(&doc, focus).any(|id| id == target))
     })
+}
+
+pub(super) fn element_contains(outer: &Rc<MountedData>, inner: &Rc<MountedData>) -> bool {
+    let (Some(outer), Some(inner)) = (
+        outer.downcast::<NodeHandle>(),
+        inner.downcast::<NodeHandle>(),
+    ) else {
+        return false;
+    };
+    let target = outer.node_id();
+    inner
+        .try_doc()
+        .is_some_and(|doc| ancestors(&doc, inner.node_id()).any(|id| id == target))
 }
 
 /// The node a click just activated: the press's target, or for a key the

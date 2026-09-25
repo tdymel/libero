@@ -2,7 +2,8 @@ use std::{cell::RefCell, rc::Rc, str::FromStr};
 
 use dioxus::prelude::*;
 
-use crate::hooks::ElementHandle;
+use crate::hooks::{ElementHandle, popover::focus_in_popup_of};
+use crate::localization::ShortcutHelpLabels;
 use crate::platform::{KeyChord, KeySubscription, keyboard, mod_is_meta, warn_reserved_chord};
 
 /// One keyboard shortcut for [`use_hotkeys`]: a chord such as `"mod+k"` and what
@@ -31,8 +32,9 @@ impl Hotkey {
         }
     }
 
-    /// Lets the shortcut through only while focus is on `element` or inside it.
-    /// Call it again to add an element, such as a popup `element` portals out:
+    /// Lets the shortcut through only while focus is on `element` or inside it,
+    /// or in a `Menu`, `Select` or `Popover` popup opened from inside it (not on a
+    /// WebView). Call it again to add an element, such as your own portaled box:
     /// focus in any of them counts. A press elsewhere keeps its default action.
     ///
     /// Spread `..element.attributes()` on the element, so a WebView finds it.
@@ -164,13 +166,13 @@ struct Entry {
 }
 
 impl Entry {
-    /// No scope, or focus in one of its mounted elements.
+    /// No scope, or focus in one of its mounted elements or a popup opened from one.
     fn in_scope(&self, pressed: &KeyChord) -> bool {
         self.within.is_empty()
             || self.within.iter().any(|element| {
-                element
-                    .try_mounted()
-                    .is_some_and(|mounted| pressed.within(&mounted, element.tag()))
+                element.try_mounted().is_some_and(|mounted| {
+                    pressed.within(&mounted, element.tag()) || focus_in_popup_of(&mounted)
+                })
             })
     }
 }
@@ -291,6 +293,36 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
     });
 }
 
+/// The key names `chord` shows, modifiers first in the platform's order; `None`
+/// for a chord [`use_hotkeys`] would not bind.
+pub(crate) fn chord_keys(
+    chord: &str,
+    apple: bool,
+    words: &ShortcutHelpLabels,
+) -> Option<Vec<String>> {
+    let chord = Chord::parse(chord, apple)?;
+    let (alt, meta) = match apple {
+        true => (words.option, words.meta),
+        false => (words.alt, "Meta"),
+    };
+    let mut keys: Vec<String> = [
+        (chord.ctrl, words.ctrl),
+        (chord.alt, alt),
+        (chord.shift, words.shift),
+        (chord.meta, meta),
+    ]
+    .into_iter()
+    .filter(|(held, _)| *held)
+    .map(|(_, name)| name.to_string())
+    .collect();
+    keys.push(match chord.key {
+        Key::Character(text) if text == " " => "Space".to_string(),
+        Key::Character(text) => text.to_uppercase(),
+        other => other.to_string(),
+    });
+    Some(keys)
+}
+
 fn held_modifiers(chord: &Chord) -> Modifiers {
     let mut modifiers = Modifiers::empty();
     modifiers.set(Modifiers::CONTROL, chord.ctrl);
@@ -316,6 +348,17 @@ mod tests {
 
     fn character(text: &str) -> Key {
         Key::Character(text.into())
+    }
+
+    #[test]
+    fn a_chord_shows_the_platforms_key_names() {
+        let words = ShortcutHelpLabels::ENGLISH;
+        let keys = |chord, apple| chord_keys(chord, apple, &words);
+        assert_eq!(keys("shift+mod+k", false).unwrap(), ["Ctrl", "Shift", "K"]);
+        assert_eq!(keys("shift+mod+k", true).unwrap(), ["Shift", "Cmd", "K"]);
+        assert_eq!(keys("alt+f10", true).unwrap(), ["Option", "F10"]);
+        assert_eq!(keys("space", false).unwrap(), ["Space"]);
+        assert_eq!(keys("hyper+k", false), None);
     }
 
     #[test]

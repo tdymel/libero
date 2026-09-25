@@ -48,6 +48,16 @@ pub(super) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
         .is_some_and(|element| active.is_some_and(|active| element.contains(Some(&active))))
 }
 
+pub(super) fn element_contains(outer: &Rc<MountedData>, inner: &Rc<MountedData>) -> bool {
+    let (Some(outer), Some(inner)) = (
+        outer.downcast::<web_sys::Element>(),
+        inner.downcast::<web_sys::Element>(),
+    ) else {
+        return false;
+    };
+    outer.contains(Some(inner))
+}
+
 /// The computed `direction`, for any node: an event's target as well.
 pub(super) fn element_is_rtl(element: &web_sys::Element) -> bool {
     web_sys::window()
@@ -91,6 +101,19 @@ pub(super) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     event
         .downcast::<web_sys::KeyboardEvent>()
         .is_some_and(stepping_target)
+}
+
+pub(super) fn caret_edges(event: &Event<KeyboardData>) -> Option<(bool, bool)> {
+    let input = event
+        .downcast::<web_sys::KeyboardEvent>()
+        .and_then(key_target)?
+        .dyn_into::<web_sys::HtmlInputElement>()
+        .ok()?;
+    // `None` on a type without a selection, such as `number`.
+    let start = input.selection_start().ok()??;
+    let end = input.selection_end().ok()??;
+    let length = u32::try_from(input.value().encode_utf16().count()).ok()?;
+    Some((start == end && start == 0, start == end && end == length))
 }
 
 pub(super) fn rtl_target(event: &Event<KeyboardData>) -> bool {

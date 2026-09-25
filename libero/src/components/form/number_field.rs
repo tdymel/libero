@@ -6,7 +6,10 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{Glyph, HtmlTag, Input, NumberValue, navigation_chord},
+        common::{
+            Glyph, HtmlTag, Input, NumberValue, TOOLBAR_ITEM, ToolbarItem, navigation_chord,
+            use_no_toolbar, use_toolbar_item,
+        },
         form::{
             FIELD_CONTROL_SX, LiveControl, field_props, slot_button_sx, slot_icon_size, use_bound,
             use_field, use_field_frame,
@@ -121,7 +124,11 @@ fn NumberFieldShell<T: NumberValue>(
     let disabled = bound.disabled(props.disabled);
     // The native `readonly` stops typing; the arrow keys and the steppers are
     // ours, so they are refused here.
-    let readonly = props.readonly.unwrap_or(false);
+    let item = use_toolbar_item();
+    use_no_toolbar();
+    // A toolbar keeps a disabled item focusable, in its arrow order: read-only instead.
+    let soft_disabled = disabled && item.is_some();
+    let readonly = props.readonly.unwrap_or(false) || soft_disabled;
     let bound_value = bound.value();
     // Not a subscription: only rules and the control read the number.
     let current = move || bound_value.unwrap_or_else(|| *live.peek());
@@ -236,9 +243,12 @@ fn NumberFieldShell<T: NumberValue>(
         .attr("name", bound.name().map(str::to_string))
         .attr("data-controlled", true)
         .attr("placeholder", props.placeholder)
-        .attr("disabled", disabled)
+        .attr("disabled", disabled && !soft_disabled)
+        .attr("aria-disabled", soft_disabled.then_some("true"))
         .attr("readonly", readonly)
         .attr("required", required)
+        .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
+        .attr("tabindex", item.map(ToolbarItem::tabindex))
         .event("oninput", move |event: FormEvent| {
             let text = event.value();
             let publish = publish.clone();

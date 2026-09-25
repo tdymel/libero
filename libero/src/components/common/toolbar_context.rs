@@ -17,9 +17,17 @@ pub(crate) struct ToolbarScope {
     /// The item focused last; `None` makes the first one the tab stop.
     current: Signal<Option<u64>>,
     orientation: Signal<Orientation>,
+    /// An item left the arrow at its end to the bar, for the press bubbling now.
+    passed: CopyValue<bool>,
 }
 
 impl ToolbarScope {
+    /// Whether an item passed the press on, cleared by the asking.
+    pub(crate) fn take_passed(&self) -> bool {
+        let mut passed = self.passed;
+        std::mem::take(&mut *passed.write())
+    }
+
     pub(crate) fn orientation(&self) -> Orientation {
         *self.orientation.read()
     }
@@ -57,13 +65,19 @@ impl ToolbarScope {
     }
 }
 
+/// The nearest `Toolbar`, or `None` below an item that keeps its parts out.
+#[derive(Clone, Copy)]
+struct ToolbarContext(Option<ToolbarScope>);
+
 /// Makes the controls below one `Toolbar`'s items.
 pub(crate) fn use_provide_toolbar(orientation: Orientation) -> ToolbarScope {
-    let scope = use_context_provider(|| ToolbarScope {
+    let scope = use_hook(|| ToolbarScope {
         order: CopyValue::new(Vec::new()),
         current: Signal::new(None),
         orientation: Signal::new(orientation),
+        passed: CopyValue::new(false),
     });
+    use_context_provider(|| ToolbarContext(Some(scope)));
     let mut current = scope.orientation;
     if *current.peek() != orientation {
         current.set(orientation);
@@ -73,7 +87,13 @@ pub(crate) fn use_provide_toolbar(orientation: Orientation) -> ToolbarScope {
 
 /// The enclosing `Toolbar`, `None` outside one.
 pub(crate) fn use_toolbar() -> Option<ToolbarScope> {
-    use_hook(try_consume_context::<ToolbarScope>)
+    use_hook(|| try_consume_context::<ToolbarContext>().and_then(|context| context.0))
+}
+
+/// Keeps the controls below this one out of an enclosing `Toolbar`'s arrow
+/// order: a `NumberField`'s steppers belong to it, not the bar.
+pub(crate) fn use_no_toolbar() {
+    use_context_provider(|| ToolbarContext(None));
 }
 
 /// A control inside a `Toolbar`: one of its roving tab stops.
@@ -88,6 +108,17 @@ impl ToolbarItem {
     /// Makes this item the tab stop, from its own click: Blitz's `focusin` comes too early.
     pub(crate) fn take_stop(self) {
         self.scope.focused(self.id);
+    }
+
+    /// An item that steps on arrows itself leaves this one, at its end, to the bar.
+    pub(crate) fn pass_on(self) {
+        let mut passed = self.scope.passed;
+        passed.set(true);
+    }
+
+    /// The toolbar's arrow axis.
+    pub(crate) fn orientation(self) -> Orientation {
+        self.scope.orientation()
     }
 
     /// `0` on the toolbar's one tab stop, `-1` on the rest.

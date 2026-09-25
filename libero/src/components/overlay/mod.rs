@@ -6,6 +6,7 @@ mod hover_intent;
 mod menu;
 mod modal;
 mod overlay;
+mod shortcut_help;
 mod spotlight;
 mod tooltip;
 // The hooks that render an overlay. Exported once, through `hooks`.
@@ -26,6 +27,7 @@ pub(crate) use menu::MenuFocus;
 pub use menu::{Menu, MenuEdge, MenuEntry, MenuItem, MenuPart, MenuProps, MenuState, use_menu};
 pub(crate) use modal::Modal;
 pub use overlay::{Overlay, OverlayProps};
+pub use shortcut_help::{Shortcut, ShortcutHelp, ShortcutHelpProps};
 pub use spotlight::{
     SpotlightAction, SpotlightHandle, SpotlightOptions, SpotlightPart, spotlight_filter,
     use_spotlight,

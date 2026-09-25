@@ -123,6 +123,7 @@ md_pages! {
     Scroller => "scroller",
     SegmentedControl => "segmented_control",
     Select => "select",
+    ShortcutHelp => "shortcut_help",
     Sidebar => "sidebar",
     Skeleton => "skeleton",
     Slider => "slider",

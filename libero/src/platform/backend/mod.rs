@@ -168,6 +168,18 @@ pub(crate) fn focus_is_in(mounted: &Rc<MountedData>) -> bool {
     return false;
 }
 
+/// A WebView answers `false`: it has no synchronous DOM.
+pub(crate) fn element_contains(outer: &Rc<MountedData>, inner: &Rc<MountedData>) -> bool {
+    #[cfg(not(any(target_arch = "wasm32", feature = "native")))]
+    let _ = (outer, inner);
+    #[cfg(target_arch = "wasm32")]
+    return web::element_contains(outer, inner);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::element_contains(outer, inner);
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return false;
+}
+
 /// What the renderer needs mounted at the root, once, by `LiberoProvider`:
 /// Blitz's `blitz::Outlet`; a WebView starts its focus mirror before any press
 /// and its typed-value guard before any keystroke.
@@ -463,6 +475,18 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     return blitz::arrow_target();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::arrow_target();
+}
+
+/// As [`typing_target`]; a WebView cannot tell - see [`caret_edges`](crate::platform::caret_edges).
+pub(crate) fn caret_edges(event: &Event<KeyboardData>) -> Option<(bool, bool)> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = event;
+    #[cfg(target_arch = "wasm32")]
+    return web::caret_edges(event);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::caret_edges();
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return None;
 }
 
 /// As [`typing_target`] - see [`rtl_target`](crate::platform::rtl_target).

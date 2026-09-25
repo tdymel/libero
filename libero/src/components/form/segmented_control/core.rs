@@ -5,8 +5,8 @@ use crate::{
         common::Part,
         common::{
             BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, HtmlTag,
-            Orientation, States, Variant, disabled_look_sx, focus_ring_sx, has_shortcut_modifier,
-            interactive_variant_sx, neighbour, variant_selected_sx,
+            Orientation, States, ToolbarItem, Variant, disabled_look_sx, focus_ring_sx,
+            has_shortcut_modifier, interactive_variant_sx, neighbour, variant_selected_sx,
         },
         form::{Activation, field_parts_enum},
         layout::use_box,
@@ -230,6 +230,18 @@ pub(crate) struct SegmentedControlView {
     /// `--lsx-button-*`, rendered. Set on the root, and the segments inherit.
     pub style: String,
     pub attributes: Vec<Attribute>,
+    /// Inside a `Toolbar`: the tab stop's place in its arrow order.
+    pub toolbar_item: Option<ToolbarItem>,
+    /// Disabled but focusable, as a toolbar keeps it: looks and reads disabled.
+    pub soft_disabled: bool,
+}
+
+/// Whether an enabled segment lies past `index` towards `step`, without wrapping.
+fn has_further(disabled: &[bool], index: usize, step: isize) -> bool {
+    match step {
+        1 => disabled.iter().skip(index + 1).any(|off| !off),
+        _ => disabled.iter().take(index).any(|off| !off),
+    }
 }
 
 /// Scoped to this strip's own root, so two controls can hold the same segment
@@ -276,7 +288,10 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         element,
         style,
         attributes,
+        toolbar_item,
+        soft_disabled,
     } = view;
+    let bar_axis = toolbar_item.map(ToolbarItem::orientation);
 
     // The arrow keys step over the disabled segments, and every segment's
     // handler needs the whole set to do it.
@@ -333,11 +348,27 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                 if disabled || activation.keydown(&event) || has_shortcut_modifier(&event) {
                     return;
                 }
-                let step = match logical_key(&event) {
+                let key = logical_key(&event);
+                let step = match key {
                     Key::ArrowDown | Key::ArrowRight => 1,
                     Key::ArrowUp | Key::ArrowLeft => -1,
                     _ => return,
                 };
+                // In a toolbar, an arrow along its axis leaves past the last segment.
+                let along = match bar_axis {
+                    Some(Orientation::Horizontal) => {
+                        matches!(key, Key::ArrowLeft | Key::ArrowRight)
+                    }
+                    Some(Orientation::Vertical) => matches!(key, Key::ArrowUp | Key::ArrowDown),
+                    None => false,
+                };
+                if let Some(item) = toolbar_item
+                    && along
+                    && (readonly || !has_further(&disabled_segments, index, step))
+                {
+                    item.pass_on();
+                    return;
+                }
                 // Cancelled even when read-only: the browser's own arrow would
                 // move focus and check the next radio.
                 event.prevent_default();
@@ -368,7 +399,14 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                 // `Some(true)` or nothing: dioxus-native writes `false` as a
                 // string, and Blitz reads `disabled` by presence.
                 disabled: segment.disabled.then_some(true),
-                tabindex: if focusable && tab_stop == Some(index) { "0" } else { "-1" },
+                tabindex: match (focusable && tab_stop == Some(index), toolbar_item) {
+                    (true, Some(item)) => item.tabindex(),
+                    (true, None) => "0",
+                    (false, _) => "-1",
+                },
+                "data-toolbar-item": toolbar_item
+                    .filter(|_| focusable && tab_stop == Some(index))
+                    .map(ToolbarItem::key),
                 onclick: activation.input_click(),
                 oninput: activation.input_input(),
                 onkeydown: keydown,
@@ -377,7 +415,11 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
             label {
                 r#for: "{root}-segment-{index}",
                 "data-slot": SegmentedControlPart::Segment.slot(),
-                "data-state": segment_state(&segment_states, segment.disabled, selected == Some(index)),
+                "data-state": segment_state(
+                    &segment_states,
+                    segment.disabled || soft_disabled,
+                    selected == Some(index),
+                ),
                 // The whole name, where an ellipsis cuts the visible one.
                 title: segment.name.clone(),
                 onclick: activation.label_click(),
@@ -413,13 +455,26 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         .attr("aria-describedby", describedby)
         .attr("aria-invalid", invalid.then_some("true"))
         .attr("aria-required", required.then_some("true"))
-        .attr("aria-readonly", readonly.then_some("true"))
+        .attr(
+            "aria-readonly",
+            (readonly && !soft_disabled).then_some("true"),
+        )
+        .attr("aria-disabled", soft_disabled.then_some("true"))
         .render(HtmlTag::Div, attributes, items.collect::<Vec<_>>())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::segment_state;
+    use super::{has_further, segment_state};
+
+    #[test]
+    fn an_arrow_past_the_last_enabled_segment_has_nowhere_further() {
+        let disabled = [false, false, true];
+        assert!(has_further(&disabled, 0, 1));
+        assert!(!has_further(&disabled, 1, 1));
+        assert!(!has_further(&disabled, 0, -1));
+        assert!(has_further(&disabled, 1, -1));
+    }
 
     /// Disabling the picked segment must not hide that it is picked: its
     /// radio stays checked, so the label has to say so too.

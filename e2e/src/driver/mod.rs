@@ -53,6 +53,11 @@ pub trait Driver {
     async fn press_shift(&mut self, key: Key) -> Result<()>;
     /// A chord with Ctrl held; give `key` no `text`.
     async fn press_ctrl(&mut self, key: Key) -> Result<()>;
+    /// A chord with Alt held; give `key` no `text`.
+    async fn press_alt(&mut self, key: Key) -> Result<()> {
+        let _ = key;
+        bail!("{:?}: no Alt chord", self.platform())
+    }
     async fn type_text(&mut self, text: &str) -> Result<()>;
     /// Types `text` one key per `ms`, faster than a WebView's IPC round trip (1026).
     async fn type_burst(&mut self, text: &str, ms: u64) -> Result<()> {

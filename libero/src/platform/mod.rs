@@ -64,8 +64,8 @@ pub use error::PlatformError;
 pub(crate) use eye_dropper::eye_dropper;
 pub(crate) use file_dialog::pick_files;
 pub(crate) use focus::{
-    FocusMove, SilentFocusApi, SilentFocusSubscription, blur_counts, focus_entered_from,
-    focus_pressed, focus_selectors, focus_visible, silent_focus,
+    FocusMove, SilentFocusApi, SilentFocusSubscription, blur_counts, element_contains,
+    focus_entered_from, focus_is_in, focus_pressed, focus_selectors, focus_visible, silent_focus,
 };
 pub(crate) use form::{lifts_legends, submit_event, submit_listeners};
 pub(crate) use http::fetch_text;
@@ -73,6 +73,7 @@ pub(crate) use intersection::{
     OBSERVE_ATTR, computed_px_by_tag, next_observe_tag, observes_by_tag, on_intersection,
 };
 pub(crate) use keyboard::arrow_target;
+pub(crate) use keyboard::caret_edges;
 pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::logical_key;
 pub(crate) use keyboard::mod_is_meta;

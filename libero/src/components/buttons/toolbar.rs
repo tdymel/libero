@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -9,8 +11,11 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{ElementHandle, use_element},
-    platform::{ElementApi, arrow_target, key_taken, logical_key, typing_target},
+    hooks::{ElementHandle, Hotkey, use_element, use_focus_return, use_hotkeys},
+    platform::{
+        ElementApi, arrow_target, caret_edges, document, key_taken, logical_key, silent_focus,
+        typing_target,
+    },
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, Size, SizeCss},
 };
@@ -66,7 +71,11 @@ base_props! {
         /// Whether the arrow keys wrap at the ends. Unset, `true`.
         #[props(default)]
         loop_focus: Option<bool>,
-        /// `Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, [`ToolbarGroup`]s and [`ToolbarSeparator`]s.
+        /// The element the bar serves, such as an editor: Alt+F10 inside it moves focus
+        /// to the bar, and Escape in the bar hands it back. Spread its `attributes()`.
+        #[props(default)]
+        focus_from: Option<ElementHandle>,
+        /// `Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, fields, [`ToolbarGroup`]s and [`ToolbarSeparator`]s.
         children: Element,
     }
 }
@@ -107,13 +116,41 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
         "Toolbar: no `aria-label` or `aria-labelledby`, so it is announced as just \"toolbar\".",
     );
 
+    // Alt+F10 (APG editor menubar); set while Escape has focus to hand back.
+    let focus_return = use_focus_return();
+    let mut arrived = use_signal(|| false);
+    use_hotkeys(props.focus_from.map(|from| {
+        Hotkey::new("alt+f10", move || {
+            // A WebView holds no document: Escape returns to the element itself.
+            match document() {
+                Some(_) => focus_return.remember_active(),
+                None => focus_return.remember_element(from),
+            }
+            arrived.set(true);
+            if let Ok(stop) = bar.query_selector(&format!("[{TOOLBAR_ITEM}][tabindex='0']")) {
+                let _ = stop.focus();
+            }
+        })
+        .include_editable(true)
+        .within(from)
+    }));
+
     let onkeydown = move |event: KeyboardEvent| {
-        // A press the item took (`Select`'s Home), text entry or a slider keeps its keys.
-        if key_taken(&event)
-            || typing_target(&event)
-            || arrow_target(&event)
-            || has_shortcut_modifier(&event)
-        {
+        // Tab leaves the bar, so a later Escape stays the page's.
+        if logical_key(&event) == Key::Tab && *arrived.peek() {
+            arrived.set(false);
+        }
+        if logical_key(&event) == Key::Escape && *arrived.peek() && !key_taken(&event) {
+            arrived.set(false);
+            event.prevent_default();
+            event.stop_propagation();
+            focus_return.restore();
+            return;
+        }
+        // A press the item took (`Select`'s Home) or a slider keeps its keys, unless
+        // the item passed it on at its end (`SegmentedControl`).
+        let passed = scope.take_passed();
+        if key_taken(&event) || (arrow_target(&event) && !passed) || has_shortcut_modifier(&event) {
             return;
         }
         let vertical = orientation == Orientation::Vertical;
@@ -125,6 +162,17 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
             Key::Home | Key::End => None,
             _ => return,
         };
+        // A text field keeps its caret's keys; an arrow leaves it at the caret's edge.
+        if typing_target(&event) {
+            let Some((at_start, at_end)) = caret_edges(&event) else {
+                return;
+            };
+            match step {
+                Some(1) if at_end => {}
+                Some(-1) if at_start => {}
+                _ => return,
+            }
+        }
         let Ok(items) = bar.query_selector_all(&format!("[{TOOLBAR_ITEM}]")) else {
             return;
         };
@@ -155,6 +203,21 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
     // Whichever item takes focus, by arrow, click or script, becomes the tab stop.
     // Blitz fires `focusin` before the focus moves: there an item's own click reports it.
     let onfocusin = move |_: FocusEvent| follow_focus(&bar, scope);
+    // Blitz moves focus by script or Tab with no `focusin`; fixed per build, so the hook order holds.
+    if silent_focus().is_some() {
+        use_hook(|| {
+            Rc::new(silent_focus().map(|api| {
+                api.on_move(Box::new(move |moved| {
+                    if bar
+                        .try_mounted()
+                        .is_some_and(|mounted| moved.is_in(&mounted))
+                    {
+                        follow_focus(&bar, scope);
+                    }
+                }))
+            }))
+        });
+    }
 
     let states: Input<States> = props
         .states

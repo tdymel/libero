@@ -6,9 +6,9 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            Glyph, HtmlTag, Input, Part, States, base_color, contrast_color, fill_color,
-            focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx, use_name_warning,
-            variables,
+            Glyph, HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color,
+            contrast_color, fill_color, focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx,
+            use_name_warning, use_toolbar_item, variables,
         },
         form::{field_parts_enum, field_props, use_bound, use_field},
         layout::use_box,
@@ -192,6 +192,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     };
 
     let element = use_element();
+    let item = use_toolbar_item();
     // A browser reads a native checkbox's mixed state from the property alone;
     // elsewhere `aria-checked="mixed"` below carries it.
     use_effect(use_reactive!(|indeterminate| {
@@ -255,10 +256,17 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .attr("data-controlled", true)
         .attr("aria-checked", indeterminate.then_some("mixed"))
         .attr("name", bound.name().map(str::to_string))
-        .attr("disabled", disabled)
+        // A toolbar keeps a disabled item focusable, in its arrow order.
+        .attr("disabled", disabled && item.is_none())
+        .attr(
+            "aria-disabled",
+            (disabled && item.is_some()).then_some("true"),
+        )
         .attr("aria-readonly", readonly.then_some("true"))
         .attr("required", required)
         .attr("aria-label", props.aria_label)
+        .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
+        .attr("tabindex", item.map(ToolbarItem::tabindex))
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 

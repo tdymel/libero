@@ -8,7 +8,7 @@ use crate::{
         buttons::button_variables,
         common::{
             Input, OptionLabel, OptionSource, Options, Orientation, Variant, base_color,
-            names_itself, use_name_warning,
+            names_itself, use_name_warning, use_toolbar_item,
         },
         form::{field_props, use_bound, use_field, use_form_context},
     },
@@ -92,6 +92,9 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
+    let toolbar_item = use_toolbar_item();
+    // A toolbar keeps a disabled item focusable, in its arrow order: read-only instead.
+    let soft_disabled = disabled && toolbar_item.is_some();
     let current = bound.value().or_else(|| props.value.clone());
     let in_form = use_form_context().is_some();
     // A raw `<form>` around the strip counts too (todo 660).
@@ -168,7 +171,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
                 content: label.content.unwrap_or_else(|| rsx! { span { "{name}" } }),
                 name,
                 value: value.value(),
-                disabled: disabled || option_disabled,
+                disabled: (disabled && !soft_disabled) || option_disabled,
             }
         })
         .collect();
@@ -206,7 +209,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             radius,
             gap: props.gap.as_ref().copied(),
             focusable: props.focusable.unwrap_or(true),
-            readonly: props.readonly.unwrap_or(false),
+            readonly: props.readonly.unwrap_or(false) || soft_disabled,
             enter: !in_form,
             name,
             labelledby: field.label_id(),
@@ -216,6 +219,8 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             element,
             style,
             attributes: props.attributes,
+            toolbar_item,
+            soft_disabled,
         },
         field.id().to_string(),
     );

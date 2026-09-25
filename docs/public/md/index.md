@@ -105,6 +105,7 @@ fetch only the file you need.
 - [HoverCard](hover_card.md): An interactive card that opens while its trigger is hovered or focused, a named, dismissible dialog on a paper surface.
 - [Menu](menu.md): A list of commands that drops from a trigger, with groups, separators and submenus.
 - [Spotlight](spotlight.md): A command palette. A modal search box over your actions, with groups, arrow-key highlight and a Ctrl/Cmd+K hotkey.
+- [ShortcutHelp](shortcut_help.md): A dialog listing keyboard shortcuts, each chord in the platform's key names.
 - [Lightbox](lightbox.md): A modal image viewer, `use_modal` with a gallery around it, with zoom, pan, captions and a thumbnail strip.
 - [FloatingWindow](floating_window.md): A non-modal window over the page that drags, moves by keyboard and resizes from a corner, opened through a hook.
 

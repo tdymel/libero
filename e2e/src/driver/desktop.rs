@@ -356,6 +356,10 @@ impl Driver for Desktop {
         self.key(&format!("ctrl+{}", keysym(key.key)))
     }
 
+    async fn press_alt(&mut self, key: Key) -> Result<()> {
+        self.key(&format!("alt+{}", keysym(key.key)))
+    }
+
     async fn type_text(&mut self, text: &str) -> Result<()> {
         self.type_burst(text, 30).await
     }

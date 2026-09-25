@@ -3,8 +3,8 @@
 //! `within` hotkey fires only with focus in its elements.
 
 use anyhow::Result;
-use e2e::driver::{Driver, eventually};
-use e2e::passes::keyboard::Key;
+use e2e::driver::{Driver, eventually, eventually_focused, linger};
+use e2e::passes::keyboard::{self, Key};
 
 /// A chord's key carries no text: a held Ctrl types nothing.
 const K: Key = Key {
@@ -106,6 +106,54 @@ async fn a_press_outside_keeps_its_default<D: Driver>(d: &mut D, _route: &str) -
     count_is(d, "#count", "1").await
 }
 
+const ITEM: &str = "[role=menuitem]";
+const SHARE: &str = "[role=menuitem][aria-haspopup=menu]";
+
+/// Opens the menu behind `trigger` and focuses its first item.
+async fn open_menu<D: Driver>(d: &mut D, trigger: &str) -> Result<()> {
+    d.click(trigger).await?;
+    eventually(d, "the menu to open", async |d| d.exists(ITEM).await).await?;
+    d.focus(ITEM).await?;
+    eventually_focused(d, ITEM, "focusing the first item").await
+}
+
+async fn close_menus<D: Driver>(d: &mut D) -> Result<()> {
+    while d.exists(ITEM).await? {
+        d.press(keyboard::ESCAPE).await?;
+        d.idle().await;
+    }
+    Ok(())
+}
+
+/// A `Menu` opened inside the scope, its submenu too, counts as inside; one opened outside not.
+async fn a_menu_opened_inside_counts_as_inside<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open_menu(d, "#outside button").await?;
+    d.press_ctrl(J).await?;
+    linger(d, 5).await;
+    count_is(d, "#count", "0").await?;
+    close_menus(d).await?;
+
+    open_menu(d, "#scope button").await?;
+    d.press_ctrl(J).await?;
+    count_is(d, "#count", "1").await?;
+
+    d.focus(SHARE).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "focus in the submenu", async |d| {
+        Ok(d.is_focused(ITEM).await? && !d.is_focused(SHARE).await?)
+    })
+    .await?;
+    d.press_ctrl(J).await?;
+    count_is(d, "#count", "2").await
+}
+
+e2e::scenario!(
+    a_menu_opened_inside_the_scope_counts_as_inside,
+    "/use-hotkeys/within-menu",
+    a_menu_opened_inside_counts_as_inside,
+    android: skip("1188: a WebView has no portal-owner chain yet"),
+    desktop: skip("1188: a WebView has no portal-owner chain yet")
+);
 e2e::scenario!(
     a_scoped_hotkey_fires_only_with_focus_inside_its_elements,
     "/use-hotkeys/within",

@@ -7,6 +7,7 @@ mod menu;
 mod modal;
 mod overlay_page;
 mod popover;
+mod shortcut_help;
 mod spotlight;
 mod tooltip;
 
@@ -19,5 +20,6 @@ pub use menu::MenuPage;
 pub use modal::ModalPage;
 pub use overlay_page::OverlayPage;
 pub use popover::PopoverPage;
+pub use shortcut_help::ShortcutHelpPage;
 pub use spotlight::SpotlightPage;
 pub use tooltip::TooltipPage;

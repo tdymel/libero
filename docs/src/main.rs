@@ -286,6 +286,8 @@ pub(crate) enum Route {
     OverlayPage {},
     #[route("/overlay/popover")]
     PopoverPage {},
+    #[route("/overlay/shortcut-help")]
+    ShortcutHelpPage {},
     #[route("/overlay/spotlight")]
     SpotlightPage {},
     #[route("/overlay/tooltip")]

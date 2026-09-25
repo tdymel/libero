@@ -108,10 +108,139 @@ async fn rtl_swaps_the_arrows<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     eventually_focused(d, "#one", "ArrowRight").await
 }
 
+/// A script's `focus()` on an item makes it the tab stop, as a click does.
+async fn script_focus_moves_the_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#jump").await?;
+    eventually_focused(d, "#three", "the script's focus").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#jump", "Tab").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, "#three", "Shift+Tab").await
+}
+
+const SEGMENT: &str = "[role=radiogroup] input:focus";
+
+/// Fields keep their own arrows until an end: the segments' last, the caret's edge.
+async fn fields_pass_arrows_on_at_their_ends<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#first").await?;
+    for (key, name, to) in [
+        (keyboard::ARROW_RIGHT, "ArrowRight", "#bold"),
+        (keyboard::ARROW_RIGHT, "ArrowRight", "#wrap"),
+        (
+            keyboard::ARROW_RIGHT,
+            "ArrowRight into the segments",
+            "[aria-label=Serif]",
+        ),
+        (
+            keyboard::ARROW_RIGHT,
+            "ArrowRight in the segments",
+            "[aria-label=Sans]",
+        ),
+        (
+            keyboard::ARROW_RIGHT,
+            "ArrowRight in the segments",
+            "[aria-label=Mono]",
+        ),
+        (
+            keyboard::ARROW_RIGHT,
+            "ArrowRight past the last segment",
+            "#find",
+        ),
+        (keyboard::END, "End in the text", "#find"),
+        (
+            keyboard::ARROW_RIGHT,
+            "ArrowRight at the caret's end",
+            "#size",
+        ),
+        (keyboard::ARROW_UP, "ArrowUp on the stepper", "#size"),
+        (keyboard::HOME, "Home in the number", "#size"),
+        (
+            keyboard::ARROW_LEFT,
+            "ArrowLeft at the caret's start",
+            "#find",
+        ),
+        (keyboard::END, "End in the text", "#find"),
+        (keyboard::ARROW_LEFT, "ArrowLeft mid-text", "#find"),
+        (keyboard::HOME, "Home in the text", "#find"),
+        (
+            keyboard::ARROW_LEFT,
+            "ArrowLeft at the caret's start",
+            SEGMENT,
+        ),
+    ] {
+        d.press(key).await?;
+        eventually_focused(d, to, name).await?;
+    }
+    eventually(d, "ArrowUp to step the number", async |d| {
+        Ok(d.attr("#size", "aria-valuenow").await?.as_deref() == Some("13"))
+    })
+    .await
+}
+
+/// Alt+F10 in the editor lands on the bar's tab stop; Escape hands focus back (APG).
+async fn alt_f10_reaches_the_bar<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#text").await?;
+    d.press_alt(keyboard::F10).await?;
+    eventually_focused(d, "#bold", "Alt+F10").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_focused(d, "#italic", "ArrowRight").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually_focused(d, "#text", "Escape").await?;
+    d.press_alt(keyboard::F10).await?;
+    eventually_focused(d, "#italic", "Alt+F10 to the last item").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually_focused(d, "#text", "Escape again").await
+}
+
+/// The help lists each chord in the platform's key names.
+async fn the_help_lists_the_chords<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#help").await?;
+    eventually(d, "the help to open", async |d| {
+        d.exists("[role=dialog] dl").await
+    })
+    .await?;
+    let title = d.text("[role=dialog] [data-slot=title]").await?;
+    ensure!(title == "Keyboard shortcuts", "title: {title:?}");
+    let chords = d.text("[role=dialog] dl").await?;
+    for want in ["Alt", "F10", "Go to the toolbar", "Ctrl", "Shift", "K"] {
+        ensure!(chords.contains(want), "no {want:?} in {chords:?}");
+    }
+    d.press(keyboard::ESCAPE).await?;
+    eventually_focused(d, "#help", "Escape closing the help").await
+}
+
+e2e::scenario!(
+    alt_f10_moves_focus_to_the_bar_and_escape_back,
+    "/toolbar-editor",
+    alt_f10_reaches_the_bar,
+    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
+    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
+);
+e2e::scenario!(
+    shortcut_help_lists_the_chords,
+    "/toolbar-editor",
+    the_help_lists_the_chords
+);
+e2e::scenario!(
+    fields_join_the_arrow_order,
+    "/toolbar-fields",
+    fields_pass_arrows_on_at_their_ends,
+    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
+    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
+);
+e2e::scenario!(
+    a_script_focus_moves_the_tab_stop,
+    "/toolbar-script-focus",
+    script_focus_moves_the_stop,
+    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
+    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
+);
 e2e::scenario!(
     the_arrows_rove_over_every_kind_of_item,
     "/toolbar",
-    the_arrows_rove
+    the_arrows_rove,
+    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
+    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
 );
 e2e::scenario!(
     a_select_keeps_its_home_key,
@@ -121,7 +250,9 @@ e2e::scenario!(
 e2e::scenario!(
     tabbing_back_in_returns_to_the_last_item,
     "/toolbar",
-    the_tab_stop_follows_focus
+    the_tab_stop_follows_focus,
+    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
+    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
 );
 e2e::scenario!(
     a_disabled_item_ignores_clicks_and_keys,
@@ -131,12 +262,16 @@ e2e::scenario!(
 e2e::scenario!(
     a_vertical_toolbar_moves_on_up_and_down,
     "/toolbar-vertical",
-    a_vertical_bar_moves_on_up_and_down
+    a_vertical_bar_moves_on_up_and_down,
+    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
+    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
 );
 e2e::scenario!(
     a_right_to_left_toolbar_swaps_the_arrows,
     "/toolbar-rtl",
-    rtl_swaps_the_arrows
+    rtl_swaps_the_arrows,
+    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
+    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
 );
 
 #[test]

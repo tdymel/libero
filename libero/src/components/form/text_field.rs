@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input},
+        common::{HtmlTag, Input, TOOLBAR_ITEM, ToolbarItem, use_no_toolbar, use_toolbar_item},
         form::{
             FIELD_CONTROL_SX, LiveControl, LiveSlot, field_props, use_bound, use_field,
             use_field_frame, use_live_slot,
@@ -99,6 +99,9 @@ fn TextFieldShell(
     let bound = use_bound(&props.name, props.oninput.is_some());
     let disabled = bound.disabled(props.disabled);
     let readonly = props.readonly.unwrap_or(false);
+    let item = use_toolbar_item();
+    // Buttons in the slots belong to the field, not the bar.
+    use_no_toolbar();
     let bound_value = bound.value();
     // Rules read the text here, so only a validated field redraws per keystroke.
     let rules = (!props.validate.is_empty())
@@ -152,9 +155,16 @@ fn TextFieldShell(
         .attr_default("type", "text")
         .attr("name", bound.name().map(str::to_string))
         .attr("placeholder", props.placeholder)
-        .attr("disabled", disabled)
-        .attr("readonly", readonly)
+        // A toolbar keeps a disabled item focusable, in its arrow order: read-only instead.
+        .attr("disabled", disabled && item.is_none())
+        .attr(
+            "aria-disabled",
+            (disabled && item.is_some()).then_some("true"),
+        )
+        .attr("readonly", readonly || (disabled && item.is_some()))
         .attr("required", required)
+        .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
+        .attr("tabindex", item.map(ToolbarItem::tabindex))
         .event(
             "oninput",
             oninput.map(|emit| move |event: FormEvent| emit(fit_max_length(event.value()))),

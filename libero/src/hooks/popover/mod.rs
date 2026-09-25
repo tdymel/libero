@@ -2,6 +2,7 @@
 //! `overflow: hidden` ancestor and flips when it runs out of room.
 
 mod options;
+mod owners;
 mod place;
 
 use dioxus::prelude::*;
@@ -24,6 +25,7 @@ use crate::{
     platform::{ElementApi, ScrollSubscription, document, scroll, when_laid_out},
 };
 
+pub(crate) use owners::focus_in_popup_of;
 pub(crate) use place::place;
 
 /// A popover's own state: where its box goes, and the portal slot it goes in.
@@ -223,6 +225,7 @@ pub(crate) fn use_popover_on(
     let mut placed = use_signal(|| None::<Placed>);
     let mut anchor_width = use_signal(|| None::<f64>);
     let slot = use_portal_slot();
+    owners::use_popup_owner(anchor, floating, open);
 
     // Bumped from the scroll callback, outside every scope: it only invalidates,
     // the effect below measures, where a `Read` may be created.

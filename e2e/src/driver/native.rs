@@ -72,6 +72,12 @@ impl Driver for Native {
         Ok(())
     }
 
+    async fn press_alt(&mut self, key: keyboard::Key) -> Result<()> {
+        let key = native_key(key)?;
+        self.page.press_with(key, crate::native::Modifiers::ALT);
+        Ok(())
+    }
+
     async fn type_text(&mut self, text: &str) -> Result<()> {
         for ch in text.chars() {
             self.page

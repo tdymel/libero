@@ -92,6 +92,12 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     backend::arrow_target(event)
 }
 
+/// Whether a text field's caret sits at its start and at its end, `false` with
+/// text selected; `None` off a text field or where the renderer cannot tell.
+pub(crate) fn caret_edges(event: &Event<KeyboardData>) -> Option<(bool, bool)> {
+    backend::caret_edges(event)
+}
+
 /// Whether the platform's shortcut modifier is Cmd (Apple) rather than Ctrl.
 pub(crate) fn mod_is_meta() -> bool {
     backend::mod_is_meta()
