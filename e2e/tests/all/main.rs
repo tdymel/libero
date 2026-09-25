@@ -29,6 +29,7 @@ mod divider;
 mod docs_shell;
 mod drawer;
 mod dropdown_parts;
+mod editor_ime_probe;
 mod editor_probe;
 mod elevation;
 mod field_frame;
