@@ -5,13 +5,13 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ComboboxState, Glyph, HtmlTag, Input, Part, States, attr, focus_ring_sx,
+            ComboboxState, Glyph, HtmlTag, Input, Part, Parts, States, attr, focus_ring_sx,
             has_shortcut_modifier, navigation_chord, ring_overlay,
         },
         form::{
-            CaretKeys, ComboboxCore, ComboboxOption, PreparedField, clear_button, field_control_sx,
-            field_parts_enum, field_props, use_chip_announcer, use_field, use_field_frame,
-            use_refocus_on_close, with_drawn_placeholder,
+            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, clear_button,
+            field_control_sx, field_parts_enum, field_props, use_chip_announcer, use_field,
+            use_field_frame, use_refocus_on_close, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -239,6 +239,8 @@ field_props! {
         /// Which rows survive the query, one `bool` per row; erases `T` like `rows`.
         #[props(default)]
         matches: Option<Callback<String, Vec<bool>>>,
+        #[props(default, into)]
+        dropdown_parts: Input<Parts<DropdownPart>>,
     }
 }
 
@@ -496,6 +498,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         // Focused once measured; earlier is a silent no-op.
         autofocus: searchable.then_some(search),
         labelled_by: field.label_id(),
+        parts: props.dropdown_parts,
     });
 
     field.render(rsx! {
@@ -526,10 +529,12 @@ struct Listbox {
     /// The search box, if any.
     autofocus: Option<ElementHandle>,
     labelled_by: Option<String>,
+    parts: Input<Parts<DropdownPart>>,
 }
 
 fn select_listbox(list: Listbox) -> Element {
     let Listbox {
+        parts,
         rows,
         groups,
         row_disabled,
@@ -578,6 +583,7 @@ fn select_listbox(list: Listbox) -> Element {
             width: PopoverWidth::Min,
             remeasure,
             labelled_by,
+            parts,
             {control}
         }
     }
@@ -955,6 +961,7 @@ fn select_search_box(
     search_box
         .element(&search)
         .attr_default("type", "text")
+        .attr("data-slot", DropdownPart::Search.slot())
         .attr("value", query())
         .attr("data-controlled", true)
         // Ours is the list underneath; the browser's would cover it.

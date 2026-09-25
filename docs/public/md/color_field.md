@@ -63,6 +63,7 @@ fn Demo() -> Element {
 | `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
 | `disabled` | `bool` | `false` | Disables typing and the dropdown, and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
+| `dropdown_parts` | `Parts<ColorDropdownPart>` | - | Styles the portaled dropdown and the picker in it. |
 
 `ColorField` also takes the `<input>` HTML attributes and, like every
 component, the shared props `sx`, `class`, `style`, `states`, and any extra
@@ -85,6 +86,25 @@ explains how parts work.
 | `FieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
 | `FieldPart::Helper` | `helper` | The caption under the control. |
 | `FieldPart::Status` | `status` | The validation message. |
+
+### Dropdown
+
+The dropdown is portaled out of the field, so its parts take the
+`dropdown_parts` prop. They match from the dropdown box at any depth.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ColorDropdownPart::Panel` | `dropdown` | The dropdown box itself. |
+| `ColorDropdownPart::Saturation` | `saturation` | The saturation and brightness panel. |
+| `ColorDropdownPart::Body` | `body` | The row under the panel: the sliders and the preview. |
+| `ColorDropdownPart::Sliders` | `sliders` | The column of the hue and alpha sliders. |
+| `ColorDropdownPart::Hue` | `hue` | The hue slider. |
+| `ColorDropdownPart::Alpha` | `alpha` | The alpha slider, with `with_alpha`. |
+| `ColorDropdownPart::Track` | `track` | Both sliders' gradient tracks. |
+| `ColorDropdownPart::Thumb` | `thumb` | Every handle: the panel's and the sliders'. |
+| `ColorDropdownPart::Preview` | `preview` | The current color beside the sliders, with `with_alpha`. |
+| `ColorDropdownPart::Swatches` | `swatches` | The row of preset swatches. |
+| `ColorDropdownPart::Swatch` | `swatch` | One preset swatch. |
 
 ## Accessibility
 

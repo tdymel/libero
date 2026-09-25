@@ -4,8 +4,10 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_FIXED_SX,
         common::{
-            ClassList, HtmlTag, Input, NavigationChord, Parts, States, base_props, navigation_chord,
+            ClassList, HtmlTag, Input, NavigationChord, Part, Parts, States, base_props,
+            navigation_chord,
         },
+        form::DropdownPart,
         layout::{paper_sx, use_box},
     },
     hooks::{
@@ -17,7 +19,7 @@ use crate::{
     theme::{COMBOBOX_PADDING, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
-use super::{ComboboxPart, ComboboxState, dropdown::ComboboxDropdown, option::ComboboxContext};
+use super::{ComboboxState, dropdown::ComboboxDropdown, option::ComboboxContext};
 
 // A `paper_sx()` surface, through `use_box` rather than `Paper` for the popover's handle and events.
 pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
@@ -50,7 +52,7 @@ pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
 });
 
 base_props! {
-    parts(ComboboxPart);
+    parts(DropdownPart);
     pub(crate) struct ComboboxCoreProps {
         /// Already drawn: erases the caller's `T` and stops memoizing below.
         rows: Vec<Element>,
@@ -256,7 +258,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
 /// The dropdown's text for a query that matched nothing. `Cascader` draws it too.
 pub(crate) fn nothing_found_row(text: &str) -> Element {
     rsx! {
-        div { "data-slot": "nothing-found", "{text}" }
+        div { "data-slot": DropdownPart::Empty.slot(), "{text}" }
     }
 }
 
@@ -269,7 +271,7 @@ struct ComboboxPopupProps {
     autofocus: Option<ElementHandle>,
     class: Input<ClassList>,
     sx: Input<Sx>,
-    parts: Input<Parts<ComboboxPart>>,
+    parts: Input<Parts<DropdownPart>>,
     states: Input<States>,
     attributes: Vec<Attribute>,
     rows: Vec<Element>,
@@ -331,6 +333,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
             })
             // Portaled, so keys bubble to `PortalOutlet`; this lets a search box inside answer the arrows.
             .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
+            .attr_default("data-slot", DropdownPart::Panel.slot())
             .attr("aria-busy", props.loading.then_some("true"))
             .render(
                 HtmlTag::Div,

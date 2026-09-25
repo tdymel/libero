@@ -283,8 +283,10 @@ prop keyed by it. The component's page lists its parts in a "Style API" tab.
   styling like `sx` does. Where the instance `sx` sets the same property on the
   same part, `sx` wins.
 - `StaticParts` builds the parts once per process, as `StaticSx` does for `sx`.
-- Parts a component renders in a portal (a `Select`'s list, a `Dialog`, a
-  `Menu`, a `Tooltip`) sit outside its root, so `parts` cannot reach them.
+- Parts a component renders in a portal (a `Dialog`, a `Menu`, a `Tooltip`)
+  sit outside its root, so `parts` cannot reach them. A field's portaled
+  dropdown, such as a `Select`'s list, takes its own `dropdown_parts` prop
+  instead.
 
 ```rust
 use dioxus::prelude::*;

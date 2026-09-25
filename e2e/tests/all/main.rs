@@ -28,6 +28,7 @@ mod direction_toggle;
 mod divider;
 mod docs_shell;
 mod drawer;
+mod dropdown_parts;
 mod editor_probe;
 mod elevation;
 mod field_frame;

@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{Input, Options},
-        form::{field_props, use_bound},
+        common::{Input, Options, Parts},
+        form::{DropdownPart, field_props, use_bound},
     },
     hooks::use_theme,
     utils::warn,
@@ -98,6 +98,9 @@ field_props! {
         /// Rules over the selected value, shown after blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Option<T>>,
+        /// Styles the portaled dropdown and its inner parts.
+        #[props(default, into)]
+        dropdown_parts: Input<Parts<DropdownPart>>,
     }
 }
 
@@ -254,6 +257,7 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
             class: props.class,
             sx: props.sx,
             parts: props.parts,
+            dropdown_parts: props.dropdown_parts,
             states: props.states,
             attributes: props.attributes,
         }

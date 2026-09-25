@@ -2,10 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Options, use_combobox},
+        common::{HtmlTag, Input, Options, Parts, use_combobox},
         form::{
-            CaretKeys, ComboboxCore, ComboboxOption, FIELD_CONTROL_SX, clear_button, field_props,
-            row_label, use_bound, use_field, use_field_frame,
+            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, clear_button,
+            field_props, row_label, use_bound, use_field, use_field_frame,
         },
         layout::use_box,
     },
@@ -82,6 +82,9 @@ field_props! {
         /// `trailing` is text that describes the value, e.g. a unit.
         #[props(default)]
         describe_trailing: bool,
+        /// Styles the portaled dropdown and its inner parts.
+        #[props(default, into)]
+        dropdown_parts: Input<Parts<DropdownPart>>,
     }
 }
 
@@ -298,6 +301,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             disabled: disabled || readonly,
             width: PopoverWidth::Match,
             labelled_by: field.label_id(),
+            parts: props.dropdown_parts,
             {frame.render(input)}
         }
     };

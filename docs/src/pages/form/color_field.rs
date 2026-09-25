@@ -1,3 +1,4 @@
+use super::dropdown_parts::color_dropdown_parts;
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::FieldPart;
@@ -66,6 +67,7 @@ pub fn ColorFieldPage() -> Element {
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                    prop("dropdown_parts", "Parts<ColorDropdownPart>").doc("Styles the portaled dropdown and the picker in it."),
                 ])
                 .parts("FieldPart", vec![
                     (FieldPart::Label, "The label above the control."),
@@ -77,7 +79,9 @@ pub fn ColorFieldPage() -> Element {
                     (FieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
                     (FieldPart::Helper, "The caption under the control."),
                     (FieldPart::Status, "The validation message."),
-                ]).extends("input"),
+                ])
+                .dropdown_parts("ColorDropdownPart", color_dropdown_parts())
+                .extends("input"),
             ],
             accessibility: a11y()
                 .key(["Down"], "Moves focus into the picker, onto the saturation area or the first swatch, where the `ColorPicker` keys apply.")

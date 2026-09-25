@@ -4,7 +4,7 @@
 use dioxus::prelude::*;
 use libero::components::{
     Button, Checkbox, CheckboxPart, Chip, ChipPart, ColorCode, ColorPicker, ColorPickerPart,
-    ColorSliderPart, Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxPart, FieldPart,
+    ColorSliderPart, Combobox, ComboboxOption, ComboboxOptionArgs, DropdownPart, FieldPart,
     Fieldset, FieldsetPart, FileField, FileFieldPart, Flex, Form, FormPart, HueSlider, MultiSelect,
     OptionList, Parts, Rule, Select, SelectPart, Slider, SliderPart, Swatches, TextField, Textarea,
     TextareaPart, not_empty, use_combobox,
@@ -40,8 +40,8 @@ fn FormPartsPage() -> Element {
                     ComboboxOption { onpick: move |_| state.close(), "{row.value}" }
                 },
                 parts: Parts::new()
-                    .part(ComboboxPart::Option, sx().letter_spacing("3px"))
-                    .part(ComboboxPart::GroupLabel, sx().font_style("italic")),
+                    .part(DropdownPart::Option, sx().letter_spacing("3px"))
+                    .part(DropdownPart::GroupLabel, sx().font_style("italic")),
                 Button { id: "trigger", attributes: state.a11y_attributes(), onclick: move |_| state.toggle(), "Fruit" }
             }
             ColorPicker { id: "picker", value: ColorCode::hex(0x228be6), with_alpha: true,

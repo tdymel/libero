@@ -96,6 +96,7 @@ holds selects nothing and warns. The hidden input posts `Options::value()`.
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
 | `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
+| `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 
 `CascaderNodeArgs<T>` carries `value`, `label`, `level`, `expanded` and
 `selected`. `CascaderFilterArgs<T>` carries `query`, `label` and `path`, the
@@ -121,6 +122,23 @@ explains how parts work.
 | `CascaderPart::Value` | `value` | The joined path or the placeholder, in the trigger. |
 | `CascaderPart::Helper` | `helper` | The caption under the control. |
 | `CascaderPart::Status` | `status` | The validation message. |
+
+### Dropdown
+
+The dropdown is portaled out of the field, so its parts take the
+`dropdown_parts` prop. They match from the dropdown box at any depth.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `DropdownPart::Panel` | `dropdown` | The dropdown box itself. |
+| `DropdownPart::Search` | `search` | The search box above the rows. |
+| `DropdownPart::Listbox` | `listbox` | The scrolling list of rows. |
+| `DropdownPart::Option` | `option` | A row. |
+| `DropdownPart::OptionLabel` | `label` | A row's `span { "data-slot": "label" }`, which ends in an ellipsis. |
+| `DropdownPart::Empty` | `nothing-found` | The text shown when the query matches nothing. |
+| `DropdownPart::Column` | `column` | One level's column. |
+| `DropdownPart::DrillBack` | `drill-back` | On a narrow screen, the header over a child level that goes back to its parent. |
+| `DropdownPart::PickParent` | `pick-parent` | On a narrow screen with `any_level`, the row that picks the parent. |
 
 ## Accessibility
 

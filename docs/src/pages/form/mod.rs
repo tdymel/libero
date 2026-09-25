@@ -9,6 +9,7 @@ mod color_picker;
 mod combobox;
 mod date_common;
 pub(crate) mod date_locales;
+mod dropdown_parts;
 mod fieldset;
 mod file_field;
 mod form;

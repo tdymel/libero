@@ -1,29 +1,16 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::common::{ClassList, Input, OptionSource, Parts, States, parts_enum},
+    components::{
+        common::{ClassList, Input, OptionSource, Parts, States},
+        form::DropdownPart,
+    },
     hooks::use_localization,
     sx::Sx,
     theme::Size,
 };
 
 use super::{ComboboxState, core::ComboboxCore, option::ComboboxOptionArgs};
-
-parts_enum! {
-    /// [`Combobox`]'s inner parts, for its `parts` prop. Matched from the dropdown,
-    /// which takes `sx`; rows sit in groups, so the rows' parts match at any depth.
-    pub enum ComboboxPart {
-        /// The scrolling `role="listbox"`.
-        Listbox = "listbox" => "& > [data-slot='listbox']",
-        /// A `role="group"` of rows that share a label.
-        Group = "group" => "& > [data-slot='listbox'] [data-slot='group']",
-        GroupLabel = "group-label" => "& > [data-slot='listbox'] [data-slot='group-label']",
-        /// A [`ComboboxOption`](super::ComboboxOption) row.
-        Option = "option" => "& > [data-slot='listbox'] [data-slot='option']",
-        /// A row's `span { "data-slot": "label" }`, which ellipsises.
-        OptionLabel = "label" => "& > [data-slot='listbox'] [data-slot='option'] > [data-slot='label']",
-    }
-}
 
 // Hand-written rather than `base_props!`, which is not generic.
 #[derive(Props, Clone, PartialEq)]
@@ -58,9 +45,9 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// Styles the dropdown, not the wrapper it hangs off.
     #[props(default, into)]
     sx: Input<Sx>,
-    /// Styles the dropdown's inner parts, under `sx`.
+    /// Styles the dropdown and its inner parts, under `sx`.
     #[props(default, into)]
-    parts: Input<Parts<ComboboxPart>>,
+    parts: Input<Parts<DropdownPart>>,
     #[props(default, into)]
     states: Input<States>,
     /// The trigger, plus anything that belongs with it. `Combobox` renders no control of its own.
@@ -166,32 +153,5 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             states: props.states,
             {props.children}
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::components::common::part_table;
-
-    /// The slot names are public: a rename here is a breaking change.
-    #[test]
-    fn the_part_table_is_stable() {
-        assert_eq!(
-            part_table::<ComboboxPart>(),
-            [
-                ("listbox", "& > [data-slot='listbox']"),
-                ("group", "& > [data-slot='listbox'] [data-slot='group']"),
-                (
-                    "group-label",
-                    "& > [data-slot='listbox'] [data-slot='group-label']"
-                ),
-                ("option", "& > [data-slot='listbox'] [data-slot='option']"),
-                (
-                    "label",
-                    "& > [data-slot='listbox'] [data-slot='option'] > [data-slot='label']"
-                ),
-            ]
-        );
     }
 }

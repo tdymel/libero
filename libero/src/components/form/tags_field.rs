@@ -5,10 +5,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::use_announcer,
-        common::{ComboboxState, HtmlTag, Input, Part, ring_overlay, use_combobox},
+        common::{ComboboxState, HtmlTag, Input, Part, Parts, ring_overlay, use_combobox},
         form::{
-            CaretKeys, ComboboxCore, ComboboxOption, SelectionArgs, clear_button, field_control_sx,
-            field_parts_enum, field_props, removable_chip, row_label, use_bound,
+            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, SelectionArgs, clear_button,
+            field_control_sx, field_parts_enum, field_props, removable_chip, row_label, use_bound,
             use_chip_announcer, use_field, use_field_frame,
         },
         layout::{BoxStyle, use_box},
@@ -102,6 +102,9 @@ field_props! {
         /// that a `<button>` with `tabindex: "-1"`.
         #[props(default)]
         tag: Option<Callback<SelectionArgs<String>, Element>>,
+        /// Styles the portaled `suggestions` dropdown and its inner parts.
+        #[props(default, into)]
+        dropdown_parts: Input<Parts<DropdownPart>>,
     }
 }
 
@@ -320,6 +323,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 width: PopoverWidth::Match,
                 // A tag added or taken back resizes the frame under an open list.
                 remeasure: held.len() as u64,
+                parts: props.dropdown_parts,
                 {framed}
             }
         },

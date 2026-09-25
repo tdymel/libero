@@ -17,12 +17,12 @@ use crate::{
     components::{
         accessibility::use_announcer,
         common::{
-            ClassList, FOCUSABLE_SELECTOR, HtmlTag, Input, NavigationChord, Parts, States,
+            ClassList, FOCUSABLE_SELECTOR, HtmlTag, Input, NavigationChord, Part, Parts, States,
             navigation_chord,
         },
         form::{
-            Caption, FIELD_CONTROL_SX, FieldName, FieldPart, FieldStatus, Validators, use_bound,
-            use_field, use_field_frame,
+            Caption, ChronoDropdownPart, FIELD_CONTROL_SX, FieldName, FieldPart, FieldStatus,
+            Validators, use_bound, use_field, use_field_frame,
         },
         layout::{paper_sx, use_box},
     },
@@ -229,6 +229,7 @@ pub(super) struct PickerField<'a, V: 'static> {
     pub class: &'a Input<ClassList>,
     pub sx: &'a Input<Sx>,
     pub parts: &'a Input<Parts<FieldPart>>,
+    pub dropdown_parts: &'a Input<Parts<ChronoDropdownPart>>,
     pub states: &'a Input<States>,
     pub attributes: Vec<Attribute>,
 }
@@ -264,6 +265,7 @@ macro_rules! picker_field {
             class: &$props.class,
             sx: &$props.sx,
             parts: &$props.parts,
+            dropdown_parts: &$props.dropdown_parts,
             states: &$props.states,
             attributes: $props.attributes,
         }
@@ -388,6 +390,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown_box = use_box()
         .framework_sx(&PICKER_FIELD_DROPDOWN_SX)
+        .parts(field.dropdown_parts)
         .states(&dropdown_states)
         .style(popover.style())
         .prepare();
@@ -533,6 +536,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         dropdown_box
             .element(popover.floating())
             .attr("id", dialog_id)
+            .attr("data-slot", ChronoDropdownPart::Panel.slot())
             .attr("role", "dialog")
             .attr("aria-label", V::dialog_label(names))
             .event("onmousedown", move |event: MouseEvent| {

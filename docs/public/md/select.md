@@ -126,6 +126,7 @@ option is read out, and the arrows, typeahead and clicks skip it.
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
 | `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |
+| `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 
 `SelectOptionArgs<T>` carries `value`, `index`, `selected` and `disabled`.
 `SelectFilterArgs<T>` carries `value` and `query`.
@@ -150,6 +151,22 @@ explains how parts work.
 | `SelectPart::Value` | `value` | The picked value or the placeholder, in the trigger. |
 | `SelectPart::Helper` | `helper` | The caption under the control. |
 | `SelectPart::Status` | `status` | The validation message. |
+
+### Dropdown
+
+The dropdown is portaled out of the field, so its parts take the
+`dropdown_parts` prop. They match from the dropdown box at any depth.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `DropdownPart::Panel` | `dropdown` | The dropdown box itself. |
+| `DropdownPart::Search` | `search` | The search box above the rows. |
+| `DropdownPart::Listbox` | `listbox` | The scrolling list of rows. |
+| `DropdownPart::Group` | `group` | A group of rows that share a label, from an `OptionList`. |
+| `DropdownPart::GroupLabel` | `group-label` | A group's heading. |
+| `DropdownPart::Option` | `option` | A row. |
+| `DropdownPart::OptionLabel` | `label` | A row's `span { "data-slot": "label" }`, which ends in an ellipsis. |
+| `DropdownPart::Empty` | `nothing-found` | The text shown when the query matches nothing. |
 
 ## Accessibility
 

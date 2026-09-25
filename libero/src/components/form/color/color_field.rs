@@ -7,11 +7,12 @@ use crate::{
         accessibility::use_announcer,
         buttons::ActionIcon,
         common::{
-            FOCUSABLE_SELECTOR, Glyph, HtmlTag, Input, NavigationChord, States, navigation_chord,
+            FOCUSABLE_SELECTOR, Glyph, HtmlTag, Input, NavigationChord, Part, Parts, States,
+            navigation_chord,
         },
         form::{
-            FIELD_CONTROL_SX, FieldStatus, SLOT_BUTTON_SX, SliderChangeEvent, field_props,
-            slot_icon_size, use_bound, use_field, use_field_frame,
+            ColorDropdownPart, FIELD_CONTROL_SX, FieldStatus, SLOT_BUTTON_SX, SliderChangeEvent,
+            field_props, slot_icon_size, use_bound, use_field, use_field_frame,
         },
         layout::{paper_sx, use_box},
     },
@@ -92,6 +93,9 @@ field_props! {
         name: crate::components::form::FieldName<ColorCode>,
         #[props(default, into)]
         placeholder: Option<String>,
+        /// Styles the portaled dropdown and the picker in it.
+        #[props(default, into)]
+        dropdown_parts: Input<Parts<ColorDropdownPart>>,
     }
 }
 
@@ -275,6 +279,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown = use_box()
         .framework_sx(&COLOR_FIELD_DROPDOWN_SX)
+        .parts(&props.dropdown_parts)
         .states(&dropdown_states)
         .style(popover.style())
         .prepare();
@@ -422,6 +427,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         dropdown
             .element(popover.floating())
             .attr("id", dialog_id)
+            .attr("data-slot", ColorDropdownPart::Panel.slot())
             .attr("role", "dialog")
             .attr("aria-label", labels.choose)
             .event("onmousedown", move |event: MouseEvent| {

@@ -12,7 +12,7 @@ use crate::{
     theme::{ComboboxDefaults, Size},
 };
 
-use super::ComboboxPart;
+use crate::components::form::DropdownPart;
 
 /// Shared with the rows. Signals: a provider runs once, so plain fields would freeze.
 #[derive(Clone, Copy, PartialEq)]
@@ -182,7 +182,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .states(&states)
         .prepare()
         .attr_default("id", id)
-        .attr_default("data-slot", ComboboxPart::Option.slot())
+        .attr_default("data-slot", DropdownPart::Option.slot())
         .attr_default("role", "option")
         .attr("aria-selected", props.selected.map(|on| on.to_string()))
         // `disabled` is no `div` attribute, and the row must stay readable.
@@ -198,7 +198,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
 /// A default row's text, the element that can ellipsise. Shared by the pickers' own rows.
 pub(crate) fn row_label(label: String) -> Element {
     rsx! {
-        span { "data-slot": ComboboxPart::OptionLabel.slot(), "{label}" }
+        span { "data-slot": DropdownPart::OptionLabel.slot(), "{label}" }
     }
 }
 

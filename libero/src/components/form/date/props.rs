@@ -145,6 +145,11 @@ macro_rules! date_props {
                 name: $crate::components::form::FieldName<Option<$v>>,
                 #[props(default, into)]
                 placeholder: Option<String>,
+                /// Styles the portaled dropdown and the picker in it.
+                #[props(default, into)]
+                dropdown_parts: $crate::components::common::Input<
+                    $crate::components::common::Parts<$crate::components::form::ChronoDropdownPart>,
+                >,
             }
         }
     };

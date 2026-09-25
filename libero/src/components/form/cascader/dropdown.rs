@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States},
-        form::combobox::COMBOBOX_DROPDOWN_SX,
+        common::{HtmlTag, Input, Part, Parts, States},
+        form::{DropdownPart, combobox::COMBOBOX_DROPDOWN_SX},
         layout::{BoxStyle, use_box},
     },
     hooks::{
@@ -58,10 +58,11 @@ pub(super) fn dropdown_box(
         })
         // Portaled, so keys inside would bubble to `PortalOutlet`, not the trigger.
         .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
+        .attr("data-slot", DropdownPart::Panel.slot())
         .render(HtmlTag::Div, Vec::new(), content)
 }
 
-pub(super) struct DropdownSetup {
+pub(super) struct DropdownSetup<'a> {
     pub(super) opened: bool,
     pub(super) searchable: bool,
     pub(super) search: ElementHandle,
@@ -71,6 +72,7 @@ pub(super) struct DropdownSetup {
     pub(super) remeasure: u64,
     pub(super) gap: f64,
     pub(super) padding: f64,
+    pub(super) parts: &'a Input<Parts<DropdownPart>>,
 }
 
 pub(super) struct Dropdown {
@@ -92,6 +94,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         remeasure,
         gap,
         padding,
+        parts,
     } = setup;
 
     // On the Escape stack while open, so a surrounding `HoverCard` leaves the press to it.
@@ -118,6 +121,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     let dropdown = use_box()
         // `use_popover` caps it to the viewport; wide columns scroll inside instead of off-screen.
         .framework_sx(&CASCADER_DROPDOWN_SX)
+        .parts(parts)
         .states(&dropdown_states)
         .style(popover.style())
         .prepare();

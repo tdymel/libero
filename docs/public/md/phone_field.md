@@ -71,6 +71,7 @@ fn Demo() -> Element {
 | `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
 | `disabled` | `bool` | `false` | Disables and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. The country button stays focusable and opens nothing. |
+| `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled country list and its inner parts. |
 
 `PhoneField` also takes the `<input>` HTML attributes and, like every
 component, the shared props `sx`, `class`, `style`, `states`, and any extra
@@ -95,6 +96,20 @@ explains how parts work.
 | `PhoneFieldPart::Dial` | `dial` | The dial code: in the country button, or alone without `country_select`. |
 | `PhoneFieldPart::Helper` | `helper` | The caption under the control. |
 | `PhoneFieldPart::Status` | `status` | The validation message. |
+
+### Dropdown
+
+The dropdown is portaled out of the field, so its parts take the
+`dropdown_parts` prop. They match from the dropdown box at any depth.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `DropdownPart::Panel` | `dropdown` | The dropdown box itself. |
+| `DropdownPart::Search` | `search` | The search box above the rows. |
+| `DropdownPart::Listbox` | `listbox` | The scrolling list of rows. |
+| `DropdownPart::Option` | `option` | A row. |
+| `DropdownPart::CountryName` | `name` | A row's country name. |
+| `DropdownPart::CountryDial` | `dial` | A row's dial code. |
 
 ## Accessibility
 

@@ -90,8 +90,8 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
 own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
 explains how parts work. Every picker takes `ChronoPickerPart` and draws only
-the parts its value uses. A date field's dropdown is portaled, so the field's
-`parts` do not reach the picker in it.
+the parts its value uses. A date field's dropdown is portaled, so style the
+picker in it with the field's `dropdown_parts`.
 
 | Part | `data-slot` | Description |
 |---|---|---|

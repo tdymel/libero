@@ -1,3 +1,4 @@
+use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::SelectPart;
@@ -261,6 +262,7 @@ pub fn SelectPage() -> Element {
                     prop("required", "bool").default("false").doc("Sets `aria-required` and marks the label."),
                     prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead."),
+                    prop("dropdown_parts", "Parts<DropdownPart>").doc("Styles the portaled dropdown and its inner parts."),
                 ])
                 .parts("SelectPart", vec![
                     (SelectPart::Label, "The label above the control."),
@@ -272,7 +274,8 @@ pub fn SelectPage() -> Element {
                     (SelectPart::Value, "The picked value or the placeholder, in the trigger."),
                     (SelectPart::Helper, "The caption under the control."),
                     (SelectPart::Status, "The validation message."),
-                ]),
+                ])
+                .dropdown_parts("DropdownPart", list_dropdown_parts(SELECT_DROPDOWN)),
             ],
             accessibility: a11y()
                 .key(["Down", "Up", "Enter", "Space"], "Closed: opens the list.")

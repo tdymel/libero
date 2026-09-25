@@ -4,16 +4,14 @@ use crate::{
     components::{
         common::{Part, group_id, listbox_id},
         feedback::Loader,
+        form::DropdownPart,
         layout::ScrollArea,
     },
     sx::sx,
     theme::Size,
 };
 
-use super::{
-    ComboboxPart,
-    option::{ComboboxContext, ComboboxRowContext},
-};
+use super::option::{ComboboxContext, ComboboxRowContext};
 
 /// Publishes the row's place to `ComboboxOption`. A `Signal` written in render: a provider runs once.
 #[component]
@@ -90,7 +88,7 @@ pub(super) fn ComboboxDropdown(
                     sx: sx().max_height(max_height),
                     scroll_position_y: scroll_y,
                     id: listbox_id(&id),
-                    "data-slot": ComboboxPart::Listbox.slot(),
+                    "data-slot": DropdownPart::Listbox.slot(),
                     "role": "listbox",
                     "aria-multiselectable": multiselectable.then_some("true"),
                     "aria-labelledby": labelled_by,
@@ -98,14 +96,14 @@ pub(super) fn ComboboxDropdown(
                         if let Some(label) = label {
                             div {
                                 key: "group-{start}",
-                                "data-slot": ComboboxPart::Group.slot(),
+                                "data-slot": DropdownPart::Group.slot(),
                                 role: "group",
                                 "aria-labelledby": group_id(&id, start),
                                 div {
                                     id: group_id(&id, start),
                                     // Already the group's name; would be read twice.
                                     role: "presentation",
-                                    "data-slot": ComboboxPart::GroupLabel.slot(),
+                                    "data-slot": DropdownPart::GroupLabel.slot(),
                                     "{label}"
                                 }
                                 {drawn[start..end].iter().cloned()}

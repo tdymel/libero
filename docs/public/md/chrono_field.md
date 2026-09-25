@@ -142,6 +142,7 @@ fn Demo() -> Element {
 | `required` | `bool` | `false` | Sets `required` on the input and marks the label. |
 | `disabled` | `bool` | `false` | Disables typing and the dropdown, and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
+| `dropdown_parts` | `Parts<ChronoDropdownPart>` | - | Styles the portaled dropdown and the picker in it. |
 
 `format` takes the dayjs tokens `YYYY M MM MMM MMMM D DD dd ddd dddd` and
 `[literal]` text. Props that only some value types use are ignored by the rest,
@@ -166,6 +167,38 @@ explains how parts work.
 | `FieldPart::Trailing` | `trailing` | The slot after the control: a chevron, a toggle. |
 | `FieldPart::Helper` | `helper` | The caption under the control. |
 | `FieldPart::Status` | `status` | The validation message. |
+
+### Dropdown
+
+The dropdown is portaled out of the field, so its parts take the
+`dropdown_parts` prop. They match from the dropdown box at any depth.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ChronoDropdownPart::Panel` | `dropdown` | The dropdown box itself. |
+| `ChronoDropdownPart::Header` | `header` | Calendar: the row over a month, a year or a decade, with paging buttons and title. |
+| `ChronoDropdownPart::Nav` | `nav` | Calendar: a paging button, in the header or beside the mini calendar's row. |
+| `ChronoDropdownPart::Title` | `title` | Calendar: the month, year or decade heading, a button that climbs a level. |
+| `ChronoDropdownPart::Months` | `months` | Days: the months side by side, or the mini calendar's row. |
+| `ChronoDropdownPart::Weekday` | `weekday` | Days: a weekday name over a month's columns. |
+| `ChronoDropdownPart::Day` | `day` | Days: a day button. |
+| `ChronoDropdownPart::Month` | `month` | Mini calendar: the month over a day's number. |
+| `ChronoDropdownPart::Blank` | `blank` | Days, `columns` over 1: an empty cell instead of a neighbour's day. |
+| `ChronoDropdownPart::Cells` | `cells` | Months and years: their grid. |
+| `ChronoDropdownPart::Cell` | `cell` | Months and years: a month or a year button. |
+| `ChronoDropdownPart::Strip` | `strip` | Mini calendar: the row of days between its paging buttons. |
+| `ChronoDropdownPart::Columns` | `columns` | Digital clock, duration: the columns. |
+| `ChronoDropdownPart::Spin` | `spin` | Digital clock, duration: one column, a spinbutton. |
+| `ChronoDropdownPart::Value` | `value` | Digital clock, duration: a column's value. |
+| `ChronoDropdownPart::Neighbour` | `neighbour` | Digital clock, duration: the faded values above and below a column's value. |
+| `ChronoDropdownPart::Separator` | `separator` | Digital clock: the `:` between columns. |
+| `ChronoDropdownPart::Unit` | `unit` | Duration: the unit after each column. |
+| `ChronoDropdownPart::Readout` | `readout` | Analog clock: the digits over the face, buttons that pick the hand. |
+| `ChronoDropdownPart::Face` | `face` | Analog clock: the face, a slider. |
+| `ChronoDropdownPart::Mark` | `mark` | Analog clock: a number on the face. |
+| `ChronoDropdownPart::Ticks` | `ticks` | Analog clock: the ring of ticks for steps finer than the marks. |
+| `ChronoDropdownPart::Hand` | `hand` | Analog clock: the hand. |
+| `ChronoDropdownPart::Pivot` | `pivot` | Analog clock: the dot the hand turns on. |
 
 ## Accessibility
 

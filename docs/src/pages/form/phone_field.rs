@@ -1,3 +1,4 @@
+use super::dropdown_parts::{PHONE_DROPDOWN, list_dropdown_parts};
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::PhoneFieldPart;
@@ -81,6 +82,8 @@ pub fn PhoneFieldPage() -> Element {
                     prop("readonly", "bool")
                         .default("false")
                         .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. The country button stays focusable and opens nothing."),
+                    prop("dropdown_parts", "Parts<DropdownPart>")
+                        .doc("Styles the portaled country list and its inner parts."),
                 ])
                 .parts("PhoneFieldPart", vec![
                     (PhoneFieldPart::Label, "The label above the control."),
@@ -94,7 +97,9 @@ pub fn PhoneFieldPage() -> Element {
                     (PhoneFieldPart::Dial, "The dial code: in the country button, or alone without `country_select`."),
                     (PhoneFieldPart::Helper, "The caption under the control."),
                     (PhoneFieldPart::Status, "The validation message."),
-                ]).extends("input"),
+                ])
+                .dropdown_parts("DropdownPart", list_dropdown_parts(PHONE_DROPDOWN))
+                .extends("input"),
             ],
             accessibility: a11y()
                 .key(["Enter", "Space", "Down"], "On the country picker: opens the list.")

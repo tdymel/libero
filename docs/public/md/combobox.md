@@ -259,11 +259,12 @@ match at any depth inside the list.
 
 | Part | `data-slot` | Description |
 |---|---|---|
-| `ComboboxPart::Listbox` | `listbox` | The scrolling list of rows. |
-| `ComboboxPart::Group` | `group` | A group of rows that share a label, from an `OptionList`. |
-| `ComboboxPart::GroupLabel` | `group-label` | A group's heading. |
-| `ComboboxPart::Option` | `option` | A `ComboboxOption` row. |
-| `ComboboxPart::OptionLabel` | `label` | A row's `span { "data-slot": "label" }`, which ends in an ellipsis. |
+| `DropdownPart::Panel` | `dropdown` | The dropdown box itself. |
+| `DropdownPart::Listbox` | `listbox` | The scrolling list of rows. |
+| `DropdownPart::Group` | `group` | A group of rows that share a label, from an `OptionList`. |
+| `DropdownPart::GroupLabel` | `group-label` | A group's heading. |
+| `DropdownPart::Option` | `option` | A row. |
+| `DropdownPart::OptionLabel` | `label` | A row's `span { "data-slot": "label" }`, which ends in an ellipsis. |
 
 ## Accessibility
 

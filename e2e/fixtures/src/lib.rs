@@ -33,6 +33,7 @@ mod direction_toggle;
 mod divider;
 pub mod docs_shell;
 mod drawer;
+mod dropdown_parts;
 mod editor_probe;
 mod elevation;
 mod field_frame;
@@ -154,6 +155,7 @@ const FIXTURES: &[Routes] = &[
     divider::ROUTES,
     docs_shell::ROUTES,
     drawer::ROUTES,
+    dropdown_parts::ROUTES,
     editor_probe::ROUTES,
     elevation::ROUTES,
     gradient::ROUTES,

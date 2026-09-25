@@ -4,8 +4,8 @@ use crate::components::form::{row_label, use_bound};
 
 use crate::{
     components::{
-        common::{ComboboxState, Input, OptionSource, Options, use_combobox},
-        form::field_props,
+        common::{ComboboxState, Input, OptionSource, Options, Parts, use_combobox},
+        form::{DropdownPart, field_props},
     },
     hooks::{use_localization, use_theme},
     utils::warn,
@@ -81,6 +81,9 @@ field_props! {
         /// What the search box says while empty.
         #[props(default)]
         search_placeholder: Option<String>,
+        /// Styles the portaled dropdown and its inner parts.
+        #[props(default, into)]
+        dropdown_parts: Input<Parts<DropdownPart>>,
     }
 }
 
@@ -223,6 +226,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             class: props.class,
             sx: props.sx,
             parts: props.parts,
+            dropdown_parts: props.dropdown_parts,
             states: props.states,
             attributes: props.attributes,
         }

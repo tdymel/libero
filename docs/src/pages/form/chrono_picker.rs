@@ -2,10 +2,11 @@ use super::date_common::{
     SIZES, calendar_controls, day_limits, has_days, has_time, is_mini, is_on, is_weekend,
     moment_limits, shared_controls, shown, step_of, time_limits, today_of, twelve_hour_of,
 };
+use super::dropdown_parts::chrono_picker_parts;
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use libero::components::{ChronoPicker, ChronoPickerPart, Code, DateLevel, DateRange, Flex, Text};
+use libero::components::{ChronoPicker, Code, DateLevel, DateRange, Flex, Text};
 
 const KINDS: [&str; 7] = [
     "date",
@@ -56,31 +57,7 @@ pub fn ChronoPickerPage() -> Element {
                     prop("name", "String").doc("Posts the value as ISO 8601 in a hidden input of that name."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the picker out of the tab order, for a picker inside a dropdown whose input keeps focus."),
                 ])
-                .parts("ChronoPickerPart", vec![
-                    (ChronoPickerPart::Header, "Calendar: the row over a month, a year or a decade, with paging buttons and title."),
-                    (ChronoPickerPart::Nav, "Calendar: a paging button, in the header or beside the mini calendar's row."),
-                    (ChronoPickerPart::Title, "Calendar: the month, year or decade heading, a button that climbs a level."),
-                    (ChronoPickerPart::Months, "Days: the months side by side, or the mini calendar's row."),
-                    (ChronoPickerPart::Weekday, "Days: a weekday name over a month's columns."),
-                    (ChronoPickerPart::Day, "Days: a day button."),
-                    (ChronoPickerPart::Month, "Mini calendar: the month over a day's number."),
-                    (ChronoPickerPart::Blank, "Days, `columns` over 1: an empty cell instead of a neighbour's day."),
-                    (ChronoPickerPart::Cells, "Months and years: their grid."),
-                    (ChronoPickerPart::Cell, "Months and years: a month or a year button."),
-                    (ChronoPickerPart::Strip, "Mini calendar: the row of days between its paging buttons."),
-                    (ChronoPickerPart::Columns, "Digital clock, duration: the columns."),
-                    (ChronoPickerPart::Spin, "Digital clock, duration: one column, a spinbutton."),
-                    (ChronoPickerPart::Value, "Digital clock, duration: a column's value."),
-                    (ChronoPickerPart::Neighbour, "Digital clock, duration: the faded values above and below a column's value."),
-                    (ChronoPickerPart::Separator, "Digital clock: the `:` between columns."),
-                    (ChronoPickerPart::Unit, "Duration: the unit after each column."),
-                    (ChronoPickerPart::Readout, "Analog clock: the digits over the face, buttons that pick the hand."),
-                    (ChronoPickerPart::Face, "Analog clock: the face, a slider."),
-                    (ChronoPickerPart::Mark, "Analog clock: a number on the face."),
-                    (ChronoPickerPart::Ticks, "Analog clock: the ring of ticks for steps finer than the marks."),
-                    (ChronoPickerPart::Hand, "Analog clock: the hand."),
-                    (ChronoPickerPart::Pivot, "Analog clock: the dot the hand turns on."),
-                ]),
+                .parts("ChronoPickerPart", chrono_picker_parts()),
             ],
             accessibility: a11y()
                 .key(["Left", "Right"], "Days: the day before or after. Months and years: the cell before or after. Mini calendar: a day, sliding the row one day past its ends.")

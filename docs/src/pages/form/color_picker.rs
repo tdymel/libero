@@ -1,10 +1,11 @@
+use super::dropdown_parts::color_picker_parts;
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
+use libero::components::ColorSliderPart;
 use libero::components::{
     AlphaSlider, Code, ColorCode, ColorPicker, ColorSwatch, Flex, HueSlider, SliderChangeEvent,
     Swatches, Text,
 };
-use libero::components::{ColorPickerPart, ColorSliderPart};
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
@@ -119,18 +120,7 @@ pub fn ColorPickerPage() -> Element {
                     prop("hue_label", "String").default("color.hue").doc("Names the hue slider's thumb. Unset, the localization's `color.hue`."),
                     prop("alpha_label", "String").default("color.alpha").doc("Names the alpha slider's thumb. Unset, the localization's `color.alpha`."),
                 ])
-                .parts("ColorPickerPart", vec![
-                    (ColorPickerPart::Saturation, "The saturation and brightness panel."),
-                    (ColorPickerPart::Body, "The row under the panel: the sliders and the preview."),
-                    (ColorPickerPart::Sliders, "The column of the hue and alpha sliders."),
-                    (ColorPickerPart::Hue, "The hue slider."),
-                    (ColorPickerPart::Alpha, "The alpha slider, with `with_alpha`."),
-                    (ColorPickerPart::Track, "Both sliders' gradient tracks."),
-                    (ColorPickerPart::Thumb, "Every handle: the panel's and the sliders'."),
-                    (ColorPickerPart::Preview, "The current color beside the sliders, with `with_alpha`."),
-                    (ColorPickerPart::Swatches, "The row of preset swatches."),
-                    (ColorPickerPart::Swatch, "One preset swatch."),
-                ]),
+                .parts("ColorPickerPart", color_picker_parts()),
                 props("HueSlider", vec![
                     prop("value", "f64").doc("The hue in degrees, 0 to 360. Pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent>").doc("Every new hue."),

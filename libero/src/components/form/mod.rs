@@ -7,6 +7,7 @@ mod clear;
 mod color;
 mod combobox;
 mod date;
+mod dropdown_parts;
 mod field_props;
 mod field_status;
 mod fieldset;
@@ -51,10 +52,11 @@ pub use color::{
 };
 pub(crate) use combobox::{CaretKeys, ComboboxCore, row_label};
 pub use combobox::{
-    Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxPart, ComboboxProps,
+    Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxProps,
     ComboboxState, use_combobox,
 };
 pub use date::*;
+pub use dropdown_parts::{ChronoDropdownPart, ColorDropdownPart, DropdownPart};
 pub use field_props::FieldPart;
 pub(crate) use field_props::{field_parts_enum, field_props};
 pub use field_status::FieldStatus;

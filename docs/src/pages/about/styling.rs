@@ -465,8 +465,6 @@ pub fn StylingPage() -> Element {
                 CodeBlock { source: PARTS, language: "rust" }
                 Text {
                     "Parts a component renders in a portal (a "
-                    Code { source: "Select" }
-                    "'s list, a "
                     Code { source: "Dialog" }
                     ", a "
                     Code { source: "Menu" }
@@ -474,7 +472,11 @@ pub fn StylingPage() -> Element {
                     Code { source: "Tooltip" }
                     ") sit outside its root, so "
                     Code { source: "parts" }
-                    " cannot reach them."
+                    " cannot reach them. A field's portaled dropdown, such as a "
+                    Code { source: "Select" }
+                    "'s list, takes its own "
+                    Code { source: "dropdown_parts" }
+                    " prop instead."
                 }
             }
         }

@@ -342,6 +342,7 @@ impl CascaderRows {
                             sx: sx().max_height(max_height),
                             scroll_position_y: scroll_y,
                             id: format!("{listbox_id}-{level}"),
+                            "data-slot": "listbox",
                             "role": "listbox",
                             "aria-labelledby": labelled_by,
                             {pick_parent}
@@ -393,6 +394,7 @@ impl CascaderRows {
                     sx: sx().max_height(max_height),
                     scroll_position_y: scroll_y,
                     id: listbox_id.to_string(),
+                    "data-slot": "listbox",
                     "role": "listbox",
                     "aria-labelledby": label_id,
                     for row in rows {

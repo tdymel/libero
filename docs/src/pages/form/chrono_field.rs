@@ -3,6 +3,7 @@ use super::date_common::{
     has_time, is_on, is_weekend, moment_limits, shared_controls, shown, status_of, step_of,
     text_of, time_limits, today_of, twelve_hour_of,
 };
+use super::dropdown_parts::chrono_dropdown_parts;
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
@@ -103,6 +104,7 @@ pub fn ChronoFieldPage() -> Element {
                     prop("required", "bool").default("false").doc("Sets `required` on the input and marks the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
+                    prop("dropdown_parts", "Parts<ChronoDropdownPart>").doc("Styles the portaled dropdown and the picker in it."),
                 ])
                 .parts("FieldPart", vec![
                     (FieldPart::Label, "The label above the control."),
@@ -113,7 +115,8 @@ pub fn ChronoFieldPage() -> Element {
                     (FieldPart::Trailing, "The slot after the control: a chevron, a toggle."),
                     (FieldPart::Helper, "The caption under the control."),
                     (FieldPart::Status, "The validation message."),
-                ]),
+                ])
+                .dropdown_parts("ChronoDropdownPart", chrono_dropdown_parts()),
             ],
             accessibility: a11y()
                 .key(["Down"], "Moves focus into the picker, onto the picked day or the clock, where the `ChronoPicker` keys apply.")

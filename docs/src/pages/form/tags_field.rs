@@ -1,3 +1,4 @@
+use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::TagsFieldPart;
@@ -123,6 +124,7 @@ pub fn TagsFieldPage() -> Element {
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Takes the input out of the tab order and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                    prop("dropdown_parts", "Parts<DropdownPart>").doc("Styles the portaled `suggestions` dropdown and its inner parts."),
                 ])
                 .parts("TagsFieldPart", vec![
                     (TagsFieldPart::Label, "The label above the control."),
@@ -134,7 +136,9 @@ pub fn TagsFieldPage() -> Element {
                     (TagsFieldPart::Tag, "One tag's chip, before the draft input."),
                     (TagsFieldPart::Helper, "The caption under the control."),
                     (TagsFieldPart::Status, "The validation message."),
-                ]).extends("input"),
+                ])
+                .dropdown_parts("DropdownPart", list_dropdown_parts(SUGGESTION_DROPDOWN))
+                .extends("input"),
             ],
             accessibility: a11y()
                 .key(["Backspace"], "On an empty input: removes the last tag.")

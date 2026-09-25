@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::HtmlTag,
-        form::{ComboboxState, PreparedField},
+        common::{HtmlTag, Part},
+        form::{ComboboxState, DropdownPart, PreparedField},
         layout::BoxStyle,
     },
     hooks::ElementHandle,
@@ -59,6 +59,7 @@ pub(super) fn search_header(
     style
         .element(&element)
         .attr_default("type", "text")
+        .attr("data-slot", DropdownPart::Search.slot())
         .attr("value", query())
         .attr("data-controlled", true)
         .attr("placeholder", placeholder)

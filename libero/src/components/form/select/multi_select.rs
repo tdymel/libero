@@ -4,8 +4,8 @@ use crate::components::form::use_bound;
 
 use crate::{
     components::{
-        common::{Input, OptionSource, Options, Part, use_combobox},
-        form::{field_props, removable_chip},
+        common::{Input, OptionSource, Options, Part, Parts, use_combobox},
+        form::{DropdownPart, field_props, removable_chip},
     },
     hooks::{use_localization, use_theme},
     utils::warn,
@@ -56,6 +56,9 @@ field_props! {
         /// What the search box says while empty.
         #[props(default)]
         search_placeholder: Option<String>,
+        /// Styles the portaled dropdown and its inner parts.
+        #[props(default, into)]
+        dropdown_parts: Input<Parts<DropdownPart>>,
     }
 }
 
@@ -232,6 +235,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             class: props.class,
             sx: props.sx,
             parts: props.parts,
+            dropdown_parts: props.dropdown_parts,
             states: props.states,
             attributes: props.attributes,
         }

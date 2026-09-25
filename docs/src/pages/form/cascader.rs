@@ -1,3 +1,4 @@
+use super::dropdown_parts::{CASCADER_DROPDOWN, list_dropdown_parts};
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::CascaderPart;
@@ -136,6 +137,7 @@ pub fn CascaderPage() -> Element {
                     prop("required", "bool").default("false").doc("Sets `aria-required` and marks the label."),
                     prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
+                    prop("dropdown_parts", "Parts<DropdownPart>").doc("Styles the portaled dropdown and its inner parts."),
                 ])
                 .parts("CascaderPart", vec![
                     (CascaderPart::Label, "The label above the control."),
@@ -147,7 +149,8 @@ pub fn CascaderPage() -> Element {
                     (CascaderPart::Value, "The joined path or the placeholder, in the trigger."),
                     (CascaderPart::Helper, "The caption under the control."),
                     (CascaderPart::Status, "The validation message."),
-                ]),
+                ])
+                .dropdown_parts("DropdownPart", list_dropdown_parts(CASCADER_DROPDOWN)),
             ],
             accessibility: a11y()
                 .key(["Down", "Up", "Right", "Enter", "Space"], "Closed: opens on the committed path, or with the cursor on the first enabled root (`Up`: the last).")

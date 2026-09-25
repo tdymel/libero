@@ -5,11 +5,11 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input, Part, input_from_str},
+        common::{HtmlTag, Input, Part, Parts, input_from_str},
         form::{
-            ComboboxState, clear_button, combobox::nothing_found_row, field_parts_enum,
-            field_props, use_combobox, use_field, use_field_frame, use_refocus_on_close,
-            with_drawn_placeholder,
+            ComboboxState, DropdownPart, clear_button, combobox::nothing_found_row,
+            field_parts_enum, field_props, use_combobox, use_field, use_field_frame,
+            use_refocus_on_close, with_drawn_placeholder,
         },
         layout::use_box,
     },
@@ -134,6 +134,8 @@ field_props! {
         /// `None` is a case-insensitive `contains` over the joined labels.
         #[props(default)]
         filter: Option<CascaderMatch>,
+        #[props(default, into)]
+        dropdown_parts: Input<Parts<DropdownPart>>,
     }
 }
 
@@ -300,6 +302,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         remeasure: (cursor_now.len() * 4096 + visible.len()) as u64,
         gap: theme.popover.gap,
         padding: theme.popover.padding,
+        parts: &props.dropdown_parts,
     });
 
     // Drawn in the list's place and said by the status region below.

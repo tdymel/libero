@@ -54,6 +54,7 @@ pub struct PropGroup {
     base: bool,
     extends: String,
     parts: Vec<PartDoc>,
+    dropdown_parts: Vec<PartDoc>,
 }
 
 /// Starts a Properties block for one component.
@@ -64,7 +65,19 @@ pub fn props(component: impl Into<String>, props: Vec<PropDoc>) -> PropGroup {
         base: true,
         extends: String::new(),
         parts: Vec::new(),
+        dropdown_parts: Vec::new(),
     }
+}
+
+fn part_docs<P: Part + std::fmt::Debug>(enum_name: &str, parts: Vec<(P, &str)>) -> Vec<PartDoc> {
+    parts
+        .into_iter()
+        .map(|(part, description)| PartDoc {
+            name: format!("{enum_name}::{part:?}"),
+            slot: part.slot(),
+            description: description.to_string(),
+        })
+        .collect()
 }
 
 impl PropGroup {
@@ -78,16 +91,17 @@ impl PropGroup {
         self.props.iter().map(|prop| prop.name.as_str())
     }
 
-    /// `(part, data-slot)` per row of the Style API table.
+    /// `(part, data-slot)` per row of the Style API tables.
     #[cfg(test)]
     pub fn part_slots(&self) -> impl Iterator<Item = (&str, &str)> {
         self.parts
             .iter()
+            .chain(&self.dropdown_parts)
             .map(|part| (part.name.as_str(), part.slot))
     }
 
     pub fn has_parts(&self) -> bool {
-        !self.parts.is_empty()
+        !self.parts.is_empty() || !self.dropdown_parts.is_empty()
     }
 
     /// For a type that is not a `base_props!` component - a builder, say.
@@ -110,14 +124,17 @@ impl PropGroup {
         enum_name: &str,
         parts: Vec<(P, &str)>,
     ) -> Self {
-        self.parts = parts
-            .into_iter()
-            .map(|(part, description)| PartDoc {
-                name: format!("{enum_name}::{part:?}"),
-                slot: part.slot(),
-                description: description.to_string(),
-            })
-            .collect();
+        self.parts = part_docs(enum_name, parts);
+        self
+    }
+
+    /// A second Style API table, for the `dropdown_parts` prop of a portaled dropdown.
+    pub fn dropdown_parts<P: Part + std::fmt::Debug>(
+        mut self,
+        enum_name: &str,
+        parts: Vec<(P, &str)>,
+    ) -> Self {
+        self.dropdown_parts = part_docs(enum_name, parts);
         self
     }
 }
@@ -175,7 +192,7 @@ pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
 pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
     let groups: Vec<PropGroup> = properties
         .into_iter()
-        .filter(|group| !group.parts.is_empty())
+        .filter(PropGroup::has_parts)
         .collect();
     let named = groups.len() > 1;
 
@@ -200,7 +217,20 @@ pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
                         // h2 directly under the page's h1, like the Properties tab.
                         Title { size: "lg", component: "h2", "{group.component}" }
                     }
-                    PartRows { name: format!("{} parts", group.component), parts: group.parts }
+                    if !group.parts.is_empty() {
+                        PartRows { name: format!("{} parts", group.component), parts: group.parts }
+                    }
+                    if !group.dropdown_parts.is_empty() {
+                        Text {
+                            "The dropdown is portaled out of the field, so its parts take the "
+                            Code { source: "dropdown_parts" }
+                            " prop. They match from the dropdown box at any depth."
+                        }
+                        PartRows {
+                            name: format!("{} dropdown parts", group.component),
+                            parts: group.dropdown_parts,
+                        }
+                    }
                 }
             }
         }

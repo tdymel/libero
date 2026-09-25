@@ -5,10 +5,11 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{ComboboxState, Glyph, HtmlTag, Input, Part, use_combobox},
+        common::{ComboboxState, Glyph, HtmlTag, Input, Part, Parts, use_combobox},
         form::{
-            CaretKeys, ComboboxCore, ComboboxOption, FIELD_CONTROL_SX, field_parts_enum,
-            field_props, use_bound, use_field, use_field_frame, with_drawn_placeholder,
+            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX,
+            field_parts_enum, field_props, use_bound, use_field, use_field_frame,
+            with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -152,6 +153,9 @@ field_props! {
         name: crate::components::form::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
+        /// Styles the portaled country list and its inner parts.
+        #[props(default, into)]
+        dropdown_parts: Input<Parts<DropdownPart>>,
     }
 }
 
@@ -324,6 +328,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let search = search_box
         .element(&search_element)
         .attr_default("type", "text")
+        .attr("data-slot", DropdownPart::Search.slot())
         .attr("value", query())
         .attr("data-controlled", true)
         .attr("placeholder", localization.common.search)
@@ -377,6 +382,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             disabled: disabled || readonly,
             dial: country.dial,
             dial_id: dial_id.clone(),
+            dropdown_parts: props.dropdown_parts,
         },
         rows,
     );
@@ -652,6 +658,7 @@ struct Picker {
     disabled: bool,
     dial: &'static str,
     dial_id: String,
+    dropdown_parts: Input<Parts<DropdownPart>>,
 }
 
 /// The frame's leading slot: the country picker with its list, or - with
@@ -672,6 +679,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
         disabled,
         dial,
         dial_id,
+        dropdown_parts,
     } = parts;
 
     match with_select {
@@ -703,6 +711,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 autofocus: search_element,
                 caret_keys: CaretKeys::Always,
                 labelled_by: Some(picker_id(state)),
+                parts: dropdown_parts,
                 {picker}
             }
         }),
