@@ -52,7 +52,7 @@ pub fn Hero() -> Element {
                         .line_height("1.1")
                         .breakpoint(Size::Md, sx().font_size("3.5rem")),
                     span { color: ColorCss::PRIMARY.role_value("text-", ColorShade::S6), "Focus on your game," }
-                    " while the "
+                    " while "
                     span { color: ColorCss::PRIMARY.role_value("text-", ColorShade::S6), "Libero" }
                     " has your back!"
                 }

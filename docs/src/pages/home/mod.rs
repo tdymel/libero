@@ -9,7 +9,7 @@ mod stats;
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Flex, OptionLabel, Title},
+    components::{Flex, OptionLabel, Title, VisuallyHidden},
     sx::{Sx, sx},
     theme::{ColorCss, ColorShade},
 };
@@ -107,20 +107,12 @@ mod tests {
     }
 }
 
-/// A section's heading: an `h2` set small, blue and capitalised.
+/// A section's `h2`, for screen readers only (todo 1206): the sections show no subtitle.
 #[component]
 pub(super) fn SectionTitle(id: &'static str, children: Element) -> Element {
     rsx! {
-        Title {
-            size: "sm",
-            component: "h2",
-            id,
-            sx: sx()
-                .color("primary.7")
-                .font_weight("700")
-                .text_transform("uppercase")
-                .letter_spacing("0.08em"),
-            {children}
+        Title { component: "h2", id, sx: sx().margin("0"),
+            VisuallyHidden { {children} }
         }
     }
 }

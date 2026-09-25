@@ -145,8 +145,8 @@ impl File {
 pub fn Example() -> Element {
     rsx! {
         section { "aria-labelledby": "example-title",
+            SectionTitle { id: "example-title", "Libero in action" }
             Flex { direction: "column", gap: "lg",
-                SectionTitle { id: "example-title", "Libero in action" }
                 Flex {
                     direction: "column",
                     gap: "xl",

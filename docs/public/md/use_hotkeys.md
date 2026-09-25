@@ -59,7 +59,7 @@ fn Shortcuts() -> Element {
             Text { "Help opened {helps} times" }
             TextField { label: "Press Alt+H while typing" }
             div { onmounted: editor.mount(), ..editor.attributes(),
-                TextField { label: "Press Mod+B in here" }
+                TextField { label: "Press Ctrl+B (Cmd+B on a Mac) in here" }
             }
             Text { "Bold pressed {bolds} times" }
         }

@@ -4,7 +4,7 @@ use libero::components::{Code, Kbd, Shortcut, ShortcutHelp, Text};
 
 // snippet: in ShortcutHelp { .. }
 const SHORTCUTS: &str = r#"shortcuts: vec![
-    Shortcut::new("mod+b", "Bold"),
+    Shortcut::new("mod+b", "Bold"), // Ctrl+B, or Cmd+B on a Mac
     Shortcut::new("mod+i", "Italic"),
     Shortcut::new("shift+mod+k", "Insert a link"),
     Shortcut::new("alt+f10", "Go to the toolbar"),
@@ -45,7 +45,11 @@ pub fn ShortcutHelpPage() -> Element {
                     Kbd { "Ctrl" }
                     " + "
                     Kbd { "B" }
-                    " here and Cmd + B on a Mac. Open it with "
+                    " on Windows and Linux and "
+                    Kbd { "Cmd" }
+                    " + "
+                    Kbd { "B" }
+                    " on a Mac. Open it with "
                     Code { source: "use_modal" }
                     ", often from a "
                     Code { source: "shift+?" }

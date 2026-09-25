@@ -24,7 +24,7 @@ fn Demo() -> Element {
         rsx! {
             ShortcutHelp {
                 shortcuts: vec![
-                    Shortcut::new("mod+b", "Bold"),
+                    Shortcut::new("mod+b", "Bold"), // Ctrl+B, or Cmd+B on a Mac
                     Shortcut::new("mod+i", "Italic"),
                     Shortcut::new("shift+mod+k", "Insert a link"),
                     Shortcut::new("alt+f10", "Go to the toolbar"),

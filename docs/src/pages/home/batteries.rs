@@ -14,8 +14,8 @@ use crate::site::GITHUB;
 pub fn Batteries() -> Element {
     rsx! {
         section { "aria-labelledby": "batteries-title",
+            SectionTitle { id: "batteries-title", "Batteries included" }
             Flex { direction: "column", gap: "lg",
-                SectionTitle { id: "batteries-title", "Batteries included" }
                 Box {
                     component: "ul",
                     // Safari drops the list role with `list-style: none`.
