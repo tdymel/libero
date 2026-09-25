@@ -109,6 +109,7 @@ mod theme_toggle;
 mod time_picker;
 mod timeline;
 mod tldr;
+mod toolbar;
 mod tooltip;
 mod trailing_button;
 mod transition;
@@ -232,6 +233,7 @@ const FIXTURES: &[Routes] = &[
     time_picker::ROUTES,
     timeline::ROUTES,
     tldr::ROUTES,
+    toolbar::ROUTES,
     tooltip::ROUTES,
     trailing_button::ROUTES,
     transition::ROUTES,

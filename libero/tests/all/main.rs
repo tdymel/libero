@@ -110,6 +110,7 @@ mod theme_set;
 mod theme_toggle;
 mod timeline;
 mod title;
+mod toolbar;
 mod tooltip;
 mod transition;
 mod tree;

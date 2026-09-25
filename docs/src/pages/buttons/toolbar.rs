@@ -1,0 +1,124 @@
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use dioxus::prelude::*;
+use libero::components::{
+    ActionIcon, Code, Pictogram, Text, Toolbar, ToolbarGroup, ToolbarPart, ToolbarSeparator,
+};
+use pictogram_icons_lucide as lucide;
+
+/// The controls inside - a subtree, so the code block prints it verbatim.
+const CHILDREN: &str = r#"ToolbarGroup { "aria-label": "Style",
+    ActionIcon { aria_label: "Bold", Pictogram { icon: lucide::bold::outlined } }
+    ActionIcon { aria_label: "Italic", Pictogram { icon: lucide::italic::outlined } }
+    ActionIcon { aria_label: "Underline", Pictogram { icon: lucide::underline::outlined } }
+}
+ToolbarSeparator {}
+ToolbarGroup { "aria-label": "History",
+    ActionIcon { aria_label: "Undo", Pictogram { icon: lucide::undo_2::outlined } }
+    ActionIcon { aria_label: "Redo", disabled: true, Pictogram { icon: lucide::redo_2::outlined } }
+}"#;
+
+#[component]
+pub fn ToolbarPage() -> Element {
+    rsx! {
+        DocPage {
+            title: "Toolbar",
+            source: "libero/src/components/buttons/toolbar.rs",
+            markdown: "/md/toolbar.md",
+            properties: vec![
+                props("Toolbar", vec![
+                    prop("orientation", "Orientation")
+                        .default("horizontal")
+                        .doc("`\"vertical\"` stacks the controls; Up and Down move instead of Left and Right."),
+                    prop("loop_focus", "bool")
+                        .default("true")
+                        .doc("Whether the arrow keys wrap at the ends."),
+                    prop("parts", "Parts<ToolbarPart>")
+                        .doc("Styles for the groups and separators, under `sx`."),
+                    prop("children", "Element")
+                        .default("required")
+                        .doc("`Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, `ToolbarGroup`s and `ToolbarSeparator`s."),
+                ])
+                .parts("ToolbarPart", vec![
+                    (ToolbarPart::Group, "A `ToolbarGroup`, laid out along the bar."),
+                    (ToolbarPart::Separator, "A `ToolbarSeparator`, a 1px line across the bar."),
+                ]),
+                props("ToolbarGroup", vec![
+                    prop("children", "Element")
+                        .default("required")
+                        .doc("The section's controls. They stay in the bar's arrow order."),
+                ]),
+                props("ToolbarSeparator", vec![]),
+            ],
+            accessibility: a11y()
+                .key(["Tab"], "Enters the bar on the control focused last, the first one at the start, and leaves it.")
+                .key(["Left", "Right"], "Moves to the previous or next control, disabled ones included. Swapped under right-to-left text. Up and Down in a vertical bar.")
+                .key(["Home", "End"], "Goes to the first or last control.")
+                .handles([
+                    "The root is a `role=\"toolbar\"`, with `aria-orientation=\"vertical\"` when vertical.",
+                    "The bar is one tab stop: the controls inside get a roving `tabindex`.",
+                    "A disabled `Button`, `ActionIcon` or `Select` inside stays focusable with `aria-disabled`, so a keyboard user finds it; `focusable_when_disabled: false` opts out.",
+                    "A key a control uses itself stays its own: `Select` opens on Home, End and Up, a text field keeps its caret.",
+                    "`ToolbarGroup` is a `role=\"group\"`; `ToolbarSeparator` a `role=\"separator\"` across the bar.",
+                ])
+                .must([
+                    "Name the bar with `aria-label`, or `aria-labelledby` on a visible heading. Without either it warns in debug builds.",
+                    "Name each `ToolbarGroup` with `aria-label`.",
+                ])
+                .limits([
+                    "Only `Button`, `ActionIcon` and `Select` (and what is built on them) join the arrow order. Another focusable element inside stays its own tab stop.",
+                ]),
+            lead: rsx! {
+                Text {
+                    "A row of controls that is one tab stop: the arrow keys move between them, "
+                    "Home and End jump to the ends. An editor's formatting bar is the typical use."
+                }
+                Text {
+                    "Put "
+                    Code { source: "Button" }
+                    "s, "
+                    Code { source: "ActionIcon" }
+                    "s, "
+                    Code { source: "ButtonGroup" }
+                    "s and "
+                    Code { source: "Select" }
+                    "s inside, sectioned by "
+                    Code { source: "ToolbarGroup" }
+                    " and "
+                    Code { source: "ToolbarSeparator" }
+                    ". For buttons that stay separate tab stops, use "
+                    Code { source: "ButtonGroup" }
+                    " alone."
+                }
+            },
+            Demo {
+                component: "Toolbar",
+                children_text: "",
+                children_code: CHILDREN,
+                fixed: vec!["\"aria-label\": \"Formatting\"".to_string()],
+                controls: vec![
+                    Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"])
+                        .default("horizontal"),
+                    Control::switch("loop_focus").default("true"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Toolbar {
+                        "aria-label": "Formatting",
+                        orientation: values.str("orientation"),
+                        loop_focus: values.str("loop_focus") == "true",
+                        ToolbarGroup { "aria-label": "Style",
+                            ActionIcon { aria_label: "Bold", Pictogram { icon: lucide::bold::outlined } }
+                            ActionIcon { aria_label: "Italic", Pictogram { icon: lucide::italic::outlined } }
+                            ActionIcon { aria_label: "Underline", Pictogram { icon: lucide::underline::outlined } }
+                        }
+                        ToolbarSeparator {}
+                        ToolbarGroup { "aria-label": "History",
+                            ActionIcon { aria_label: "Undo", Pictogram { icon: lucide::undo_2::outlined } }
+                            ActionIcon { aria_label: "Redo", disabled: true, Pictogram { icon: lucide::redo_2::outlined } }
+                        }
+                    }
+                },
+            }
+        }
+    }
+}

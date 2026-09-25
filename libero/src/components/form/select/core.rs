@@ -5,8 +5,9 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ComboboxState, Glyph, HtmlTag, Input, Part, Parts, States, attr, focus_ring_sx,
-            has_shortcut_modifier, navigation_chord, ring_overlay,
+            ComboboxState, Glyph, HtmlTag, Input, Part, Parts, States, TOOLBAR_ITEM, ToolbarItem,
+            attr, focus_ring_sx, has_shortcut_modifier, navigation_chord, ring_overlay,
+            use_toolbar_item,
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, clear_button,
@@ -272,6 +273,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let cursor = use_signal(|| None::<usize>);
     let search = use_element();
     let trigger_element = use_element();
+    let toolbar_item = use_toolbar_item();
 
     let picked = props.picked;
     let visible = visible_rows(searchable, props.matches, query, picked);
@@ -466,6 +468,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             searchable,
             multiple,
             chevron: !multiple && clear.is_none(),
+            toolbar_item,
         },
         content,
         attributes,
@@ -701,6 +704,8 @@ struct TriggerParts {
     multiple: bool,
     /// A single select with nothing to clear draws its own chevron.
     chevron: bool,
+    /// Inside a `Toolbar`: a roving tab stop, focusable even disabled.
+    toolbar_item: Option<ToolbarItem>,
 }
 
 /// The one element `ComboboxCore` doesn't draw; it holds focus throughout.
@@ -719,6 +724,7 @@ fn select_trigger(
         searchable,
         multiple,
         chevron,
+        toolbar_item,
     } = parts;
     let open = keys.open;
     let state = open.state;
@@ -743,9 +749,19 @@ fn select_trigger(
         .element(&element)
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("aria-readonly", readonly.then_some("true"))
-        .attr("tabindex", (!disabled).then_some("0"))
+        .attr(
+            "tabindex",
+            match toolbar_item {
+                Some(item) => Some(item.tabindex()),
+                None => (!disabled).then_some("0"),
+            },
+        )
+        .attr(TOOLBAR_ITEM, toolbar_item.map(ToolbarItem::key))
         // A multi-select's click bubbles to the slot around it, which owns it.
         .event("onclick", move |_: MouseEvent| {
+            if let Some(item) = toolbar_item {
+                item.take_stop();
+            }
             if !multiple && !disabled && !readonly {
                 open.open(!state.is_open());
             }

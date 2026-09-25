@@ -8,7 +8,8 @@ use crate::{
     LiberoProvider,
     components::{
         ActionIcon, Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup, Rating,
-        ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, use_spotlight,
+        ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, Toolbar,
+        use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     utils::take_warnings,
@@ -99,6 +100,22 @@ fn an_unnamed_splitter_divider_warns() {
             }
         },
         "Splitter:"
+    ));
+}
+
+#[test]
+fn an_unnamed_toolbar_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { Toolbar { ActionIcon { aria_label: "Bold", "B" } } } },
+        "Toolbar:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Toolbar { "aria-label": "Format", ActionIcon { aria_label: "Bold", "B" } } } },
+        "Toolbar:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Toolbar { "aria-labelledby": "heading", ActionIcon { aria_label: "Bold", "B" } } } },
+        "Toolbar:"
     ));
 }
 

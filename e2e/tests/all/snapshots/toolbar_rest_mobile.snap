@@ -1,0 +1,24 @@
+---
+source: e2e/src/suite.rs
+description: toolbar at mobile (rest)
+expression: tree
+---
+toolbar "Formatting"
+  group "Style"
+    button "Bold"
+      StaticText "B"
+    button "Italic"
+      StaticText "I"
+  separator
+  group "Align"
+    button "Left"
+      StaticText "Left"
+    button "Right"
+      StaticText "Right"
+  button "Undo" [disabled]
+    StaticText "Undo"
+  combobox "Font" = Serif [expanded=false] [haspopup=listbox]
+    StaticText "Serif"
+  status [atomic] [live=polite]
+button "after"
+  StaticText "after"

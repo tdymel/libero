@@ -143,6 +143,7 @@ md_pages! {
     Timeline => "timeline",
     Title => "title",
     Tldr => "tldr",
+    Toolbar => "toolbar",
     Tooltip => "tooltip",
     Transition => "transition",
     Tree => "tree",

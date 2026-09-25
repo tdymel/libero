@@ -4,6 +4,7 @@ use crate::{
     components::{
         common::{ButtonGroupContext, use_button_group},
         common::{HtmlTag, Input, States, Variables, Variant, base_props, variables},
+        common::{TOOLBAR_ITEM, ToolbarItem, use_toolbar_item},
         common::{
             VariantVars, base_color, borderless_on_state_sx, contrast_color, disabled_look_sx,
             fill_color, focus_ring_sx, interactive_variant_sx, literal_contrast, names_itself,
@@ -258,12 +259,14 @@ base_props! {
 pub fn ActionIcon(mut props: ActionIconProps) -> Element {
     let group = use_button_group();
     fill_from_group(&mut props, group);
+    let item = use_toolbar_item();
     let disabled = props.disabled.unwrap_or(false);
     let selectable = props.selected.is_some();
     let selected = props.selected.unwrap_or(false);
     let is_link = props.to.as_ref().is_some();
     let loading = props.loading.unwrap_or(false) && !is_link;
-    let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(false);
+    // A toolbar keeps its disabled items in the arrow order.
+    let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(item.is_some());
 
     if is_link && props.loading == Some(true) {
         warn("ActionIcon:`loading` is ignored on a link - an `<a>` has nothing to wait for.");
@@ -316,6 +319,9 @@ pub fn ActionIcon(mut props: ActionIconProps) -> Element {
     .into();
 
     let handle_click = move |event: Event<MouseData>| {
+        if let Some(item) = item {
+            item.take_stop();
+        }
         // Else a busy `type="submit"` still submits, as on `Button`.
         if loading || soft_disabled {
             event.prevent_default();
@@ -344,14 +350,22 @@ pub fn ActionIcon(mut props: ActionIconProps) -> Element {
     if let Some(to) = props.to.as_ref().cloned() {
         // `<a>` has no `disabled`: drop `href`; without it `<a>` is `generic`, so restore the role.
         if disabled {
+            let tabindex = match item {
+                Some(item) => item.tabindex(),
+                None if soft_disabled => "0",
+                None => "-1",
+            };
             return boxed
                 .attr_default("role", "link")
                 .attr("aria-label", props.aria_label)
                 .attr("aria-disabled", "true")
-                .attr("tabindex", if soft_disabled { "0" } else { "-1" })
+                .attr("tabindex", tabindex)
+                .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
                 .render(HtmlTag::A, props.attributes, glyph);
         }
 
+        let mut attributes = props.attributes;
+        attributes.extend(item.into_iter().flat_map(ToolbarItem::attributes));
         return rsx! {
             InternalAnchor {
                 to,
@@ -362,7 +376,7 @@ pub fn ActionIcon(mut props: ActionIconProps) -> Element {
                 states,
                 variables,
                 "aria-label": props.aria_label,
-                attributes: props.attributes,
+                attributes,
                 {glyph}
             }
         };
@@ -381,6 +395,8 @@ pub fn ActionIcon(mut props: ActionIconProps) -> Element {
         .event("onclick", handle_click)
         .attr("aria-label", props.aria_label)
         .attr("disabled", disabled && !soft_disabled)
+        .attr("tabindex", item.map(ToolbarItem::tabindex))
+        .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
         .attr("aria-busy", loading.then_some("true"))
         .attr(
             "aria-disabled",

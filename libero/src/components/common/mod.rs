@@ -19,6 +19,7 @@ mod polymorphic;
 mod rail;
 mod style_attributes;
 mod svg_fit;
+mod toolbar_context;
 mod util;
 mod variant;
 mod variant_chrome;
@@ -67,6 +68,9 @@ pub(crate) use style_attributes::{
     ABSENT, StyleAttributes, sx_source, use_style_attributes, with_parts,
 };
 pub(crate) use svg_fit::{SVG_FIT, svg_fit, svg_fit_sx, svg_fit_variables};
+pub(crate) use toolbar_context::{
+    TOOLBAR_ITEM, ToolbarItem, ToolbarScope, use_provide_toolbar, use_toolbar, use_toolbar_item,
+};
 pub(crate) use util::{attr, css_string};
 pub use variant::Variant;
 pub(crate) use variant_chrome::{

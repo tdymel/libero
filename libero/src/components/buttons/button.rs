@@ -5,10 +5,10 @@ use crate::{
         common::{
             BUTTON_COLOR_VAR, BUTTON_CONTAINER_VAR, BUTTON_CONTRAST_VAR, BUTTON_FILL_VAR,
             BUTTON_HOVER_VAR, BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR,
-            BUTTON_VARS, HtmlTag, Input, Part, States, Variant, base_color, base_props,
-            contrast_color, disabled_look_sx, fill_color, focus_ring_sx, input_from_str,
-            interactive_variant_sx, literal_contrast, parts_enum, text_color, use_button_group,
-            variables, variant_colors, variant_selected_sx,
+            BUTTON_VARS, HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, Variant,
+            base_color, base_props, contrast_color, disabled_look_sx, fill_color, focus_ring_sx,
+            input_from_str, interactive_variant_sx, literal_contrast, parts_enum, text_color,
+            use_button_group, use_toolbar_item, variables, variant_colors, variant_selected_sx,
         },
         feedback::Loader,
         layout::{render_anchor, use_box},
@@ -226,6 +226,7 @@ base_props! {
 pub fn Button(props: ButtonProps) -> Element {
     let theme = use_theme();
     let group = use_button_group();
+    let item = use_toolbar_item();
     let variant = props
         .variant
         .copied_or(group.variant.unwrap_or(theme.button.variant));
@@ -237,7 +238,8 @@ pub fn Button(props: ButtonProps) -> Element {
     let selected = props.selected.unwrap_or(false);
     let is_link = props.to.as_ref().is_some();
     let loading = props.loading.unwrap_or(false) && !is_link;
-    let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(false);
+    // A toolbar keeps its disabled items in the arrow order.
+    let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(item.is_some());
 
     if is_link && props.loading == Some(true) {
         warn("Button: `loading` is ignored on a link - an `<a>` has nothing to wait for.");
@@ -306,6 +308,9 @@ pub fn Button(props: ButtonProps) -> Element {
     };
 
     let handle_click = move |event: Event<MouseData>| {
+        if let Some(item) = item {
+            item.take_stop();
+        }
         // Else a busy `type="submit"` still submits, by click or by Enter in a field.
         // Android's WebView sends a tap on a disabled button's child a click (990).
         if loading || disabled {
@@ -340,19 +345,27 @@ pub fn Button(props: ButtonProps) -> Element {
     if let Some(to) = props.to.as_ref().cloned() {
         // `<a>` has no `disabled`: drop `href`; without it `<a>` is `generic`, so restore the role.
         if disabled {
+            let tabindex = match item {
+                Some(item) => item.tabindex(),
+                None if soft_disabled => "0",
+                None => "-1",
+            };
             return boxed
                 .attr_default("role", "link")
                 .attr("aria-disabled", "true")
-                .attr("tabindex", if soft_disabled { "0" } else { "-1" })
+                .attr("tabindex", tabindex)
+                .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
                 .render(HtmlTag::A, props.attributes, label);
         }
 
+        let mut attributes = props.attributes;
+        attributes.extend(item.into_iter().flat_map(ToolbarItem::attributes));
         return render_anchor(
             boxed.into_style_attributes(),
             to,
             props.target,
             None::<fn(MountedEvent)>,
-            props.attributes,
+            attributes,
             label,
         );
     }
@@ -370,6 +383,8 @@ pub fn Button(props: ButtonProps) -> Element {
     boxed
         .event("onclick", handle_click)
         .attr("disabled", disabled && !soft_disabled)
+        .attr("tabindex", item.map(ToolbarItem::tabindex))
+        .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
         .attr("aria-busy", loading.then_some("true"))
         .attr(
             "aria-disabled",

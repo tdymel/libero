@@ -283,6 +283,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::RepoButtonPage {}, "RepoButton"),
                 page(Route::ThemeTogglePage {}, "ThemeToggle"),
                 page(Route::TldrPage {}, "Tldr"),
+                page(Route::ToolbarPage {}, "Toolbar"),
             ],
         ),
         // Fields built on `use_field`, ordered for reading: guide, containers, then fields

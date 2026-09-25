@@ -6,6 +6,7 @@ mod direction_toggle;
 mod repo_button;
 mod theme_toggle;
 mod tldr;
+mod toolbar;
 
 pub use action_icon::ActionIconPage;
 pub use button::ButtonPage;
@@ -15,3 +16,4 @@ pub use direction_toggle::DirectionTogglePage;
 pub use repo_button::RepoButtonPage;
 pub use theme_toggle::ThemeTogglePage;
 pub use tldr::TldrPage;
+pub use toolbar::ToolbarPage;
