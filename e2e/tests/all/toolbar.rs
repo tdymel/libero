@@ -1,6 +1,6 @@
 //! `Toolbar`: the `RovingTabindex` archetype over mixed items, plus vertical and RTL bars.
 
-use anyhow::Result;
+use anyhow::{Result, ensure};
 use e2e::archetypes::{Orientation, RovingTabindex};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
@@ -61,6 +61,27 @@ async fn the_tab_stop_follows_focus<D: Driver>(d: &mut D, _route: &str) -> Resul
     eventually_focused(d, "#right", "Shift+Tab after a click").await
 }
 
+/// A disabled item stays focusable but inert. `#right` is the control: its press lands
+/// after the disabled ones, so `undo` still at 0 means swallowed, not merely late.
+async fn a_disabled_item_stays_inert<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#undo").await?;
+    d.focus("#undo").await?;
+    eventually_focused(d, "#undo", "focus on the disabled item").await?;
+    d.press(keyboard::ENTER).await?;
+    d.press(keyboard::SPACE).await?;
+    d.click("#right").await?;
+    eventually(d, "the control's click", async |d| {
+        Ok(d.attr("#presses", "data-right").await?.as_deref() == Some("1"))
+    })
+    .await?;
+    let undo = d.attr("#presses", "data-undo").await?;
+    ensure!(
+        undo.as_deref() == Some("0"),
+        "the disabled item ran its onclick: {undo:?}"
+    );
+    Ok(())
+}
+
 /// Up and Down move, stopping at the ends (`loop_focus: false`); Left and Right belong to the items.
 async fn a_vertical_bar_moves_on_up_and_down<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus("#pen").await?;
@@ -101,6 +122,11 @@ e2e::scenario!(
     tabbing_back_in_returns_to_the_last_item,
     "/toolbar",
     the_tab_stop_follows_focus
+);
+e2e::scenario!(
+    a_disabled_item_ignores_clicks_and_keys,
+    "/toolbar",
+    a_disabled_item_stays_inert
 );
 e2e::scenario!(
     a_vertical_toolbar_moves_on_up_and_down,

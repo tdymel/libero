@@ -24,6 +24,8 @@ enum Font {
 #[component]
 fn ToolbarPage() -> Element {
     let mut font = use_signal(|| Some(Font::Serif));
+    let mut undo = use_signal(|| 0);
+    let mut right = use_signal(|| 0);
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "640px",
             Toolbar { "aria-label": "Formatting",
@@ -34,12 +36,13 @@ fn ToolbarPage() -> Element {
                 ToolbarSeparator {}
                 ButtonGroup { "aria-label": "Align", variant: "outlined",
                     Button { id: "left", "Left" }
-                    Button { id: "right", "Right" }
+                    Button { id: "right", onclick: move |_| right += 1, "Right" }
                 }
-                Button { id: "undo", disabled: true, "Undo" }
+                Button { id: "undo", disabled: true, onclick: move |_| undo += 1, "Undo" }
                 Select { value: font(), onchange: move |next| font.set(next), "aria-label": "Font" }
             }
             button { id: "after", "after" }
+            div { id: "presses", "data-undo": "{undo}", "data-right": "{right}" }
         }
     }
 }
