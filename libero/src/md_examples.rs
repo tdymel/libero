@@ -39,6 +39,7 @@ md_pages! {
     Alert => "alert",
     Anchor => "anchor",
     AspectRatio => "aspect_ratio",
+    Audio => "audio",
     Autocomplete => "autocomplete",
     Avatar => "avatar",
     Badge => "badge",

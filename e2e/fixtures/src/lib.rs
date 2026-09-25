@@ -9,6 +9,7 @@
 mod accordion;
 mod action_icon;
 mod alert;
+mod audio;
 mod autocomplete;
 mod avatar;
 mod badge;
@@ -138,6 +139,7 @@ const FIXTURES: &[Routes] = &[
     accordion::ROUTES,
     action_icon::ROUTES,
     alert::ROUTES,
+    audio::ROUTES,
     autocomplete::ROUTES,
     avatar::ROUTES,
     badge::ROUTES,

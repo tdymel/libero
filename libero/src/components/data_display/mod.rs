@@ -1,4 +1,5 @@
 mod accordion;
+mod audio;
 mod avatar;
 mod badge;
 mod carousel;
@@ -17,6 +18,7 @@ mod table;
 mod timeline;
 
 pub use accordion::{Accordion, AccordionOpen, AccordionProps};
+pub use audio::{Audio, AudioPart, AudioProps, MediaPreload};
 pub use avatar::{Avatar, AvatarGroup, AvatarGroupProps, AvatarPart, AvatarProps, AvatarSpec};
 pub use badge::{Badge, BadgeProps};
 pub use carousel::{Carousel, CarouselAlign, CarouselPart, CarouselProps};

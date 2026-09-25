@@ -1,4 +1,5 @@
 mod accordion;
+mod audio;
 mod avatar;
 mod badge;
 mod carousel;
@@ -18,6 +19,7 @@ mod table;
 mod timeline;
 
 pub use accordion::AccordionPage;
+pub use audio::AudioPage;
 pub use avatar::AvatarPage;
 pub use badge::BadgePage;
 pub use carousel::CarouselPage;

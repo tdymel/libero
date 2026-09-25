@@ -1,0 +1,69 @@
+//! `Audio` over a generated 4 s silent WAV, a broken source, and `use_media` on a bare element.
+
+use dioxus::prelude::*;
+use libero::components::{Audio, Button, Flex, Text};
+use libero::hooks::use_media;
+
+use crate::Routes;
+
+pub const ROUTES: Routes = &[("/audio", || rsx! { AudioPage {} })];
+
+/// A silent 8 kHz, 8-bit mono WAV of `seconds`, as a `data:` URL: no file to serve,
+/// and every Chromium decodes PCM.
+fn silent_wav(seconds: u32) -> String {
+    let samples = 8000 * seconds;
+    let mut bytes = Vec::with_capacity(44 + samples as usize);
+    bytes.extend_from_slice(b"RIFF");
+    bytes.extend_from_slice(&(36 + samples).to_le_bytes());
+    bytes.extend_from_slice(b"WAVEfmt ");
+    bytes.extend_from_slice(&16u32.to_le_bytes());
+    bytes.extend_from_slice(&1u16.to_le_bytes()); // PCM
+    bytes.extend_from_slice(&1u16.to_le_bytes()); // mono
+    bytes.extend_from_slice(&8000u32.to_le_bytes());
+    bytes.extend_from_slice(&8000u32.to_le_bytes());
+    bytes.extend_from_slice(&1u16.to_le_bytes());
+    bytes.extend_from_slice(&8u16.to_le_bytes());
+    bytes.extend_from_slice(b"data");
+    bytes.extend_from_slice(&samples.to_le_bytes());
+    bytes.resize(44 + samples as usize, 128); // 8-bit silence is the midpoint
+    format!("data:audio/wav;base64,{}", base64(&bytes))
+}
+
+fn base64(bytes: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let n = chunk
+            .iter()
+            .enumerate()
+            .fold(0u32, |n, (i, b)| n | (*b as u32) << (16 - 8 * i));
+        for i in 0..4 {
+            out.push(match i <= chunk.len() {
+                true => TABLE[(n >> (18 - 6 * i) & 63) as usize] as char,
+                false => '=',
+            });
+        }
+    }
+    out
+}
+
+#[component]
+fn AudioPage() -> Element {
+    let src = use_hook(|| silent_wav(4));
+    let media = use_media();
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "32rem",
+            div { id: "player", Audio { src: src.clone(), label: "Silence" } }
+            div { id: "broken", Audio { src: "data:audio/wav;base64,AAAA", label: "Broken" } }
+            div { id: "custom",
+                audio { src, onmounted: media.mount(), ..media.attributes() }
+                Button { onclick: move |_| media.toggle(),
+                    if media.paused() { "Play" } else { "Pause" }
+                }
+                Text { id: "custom-state",
+                    "supported={media.is_supported()} duration={media.duration().unwrap_or(0.0)}"
+                }
+            }
+        }
+    }
+}

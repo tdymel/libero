@@ -38,6 +38,8 @@ pub(crate) use webview::geolocation as webview_geolocation;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::image_crop as webview_image_crop;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+pub(crate) use webview::media as webview_media;
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::permission as webview_permission;
 
 /// What HTML counts as interactive content, plus anything a caller made

@@ -47,6 +47,7 @@ pub struct Localization {
     pub kanban: KanbanLabels,
     pub stepper: StepperLabels,
     pub marquee: MarqueeLabels,
+    pub media: MediaLabels,
     pub chips: ChipsLabels,
     pub combobox: ComboboxLabels,
     pub cascader: CascaderLabels,
@@ -93,6 +94,7 @@ impl Localization {
         kanban: KanbanLabels::ENGLISH,
         stepper: StepperLabels::ENGLISH,
         marquee: MarqueeLabels::ENGLISH,
+        media: MediaLabels::ENGLISH,
         chips: ChipsLabels::ENGLISH,
         combobox: ComboboxLabels::ENGLISH,
         cascader: CascaderLabels::ENGLISH,
@@ -138,6 +140,7 @@ impl Localization {
         kanban: KanbanLabels::GERMAN,
         stepper: StepperLabels::GERMAN,
         marquee: MarqueeLabels::GERMAN,
+        media: MediaLabels::GERMAN,
         chips: ChipsLabels::GERMAN,
         combobox: ComboboxLabels::GERMAN,
         cascader: CascaderLabels::GERMAN,
@@ -165,8 +168,9 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 41] {
+    fn templates(words: &Localization) -> [&'static str; 42] {
         [
+            words.media.position,
             words.common.remove,
             words.image_cropper.value,
             words.rating.value,
@@ -253,6 +257,8 @@ mod tests {
             ("height", &30),
             ("x", &10),
             ("y", &20),
+            ("time", &"1:05"),
+            ("duration", &"4:56"),
         ];
         for words in [&Localization::ENGLISH, &Localization::GERMAN] {
             for template in templates(words) {

@@ -392,6 +392,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::AvatarPage {}, "Avatar"),
                 page(Route::ImagePage {}, "Image"),
                 page(Route::ImageListPage {}, "ImageList"),
+                page(Route::AudioPage {}, "Audio"),
                 page(Route::CarouselPage {}, "Carousel"),
                 page(Route::ListPage {}, "List"),
                 page(Route::DataListPage {}, "DataList"),

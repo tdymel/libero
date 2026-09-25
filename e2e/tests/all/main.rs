@@ -4,6 +4,7 @@
 mod accordion;
 mod action_icon;
 mod alert;
+mod audio;
 mod autocomplete;
 mod avatar;
 mod badge;

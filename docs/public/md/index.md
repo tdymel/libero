@@ -128,6 +128,7 @@ fetch only the file you need.
 - [Avatar](avatar.md): A person as a fixed square, with a fallback chain from a picture down to a person glyph, and a group that collapses its overflow into a +N chip.
 - [Image](image.md): An `<img>` with a fallback source on load error, rounded corners and an optional click-to-zoom overlay.
 - [ImageList](image_list.md): A gallery of pictures with optional caption bars, laid out on a `GridZone`, so `cols` counts the library's twelve tracks.
+- [Audio](audio.md): An `<audio>` with libero's own controls, and the `use_media` hook behind them.
 - [Carousel](carousel.md): A strip of slides that snaps as it scrolls and knows which one it is on, with controls, indicators and optional autoplay.
 - [List](list.md): A `<ul>` of `<li>` items without the browser's list styling, with themed gaps and nested indent.
 - [DataList](data_list.md): A `<dl>` of term/description pairs, where one term can carry several descriptions.

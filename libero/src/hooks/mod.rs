@@ -23,6 +23,7 @@ mod localization;
 mod long_press;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod long_press_tests;
+mod media;
 mod media_query;
 mod popover;
 mod portal;
@@ -76,6 +77,7 @@ pub(crate) use local_state::{LocalState, use_local_state};
 pub(crate) use localization::current_localization;
 pub use localization::{LocalizationHandle, use_localization, use_localization_handle};
 pub use long_press::{LongPress, LongPressOptions, use_long_press};
+pub use media::{MediaError, MediaHandle, use_media};
 pub use media_query::{use_is_mobile, use_media_query};
 pub use popover::{
     Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,

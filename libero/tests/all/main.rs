@@ -18,6 +18,7 @@ mod anchor;
 mod architecture;
 mod aspect_ratio;
 mod attributes;
+mod audio;
 mod autocomplete;
 mod avatar;
 mod badge;

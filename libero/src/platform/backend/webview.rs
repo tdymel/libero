@@ -31,6 +31,7 @@ use crate::platform::{
     },
     image_crop::{CROP_SCRIPT, Cropped, Fractions, ImageCropApi, cropped_name, encode_base64},
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
+    media::{MEDIA_EVENTS, MediaApi, MediaState, MediaSubscription},
     permission::{PermissionApi, PermissionKind, PermissionState, PermissionSubscription},
 };
 use crate::tokens::{
@@ -413,11 +414,135 @@ impl PressApi for WebViewPress {
     }
 }
 
+pub(crate) fn media(tag: u64) -> Option<Box<dyn MediaApi>> {
+    runs_scripts().then(|| Box::new(WebViewMedia { tag }) as Box<dyn MediaApi>)
+}
+
+/// The `<audio>`/`<video>` tagged `tag`, found per call: no handle reaches the DOM.
+struct WebViewMedia {
+    tag: u64,
+}
+
+/// `data` is `[attr, tag, ...]`; the script sees the element as `media`, maybe `null`.
+const FIND_MEDIA: &str =
+    "const media = document.querySelector('[' + data[0] + '=\"' + data[1] + '\"]');";
+
+impl WebViewMedia {
+    /// Queued behind the edits dioxus sent before it.
+    fn command(&self, argument: Value, script: &str) -> Result<(), PlatformError> {
+        eval_with(
+            json!([OBSERVE_ATTR, self.tag.to_string(), argument]),
+            &format!("{FIND_MEDIA}\nconst value = data[2];\nif (media) {{ {script} }}"),
+        );
+        Ok(())
+    }
+}
+
+/// Sends the state on each media event, `timeupdate` at most every 250 ms: each
+/// message crosses the IPC. Waits for the element if it is not there yet.
+const ON_MEDIA: &str = "let media = null;
+    let last = 0;
+    const send = (event) => {
+        const now = Date.now();
+        if (event?.type === 'timeupdate' && now - last < 250) return;
+        last = now;
+        const duration = isFinite(media.duration) ? media.duration : null;
+        dioxus.send([media.paused, media.ended, media.currentTime, duration, media.volume,
+            media.muted, media.playbackRate, !media.paused && media.readyState < 3, media.error?.code ?? null]);
+    };
+    const start = () => {
+        media = document.querySelector('[' + data[0] + '=\"' + data[1] + '\"]');
+        if (!media) return false;
+        for (const name of data[2]) media.addEventListener(name, send);
+        send();
+        return true;
+    };
+    const waiting = start() ? null : new MutationObserver(() => {
+        if (start()) waiting.disconnect();
+    });
+    waiting?.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: [data[0]] });";
+
+impl MediaApi for WebViewMedia {
+    fn play(&self) -> Result<(), PlatformError> {
+        // A refused play (autoplay policy) only shows as staying paused.
+        self.command(Value::Null, "media.play().catch(() => {});")
+    }
+
+    fn pause(&self) -> Result<(), PlatformError> {
+        self.command(Value::Null, "media.pause();")
+    }
+
+    fn seek(&self, seconds: f64) -> Result<(), PlatformError> {
+        self.command(json!(seconds), "media.currentTime = value;")
+    }
+
+    fn set_volume(&self, volume: f64) -> Result<(), PlatformError> {
+        self.command(json!(volume.clamp(0.0, 1.0)), "media.volume = value;")
+    }
+
+    fn set_muted(&self, muted: bool) -> Result<(), PlatformError> {
+        self.command(json!(muted), "media.muted = value;")
+    }
+
+    fn set_rate(&self, rate: f64) -> Result<(), PlatformError> {
+        self.command(json!(rate), "media.playbackRate = value;")
+    }
+
+    fn watch(&self, callback: Box<dyn Fn(MediaState)>) -> Box<dyn MediaSubscription> {
+        type Sent = (
+            bool,
+            bool,
+            f64,
+            Option<f64>,
+            f64,
+            bool,
+            f64,
+            bool,
+            Option<u16>,
+        );
+        let slot = Slot::new();
+        let script = eval_with(
+            json!([OBSERVE_ATTR, self.tag.to_string(), MEDIA_EVENTS]),
+            &format!(
+                "{ON_MEDIA}
+                {}
+                waiting?.disconnect();
+                if (media) for (const name of data[2]) media.removeEventListener(name, send);",
+                slot.park("")
+            ),
+        );
+        let task = spawn(async move {
+            let mut script = script;
+            while let Ok(sent) = script.recv::<Sent>().await {
+                let (paused, ended, current_time, duration, volume, muted, rate, buffering, error) =
+                    sent;
+                callback(MediaState {
+                    paused,
+                    ended,
+                    current_time,
+                    duration,
+                    volume,
+                    muted,
+                    rate,
+                    buffering,
+                    error,
+                });
+            }
+        });
+        Box::new(WebViewListener {
+            task,
+            _slot: Rc::new(slot),
+        })
+    }
+}
+
 /// A listening script's task and slot: dropping it stops both.
 struct WebViewListener {
     task: Task,
     _slot: Rc<Slot>,
 }
+
+impl MediaSubscription for WebViewListener {}
 
 impl ScrollSubscription for WebViewListener {}
 

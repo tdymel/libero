@@ -135,6 +135,8 @@ pub(crate) enum Route {
     IconProviderPage {},
     #[route("/data-display/image")]
     ImagePage {},
+    #[route("/data-display/audio")]
+    AudioPage {},
     #[route("/data-display/indicator")]
     IndicatorPage {},
     #[route("/data-display/table")]
