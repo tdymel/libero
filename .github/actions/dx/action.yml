@@ -1,0 +1,32 @@
+name: dx
+description: The `dx` CLI from the lockfile's dioxus source, so CLI and app speak one protocol. A copy of ci.yml's e2e step.
+
+runs:
+  using: composite
+  steps:
+    - id: dx
+      shell: bash
+      run: |
+        src=$(awk '/^name = "dioxus"$/ { f = 1 } f && /^$/ { exit } f && /^source = / { gsub(/"/, "", $3); print $3; exit }' Cargo.lock)
+        case "$src" in
+          git+*)
+            url=${src#git+}
+            echo "args=--git ${url%%[?#]*} --rev ${src##*#}" >> "$GITHUB_OUTPUT"
+            echo "key=${src##*#}" >> "$GITHUB_OUTPUT" ;;
+          registry+*)
+            ver=$(awk '/^name = "dioxus"$/ { getline; gsub(/"/, "", $3); print $3; exit }' Cargo.lock)
+            echo "args=--version $ver" >> "$GITHUB_OUTPUT"
+            echo "key=$ver" >> "$GITHUB_OUTPUT" ;;
+          *) echo "no dioxus source in Cargo.lock: '$src'" >&2; exit 1 ;;
+        esac
+    - id: dx-cache
+      uses: actions/cache@v4
+      with:
+        # `dx.exe` on Windows.
+        path: |
+          ~/.cargo/bin/dx
+          ~/.cargo/bin/dx.exe
+        key: dx-${{ runner.os }}-${{ runner.arch }}-${{ steps.dx.outputs.key }}
+    - if: steps.dx-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: cargo install dioxus-cli ${{ steps.dx.outputs.args }} --locked --bin dx

@@ -1,0 +1,142 @@
+# Builds the docs app once per platform (1219). Build-only, dev profile, informational: no
+# launch, nothing required by a PR. The PR gate stays ci.yml.
+name: Platforms
+
+# Manual only while the repo is private: macOS minutes bill at 10x, Windows at 2x. To run it
+# on its own, add `push: { branches: [main] }` or `schedule: [{ cron: "0 3 * * *" }]` here.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platforms-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          targets: wasm32-unknown-unknown
+          cache-key: platforms-web
+      - uses: ./.github/actions/dx
+      - working-directory: docs
+        run: |
+          dx build --platform web --debug-symbols=false
+          ./preload_wasm.sh ../target/dx/docs/debug/web/public
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-web
+          path: target/dx/docs/debug/web/public
+          retention-days: 3
+
+  # Blitz. `--platform linux` because two features map to a renderer, see docs/native.just.
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev libdbus-1-dev
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: platforms-native
+      - uses: ./.github/actions/dx
+      - working-directory: docs
+        run: dx build --platform linux --renderer native --debug-symbols=false --features native-vello
+
+  # Whether Blitz and libero/native compile off Linux at all; a `dx build` once they do.
+  native-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: platforms-native-check
+      - run: cargo check -p docs --features native-vello
+
+  # wry on the system WebView: WebKitGTK, WebView2, WKWebView.
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: platforms-desktop
+      - uses: ./.github/actions/dx
+      - working-directory: docs
+        run: dx build --platform desktop --renderer webview --debug-symbols=false --features desktop
+
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      # The NDK the emulator runs were verified with (codebase/platform/android-build.md).
+      NDK_VERSION: 27.3.13750724
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: ./.github/actions/setup
+        with:
+          targets: aarch64-linux-android
+          cache-key: platforms-android
+      - uses: ./.github/actions/dx
+      # `dx` finds the NDK only with ANDROID_HOME exported; the image sets it, the rest is ours.
+      - run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+      # The launcher icon, as `just build-android` places it (docs/android.just `_android-icon`).
+      - run: |
+          res=target/dx/docs/debug/android/app/app/src/debug/res
+          mkdir -p "$res"
+          cp -r docs/android/res/. "$res"
+      # No device attached to pick the ABI from, so name it.
+      - working-directory: docs
+        run: dx build --platform android --target aarch64-linux-android --debug-symbols=false --features mobile
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-android
+          path: target/dx/docs/debug/android/app/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 3
+
+  # Simulator build, unsigned. Launching it is 1091.
+  ios:
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          targets: aarch64-apple-ios-sim
+          cache-key: platforms-ios
+      - uses: ./.github/actions/dx
+      - working-directory: docs
+        run: dx build --platform ios --target aarch64-apple-ios-sim --debug-symbols=false --features mobile
