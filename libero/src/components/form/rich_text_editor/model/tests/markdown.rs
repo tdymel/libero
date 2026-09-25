@@ -90,21 +90,70 @@ fn the_corpus_round_trips() {
 #[test]
 fn emit_is_readable() {
     let cases = [
-        ("*em* __strong__", "*em* **strong**"),
-        ("Setext\n===", "# Setext"),
+        ("<em>em</em> <strong>strong</strong>", "*em* **strong**"),
         ("* a\n* b", "- a\n- b"),
         ("***", "---"),
         ("soft\nbreak", "soft break"),
-        ("hard  \nbreak", "hard\\\nbreak"),
-        ("~~~py\nx\n~~~", "```py\nx\n```"),
-        (
-            "<mail@example.com>",
-            "[mail@example.com](mailto:mail@example.com)",
-        ),
+        ("````py\nx\n````", "```py\nx\n```"),
+        ("`a`b` <code>c</code>", "`a`b\\` `c`"),
+        ("<code>a`b</code>", "<code>a\\`b</code>"),
         ("1. a\n1. b", "1. a\n2. b"),
     ];
     for (source, expected) in cases {
         assert_eq!(md(&Doc::from_markdown(source)), expected, "from {source:?}");
+    }
+}
+
+/// CommonMark syntax outside the subset reads as the text it is.
+#[test]
+fn unknown_syntax_stays_text() {
+    let cases = [
+        ("Setext\n===", "Setext ==="),
+        ("_em_ __strong__", "_em_ __strong__"),
+        ("&amp; &#35;", "&amp; &#35;"),
+        ("<https://a.example>", "<https://a.example>"),
+        (
+            "![alt](https://a.example/i.png)",
+            "![alt](https://a.example/i.png)",
+        ),
+        ("[ref][1]", "[ref][1]"),
+        ("~~~\nx\n~~~", "~~~ x ~~~"),
+        (">no space", ">no space"),
+        ("-no space", "-no space"),
+        ("    indented", "indented"),
+        ("hard  \nbreak", "hard break"),
+        ("` spaced `", "` spaced `"),
+        ("| a | b |", "| a | b |"),
+    ];
+    for (source, text) in cases {
+        let doc = Doc::from_markdown(source);
+        assert_eq!(doc.blocks.len(), 1, "{source:?}");
+        assert_eq!(doc.blocks[0].kind, BlockKind::Paragraph, "{source:?}");
+        assert_eq!(doc.blocks[0].text(), text, "{source:?}");
+        let marked = doc.blocks[0]
+            .inlines()
+            .iter()
+            .any(|inline| matches!(inline, Inline::Text { marks, .. } if marks.iter().count() > 0));
+        assert!(!marked, "{source:?} got marks");
+    }
+}
+
+/// The reader and the typing shortcuts agree: whatever the shortcuts build reads back.
+#[test]
+fn typed_spans_read_like_the_shortcuts() {
+    let cases = [
+        ("**a** *b* ~~c~~ `d`", "a b c d"),
+        ("***both***", "both"),
+        ("`2*3*4`", "2*3*4"),
+        ("2*3*4", "234"),
+        ("\\*not\\*", "*not*"),
+    ];
+    for (source, text) in cases {
+        assert_eq!(
+            Doc::from_markdown(source).blocks[0].text(),
+            text,
+            "{source:?}"
+        );
     }
 }
 
@@ -309,4 +358,20 @@ fn marks_split_by_a_link_stay_nested() {
         doc.blocks[0].inlines(),
         "{written}"
     );
+}
+
+#[test]
+fn blocks_nest_by_indent() {
+    let doc =
+        Doc::from_markdown("- a\n  - nested\n\n    > quoted\n- b\n\n> # h\n> ```js\n> x\n> ```");
+    assert_eq!(doc.blocks.len(), 2);
+    let items = doc.blocks[0].children();
+    assert_eq!(items.len(), 2);
+    let nested = &items[0].children()[1];
+    assert_eq!(nested.kind, BlockKind::bullet_list());
+    assert_eq!(nested.children()[0].children()[1].kind, BlockKind::Quote);
+    let quote = doc.blocks[1].children();
+    assert_eq!(quote[0].kind, BlockKind::heading(1));
+    assert_eq!(quote[1].kind, BlockKind::code("js"));
+    assert_eq!(quote[1].text(), "x");
 }

@@ -13,6 +13,7 @@ mod registry;
 mod rules;
 mod state;
 mod structure;
+mod syntax;
 #[cfg(test)]
 mod tests;
 

@@ -36,9 +36,9 @@ pub(crate) use webview::file_dialog as webview_file_dialog;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::geolocation as webview_geolocation;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-pub(crate) use webview::permission as webview_permission;
-#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::image_crop as webview_image_crop;
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+pub(crate) use webview::permission as webview_permission;
 
 /// What HTML counts as interactive content, plus anything a caller made
 /// focusable. A label does not forward a click on any of these.

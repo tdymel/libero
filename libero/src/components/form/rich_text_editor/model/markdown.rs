@@ -3,6 +3,7 @@
 use super::doc::{Block, BlockKind, ContentKind, Doc, Inline, normalize_inlines};
 use super::mark::{Mark, MarkKind, Marks};
 use super::registry::NodeRegistry;
+use super::syntax::valid_inner;
 
 impl Doc {
     pub fn to_markdown(&self) -> String {
@@ -123,10 +124,7 @@ impl Writer<'_> {
                 continue;
             }
             if !out.is_empty() {
-                let interrupts = match child.kind {
-                    BlockKind::List { ordered, start } => !ordered || start == 1,
-                    _ => false,
-                };
+                let interrupts = matches!(child.kind, BlockKind::List { .. });
                 let after_paragraph = index > 0 && children[index - 1].kind == BlockKind::Paragraph;
                 out.push_str(if interrupts && after_paragraph {
                     "\n"
@@ -139,8 +137,8 @@ impl Writer<'_> {
         out
     }
 
-    /// Delimiters read best; where CommonMark's flanking rules would misread them
-    /// (`**a**` right before `*(b)*`), the paragraph falls back to HTML tags.
+    /// Delimiters read best; where the subset would misread them (`***a***`, a span
+    /// across a break), the paragraph falls back to HTML tags.
     fn inlines(&self, inlines: &[Inline]) -> String {
         let write = |tags: bool| {
             InlineWriter {
@@ -379,24 +377,19 @@ fn destination(href: &str) -> String {
     }
 }
 
+/// `` `code` `` as typed; code the subset cannot delimit (a backtick, edge spaces) uses `<code>`.
 fn code_span(code: &str) -> String {
-    let longest = longest_run(code, '`');
-    let fence = "`".repeat(longest + 1);
-    let pad = code.starts_with(['`', ' ']) || code.ends_with(['`', ' ']);
-    let pad = if pad && !code.trim().is_empty() {
-        " "
-    } else {
-        ""
-    };
-    format!("{fence}{pad}{code}{pad}{fence}")
+    let chars: Vec<char> = code.chars().collect();
+    match valid_inner(&chars, "`") {
+        true => format!("`{code}`"),
+        false => format!("<code>{}</code>", escape(code)),
+    }
 }
 
+/// A language with a backtick cannot follow a backtick fence: those backticks are dropped.
 fn code_block(code: &str, language: &str) -> String {
-    let (fence_char, longest) = match language.contains('`') {
-        true => ('~', longest_run(code, '~')),
-        false => ('`', longest_run(code, '`')),
-    };
-    let fence = fence_char.to_string().repeat((longest + 1).max(3));
+    let language = language.replace('`', "");
+    let fence = "`".repeat((longest_run(code, '`') + 1).max(3));
     match code.is_empty() {
         true => format!("{fence}{language}\n{fence}"),
         false => format!("{fence}{language}\n{code}\n{fence}"),
@@ -419,7 +412,7 @@ fn escape(text: &str) -> String {
     for c in text.chars() {
         if matches!(
             c,
-            '\\' | '`' | '*' | '_' | '[' | ']' | '<' | '>' | '~' | '&' | '!' | '#'
+            '\\' | '`' | '*' | '_' | '[' | ']' | '<' | '>' | '~' | '!' | '#'
         ) {
             out.push('\\');
         }
@@ -428,17 +421,19 @@ fn escape(text: &str) -> String {
     out
 }
 
-/// Escapes what only means something at a line start: list markers, setext underlines.
+/// Escapes what only means something at a line start: list markers.
 fn escape_line_starts(text: &str) -> String {
     text.split('\n')
         .map(|line| {
-            let digits = line.chars().take_while(char::is_ascii_digit).count();
-            match line.chars().next() {
-                Some('-' | '+' | '=') => format!("\\{line}"),
+            let body = line.trim_start_matches(' ');
+            let lead = &line[..line.len() - body.len()];
+            let digits = body.chars().take_while(char::is_ascii_digit).count();
+            match body.chars().next() {
+                Some('-' | '+') => format!("{lead}\\{body}"),
                 Some(_)
-                    if digits > 0 && matches!(line[digits..].chars().next(), Some('.' | ')')) =>
+                    if digits > 0 && matches!(body[digits..].chars().next(), Some('.' | ')')) =>
                 {
-                    format!("{}\\{}", &line[..digits], &line[digits..])
+                    format!("{lead}{}\\{}", &body[..digits], &body[digits..])
                 }
                 _ => line.to_string(),
             }
