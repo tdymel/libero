@@ -83,7 +83,6 @@ pub fn UseHotkeysPage() -> Element {
                 ])
                 .limits([
                     "A WebView prevents a chord's default action only from the second press of it.",
-                    "On a WebView, `within` does not count a libero popup opened inside the element, such as a `Menu`, which portals out: add its element too, `.within(editor).within(popup)`.",
                 ]),
             lead: rsx! {
                 Text {
@@ -133,9 +132,17 @@ pub fn UseHotkeysPage() -> Element {
                     Code { source: "use_element" }
                     ". A libero popup opened inside it, such as a "
                     Code { source: "Menu" }
-                    " or a "
+                    ", a "
                     Code { source: "Select" }
-                    " list, counts as inside; call it again to add your own portaled box. "
+                    " list or a "
+                    Code { source: "HoverCard" }
+                    ", counts as inside, as does a "
+                    Code { source: "use_popover" }
+                    " box with its "
+                    Code { source: "anchor_events()" }
+                    " and "
+                    Code { source: "floating_events()" }
+                    " spread; call it again to add your own portaled box. "
                     "Spread "
                     Code { source: "..element.attributes()" }
                     " on it, so a WebView finds it. "

@@ -7,12 +7,12 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-use dioxus::core::Runtime;
+use dioxus::core::{AttributeValue, Runtime};
 use dioxus::prelude::*;
 
 use crate::{
     hooks::ElementHandle,
-    platform::{element_contains, focus_is_in},
+    platform::{OWNER_ATTR, element_contains, focus_is_in},
 };
 
 /// How many popups deep a chain is followed: a submenu of a submenu.
@@ -63,6 +63,23 @@ pub(crate) fn use_popup_owner(anchor: ElementHandle, floating: ElementHandle, op
         // A thread-local torn down at exit is gone already.
         let _ = OPEN.try_with(|popups| popups.borrow_mut().retain(|popup| popup.id != id));
     });
+}
+
+/// Spread on the box, with `anchor.attributes()` on the anchor: the link a
+/// WebView's walk follows back to it. Empty elsewhere.
+pub(crate) fn owner_link(anchor: &ElementHandle) -> Vec<Attribute> {
+    anchor
+        .tag()
+        .map(|tag| {
+            Attribute::new(
+                OWNER_ATTR,
+                AttributeValue::Text(tag.to_string()),
+                None,
+                false,
+            )
+        })
+        .into_iter()
+        .collect()
 }
 
 /// Whether focus is in an open popup whose anchor lies in `scope`, directly or

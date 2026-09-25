@@ -17,9 +17,10 @@ Presses in text entry are skipped unless the binding calls
 `.include_editable(true)`. `.when(guard)` lets a press through only while the
 guard answers `true`. `.within(element)` lets it through only with focus on or
 inside an element from `use_element`. A libero popup opened inside it, such as a
-`Menu` or a `Select` list, counts as inside; call it again to add your own
-portaled box. Spread `..element.attributes()` on it, so a WebView
-finds it. A press a binding takes has its default action prevented; one it turns
+`Menu`, a `Select` list or a `HoverCard`, counts as inside, as does a
+`use_popover` box with its `anchor_events()` and `floating_events()` spread;
+call it again to add your own portaled box. Spread `..element.attributes()` on
+it, so a WebView finds it. A press a binding takes has its default action prevented; one it turns
 away keeps it. Native Blitz hears presses that bubble out of the app, and a
 server render binds nothing.
 
@@ -118,6 +119,3 @@ that parses to no key is ignored.
 ### Limits
 
 - A WebView prevents a chord's default action only from the second press of it.
-- On a WebView, `within` does not count a libero popup opened inside the
-  element, such as a `Menu`, which portals out: add its element too,
-  `.within(editor).within(popup)`.

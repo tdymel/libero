@@ -93,6 +93,7 @@ mod scroll_area;
 mod scroller;
 mod segmented_control;
 mod select;
+mod shortcut_help;
 mod skeleton;
 mod slider;
 mod sortable;
@@ -217,6 +218,7 @@ const FIXTURES: &[Routes] = &[
     scroller::ROUTES,
     segmented_control::ROUTES,
     select::ROUTES,
+    shortcut_help::ROUTES,
     skeleton::ROUTES,
     slider::ROUTES,
     sortable::ROUTES,

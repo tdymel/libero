@@ -20,7 +20,7 @@ use crate::platform::a11y_media::{
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
     DocumentApi, ElementApi, FocusStep, KeyChord, KeySubscription, KeyboardApi, MediaQueryApi,
-    MediaQuerySubscription, OBSERVE_ATTR, PRESS_MARKER_ATTR, PlatformError, PressApi,
+    MediaQuerySubscription, OBSERVE_ATTR, OWNER_ATTR, PRESS_MARKER_ATTR, PlatformError, PressApi,
     PressSubscription, Read, ScrollApi, ScrollSubscription,
     clipboard::{ClipboardApi, Write},
     file_dialog::{FileDialogApi, Picked, held_file},
@@ -847,11 +847,18 @@ static KEYBOARD: WebViewKeyboard = WebViewKeyboard;
 
 /// The answer crosses the IPC after the press is over, so the script prevents
 /// a chord once its subscription has taken it: from the second press on.
-const ON_KEY: &str = "const [skipTyping, clicked, seeded, observe] = data;
+const ON_KEY: &str = "const [skipTyping, clicked, seeded, observe, owner] = data;
     const taken = new Set(seeded);
-    // The trigger whose `aria-controls` names a popup around `el`, outside it.
+    // The trigger of the nearest popup around `el`, outside it: named by its
+    // `aria-controls`, or the anchor whose tag the popup's owner attribute holds.
     const trigger = (el) => {
-        for (let at = el.closest('[id]'); at; at = at.parentElement?.closest('[id]')) {
+        for (let at = el; at; at = at.parentElement) {
+            const tag = at.getAttribute(owner);
+            if (tag !== null) {
+                const by = document.querySelector(`[${observe}=\"${CSS.escape(tag)}\"]`);
+                if (by && !at.contains(by)) return by;
+            }
+            if (!at.id) continue;
             const id = CSS.escape(at.id);
             const by = document.querySelector(`[aria-haspopup]:not([aria-haspopup=false])[aria-controls~=${id}], [role=combobox][aria-controls~=${id}]`);
             if (by && !at.contains(by)) return by;
@@ -880,14 +887,18 @@ const ON_KEY: &str = "const [skipTyping, clicked, seeded, observe] = data;
         return target.isContentEditable === true;
     };
     const onKey = (event) => {
-        if (event.defaultPrevented || event.isComposing) return;
+        // A sibling subscription's prevent still lets this one hear the press, as on the web (1223).
+        if ((event.defaultPrevented && !event.liberoTaken) || event.isComposing) return;
         const entry = typing(event.target);
         if (skipTyping && entry) return;
         const chord = [event.key, event.ctrlKey, event.shiftKey, event.altKey, event.metaKey];
         const inside = scopes(event.target);
         // Per target kind and scope: a chord taken outside text entry stays the field's inside it.
         const name = chord.join(' ') + (entry ? ' typing' : '') + (inside.length ? ' in ' + inside.join(',') : '');
-        if (taken.has(name)) event.preventDefault();
+        if (taken.has(name)) {
+            event.preventDefault();
+            event.liberoTaken = true;
+        }
         dioxus.send([name, ...chord, event.repeat, entry, inside]);
     };
     window.addEventListener('keydown', onKey);";
@@ -907,7 +918,13 @@ impl WebViewKeyboard {
             .unwrap_or_default();
         let slot = Rc::new(Slot::new());
         let script = eval_with(
-            json!([skip_text_entry, CLICKED_INPUT_TYPES, &taken, OBSERVE_ATTR]),
+            json!([
+                skip_text_entry,
+                CLICKED_INPUT_TYPES,
+                &taken,
+                OBSERVE_ATTR,
+                OWNER_ATTR
+            ]),
             &format!(
                 "{ON_KEY}
                 {}

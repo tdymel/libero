@@ -154,6 +154,43 @@ async fn a_menu_opened_inside_counts_as_inside<D: Driver>(d: &mut D, _route: &st
     count_is(d, "#count", "2").await
 }
 
+/// A press from `outside` is not counted, one from `inside` is.
+async fn only_the_inside_box_counts<D: Driver>(
+    d: &mut D,
+    outside: &str,
+    inside: &str,
+) -> Result<()> {
+    d.focus(outside).await?;
+    eventually_focused(d, outside, "focusing the outside box").await?;
+    d.press_ctrl(J).await?;
+    linger(d, 5).await;
+    count_is(d, "#count", "0").await?;
+    d.focus(inside).await?;
+    eventually_focused(d, inside, "focusing the inside box").await?;
+    d.press_ctrl(J).await?;
+    count_is(d, "#count", "1").await
+}
+
+/// A `HoverCard` anchored inside the scope counts as inside, one outside not (1225).
+async fn a_hover_card_inside_counts_as_inside<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    only_the_inside_box_counts(d, "#out-card", "#in-card").await
+}
+
+/// So does an app's own `use_popover` box (1225).
+async fn a_popover_inside_counts_as_inside<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    only_the_inside_box_counts(d, "#outside-box", "#inside-box").await
+}
+
+e2e::scenario!(
+    a_hover_card_opened_inside_the_scope_counts_as_inside,
+    "/use-hotkeys/within-hover-card",
+    a_hover_card_inside_counts_as_inside
+);
+e2e::scenario!(
+    an_own_popover_opened_inside_the_scope_counts_as_inside,
+    "/use-hotkeys/within-popover",
+    a_popover_inside_counts_as_inside
+);
 e2e::scenario!(
     a_menu_opened_inside_the_scope_counts_as_inside,
     "/use-hotkeys/within-menu",

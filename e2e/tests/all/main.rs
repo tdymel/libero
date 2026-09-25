@@ -93,6 +93,7 @@ mod scroll_area;
 mod scroller;
 mod segmented_control;
 mod select;
+mod shortcut_help;
 mod skeleton;
 mod slider;
 mod sortable;

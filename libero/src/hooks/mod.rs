@@ -77,7 +77,7 @@ pub use media_query::{use_is_mobile, use_media_query};
 pub use popover::{
     Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,
 };
-pub(crate) use popover::{place, use_popover_on};
+pub(crate) use popover::{owner_link, place, use_popover_on};
 pub(crate) use portal::{use_portal, use_portal_slot};
 pub(crate) use presence::use_presence;
 pub(crate) use ripple::{clipped_ripple_sx, ripple_sx, use_ripple};

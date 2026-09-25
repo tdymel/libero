@@ -9,6 +9,10 @@ use super::{ContentSubscription, backend};
 /// observe by. Rendered only where [`observes_by_tag`] answers.
 pub(crate) const OBSERVE_ATTR: &str = "data-lsx-observe";
 
+/// On a popup box, its anchor's [`OBSERVE_ATTR`] tag: the WebView's `Hotkey::within`
+/// walk goes on from there, as for `aria-controls` (1225).
+pub(crate) const OWNER_ATTR: &str = "data-lsx-owner";
+
 static NEXT_TAG: AtomicU64 = AtomicU64::new(0);
 
 /// A tag no other observed element carries.

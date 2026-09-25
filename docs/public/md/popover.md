@@ -178,8 +178,8 @@ only Escape and your own handlers close the box.
 | `style()` | `Option<String>` | The box's `style`, with its position and width. |
 | `show(content)` | `Option<Element>` | Renders the box. `None` removes it. |
 | `on_dismiss(f)` | `impl FnMut()` | What Escape and a press outside call, with `dismiss` on. Call it on every render. |
-| `anchor_events()` | `Vec<Attribute>` | Spread on the trigger, with `dismiss` on. |
-| `floating_events()` | `Vec<Attribute>` | Spread on the box, with `dismiss` on. |
+| `anchor_events()` | `Vec<Attribute>` | Spread on the trigger: `dismiss`, and on a WebView the link `Hotkey::within` follows into the box. |
+| `floating_events()` | `Vec<Attribute>` | Spread on the box, as `anchor_events()` on the trigger; the WebView link needs both. |
 
 ## Accessibility
 

@@ -13,7 +13,9 @@ use crate::{
     utils::warn,
 };
 
-// Chords in one column, what they do in the next.
+const SHORTCUT_LIST: &str = "lsx-shortcut-list";
+
+// Chords in one column, what they do in the next; stacked below 20rem (Blitz drops `@container`).
 static SHORTCUT_LIST_SX: StaticSx = StaticSx::new(|| {
     sx().display("grid")
         .grid_template_columns("max-content 1fr")
@@ -21,7 +23,14 @@ static SHORTCUT_LIST_SX: StaticSx = StaticSx::new(|| {
         .row_gap("xs")
         .align_items("baseline")
         .margin("0")
+        .container(SHORTCUT_LIST)
         .selector("& > dd", sx().margin("0"))
+        .container_query(
+            SHORTCUT_LIST,
+            "(max-width: 20rem)",
+            sx().selector("& > dt, & > dd", sx().grid_column("1 / -1"))
+                .selector("& > dt:not(:first-child)", sx().margin_top("sm")),
+        )
 });
 
 /// One row of a [`ShortcutHelp`]: a chord as [`Hotkey`](crate::hooks::Hotkey) takes it, and

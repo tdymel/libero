@@ -33,11 +33,12 @@ impl Hotkey {
     }
 
     /// Lets the shortcut through only while focus is on `element` or inside it,
-    /// or in a `Menu`, `Select` or `Popover` popup opened from inside it (not on a
-    /// WebView). Call it again to add an element, such as your own portaled box:
-    /// focus in any of them counts. A press elsewhere keeps its default action.
+    /// or in a popup opened from inside it, such as a `Menu`, `Select` or `HoverCard`.
+    /// Call it again to add an element, such as your own portaled box: focus in any
+    /// of them counts. A press elsewhere keeps its default action.
     ///
-    /// Spread `..element.attributes()` on the element, so a WebView finds it.
+    /// Spread `..element.attributes()` on the element, so a WebView finds it. There
+    /// a `use_popover` box counts once its `anchor_events()` and `floating_events()` are spread.
     ///
     /// ```rust
     /// # use dioxus::prelude::*;

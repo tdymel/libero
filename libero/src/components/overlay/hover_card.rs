@@ -9,8 +9,8 @@ use crate::{
         layout::{paper_sx, use_box},
     },
     hooks::{
-        Align, DismissOptions, ElementHandle, PopoverOptions, Side, use_dismiss, use_element,
-        use_focus_within, use_popover_on, use_theme,
+        Align, DismissOptions, ElementHandle, PopoverOptions, Side, owner_link, use_dismiss,
+        use_element, use_focus_within, use_popover_on, use_theme,
     },
     platform::{ElementApi, next_task},
     sx::StaticSx,
@@ -223,6 +223,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     popover.show(open.then(|| {
         let mut attributes = props.attributes.clone();
         attributes.extend(dismiss.floating_events());
+        attributes.extend(owner_link(&anchor));
         card.element(&floating)
             .attr("role", "dialog")
             .event("onmouseenter", move |_: MouseEvent| hovered.hover(true, 0))
@@ -260,7 +261,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         })
         .render(
             HtmlTag::Span,
-            dismiss.anchor_events(),
+            [dismiss.anchor_events(), anchor.attributes()].concat(),
             rsx! {
                 span {
                     style: CONTENTS,

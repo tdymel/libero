@@ -25,13 +25,14 @@ use crate::{
     platform::{ElementApi, ScrollSubscription, document, scroll, when_laid_out},
 };
 
-pub(crate) use owners::focus_in_popup_of;
+pub(crate) use owners::{focus_in_popup_of, owner_link};
 pub(crate) use place::place;
 
 /// A popover's own state: where its box goes, and the portal slot it goes in.
 /// Built by [`use_popover`]; `Copy`, so it travels into handlers.
 #[derive(Clone, Copy)]
 pub struct PopoverHandle {
+    anchor: ElementHandle,
     floating: ElementHandle,
     placed: Signal<Option<Placed>>,
     /// The anchor's measured width, which is what `PopoverWidth` follows.
@@ -117,23 +118,26 @@ impl PopoverHandle {
     }
 
     /// Spread on the trigger: the press-outside check, and Escape where the
-    /// document cannot be listened to. Empty unless open with `dismiss` on.
+    /// document cannot be listened to, while open with `dismiss` on. On a
+    /// WebView, also the link that lets [`Hotkey::within`](crate::hooks::Hotkey::within)
+    /// count focus in the box as inside the trigger's scope.
     pub fn anchor_events(&self) -> Vec<Attribute> {
-        let Some(dismiss) = self.dismiss.filter(|dismiss| dismiss.active) else {
-            return Vec::new();
-        };
-        let mut events = dismiss.handle.anchor_events();
-        events.push(dismiss.handle.focusout_listener());
+        let mut events = self.anchor.attributes();
+        if let Some(dismiss) = self.dismiss.filter(|dismiss| dismiss.active) {
+            events.extend(dismiss.handle.anchor_events());
+            events.push(dismiss.handle.focusout_listener());
+        }
         events
     }
 
     /// Spread on the box, as [`anchor_events`](Self::anchor_events) on the
-    /// trigger. Empty unless `dismiss` is on.
+    /// trigger; the WebView link needs both.
     pub fn floating_events(&self) -> Vec<Attribute> {
-        match self.dismiss {
-            Some(dismiss) => dismiss.handle.floating_events(),
-            None => Vec::new(),
+        let mut events = owners::owner_link(&self.anchor);
+        if let Some(dismiss) = self.dismiss {
+            events.extend(dismiss.handle.floating_events());
         }
+        events
     }
 }
 
@@ -319,6 +323,7 @@ pub(crate) fn use_popover_on(
     }));
 
     PopoverHandle {
+        anchor,
         floating,
         placed,
         anchor_width,
