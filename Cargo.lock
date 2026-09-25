@@ -4481,6 +4481,7 @@ dependencies = [
  "pictogram-icons-tabler",
  "regex",
  "rfd",
+ "serde",
  "serde_json",
  "stylo",
  "wasm-bindgen",

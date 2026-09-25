@@ -23,6 +23,7 @@ mod radio;
 mod radio_group;
 mod rating;
 mod removable_chip;
+mod rich_text_editor;
 mod segmented_control;
 mod select;
 mod slider;

@@ -40,6 +40,8 @@ pictogram-icons-phosphor = { version = "0.4", optional = true }
 pictogram-icons-tabler = { version = "0.4", optional = true }
 # `RepoButton` reads a host's JSON reply. Already in every graph through `dioxus-document`.
 serde_json = "1"
+# The rich text editor's `Doc`, the format of record. Already in the graph through dioxus.
+serde = { version = "1", features = ["derive"] }
 
 # Everything web-specific is wasm32-only, so a native build (`cargo test`, or
 # any future non-web renderer) compiles without it and the platform-backed
