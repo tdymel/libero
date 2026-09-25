@@ -56,7 +56,8 @@ impl SpotlightAction {
 }
 
 /// The default filter: a case-insensitive substring match on label, description
-/// and keywords, label hits first. An empty query returns everything.
+/// and keywords. Label hits rank first: exact, then prefix, then word start,
+/// then anywhere; ties keep their input order. An empty query returns everything.
 pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<SpotlightAction> {
     let query = query.trim().to_lowercase();
     if query.is_empty() {
@@ -64,12 +65,37 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
     }
     let hit = |text: &str| text.to_lowercase().contains(&query);
 
-    let (by_label, rest): (Vec<_>, Vec<_>) = actions.iter().partition(|action| hit(&action.label));
-    let by_other = rest.into_iter().filter(|action| {
-        action.description.as_deref().is_some_and(hit)
-            || action.keywords.iter().any(|keyword| hit(keyword))
-    });
-    by_label.into_iter().chain(by_other).cloned().collect()
+    let mut ranked: Vec<(u8, &SpotlightAction)> = actions
+        .iter()
+        .filter_map(|action| {
+            let rank = label_rank(&action.label.to_lowercase(), &query).or_else(|| {
+                (action.description.as_deref().is_some_and(hit)
+                    || action.keywords.iter().any(|keyword| hit(keyword)))
+                .then_some(4)
+            })?;
+            Some((rank, action))
+        })
+        .collect();
+    ranked.sort_by_key(|(rank, _)| *rank);
+    ranked
+        .into_iter()
+        .map(|(_, action)| action.clone())
+        .collect()
+}
+
+fn label_rank(label: &str, query: &str) -> Option<u8> {
+    if label == query {
+        Some(0)
+    } else if label.starts_with(query) {
+        Some(1)
+    } else if label
+        .match_indices(query)
+        .any(|(at, _)| !label[..at].ends_with(char::is_alphanumeric))
+    {
+        Some(2)
+    } else {
+        label.contains(query).then_some(3)
+    }
 }
 
 /// Regrouped by first appearance of `group`, then cut to `limit` rows in total,
@@ -130,6 +156,29 @@ mod tests {
         );
         assert_eq!(labels(&spotlight_filter("start", &fixture())), ["Home"]);
         assert!(spotlight_filter("nothing", &fixture()).is_empty());
+    }
+
+    #[test]
+    fn exact_and_prefix_label_hits_rank_above_substring_hits() {
+        let actions = vec![
+            SpotlightAction::new("Sortable"),
+            SpotlightAction::new("Data table"),
+            SpotlightAction::new("Tables guide"),
+            SpotlightAction::new("Grid").keywords(["table"]),
+            SpotlightAction::new("Table"),
+            SpotlightAction::new("Stable"),
+        ];
+        assert_eq!(
+            labels(&spotlight_filter("table", &actions)),
+            [
+                "Table",
+                "Tables guide",
+                "Data table",
+                "Sortable",
+                "Stable",
+                "Grid"
+            ]
+        );
     }
 
     #[test]

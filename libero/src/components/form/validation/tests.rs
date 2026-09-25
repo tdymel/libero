@@ -735,3 +735,38 @@ fn is_valid_follows_the_fields_without_revealing_them() {
     let after = settle(&mut dom);
     assert!(after.contains(">valid<"), "{after}");
 }
+
+#[test]
+fn a_field_shown_by_another_fields_value_only_validates_while_shown() {
+    fn app() -> Element {
+        let login = use_store(Login::default);
+        LOGIN.with(|cell| cell.set(Some(login)));
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: login,
+                    Spy {}
+                    TextField { name: crate::path!(Login => email) }
+                    if !login.read().email.is_empty() {
+                        TextField { name: crate::path!(Login => name), validate: [not_empty.error("Name needed")] }
+                    }
+                }
+            }
+        }
+    }
+    let has_errors =
+        |dom: &VirtualDom| dom.in_runtime(|| SCOPE.with(Cell::get).expect("mounted").has_errors());
+
+    let (mut dom, _) = mount(app);
+    let hidden = submit(&mut dom);
+    assert!(!hidden.contains("Name needed"), "{hidden}");
+    assert!(!has_errors(&dom), "a hidden field blocks the submit");
+
+    dom.in_runtime(|| login().write().email = "tom@libero.dev".into());
+    settle(&mut dom);
+    assert!(has_errors(&dom), "the shown field does not validate");
+
+    dom.in_runtime(|| login().write().email.clear());
+    settle(&mut dom);
+    assert!(!has_errors(&dom), "the field kept its error after hiding");
+}

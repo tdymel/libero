@@ -16,18 +16,20 @@ pub struct Signup {
     pub email: String,
     #[fields(nested)]
     pub password: NewPassword,
+    pub company: bool,
+    pub company_name: String,
     pub terms: bool,
 }
 
 // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
 const FORM_CODE: &str = r#"use dioxus::prelude::*;
-use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, not_empty};__IMPORTS__
+use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, not_empty};__IMPORTS____COMPANY_IMPORT__
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Signup {
     email: String,
     #[fields(nested)]
-    password: NewPassword,
+    password: NewPassword,__COMPANY_FIELDS__
     terms: bool,
 }
 
@@ -46,7 +48,7 @@ fn SignupForm() -> Element {
             onsubmit: move |_| sent.set(true),
             // A specialized field and a composed part, built in Getting started.
             EmailField { label: "Email", name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
-            NewPasswordFieldset { path: Signup::FIELDS.password() }
+            NewPasswordFieldset { path: Signup::FIELDS.password() }__COMPANY__
             Checkbox {
                 label: "I accept the terms",
                 name: Signup::FIELDS.terms(),
@@ -59,6 +61,18 @@ __BUTTONS__
         }
     }
 }"#;
+
+// snippet: ignore - spliced into `FORM_CODE`
+const COMPANY_FIELDS: &str = r#"
+            Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
+            // Rendered only while ticked, so its rules leave with it.
+            if signup.read().company {
+                TextField {
+                    label: "Company name",
+                    name: Signup::FIELDS.company_name(),
+                    validate: not_empty.error("Enter the company name."),
+                }
+            }"#;
 
 const SUBMIT_BUTTON: &str = r#"            Button { r#type: "submit", "Create account" }"#;
 
@@ -92,6 +106,13 @@ fn CheckButton() -> Element {
 fn form_code(values: &DemoValues, _: &str) -> String {
     let handle = values.str("form") == "true";
     let pick = |on: &'static str| if handle { on } else { "" };
+    let company = |on: &'static str| {
+        if values.str("company") == "true" {
+            on
+        } else {
+            ""
+        }
+    };
     let code = FORM_CODE
         .replace(
             "__SUMMARY__",
@@ -104,6 +125,15 @@ fn form_code(values: &DemoValues, _: &str) -> String {
             "__IMPORTS__",
             pick("\nuse libero::components::{Flex, use_form, use_form_context};"),
         )
+        .replace(
+            "__COMPANY_IMPORT__",
+            company("\nuse libero::components::TextField;"),
+        )
+        .replace(
+            "__COMPANY_FIELDS__",
+            company("\n    company: bool,\n    company_name: String,"),
+        )
+        .replace("__COMPANY__", company(COMPANY_FIELDS))
         .replace("__HANDLE__", pick("\n    let form = use_form();"))
         .replace("__FORM__", pick("\n            form,"))
         .replace(
@@ -191,6 +221,13 @@ pub fn FormPage() -> Element {
                     "The summary keeps the problems of that submit. A line leaves once it is fixed, "
                     "and new ones wait for the next submit."
                 }
+                Text {
+                    "A field shown only for some values is a plain "
+                    Code { source: "if" }
+                    " around it, as the company switch shows. Its rules leave with it, so a "
+                    "hidden field never blocks a submit. Its value stays in the store, and a "
+                    "rule on the whole form still runs, so check the condition there too."
+                }
             },
             // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
             Demo {
@@ -202,11 +239,13 @@ pub fn FormPage() -> Element {
                 controls: vec![
                     Control::switch("summary_title").code(silent),
                     Control::switch("form").code(silent),
+                    Control::switch("company").code(silent),
                 ],
                 render: move |values: DemoValues| rsx! {
                     SignupForm {
                         summary_title: values.str("summary_title") == "true",
                         handle: values.str("form") == "true",
+                        company: values.str("company") == "true",
                     }
                 },
             }
@@ -215,7 +254,7 @@ pub fn FormPage() -> Element {
 }
 
 #[component]
-fn SignupForm(summary_title: bool, handle: bool) -> Element {
+fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
     let signup = use_store(Signup::default);
     let mut sent = use_signal(|| false);
     // Always made, so the hook order holds; the form only gets it while the
@@ -234,6 +273,16 @@ fn SignupForm(summary_title: bool, handle: bool) -> Element {
             onsubmit: move |_| sent.set(true),
             EmailField { label: "Email", name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             NewPasswordFieldset { path: Signup::FIELDS.password() }
+            if company {
+                Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
+                if signup.read().company {
+                    TextField {
+                        label: "Company name",
+                        name: Signup::FIELDS.company_name(),
+                        validate: not_empty.error("Enter the company name."),
+                    }
+                }
+            }
             Checkbox {
                 label: "I accept the terms",
                 name: Signup::FIELDS.terms(),

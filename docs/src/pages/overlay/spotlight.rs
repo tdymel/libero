@@ -417,7 +417,8 @@ pub fn SpotlightPage() -> Element {
                     " is called with the query and returns the rows, so a fixed list and "
                     "search results are the same prop. "
                     Code { source: "spotlight_filter" }
-                    " covers the common case, with label hits first."
+                    " covers the common case. Label hits come first, exact and prefix matches "
+                    "before matches inside a word, so \"table\" puts Table above Sortable."
                 }
                 Text {
                     "The hotkey here is J or P, because this site's search owns "

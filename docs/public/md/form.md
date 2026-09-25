@@ -103,6 +103,22 @@ fn CheckButton() -> Element {
 }
 ```
 
+A field shown only for some values is a plain `if` around it. Its rules leave
+with it, so a hidden field never blocks a submit. Its value stays in the store,
+and a rule on the whole form still runs, so check the condition there too.
+
+```rust,ignore
+Checkbox { label: "Sign up as a company", name: Signup::FIELDS.company() }
+// Rendered only while ticked, so its rules leave with it.
+if signup.read().company {
+    TextField {
+        label: "Company name",
+        name: Signup::FIELDS.company_name(),
+        validate: not_empty.error("Enter the company name."),
+    }
+}
+```
+
 ## Props
 
 ### `Form`

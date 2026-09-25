@@ -9,7 +9,9 @@ Description: A command palette. A modal search box over your actions, with group
 A command palette, a modal search box over a list of actions. `use_spotlight`
 returns a `Copy` handle, like `use_modal`. `actions` is called with the query
 and returns the rows, so a fixed list and search results are the same prop.
-`spotlight_filter` covers the common case, with label hits first.
+`spotlight_filter` covers the common case. Label hits come first, exact and
+prefix matches before matches inside a word, so "table" puts Table above
+Sortable.
 
 Rows with a `group` are drawn under its header, groups in the order they first
 appear. A `shortcut` on an action is a hint, drawn as one `Kbd` per key, and
