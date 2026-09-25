@@ -169,6 +169,7 @@ pub(crate) fn Outlet() -> Element {
     use_hook(|| {
         webview::watch_focus();
         webview::guard_typed_values();
+        webview::guard_defaults();
     });
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
     return rsx! {};
@@ -515,8 +516,8 @@ pub(crate) fn fit_pasted(value: String) -> String {
     blitz::fit_pasted(value)
 }
 
-/// Only Blitz, which has no pointer capture - see
-/// [`follow_pointer`](crate::platform::follow_pointer).
+/// Blitz, which has no pointer capture, and a WebView, whose handles reach no
+/// element - see [`follow_pointer`](crate::platform::follow_pointer).
 pub(crate) fn follow_pointer(
     event: &Event<PointerData>,
     capture: &Rc<MountedData>,
@@ -525,7 +526,12 @@ pub(crate) fn follow_pointer(
 ) {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     blitz::follow_pointer(event, capture, onmove, onup);
-    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    {
+        let _ = (capture, onmove, onup);
+        webview::follow_pointer(event);
+    }
+    #[cfg(target_arch = "wasm32")]
     let _ = (event, capture, onmove, onup);
 }
 

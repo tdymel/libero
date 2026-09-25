@@ -144,8 +144,7 @@ async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_vertical_swipe_over_a_vertical_divider_scrolls_the_page_and_a_sideways_drag_moves_it,
     "/splitter/scroll",
-    a_swipe_scrolls,
-    desktop: skip("1179: no pointer capture on the WebView, a release off the divider is lost")
+    a_swipe_scrolls
 );
 
 #[test]

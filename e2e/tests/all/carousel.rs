@@ -98,6 +98,7 @@ const INDEX: &str = "[...document.querySelectorAll('[aria-roledescription=slide]
                      .findIndex(el => el.hasAttribute('data-current'))";
 
 const FIRST_CURRENT: &str = "[aria-roledescription=slide]:nth-of-type(1)[data-current]";
+const FIRST_SLIDE: &str = "[aria-roledescription=slide]:nth-of-type(1)";
 
 async fn an_arrow_on_the_track_moves<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(TRACK).await?;
@@ -122,6 +123,23 @@ async fn an_arrow_in_a_field_stays<D: Driver>(d: &mut D, field: &str) -> Result<
     Ok(())
 }
 
+/// Todo 1178: with the caret at the field's end, WebKitGTK scrolled the track on an
+/// ArrowRight the caret could not follow.
+async fn an_arrow_at_the_fields_end_stays<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TEXT).await?;
+    d.press(keyboard::END).await?;
+    let before = d.rect(FIRST_SLIDE).await?.x;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    linger(d, 10).await;
+    let after = d.rect(FIRST_SLIDE).await?.x;
+    ensure!(
+        (after - before).abs() < 1.0 && d.is_focused(TEXT).await?,
+        "{:?}: an ArrowRight at the field's end scrolled the track from {before} to {after}",
+        d.platform()
+    );
+    Ok(())
+}
+
 async fn an_arrow_in_the_text_field_stays<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     an_arrow_in_a_field_stays(d, TEXT).await
 }
@@ -138,8 +156,12 @@ e2e::scenario!(
 e2e::scenario!(
     an_arrow_in_a_text_field_stays_in_the_field,
     "/carousel",
-    an_arrow_in_the_text_field_stays,
-    desktop: skip("1178:WebKitGTK scrolls the track on an arrow in the field")
+    an_arrow_in_the_text_field_stays
+);
+e2e::scenario!(
+    an_arrow_at_a_text_fields_end_leaves_the_track,
+    "/carousel",
+    an_arrow_at_the_fields_end_stays
 );
 e2e::scenario!(
     an_arrow_on_a_range_stays_on_the_range,

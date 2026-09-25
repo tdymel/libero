@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::core::{Runtime, ScopeId, Task, spawn_forever};
 use dioxus::document::{Document, Eval, NoOpDocument};
-use dioxus::prelude::{Key, Modifiers, spawn};
+use dioxus::prelude::{Event, Key, Modifiers, PointerData, spawn};
 use serde_json::{Value, json};
 
 use crate::platform::a11y_media::{
@@ -519,6 +519,8 @@ struct PageState {
     watching_focus: Cell<bool>,
     /// Whether [`guard_typed_values`] ran on this page.
     guarding_values: Cell<bool>,
+    /// Whether [`guard_defaults`] ran on this page.
+    guarding_defaults: Cell<bool>,
 }
 
 /// The focused element as the page last reported it: tag, `type`, editable, RTL.
@@ -1010,6 +1012,77 @@ pub(super) fn set_value_by_id(id: &str, value: &str) -> Result<(), PlatformError
         if (el && el.value !== value) el.value = value;",
     );
     Ok(())
+}
+
+/// Records each pointer's pressed element for [`follow_pointer`]. A followed release
+/// 4px or more from its press swallows its click: the web's capture on the drag root
+/// sends that click to the root, never to the pressed handle.
+const RECORD_PRESSES: &str = "const pressed = window.__lsxPressed = new Map();
+    window.addEventListener('pointerdown', (event) => {
+        pressed.set(event.pointerId, [event.target, event.clientX, event.clientY]);
+    }, { capture: true });
+    const release = (event) => {
+        const [, x, y, followed] = pressed.get(event.pointerId) ?? [];
+        pressed.delete(event.pointerId);
+        if (event.type !== 'pointerup' || !followed
+            || Math.hypot(event.clientX - x, event.clientY - y) < 4) return;
+        const swallow = (click) => { click.stopPropagation(); click.preventDefault(); };
+        window.addEventListener('click', swallow, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener('click', swallow, { capture: true }));
+    };
+    window.addEventListener('pointerup', release);
+    window.addEventListener('pointercancel', release);";
+
+/// WebKitGTK scrolls the nearest scroller on an arrow the caret cannot follow past a
+/// field's edge; browsers do not (1178). Bubble phase, after every handler's say.
+#[cfg(not(target_os = "android"))]
+const ARROW_EDGES: &str = "window.addEventListener('keydown', (event) => {
+        if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey
+            || event.metaKey || event.shiftKey) return;
+        const el = event.target;
+        const area = el instanceof HTMLTextAreaElement;
+        if (!area && !(el instanceof HTMLInputElement)) return;
+        const { selectionStart: start, selectionEnd: end } = el;
+        if (start == null || start !== end) return;
+        const rtl = getComputedStyle(el).direction === 'rtl';
+        const [first, last] = [start === 0, end === el.value.length];
+        const edge = {
+            ArrowLeft: rtl ? last : first,
+            ArrowRight: rtl ? first : last,
+            ArrowUp: !area && first,
+            ArrowDown: !area && last,
+        }[event.key];
+        if (edge) event.preventDefault();
+    });";
+
+/// Fills in WebView defaults that differ from a browser's, once a page.
+pub(super) fn guard_defaults() {
+    if !runs_scripts() {
+        return;
+    }
+    if let Some(page) = page()
+        && !page.guarding_defaults.replace(true)
+    {
+        eval(RECORD_PRESSES);
+        #[cfg(not(target_os = "android"))]
+        eval(ARROW_EDGES);
+    }
+}
+
+/// Captures the pointer on its pressed element, inside the drag's own, so moves and
+/// the release still bubble there (1179). A release before the eval lands is ignored.
+pub(super) fn follow_pointer(event: &Event<PointerData>) {
+    if !runs_scripts() {
+        return;
+    }
+    eval_with(
+        json!(event.pointer_id()),
+        "const press = window.__lsxPressed?.get(data);
+        const el = press?.[0];
+        if (el?.isConnected && !el.hasPointerCapture(data)) {
+            try { el.setPointerCapture(data); press[3] = true; } catch {}
+        }",
+    );
 }
 
 fn focused() -> Focused {

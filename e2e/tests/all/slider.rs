@@ -150,8 +150,33 @@ async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_vertical_swipe_scrolls_the_page_and_a_sideways_drag_or_a_tap_moves_it,
     "/slider/scroll",
-    a_swipe_scrolls,
-    desktop: skip("1179: no pointer capture on the WebView, a release off the thumb is lost")
+    a_swipe_scrolls
+);
+
+/// Todo 1179: a drag released past the track's end still tracks to the max and
+/// ends there; a later hover moves nothing.
+async fn a_release_outside_ends<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let max = d
+        .attr(SCROLL_THUMB, "aria-valuemax")
+        .await?
+        .unwrap_or_default();
+    d.drag(SCROLL_THUMB, 400.0, 60.0).await?;
+    eventually_text(d, "#slider-end", &max, "a release past the end").await?;
+    d.hover(RANGE_THUMB).await?;
+    linger(d, 8).await;
+    let value = d.attr(SCROLL_THUMB, "aria-valuenow").await?;
+    ensure!(
+        value.as_deref() == Some(max.as_str()),
+        "a hover after the release moved it to {value:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_drag_released_past_the_end_tracks_and_ends,
+    "/slider/scroll",
+    a_release_outside_ends,
+    android: skip("1179: not yet run on the emulator")
 );
 
 /// Todo 483: the label focuses the thumb it names by id.

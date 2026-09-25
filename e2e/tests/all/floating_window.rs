@@ -917,8 +917,7 @@ async fn a_resize_beats_the_callers_size<D: Driver>(d: &mut D, _route: &str) -> 
 e2e::scenario!(
     a_resize_wins_over_the_callers_sx_size,
     "/floating-window-sized",
-    a_resize_beats_the_callers_size,
-    desktop: skip("1179: no pointer capture on the WebView, the drag loses the separator")
+    a_resize_beats_the_callers_size
 );
 e2e::scenario!(
     enter_opens_it_with_focus_inside_and_escape_hands_it_back,
