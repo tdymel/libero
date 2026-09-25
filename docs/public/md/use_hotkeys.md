@@ -117,3 +117,5 @@ that parses to no key is ignored.
 ### Limits
 
 - A WebView prevents a chord's default action only from the second press of it.
+- `within` does not count a libero popup opened inside the element, such as a
+  `Menu`, which portals out: add its element too, `.within(editor).within(popup)`.
