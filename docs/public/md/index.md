@@ -168,6 +168,7 @@ fetch only the file you need.
 - [History](use_history.md): Undo and redo over snapshots of a value, with rapid changes grouped into one step by time or size.
 - [Hotkeys](use_hotkeys.md): Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked.
 - [Media query](use_media_query.md): Whether a CSS media query or the 768px mobile breakpoint matches, live.
+- [Geolocation](use_geolocation.md): The device's position, once or followed, with the location permission; never prompts on mount.
 - [Theme set](use_theme_set.md): Reads and swaps the active theme set, which a theme picker is built on.
 - [Stylesheet](use_stylesheet.md): Registers a stylesheet of your own above every libero layer and returns its class.
 

@@ -165,6 +165,11 @@ fn run_on(
         "dx/e2e-fixtures/{profile}/android/app/app/build/outputs/apk/debug/app-debug.apk"
     ));
     adb(serial, &["install", "-r", &apk.to_string_lossy()])?;
+    // `use_geolocation`: no driver answers wry's runtime dialog, so grant up front.
+    for permission in ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"] {
+        let permission = format!("android.permission.{permission}");
+        adb(serial, &["shell", "pm", "grant", PACKAGE, &permission])?;
+    }
 
     // libtest ORs its filters, so the `android` tests matching any of them are
     // named one by one, `--exact`. An `android: skip(...)` is left out.

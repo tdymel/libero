@@ -6,3 +6,7 @@ title = "libero e2e fixtures"
 [android]
 # The package the e2e runner installs, launches and forwards CDP to (964).
 identifier = "dev.libero.fixtures"
+
+# `use_geolocation`'s fixture; the runner grants it before launch.
+[permissions]
+location = { precision = "fine", description = "The geolocation fixture" }

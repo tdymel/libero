@@ -18,6 +18,7 @@ mod eye_dropper;
 mod file_dialog;
 mod focus;
 mod form;
+mod geolocation;
 mod http;
 mod intersection;
 mod keyboard;
@@ -25,6 +26,7 @@ mod max_length;
 mod media_query;
 mod motion;
 mod paint;
+mod permission;
 mod placeholder;
 mod press;
 mod regex;
@@ -68,6 +70,8 @@ pub(crate) use focus::{
     focus_entered_from, focus_is_in, focus_pressed, focus_selectors, focus_visible, silent_focus,
 };
 pub(crate) use form::{lifts_legends, submit_event, submit_listeners};
+pub(crate) use geolocation::{Fix, GeolocationSubscription, geolocation};
+pub use geolocation::{GeolocationError, GeolocationOptions, Position};
 pub(crate) use http::fetch_text;
 pub(crate) use intersection::{
     OBSERVE_ATTR, OWNER_ATTR, computed_px_by_tag, next_observe_tag, observes_by_tag,
@@ -89,6 +93,8 @@ pub(crate) use paint::{
     aligns_logical_text, clips_background_to_text, colors_form_controls, draws_backdrop_filter,
     fires_image_errors, fits_svg_images, paints_outer_inline_backgrounds,
 };
+pub use permission::PermissionState;
+pub(crate) use permission::{PermissionKind, PermissionSubscription, permission};
 pub(crate) use placeholder::{
     PLACEHOLDER_ATTR, PLACEHOLDER_CELL_ATTR, PLACEHOLDER_SHOWN_ATTR, draws_placeholders,
     placeholder_drawn,

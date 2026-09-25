@@ -54,6 +54,7 @@ mod flex;
 mod float;
 mod floating_window;
 mod focus_trap;
+mod geolocation;
 mod grid;
 mod header;
 mod hover_card;

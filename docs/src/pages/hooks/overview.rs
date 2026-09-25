@@ -118,6 +118,11 @@ fn hooks() -> Vec<HookRow> {
             Route::UseMediaQueryPage {},
         ),
         row(
+            "use_geolocation",
+            "The device's position, once or followed, and the location permission.",
+            Route::UseGeolocationPage {},
+        ),
+        row(
             "use_theme",
             "The active theme, for values CSS cannot carry.",
             Route::ThemingPage {},

@@ -153,6 +153,7 @@ md_pages! {
     UseDrag => "use_drag",
     UseElement => "use_element",
     UseFocusReturn => "use_focus_return",
+    UseGeolocation => "use_geolocation",
     UseHistory => "use_history",
     UseHotkeys => "use_hotkeys",
     UseId => "use_id",

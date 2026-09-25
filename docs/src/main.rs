@@ -89,6 +89,8 @@ pub(crate) enum Route {
     UseHotkeysPage {},
     #[route("/hooks/use-media-query")]
     UseMediaQueryPage {},
+    #[route("/hooks/use-geolocation")]
+    UseGeolocationPage {},
     #[route("/hooks/use-theme-set")]
     UseThemeSetPage {},
     #[route("/hooks/use-stylesheet")]

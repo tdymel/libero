@@ -197,6 +197,13 @@ fn aliases(label: &str) -> &'static [&'static str] {
         "Drag" => &["use_drag", "pointer"],
         "Intersection" => &["use_intersection", "use_in_viewport", "viewport", "visible"],
         "Long press" => &["use_long_press", "hold"],
+        "Geolocation" => &[
+            "use_geolocation",
+            "location",
+            "gps",
+            "position",
+            "permission",
+        ],
         "Timers" => &["use_timeout", "use_interval", "setTimeout", "setInterval"],
         "Debounce and throttle" => &[
             "use_debounced_value",
@@ -436,6 +443,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseHistoryPage {}, "History"),
                 page(Route::UseHotkeysPage {}, "Hotkeys"),
                 page(Route::UseMediaQueryPage {}, "Media query"),
+                page(Route::UseGeolocationPage {}, "Geolocation"),
                 page(Route::UseThemeSetPage {}, "Theme set"),
                 page(Route::UseStylesheetPage {}, "Stylesheet"),
             ],

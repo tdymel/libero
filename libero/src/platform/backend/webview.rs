@@ -24,7 +24,12 @@ use crate::platform::{
     PressSubscription, Read, ScrollApi, ScrollSubscription,
     clipboard::{ClipboardApi, Write},
     file_dialog::{FileDialogApi, Picked, held_file},
+    geolocation::{
+        Fix, GeolocationApi, GeolocationError, GeolocationOptions, GeolocationSubscription, Locate,
+        Position,
+    },
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
+    permission::{PermissionApi, PermissionKind, PermissionState, PermissionSubscription},
 };
 use crate::tokens::{
     AccessibilityPreferences, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting, Contrast,
@@ -416,6 +421,10 @@ impl PressSubscription for WebViewListener {}
 
 impl MediaQuerySubscription for WebViewListener {}
 
+impl GeolocationSubscription for WebViewListener {}
+
+impl PermissionSubscription for WebViewListener {}
+
 impl Drop for WebViewListener {
     fn drop(&mut self) {
         self.task.cancel();
@@ -453,6 +462,193 @@ impl ClipboardApi for WebViewClipboard {
                 Ok(false) => Err(PlatformError::Denied),
                 Err(_) => Err(PlatformError::Unsupported),
             }
+        })
+    }
+}
+
+pub(crate) fn geolocation() -> Option<&'static dyn GeolocationApi> {
+    runs_scripts().then_some(&GEOLOCATION as &'static dyn GeolocationApi)
+}
+
+pub(crate) fn permission() -> Option<&'static dyn PermissionApi> {
+    runs_scripts().then_some(&PERMISSIONS as &'static dyn PermissionApi)
+}
+
+struct WebViewGeolocation;
+
+static GEOLOCATION: WebViewGeolocation = WebViewGeolocation;
+
+/// `send` gets a fix's fields, or `{ error: code }`; code 0 = no Geolocation API.
+const GEOLOCATION_SEND: &str = "const send = (answer) => dioxus.send(answer);
+    const fix = (p) => send({
+        latitude: p.coords.latitude, longitude: p.coords.longitude, accuracy: p.coords.accuracy,
+        altitude: p.coords.altitude, altitude_accuracy: p.coords.altitudeAccuracy,
+        heading: Number.isFinite(p.coords.heading) ? p.coords.heading : null,
+        speed: p.coords.speed, timestamp_ms: p.timestamp,
+    });
+    const fail = (error) => send({ error: error?.code ?? 2 });
+    const geolocation = navigator.geolocation;
+    if (!geolocation) send({ error: 0 });";
+
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum GeolocationAnswer {
+    Fix {
+        latitude: f64,
+        longitude: f64,
+        accuracy: f64,
+        altitude: Option<f64>,
+        altitude_accuracy: Option<f64>,
+        heading: Option<f64>,
+        speed: Option<f64>,
+        timestamp_ms: f64,
+    },
+    Error {
+        error: u16,
+    },
+}
+
+impl From<GeolocationAnswer> for Fix {
+    fn from(answer: GeolocationAnswer) -> Self {
+        match answer {
+            GeolocationAnswer::Fix {
+                latitude,
+                longitude,
+                accuracy,
+                altitude,
+                altitude_accuracy,
+                heading,
+                speed,
+                timestamp_ms,
+            } => Ok(Position {
+                latitude,
+                longitude,
+                accuracy,
+                altitude,
+                altitude_accuracy,
+                heading,
+                speed,
+                timestamp_ms,
+            }),
+            GeolocationAnswer::Error { error: 0 } => Err(GeolocationError::Unsupported),
+            GeolocationAnswer::Error { error } => Err(GeolocationError::from_code(error)),
+        }
+    }
+}
+
+fn position_options(options: GeolocationOptions) -> Value {
+    let mut value = json!({
+        "enableHighAccuracy": options.high_accuracy,
+        "maximumAge": options.max_age.as_millis() as u64,
+    });
+    if let Some(timeout) = options.timeout {
+        value["timeout"] = json!(timeout.as_millis() as u64);
+    }
+    value
+}
+
+impl GeolocationApi for WebViewGeolocation {
+    /// Answers by `send` from a parked script, not `join`: a prompt can outlast
+    /// [`CHANNEL_HOLD_MS`], and the parked script keeps its channel alive.
+    fn current(&self, options: GeolocationOptions) -> Locate {
+        let slot = Slot::new();
+        let script = eval_with(
+            position_options(options),
+            &format!(
+                "{GEOLOCATION_SEND}
+                else geolocation.getCurrentPosition(fix, fail, data);
+                {}",
+                slot.park("")
+            ),
+        );
+        Box::pin(async move {
+            let mut script = script;
+            let answer = script.recv::<GeolocationAnswer>().await;
+            drop(slot);
+            answer.map_or(Err(GeolocationError::Unsupported), Fix::from)
+        })
+    }
+
+    fn watch(
+        &self,
+        options: GeolocationOptions,
+        callback: Box<dyn Fn(Fix)>,
+    ) -> Box<dyn GeolocationSubscription> {
+        let slot = Slot::new();
+        let script = eval_with(
+            position_options(options),
+            &format!(
+                "{GEOLOCATION_SEND}
+                const id = geolocation?.watchPosition(fix, fail, data);
+                {}
+                if (id !== undefined) geolocation.clearWatch(id);",
+                slot.park("")
+            ),
+        );
+        let task = spawn(async move {
+            let mut script = script;
+            while let Ok(answer) = script.recv::<GeolocationAnswer>().await {
+                callback(answer.into());
+            }
+        });
+        Box::new(WebViewListener {
+            task,
+            _slot: Rc::new(slot),
+        })
+    }
+}
+
+struct WebViewPermissions;
+
+static PERMISSIONS: WebViewPermissions = WebViewPermissions;
+
+/// Binds `status`, `null` where the query rejects or the WebView has no Permissions API.
+const PERMISSION_STATUS: &str = "let status = null;
+    try { status = await navigator.permissions.query({ name: data }); } catch (error) {}";
+
+impl PermissionApi for WebViewPermissions {
+    fn query(&self, kind: PermissionKind) -> Read<PermissionState> {
+        let read = eval_with(
+            json!(kind.name()),
+            &format!("{PERMISSION_STATUS}\nreturn status?.state ?? null;"),
+        );
+        Box::pin(async move {
+            let state = read.join::<Option<String>>().await.ok().flatten();
+            Ok(state.map_or(PermissionState::Unknown, |state| {
+                PermissionState::from_name(&state)
+            }))
+        })
+    }
+
+    fn on_change(
+        &self,
+        kind: PermissionKind,
+        callback: Box<dyn Fn(PermissionState)>,
+    ) -> Box<dyn PermissionSubscription> {
+        let slot = Slot::new();
+        let script = eval_with(
+            json!(kind.name()),
+            &format!(
+                "{PERMISSION_STATUS}
+                const send = () => dioxus.send(status?.state ?? null);
+                send();
+                status?.addEventListener('change', send);
+                {}
+                status?.removeEventListener('change', send);",
+                slot.park("")
+            ),
+        );
+        let task = spawn(async move {
+            let mut script = script;
+            while let Ok(state) = script.recv::<Option<String>>().await {
+                callback(state.map_or(PermissionState::Unknown, |state| {
+                    PermissionState::from_name(&state)
+                }));
+            }
+        });
+        Box::new(WebViewListener {
+            task,
+            _slot: Rc::new(slot),
         })
     }
 }

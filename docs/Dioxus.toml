@@ -24,3 +24,10 @@ title = "libero"
 # `dx` otherwise makes one up (`com.example.docs`), and it ends up baked into
 # the generated gradle project, the APK and the emulator's package list.
 identifier = "dev.libero.docs"
+
+# The capture and location demos (1220, 1221); an app without the manifest
+# entry is denied at once, with no prompt.
+[permissions]
+location = { precision = "fine", description = "Shows your position in the location demo" }
+camera = { description = "Shows your camera in the capture demo" }
+microphone = { description = "Records your voice in the capture demo" }

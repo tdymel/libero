@@ -117,6 +117,7 @@ mod transition;
 mod tree;
 mod typography;
 mod use_accessibility;
+mod use_geolocation;
 mod use_hotkeys;
 mod use_intersection;
 mod use_long_press;
@@ -242,6 +243,7 @@ const FIXTURES: &[Routes] = &[
     tree::ROUTES,
     typography::ROUTES,
     use_accessibility::ROUTES,
+    use_geolocation::ROUTES,
     use_hotkeys::ROUTES,
     use_intersection::ROUTES,
     use_long_press::ROUTES,

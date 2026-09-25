@@ -32,6 +32,7 @@ guide page they belong to.
 | `use_hotkeys` | Runs a handler on a keyboard shortcut, from anywhere in the page. | [Hotkeys](use_hotkeys.md) |
 | `use_media_query` | Whether a CSS media query matches, live. | [Media query](use_media_query.md) |
 | `use_is_mobile` | Whether the viewport is narrower than 768px, live. | [Media query](use_media_query.md) |
+| `use_geolocation` | The device's position, once or followed, and the location permission. | [Geolocation](use_geolocation.md) |
 | `use_theme` | The active theme, for values CSS cannot carry. | [Theming](theming.md) |
 | `use_theme_set` | Reads and swaps the active theme set. | [Theme set](use_theme_set.md) |
 | `use_localization` | The words libero's components say, in the active language. | [Localization](localization.md) |
