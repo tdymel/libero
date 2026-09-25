@@ -14,6 +14,7 @@ mod fieldset;
 mod file_field;
 mod form;
 mod handle;
+mod image_cropper;
 mod native_select;
 mod number_field;
 mod password_field;
@@ -65,6 +66,9 @@ pub use fieldset::{Fieldset, FieldsetPart, FieldsetProps};
 pub use file_field::{FileField, FileFieldPart, FileFieldProps, Files};
 pub use form::{Form, FormPart, FormProps, FormValue};
 pub use handle::{FormHandle, use_form, use_form_context};
+pub use image_cropper::{
+    CropOptions, CropRect, CropShape, ImageCropper, ImageCropperPart, ImageCropperProps, PixelRect,
+};
 pub use native_select::{NativeSelect, NativeSelectProps};
 pub use number_field::{NumberField, NumberFieldProps};
 pub use password_field::{PasswordField, PasswordFieldProps};

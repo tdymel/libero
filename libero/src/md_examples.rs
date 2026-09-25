@@ -84,6 +84,7 @@ md_pages! {
     IconProvider => "icon_provider",
     Hooks => "hooks",
     Image => "image",
+    ImageCropper => "image_cropper",
     ImageList => "image_list",
     Index => "index",
     Indicator => "indicator",

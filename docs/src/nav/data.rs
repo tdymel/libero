@@ -330,6 +330,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ChronoFieldPage {}, "ChronoField"),
                 page(Route::ChronoPickerPage {}, "ChronoPicker"),
                 page(Route::FileFieldPage {}, "FileField"),
+                page(Route::ImageCropperPage {}, "ImageCropper"),
             ],
         ),
         // Links, then section switchers, then step and tree navigation.

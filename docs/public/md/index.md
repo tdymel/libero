@@ -82,6 +82,7 @@ fetch only the file you need.
 - [ChronoField](chrono_field.md): A text field for every date and time value, typed leniently, with the matching `ChronoPicker` in a dropdown.
 - [ChronoPicker](chrono_picker.md): One picker for every date and time value, from days, months and years to times, date-times and ranges of them.
 - [FileField](file_field.md): Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
+- [ImageCropper](image_cropper.md): A box with handles over an image, picking the part to keep by drag or arrow keys, free or at a fixed aspect, with a rect or circle mask.
 
 ## Navigation
 

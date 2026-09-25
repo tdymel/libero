@@ -113,7 +113,7 @@ fn files_on_disk() -> Vec<String> {
 
 /// Enter, over, drop: what the browser sends for an OS file dragged onto the
 /// surface. Trusted events, unlike a `DataTransfer` built in the page.
-async fn drop_files(page: &Page, selector: &str, files: Vec<String>) {
+pub(crate) async fn drop_files(page: &Page, selector: &str, files: Vec<String>) {
     let at = pointer::centre_of(page, selector).await.unwrap();
     drop_files_at(page, at.x, at.y, files).await;
 }

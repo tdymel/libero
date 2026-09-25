@@ -62,6 +62,19 @@ fn Demo() -> Element {
 }
 ```
 
+`crop` cuts a picked image before the field takes it, here to a square of at
+most 512 px. [ImageCropper](image_cropper.md) explains the dialog's cropper:
+
+```rust,ignore
+FileField {
+    label: "Avatar",
+    accept: "image/*",
+    crop: CropOptions { aspect: Some(1.0), max_size: Some(512), ..Default::default() },
+    value: avatar(),
+    onchange: move |picked: Files| avatar.set(picked),
+}
+```
+
 ## Props
 
 ### `FileField`
@@ -76,6 +89,8 @@ fn Demo() -> Element {
 | `placeholder` | `String` | - | Shown while nothing is picked. It is the dropzone's prompt when `children` is empty. With neither, the localization's `file_field.drop_file` or `drop_files`. |
 | `clearable` | `bool` | `true` | Shows an x that empties the field. |
 | `loading` | `bool` | `false` | Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that. |
+| `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first: Apply hands `onchange` the cut file, Cancel drops it. Under Blitz the field keeps the whole file. Ignored on a `multiple` field. |
+| `oncrop` | `EventHandler<CropRect>` | - | The box picked in the crop dialog, before the cut file reaches `onchange`. |
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | `Chip`, or the file name | Draws one picked file, remove control included. `args.remove` removes it. |
 | `name` | `FieldName<Files>` | - | What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`. |
 | `onchange` | `EventHandler<Files>` | - | Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick carries only the new files, so a `multiple` field that collects files merges them in its handler. |

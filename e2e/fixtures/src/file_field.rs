@@ -1,7 +1,7 @@
 //! `FileField`, as a dropzone taking several files.
 
 use dioxus::prelude::*;
-use libero::components::{Button, FileField, Files, Flex};
+use libero::components::{Button, CropOptions, CropRect, FileField, Files, Flex};
 
 use crate::Routes;
 
@@ -11,7 +11,61 @@ pub const ROUTES: Routes = &[
     ("/file-field/states", || rsx! { FileStatesPage {} }),
     ("/file-field/modes", || rsx! { FileModesPage {} }),
     ("/file-field/pick", || rsx! { FilePickPage {} }),
+    ("/file-field/crop", || rsx! { FileCropPage {} }),
 ];
+
+/// A square crop of a dropped image (1218): `#rect` reads the crop in whole
+/// percent, `#out` the file `onchange` got, with its PNG size.
+#[component]
+fn FileCropPage() -> Element {
+    let mut files = use_signal(Files::default);
+    let mut rect = use_signal(String::new);
+    let mut out = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            FileField {
+                id: "avatar",
+                label: "Avatar",
+                variant: "dropzone",
+                accept: "image/*",
+                crop: CropOptions { aspect: Some(1.0), max_size: Some(16), ..CropOptions::default() },
+                value: files(),
+                oncrop: move |crop: CropRect| {
+                    let percent = |fraction: f64| (fraction * 100.0).round();
+                    rect.set(format!(
+                        "{},{},{},{}",
+                        percent(crop.x),
+                        percent(crop.y),
+                        percent(crop.width),
+                        percent(crop.height)
+                    ));
+                },
+                onchange: move |next: Files| {
+                    if let Some(file) = next.one() {
+                        spawn(async move {
+                            let bytes = file.read_bytes().await.unwrap_or_default();
+                            // A PNG's IHDR: width and height, big-endian, from byte 16.
+                            let size = |at: usize| {
+                                bytes.get(at..at + 4).map_or(0, |b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]))
+                            };
+                            out.set(format!(
+                                "{} {} {}x{}",
+                                file.name(),
+                                file.content_type().unwrap_or_default(),
+                                size(16),
+                                size(20)
+                            ));
+                        });
+                    }
+                    files.set(next);
+                },
+            }
+            p { id: "rect", "{rect}" }
+            p { id: "out", "{out}" }
+        }
+    }
+}
 
 /// One file from the chooser, whose text shows once read: the bytes arrived.
 #[component]

@@ -1,0 +1,15 @@
+---
+source: e2e/src/suite.rs
+description: image_cropper at desktop (rest)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+image "A sun on blue"
+slider "Crop area" = 25 [valuemax=100] [valuemin=0]
+slider "Top left corner" = 50 [valuemax=100] [valuemin=0]
+slider "Top right corner" = 50 [valuemax=100] [valuemin=0]
+slider "Bottom right corner" = 50 [valuemax=100] [valuemin=0]
+slider "Bottom left corner" = 50 [valuemax=100] [valuemin=0]
+paragraph
+  StaticText "25,25,50,50"

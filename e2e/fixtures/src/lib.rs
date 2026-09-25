@@ -57,6 +57,7 @@ mod hover_card;
 mod icon;
 mod icon_provider;
 mod image;
+mod image_cropper;
 mod image_list;
 mod layout;
 mod lightbox;
@@ -168,6 +169,7 @@ const FIXTURES: &[Routes] = &[
     field_parts::ROUTES,
     field_value::ROUTES,
     file_field::ROUTES,
+    image_cropper::ROUTES,
     floating_window::ROUTES,
     flows::ROUTES,
     focus_contrast::ROUTES,

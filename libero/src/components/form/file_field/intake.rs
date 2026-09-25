@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use crate::{components::form::Setter, hooks::ElementHandle, platform::ElementApi, utils::warn};
 
 use super::accept::accepts;
+use super::crop::croppable;
 use super::files::Files;
 use super::rows::FocusDebt;
 
@@ -14,6 +15,8 @@ pub(super) struct Taking {
     pub(super) accept: String,
     pub(super) multiple: bool,
     pub(super) editable: bool,
+    /// Set with `crop`: a croppable pick waits here for the crop dialog.
+    pub(super) crop: Option<Signal<Option<FileData>>>,
 }
 
 /// The one writer, and the focus debt every edit through it leaves.
@@ -33,6 +36,7 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
         accept,
         multiple,
         editable,
+        crop,
     } = taking;
 
     let emit = use_callback(move |files: Files| match (&onchange, &setter) {
@@ -48,7 +52,11 @@ pub(super) fn use_file_intake(taking: Taking) -> Intake {
             return;
         }
         let kept = keep_accepted(files, &accept, multiple);
-        if !kept.is_empty() {
+        if let Some(mut pending) = crop
+            && let Some(file) = croppable(&kept)
+        {
+            pending.set(Some(file));
+        } else if !kept.is_empty() {
             owed.set(Some(FocusDebt::Took));
             emit.call(kept);
         }

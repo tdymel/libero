@@ -1,0 +1,198 @@
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::site::SAMPLE_IMAGE;
+use dioxus::prelude::*;
+use libero::components::{Code, CropRect, CropShape, Flex, ImageCropper, ImageCropperPart, Text};
+
+/// `SAMPLE_IMAGE` is 16:9.
+const SAMPLE_RATIO: f64 = 16.0 / 9.0;
+
+fn aspect_of(values: &DemoValues) -> Option<f64> {
+    match values.str("aspect").as_str() {
+        "1" => Some(1.0),
+        "4/3" => Some(4.0 / 3.0),
+        _ => None,
+    }
+}
+
+/// The largest centred box `aspect` allows on the sample image.
+fn largest(aspect: Option<f64>) -> CropRect {
+    let Some(ratio) = aspect.map(|aspect| aspect / SAMPLE_RATIO) else {
+        return CropRect::FULL;
+    };
+    let (width, height) = match ratio <= 1.0 {
+        true => (ratio, 1.0),
+        false => (1.0, 1.0 / ratio),
+    };
+    CropRect {
+        x: (1.0 - width) / 2.0,
+        y: (1.0 - height) / 2.0,
+        width,
+        height,
+    }
+}
+
+#[component]
+pub fn ImageCropperPage() -> Element {
+    rsx! {
+        DocPage {
+            title: "ImageCropper",
+            source: "libero/src/components/form/image_cropper",
+            markdown: "/md/image_cropper.md",
+            properties: vec![
+                props("ImageCropper", vec![
+                    prop("src", "String")
+                        .doc("The image: any URL, a `data:` URL included."),
+                    prop("alt", "String").doc("Describes the image."),
+                    prop("value", "Option<CropRect>")
+                        .doc("The box, in fractions of the image. Pair it with `onchange`. Unset starts at the largest centred box `aspect` allows, and reports it once the image has loaded."),
+                    prop("onchange", "EventHandler<CropRect>")
+                        .doc("Fires on every move of the box, by a drag or a key. Without it the cropper only shows."),
+                    prop("aspect", "f64")
+                        .doc("Locks width over height, in image pixels: `1.0` is square, `16.0 / 9.0` wide. Unset is free."),
+                    prop("shape", "CropShape")
+                        .default("Rect")
+                        .doc("`Circle` masks outside an ellipse, for an avatar. The rect is the same either way."),
+                    prop("min_size", "f64")
+                        .default("0.05")
+                        .doc("The smallest side, a fraction of the image's."),
+                    prop("disabled", "bool")
+                        .default("false")
+                        .doc("Dims the cropper and takes no input."),
+                    prop("aria_label", "String")
+                        .doc("Names the box; the localization's `image_cropper.label` (\"Crop area\") when unset."),
+                ])
+                .parts("ImageCropperPart", vec![
+                    (ImageCropperPart::Image, "The image."),
+                    (ImageCropperPart::Mask, "The dimmed image outside the box."),
+                    (ImageCropperPart::Box, "The crop box, a tab stop."),
+                    (ImageCropperPart::Frame, "Over the box: takes its drags and holds the handles."),
+                    (ImageCropperPart::Handle, "One of the eight resize handles."),
+                ]),
+                props("CropRect", vec![
+                    prop("x, y", "f64").doc("The top left corner, a fraction of the image's width and height."),
+                    prop("width, height", "f64").doc("The size, a fraction of the image's. `CropRect::FULL` is the whole image."),
+                    prop("to_pixels(width, height)", "PixelRect")
+                        .doc("The box in pixels of an image that size, rounded."),
+                ])
+                .without_base_props(),
+                props("CropOptions", vec![
+                    prop("aspect", "Option<f64>").doc("As `aspect` above."),
+                    prop("shape", "CropShape").default("Rect").doc("As `shape` above."),
+                    prop("max_size", "Option<u32>")
+                        .doc("Scales the crop down so its longer side is at most this many pixels."),
+                ])
+                .without_base_props(),
+            ],
+            accessibility: a11y()
+                .key(["Arrow"], "On the box: moves it. On a corner: moves that corner, resizing the box.")
+                .key(["Shift+Arrow"], "Ten times as far.")
+                .handles([
+                    "The box is a `slider` tab stop named by `aria_label`, its value spoken as \"50% by 50%, at 25%, 25%\".",
+                    "The four corners are tab stops of their own, sliders named \"Top left corner\" and so on.",
+                    "Each handle is a 24px target around a 12px square.",
+                    "A drag focuses the box or the corner it grabbed, so the keys carry on from there.",
+                    "With an `aspect`, a corner key resizes both sides together.",
+                    "The box and the corners describe their keys.",
+                ])
+                .must([
+                    "Describe the image with `alt`.",
+                    "Translate the corner names and the spoken value with the localization.",
+                ])
+                .limits([
+                    "The edge handles are pointer-only: the corners reach every size.",
+                    "A screen reader hears where the box is, not what it shows.",
+                    "Under Blitz a `FileField` with `crop` keeps the whole file: the rect still reaches `oncrop`.",
+                ]),
+            lead: rsx! {
+                Text {
+                    "A box with handles over an image, picking the part to keep. Drag the box or "
+                    "a handle, or use the arrow keys on the box and its corners. "
+                    Code { source: "value" }
+                    " is a "
+                    Code { source: "CropRect" }
+                    " in fractions of the image, so it fits any resolution; "
+                    Code { source: "to_pixels" }
+                    " turns it into pixels."
+                }
+                Text {
+                    "It only picks the box. To cut the picture, give a "
+                    Code { source: "FileField" }
+                    " a "
+                    Code { source: "crop" }
+                    ": a picked image opens in a cropper first, and the field takes the cut file."
+                }
+            },
+            // snippet: let mut crop = use_signal(|| None::<CropRect>);
+            Demo {
+                component: "ImageCropper",
+                children_text: "",
+                controls: vec![
+                    Control::toggle("aspect", ["free", "1", "4/3"])
+                        .labels(["Free", "Square", "4:3"])
+                        .default("free")
+                        .code(|_, values| {
+                            // `src` and the value pair print in every state.
+                            let mut code = vec![
+                                "src: SAMPLE_IMAGE".to_string(),
+                                r#"alt: "A sample landscape""#.to_string(),
+                                "value: crop()".to_string(),
+                                "onchange: move |rect| crop.set(Some(rect))".to_string(),
+                            ];
+                            match values.str("aspect").as_str() {
+                                "1" => code.push("aspect: 1.0".to_string()),
+                                "4/3" => code.push("aspect: 4.0 / 3.0".to_string()),
+                                _ => {}
+                            }
+                            code
+                        }),
+                    Control::toggle("shape", ["rect", "circle"])
+                        .labels(["Rect", "Circle"])
+                        .default("rect")
+                        .code(|_, values| match values.str("shape").as_str() {
+                            "circle" => vec!["shape: CropShape::Circle".to_string()],
+                            _ => vec![],
+                        }),
+                    Control::switch("disabled"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    ImageCropperDemo { values }
+                },
+            }
+        }
+    }
+}
+
+/// Its own component, so the box survives a control change.
+#[component]
+fn ImageCropperDemo(values: DemoValues) -> Element {
+    // The box, with the aspect it was drawn for.
+    let mut crop = use_signal(|| None::<(String, CropRect)>);
+
+    let aspect = aspect_of(&values);
+    let key = values.str("aspect");
+    let rect = match crop() {
+        Some((drawn, rect)) if drawn == key => rect,
+        _ => largest(aspect),
+    };
+    let pixels = rect.to_pixels(1600, 900);
+
+    rsx! {
+        Flex { direction: "column", gap: "sm",
+            ImageCropper {
+                src: SAMPLE_IMAGE,
+                alt: "A sample landscape",
+                aspect,
+                shape: match values.str("shape").as_str() {
+                    "circle" => CropShape::Circle,
+                    _ => CropShape::Rect,
+                },
+                disabled: values.str("disabled") == "true",
+                value: rect,
+                onchange: move |next: CropRect| crop.set(Some((key.clone(), next))),
+            }
+            Text { size: "sm",
+                "{pixels.width} x {pixels.height} px at {pixels.x}, {pixels.y} of 1600 x 900"
+            }
+        }
+    }
+}

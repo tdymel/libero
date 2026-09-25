@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::FileFieldPart;
-use libero::components::{Code, FieldStatus, FileField, Files, Flex, Text};
+use libero::components::{Code, CropOptions, FieldStatus, FileField, Files, Flex, Text};
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
@@ -52,7 +52,11 @@ pub fn FileFieldPage() -> Element {
                     prop("loading", "bool")
                         .default("false")
                         .doc("Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that."),
-                    prop("selection", "Callback<SelectionArgs<FileData>, Element>")
+                    prop("crop", "CropOptions")
+                        .doc("A single picked or dropped image opens in an `ImageCropper` dialog first: Apply hands `onchange` the cut file, Cancel drops it. Under Blitz the field keeps the whole file. Ignored on a `multiple` field."),
+                    prop("oncrop", "EventHandler<CropRect>")
+                        .doc("The box picked in the crop dialog, before the cut file reaches `onchange`."),
+                    prop("selection","Callback<SelectionArgs<FileData>, Element>")
                         .default("Chip, or the file name")
                         .doc("Draws one picked file, remove control included. `args.remove` removes it."),
                     prop("name", "FieldName<Files>")
@@ -162,6 +166,12 @@ pub fn FileFieldPage() -> Element {
                         true => vec!["multiple: true".to_string()],
                         false => vec![],
                     }),
+                    Control::switch("crop").code(|_, values| match is_on(values, "crop") {
+                        true => vec![
+                            "crop: CropOptions { aspect: Some(1.0), ..Default::default() }".to_string(),
+                        ],
+                        false => vec![],
+                    }),
                     Control::switch("clearable").default("true").code(|_, values| {
                         match is_on(values, "clearable") {
                             true => vec![],
@@ -215,6 +225,8 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 variant: values.str("variant"),
                 multiple: is_on(&values, "multiple"),
                 accept,
+                crop: is_on(&values, "crop")
+                    .then(|| CropOptions { aspect: Some(1.0), ..Default::default() }),
                 clearable: is_on(&values, "clearable"),
                 placeholder: "No file picked",
                 value: files(),

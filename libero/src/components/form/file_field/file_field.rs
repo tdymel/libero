@@ -10,8 +10,8 @@ use crate::{
         common::{Glyph, HtmlTag, Input, States, input_from_str},
         feedback::Loader,
         form::{
-            SelectionArgs, field_parts_enum, field_props, slot_icon_size, use_bound,
-            use_chip_announcer, use_field,
+            CropOptions, CropRect, SelectionArgs, field_parts_enum, field_props, slot_icon_size,
+            use_bound, use_chip_announcer, use_field,
         },
         layout::{BoxStyle, use_box},
     },
@@ -26,6 +26,7 @@ use crate::{
 };
 
 use super::accept::accept_hint;
+use super::crop::CropGate;
 use super::files::Files;
 use super::intake::{Intake, Taking, use_file_intake, use_input_mirror};
 use super::rows::{ChipKeys, FileRows, FocusDebt, use_chip_cursor, use_focus_debt};
@@ -95,6 +96,14 @@ field_props! {
         /// Fires with the next files: a pick, a drop, a removal or a clear.
         #[props(default)]
         onchange: Option<EventHandler<Files>>,
+        /// Crops a single picked PNG, JPEG, WebP, BMP or AVIF in a dialog before
+        /// `onchange` gets it, cut where a page can cut it (web, WebView) and
+        /// whole on Blitz. Cancel drops the pick. Ignored with `multiple`.
+        #[props(default)]
+        crop: Option<CropOptions>,
+        /// The crop the dialog applied, on every platform.
+        #[props(default)]
+        oncrop: Option<EventHandler<CropRect>>,
         /// Rules over the files, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Files>,
@@ -159,6 +168,9 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let announcer = use_chip_announcer(value.iter().map(FileData::name).collect());
     let dragging = use_local_state(|| false);
 
+    let crop = props.crop.filter(|_| !multiple);
+    let pending = use_signal(|| None::<FileData>);
+
     let cards = variant == FileFieldVariant::Dropzone;
     // A full single-file dropzone swaps its surface for the card.
     let surface = !cards || multiple || value.is_empty();
@@ -173,6 +185,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         accept: props.accept.clone().unwrap_or_default(),
         multiple,
         editable,
+        crop: crop.map(|_| pending),
     });
 
     use_input_mirror(input_element, mirrored, value.clone());
@@ -343,7 +356,10 @@ pub fn FileField(props: FileFieldProps) -> Element {
         attributes: props.attributes.clone(),
     };
 
-    match variant {
+    let gate = crop.map(|options| {
+        rsx! { CropGate { pending, options, emit, oncrop: props.oncrop } }
+    });
+    let field = match variant {
         // A scope per variant: their hooks differ, so a `variant` switch must
         // remount rather than reuse the other's slots.
         FileFieldVariant::Input => file_input_variant(
@@ -376,6 +392,10 @@ pub fn FileField(props: FileFieldProps) -> Element {
             input,
             announcer,
         ),
+    };
+    match gate {
+        Some(gate) => rsx! { {field} {gate} },
+        None => field,
     }
 }
 

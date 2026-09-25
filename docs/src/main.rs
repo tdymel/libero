@@ -185,6 +185,8 @@ pub(crate) enum Route {
     FileFieldPage {},
     #[route("/form/form")]
     FormPage {},
+    #[route("/form/image-cropper")]
+    ImageCropperPage {},
     #[route("/form/multi-select")]
     MultiSelectPage {},
     #[route("/form/cascader")]

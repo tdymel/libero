@@ -42,6 +42,9 @@ pictogram-icons-tabler = { version = "0.4", optional = true }
 serde_json = "1"
 # The rich text editor's `Doc`, the format of record. Already in the graph through dioxus.
 serde = { version = "1", features = ["derive"] }
+# Only to name `NativeFileData::byte_stream`'s return type for a picked or
+# cropped file. Already in dioxus's tree.
+futures-core = "0.3"
 
 # Everything web-specific is wasm32-only, so a native build (`cargo test`, or
 # any future non-web renderer) compiles without it and the platform-backed
@@ -54,7 +57,7 @@ js-sys = "0.3"
 # 0.2.128+ imports a wasm exception tag (`__wbindgen_jstag`) that dx's hotpatch parser rejects.
 wasm-bindgen = "=0.2.127"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlImageElement", "HtmlInputElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "NodeList", "Navigator", "ScrollBehavior", "ScrollToOptions", "Clipboard", "CssStyleDeclaration", "DomRect", "KeyboardEvent", "MediaQueryList", "MutationObserver", "MutationObserverInit", "IntersectionObserver", "IntersectionObserverEntry", "IntersectionObserverInit", "Storage", "MouseEvent", "FocusEvent", "FocusOptions", "PointerEvent", "TransitionEvent", "console"] }
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlImageElement", "HtmlInputElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "FilePropertyBag", "NodeList", "Navigator", "ScrollBehavior", "ScrollToOptions", "Clipboard", "CssStyleDeclaration", "DomRect", "KeyboardEvent", "MediaQueryList", "MutationObserver", "MutationObserverInit", "IntersectionObserver", "IntersectionObserverEntry", "IntersectionObserverInit", "Storage", "MouseEvent", "FocusEvent", "FocusOptions", "PointerEvent", "TransitionEvent", "console"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # Only for `serialize`, which is what defines `SerializedTransitionData` - the
@@ -65,9 +68,6 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Event
 # 2026-09-19, todo 36a).
 dioxus-html = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["serialize"] }
 regex = "1"
-# Only to name `NativeFileData::byte_stream`'s return type for a picked file.
-# Already in dioxus's tree.
-futures-core = "0.3"
 # `Local`, for today off the web: the system time zone via `iana-time-zone`.
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 # Blitz's `NodeHandle`, which is what a `MountedData` downcasts to under

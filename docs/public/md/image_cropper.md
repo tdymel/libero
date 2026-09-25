@@ -1,0 +1,151 @@
+# ImageCropper
+
+Crate: `libero`
+Import: `use libero::components::ImageCropper;`
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/image_cropper>
+Index: [index.md](index.md) lists every other page
+Description: A box with handles over an image, picking the part to keep by drag or arrow keys, free or at a fixed aspect, with a rect or circle mask.
+
+A box with handles over an image, picking the part to keep. Drag the box or a
+handle, or use the arrow keys on the box and its corners. `value` is a
+`CropRect` in fractions of the image, so it fits any resolution; `to_pixels`
+turns it into pixels.
+
+It only picks the box. To cut the picture, give a `FileField` a `crop`: a
+picked image opens in a cropper first, and the field takes the cut file.
+
+## Usage
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{CropRect, ImageCropper};
+
+#[component]
+fn Demo() -> Element {
+    let mut crop = use_signal(|| None::<CropRect>);
+
+    rsx! {
+        ImageCropper {
+            src: "/photo.jpg",
+            alt: "Holiday photo",
+            aspect: 1.0,
+            value: crop(),
+            onchange: move |rect| crop.set(Some(rect)),
+        }
+    }
+}
+```
+
+An avatar picker: a square box with a round mask, cropped on pick and scaled
+to at most 512 px:
+
+```rust,ignore
+FileField {
+    accept: "image/*",
+    crop: CropOptions { aspect: Some(1.0), shape: CropShape::Circle, max_size: Some(512) },
+    value: avatar(),
+    onchange: move |files| avatar.set(files),
+}
+```
+
+## Props
+
+### `ImageCropper`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `src` | `String` | - | The image: any URL, a `data:` URL included. |
+| `alt` | `String` | - | Describes the image. |
+| `value` | `Option<CropRect>` | - | The box, in fractions of the image. Pair it with `onchange`. Unset starts at the largest centred box `aspect` allows, and reports it once the image has loaded. |
+| `onchange` | `EventHandler<CropRect>` | - | Fires on every move of the box, by a drag or a key. Without it the cropper only shows. |
+| `aspect` | `f64` | - | Locks width over height, in image pixels: `1.0` is square, `16.0 / 9.0` wide. Unset is free. |
+| `shape` | `CropShape` | `Rect` | `Circle` masks outside an ellipse, for an avatar. The rect is the same either way. |
+| `min_size` | `f64` | `0.05` | The smallest side, a fraction of the image's. |
+| `disabled` | `bool` | `false` | Dims the cropper and takes no input. |
+| `aria_label` | `String` | - | Names the box; the localization's `image_cropper.label` ("Crop area") when unset. |
+
+Like every component, it also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes.
+
+### `CropRect`
+
+| Field | Type | Description |
+|---|---|---|
+| `x, y` | `f64` | The top left corner, a fraction of the image's width and height. |
+| `width, height` | `f64` | The size, a fraction of the image's. `CropRect::FULL` is the whole image. |
+| `to_pixels(width, height)` | `PixelRect` | The box in pixels of an image that size, rounded. |
+
+### `CropOptions`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `aspect` | `Option<f64>` | - | As `aspect` above. |
+| `shape` | `CropShape` | `Rect` | As `shape` above. |
+| `max_size` | `Option<u32>` | - | Scales the crop down so its longer side is at most this many pixels. |
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `ImageCropperPart::Image` | `image` | The image. |
+| `ImageCropperPart::Mask` | `mask` | The dimmed image outside the box. |
+| `ImageCropperPart::Box` | `box` | The crop box, a tab stop. |
+| `ImageCropperPart::Frame` | `frame` | Over the box: takes its drags and holds the handles. |
+| `ImageCropperPart::Handle` | `handle` | One of the eight resize handles. |
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Arrow` | On the box: moves it. On a corner: moves that corner, resizing the box. |
+| `Shift+Arrow` | Ten times as far. |
+
+### Libero handles
+
+- The box is a `slider` tab stop named by `aria_label`, its value spoken as
+  "50% by 50%, at 25%, 25%".
+- The four corners are tab stops of their own, sliders named "Top left corner"
+  and so on.
+- Each handle is a 24px target around a 12px square.
+- A drag focuses the box or the corner it grabbed, so the keys carry on from
+  there.
+- With an `aspect`, a corner key resizes both sides together.
+- The box and the corners describe their keys.
+
+### You must
+
+- Describe the image with `alt`.
+- Translate the corner names and the spoken value with the localization.
+
+### Limits
+
+- The edge handles are pointer-only: the corners reach every size.
+- A screen reader hears where the box is, not what it shows.
+- Under Blitz a `FileField` with `crop` keeps the whole file: the rect still
+  reaches `oncrop`.
+
+## Localization
+
+`Localization.image_cropper` holds the box's name (`label`), its key hint
+(`keys`), the corner names, and the crop dialog's `title`, `apply` and
+`cancel`. `value` is the spoken box, with the holes `{width}`, `{height}`, `{x}`
+and `{y}` in percent: "{width}% by {height}%, at {x}%, {y}%" in English.
+
+## CSS variables
+
+| Variable | Description |
+|---|---|
+| `--lsx-image-cropper-x` / `--lsx-image-cropper-y` | The box's top left corner, a fraction of the image. |
+| `--lsx-image-cropper-width` / `--lsx-image-cropper-height` | The box's size, a fraction of the image. |
+
+## Data attributes
+
+`data-state` on the root carries `circle` and `disabled` when they apply. Each
+handle is `data-slot="handle"` with `data-grip` one of `n`, `s`, `e`, `w`,
+`ne`, `nw`, `se`, `sw`.

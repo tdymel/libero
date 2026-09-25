@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::core::{Runtime, ScopeId, Task, spawn_forever};
 use dioxus::document::{Document, Eval, NoOpDocument};
+use dioxus::html::FileData;
 use dioxus::prelude::{Event, Key, Modifiers, PointerData, spawn};
 use serde_json::{Value, json};
 
@@ -28,6 +29,7 @@ use crate::platform::{
         Fix, GeolocationApi, GeolocationError, GeolocationOptions, GeolocationSubscription, Locate,
         Position,
     },
+    image_crop::{CROP_SCRIPT, Cropped, Fractions, ImageCropApi, cropped_name, encode_base64},
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
     permission::{PermissionApi, PermissionKind, PermissionState, PermissionSubscription},
 };
@@ -71,6 +73,10 @@ pub(crate) fn clipboard() -> Option<&'static dyn ClipboardApi> {
 
 pub(crate) fn file_dialog() -> Option<&'static dyn FileDialogApi> {
     runs_scripts().then_some(&FILE_DIALOG as &'static dyn FileDialogApi)
+}
+
+pub(crate) fn image_crop() -> Option<&'static dyn ImageCropApi> {
+    runs_scripts().then_some(&IMAGE_CROP as &'static dyn ImageCropApi)
 }
 
 struct WebViewDocument;
@@ -695,6 +701,43 @@ impl FileDialogApi for WebViewFileDialog {
                     Some(held_file(name, content_type, modified as u64, bytes))
                 })
                 .collect()
+        })
+    }
+}
+
+struct WebViewImageCrop;
+
+static IMAGE_CROP: WebViewImageCrop = WebViewImageCrop;
+
+impl ImageCropApi for WebViewImageCrop {
+    fn crop(&self, file: FileData, rect: Fractions, max: Option<u32>) -> Cropped {
+        Box::pin(async move {
+            let bytes = file.read_bytes().await.ok()?;
+            let from = file.content_type().unwrap_or_default();
+            // Both ways as base64: the IPC carries JSON only.
+            let script = eval_with(
+                json!([encode_base64(&bytes), from, rect, max]),
+                &format!(
+                    "{CROP_SCRIPT}
+                    const [encoded, type, rect, max] = data;
+                    const bytes = Uint8Array.from(atob(encoded), (ch) => ch.charCodeAt(0));
+                    const blob = await crop(bytes, type, rect, max);
+                    const out = new Uint8Array(await blob.arrayBuffer());
+                    let binary = '';
+                    for (let at = 0; at < out.length; at += 0x8000) {{
+                        binary += String.fromCharCode(...out.subarray(at, at + 0x8000));
+                    }}
+                    return [blob.type, btoa(binary)];"
+                ),
+            );
+            let (to, encoded) = script.join::<(String, String)>().await.ok()?;
+            let name = cropped_name(&file.name(), &from, &to);
+            Some(held_file(
+                name,
+                to,
+                file.last_modified(),
+                decode_base64(&encoded)?,
+            ))
         })
     }
 }

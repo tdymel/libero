@@ -58,6 +58,7 @@ pub struct Localization {
     pub password_field: PasswordFieldLabels,
     pub number_field: NumberFieldLabels,
     pub file_field: FileFieldLabels,
+    pub image_cropper: ImageCropperLabels,
     pub textarea: TextareaLabels,
     pub slider: SliderLabels,
     pub rating: RatingLabels,
@@ -102,6 +103,7 @@ impl Localization {
         password_field: PasswordFieldLabels::ENGLISH,
         number_field: NumberFieldLabels::ENGLISH,
         file_field: FileFieldLabels::ENGLISH,
+        image_cropper: ImageCropperLabels::ENGLISH,
         textarea: TextareaLabels::ENGLISH,
         slider: SliderLabels::ENGLISH,
         rating: RatingLabels::ENGLISH,
@@ -145,6 +147,7 @@ impl Localization {
         password_field: PasswordFieldLabels::GERMAN,
         number_field: NumberFieldLabels::GERMAN,
         file_field: FileFieldLabels::GERMAN,
+        image_cropper: ImageCropperLabels::GERMAN,
         textarea: TextareaLabels::GERMAN,
         slider: SliderLabels::GERMAN,
         rating: RatingLabels::GERMAN,
@@ -159,9 +162,10 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 39] {
+    fn templates(words: &Localization) -> [&'static str; 40] {
         [
             words.common.remove,
+            words.image_cropper.value,
             words.rating.value,
             words.cascader.back,
             words.cascader.select,
@@ -240,6 +244,10 @@ mod tests {
             ("from", &1),
             ("to", &3),
             ("url", &"https://libero-ui.dev"),
+            ("width", &40),
+            ("height", &30),
+            ("x", &10),
+            ("y", &20),
         ];
         for words in [&Localization::ENGLISH, &Localization::GERMAN] {
             for template in templates(words) {

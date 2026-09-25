@@ -20,6 +20,7 @@ mod focus;
 mod form;
 mod geolocation;
 mod http;
+mod image_crop;
 mod intersection;
 mod keyboard;
 mod max_length;
@@ -73,6 +74,7 @@ pub(crate) use form::{lifts_legends, submit_event, submit_listeners};
 pub(crate) use geolocation::{Fix, GeolocationSubscription, geolocation};
 pub use geolocation::{GeolocationError, GeolocationOptions, Position};
 pub(crate) use http::fetch_text;
+pub(crate) use image_crop::{data_url, image_crop};
 pub(crate) use intersection::{
     OBSERVE_ATTR, OWNER_ATTR, computed_px_by_tag, next_observe_tag, observes_by_tag,
     on_intersection,

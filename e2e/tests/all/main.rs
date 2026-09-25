@@ -53,6 +53,7 @@ mod hover_card;
 mod icon;
 mod icon_provider;
 mod image;
+mod image_cropper;
 mod image_list;
 mod isolation;
 mod journal;
