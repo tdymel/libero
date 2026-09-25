@@ -126,6 +126,7 @@ mod use_intersection;
 mod use_long_press;
 mod use_media_query;
 mod use_timers;
+mod use_user_media;
 mod visually_hidden;
 
 use dioxus::prelude::*;
@@ -255,6 +256,7 @@ const FIXTURES: &[Routes] = &[
     use_long_press::ROUTES,
     use_media_query::ROUTES,
     use_timers::ROUTES,
+    use_user_media::ROUTES,
     visually_hidden::ROUTES,
 ];
 

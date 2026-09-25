@@ -126,6 +126,7 @@ mod use_intersection;
 mod use_long_press;
 mod use_media_query;
 mod use_timers;
+mod use_user_media;
 mod visually_hidden;
 
 /// Every `.rs` file here needs a `mod` line: an unregistered test file silently never runs.

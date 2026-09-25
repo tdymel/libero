@@ -69,7 +69,7 @@ pub(crate) fn data_url(content_type: &str, bytes: &[u8]) -> String {
 }
 
 #[cfg(target_arch = "wasm32")]
-mod web {
+pub(super) mod web {
     use std::{future::Future, pin::Pin};
 
     use dioxus::html::{FileData, NativeFileData, bytes::Bytes};
@@ -116,19 +116,26 @@ mod web {
                 let result: Array = JsFuture::from(promise).await.ok()?.dyn_into().ok()?;
                 let to = result.get(0).as_string()?;
                 let bytes = result.get(1).dyn_into::<Uint8Array>().ok()?;
-                let name = cropped_name(&file.name(), &from, &to);
-                let options = web_sys::FilePropertyBag::new();
-                options.set_type(&to);
-                let parts: Array = [JsValue::from(bytes.clone())].into_iter().collect();
-                let web_file =
-                    web_sys::File::new_with_u8_array_sequence_and_options(&parts, &name, &options)
-                        .ok()?;
-                Some(FileData::new(CroppedFile {
-                    bytes: bytes.to_vec().into(),
-                    file: web_file,
-                }))
+                bytes_file(&cropped_name(&file.name(), &from, &to), &to, &bytes)
             })
         }
+    }
+
+    /// `bytes` as a `FileData`, backed by a browser `File` a form can post.
+    pub(crate) fn bytes_file(
+        name: &str,
+        content_type: &str,
+        bytes: &Uint8Array,
+    ) -> Option<FileData> {
+        let options = web_sys::FilePropertyBag::new();
+        options.set_type(content_type);
+        let parts: Array = [JsValue::from(bytes.clone())].into_iter().collect();
+        let file =
+            web_sys::File::new_with_u8_array_sequence_and_options(&parts, name, &options).ok()?;
+        Some(FileData::new(CroppedFile {
+            bytes: bytes.to_vec().into(),
+            file,
+        }))
     }
 
     /// A crop's bytes, and the browser `File` a form posts them as.

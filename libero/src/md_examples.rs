@@ -166,5 +166,6 @@ md_pages! {
     UseStylesheet => "use_stylesheet",
     UseThemeSet => "use_theme_set",
     UseTimers => "use_timers",
+    UseUserMedia => "use_user_media",
     VisuallyHidden => "visually_hidden",
 }

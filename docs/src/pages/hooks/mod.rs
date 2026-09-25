@@ -14,6 +14,7 @@ mod use_media_query;
 mod use_stylesheet;
 mod use_theme_set;
 mod use_timers;
+mod use_user_media;
 
 pub use overview::HooksPage;
 pub use use_debounce::UseDebouncePage;
@@ -28,6 +29,7 @@ pub use use_media_query::UseMediaQueryPage;
 pub use use_stylesheet::UseStylesheetPage;
 pub use use_theme_set::UseThemeSetPage;
 pub use use_timers::UseTimersPage;
+pub use use_user_media::UseUserMediaPage;
 
 /// Around a demo that switches the site's theme set: puts it back when the
 /// page is left.

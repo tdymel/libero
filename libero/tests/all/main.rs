@@ -117,6 +117,7 @@ mod toolbar;
 mod tooltip;
 mod transition;
 mod tree;
+mod user_media;
 mod validation;
 mod variant_contrast;
 mod visually_hidden;

@@ -123,6 +123,16 @@ fn hooks() -> Vec<HookRow> {
             Route::UseGeolocationPage {},
         ),
         row(
+            "use_user_media",
+            "The camera and microphone: a preview, a photo and a recording.",
+            Route::UseUserMediaPage {},
+        ),
+        row(
+            "use_user_media_devices",
+            "The page's cameras and microphones, live.",
+            Route::UseUserMediaPage {},
+        ),
+        row(
             "use_theme",
             "The active theme, for values CSS cannot carry.",
             Route::ThemingPage {},

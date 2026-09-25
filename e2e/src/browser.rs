@@ -112,6 +112,10 @@ impl Drop for PrimesOnDrop {
 
 static HARNESS: OnceLock<Harness> = OnceLock::new();
 
+/// Held by a test that sets CDP permissions, from the first set until its page
+/// closed: closing a page that set one resets every override, another test's too.
+pub static PERMISSIONS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 fn harness() -> &'static Harness {
     HARNESS.get_or_init(|| {
         let runtime = Runtime::new().expect("tokio runtime");
@@ -127,6 +131,8 @@ fn harness() -> &'static Harness {
                 .request_timeout(Duration::from_secs(120))
                 // Instant scrolls: a background page stalls smooth ones (todo 687).
                 .arg("disable-smooth-scrolling")
+                // A fake camera and microphone for `use_user_media`; the grant stays a CDP call.
+                .arg("use-fake-device-for-media-stream")
                 .build()
                 .expect("browser config");
             let (browser, mut handler) = Browser::launch(config).await.expect("launch chromium");

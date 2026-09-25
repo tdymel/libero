@@ -40,8 +40,11 @@ mod timers;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod timers_tests;
 mod typeahead;
+mod user_media;
 
-pub use crate::platform::{GeolocationError, GeolocationOptions, PermissionState, Position};
+pub use crate::platform::{
+    GeolocationError, GeolocationOptions, MediaDevice, PermissionState, Position, UserMediaError,
+};
 pub use accessibility::{AccessibilityHandle, use_accessibility};
 pub(crate) use cache::use_cache;
 pub use clipboard::{Clipboard, use_clipboard};
@@ -94,6 +97,9 @@ pub(crate) use theme::{use_glass_gradient_style, use_glass_tint, use_gradient_st
 pub use timers::{IntervalHandle, TimeoutHandle, use_interval, use_timeout};
 pub(crate) use timers::{Scheduled, use_scheduled};
 pub(crate) use typeahead::{TYPEAHEAD_RESET, Typeahead, typeahead_match, use_typeahead};
+pub use user_media::{
+    UserMedia, UserMediaDevices, UserMediaOptions, use_user_media, use_user_media_devices,
+};
 
 // The overlay hooks render a component, so they live beside it (todo 178).
 // The layer rule (`tests/all/architecture.rs`) exempts only this `use`.

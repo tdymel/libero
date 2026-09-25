@@ -8,7 +8,7 @@ use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
 };
 use chromiumoxide::cdp::browser_protocol::emulation::SetGeolocationOverrideParams;
-use e2e::browser::block_on;
+use e2e::browser::{PERMISSIONS, block_on};
 use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
 use e2e::{Fixture, Viewport, wait};
 
@@ -97,6 +97,7 @@ async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {
 #[test]
 fn the_web_locates_watches_and_reports_a_denial() {
     block_on(async {
+        let _permissions = PERMISSIONS.lock().await;
         let fixture = Fixture::open("/use-geolocation", Viewport::Desktop)
             .await
             .unwrap();

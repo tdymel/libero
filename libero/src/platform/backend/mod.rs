@@ -30,6 +30,8 @@ mod web;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 mod webview;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+pub(crate) use webview::capture as webview_capture;
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::clipboard as webview_clipboard;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::file_dialog as webview_file_dialog;

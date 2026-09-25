@@ -204,6 +204,15 @@ fn aliases(label: &str) -> &'static [&'static str] {
             "position",
             "permission",
         ],
+        "User media" => &[
+            "use_user_media",
+            "use_user_media_devices",
+            "camera",
+            "microphone",
+            "webcam",
+            "record",
+            "photo",
+        ],
         "Timers" => &["use_timeout", "use_interval", "setTimeout", "setInterval"],
         "Debounce and throttle" => &[
             "use_debounced_value",
@@ -447,6 +456,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseHotkeysPage {}, "Hotkeys"),
                 page(Route::UseMediaQueryPage {}, "Media query"),
                 page(Route::UseGeolocationPage {}, "Geolocation"),
+                page(Route::UseUserMediaPage {}, "User media"),
                 page(Route::UseThemeSetPage {}, "Theme set"),
                 page(Route::UseStylesheetPage {}, "Stylesheet"),
             ],
