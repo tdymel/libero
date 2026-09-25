@@ -122,6 +122,7 @@ md_pages! {
     RangeSlider => "range_slider",
     Rating => "rating",
     RepoButton => "repo_button",
+    RichTextEditor => "rich_text_editor",
     ScrollArea => "scroll_area",
     Scroller => "scroller",
     SegmentedControl => "segmented_control",

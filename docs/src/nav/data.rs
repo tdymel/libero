@@ -323,6 +323,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::FieldsetPage {}, "Fieldset"),
                 page(Route::TextFieldPage {}, "TextField"),
                 page(Route::TextareaPage {}, "Textarea"),
+                page(Route::RichTextEditorPage {}, "RichTextEditor"),
                 page(Route::PasswordFieldPage {}, "PasswordField"),
                 page(Route::PhoneFieldPage {}, "PhoneField"),
                 page(Route::NumberFieldPage {}, "NumberField"),

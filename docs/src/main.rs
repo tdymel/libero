@@ -215,6 +215,8 @@ pub(crate) enum Route {
     RangeSliderPage {},
     #[route("/form/rating")]
     RatingPage {},
+    #[route("/form/rich-text-editor")]
+    RichTextEditorPage {},
     #[route("/form/segmented-control")]
     SegmentedControlPage {},
     #[route("/form/select")]

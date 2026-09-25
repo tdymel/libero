@@ -111,6 +111,63 @@ fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
     });
 }
 
+/// In the WebView, `adb input text` keys open Gboard composing regions over each word;
+/// the model must still hold every letter once, in order, with shortcuts applied.
+#[cfg(feature = "android")]
+#[test]
+fn android() {
+    use e2e::driver::{Driver, eventually};
+
+    e2e::android::block_on(async {
+        let mut d = e2e::driver::Android::open("/rich-text-editor")
+            .await
+            .unwrap();
+        let page = d.page().clone();
+        d.click("[role=textbox]").await.unwrap();
+        eventually(&mut d, "the editor to take focus", async |d| {
+            d.is_focused("[role=textbox]").await
+        })
+        .await
+        .unwrap();
+        // Every input event after dioxus handled it, for the failure message.
+        page.evaluate(
+            "window.__events = []; for (const t of ['keydown', 'beforeinput', 'compositionstart', 'compositionupdate', 'compositionend']) addEventListener(t, e => __events.push([t, e.inputType ?? e.key ?? '', e.data ?? '', e.ctrlKey ? 'ctrl' : '', e.defaultPrevented ? 'prevented' : ''].join('|'))); document.addEventListener('selectionchange', () => { const s = getSelection(); __events.push(['sel', s.anchorNode?.textContent, s.anchorOffset, s.focusOffset].join('|')); })",
+        )
+        .await
+        .unwrap();
+        async fn out_is(d: &mut e2e::driver::Android, page: &Page, want: &str) {
+            let mut last = String::new();
+            let held = eventually(d, want, async |d| {
+                last = d.text("#out").await?;
+                Ok(last == want)
+            })
+            .await;
+            let events: Vec<String> =
+                eval(page, &format!("[...window.__events, {EDITOR}.innerHTML]")).await;
+            assert!(
+                held.is_ok(),
+                "#out {last:?}, want {want:?}; events {events:#?}"
+            );
+            eval::<bool>(page, "(window.__events = [], true)").await;
+        }
+
+        d.type_text("hello world").await.unwrap();
+        out_is(&mut d, &page, "hello world\n").await;
+        d.press(ENTER).await.unwrap();
+        d.type_text("# Title").await.unwrap();
+        out_is(&mut d, &page, "hello world\n\n# Title\n").await;
+        d.press(BACKSPACE).await.unwrap();
+        out_is(&mut d, &page, "hello world\n\n# Titl\n").await;
+        d.press_ctrl(KEY_Z).await.unwrap();
+        out_is(&mut d, &page, "hello world\n\n# Title\n").await;
+        // The inline rule fires on keys typed into Gboard's composing region.
+        d.press(ENTER).await.unwrap();
+        d.type_text("a **b** c").await.unwrap();
+        out_is(&mut d, &page, "hello world\n\n# Title\n\na **b** c\n").await;
+        d.finish("rich text editor").await.unwrap();
+    });
+}
+
 #[test]
 fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
     block_on(async {

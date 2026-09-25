@@ -58,6 +58,7 @@ fetch only the file you need.
 - [Fieldset](fieldset.md): Several fields that form one value under a `<legend>`, with rules over that value that land on the fields they name.
 - [TextField](text_field.md): A single-line text field with a label, a description, helper text and a validation message.
 - [Textarea](textarea.md): A multi-line text field, sized by `rows` and resizable by the user.
+- [RichTextEditor](rich_text_editor.md): A rich text field over a `Doc`: headings, lists, quotes, code blocks and marks, with undo, shortcuts and Markdown typing.
 - [PasswordField](password_field.md): A `TextField` for secrets, with a button in its trailing slot that shows the text.
 - [PhoneField](phone_field.md): A country picker in front of a `tel` input, whose value is an E.164 string.
 - [NumberField](number_field.md): A numeric field over your own number type, with optional steppers in its trailing slot.

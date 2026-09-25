@@ -394,7 +394,8 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let apple = mod_is_meta();
 
     let onkeydown = move |event: KeyboardEvent| {
-        if *composing.peek() || event.is_composing() {
+        // Not `is_composing()`: Gboard keeps a composing region open over typed words.
+        if *composing.peek() {
             return;
         }
         let modifiers = event.modifiers();
@@ -418,7 +419,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let onbeforeinput = move |event: Event<BeforeInputData>| {
         let data = event.data();
         match intent(&data.input_type().to_string(), data.data()) {
-            Intent::Pass => {}
+            Intent::Pass => composing.set(true),
             Intent::Cancel => event.prevent_default(),
             Intent::Type(text) => {
                 event.prevent_default();
@@ -442,10 +443,13 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         );
     };
 
-    let oncompositionstart = move |_: CompositionEvent| composing.set(true);
+    // Gboard opens composing regions over words the model typed; only text the browser
+    // composed itself (`insertCompositionText`) is read back, or a lagging DOM undoes keys.
     let oncompositionend = move |_: CompositionEvent| {
-        composing.set(false);
-        surface.read(editor.peek().state().caret().block.0);
+        if *composing.peek() {
+            composing.set(false);
+            surface.read(editor.peek().state().caret().block.0);
+        }
     };
 
     let surface_element = field
@@ -463,7 +467,6 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .event("onkeydown", editable.then_some(onkeydown))
         .event("onbeforeinput", editable.then_some(onbeforeinput))
         .event("onpaste", editable.then_some(onpaste))
-        .event("oncompositionstart", editable.then_some(oncompositionstart))
         .event("oncompositionend", editable.then_some(oncompositionend))
         .event("onfocusin", move |_: FocusEvent| focused.set(true))
         .event("onfocusout", move |_: FocusEvent| focused.set(false))
