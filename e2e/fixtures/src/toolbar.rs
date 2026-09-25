@@ -119,12 +119,17 @@ fn ToolbarEditorPage() -> Element {
 }
 
 /// A button outside moves focus into the bar by script, which Blitz does with no `focusin` (1192).
+/// `#show` mounts `#zero` last but first in the bar: the arrows follow the DOM.
 #[component]
 fn ToolbarScriptFocusPage() -> Element {
     let page = use_element();
+    let mut zero = use_signal(|| false);
     rsx! {
         div { onmounted: page.mount(),
             Toolbar { "aria-label": "Formatting",
+                if zero() {
+                    Button { id: "zero", "Zero" }
+                }
                 Button { id: "one", "One" }
                 Button { id: "two", "Two" }
                 Button { id: "three", "Three" }
@@ -132,10 +137,14 @@ fn ToolbarScriptFocusPage() -> Element {
             button {
                 id: "jump",
                 onclick: move |_| {
-                    let _ = page.query_selector("#three").and_then(|three| three.focus());
+                    if page.query_selector("#three").and_then(|three| three.focus()).is_err() {
+                        // A WebView queries nothing: the page's own script does it.
+                        document::eval("document.getElementById('three').focus();");
+                    }
                 },
                 "Jump"
             }
+            button { id: "show", onclick: move |_| zero.set(true), "Show zero" }
         }
     }
 }

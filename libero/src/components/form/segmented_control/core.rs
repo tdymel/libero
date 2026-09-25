@@ -12,7 +12,7 @@ use crate::{
         layout::use_box,
     },
     hooks::ElementHandle,
-    platform::{ElementApi, logical_key, next_task},
+    platform::{ElementApi, focus_selector, logical_key, next_task},
     sx::{StaticSx, sx},
     theme::{ButtonDefaults, Size, SizeCss},
 };
@@ -248,7 +248,11 @@ fn has_further(disabled: &[bool], index: usize, step: isize) -> bool {
 /// count without colliding.
 fn focus_segment(element: &ElementHandle, root: &str, index: usize) {
     let selector = format!("#{root}-segment-{index}");
-    let _ = element.query_selector(&selector).and_then(|el| el.focus());
+    // A WebView queries nothing: the page focuses it by its id.
+    let _ = element
+        .query_selector(&selector)
+        .and_then(|el| el.focus())
+        .or_else(|_| focus_selector(&selector));
 }
 
 /// A segment label's `data-state`. A picked segment that is then disabled

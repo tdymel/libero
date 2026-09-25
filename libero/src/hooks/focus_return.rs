@@ -13,6 +13,8 @@ use crate::{
 enum Trigger {
     Mounted(Rc<MountedData>),
     Active(Rc<dyn ElementApi>),
+    /// A WebView's focused element, kept page-side under this token.
+    Kept(u64),
 }
 
 impl Trigger {
@@ -22,6 +24,7 @@ impl Trigger {
         match self {
             Trigger::Mounted(data) => platform::element(data).is_connected(),
             Trigger::Active(element) => element.is_connected(),
+            Trigger::Kept(_) => true,
         }
     }
 }
@@ -54,6 +57,16 @@ impl FocusReturn {
         trigger.set(active.map(Trigger::Active));
     }
 
+    /// As [`remember_active`](Self::remember_active), which a WebView keeps page-side.
+    pub(crate) fn remember_focused(&self) {
+        let active = document().and_then(|document| document.active_element());
+        let mut trigger = self.trigger;
+        trigger.set(match active {
+            Some(active) => Some(Trigger::Active(Rc::from(active))),
+            None => platform::keep_focused().map(Trigger::Kept),
+        });
+    }
+
     /// Remembers `element` as a snapshot, consumed by the next
     /// [`restore`](Self::restore) like [`remember_active`](Self::remember_active).
     pub(crate) fn remember_element(&self, element: ElementHandle) {
@@ -78,7 +91,7 @@ impl FocusReturn {
         let Some(trigger) = (*signal.peek()).clone() else {
             return;
         };
-        if matches!(trigger, Trigger::Active(_)) {
+        if matches!(trigger, Trigger::Active(_) | Trigger::Kept(_)) {
             signal.write().take();
         }
 
@@ -104,6 +117,10 @@ impl FocusReturn {
             let _ = match target {
                 Trigger::Mounted(data) => platform::element(&data).focus(),
                 Trigger::Active(element) => element.focus(),
+                Trigger::Kept(token) => {
+                    platform::focus_kept(token);
+                    Ok(())
+                }
             };
         });
     }

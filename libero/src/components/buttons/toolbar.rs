@@ -13,8 +13,8 @@ use crate::{
     },
     hooks::{ElementHandle, Hotkey, use_element, use_focus_return, use_hotkeys},
     platform::{
-        ElementApi, arrow_target, caret_edges, document, key_taken, logical_key, silent_focus,
-        typing_target,
+        ElementApi, FocusStep, arrow_target, caret_edges, focus_among, focus_selector,
+        focused_attribute, key_taken, logical_key, silent_focus, typing_target,
     },
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, Size, SizeCss},
@@ -121,14 +121,17 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
     let mut arrived = use_signal(|| false);
     use_hotkeys(props.focus_from.map(|from| {
         Hotkey::new("alt+f10", move || {
-            // A WebView holds no document: Escape returns to the element itself.
-            match document() {
-                Some(_) => focus_return.remember_active(),
-                None => focus_return.remember_element(from),
-            }
+            focus_return.remember_focused();
             arrived.set(true);
-            if let Ok(stop) = bar.query_selector(&format!("[{TOOLBAR_ITEM}][tabindex='0']")) {
-                let _ = stop.focus();
+            match bar.query_selector(&format!("[{TOOLBAR_ITEM}][tabindex='0']")) {
+                Ok(stop) => {
+                    let _ = stop.focus();
+                }
+                Err(_) => {
+                    if let Some(stop) = scope.stop() {
+                        let _ = focus_selector(&item_selector(stop));
+                    }
+                }
             }
         })
         .include_editable(true)
@@ -174,6 +177,18 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
             }
         }
         let Ok(items) = bar.query_selector_all(&format!("[{TOOLBAR_ITEM}]")) else {
+            // A WebView queries nothing: the page walks the items, `focusin` moves the stop.
+            let ids: Vec<String> = scope.items().iter().map(u64::to_string).collect();
+            let to = match (step, event.key()) {
+                (Some(by), _) => FocusStep::By {
+                    by,
+                    wrap: loop_focus,
+                },
+                (None, Key::Home) => FocusStep::First,
+                (None, _) => FocusStep::Last,
+            };
+            event.prevent_default();
+            let _ = focus_among(TOOLBAR_ITEM, &ids, to);
             return;
         };
         let Some(at) = items.iter().position(|item| item.is_focused()) else {
@@ -247,6 +262,16 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
 /// Makes the focused item, if any, the tab stop.
 fn follow_focus(bar: &ElementHandle, scope: ToolbarScope) {
     let Ok(items) = bar.query_selector_all(&format!("[{TOOLBAR_ITEM}]")) else {
+        // A WebView: the page names the focused item, after the handler.
+        let read = focused_attribute(TOOLBAR_ITEM);
+        spawn(async move {
+            if let Ok(Some(id)) = read.await
+                && let Ok(id) = id.parse()
+                && scope.items().contains(&id)
+            {
+                scope.focused(id);
+            }
+        });
         return;
     };
     let Some(focused) = items.iter().find(|item| item.is_focused()) else {
@@ -255,13 +280,17 @@ fn follow_focus(bar: &ElementHandle, scope: ToolbarScope) {
     // A WebView reads no attribute: ask each id's element instead.
     let id = marked_id(focused.as_ref()).or_else(|| {
         scope.items().into_iter().find(|id| {
-            bar.query_selector(&format!("[{TOOLBAR_ITEM}=\"{id}\"]"))
+            bar.query_selector(&item_selector(*id))
                 .is_ok_and(|item| item.is_focused())
         })
     });
     if let Some(id) = id {
         scope.focused(id);
     }
+}
+
+fn item_selector(id: u64) -> String {
+    format!("[{TOOLBAR_ITEM}=\"{id}\"]")
 }
 
 /// `item`'s [`TOOLBAR_ITEM`] id, `None` where the renderer reads no attribute.

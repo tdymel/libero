@@ -19,7 +19,7 @@ use crate::platform::a11y_media::{
 };
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
-    DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, MediaQueryApi,
+    DocumentApi, ElementApi, FocusStep, KeyChord, KeySubscription, KeyboardApi, MediaQueryApi,
     MediaQuerySubscription, OBSERVE_ATTR, PRESS_MARKER_ATTR, PlatformError, PressApi,
     PressSubscription, Read, ScrollApi, ScrollSubscription,
     clipboard::{ClipboardApi, Write},
@@ -556,8 +556,9 @@ struct PageState {
     guarding_defaults: Cell<bool>,
 }
 
-/// The focused element as the page last reported it: tag, `type`, editable, RTL.
-type Focused = Option<(String, Option<String>, bool, bool)>;
+/// The focused element as the page last reported it: tag, `type`, editable, RTL,
+/// and an input's caret at its start and its end.
+type Focused = Option<(String, Option<String>, bool, bool, Option<(bool, bool)>)>;
 
 impl PageState {
     fn next_id(&self) -> u64 {
@@ -848,12 +849,25 @@ static KEYBOARD: WebViewKeyboard = WebViewKeyboard;
 /// a chord once its subscription has taken it: from the second press on.
 const ON_KEY: &str = "const [skipTyping, clicked, seeded, observe] = data;
     const taken = new Set(seeded);
-    // The tagged elements around the target, nearest first, for `Hotkey::within`.
+    // The trigger whose `aria-controls` names a popup around `el`, outside it.
+    const trigger = (el) => {
+        for (let at = el.closest('[id]'); at; at = at.parentElement?.closest('[id]')) {
+            const id = CSS.escape(at.id);
+            const by = document.querySelector(`[aria-haspopup]:not([aria-haspopup=false])[aria-controls~=${id}], [role=combobox][aria-controls~=${id}]`);
+            if (by && !at.contains(by)) return by;
+        }
+        return null;
+    };
+    // The tagged elements around the target, nearest first, for `Hotkey::within`;
+    // a popup's walk goes on from its trigger, as its portal sits elsewhere (1212).
     const scopes = (target) => {
         const found = [];
-        let at = target instanceof Element ? target.closest(`[${observe}]`) : null;
-        for (; at; at = at.parentElement?.closest(`[${observe}]`)) {
-            found.push(Number(at.getAttribute(observe)));
+        let from = target instanceof Element ? target : null;
+        for (let hops = 0; from && hops < 8; hops++, from = trigger(from)) {
+            let at = from.closest(`[${observe}]`);
+            for (; at; at = at.parentElement?.closest(`[${observe}]`)) {
+                found.push(Number(at.getAttribute(observe)));
+            }
         }
         return found;
     };
@@ -955,14 +969,29 @@ impl KeyboardApi for WebViewKeyboard {
     }
 }
 
-/// A focus move with no `relatedTarget` left for no element.
+/// A focus move with no `relatedTarget` left for no element. A caret move resends
+/// only when an input's edges changed; `selectionchange` targets the input or the document.
 const ON_FOCUS: &str =
-    "const send = (el) => dioxus.send(el instanceof Element && el !== document.body
-        ? [el.tagName, el.getAttribute('type'), el.isContentEditable === true,
-           getComputedStyle(el).direction === 'rtl']
-        : null);
+    "let last;
+    const edges = (el) => {
+        if (!(el instanceof HTMLInputElement) || el.selectionStart == null) return null;
+        const { selectionStart: start, selectionEnd: end } = el;
+        return [start === end && start === 0, start === end && end === el.value.length];
+    };
+    const send = (el) => {
+        const state = el instanceof Element && el !== document.body
+            ? [el.tagName, el.getAttribute('type'), el.isContentEditable === true,
+               getComputedStyle(el).direction === 'rtl', edges(el)]
+            : null;
+        const key = JSON.stringify(state);
+        if (key !== last) { last = key; dioxus.send(state); }
+    };
     document.addEventListener('focusin', (event) => send(event.target));
     document.addEventListener('focusout', (event) => { if (!event.relatedTarget) send(null); });
+    const caret = () => { if (document.activeElement instanceof HTMLInputElement) send(document.activeElement); };
+    document.addEventListener('selectionchange', caret, { capture: true });
+    document.addEventListener('keyup', caret, { capture: true });
+    document.addEventListener('input', caret, { capture: true });
     send(document.activeElement);
     await new Promise(() => {});";
 
@@ -1124,7 +1153,7 @@ fn focused() -> Focused {
 
 pub(super) fn typing_target() -> bool {
     focused()
-        .is_some_and(|(tag, kind, editable, _)| editable || takes_typing(&tag, kind.as_deref()))
+        .is_some_and(|(tag, kind, editable, ..)| editable || takes_typing(&tag, kind.as_deref()))
 }
 
 pub(super) fn arrow_target() -> bool {
@@ -1132,7 +1161,92 @@ pub(super) fn arrow_target() -> bool {
 }
 
 pub(super) fn rtl_target() -> bool {
-    focused().is_some_and(|(.., rtl)| rtl)
+    focused().is_some_and(|(_, _, _, rtl, _)| rtl)
+}
+
+/// The mirror's caret, current once the page's `selectionchange` crossed the IPC.
+pub(super) fn caret_edges() -> Option<(bool, bool)> {
+    focused().and_then(|(.., edges)| edges)
+}
+
+/// Queued, like [`ElementApi::focus`] here: no handle names the element.
+pub(super) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    eval_with(json!(selector), "document.querySelector(data)?.focus();");
+    Ok(())
+}
+
+/// Queued, read where it runs: the page's focus, not a mirror that may lag.
+pub(super) fn focus_among(
+    attr: &str,
+    values: &[String],
+    to: FocusStep,
+) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    let (kind, by, wrap) = match to {
+        FocusStep::By { by, wrap } => ("by", by, wrap),
+        FocusStep::First => ("first", 0, false),
+        FocusStep::Last => ("last", 0, false),
+    };
+    eval_with(
+        json!([attr, values, kind, by, wrap]),
+        "const [attr, values, kind, by, wrap] = data;
+        const items = [...document.querySelectorAll(`[${attr}]`)]
+            .filter((el) => values.includes(el.getAttribute(attr)));
+        const at = items.findIndex((el) => el.contains(document.activeElement));
+        const last = items.length - 1;
+        let next = kind === 'first' ? 0 : last;
+        if (kind === 'by') {
+            if (at < 0) return;
+            next = wrap ? (at + by + items.length) % items.length
+                : Math.min(Math.max(at + by, 0), last);
+        }
+        items[next]?.focus();",
+    );
+    Ok(())
+}
+
+/// The focused element's nearest `attr` value, read once the script answers.
+pub(super) fn focused_attribute(attr: &str) -> Read<Option<String>> {
+    if !runs_scripts() {
+        return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
+    }
+    let read = eval_with(
+        json!(attr),
+        "return document.activeElement?.closest(`[${data}]`)?.getAttribute(data) ?? null;",
+    );
+    Box::pin(async move {
+        read.join::<Option<String>>()
+            .await
+            .map_err(|_| PlatformError::Unsupported)
+    })
+}
+
+/// Keeps the focused element in the page under the returned token, for [`focus_kept`].
+pub(super) fn keep_focused() -> Option<u64> {
+    if !runs_scripts() {
+        return None;
+    }
+    let token = NEXT_SLOT.fetch_add(1, Ordering::Relaxed);
+    eval_with(
+        json!(token),
+        "(window.__lsxKept ??= new Map()).set(data, document.activeElement);",
+    );
+    Some(token)
+}
+
+/// Focuses the element [`keep_focused`] kept, once; nothing if it left the page.
+pub(super) fn focus_kept(token: u64) {
+    eval_with(
+        json!(token),
+        "const el = window.__lsxKept?.get(data);
+        window.__lsxKept?.delete(data);
+        if (el?.isConnected && el !== document.body) el.focus();",
+    );
 }
 
 #[cfg(test)]

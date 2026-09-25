@@ -108,6 +108,7 @@ async fn a_press_outside_keeps_its_default<D: Driver>(d: &mut D, _route: &str) -
 
 const ITEM: &str = "[role=menuitem]";
 const SHARE: &str = "[role=menuitem][aria-haspopup=menu]";
+const SUBMENU_ITEM: &str = "[role=menu]:not(:has([aria-haspopup=menu])) [role=menuitem]";
 
 /// Opens the menu behind `trigger` and focuses its first item.
 async fn open_menu<D: Driver>(d: &mut D, trigger: &str) -> Result<()> {
@@ -139,6 +140,12 @@ async fn a_menu_opened_inside_counts_as_inside<D: Driver>(d: &mut D, _route: &st
 
     d.focus(SHARE).await?;
     d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "the submenu to open", async |d| {
+        d.exists(SUBMENU_ITEM).await
+    })
+    .await?;
+    // A WebView's submenu opens without taking focus (958): the scope is under test, not Menu.
+    d.focus(SUBMENU_ITEM).await?;
     eventually(d, "focus in the submenu", async |d| {
         Ok(d.is_focused(ITEM).await? && !d.is_focused(SHARE).await?)
     })
@@ -150,9 +157,7 @@ async fn a_menu_opened_inside_counts_as_inside<D: Driver>(d: &mut D, _route: &st
 e2e::scenario!(
     a_menu_opened_inside_the_scope_counts_as_inside,
     "/use-hotkeys/within-menu",
-    a_menu_opened_inside_counts_as_inside,
-    android: skip("1188: a WebView has no portal-owner chain yet"),
-    desktop: skip("1188: a WebView has no portal-owner chain yet")
+    a_menu_opened_inside_counts_as_inside
 );
 e2e::scenario!(
     a_scoped_hotkey_fires_only_with_focus_inside_its_elements,

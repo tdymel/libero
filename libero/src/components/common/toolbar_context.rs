@@ -37,6 +37,12 @@ impl ToolbarScope {
         self.order.peek().clone()
     }
 
+    /// The tab stop: the item focused last, else the first.
+    pub(crate) fn stop(&self) -> Option<u64> {
+        let current = *self.current.peek();
+        current.or_else(|| self.order.peek().first().copied())
+    }
+
     /// `id` took focus, so it becomes the tab stop.
     pub(crate) fn focused(&self, id: u64) {
         let mut current = self.current;

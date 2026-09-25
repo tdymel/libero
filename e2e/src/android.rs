@@ -262,8 +262,9 @@ pub(crate) fn keycode(key: &str) -> Result<u32> {
     })
 }
 
-/// `KEYCODE_SHIFT_LEFT`, `KEYCODE_CTRL_LEFT`, for `input keycombination`.
+/// `KEYCODE_SHIFT_LEFT`, `KEYCODE_CTRL_LEFT`, `KEYCODE_ALT_LEFT`, for `input keycombination`.
 pub(crate) const SHIFT: u32 = 59;
+pub(crate) const ALT: u32 = 57;
 pub(crate) const CTRL: u32 = 113;
 
 /// `input text` takes `%s` for a space and a shell-quoted rest.

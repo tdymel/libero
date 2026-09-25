@@ -118,6 +118,23 @@ async fn script_focus_moves_the_stop<D: Driver>(d: &mut D, _route: &str) -> Resu
     eventually_focused(d, "#three", "Shift+Tab").await
 }
 
+/// An item mounted later but placed first is first in the arrow order too.
+async fn a_late_item_keeps_its_place<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#show").await?;
+    eventually(d, "#zero to mount", async |d| d.exists("#zero").await).await?;
+    d.focus("#one").await?;
+    for (key, name, to) in [
+        (keyboard::ARROW_LEFT, "ArrowLeft", "#zero"),
+        (keyboard::ARROW_LEFT, "ArrowLeft wrapping", "#three"),
+        (keyboard::HOME, "Home", "#zero"),
+        (keyboard::ARROW_RIGHT, "ArrowRight", "#one"),
+    ] {
+        d.press(key).await?;
+        eventually_focused(d, to, name).await?;
+    }
+    Ok(())
+}
+
 const SEGMENT: &str = "[role=radiogroup] input:focus";
 
 /// Fields keep their own arrows until an end: the segments' last, the caret's edge.
@@ -212,9 +229,7 @@ async fn the_help_lists_the_chords<D: Driver>(d: &mut D, _route: &str) -> Result
 e2e::scenario!(
     alt_f10_moves_focus_to_the_bar_and_escape_back,
     "/toolbar-editor",
-    alt_f10_reaches_the_bar,
-    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
-    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
+    alt_f10_reaches_the_bar
 );
 e2e::scenario!(
     shortcut_help_lists_the_chords,
@@ -224,23 +239,22 @@ e2e::scenario!(
 e2e::scenario!(
     fields_join_the_arrow_order,
     "/toolbar-fields",
-    fields_pass_arrows_on_at_their_ends,
-    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
-    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
+    fields_pass_arrows_on_at_their_ends
 );
 e2e::scenario!(
     a_script_focus_moves_the_tab_stop,
     "/toolbar-script-focus",
-    script_focus_moves_the_stop,
-    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
-    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
+    script_focus_moves_the_stop
+);
+e2e::scenario!(
+    an_item_shown_later_keeps_its_dom_place,
+    "/toolbar-script-focus",
+    a_late_item_keeps_its_place
 );
 e2e::scenario!(
     the_arrows_rove_over_every_kind_of_item,
     "/toolbar",
-    the_arrows_rove,
-    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
-    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
+    the_arrows_rove
 );
 e2e::scenario!(
     a_select_keeps_its_home_key,
@@ -250,9 +264,7 @@ e2e::scenario!(
 e2e::scenario!(
     tabbing_back_in_returns_to_the_last_item,
     "/toolbar",
-    the_tab_stop_follows_focus,
-    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
-    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
+    the_tab_stop_follows_focus
 );
 e2e::scenario!(
     a_disabled_item_ignores_clicks_and_keys,
@@ -262,16 +274,12 @@ e2e::scenario!(
 e2e::scenario!(
     a_vertical_toolbar_moves_on_up_and_down,
     "/toolbar-vertical",
-    a_vertical_bar_moves_on_up_and_down,
-    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
-    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
+    a_vertical_bar_moves_on_up_and_down
 );
 e2e::scenario!(
     a_right_to_left_toolbar_swaps_the_arrows,
     "/toolbar-rtl",
-    rtl_swaps_the_arrows,
-    android: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop"),
-    desktop: skip("1191: a WebView answers no query_selector, so the bar neither roves nor tracks its stop")
+    rtl_swaps_the_arrows
 );
 
 #[test]

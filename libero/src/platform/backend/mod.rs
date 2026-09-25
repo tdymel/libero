@@ -477,7 +477,7 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     return webview::arrow_target();
 }
 
-/// As [`typing_target`]; a WebView cannot tell - see [`caret_edges`](crate::platform::caret_edges).
+/// As [`typing_target`] - see [`caret_edges`](crate::platform::caret_edges).
 pub(crate) fn caret_edges(event: &Event<KeyboardData>) -> Option<(bool, bool)> {
     #[cfg(not(target_arch = "wasm32"))]
     let _ = event;
@@ -486,7 +486,7 @@ pub(crate) fn caret_edges(event: &Event<KeyboardData>) -> Option<(bool, bool)> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::caret_edges();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-    return None;
+    return webview::caret_edges();
 }
 
 /// As [`typing_target`] - see [`rtl_target`](crate::platform::rtl_target).
@@ -510,6 +510,59 @@ pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), super::Platfo
         let _ = (id, value);
         Err(super::PlatformError::Unsupported)
     };
+}
+
+/// Only a WebView - see [`focus_selector`](crate::platform::focus_selector).
+pub(crate) fn focus_selector(selector: &str) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::focus_selector(selector);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return {
+        let _ = selector;
+        Err(super::PlatformError::Unsupported)
+    };
+}
+
+/// Only a WebView - see [`focus_among`](crate::platform::focus_among).
+pub(crate) fn focus_among(
+    attr: &str,
+    values: &[String],
+    to: super::FocusStep,
+) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::focus_among(attr, values, to);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return {
+        let _ = (attr, values, to);
+        Err(super::PlatformError::Unsupported)
+    };
+}
+
+/// Only a WebView - see [`focused_attribute`](crate::platform::focused_attribute).
+pub(crate) fn focused_attribute(attr: &str) -> super::Read<Option<String>> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::focused_attribute(attr);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return {
+        let _ = attr;
+        Box::pin(std::future::ready(Err(super::PlatformError::Unsupported)))
+    };
+}
+
+/// Only a WebView - see [`keep_focused`](crate::platform::keep_focused).
+pub(crate) fn keep_focused() -> Option<u64> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::keep_focused();
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return None;
+}
+
+/// Only a WebView - see [`focus_kept`](crate::platform::focus_kept).
+pub(crate) fn focus_kept(token: u64) {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    webview::focus_kept(token);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    let _ = token;
 }
 
 /// Only a WebView on a phone - see [`soft_keyboard_app`](crate::platform::soft_keyboard_app).

@@ -6,7 +6,7 @@ use chromiumoxide::Page;
 use super::web::{element, json};
 use super::{Driver, Platform, Rect};
 use crate::android::{
-    CTRL, SHIFT, download, harness, input, input_text, keycode, soft_keyboard_shown, tap_node,
+    ALT, CTRL, SHIFT, download, harness, input, input_text, keycode, soft_keyboard_shown, tap_node,
     webview_view_focused,
 };
 use crate::passes::{focus, keyboard, pointer};
@@ -190,6 +190,10 @@ impl Driver for Android {
 
     async fn press_ctrl(&mut self, key: keyboard::Key) -> Result<()> {
         self.chord(CTRL, key).await
+    }
+
+    async fn press_alt(&mut self, key: keyboard::Key) -> Result<()> {
+        self.chord(ALT, key).await
     }
 
     /// One `input text` per character, at about a typist's pace: one call

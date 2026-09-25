@@ -31,6 +31,52 @@ pub(crate) fn set_value_by_id(id: &str, value: &str) -> Result<(), PlatformError
     backend::set_value_by_id(id, value)
 }
 
+/// Focuses the page's first match of `selector`, for a WebView, where no handle
+/// can query (1191). `Unsupported` elsewhere: `query_selector` there can.
+pub(crate) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
+    backend::focus_selector(selector)
+}
+
+/// Where [`focus_among`] moves focus.
+#[derive(Clone, Copy)]
+#[cfg_attr(any(target_arch = "wasm32", feature = "native"), allow(dead_code))]
+pub(crate) enum FocusStep {
+    /// `by` places from the focused one; `wrap` past the ends, else it stops there.
+    By {
+        by: isize,
+        wrap: bool,
+    },
+    First,
+    Last,
+}
+
+/// Moves focus among the page's `[attr]` elements valued in `values`, in DOM
+/// order, for a WebView, where no handle can query (1191). `Unsupported` elsewhere.
+pub(crate) fn focus_among(
+    attr: &str,
+    values: &[String],
+    to: FocusStep,
+) -> Result<(), PlatformError> {
+    backend::focus_among(attr, values, to)
+}
+
+/// The focused element's own or nearest ancestor's `attr`, for a WebView, which
+/// reads no attribute in a handler. `Unsupported` elsewhere.
+pub(crate) fn focused_attribute(attr: &str) -> super::Read<Option<String>> {
+    backend::focused_attribute(attr)
+}
+
+/// Keeps the focused element page-side, for a WebView, which holds no active
+/// element (no `DocumentApi`). `None` elsewhere. [`focus_kept`] focuses it.
+pub(crate) fn keep_focused() -> Option<u64> {
+    backend::keep_focused()
+}
+
+/// Focuses what [`keep_focused`] kept under `token`, once.
+pub(crate) fn focus_kept(token: u64) {
+    backend::focus_kept(token);
+}
+
 /// Whether `mounted` lays out right to left: its computed `direction`, which
 /// `dir="rtl"` on it or an ancestor sets. `false` where the renderer cannot say.
 pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
