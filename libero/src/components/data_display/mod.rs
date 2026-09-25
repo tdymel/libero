@@ -7,6 +7,7 @@ mod icon;
 mod image;
 mod image_list;
 mod indicator;
+mod kanban;
 mod list;
 mod marquee;
 mod pictogram;
@@ -25,6 +26,10 @@ pub use icon::{Icon, IconProps};
 pub use image::{Image, ImageFit, ImageLoading, ImagePart, ImageProps};
 pub use image_list::{ImageBar, ImageItem, ImageList, ImageListPart, ImageListProps};
 pub use indicator::{Indicator, IndicatorProps};
+pub use kanban::{
+    Kanban, KanbanCard, KanbanCardPart, KanbanCardProps, KanbanColumn, KanbanColumnPart,
+    KanbanColumnProps, KanbanMove, KanbanProps,
+};
 pub use list::{List, ListItem, ListItemPart, ListItemProps, ListProps};
 pub use marquee::{Marquee, MarqueePart, MarqueeProps};
 pub use pictogram::{Pictogram, PictogramProps, SvgData};

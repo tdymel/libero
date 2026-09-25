@@ -605,7 +605,7 @@ pub fn use_sortable_item(index: usize) -> SortableItemHandle {
 }
 
 /// [`use_sortable_item`], named `label` in the announcements.
-pub(super) fn use_labelled_sortable_item(
+pub(crate) fn use_labelled_sortable_item(
     index: usize,
     label: Option<String>,
 ) -> SortableItemHandle {

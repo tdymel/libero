@@ -30,7 +30,7 @@ static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("sorting", sx().user_select("none"))
 });
 
-static SORTABLE_ITEM_SX: StaticSx = StaticSx::new(|| {
+pub(crate) static SORTABLE_ITEM_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
         .gap("xs")
@@ -45,7 +45,7 @@ static SORTABLE_ITEM_SX: StaticSx = StaticSx::new(|| {
         .when("dragging", sx().z_index("1"))
 });
 
-static SORTABLE_HANDLE_SX: StaticSx =
+pub(crate) static SORTABLE_HANDLE_SX: StaticSx =
     StaticSx::new(|| control_sx().and(drag_handle_sx()).cursor("grab"));
 
 /// The handle's and the move buttons' box.
@@ -66,10 +66,11 @@ fn control_sx() -> Sx {
         .selector("& svg", sx().width("16px").height("16px"))
 }
 
-static SORTABLE_CONTENT_SX: StaticSx = StaticSx::new(|| sx().flex("1 1 auto").min_width("0"));
+pub(crate) static SORTABLE_CONTENT_SX: StaticSx =
+    StaticSx::new(|| sx().flex("1 1 auto").min_width("0"));
 
 /// The move buttons: the handle's box, an arrow cursor, dimmed at the list's end.
-static SORTABLE_MOVE_SX: StaticSx = StaticSx::new(|| {
+pub(crate) static SORTABLE_MOVE_SX: StaticSx = StaticSx::new(|| {
     control_sx()
         .cursor("pointer")
         .selector("&:disabled", sx().opacity("0.4").cursor("default"))

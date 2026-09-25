@@ -88,6 +88,7 @@ md_pages! {
     ImageList => "image_list",
     Index => "index",
     Indicator => "indicator",
+    Kanban => "kanban",
     Kbd => "kbd",
     Lightbox => "lightbox",
     List => "list",

@@ -77,9 +77,11 @@ pub enum IconSlot {
     Star,
     /// A sortable item's drag handle.
     Grip,
+    /// A kanban card's Move to column trigger.
+    MoveTo,
 }
 
-const SLOTS: usize = IconSlot::Grip as usize + 1;
+const SLOTS: usize = IconSlot::MoveTo as usize + 1;
 
 /// Glyphs by [`IconSlot`]; an empty slot keeps libero's default (lucide).
 /// A whole set starts from its constructor, one `icons-<set>` feature each:

@@ -396,6 +396,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ListPage {}, "List"),
                 page(Route::DataListPage {}, "DataList"),
                 page(Route::SortablePage {}, "Sortable"),
+                page(Route::KanbanPage {}, "Kanban"),
                 page(Route::TablePage {}, "Table"),
                 page(Route::TimelinePage {}, "Timeline"),
                 page(Route::AccordionPage {}, "Accordion"),

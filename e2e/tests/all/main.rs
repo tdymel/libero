@@ -57,6 +57,7 @@ mod image_cropper;
 mod image_list;
 mod isolation;
 mod journal;
+mod kanban;
 mod layout;
 mod lightbox;
 mod loader;

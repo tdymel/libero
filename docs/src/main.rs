@@ -149,6 +149,8 @@ pub(crate) enum Route {
     QrCodePage {},
     #[route("/data-display/sortable")]
     SortablePage {},
+    #[route("/data-display/kanban")]
+    KanbanPage {},
 
     #[route("/feedback/alert")]
     AlertPage {},

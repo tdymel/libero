@@ -1,0 +1,47 @@
+---
+source: e2e/src/suite.rs
+description: kanban at desktop (rest)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+StaticText "To do"
+list "To do"
+  listitem [level=1]
+    button "Reorder"
+    paragraph
+      StaticText "Alpha"
+    button "Move up" [disabled]
+    button "Move down"
+    button "Move to column" [expanded=false] [haspopup=menu]
+  listitem [level=1]
+    button "Reorder"
+    paragraph
+      StaticText "Beta"
+    button "Move up"
+    button "Move down"
+    button "Move to column" [expanded=false] [haspopup=menu]
+  listitem [level=1]
+    button "Reorder"
+    paragraph
+      StaticText "Gamma"
+    button "Move up"
+    button "Move down" [disabled]
+    button "Move to column" [expanded=false] [haspopup=menu]
+StaticText "Doing"
+list "Doing"
+  listitem [level=1]
+    button "Reorder"
+    paragraph
+      StaticText "Delta"
+    button "Move up" [disabled]
+    button "Move down" [disabled]
+    button "Move to column" [expanded=false] [haspopup=menu]
+StaticText "Done"
+list "Done"
+status [atomic] [live=polite]
+paragraph
+  StaticText "Alpha Beta Gamma | Delta |"
+paragraph
+button "After"
+  StaticText "After"

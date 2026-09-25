@@ -44,6 +44,7 @@ pub struct Localization {
     pub notifications: NotificationsLabels,
     pub scroller: ScrollerLabels,
     pub sortable: SortableLabels,
+    pub kanban: KanbanLabels,
     pub stepper: StepperLabels,
     pub marquee: MarqueeLabels,
     pub chips: ChipsLabels,
@@ -89,6 +90,7 @@ impl Localization {
         notifications: NotificationsLabels::ENGLISH,
         scroller: ScrollerLabels::ENGLISH,
         sortable: SortableLabels::ENGLISH,
+        kanban: KanbanLabels::ENGLISH,
         stepper: StepperLabels::ENGLISH,
         marquee: MarqueeLabels::ENGLISH,
         chips: ChipsLabels::ENGLISH,
@@ -133,6 +135,7 @@ impl Localization {
         notifications: NotificationsLabels::GERMAN,
         scroller: ScrollerLabels::GERMAN,
         sortable: SortableLabels::GERMAN,
+        kanban: KanbanLabels::GERMAN,
         stepper: StepperLabels::GERMAN,
         marquee: MarqueeLabels::GERMAN,
         chips: ChipsLabels::GERMAN,
@@ -162,7 +165,7 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 40] {
+    fn templates(words: &Localization) -> [&'static str; 41] {
         [
             words.common.remove,
             words.image_cropper.value,
@@ -197,6 +200,7 @@ mod tests {
             words.sortable.moved,
             words.sortable.dropped,
             words.sortable.cancelled,
+            words.kanban.moved,
             words.code_block.code_named,
             words.tldr.prompt,
             words.date.on_or_after,
@@ -235,6 +239,7 @@ mod tests {
             ("value", &90),
             ("count", &5),
             ("name", &"Germany"),
+            ("column", &"Done"),
             ("iso", &"DE"),
             ("dial", &49),
             ("key", &"F8"),

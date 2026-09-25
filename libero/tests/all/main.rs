@@ -65,6 +65,7 @@ mod image;
 mod image_list;
 mod indicator;
 mod input;
+mod kanban;
 mod kbd;
 mod lightbox;
 mod list;

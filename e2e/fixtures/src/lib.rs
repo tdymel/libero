@@ -59,6 +59,7 @@ mod icon_provider;
 mod image;
 mod image_cropper;
 mod image_list;
+mod kanban;
 mod layout;
 mod lightbox;
 mod loader;
@@ -186,6 +187,7 @@ const FIXTURES: &[Routes] = &[
     icon_provider::ROUTES,
     image::ROUTES,
     image_list::ROUTES,
+    kanban::ROUTES,
     layout::ROUTES,
     lightbox::ROUTES,
     loader::ROUTES,

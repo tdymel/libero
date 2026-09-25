@@ -65,6 +65,7 @@ icon_set!(lucide: [outlined => lucide_outlined] {
     Sparkles => sparkles,
     Star => star,
     Grip => grip_vertical,
+    MoveTo => arrow_right_left,
 });
 
 #[cfg(feature = "icons-material")]
@@ -106,6 +107,7 @@ icon_set!(material: [
     Sparkles => image_auto_awesome,
     Star => toggle_star,
     Grip => action_drag_indicator,
+    MoveTo => action_swap_horiz,
 });
 
 #[cfg(feature = "icons-tabler")]
@@ -141,6 +143,7 @@ icon_set!(tabler: [outlined => tabler_outlined] {
     Sparkles => sparkles,
     Star => star,
     Grip => grip_vertical,
+    MoveTo => arrows_left_right,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -175,6 +178,7 @@ icon_set!(bootstrap: [outlined => bootstrap_outlined] {
     Sparkles => stars,
     Star => star,
     Grip => grip_vertical,
+    MoveTo => arrow_left_right,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -216,6 +220,7 @@ icon_set!(phosphor: [
     Sparkles => sparkle,
     Star => star,
     Grip => dots_six_vertical,
+    MoveTo => arrows_left_right,
 });
 
 #[cfg(test)]
