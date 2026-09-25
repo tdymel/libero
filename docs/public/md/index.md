@@ -164,6 +164,7 @@ fetch only the file you need.
 - [Long press](use_long_press.md): Pointer handlers that call back once a press is held, without breaking a tap or a scroll.
 - [Timers](use_timers.md): Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.
 - [Debounce and throttle](use_debounce.md): Signals and callbacks that follow their source once it settles or at most once per period.
+- [History](use_history.md): Undo and redo over snapshots of a value, with rapid changes grouped into one step by time or size.
 - [Hotkeys](use_hotkeys.md): Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked.
 - [Media query](use_media_query.md): Whether a CSS media query or the 768px mobile breakpoint matches, live.
 - [Theme set](use_theme_set.md): Reads and swaps the active theme set, which a theme picker is built on.

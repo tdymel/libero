@@ -28,6 +28,7 @@ guide page they belong to.
 | `use_debounced_callback` | A callback that runs after its last call, with the last argument. | [Debounce and throttle](use_debounce.md) |
 | `use_throttled_value` | A signal that follows another at most once per period. | [Debounce and throttle](use_debounce.md) |
 | `use_throttled_callback` | A callback that runs at once, then at most once per period. | [Debounce and throttle](use_debounce.md) |
+| `use_history` | Undo and redo over snapshots of a value, rapid changes grouped. | [History](use_history.md) |
 | `use_hotkeys` | Runs a handler on a keyboard shortcut, from anywhere in the page. | [Hotkeys](use_hotkeys.md) |
 | `use_media_query` | Whether a CSS media query matches, live. | [Media query](use_media_query.md) |
 | `use_is_mobile` | Whether the viewport is narrower than 768px, live. | [Media query](use_media_query.md) |

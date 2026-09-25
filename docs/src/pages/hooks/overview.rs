@@ -98,6 +98,11 @@ fn hooks() -> Vec<HookRow> {
             Route::UseDebouncePage {},
         ),
         row(
+            "use_history",
+            "Undo and redo over snapshots of a value, rapid changes grouped.",
+            Route::UseHistoryPage {},
+        ),
+        row(
             "use_hotkeys",
             "Runs a handler on a keyboard shortcut, from anywhere in the page.",
             Route::UseHotkeysPage {},
