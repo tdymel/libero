@@ -35,6 +35,8 @@ guide page they belong to.
 | `use_geolocation` | The device's position, once or followed, and the location permission. | [Geolocation](use_geolocation.md) |
 | `use_user_media` | The camera and microphone: a preview, a photo and a recording. | [User media](use_user_media.md) |
 | `use_user_media_devices` | The page's cameras and microphones, live. | [User media](use_user_media.md) |
+| `use_system_notification` | Notifications the operating system draws, and their permission. | [System notifications](use_system_notification.md) |
+| `use_push_subscription` | A web push subscription for the app's server to push to. | [System notifications](use_system_notification.md) |
 | `use_theme` | The active theme, for values CSS cannot carry. | [Theming](theming.md) |
 | `use_theme_set` | Reads and swaps the active theme set. | [Theme set](use_theme_set.md) |
 | `use_localization` | The words libero's components say, in the active language. | [Localization](localization.md) |

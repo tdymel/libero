@@ -1,0 +1,130 @@
+//! `use_system_notification` and `use_push_subscription`: mounting asks nothing;
+//! on the web a granted show and close, a denial, and push registering its worker.
+//! Blitz and Android have no Notifications API; push is web only.
+
+use anyhow::Result;
+use chromiumoxide::Page;
+use chromiumoxide::cdp::browser_protocol::browser::{
+    PermissionDescriptor, PermissionSetting, SetPermissionParams,
+};
+use e2e::browser::{PERMISSIONS, block_on};
+use e2e::driver::{Driver, Platform, eventually_text, linger};
+use e2e::{Fixture, Viewport, wait};
+
+/// Nothing prompts until asked; elsewhere than the web, push is unsupported.
+async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let web = d.platform() == Platform::Web;
+    eventually_text(d, "#push-supported", &web.to_string(), "mount").await?;
+    linger(d, 3).await;
+    for (selector, expected) in [
+        ("#error", "None"),
+        ("#pending", "false"),
+        ("#push-error", "None"),
+        ("#subscription", "false"),
+    ] {
+        eventually_text(d, selector, expected, "mount").await?;
+    }
+    match d.platform() {
+        Platform::Native | Platform::Android => {
+            eventually_text(d, "#supported", "false", "mount").await?;
+            eventually_text(d, "#permission", "Unsupported", "mount").await?;
+            d.click("#show").await?;
+            eventually_text(d, "#error", "Some(Unsupported)", "a show").await?;
+            d.click("#subscribe").await?;
+            eventually_text(d, "#push-error", "Some(Unsupported)", "a subscribe").await?;
+        }
+        // WebKitGTK has a `Notification`, but wry answers no permission request.
+        Platform::Desktop => {
+            eventually_text(d, "#supported", "true", "mount").await?;
+            d.click("#request").await?;
+            eventually_text(d, "#error", "Some(Denied)", "a request").await?;
+            eventually_text(d, "#permission", "Denied", "a denial").await?;
+        }
+        Platform::Web => {
+            eventually_text(d, "#supported", "true", "mount").await?;
+        }
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    mounting_asks_nothing_until_a_request,
+    "/use-system-notification",
+    mounting_asks_nothing
+);
+
+async fn set_permission(page: &Page, setting: PermissionSetting) -> Result<()> {
+    let descriptor = PermissionDescriptor::new("notifications");
+    page.execute(SetPermissionParams::new(descriptor, setting))
+        .await?;
+    Ok(())
+}
+
+async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {
+    let expression = format!("document.querySelector({selector:?})?.textContent === {text:?}");
+    wait::for_js_true(page, &expression, &format!("{selector} to read {text}")).await
+}
+
+async fn click(page: &Page, selector: &str) {
+    page.find_element(selector)
+        .await
+        .unwrap()
+        .click()
+        .await
+        .unwrap();
+}
+
+#[test]
+fn the_web_shows_closes_and_reports_a_denial() {
+    block_on(async {
+        let _permissions = PERMISSIONS.lock().await;
+        let fixture = Fixture::open("/use-system-notification", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        set_permission(page, PermissionSetting::Granted)
+            .await
+            .unwrap();
+        reads(page, "#permission", "Granted").await.unwrap();
+
+        click(page, "#request").await;
+        reads(page, "#pending", "false").await.unwrap();
+        reads(page, "#error", "None").await.unwrap();
+        click(page, "#show").await;
+        // A failed show would land in `#error` once its promise settles.
+        page.evaluate("new Promise((done) => setTimeout(done, 500))")
+            .await
+            .unwrap();
+        reads(page, "#error", "None").await.unwrap();
+        click(page, "#close").await;
+
+        // The Permissions API reports the revoke; a show then fails as denied.
+        set_permission(page, PermissionSetting::Denied)
+            .await
+            .unwrap();
+        reads(page, "#permission", "Denied").await.unwrap();
+        click(page, "#show").await;
+        reads(page, "#error", "Some(Denied)").await.unwrap();
+
+        // The worker registers; headless Chromium then refuses the subscription itself.
+        click(page, "#subscribe").await;
+        reads(page, "#push-error", "Some(Denied)").await.unwrap();
+        reads(page, "#push-pending", "false").await.unwrap();
+        let registered = page
+            .evaluate("navigator.serviceWorker.getRegistration().then((r) => !!r)")
+            .await
+            .unwrap()
+            .into_value::<bool>()
+            .unwrap();
+        assert!(registered, "the worker registers before the subscription");
+
+        set_permission(page, PermissionSetting::Prompt)
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("the system notification hooks")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

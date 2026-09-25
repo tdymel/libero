@@ -32,7 +32,6 @@ impl PermissionState {
 
 /// The permissions libero asks about.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // Notifications land with 1222.
 pub(crate) enum PermissionKind {
     Geolocation,
     Camera,

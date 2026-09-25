@@ -133,6 +133,16 @@ fn hooks() -> Vec<HookRow> {
             Route::UseUserMediaPage {},
         ),
         row(
+            "use_system_notification",
+            "Notifications the operating system draws, and their permission.",
+            Route::UseSystemNotificationPage {},
+        ),
+        row(
+            "use_push_subscription",
+            "A web push subscription for the app's server to push to.",
+            Route::UseSystemNotificationPage {},
+        ),
+        row(
             "use_theme",
             "The active theme, for values CSS cannot carry.",
             Route::ThemingPage {},

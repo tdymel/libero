@@ -93,6 +93,8 @@ pub(crate) enum Route {
     UseGeolocationPage {},
     #[route("/hooks/use-user-media")]
     UseUserMediaPage {},
+    #[route("/hooks/use-system-notification")]
+    UseSystemNotificationPage {},
     #[route("/hooks/use-theme-set")]
     UseThemeSetPage {},
     #[route("/hooks/use-stylesheet")]

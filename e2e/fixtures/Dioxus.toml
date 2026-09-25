@@ -1,3 +1,7 @@
+# `public/sw.js` is `use_push_subscription`'s worker, served at the root.
+[application]
+public_dir = "public"
+
 [web.app]
 # `dx` concatenates its title into an existing <title>; naming it here keeps
 # the fixture pages from rendering as "e2e-fixturesdioxus | ⛺".

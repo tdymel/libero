@@ -32,9 +32,11 @@ mod portal_tests;
 mod presence;
 #[cfg(test)]
 mod presence_tests;
+mod push_subscription;
 mod ripple;
 mod silent_focus;
 mod stylesheet;
+mod system_notification;
 mod theme;
 mod timers;
 #[cfg(all(test, not(target_arch = "wasm32")))]
@@ -43,7 +45,8 @@ mod typeahead;
 mod user_media;
 
 pub use crate::platform::{
-    GeolocationError, GeolocationOptions, MediaDevice, PermissionState, Position, UserMediaError,
+    GeolocationError, GeolocationOptions, MediaDevice, PermissionState, Position, PushEndpoint,
+    PushError, PushOptions, SystemNotification, SystemNotificationError, UserMediaError,
 };
 pub use accessibility::{AccessibilityHandle, use_accessibility};
 pub(crate) use cache::use_cache;
@@ -88,10 +91,12 @@ pub use popover::{
 pub(crate) use popover::{owner_link, place, use_popover_on};
 pub(crate) use portal::{use_portal, use_portal_slot};
 pub(crate) use presence::use_presence;
+pub use push_subscription::{PushSubscription, use_push_subscription};
 pub(crate) use ripple::{clipped_ripple_sx, ripple_sx, use_ripple};
 pub(crate) use silent_focus::{use_silent_focus_in, use_silent_focus_out};
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
+pub use system_notification::{SystemNotifier, use_system_notification};
 pub use theme::{ThemeSetHandle, use_theme, use_theme_set};
 pub(crate) use theme::{use_glass_gradient_style, use_glass_tint, use_gradient_style};
 pub use timers::{IntervalHandle, TimeoutHandle, use_interval, use_timeout};

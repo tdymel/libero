@@ -103,6 +103,7 @@ mod splitter;
 mod spotlight;
 mod stepper;
 mod stylesheet;
+mod system_notification;
 mod table;
 mod table_paging;
 mod tabs;

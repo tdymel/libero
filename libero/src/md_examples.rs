@@ -157,6 +157,7 @@ md_pages! {
     UseElement => "use_element",
     UseFocusReturn => "use_focus_return",
     UseGeolocation => "use_geolocation",
+    UseSystemNotification => "use_system_notification",
     UseHistory => "use_history",
     UseHotkeys => "use_hotkeys",
     UseId => "use_id",

@@ -213,6 +213,14 @@ fn aliases(label: &str) -> &'static [&'static str] {
             "record",
             "photo",
         ],
+        "System notifications" => &[
+            "use_system_notification",
+            "use_push_subscription",
+            "push",
+            "web push",
+            "desktop notification",
+            "service worker",
+        ],
         "Timers" => &["use_timeout", "use_interval", "setTimeout", "setInterval"],
         "Debounce and throttle" => &[
             "use_debounced_value",
@@ -457,6 +465,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseMediaQueryPage {}, "Media query"),
                 page(Route::UseGeolocationPage {}, "Geolocation"),
                 page(Route::UseUserMediaPage {}, "User media"),
+                page(Route::UseSystemNotificationPage {}, "System notifications"),
                 page(Route::UseThemeSetPage {}, "Theme set"),
                 page(Route::UseStylesheetPage {}, "Stylesheet"),
             ],

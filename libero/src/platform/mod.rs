@@ -32,11 +32,13 @@ mod paint;
 mod permission;
 mod placeholder;
 mod press;
+mod push;
 mod regex;
 mod resize;
 mod scroll;
 mod select;
 mod session;
+mod system_notification;
 mod table;
 mod task;
 mod timer;
@@ -110,6 +112,8 @@ pub(crate) use placeholder::{
     placeholder_drawn,
 };
 pub(crate) use press::{PRESS_MARKER_ATTR, PressApi, PressSubscription, press};
+pub(crate) use push::{PushApi, push};
+pub use push::{PushEndpoint, PushError, PushOptions};
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub(crate) use resize::{is_measured_resize, on_resize};
 pub(crate) use scroll::{
@@ -119,6 +123,8 @@ pub(crate) use scroll::{
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::opens_select_picker;
 pub(crate) use session::{session_get, session_set};
+pub(crate) use system_notification::{NotificationEvent, ShownNotification, system_notification};
+pub use system_notification::{SystemNotification, SystemNotificationError};
 pub(crate) use table::{lays_out_captions, widens_sized_tables};
 pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};

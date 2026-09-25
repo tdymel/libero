@@ -125,6 +125,7 @@ mod use_hotkeys;
 mod use_intersection;
 mod use_long_press;
 mod use_media_query;
+mod use_system_notification;
 mod use_timers;
 mod use_user_media;
 mod visually_hidden;
@@ -255,6 +256,7 @@ const FIXTURES: &[Routes] = &[
     use_intersection::ROUTES,
     use_long_press::ROUTES,
     use_media_query::ROUTES,
+    use_system_notification::ROUTES,
     use_timers::ROUTES,
     use_user_media::ROUTES,
     visually_hidden::ROUTES,
