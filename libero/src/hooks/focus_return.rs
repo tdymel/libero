@@ -141,7 +141,7 @@ impl FocusReturn {
 /// # }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/hooks/use-focus-return>
+/// Docs: <https://libero-ui.dev/accessibility/use-focus-return>
 pub fn use_focus_return() -> FocusReturn {
     FocusReturn {
         trigger: use_signal(|| None),

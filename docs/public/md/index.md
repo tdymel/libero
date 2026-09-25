@@ -151,13 +151,14 @@ fetch only the file you need.
 - [Overview](accessibility.md): What libero's accessibility support covers across the library and what it does not, from on and disabled states to forced colors, which is covered only in part.
 - [FocusTrap](focus_trap.md): Confines Tab and Shift+Tab cycling to its children, for keeping keyboard focus inside an open overlay.
 - [VisuallyHidden](visually_hidden.md): A `span` read by screen readers but hidden from sighted layout, for extra context on something vague on its own.
+- [Unique ID](use_id.md): A process-unique id, stable for the component's lifetime, for the aria wiring between one instance's elements.
+- [Focus return](use_focus_return.md): Puts focus back on the element that opened a panel or popup once it closes, with fallbacks for a trigger that is gone.
+- [Accessibility settings](use_accessibility.md): Reads the reader's accessibility settings and lets an app force reduced motion.
 
 ## Hooks
 
 - [Overview](hooks.md): Every public libero hook in one table, with what it is for and the page that shows it.
-- [Unique ID](use_id.md): A process-unique id, stable for the component's lifetime, for the aria wiring between one instance's elements.
 - [Element handle](use_element.md): A handle to one of your component's own elements, to focus, scroll and measure it on every renderer.
-- [Focus return](use_focus_return.md): Puts focus back on the element that opened a panel or popup once it closes, with fallbacks for a trigger that is gone.
 - [Drag](use_drag.md): Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
 - [Intersection](use_intersection.md): Reports how much of an element is visible, with a root, margin and thresholds; never intersecting where nothing can observe.
 - [Long press](use_long_press.md): Pointer handlers that call back once a press is held, without breaking a tap or a scroll.
@@ -167,7 +168,6 @@ fetch only the file you need.
 - [Media query](use_media_query.md): Whether a CSS media query or the 768px mobile breakpoint matches, live.
 - [Theme set](use_theme_set.md): Reads and swaps the active theme set, which a theme picker is built on.
 - [Stylesheet](use_stylesheet.md): Registers a stylesheet of your own above every libero layer and returns its class.
-- [Accessibility settings](use_accessibility.md): Reads the reader's accessibility settings and lets an app force reduced motion.
 
 ---
 

@@ -412,6 +412,9 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::AccessibilityPage {}, "Overview"),
                 page(Route::FocusTrapPage {}, "FocusTrap"),
                 page(Route::VisuallyHiddenPage {}, "VisuallyHidden"),
+                page(Route::UseIdPage {}, "Unique ID"),
+                page(Route::UseFocusReturnPage {}, "Focus return"),
+                page(Route::UseAccessibilityPage {}, "Accessibility settings"),
             ],
         ),
         // The overview, the primitives, then the app-wide ones. A hook a
@@ -421,9 +424,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             "Hooks",
             vec![
                 page(Route::HooksPage {}, "Overview"),
-                page(Route::UseIdPage {}, "Unique ID"),
                 page(Route::UseElementPage {}, "Element handle"),
-                page(Route::UseFocusReturnPage {}, "Focus return"),
                 page(Route::UseDragPage {}, "Drag"),
                 page(Route::UseIntersectionPage {}, "Intersection"),
                 page(Route::UseLongPressPage {}, "Long press"),
@@ -433,7 +434,6 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseMediaQueryPage {}, "Media query"),
                 page(Route::UseThemeSetPage {}, "Theme set"),
                 page(Route::UseStylesheetPage {}, "Stylesheet"),
-                page(Route::UseAccessibilityPage {}, "Accessibility settings"),
             ],
         ),
     ]
@@ -456,7 +456,20 @@ mod tests {
                 action.label == label && action.group.as_deref() == Some("Accessibility")
             })
         };
-        assert!(hit("Overview") && hit("FocusTrap"));
+        assert!(hit("Overview") && hit("FocusTrap") && hit("Focus return"));
+    }
+
+    /// The a11y hooks moved from Hooks to Accessibility: their old links still land.
+    #[test]
+    fn a_moved_hook_page_keeps_its_old_url() {
+        for (old, route) in [
+            ("/hooks/use-id", Route::UseIdPage {}),
+            ("/hooks/use-focus-return", Route::UseFocusReturnPage {}),
+            ("/hooks/use-accessibility", Route::UseAccessibilityPage {}),
+        ] {
+            assert_eq!(old.parse::<Route>().ok(), Some(route.clone()), "{old}");
+            assert!(route.to_string().starts_with("/accessibility/"), "{route}");
+        }
     }
 
     #[test]

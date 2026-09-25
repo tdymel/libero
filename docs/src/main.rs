@@ -58,15 +58,21 @@ pub(crate) enum Route {
     FocusTrapPage {},
     #[route("/accessibility/visually-hidden")]
     VisuallyHiddenPage {},
+    // The a11y hooks' URLs from before they moved here from Hooks (2026-10-02).
+    #[redirect("/hooks/use-id", || Route::UseIdPage {})]
+    #[redirect("/hooks/use-focus-return", || Route::UseFocusReturnPage {})]
+    #[redirect("/hooks/use-accessibility", || Route::UseAccessibilityPage {})]
+    #[route("/accessibility/use-id")]
+    UseIdPage {},
+    #[route("/accessibility/use-focus-return")]
+    UseFocusReturnPage {},
+    #[route("/accessibility/use-accessibility")]
+    UseAccessibilityPage {},
 
     #[route("/hooks")]
     HooksPage {},
-    #[route("/hooks/use-id")]
-    UseIdPage {},
     #[route("/hooks/use-element")]
     UseElementPage {},
-    #[route("/hooks/use-focus-return")]
-    UseFocusReturnPage {},
     #[route("/hooks/use-drag")]
     UseDragPage {},
     #[route("/hooks/use-intersection")]
@@ -85,8 +91,6 @@ pub(crate) enum Route {
     UseThemeSetPage {},
     #[route("/hooks/use-stylesheet")]
     UseStylesheetPage {},
-    #[route("/hooks/use-accessibility")]
-    UseAccessibilityPage {},
 
     #[route("/buttons/action-icon")]
     ActionIconPage {},

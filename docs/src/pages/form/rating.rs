@@ -1,7 +1,8 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::RatingPart;
-use libero::components::{Code, Rating, Text};
+use libero::components::{Code, CodeBlock, Rating, Text};
+use pictogram_icons_lucide as lucide;
 
 /// The `value` steps up to `count`, in `fractions` steps per star.
 fn values_for(values: &DemoValues) -> Vec<String> {
@@ -11,6 +12,11 @@ fn values_for(values: &DemoValues) -> Vec<String> {
         .map(|step| (f64::from(step) / f64::from(fractions)).to_string())
         .collect()
 }
+
+const HEART_EXAMPLE: &str = r#"IconProvider {
+    icons: IconSet::new().with(IconSlot::Star, lucide::heart::outlined),
+    Rating { label: "Love it", color: "error", value: 3.5, fractions: 2, focusable: false }
+}"#;
 
 #[component]
 pub fn RatingPage() -> Element {
@@ -112,6 +118,18 @@ pub fn RatingPage() -> Element {
                     Code { source: "focusable: false" }
                     " shows a value only, such as an average."
                 }
+                Text {
+                    Code { source: "icon" }
+                    " draws another symbol on one rating (the demo's Heart). For every rating in a subtree, "
+                    "swap "
+                    Code { source: "IconSlot::Star" }
+                    " in an "
+                    Code { source: "IconProvider" }
+                    "; an "
+                    Code { source: "icon" }
+                    " prop still wins:"
+                }
+                CodeBlock { source: HEART_EXAMPLE, language: "rust" }
             },
             // snippet: let mut stars = use_signal(|| 3.5);
             Demo {
@@ -119,12 +137,18 @@ pub fn RatingPage() -> Element {
                 children_text: "",
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::color("color"),
+                    Control::color("color").default("warning"),
                     Control::toggle("fractions", ["1", "2"])
                         .labels(["Whole", "Halves"])
                         .default("2")
                         .code(|_, values| match values.str("fractions").as_str() {
                             "2" => vec!["fractions: 2".to_string()],
+                            _ => vec![],
+                        }),
+                    Control::toggle("icon", ["star", "heart"])
+                        .labels(["Star", "Heart"])
+                        .code(|_, values| match values.str("icon").as_str() {
+                            "heart" => vec!["icon: lucide::heart::outlined".to_string()],
                             _ => vec![],
                         }),
                     Control::toggle("count", ["3", "5", "10"])
@@ -166,6 +190,7 @@ pub fn RatingPage() -> Element {
                         color: values.str("color"),
                         fractions: values.str("fractions").parse::<u8>().ok(),
                         count: values.str("count").parse::<u8>().ok(),
+                        icon: (values.str("icon") == "heart").then_some(lucide::heart::outlined),
                         value: values.str("value").parse::<f64>().ok(),
                         onchange: {
                             let values = values.clone();

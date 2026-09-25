@@ -39,8 +39,8 @@ Rating { label: "Average", value: 4.3, focusable: false }
 ```
 
 `clearable` resets the rating to 0 when the current value is picked again.
-`icon` draws another symbol, and `IconProvider`'s `IconSlot::Star` swaps it
-for a whole subtree:
+`icon` draws another symbol on one rating, empty as an outline and filled
+solid:
 
 ```rust,ignore
 Rating {
@@ -50,6 +50,16 @@ Rating {
     clearable: true,
     value: hearts(),
     onchange: move |value| hearts.set(value),
+}
+```
+
+For every rating in a subtree, swap `IconSlot::Star` in an `IconProvider`; an
+`icon` prop still wins:
+
+```rust,ignore
+IconProvider {
+    icons: IconSet::new().with(IconSlot::Star, pictogram_icons_lucide::heart::outlined),
+    Rating { label: "Love it", color: "error", value: 3.5, fractions: 2, focusable: false }
 }
 ```
 

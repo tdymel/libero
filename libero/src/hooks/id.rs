@@ -23,7 +23,7 @@ fn next_id() -> String {
 /// # }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/hooks/use-id>
+/// Docs: <https://libero-ui.dev/accessibility/use-id>
 pub fn use_id() -> Signal<String> {
     use_signal(next_id)
 }

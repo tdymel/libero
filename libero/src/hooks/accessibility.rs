@@ -28,7 +28,7 @@ use crate::{
 ///
 /// A forced reduced motion reaches libero's own CSS, not a `<style>` the app adds itself.
 ///
-/// Docs: <https://libero-ui.dev/hooks/use-accessibility>
+/// Docs: <https://libero-ui.dev/accessibility/use-accessibility>
 pub fn use_accessibility() -> AccessibilityHandle {
     AccessibilityHandle {
         context: use_context::<LiberoContext>(),
