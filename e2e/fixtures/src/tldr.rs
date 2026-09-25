@@ -2,9 +2,10 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{SummaryProvider, Tldr},
+    components::{MenuPart, Parts, SummaryProvider, Tldr},
     hooks::use_localization_handle,
     localization::Localization,
+    sx::sx,
 };
 
 use crate::Routes;
@@ -61,6 +62,7 @@ fn TldrSizedPage() -> Element {
 }
 
 /// Google dropped, one provider without a mark added, the docs' own prompt.
+/// `menu_parts` reaches the portaled menu's labels.
 #[component]
 fn TldrCustomPage() -> Element {
     let mut providers = SummaryProvider::defaults();
@@ -77,6 +79,7 @@ fn TldrCustomPage() -> Element {
             // Doubled braces: rsx would format a bare `{url}`.
             prompt: "Read {{url}}",
             label: "Summary",
+            menu_parts: Parts::new().part(MenuPart::Label, sx().font_style("italic")),
         }
     }
 }

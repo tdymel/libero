@@ -1,7 +1,8 @@
 //! `ThemeToggle`, the toggle alone.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, Text, ThemeToggle};
+use libero::components::{Flex, MenuPart, Parts, Text, ThemeToggle};
+use libero::sx::sx;
 use libero::theme::ThemeSet;
 
 use crate::Routes;
@@ -23,11 +24,16 @@ fn SystemPage() -> Element {
     }
 }
 
-/// The split button: the toggle and the theme picker's chevron.
+/// The split button: the toggle and the theme picker's chevron. `menu_parts`
+/// reaches the portaled menu's labels.
 #[component]
 fn ThemesPage() -> Element {
     rsx! {
-        ThemeToggle { id: "split", themes: ThemeSet::CATALOGUE }
+        ThemeToggle {
+            id: "split",
+            themes: ThemeSet::CATALOGUE,
+            menu_parts: Parts::new().part(MenuPart::Label, sx().font_style("italic")),
+        }
     }
 }
 

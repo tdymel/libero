@@ -968,3 +968,34 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView")
 );
+
+/// `menu_parts` reaches the labels of the portaled title-bar menu.
+#[test]
+fn menu_parts_style_the_portaled_menu() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window-sized", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_visible(page, MENU).await?;
+            pointer::click(page, MENU).await?;
+            wait::for_visible(page, "[role=menu] [data-slot=label]").await?;
+            let style: String = page
+                .evaluate(
+                    "getComputedStyle(document.querySelector('[role=menu] [data-slot=label]')).fontStyle",
+                )
+                .await?
+                .into_value()?;
+            anyhow::ensure!(style == "italic", "menu_parts missed the label: {style}");
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("floating window menu_parts");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}

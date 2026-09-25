@@ -5,11 +5,11 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, Part, Variant, attr, base_props, parts_enum, parts_under_sx,
-            use_button_group,
+            Glyph, HtmlTag, Input, Part, Parts, Variant, attr, base_props, parts_enum,
+            parts_under_sx, use_button_group,
         },
         layout::use_box,
-        overlay::{Menu, MenuEntry, MenuItem, use_menu},
+        overlay::{Menu, MenuEntry, MenuItem, MenuPart, use_menu},
     },
     context::IconSlot,
     hooks::{
@@ -85,6 +85,9 @@ base_props! {
         label: Option<Callback<ColorSchemeSetting, String>>,
         #[props(default)]
         disabled: Option<bool>,
+        /// The theme-set menu's `parts`: the menu is portaled, out of `parts`' reach.
+        #[props(default, into)]
+        menu_parts: Input<Parts<MenuPart>>,
     }
 }
 
@@ -244,6 +247,7 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
                 items,
                 align: Align::End,
                 disabled: disabled.unwrap_or(false),
+                parts: props.menu_parts.clone(),
                 ActionIcon {
                     aria_label: labels.picker,
                     variant,

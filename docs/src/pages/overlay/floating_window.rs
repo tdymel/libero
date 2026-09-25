@@ -274,13 +274,14 @@ pub fn FloatingWindowPage() -> Element {
                     prop("onmove", "Option<Callback<WindowRect>>").doc("Called after a drag, a keyboard or button move, or a Reset, in viewport pixels."),
                     prop("onresize", "Option<Callback<WindowRect>>").doc("Called after a resize by pointer, keyboard or button, or a Reset."),
                     prop("parts", "Input<Parts<FloatingWindowPart>>").doc("Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(FloatingWindowPart::Body, sx().padding(\"lg\"))`."),
+                    prop("menu_parts", "Input<Parts<MenuPart>>").doc("The title-bar menu's `parts`, the `Menu` page's Style API table. The menu opens in a portal, out of `parts`; `FloatingWindowPart::Menu` styles its button."),
                 ])
                 .without_base_props()
                 .parts("FloatingWindowPart", vec![
                     (FloatingWindowPart::TitleBar, "The row holding the move handle, the menu button and the close button."),
                     (FloatingWindowPart::Handle, "The move handle around the title."),
                     (FloatingWindowPart::Title, "The title heading."),
-                    (FloatingWindowPart::Menu, "The Move, Resize and Reset menu's button. The menu itself is portaled and not reached."),
+                    (FloatingWindowPart::Menu, "The Move, Resize and Reset menu's button. The menu itself is portaled: style it with `menu_parts`."),
                     (FloatingWindowPart::Close, "The close button."),
                     (FloatingWindowPart::Steps, "The step buttons Move or Resize shows."),
                     (FloatingWindowPart::Body, "The scrolling content."),

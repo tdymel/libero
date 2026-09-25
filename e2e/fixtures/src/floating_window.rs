@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Flex, FloatingWindowOptions, Text, WindowRect},
+    components::{Button, Flex, FloatingWindowOptions, MenuPart, Parts, Text, WindowRect},
     hooks::use_floating_window,
     sx::sx,
 };
@@ -16,6 +16,7 @@ pub const ROUTES: Routes = &[
 ];
 
 /// A caller's `sx` size is only the initial size: a resize wins over it (todo 922).
+/// `menu_parts` reaches the portaled title-bar menu's labels.
 #[component]
 fn SizedWindowPage() -> Element {
     let mut resized = use_signal(String::new);
@@ -25,6 +26,9 @@ fn SizedWindowPage() -> Element {
             title: Some("Sized".into()),
             resizable: true,
             sx: sx().width("400px").height("200px").into(),
+            menu_parts: Parts::new()
+                .part(MenuPart::Label, sx().font_style("italic"))
+                .into(),
             onresize: Some(record_resize),
             ..Default::default()
         },

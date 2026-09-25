@@ -309,3 +309,32 @@ fn each_press_steps_the_cycle_and_renames_the_button() {
         fixture.close().await.unwrap();
     });
 }
+
+/// `menu_parts` reaches the labels of the portaled theme-set menu.
+#[test]
+fn menu_parts_style_the_portaled_menu() {
+    block_on(async {
+        let fixture = Fixture::open("/theme-toggle/themes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, CHEVRON).await?;
+            wait::for_visible(page, "[role=menu] [data-slot=label]").await?;
+            let style: String = page
+                .evaluate(
+                    "getComputedStyle(document.querySelector('[role=menu] [data-slot=label]')).fontStyle",
+                )
+                .await?
+                .into_value()?;
+            anyhow::ensure!(style == "italic", "menu_parts missed the label: {style}");
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("theme toggle menu_parts");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}

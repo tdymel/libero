@@ -85,6 +85,7 @@ handle, so the body can close its own window.
 | `onmove` | `Option<Callback<WindowRect>>` | - | Called after a drag, a keyboard or button move, or a Reset, in viewport pixels. |
 | `onresize` | `Option<Callback<WindowRect>>` | - | Called after a resize by pointer, keyboard or button, or a Reset. |
 | `parts` | `Input<Parts<FloatingWindowPart>>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(FloatingWindowPart::Body, sx().padding("lg"))`. |
+| `menu_parts` | `Input<Parts<MenuPart>>` | - | The title-bar menu's `parts`, the `Menu` page's Style API table. The menu opens in a portal, out of `parts`; `FloatingWindowPart::Menu` styles its button. |
 
 `WindowRect { x, y, width, height }` is in viewport pixels.
 
@@ -99,7 +100,7 @@ explains how parts work.
 | `FloatingWindowPart::TitleBar` | `title-bar` | The row holding the move handle, the menu button and the close button. |
 | `FloatingWindowPart::Handle` | `handle` | The move handle around the title. |
 | `FloatingWindowPart::Title` | `title` | The title heading. |
-| `FloatingWindowPart::Menu` | `menu` | The Move, Resize and Reset menu's button. The menu itself is portaled and not reached. |
+| `FloatingWindowPart::Menu` | `menu` | The Move, Resize and Reset menu's button. The menu itself is portaled: style it with `menu_parts`. |
 | `FloatingWindowPart::Close` | `close` | The close button. |
 | `FloatingWindowPart::Steps` | `steps` | The step buttons Move or Resize shows. |
 | `FloatingWindowPart::Body` | `body` | The scrolling content. |

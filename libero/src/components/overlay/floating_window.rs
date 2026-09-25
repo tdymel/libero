@@ -15,7 +15,7 @@ use crate::{
             inset_focus_ring_sx, parts_enum,
         },
         layout::{Float, Placement, paper_sx, use_box},
-        overlay::{Menu, MenuEntry, MenuItem, use_menu},
+        overlay::{Menu, MenuEntry, MenuItem, MenuPart, use_menu},
         typography::Title,
     },
     context::{IconSlot, ModalContext, WindowHost},
@@ -56,6 +56,9 @@ pub struct FloatingWindowOptions {
     pub sx: Input<Sx>,
     /// Styles for the inner parts, under `sx`.
     pub parts: Input<Parts<FloatingWindowPart>>,
+    /// The title-bar menu's `parts`: the menu is portaled, out of `parts`' reach.
+    /// [`FloatingWindowPart::Menu`] stays its trigger.
+    pub menu_parts: Input<Parts<MenuPart>>,
     /// After a drag, a keyboard or button move, or a Reset.
     pub onmove: Option<Callback<WindowRect>>,
     /// After a resize, by pointer, keyboard or button, or a Reset.
@@ -375,6 +378,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         z_index,
         sx: user_sx,
         parts,
+        menu_parts,
         onmove,
         onresize,
     } = props.options;
@@ -561,6 +565,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                     pinned,
                     resizable,
                     labels,
+                    menu_parts,
                     close_label: localization.common.close,
                     onclose,
                     onadjust,
@@ -615,6 +620,7 @@ fn WindowTitleBar(
     pinned: bool,
     resizable: bool,
     labels: FloatingWindowLabels,
+    menu_parts: Input<Parts<MenuPart>>,
     close_label: &'static str,
     onclose: Callback<()>,
     onadjust: Callback<Adjust>,
@@ -678,7 +684,7 @@ fn WindowTitleBar(
                 span { id: hint_id(), hidden: true, "{move_hint}" }
             }
             if !items.is_empty() {
-                Menu { state: menu, items,
+                Menu { state: menu, items, parts: menu_parts,
                     ActionIcon {
                         variant: "standard",
                         color: "muted",

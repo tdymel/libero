@@ -52,13 +52,14 @@ fn Demo() -> Element {
 | `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 | `parts` | `Parts<ThemeTogglePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
+| `menu_parts` | `Parts<MenuPart>` | - | The theme-set menu's `parts`, the `Menu` page's Style API table. The menu opens in a portal, out of `sx` and `parts`. |
 
 Like every component, `ThemeToggle` also takes the shared props `sx`,
 `class`, `style`, `states`, and any extra HTML attributes.
 
 ## Style API
 
-Without `themes` the toggle is the root itself, styled by `sx`; `Toggle`, `Picker` and `Chevron` exist only with `themes`. The theme-set menu is portaled and out of reach.
+Without `themes` the toggle is the root itself, styled by `sx`; `Toggle`, `Picker` and `Chevron` exist only with `themes`. The theme-set menu is portaled, out of `parts`' reach: style it with `menu_parts`, which takes the [`Menu`](menu.md) parts.
 
 Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
 own CSS. The names are stable. [Style API in Styling](styling.md#style-api)

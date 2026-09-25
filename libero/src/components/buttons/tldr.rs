@@ -5,10 +5,10 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         buttons::ActionIcon,
-        common::{Glyph, Input, Variant, base_props},
+        common::{Glyph, Input, Parts, Variant, base_props},
         data_display::{Icon, Pictogram},
         form::Chip,
-        overlay::{Menu, MenuEntry, MenuItem, use_menu},
+        overlay::{Menu, MenuEntry, MenuItem, MenuPart, use_menu},
     },
     context::IconSlot,
     hooks::{use_localization, use_theme},
@@ -147,6 +147,9 @@ base_props! {
         /// Unset, `theme.tldr.color`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// The menu's `parts`: the menu is portaled, out of the trigger's `sx`.
+        #[props(default, into)]
+        menu_parts: Input<Parts<MenuPart>>,
     }
 }
 
@@ -202,7 +205,7 @@ pub fn Tldr(props: TldrProps) -> Element {
     attributes.extend(props.attributes.clone());
 
     rsx! {
-        Menu { state: menu, items,
+        Menu { state: menu, items, parts: props.menu_parts.clone(),
             if props.icon_only {
                 ActionIcon {
                     size,

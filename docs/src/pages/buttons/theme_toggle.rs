@@ -37,6 +37,8 @@ pub fn ThemeTogglePage() -> Element {
                     .doc("Disables and dims the button."),
                 prop("parts", "Parts<ThemeTogglePart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`. `Toggle`, `Picker` and `Chevron` exist with `themes` only."),
+                prop("menu_parts", "Parts<MenuPart>")
+                    .doc("The theme-set menu's `parts`, the `Menu` page's Style API table. The menu opens in a portal, out of `sx` and `parts`."),
             ])
             .parts("ThemeTogglePart", vec![
                 (ThemeTogglePart::Icon, "The sun, moon or system glyph."),

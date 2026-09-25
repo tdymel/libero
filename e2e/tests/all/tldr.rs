@@ -3,7 +3,7 @@
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
 /// `a11y_attributes()` gives the trigger a generated id, so the attribute finds it.
@@ -252,5 +252,34 @@ fn space_and_enter_follow_the_link_and_return_focus() {
         .unwrap();
         fixture.console.assert_clean("the tldr fixture").unwrap();
         fixture.close().await.unwrap();
+    });
+}
+
+/// `menu_parts` reaches the labels of the portaled menu.
+#[test]
+fn menu_parts_style_the_portaled_menu() {
+    block_on(async {
+        let fixture = Fixture::open("/tldr/custom", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_visible(page, "[role=menu] [data-slot=label]").await?;
+            let style: String = page
+                .evaluate(
+                    "getComputedStyle(document.querySelector('[role=menu] [data-slot=label]')).fontStyle",
+                )
+                .await?
+                .into_value()?;
+            ensure!(style == "italic", "menu_parts missed the label: {style}");
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("tldr menu_parts");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
     });
 }

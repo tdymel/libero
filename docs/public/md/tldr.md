@@ -69,6 +69,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `md` | The trigger's size step, the icon-only one too. |
 | `radius` | `Size` | - | Corner radius, independent of `size`. Unset, the trigger's own: `xl` on the labelled chip, `sm` icon-only. |
 | `color` | `ThemeAwareValue` | `neutral` | The trigger's accent color. A theme color name or any CSS color. Unset, `theme.tldr.color`. |
+| `menu_parts` | `Parts<MenuPart>` | - | The menu's `parts`, the [`Menu`](menu.md) page's Style API table. The menu opens in a portal, out of the trigger's `sx`. |
 
 Like every component, `Tldr` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the trigger.

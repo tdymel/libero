@@ -38,6 +38,8 @@ pub fn TldrPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("neutral")
                     .doc("The trigger's accent color. A theme color name or any CSS color."),
+                prop("menu_parts", "Parts<MenuPart>")
+                    .doc("The menu's `parts`, the `Menu` page's Style API table. The menu opens in a portal, out of the trigger's `sx`."),
             ])],
             accessibility: a11y()
                 .key(["Enter", "Space", "ArrowDown"], "On the trigger: opens the menu on its first link.")
