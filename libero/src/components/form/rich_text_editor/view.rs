@@ -6,23 +6,33 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
+use super::dialogs::{LinkArgs, LinkChoice, LinkDialog, announcement, shortcut_rows};
+use super::handle::{RichTextHandle, Status};
 use super::input::{Intent, intent, text_diff};
 use super::model::{
-    Builtin, Commands, Doc, Editor, EditorState, KeyPress, Keymap, MarkKind, NodeKey, Position,
-    Record, Selection, UndoStack,
+    Action, BlockKind, Builtin, CommandName, Commands, Doc, Editor, EditorState, Inline, KeyPress,
+    Keymap, Mark, MarkKind, NodeKey, Position, Record, Selection, UndoStack,
 };
+use super::node_view::NodeViews;
 use super::offsets::{to_dom, to_model};
 use super::render::{RenderCtx, blocks};
 use super::surface::{ROOT_ATTR, Report, Surface};
 use crate::{
     components::{
-        buttons::{ActionIcon, Toolbar, ToolbarGroup, ToolbarSeparator},
-        common::{HtmlTag, Input},
+        accessibility::use_announcer,
+        buttons::{ActionIcon, Button, Toolbar, ToolbarGroup, ToolbarSeparator},
+        common::{Glyph, HtmlTag, Input},
         form::{field_props, use_bound, use_field, use_field_frame},
         layout::use_box,
+        overlay::{Menu, MenuEntry, MenuItem, Shortcut, ShortcutHelp, use_menu},
     },
-    hooks::{HistoryHandle, UndoHistory, use_element, use_history, use_localization, use_theme},
+    context::IconSlot,
+    hooks::{
+        HistoryHandle, ModalScope, UndoHistory, use_element, use_history, use_localization,
+        use_modal, use_theme,
+    },
     platform::mod_is_meta,
     sx::{StaticSx, sx},
 };
@@ -87,6 +97,8 @@ static SURFACE_SX: StaticSx = StaticSx::new(|| {
             sx().margin_bottom("0"),
         )
         .selector("& pre", sx().font_family("monospace").margin("0"))
+        // List items hold paragraphs: no paragraph gaps between bullets.
+        .selector("& li > p", sx().margin("0"))
         .selector(
             "& [data-fence]",
             sx().font_family("monospace")
@@ -129,6 +141,12 @@ field_props! {
         /// What the keymap and toolbar run; the default holds every built-in.
         #[props(default)]
         commands: Commands,
+        /// Runs commands and reads the state from your own toolbar; see [`use_rich_text_editor`](super::handle::use_rich_text_editor).
+        #[props(default, into)]
+        handle: Option<RichTextHandle>,
+        /// Components for custom nodes, by node name; others draw a plain fallback.
+        #[props(default)]
+        nodes: NodeViews,
     }
 }
 
@@ -228,6 +246,10 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     // While the DOM has not caught up with a model caret, its reports are stale.
     let mut syncing = use_hook(|| CopyValue::new(false));
     let token = use_hook(next_token);
+    let mut can_edit = use_hook(|| CopyValue::new(editable));
+    if *can_edit.peek() != editable {
+        can_edit.set(editable);
+    }
 
     let emit = use_hook(|| CopyValue::new(None::<Rc<dyn Fn(Doc)>>));
     {
@@ -287,6 +309,103 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         done
     };
 
+    let words = use_localization().rich_text_editor;
+    let announcer = use_announcer();
+    let link_modal = use_modal(|scope: ModalScope<LinkArgs, LinkChoice>| {
+        rsx! { LinkDialog { args: scope.args(), onchoose: move |choice| scope.resolve(choice) } }
+    });
+    let help_modal = use_modal(move |scope: ModalScope<Vec<Shortcut>>| {
+        rsx! { ShortcutHelp { title: words.shortcuts, shortcuts: scope.args() } }
+    });
+
+    // Opens a view command's dialog; the caret goes back to the text when it closes.
+    let open_view = move |name: &CommandName| -> bool {
+        if *name == Builtin::Link.into() {
+            let href = link_href(editor.peek().state());
+            link_modal
+                .open_with(LinkArgs { href })
+                .onresult(move |choice| {
+                    let mut edit = edit;
+                    match choice {
+                        Some(LinkChoice::Set(href)) => edit(
+                            &|live| {
+                                live.apply(Record::Step, |state| {
+                                    state.set_link(&href).unwrap_or(false)
+                                })
+                            },
+                            true,
+                        ),
+                        Some(LinkChoice::Remove) => {
+                            edit(&|live| live.run(&commands.peek(), Builtin::Unlink), true)
+                        }
+                        None => false,
+                    };
+                    let mut changed = changed;
+                    changed(None, true);
+                });
+            return true;
+        }
+        if *name == Builtin::Shortcuts.into() {
+            help_modal
+                .open_with(shortcut_rows(&keymap.peek(), &words))
+                .onresult(move |_| {
+                    let mut changed = changed;
+                    changed(None, true);
+                });
+            return true;
+        }
+        false
+    };
+
+    // Every command goes through here: keys, the toolbar and the handle.
+    let run_command = move |name: CommandName, focus: bool, announce: bool| -> bool {
+        if !*can_edit.peek() {
+            return false;
+        }
+        if matches!(commands.peek().get(&name), Some(Action::View)) {
+            return open_view(&name);
+        }
+        let mut edit = edit;
+        let ran = edit(&|live| live.run(&commands.peek(), name.clone()), focus);
+        if ran
+            && announce
+            && let Some(message) = announcement(&name, editor.peek().state(), &words)
+        {
+            announcer.say(message);
+        }
+        ran
+    };
+
+    let handle = use_hook(|| {
+        let handle = props.handle;
+        if let Some(handle) = handle {
+            let owner = token.clone();
+            handle.attach(&owner, Rc::new(move |name| run_command(name, true, false)));
+        }
+        handle
+    });
+    {
+        let token = token.clone();
+        use_drop(move || {
+            if let Some(handle) = handle {
+                handle.detach(&token);
+            }
+        });
+    }
+    {
+        let token = token.clone();
+        use_effect(move || {
+            let _ = revision();
+            if let Some(handle) = handle {
+                let live = editor.peek();
+                handle.publish(
+                    &token,
+                    Status::of(live.state(), live.can_undo(), live.can_redo()),
+                );
+            }
+        });
+    }
+
     let surface = use_hook(|| {
         Surface::start(token.clone(), move |report: Report| {
             if let Some((anchor_key, anchor, head_key, head)) = report.selection {
@@ -313,6 +432,12 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 reconcile(editor, NodeKey(key), &text, &mut changed);
                 generation += 1;
             }
+            if let Some((key, at_end)) = report.code
+                && *can_edit.peek()
+            {
+                enter_code(editor, NodeKey(key), at_end);
+                changed(None, true);
+            }
         })
     });
 
@@ -334,10 +459,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let source_code = (focused() && state.block(caret).kind.is_code()).then_some(caret);
     let on_code = editable.then(|| {
         EventHandler::new(move |key: NodeKey| {
-            let at = editor.peek().doc().get(key).map_or(0, |block| block.len());
-            editor
-                .write()
-                .select(Selection::caret(Position::new(key, at)));
+            enter_code(editor, key, true);
             focused.set(true);
             changed(None, true);
         })
@@ -347,6 +469,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         RenderCtx {
             source_code,
             on_code,
+            views: &props.nodes,
         },
     );
     let empty = is_empty(live.doc());
@@ -356,11 +479,13 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         MarkKind::Underline,
         MarkKind::Strike,
         MarkKind::Code,
+        MarkKind::Link,
     ]
     .map(|kind| (kind, state.is_active(kind)));
     let active = move |kind: MarkKind| marks.iter().find(|(k, _)| *k == kind).map(|(_, on)| *on);
     let list = state.list_kind();
     let in_code = state.block_kind().is_code();
+    let block_kind = state.block_kind().clone();
     let quote = state.in_quote();
     let (can_undo, can_redo) = (live.can_undo(), live.can_redo());
     drop(live);
@@ -407,11 +532,8 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             alt: modifiers.alt(),
             shift: modifiers.shift(),
         };
-        let ran = edit(
-            &|live| live.handle_key(&keymap.peek(), &commands.peek(), &press, apple),
-            false,
-        );
-        if ran {
+        let name = keymap.peek().command_for(&press, apple).cloned();
+        if name.is_some_and(|name| run_command(name, false, true)) {
             event.prevent_default();
         }
     };
@@ -482,33 +604,85 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
 
     let run = move |builtin: Builtin| {
         move |_: MouseEvent| {
-            edit(&|live| live.run(&commands.peek(), builtin), true);
+            run_command(builtin.into(), true, false);
         }
     };
     // Pressing a button must not take focus or the selection from the text.
     let keep = |event: MouseEvent| event.prevent_default();
-    let words = use_localization().rich_text_editor;
+    let block_menu = use_menu();
+    let heading = |level: u8| words.heading.replace("{level}", &level.to_string());
+    let block_label = match block_kind {
+        BlockKind::Heading { level } => heading(level),
+        BlockKind::CodeBlock { .. } => words.code_block.to_string(),
+        _ => words.paragraph.to_string(),
+    };
+    let block_items: Vec<MenuEntry> = {
+        use Builtin as B;
+        let paragraph = std::iter::once((
+            B::Paragraph,
+            words.paragraph.to_string(),
+            block_kind == BlockKind::Paragraph,
+        ));
+        let headings = [
+            B::Heading1,
+            B::Heading2,
+            B::Heading3,
+            B::Heading4,
+            B::Heading5,
+            B::Heading6,
+        ]
+        .into_iter()
+        .zip(1u8..)
+        .map(|(builtin, level)| {
+            (
+                builtin,
+                heading(level),
+                block_kind == BlockKind::Heading { level },
+            )
+        });
+        paragraph
+            .chain(headings)
+            .map(|(builtin, label, on)| {
+                MenuItem::new(label)
+                    .radio(on)
+                    .onselect(move |_| {
+                        run_command(builtin.into(), true, false);
+                    })
+                    .into()
+            })
+            .collect()
+    };
     let toolbar = (props.toolbar && editable).then(|| {
         rsx! {
             Toolbar { "aria-label": words.toolbar, focus_from: element, onmousedown: keep,
                 ToolbarGroup { "aria-label": words.marks,
-                    ActionIcon { aria_label: words.bold, selected: active(MarkKind::Bold), onclick: run(Builtin::Bold), icon: pictogram_icons_lucide::bold::outlined }
-                    ActionIcon { aria_label: words.italic, selected: active(MarkKind::Italic), onclick: run(Builtin::Italic), icon: pictogram_icons_lucide::italic::outlined }
-                    ActionIcon { aria_label: words.underline, selected: active(MarkKind::Underline), onclick: run(Builtin::Underline), icon: pictogram_icons_lucide::underline::outlined }
-                    ActionIcon { aria_label: words.strike, selected: active(MarkKind::Strike), onclick: run(Builtin::Strike), icon: pictogram_icons_lucide::strikethrough::outlined }
-                    ActionIcon { aria_label: words.code, selected: active(MarkKind::Code), onclick: run(Builtin::Code), icon: pictogram_icons_lucide::code::outlined }
+                    ActionIcon { aria_label: words.bold, selected: active(MarkKind::Bold), onclick: run(Builtin::Bold), Glyph { slot: IconSlot::Bold, icon: lucide::bold::outlined } }
+                    ActionIcon { aria_label: words.italic, selected: active(MarkKind::Italic), onclick: run(Builtin::Italic), Glyph { slot: IconSlot::Italic, icon: lucide::italic::outlined } }
+                    ActionIcon { aria_label: words.underline, selected: active(MarkKind::Underline), onclick: run(Builtin::Underline), Glyph { slot: IconSlot::Underline, icon: lucide::underline::outlined } }
+                    ActionIcon { aria_label: words.strike, selected: active(MarkKind::Strike), onclick: run(Builtin::Strike), Glyph { slot: IconSlot::Strikethrough, icon: lucide::strikethrough::outlined } }
+                    ActionIcon { aria_label: words.code, selected: active(MarkKind::Code), onclick: run(Builtin::Code), Glyph { slot: IconSlot::InlineCode, icon: lucide::code::outlined } }
+                    ActionIcon { aria_label: words.link, selected: active(MarkKind::Link), onclick: run(Builtin::Link), Glyph { slot: IconSlot::Link, icon: lucide::link::outlined } }
                 }
                 ToolbarSeparator {}
                 ToolbarGroup { "aria-label": words.blocks,
-                    ActionIcon { aria_label: words.bullet_list, selected: Some(list == Some(false)), onclick: run(Builtin::BulletList), icon: pictogram_icons_lucide::list::outlined }
-                    ActionIcon { aria_label: words.ordered_list, selected: Some(list == Some(true)), onclick: run(Builtin::OrderedList), icon: pictogram_icons_lucide::list_ordered::outlined }
-                    ActionIcon { aria_label: words.quote, selected: Some(quote), onclick: run(Builtin::Quote), icon: pictogram_icons_lucide::text_quote::outlined }
-                    ActionIcon { aria_label: words.code_block, selected: Some(in_code), onclick: run(Builtin::CodeBlock), icon: pictogram_icons_lucide::square_code::outlined }
+                    Menu { state: block_menu, items: block_items,
+                        Button {
+                            attributes: block_menu.a11y_attributes(),
+                            "aria-label": "{words.block_type}: {block_label}",
+                            variant: "subtle",
+                            size: "sm",
+                            "{block_label}"
+                        }
+                    }
+                    ActionIcon { aria_label: words.bullet_list, selected: Some(list == Some(false)), onclick: run(Builtin::BulletList), Glyph { slot: IconSlot::BulletList, icon: lucide::list::outlined } }
+                    ActionIcon { aria_label: words.ordered_list, selected: Some(list == Some(true)), onclick: run(Builtin::OrderedList), Glyph { slot: IconSlot::OrderedList, icon: lucide::list_ordered::outlined } }
+                    ActionIcon { aria_label: words.quote, selected: Some(quote), onclick: run(Builtin::Quote), Glyph { slot: IconSlot::Quote, icon: lucide::text_quote::outlined } }
+                    ActionIcon { aria_label: words.code_block, selected: Some(in_code), onclick: run(Builtin::CodeBlock), Glyph { slot: IconSlot::CodeBlock, icon: lucide::square_code::outlined } }
                 }
                 ToolbarSeparator {}
                 ToolbarGroup { "aria-label": words.history,
-                    ActionIcon { aria_label: words.undo, disabled: !can_undo, onclick: run(Builtin::Undo), icon: pictogram_icons_lucide::undo_2::outlined }
-                    ActionIcon { aria_label: words.redo, disabled: !can_redo, onclick: run(Builtin::Redo), icon: pictogram_icons_lucide::redo_2::outlined }
+                    ActionIcon { aria_label: words.undo, disabled: !can_undo, onclick: run(Builtin::Undo), Glyph { slot: IconSlot::Undo, icon: lucide::undo_2::outlined } }
+                    ActionIcon { aria_label: words.redo, disabled: !can_redo, onclick: run(Builtin::Redo), Glyph { slot: IconSlot::Redo, icon: lucide::redo_2::outlined } }
                 }
             }
         }
@@ -517,7 +691,28 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     field.render(rsx! {
         {toolbar}
         {frame.render(surface_element)}
+        {announcer.render()}
     })
+}
+
+/// The href of the link around the caret.
+fn link_href(state: &EditorState) -> Option<String> {
+    let (key, from, _) = state.link_at_caret()?;
+    let mut at = 0;
+    let mark = state.block(key).inlines().iter().find_map(|inline| {
+        let start = at;
+        at += inline.len();
+        match inline {
+            Inline::Text { marks, .. } if start <= from && from < at => {
+                marks.get(MarkKind::Link).cloned()
+            }
+            _ => None,
+        }
+    })?;
+    match mark {
+        Mark::Link { href, .. } => Some(href.as_str().to_string()),
+        _ => None,
+    }
 }
 
 /// Plain text at the caret; each line after the first starts a new block.
@@ -531,6 +726,18 @@ fn paste(state: &mut EditorState, text: &str) -> bool {
         changed |= state.insert_text(line);
     }
     changed
+}
+
+/// Puts the caret at the start or end of code block `key`, which then renders as source.
+fn enter_code(mut editor: CopyValue<LiveEditor>, key: NodeKey, at_end: bool) {
+    let at = match editor.peek().doc().get(key) {
+        Some(block) if at_end => block.len(),
+        Some(_) => 0,
+        None => return,
+    };
+    editor
+        .write()
+        .select(Selection::caret(Position::new(key, at)));
 }
 
 /// Takes the text the browser composed into leaf `key` into the model.

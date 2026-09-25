@@ -71,6 +71,18 @@ icon_set!(lucide: [outlined => lucide_outlined] {
     Fullscreen => maximize,
     ExitFullscreen => minimize,
     Captions => captions,
+    Bold => bold,
+    Italic => italic,
+    Underline => underline,
+    Strikethrough => strikethrough,
+    InlineCode => code,
+    BulletList => list,
+    OrderedList => list_ordered,
+    Quote => text_quote,
+    CodeBlock => square_code,
+    Undo => undo_2,
+    Redo => redo_2,
+    Link => link,
 });
 
 #[cfg(feature = "icons-material")]
@@ -118,6 +130,18 @@ icon_set!(material: [
     Fullscreen => navigation_fullscreen,
     ExitFullscreen => navigation_fullscreen_exit,
     Captions => av_closed_caption,
+    Bold => editor_format_bold,
+    Italic => editor_format_italic,
+    Underline => editor_format_underlined,
+    Strikethrough => editor_format_strikethrough,
+    InlineCode => action_code,
+    BulletList => editor_format_list_bulleted,
+    OrderedList => editor_format_list_numbered,
+    Quote => editor_format_quote,
+    CodeBlock => editor_data_object,
+    Undo => content_undo,
+    Redo => content_redo,
+    Link => content_link,
 });
 
 #[cfg(feature = "icons-tabler")]
@@ -159,6 +183,18 @@ icon_set!(tabler: [outlined => tabler_outlined] {
     Fullscreen => maximize,
     ExitFullscreen => minimize,
     Captions => badge_cc,
+    Bold => bold,
+    Italic => italic,
+    Underline => underline,
+    Strikethrough => strikethrough,
+    InlineCode => code,
+    BulletList => list,
+    OrderedList => list_numbers,
+    Quote => blockquote,
+    CodeBlock => source_code,
+    Undo => arrow_back_up,
+    Redo => arrow_forward_up,
+    Link => link,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -199,6 +235,18 @@ icon_set!(bootstrap: [outlined => bootstrap_outlined] {
     Fullscreen => fullscreen,
     ExitFullscreen => fullscreen_exit,
     Captions => cc_square,
+    Bold => type_bold,
+    Italic => type_italic,
+    Underline => type_underline,
+    Strikethrough => type_strikethrough,
+    InlineCode => code,
+    BulletList => list_ul,
+    OrderedList => list_ol,
+    Quote => blockquote_left,
+    CodeBlock => code_square,
+    Undo => arrow_counterclockwise,
+    Redo => arrow_clockwise,
+    Link => link_45deg,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -246,6 +294,18 @@ icon_set!(phosphor: [
     Fullscreen => corners_out,
     ExitFullscreen => corners_in,
     Captions => closed_captioning,
+    Bold => text_b,
+    Italic => text_italic,
+    Underline => text_underline,
+    Strikethrough => text_strikethrough,
+    InlineCode => code,
+    BulletList => list_bullets,
+    OrderedList => list_numbers,
+    Quote => quotes,
+    CodeBlock => code_block,
+    Undo => arrow_u_up_left,
+    Redo => arrow_u_up_right,
+    Link => link,
 });
 
 #[cfg(test)]

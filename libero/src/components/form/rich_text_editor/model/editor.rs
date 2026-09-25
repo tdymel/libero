@@ -171,10 +171,15 @@ impl<H: UndoStack> Editor<H> {
             Action::Edit(edit, record) => self.apply(record, |state| edit(state)),
             Action::Undo => self.undo(),
             Action::Redo => self.redo(),
+            Action::View => false,
         }
     }
 
     /// Runs the command bound to `press`. `false` when none is bound or it did nothing.
+    #[allow(
+        dead_code,
+        reason = "tests; the view routes keys through its own dialogs"
+    )]
     pub fn handle_key(
         &mut self,
         keymap: &Keymap,

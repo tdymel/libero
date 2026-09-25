@@ -28,13 +28,18 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("Shown while the document is one empty paragraph."),
                     prop("toolbar", "bool")
                         .default("true")
-                        .doc("Shows the formatting toolbar above the text: marks, lists, quote, code block, undo and redo."),
+                        .doc("Shows the formatting toolbar above the text: marks, link, text type menu, lists, quote, code block, undo and redo."),
                     prop("keymap", "Keymap")
                         .default("Keymap::default()")
                         .doc("Which chords run which commands. `Mod` is Cmd on Apple platforms and Ctrl elsewhere."),
                     prop("commands", "Commands")
                         .default("Commands::default()")
                         .doc("What the keymap and the toolbar run. Register your own command under a name and bind a chord to it."),
+                    prop("handle", "RichTextHandle")
+                        .doc("From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`). One handle drives one editor."),
+                    prop("nodes", "NodeViews")
+                        .default("NodeViews::new()")
+                        .doc("Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once."),
                     prop("size", "Size").default("md").doc("Padding and font size."),
                     prop("radius", "Size")
                         .default("sm")
@@ -85,17 +90,23 @@ pub fn RichTextEditorPage() -> Element {
                 .key(["Shift+Enter"], "Line break inside the block.")
                 .key(["Ctrl+Z"], "Undo.")
                 .key(["Ctrl+Shift+Z", "Ctrl+Y"], "Redo.")
+                .key(["Ctrl+K"], "Opens the link dialog: links the selection, or edits or removes the link at the caret.")
                 .key(["Ctrl+Shift+U"], "Removes the link at the caret.")
+                .key(["Ctrl+/"], "Lists the editor's shortcuts, from the live keymap.")
                 .key(["Alt+F10"], "Moves focus to the toolbar; the arrow keys move through it, Escape returns to the text.")
                 .handles([
                     "The text is a `role=\"textbox\"` with `aria-multiline`, named by `label` and described by `description` and `helper`.",
                     "The toolbar is one tab stop with arrow-key movement, named by the localization's `rich_text_editor` words. Each mark and block button reports `aria-pressed`.",
                     "The toolbar keeps focus and the selection in the text when clicked.",
+                    "A shortcut that toggles a mark, list, quote or block type is announced through a polite live region (\"Bold on\", \"Heading 2\").",
+                    "The link dialog focuses its labelled URL field; a refused scheme shows as that field's error. Closing it puts the caret back in the text.",
+                    "The text type menu is a menu button whose name includes the current type, with `menuitemradio` items.",
                     "Every edit goes through the document model, so undo, the `onchange` value and the screen stay in step. Input methods (IME) compose natively and are taken in when the composition ends.",
                 ])
                 .must([
                     "Leave `label` unset only when something else names the editor, such as an `aria_label`.",
                     "Document custom chords you bind in `keymap` for your users.",
+                    "Make a `NodeViews` atom name its node in text (a mention shows `@name`): it is a non-editable island a screen reader reads as is.",
                 ])
                 .limits([
                     "On Blitz (native) the document is shown read-only.",

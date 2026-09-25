@@ -83,6 +83,26 @@ const report = () => {
         +f.dataset.key, units(f, s.focusNode, s.focusOffset)] });
 };
 document.addEventListener('selectionchange', report);
+// Chrome steps over a rendered code block (contenteditable=false): step into it instead.
+const onArrow = (e) => {
+    const up = e.key === 'ArrowUp';
+    if (!up && e.key !== 'ArrowDown') return;
+    if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+    const r = root(), s = document.getSelection();
+    if (!r || !r.contains(e.target) || !s || !s.isCollapsed || !s.rangeCount) return;
+    const l = leafOf(s.focusNode);
+    if (!l) return;
+    const stops = [...r.querySelectorAll('[data-key], [data-code-key]')];
+    const next = stops[stops.indexOf(l) + (up ? -1 : 1)];
+    if (!next || !next.hasAttribute('data-code-key')) return;
+    const caret = s.getRangeAt(0).getBoundingClientRect(), box = l.getBoundingClientRect();
+    const line = parseFloat(getComputedStyle(l).lineHeight) || caret.height || 16;
+    const edge = caret.height === 0 || (up ? caret.top < box.top + line : caret.bottom > box.bottom - line);
+    if (!edge) return;
+    e.preventDefault();
+    dioxus.send({ code: [+next.dataset.codeKey, up] });
+};
+document.addEventListener('keydown', onArrow);
 while (true) {
     const m = await dioxus.recv();
     const r = root();
@@ -112,6 +132,8 @@ pub(crate) struct Report {
     pub selection: Option<(u64, usize, u64, usize)>,
     /// A leaf's key and its DOM text, asked for by [`Surface::read`].
     pub text: Option<(u64, String)>,
+    /// An arrow key left a leaf toward this rendered code block; `true` enters at its end.
+    pub code: Option<(u64, bool)>,
     /// The DOM selection caught up with the last [`Surface::select`].
     #[serde(default)]
     pub synced: bool,

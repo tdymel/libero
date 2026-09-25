@@ -88,6 +88,8 @@ builtins! {
     SelectAll => "select_all",
     Undo => "undo",
     Redo => "redo",
+    Link => "link",
+    Shortcuts => "shortcuts",
 }
 
 /// A doc transform: `true` when it changed the state.
@@ -110,6 +112,8 @@ pub enum Action {
     Edit(EditFn, Record),
     Undo,
     Redo,
+    /// Opens the editor's own UI (a dialog); the pure model does nothing for it.
+    View,
 }
 
 impl fmt::Debug for Action {
@@ -118,6 +122,7 @@ impl fmt::Debug for Action {
             Self::Edit(_, record) => write!(f, "Edit({record:?})"),
             Self::Undo => f.write_str("Undo"),
             Self::Redo => f.write_str("Redo"),
+            Self::View => f.write_str("View"),
         }
     }
 }
@@ -206,7 +211,9 @@ impl PartialEq for Commands {
 fn same_action(a: &Action, b: &Action) -> bool {
     match (a, b) {
         (Action::Edit(f, r), Action::Edit(g, s)) => Rc::ptr_eq(f, g) && r == s,
-        (Action::Undo, Action::Undo) | (Action::Redo, Action::Redo) => true,
+        (Action::Undo, Action::Undo)
+        | (Action::Redo, Action::Redo)
+        | (Action::View, Action::View) => true,
         _ => false,
     }
 }
@@ -241,6 +248,7 @@ fn builtin_action(builtin: Builtin) -> Action {
         B::SelectAll => Action::Edit(Rc::new(EditorState::select_all), Record::Skip),
         B::Undo => Action::Undo,
         B::Redo => Action::Redo,
+        B::Link | B::Shortcuts => Action::View,
     }
 }
 
@@ -360,9 +368,21 @@ impl Chord {
         text.parse()
     }
 
-    /// Whether `press` is this chord. `apple` maps `Mod` to Cmd.
+    /// Whether `press` is this chord. `apple` maps `Mod` to Cmd. A symbol key matches
+    /// with Shift too unless the chord names Shift: `/` is Shift+7 on a German layout.
     pub fn matches(&self, press: &KeyPress, apple: bool) -> bool {
-        self.modifiers_match(press, apple) && normalize_key(&press.key) == self.key
+        if normalize_key(&press.key) != self.key {
+            return false;
+        }
+        let symbol = !self.key.chars().all(char::is_alphanumeric);
+        self.modifiers_match(press, apple)
+            || (symbol && !self.shift && press.shift && {
+                let unshifted = KeyPress {
+                    shift: false,
+                    ..press.clone()
+                };
+                self.modifiers_match(&unshifted, apple)
+            })
     }
 
     /// Matches by `code` when the key itself is not a plain letter or digit:
@@ -394,7 +414,7 @@ pub struct Keymap {
 impl Default for Keymap {
     fn default() -> Self {
         use Builtin as B;
-        let defaults: [(&str, Builtin); 29] = [
+        let defaults: [(&str, Builtin); 31] = [
             ("Mod+b", B::Bold),
             ("Mod+i", B::Italic),
             ("Mod+u", B::Underline),
@@ -424,6 +444,8 @@ impl Default for Keymap {
             ("Mod+Shift+u", B::Unlink),
             ("Mod+Shift+Enter", B::Rule),
             ("Mod+Shift+x", B::Strike),
+            ("Mod+k", B::Link),
+            ("Mod+/", B::Shortcuts),
         ];
         let mut keymap = Self::empty();
         for (chord, builtin) in defaults {

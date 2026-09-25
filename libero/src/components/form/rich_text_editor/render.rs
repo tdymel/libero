@@ -3,18 +3,21 @@
 
 use dioxus::prelude::*;
 
-use super::model::{Block, BlockKind, Content, Inline, Mark, Marks, NodeKey};
+use super::model::{Attrs, Block, BlockKind, Content, Inline, Mark, Marks, NodeKey};
+use super::node_view::NodeViews;
 use crate::components::typography::CodeBlock;
 
 #[derive(Clone, Copy)]
-pub(crate) struct RenderCtx {
+pub(crate) struct RenderCtx<'a> {
     /// The code block edited as source, fences shown; others render as `CodeBlock`.
     pub source_code: Option<NodeKey>,
     /// Pressing a rendered code block moves the caret into it.
     pub on_code: Option<EventHandler<NodeKey>>,
+    /// The caller's components for custom nodes.
+    pub views: &'a NodeViews,
 }
 
-pub(crate) fn blocks(blocks: &[Block], ctx: RenderCtx) -> Element {
+pub(crate) fn blocks(blocks: &[Block], ctx: RenderCtx<'_>) -> Element {
     rsx! {
         for block in blocks {
             {self::block(block, ctx)}
@@ -22,11 +25,11 @@ pub(crate) fn blocks(blocks: &[Block], ctx: RenderCtx) -> Element {
     }
 }
 
-fn block(block: &Block, ctx: RenderCtx) -> Element {
+fn block(block: &Block, ctx: RenderCtx<'_>) -> Element {
     let key = block.key.0.to_string();
     match &block.kind {
-        BlockKind::Paragraph => rsx! { p { "data-key": key, {inlines(block.inlines())} } },
-        BlockKind::Heading { level } => heading(*level, key, inlines(block.inlines())),
+        BlockKind::Paragraph => rsx! { p { "data-key": key, {inlines(block.inlines(), ctx)} } },
+        BlockKind::Heading { level } => heading(*level, key, inlines(block.inlines(), ctx)),
         BlockKind::CodeBlock { language } => code(block, language, ctx),
         BlockKind::Quote => rsx! { blockquote { {blocks(block.children(), ctx)} } },
         BlockKind::List {
@@ -38,17 +41,35 @@ fn block(block: &Block, ctx: RenderCtx) -> Element {
         BlockKind::List { .. } => rsx! { ul { {blocks(block.children(), ctx)} } },
         BlockKind::ListItem => rsx! { li { {blocks(block.children(), ctx)} } },
         BlockKind::Rule => rsx! { hr { "data-key": key, contenteditable: "false" } },
-        BlockKind::Custom { name, .. } => match &block.content {
-            Content::Inlines(content) => rsx! {
-                div { "data-key": key, "data-node": "{name}", {inlines(content)} }
-            },
-            Content::Blocks(children) => rsx! {
-                div { "data-node": "{name}", {blocks(children, ctx)} }
-            },
-            Content::Empty => rsx! {
-                div { "data-key": key, "data-node": "{name}", contenteditable: "false", "{name}" }
-            },
+        BlockKind::Custom { name, attrs, .. } => custom(name, attrs, key, &block.content, ctx),
+    }
+}
+
+/// A caller's block through its view, if any; its content keeps the leaf the caret needs.
+fn custom(
+    name: &str,
+    attrs: &Attrs,
+    key: String,
+    content: &Content,
+    ctx: RenderCtx<'_>,
+) -> Element {
+    let children = match content {
+        Content::Inlines(content) => {
+            rsx! { div { "data-key": key.clone(), {inlines(content, ctx)} } }
+        }
+        Content::Blocks(children) => blocks(children, ctx),
+        Content::Empty => VNode::empty(),
+    };
+    let atom = matches!(content, Content::Empty);
+    match ctx.views.render(name, attrs, children.clone()) {
+        Some(view) if atom => rsx! {
+            div { "data-key": key, "data-node": "{name}", contenteditable: "false", {view} }
         },
+        Some(view) => rsx! { div { "data-node": "{name}", {view} } },
+        None if atom => rsx! {
+            div { "data-key": key, "data-node": "{name}", contenteditable: "false", "{name}" }
+        },
+        None => rsx! { div { "data-node": "{name}", {children} } },
     }
 }
 
@@ -64,7 +85,7 @@ fn heading(level: u8, key: String, children: Element) -> Element {
 }
 
 /// Source while the caret is in it, fences around it; a highlighted `CodeBlock` otherwise.
-fn code(block: &Block, language: &str, ctx: RenderCtx) -> Element {
+fn code(block: &Block, language: &str, ctx: RenderCtx<'_>) -> Element {
     let key = block.key;
     let text = block.text();
     if ctx.source_code == Some(key) {
@@ -86,6 +107,7 @@ fn code(block: &Block, language: &str, ctx: RenderCtx) -> Element {
     rsx! {
         div {
             "data-code": "view",
+            "data-code-key": key.0.to_string(),
             contenteditable: "false",
             onmousedown: move |event: MouseEvent| {
                 if let Some(on_code) = on_code {
@@ -98,12 +120,12 @@ fn code(block: &Block, language: &str, ctx: RenderCtx) -> Element {
     }
 }
 
-fn inlines(content: &[Inline]) -> Element {
+fn inlines(content: &[Inline], ctx: RenderCtx<'_>) -> Element {
     // A trailing break or an empty leaf needs a line box for the caret.
     let filler = matches!(content.last(), None | Some(Inline::HardBreak));
     rsx! {
         for inline in content {
-            {self::inline(inline)}
+            {self::inline(inline, ctx)}
         }
         if filler {
             br { "data-skip": "" }
@@ -111,11 +133,16 @@ fn inlines(content: &[Inline]) -> Element {
     }
 }
 
-fn inline(inline: &Inline) -> Element {
+fn inline(inline: &Inline, ctx: RenderCtx<'_>) -> Element {
     match inline {
         Inline::Text { text, marks } => marked(text, marks),
         Inline::HardBreak => rsx! { br {} },
         Inline::Node { name, attrs } => {
+            if let Some(view) = ctx.views.render(name, attrs, VNode::empty()) {
+                return rsx! {
+                    span { "data-atom": "", "data-node": "{name}", contenteditable: "false", {view} }
+                };
+            }
             let label = attrs
                 .get("label")
                 .and_then(|label| label.as_str())

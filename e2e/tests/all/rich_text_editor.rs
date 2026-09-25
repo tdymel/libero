@@ -111,6 +111,191 @@ fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
     });
 }
 
+#[test]
+fn a_caller_toolbar_runs_commands_and_reads_state_through_the_handle() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/handle", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let undo_disabled = "document.getElementById('ext-undo').disabled";
+        assert!(eval::<bool>(page, undo_disabled).await);
+
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "ab").await.unwrap();
+        settle(page).await;
+        page.evaluate(format!(
+            "(() => {{ getSelection().selectAllChildren({EDITOR}.querySelector('[data-key]')); }})()"
+        ))
+        .await
+        .unwrap();
+        settle(page).await;
+        page.evaluate("document.getElementById('ext-bold').click()")
+            .await
+            .unwrap();
+        assert_eq!(out(page).await, "**ab**\n");
+        let pressed: String = eval(
+            page,
+            "document.getElementById('ext-bold').getAttribute('aria-pressed')",
+        )
+        .await;
+        assert_eq!(pressed, "true");
+        assert!(!eval::<bool>(page, undo_disabled).await);
+
+        page.evaluate("document.getElementById('ext-undo').click()")
+            .await
+            .unwrap();
+        assert_eq!(out(page).await, "ab\n");
+    });
+}
+
+const KEY_K: Key = Key {
+    key: "k",
+    code: "KeyK",
+    vk: 75,
+    text: None,
+};
+
+const SLASH: Key = Key {
+    key: "/",
+    code: "Slash",
+    vk: 191,
+    text: None,
+};
+
+async fn select_first_leaf(page: &Page) {
+    page.evaluate(format!(
+        "(() => {{ getSelection().selectAllChildren({EDITOR}.querySelector('[data-key]')); }})()"
+    ))
+    .await
+    .unwrap();
+    settle(page).await;
+}
+
+#[test]
+fn link_dialog_shortcut_help_block_menu_and_announcements() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "ab").await.unwrap();
+        settle(page).await;
+
+        // Mod+B from the keyboard is announced.
+        select_first_leaf(page).await;
+        keyboard::press_with(page, KEY_B, CTRL).await.unwrap();
+        settle(page).await;
+        let said: String = eval(page, "document.querySelector('[role=status]').textContent").await;
+        assert_eq!(said, "Bold on");
+        keyboard::press_with(page, KEY_B, CTRL).await.unwrap();
+        assert_eq!(out(page).await, "ab\n");
+
+        // Mod+K: an unsafe scheme is a field error, a safe one links the selection.
+        select_first_leaf(page).await;
+        keyboard::press_with(page, KEY_K, CTRL).await.unwrap();
+        settle(page).await;
+        let in_field: bool = eval(
+            page,
+            "document.activeElement === document.querySelector('[role=dialog] input')",
+        )
+        .await;
+        assert!(in_field);
+        keyboard::type_text(page, "javascript:alert(1)")
+            .await
+            .unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        settle(page).await;
+        let invalid: String = eval(
+            page,
+            "document.querySelector('[role=dialog] input').getAttribute('aria-invalid')",
+        )
+        .await;
+        assert_eq!(invalid, "true");
+        page.evaluate(
+            "(() => { const i = document.querySelector('[role=dialog] input'); i.select(); })()",
+        )
+        .await
+        .unwrap();
+        keyboard::type_text(page, "https://example.com")
+            .await
+            .unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        assert_eq!(out(page).await, "[ab](https://example.com)\n");
+        let back: bool = eval(page, &format!("document.activeElement === {EDITOR}")).await;
+        assert!(back, "focus goes back to the text");
+
+        // Mod+/ lists the keymap.
+        keyboard::press_with(page, SLASH, CTRL).await.unwrap();
+        settle(page).await;
+        let listed: String =
+            eval(page, "document.querySelector('[role=dialog]').textContent").await;
+        assert!(
+            listed.contains("Keyboard shortcuts") && listed.contains("Heading 2"),
+            "{listed}"
+        );
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        settle(page).await;
+
+        // The block-type menu turns the paragraph into a heading.
+        page.evaluate("document.querySelector('[role=toolbar] button[aria-haspopup]').click()")
+            .await
+            .unwrap();
+        settle(page).await;
+        page.evaluate(
+            "[...document.querySelectorAll('[role=menuitemradio]')].find(i => i.textContent.includes('Heading 2')).click()",
+        )
+        .await
+        .unwrap();
+        assert_eq!(out(page).await, "## [ab](https://example.com)\n");
+        let trigger: String = eval(
+            page,
+            "document.querySelector('[role=toolbar] button[aria-haspopup]').textContent",
+        )
+        .await;
+        assert_eq!(trigger, "Heading 2");
+    });
+}
+
+#[test]
+fn node_views_draw_caller_nodes_and_keep_their_content_editable() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/nodes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        settle(page).await;
+        let atom: String = eval(
+            page,
+            &format!(
+                "{EDITOR}.querySelector('[data-atom][contenteditable=false] .mention').textContent"
+            ),
+        )
+        .await;
+        assert_eq!(atom, "@ada");
+
+        // The callout's text is its own leaf inside the caller's markup.
+        page.evaluate(format!(
+            "(() => {{ const e = {EDITOR}; e.focus(); const l = e.querySelector('aside.callout [data-key]'); getSelection().selectAllChildren(l); getSelection().collapseToEnd(); }})()"
+        ))
+        .await
+        .unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "!").await.unwrap();
+        let text = out(page).await;
+        assert!(text.ends_with("careful!"), "{text:?}");
+        let note: u32 = eval(
+            page,
+            &format!("{EDITOR}.querySelectorAll('aside.callout > span').length"),
+        )
+        .await;
+        assert_eq!(note, 1, "the view renders once, its children once");
+    });
+}
+
 /// In the WebView, `adb input text` keys open Gboard composing regions over each word;
 /// the model must still hold every letter once, in order, with shortcuts applied.
 #[cfg(feature = "android")]
@@ -234,5 +419,21 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
         )
         .await;
         assert!(view);
+
+        // ArrowDown at the leaf above enters the rendered block, which Chrome would skip.
+        page.evaluate(format!(
+            "(() => {{ const e = {EDITOR}; e.focus(); const l = e.querySelector('li [data-key]'); getSelection().selectAllChildren(l); getSelection().collapseToEnd(); }})()"
+        ))
+        .await
+        .unwrap();
+        settle(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "Z").await.unwrap();
+        let markdown = out(page).await;
+        assert!(
+            markdown.ends_with("```\nZlet x = 1;\n```\n"),
+            "{markdown:?}"
+        );
     });
 }

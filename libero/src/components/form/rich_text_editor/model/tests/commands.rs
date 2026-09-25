@@ -39,6 +39,38 @@ fn every_default_chord_runs_a_known_command() {
 }
 
 #[test]
+fn a_symbol_chord_matches_with_the_shift_its_layout_needs() {
+    let keymap = Keymap::default();
+    let german_slash = KeyPress {
+        ctrl: true,
+        shift: true,
+        code: "Digit7".into(),
+        ..KeyPress::new("/")
+    };
+    assert_eq!(
+        keymap.command_for(&german_slash, false),
+        Some(&Builtin::Shortcuts.into())
+    );
+    // A letter keeps strict modifiers: Mod+Shift+b is quote, not bold.
+    assert_eq!(
+        keymap.command_for(&press("Mod+Shift+b"), false),
+        Some(&Builtin::Quote.into())
+    );
+}
+
+#[test]
+fn view_commands_change_nothing_in_the_model() {
+    let mut editor = editor("hel|lo");
+    let commands = Commands::builtin();
+    assert!(matches!(
+        commands.get(&Builtin::Link.into()),
+        Some(Action::View)
+    ));
+    assert!(!editor.run(&commands, Builtin::Link));
+    assert!(!editor.handle_key(&Keymap::default(), &commands, &press("Mod+k"), false));
+}
+
+#[test]
 fn chords_parse_and_print() {
     let chord = Chord::parse("Mod+Shift+Z").unwrap();
     assert!(chord.primary && chord.shift && !chord.alt);

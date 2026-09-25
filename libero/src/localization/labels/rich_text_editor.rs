@@ -1,4 +1,5 @@
-/// A `RichTextEditor`'s toolbar: its name, its groups and one name per button.
+/// A `RichTextEditor`'s toolbar, link dialog, shortcut list and announcements.
+/// `{level}` and `{name}` are filled in.
 ///
 /// ```
 /// use libero::localization::RichTextEditorLabels;
@@ -27,6 +28,25 @@ pub struct RichTextEditorLabels {
     pub code_block: &'static str,
     pub undo: &'static str,
     pub redo: &'static str,
+    pub link: &'static str,
+    pub link_url: &'static str,
+    pub link_save: &'static str,
+    pub link_remove: &'static str,
+    pub link_unsafe: &'static str,
+    pub unlink: &'static str,
+    pub shortcuts: &'static str,
+    pub block_type: &'static str,
+    pub paragraph: &'static str,
+    /// `{level}` is 1 to 6.
+    pub heading: &'static str,
+    pub indent: &'static str,
+    pub outdent: &'static str,
+    pub hard_break: &'static str,
+    pub rule: &'static str,
+    /// Announced when a toggle turns on; `{name}` is the toggle's label.
+    pub on: &'static str,
+    /// Announced when a toggle turns off.
+    pub off: &'static str,
 }
 
 impl RichTextEditorLabels {
@@ -46,6 +66,22 @@ impl RichTextEditorLabels {
         code_block: "Code block",
         undo: "Undo",
         redo: "Redo",
+        link: "Link",
+        link_url: "URL",
+        link_save: "Save",
+        link_remove: "Remove link",
+        link_unsafe: "Use an http, https or mailto link",
+        unlink: "Remove link",
+        shortcuts: "Keyboard shortcuts",
+        block_type: "Text type",
+        paragraph: "Paragraph",
+        heading: "Heading {level}",
+        indent: "Indent",
+        outdent: "Outdent",
+        hard_break: "Line break",
+        rule: "Divider",
+        on: "{name} on",
+        off: "{name} off",
     };
 
     pub const GERMAN: Self = Self {
@@ -64,5 +100,21 @@ impl RichTextEditorLabels {
         code_block: "Codeblock",
         undo: "Rückgängig",
         redo: "Wiederholen",
+        link: "Link",
+        link_url: "URL",
+        link_save: "Speichern",
+        link_remove: "Link entfernen",
+        link_unsafe: "Nutze einen http-, https- oder mailto-Link",
+        unlink: "Link entfernen",
+        shortcuts: "Tastenkürzel",
+        block_type: "Textart",
+        paragraph: "Absatz",
+        heading: "Überschrift {level}",
+        indent: "Einrücken",
+        outdent: "Ausrücken",
+        hard_break: "Zeilenumbruch",
+        rule: "Trennlinie",
+        on: "{name} an",
+        off: "{name} aus",
     };
 }

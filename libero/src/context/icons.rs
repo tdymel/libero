@@ -89,9 +89,33 @@ pub enum IconSlot {
     ExitFullscreen,
     /// A video player's captions toggle.
     Captions,
+    /// A rich text editor's bold toggle.
+    Bold,
+    /// A rich text editor's italic toggle.
+    Italic,
+    /// A rich text editor's underline toggle.
+    Underline,
+    /// A rich text editor's strikethrough toggle.
+    Strikethrough,
+    /// A rich text editor's inline code toggle.
+    InlineCode,
+    /// A rich text editor's bulleted list toggle.
+    BulletList,
+    /// A rich text editor's numbered list toggle.
+    OrderedList,
+    /// A rich text editor's quote toggle.
+    Quote,
+    /// A rich text editor's code block toggle.
+    CodeBlock,
+    /// An editor's undo button.
+    Undo,
+    /// An editor's redo button.
+    Redo,
+    /// A rich text editor's link button.
+    Link,
 }
 
-const SLOTS: usize = IconSlot::Captions as usize + 1;
+const SLOTS: usize = IconSlot::Link as usize + 1;
 
 /// Glyphs by [`IconSlot`]; an empty slot keeps libero's default (lucide).
 /// A whole set starts from its constructor, one `icons-<set>` feature each:
