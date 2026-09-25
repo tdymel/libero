@@ -786,17 +786,13 @@ async fn the_separator_clamps<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
             Some(format!("{width} by {height} pixels"))
         );
     }
-    // The bounds come from `computed_px`, `Unsupported` on the WebView floor (958).
-    if matches!(d.platform(), Platform::Android | Platform::Desktop) {
-        return Ok(());
-    }
     assert_eq!(
         d.attr(SEPARATOR, "aria-valuemin").await?,
         Some(MIN.0.to_string())
     );
     assert_eq!(
         d.attr(SEPARATOR, "aria-valuemax").await?,
-        Some(MAX.0.to_string())
+        Some(max.0.to_string())
     );
     Ok(())
 }

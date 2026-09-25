@@ -22,6 +22,12 @@ pub(crate) fn observes_by_tag() -> bool {
     backend::observes_by_tag()
 }
 
+/// A computed CSS length of the element carrying `tag`, read by the page's script:
+/// a WebView's handles hold no DOM node. `Unsupported` on every other renderer.
+pub(crate) fn computed_px_by_tag(tag: u64, property: &str) -> super::Read<Option<f64>> {
+    backend::computed_px_by_tag(tag, property)
+}
+
 /// Calls `callback` with `(is_intersecting, ratio)` at the first observation
 /// and whenever `target` crosses a threshold of its `root` (the viewport for
 /// `None`) grown by `root_margin`. The web and a WebView use an

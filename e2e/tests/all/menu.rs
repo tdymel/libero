@@ -168,8 +168,7 @@ async fn a_press_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     a_press_outside_closes_it,
     "/menu-submenu-reopen",
-    a_press_outside_closes,
-    desktop: skip("1180:the reopened menu is never placed while the driver polls")
+    a_press_outside_closes
 );
 
 /// The docs demo's row: the trigger and the text beside it share a centre line.

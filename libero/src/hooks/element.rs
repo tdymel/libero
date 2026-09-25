@@ -320,8 +320,13 @@ impl ElementApi for ElementHandle {
         self.read(|element| element.natural_size())
     }
 
+    /// On a WebView by [`attributes`](Self::attributes)' tag, which the element
+    /// must carry.
     fn computed_px(&self, property: &str) -> Read<Option<f64>> {
-        self.read(|element| element.computed_px(property))
+        match self.tag {
+            Some(tag) => platform::computed_px_by_tag(tag, property),
+            None => self.read(|element| element.computed_px(property)),
+        }
     }
 
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {

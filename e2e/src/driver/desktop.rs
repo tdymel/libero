@@ -23,13 +23,6 @@ pub const APP_ENV: &str = "E2E_DESKTOP_APP";
 /// A cold WebKitGTK start under Xvfb took 5.5 s on a seat.
 const LAUNCH: Duration = Duration::from_secs(60);
 
-/// Records console errors from the moment the bridge answers.
-const CONSOLE_HOOK: &str = "window.__e2eErrors = [];
-    const error = console.error.bind(console);
-    console.error = (...args) => { __e2eErrors.push(args.map(String).join(' ')); error(...args); };
-    addEventListener('error', e => __e2eErrors.push(String(e.message)));
-    addEventListener('unhandledrejection', e => __e2eErrors.push(String(e.reason)));";
-
 /// The app the last scenario finished cleanly in; the next scenario of its unit reuses it.
 static IDLE: Mutex<Option<Desktop>> = Mutex::new(None);
 
@@ -54,10 +47,11 @@ impl Desktop {
         let unit = module.rsplit_once("::").map_or(module, |(unit, _)| unit);
         let idle = IDLE.lock().unwrap_or_else(PoisonError::into_inner).take();
         let mut desktop = match idle {
-            Some(desktop) if desktop.unit == unit => {
+            Some(mut desktop) if desktop.unit == unit => {
                 // Past GTK's double-click time: the last scenario's clicks would count
                 // towards the first one here (a splitter drag read as a double-click).
                 std::thread::sleep(Duration::from_millis(500));
+                desktop.run("__e2eErrors = []")?;
                 desktop
             }
             stale => {
@@ -66,7 +60,7 @@ impl Desktop {
             }
         };
         // Pointer back to the calibration corner: no hover left from the last scenario.
-        desktop.run("document.activeElement?.blur(); scrollTo(0, 0); __e2eErrors = []")?;
+        desktop.run("document.activeElement?.blur(); scrollTo(0, 0)")?;
         desktop.park_pointer()?;
         let generation: u64 = desktop.json(&format!("window.__route({route:?})"))?;
         desktop.wait_for(&format!("[data-fixture-generation=\"{generation}\"]"))?;
@@ -122,7 +116,6 @@ impl Desktop {
         desktop.wait_for("[data-fixture-ready]")?;
         // `Shell` installs the route hook in an effect, after the marker mounts.
         desktop.wait_until("typeof window.__route === 'function'")?;
-        desktop.run(CONSOLE_HOOK)?;
         desktop.window = desktop.find_window()?;
         desktop.scale = desktop.json("devicePixelRatio")?;
         desktop.calibrate()?;
@@ -130,7 +123,8 @@ impl Desktop {
         Ok(desktop)
     }
 
-    /// The console stayed clean since [`Desktop::open`]; keeps the app for the
+    /// The console stayed clean since the page loaded or the unit's last scenario
+    /// (the fixture's head hook records it); keeps the app for the
     /// unit's next scenario.
     pub fn finish(mut self, what: &str) -> Result<()> {
         let errors: Vec<String> = self.json("__e2eErrors")?;

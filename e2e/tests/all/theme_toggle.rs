@@ -91,8 +91,7 @@ async fn a_press_outside_closes_the_theme_menu<D: Driver>(d: &mut D, _route: &st
 e2e::scenario!(
     a_press_outside_closes_the_theme_menu,
     "/theme-toggle/themes",
-    a_press_outside_closes_the_theme_menu,
-    desktop: skip("1180:the menu is at times never placed while the driver polls")
+    a_press_outside_closes_the_theme_menu
 );
 
 /// Test pages share one profile, so a stored `dark` would leak into later fixtures.

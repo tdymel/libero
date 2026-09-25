@@ -118,11 +118,22 @@ fn page_document() -> Option<Rc<dyn Document>> {
 
 /// Runs `script` in [`page_document`]'s page; a quiet no-op without one.
 fn eval(script: &str) -> Eval {
+    let script = format!(
+        "if (typeof dioxus !== 'undefined') {{
+            (window.__liberoHeld ??= new Set()).add(dioxus);
+            setTimeout(() => __liberoHeld.delete(dioxus), {CHANNEL_HOLD_MS});
+        }}
+        {script}"
+    );
     match page_document() {
-        Some(document) => document.eval(script.to_string()),
-        None => NoOpDocument.eval(script.to_string()),
+        Some(document) => document.eval(script),
+        None => NoOpDocument.eval(script),
     }
 }
+
+/// dioxus-desktop drops an eval's Rust half once the page GCs its `dioxus` channel,
+/// result read or not (`Finished`): held past the read, see `codebase/platform/platform-api`.
+const CHANNEL_HOLD_MS: u32 = 5000;
 
 /// Runs `script` with `data` bound as `data`. Never `dioxus.recv()`: liveview's
 /// spins on an empty queue and freezes the tab.
@@ -280,6 +291,28 @@ const ON_INTERSECTION: &str = "const [attr, tag, rootTag, margin, thresholds] = 
         if (start()) waiting.disconnect();
     });
     waiting?.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: [attr] });";
+
+/// A computed CSS length of the element tagged `tag` (no handle reaches the DOM
+/// here, 958); `Unsupported` while no element carries the tag.
+pub(super) fn computed_px(tag: u64, property: &str) -> Read<Option<f64>> {
+    if !runs_scripts() {
+        return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
+    }
+    let read = eval_with(
+        json!([OBSERVE_ATTR, tag.to_string(), property]),
+        "const [attr, tag, property] = data;
+        const element = document.querySelector(`[${attr}=\"${tag}\"]`);
+        if (!element) return [false, null];
+        const value = getComputedStyle(element).getPropertyValue(property);
+        return [true, value.endsWith('px') ? parseFloat(value) : null];",
+    );
+    Box::pin(async move {
+        match read.join::<(bool, Option<f64>)>().await {
+            Ok((true, px)) => Ok(px.filter(|px| px.is_finite())),
+            _ => Err(PlatformError::Unsupported),
+        }
+    })
+}
 
 /// Observed in the page, keyed by the `tag` attribute the element carries: it
 /// clips by every scroller up to the root and sees layout-only changes.

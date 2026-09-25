@@ -557,7 +557,8 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         .event("onresize", resized)
         .render(
             HtmlTag::Div,
-            Vec::new(),
+            // The WebView's `computed_px` finds the root by its tag (1007).
+            root.attributes(),
             rsx! {
                 WindowTitleBar {
                     title,

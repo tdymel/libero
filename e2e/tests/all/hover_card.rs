@@ -67,8 +67,7 @@ e2e::scenario!(
 e2e::scenario!(
     escape_closes_a_pointer_opened_card_with_focus_elsewhere,
     "/hover-card",
-    escape_with_focus_elsewhere,
-    desktop: skip("1180:the hovered card is never placed while the driver polls")
+    escape_with_focus_elsewhere
 );
 e2e::scenario!(
     escape_closes_a_select_list_in_the_card_before_the_card,
