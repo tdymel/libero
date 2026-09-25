@@ -13,6 +13,12 @@ pub(crate) fn draws_placeholders() -> bool {
     backend::DRAWS_PLACEHOLDERS
 }
 
+/// Whether a `contenteditable` rich text surface works. Blitz has none, so the
+/// rich text editor renders read-only there.
+pub(crate) fn edits_rich_text() -> bool {
+    backend::EDITS_RICH_TEXT
+}
+
 /// A field's own placeholder mounted: the renderer marks it once laid out.
 pub(crate) fn placeholder_drawn() {
     backend::placeholder_drawn();

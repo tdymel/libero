@@ -293,6 +293,10 @@ pub(crate) const FIRES_IMAGE_ERRORS: bool =
 pub(crate) const DRAWS_PLACEHOLDERS: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz has no `contenteditable`; see [`edits_rich_text`](crate::platform::edits_rich_text).
+pub(crate) const EDITS_RICH_TEXT: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 /// Only Blitz marks libero's own placeholders - see
 /// [`placeholder_drawn`](crate::platform::placeholder_drawn).
 pub(crate) fn placeholder_drawn() {

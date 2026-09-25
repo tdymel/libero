@@ -47,6 +47,7 @@ macro_rules! builtins {
     ($($variant:ident => $name:literal,)*) => {
         /// The editor's own commands.
         #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        #[non_exhaustive]
         pub enum Builtin { $($variant,)* }
 
         impl Builtin {
@@ -104,6 +105,7 @@ pub enum Record {
 }
 
 #[derive(Clone)]
+#[non_exhaustive]
 pub enum Action {
     Edit(EditFn, Record),
     Undo,
@@ -143,7 +145,15 @@ impl Commands {
         }
     }
 
+    /// Every built-in. Shares its functions with other calls, so two compare equal.
     pub fn builtin() -> Self {
+        thread_local! {
+            static BUILTIN: Commands = Commands::fresh_builtin();
+        }
+        BUILTIN.with(Clone::clone)
+    }
+
+    fn fresh_builtin() -> Self {
         let mut commands = Self::empty();
         for builtin in Builtin::ALL {
             commands
@@ -178,6 +188,26 @@ impl Commands {
 
     pub fn names(&self) -> impl Iterator<Item = &CommandName> {
         self.actions.keys()
+    }
+}
+
+/// Same names running the same functions: what a component prop needs to skip re-renders.
+impl PartialEq for Commands {
+    fn eq(&self, other: &Self) -> bool {
+        self.actions.len() == other.actions.len()
+            && self
+                .actions
+                .iter()
+                .zip(&other.actions)
+                .all(|((a, x), (b, y))| a == b && same_action(x, y))
+    }
+}
+
+fn same_action(a: &Action, b: &Action) -> bool {
+    match (a, b) {
+        (Action::Edit(f, r), Action::Edit(g, s)) => Rc::ptr_eq(f, g) && r == s,
+        (Action::Undo, Action::Undo) | (Action::Redo, Action::Redo) => true,
+        _ => false,
     }
 }
 

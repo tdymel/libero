@@ -90,6 +90,7 @@ mod range_slider;
 mod rating;
 mod refused;
 mod repo_button;
+mod rich_text_editor;
 mod rtl_keys;
 mod rtl_layout;
 mod scroll_area;

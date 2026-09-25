@@ -92,6 +92,7 @@ mod range_slider;
 mod rating;
 mod refused;
 mod repo_button;
+mod rich_text_editor;
 mod scroll_area;
 mod scroller;
 mod segmented_control;
@@ -223,6 +224,7 @@ const FIXTURES: &[Routes] = &[
     rating::ROUTES,
     refused::ROUTES,
     repo_button::ROUTES,
+    rich_text_editor::ROUTES,
     scroll_area::ROUTES,
     scroller::ROUTES,
     segmented_control::ROUTES,

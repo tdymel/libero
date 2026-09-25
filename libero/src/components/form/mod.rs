@@ -78,6 +78,7 @@ pub use radio::{Radio, RadioPart, RadioProps};
 pub use radio_group::{RadioGroup, RadioGroupPart, RadioGroupProps};
 pub use rating::{Rating, RatingPart, RatingProps};
 pub(crate) use removable_chip::{removable_chip, use_chip_announcer};
+pub use rich_text_editor::{RichTextEditor, RichTextEditorProps, rich_text};
 pub use segmented_control::{SegmentedControl, SegmentedControlPart, SegmentedControlProps};
 pub use select::{
     MultiSelect, MultiSelectProps, Select, SelectFilterArgs, SelectOptionArgs, SelectPart,

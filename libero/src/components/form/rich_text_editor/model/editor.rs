@@ -69,6 +69,7 @@ pub struct Editor<H = UndoHistory<EditorState>> {
 }
 
 impl Editor {
+    #[allow(dead_code, reason = "tests; the view runs on `use_history`")]
     pub fn new(doc: Doc) -> Self {
         let state = EditorState::new(doc);
         let history = UndoHistory::new(state.clone());
@@ -91,6 +92,7 @@ impl<H: UndoStack> Editor<H> {
         &self.state.doc
     }
 
+    #[allow(dead_code, reason = "for the command handle, todo in plan 1159")]
     pub fn history(&self) -> &H {
         &self.history
     }

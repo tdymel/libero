@@ -194,7 +194,7 @@ impl EditorState {
             return self.insert_inline(Inline::text("\n"));
         }
         let parent = self.parent(at.block);
-        if block.len() == 0 {
+        if block.is_empty() {
             match parent.as_ref().map(|(_, kind, _)| kind) {
                 Some(BlockKind::ListItem) => return self.outdent(),
                 Some(BlockKind::Quote) if self.is_last_child(at.block) => {

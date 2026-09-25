@@ -71,6 +71,7 @@ impl NodeSpec {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum RegistryError {
     /// The name is taken by a built-in node.
     Builtin(String),

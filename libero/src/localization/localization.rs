@@ -67,6 +67,7 @@ pub struct Localization {
     pub menu: MenuLabels,
     pub table: TableLabels,
     pub shortcut_help: ShortcutHelpLabels,
+    pub rich_text_editor: RichTextEditorLabels,
 }
 
 impl Localization {
@@ -114,6 +115,7 @@ impl Localization {
         menu: MenuLabels::ENGLISH,
         table: TableLabels::ENGLISH,
         shortcut_help: ShortcutHelpLabels::ENGLISH,
+        rich_text_editor: RichTextEditorLabels::ENGLISH,
     };
 
     /// Hand it to `LiberoProvider { localization }`; German dates are `Formats::GERMAN`.
@@ -160,6 +162,7 @@ impl Localization {
         menu: MenuLabels::GERMAN,
         table: TableLabels::GERMAN,
         shortcut_help: ShortcutHelpLabels::GERMAN,
+        rich_text_editor: RichTextEditorLabels::GERMAN,
     };
 }
 

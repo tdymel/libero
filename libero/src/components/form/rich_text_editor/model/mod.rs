@@ -1,6 +1,4 @@
 //! The editor's document core: no dioxus here, so it runs and tests natively.
-// Nothing public reaches the model until the view lands, plan 1159.
-#![allow(dead_code, unused_imports, unnameable_types)]
 
 mod command;
 mod doc;

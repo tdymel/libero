@@ -109,7 +109,7 @@ pub use permission::PermissionState;
 pub(crate) use permission::{PermissionKind, PermissionSubscription, permission};
 pub(crate) use placeholder::{
     PLACEHOLDER_ATTR, PLACEHOLDER_CELL_ATTR, PLACEHOLDER_SHOWN_ATTR, draws_placeholders,
-    placeholder_drawn,
+    edits_rich_text, placeholder_drawn,
 };
 pub(crate) use press::{PRESS_MARKER_ATTR, PressApi, PressSubscription, press};
 pub(crate) use push::{PushApi, push};

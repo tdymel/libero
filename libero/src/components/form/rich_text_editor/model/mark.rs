@@ -72,6 +72,7 @@ impl From<Href> for String {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum Mark {
     Bold,
     Italic,
@@ -87,6 +88,7 @@ pub enum Mark {
 
 /// A mark's kind without its attributes: what a toggle or a toolbar asks about.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
 pub enum MarkKind {
     Bold,
     Italic,

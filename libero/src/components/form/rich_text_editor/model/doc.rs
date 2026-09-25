@@ -27,6 +27,7 @@ pub enum ContentKind {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum BlockKind {
     Paragraph,
     Heading {
@@ -119,6 +120,7 @@ impl BlockKind {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum Inline {
     Text {
         text: String,
@@ -154,6 +156,10 @@ impl Inline {
             Self::Text { text, .. } => text.chars().count(),
             Self::HardBreak | Self::Node { .. } => 1,
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     fn marks(&self) -> Option<&Marks> {
@@ -282,6 +288,10 @@ impl Block {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn is_leaf(&self) -> bool {
         self.kind.content() != ContentKind::Blocks
     }
@@ -300,13 +310,33 @@ impl Block {
 }
 
 /// The format of record. `version` lets a later model migrate older JSON.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+///
+/// Equality compares content only: two docs built apart never share keys.
+#[derive(Clone, Debug, Serialize)]
 pub struct Doc {
     pub version: u32,
     pub blocks: Vec<Block>,
     #[serde(skip)]
     next_key: u64,
 }
+
+impl PartialEq for Doc {
+    fn eq(&self, other: &Self) -> bool {
+        fn same(a: &[Block], b: &[Block]) -> bool {
+            a.len() == b.len()
+                && a.iter().zip(b).all(|(a, b)| {
+                    a.kind == b.kind
+                        && match (&a.content, &b.content) {
+                            (Content::Blocks(x), Content::Blocks(y)) => same(x, y),
+                            (x, y) => x == y,
+                        }
+                })
+        }
+        self.version == other.version && same(&self.blocks, &other.blocks)
+    }
+}
+
+impl Eq for Doc {}
 
 #[derive(Deserialize)]
 struct DocRepr {
