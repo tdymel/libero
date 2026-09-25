@@ -5,7 +5,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Mark, SortDirection, States, Table, TableSort, column},
+    components::{ColumnDefaults, Mark, SortDirection, States, Table, TableSort, column},
     localization::Localization,
     theme::Size,
 };
@@ -477,4 +477,46 @@ fn without_multi_sort_only_the_first_entry_sorts() {
     assert!(pear < fig, "{body}");
     assert_eq!(body.matches("aria-sort=").count(), 1, "{body}");
     assert!(!body.contains("data-sort-order"), "{body}");
+}
+
+#[test]
+fn widths_defaults_and_a_header_render_reach_the_header_cells() {
+    #[derive(Clone, PartialEq)]
+    struct Row {
+        name: &'static str,
+        age: u32,
+    }
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    column_defaults: ColumnDefaults::new().min_width("4rem"),
+                    data: vec![Row { name: "Ada", age: 36 }],
+                    columns: vec![
+                        column("Name").value(|row: &Row| row.name.to_string()).width("12rem"),
+                        column("Age")
+                            .value(|row: &Row| row.age)
+                            .min_width("2rem")
+                            .sortable()
+                            .header_render(|| rsx! { "Age " small { "(years)" } }),
+                    ],
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert_eq!(body.matches("data-sortable").count(), 1, "{body}");
+    assert!(
+        body.contains("style=\"box-sizing:border-box;width:12rem;min-width:4rem;\""),
+        "{body}"
+    );
+    assert!(
+        body.contains("style=\"box-sizing:border-box;min-width:2rem;\""),
+        "{body}"
+    );
+    assert!(body.contains("<small>(years)</small>"), "{body}");
 }

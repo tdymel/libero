@@ -145,6 +145,34 @@ fn a_wide_scroll_table_scrolls_to_its_last_column() {
     );
 }
 
+/// 1156-2a: a column's `width` sits on its header cell (Blitz ignores `<col>`)
+/// and sizes its body cells too, padding included.
+#[test]
+fn a_column_width_sizes_the_whole_column() {
+    fn app() -> Element {
+        rsx! {
+            div { width: "600px",
+                Table {
+                    aria_label: "People",
+                    data: vec![Person { name: "Ada", age: 36 }],
+                    columns: vec![
+                        column("Name").value(|p: &Person| p.name.to_string()).width("200px"),
+                        column("Age").value(|p: &Person| p.age),
+                    ],
+                }
+            }
+        }
+    }
+    let page = mount(app);
+    let header = page.rect("thead th").2;
+    let cell = page.rect("tbody td").2;
+    assert!(
+        (header - 200.0).abs() <= 1.0,
+        "the header is {header}px wide"
+    );
+    assert!((cell - 200.0).abs() <= 1.0, "the cell is {cell}px wide");
+}
+
 /// Todo 734: Blitz's UA sheet centres a button's content, so a sortable header
 /// sat mid-cell while its column's cells start at the edge.
 #[test]

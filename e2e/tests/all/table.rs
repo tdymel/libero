@@ -539,6 +539,46 @@ fn an_empty_table_shows_its_empty_slot_across_every_column() {
     });
 }
 
+/// 1156-2a: `width` on the header sizes the column, padding included; the
+/// rendered header sorts like a text one.
+#[test]
+fn a_column_width_and_a_rendered_header_reach_the_browser() {
+    block_on(async {
+        let fixture = Fixture::open("/table/widths", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        wait::for_js_true(
+            page,
+            "(() => { const w = s => document.querySelector(s).getBoundingClientRect().width; \
+             return Math.abs(w('thead th') - 200) <= 1 && Math.abs(w('tbody td') - 200) <= 1; })()",
+            "the first column to be 200px wide",
+        )
+        .await
+        .unwrap();
+        assert_eq!(count(page, "th[data-sortable]").await, 1.0);
+        page.find_element("thead th:nth-child(2) button")
+            .await
+            .unwrap()
+            .click()
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const th = document.querySelector('thead th:nth-child(2)'); \
+             return th.getAttribute('aria-sort') === 'ascending' \
+             && th.querySelector('small').textContent === '(boxes)'; })()",
+            "the rendered header to sort",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("a sized table").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn count(page: &Page, selector: &str) -> f64 {
     page.evaluate(format!("document.querySelectorAll({selector:?}).length"))
         .await

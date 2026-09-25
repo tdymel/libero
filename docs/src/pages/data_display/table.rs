@@ -91,6 +91,7 @@ pub fn TablePage() -> Element {
                 props("Table", vec![
                     prop("data", "Vec<T>").default("required").doc("One row each, in source order until a column is sorted."),
                     prop("columns", "Vec<Column<T>>").default("required").doc("Built with `column(..)`."),
+                    prop("column_defaults", "ColumnDefaults").default("none").doc("Settings every column starts from: `ColumnDefaults::new().align(..).width(..).min_width(..)`. A column's own setting wins."),
                     prop("caption", "Option<String>").default("None").doc("A visible title above the header row, and the table's accessible name."),
                     prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\"."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
@@ -125,7 +126,11 @@ pub fn TablePage() -> Element {
                     prop("sortable", "bool").default("false").doc("Turns the header into a sort button."),
                     prop("render", "fn(&T) -> Element").default("None").doc("Replaces the cell body. Sorting still uses `value`."),
                     prop("format", "fn(&T) -> String").default("None").doc("Replaces the cell text, say a price with its currency. Sorting and alignment still follow `value`."),
-                    prop("align", "CellAlign").default("follows the cell type").doc("Overrides the alignment the cell type chose."),
+                    prop("align", "CellAlign").default("follows the cell type").doc("Overrides the alignment the cell type chose and `column_defaults`."),
+                    prop("width", "String").default("None").doc("The column's width, any CSS length. Columns without one share the rest."),
+                    prop("min_width", "String").default("None").doc("The narrowest the column gets, any CSS length."),
+                    prop("header_render", "fn() -> Element").default("None").doc("Replaces the header's body, inside the sort button when sortable. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header."),
+                    prop("of", "&ColumnType<V>").default("None").doc("Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win."),
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
                 ]).without_base_props(),
             ],
@@ -195,6 +200,21 @@ pub fn TablePage() -> Element {
                     " sets the cell padding and font size, and "
                     Code { source: "striped" }
                     " shades every other row."
+                }
+                Text {
+                    Code { source: "width" }
+                    " and "
+                    Code { source: "min_width" }
+                    " size a column, "
+                    Code { source: "header_render" }
+                    " draws its header, and "
+                    Code { source: "column_defaults" }
+                    " sets what every column starts from, say a minimum width. Columns of one "
+                    "kind, say prices, share a "
+                    Code { source: "const ColumnType" }
+                    " with "
+                    Code { source: "column(\"Price\").of(&MONEY).value(..)" }
+                    "."
                 }
                 Text {
                     Code { source: "selectable" }

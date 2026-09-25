@@ -5,7 +5,7 @@ use pictogram_icons_lucide as lucide;
 
 use super::{
     cell_value::{CellAlign, SortDirection, SortKey},
-    column::Column,
+    column::{Column, ColumnDefaults},
     use_table::StateSlice,
 };
 use crate::{
@@ -89,18 +89,43 @@ pub(super) struct HeaderSpec {
     pub align: CellAlign,
     pub sortable: bool,
     pub row_header: bool,
+    /// The header cell's inline `width`/`min-width`, which size the column.
+    pub style: Option<String>,
+    /// A caller's header body, which replaces the text.
+    pub body: Option<Element>,
 }
 
-pub(super) fn header_specs<T>(columns: &[Column<T>]) -> Vec<HeaderSpec> {
+pub(super) fn header_specs<T>(columns: &[Column<T>], defaults: &ColumnDefaults) -> Vec<HeaderSpec> {
     columns
         .iter()
-        .map(|column| HeaderSpec {
-            header: column.header.clone(),
-            align: column.align,
-            sortable: column.sortable,
-            row_header: column.row_header,
+        .map(|column| {
+            let resolved = column.resolve(defaults);
+            HeaderSpec {
+                header: column.header.clone(),
+                align: resolved.align,
+                sortable: column.sortable,
+                row_header: column.row_header,
+                style: width_style(resolved.width, resolved.min_width),
+                body: column.header_render.as_ref().map(|render| render()),
+            }
         })
         .collect()
+}
+
+// Not `<col>`: Blitz ignores its width (blitz-table-probe). Border-box, as
+// Blitz reads a cell's width.
+fn width_style(width: Option<&str>, min_width: Option<&str>) -> Option<String> {
+    if width.is_none() && min_width.is_none() {
+        return None;
+    }
+    let mut style = String::from("box-sizing:border-box;");
+    if let Some(width) = width {
+        style.push_str(&format!("width:{width};"));
+    }
+    if let Some(min_width) = min_width {
+        style.push_str(&format!("min-width:{min_width};"));
+    }
+    Some(style)
 }
 
 /// The sorted columns by header index, in priority order.
@@ -265,6 +290,13 @@ fn adds_column(touch: Option<CopyValue<bool>>, event: &MouseEvent) -> bool {
     touched || modifiers.shift() || modifiers.ctrl() || modifiers.meta()
 }
 
+fn header_body(spec: &HeaderSpec) -> Element {
+    match &spec.body {
+        Some(body) => body.clone(),
+        None => rsx! { "{spec.header}" },
+    }
+}
+
 pub(super) fn render_body(body: BodySpec) -> Element {
     let BodySpec {
         caption,
@@ -296,6 +328,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                         scope: "col",
                         "data-align": align_attr(spec.align),
                         "data-sortable": spec.sortable.then_some(true),
+                        style: spec.style.clone(),
                         // On the sorted columns only (APG): a "none" on every
                         // other one is read out as "not sorted" at each.
                         aria_sort: active
@@ -317,7 +350,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                         sort.set(next_sort(&active, &headers, index, add));
                                     }
                                 },
-                                "{spec.header}"
+                                {header_body(spec)}
                                 // Always rendered, so sorting can't change the width;
                                 // `aria-sort` shows and flips it.
                                 Glyph { slot: IconSlot::ArrowDown, icon: lucide::arrow_down::outlined }
@@ -332,7 +365,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                 }
                             }
                         } else {
-                            "{spec.header}"
+                            {header_body(spec)}
                         }
                     }
                 }
@@ -435,6 +468,8 @@ mod tests {
                 align: CellAlign::Start,
                 sortable: true,
                 row_header: false,
+                style: None,
+                body: None,
             })
             .collect()
     }
@@ -569,11 +604,24 @@ mod tests {
     #[test]
     fn a_sort_on_an_unknown_or_unsortable_header_is_inactive() {
         let (_, columns) = ages();
-        let headers = header_specs(&columns);
+        let headers = header_specs(&columns, &ColumnDefaults::new());
 
         let unknown = [TableSort::new("Height", Ascending)];
         assert!(active_sort(&headers, &unknown, true).is_empty());
         let unsortable = [TableSort::new("Name", Ascending)];
         assert!(active_sort(&headers, &unsortable, true).is_empty());
+    }
+
+    #[test]
+    fn widths_become_the_header_cells_style() {
+        assert_eq!(width_style(None, None), None);
+        assert_eq!(
+            width_style(Some("6rem"), None).as_deref(),
+            Some("box-sizing:border-box;width:6rem;")
+        );
+        assert_eq!(
+            width_style(Some("50%"), Some("4rem")).as_deref(),
+            Some("box-sizing:border-box;width:50%;min-width:4rem;")
+        );
     }
 }

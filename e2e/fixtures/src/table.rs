@@ -1,9 +1,9 @@
 //! `Table` with a sortable text column and a custom-rendered one; a wide one
 //! in its scroll region under a caption; keyed, clickable, striped rows; selectable,
-//! multi-sorted rows; an empty one; a paged one.
+//! multi-sorted rows; an empty one; a paged one; sized columns.
 
 use dioxus::prelude::*;
-use libero::components::{SortDirection, States, Table, TableSort, column};
+use libero::components::{ColumnDefaults, SortDirection, States, Table, TableSort, column};
 use libero::sx::sx;
 
 use crate::Routes;
@@ -15,7 +15,29 @@ pub const ROUTES: Routes = &[
     ("/table/empty", || rsx! { EmptyTablePage {} }),
     ("/table/select", || rsx! { SelectTablePage {} }),
     ("/table/paged", || rsx! { PagedTablePage {} }),
+    ("/table/widths", || rsx! { WidthsTablePage {} }),
 ];
+
+/// A 200px first column; a sortable one with a rendered header.
+#[component]
+fn WidthsTablePage() -> Element {
+    rsx! {
+        div { width: "600px",
+            Table {
+                aria_label: "Fruit",
+                column_defaults: ColumnDefaults::new().min_width("4rem"),
+                data: fruit(),
+                columns: vec![
+                    column("Name").value(|fruit: &Fruit| fruit.name.to_string()).width("200px"),
+                    column("Stock")
+                        .value(|fruit: &Fruit| fruit.stock)
+                        .sortable()
+                        .header_render(|| rsx! { "Stock " small { "(boxes)" } }),
+                ],
+            }
+        }
+    }
+}
 
 #[derive(Clone, PartialEq)]
 struct Fruit {

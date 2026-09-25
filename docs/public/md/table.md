@@ -25,6 +25,11 @@ server-side query or a saved view, pass `sort` and update it from
 added, removed or sorted. `size` sets the cell padding and font size, and
 `striped` shades every other row.
 
+`width` and `min_width` size a column, `header_render` draws its header, and
+`column_defaults` sets what every column starts from, say a minimum width.
+Columns of one kind, say prices, share a `const ColumnType` with
+`column("Price").of(&MONEY).value(..)`.
+
 `selectable` adds a checkbox per row and a select-all box. The selection is a
 list of `row_key`s, so it stays with its rows through a sort. Hold it yourself
 with `selection` and `onselectionchange`. `multi_sort` lets Shift-click, or a
@@ -370,6 +375,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `data` | `Vec<T>` | required | One row each, in source order until a column is sorted. |
 | `columns` | `Vec<Column<T>>` | required | Built with `column(..)`. |
+| `column_defaults` | `ColumnDefaults` | none | Settings every column starts from: `ColumnDefaults::new().align(..).width(..).min_width(..)`. A column's own setting wins. |
 | `caption` | `Option<String>` | `None` | A visible title above the header row, and the table's accessible name. |
 | `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". |
 | `scroll` | `bool` | `false` | Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
@@ -410,7 +416,11 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `sortable` | `bool` | `false` | Turns the header into a sort button. |
 | `render` | `fn(&T) -> Element` | `None` | Replaces the cell body. Sorting still uses `value`. |
 | `format` | `fn(&T) -> String` | `None` | Replaces the cell text, say a price with its currency. Sorting and alignment still follow `value`. |
-| `align` | `CellAlign` | follows the cell type | Overrides the alignment the cell type chose. |
+| `align` | `CellAlign` | follows the cell type | Overrides the alignment the cell type chose and `column_defaults`. |
+| `width` | `String` | `None` | The column's width, any CSS length. Columns without one share the rest. |
+| `min_width` | `String` | `None` | The narrowest the column gets, any CSS length. |
+| `header_render` | `fn() -> Element` | `None` | Replaces the header's body, inside the sort button when sortable. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header. |
+| `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
 
 `column()` is a builder, not a component, so it takes no shared props.

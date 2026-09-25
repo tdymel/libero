@@ -19,7 +19,7 @@ use crate::{
 };
 
 use super::{
-    column::Column,
+    column::{Column, ColumnDefaults},
     core::{
         BodySpec, CaptionSpec, RowFn, RowSpec, TableSort, active_sort, header_specs, render_body,
         row_order,
@@ -146,6 +146,9 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     data: Vec<T>,
     /// Built with [`column`](super::column).
     columns: Vec<Column<T>>,
+    /// What every column starts from; a column's own setting wins.
+    #[props(default)]
+    column_defaults: ColumnDefaults,
     /// A visible title above the header row, and the table's accessible name.
     #[props(default, into)]
     caption: Option<String>,
@@ -314,7 +317,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .states(&size_states)
         .prepare();
 
-    let headers = header_specs(&props.columns);
+    let headers = header_specs(&props.columns, &props.column_defaults);
     let active = active_sort(&headers, &state.sort.read(), props.multi_sort);
 
     let data = Rc::new(props.data);
