@@ -158,6 +158,7 @@ md_pages! {
     UseElement => "use_element",
     UseFocusReturn => "use_focus_return",
     UseGeolocation => "use_geolocation",
+    UseMedia => "use_media",
     UseSystemNotification => "use_system_notification",
     UseHistory => "use_history",
     UseHotkeys => "use_hotkeys",
@@ -169,5 +170,6 @@ md_pages! {
     UseThemeSet => "use_theme_set",
     UseTimers => "use_timers",
     UseUserMedia => "use_user_media",
+    Video => "video",
     VisuallyHidden => "visually_hidden",
 }

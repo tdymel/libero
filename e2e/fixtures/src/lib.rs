@@ -129,6 +129,7 @@ mod use_media_query;
 mod use_system_notification;
 mod use_timers;
 mod use_user_media;
+mod video;
 mod visually_hidden;
 
 use dioxus::prelude::*;
@@ -261,6 +262,7 @@ const FIXTURES: &[Routes] = &[
     use_system_notification::ROUTES,
     use_timers::ROUTES,
     use_user_media::ROUTES,
+    video::ROUTES,
     visually_hidden::ROUTES,
 ];
 

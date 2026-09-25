@@ -11,11 +11,13 @@ mod indicator;
 mod kanban;
 mod list;
 mod marquee;
+mod media_controls;
 mod pictogram;
 mod qr_code;
 pub(crate) mod sortable;
 mod table;
 mod timeline;
+mod video;
 
 pub use accordion::{Accordion, AccordionOpen, AccordionProps};
 pub use audio::{Audio, AudioPart, AudioProps, MediaPreload};
@@ -42,5 +44,6 @@ pub use table::{
     SortKey, Table, TableProps, TableSort, TypedColumnHeader, column,
 };
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelinePart, TimelineProps};
+pub use video::{MediaTrack, TrackKind, Video, VideoPart, VideoProps};
 
 pub(crate) use image::LinkedImageScope;

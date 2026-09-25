@@ -66,6 +66,11 @@ icon_set!(lucide: [outlined => lucide_outlined] {
     Star => star,
     Grip => grip_vertical,
     MoveTo => arrow_right_left,
+    Volume => volume_2,
+    VolumeOff => volume_x,
+    Fullscreen => maximize,
+    ExitFullscreen => minimize,
+    Captions => captions,
 });
 
 #[cfg(feature = "icons-material")]
@@ -108,6 +113,11 @@ icon_set!(material: [
     Star => toggle_star,
     Grip => action_drag_indicator,
     MoveTo => action_swap_horiz,
+    Volume => av_volume_up,
+    VolumeOff => av_volume_off,
+    Fullscreen => navigation_fullscreen,
+    ExitFullscreen => navigation_fullscreen_exit,
+    Captions => av_closed_caption,
 });
 
 #[cfg(feature = "icons-tabler")]
@@ -144,6 +154,11 @@ icon_set!(tabler: [outlined => tabler_outlined] {
     Star => star,
     Grip => grip_vertical,
     MoveTo => arrows_left_right,
+    Volume => volume,
+    VolumeOff => volume_3,
+    Fullscreen => maximize,
+    ExitFullscreen => minimize,
+    Captions => badge_cc,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -179,6 +194,11 @@ icon_set!(bootstrap: [outlined => bootstrap_outlined] {
     Star => star,
     Grip => grip_vertical,
     MoveTo => arrow_left_right,
+    Volume => volume_up,
+    VolumeOff => volume_mute,
+    Fullscreen => fullscreen,
+    ExitFullscreen => fullscreen_exit,
+    Captions => cc_square,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -221,6 +241,11 @@ icon_set!(phosphor: [
     Star => star,
     Grip => dots_six_vertical,
     MoveTo => arrows_left_right,
+    Volume => speaker_high,
+    VolumeOff => speaker_x,
+    Fullscreen => corners_out,
+    ExitFullscreen => corners_in,
+    Captions => closed_captioning,
 });
 
 #[cfg(test)]

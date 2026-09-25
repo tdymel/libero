@@ -19,6 +19,7 @@ mod eye_dropper;
 mod file_dialog;
 mod focus;
 mod form;
+mod fullscreen;
 mod geolocation;
 mod http;
 mod image_crop;
@@ -80,6 +81,7 @@ pub(crate) use focus::{
     focus_entered_from, focus_is_in, focus_pressed, focus_selectors, focus_visible, silent_focus,
 };
 pub(crate) use form::{lifts_legends, submit_event, submit_listeners};
+pub(crate) use fullscreen::{FullscreenApi, FullscreenSubscription, fullscreen};
 pub(crate) use geolocation::{Fix, GeolocationSubscription, geolocation};
 pub use geolocation::{GeolocationError, GeolocationOptions, Position};
 pub(crate) use http::fetch_text;

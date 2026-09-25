@@ -118,6 +118,11 @@ fn hooks() -> Vec<HookRow> {
             Route::UseMediaQueryPage {},
         ),
         row(
+            "use_media",
+            "Plays and reads an `<audio>` or `<video>` you render yourself.",
+            Route::UseMediaPage {},
+        ),
+        row(
             "use_geolocation",
             "The device's position, once or followed, and the location permission.",
             Route::UseGeolocationPage {},

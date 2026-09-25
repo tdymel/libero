@@ -1,4 +1,4 @@
-/// An `Audio` player's strings. `{time}` and `{duration}` are clock times such as `1:05`.
+/// An `Audio` or `Video` player's strings. `{time}` and `{duration}` are clock times such as `1:05`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MediaLabels {
     pub controls: &'static str,
@@ -16,6 +16,9 @@ pub struct MediaLabels {
     /// Where nothing plays media, above a link to the file.
     pub unsupported: &'static str,
     pub download: &'static str,
+    pub captions: &'static str,
+    pub fullscreen: &'static str,
+    pub exit_fullscreen: &'static str,
 }
 
 impl MediaLabels {
@@ -32,6 +35,9 @@ impl MediaLabels {
         error: "This media could not be played.",
         unsupported: "This app cannot play media here.",
         download: "Open the file",
+        captions: "Captions",
+        fullscreen: "Fullscreen",
+        exit_fullscreen: "Exit fullscreen",
     };
 
     pub const GERMAN: Self = Self {
@@ -47,5 +53,8 @@ impl MediaLabels {
         error: "Dieses Medium kann nicht abgespielt werden.",
         unsupported: "Diese App kann hier keine Medien abspielen.",
         download: "Datei öffnen",
+        captions: "Untertitel",
+        fullscreen: "Vollbild",
+        exit_fullscreen: "Vollbild beenden",
     };
 }

@@ -1,19 +1,13 @@
 use dioxus::prelude::*;
-use pictogram_icons_lucide as lucide;
 
+use super::media_controls::{MediaControls, MediaFallback, use_media_keys};
 use crate::{
     components::{
-        accessibility::VisuallyHidden,
-        buttons::{ActionIcon, Toolbar},
-        common::{Glyph, HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
-        form::{Slider, SliderChangeEvent},
+        common::{HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
         layout::use_box,
     },
-    context::IconSlot,
-    hooks::{Hotkey, MediaError, MediaHandle, use_hotkeys, use_localization, use_media},
-    localization::fill,
-    platform::key_taken,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    hooks::{MediaError, MediaHandle, use_media},
+    sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, Size, SizeCss},
     utils::warn,
 };
@@ -73,7 +67,7 @@ pub enum MediaPreload {
 }
 
 impl MediaPreload {
-    fn attribute(self) -> &'static str {
+    pub(super) fn attribute(self) -> &'static str {
         match self {
             Self::None => "none",
             Self::Metadata => "metadata",
@@ -141,7 +135,6 @@ base_props! {
 pub fn Audio(props: AudioProps) -> Element {
     let own = use_media();
     let media = props.media.unwrap_or(own);
-    let labels = use_localization().media;
     let player = crate::hooks::use_element();
 
     use_name_warning(
@@ -157,20 +150,7 @@ pub fn Audio(props: AudioProps) -> Element {
         }
     });
 
-    let jump = move |by: f64| media.seek(media.current_time() + by);
-    use_hotkeys([
-        Hotkey::new("k", move || media.toggle()).within(player),
-        Hotkey::new("j", move || jump(-10.0)).within(player),
-        Hotkey::new("l", move || jump(10.0)).within(player),
-        Hotkey::new("m", move || media.set_muted(!media.muted())).within(player),
-    ]);
-    // Space on a slider plays and pauses; a button keeps its own Space, so no hotkey.
-    let space_toggles = move |event: KeyboardEvent| {
-        if event.key() == Key::Character(" ".into()) && !key_taken(&event) {
-            event.prevent_default();
-            media.toggle();
-        }
-    };
+    use_media_keys(media, player, []);
 
     let error = media.error();
     let onerror = props.onerror;
@@ -182,11 +162,10 @@ pub fn Audio(props: AudioProps) -> Element {
 
     let (onplay, onpause, onended) = (props.onplay, props.onpause, props.onended);
     let unsupported = media.supported() == Some(false);
-    let size = props.size.clone();
-    let icon_size: Input<ThemeAwareValue> = match props.size.as_ref() {
-        Some(size) => Input::Value(ThemeAwareValue::Size(*size)),
-        None => Input::None,
-    };
+
+    // Tagged, so a WebView finds the player for the hotkeys.
+    let mut attributes = props.attributes;
+    attributes.extend(player.attributes());
 
     let body = rsx! {
         audio {
@@ -202,59 +181,9 @@ pub fn Audio(props: AudioProps) -> Element {
             ..media.attributes(),
         }
         if unsupported {
-            div { "data-slot": AudioPart::Message.slot(),
-                if props.children != VNode::empty() {
-                    {props.children.clone()}
-                } else {
-                    p { {labels.unsupported} }
-                    a { href: props.src.clone(), {labels.download} }
-                }
-            }
+            MediaFallback { src: props.src.clone(), children: props.children }
         } else {
-            Toolbar { "aria-label": labels.controls, "data-slot": AudioPart::Controls.slot(),
-                ActionIcon {
-                    aria_label: if media.paused() { labels.play } else { labels.pause },
-                    size: icon_size.clone(),
-                    onclick: move |_| media.toggle(),
-                    if media.paused() {
-                        Glyph { slot: IconSlot::Play, icon: lucide::play::outlined }
-                    } else {
-                        Glyph { slot: IconSlot::Pause, icon: lucide::pause::outlined }
-                    }
-                }
-                AudioTime { media }
-                div { "data-slot": AudioPart::Seek.slot(), onkeydown: space_toggles,
-                    AudioSeek { media, size: size.clone() }
-                }
-                ActionIcon {
-                    aria_label: if media.muted() { labels.unmute } else { labels.mute },
-                    size: icon_size.clone(),
-                    onclick: move |_| media.set_muted(!media.muted()),
-                    icon: if media.muted() || media.volume() == 0.0 {
-                        lucide::volume_x::outlined
-                    } else {
-                        lucide::volume_2::outlined
-                    },
-                }
-                div { "data-slot": AudioPart::Volume.slot(), onkeydown: space_toggles,
-                    Slider::<f64> {
-                        value: media.volume() * 100.0,
-                        min: 0.0,
-                        max: 100.0,
-                        step: 5.0,
-                        size: size.clone(),
-                        aria_label: labels.volume,
-                        oninput: move |event: SliderChangeEvent| media.set_volume(event.value() / 100.0),
-                    }
-                }
-            }
-            if error.is_some() {
-                p { "data-slot": AudioPart::Message.slot(), role: "alert", {labels.error} }
-            }
-            // Mounted throughout, so a screen reader hears the change.
-            VisuallyHidden { role: "status",
-                if media.buffering() { {labels.buffering} }
-            }
+            MediaControls { media, size: props.size.clone() }
         }
     };
 
@@ -268,81 +197,13 @@ pub fn Audio(props: AudioProps) -> Element {
         .element(&player)
         .attr("role", "group")
         .attr("aria-label", props.label.clone())
-        .render(HtmlTag::Div, props.attributes, body)
-}
-
-/// Elapsed and total time; its own component, so a time tick re-renders only this.
-#[component]
-fn AudioTime(media: MediaHandle) -> Element {
-    let time = clock(media.current_time());
-    let total = media.duration().map_or_else(|| "--:--".to_string(), clock);
-    rsx! {
-        span { "data-slot": AudioPart::Time.slot(), "aria-hidden": "true", "{time} / {total}" }
-    }
-}
-
-/// The seek slider. While dragged it shows the thumb's value, not the element's
-/// older answer, which trails on a WebView.
-#[component]
-fn AudioSeek(media: MediaHandle, size: Input<Size>) -> Element {
-    let labels = use_localization().media;
-    let mut scrub = use_signal(|| None::<f64>);
-    let duration = media.duration();
-    let value = scrub().unwrap_or_else(|| media.current_time());
-    let total = duration.map_or_else(|| "--:--".to_string(), clock);
-    let format = use_callback(move |seconds: f64| {
-        fill(
-            labels.position,
-            &[("time", &clock(seconds)), ("duration", &total)],
-        )
-    });
-    rsx! {
-        Slider::<f64> {
-            value,
-            min: 0.0,
-            max: duration.unwrap_or(1.0).max(1.0),
-            step: 1.0,
-            size,
-            disabled: duration.is_none(),
-            aria_label: labels.seek,
-            format,
-            oninput: move |event: SliderChangeEvent| match event {
-                SliderChangeEvent::Start(seconds) => scrub.set(Some(seconds)),
-                SliderChangeEvent::Change(seconds) => {
-                    if scrub.peek().is_some() {
-                        scrub.set(Some(seconds));
-                    }
-                    media.seek(seconds);
-                }
-                SliderChangeEvent::End(_) => scrub.set(None),
-            },
-        }
-    }
-}
-
-/// `m:ss`, or `h:mm:ss` from an hour.
-fn clock(seconds: f64) -> String {
-    let total = seconds.max(0.0).floor() as u64;
-    let (hours, minutes, seconds) = (total / 3600, total / 60 % 60, total % 60);
-    match hours {
-        0 => format!("{minutes}:{seconds:02}"),
-        _ => format!("{hours}:{minutes:02}:{seconds:02}"),
-    }
+        .render(HtmlTag::Div, attributes, body)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::components::common::part_table;
-
-    #[test]
-    fn a_clock_shows_hours_only_from_an_hour() {
-        assert_eq!(clock(0.0), "0:00");
-        assert_eq!(clock(65.9), "1:05");
-        assert_eq!(clock(3599.0), "59:59");
-        assert_eq!(clock(3725.0), "1:02:05");
-        assert_eq!(clock(-3.0), "0:00");
-    }
 
     /// The slot names are public: a rename here is a breaking change.
     #[test]

@@ -107,6 +107,13 @@ impl MediaHandle {
         }
     }
 
+    /// Shows text track `index` of the element's, hiding other captions; `None` hides all.
+    pub(crate) fn show_captions(&self, index: Option<usize>) {
+        if let Some(api) = self.api() {
+            let _ = api.show_captions(index);
+        }
+    }
+
     /// Reactive, as every read below. `false` until the element mounts, and
     /// always where nothing plays media.
     pub fn is_supported(&self) -> bool {
@@ -201,8 +208,8 @@ impl MediaError {
     }
 }
 
-/// Plays and reads an `<audio>` or `<video>` you render yourself; `Audio` takes
-/// one through its `media` prop.
+/// Plays and reads an `<audio>` or `<video>` you render yourself; `Audio` and
+/// `Video` take one through their `media` prop.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -220,7 +227,7 @@ impl MediaError {
 /// # }
 /// ```
 ///
-/// Docs: <https://libero-ui.dev/data-display/audio>
+/// Docs: <https://libero-ui.dev/hooks/use-media>
 pub fn use_media() -> MediaHandle {
     let defaults = MediaState::default();
     let handle = MediaHandle {

@@ -1,0 +1,26 @@
+---
+source: e2e/src/suite.rs
+description: video at desktop (rest)
+expression: tree
+---
+paragraph
+  StaticText "A silent clip with subtitles, and one without."
+group "Silence"
+  Video
+  toolbar "Player controls"
+    button "Play"
+    slider "Seek" = 0 [valuemax=4] [valuemin=0]
+    button "Mute"
+    slider "Volume" = 100 [valuemax=100] [valuemin=0]
+    button "Captions" [pressed=false]
+    button "Fullscreen"
+  status [atomic] [live=polite]
+group "Plain"
+  Video
+  toolbar "Player controls"
+    button "Play"
+    slider "Seek" = 0 [valuemax=4] [valuemin=0]
+    button "Mute"
+    slider "Volume" = 100 [valuemax=100] [valuemin=0]
+    button "Fullscreen"
+  status [atomic] [live=polite]

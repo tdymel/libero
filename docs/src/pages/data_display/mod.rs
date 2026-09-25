@@ -17,6 +17,7 @@ mod qr_code;
 mod sortable;
 mod table;
 mod timeline;
+mod video;
 
 pub use accordion::AccordionPage;
 pub use audio::AudioPage;
@@ -37,3 +38,4 @@ pub use qr_code::QrCodePage;
 pub use sortable::SortablePage;
 pub use table::TablePage;
 pub use timeline::TimelinePage;
+pub use video::VideoPage;

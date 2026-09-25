@@ -79,9 +79,19 @@ pub enum IconSlot {
     Grip,
     /// A kanban card's Move to column trigger.
     MoveTo,
+    /// A media player's mute button, sound on.
+    Volume,
+    /// A media player's mute button, muted or silent.
+    VolumeOff,
+    /// A video player's fullscreen button.
+    Fullscreen,
+    /// A video player's fullscreen button, in fullscreen.
+    ExitFullscreen,
+    /// A video player's captions toggle.
+    Captions,
 }
 
-const SLOTS: usize = IconSlot::MoveTo as usize + 1;
+const SLOTS: usize = IconSlot::Captions as usize + 1;
 
 /// Glyphs by [`IconSlot`]; an empty slot keeps libero's default (lucide).
 /// A whole set starts from its constructor, one `icons-<set>` feature each:
@@ -94,8 +104,15 @@ const SLOTS: usize = IconSlot::MoveTo as usize + 1;
 ///     .with(IconSlot::ChevronDown, pictogram_icons_lucide::chevrons_down::outlined);
 /// assert!(ICONS.get(IconSlot::Close).is_some());
 /// ```
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct IconSet([Option<SvgData>; SLOTS]);
+
+// By hand: `Default` stops at arrays of 32.
+impl Default for IconSet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl IconSet {
     /// No slot set.

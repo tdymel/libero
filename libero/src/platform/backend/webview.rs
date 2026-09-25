@@ -29,6 +29,7 @@ use crate::platform::{
     },
     clipboard::{ClipboardApi, Write},
     file_dialog::{FileDialogApi, Picked, held_file},
+    fullscreen::{FullscreenApi, FullscreenState, FullscreenSubscription},
     geolocation::{
         Fix, GeolocationApi, GeolocationError, GeolocationOptions, GeolocationSubscription, Locate,
         Position,
@@ -497,6 +498,16 @@ impl MediaApi for WebViewMedia {
         self.command(json!(rate), "media.playbackRate = value;")
     }
 
+    fn show_captions(&self, index: Option<usize>) -> Result<(), PlatformError> {
+        self.command(
+            json!(index),
+            "Array.from(media.textTracks).forEach((track, at) => {
+                if (at === value) track.mode = 'showing';
+                else if (track.kind === 'captions' || track.kind === 'subtitles') track.mode = 'hidden';
+            });",
+        )
+    }
+
     fn watch(&self, callback: Box<dyn Fn(MediaState)>) -> Box<dyn MediaSubscription> {
         type Sent = (
             bool,
@@ -545,6 +556,64 @@ impl MediaApi for WebViewMedia {
     }
 }
 
+pub(crate) fn fullscreen(tag: u64) -> Option<Box<dyn FullscreenApi>> {
+    runs_scripts().then(|| Box::new(WebViewFullscreen { tag }) as Box<dyn FullscreenApi>)
+}
+
+/// The element tagged `tag`, found per call as [`WebViewMedia`] is.
+struct WebViewFullscreen {
+    tag: u64,
+}
+
+impl FullscreenApi for WebViewFullscreen {
+    fn enter(&self) -> Read<()> {
+        let read = eval_with(
+            json!([OBSERVE_ATTR, self.tag.to_string()]),
+            &format!(
+                "{FIND_MEDIA}\ntry {{ await media.requestFullscreen(); return true; }} catch {{ return false; }}"
+            ),
+        );
+        Box::pin(async move {
+            match read.join::<bool>().await {
+                Ok(true) => Ok(()),
+                _ => Err(PlatformError::Denied),
+            }
+        })
+    }
+
+    fn exit(&self) -> Result<(), PlatformError> {
+        eval("if (document.fullscreenElement) document.exitFullscreen().catch(() => {});");
+        Ok(())
+    }
+
+    fn watch(&self, callback: Box<dyn Fn(FullscreenState)>) -> Box<dyn FullscreenSubscription> {
+        let slot = Slot::new();
+        let script = eval_with(
+            json!([OBSERVE_ATTR, self.tag.to_string()]),
+            &format!(
+                "const selector = '[' + data[0] + '=\"' + data[1] + '\"]';
+                const send = () => dioxus.send([document.fullscreenEnabled === true,
+                    document.fullscreenElement?.matches(selector) === true]);
+                document.addEventListener('fullscreenchange', send);
+                send();
+                {}
+                document.removeEventListener('fullscreenchange', send);",
+                slot.park("")
+            ),
+        );
+        let task = spawn(async move {
+            let mut script = script;
+            while let Ok((available, active)) = script.recv::<(bool, bool)>().await {
+                callback(FullscreenState { available, active });
+            }
+        });
+        Box::new(WebViewListener {
+            task,
+            _slot: Rc::new(slot),
+        })
+    }
+}
+
 /// A listening script's task and slot: dropping it stops both.
 struct WebViewListener {
     task: Task,
@@ -552,6 +621,8 @@ struct WebViewListener {
 }
 
 impl MediaSubscription for WebViewListener {}
+
+impl FullscreenSubscription for WebViewListener {}
 
 impl ScrollSubscription for WebViewListener {}
 

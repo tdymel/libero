@@ -129,6 +129,7 @@ mod use_media_query;
 mod use_system_notification;
 mod use_timers;
 mod use_user_media;
+mod video;
 mod visually_hidden;
 
 /// Every `.rs` file here needs a `mod` line: an unregistered test file silently never runs.

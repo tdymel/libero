@@ -130,6 +130,7 @@ fetch only the file you need.
 - [Image](image.md): An `<img>` with a fallback source on load error, rounded corners and an optional click-to-zoom overlay.
 - [ImageList](image_list.md): A gallery of pictures with optional caption bars, laid out on a `GridZone`, so `cols` counts the library's twelve tracks.
 - [Audio](audio.md): An `<audio>` with libero's own controls, and the `use_media` hook behind them.
+- [Video](video.md): A `<video>` with libero's own controls, captions and fullscreen, on the `use_media` hook.
 - [Carousel](carousel.md): A strip of slides that snaps as it scrolls and knows which one it is on, with controls, indicators and optional autoplay.
 - [List](list.md): A `<ul>` of `<li>` items without the browser's list styling, with themed gaps and nested indent.
 - [DataList](data_list.md): A `<dl>` of term/description pairs, where one term can carry several descriptions.
@@ -172,6 +173,7 @@ fetch only the file you need.
 - [History](use_history.md): Undo and redo over snapshots of a value, with rapid changes grouped into one step by time or size.
 - [Hotkeys](use_hotkeys.md): Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked.
 - [Media query](use_media_query.md): Whether a CSS media query or the 768px mobile breakpoint matches, live.
+- [Media](use_media.md): Plays and reads an `<audio>` or `<video>` you render yourself, one signal per read; the engine behind `Audio` and `Video`.
 - [Geolocation](use_geolocation.md): The device's position, once or followed, with the location permission; never prompts on mount.
 - [User media](use_user_media.md): The camera and microphone with a preview, a PNG snapshot and a chunked recording; never prompts on mount.
 - [System notifications](use_system_notification.md): Notifications the operating system draws and a web push subscription; never prompt on mount.

@@ -10,7 +10,7 @@ pub const ROUTES: Routes = &[("/audio", || rsx! { AudioPage {} })];
 
 /// A silent 8 kHz, 8-bit mono WAV of `seconds`, as a `data:` URL: no file to serve,
 /// and every Chromium decodes PCM.
-fn silent_wav(seconds: u32) -> String {
+pub(crate) fn silent_wav(seconds: u32) -> String {
     let samples = 8000 * seconds;
     let mut bytes = Vec::with_capacity(44 + samples as usize);
     bytes.extend_from_slice(b"RIFF");

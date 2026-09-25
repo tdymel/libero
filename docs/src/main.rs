@@ -89,6 +89,8 @@ pub(crate) enum Route {
     UseHotkeysPage {},
     #[route("/hooks/use-media-query")]
     UseMediaQueryPage {},
+    #[route("/hooks/use-media")]
+    UseMediaPage {},
     #[route("/hooks/use-geolocation")]
     UseGeolocationPage {},
     #[route("/hooks/use-user-media")]
@@ -141,6 +143,8 @@ pub(crate) enum Route {
     ImagePage {},
     #[route("/data-display/audio")]
     AudioPage {},
+    #[route("/data-display/video")]
+    VideoPage {},
     #[route("/data-display/indicator")]
     IndicatorPage {},
     #[route("/data-display/table")]

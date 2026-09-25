@@ -136,7 +136,8 @@ What a slot cannot change:
 `CheckboxIndeterminate`, `Plus`, `Minus`, `Eye`, `EyeOff`, `Upload`,
 `EyeDropper`, `Copy`, `CopyFailed`, `ExternalLink`, `Person`, `Sun`, `Moon`,
 `SystemScheme`, `Play`, `Pause`, `TextDirectionLtr`, `TextDirectionRtl`,
-`Sparkles`, `Star`, `Grip`. `IconSlot` is `#[non_exhaustive]`: new slots may come.
+`Sparkles`, `Star`, `Grip`, `MoveTo`, `Volume`, `VolumeOff`, `Fullscreen`,
+`ExitFullscreen`, `Captions`. `IconSlot` is `#[non_exhaustive]`: new slots may come.
 `Star` is filled in `currentColor` for a rating's value: a stroked glyph turns
 solid, a solid one only changes colour.
 

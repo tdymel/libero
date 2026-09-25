@@ -70,6 +70,9 @@ pub(crate) trait MediaApi {
     fn set_volume(&self, volume: f64) -> Result<(), PlatformError>;
     fn set_muted(&self, muted: bool) -> Result<(), PlatformError>;
     fn set_rate(&self, rate: f64) -> Result<(), PlatformError>;
+    /// Shows text track `index` (its order among the element's tracks) and hides
+    /// the other captions and subtitles; `None` hides them all.
+    fn show_captions(&self, index: Option<usize>) -> Result<(), PlatformError>;
     /// Calls `callback` with the state now (async on a WebView) and after each event.
     fn watch(&self, callback: Box<dyn Fn(MediaState)>) -> Box<dyn MediaSubscription>;
 }
@@ -100,6 +103,7 @@ mod web {
     use std::rc::Rc;
 
     use dioxus::prelude::MountedData;
+    use js_sys::Reflect;
     use wasm_bindgen::{JsCast, prelude::Closure};
     use web_sys::HtmlMediaElement;
 
@@ -169,6 +173,31 @@ mod web {
 
         fn set_rate(&self, rate: f64) -> Result<(), PlatformError> {
             self.element.set_playback_rate(rate);
+            Ok(())
+        }
+
+        // Through `Reflect`: the `TextTrack` bindings would grow every app's bundle.
+        fn show_captions(&self, index: Option<usize>) -> Result<(), PlatformError> {
+            let tracks = Reflect::get(&self.element, &"textTracks".into())
+                .map_err(|_| PlatformError::Unsupported)?;
+            let length = Reflect::get(&tracks, &"length".into())
+                .ok()
+                .and_then(|length| length.as_f64())
+                .unwrap_or(0.0) as u32;
+            for at in 0..length {
+                let Ok(track) = Reflect::get_u32(&tracks, at) else {
+                    continue;
+                };
+                let kind = Reflect::get(&track, &"kind".into())
+                    .ok()
+                    .and_then(|kind| kind.as_string());
+                let mode = match (index == Some(at as usize), kind.as_deref()) {
+                    (true, _) => "showing",
+                    (false, Some("captions" | "subtitles")) => "hidden",
+                    _ => continue,
+                };
+                let _ = Reflect::set(&track, &"mode".into(), &mode.into());
+            }
             Ok(())
         }
 
