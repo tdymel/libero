@@ -86,6 +86,8 @@ Like every component, `Box` also takes the shared props `sx`, `class`, `style`,
 
 - Use `component: "button"` for something clickable: a clickable `div` has no
   keyboard support.
+- Set `r#type: "button"` on a `button` inside a form, or it submits the form.
+- Give an `img` an `alt`, empty for a decorative one.
 
 ## Theme defaults
 

@@ -50,7 +50,7 @@ pub fn BoxPage() -> Element {
             ]).extends("img, a and button")],
             accessibility: a11y()
                 .handles(["`Box` adds no roles, so the semantics are whatever tag `component` names."])
-                .must(["Use `component: \"button\"` for something clickable: a clickable `div` has no keyboard support."]),
+                .must(["Use `component: \"button\"` for something clickable: a clickable `div` has no keyboard support.", "Set `r#type: \"button\"` on a `button` inside a form, or it submits the form.", "Give an `img` an `alt`, empty for a decorative one."]),
             lead: rsx! {
                 Text {
                     "The primitive every other component is built on. "

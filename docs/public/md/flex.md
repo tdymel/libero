@@ -79,6 +79,21 @@ wraps by default so it reflows on a narrow screen. `wrap: false` turns that off.
 Like every component, `Flex` also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
 
+## Accessibility
+
+### Libero handles
+
+- `Flex` adds no roles and has no reverse direction, so tab and reading order
+  match what is seen.
+- A row wraps by default, so it reflows on a narrow screen.
+
+### You must
+
+- Add `role` and `aria-label` when the children form a group, such as
+  `role: "group"` around related buttons.
+- `Flex` always renders a `div`: for a list or a nav, use `Box` with
+  `component: "ul"` or `"nav"`.
+
 ## Theme defaults
 
 `FlexDefaults` on the theme holds one `FlexAxisDefaults` per axis.

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, or_unset, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Flex, Text},
@@ -73,6 +73,15 @@ pub fn FlexPage() -> Element {
                     .doc("Whether children wrap onto new lines. Also takes a `bool`."),
                 prop("children", "Element").doc("The flex's children."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "`Flex` adds no roles and has no reverse direction, so tab and reading order match what is seen.",
+                    "A row wraps by default, so it reflows on a narrow screen.",
+                ])
+                .must([
+                    "Add `role` and `aria-label` when the children form a group, such as `role: \"group\"` around related buttons.",
+                    "`Flex` always renders a `div`: for a list or a nav, use `Box` with `component: \"ul\"` or `\"nav\"`.",
+                ]),
             lead: rsx! {
                 Text {
                     "A flexbox container with theme-aware direction, gap, alignment and "
