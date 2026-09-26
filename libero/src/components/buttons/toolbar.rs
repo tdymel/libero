@@ -45,20 +45,35 @@ static TOOLBAR_SX: StaticSx = StaticSx::new(|| {
             group,
             sx().display("flex").align_items("center").gap(gap.clone()),
         )
-        .selector(separator, sx().flex("0 0 auto").background(line))
+        // A border, not a fill: forced colours keep it.
+        .selector(
+            separator,
+            sx().flex("0 0 auto")
+                .border_width("0")
+                .border_style("solid")
+                .border_color(line),
+        )
         .when(
             Orientation::Horizontal.state_name(),
             // A long bar wraps rather than widening the page (1.4.10).
             sx().flex_wrap("wrap")
                 .selector(group, sx().flex_wrap("wrap"))
-                .selector(separator, sx().width("1px").align_self("stretch")),
+                .selector(
+                    separator,
+                    sx().width("0")
+                        .with("border-inline-start-width", "1px")
+                        .align_self("stretch"),
+                ),
         )
         .when(
             Orientation::Vertical.state_name(),
             sx().flex_direction("column")
                 .align_items("stretch")
                 .selector(group, sx().flex_direction("column").align_items("stretch"))
-                .selector(separator, sx().height("1px")),
+                .selector(
+                    separator,
+                    sx().height("0").with("border-block-start-width", "1px"),
+                ),
         )
 });
 

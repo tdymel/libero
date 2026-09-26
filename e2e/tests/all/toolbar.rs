@@ -5,7 +5,7 @@ use e2e::archetypes::{Orientation, RovingTabindex};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
-use e2e::{Fixture, Suite, Viewport};
+use e2e::{Fixture, Suite, Viewport, wait};
 
 const ITEMS: &str = "[role=toolbar] [data-toolbar-item]";
 const FONT: &str = "[role=toolbar] [data-toolbar-item][aria-label=Font]";
@@ -281,6 +281,51 @@ e2e::scenario!(
     "/toolbar-rtl",
     rtl_swaps_the_arrows
 );
+
+/// A separator drawn as a background fill turns `Canvas` under forced colours: invisible.
+#[test]
+fn the_separator_shows_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/toolbar", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        // The page is `Canvas`; a line of the same colour is no line.
+        let [fill, edge, width]: [String; 3] = page
+            .evaluate(
+                "(() => { const probe = document.createElement('div'); \
+                 probe.style.background = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 const sep = getComputedStyle(document.querySelector('[role=toolbar] [role=separator]')); \
+                 const same = (c) => c === canvas ? 'canvas' : 'drawn'; \
+                 return [same(sep.backgroundColor), same(sep.borderInlineStartColor), \
+                 sep.borderInlineStartWidth]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let line = fill == "drawn" || (edge == "drawn" && width != "0px");
+        assert!(
+            line,
+            "the separator vanishes: fill {fill}, edge {edge} {width}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
 
 #[test]
 fn it_meets_the_baseline() {
