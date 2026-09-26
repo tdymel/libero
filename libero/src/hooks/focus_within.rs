@@ -51,7 +51,7 @@ impl FocusChange<'_> {
 }
 
 /// The focus listeners of a [`use_focus_within`] group, for its elements.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub(crate) struct FocusWithin {
     current: CopyValue<Rc<Current>>,
 }

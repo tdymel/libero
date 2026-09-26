@@ -62,6 +62,6 @@ fn the_controls_start_paused_with_an_unknown_duration() {
     assert!(html.contains(r#"aria-label="Stummschalten""#), "{html}");
     assert!(html.contains(r#"aria-label="Position""#), "{html}");
     assert!(html.contains(r#"aria-label="Lautstärke""#), "{html}");
-    assert!(html.contains("0:00 / --:--"), "{html}");
+    assert!(html.contains("0:00") && html.contains(" / --:--"), "{html}");
     assert!(html.contains(r#"role="status""#), "{html}");
 }

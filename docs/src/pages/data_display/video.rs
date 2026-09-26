@@ -71,6 +71,8 @@ pub fn VideoPage() -> Element {
                     "The player is a `group` named by `label`; its buttons are one `toolbar` stop, each slider its own.",
                     "The play, mute and fullscreen buttons change their names (Play/Pause, Mute/Unmute, Fullscreen/Exit fullscreen); the captions button uses `aria-pressed`.",
                     "Where the page may not go fullscreen, the player covers the window as a fixed box instead, which Escape, F and a Tab out of the player leave, so focus never hides behind it.",
+                    "In fullscreen the controls overlay the bottom of the picture and fade after 3 seconds of playing untouched. A pointer move, a tap or a key brings them back. After a key they stay until the next click or tap, so keyboard focus never sits on a faded control; they never leave the Tab order, and a tap on the picture only shows them.",
+                    "Below 28rem the volume slider hides and the mute button stays; below 22rem the total time hides too, so the row fits at 320px (WCAG 1.4.10).",
                     "The seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`).",
                     "A polite status says \"Loading\" while playing waits for data; a failed source shows an alert.",
                     "No autoplay unless asked, and a debug warning for autoplay with sound (WCAG 1.4.2).",
@@ -83,7 +85,8 @@ pub fn VideoPage() -> Element {
                 .limits([
                     "Blitz plays no media: the controls give way to `children`, by default a link to the file.",
                     "On a WebView each command and state change crosses the IPC, so the time trails by a moment.",
-                    "The controls stay below the picture, also in fullscreen: they do not hide or overlay it.",
+                    "In fullscreen the shown controls cover the bottom of the picture, captions included.",
+                    "One `src`, no list of formats: serve one every target plays, such as MP4 (H.264). The demo's VP9 WebM may not play in older Safari.",
                 ]),
             lead: rsx! {
                 Text {

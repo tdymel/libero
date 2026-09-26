@@ -11,7 +11,6 @@ group "Silence"
     button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
     button "Mute"
-    slider "Volume" = 100 [valuemax=100] [valuemin=0]
     button "Captions" [pressed=false]
     button "Fullscreen"
   status [atomic] [live=polite]
@@ -21,6 +20,5 @@ group "Plain"
     button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
     button "Mute"
-    slider "Volume" = 100 [valuemax=100] [valuemin=0]
     button "Fullscreen"
   status [atomic] [live=polite]

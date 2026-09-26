@@ -67,7 +67,7 @@ pub enum MediaError { Aborted, Network, Decode, SourceNotSupported }
 |---|---|
 | Web | Full. |
 | Linux desktop (WebKitGTK) | Full: play, state and the time, checked by the e2e suite. |
-| Android (WebView) | Untested on a device. |
+| Android (WebView) | Full: play, state and the time, checked by the e2e suite on the emulator. |
 | macOS, Windows desktop | Untested. |
 | Blitz, server render | No media: commands do nothing and `is_supported()` stays `false`. |
 

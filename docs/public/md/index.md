@@ -174,6 +174,7 @@ fetch only the file you need.
 - [Hotkeys](use_hotkeys.md): Runs a handler on a keyboard shortcut from anywhere in the page, skipping text entry unless asked.
 - [Media query](use_media_query.md): Whether a CSS media query or the 768px mobile breakpoint matches, live.
 - [Media](use_media.md): Plays and reads an `<audio>` or `<video>` you render yourself, one signal per read; the engine behind `Audio` and `Video`.
+- [Fullscreen](use_fullscreen.md): Puts one of your elements in fullscreen, natively or drawn as a fixed box where the platform refuses it; the engine behind `Video`'s fullscreen.
 - [Geolocation](use_geolocation.md): The device's position, once or followed, with the location permission; never prompts on mount.
 - [User media](use_user_media.md): The camera and microphone with a preview, a PNG snapshot and a chunked recording; never prompts on mount.
 - [System notifications](use_system_notification.md): Notifications the operating system draws and a web push subscription; never prompt on mount.

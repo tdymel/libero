@@ -157,6 +157,7 @@ md_pages! {
     UseDrag => "use_drag",
     UseElement => "use_element",
     UseFocusReturn => "use_focus_return",
+    UseFullscreen => "use_fullscreen",
     UseGeolocation => "use_geolocation",
     UseMedia => "use_media",
     UseSystemNotification => "use_system_notification",

@@ -166,7 +166,8 @@ fn MediaTime(media: MediaHandle) -> Element {
     let time = clock(media.current_time());
     let total = media.duration().map_or_else(|| "--:--".to_string(), clock);
     rsx! {
-        span { "data-slot": TIME, "aria-hidden": "true", "{time} / {total}" }
+        // The total in its own span, so a narrow player can drop it.
+        span { "data-slot": TIME, "aria-hidden": "true", "{time}", span { " / {total}" } }
     }
 }
 

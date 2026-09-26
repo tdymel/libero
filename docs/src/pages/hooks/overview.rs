@@ -123,6 +123,11 @@ fn hooks() -> Vec<HookRow> {
             Route::UseMediaPage {},
         ),
         row(
+            "use_fullscreen",
+            "Puts one element in fullscreen, drawn where the platform refuses it.",
+            Route::UseFullscreenPage {},
+        ),
+        row(
             "use_geolocation",
             "The device's position, once or followed, and the location permission.",
             Route::UseGeolocationPage {},

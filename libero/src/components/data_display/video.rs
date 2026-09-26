@@ -1,3 +1,4 @@
+use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use super::MediaPreload;
@@ -8,9 +9,9 @@ use crate::{
         layout::use_box,
     },
     hooks::{
-        Hotkey, MediaError, MediaHandle, use_element, use_focus_within, use_fullscreen, use_media,
+        FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, listener, use_element, use_fullscreen,
+        use_media, use_timeout,
     },
-    platform::next_task,
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, NamedColorCss, Size, SizeCss, Z_INDEX_MODAL},
     utils::warn,
@@ -34,10 +35,27 @@ parts_enum! {
     }
 }
 
-/// Set while the player fills the screen, natively or as a fixed box.
-const FULLSCREEN_ATTR: &str = "data-fullscreen";
+/// Set on the player while its fullscreen controls are faded out.
+const CONTROLS_ATTR: &str = "data-controls";
+/// How long the fullscreen controls stay after the last pointer move or key.
+const CONTROLS_IDLE_MS: u64 = 3000;
+const CONTROLS_CONTAINER: &str = "libero-video-controls";
+const NARROW: &str = "(max-width: 28rem)";
+const NARROWEST: &str = "(max-width: 22rem)";
 
 static VIDEO_SX: StaticSx = StaticSx::new(|| {
+    let controls = VideoPart::Controls.selector();
+    // The themed surface, not a dark scrim, so the controls keep their contrast.
+    let overlay = sx()
+        .position("absolute")
+        .inset("auto 0 0 0")
+        .padding(SizeCss::SPACING.value(Size::Xs))
+        .background_color(format!(
+            "color-mix(in srgb, {} 85%, transparent)",
+            NamedColorCss::SURFACE.value()
+        ))
+        .transition("opacity 200ms ease")
+        .media("(prefers-reduced-motion: reduce)", sx().transition("none"));
     let filled = sx()
         .background_color(NamedColorCss::SURFACE.value())
         .padding(SizeCss::SPACING.value(Size::Xs))
@@ -57,20 +75,37 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 .background_color("#000")
                 .object_fit("contain"),
         )
-        .selector(VideoPart::Controls.selector(), sx().flex_wrap("nowrap"))
+        .selector(
+            VideoPart::Controls.selector(),
+            sx().flex_wrap("nowrap").container(CONTROLS_CONTAINER),
+        )
+        // A phone's width: the mute button stays, the volume slider goes (its
+        // hardware keys remain), then the total time, so the row fits at 320px.
         .selector(
             VideoPart::Time.selector(),
             sx().font_variant_numeric("tabular-nums")
                 .white_space("nowrap")
-                .flex_shrink("0"),
+                .flex_shrink("0")
+                .selector(
+                    "& > span",
+                    sx().container_query(CONTROLS_CONTAINER, NARROWEST, sx().display("none")),
+                ),
         )
         .selector(
             VideoPart::Seek.selector(),
-            sx().flex("1 1 8rem").min_width("6rem"),
+            sx().flex("1 1 8rem").min_width("6rem").container_query(
+                CONTROLS_CONTAINER,
+                NARROW,
+                sx().min_width("4rem"),
+            ),
         )
         .selector(
             VideoPart::Volume.selector(),
-            sx().flex("0 1 6rem").min_width("4rem"),
+            sx().flex("0 1 6rem").min_width("4rem").container_query(
+                CONTROLS_CONTAINER,
+                NARROW,
+                sx().display("none"),
+            ),
         )
         .selector(
             VideoPart::Message.selector(),
@@ -78,11 +113,17 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
         )
         .selector("&:fullscreen", filled.clone())
         .selector(
-            format!("&[{FULLSCREEN_ATTR}='pseudo']"),
+            format!("&[{FULLSCREEN_ATTR}='drawn']"),
             filled
                 .position("fixed")
                 .inset("0")
                 .z_index(Z_INDEX_MODAL.value()),
+        )
+        .selector(format!("&[{FULLSCREEN_ATTR}] {}", &controls[2..]), overlay)
+        .selector(format!("&[{CONTROLS_ATTR}='hidden']"), sx().cursor("none"))
+        .selector(
+            format!("&[{CONTROLS_ATTR}='hidden'] {}", &controls[2..]),
+            sx().opacity("0"),
         )
 });
 
@@ -244,27 +285,6 @@ pub fn Video(props: VideoProps) -> Element {
         ],
     );
 
-    // The pseudo-fullscreen covers the page, so focus leaving the player leaves it
-    // too. Decided a task later: a `focusin` in between only moved focus inside.
-    let moves = use_signal(|| 0u64);
-    let focus = use_focus_within(
-        move || vec![player.mounted()],
-        move |change| {
-            let mut moves = moves;
-            if change.within {
-                moves += 1;
-                return;
-            }
-            let seen = *moves.peek();
-            spawn(async move {
-                next_task().await;
-                if *moves.peek() == seen {
-                    fullscreen.exit_pseudo();
-                }
-            });
-        },
-    );
-
     let error = media.error();
     let onerror = props.onerror;
     use_effect(use_reactive!(|error| {
@@ -275,19 +295,62 @@ pub fn Video(props: VideoProps) -> Element {
 
     let (onplay, onpause, onended) = (props.onplay, props.onpause, props.onended);
     let unsupported = media.supported() == Some(false);
-    let fullscreen_state = match (fullscreen.is_fullscreen(), fullscreen.is_pseudo()) {
-        (_, true) => Some("pseudo"),
-        (true, false) => Some("native"),
-        _ => None,
-    };
     let aspect_ratio = props
         .aspect_ratio
         .as_ref()
         .map(|ratio| format!("aspect-ratio: {ratio}"));
 
+    // In fullscreen the controls overlay the picture and fade out while playing
+    // untouched; a pointer or a key brings them back. A key keeps them until the
+    // next press of a pointer, so keyboard focus never sits on an unseen control.
+    let mut idle = use_signal(|| false);
+    let keyboard = use_signal(|| false);
+    let idle_timer = use_timeout(move || idle.set(true), CONTROLS_IDLE_MS);
+    let wake = move || {
+        let mut idle = idle;
+        if *idle.peek() {
+            idle.set(false);
+        }
+        idle_timer.start();
+    };
+    let (filling, playing) = (fullscreen.is_fullscreen(), !media.paused());
+    use_effect(use_reactive!(|filling, playing| {
+        if filling && playing {
+            wake();
+        }
+    }));
+
     // Tagged, so a WebView finds the player for fullscreen and the hotkeys.
     let mut attributes = props.attributes;
-    attributes.extend(player.attributes());
+    attributes.extend(fullscreen.attributes());
+    // Only in fullscreen, so a WebView sends no pointer moves across the IPC otherwise.
+    if filling {
+        attributes.extend([
+            listener("onpointermove", move |_: Event<PointerData>| wake()),
+            listener("onpointerdown", move |_: Event<PointerData>| {
+                let mut keyboard = keyboard;
+                if *keyboard.peek() {
+                    keyboard.set(false);
+                }
+                wake();
+            }),
+            listener("onkeyup", move |_: Event<KeyboardData>| {
+                let mut keyboard = keyboard;
+                if !*keyboard.peek() {
+                    keyboard.set(true);
+                }
+                wake();
+            }),
+        ]);
+    }
+    if filling && playing && idle() && !keyboard() {
+        attributes.push(Attribute::new(
+            CONTROLS_ATTR,
+            AttributeValue::Text("hidden".into()),
+            None,
+            false,
+        ));
+    }
 
     let body = rsx! {
         video {
@@ -332,15 +395,6 @@ pub fn Video(props: VideoProps) -> Element {
         .element(&player)
         .attr("role", "group")
         .attr("aria-label", props.label.clone())
-        .attr(FULLSCREEN_ATTR, fullscreen_state)
-        .event("onkeydown", move |event: KeyboardEvent| {
-            if fullscreen.is_pseudo() && event.key() == Key::Escape {
-                event.prevent_default();
-                fullscreen.exit_pseudo();
-            }
-        })
-        .event("onfocusin", focus.focusin(0))
-        .event("onfocusout", focus.focusout(0))
         .render(HtmlTag::Div, attributes, body)
 }
 

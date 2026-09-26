@@ -33,6 +33,38 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// WCAG 1.4.10: at a phone's 412px and at 320px the whole row fits in the player,
+/// the volume slider and then the total time giving way.
+#[test]
+fn the_controls_fit_a_narrow_player() {
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        for (width, volume, total) in [(412, "none", "inline"), (320, "none", "none")] {
+            page.evaluate(format!(
+                "document.querySelector('#player').style.width = '{width}px'"
+            ))
+            .await
+            .unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{ const player = document.querySelector('#player [role=group]').getBoundingClientRect();
+                     const button = document.querySelector('{FULLSCREEN}').getBoundingClientRect();
+                     const style = (s) => getComputedStyle(document.querySelector('#player ' + s)).display;
+                     return player.width === {width} && button.right <= player.right && button.left >= player.left
+                         && style('[data-slot=volume]') === '{volume}'
+                         && style('[data-slot=time] > span') === '{total}'; }})()"
+                ),
+                &format!("the row to fit {width}px"),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 fn track_mode() -> &'static str {
     "document.querySelector('#player video').textTracks[0].mode"
 }
@@ -66,7 +98,7 @@ fn fullscreen_takes_the_player_and_escape_or_f_gives_it_back() {
         .await
         .unwrap();
         let state: String = page.evaluate(STATE).await.unwrap().into_value().unwrap();
-        if state == "pseudo" {
+        if state == "drawn" {
             wait::for_js_true(
                 page,
                 "(() => { const r = document.querySelector('#player [role=group]').getBoundingClientRect(); \
@@ -223,27 +255,27 @@ async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(the_fullscreen_button_toggles, "/video", fullscreen_toggles);
 
 fn pseudo_state(fullscreen: Option<String>) -> bool {
-    fullscreen.as_deref() == Some("pseudo")
+    fullscreen.as_deref() == Some("drawn")
 }
 
 /// The drawn box covers the page, so a Tab out of the player gives the page back;
-/// a Tab between its controls does not.
+/// a Tab between its controls does not. The route refuses the Fullscreen API, so
+/// WebKitGTK, which grants it, draws the box too.
 async fn tab_out_leaves_pseudo<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     if d.platform() == Platform::Native {
         return Ok(());
     }
-    eventually(d, "the controls", async |d| d.exists(FULLSCREEN).await).await?;
-    d.click(FULLSCREEN).await?;
-    eventually(d, "the player to fill the screen", async |d| {
-        Ok(d.attr("#player [role=group]", "data-fullscreen")
-            .await?
-            .is_some())
+    eventually(d, "the refusal and the controls", async |d| {
+        Ok(d.exists("#player[data-refused]").await? && d.exists(FULLSCREEN).await?)
     })
     .await?;
-    if !pseudo_state(d.attr("#player [role=group]", "data-fullscreen").await?) {
-        // Granted for real (WebKitGTK): the renderer keeps focus in, nothing to test.
-        return d.press(keyboard::ESCAPE).await;
-    }
+    d.click(FULLSCREEN).await?;
+    eventually(d, "the drawn box", async |d| {
+        Ok(pseudo_state(
+            d.attr("#player [role=group]", "data-fullscreen").await?,
+        ))
+    })
+    .await?;
     d.focus(PLAY).await?;
     d.press(keyboard::TAB).await?;
     d.idle().await;
@@ -260,8 +292,98 @@ async fn tab_out_leaves_pseudo<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     .await
 }
 
+/// Polls `probe` for `secs`, past the driver's budget: the controls fade after 3 s.
+async fn within<D: Driver>(
+    d: &mut D,
+    secs: u64,
+    what: &str,
+    mut probe: impl AsyncFnMut(&mut D) -> Result<bool>,
+) -> Result<()> {
+    let started = std::time::Instant::now();
+    while !probe(d).await? {
+        anyhow::ensure!(
+            started.elapsed().as_secs() < secs,
+            "{:?}: gave up waiting for {what}",
+            d.platform()
+        );
+        d.idle().await;
+    }
+    Ok(())
+}
+
+async fn faded<D: Driver>(d: &mut D) -> Result<bool> {
+    Ok(d.attr("#player [role=group]", "data-controls")
+        .await?
+        .as_deref()
+        == Some("hidden")
+        && d.style("#player [data-slot=controls]", "opacity").await? == "0")
+}
+
+async fn controls_shown<D: Driver>(d: &mut D) -> Result<bool> {
+    Ok(d.attr("#player [role=group]", "data-controls")
+        .await?
+        .is_none()
+        && d.style("#player [data-slot=controls]", "opacity").await? == "1")
+}
+
+/// In fullscreen the controls overlay the picture and fade while playing
+/// untouched; keyboard focus and a tap on the picture bring them back.
+async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    if d.platform() == Platform::Native {
+        return Ok(());
+    }
+    eventually(d, "the duration", async |d| {
+        Ok(d.text("#player [data-slot=time]").await? == "0:00 / 0:15")
+    })
+    .await?;
+    d.click(FULLSCREEN).await?;
+    eventually(d, "the player to fill the screen", async |d| {
+        Ok(d.attr("#player [role=group]", "data-fullscreen")
+            .await?
+            .is_some())
+    })
+    .await?;
+    let position = d.style("#player [data-slot=controls]", "position").await?;
+    anyhow::ensure!(
+        position == "absolute",
+        "the controls are {position}, not overlaid"
+    );
+    d.click(PLAY).await?;
+    within(d, 8, "the controls to fade while playing", faded).await?;
+
+    d.click("#player video").await?;
+    within(d, 3, "a tap on the picture to show them", controls_shown).await?;
+    reads(
+        d,
+        "the tap to leave playing alone",
+        PLAY,
+        "aria-label",
+        "Pause",
+    )
+    .await?;
+    within(d, 8, "the controls to fade again", faded).await?;
+
+    d.press(keyboard::TAB).await?;
+    within(d, 3, "keyboard focus to show them", controls_shown).await?;
+    let started = std::time::Instant::now();
+    while started.elapsed().as_secs() < 4 {
+        anyhow::ensure!(
+            controls_shown(d).await?,
+            "the controls faded under keyboard focus"
+        );
+        d.idle().await;
+    }
+    d.press(keyboard::ESCAPE).await
+}
+
+e2e::scenario!(
+    in_fullscreen_the_controls_fade_and_come_back,
+    "/video/long",
+    fullscreen_controls_fade
+);
+
 e2e::scenario!(
     a_tab_out_of_the_drawn_fullscreen_leaves_it,
-    "/video",
+    "/video/refused",
     tab_out_leaves_pseudo
 );

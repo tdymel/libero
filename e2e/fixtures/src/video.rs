@@ -7,13 +7,28 @@ use libero::components::{Flex, MediaTrack, Text, TrackKind, Video};
 use crate::Routes;
 use crate::audio::silent_wav;
 
-pub const ROUTES: Routes = &[("/video", || rsx! { VideoPage {} })];
+pub const ROUTES: Routes = &[
+    ("/video", || rsx! { VideoPage {} }),
+    ("/video/refused", || rsx! { VideoPage { refused: true } }),
+    // Long enough for the fullscreen controls to fade out while playing.
+    ("/video/long", || rsx! { VideoPage { seconds: 15 } }),
+];
 
 const SUBTITLES: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 00:04.000%0ASilence";
 
+/// The player refuses the Fullscreen API, as a WebView without it does; marks `#player` once set.
+const REFUSE: &str = "const player = document.querySelector('#player [role=group]');
+    player.requestFullscreen = () => Promise.reject(new TypeError('refused'));
+    document.querySelector('#player').dataset.refused = 'true';";
+
 #[component]
-fn VideoPage() -> Element {
-    let src = use_hook(|| silent_wav(4));
+fn VideoPage(#[props(default)] refused: bool, #[props(default = 4)] seconds: u32) -> Element {
+    let src = use_hook(|| silent_wav(seconds));
+    use_effect(move || {
+        if refused {
+            document::eval(REFUSE);
+        }
+    });
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "32rem",
             Text { "A silent clip with subtitles, and one without." }

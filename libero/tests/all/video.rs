@@ -72,6 +72,6 @@ fn the_controls_add_fullscreen_and_no_captions_button_without_a_track() {
     assert!(html.contains(r#"aria-label="Abspielen""#), "{html}");
     assert!(html.contains(r#"aria-label="Vollbild""#), "{html}");
     assert!(!html.contains(r#"aria-label="Untertitel""#), "{html}");
-    assert!(html.contains("0:00 / --:--"), "{html}");
+    assert!(html.contains("0:00") && html.contains(" / --:--"), "{html}");
     assert!(!html.contains("data-fullscreen"), "{html}");
 }

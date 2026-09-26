@@ -32,6 +32,8 @@ guide page they belong to.
 | `use_hotkeys` | Runs a handler on a keyboard shortcut, from anywhere in the page. | [Hotkeys](use_hotkeys.md) |
 | `use_media_query` | Whether a CSS media query matches, live. | [Media query](use_media_query.md) |
 | `use_is_mobile` | Whether the viewport is narrower than 768px, live. | [Media query](use_media_query.md) |
+| `use_media` | Plays and reads an `<audio>` or `<video>` you render yourself. | [Media](use_media.md) |
+| `use_fullscreen` | Puts one element in fullscreen, drawn where the platform refuses it. | [Fullscreen](use_fullscreen.md) |
 | `use_geolocation` | The device's position, once or followed, and the location permission. | [Geolocation](use_geolocation.md) |
 | `use_user_media` | The camera and microphone: a preview, a photo and a recording. | [User media](use_user_media.md) |
 | `use_user_media_devices` | The page's cameras and microphones, live. | [User media](use_user_media.md) |

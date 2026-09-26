@@ -198,6 +198,7 @@ fn aliases(label: &str) -> &'static [&'static str] {
         "Intersection" => &["use_intersection", "use_in_viewport", "viewport", "visible"],
         "Long press" => &["use_long_press", "hold"],
         "Media" => &["use_media", "audio", "video", "player"],
+        "Fullscreen" => &["use_fullscreen", "full screen", "maximize"],
         "Geolocation" => &[
             "use_geolocation",
             "location",
@@ -467,6 +468,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseHotkeysPage {}, "Hotkeys"),
                 page(Route::UseMediaQueryPage {}, "Media query"),
                 page(Route::UseMediaPage {}, "Media"),
+                page(Route::UseFullscreenPage {}, "Fullscreen"),
                 page(Route::UseGeolocationPage {}, "Geolocation"),
                 page(Route::UseUserMediaPage {}, "User media"),
                 page(Route::UseSystemNotificationPage {}, "System notifications"),
