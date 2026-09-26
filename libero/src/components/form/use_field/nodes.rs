@@ -112,13 +112,18 @@ pub(super) fn label_node(
     })
 }
 
+/// The tab stop of a control that `label_id` names through `aria-labelledby`.
+pub(in crate::components::form) fn labelled_focus_selector(label_id: &str) -> String {
+    let named = format!("[aria-labelledby~=\"{label_id}\"]");
+    format!(
+        "{named}[tabindex=\"0\"], {named} input:not([type=\"hidden\"]):not(:disabled):not([tabindex=\"-1\"])"
+    )
+}
+
 /// The label's click for a control it names by id: focuses the tab stop that
 /// id names - the control, or its first input (`PinField`'s group).
 fn focus_labelled(root: ElementHandle, label_id: String) -> impl FnMut(Event<MouseData>) + 'static {
-    let named = format!("[aria-labelledby~=\"{label_id}\"]");
-    let selector = format!(
-        "{named}[tabindex=\"0\"], {named} input:not([type=\"hidden\"]):not(:disabled):not([tabindex=\"-1\"])"
-    );
+    let selector = labelled_focus_selector(&label_id);
     move |event| {
         if nested_interactive(&event, CLICK_BOUNDARY) {
             return;

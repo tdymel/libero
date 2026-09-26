@@ -3,8 +3,9 @@
 
 use anyhow::Result;
 use chromiumoxide::Page;
+use e2e::browser::Scheme;
 use e2e::browser::block_on;
-use e2e::passes::{keyboard, pointer};
+use e2e::passes::{contrast, focus, keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
 const INPUT: &str = "input[name=email]";
@@ -69,6 +70,81 @@ fn a_submit_button_and_the_handle_submit_once_each_and_reset_clears() {
         .unwrap();
 
         fixture.console.assert_clean("submitting a form").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A blocked submit hands focus to the summary, axe finds nothing on it in either
+/// scheme, and Tab then Enter on a line focuses its field.
+#[test]
+fn a_blocked_submit_focuses_the_summary_and_its_lines_reach_the_fields() {
+    block_on(async {
+        for scheme in [Scheme::Light, Scheme::Dark] {
+            let fixture = Fixture::open_in("/form/summary", Viewport::Mobile, scheme)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            pointer::click(page, "input[type=email]").await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            focus::wait_for_focus(page, "[data-slot=summary]", "a blocked submit")
+                .await
+                .unwrap();
+            contrast::assert_clean(page, "form").await.unwrap();
+
+            keyboard::tab_to(page, "[data-slot=summary] a", 2)
+                .await
+                .unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            focus::wait_for_focus(page, "input[type=email]", "Enter on its line")
+                .await
+                .unwrap();
+
+            fixture.console.assert_clean("the error summary").unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// A group field has no single control to carry the id its summary line links
+/// to: the line must still focus the group's tab stop.
+#[test]
+fn every_summary_line_focuses_something_in_its_field() {
+    block_on(async {
+        let fixture = Fixture::open("/form/targets", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "button[type=submit]").await.unwrap();
+        focus::wait_for_focus(page, "[data-slot=summary]", "a blocked submit")
+            .await
+            .unwrap();
+        let lines: usize = page
+            .evaluate("document.querySelectorAll('[data-slot=summary] a').length")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(lines, 10);
+        for line in 0..lines {
+            page.evaluate(format!(
+                "document.querySelectorAll('[data-slot=summary] a')[{line}].click()"
+            ))
+            .await
+            .unwrap();
+            wait::for_js_true(
+                page,
+                "(() => { const a = document.activeElement; \
+                 return a !== document.body && !a.closest('[data-slot=summary]'); })()",
+                &format!("summary line {line} to focus its field"),
+            )
+            .await
+            .unwrap();
+            // Back on the summary, so a line that focuses nothing shows.
+            page.evaluate("document.querySelector('[data-slot=summary]').focus()")
+                .await
+                .unwrap();
+        }
+        fixture.console.assert_clean("the summary lines").unwrap();
         fixture.close().await.unwrap();
     });
 }

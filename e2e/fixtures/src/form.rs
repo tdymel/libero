@@ -2,11 +2,158 @@
 //! re-render the page, submit and reset.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Fields, Flex, Form, Rule, TextField, not_empty, use_form};
+use libero::components::{
+    Button, Checkbox, Fields, Fieldset, FileField, Files, Flex, Form, NativeSelect, Options,
+    PasswordField, PhoneField, PinField, RadioGroup, Rating, Rule, SegmentedControl, Select,
+    Switch, TagsField, TextField, min_length, not_empty, use_form,
+};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/form", || rsx! { FormPage {} })];
+pub const ROUTES: Routes = &[
+    ("/form", || rsx! { FormPage {} }),
+    ("/form/summary", || rsx! { SummaryPage {} }),
+    ("/form/targets", || rsx! { TargetsPage {} }),
+];
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Plan {
+    Free,
+    Pro,
+}
+
+#[component]
+fn TargetsPage() -> Element {
+    let mut plan = use_signal(|| None::<Plan>);
+    let mut tier = use_signal(|| None::<Plan>);
+    let mut pin = use_signal(String::new);
+    let mut stars = use_signal(|| 0.0f64);
+    let mut tags = use_signal(Vec::<String>::new);
+    let mut notify = use_signal(|| false);
+    let mut native = use_signal(|| None::<Plan>);
+    let mut billing = use_signal(|| Plan::Free);
+    let mut files = use_signal(Files::default);
+    let mut phone = use_signal(String::new);
+    rsx! {
+        Form::<()> { summary_title: "Fix these:",
+            RadioGroup {
+                label: "Plan",
+                value: plan(),
+                onchange: move |next| plan.set(Some(next)),
+                validate: not_empty.error("Pick a plan."),
+            }
+            Select {
+                label: "Tier",
+                value: tier(),
+                onchange: move |next| tier.set(next),
+                validate: not_empty.error("Pick a tier."),
+            }
+            PinField {
+                label: "Code",
+                value: pin(),
+                oninput: move |next: String| pin.set(next),
+                length: 4usize,
+                validate: min_length(4).error("Enter the code."),
+            }
+            Rating {
+                label: "Stars",
+                value: stars(),
+                onchange: move |next| stars.set(next),
+                validate: (|v: &f64| *v > 0.0).error("Rate it."),
+            }
+            TagsField {
+                label: "Tags",
+                value: tags(),
+                onchange: move |next| tags.set(next),
+                validate: not_empty.error("Add a tag."),
+            }
+            Switch {
+                label: "Notify me",
+                checked: notify(),
+                onchange: move |next| notify.set(next),
+                validate: not_empty.error("Switch it on."),
+            }
+            NativeSelect {
+                label: "Plan again",
+                value: native(),
+                onchange: move |next| native.set(Some(next)),
+                validate: not_empty.error("Pick one."),
+            }
+            SegmentedControl {
+                label: "Billing",
+                value: Some(billing()),
+                onchange: move |next| billing.set(next),
+                validate: (|v: &Plan| *v == Plan::Pro).error("Pick Pro."),
+            }
+            FileField {
+                label: "Receipt",
+                value: files(),
+                onchange: move |next| files.set(next),
+                validate: (|_: &Files| false).error("Attach a file."),
+            }
+            PhoneField {
+                label: "Phone",
+                value: Some(phone()),
+                oninput: move |next: String| phone.set(next),
+                validate: min_length(5).error("Enter a number."),
+            }
+            Button { r#type: "submit", "Send" }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct NewPassword {
+    value: String,
+    repeat: String,
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Account {
+    email: String,
+    #[fields(nested)]
+    password: NewPassword,
+    terms: bool,
+}
+
+#[component]
+fn SummaryPage() -> Element {
+    let value = use_store(Account::default);
+    rsx! {
+        Form {
+            value,
+            summary_title: "Please fix these first:",
+            validate: (|s: &Account| s.email.is_empty() || !s.password.value.contains(&s.email))
+                .warn("Your password contains your email address.")
+                .on([Account::FIELDS.password().value()]),
+            TextField {
+                label: "Email",
+                r#type: "email",
+                name: Account::FIELDS.email(),
+                validate: not_empty.error("Enter your email."),
+            }
+            Fieldset {
+                label: "Password",
+                path: Account::FIELDS.password(),
+                validate: (|p: &NewPassword| p.value == p.repeat)
+                    .error("The passwords differ.")
+                    .on([NewPassword::FIELDS.repeat()]),
+                PasswordField {
+                    label: "Password",
+                    name: NewPassword::FIELDS.value(),
+                    validate: min_length(8).error("Use at least 8 characters."),
+                }
+                PasswordField { label: "Repeat password", name: NewPassword::FIELDS.repeat() }
+            }
+            Checkbox {
+                label: "I accept the terms",
+                name: Account::FIELDS.terms(),
+                validate: not_empty.error("Accept the terms to continue."),
+            }
+            Button { r#type: "submit", "Create account" }
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Signup {

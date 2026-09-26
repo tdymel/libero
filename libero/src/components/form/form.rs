@@ -10,6 +10,7 @@ use crate::{
             Binding, Source, Validators,
             handle::{Control, FormHandle, Summary},
             issues_of,
+            use_field::labelled_focus_selector,
         },
         layout::{Box, use_box},
     },
@@ -218,7 +219,12 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
                         li {
                             match &item.target {
                                 Some(id) => {
-                                    let target = crate::hooks::id_selector(id);
+                                    // A group has no control with the id: its tab stop is named by the label.
+                                    let target = format!(
+                                        "{}, {}",
+                                        crate::hooks::id_selector(id),
+                                        labelled_focus_selector(&format!("{id}-label"))
+                                    );
                                     rsx! {
                                         a {
                                             href: "#{id}",
