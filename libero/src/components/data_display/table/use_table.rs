@@ -92,6 +92,9 @@ pub(crate) struct TableConfig {
     /// Seeds the page size; read only while paginated.
     pub default_page_size: usize,
     pub onpagesizechange: Option<EventHandler<usize>>,
+    pub hidden_columns: Option<Vec<String>>,
+    pub default_hidden_columns: Vec<String>,
+    pub onhiddencolumnschange: Option<EventHandler<Vec<String>>>,
 }
 
 /// A table's state, one slice per feature.
@@ -103,6 +106,8 @@ pub(crate) struct TableState {
     /// 1-based.
     pub page: StateSlice<u32>,
     pub page_size: StateSlice<usize>,
+    /// The hidden columns' headers.
+    pub hidden_columns: StateSlice<Vec<String>>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -130,10 +135,17 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.onpagesizechange,
         "Table: a controlled `page_size` without `onpagesizechange` never changes.",
     );
+    let hidden_columns = use_state_slice(
+        config.hidden_columns,
+        || config.default_hidden_columns,
+        config.onhiddencolumnschange,
+        "Table: a controlled `hidden_columns` without `onhiddencolumnschange` never changes.",
+    );
     TableState {
         sort,
         selection,
         page,
         page_size,
+        hidden_columns,
     }
 }

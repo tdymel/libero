@@ -25,6 +25,7 @@ pub struct Column<T> {
     pub(super) align: Option<CellAlign>,
     pub(super) sortable: bool,
     pub(super) row_header: bool,
+    pub(super) hideable: bool,
     pub(super) width: Option<String>,
     pub(super) min_width: Option<String>,
     pub(super) header_render: Option<HeaderRender>,
@@ -51,6 +52,7 @@ impl ColumnHeader {
             align: None,
             sortable: false,
             row_header: false,
+            hideable: true,
             width: None,
             min_width: None,
             header_render: None,
@@ -199,6 +201,19 @@ impl<T> Column<T> {
         self
     }
 
+    /// Whether the column menu offers to hide it; on by default. `hidden_columns`
+    /// still hides it.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # struct User { name: String }
+    /// column("Name").value(|u: &User| u.name.clone()).hideable(false);
+    /// ```
+    pub fn hideable(mut self, hideable: bool) -> Self {
+        self.hideable = hideable;
+        self
+    }
+
     /// Replaces the cell body. Sorting still uses `value`.
     ///
     /// Runs per row in `Table`'s scope: no hooks, and capture signals, not values.
@@ -276,6 +291,7 @@ impl<T> Clone for Column<T> {
             align: self.align,
             sortable: self.sortable,
             row_header: self.row_header,
+            hideable: self.hideable,
             width: self.width.clone(),
             min_width: self.min_width.clone(),
             header_render: self.header_render.clone(),
@@ -294,6 +310,7 @@ impl<T> PartialEq for Column<T> {
             && self.align == other.align
             && self.sortable == other.sortable
             && self.row_header == other.row_header
+            && self.hideable == other.hideable
             && self.width == other.width
             && self.min_width == other.min_width
     }
@@ -366,6 +383,7 @@ mod tests {
         assert!(a == b);
         assert!(a != b.clone().sortable());
         assert!(a != b.clone().row_header());
+        assert!(a != b.clone().hideable(false));
         assert!(a != b.clone().width("4rem"));
         assert!(a != b.clone().min_width("4rem"));
         assert!(a == b.clone().header_render(|| rsx! { "x" }));

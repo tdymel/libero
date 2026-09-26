@@ -497,7 +497,7 @@ fn a_table_sort_follows_its_column_through_a_reorder() {
     let html = dioxus_ssr::render(&dom);
     assert_eq!(row_order(&html), ["Linus", "Ada", "Grace"]);
     assert!(
-        html.contains(r#"aria-sort="ascending"><button type="button">Age"#),
+        html.contains(r#"aria-sort="ascending"><button type="button" data-sort-button=true>Age"#),
         "{html}"
     );
 
@@ -506,7 +506,10 @@ fn a_table_sort_follows_its_column_through_a_reorder() {
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
     let html = dioxus_ssr::render(&dom);
     assert_eq!(row_order(&html), ["Grace", "Linus", "Ada"]);
-    assert!(html.contains(r#"<button type="button">Name"#));
+    assert!(
+        html.contains(r#"<button type="button" data-sort-button=true>Name"#),
+        "{html}"
+    );
     assert!(!markup(&html).contains("aria-sort"), "{html}");
 }
 

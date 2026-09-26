@@ -119,6 +119,11 @@ pub fn TablePage() -> Element {
                     prop("manual_sort", "bool").default("false").doc("`data` comes sorted, say from a server: a header click only reports through `onsortchange`."),
                     prop("manual_pagination", "bool").default("false").doc("`data` is the current page only: the table draws the page controls and leaves the slicing to you."),
                     prop("row_count", "Option<usize>").default("data's length").doc("Rows over all pages with `manual_pagination`, for the page count and the range text."),
+                    prop("hidden_columns", "Option<Vec<String>>").default("None").doc("The hidden columns' headers. Set, visibility is controlled: pair it with `onhiddencolumnschange`. A hidden sorted column keeps sorting."),
+                    prop("default_hidden_columns", "Vec<String>").default("[]").doc("Seeds the hidden columns once. Ignored when `hidden_columns` is set."),
+                    prop("onhiddencolumnschange", "EventHandler<Vec<String>>").default("None").doc("Called with the hidden columns a column menu pick asks for."),
+                    prop("column_menu", "bool").default("false").doc("Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, hide the column, and a Columns submenu that shows or hides the others."),
+                    prop("column_menu_parts", "Parts<MenuPart>").default("none").doc("The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`."),
                 ]),
                 props("column()", vec![
                     prop("header", "String").default("required").doc("The column's title, the argument to `column(..)`."),
@@ -132,6 +137,7 @@ pub fn TablePage() -> Element {
                     prop("header_render", "fn() -> Element").default("None").doc("Replaces the header's body, inside the sort button when sortable. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header."),
                     prop("of", "&ColumnType<V>").default("None").doc("Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win."),
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
+                    prop("hideable", "bool").default("true").doc("Whether the column menu offers to hide the column. `hidden_columns` still hides it."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()
@@ -140,6 +146,7 @@ pub fn TablePage() -> Element {
                 .key(["Enter", "Space"], "On a sortable header, a button: sorts by that column, flips it, then unsorts.")
                 .key(["Shift+Enter", "Shift+Space"],"With `multi_sort`, on a sortable header: adds that column after the sorted ones.")
                 .key(["Space"], "On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row.")
+                .key(["Enter", "Space", "Down"], "With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`.")
                 .handles([
                     "An unnamed table warns in a debug build.",
                     "With `scroll: true` the wrapper is a `role=\"region\"` named like the table.",
@@ -150,6 +157,7 @@ pub fn TablePage() -> Element {
                     "`selectable` without `row_key` warns in a debug build.",
                     "`.row_header()` cells render as `th scope=\"row\"`, so a screen reader reads that name as it moves down any other column. They look like the other cells.",
                     "Paginated, the page buttons sit in a `nav` named after the caption, the page-size picker is labelled, and a page change announces the new range, \"4–6 of 7\", politely. The first render announces nothing.",
+                    "With `column_menu`, each menu button is named after its column, \"Age column options\", and the header keeps its text as its name. The Columns submenu lists checkbox items, and the last shown column cannot be hidden.",
                 ])
                 .must([
                     "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
@@ -248,6 +256,17 @@ pub fn TablePage() -> Element {
                     ". Select-all covers the rows on every page."
                 }
                 Text {
+                    Code { source: "column_menu" }
+                    " adds a menu to each header to sort, hide the column, or show and hide "
+                    "the others. "
+                    Code { source: ".hideable(false)" }
+                    " keeps a column out of it. To hold the hidden columns yourself, pass "
+                    Code { source: "hidden_columns" }
+                    " and update it from "
+                    Code { source: "onhiddencolumnschange" }
+                    "."
+                }
+                Text {
                     Code { source: "scroll" }
                     " wraps a table wider than its container in a region that scrolls "
                     "sideways. The demo's switch also sets "
@@ -282,6 +301,7 @@ pub fn TablePage() -> Element {
                         false => vec![],
                     }),
                     Control::switch("multi_sort"),
+                    Control::switch("column_menu"),
                     Control::switch("paginate").code(|_, values| match values.str("paginate") == "true" {
                         true => vec!["page_sizes: vec![2, 5, 10]".to_string()],
                         false => vec![],
@@ -306,6 +326,7 @@ pub fn TablePage() -> Element {
                         },
                         selectable: values.str("selectable") == "true",
                         multi_sort: values.str("multi_sort") == "true",
+                        column_menu: values.str("column_menu") == "true",
                         row_key: |p: &Person| p.name.clone(),
                         page_sizes: if values.str("paginate") == "true" { vec![2, 5, 10] } else { vec![] },
                         empty: no_rows(&values).then(|| rsx! { "No team members yet." }),

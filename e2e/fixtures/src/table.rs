@@ -1,6 +1,6 @@
 //! `Table` with a sortable text column and a custom-rendered one; a wide one
 //! in its scroll region under a caption; keyed, clickable, striped rows; selectable,
-//! multi-sorted rows; an empty one; a paged one; sized columns.
+//! multi-sorted rows; an empty one; a paged one; sized columns; column menus.
 
 use dioxus::prelude::*;
 use libero::components::{ColumnDefaults, SortDirection, States, Table, TableSort, column};
@@ -16,7 +16,29 @@ pub const ROUTES: Routes = &[
     ("/table/select", || rsx! { SelectTablePage {} }),
     ("/table/paged", || rsx! { PagedTablePage {} }),
     ("/table/widths", || rsx! { WidthsTablePage {} }),
+    ("/table/menu", || rsx! { MenuTablePage {} }),
 ];
+
+/// Column menus over a multi-sorted table; the name column can't be hidden.
+#[component]
+fn MenuTablePage() -> Element {
+    rsx! {
+        Table {
+            aria_label: "Fruit",
+            column_menu: true,
+            multi_sort: true,
+            data: fruit(),
+            columns: vec![
+                column("Name")
+                    .value(|fruit: &Fruit| fruit.name.to_string())
+                    .sortable()
+                    .row_header()
+                    .hideable(false),
+                column("Stock").value(|fruit: &Fruit| fruit.stock).sortable(),
+            ],
+        }
+    }
+}
 
 /// A 200px first column; a sortable one with a rendered header.
 #[component]

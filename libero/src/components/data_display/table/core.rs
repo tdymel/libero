@@ -89,24 +89,37 @@ pub(super) struct HeaderSpec {
     pub align: CellAlign,
     pub sortable: bool,
     pub row_header: bool,
+    pub hideable: bool,
+    /// Named in `hidden_columns`: no cells drawn, its sort still applies.
+    pub hidden: bool,
     /// The header cell's inline `width`/`min-width`, which size the column.
     pub style: Option<String>,
     /// A caller's header body, which replaces the text.
     pub body: Option<Element>,
 }
 
-pub(super) fn header_specs<T>(columns: &[Column<T>], defaults: &ColumnDefaults) -> Vec<HeaderSpec> {
+pub(super) fn header_specs<T>(
+    columns: &[Column<T>],
+    defaults: &ColumnDefaults,
+    hidden: &[String],
+) -> Vec<HeaderSpec> {
     columns
         .iter()
         .map(|column| {
             let resolved = column.resolve(defaults);
+            let hidden = hidden.contains(&column.header);
             HeaderSpec {
                 header: column.header.clone(),
                 align: resolved.align,
                 sortable: column.sortable,
                 row_header: column.row_header,
+                hideable: column.hideable,
+                hidden,
                 style: width_style(resolved.width, resolved.min_width),
-                body: column.header_render.as_ref().map(|render| render()),
+                body: match hidden {
+                    true => None,
+                    false => column.header_render.as_ref().map(|render| render()),
+                },
             }
         })
         .collect()
@@ -316,6 +329,8 @@ pub(super) struct BodySpec {
     pub sort_order: &'static str,
     /// The select-all header cell, with `selectable`.
     pub select_all: Option<Element>,
+    /// With `column_menu`: each header's menu, by header index.
+    pub menus: Vec<Element>,
 }
 
 /// Whether a header click adds its column to the others: a modifier, or a touch,
@@ -348,13 +363,29 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         touch,
         sort_order,
         select_all,
+        menus,
     } = body;
-    let columns = headers.len().max(1) + usize::from(select_all.is_some());
+    // Cells come for the shown columns only, in order.
+    let shown: Vec<usize> = (0..headers.len())
+        .filter(|&index| !headers[index].hidden)
+        .collect();
+    let columns = shown.len().max(1) + usize::from(select_all.is_some());
     let empty = rows.is_empty().then_some(empty);
     // The order shows only when it tells something: with two or more sorted columns.
     let ranked = active.len() > 1;
     let active = Rc::new(active);
     let headers = Rc::new(headers);
+    let context = SortContext {
+        active: active.clone(),
+        headers: headers.clone(),
+        sort,
+        touch,
+        ranked,
+        sort_order,
+    };
+    let with_menu = !menus.is_empty();
+    let mut menus = menus.into_iter().map(Some).collect::<Vec<_>>();
+    let mut menu_of = move |index: usize| menus.get_mut(index).and_then(Option::take);
     rsx! {
         if let Some(spec) = caption {
             caption { id: spec.id, "{spec.text}" }
@@ -362,12 +393,15 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         thead {
             tr {
                 {select_all}
-                for (index , spec) in headers.iter().enumerate() {
+                for (index , spec) in headers.iter().enumerate().filter(|(_, spec)| !spec.hidden) {
                     th {
                         key: "{index}",
                         scope: "col",
                         "data-align": align_attr(spec.align),
                         "data-sortable": spec.sortable.then_some(true),
+                        "data-menu": with_menu.then_some(true),
+                        // Else the menu button's label joins the name every cell reads out.
+                        aria_label: with_menu.then(|| spec.header.clone()),
                         style: spec.style.clone(),
                         // On the sorted columns only (APG): a "none" on every
                         // other one is read out as "not sorted" at each.
@@ -375,38 +409,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                             .iter()
                             .find(|(column, _)| *column == index)
                             .map(|(_, direction)| direction.aria_value()),
-                        if spec.sortable {
-                            button {
-                                r#type: "button",
-                                onpointerdown: move |event: PointerEvent| {
-                                    if let Some(mut touch) = touch {
-                                        touch.set(event.pointer_type() != "mouse");
-                                    }
-                                },
-                                onclick: {
-                                    let (active, headers) = (active.clone(), headers.clone());
-                                    move |event: MouseEvent| {
-                                        let add = adds_column(touch, &event);
-                                        sort.set(next_sort(&active, &headers, index, add));
-                                    }
-                                },
-                                {header_body(spec)}
-                                // Always rendered, so sorting can't change the width;
-                                // `aria-sort` shows and flips it.
-                                Glyph { slot: IconSlot::ArrowDown, icon: lucide::arrow_down::outlined }
-                                if let Some(order) = active
-                                    .iter()
-                                    .position(|(column, _)| *column == index)
-                                    .filter(|_| ranked)
-                                    .map(|order| order + 1)
-                                {
-                                    span { "data-sort-order": true, aria_hidden: "true", "{order}" }
-                                    VisuallyHidden { {fill(sort_order, &[("n", &order)])} }
-                                }
-                            }
-                        } else {
-                            {header_body(spec)}
-                        }
+                        {header_cell(spec, index, &context, menu_of(index))}
                     }
                 }
             }
@@ -425,25 +428,104 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                     ..attributes,
                     {select}
                     for (index , (text , body)) in cells.into_iter().enumerate() {
-                        if headers.get(index).is_some_and(|spec| spec.row_header) {
-                            th {
-                                key: "{index}",
-                                scope: "row",
-                                "data-align": headers.get(index).and_then(|spec| align_attr(spec.align)),
-                                "{text}"
-                                {body}
-                            }
-                        } else {
-                            td {
-                                key: "{index}",
-                                "data-align": headers.get(index).and_then(|spec| align_attr(spec.align)),
-                                // Text inline: a nested node per cell costs ~1 us a sort.
-                                "{text}"
-                                {body}
+                        if let Some(spec) = shown.get(index).map(|&column| &headers[column]) {
+                            if spec.row_header {
+                                th {
+                                    key: "{index}",
+                                    scope: "row",
+                                    "data-align": align_attr(spec.align),
+                                    "{text}"
+                                    {body}
+                                }
+                            } else {
+                                td {
+                                    key: "{index}",
+                                    "data-align": align_attr(spec.align),
+                                    // Text inline: a nested node per cell costs ~1 us a sort.
+                                    "{text}"
+                                    {body}
+                                }
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/// What a header's sort button needs, shared by every header.
+#[derive(Clone)]
+struct SortContext {
+    active: Rc<ActiveSort>,
+    headers: Rc<Vec<HeaderSpec>>,
+    sort: StateSlice<Vec<TableSort>>,
+    touch: Option<CopyValue<bool>>,
+    /// Whether the order badges show: two or more sorted columns.
+    ranked: bool,
+    sort_order: &'static str,
+}
+
+/// A header cell's body: the sort button or the text, then the column menu.
+fn header_cell(
+    spec: &HeaderSpec,
+    index: usize,
+    context: &SortContext,
+    menu: Option<Element>,
+) -> Element {
+    let label = match spec.sortable {
+        true => sort_button(spec, index, context.clone()),
+        false => header_body(spec),
+    };
+    match menu {
+        Some(menu) => rsx! {
+            div { "data-header": true,
+                if spec.sortable {
+                    {label}
+                } else {
+                    span { "data-header-text": true, {label} }
+                }
+                {menu}
+            }
+        },
+        None => label,
+    }
+}
+
+fn sort_button(spec: &HeaderSpec, index: usize, context: SortContext) -> Element {
+    let SortContext {
+        active,
+        headers,
+        sort,
+        touch,
+        ranked,
+        sort_order,
+    } = context;
+    let order = active
+        .iter()
+        .position(|(column, _)| *column == index)
+        .filter(|_| ranked)
+        .map(|order| order + 1);
+    rsx! {
+        button {
+            r#type: "button",
+            "data-sort-button": true,
+            onpointerdown: move |event: PointerEvent| {
+                if let Some(mut touch) = touch {
+                    touch.set(event.pointer_type() != "mouse");
+                }
+            },
+            onclick: move |event: MouseEvent| {
+                let add = adds_column(touch, &event);
+                sort.set(next_sort(&active, &headers, index, add));
+            },
+            {header_body(spec)}
+            // Always rendered, so sorting can't change the width;
+            // `aria-sort` shows and flips it.
+            Glyph { slot: IconSlot::ArrowDown, icon: lucide::arrow_down::outlined }
+            if let Some(order) = order {
+                span { "data-sort-order": true, aria_hidden: "true", "{order}" }
+                VisuallyHidden { {fill(sort_order, &[("n", &order)])} }
             }
         }
     }
@@ -542,6 +624,8 @@ mod tests {
                 align: CellAlign::Start,
                 sortable: true,
                 row_header: false,
+                hideable: true,
+                hidden: false,
                 style: None,
                 body: None,
             })
@@ -678,7 +762,7 @@ mod tests {
     #[test]
     fn a_sort_on_an_unknown_or_unsortable_header_is_inactive() {
         let (_, columns) = ages();
-        let headers = header_specs(&columns, &ColumnDefaults::new());
+        let headers = header_specs(&columns, &ColumnDefaults::new(), &[]);
 
         let unknown = [TableSort::new("Height", Ascending)];
         assert!(active_sort(&headers, &unknown, true).is_empty());

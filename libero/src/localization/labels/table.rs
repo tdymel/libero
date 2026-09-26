@@ -44,6 +44,23 @@ pub struct TableLabels {
     pub pages: &'static str,
     /// The same landmark, named after the table's caption.
     pub pages_of: fn(&str) -> String,
+    /// A header's column menu button, from the header text.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.column_menu)("Age"), "Age column options");
+    /// ```
+    pub column_menu: fn(&str) -> String,
+    pub sort_ascending: &'static str,
+    pub sort_descending: &'static str,
+    /// Drops the column from the sort.
+    pub unsort: &'static str,
+    /// Sorts by the column after the sorted ones, with `multi_sort`.
+    pub add_to_sort: &'static str,
+    pub hide_column: &'static str,
+    /// The submenu that shows and hides columns.
+    pub columns: &'static str,
 }
 
 /// `TableLabels::ENGLISH.select_row`. A named fn, so every copy compares equal.
@@ -88,6 +105,14 @@ fn german_pages_of(table: &str) -> String {
     format!("Seiten von {table}")
 }
 
+fn english_column_menu(column: &str) -> String {
+    format!("{column} column options")
+}
+
+fn german_column_menu(column: &str) -> String {
+    format!("Optionen für Spalte {column}")
+}
+
 impl TableLabels {
     pub const ENGLISH: Self = Self {
         no_rows: "No rows",
@@ -99,6 +124,13 @@ impl TableLabels {
         range: english_range,
         pages: "Table pages",
         pages_of: english_pages_of,
+        column_menu: english_column_menu,
+        sort_ascending: "Sort ascending",
+        sort_descending: "Sort descending",
+        unsort: "Unsort",
+        add_to_sort: "Add to sort",
+        hide_column: "Hide column",
+        columns: "Columns",
     };
 
     pub const GERMAN: Self = Self {
@@ -111,5 +143,12 @@ impl TableLabels {
         range: german_range,
         pages: "Tabellenseiten",
         pages_of: german_pages_of,
+        column_menu: german_column_menu,
+        sort_ascending: "Aufsteigend sortieren",
+        sort_descending: "Absteigend sortieren",
+        unsort: "Sortierung aufheben",
+        add_to_sort: "Zur Sortierung hinzufügen",
+        hide_column: "Spalte ausblenden",
+        columns: "Spalten",
     };
 }

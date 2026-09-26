@@ -1,0 +1,246 @@
+use std::rc::Rc;
+
+use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
+
+use super::{
+    cell_value::SortDirection,
+    core::{ActiveSort, TableSort},
+    use_table::StateSlice,
+};
+use crate::{
+    components::{
+        common::{Glyph, Input, Parts},
+        overlay::{Menu, MenuEntry, MenuItem, MenuPart, use_menu},
+    },
+    context::IconSlot,
+    hooks::Align,
+    localization::TableLabels,
+    theme::Size,
+};
+
+/// One column as the menus see it.
+#[derive(Clone, PartialEq)]
+pub(super) struct MenuColumn {
+    pub header: String,
+    pub sortable: bool,
+    pub hideable: bool,
+    pub hidden: bool,
+}
+
+/// A header's menu: sort, hide, and the columns to show.
+#[component]
+pub(super) fn ColumnMenu(
+    index: usize,
+    columns: Rc<[MenuColumn]>,
+    active: Rc<ActiveSort>,
+    sort: StateSlice<Vec<TableSort>>,
+    multi_sort: bool,
+    hidden: StateSlice<Vec<String>>,
+    labels: TableLabels,
+    size: Size,
+    parts: Input<Parts<MenuPart>>,
+) -> Element {
+    let menu = use_menu();
+    let column = &columns[index];
+    let shown = columns.iter().filter(|column| !column.hidden).count();
+    let mut items: Vec<MenuEntry> = Vec::new();
+    if column.sortable {
+        let current = active
+            .iter()
+            .find(|(column, _)| *column == index)
+            .map(|(_, direction)| *direction);
+        let set = |direction: Option<SortDirection>| {
+            let (columns, active) = (columns.clone(), active.clone());
+            move |_| sort.set(sorted_by(&columns, &active, index, direction, false))
+        };
+        items.push(
+            MenuItem::new(labels.sort_ascending)
+                .disabled(current == Some(SortDirection::Ascending))
+                .onselect(set(Some(SortDirection::Ascending)))
+                .into(),
+        );
+        items.push(
+            MenuItem::new(labels.sort_descending)
+                .disabled(current == Some(SortDirection::Descending))
+                .onselect(set(Some(SortDirection::Descending)))
+                .into(),
+        );
+        if multi_sort && current.is_none() && !active.is_empty() {
+            let (columns, active) = (columns.clone(), active.clone());
+            items.push(
+                MenuItem::new(labels.add_to_sort)
+                    .onselect(move |_| {
+                        sort.set(sorted_by(
+                            &columns,
+                            &active,
+                            index,
+                            Some(SortDirection::Ascending),
+                            true,
+                        ))
+                    })
+                    .into(),
+            );
+        }
+        if current.is_some() {
+            items.push(MenuItem::new(labels.unsort).onselect(set(None)).into());
+        }
+    }
+    let hideable: Vec<usize> = (0..columns.len())
+        .filter(|&column| columns[column].hideable)
+        .collect();
+    if !items.is_empty() && !hideable.is_empty() {
+        items.push(MenuEntry::Separator);
+    }
+    if column.hideable {
+        let header = column.header.clone();
+        items.push(
+            MenuItem::new(labels.hide_column)
+                .disabled(shown <= 1)
+                .onselect(move |_| hidden.set(toggle_column(&hidden.read(), &header, false)))
+                .into(),
+        );
+    }
+    if !hideable.is_empty() {
+        let toggles = hideable
+            .into_iter()
+            .map(|column| {
+                let MenuColumn {
+                    header,
+                    hidden: off,
+                    ..
+                } = columns[column].clone();
+                MenuItem::new(header.clone())
+                    .checkbox(!off)
+                    // The last shown column stays.
+                    .disabled(!off && shown <= 1)
+                    .keep_open()
+                    .onselect(move |_| hidden.set(toggle_column(&hidden.read(), &header, off)))
+                    .into()
+            })
+            .collect();
+        items.push(MenuItem::new(labels.columns).submenu(toggles).into());
+    }
+    let mut attributes = menu.a11y_attributes();
+    attributes.push(Attribute::new(
+        "aria-label",
+        (labels.column_menu)(&column.header),
+        None,
+        false,
+    ));
+    rsx! {
+        Menu {
+            state: menu,
+            items,
+            align: Align::End,
+            size,
+            parts,
+            button {
+                r#type: "button",
+                "data-column-menu": true,
+                ..attributes,
+                Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
+            }
+        }
+    }
+}
+
+/// The sort after a menu pick on column `index`: `direction` in its place if
+/// sorted, else alone, or after the others with `add`; `None` drops it.
+pub(super) fn sorted_by(
+    columns: &[MenuColumn],
+    active: &ActiveSort,
+    index: usize,
+    direction: Option<SortDirection>,
+    add: bool,
+) -> Vec<TableSort> {
+    let entry = |(column, direction): (usize, SortDirection)| {
+        TableSort::new(&columns[column].header, direction)
+    };
+    let sorted = active.iter().any(|(column, _)| *column == index);
+    if !sorted && !add {
+        return direction
+            .map(|direction| entry((index, direction)))
+            .into_iter()
+            .collect();
+    }
+    active
+        .iter()
+        .filter_map(|&(column, current)| match column == index {
+            true => direction.map(|direction| (column, direction)),
+            false => Some((column, current)),
+        })
+        .chain(
+            direction
+                .filter(|_| !sorted)
+                .map(|direction| (index, direction)),
+        )
+        .map(entry)
+        .collect()
+}
+
+/// `hidden` with `header` shown or hidden, the others in their order.
+pub(super) fn toggle_column(hidden: &[String], header: &str, show: bool) -> Vec<String> {
+    let mut next: Vec<String> = hidden.iter().filter(|h| *h != header).cloned().collect();
+    if !show {
+        next.push(header.to_string());
+    }
+    next
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use SortDirection::{Ascending, Descending};
+
+    fn columns(headers: &[&str]) -> Vec<MenuColumn> {
+        headers
+            .iter()
+            .map(|header| MenuColumn {
+                header: header.to_string(),
+                sortable: true,
+                hideable: true,
+                hidden: false,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_menu_sort_replaces_unless_added_or_already_sorted() {
+        let columns = columns(&["A", "B", "C"]);
+        let active = vec![(0, Ascending), (1, Descending)];
+
+        assert_eq!(
+            sorted_by(&columns, &active, 2, Some(Descending), false),
+            vec![TableSort::new("C", Descending)]
+        );
+        assert_eq!(
+            sorted_by(&columns, &active, 2, Some(Ascending), true),
+            vec![
+                TableSort::new("A", Ascending),
+                TableSort::new("B", Descending),
+                TableSort::new("C", Ascending)
+            ]
+        );
+        assert_eq!(
+            sorted_by(&columns, &active, 1, Some(Ascending), false),
+            vec![
+                TableSort::new("A", Ascending),
+                TableSort::new("B", Ascending)
+            ]
+        );
+        assert_eq!(
+            sorted_by(&columns, &active, 0, None, false),
+            vec![TableSort::new("B", Descending)]
+        );
+    }
+
+    #[test]
+    fn a_column_toggles_in_and_out_of_the_hidden_list() {
+        let hidden = vec!["A".to_string()];
+
+        assert_eq!(toggle_column(&hidden, "B", false), vec!["A", "B"]);
+        assert_eq!(toggle_column(&hidden, "A", true), Vec::<String>::new());
+        assert_eq!(toggle_column(&hidden, "A", false), vec!["A"]);
+    }
+}

@@ -6,11 +6,12 @@ use crate::{
     components::{
         accessibility::use_announcer,
         common::{
-            ClassList, HtmlTag, Input, LogicalTextAlign, States, attr, inset_focus_ring_sx,
+            ClassList, HtmlTag, Input, LogicalTextAlign, Parts, States, attr, inset_focus_ring_sx,
             names_itself, use_name_warning,
         },
         form::use_checkbox_look,
         layout::use_box,
+        overlay::MenuPart,
     },
     hooks::{listener, use_id, use_localization, use_theme},
     platform::{lays_out_captions, widens_sized_tables},
@@ -21,6 +22,7 @@ use crate::{
 
 use super::{
     column::{Column, ColumnDefaults},
+    column_menu::{ColumnMenu, MenuColumn},
     core::{
         BodySpec, CaptionSpec, RowFn, RowSpec, SortedRows, TableSort, active_sort, header_specs,
         render_body,
@@ -58,9 +60,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     // The button takes the padding, so all of it clicks. Marked from Rust:
     // `th:has(button)` never matches natively.
-    .selector("& th[data-sortable]", sx().padding("0"))
+    .selector("& th[data-sortable], & th[data-menu]", sx().padding("0"))
     .selector(
-        "& th button",
+        "& [data-sort-button]",
         // Blitz's UA sheet centres a button's content: start it, as its cells.
         sx().display("flex")
             .align_items("center")
@@ -75,9 +77,12 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .cursor("pointer"),
     )
     // Inset: the button fills its cell edge to edge.
-    .selector("& th button:focus-visible", inset_focus_ring_sx("-2px"))
     .selector(
-        "& th button svg",
+        "& [data-sort-button]:focus-visible",
+        inset_focus_ring_sx("-2px"),
+    )
+    .selector(
+        "& [data-sort-button] svg",
         sx().width("16px")
             .height("16px")
             .flex_shrink("0")
@@ -86,30 +91,72 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     // `aria-sort`, on the sorted header only, doubles as the styling state.
     .selector(
-        "& th[data-sortable]:not([aria-sort]):hover svg, \
-             & th[data-sortable]:not([aria-sort]):focus-within svg",
+        "& th[data-sortable]:not([aria-sort]) [data-sort-button]:hover svg, \
+             & th[data-sortable]:not([aria-sort]) [data-sort-button]:focus svg",
         sx().opacity("0.5"),
     )
     .selector(
-        "& th[aria-sort=\"ascending\"] svg, & th[aria-sort=\"descending\"] svg",
+        "& th[aria-sort=\"ascending\"] [data-sort-button] svg, \
+             & th[aria-sort=\"descending\"] [data-sort-button] svg",
         sx().opacity("1"),
     )
     .selector(
-        "& th[aria-sort=\"ascending\"] svg",
+        "& th[aria-sort=\"ascending\"] [data-sort-button] svg",
         sx().transform("rotate(180deg)"),
     )
     // `text-align` doesn't position flex items.
     .selector(
-        "& th[data-align=\"center\"] button",
+        "& th[data-align=\"center\"] [data-sort-button]",
         sx().justify_content("center"),
     )
     .selector(
-        "& th[data-align=\"end\"] button",
+        "& th[data-align=\"end\"] [data-sort-button]",
         sx().justify_content("end"),
     )
     .selector(
-        "& th button [data-sort-order]",
+        "& [data-sort-button] [data-sort-order]",
         sx().font_size("0.75em").font_weight("600").opacity("0.75"),
+    )
+    // The label takes the room, the menu button its glyph's.
+    .selector(
+        "& [data-header]",
+        sx().display("flex").align_items("center"),
+    )
+    .selector(
+        "& [data-header] > [data-sort-button], & [data-header-text]",
+        sx().flex("1").min_width("0"),
+    )
+    // An end-aligned header keeps its text over its cells: the button goes first.
+    .selector(
+        "& th[data-align=\"end\"] [data-header]",
+        sx().flex_direction("row-reverse"),
+    )
+    .selector(
+        "& [data-header-text]",
+        sx().padding(TableDefaults::padding()),
+    )
+    .selector(
+        "& [data-column-menu]",
+        sx().display("flex")
+            .align_items("center")
+            .justify_content("center")
+            .width("24px")
+            .height("24px")
+            .margin_inline("4px")
+            .padding("0")
+            .border("0")
+            .border_radius("4px")
+            .background("none")
+            .color("inherit")
+            .cursor("pointer"),
+    )
+    .selector(
+        "& [data-column-menu] svg",
+        sx().width("16px").height("16px"),
+    )
+    .selector(
+        "& [data-column-menu]:focus-visible",
+        inset_focus_ring_sx("0"),
     )
     // As wide as its box and padding, spelled out: Blitz sizes a `width: 1px`
     // cell below its content.
@@ -236,6 +283,22 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Rows over all pages with `manual_pagination`. Unset, `data`'s length.
     #[props(default)]
     row_count: Option<usize>,
+    /// The hidden columns' headers; set, visibility is controlled. A hidden
+    /// sorted column keeps sorting.
+    #[props(default)]
+    hidden_columns: Option<Vec<String>>,
+    /// Seeds the hidden columns once. Ignored when `hidden_columns` is set.
+    #[props(default)]
+    default_hidden_columns: Vec<String>,
+    /// The hidden columns a column menu pick asks for.
+    #[props(default)]
+    onhiddencolumnschange: Option<EventHandler<Vec<String>>>,
+    /// A menu button in each header: sort, hide the column, show or hide others.
+    #[props(default)]
+    column_menu: bool,
+    /// The column menus' `parts`: they open in a portal, out of `sx`'s reach.
+    #[props(default, into)]
+    column_menu_parts: Input<Parts<MenuPart>>,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -288,6 +351,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             .or(props.page_sizes.first().copied())
             .unwrap_or(10),
         onpagesizechange: props.onpagesizechange,
+        hidden_columns: props.hidden_columns,
+        default_hidden_columns: props.default_hidden_columns,
+        onhiddencolumnschange: props.onhiddencolumnschange,
     });
     let announcer = use_announcer();
     let touch = use_hook(|| CopyValue::new(false));
@@ -321,8 +387,44 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let look = use_checkbox_look(size, props.selectable);
     let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
 
-    let headers = header_specs(&props.columns, &props.column_defaults);
+    let headers = header_specs(
+        &props.columns,
+        &props.column_defaults,
+        &state.hidden_columns.read(),
+    );
     let active = active_sort(&headers, &state.sort.read(), props.multi_sort);
+    let menus = match props.column_menu {
+        true => {
+            let columns: Rc<[MenuColumn]> = headers
+                .iter()
+                .map(|spec| MenuColumn {
+                    header: spec.header.clone(),
+                    sortable: spec.sortable,
+                    hideable: spec.hideable,
+                    hidden: spec.hidden,
+                })
+                .collect();
+            let active = Rc::new(active.clone());
+            (0..headers.len())
+                .map(|index| {
+                    rsx! {
+                        ColumnMenu {
+                            index,
+                            columns: columns.clone(),
+                            active: active.clone(),
+                            sort: state.sort,
+                            multi_sort: props.multi_sort,
+                            hidden: state.hidden_columns,
+                            labels,
+                            size,
+                            parts: props.column_menu_parts.clone(),
+                        }
+                    }
+                })
+                .collect()
+        }
+        false => Vec::new(),
+    };
 
     let data = Rc::new(props.data);
     let key_of = |index: usize| {
@@ -423,7 +525,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 cells: props
                     .columns
                     .iter()
-                    .map(|column| match &column.render {
+                    .zip(&headers)
+                    .filter(|(_, spec)| !spec.hidden)
+                    .map(|(column, _)| match &column.render {
                         Some(render) => (String::new(), Some(render(row))),
                         None => ((column.text)(row), None),
                     })
@@ -490,6 +594,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 select_all: selection
                     .as_ref()
                     .map(|selection| selection.header_cell(&selected)),
+                menus,
             }),
         );
     // The selection's live region: valid in no part of a table, so beside it.

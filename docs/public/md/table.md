@@ -41,6 +41,11 @@ state yourself, as `sort` does. For server-side data set `manual_sort` and
 `manual_pagination`, pass the current page as `data` and the total as
 `row_count`. Select-all covers the rows on every page.
 
+`column_menu` adds a menu to each header to sort, hide the column, or show and
+hide the others. `.hideable(false)` keeps a column out of it. To hold the hidden
+columns yourself, pass `hidden_columns` and update it from
+`onhiddencolumnschange`.
+
 `scroll` wraps a table wider than its container in a region that scrolls
 sideways. The demo's switch also sets `sx().min_width("640px")`, so the three
 columns overflow at any width.
@@ -403,6 +408,11 @@ fn Demo() -> Element {
 | `manual_sort` | `bool` | `false` | `data` comes sorted, say from a server: a header click only reports through `onsortchange`. |
 | `manual_pagination` | `bool` | `false` | `data` is the current page only: the table draws the page controls and leaves the slicing to you. |
 | `row_count` | `Option<usize>` | data's length | Rows over all pages with `manual_pagination`, for the page count and the range text. |
+| `hidden_columns` | `Option<Vec<String>>` | `None` | The hidden columns' headers. Set, visibility is controlled: pair it with `onhiddencolumnschange`. A hidden sorted column keeps sorting. |
+| `default_hidden_columns` | `Vec<String>` | `[]` | Seeds the hidden columns once. Ignored when `hidden_columns` is set. |
+| `onhiddencolumnschange` | `EventHandler<Vec<String>>` | `None` | Called with the hidden columns a column menu pick asks for. |
+| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, hide the column, and a Columns submenu that shows or hides the others. |
+| `column_menu_parts` | `Parts<MenuPart>` | none | The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes, `aria_label` among them.
@@ -422,6 +432,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `header_render` | `fn() -> Element` | `None` | Replaces the header's body, inside the sort button when sortable. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header. |
 | `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
+| `hideable` | `bool` | `true` | Whether the column menu offers to hide the column. `hidden_columns` still hides it. |
 
 `column()` is a builder, not a component, so it takes no shared props.
 
@@ -436,6 +447,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Enter` or `Space` | On a sortable header, a button: sorts by that column, flips it, then unsorts. |
 | `Shift+Enter` or `Shift+Space` | With `multi_sort`, on a sortable header: adds that column after the sorted ones. |
 | `Space` | On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row. |
+| `Enter` or `Space` or `Down` | With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`. |
 
 ### Libero handles
 
@@ -455,6 +467,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - Paginated, the page buttons sit in a `nav` named after the caption, the
   page-size picker is labelled, and a page change announces the new range,
   "4–6 of 7", politely. The first render announces nothing.
+- With `column_menu`, each menu button is named after its column, "Age column
+  options", and the header keeps its text as its name. The Columns submenu lists
+  checkbox items, and the last shown column cannot be hidden.
 
 ### You must
 

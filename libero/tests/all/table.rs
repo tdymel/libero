@@ -564,3 +564,84 @@ fn widths_defaults_and_a_header_render_reach_the_header_cells() {
     );
     assert!(body.contains("<small>(years)</small>"), "{body}");
 }
+
+#[test]
+fn a_hidden_column_draws_no_cells_but_keeps_its_sort() {
+    #[derive(Clone, PartialEq)]
+    struct Row {
+        name: &'static str,
+        age: u32,
+    }
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    default_hidden_columns: vec!["Age".to_string()],
+                    default_sort: vec![TableSort::new("Age", SortDirection::Descending)],
+                    data: vec![
+                        Row { name: "Ada", age: 36 },
+                        Row { name: "Grace", age: 45 },
+                    ],
+                    columns: vec![
+                        column("Name").value(|row: &Row| row.name.to_string()),
+                        column("Age").value(|row: &Row| row.age).sortable(),
+                    ],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    assert_eq!(body.matches("<th scope=\"col\"").count(), 1, "{body}");
+    assert_eq!(body.matches("<td").count(), 2, "{body}");
+    assert!(!body.contains("36"), "{body}");
+    assert!(
+        body.find("Grace").unwrap() < body.find("Ada").unwrap(),
+        "{body}"
+    );
+}
+
+#[test]
+fn a_column_menu_puts_a_named_menu_button_in_each_shown_header() {
+    #[derive(Clone, PartialEq)]
+    struct Row {
+        name: &'static str,
+        age: u32,
+    }
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    column_menu: true,
+                    data: vec![Row { name: "Ada", age: 36 }],
+                    columns: vec![
+                        column("Name").value(|row: &Row| row.name.to_string()),
+                        column("Age").value(|row: &Row| row.age).sortable(),
+                    ],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    assert_eq!(body.matches("data-column-menu").count(), 2, "{body}");
+    assert!(
+        body.contains("aria-label=\"Name column options\""),
+        "{body}"
+    );
+    assert!(body.contains("aria-label=\"Age column options\""), "{body}");
+    assert!(body.contains("aria-haspopup=\"menu\""), "{body}");
+    assert_eq!(body.matches("data-menu").count(), 2, "{body}");
+    // The header's name stays its text, without the menu button's label.
+    assert!(body.contains("aria-label=\"Age\""), "{body}");
+    // One sort button, beside its menu button.
+    assert_eq!(body.matches("data-sort-button").count(), 1, "{body}");
+}

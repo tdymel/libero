@@ -579,6 +579,104 @@ fn a_column_width_and_a_rendered_header_reach_the_browser() {
     });
 }
 
+/// 1156-2b: the column menu sorts, adds to the sort, hides a column and shows
+/// it again from the Columns submenu.
+#[test]
+fn a_column_menu_sorts_hides_and_shows_columns() {
+    block_on(async {
+        let fixture = Fixture::open("/table/menu", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        // Opens `header`'s menu, then clicks the item labelled `item` once it shows.
+        async fn pick(page: &Page, header: &str, item: &str) {
+            page.find_element(format!("button[aria-label=\"{header} column options\"]"))
+                .await
+                .unwrap()
+                .click()
+                .await
+                .unwrap();
+            choose(page, item).await;
+        }
+        async fn choose(page: &Page, item: &str) {
+            let find = format!(
+                "[...document.querySelectorAll('[role^=menuitem]')]\
+                 .find(e => e.textContent.trim() === {item:?})"
+            );
+            wait::for_js_true(page, &format!("!!{find}"), item)
+                .await
+                .unwrap();
+            page.evaluate(format!("{find}.click()")).await.unwrap();
+        }
+        let sort_of = |column: usize| {
+            format!(
+                "document.querySelector('thead th:nth-child({column})')?.getAttribute('aria-sort')"
+            )
+        };
+
+        pick(page, "Stock", "Sort descending").await;
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} === 'descending' && document.querySelector('tbody th').textContent === 'Apple'",
+                sort_of(2)
+            ),
+            "Stock to sort descending",
+        )
+        .await
+        .unwrap();
+
+        pick(page, "Name", "Add to sort").await;
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} === 'ascending' && document.querySelectorAll('[data-sort-order]').length === 2",
+                sort_of(1)
+            ),
+            "Name to sort second",
+        )
+        .await
+        .unwrap();
+
+        pick(page, "Stock", "Hide column").await;
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('thead th').length === 1 \
+             && document.querySelectorAll('tbody td').length === 0",
+            "Stock to hide",
+        )
+        .await
+        .unwrap();
+        // The hidden column still sorts first.
+        assert_eq!(
+            page.evaluate("document.querySelector('tbody th').textContent")
+                .await
+                .unwrap()
+                .into_value::<String>()
+                .unwrap(),
+            "Apple"
+        );
+
+        pick(page, "Name", "Columns").await;
+        choose(page, "Stock").await;
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('thead th').length === 2 \
+             && document.querySelectorAll('tbody td').length === 3",
+            "Stock to show again",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a table with column menus")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn count(page: &Page, selector: &str) -> f64 {
     page.evaluate(format!("document.querySelectorAll({selector:?}).length"))
         .await
