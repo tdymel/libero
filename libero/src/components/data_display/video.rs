@@ -15,7 +15,7 @@ use crate::{
         FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, listener, use_element, use_fullscreen,
         use_media, use_timeout,
     },
-    sx::{StaticSx, sx},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
     theme::{ColorCss, ColorShade, NamedColorCss, Size, SizeCss, Z_INDEX_MODAL},
     utils::warn,
 };
@@ -48,17 +48,14 @@ const NARROWEST: &str = "(max-width: 22rem)";
 
 static VIDEO_SX: StaticSx = StaticSx::new(|| {
     let controls = VideoPart::Controls.selector();
-    // The themed surface, not a dark scrim, so the controls keep their contrast.
+    // Solid: a see-through surface left the slider tracks under 3:1 over a dark picture.
     let overlay = sx()
         .position("absolute")
         .inset("auto 0 0 0")
         .padding(SizeCss::SPACING.value(Size::Xs))
-        .background_color(format!(
-            "color-mix(in srgb, {} 85%, transparent)",
-            NamedColorCss::SURFACE.value()
-        ))
+        .background_color(NamedColorCss::SURFACE.value())
         .transition("opacity 200ms ease")
-        .media("(prefers-reduced-motion: reduce)", sx().transition("none"));
+        .media(REDUCED_MOTION, sx().transition("none"));
     let filled = sx()
         .background_color(NamedColorCss::SURFACE.value())
         .padding(SizeCss::SPACING.value(Size::Xs))
@@ -76,7 +73,12 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 .width("100%")
                 // Letterboxing stays black in either scheme, as every player draws it.
                 .background_color("#000")
-                .object_fit("contain"),
+                .object_fit("contain")
+                // Forced colours repaint the black as Canvas, which leaves the picture's box unmarked.
+                .media(
+                    FORCED_COLORS,
+                    sx().outline("1px solid CanvasText").outline_offset("-1px"),
+                ),
         )
         .selector(
             VideoPart::Controls.selector(),

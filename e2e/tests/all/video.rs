@@ -65,6 +65,77 @@ fn the_controls_fit_a_narrow_player() {
     });
 }
 
+/// WCAG 1.4.11: in fullscreen the controls sit over the picture; over a black one
+/// the seek track and thumb outline keep 3:1 against the bar.
+#[test]
+fn the_fullscreen_controls_keep_their_non_text_contrast_over_a_dark_picture() {
+    const CONTRAST: &str = r#"(() => {
+        const rgb = (s) => {
+            const m = s.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/);
+            if (m) return [m[1] * 255, m[2] * 255, m[3] * 255, m[4] === undefined ? 1 : +m[4]];
+            const n = s.match(/rgba?\(([^)]+)\)/)[1].split(/[ ,\/]+/).map(Number);
+            return [n[0], n[1], n[2], n[3] === undefined ? 1 : n[3]];
+        };
+        const lum = (c) => {
+            const [r, g, b] = c.slice(0, 3).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const q = (s) => document.querySelector('#player ' + s);
+        const bar = rgb(getComputedStyle(q('[data-slot=controls]')).backgroundColor);
+        const base = [0, 1, 2].map((i) => bar[i] * bar[3]);
+        const ratio = (c) => {
+            const [x, y] = [lum(c), lum(base)];
+            return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+        };
+        const track = q('[data-slot=seek] div div div');
+        return [
+            ratio(rgb(getComputedStyle(track).backgroundColor)),
+            ratio(rgb(getComputedStyle(q('[data-slot=seek] [role=slider]')).borderTopColor)),
+        ];
+    })()"#;
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        pointer::click(page, FULLSCREEN).await.unwrap();
+        wait::for_js_true(page, &format!("{STATE} !== 'none'"), "fullscreen")
+            .await
+            .unwrap();
+        let [track, thumb]: [f64; 2] = page.evaluate(CONTRAST).await.unwrap().into_value().unwrap();
+        assert!(track >= 3.0, "the seek track is {track:.2}:1 over the bar");
+        assert!(
+            thumb >= 3.0,
+            "the thumb outline is {thumb:.2}:1 over the bar"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// WCAG 1.4.11: forced colours paint the black letterbox as Canvas, so the
+/// picture's box needs a line of its own.
+#[test]
+fn the_picture_has_an_edge_under_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "getComputedStyle(document.querySelector('#player video')).outlineStyle === 'solid'",
+            "an outline on the picture",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 fn track_mode() -> &'static str {
     "document.querySelector('#player video').textTracks[0].mode"
 }
