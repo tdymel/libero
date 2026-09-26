@@ -2,8 +2,10 @@ use dioxus::prelude::*;
 use libero::{
     components::{Box, Flex, Paper, Text, Title, VisuallyHidden},
     sx::sx,
-    theme::{Gradient, Size},
+    theme::{ColorCss, Size},
 };
+
+use super::tint;
 
 /// The library in four numbers, each a floor the tests below hold.
 #[component]
@@ -39,11 +41,16 @@ pub fn Stats() -> Element {
 #[component]
 fn Stat(value: &'static str, title: &'static str) -> Element {
     rsx! {
+        // A tint, not the full gradient (1214): the page's text reads on it in every theme and scheme.
         Paper {
             component: "li",
-            gradient: Gradient::default(),
             shadow: "xs",
             sx: sx()
+                .background(format!(
+                    "linear-gradient(45deg, {}, {})",
+                    tint(ColorCss::PRIMARY, 30),
+                    tint(ColorCss::SECONDARY, 30),
+                ))
                 .flex("1 1 calc(50% - 8px)")
                 .min_width("0")
                 .padding("lg")

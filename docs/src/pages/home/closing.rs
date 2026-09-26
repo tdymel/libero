@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Button, CodeBlock, Divider, Flex, Paper, Text, Title},
     sx::sx,
-    theme::Gradient,
+    theme::{Gradient, NamedColorCss},
 };
 
 use super::cta_row_sx;
@@ -14,7 +14,6 @@ pub fn Closing() -> Element {
     rsx! {
         section { "aria-labelledby": "closing-title",
             Flex { direction: "column", gap: "lg", align: "center",
-                // The install line sits outside the gradient: its code colours are not measured against it.
                 Paper {
                     gradient: Gradient::default(),
                     radius: "xl",
@@ -25,17 +24,22 @@ pub fn Closing() -> Element {
                             Button { to: Route::GettingStarted {}, size: "lg", color: "surface", "Get started" }
                             Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "currentColor", "Browse components" }
                         }
+                        CodeBlock {
+                            // copy: install
+                            source: "cargo add libero",
+                            language: "shell",
+                            label: "Add libero to your project",
+                            header: false,
+                            line_numbers: false,
+                            // copy: end
+                            // The block keeps its own surface, so not the gradient's label colour.
+                            sx: sx()
+                                .width("100%")
+                                .max_width("320px")
+                                .text_align("start")
+                                .color(NamedColorCss::INK.value()),
+                        }
                     }
-                }
-                CodeBlock {
-                    // copy: install
-                    source: "cargo add libero",
-                    language: "shell",
-                    label: "Add libero to your project",
-                    header: false,
-                    line_numbers: false,
-                    // copy: end
-                    sx: sx().width("100%").max_width("320px").text_align("start"),
                 }
             }
         }

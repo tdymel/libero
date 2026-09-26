@@ -28,12 +28,12 @@ pub fn Home() -> Element {
     }
 }
 
-/// The palette's primary colour at `percent` over transparent: a tint that
+/// The palette's `color` at `percent` over transparent: a tint that
 /// follows the palette and the scheme.
-pub(super) fn tint(percent: u8) -> String {
+pub(super) fn tint(color: ColorCss, percent: u8) -> String {
     format!(
         "color-mix(in srgb, {} {percent}%, transparent)",
-        ColorCss::PRIMARY.value(ColorShade::S6)
+        color.value(ColorShade::S6)
     )
 }
 

@@ -29,8 +29,8 @@ pub fn Hero() -> Element {
                     .text_align("center")
                     .background(format!(
                         "linear-gradient(180deg, {} 0%, {} 60%, transparent 100%)",
-                        tint(18),
-                        tint(6),
+                        tint(ColorCss::PRIMARY, 18),
+                        tint(ColorCss::PRIMARY, 6),
                     ))
                     .breakpoint(Size::Md, sx().padding("64px 48px")),
                 Flex { direction: "row", gap: "sm", wrap: "wrap", justify: "center",
