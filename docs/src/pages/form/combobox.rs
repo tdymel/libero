@@ -52,6 +52,7 @@ const FETCHING_TRIGGER: &str = r#"TextField {
     placeholder: "Type a fruit",
     value: text(),
     attributes: suggestions.a11y_attributes(),
+    onblur: move |_| suggestions.close(),
     oninput: move |next: String| {
         text.set(next.clone());
         suggestions.open();
@@ -113,6 +114,7 @@ Button {
     ]
     .concat(),
     onclick: move |_| fruit.toggle(),
+    onblur: move |_| fruit.close(),
     match picked() {
         Some(fruit) => rsx! { "{fruit.label()}" },
         None => rsx! { "Pick a fruit" },
@@ -126,6 +128,7 @@ const SUGGESTIONS_TRIGGER: &str = r#"TextField {
     placeholder: "Type a fruit",
     value: text(),
     attributes: suggestions.a11y_attributes(),
+    onblur: move |_| suggestions.close(),
     oninput: move |next| {
         text.set(next);
         suggestions.open();
@@ -345,6 +348,7 @@ fn SelectDemo(values: DemoValues) -> Element {
                     ]
                     .concat(),
                     onclick: move |_| fruit.toggle(),
+                    onblur: move |_| fruit.close(),
                     match picked() {
                         Some(fruit) => rsx! { "{fruit.label()}" },
                         None => rsx! { "Pick a fruit" },
@@ -412,6 +416,7 @@ fn FetchingDemo(values: DemoValues) -> Element {
                 value: text(),
                 disabled,
                 attributes: suggestions.a11y_attributes(),
+                onblur: move |_| suggestions.close(),
                 oninput: move |next: String| {
                     text.set(next.clone());
                     suggestions.open();
@@ -471,6 +476,7 @@ fn SuggestionsDemo(values: DemoValues) -> Element {
                 value: text(),
                 disabled,
                 attributes: suggestions.a11y_attributes(),
+                onblur: move |_| suggestions.close(),
                 oninput: move |next| {
                     text.set(next);
                     suggestions.open();
@@ -511,7 +517,7 @@ pub fn ComboboxPage() -> Element {
                         .doc("The dropdown's corner radius."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Blocks the arrow keys. Disable the trigger too."),
+                        .doc("Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too."),
                 ])
                 .parts("DropdownPart", list_dropdown_parts(COMBOBOX_DROPDOWN)),
                 props("ComboboxOption", vec![

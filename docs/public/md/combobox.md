@@ -50,6 +50,7 @@ fn Demo() -> Element {
                 variant: "outlined",
                 attributes: fruit.a11y_attributes(),
                 onclick: move |_| fruit.toggle(),
+                onblur: move |_| fruit.close(),
                 match picked() {
                     Some(fruit) => rsx! { "{fruit.label()}" },
                     None => rsx! { "Pick a fruit" },
@@ -104,6 +105,7 @@ fn Demo() -> Element {
                 placeholder: "Type a fruit",
                 value: text(),
                 attributes: suggestions.a11y_attributes(),
+                onblur: move |_| suggestions.close(),
                 oninput: move |next| {
                     text.set(next);
                     suggestions.open();
@@ -179,6 +181,7 @@ fn Demo() -> Element {
                 placeholder: "Type a fruit",
                 value: text(),
                 attributes: suggestions.a11y_attributes(),
+                onblur: move |_| suggestions.close(),
                 oninput: move |next: String| {
                     text.set(next.clone());
                     suggestions.open();
@@ -208,7 +211,7 @@ fn Demo() -> Element {
 | `loading_label` | `String` | `common.loading` | What screen readers hear while `options` is pending. A pending list shows a `Loader` instead of the rows or `empty`. |
 | `size` | `Size` | `md` | A row's height and font size. |
 | `radius` | `Size` | `sm` | The dropdown's corner radius. |
-| `disabled` | `bool` | `false` | Blocks the arrow keys. Disable the trigger too. |
+| `disabled` | `bool` | `false` | Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too. |
 
 `T` is any `Clone + PartialEq`. `Options` is not required, since you hand the
 list in.

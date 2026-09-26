@@ -2,8 +2,12 @@
 //! the probes the family's shared web/native scenarios read.
 
 use anyhow::{Result, ensure};
+use e2e::archetypes::Combobox;
+use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
+use e2e::suite::Step;
+use e2e::{Fixture, Suite, Viewport, wait};
 
 pub const TRIGGER: &str = "[role=combobox]";
 pub const LISTBOX: &str = "[role=listbox]";
@@ -13,6 +17,101 @@ pub const LISTBOX: &str = "[role=listbox]";
 #[test]
 fn the_selected_row_shows_the_on_state_line() {
     crate::select::selected_row_is_marked("/combobox");
+}
+
+/// Axe, contrast, focus rings, target size and the open state, in both schemes and all viewports.
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("combobox", "/combobox")
+        .focusable(TRIGGER)
+        .targets("[role=option]")
+        .state(
+            "open",
+            &[Step::TabTo(TRIGGER), Step::Press(keyboard::ARROW_DOWN)],
+            LISTBOX,
+        )
+        .run();
+}
+
+/// Keyboard, focus and the aria contract on the bare `Combobox`.
+#[test]
+fn it_honours_the_combobox_contract() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/combobox", viewport).await.unwrap();
+            Combobox {
+                trigger: TRIGGER,
+                option_count: 5,
+                tab_budget: 10,
+            }
+            .assert_contract(&fixture.page)
+            .await
+            .unwrap_or_else(|e| panic!("at {}: {e}", viewport.name()));
+            fixture
+                .console
+                .assert_clean(&format!("the combobox contract at {}", viewport.name()))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// The highlight skips a refused row, and so must the trigger's `aria-activedescendant`.
+#[test]
+fn the_trigger_names_the_row_the_list_highlights() {
+    block_on(async {
+        let fixture = Fixture::open("/combobox/refused", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_visible(page, LISTBOX).await.unwrap();
+        let js = r#"(() => {
+            const t = document.querySelector('[role=combobox]');
+            const lit = document.querySelector('[role=option][data-active]');
+            const named = document.getElementById(t.getAttribute('aria-activedescendant'));
+            return [named && named.textContent, named && named.getAttribute('aria-disabled'),
+                    lit && lit.textContent];
+        })()"#;
+        let read: (Option<String>, Option<String>, Option<String>) =
+            page.evaluate(js).await.unwrap().into_value().unwrap();
+        assert_eq!(read.1, None, "the trigger names a refused row: {read:?}");
+        assert_eq!(read.0, Some("Banana".into()), "{read:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// An open list with nothing to draw is not expanded for a screen reader.
+#[test]
+fn a_list_with_nothing_to_draw_is_not_expanded() {
+    block_on(async {
+        let fixture = Fixture::open("/combobox/none", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        page.evaluate("new Promise(r => setTimeout(() => r(1), 300))")
+            .await
+            .unwrap();
+        let read: (Option<String>, bool) = page
+            .evaluate(
+                "[document.querySelector('[role=combobox]').getAttribute('aria-expanded'), \
+                 !!document.querySelector('[role=listbox]')]",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!read.1, "nothing should be drawn");
+        assert_eq!(
+            read.0.as_deref(),
+            Some("false"),
+            "aria-expanded with nothing drawn"
+        );
+        fixture.close().await.unwrap();
+    });
 }
 
 pub async fn is_expanded<D: Driver>(d: &mut D) -> Result<bool> {

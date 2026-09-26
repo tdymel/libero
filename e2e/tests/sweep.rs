@@ -183,3 +183,48 @@ fn the_landing_gradients_are_measured() {
         }
     });
 }
+
+/// The docs demos follow their own rule: the trigger's blur closes the list.
+#[test]
+fn a_combobox_demo_closes_on_an_outside_click() {
+    block_on(async {
+        for mode in ["Select", "Suggestions"] {
+            let viewport = Viewport::Desktop;
+            let fixture =
+                Fixture::open_until("/form/combobox", viewport, Scheme::Light, "#docs-main *")
+                    .await
+                    .unwrap();
+            let page = &fixture.page;
+            tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+            let js = format!(
+                "(() => {{ const q = [...document.querySelectorAll('[role=radio],button,label')]; \
+                 const m = q.find(e => e.textContent.trim() === '{mode}'); if (m) m.click(); return !!m; }})()"
+            );
+            eval_bool(page, &js).await;
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            e2e::passes::pointer::click(page, "[role=combobox]")
+                .await
+                .unwrap();
+            if mode == "Suggestions" {
+                keyboard::type_text(page, "a").await.unwrap();
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            let before = eval_bool(page, "!!document.querySelector('[role=listbox]')").await;
+            e2e::passes::pointer::click(page, "#docs-main h1")
+                .await
+                .unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            let after = eval_bool(page, "!!document.querySelector('[role=listbox]')").await;
+            let expanded: String = page
+                .evaluate("document.querySelector('[role=combobox]').getAttribute('aria-expanded')")
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(before, "{mode}: the list never opened");
+            assert!(!after, "{mode}: the list stayed open after a click outside");
+            assert_eq!(expanded, "false", "{mode}");
+            let _ = fixture.close().await;
+        }
+    });
+}

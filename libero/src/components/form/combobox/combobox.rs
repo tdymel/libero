@@ -36,6 +36,7 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// The dropdown's corner radius.
     #[props(default, into)]
     radius: Input<Size>,
+    /// Draws no list and ignores the keys; the trigger reads as closed. Disable the trigger too.
     #[props(default)]
     disabled: Option<bool>,
     #[props(extends = GlobalAttributes)]

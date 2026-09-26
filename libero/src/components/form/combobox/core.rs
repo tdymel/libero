@@ -128,7 +128,6 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
 
     // Disabled or read-only never draws: pointer and ARIA pass this gate, not only the keys.
     let opened = props.opened && !props.disabled;
-    props.state.set_held(props.state.is_open() && !opened);
     let loading = props.loading.is_some();
     // Said outside the `aria-busy` dropdown, whose changes some readers hold back. While
     // fetching, the rows are the previous query's, so none are drawn or reachable.
@@ -165,6 +164,9 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 .find(|candidate| *candidate >= row)
                 .or_else(|| enabled.last().copied())
         });
+    if let (true, Some(row)) = (opened, active_row) {
+        props.state.snap_active(props.active, row);
+    }
     let set_active = props.onactive;
 
     let keys = ComboboxKeys {
@@ -207,6 +209,8 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
 
     // Nothing to show draws nothing, but a `header` keeps the box: a failed search must stay editable.
     let showing = opened && (loading || count > 0 || empty.is_some() || props.header.is_some());
+    // Open in the state but nothing on screen: the trigger must not claim `aria-expanded`.
+    props.state.set_held(props.state.is_open() && !showing);
     // Mounted only while showing, so a closed list pays for no popover.
     let popup = showing.then(|| {
         rsx! {

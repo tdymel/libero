@@ -74,6 +74,14 @@ impl ComboboxState {
         }
     }
 
+    /// Moves a highlight the list snapped off a refused row, so the trigger names the lit row.
+    pub(crate) fn snap_active(&self, from: Option<usize>, to: usize) {
+        let mut active = self.active;
+        if *active.peek() == from && from != Some(to) {
+            active.set(Some(to));
+        }
+    }
+
     /// Peek-compared like `set_rows`.
     pub(crate) fn set_held(&self, held: bool) {
         let mut signal = self.held;
