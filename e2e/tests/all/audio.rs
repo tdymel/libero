@@ -29,6 +29,41 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// WCAG 1.4.10: from 360px down to 320px the whole row fits in the player, the
+/// volume slider giving way at 352px and the mute button staying.
+#[test]
+fn the_controls_fit_a_narrow_player() {
+    block_on(async {
+        let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        for (width, volume) in [(360, true), (353, true), (352, false), (320, false)] {
+            page.evaluate(format!(
+                "document.querySelector('#player').style.width = '{width}px'"
+            ))
+            .await
+            .unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{ const player = document.querySelector('#player [role=group]').getBoundingClientRect();
+                     const row = [...document.querySelectorAll('#player [data-slot=controls] > *')]
+                         .filter((e) => getComputedStyle(e).display !== 'none');
+                     const fits = row.every((e) => {{ const r = e.getBoundingClientRect();
+                         return r.left >= player.left && r.right <= player.right; }});
+                     const shown = getComputedStyle(document.querySelector('#player [data-slot=volume]')).display !== 'none';
+                     const mute = document.querySelector('#player button[aria-label=Mute]');
+                     return player.width === {width} && fits && shown === {volume}
+                         && mute !== null && getComputedStyle(mute).display !== 'none'; }})()"
+                ),
+                &format!("the row to fit {width}px"),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 fn audio(id: &str, js: &str) -> String {
     format!("(() => {{ const a = document.querySelector('#{id} audio'); return {js}; }})()")
 }
@@ -47,8 +82,12 @@ fn the_controls_follow_the_element() {
 
         wait::for_js_true(
             page,
-            &format!("{} === '0:00 / 0:04'", time_text("player")),
-            "the duration",
+            &format!(
+                "{} === '0:00 / 0:04' && {}",
+                time_text("player"),
+                audio("player", "a.currentSrc.startsWith('data:audio/wav')")
+            ),
+            "the duration, from the `src` after an unplayable source",
         )
         .await
         .unwrap();

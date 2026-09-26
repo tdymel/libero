@@ -100,6 +100,19 @@ fn a_block_without_a_language_shows_no_language_label() {
     );
 }
 
+/// Todo 1252. A header with no language and no copy button would be an empty bar.
+#[test]
+fn a_header_with_nothing_to_show_is_dropped() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { CodeBlock { source: "a -> b", header: true, copyable: false } }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(!html.contains(r#"data-slot="header""#), "{html}");
+}
+
 /// Todo 668. No grammar still draws the diff's marker and spoken word, on the
 /// first render: there is no highlighting to wait for.
 #[test]

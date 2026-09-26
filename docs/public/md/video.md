@@ -1,7 +1,7 @@
 # Video
 
 Crate: `libero`
-Import: `use libero::components::{MediaTrack, TrackKind, Video};`
+Import: `use libero::components::{MediaSource, MediaTrack, TrackKind, Video};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/video.rs>
 Index: [index.md](index.md) lists every other page
 Description: A `<video>` with libero's own controls, captions and fullscreen, on the `use_media` hook.
@@ -41,11 +41,33 @@ A captions or subtitles track adds the captions button: it shows the default
 one, else the first. Pass a `use_media()` handle to `Video { media }` to drive
 the player from outside.
 
+### Several formats
+
+A browser plays the first `sources` entry whose type it supports, then `src`.
+WebM first and an MP4 as `src` reach every browser, Safari included.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{MediaSource, Video};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Video {
+            src: "/launch.mp4",
+            sources: vec![MediaSource::new("/launch.webm", "video/webm")],
+            label: "Launch day",
+        }
+    }
+}
+```
+
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `src` | `String` | required | The file's URL. |
+| `sources` | `Vec<MediaSource>` | `[]` | The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`. `src` stays the fallback and the download link. |
 | `label` | `String` | required | Names the player, e.g. the video's title. |
 | `poster` | `Option<String>` | `None` | A picture shown until playing starts. |
 | `aspect_ratio` | `Option<String>` | `None` | The picture's CSS `aspect-ratio`, such as `"16 / 9"`, so the box holds its shape before the file loads. Unset, the file's own. |
@@ -138,5 +160,7 @@ screen, from [use_fullscreen](use_fullscreen.md).
   trails by a moment.
 - In fullscreen the shown controls cover the bottom of the picture, captions
   included.
-- One `src`, no list of formats: serve one every target plays, such as MP4
-  (H.264). The demo's VP9 WebM may not play in older Safari.
+- The demo's VP9 WebM may not play in older Safari: give `sources` a WebM and
+  keep an MP4 (H.264) as `src`.
+- With `sources`, a file changed after mount is not loaded: the browser reads
+  `<source>` once, so remount the player to swap files.

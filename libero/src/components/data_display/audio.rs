@@ -28,12 +28,18 @@ parts_enum! {
     }
 }
 
+const CONTROLS_CONTAINER: &str = "libero-audio-controls";
+const NARROW: &str = "(max-width: 22rem)";
+
 static AUDIO_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
         .gap(SizeCss::SPACING.value(Size::Xs))
         .min_width("0")
-        .selector(AudioPart::Controls.selector(), sx().flex_wrap("nowrap"))
+        .selector(
+            AudioPart::Controls.selector(),
+            sx().flex_wrap("nowrap").container(CONTROLS_CONTAINER),
+        )
         .selector(
             AudioPart::Time.selector(),
             sx().font_variant_numeric("tabular-nums")
@@ -44,9 +50,15 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
             AudioPart::Seek.selector(),
             sx().flex("1 1 8rem").min_width("6rem"),
         )
+        // A phone's width: the volume slider goes (mute and the keys remain), so
+        // the row fits at 320px.
         .selector(
             AudioPart::Volume.selector(),
-            sx().flex("0 1 6rem").min_width("4rem"),
+            sx().flex("0 1 6rem").min_width("4rem").container_query(
+                CONTROLS_CONTAINER,
+                NARROW,
+                sx().display("none"),
+            ),
         )
         .selector(
             AudioPart::Message.selector(),
@@ -76,12 +88,48 @@ impl MediaPreload {
     }
 }
 
+/// The file in another format, for the `sources` of [`Audio`] and
+/// [`Video`](super::Video): a browser plays the first whose `mime` it supports.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MediaSource {
+    /// The file's URL.
+    pub src: String,
+    /// Its MIME type, such as `"video/mp4"` or `"audio/ogg; codecs=opus"`.
+    pub mime: String,
+}
+
+impl MediaSource {
+    pub fn new(src: impl Into<String>, mime: impl Into<String>) -> Self {
+        Self {
+            src: src.into(),
+            mime: mime.into(),
+        }
+    }
+}
+
+/// `src` as the element's attribute, or with `sources` the last `<source>` after them.
+pub(super) fn media_sources(src: &str, sources: &[MediaSource]) -> (Option<String>, Element) {
+    if sources.is_empty() {
+        return (Some(src.to_string()), VNode::empty());
+    }
+    let list = rsx! {
+        for other in sources {
+            source { src: other.src.clone(), r#type: other.mime.clone() }
+        }
+        source { src: src.to_string() }
+    };
+    (None, list)
+}
+
 base_props! {
     parts(AudioPart);
     pub struct AudioProps {
         /// The file's URL.
         #[props(into)]
         src: String,
+        /// The file in other formats, tried in order before `src`.
+        #[props(default)]
+        sources: Vec<MediaSource>,
         /// Names the player, e.g. the track's title.
         #[props(into)]
         label: String,
@@ -167,9 +215,10 @@ pub fn Audio(props: AudioProps) -> Element {
     let mut attributes = props.attributes;
     attributes.extend(player.attributes());
 
+    let (src, sources) = media_sources(&props.src, &props.sources);
     let body = rsx! {
         audio {
-            src: props.src.clone(),
+            src,
             autoplay: props.autoplay,
             muted: props.muted,
             "loop": props.looping,
@@ -179,6 +228,7 @@ pub fn Audio(props: AudioProps) -> Element {
             onpause: move |_| if let Some(handler) = onpause { handler.call(()) },
             onended: move |_| if let Some(handler) = onended { handler.call(()) },
             ..media.attributes(),
+            {sources}
         }
         if unsupported {
             MediaFallback { src: props.src.clone(), children: props.children }

@@ -1,9 +1,15 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Input, Text, Video, VideoPart},
+    components::{Code, CodeBlock, Input, Text, Video, VideoPart},
     theme::Size,
 };
+
+const FORMATS: &str = r#"Video {
+    src: "/launch.mp4",
+    sources: vec![MediaSource::new("/launch.webm", "video/webm")],
+    label: "Launch day",
+}"#;
 
 #[component]
 pub fn VideoPage() -> Element {
@@ -15,6 +21,9 @@ pub fn VideoPage() -> Element {
             properties: vec![
                 props("Video", vec![
                     prop("src", "String").default("required").doc("The file's URL."),
+                    prop("sources", "Vec<MediaSource>")
+                        .default("[]")
+                        .doc("The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`. `src` stays the fallback and the download link."),
                     prop("label", "String")
                         .default("required")
                         .doc("Names the player, e.g. the video's title."),
@@ -86,7 +95,8 @@ pub fn VideoPage() -> Element {
                     "Blitz plays no media: the controls give way to `children`, by default a link to the file.",
                     "On a WebView each command and state change crosses the IPC, so the time trails by a moment.",
                     "In fullscreen the shown controls cover the bottom of the picture, captions included.",
-                    "One `src`, no list of formats: serve one every target plays, such as MP4 (H.264). The demo's VP9 WebM may not play in older Safari.",
+                    "The demo's VP9 WebM may not play in older Safari: give `sources` a WebM and keep an MP4 (H.264) as `src`.",
+                    "With `sources`, a file changed after mount is not loaded: the browser reads `<source>` once, so remount the player to swap files.",
                 ]),
             lead: rsx! {
                 Text {
@@ -124,6 +134,19 @@ pub fn VideoPage() -> Element {
                         looping: values.str("looping") == "true",
                     }
                 },
+            }
+            DocSection {
+                title: "Several formats",
+                Text {
+                    "A browser plays the first "
+                    Code { source: "sources" }
+                    " entry whose type it supports, then "
+                    Code { source: "src" }
+                    ". WebM first and an MP4 as "
+                    Code { source: "src" }
+                    " reach every browser, Safari included."
+                }
+                CodeBlock { source: FORMATS, language: "rust" }
             }
         }
     }

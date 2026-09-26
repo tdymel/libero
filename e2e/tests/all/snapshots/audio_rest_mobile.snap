@@ -8,14 +8,12 @@ group "Silence"
     button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
     button "Mute"
-    slider "Volume" = 100 [valuemax=100] [valuemin=0]
   status [atomic] [live=polite]
 group "Broken"
   toolbar "Player controls"
     button "Play"
     slider "Seek" = 0 [disabled] [valuemax=1] [valuemin=0]
     button "Mute"
-    slider "Volume" = 100 [valuemax=100] [valuemin=0]
   alert [atomic] [live=assertive]
     StaticText "This media could not be played."
   status [atomic] [live=polite]

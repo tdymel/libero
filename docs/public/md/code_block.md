@@ -84,7 +84,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `source` | `String` | required | The text. Highlighted when `language` names a grammar this build compiles in. |
 | `language` | `Language` | - | One of 30 grammars, each behind its own `code-lang-*` feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` work too. The default features cover `rust`, `bash`, `css` and a few more. An unknown name, or one whose feature is off, renders plain text. |
-| `header` | `bool` | `true` | A bar above the code naming the language, or saying it is unknown. |
+| `header` | `bool` | `true` | A bar above the code naming the language. Left out when there is no language and no copy button. |
 | `copyable` | `bool` | `true` | Shows a [`CopyButton`](copy_button.md). Without `header`, it floats in the top-right corner. |
 | `max_lines` | `u32` | - | Caps the height at about this many lines and scrolls the rest. Unset, the block grows to fit. |
 | `line_numbers` | `bool` | `true` | Shows the line-number gutter. |

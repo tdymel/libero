@@ -1,8 +1,8 @@
 use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
-use super::MediaPreload;
 use super::media_controls::{Captions, MediaControls, MediaFallback, use_media_keys};
+use super::{MediaPreload, MediaSource, audio::media_sources};
 use crate::{
     components::{
         common::{HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
@@ -177,6 +177,10 @@ base_props! {
         /// The file's URL.
         #[props(into)]
         src: String,
+        /// The file in other formats, tried in order before `src`, such as WebM
+        /// then MP4 for Safari.
+        #[props(default)]
+        sources: Vec<MediaSource>,
         /// Names the player, e.g. the video's title.
         #[props(into)]
         label: String,
@@ -352,10 +356,11 @@ pub fn Video(props: VideoProps) -> Element {
         ));
     }
 
+    let (src, sources) = media_sources(&props.src, &props.sources);
     let body = rsx! {
         video {
             "data-slot": VideoPart::Media.slot(),
-            src: props.src.clone(),
+            src,
             poster: props.poster.clone(),
             style: aspect_ratio,
             autoplay: props.autoplay,
@@ -368,6 +373,7 @@ pub fn Video(props: VideoProps) -> Element {
             onpause: move |_| if let Some(handler) = onpause { handler.call(()) },
             onended: move |_| if let Some(handler) = onended { handler.call(()) },
             ..media.attributes(),
+            {sources}
             for track in props.tracks.iter() {
                 track {
                     src: track.src.clone(),

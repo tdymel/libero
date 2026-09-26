@@ -6,7 +6,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{MediaTrack, TrackKind, Video},
+    components::{MediaSource, MediaTrack, TrackKind, Video},
     localization::{Localization, MediaLabels},
 };
 
@@ -53,6 +53,42 @@ fn the_player_is_a_named_group_round_a_bare_video_element() {
     assert!(track.contains_key("default"), "{html}");
     // A default track starts shown, so the toggle starts pressed.
     assert!(html.contains(r#"aria-pressed="true""#), "{html}");
+}
+
+/// Todo 1247. With `sources`, `<source>` children in order, `src` last and
+/// untyped, and no `src` attribute that would win over them; tracks after.
+#[test]
+fn sources_render_in_order_before_src_and_the_tracks() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Video {
+                    src: "/a.ogv",
+                    sources: vec![
+                        MediaSource::new("/a.webm", "video/webm"),
+                        MediaSource::new("/a.mp4", "video/mp4"),
+                    ],
+                    label: "Launch",
+                    tracks: vec![MediaTrack { src: "/a.vtt".into(), ..Default::default() }],
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert!(!attributes_of(&html, "video").contains_key("src"), "{html}");
+    let order: Vec<usize> = [
+        r#"<source src="/a.webm" type="video/webm""#,
+        r#"<source src="/a.mp4" type="video/mp4""#,
+        r#"<source src="/a.ogv""#,
+        "<track",
+    ]
+    .iter()
+    .map(|tag| html.find(tag).unwrap_or_else(|| panic!("{tag} in {html}")))
+    .collect();
+    assert!(order.is_sorted(), "{html}");
+    assert!(!html.contains(r#"src="/a.ogv" type"#), "{html}");
 }
 
 #[test]

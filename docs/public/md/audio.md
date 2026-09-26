@@ -53,6 +53,7 @@ Pass the handle to `Audio { media }` to drive the built-in player from outside.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `src` | `String` | required | The file's URL. |
+| `sources` | `Vec<MediaSource>` | `[]` | The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`. `src` stays the fallback and the download link. |
 | `label` | `String` | required | Names the player, e.g. the track's title. |
 | `media` | `Option<MediaHandle>` | `None` | A handle from `use_media()`, to drive or read the player from outside. |
 | `autoplay` | `bool` | `false` | Starts on load. Browsers refuse it with sound: pair it with `muted`; a debug build warns otherwise. |
@@ -101,6 +102,8 @@ explains how parts work.
   each slider its own.
 - The play and mute buttons change their names (Play/Pause, Mute/Unmute) rather
   than using `aria-pressed`.
+- Below 22rem the volume slider hides and the mute button stays, so the row fits
+  at 320px (WCAG 1.4.10).
 - The seek slider's `aria-valuetext` reads "1:05 of 4:56" (the localization's
   `media.position`).
 - A polite status says "Loading" while playing waits for data; a failed source
@@ -119,3 +122,5 @@ explains how parts work.
   to the file.
 - On a WebView each command and state change crosses the IPC, so the time
   trails by a moment.
+- With `sources`, a file changed after mount is not loaded: the browser reads
+  `<source>` once, so remount the player to swap files.

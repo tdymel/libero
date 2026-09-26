@@ -1,7 +1,7 @@
-//! `Audio` over a generated 4 s silent WAV, a broken source, and `use_media` on a bare element.
+//! `Audio` over a generated 4 s silent WAV behind an unplayable `<source>`, a broken source, and `use_media` on a bare element.
 
 use dioxus::prelude::*;
-use libero::components::{Audio, Button, Flex, Text};
+use libero::components::{Audio, Button, Flex, MediaSource, Text};
 use libero::hooks::use_media;
 
 use crate::Routes;
@@ -53,7 +53,14 @@ fn AudioPage() -> Element {
     let media = use_media();
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "32rem",
-            div { id: "player", Audio { src: src.clone(), label: "Silence" } }
+            // A first source no browser plays: the WAV `src` after it is the one loaded.
+            div { id: "player",
+                Audio {
+                    src: src.clone(),
+                    sources: vec![MediaSource::new("/none.xyz", "audio/x-none")],
+                    label: "Silence",
+                }
+            }
             div { id: "broken", Audio { src: "data:audio/wav;base64,AAAA", label: "Broken" } }
             div { id: "custom",
                 audio { src, onmounted: media.mount(), ..media.attributes() }

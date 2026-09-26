@@ -51,7 +51,7 @@ pub fn CodeBlockPage() -> Element {
                 prop("language", "Language").doc(LANGUAGE_DOC),
                 prop("header", "bool")
                     .default("true")
-                    .doc("A bar above the code naming the language, or saying it is unknown."),
+                    .doc("A bar above the code naming the language. Left out when there is no language and no copy button."),
                 prop("copyable", "bool")
                     .default("true")
                     .doc("Shows a `CopyButton`. Without `header`, it floats in the top-right corner."),

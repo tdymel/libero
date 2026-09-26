@@ -251,12 +251,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .prepare();
     let box_class = use_css(Some(&CHECKBOX_BOX_SX), CssLayer::Framework);
 
-    let input = field
-        .aria(input)
-        .attr("type", "checkbox")
-        .attr("checked", checked && !indeterminate)
-        .attr("data-controlled", true)
-        .attr("aria-checked", indeterminate.then_some("mixed"))
+    let input = checkbox_input(field.aria(input), checked, indeterminate)
         .attr("name", bound.name().map(str::to_string))
         // A toolbar keeps a disabled item focusable, in its arrow order.
         .attr("disabled", disabled && item.is_none())
@@ -272,8 +267,44 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 
+    // A card takes the click itself. Focuses the input as a native click would,
+    // so its blur shows the rules.
+    let press = move || {
+        if !card {
+            toggle();
+            if !disabled {
+                let _ = element.focus();
+            }
+        }
+    };
+    field.render(checkbox_control(
+        control,
+        input,
+        box_class,
+        indeterminate,
+        press,
+    ))
+}
+
+/// The hidden input's checkbox attributes; `mixed` wins over `checked`.
+fn checkbox_input(input: BoxStyle, checked: bool, indeterminate: bool) -> BoxStyle {
+    input
+        .attr("type", "checkbox")
+        .attr("checked", checked && !indeterminate)
+        .attr("data-controlled", true)
+        .attr("aria-checked", indeterminate.then_some("mixed"))
+}
+
+/// The control slot: the hidden input, the box, and the focus ring.
+fn checkbox_control(
+    control: BoxStyle,
+    input: Element,
+    box_class: Option<String>,
+    indeterminate: bool,
+    press: impl Fn() + 'static,
+) -> Element {
     // Decoration that carries the click: a hidden input has no hit area, and a
-    // second `<label for>` would compete for the name. A card takes the click itself.
+    // second `<label for>` would compete for the name.
     let (slot, icon) = match indeterminate {
         true => (IconSlot::CheckboxIndeterminate, lucide::minus::outlined),
         false => (IconSlot::CheckboxCheck, lucide::check::outlined),
@@ -283,29 +314,18 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
             class: box_class,
             "data-slot": CheckboxPart::Box.slot(),
             "aria-hidden": "true",
-            // Focuses the input as a native click would, so its blur shows the rules.
-            onclick: move |_| {
-                if !card {
-                    toggle();
-                    if !disabled {
-                        let _ = element.focus();
-                    }
-                }
-            },
+            onclick: move |_| press(),
             // Heavier than other glyphs: drawn at 65% of a small box.
             Glyph { slot, icon, stroke_width: "3" }
         }
     };
-
-    field.render(
-        control
-            .attr("data-slot", CheckboxPart::Control.slot())
-            .render(
-                HtmlTag::Span,
-                Vec::new(),
-                vec![input, box_node, ring_overlay()],
-            ),
-    )
+    control
+        .attr("data-slot", CheckboxPart::Control.slot())
+        .render(
+            HtmlTag::Span,
+            Vec::new(),
+            vec![input, box_node, ring_overlay()],
+        )
 }
 
 /// A plain [`Checkbox`]'s styling, resolved once for many label-less boxes
@@ -378,40 +398,25 @@ impl CheckboxLook {
         onchange: impl Fn(bool) + Clone + 'static,
     ) -> Element {
         let toggle = move || onchange(!checked);
-        let input = Activation::new(element, toggle.clone())
-            .wire(self.input.clone())
-            .attr("type", "checkbox")
-            .attr("checked", checked)
-            .attr("data-controlled", true)
-            .attr("aria-label", aria_label)
-            .render(HtmlTag::Input, Vec::new(), ());
-        let box_node = rsx! {
-            span {
-                class: self.box_class.clone(),
-                "data-slot": CheckboxPart::Box.slot(),
-                "aria-hidden": "true",
-                onclick: move |_| {
-                    toggle();
-                    let _ = element.focus();
-                },
-                Glyph { slot: IconSlot::CheckboxCheck, icon: lucide::check::outlined, stroke_width: "3" }
-            }
-        };
+        let input = checkbox_input(
+            Activation::new(element, toggle.clone()).wire(self.input.clone()),
+            checked,
+            false,
+        )
+        .attr("aria-label", aria_label)
+        .render(HtmlTag::Input, Vec::new(), ());
         let control = match checked {
             true => &self.on,
             false => &self.off,
         };
+        let press = move || {
+            toggle();
+            let _ = element.focus();
+        };
         self.wrapper.clone().render(
             HtmlTag::Div,
             Vec::new(),
-            control
-                .clone()
-                .attr("data-slot", CheckboxPart::Control.slot())
-                .render(
-                    HtmlTag::Span,
-                    Vec::new(),
-                    vec![input, box_node, ring_overlay()],
-                ),
+            checkbox_control(control.clone(), input, self.box_class.clone(), false, press),
         )
     }
 }

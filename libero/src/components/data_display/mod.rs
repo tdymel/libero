@@ -20,7 +20,7 @@ mod timeline;
 mod video;
 
 pub use accordion::{Accordion, AccordionOpen, AccordionProps};
-pub use audio::{Audio, AudioPart, AudioProps, MediaPreload};
+pub use audio::{Audio, AudioPart, AudioProps, MediaPreload, MediaSource};
 pub use avatar::{Avatar, AvatarGroup, AvatarGroupProps, AvatarPart, AvatarProps, AvatarSpec};
 pub use badge::{Badge, BadgeProps};
 pub use carousel::{Carousel, CarouselAlign, CarouselPart, CarouselProps};

@@ -400,11 +400,13 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     use_token_theme();
     let theme = use_theme();
     let labels = use_localization().code_block;
-    let header = props.header.unwrap_or(theme.code_block.header);
     let copyable = props.copyable.unwrap_or(theme.code_block.copyable);
     let line_numbers = props.line_numbers.unwrap_or(theme.code_block.line_numbers);
 
     let language = props.language.as_ref().copied();
+    // Nothing to name and nothing to copy: no empty bar (todo 1252).
+    let header =
+        props.header.unwrap_or(theme.code_block.header) && (language.is_some() || copyable);
     // Everything shown or copied uses the stripped version, so the two match.
     let display_source = if props.diff {
         strip_diff_markers(&props.source)
