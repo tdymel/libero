@@ -10,8 +10,8 @@ use crate::{
         layout::use_box,
     },
     hooks::{
-        DragMove, DragOptions, DragStart, drag_handle_sx, use_drag, use_element, use_id,
-        use_local_state, use_localization,
+        DragMove, DragOptions, DragStart, use_drag, use_element, use_id, use_local_state,
+        use_localization,
     },
     localization::fill,
     platform::{ElementApi, when_laid_out},
@@ -68,7 +68,7 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                 .cursor(cursor.to_string()),
         )
     };
-    let base = drag_handle_sx()
+    let base = sx()
         .position("relative")
         .display("inline-block")
         // The box maps onto this, so it must hug the image, in a flex column too.
@@ -105,7 +105,11 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
             placed().outline("1px solid rgba(255, 255, 255, 0.9)"),
         )
         .selector("& > [data-slot='box']:focus-visible", focus_ring_sx())
-        .selector("& > [data-slot='frame']", placed().cursor("move"))
+        // Only the box claims touches: the rest of the image still scrolls the page.
+        .selector(
+            "& > [data-slot='frame']",
+            placed().cursor("move").touch_action("none"),
+        )
         .selector(
             "& > [data-slot='frame'] > [data-slot='handle']",
             sx().position("absolute")
@@ -133,7 +137,13 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
             "circle",
             sx().selector("& > [data-slot='mask'] > *", sx().border_radius("50%")),
         )
-        .when("disabled", sx().opacity("0.5").cursor("not-allowed"));
+        .when(
+            "disabled",
+            sx().opacity("0.5").cursor("not-allowed").selector(
+                "& > [data-slot='frame'], & > [data-slot='frame'] > [data-slot='handle']",
+                sx().cursor("not-allowed"),
+            ),
+        );
 
     [
         handle("nw", "0", "0", "nwse-resize"),

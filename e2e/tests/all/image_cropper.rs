@@ -120,6 +120,35 @@ e2e::scenario!(
     native: skip("Blitz has no canvas: the field takes the image uncropped")
 );
 
+/// A touch on the image outside the box scrolls the page; only the box takes drags.
+async fn only_the_box_claims_touches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let root = d.style(":has(> [data-slot=image])", "touch-action").await?;
+    anyhow::ensure!(root == "auto", "the cropper's touch-action is {root}");
+    let frame = d.style("[data-slot=frame]", "touch-action").await?;
+    anyhow::ensure!(frame == "none", "the box's touch-action is {frame}");
+    Ok(())
+}
+
+/// A disabled cropper shows no move or resize cursor over the box and its handles.
+async fn a_disabled_cropper_shows_no_grab_cursor<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for part in ["[data-slot=frame]", SOUTH_EAST, "[data-grip=e]"] {
+        let cursor = d.style(part, "cursor").await?;
+        anyhow::ensure!(cursor == "not-allowed", "{part} shows the {cursor} cursor");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    only_the_box_claims_touches,
+    "/image-cropper",
+    only_the_box_claims_touches
+);
+e2e::scenario!(
+    a_disabled_cropper_shows_no_grab_cursor,
+    "/image-cropper/disabled",
+    a_disabled_cropper_shows_no_grab_cursor
+);
+
 async fn the_arrows_move_the_box<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(BOX).await?;
     d.press(keyboard::ARROW_RIGHT).await?;

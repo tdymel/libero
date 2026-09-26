@@ -9,6 +9,10 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/image-cropper", || rsx! { ImageCropperPage {} }),
     ("/image-cropper/square", || rsx! { SquareCropperPage {} }),
+    (
+        "/image-cropper/disabled",
+        || rsx! { DisabledCropperPage {} },
+    ),
 ];
 
 const PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23339af0'/%3E%3Ccircle cx='200' cy='100' r='60' fill='%23ffd43b'/%3E%3C/svg%3E";
@@ -43,6 +47,20 @@ fn ImageCropperPage() -> Element {
                 onchange: move |next| crop.set(next),
             }
             p { id: "crop", "{reading(crop())}" }
+        }
+    }
+}
+
+#[component]
+fn DisabledCropperPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "md",
+            ImageCropper {
+                src: PICTURE,
+                alt: "A sun on blue",
+                disabled: true,
+                onchange: |_: CropRect| {},
+            }
         }
     }
 }
