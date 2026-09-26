@@ -5,7 +5,7 @@ use dioxus::html::FileData;
 use dioxus::prelude::*;
 
 use crate::platform::{
-    CaptureEvent, CaptureSession, CaptureSubscription, DeviceList, MediaDevice, OBSERVE_ATTR,
+    CAPTURE_ATTR, CaptureEvent, CaptureSession, CaptureSubscription, DeviceList, MediaDevice,
     PermissionKind, PermissionState, PermissionSubscription, UserMediaError, capture, constraints,
     file_from_bytes, next_observe_tag, permission,
 };
@@ -226,9 +226,10 @@ impl UserMedia {
 
     /// Spread on the preview `<video>` (`..media.attributes()`): the stream shows
     /// in the element carrying them. Keep it `muted`, so the microphone never echoes.
+    /// An `ElementHandle`'s attributes may go on the same video.
     pub fn attributes(&self) -> Vec<Attribute> {
         vec![Attribute::new(
-            OBSERVE_ATTR,
+            CAPTURE_ATTR,
             AttributeValue::Text(self.tag.to_string()),
             None,
             false,

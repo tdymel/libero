@@ -14,16 +14,51 @@ pub const ROUTES: Routes = &[
     ("/file-field/crop", || rsx! { FileCropPage {} }),
 ];
 
+/// The next file chooser answers itself with a 40 x 20 PNG, as no driver answers
+/// GTK's (1126): a detached input (the WebViews') at `click()`, an attached one at its event.
+const STUB_PICKER: &str = "const click = HTMLInputElement.prototype.click;
+    const answer = (input) => {
+        HTMLInputElement.prototype.click = click;
+        document.removeEventListener('click', onClick, true);
+        const bytes = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAIAAABwJOjsAAAAJ0lEQVR42mP4z8BANqJA63+GUYtHLR61eNTiUYtHLR61eNTikWMxAGDtHQ7V1k7XAAAAAElFTkSuQmCC'), (ch) => ch.charCodeAt(0));
+        const files = new DataTransfer();
+        files.items.add(new File([bytes], 'e2e-crop-picked.png', { type: 'image/png' }));
+        input.files = files.files;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const onClick = (event) => {
+        if (event.target instanceof HTMLInputElement && event.target.type === 'file') {
+            event.preventDefault();
+            answer(event.target);
+        }
+    };
+    document.addEventListener('click', onClick, true);
+    HTMLInputElement.prototype.click = function () {
+        if (this.type !== 'file' || this.isConnected) return click.call(this);
+        answer(this);
+    };";
+
 /// A square crop of a dropped image (1218): `#rect` reads the crop in whole
-/// percent, `#out` the file `onchange` got, with its PNG size.
+/// percent, `#out` the file `onchange` got, with its PNG size. `#stub-picker`
+/// makes Browse pick the PNG, for the WebViews' crop round trip (1230).
 #[component]
 fn FileCropPage() -> Element {
     let mut files = use_signal(Files::default);
     let mut rect = use_signal(String::new);
     let mut out = use_signal(String::new);
+    let mut stubbed = use_signal(|| false);
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "360px",
+            Button {
+                id: "stub-picker",
+                onclick: move |_| async move {
+                    let _ = document::eval(STUB_PICKER).await;
+                    stubbed.set(true);
+                },
+                "Stub the picker"
+            }
             FileField {
                 id: "avatar",
                 label: "Avatar",
@@ -61,6 +96,7 @@ fn FileCropPage() -> Element {
                     files.set(next);
                 },
             }
+            p { id: "stubbed", "{stubbed}" }
             p { id: "rect", "{rect}" }
             p { id: "out", "{out}" }
         }

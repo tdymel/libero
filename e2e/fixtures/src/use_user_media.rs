@@ -1,7 +1,9 @@
 //! `use_user_media`: its state in text, a preview, a snapshot and a recording.
 
 use dioxus::prelude::*;
-use libero::hooks::{UserMediaOptions, use_user_media, use_user_media_devices};
+use libero::hooks::{
+    UserMediaOptions, use_element, use_fullscreen, use_user_media, use_user_media_devices,
+};
 
 use crate::Routes;
 
@@ -15,6 +17,9 @@ fn Captured() -> Element {
         ..Default::default()
     });
     let mut devices = use_user_media_devices();
+    // A second hook's attributes on the same preview (1237).
+    let preview = use_element();
+    let fullscreen = use_fullscreen(preview);
     let size = |file: Option<dioxus::html::FileData>| {
         file.map_or("none".to_string(), |file| {
             format!("{} {}", file.name(), file.size() > 0)
@@ -30,8 +35,11 @@ fn Captured() -> Element {
             playsinline: true,
             width: "160",
             height: "120",
-            ..media.attributes()
+            onmounted: preview.mount(),
+            ..media.attributes(),
+            ..fullscreen.attributes()
         }
+        button { id: "fullscreen", onclick: move |_| fullscreen.toggle(), "Fullscreen" }
         button { id: "start", onclick: move |_| media.start(), "Start" }
         button { id: "stop", onclick: move |_| media.stop(), "Stop" }
         button { id: "audio", onclick: move |_| audio.toggle(), "Audio" }
@@ -49,5 +57,6 @@ fn Captured() -> Element {
         p { id: "recorded", "{size(media.recording())}" }
         p { id: "cameras", "{devices.cameras().len()}" }
         p { id: "devices-supported", "{devices.is_supported()}" }
+        p { id: "is-fullscreen", "{fullscreen.is_fullscreen()}" }
     }
 }

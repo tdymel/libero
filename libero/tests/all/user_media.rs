@@ -33,7 +33,7 @@ fn a_server_render_reports_no_capture() {
         assert!(html.contains(expected), "{expected} missing in {html}");
     }
     assert!(
-        html.contains("<video data-lsx-observe="),
+        html.contains("<video data-lsx-capture="),
         "untagged preview in {html}"
     );
 }

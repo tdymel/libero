@@ -1,13 +1,14 @@
 //! `use_user_media`: mounting asks nothing; on the web Chromium's fake camera
 //! opens, shows, snapshots, records, stops and is refused. Blitz is unsupported.
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
 };
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Platform, eventually_text, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
+use e2e::passes::keyboard;
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or opens until asked; Blitz has no capture API.
@@ -34,6 +35,9 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             d.click("#start").await?;
             eventually_text(d, "#error", "Some(Denied)", "a start").await?;
             eventually_text(d, "#camera", "Denied", "a denial").await?;
+            fullscreen_beside_the_capture(d).await?;
+            d.press(keyboard::ESCAPE).await?;
+            eventually_text(d, "#is-fullscreen", "false", "Escape").await?;
         }
         // The runner granted the permission; the emulator's virtual camera answers.
         Platform::Android => {
@@ -50,10 +54,29 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             eventually_text(d, "#recorded", "recording.webm true", "a finish").await?;
             d.click("#stop").await?;
             eventually_text(d, "#live", "false", "a stop").await?;
+            // Native here, found by the watch's selector; Escape leaves it open.
+            fullscreen_beside_the_capture(d).await?;
+            eventually(d, "native fullscreen", async |d| {
+                Ok(d.attr("#preview", "data-fullscreen").await?.as_deref() == Some("native"))
+            })
+            .await?;
         }
         Platform::Web => {}
     }
     Ok(())
+}
+
+/// A WebView finds each hook's element by its own attribute: `use_fullscreen`'s
+/// tag on the preview leaves the capture's in place (1237). The video then
+/// covers the page, the toggle included.
+async fn fullscreen_beside_the_capture<D: Driver>(d: &mut D) -> Result<()> {
+    for name in ["data-lsx-capture", "data-lsx-observe"] {
+        if d.attr("#preview", name).await?.is_none() {
+            bail!("{:?}: the preview lost its {name}", d.platform());
+        }
+    }
+    d.click("#fullscreen").await?;
+    eventually_text(d, "#is-fullscreen", "true", "entering fullscreen").await
 }
 
 e2e::scenario!(

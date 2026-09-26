@@ -88,6 +88,38 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
     let _ = std::fs::remove_file(path);
 }
 
+/// The same crop through Browse, the PNG handed to the page's canvas and back
+/// as base64 in a WebView (1230).
+async fn a_picked_image_is_cropped<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#stub-picker").await?;
+    eventually_text(d, "#stubbed", "true", "stubbing the picker").await?;
+    d.click("#avatar").await?;
+    eventually(d, "the crop dialog to open", async |d| {
+        d.exists("[role=dialog] [data-slot=box]").await
+    })
+    .await?;
+    // Cancel, then Apply, the footer's last button; enabled once the box settles.
+    let apply = "[role=dialog] button:last-of-type:not(:first-of-type)";
+    eventually(d, "Apply to be enabled", async |d| {
+        Ok(d.attr(apply, "disabled").await?.is_none())
+    })
+    .await?;
+    d.click(apply).await?;
+    eventually_text(d, "#rect", "25,0,50,100", "Apply").await?;
+    eventually_text(d, "#out", "e2e-crop-picked.png image/png 16x16", "the crop").await?;
+    eventually(d, "the dialog to close", async |d| {
+        Ok(!d.exists("[role=dialog]").await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_picked_image_is_cropped_through_the_page,
+    "/file-field/crop",
+    a_picked_image_is_cropped,
+    native: skip("Blitz has no canvas: the field takes the image uncropped")
+);
+
 async fn the_arrows_move_the_box<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(BOX).await?;
     d.press(keyboard::ARROW_RIGHT).await?;
@@ -115,10 +147,17 @@ async fn the_arrows_resize_from_a_corner<D: Driver>(d: &mut D, _route: &str) -> 
     eventually_text(d, "#crop", "25,24,51,51", "ArrowUp on the top left corner").await
 }
 
-/// 40 px right on a 400 px wide picture is 10%; the corner takes the focus.
+/// A drag by a tenth of the picture, which a phone draws narrower than its 400 px.
+async fn tenth_of_the_picture<D: Driver>(d: &mut D) -> Result<(f64, f64)> {
+    let picture = d.rect("[data-slot=image]").await?;
+    Ok((picture.width / 10.0, picture.height / 10.0))
+}
+
+/// A tenth of the picture each way is 10%; the corner takes the focus.
 async fn a_drag_resizes_from_a_corner<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#before").await?;
-    d.drag(SOUTH_EAST, 40.0, 20.0).await?;
+    let (dx, dy) = tenth_of_the_picture(d).await?;
+    d.drag(SOUTH_EAST, dx, dy).await?;
     eventually_text(
         d,
         "#crop",
@@ -130,7 +169,8 @@ async fn a_drag_resizes_from_a_corner<D: Driver>(d: &mut D, _route: &str) -> Res
 }
 
 async fn a_drag_moves_the_box<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.drag("[data-slot=frame]", -40.0, -20.0).await?;
+    let (dx, dy) = tenth_of_the_picture(d).await?;
+    d.drag("[data-slot=frame]", -dx, -dy).await?;
     eventually_text(d, "#crop", "15,15,50,50", "a drag on the box").await?;
     eventually_focused(d, BOX, "the drag").await
 }

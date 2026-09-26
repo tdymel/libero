@@ -4,6 +4,10 @@
 use dioxus::html::FileData;
 use serde_json::Value;
 
+/// Carries the preview `<video>`'s tag; not [`OBSERVE_ATTR`](super::OBSERVE_ATTR),
+/// which an `ElementHandle` spread on the same video sets too (1237).
+pub(crate) const CAPTURE_ATTR: &str = "data-lsx-capture";
+
 /// Why the camera or microphone could not be used.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UserMediaError {
@@ -321,11 +325,11 @@ mod web {
     use serde_json::Value;
     use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 
+    use super::CAPTURE_ATTR;
     use super::{
         CAPTURE_SCRIPT, CaptureApi, CaptureEvent, CaptureSession, CaptureSubscription,
         DEVICES_SCRIPT, DeviceList,
     };
-    use crate::platform::OBSERVE_ATTR;
 
     /// `navigator.mediaDevices`, by name: absent off a secure context.
     pub(super) fn media_devices() -> Option<Object> {
@@ -400,7 +404,7 @@ mod web {
                     callback(event);
                 }
             });
-            let data = js_sys::Array::of2(&OBSERVE_ATTR.into(), &tag.to_string().into());
+            let data = js_sys::Array::of2(&CAPTURE_ATTR.into(), &tag.to_string().into());
             let session = run(CAPTURE_SCRIPT, "session", data.into(), &send);
             Box::new(WebSession {
                 session,

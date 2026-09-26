@@ -24,8 +24,8 @@ use crate::platform::{
     MediaQuerySubscription, OBSERVE_ATTR, OWNER_ATTR, PRESS_MARKER_ATTR, PlatformError, PressApi,
     PressSubscription, Read, ScrollApi, ScrollSubscription,
     capture::{
-        CAPTURE_SCRIPT, CaptureApi, CaptureEvent, CaptureSession, CaptureSubscription,
-        DEVICES_SCRIPT, DeviceList,
+        CAPTURE_ATTR, CAPTURE_SCRIPT, CaptureApi, CaptureEvent, CaptureSession,
+        CaptureSubscription, DEVICES_SCRIPT, DeviceList,
     },
     clipboard::{ClipboardApi, Write},
     file_dialog::{FileDialogApi, Picked, held_file},
@@ -887,7 +887,7 @@ impl CaptureApi for WebViewCapture {
     fn session(&self, tag: u64, callback: Box<dyn Fn(CaptureEvent)>) -> Box<dyn CaptureSession> {
         let slot = Rc::new(Slot::new());
         let script = eval_with(
-            json!([OBSERVE_ATTR, tag.to_string()]),
+            json!([CAPTURE_ATTR, tag.to_string()]),
             &format!(
                 "{CAPTURE_SEND}
                 {CAPTURE_SCRIPT}

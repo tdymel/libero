@@ -284,14 +284,29 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         let _ = element.focus();
     });
 
-    let onstart = {
+    // The latest move while the start is unmeasured: a slow WebView moves first (1230).
+    let early = use_local_state(|| None::<DragMove>);
+    let move_to = {
         let (start, grip) = (start.clone(), grip.clone());
+        use_callback(move |event: DragMove| {
+            let (from, width, height) = start.get();
+            let delta = event.delta();
+            let rect = from.resized(grip.get(), delta.x / width, delta.y / height, ratio, min);
+            if rect != shown {
+                emit.call(rect);
+            }
+        })
+    };
+    let onstart = {
+        let (start, grip, early) = (start.clone(), grip.clone(), early.clone());
         use_callback(move |event: DragStart| {
             if !interactive {
                 event.cancel.call(());
                 return;
             }
-            let (start, grabbed) = (start.clone(), grip.get());
+            let (start, grabbed, early) = (start.clone(), grip.get(), early.clone());
+            start.set((shown, 0.0, 0.0));
+            early.set(None);
             // Started here, awaited in the task: under Blitz a read resolves
             // where it is called.
             let size = root.dimensions();
@@ -306,20 +321,19 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 }
                 image_ratio.set(Some(size.width / size.height));
                 start.set((shown, size.width, size.height));
+                if let Some(moved) = early.get() {
+                    move_to.call(moved);
+                }
                 // The drag cancels the pointerdown, and with it the focus.
                 focus_grip.call(grabbed);
             });
         })
     };
     let onmove = {
-        let (start, grip) = (start.clone(), grip.clone());
-        use_callback(move |event: DragMove| {
-            let (from, width, height) = start.get();
-            let delta = event.delta();
-            let rect = from.resized(grip.get(), delta.x / width, delta.y / height, ratio, min);
-            if rect != shown {
-                emit.call(rect);
-            }
+        let start = start.clone();
+        use_callback(move |event: DragMove| match start.get() {
+            (_, width, _) if width <= 0.0 => early.set(Some(event)),
+            _ => move_to.call(event),
         })
     };
     let drag = use_drag(DragOptions {

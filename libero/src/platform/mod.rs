@@ -52,8 +52,8 @@ pub(crate) use a11y_media::{
 // Renderer seams that everything above reaches `backend` through (820).
 pub(crate) use backend::{Listener, Outlet, PortalEntry, PortalRoot, SheetWatch, element};
 pub(crate) use capture::{
-    CaptureEvent, CaptureSession, CaptureSubscription, DeviceList, capture, constraints,
-    file_from_bytes,
+    CAPTURE_ATTR, CaptureEvent, CaptureSession, CaptureSubscription, DeviceList, capture,
+    constraints, file_from_bytes,
 };
 pub use capture::{MediaDevice, UserMediaError};
 pub(crate) use click::{
