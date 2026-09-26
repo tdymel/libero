@@ -12,7 +12,72 @@ pub const ROUTES: Routes = &[
     ("/modal", || rsx! { ModalPage {} }),
     ("/modal/static", || rsx! { StaticModalPage {} }),
     ("/modal/menu", || rsx! { MenuModalPage {} }),
+    ("/modal/nested", || rsx! { NestedModalPage {} }),
+    ("/modal/tall", || rsx! { TallModalPage {} }),
 ];
+
+/// A dialog taller than the viewport, as at 200% zoom or on a 320px phone.
+#[component]
+fn TallModalPage() -> Element {
+    let tall = use_modal(|s: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Terms",
+                for line in 0..40 {
+                    Text { "Clause {line}: a long line of terms the reader has to scroll to." }
+                }
+                Button { id: "accept", onclick: move |_| s.close(), "Accept" }
+            }
+        }
+    });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                tall.open();
+            },
+            "Open terms"
+        }
+    }
+}
+
+/// A modal opened from inside a modal, on a page tall enough to scroll.
+#[component]
+fn NestedModalPage() -> Element {
+    let inner = use_modal(|s: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Inner",
+                Button { id: "inner-close", onclick: move |_| s.close(), "Close inner" }
+                Button { id: "inner-other", variant: "text", "Other" }
+            }
+        }
+    });
+    let outer = use_modal(move |s: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Outer",
+                Button {
+                    id: "open-inner",
+                    onclick: move |_| {
+                        inner.open();
+                    },
+                    "Open inner"
+                }
+                Button { id: "outer-close", variant: "text", onclick: move |_| s.close(), "Close outer" }
+            }
+        }
+    });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                outer.open();
+            },
+            "Open outer"
+        }
+        div { style: "height: 3000px;", "Tall page" }
+    }
+}
 
 /// A menu inside a dialog: Android's Back closes the menu, then the dialog (1275).
 #[component]

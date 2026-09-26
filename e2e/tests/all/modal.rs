@@ -249,6 +249,162 @@ e2e::scenario!(
     desktop: skip("1275: no Back key off Android")
 );
 
+async fn eval_bool(page: &chromiumoxide::Page, js: &str) -> bool {
+    page.evaluate(js).await.unwrap().into_value().unwrap()
+}
+
+async fn dialog_count(page: &chromiumoxide::Page) -> i64 {
+    page.evaluate("document.querySelectorAll('[role=dialog]').length")
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
+}
+
+async fn wait_dialogs(page: &chromiumoxide::Page, n: i64, what: &str) {
+    wait::for_js_true(
+        page,
+        &format!("document.querySelectorAll('[role=dialog]').length === {n}"),
+        what,
+    )
+    .await
+    .unwrap();
+}
+
+/// Layers close one at a time: Escape and a backdrop click each close only the top
+/// modal, focus goes back to the control that opened it, the scroll lock holds until the last.
+#[test]
+fn nested_modals_close_one_layer_at_a_time() {
+    block_on(async {
+        let fixture = Fixture::open("/modal/nested", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait_dialogs(page, 1, "the outer dialog").await;
+        pointer::click(page, "#open-inner").await.unwrap();
+        wait_dialogs(page, 2, "the inner dialog").await;
+        wait::for_js_true(
+            page,
+            "document.activeElement.closest('[role=dialog]')?.querySelector('#inner-close') != null",
+            "focus in the inner dialog",
+        )
+        .await
+        .unwrap();
+        assert!(
+            eval_bool(
+                page,
+                "getComputedStyle(document.body).overflow === 'hidden'"
+            )
+            .await,
+            "no scroll lock"
+        );
+
+        for _ in 0..4 {
+            keyboard::press(page, keyboard::TAB).await.unwrap();
+            assert!(
+                eval_bool(
+                    page,
+                    "document.activeElement.closest('[role=dialog]')?.querySelector('#inner-close') !== null"
+                )
+                .await,
+                "Tab left the inner dialog"
+            );
+        }
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait_dialogs(page, 1, "Escape to close the inner only").await;
+        focus::wait_for_focus(page, "#open-inner", "Escape on the inner")
+            .await
+            .unwrap();
+        assert!(
+            eval_bool(
+                page,
+                "getComputedStyle(document.body).overflow === 'hidden'"
+            )
+            .await,
+            "the scroll lock dropped with the outer still open"
+        );
+
+        pointer::click(page, "#open-inner").await.unwrap();
+        wait_dialogs(page, 2, "the inner again").await;
+        // Backdrop of the inner: top left corner.
+        pointer::click_at(page, pointer::Point { x: 4.0, y: 4.0 })
+            .await
+            .unwrap();
+        wait_dialogs(page, 1, "a backdrop click to close the inner only").await;
+        focus::wait_for_focus(page, "#open-inner", "backdrop on the inner")
+            .await
+            .unwrap();
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait_dialogs(page, 0, "Escape to close the outer").await;
+        focus::wait_for_focus(page, TRIGGER, "Escape on the outer")
+            .await
+            .unwrap();
+        assert!(
+            eval_bool(
+                page,
+                "getComputedStyle(document.body).overflow !== 'hidden'"
+            )
+            .await,
+            "the scroll lock stayed after the last close"
+        );
+        assert_eq!(dialog_count(page).await, 0);
+        fixture.console.assert_clean("nested modals").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// 1.4.10 / 2.4.11: every control of a dialog taller than the viewport can be reached.
+#[test]
+fn a_dialog_taller_than_the_viewport_stays_reachable() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/modal/tall", viewport).await.unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            wait::for_visible(page, DIALOG).await.unwrap();
+            let probe: String = page
+                .evaluate(
+                    "(() => { const r = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+                     const a = document.querySelector('#accept'); a.focus(); const b = a.getBoundingClientRect(); \
+                     return JSON.stringify({top: r.top, bottom: r.bottom, vh: innerHeight, acceptTop: b.top, acceptBottom: b.bottom}); })()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let probe: serde_json::Value = serde_json::from_str(&probe).unwrap();
+            let at = |key: &str| probe[key].as_f64().unwrap();
+            let name = viewport.name();
+            assert!(
+                at("acceptBottom") <= at("vh"),
+                "Accept is below the fold at {name}: {probe}"
+            );
+            assert!(
+                at("acceptTop") >= 0.0,
+                "Accept is above the fold at {name}: {probe}"
+            );
+            // Scrolled back up, the title and the close button are on screen.
+            let top_reachable = eval_bool(
+                page,
+                "(() => { const d = document.querySelector('[role=dialog]'); \
+                 for (let el = d.parentElement; el; el = el.parentElement) el.scrollTop = 0; \
+                 return d.getBoundingClientRect().top >= 0; })()",
+            )
+            .await;
+            assert!(
+                top_reachable,
+                "the dialog's top is clipped at {name}: {probe}"
+            );
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 #[test]
 fn it_honours_the_overlay_contract() {
     block_on(async {

@@ -28,15 +28,17 @@ static MODAL_SX: StaticSx = StaticSx::new(|| {
 });
 
 // On the `FocusTrap` as an `sx`, to beat its `display: contents`. No pointer
-// events, so clicks in the empty area reach the `Overlay`.
+// events, so clicks in the empty area reach the `Overlay`. Scrolls when the dialog
+// outgrows the viewport; its auto margins centre it, and drop to 0 rather than clip the top.
 static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")
         .z_index("1")
         .display("flex")
-        .align_items("center")
-        .justify_content("center")
+        .padding("md")
+        .overflow_y("auto")
         .pointer_events("none")
+        .selector("& > [role='dialog']", sx().margin("auto"))
 });
 
 base_props! {

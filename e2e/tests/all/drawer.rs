@@ -101,6 +101,58 @@ e2e::scenario!(
     desktop: skip("1275: no Back key off Android")
 );
 
+/// An end drawer docks to the left under `dir="rtl"`.
+#[test]
+fn an_end_drawer_docks_left_in_rtl() {
+    block_on(async {
+        let fixture = Fixture::open("/drawer", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        e2e::wait::for_visible(page, DIALOG).await.unwrap();
+        let x: f64 = page
+            .evaluate("document.querySelector('[role=dialog]').getBoundingClientRect().x")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(x.abs() <= 1.0, "the end drawer is at x={x} under rtl");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// 1.4.10: a drawer taller than the viewport scrolls; its last control is reachable.
+#[test]
+fn a_drawer_taller_than_the_viewport_scrolls() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/drawer/tall", viewport).await.unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            e2e::wait::for_visible(page, DIALOG).await.unwrap();
+            let reachable: bool = page
+                .evaluate(
+                    "(() => { const a = document.querySelector('#drawer-close'); a.focus(); \
+                     const b = a.getBoundingClientRect(); return b.top >= 0 && b.bottom <= innerHeight; })()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                reachable,
+                "the last control is off screen at {}",
+                viewport.name()
+            );
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 #[test]
 fn it_honours_the_overlay_contract() {
     block_on(async {
