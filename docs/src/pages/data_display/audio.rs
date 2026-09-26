@@ -72,7 +72,6 @@ pub fn AudioPage() -> Element {
                 .limits([
                     "Blitz plays no media: the controls give way to `children`, by default a link to the file.",
                     "On a WebView each command and state change crosses the IPC, so the time trails by a moment.",
-                    "With `sources`, a file changed after mount is not loaded: the browser reads `<source>` once, so remount the player to swap files.",
                 ]),
             lead: rsx! {
                 Text {

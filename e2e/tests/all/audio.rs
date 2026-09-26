@@ -187,6 +187,36 @@ fn keys_act_inside_the_player_only() {
     });
 }
 
+/// A file swapped after mount behind `sources` is loaded, not the first one kept.
+#[test]
+fn a_swapped_source_is_loaded() {
+    block_on(async {
+        let fixture = Fixture::open("/audio/swap", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        wait::for_js_true(
+            page,
+            &format!("{} === '0:00 / 0:04'", time_text("swap")),
+            "the 4 s file",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#swap-button").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} === '0:00 / 0:02'", time_text("swap")),
+            "the 2 s file",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("swapping").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn a_broken_source_is_announced_and_the_hook_reads_a_bare_element() {
     block_on(async {

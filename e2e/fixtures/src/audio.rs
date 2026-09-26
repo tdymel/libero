@@ -6,7 +6,10 @@ use libero::hooks::use_media;
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/audio", || rsx! { AudioPage {} })];
+pub const ROUTES: Routes = &[
+    ("/audio", || rsx! { AudioPage {} }),
+    ("/audio/swap", || rsx! { SwapPage {} }),
+];
 
 /// A silent 8 kHz, 8-bit mono WAV of `seconds`, as a `data:` URL: no file to serve,
 /// and every Chromium decodes PCM.
@@ -72,5 +75,23 @@ fn AudioPage() -> Element {
                 }
             }
         }
+    }
+}
+
+/// With `sources`, `src` is the last `<source>`: a swap after mount needs a reload.
+#[component]
+fn SwapPage() -> Element {
+    let long = use_hook(|| silent_wav(4));
+    let short = use_hook(|| silent_wav(2));
+    let mut swapped = use_signal(|| false);
+    rsx! {
+        div { id: "swap",
+            Audio {
+                src: if swapped() { short.clone() } else { long.clone() },
+                sources: vec![MediaSource::new("/none.xyz", "audio/x-none")],
+                label: "Swap",
+            }
+        }
+        Button { id: "swap-button", onclick: move |_| swapped.set(true), "Swap" }
     }
 }

@@ -41,6 +41,20 @@ Leave `inline` unset to use the theme's default.
 Like every component, `Center` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
 
+## Accessibility
+
+### Libero handles
+
+- `Center` adds no roles and moves nothing, so tab and reading order match the
+  code.
+
+### You must
+
+- Size it with `sx().min_height(..)`, not a fixed `height`: a child taller than
+  the box spills past its top as well, where no scrolling reaches.
+- `Center` always renders a `div`: for a list or a nav, put a `Box` with
+  `component: "ul"` or `"nav"` inside.
+
 ## Theme defaults
 
 `CenterDefaults` on the theme holds the display mode every `Center` starts

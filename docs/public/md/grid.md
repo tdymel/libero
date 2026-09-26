@@ -182,6 +182,22 @@ fn Demo() -> Element {
 Like every component, all three also take the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
 
+## Accessibility
+
+### Libero handles
+
+- `Grid`, `GridZone` and `GridItem` add no roles: `component` names the tag,
+  such as `HtmlTag::Header` or `HtmlTag::Aside` for a landmark.
+
+### You must
+
+- Write the zones in reading order: the template places them anywhere, but
+  screen readers and Tab follow the code.
+- Use `dense` only where order means nothing, such as a photo wall: a later
+  item fills an earlier gap and shows before items it follows in the code.
+- Give two landmarks of the same kind an `aria-label` each, such as two
+  `Aside` zones.
+
 ## Theme defaults
 
 `GridDefaults` on the theme.

@@ -30,6 +30,44 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Forced colours drop a box-shadow: the dim mask opts out, so the crop still
+/// stands out from the rest of the image (1278).
+#[test]
+fn the_dim_mask_stays_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let shadow: String = page
+            .evaluate("getComputedStyle(document.querySelector('[data-slot=mask] > *')).boxShadow")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            shadow.contains("9999px"),
+            "the mask lost its shadow: {shadow}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A dropped PNG opens the dialog at the largest centred square; Apply hands
 /// `onchange` that 20 px square, cut by the canvas and capped by `max_size` at
 /// 16 px, still a PNG.

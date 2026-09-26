@@ -315,6 +315,8 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
     let mut settle = use_signal(|| None::<Settle>);
     // A release can land before the measure: (measuring, released).
     let mut starting = use_hook(|| CopyValue::new((false, false)));
+    // The drag's direction sign, read at its start so moves before the measure use it.
+    let mut drag_sign = use_hook(|| CopyValue::new(1.0_f64));
 
     let target = use_memo(move || {
         let session = session.read();
@@ -424,6 +426,8 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
             };
             starting.set((true, false));
             travel.set(0.0);
+            let flipped = *horizontal.peek() && element.is_rtl();
+            drag_sign.set(if flipped { -1.0 } else { 1.0 });
             begin(
                 from,
                 false,
@@ -445,8 +449,7 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
             let delta = step.delta();
             let along = if *horizontal.peek() { delta.x } else { delta.y };
             // Kept before the measure lands too, so the first frame is not a jump.
-            let sign = session.peek().as_ref().map_or(1.0, |session| session.sign);
-            travel.set(along * sign);
+            travel.set(along * *drag_sign.peek());
         }),
         onend: use_callback(move |()| {
             if starting.peek().0 {

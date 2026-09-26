@@ -114,6 +114,13 @@ impl MediaHandle {
         }
     }
 
+    /// Loads the element's source again, after its `<source>` children changed.
+    pub(crate) fn reload(&self) {
+        if let Some(api) = self.api() {
+            let _ = api.load();
+        }
+    }
+
     /// Reactive, as every read below. `false` until the element mounts, and
     /// always where nothing plays media.
     pub fn is_supported(&self) -> bool {

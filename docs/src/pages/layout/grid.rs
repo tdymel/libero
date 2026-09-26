@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -196,6 +196,13 @@ pub fn GridPage() -> Element {
                     prop("children", "Element").doc("The item's content."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles(["`Grid`, `GridZone` and `GridItem` add no roles: `component` names the tag, such as `HtmlTag::Header` or `HtmlTag::Aside` for a landmark."])
+                .must([
+                    "Write the zones in reading order: the template places them anywhere, but screen readers and Tab follow the code.",
+                    "Use `dense` only where order means nothing, such as a photo wall: a later item fills an earlier gap and shows before items it follows in the code.",
+                    "Give two landmarks of the same kind an `aria-label` each, such as two `Aside` zones.",
+                ]),
             lead: rsx! {
                 Text {
                     "A layout matrix of named areas. "

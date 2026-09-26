@@ -98,7 +98,10 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& > [data-slot='mask'] > *",
-            placed().box_shadow("0 0 0 9999px rgba(0, 0, 0, 0.55)"),
+            // Forced colours drop a box-shadow unless the element opts out (todo 1278).
+            placed()
+                .box_shadow("0 0 0 9999px rgba(0, 0, 0, 0.55)")
+                .with("forced-color-adjust", "none"),
         )
         .selector(
             "& > [data-slot='box']",

@@ -73,6 +73,8 @@ pub(crate) trait MediaApi {
     /// Shows text track `index` (its order among the element's tracks) and hides
     /// the other captions and subtitles; `None` hides them all.
     fn show_captions(&self, index: Option<usize>) -> Result<(), PlatformError>;
+    /// Picks the source again: browsers read `<source>` children only on load.
+    fn load(&self) -> Result<(), PlatformError>;
     /// Calls `callback` with the state now (async on a WebView) and after each event.
     fn watch(&self, callback: Box<dyn Fn(MediaState)>) -> Box<dyn MediaSubscription>;
 }
@@ -198,6 +200,11 @@ mod web {
                 };
                 let _ = Reflect::set(&track, &"mode".into(), &mode.into());
             }
+            Ok(())
+        }
+
+        fn load(&self) -> Result<(), PlatformError> {
+            self.element.load();
             Ok(())
         }
 

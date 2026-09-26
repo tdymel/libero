@@ -510,6 +510,10 @@ impl MediaApi for WebViewMedia {
         )
     }
 
+    fn load(&self) -> Result<(), PlatformError> {
+        self.command(Value::Null, "media.load();")
+    }
+
     fn watch(&self, callback: Box<dyn Fn(MediaState)>) -> Box<dyn MediaSubscription> {
         type Sent = (
             bool,

@@ -77,6 +77,19 @@ captures a fixed float, which then scrolls and clips with it.
 Like every component, `Float` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
 
+## Accessibility
+
+### Libero handles
+
+- `Float` adds no roles, and `start` and `end` follow the text direction.
+
+### You must
+
+- Write the float next to what it marks: screen readers and Tab follow the
+  code, not where it shows.
+- Keep it off text and controls at 320px wide and at 200% text size: it takes
+  no space, so nothing moves out of its way.
+
 ## Theme defaults
 
 `FloatDefaults` on the theme.

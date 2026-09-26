@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Center, Code, Text},
@@ -35,6 +35,12 @@ pub fn CenterPage() -> Element {
                     .doc("Shrinks to the child instead of filling the parent's width."),
                 prop("children", "Element").doc("The centered content."),
             ])],
+            accessibility: a11y()
+                .handles(["`Center` adds no roles and moves nothing, so tab and reading order match the code."])
+                .must([
+                    "Size it with `sx().min_height(..)`, not a fixed `height`: a child taller than the box spills past its top as well, where no scrolling reaches.",
+                    "`Center` always renders a `div`: for a list or a nav, put a `Box` with `component: \"ul\"` or `\"nav\"` inside.",
+                ]),
             lead: rsx! {
                 Text {
                     "Centers its child horizontally and vertically. It fills the parent's "

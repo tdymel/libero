@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use dioxus::prelude::*;
 
 use super::media_controls::{MediaControls, MediaFallback, use_media_keys};
@@ -121,6 +123,19 @@ pub(super) fn media_sources(src: &str, sources: &[MediaSource]) -> (Option<Strin
     (None, list)
 }
 
+/// Reloads `media` when the `<source>` list changes after mount; a changed `src`
+/// attribute alone the browser loads by itself.
+pub(super) fn use_source_reload(media: MediaHandle, src: &str, sources: &[MediaSource]) {
+    let key = (!sources.is_empty()).then(|| (src.to_string(), sources.to_vec()));
+    let last = use_hook(|| Rc::new(RefCell::new(key.clone())));
+    use_effect(use_reactive!(|key| {
+        if *last.borrow() != key {
+            *last.borrow_mut() = key;
+            media.reload();
+        }
+    }));
+}
+
 base_props! {
     parts(AudioPart);
     pub struct AudioProps {
@@ -215,6 +230,7 @@ pub fn Audio(props: AudioProps) -> Element {
     let mut attributes = props.attributes;
     attributes.extend(player.attributes());
 
+    use_source_reload(media, &props.src, &props.sources);
     let (src, sources) = media_sources(&props.src, &props.sources);
     let body = rsx! {
         audio {

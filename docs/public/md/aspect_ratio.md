@@ -46,6 +46,10 @@ Like every component, `AspectRatio` also takes the shared props `sx`, `class`,
 
 ## Accessibility
 
+### Libero handles
+
+- A focused child keeps its focus ring: it is drawn inside the clip.
+
 ### You must
 
 - Keep nothing meaningful at the child's edges: they get cropped.

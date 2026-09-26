@@ -96,7 +96,6 @@ pub fn VideoPage() -> Element {
                     "On a WebView each command and state change crosses the IPC, so the time trails by a moment.",
                     "In fullscreen the shown controls cover the bottom of the picture, captions included.",
                     "The demo's VP9 WebM may not play in older Safari: give `sources` a WebM and keep an MP4 (H.264) as `src`.",
-                    "With `sources`, a file changed after mount is not loaded: the browser reads `<source>` once, so remount the player to swap files.",
                 ]),
             lead: rsx! {
                 Text {

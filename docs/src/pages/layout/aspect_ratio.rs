@@ -31,7 +31,9 @@ pub fn AspectRatioPage() -> Element {
                     .doc("Width-to-height ratio, e.g. `16.0 / 9.0`."),
                 prop("children", "Element").doc("The child to crop, filling the box."),
             ])],
-            accessibility: a11y().must([
+            accessibility: a11y()
+                .handles(["A focused child keeps its focus ring: it is drawn inside the clip."])
+                .must([
                 "Keep nothing meaningful at the child's edges: they get cropped.",
                 "Give an image `alt` text that describes what the reader can see.",
             ]),

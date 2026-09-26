@@ -2,7 +2,10 @@ use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use super::media_controls::{Captions, MediaControls, MediaFallback, use_media_keys};
-use super::{MediaPreload, MediaSource, audio::media_sources};
+use super::{
+    MediaPreload, MediaSource,
+    audio::{media_sources, use_source_reload},
+};
 use crate::{
     components::{
         common::{HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
@@ -356,6 +359,7 @@ pub fn Video(props: VideoProps) -> Element {
         ));
     }
 
+    use_source_reload(media, &props.src, &props.sources);
     let (src, sources) = media_sources(&props.src, &props.sources);
     let body = rsx! {
         video {

@@ -162,5 +162,3 @@ screen, from [use_fullscreen](use_fullscreen.md).
   included.
 - The demo's VP9 WebM may not play in older Safari: give `sources` a WebM and
   keep an MP4 (H.264) as `src`.
-- With `sources`, a file changed after mount is not loaded: the browser reads
-  `<source>` once, so remount the player to swap files.

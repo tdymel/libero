@@ -122,5 +122,3 @@ explains how parts work.
   to the file.
 - On a WebView each command and state change crosses the IPC, so the time
   trails by a moment.
-- With `sources`, a file changed after mount is not loaded: the browser reads
-  `<source>` once, so remount the player to swap files.

@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, or_unset, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, or_unset, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Float, Text},
@@ -44,6 +46,12 @@ pub fn FloatPage() -> Element {
                     .doc("Stacking order."),
                 prop("children", "Element").doc("The anchored content."),
             ])],
+            accessibility: a11y()
+                .handles(["`Float` adds no roles, and `start` and `end` follow the text direction."])
+                .must([
+                    "Write the float next to what it marks: screen readers and Tab follow the code, not where it shows.",
+                    "Keep it off text and controls at 320px wide and at 200% text size: it takes no space, so nothing moves out of its way.",
+                ]),
             lead: rsx! {
                 Text {
                     "Anchors its child to a corner or edge of the nearest positioned "
