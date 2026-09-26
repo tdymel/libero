@@ -61,7 +61,7 @@ pub fn UseFullscreenPage() -> Element {
             markdown: "/md/use_fullscreen.md",
             accessibility: a11y()
                 .handles([
-                    "Escape leaves the drawn fullscreen; native fullscreen leaves on Escape by itself.",
+                    "Escape leaves either fullscreen: the browser leaves its native one, the handle the drawn one and an Android WebView's native one.",
                     "Focus leaving the element leaves the drawn fullscreen, so the covered page is never focused unseen.",
                 ])
                 .must([
@@ -71,6 +71,7 @@ pub fn UseFullscreenPage() -> Element {
                 .limits([
                     "Blitz and a server render have no Fullscreen API: the handle always draws it.",
                     "The drawn fullscreen keeps the browser's bars and the device's status bar.",
+                    "Android's Back button closes the app, from fullscreen too, rather than leaving it.",
                 ]),
             lead: rsx! {
                 Text {

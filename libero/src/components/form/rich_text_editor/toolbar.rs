@@ -140,20 +140,41 @@ pub(super) const OVERFLOW: [Builtin; 10] = [
     Builtin::Link,
 ];
 
-// Default theme at a 16px root: a md `ActionIcon`, the bar's xs gap, the block type button.
-const ICON: f64 = 42.0;
-const GAP: f64 = 4.0;
-const BLOCK_TYPE: f64 = 136.0;
 const SEPARATOR: f64 = 1.0;
 
+/// Rendered px of the bar's parts, measured from Bold, Italic and the block type
+/// button, which never overflow.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct Metrics {
+    pub icon: f64,
+    pub gap: f64,
+    pub block_type: f64,
+}
+
+impl Default for Metrics {
+    /// The default theme at a 16px root, until measured.
+    fn default() -> Self {
+        Self {
+            icon: 42.0,
+            gap: 4.0,
+            block_type: 136.0,
+        }
+    }
+}
+
 /// How many of [`OVERFLOW`] leave a bar `width` px wide; below the smallest bar it wraps.
-pub(super) fn hidden(width: f64) -> usize {
+pub(super) fn hidden(width: f64, metrics: Metrics) -> usize {
     (0..=OVERFLOW.len())
-        .find(|&count| needed(count) <= width)
+        .find(|&count| needed(count, metrics) <= width)
         .unwrap_or(OVERFLOW.len())
 }
 
-fn needed(hidden: usize) -> f64 {
+fn needed(hidden: usize, metrics: Metrics) -> f64 {
+    let Metrics {
+        icon,
+        gap,
+        block_type,
+    } = metrics;
     let icons = 12 - hidden + usize::from(hidden > 0);
     let history = OVERFLOW[..hidden]
         .iter()
@@ -161,7 +182,7 @@ fn needed(hidden: usize) -> f64 {
         .count()
         < 2;
     let separators = 1 + usize::from(history);
-    icons as f64 * (ICON + GAP) + BLOCK_TYPE + GAP + separators as f64 * (SEPARATOR + GAP) - GAP
+    icons as f64 * (icon + gap) + block_type + gap + separators as f64 * (SEPARATOR + gap) - gap
 }
 
 #[cfg(test)]
@@ -170,17 +191,38 @@ mod tests {
 
     #[test]
     fn a_wide_bar_hides_nothing_and_a_phone_keeps_bold_italic_and_link() {
-        assert_eq!(hidden(800.0), 0);
-        assert_eq!(hidden(342.0), 9);
-        assert_eq!(hidden(100.0), OVERFLOW.len());
+        let metrics = Metrics::default();
+        assert_eq!(hidden(800.0, metrics), 0);
+        assert_eq!(hidden(342.0, metrics), 9);
+        assert_eq!(hidden(100.0, metrics), OVERFLOW.len());
     }
 
     #[test]
     fn hiding_more_never_needs_more_room() {
+        let metrics = Metrics::default();
         // One hidden button only trades places with the More trigger.
-        assert_eq!(needed(1), needed(0));
+        assert_eq!(needed(1, metrics), needed(0, metrics));
         for count in 2..=OVERFLOW.len() {
-            assert!(needed(count) < needed(count - 1), "{count}");
+            assert!(
+                needed(count, metrics) < needed(count - 1, metrics),
+                "{count}"
+            );
         }
+    }
+
+    #[test]
+    fn larger_icons_or_a_longer_label_hide_more() {
+        let width = 600.0;
+        let base = hidden(width, Metrics::default());
+        let big = Metrics {
+            icon: 50.0,
+            ..Metrics::default()
+        };
+        let long = Metrics {
+            block_type: 200.0,
+            ..Metrics::default()
+        };
+        assert!(hidden(width, big) > base);
+        assert!(hidden(width, long) > base);
     }
 }

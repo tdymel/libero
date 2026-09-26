@@ -235,13 +235,25 @@ async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         return Ok(());
     }
     eventually(d, "the controls", async |d| d.exists(FULLSCREEN).await).await?;
-    d.click(FULLSCREEN).await?;
-    eventually(d, "the player to fill the screen", async |d| {
+    let filled = async |d: &mut D| {
+        d.click(FULLSCREEN).await?;
+        eventually(d, "the player to fill the screen", async |d| {
+            Ok(d.attr("#player [role=group]", "data-fullscreen")
+                .await?
+                .is_some())
+        })
+        .await
+    };
+    // Android's native fullscreen too, which ignored Escape before 1256.
+    filled(d).await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to give the player back", async |d| {
         Ok(d.attr("#player [role=group]", "data-fullscreen")
             .await?
-            .is_some())
+            .is_none())
     })
     .await?;
+    filled(d).await?;
     d.click("#player button[aria-label='Exit fullscreen']")
         .await?;
     eventually(d, "the player back in the page", async |d| {

@@ -397,6 +397,36 @@ fn a_narrow_toolbar_keeps_one_row_and_moves_the_rest_into_more() {
     });
 }
 
+/// `[no horizontal overflow, distinct item rows, hidden toggles]` of the toolbar.
+const TOOLBAR_ROWS: &str = "(() => { const t = document.querySelector('[role=toolbar]'); \
+    const tops = new Set([...t.querySelectorAll('button')].map(b => Math.round(b.getBoundingClientRect().top))); \
+    return [t.scrollWidth > t.clientWidth, tops.size, t.querySelectorAll('button').length]; })()";
+
+/// Larger icons than the default theme's: the bar measures them and hides more (1259).
+#[test]
+fn a_toolbar_with_larger_icons_still_keeps_one_row() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/code", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        assert!(until(page, MORE).await, "no More trigger");
+        let (_, _, before): (bool, u32, u32) = eval(page, TOOLBAR_ROWS).await;
+        page.evaluate(
+            "(() => { const s = document.createElement('style'); \
+               s.textContent = '[role=toolbar] button:not([aria-haspopup]) { min-width: 56px; }'; \
+               document.head.append(s); })()",
+        )
+        .await
+        .unwrap();
+        let fewer = format!("{TOOLBAR_ROWS}[2] < {before}");
+        assert!(until(page, &fewer).await, "nothing moved into More");
+        let (overflow, rows, _): (bool, u32, u32) = eval(page, TOOLBAR_ROWS).await;
+        assert!(!overflow, "the toolbar runs out of its column");
+        assert_eq!(rows, 1, "the toolbar wraps");
+    });
+}
+
 /// Dispatches `kind` (`copy` or `cut`) on the editor; `[text/plain, text/markdown, cancelled]`.
 async fn clipboard(page: &Page, kind: &str) -> (String, String, bool) {
     eval(

@@ -19,7 +19,7 @@ use super::node_view::NodeViews;
 use super::offsets::{to_dom, to_model};
 use super::render::{RenderCtx, blocks};
 use super::surface::{ROOT_ATTR, Report, Surface};
-use super::toolbar::{Group, OVERFLOW, Tool, hidden as overflow_count, tools};
+use super::toolbar::{Group, Metrics, OVERFLOW, Tool, hidden as overflow_count, tools};
 use crate::{
     components::{
         accessibility::use_announcer,
@@ -31,10 +31,10 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        HistoryHandle, ModalScope, UndoHistory, use_element, use_history, use_localization,
-        use_modal, use_theme,
+        ElementHandle, HistoryHandle, ModalScope, UndoHistory, listener, use_element, use_history,
+        use_localization, use_modal, use_theme,
     },
-    platform::mod_is_meta,
+    platform::{ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
     theme::{ANCHOR_COLOR, CODE_FONT_FAMILY, ColorCss, ColorShade},
 };
@@ -742,8 +742,53 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             })
             .collect()
     };
-    // Measured by the wrapper: the buttons a narrow bar moves into the More menu.
-    let mut crowded = use_signal(|| 0usize);
+    // The wrapper's width over the measured parts: the buttons a narrow bar moves into More.
+    let mut bar_width = use_signal(|| None::<f64>);
+    let metrics = use_signal(|| None::<Metrics>);
+    let (bold, italic, block_button) = (use_element(), use_element(), use_element());
+    let crowded = use_memo(move || {
+        bar_width().map_or(0, |width| {
+            overflow_count(width, metrics().unwrap_or_default())
+        })
+    });
+    // Reads start here, not in the task: Blitz fails a read made inside one.
+    let measure = move || {
+        let reads = (
+            bold.dimensions(),
+            bold.client_offset(),
+            italic.client_offset(),
+            block_button.dimensions(),
+        );
+        spawn(async move {
+            let (Ok(icon), Ok((from, _)), Ok((to, _)), Ok(block)) =
+                (reads.0.await, reads.1.await, reads.2.await, reads.3.await)
+            else {
+                return;
+            };
+            if icon.width <= 0.0 {
+                return;
+            }
+            let mut metrics = metrics;
+            let known = metrics.peek().unwrap_or_default();
+            // Bold and Italic on two rows of a wrapped bar give no gap.
+            let gap = (to - from).abs() - icon.width;
+            let next = Some(Metrics {
+                icon: icon.width,
+                gap: if (0.0..icon.width).contains(&gap) {
+                    gap
+                } else {
+                    known.gap
+                },
+                // The widest label seen, so moving the caret never reflows the bar.
+                block_type: block
+                    .width
+                    .max(metrics.peek().map_or(0.0, |m| m.block_type)),
+            });
+            if *metrics.peek() != next {
+                metrics.set(next);
+            }
+        });
+    };
     let more_menu = use_menu();
     let hidden = &OVERFLOW[..crowded()];
     let more_items: Vec<MenuEntry> = buttons
@@ -776,10 +821,23 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         shown(Group::Blocks),
         shown(Group::History),
     );
+    // A theme or a new label resizes Bold or the block type button: the parts are read again.
+    let sized = move |handle: ElementHandle| {
+        vec![
+            listener("onmounted", handle.mount()),
+            listener("onresize", move |_: Event<ResizeData>| measure()),
+        ]
+    };
     let button = move |tool: Tool| {
+        let attributes = match tool.builtin {
+            Builtin::Bold => sized(bold),
+            Builtin::Italic => vec![listener("onmounted", italic.mount())],
+            _ => Vec::new(),
+        };
         rsx! {
             ActionIcon {
                 key: "{tool.label}",
+                attributes,
                 aria_label: tool.label,
                 selected: tool.selected,
                 disabled: tool.disabled,
@@ -789,13 +847,17 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         }
     };
     let onresize = move |event: Event<ResizeData>| {
-        if let Ok(size) = event.get_content_box_size() {
-            let count = overflow_count(size.width);
-            if *crowded.peek() != count {
-                crowded.set(count);
-            }
+        if let Ok(size) = event.get_content_box_size()
+            && *bar_width.peek() != Some(size.width)
+        {
+            bar_width.set(Some(size.width));
+        }
+        if metrics.peek().is_none() {
+            measure();
         }
     };
+    let mut block_attributes = block_menu.a11y_attributes();
+    block_attributes.extend(sized(block_button));
     let toolbar = (props.toolbar && editable).then(|| {
         rsx! {
             div { onresize,
@@ -807,7 +869,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     ToolbarGroup { "aria-label": words.blocks,
                         Menu { state: block_menu, items: block_items,
                             Button {
-                                attributes: block_menu.a11y_attributes(),
+                                attributes: block_attributes,
                                 "aria-label": "{words.block_type}: {block_label}",
                                 variant: "standard",
                                 color: "ink",

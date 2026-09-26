@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 
 use super::{ElementHandle, use_element};
 use crate::platform::{
-    ContentSubscription, OBSERVE_ATTR, next_observe_tag, observes_by_tag, on_intersection,
+    ContentSubscription, INTERSECT_ATTR, next_observe_tag, observes_by_tag, on_intersection,
 };
 
 /// What [`use_intersection`] takes.
@@ -158,7 +158,7 @@ pub fn use_intersection(options: IntersectionOptions) -> Intersection {
     let attributes = tag
         .map(|tag| {
             Attribute::new(
-                OBSERVE_ATTR,
+                INTERSECT_ATTR,
                 AttributeValue::Text(tag.to_string()),
                 None,
                 false,

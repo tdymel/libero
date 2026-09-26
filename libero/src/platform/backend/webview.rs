@@ -20,9 +20,9 @@ use crate::platform::a11y_media::{
 };
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
-    DocumentApi, ElementApi, FocusStep, KeyChord, KeySubscription, KeyboardApi, MediaQueryApi,
-    MediaQuerySubscription, OBSERVE_ATTR, OWNER_ATTR, PRESS_MARKER_ATTR, PlatformError, PressApi,
-    PressSubscription, Read, ScrollApi, ScrollSubscription,
+    DocumentApi, ElementApi, FocusStep, INTERSECT_ATTR, KeyChord, KeySubscription, KeyboardApi,
+    MediaQueryApi, MediaQuerySubscription, OBSERVE_ATTR, OWNER_ATTR, PRESS_MARKER_ATTR,
+    PlatformError, PressApi, PressSubscription, Read, ScrollApi, ScrollSubscription,
     capture::{
         CAPTURE_ATTR, CAPTURE_SCRIPT, CaptureApi, CaptureEvent, CaptureSession,
         CaptureSubscription, DEVICES_SCRIPT, DeviceList,
@@ -294,13 +294,13 @@ impl MediaQueryApi for WebViewMediaQuery {
 /// An `IntersectionObserver` on the element carrying the tag, started once it
 /// renders. Sends `[isIntersecting, ratio]` of the newest entry; a root without
 /// a tag (or one that never renders) falls back to the viewport.
-const ON_INTERSECTION: &str = "const [attr, tag, rootTag, margin, thresholds] = data;
-    const find = (value) => document.querySelector('[' + attr + '=\"' + value + '\"]');
+const ON_INTERSECTION: &str = "const [attr, tag, rootAttr, rootTag, margin, thresholds] = data;
+    const find = (name, value) => document.querySelector('[' + name + '=\"' + value + '\"]');
     let observer = null;
     const start = () => {
-        const target = find(tag);
+        const target = find(attr, tag);
         if (!target) return false;
-        const root = rootTag === null ? null : find(rootTag);
+        const root = rootTag === null ? null : find(rootAttr, rootTag);
         if (rootTag !== null && !root) console.warn('use_intersection: the root carries no attribute');
         observer = new IntersectionObserver((entries) => {
             const latest = entries[entries.length - 1];
@@ -336,8 +336,9 @@ pub(super) fn computed_px(tag: u64, property: &str) -> Read<Option<f64>> {
     })
 }
 
-/// Observed in the page, keyed by the `tag` attribute the element carries: it
-/// clips by every scroller up to the root and sees layout-only changes.
+/// Observed in the page, keyed by the target's `INTERSECT_ATTR` and the root
+/// handle's `OBSERVE_ATTR`: it clips by every scroller up to the root and sees
+/// layout-only changes.
 pub(super) fn on_intersection(
     tags: (u64, Option<u64>),
     root_margin: &str,
@@ -351,8 +352,9 @@ pub(super) fn on_intersection(
     let (tag, root_tag) = tags;
     let script = eval_with(
         json!([
-            OBSERVE_ATTR,
+            INTERSECT_ATTR,
             tag.to_string(),
+            OBSERVE_ATTR,
             root_tag.map(|tag| tag.to_string()),
             root_margin,
             thresholds
@@ -594,10 +596,19 @@ impl FullscreenApi for WebViewFullscreen {
                 "const selector = '[' + data[0] + '=\"' + data[1] + '\"]';
                 const send = () => dioxus.send([document.fullscreenEnabled === true,
                     document.fullscreenElement?.matches(selector) === true]);
+                // Android's WebView leaves fullscreen on Back only; Escape does as a browser's.
+                const escape = (event) => {{
+                    if (event.key !== 'Escape' || !document.fullscreenElement?.matches(selector)) return;
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    document.exitFullscreen().catch(() => {{}});
+                }};
                 document.addEventListener('fullscreenchange', send);
+                window.addEventListener('keydown', escape, true);
                 send();
                 {}
-                document.removeEventListener('fullscreenchange', send);",
+                document.removeEventListener('fullscreenchange', send);
+                window.removeEventListener('keydown', escape, true);",
                 slot.park("")
             ),
         );

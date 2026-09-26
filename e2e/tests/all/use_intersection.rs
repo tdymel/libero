@@ -1,9 +1,9 @@
 //! `use_in_viewport` and `use_intersection` against a real `IntersectionObserver`:
 //! scrolling a target into view and out again.
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_text, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
 use e2e::{Fixture, Viewport, wait};
 
 async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expression: &str) -> T {
@@ -41,6 +41,14 @@ async fn scroll_until<D: Driver>(d: &mut D, expected: &str, dy: f64) -> Result<(
 
 async fn in_view_only_while_scrolled_to<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "#state", "out", "the first measure").await?;
+    // A WebView finds the target by its own attribute beside the handle's (1255).
+    if matches!(d.platform(), Platform::Desktop | Platform::Android) {
+        for name in ["data-lsx-intersect", "data-lsx-observe"] {
+            if d.attr("#target", name).await?.is_none() {
+                bail!("{:?}: the target lost its {name}", d.platform());
+            }
+        }
+    }
     scroll_until(d, "in", 1.0).await?;
     scroll_until(d, "out", -1.0).await
 }

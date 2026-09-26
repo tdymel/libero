@@ -54,12 +54,14 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             eventually_text(d, "#recorded", "recording.webm true", "a finish").await?;
             d.click("#stop").await?;
             eventually_text(d, "#live", "false", "a stop").await?;
-            // Native here, found by the watch's selector; Escape leaves it open.
+            // Native here, found by the watch's selector; the watch leaves it on Escape (1256).
             fullscreen_beside_the_capture(d).await?;
             eventually(d, "native fullscreen", async |d| {
                 Ok(d.attr("#preview", "data-fullscreen").await?.as_deref() == Some("native"))
             })
             .await?;
+            d.press(keyboard::ESCAPE).await?;
+            eventually_text(d, "#is-fullscreen", "false", "Escape").await?;
         }
         Platform::Web => {}
     }

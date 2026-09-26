@@ -17,12 +17,18 @@ pub const ROUTES: Routes = &[
 #[component]
 fn Viewport() -> Element {
     let seen = use_in_viewport();
+    // A handle's attributes on the same target (1255).
+    let handle = use_element();
     rsx! {
         div { style: "height: 200vh;" }
         div {
             id: "target",
             style: "height: 40px;",
-            onmounted: move |event| seen.on_mounted.call(event),
+            onmounted: move |event| {
+                handle.mount()(event.clone());
+                seen.on_mounted.call(event);
+            },
+            ..handle.attributes(),
             ..seen.attributes,
             "target"
         }
