@@ -7,7 +7,7 @@ pub const PICTOGRAM_REPO: &str = "https://github.com/tdymel/pictogram";
 #[component]
 pub fn PictogramNote() -> Element {
     rsx! {
-        Text { size: "sm", color: "muted",
+        Text { size: "sm", color: "text-dimmed",
             "Need icons? "
             Anchor { to: PICTOGRAM_REPO, target: "_blank", "pictogram" }
             " ships lucide, Tabler, Material and more."

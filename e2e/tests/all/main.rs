@@ -80,6 +80,7 @@ mod perf;
 mod phone_field;
 mod picker_dialog;
 mod picker_parts;
+mod pictogram;
 mod pin_field;
 mod planted;
 mod popover;
