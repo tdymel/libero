@@ -72,6 +72,47 @@ pub(super) fn use_page_reset(state: TableState) {
     });
 }
 
+/// New `page_sizes` that drop an uncontrolled size reseed it: `default` if
+/// offered, else the first. The first shown row stays in view, as on a pick.
+pub(super) fn use_page_size_reseed(
+    state: TableState,
+    page_sizes: &[usize],
+    default: Option<usize>,
+) {
+    let mut last = use_signal(|| page_sizes.to_vec());
+    let sizes = page_sizes.to_vec();
+    use_effect(use_reactive!(|(sizes, default)| {
+        if *last.peek() == sizes {
+            return;
+        }
+        last.set(sizes.clone());
+        let size = state.page_size.peek();
+        if state.page_size.is_controlled() {
+            return;
+        }
+        let Some(next) = reseeded_size(&sizes, size, default) else {
+            return;
+        };
+        let page = state.page.peek();
+        let first = (page.saturating_sub(1) as usize).saturating_mul(size.max(1));
+        state.page_size.set(next);
+        let page_next = page_of_row(first, next);
+        if page_next != page {
+            state.page.set(page_next);
+        }
+    }));
+}
+
+/// The size replacing `size` once `sizes` no longer offer it; `None` keeps it.
+fn reseeded_size(sizes: &[usize], size: usize, default: Option<usize>) -> Option<usize> {
+    if sizes.contains(&size) {
+        return None;
+    }
+    default
+        .filter(|default| sizes.contains(default))
+        .or_else(|| sizes.first().copied())
+}
+
 /// One choice of the page-size picker.
 #[derive(Clone, PartialEq)]
 struct PageSize(usize);
@@ -196,5 +237,14 @@ mod tests {
         assert_eq!(page_of_row(20, 25), 1);
         assert_eq!(page_of_row(20, 5), 5);
         assert_eq!(page_of_row(0, 50), 1);
+    }
+
+    #[test]
+    fn a_dropped_size_reseeds_to_the_default_or_the_first() {
+        assert_eq!(reseeded_size(&[10, 25], 25, Some(10)), None);
+        assert_eq!(reseeded_size(&[20, 50], 25, Some(50)), Some(50));
+        assert_eq!(reseeded_size(&[20, 50], 25, Some(10)), Some(20));
+        assert_eq!(reseeded_size(&[20, 50], 25, None), Some(20));
+        assert_eq!(reseeded_size(&[], 25, Some(10)), None);
     }
 }

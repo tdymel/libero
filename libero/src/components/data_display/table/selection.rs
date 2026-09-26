@@ -4,7 +4,11 @@ use dioxus::prelude::*;
 
 use super::use_table::StateSlice;
 use crate::{
-    components::{accessibility::Announcer, form::Checkbox},
+    components::{
+        accessibility::Announcer,
+        form::{Checkbox, CheckboxLook},
+    },
+    hooks::use_element,
     localization::TableLabels,
     theme::Size,
 };
@@ -19,6 +23,8 @@ pub(super) struct Selection {
     pub labels: TableLabels,
     /// The table's, so the box scales with its text.
     pub size: Size,
+    /// The rows' boxes, styled at `size`.
+    pub look: Rc<CheckboxLook>,
 }
 
 impl Selection {
@@ -67,7 +73,7 @@ impl Selection {
             RowSelect {
                 row: key,
                 aria_label: (self.labels.select_row)(name),
-                size: self.size,
+                look: self.look.clone(),
                 checked: selected,
                 toggle,
             }
@@ -75,26 +81,23 @@ impl Selection {
     }
 }
 
-/// A row's box, its own scope so an unchanged row skips its `Checkbox` render (todo 1181).
+/// A row's box, its own scope so an unchanged row skips its render (todo 1181).
+/// The shared look keeps a first render to one hook (todo 1195).
 #[component]
 fn RowSelect(
     row: String,
     aria_label: String,
-    size: Size,
+    look: Rc<CheckboxLook>,
     checked: bool,
     toggle: Callback<(String, bool)>,
 ) -> Element {
+    let element = use_element();
     rsx! {
         td {
             "data-select": true,
             // The box is not a row click.
             onclick: |event| event.stop_propagation(),
-            Checkbox {
-                aria_label,
-                size,
-                checked,
-                onchange: move |on| toggle((row.clone(), on)),
-            }
+            {look.render(element, checked, aria_label, move |on| toggle((row.clone(), on)))}
         }
     }
 }

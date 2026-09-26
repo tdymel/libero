@@ -9,6 +9,7 @@ use crate::{
             ClassList, HtmlTag, Input, LogicalTextAlign, States, attr, inset_focus_ring_sx,
             names_itself, use_name_warning,
         },
+        form::use_checkbox_look,
         layout::use_box,
     },
     hooks::{listener, use_id, use_localization, use_theme},
@@ -21,10 +22,10 @@ use crate::{
 use super::{
     column::{Column, ColumnDefaults},
     core::{
-        BodySpec, CaptionSpec, RowFn, RowSpec, TableSort, active_sort, header_specs, render_body,
-        row_order,
+        BodySpec, CaptionSpec, RowFn, RowSpec, SortedRows, TableSort, active_sort, header_specs,
+        render_body,
     },
-    paging::{TablePager, clamp_page, page_rows, use_page_reset},
+    paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     selection::Selection,
     use_table::{TableConfig, use_table},
 };
@@ -302,6 +303,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         || props.default_page_size.is_some()
         || !props.page_sizes.is_empty();
     use_page_reset(state);
+    use_page_size_reseed(state, &props.page_sizes, props.default_page_size);
     let caption_id = use_id();
     use_name_warning(
         props.caption.is_some() || names_itself(&props.attributes),
@@ -316,6 +318,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .framework_sx(&TABLE_CAPTION_SX)
         .states(&size_states)
         .prepare();
+    let look = use_checkbox_look(size, props.selectable);
+    let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
 
     let headers = header_specs(&props.columns, &props.column_defaults);
     let active = active_sort(&headers, &state.sort.read(), props.multi_sort);
@@ -327,12 +331,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             .call(&data[index])
             .unwrap_or_else(|| index.to_string())
     };
-    let selection = props.selectable.then(|| Selection {
+    let selection = look.map(|look| Selection {
         slice: state.selection,
         keys: (0..data.len()).map(key_of).collect(),
         announcer,
         labels,
         size,
+        look: Rc::new(look),
     });
     // Stable, so a row's box memoizes when its row did not change.
     let current = selection.clone();
@@ -355,7 +360,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     // Sort, then page; a `manual_*` stage is the caller's.
     let mut order = match props.manual_sort {
         true => (0..data.len()).collect(),
-        false => row_order(&data, &props.columns, &active),
+        false => sorted.write().order(&data, &props.columns, &active),
     };
     let pager = paginated.then(|| {
         let total = match props.manual_pagination {

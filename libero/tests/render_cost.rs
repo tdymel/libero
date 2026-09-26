@@ -756,7 +756,69 @@ const TABLE_LARGE_SHAPES: &[Shape] = &[
         count: 1,
         round: rerender_app,
     },
+    Shape {
+        name: "Table 10k sort page turn",
+        app: table_page_turn_app::<10_000>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 1k select mount",
+        app: table_select_mount_app::<1_000>,
+        count: 1,
+        round: mount_round,
+    },
 ];
+
+/// A sorted, paged table turning between pages 1 and 2: the sort stays.
+fn table_page_turn_app<const ROWS: usize>() -> Element {
+    let data = use_hook(|| (0..ROWS as u32).collect::<Vec<u32>>());
+    let onpagechange = use_callback(|_: u32| {});
+    rsx! {
+        LiberoProvider {
+            Table {
+                data: data.clone(),
+                columns: vec![
+                    column("Name").value(|n: &u32| format!("Row {n}")).row_header(),
+                    column("N").value(|n: &u32| *n).sortable(),
+                ],
+                default_sort: vec![TableSort::new("N", SortDirection::Descending)],
+                page: if flip() { 2 } else { 1 },
+                onpagechange,
+                default_page_size: 25,
+            }
+        }
+    }
+}
+
+/// A selectable table's first render: unmounted untimed, then mounted.
+fn table_select_mount_app<const ROWS: usize>() -> Element {
+    let data = use_hook(|| (0..ROWS as u32).collect::<Vec<u32>>());
+    rsx! {
+        LiberoProvider {
+            if opened() {
+                Table {
+                    data: data.clone(),
+                    columns: vec![
+                        column("Name").value(|n: &u32| format!("Row {n}")).row_header(),
+                        column("N").value(|n: &u32| *n).sortable(),
+                    ],
+                    row_key: |n: &u32| n.to_string(),
+                    selectable: true,
+                    default_selection: vec!["0".to_string()],
+                }
+            }
+        }
+    }
+}
+
+fn mount_round(dom: &mut VirtualDom) {
+    OPEN.store(false, Ordering::Relaxed);
+    dom.mark_dirty(ScopeId::APP);
+    dom.render_immediate(&mut NoOpMutations);
+    OPEN.store(true, Ordering::Relaxed);
+    dom.mark_dirty(ScopeId::APP);
+}
 
 /// Items per `Sortable` list, as long as the e2e fixture's long list.
 const SORTABLE_ITEMS: usize = 40;

@@ -11,7 +11,7 @@ input_from_str!(ChoiceVariant);
 
 /// The wrapper styles all four text slots by `data-slot`, saving four
 /// stylesheet registrations per field.
-pub(super) static FIELD_SX: StaticSx = StaticSx::new(|| {
+pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
     FieldDefaults::theme_vars()
         .display("flex")
         .flex_direction("column")

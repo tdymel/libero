@@ -38,6 +38,10 @@ impl<V: Clone + PartialEq + 'static> StateSlice<V> {
         self.value.peek().clone()
     }
 
+    pub fn is_controlled(&self) -> bool {
+        self.controlled
+    }
+
     pub fn set(mut self, next: V) {
         if !self.controlled {
             self.value.set(next.clone());

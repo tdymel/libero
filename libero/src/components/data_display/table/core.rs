@@ -150,6 +150,46 @@ pub(super) fn row_order<T>(
     sorted_order(&keys)
 }
 
+/// [`row_order`] across renders: a page, selection or unrelated prop change
+/// reuses it, so sort keys are computed only when the rows, columns or sort change.
+pub(super) struct SortedRows<T> {
+    input: Option<SortInput<T>>,
+    order: Vec<usize>,
+}
+
+type SortInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, ActiveSort);
+
+impl<T> Default for SortedRows<T> {
+    fn default() -> Self {
+        Self {
+            input: None,
+            order: Vec::new(),
+        }
+    }
+}
+
+impl<T: PartialEq> SortedRows<T> {
+    pub fn order(
+        &mut self,
+        data: &Rc<Vec<T>>,
+        columns: &[Column<T>],
+        active: &ActiveSort,
+    ) -> Vec<usize> {
+        if active.is_empty() {
+            *self = Self::default();
+            return (0..data.len()).collect();
+        }
+        let fresh = self.input.as_ref().is_some_and(|(rows, cols, sort)| {
+            sort == active && cols.as_slice() == columns && (Rc::ptr_eq(rows, data) || rows == data)
+        });
+        if !fresh {
+            self.order = row_order(data, columns, active);
+            self.input = Some((data.clone(), columns.to_vec(), active.clone()));
+        }
+        self.order.clone()
+    }
+}
+
 /// What a click on header `index` asks for: ascending, descending, then unsorted.
 /// `add` keeps the other sorted columns and appends a new one last.
 pub(super) fn next_sort(
@@ -458,6 +498,40 @@ mod tests {
         assert_eq!(order, vec![2, 0, 1, 3]);
         let order = sorted_order(&[(first, Descending), (second, Ascending)]);
         assert_eq!(order, vec![1, 3, 0, 2]);
+    }
+
+    #[test]
+    fn the_sorted_order_is_reused_until_rows_columns_or_sort_change() {
+        use std::cell::Cell;
+
+        let calls = Rc::new(Cell::new(0));
+        let counted = calls.clone();
+        let columns = vec![column("N").value(move |n: &u32| {
+            counted.set(counted.get() + 1);
+            *n
+        })];
+        let mut sorted = SortedRows::default();
+        let data = Rc::new(vec![3, 1, 2]);
+        let up = vec![(0, Ascending)];
+
+        assert_eq!(sorted.order(&data, &columns, &up), vec![1, 2, 0]);
+        let first = calls.get();
+        // An equal copy of the rows, as each render's props are.
+        assert_eq!(
+            sorted.order(&Rc::new(vec![3, 1, 2]), &columns, &up),
+            vec![1, 2, 0]
+        );
+        assert_eq!(calls.get(), first);
+
+        assert_eq!(
+            sorted.order(&data, &columns, &vec![(0, Descending)]),
+            vec![0, 2, 1]
+        );
+        assert_eq!(
+            sorted.order(&Rc::new(vec![0, 1, 2]), &columns, &up),
+            vec![0, 1, 2]
+        );
+        assert_eq!(calls.get(), first * 3);
     }
 
     fn headers(names: &[&str]) -> Vec<HeaderSpec> {

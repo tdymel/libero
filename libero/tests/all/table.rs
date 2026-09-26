@@ -5,7 +5,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ColumnDefaults, Mark, SortDirection, States, Table, TableSort, column},
+    components::{Checkbox, ColumnDefaults, Mark, SortDirection, States, Table, TableSort, column},
     localization::Localization,
     theme::Size,
 };
@@ -416,6 +416,50 @@ fn select_all_is_checked_only_with_every_row_selected() {
     let none = body(&render(|| selectable(Vec::new())));
     assert!(!none.contains("aria-checked=\"mixed\""), "{none}");
     assert!(!none.contains("aria-selected=\"true\""), "{none}");
+}
+
+#[test]
+fn a_row_box_renders_as_a_plain_checkbox() {
+    fn table() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Stock",
+                    size: Size::Sm,
+                    selectable: true,
+                    default_selection: vec!["7".to_string()],
+                    data: vec![Stock { id: 7, name: "Apple", cents: 120 }],
+                    columns: vec![column("Name").value(|s: &Stock| s.name.to_string()).row_header()],
+                    row_key: |s: &Stock| s.id.to_string(),
+                }
+            }
+        }
+    }
+    fn checkbox() -> Element {
+        rsx! {
+            LiberoProvider {
+                Checkbox {
+                    aria_label: "Select Apple",
+                    size: Size::Sm,
+                    checked: true,
+                    onchange: |_| {},
+                }
+            }
+        }
+    }
+    // The table's lighter box (todo 1195) must stay the same markup, ids aside.
+    let table = body(&render(table));
+    let cell = table.split("<td data-select=true>").nth(1).unwrap();
+    let cell = &cell[..cell.find("</td>").unwrap()];
+    let plain = render(checkbox);
+    // The provider's empty portal follows the box.
+    let plain = body(&plain)
+        .strip_suffix("<div></div>")
+        .unwrap()
+        .to_string();
+    let id = plain.find(" id=\"").unwrap();
+    let end = id + 5 + plain[id + 5..].find('"').unwrap() + 1;
+    assert_eq!(cell, format!("{}{}", &plain[..id], &plain[end..]));
 }
 
 #[test]

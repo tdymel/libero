@@ -10,16 +10,18 @@ use crate::{
             contrast_color, fill_color, focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx,
             use_name_warning, use_toolbar_item, variables,
         },
-        form::{field_parts_enum, field_props, use_bound, use_field},
-        layout::use_box,
+        form::{Activation, field_parts_enum, field_props, use_bound, use_field},
+        layout::{BoxStyle, use_box},
     },
     context::IconSlot,
-    hooks::{use_cache, use_css, use_element, use_theme},
+    hooks::{ElementHandle, use_cache, use_css, use_element, use_theme},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar},
+    theme::{CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar, Size},
     utils::warn,
 };
+
+use super::use_field::FIELD_SX;
 
 /// Background and border of the box; equal when checked, so one value would
 /// not do - an unchecked box is transparent with a visible outline.
@@ -304,4 +306,112 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
                 vec![input, box_node, ring_overlay()],
             ),
     )
+}
+
+/// A plain [`Checkbox`]'s styling, resolved once for many label-less boxes
+/// (a table's rows): each box then costs no styling hooks.
+#[derive(Clone, PartialEq)]
+pub(crate) struct CheckboxLook {
+    wrapper: BoxStyle,
+    on: BoxStyle,
+    off: BoxStyle,
+    input: BoxStyle,
+    box_class: Option<String>,
+}
+
+/// [`CheckboxLook`] at `size` in the theme's radius and colour; `None`, and no
+/// stylesheet, unless `enabled`.
+pub(crate) fn use_checkbox_look(size: Size, enabled: bool) -> Option<CheckboxLook> {
+    let theme = use_theme();
+    let color = base_color(None);
+    let field: Input<States> = States::new()
+        .with(size.state_name(), true)
+        .with(theme.checkbox.radius.radius_state_name(), true)
+        .with("inline", true)
+        .into();
+    let checked: Input<States> = field
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("checked", true)
+        .into();
+    let style = |on: bool| {
+        use_cache((on, color.clone()), |(on, color)| {
+            checkbox_variables(*on, color)
+        })
+    };
+    let (on_style, off_style) = (style(true), style(false));
+    let framework = |sx: &'static StaticSx| {
+        let builder = use_box();
+        match enabled {
+            true => builder.framework_sx(sx),
+            false => builder,
+        }
+    };
+    let wrapper = framework(&FIELD_SX).states(&field).prepare();
+    let on = framework(&CHECKBOX_CONTROL_SX)
+        .states(&checked)
+        .style(Some(on_style))
+        .prepare();
+    let off = framework(&CHECKBOX_CONTROL_SX)
+        .states(&field)
+        .style(Some(off_style))
+        .prepare();
+    let input = framework(&VISUALLY_HIDDEN_SX).focus_ring(false).prepare();
+    let box_class = use_css(enabled.then_some(&CHECKBOX_BOX_SX), CssLayer::Framework);
+    enabled.then_some(CheckboxLook {
+        wrapper,
+        on,
+        off,
+        input,
+        box_class,
+    })
+}
+
+impl CheckboxLook {
+    /// [`Checkbox`]'s markup and activation for a label-less, unbound, enabled box.
+    pub fn render(
+        &self,
+        element: ElementHandle,
+        checked: bool,
+        aria_label: String,
+        onchange: impl Fn(bool) + Clone + 'static,
+    ) -> Element {
+        let toggle = move || onchange(!checked);
+        let input = Activation::new(element, toggle.clone())
+            .wire(self.input.clone())
+            .attr("type", "checkbox")
+            .attr("checked", checked)
+            .attr("data-controlled", true)
+            .attr("aria-label", aria_label)
+            .render(HtmlTag::Input, Vec::new(), ());
+        let box_node = rsx! {
+            span {
+                class: self.box_class.clone(),
+                "data-slot": CheckboxPart::Box.slot(),
+                "aria-hidden": "true",
+                onclick: move |_| {
+                    toggle();
+                    let _ = element.focus();
+                },
+                Glyph { slot: IconSlot::CheckboxCheck, icon: lucide::check::outlined, stroke_width: "3" }
+            }
+        };
+        let control = match checked {
+            true => &self.on,
+            false => &self.off,
+        };
+        self.wrapper.clone().render(
+            HtmlTag::Div,
+            Vec::new(),
+            control
+                .clone()
+                .attr("data-slot", CheckboxPart::Control.slot())
+                .render(
+                    HtmlTag::Span,
+                    Vec::new(),
+                    vec![input, box_node, ring_overlay()],
+                ),
+        )
+    }
 }
