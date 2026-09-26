@@ -131,38 +131,51 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
         })
     };
 
-    let onstart = use_callback(move |event: DragStart| {
-        if !interactive {
-            event.cancel.call(());
-            return;
-        }
-        let rect = rect.clone();
-        // Started here, awaited in the task - see `SliderCore`: under
-        // Blitz a read resolves where it is called.
-        let size = panel_element.dimensions();
-        let offset = panel_element.client_offset();
-        spawn(async move {
-            let (Ok(size), Ok((left, top))) = (size.await, offset.await) else {
+    // The latest move while the panel is unmeasured, applied once it is (1266).
+    let early = use_local_state(|| None::<(f64, f64)>);
+    let onstart = use_callback({
+        let early = early.clone();
+        move |event: DragStart| {
+            if !interactive {
                 event.cancel.call(());
                 return;
-            };
-            rect.set((left, top, size.width, size.height));
-            match at.call((event.client.x, event.client.y)) {
-                Some(point) => {
-                    grab.call(point);
-                    // The drag cancels the pointerdown, and with it the
-                    // browser's own focus - the keys would be unreachable.
-                    if focusable {
-                        let _ = thumb_element.focus();
-                    }
-                }
-                None => event.cancel.call(()),
             }
-        });
+            let (rect, early) = (rect.clone(), early.clone());
+            // The last drag's rect would map an early move to a stale point.
+            rect.set((0.0, 0.0, 0.0, 0.0));
+            early.set(None);
+            // Started here, awaited in the task - see `SliderCore`: under
+            // Blitz a read resolves where it is called.
+            let size = panel_element.dimensions();
+            let offset = panel_element.client_offset();
+            spawn(async move {
+                let (Ok(size), Ok((left, top))) = (size.await, offset.await) else {
+                    event.cancel.call(());
+                    return;
+                };
+                rect.set((left, top, size.width, size.height));
+                match at.call((event.client.x, event.client.y)) {
+                    Some(point) => {
+                        grab.call(point);
+                        if let Some(moved) = early.get().and_then(|client| at.call(client)) {
+                            slide.call(moved);
+                        }
+                        // The drag cancels the pointerdown, and with it the
+                        // browser's own focus - the keys would be unreachable.
+                        if focusable {
+                            let _ = thumb_element.focus();
+                        }
+                    }
+                    None => event.cancel.call(()),
+                }
+            });
+        }
     });
     let onmove = use_callback(move |event: DragMove| {
-        if let Some(point) = at.call((event.client.x, event.client.y)) {
-            slide.call(point);
+        let client = (event.client.x, event.client.y);
+        match at.call(client) {
+            Some(point) => slide.call(point),
+            None => early.set(Some(client)),
         }
     });
     let onend = use_callback(move |_| {

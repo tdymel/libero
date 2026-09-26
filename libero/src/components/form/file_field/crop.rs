@@ -8,6 +8,7 @@ use super::files::Files;
 use crate::{
     components::{
         buttons::Button,
+        feedback::Alert,
         form::{CropOptions, CropRect, ImageCropper},
         layout::Flex,
         overlay::Dialog,
@@ -102,6 +103,7 @@ fn CropDialog(args: CropArgs, close: Callback<()>, resolve: Callback<CropRect>) 
     let words = use_localization().image_cropper;
     let CropArgs { src, alt, options } = args;
     let mut rect = use_signal(|| None::<CropRect>);
+    let mut failed = use_signal(|| false);
 
     rsx! {
         Dialog { title: words.title,
@@ -113,13 +115,17 @@ fn CropDialog(args: CropArgs, close: Callback<()>, resolve: Callback<CropRect>) 
                     shape: options.shape,
                     value: rect(),
                     onchange: move |next| rect.set(Some(next)),
+                    onerror: move |()| failed.set(true),
                     // Tall photos fit the viewport; the box maps onto what shows.
                     sx: sx().selector("& > [data-slot='image']", sx().max_height("60vh")),
+                }
+                if failed() {
+                    Alert { color: "error", role: "alert", width: "100%", "{words.load_failed}" }
                 }
                 Flex { gap: "sm", justify: "flex-end", width: "100%",
                     Button { variant: "outlined", onclick: move |_| close.call(()), "{words.cancel}" }
                     Button {
-                        disabled: rect().is_none(),
+                        disabled: failed() || rect().is_none(),
                         onclick: move |_| {
                             if let Some(rect) = rect() {
                                 resolve.call(rect);

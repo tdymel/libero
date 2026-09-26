@@ -2,11 +2,15 @@
 //! reason as `Select`.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, MultiSelect, Text};
+use libero::components::{Flex, MultiSelect, OptionList, Text};
 
 use crate::{Routes, common::Fruit};
 
 pub const ROUTES: Routes = &[
+    (
+        "/multi-select/refused-first",
+        || rsx! { MultiSelectRefusedFirstPage {} },
+    ),
     ("/multi-select", || rsx! { MultiSelectPage {} }),
     ("/multi-select/search", || rsx! { MultiSelectSearchPage {} }),
     (
@@ -85,6 +89,23 @@ fn MultiSelectRefusedPage() -> Element {
                         value.set(next);
                     }
                 },
+            }
+        }
+    }
+}
+
+/// Apple, the first row, is refused: the list opens on Banana (1271).
+#[component]
+fn MultiSelectRefusedFirstPage() -> Element {
+    let mut value = use_signal(Vec::<Fruit>::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            MultiSelect {
+                label: "Fruit",
+                options: OptionList::from_options().disabling(|f| matches!(f, Fruit::Apple)),
+                value: value(),
+                onchange: move |next| value.set(next),
             }
         }
     }

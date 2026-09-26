@@ -88,6 +88,39 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
     let _ = std::fs::remove_file(path);
 }
 
+/// A dropped file that is no image: the dialog says so and Apply stays off (1265).
+#[test]
+fn a_broken_image_in_the_crop_dialog_says_so() {
+    let path = std::env::temp_dir().join(format!("e2e-broken-{}.png", std::process::id()));
+    std::fs::write(&path, b"not an image").unwrap();
+    block_on(async {
+        let fixture = Fixture::open("/file-field/crop", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        crate::file_field::drop_files(
+            page,
+            "[data-fixture-ready] [role=group]",
+            vec![path.to_string_lossy().into_owned()],
+        )
+        .await;
+        wait::for_js_true(
+            page,
+            "(() => { const alert = document.querySelector('[role=dialog] [role=alert]');
+              const apply = [...document.querySelectorAll('[role=dialog] button')]
+                .find((button) => button.textContent.trim() === 'Apply');
+              return !!alert && alert.textContent.includes('could not be loaded')
+                && !!apply && apply.disabled
+                && !document.querySelector('[role=dialog] [data-slot=box]'); })()",
+            "the dialog to report the broken image",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+    let _ = std::fs::remove_file(path);
+}
+
 /// The same crop through Browse, the PNG handed to the page's canvas and back
 /// as base64 in a WebView (1230).
 async fn a_picked_image_is_cropped<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -147,6 +180,64 @@ e2e::scenario!(
     a_disabled_cropper_shows_no_grab_cursor,
     "/image-cropper/disabled",
     a_disabled_cropper_shows_no_grab_cursor
+);
+
+/// An uncontrolled box refits to a new aspect or picture, a moved one too (1263).
+async fn the_box_refits_a_new_picture<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#crop", "25,0,50,100", "the starting square").await?;
+    d.focus(BOX).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_text(d, "#crop", "26,0,50,100", "ArrowRight").await?;
+    d.click("#widen").await?;
+    eventually_text(d, "#crop", "0,0,100,100", "a 2:1 aspect").await?;
+    d.click("#widen").await?;
+    eventually_text(d, "#crop", "25,0,50,100", "back to square").await?;
+    d.click("#swap").await?;
+    eventually_text(d, "#crop", "0,25,100,50", "a tall picture").await
+}
+
+/// At `min_size` the handles' hit areas meet; a drag on the box's centre still moves it (1264).
+async fn a_tiny_box_still_moves<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (dx, dy) = tenth_of_the_picture(d).await?;
+    d.drag("[data-slot=frame]", -dx, -dy).await?;
+    eventually_text(d, "#crop", "30,30,5,5", "a drag on the tiny box").await?;
+    eventually_focused(d, BOX, "the drag").await
+}
+
+/// A `src` that fails calls `onerror` once, warns, and draws no box over the alt text (1265).
+#[test]
+fn a_broken_src_reports_and_draws_no_box() {
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper/broken", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "document.getElementById('error').textContent === '1'
+              && !document.querySelector('[data-slot=box], [data-slot=frame]')",
+            "onerror, and no box",
+        )
+        .await
+        .unwrap();
+        let said = fixture.console.drain();
+        assert!(
+            said.iter()
+                .any(|message| message.contains("`src` failed to load")),
+            "no warning: {said:?}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+e2e::scenario!(
+    the_box_refits_a_new_picture,
+    "/image-cropper/refit",
+    the_box_refits_a_new_picture
+);
+e2e::scenario!(
+    a_tiny_box_still_moves,
+    "/image-cropper/tiny",
+    a_tiny_box_still_moves
 );
 
 async fn the_arrows_move_the_box<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

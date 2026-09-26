@@ -59,25 +59,35 @@ fn it_honours_the_combobox_contract() {
 /// The highlight skips a refused row, and so must the trigger's `aria-activedescendant`.
 #[test]
 fn the_trigger_names_the_row_the_list_highlights() {
+    the_trigger_names_the_lit_row("/combobox/refused", "Banana");
+}
+
+/// Opens `route`'s combobox by key; the trigger must name the lit row, `expected`, not a refused one.
+pub(crate) fn the_trigger_names_the_lit_row(route: &str, expected: &str) {
     block_on(async {
-        let fixture = Fixture::open("/combobox/refused", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         wait::for_visible(page, LISTBOX).await.unwrap();
         let js = r#"(() => {
             const t = document.querySelector('[role=combobox]');
-            const lit = document.querySelector('[role=option][data-active]');
+            const lit = document.querySelector('[role=option][data-state~=active]');
             const named = document.getElementById(t.getAttribute('aria-activedescendant'));
             return [named && named.textContent, named && named.getAttribute('aria-disabled'),
                     lit && lit.textContent];
         })()"#;
         let read: (Option<String>, Option<String>, Option<String>) =
             page.evaluate(js).await.unwrap().into_value().unwrap();
-        assert_eq!(read.1, None, "the trigger names a refused row: {read:?}");
-        assert_eq!(read.0, Some("Banana".into()), "{read:?}");
+        assert_eq!(
+            read.1, None,
+            "{route}: the trigger names a refused row: {read:?}"
+        );
+        assert_eq!(read.0.as_deref(), Some(expected), "{route}: {read:?}");
+        assert_eq!(
+            read.0, read.2,
+            "{route}: the named row is not the lit one: {read:?}"
+        );
         fixture.close().await.unwrap();
     });
 }

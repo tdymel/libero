@@ -631,3 +631,9 @@ fn a_refused_pick_keeps_the_old_selection() {
         fixture.close().await.unwrap();
     });
 }
+
+/// A refused first row: the trigger names the row the list lights (1271).
+#[test]
+fn the_trigger_skips_a_refused_first_row() {
+    crate::combobox::the_trigger_names_the_lit_row("/select/refused-first", "Banana");
+}

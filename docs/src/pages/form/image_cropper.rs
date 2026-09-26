@@ -44,7 +44,7 @@ pub fn ImageCropperPage() -> Element {
                         .doc("The image: any URL, a `data:` URL included."),
                     prop("alt", "String").doc("Describes the image."),
                     prop("value", "Option<CropRect>")
-                        .doc("The box, in fractions of the image. Pair it with `onchange`. Unset starts at the largest centred box `aspect` allows, and reports it once the image has loaded."),
+                        .doc("The box, in fractions of the image. Pair it with `onchange`. Unset starts at the largest centred box `aspect` allows, and reports it once the image has loaded. A new `src` or `aspect` starts it over."),
                     prop("onchange", "EventHandler<CropRect>")
                         .doc("Fires on every move of the box, by a drag or a key. Without it the cropper only shows."),
                     prop("aspect", "f64")
@@ -60,6 +60,8 @@ pub fn ImageCropperPage() -> Element {
                         .doc("Dims the cropper and takes no input."),
                     prop("aria_label", "String")
                         .doc("Names the box; the localization's `image_cropper.label` (\"Crop area\") when unset."),
+                    prop("onerror", "EventHandler<()>")
+                        .doc("Fires when `src` fails to load. The box is not drawn until `src` changes, so the alt text shows."),
                 ])
                 .parts("ImageCropperPart", vec![
                     (ImageCropperPart::Image, "The image."),

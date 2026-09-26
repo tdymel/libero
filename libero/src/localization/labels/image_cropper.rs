@@ -17,6 +17,8 @@ pub struct ImageCropperLabels {
     pub apply: &'static str,
     /// The crop dialog's button that drops the picked file.
     pub cancel: &'static str,
+    /// The crop dialog's error when the picked image does not load.
+    pub load_failed: &'static str,
 }
 
 impl ImageCropperLabels {
@@ -31,6 +33,7 @@ impl ImageCropperLabels {
         title: "Crop image",
         apply: "Apply",
         cancel: "Cancel",
+        load_failed: "This image could not be loaded. Cancel and pick another file.",
     };
 
     pub const GERMAN: Self = Self {
@@ -44,5 +47,6 @@ impl ImageCropperLabels {
         title: "Bild zuschneiden",
         apply: "Übernehmen",
         cancel: "Abbrechen",
+        load_failed: "Dieses Bild lässt sich nicht laden. Abbrechen und eine andere Datei wählen.",
     };
 }

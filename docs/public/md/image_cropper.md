@@ -56,13 +56,14 @@ FileField {
 |---|---|---|---|
 | `src` | `String` | - | The image: any URL, a `data:` URL included. |
 | `alt` | `String` | - | Describes the image. |
-| `value` | `Option<CropRect>` | - | The box, in fractions of the image. Pair it with `onchange`. Unset starts at the largest centred box `aspect` allows, and reports it once the image has loaded. |
+| `value` | `Option<CropRect>` | - | The box, in fractions of the image. Pair it with `onchange`. Unset starts at the largest centred box `aspect` allows, and reports it once the image has loaded. A new `src` or `aspect` starts it over. |
 | `onchange` | `EventHandler<CropRect>` | - | Fires on every move of the box, by a drag or a key. Without it the cropper only shows. |
 | `aspect` | `f64` | - | Locks width over height, in image pixels: `1.0` is square, `16.0 / 9.0` wide. Unset is free. |
 | `shape` | `CropShape` | `Rect` | `Circle` masks outside an ellipse, for an avatar. The rect is the same either way. |
 | `min_size` | `f64` | `0.05` | The smallest side, a fraction of the image's. |
 | `disabled` | `bool` | `false` | Dims the cropper and takes no input. |
 | `aria_label` | `String` | - | Names the box; the localization's `image_cropper.label` ("Crop area") when unset. |
+| `onerror` | `EventHandler<()>` | - | Fires when `src` fails to load. The box is not drawn until `src` changes, so the alt text shows. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.

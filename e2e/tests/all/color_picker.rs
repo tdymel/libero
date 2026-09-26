@@ -22,6 +22,44 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// A move in the same task as the press, before the pad is measured, still lands (1266).
+#[test]
+fn an_early_move_on_the_pad_still_lands() {
+    block_on(async {
+        let fixture = Fixture::open("/color-picker", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("!!document.querySelector({THUMB:?})"),
+            "the pad",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!(
+            "(() => {{ const pad = document.querySelector({THUMB:?}).parentElement;
+               const r = pad.getBoundingClientRect();
+               const at = (type, x) => pad.dispatchEvent(new PointerEvent(type, {{
+                   bubbles: true, pointerId: 1, isPrimary: true, pointerType: 'mouse',
+                   button: 0, buttons: type === 'pointerup' ? 0 : 1,
+                   clientX: r.left + r.width * x, clientY: r.top + r.height / 2 }}));
+               at('pointerdown', 0.1);
+               at('pointermove', 0.9); }})()"
+        ))
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{READING} === '90,50'"),
+            "the early move to land",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The swatch equal to the value is pressed and carries the only check mark;
 /// picking another moves both (todo 553).
 #[test]

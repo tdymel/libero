@@ -7,6 +7,10 @@ use libero::components::{FieldStatus, Flex, OptionItem, OptionList, Select, Text
 use crate::{Routes, common::Fruit};
 
 pub const ROUTES: Routes = &[
+    (
+        "/select/refused-first",
+        || rsx! { SelectRefusedFirstPage {} },
+    ),
     ("/select", || rsx! { SelectPage {} }),
     ("/select/field", || rsx! { SelectFieldPage {} }),
     ("/select/readonly", || rsx! { SelectReadonlyPage {} }),
@@ -136,6 +140,23 @@ fn SelectReadonlyPage() -> Element {
             Select {
                 label: "Fruit",
                 readonly: true,
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+        }
+    }
+}
+
+/// Apple, the first row, is refused: the list opens on Banana (1271).
+#[component]
+fn SelectRefusedFirstPage() -> Element {
+    let mut value = use_signal(|| None::<Fruit>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Select {
+                label: "Fruit",
+                options: OptionList::from_options().disabling(|f| matches!(f, Fruit::Apple)),
                 value: value(),
                 onchange: move |next| value.set(next),
             }

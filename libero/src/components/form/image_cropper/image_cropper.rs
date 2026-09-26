@@ -120,6 +120,17 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                 .align_items("center")
                 .justify_content("center"),
         )
+        // Over the handles between them, and at least a dot's size: a box at
+        // `min_size` stays movable when the handles' hit areas meet (1264).
+        .selector("& > [data-slot='frame'] > [data-slot='move']", {
+            let side = format!("max(calc(100% - {HANDLE_HIT}), min(100%, {HANDLE_DOT}))");
+            sx().position("absolute")
+                .left("50%")
+                .top("50%")
+                .width(side.clone())
+                .height(side)
+                .transform("translate(-50%, -50%)")
+        })
         .selector(
             "& > [data-slot='frame'] > [data-slot='handle'] > span",
             sx().display("block")
@@ -189,6 +200,9 @@ base_props! {
         /// Names the crop box; `Localization.image_cropper.label` by default.
         #[props(default, into)]
         aria_label: Option<String>,
+        /// Fires when `src` fails to load; the box is not drawn until `src` changes.
+        #[props(default)]
+        onerror: Option<EventHandler<()>>,
     }
 }
 
@@ -252,8 +266,10 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         }
     });
 
-    // An unset `value` reports its starting box once the image's shape is known.
+    // An unset `value` reports its starting box once the image's shape is known,
+    // and refits it while no key or drag has moved it.
     let (aspect, unset) = (props.aspect, props.value.is_none());
+    let mut fitted = use_signal(|| None::<CropRect>);
     let measure = use_callback(move |()| {
         let size = image.dimensions();
         spawn(async move {
@@ -267,14 +283,44 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             if *image_ratio.peek() != Some(measured) {
                 image_ratio.set(Some(measured));
             }
-            if unset && held.peek().is_none() {
+            let current = *held.peek();
+            if unset && (current.is_none() || current == *fitted.peek()) {
                 let ratio = aspect
                     .filter(|aspect| aspect.is_finite() && *aspect > 0.0)
                     .map(|aspect| aspect / measured);
-                emit.call(CropRect::largest(ratio));
+                let rect = CropRect::largest(ratio);
+                fitted.set(Some(rect));
+                if current != Some(rect) {
+                    emit.call(rect);
+                }
             }
         });
     });
+
+    // A new picture or aspect starts over: a `src` still loading is fitted again on load.
+    let mounted = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(false)));
+    use_effect(use_reactive((&props.src, &aspect), move |_| {
+        if mounted.replace(true) {
+            held.set(None);
+            when_laid_out(move || measure.call(()));
+        }
+    }));
+
+    // A `src` that failed to load: no box over the alt text until another `src`.
+    let mut failed = use_signal(|| false);
+    use_effect(use_reactive(&props.src, move |_| {
+        if *failed.peek() {
+            failed.set(false);
+        }
+    }));
+    let onerror = props.onerror;
+    let onerror = move |_| {
+        warn("ImageCropper: `src` failed to load.");
+        failed.set(true);
+        if let Some(onerror) = &onerror {
+            onerror.call(());
+        }
+    };
 
     // Blitz fires no `load`: measure once laid out as well.
     use_effect(move || {
@@ -486,31 +532,36 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     src: props.src,
                     alt: props.alt,
                     draggable: "false",
-                    onmounted: image.mount(),                    onload: move |_| measure.call(()),
+                    onmounted: image.mount(),
+                    onload: move |_| measure.call(()),
+                    onerror,
                 }
-                div { "data-slot": "mask", "aria-hidden": "true",
-                    div {}
+                if !failed() {
+                    div { "data-slot": "mask", "aria-hidden": "true",
+                        div {}
+                    }
+                    div {
+                        "data-slot": ImageCropperPart::Box.slot(),
+                        role: "slider",
+                        tabindex,
+                        "aria-label": aria_label,
+                        "aria-describedby": keys_id(),
+                        "aria-valuemin": 0,
+                        "aria-valuemax": 100,
+                        "aria-valuenow": percent(shown.x),
+                        "aria-valuetext": valuetext.clone(),
+                        "aria-disabled": (!interactive).then_some("true"),
+                        onmounted: box_element.mount(),
+                        onkeydown: key(Grip::Move),
+                    }
+                    div {
+                        "data-slot": ImageCropperPart::Frame.slot(),
+                        onpointerdown: onpointerdown_box,
+                        {handles}
+                        div { "data-slot": "move" }
+                    }
+                    span { id: keys_id(), hidden: true, "{words.keys}" }
                 }
-                div {
-                    "data-slot": ImageCropperPart::Box.slot(),
-                    role: "slider",
-                    tabindex,
-                    "aria-label": aria_label,
-                    "aria-describedby": keys_id(),
-                    "aria-valuemin": 0,
-                    "aria-valuemax": 100,
-                    "aria-valuenow": percent(shown.x),
-                    "aria-valuetext": valuetext.clone(),
-                    "aria-disabled": (!interactive).then_some("true"),
-                    onmounted: box_element.mount(),
-                    onkeydown: key(Grip::Move),
-                }
-                div {
-                    "data-slot": ImageCropperPart::Frame.slot(),
-                    onpointerdown: onpointerdown_box,
-                    {handles}
-                }
-                span { id: keys_id(), hidden: true, "{words.keys}" }
             },
         )
 }
