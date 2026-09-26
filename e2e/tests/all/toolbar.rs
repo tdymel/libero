@@ -3,7 +3,7 @@
 use anyhow::{Result, ensure};
 use e2e::archetypes::{Orientation, RovingTabindex};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::driver::{Driver, eventually, eventually_focused, linger};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -209,6 +209,38 @@ async fn alt_f10_reaches_the_bar<D: Driver>(d: &mut D, _route: &str) -> Result<(
     eventually_focused(d, "#text", "Escape again").await
 }
 
+/// Once focus left the bar, Escape back in it stays the page's (todo 1293).
+async fn leaving_the_bar_forgets_the_editor<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#text").await?;
+    d.press_alt(keyboard::F10).await?;
+    eventually_focused(d, "#bold", "Alt+F10").await?;
+    d.click("#text").await?;
+    eventually_focused(d, "#text", "a click out of the bar").await?;
+    d.click("#italic").await?;
+    eventually_focused(d, "#italic", "a click back in").await?;
+    d.press(keyboard::ESCAPE).await?;
+    linger(d, 5).await;
+    eventually_focused(d, "#italic", "Escape after leaving").await
+}
+
+/// A dialog the bar opened is not leaving it: Escape closes it, then hands back.
+async fn a_popup_of_the_bar_keeps_the_editor<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#text").await?;
+    d.press_alt(keyboard::F10).await?;
+    eventually_focused(d, "#bold", "Alt+F10").await?;
+    d.press(keyboard::END).await?;
+    eventually_focused(d, "#help", "End").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "the help to open", async |d| {
+        d.exists("[role=dialog] dl").await
+    })
+    .await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually_focused(d, "#help", "Escape closing the help").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually_focused(d, "#text", "Escape to the editor").await
+}
+
 /// The help lists each chord in the platform's key names.
 async fn the_help_lists_the_chords<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#help").await?;
@@ -230,6 +262,19 @@ e2e::scenario!(
     alt_f10_moves_focus_to_the_bar_and_escape_back,
     "/toolbar-editor",
     alt_f10_reaches_the_bar
+);
+e2e::scenario!(
+    escape_stays_put_once_focus_left_the_bar,
+    "/toolbar-editor",
+    leaving_the_bar_forgets_the_editor,
+    native: skip("1293: only the web reads a focusout's relatedTarget"),
+    android: skip("1293: only the web reads a focusout's relatedTarget"),
+    desktop: skip("1293: only the web reads a focusout's relatedTarget")
+);
+e2e::scenario!(
+    escape_still_hands_back_after_a_dialog_of_the_bar,
+    "/toolbar-editor",
+    a_popup_of_the_bar_keeps_the_editor
 );
 e2e::scenario!(
     shortcut_help_lists_the_chords,

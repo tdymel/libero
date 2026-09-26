@@ -56,7 +56,7 @@ pub fn ToolbarPage() -> Element {
                 .key(["Left", "Right"], "Moves to the previous or next control, disabled ones included. Swapped under right-to-left text. Up and Down in a vertical bar.")
                 .key(["Home", "End"], "Goes to the first or last control.")
                 .key(["Alt", "F10"], "With `focus_from`, moves from that element to the bar's tab stop.")
-                .key(["Escape"], "After Alt+F10, hands focus back to where it was.")
+                .key(["Escape"], "After Alt+F10, hands focus back to where it was, until focus leaves the bar; a menu or dialog the bar opened does not count.")
                 .handles([
                     "The root is a `role=\"toolbar\"`, with `aria-orientation=\"vertical\"` when vertical.",
                     "The bar is one tab stop: the controls inside get a roving `tabindex`.",

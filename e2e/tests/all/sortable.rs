@@ -497,24 +497,13 @@ fn a_row_scrolls_inside_itself_at_320px() {
 /// On a touch screen the handle's description names the move buttons, not Space.
 #[test]
 fn a_touch_screen_describes_the_handle_by_the_move_buttons() {
-    use chromiumoxide::cdp::browser_protocol::page::AddScriptToEvaluateOnNewDocumentParams;
     const DESCRIPTION: &str = "document.getElementById(document.querySelector('#Alpha button')\
          .getAttribute('aria-describedby')).textContent";
-    // Headless Chrome reports a coarse pointer and CDP cannot emulate `pointer`: a fake list.
-    const FAKE_POINTER: &str = "{
-        const list = new EventTarget();
-        list.matches = false;
-        const real = window.matchMedia.bind(window);
-        window.matchMedia = q => q === '(pointer: coarse)' ? list : real(q);
-        window.setCoarse = on => { list.matches = on; list.dispatchEvent(new Event('change')); };
-    }";
     block_on(async {
         let fixture = Fixture::open("/sortable", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         let outcome = async {
-            page.execute(AddScriptToEvaluateOnNewDocumentParams::new(FAKE_POINTER))
-                .await?;
-            page.reload().await?;
+            e2e::browser::fake_pointer(page).await?;
             wait::for_visible(page, "#Alpha").await?;
             wait::for_js_true(
                 page,
@@ -522,7 +511,7 @@ fn a_touch_screen_describes_the_handle_by_the_move_buttons() {
                 "the keyboard description",
             )
             .await?;
-            page.evaluate("setCoarse(true)").await?;
+            e2e::browser::set_coarse_pointer(page, true).await?;
             wait::for_js_true(
                 page,
                 &format!("{DESCRIPTION} === 'Use the move buttons to reorder the item.'"),

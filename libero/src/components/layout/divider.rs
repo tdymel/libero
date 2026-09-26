@@ -83,11 +83,9 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .align_items("center")
                 .border("0")
                 .color("muted.9")
-                .selector(
-                    "&::before, &::after",
-                    sx().content("\"\"").flex("1").background(divider_color()),
-                ),
+                .selector("&::before, &::after", sx().content("\"\"").flex("1")),
         )
+        // The halves are borders, not fills: forced colours keep them.
         .when(
             "horizontal && label",
             // "horizontal" is unconditional and also matches here; these two
@@ -95,13 +93,27 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().border_bottom("0")
                 .height("auto")
                 .width("100%")
-                .selector("&::before, &::after", sx().height(divider_line())),
+                .selector(
+                    "&::before, &::after",
+                    sx().height("0").border_top(format!(
+                        "{} solid {}",
+                        divider_line(),
+                        divider_color()
+                    )),
+                ),
         )
         .when(
             "vertical && label",
             sx().flex_direction("column")
                 .align_self("stretch")
-                .selector("&::before, &::after", sx().width(divider_line())),
+                .selector(
+                    "&::before, &::after",
+                    sx().width("0").border_left(format!(
+                        "{} solid {}",
+                        divider_line(),
+                        divider_color()
+                    )),
+                ),
         )
         // Only with "label" - out-specificities its even-flex
         // ::before/::after above.

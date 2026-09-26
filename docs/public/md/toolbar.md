@@ -65,7 +65,7 @@ parts work.
 | `Left` or `Right` | Moves to the previous or next control, disabled ones included. Swapped under right-to-left text. Up and Down in a vertical bar. |
 | `Home` or `End` | Goes to the first or last control. |
 | `Alt` + `F10` | With `focus_from`, moves from that element to the bar's tab stop. |
-| `Escape` | After Alt+F10, hands focus back to where it was. |
+| `Escape` | After Alt+F10, hands focus back to where it was, until focus leaves the bar; a menu or dialog the bar opened does not count. |
 
 ### Libero handles
 

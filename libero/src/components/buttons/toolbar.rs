@@ -13,8 +13,8 @@ use crate::{
     },
     hooks::{ElementHandle, Hotkey, use_element, use_focus_return, use_hotkeys},
     platform::{
-        ElementApi, FocusStep, arrow_target, caret_edges, focus_among, focus_selector,
-        focused_attribute, key_taken, logical_key, silent_focus, typing_target,
+        ElementApi, FocusStep, arrow_target, caret_edges, focus_among, focus_entered_from,
+        focus_selector, focused_attribute, key_taken, logical_key, silent_focus, typing_target,
     },
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, Size, SizeCss},
@@ -233,6 +233,12 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
     // Whichever item takes focus, by arrow, click or script, becomes the tab stop.
     // Blitz fires `focusin` before the focus moves: there an item's own click reports it.
     let onfocusin = move |_: FocusEvent| follow_focus(&bar, scope);
+    // Focus leaving for the page, not for a menu the bar opened: a later Escape stays the page's.
+    let onfocusout = move |event: FocusEvent| {
+        if *arrived.peek() && focus_entered_from(&event, STAYS_ARRIVED).is_some() {
+            arrived.set(false);
+        }
+    };
     // Blitz moves focus by script or Tab with no `focusin`; fixed per build, so the hook order holds.
     if silent_focus().is_some() {
         use_hook(|| {
@@ -265,6 +271,7 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
         .element(&bar)
         .event("onkeydown", onkeydown)
         .event("onfocusin", onfocusin)
+        .event("onfocusout", onfocusout)
         .attr("role", "toolbar")
         // `horizontal` is the role's default.
         .attr(
@@ -303,6 +310,9 @@ fn follow_focus(bar: &ElementHandle, scope: ToolbarScope) {
         scope.focused(id);
     }
 }
+
+/// Where focus may go from the bar and Escape still hands back: the bar, its popups.
+const STAYS_ARRIVED: &str = "[role='toolbar'], [role='menu'], [role='listbox'], [role='dialog']";
 
 fn item_selector(id: u64) -> String {
     format!("[{TOOLBAR_ITEM}=\"{id}\"]")

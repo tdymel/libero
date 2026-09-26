@@ -74,6 +74,40 @@ pub async fn emulate_media(
     Ok(())
 }
 
+/// Headless Chrome reports `(pointer: coarse)` and CDP cannot emulate `pointer`: fakes the
+/// `matchMedia` lists of `(pointer: coarse)` and `(pointer: fine)`, fine at first. Reloads.
+pub async fn fake_pointer(page: &Page) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::page::AddScriptToEvaluateOnNewDocumentParams;
+    const FAKE: &str = "{
+        const list = coarse => Object.assign(new EventTarget(), { coarse, matches: !coarse });
+        const lists = { '(pointer: coarse)': list(true), '(pointer: fine)': list(false) };
+        const real = window.matchMedia.bind(window);
+        window.matchMedia = q => lists[q.trim()] ?? real(q);
+        window.__libero_set_coarse = on => Object.values(lists).forEach(l => {
+            const matches = l.coarse === on;
+            if (l.matches !== matches) {
+                l.matches = matches;
+                l.dispatchEvent(Object.assign(new Event('change'), { matches }));
+            }
+        });
+    }";
+    page.execute(AddScriptToEvaluateOnNewDocumentParams::new(FAKE))
+        .await
+        .context("install the fake pointer")?;
+    page.reload()
+        .await
+        .context("reload with the fake pointer")?;
+    Ok(())
+}
+
+/// Switches the [`fake_pointer`] lists and fires their `change` events.
+pub async fn set_coarse_pointer(page: &Page, coarse: bool) -> Result<()> {
+    page.evaluate(format!("window.__libero_set_coarse({coarse})"))
+        .await
+        .context("switch the fake pointer")?;
+    Ok(())
+}
+
 /// Where this run's Chrome profile lives. The runner sets it and cleans it up;
 /// a bare `cargo test` gets a pid-scoped fallback so it is still unique.
 fn chrome_profile() -> std::path::PathBuf {
