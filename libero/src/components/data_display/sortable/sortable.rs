@@ -35,14 +35,15 @@ pub(crate) static SORTABLE_ITEM_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .gap("xs")
         .position("relative")
-        // Only while another item drags: on drop the order changes and the
-        // offsets reset in one frame, which must not animate.
+        // Only while the list sorts: on drop the order changes and the offsets
+        // reset in one frame, which must not animate. `when` has no negation, so
+        // the dragged item opts out below.
         .when(
-            "sorting && !dragging",
+            "sorting",
             sx().transition("transform 150ms ease")
                 .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
         )
-        .when("dragging", sx().z_index("1"))
+        .when("dragging", sx().z_index("1").transition("none"))
 });
 
 pub(crate) static SORTABLE_HANDLE_SX: StaticSx =

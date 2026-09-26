@@ -11,6 +11,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/sortable", || rsx! { SortablePage {} }),
     ("/sortable/horizontal", || rsx! { HorizontalPage {} }),
+    ("/sortable/rtl", || rsx! { RtlPage {} }),
     ("/sortable/hook", || rsx! { HookPage {} }),
     ("/sortable/long", || rsx! { LongPage {} }),
 ];
@@ -77,6 +78,27 @@ fn HorizontalPage() -> Element {
                 }
             }
             Text { id: "order", {items().join(" ")} }
+        }
+    }
+}
+
+/// A row under `dir="rtl"`: Alpha sits on the right.
+#[component]
+fn RtlPage() -> Element {
+    let mut items = use_signal(|| NAMES.to_vec());
+    rsx! {
+        div { dir: "rtl",
+            Flex { direction: "column", gap: "md",
+                Sortable {
+                    id: "list",
+                    orientation: Orientation::Horizontal,
+                    onreorder: move |step: SortableMove| step.apply(&mut items.write()),
+                    for (index, name) in items().into_iter().enumerate() {
+                        SortableItem { key: "{name}", index, id: "{name}", label: name, Text { "{name}" } }
+                    }
+                }
+                Text { id: "order", {items().join(" ")} }
+            }
         }
     }
 }

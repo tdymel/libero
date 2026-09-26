@@ -203,6 +203,68 @@ async fn a_dropped_item_settles_into_its_slot<D: Driver>(d: &mut D, _route: &str
     Ok(())
 }
 
+async fn an_rtl_row_drags_leftwards<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (alpha, gamma) = (d.rect("#Alpha").await?, d.rect("#Gamma").await?);
+    ensure!(gamma.x < alpha.x, "Alpha is not the rightmost item");
+    d.drag("#Alpha button", gamma.x - alpha.x, 0.0).await?;
+    eventually_text(
+        d,
+        "#order",
+        "Beta Gamma Alpha Delta",
+        "a drag two slots left",
+    )
+    .await?;
+    let (alpha, gamma) = (d.rect("#Alpha").await?, d.rect("#Gamma").await?);
+    ensure!(
+        alpha.x < gamma.x,
+        "Alpha at {}, Gamma at {}",
+        alpha.x,
+        gamma.x
+    );
+    Ok(())
+}
+
+async fn an_rtl_row_moves_by_the_mirrored_arrows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#Alpha button").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted Alpha, position 1 of 4.", "Space to lift").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    eventually_text(d, STATUS, "Alpha moved to position 3 of 4.", "ArrowLeft").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, "#order", "Beta Gamma Alpha Delta", "Space to drop").await?;
+    // The move forward button points the way the row runs.
+    d.click("#Alpha [data-slot=move-later]").await?;
+    eventually_text(d, "#order", "Beta Gamma Delta Alpha", "Move forward").await?;
+    Ok(())
+}
+
+/// The neighbours slide aside while an item is lifted; the lifted one follows the pointer at once.
+async fn neighbours_slide_the_lifted_item_does_not<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    ensure!(
+        d.style("#Beta", "transition-duration").await? == "0s",
+        "an idle item animates"
+    );
+    d.focus("#Alpha button").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted Alpha, position 1 of 4.", "Space to lift").await?;
+    ensure!(
+        d.style("#Beta", "transition-duration").await? == "0.15s",
+        "a neighbour has no slide: {}",
+        d.style("#Beta", "transition-duration").await?
+    );
+    ensure!(
+        d.style("#Alpha", "transition-duration").await? == "0s",
+        "the lifted item lags behind"
+    );
+    d.press(keyboard::ESCAPE).await?;
+    Ok(())
+}
+
 /// A swipe on an item's text scrolls the page: only the handle drags (touch-action).
 #[cfg_attr(not(feature = "android"), allow(dead_code))]
 async fn a_swipe_off_the_handle_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -255,6 +317,21 @@ e2e::scenario!(
     a_horizontal_list_reorders_by_a_sideways_drag,
     "/sortable/horizontal",
     a_row_reorders_sideways
+);
+e2e::scenario!(
+    the_neighbours_of_a_lifted_item_slide_and_the_lifted_item_does_not,
+    "/sortable",
+    neighbours_slide_the_lifted_item_does_not
+);
+e2e::scenario!(
+    a_right_to_left_row_reorders_by_a_leftward_drag,
+    "/sortable/rtl",
+    an_rtl_row_drags_leftwards
+);
+e2e::scenario!(
+    a_right_to_left_row_moves_by_the_mirrored_arrows_and_buttons,
+    "/sortable/rtl",
+    an_rtl_row_moves_by_the_mirrored_arrows
 );
 e2e::scenario!(
     a_click_on_a_hook_handle_clicks_and_a_drag_does_not,
