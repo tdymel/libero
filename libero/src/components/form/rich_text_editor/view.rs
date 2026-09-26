@@ -13,7 +13,7 @@ use super::handle::{RichTextHandle, Status};
 use super::input::{Intent, intent, text_diff};
 use super::model::{
     Action, BlockKind, Builtin, CommandName, Commands, Doc, Editor, EditorState, Inline, KeyPress,
-    Keymap, Mark, MarkKind, NodeKey, Position, Record, Selection, UndoStack,
+    Keymap, Mark, MarkKind, NodeKey, NodeRegistry, Position, Record, Selection, UndoStack,
 };
 use super::node_view::NodeViews;
 use super::offsets::{to_dom, to_model};
@@ -35,6 +35,7 @@ use crate::{
     },
     platform::mod_is_meta,
     sx::{StaticSx, sx},
+    theme::{ANCHOR_COLOR, CODE_FONT_FAMILY, ColorCss, ColorShade},
 };
 
 impl UndoStack for HistoryHandle<EditorState> {
@@ -99,6 +100,25 @@ static SURFACE_SX: StaticSx = StaticSx::new(|| {
         .selector("& pre", sx().font_family("monospace").margin("0"))
         // List items hold paragraphs: no paragraph gaps between bullets.
         .selector("& li > p", sx().margin("0"))
+        // Inline code, links and quotes as `Code`, `Anchor` and `Blockquote` draw them.
+        .selector(
+            "& :not(pre) > code",
+            sx().background("muted.2")
+                .border_radius("4px")
+                .padding("0 0.25em")
+                .font_family(CODE_FONT_FAMILY.value())
+                .font_size("0.875em"),
+        )
+        .selector("& a", sx().color(ANCHOR_COLOR.value()))
+        .selector(
+            "& blockquote",
+            sx().margin("1em 0")
+                .padding("0 0.75rem")
+                .border_left(format!(
+                    "2px solid {}",
+                    ColorCss::MUTED.value(ColorShade::S4)
+                )),
+        )
         .selector(
             "& [data-fence]",
             sx().font_family("monospace")
@@ -147,6 +167,9 @@ field_props! {
         /// Components for custom nodes, by node name; others draw a plain fallback.
         #[props(default)]
         nodes: NodeViews,
+        /// The caller's node types; debug builds warn about a `nodes` name it lacks.
+        #[props(default, into)]
+        registry: Option<NodeRegistry>,
     }
 }
 
@@ -269,6 +292,21 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     if *keymap.peek() != props.keymap {
         let mut keymap = keymap;
         keymap.set(props.keymap.clone());
+    }
+    #[cfg(debug_assertions)]
+    {
+        let mut checked = use_hook(|| CopyValue::new(None::<(NodeViews, NodeRegistry)>));
+        if let Some(registry) = &props.registry {
+            let pair = (props.nodes.clone(), registry.clone());
+            if checked.peek().as_ref() != Some(&pair) {
+                for name in props.nodes.unregistered(registry) {
+                    crate::utils::warn(&format!(
+                        "NodeViews: \"{name}\" is not a registered node; nodes of that name never reach this view."
+                    ));
+                }
+                checked.set(Some(pair));
+            }
+        }
     }
 
     let mut echoes = use_hook(|| CopyValue::new(Echoes::default()));
@@ -669,8 +707,8 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                         Button {
                             attributes: block_menu.a11y_attributes(),
                             "aria-label": "{words.block_type}: {block_label}",
-                            variant: "subtle",
-                            size: "sm",
+                            variant: "standard",
+                            color: "ink",
                             "{block_label}"
                         }
                     }

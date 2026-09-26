@@ -40,6 +40,8 @@ pub fn RichTextEditorPage() -> Element {
                     prop("nodes", "NodeViews")
                         .default("NodeViews::new()")
                         .doc("Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once."),
+                    prop("registry", "NodeRegistry")
+                        .doc("Your node types. With it, a debug build warns about a `nodes` name that is not registered, such as a typo."),
                     prop("size", "Size").default("md").doc("Padding and font size."),
                     prop("radius", "Size")
                         .default("sm")

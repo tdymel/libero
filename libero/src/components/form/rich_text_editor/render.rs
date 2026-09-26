@@ -115,7 +115,12 @@ fn code(block: &Block, language: &str, ctx: RenderCtx<'_>) -> Element {
                     on_code.call(key);
                 }
             },
-            CodeBlock { language: language.to_string(), source: text, copyable: false }
+            CodeBlock {
+                language: language.to_string(),
+                source: text,
+                header: !language.is_empty(),
+                copyable: false,
+            }
         }
     }
 }

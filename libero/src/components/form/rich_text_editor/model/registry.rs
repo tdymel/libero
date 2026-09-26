@@ -39,6 +39,21 @@ impl fmt::Debug for NodeSpec {
     }
 }
 
+/// `to_markdown` compares by pointer: the same closure, not the same output.
+impl PartialEq for NodeSpec {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.placement == other.placement
+            && self.content == other.content
+            && self.default_attrs == other.default_attrs
+            && self.builtin == other.builtin
+            && match (&self.to_markdown, &other.to_markdown) {
+                (Some(a), Some(b)) => Rc::ptr_eq(a, b),
+                (a, b) => a.is_none() && b.is_none(),
+            }
+    }
+}
+
 impl NodeSpec {
     pub fn inline(name: impl Into<String>) -> Self {
         Self::new(name, Placement::Inline, CustomContent::Atom)
@@ -87,7 +102,7 @@ impl fmt::Display for RegistryError {
 
 impl std::error::Error for RegistryError {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NodeRegistry {
     specs: BTreeMap<String, NodeSpec>,
 }

@@ -69,6 +69,14 @@ impl NodeViews {
         self.views.keys().map(String::as_str)
     }
 
+    /// The view names `registry` does not know: typos that silently fall back.
+    pub(crate) fn unregistered<'a>(
+        &'a self,
+        registry: &'a NodeRegistry,
+    ) -> impl Iterator<Item = &'a str> {
+        self.names().filter(|name| registry.get(name).is_none())
+    }
+
     /// `name`'s view as an element, `None` when none is set.
     pub(crate) fn render(&self, name: &str, attrs: &Attrs, children: Element) -> Option<Element> {
         let view = *self.views.get(name)?;
@@ -96,5 +104,26 @@ impl PartialEq for NodeViews {
 impl fmt::Debug for NodeViews {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_set().entries(self.views.keys()).finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::model::NodeSpec;
+    use super::*;
+
+    fn view(_: NodeViewProps) -> Element {
+        VNode::empty()
+    }
+
+    #[test]
+    fn unregistered_names_only_the_views_the_registry_lacks() {
+        let mut registry = NodeRegistry::default();
+        registry.register(NodeSpec::inline("mention")).unwrap();
+        let views = NodeViews::new().with("mention", view).with("calout", view);
+        assert_eq!(
+            views.unregistered(&registry).collect::<Vec<_>>(),
+            ["calout"]
+        );
     }
 }

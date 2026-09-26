@@ -296,6 +296,76 @@ fn node_views_draw_caller_nodes_and_keep_their_content_editable() {
     });
 }
 
+/// A German layout sends "/" as Shift+7.
+const SLASH_DE: Key = Key {
+    key: "/",
+    code: "Digit7",
+    vk: 55,
+    text: None,
+};
+
+#[test]
+fn arrow_up_enters_a_rendered_code_block_and_shift_slash_opens_help() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/code", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        settle(page).await;
+        let view: bool = eval(
+            page,
+            &format!("!!{EDITOR}.querySelector('[data-code=view]')"),
+        )
+        .await;
+        assert!(view);
+
+        // ArrowUp at the leaf below enters the rendered block at its end.
+        page.evaluate(format!(
+            "(() => {{ const e = {EDITOR}; e.focus(); const l = [...e.querySelectorAll('[data-key]')].pop(); getSelection().selectAllChildren(l); getSelection().collapseToEnd(); }})()"
+        ))
+        .await
+        .unwrap();
+        settle(page).await;
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "Z").await.unwrap();
+        let markdown = out(page).await;
+        assert_eq!(markdown, "above\n\n```\nlet x = 1;Z\n```\n\nbelow\n");
+
+        keyboard::press_with(page, SLASH_DE, CTRL | keyboard::SHIFT)
+            .await
+            .unwrap();
+        settle(page).await;
+        let listed: String = eval(
+            page,
+            "document.querySelector('[role=dialog]')?.textContent ?? ''",
+        )
+        .await;
+        assert!(listed.contains("Keyboard shortcuts"), "{listed:?}");
+    });
+}
+
+#[test]
+fn the_toolbar_wraps_in_a_narrow_column() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/sample", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        settle(page).await;
+        // [no horizontal overflow, distinct item rows]
+        let (overflow, rows): (bool, u32) = eval(
+            page,
+            "(() => { const t = document.querySelector('[role=toolbar]'); \
+               const tops = new Set([...t.querySelectorAll('button')].map(b => Math.round(b.getBoundingClientRect().top))); \
+               return [t.scrollWidth > t.clientWidth, tops.size]; })()",
+        )
+        .await;
+        assert!(!overflow, "the toolbar runs out of its column");
+        assert!(rows > 1, "the toolbar does not wrap");
+    });
+}
+
 /// In the WebView, `adb input text` keys open Gboard composing regions over each word;
 /// the model must still hold every letter once, in order, with shortcuts applied.
 #[cfg(feature = "android")]

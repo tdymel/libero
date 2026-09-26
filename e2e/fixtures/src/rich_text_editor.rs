@@ -14,7 +14,40 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor", || rsx! { RichTextEditorPage {} }),
     ("/rich-text-editor/handle", || rsx! { HandlePage {} }),
     ("/rich-text-editor/nodes", || rsx! { NodesPage {} }),
+    ("/rich-text-editor/code", || rsx! { CodePage {} }),
+    ("/rich-text-editor/sample", || rsx! { SamplePage {} }),
 ];
+
+const SAMPLE: &str = "# Release notes\n\nSome **bold**, *italic* and `code` with a [link](https://example.com).\n\n- First item\n- Second item\n- Third item\n\n1. One\n2. Two\n\n> A quote\n\n```\nlet x = 1;\n```\n\nThe end.\n";
+
+/// Every block kind, for the layout checks.
+#[component]
+fn SamplePage() -> Element {
+    let mut doc = use_signal(|| Doc::from_markdown(SAMPLE));
+
+    rsx! {
+        RichTextEditor {
+            label: "Notes",
+            value: doc(),
+            onchange: move |next| doc.set(next),
+        }
+    }
+}
+
+/// A code block between two paragraphs, for the arrow keys.
+#[component]
+fn CodePage() -> Element {
+    let mut doc = use_signal(|| Doc::from_markdown("above\n\n```\nlet x = 1;\n```\n\nbelow\n"));
+
+    rsx! {
+        RichTextEditor {
+            label: "Snippet",
+            value: doc(),
+            onchange: move |next| doc.set(next),
+        }
+        pre { id: "out", {doc.read().to_markdown()} }
+    }
+}
 
 #[component]
 fn RichTextEditorPage() -> Element {
@@ -90,8 +123,7 @@ fn Callout(props: NodeViewProps) -> Element {
     }
 }
 
-/// A doc with a caller's inline atom and a caller's block, drawn by `NodeViews`.
-fn nodes_doc() -> Doc {
+fn registry() -> NodeRegistry {
     let mut registry = NodeRegistry::default();
     registry
         .register(NodeSpec::inline("mention").attr("user", "ada"))
@@ -99,6 +131,12 @@ fn nodes_doc() -> Doc {
     registry
         .register(NodeSpec::block("callout", CustomContent::Inline))
         .unwrap();
+    registry
+}
+
+/// A doc with a caller's inline atom and a caller's block, drawn by `NodeViews`.
+fn nodes_doc() -> Doc {
+    let registry = registry();
     let mut doc = Doc::new();
     let mention = registry.new_inline("mention", Attrs::new()).unwrap();
     doc.blocks[0]
@@ -122,6 +160,7 @@ fn NodesPage() -> Element {
         RichTextEditor {
             label: "Message",
             nodes: NodeViews::new().with("mention", Mention).with("callout", Callout),
+            registry: registry(),
             value: doc(),
             onchange: move |next| doc.set(next),
         }

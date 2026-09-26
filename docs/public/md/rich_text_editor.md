@@ -67,7 +67,8 @@ fn Comment() -> Element {
 Your own nodes: register a node type in a `NodeRegistry` for the document,
 then draw it with `NodeViews`. A view gets `NodeViewProps { name, attrs,
 children }`; a node with content renders `children` exactly once and marks
-its own markup around it `contenteditable: "false"`.
+its own markup around it `contenteditable: "false"`. Pass the registry as
+`registry` too, so a debug build catches a misspelled view name.
 
 ```rust
 use dioxus::prelude::*;
@@ -166,6 +167,7 @@ shows Ctrl.
 | `commands` | `Commands` | `Commands::default()` | What the keymap and the toolbar run. Register your own command under a name and bind a chord to it. |
 | `handle` | `RichTextHandle` | - | From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`). One handle drives one editor. |
 | `nodes` | `NodeViews` | `NodeViews::new()` | Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. |
+| `registry` | `NodeRegistry` | - | Your node types. With it, a debug build warns about a `nodes` name that is not registered, such as a typo. |
 | `size` | `Size` | `md` | Padding and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
 | `label` | `Caption` | - | The field's caption, above the toolbar. It names the text. |
