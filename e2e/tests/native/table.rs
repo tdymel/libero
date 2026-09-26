@@ -124,7 +124,7 @@ fn a_wide_scroll_table_scrolls_to_its_last_column() {
         }
     }
     let mut page = mount(app);
-    let region = page.rect("[role=region]");
+    let region = page.rect("[data-table-scroll]");
     let before = page.rect("thead th:last-child");
     assert!(
         before.0 > region.0 + region.2,
@@ -135,8 +135,8 @@ fn a_wide_scroll_table_scrolls_to_its_last_column() {
         let (x, _, width, _) = page.rect("thead th:last-child");
         x + width - (region.0 + region.2)
     };
-    page.hover("[role=region]");
-    page.wheel_x("[role=region]", 2000.0);
+    page.hover("[data-table-scroll]");
+    page.wheel_x("[data-table-scroll]", 2000.0);
     page.wait_for(|page| gap(page).abs() <= 1.0);
     let gap = gap(&page);
     assert!(
@@ -207,5 +207,55 @@ fn the_painted_arrow_turns_too() {
     assert_ne!(
         ascending, descending,
         "the painted arrow stayed at {ascending:?}"
+    );
+}
+
+/// 1156-2c: under `max_height` the header cells hold at the scroll area's top
+/// while the rows wheel under them, painted over the rows.
+#[test]
+fn a_capped_table_keeps_its_header_over_the_scrolled_rows() {
+    fn app() -> Element {
+        let data = (0..40)
+            .map(|age| Person { name: "Ada", age })
+            .collect::<Vec<_>>();
+        rsx! {
+            Table {
+                aria_label: "People",
+                max_height: "200px",
+                // Grey rows: a see-through header would show them.
+                striped: true,
+                data,
+                columns: vec![
+                    column("Name").value(|p: &Person| p.name.to_string()),
+                    column("Age").value(|p: &Person| p.age).sortable(),
+                ],
+            }
+        }
+    }
+    let mut page = mount(app);
+    let area = page.rect("[data-table-scroll]");
+    assert!(
+        (area.3 - 200.0).abs() <= 1.0,
+        "the area is {}px high",
+        area.3
+    );
+    let row = page.rect("tbody td").1;
+    page.hover("tbody tr:nth-child(5) td");
+    page.wheel("tbody tr:nth-child(5) td", 300.0);
+    let held = |page: &Page| page.rect("tbody td").1 < row - 100.0;
+    page.wait_for(held);
+    assert!(held(&page), "the rows did not scroll: {}", page.tree());
+    let (x, top, _, h) = page.rect("thead th");
+    assert!(
+        (top - area.1).abs() <= 1.0,
+        "the header sits at {top}, the area at {}",
+        area.1
+    );
+    // The header's surface, not a row's text, at its middle-left.
+    let header = page.painted_pixels(&[((x + 2.0) as u32, (top + h / 2.0) as u32)])[0];
+    assert_eq!(
+        header,
+        [255, 255, 255, 255],
+        "the header is not painted over the rows"
     );
 }

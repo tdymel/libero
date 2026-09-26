@@ -478,16 +478,24 @@ fn header_cell(
         false => header_body(spec),
     };
     match menu {
-        Some(menu) => rsx! {
-            div { "data-header": true,
-                if spec.sortable {
-                    {label}
-                } else {
+        Some(menu) => {
+            let label = match spec.sortable {
+                true => label,
+                false => rsx! {
                     span { "data-header-text": true, {label} }
-                }
-                {menu}
+                },
+            };
+            // An end-aligned header keeps its text over its cells: the menu goes
+            // first, in the DOM too, so Tab follows what is seen (todo 1261).
+            match spec.align {
+                CellAlign::End => rsx! {
+                    div { "data-header": true, {menu} {label} }
+                },
+                _ => rsx! {
+                    div { "data-header": true, {label} {menu} }
+                },
             }
-        },
+        }
         None => label,
     }
 }

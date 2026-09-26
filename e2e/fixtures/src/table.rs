@@ -1,6 +1,7 @@
 //! `Table` with a sortable text column and a custom-rendered one; a wide one
 //! in its scroll region under a caption; keyed, clickable, striped rows; selectable,
-//! multi-sorted rows; an empty one; a paged one; sized columns; column menus.
+//! multi-sorted rows; an empty one; a paged one; sized columns; column menus; a
+//! height-capped one with a sticky header.
 
 use dioxus::prelude::*;
 use libero::components::{ColumnDefaults, SortDirection, States, Table, TableSort, column};
@@ -17,6 +18,14 @@ pub const ROUTES: Routes = &[
     ("/table/paged", || rsx! { PagedTablePage {} }),
     ("/table/widths", || rsx! { WidthsTablePage {} }),
     ("/table/menu", || rsx! { MenuTablePage {} }),
+    (
+        "/table/sticky",
+        || rsx! { StickyTablePage { interactive: true } },
+    ),
+    (
+        "/table/sticky-plain",
+        || rsx! { StickyTablePage { interactive: false } },
+    ),
 ];
 
 /// Column menus over a multi-sorted table; the name column can't be hidden.
@@ -228,6 +237,34 @@ fn PagedTablePage() -> Element {
             onpagechange: move |next| page.set(next),
         }
         p { id: "page", "{page}" }
+    }
+}
+
+/// Forty fruits under a 200px `max_height`; sortable with column menus, or plain
+/// text, which leaves the scroll area the only tab stop.
+#[component]
+fn StickyTablePage(interactive: bool) -> Element {
+    let data: Vec<Fruit> = (1..=40)
+        .map(|stock| Fruit {
+            name: ["Apple", "Banana", "Cherry", "Date"][stock as usize % 4],
+            stock,
+        })
+        .collect();
+    let name = column("Name").value(|fruit: &Fruit| fruit.name.to_string());
+    let stock = column("Stock").value(|fruit: &Fruit| fruit.stock);
+    let columns = match interactive {
+        true => vec![name.sortable(), stock.sortable()],
+        false => vec![name, stock],
+    };
+    rsx! {
+        Table {
+            caption: "Fruit stock",
+            max_height: "200px",
+            column_menu: interactive,
+            striped: true,
+            data,
+            columns,
+        }
     }
 }
 

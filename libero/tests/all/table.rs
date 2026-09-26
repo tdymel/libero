@@ -130,15 +130,15 @@ struct Item {
     name: &'static str,
 }
 
-/// The attributes of the scroll region's `div`, wherever `role` sits in it.
+/// The attributes of the table's `ScrollArea` root.
 fn region(html: &str) -> BTreeMap<String, String> {
-    let at = html.find("role=\"region\"").expect("no scroll region");
+    let at = html.find("data-table-scroll").expect("no scroll area");
     let start = html[..at].rfind("<div").unwrap();
     attributes_of(&html[start..], "div")
 }
 
 #[test]
-fn a_caption_names_the_table_and_the_scroll_region() {
+fn a_scrolling_table_sits_in_a_scroll_area_that_is_no_stop_until_it_overflows() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -153,22 +153,23 @@ fn a_caption_names_the_table_and_the_scroll_region() {
     }
 
     let html = render(app);
-    let caption = attributes_of(&html, "caption");
     let region = region(&html);
 
     assert!(body(&html).contains(">Stock</caption>"));
-    assert_eq!(region["aria-labelledby"], caption["id"]);
-    assert_eq!(region["tabindex"], "0");
+    // Measured once mounted: the e2e covers the named stop of an overflowing one.
+    assert_eq!(region["tabindex"], "-1");
+    assert!(!region.contains_key("role"), "{region:?}");
+    assert!(!body(&html).contains("sticky-header"));
 }
 
 #[test]
-fn a_scroll_region_copies_the_callers_label() {
+fn max_height_bounds_the_area_and_sticks_the_header() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
                 Table {
                     aria_label: "Stock",
-                    scroll: true,
+                    max_height: "240px",
                     data: vec![Item { name: "Apple" }],
                     columns: vec![column("Name").value(|item: &Item| item.name.to_string())],
                 }
@@ -177,9 +178,15 @@ fn a_scroll_region_copies_the_callers_label() {
     }
 
     let html = render(app);
+    let region = region(&html);
 
-    assert_eq!(region(&html)["aria-label"], "Stock");
-    assert_eq!(attributes_of(&html, "table")["aria-label"], "Stock");
+    assert!(region["data-state"].contains("axis-both"), "{region:?}");
+    assert!(html.contains("max-height:240px"), "{html}");
+    assert!(
+        attributes_of(&html, "table")["data-state"].contains("sticky-header"),
+        "{html}"
+    );
+    assert!(html.contains("position:sticky"), "{html}");
 }
 
 #[test]
@@ -644,4 +651,16 @@ fn a_column_menu_puts_a_named_menu_button_in_each_shown_header() {
     assert!(body.contains("aria-label=\"Age\""), "{body}");
     // One sort button, beside its menu button.
     assert_eq!(body.matches("data-sort-button").count(), 1, "{body}");
+    // The end-aligned number column puts its menu first in the DOM, so Tab
+    // follows the visual order (todo 1261); the start-aligned one after its text.
+    let age = &body[body.find("aria-label=\"Age\"").unwrap()..];
+    assert!(
+        age.find("data-column-menu") < age.find("data-sort-button"),
+        "{age}"
+    );
+    let name = &body[body.find("aria-label=\"Name\"").unwrap()..];
+    assert!(
+        name.find("data-header-text") < name.find("data-column-menu"),
+        "{name}"
+    );
 }

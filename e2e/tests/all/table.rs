@@ -5,7 +5,7 @@ use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text, linger};
-use e2e::passes::{focus, keyboard};
+use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const SORT: &str = "th[data-sortable] button";
@@ -44,7 +44,7 @@ e2e::scenario!(
 /// nothing on a focus move, and held the table at the region's width.
 async fn the_tabbed_last_header_shows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const LAST: &str = "th:last-child button";
-    d.focus("[role=region]").await?;
+    d.focus("th:first-child button").await?;
     for _ in 0..8 {
         if d.is_focused(LAST).await? {
             break;
@@ -53,7 +53,7 @@ async fn the_tabbed_last_header_shows<D: Driver>(d: &mut D, _route: &str) -> Res
     }
     eventually_focused(d, LAST, "Tab").await?;
     eventually(d, "the region to show the last header", async |d| {
-        let region = d.rect("[role=region]").await?;
+        let region = d.rect(AREA).await?;
         let last = d.rect(LAST).await?;
         Ok(last.x + last.width <= region.x + region.width + 1.0 && last.x >= region.x - 1.0)
     })
@@ -64,6 +64,86 @@ e2e::scenario!(
     a_tabbed_header_scrolls_into_its_region,
     "/table/wide",
     the_tabbed_last_header_shows,
+    android: skip("958: element identity on the WebView")
+);
+
+const AREA: &str = "[data-table-scroll]";
+
+/// The header row's top, the first body row's top and the area's top.
+async fn tops<D: Driver>(d: &mut D) -> Result<(f64, f64, f64)> {
+    Ok((
+        d.rect("thead th").await?.y,
+        // A `tr` has no box on Blitz.
+        d.rect("tbody td").await?.y,
+        d.rect(AREA).await?.y,
+    ))
+}
+
+/// The rows scroll under the header, which stays at the area's top, opaque.
+async fn scrolls_under_the_header<D: Driver>(d: &mut D, key: keyboard::Key) -> Result<()> {
+    let (_, row, _) = tops(d).await?;
+    d.press(key).await?;
+    eventually(d, "the rows to scroll under the header", async |d| {
+        let (header, moved, area) = tops(d).await?;
+        Ok(moved < row - 20.0 && (header - area).abs() <= 1.0)
+    })
+    .await?;
+    let background = d.style("thead th", "background-color").await?;
+    if background == "rgba(0, 0, 0, 0)" || background == "transparent" {
+        bail!("the sticky header is see-through: {background}");
+    }
+    Ok(())
+}
+
+/// 1156-2c: with a sort button focused, PageDown scrolls the capped body.
+async fn a_focused_header_scrolls_the_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("th:first-child [data-sort-button]").await?;
+    eventually_focused(d, "th:first-child [data-sort-button]", "focus").await?;
+    if d.attr(AREA, "role").await?.is_some() {
+        bail!("the area is a tab stop beside the header buttons");
+    }
+    scrolls_under_the_header(d, keyboard::PAGE_DOWN).await?;
+    // The menu opens in a portal: the 200px area does not clip it.
+    d.click("button[aria-label=\"Stock column options\"]")
+        .await?;
+    eventually(d, "the column menu to open unclipped", async |d| {
+        if !d.exists("[role=menu]").await? || d.exists(&format!("{AREA} [role=menu]")).await? {
+            return Ok(false);
+        }
+        Ok(d.rect("[role=menu]").await?.height > 50.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_capped_table_scrolls_from_its_header,
+    "/table/sticky",
+    a_focused_header_scrolls_the_rows,
+    native: skip("Blitz scrolls nothing on a key; the wheel is native/table.rs"),
+    android: skip("958: element identity on the WebView")
+);
+
+/// 1156-2c: no button inside, so the overflowing area is the named tab stop.
+async fn a_plain_capped_table_is_a_named_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the area to become a region", async |d| {
+        Ok(d.attr(AREA, "role").await?.as_deref() == Some("region"))
+    })
+    .await?;
+    // Blitz draws the caption as a div before the table, under the same id.
+    let name = d.attr(AREA, "aria-labelledby").await?.unwrap_or_default();
+    if d.text(&format!("[id=\"{name}\"]")).await? != "Fruit stock" {
+        bail!("the area is not named by the caption: {name:?}");
+    }
+    d.focus(AREA).await?;
+    eventually_focused(d, AREA, "focus").await?;
+    scrolls_under_the_header(d, keyboard::ARROW_DOWN).await
+}
+
+e2e::scenario!(
+    a_plain_capped_table_scrolls_as_a_named_region,
+    "/table/sticky-plain",
+    a_plain_capped_table_is_a_named_stop,
+    native: skip("Blitz scrolls nothing on a key; the wheel is native/table.rs"),
     android: skip("958: element identity on the WebView")
 );
 
@@ -465,11 +545,11 @@ fn only_the_sorted_header_carries_aria_sort_and_the_others_still_hint() {
     });
 }
 
-/// A wide table scrolls in its region, a named tab stop with the library ring (588), which
-/// ArrowRight scrolls once focused (654).
+/// A wide table scrolls in its `ScrollArea` (588), which ArrowRight scrolls from a
+/// focused header button (654); the buttons make the area no stop (1156-2c).
 #[test]
-fn a_wide_table_scrolls_in_a_named_focusable_region() {
-    const REGION: &str = "[role=region]";
+fn a_wide_table_scrolls_from_a_focused_header() {
+    const REGION: &str = AREA;
     block_on(async {
         for viewport in Viewport::ALL {
             let at = viewport.name();
@@ -482,7 +562,7 @@ fn a_wide_table_scrolls_in_a_named_focusable_region() {
                      const c = document.querySelector('caption'); \
                      return [r.scrollWidth > r.clientWidth, \
                      document.documentElement.scrollWidth <= innerWidth, \
-                     r.getAttribute('aria-labelledby') === c.id, \
+                     r.getAttribute('role'), r.tabIndex, \
                      c.textContent].join('|'); }})()"
                 ))
                 .await
@@ -490,15 +570,13 @@ fn a_wide_table_scrolls_in_a_named_focusable_region() {
                 .into_value()
                 .unwrap();
             assert_eq!(
-                state, "true|true|true|Fruit catalogue",
-                "at {at}: overflows itself, not the page; named by its caption"
+                state, "true|true||-1|Fruit catalogue",
+                "at {at}: overflows itself, not the page; no stop beside its header buttons"
             );
 
-            let ring = focus::assert_focus_ring(page, REGION, 3)
+            page.evaluate("document.querySelector('th button').focus()")
                 .await
-                .unwrap_or_else(|e| panic!("at {at}: {e}"));
-            focus::assert_ring_contrast(&ring).unwrap_or_else(|e| panic!("at {at}: {e}"));
-
+                .unwrap();
             keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
             wait::for_js_true(
                 page,
@@ -614,6 +692,30 @@ fn a_column_menu_sorts_hides_and_shows_columns() {
                 "document.querySelector('thead th:nth-child({column})')?.getAttribute('aria-sort')"
             )
         };
+
+        // Todo 1260: with a mouse, the menu button shows on its header's hover or focus.
+        const STOCK_MENU: &str = "button[aria-label=\"Stock column options\"]";
+        // Headless Chromium has no hover-capable pointer and CDP cannot emulate
+        // one: match the fine-pointer rule's selector by hand.
+        let menu_opacity = |expected: &str| {
+            format!(
+                "(() => {{ const all = rs => [...rs].flatMap(r => [r, ...all(r.cssRules ?? [])]); \
+                 const rule = [...document.styleSheets, ...document.adoptedStyleSheets] \
+                 .flatMap(s => all(s.cssRules)) \
+                 .find(r => r.conditionText?.includes('pointer: fine')).cssRules[0]; \
+                 const faded = document.querySelector({STOCK_MENU:?}).matches(rule.selectorText) \
+                 && rule.style.opacity === '0'; return (faded ? '0' : '1') === {expected:?}; }})()"
+            )
+        };
+        wait::for_js_true(page, &menu_opacity("0"), "the idle menu button faded")
+            .await
+            .unwrap();
+        page.evaluate(format!("document.querySelector({STOCK_MENU:?}).focus()"))
+            .await
+            .unwrap();
+        wait::for_js_true(page, &menu_opacity("1"), "the focused menu button shown")
+            .await
+            .unwrap();
 
         pick(page, "Stock", "Sort descending").await;
         wait::for_js_true(

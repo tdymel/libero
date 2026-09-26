@@ -46,9 +46,10 @@ hide the others. `.hideable(false)` keeps a column out of it. To hold the hidden
 columns yourself, pass `hidden_columns` and update it from
 `onhiddencolumnschange`.
 
-`scroll` wraps a table wider than its container in a region that scrolls
-sideways. The demo's switch also sets `sx().min_width("640px")`, so the three
-columns overflow at any width.
+`scroll` wraps a table wider than its container in a `ScrollArea` that
+scrolls sideways. The demo's switch also sets `sx().min_width("640px")`, so the
+three columns overflow at any width. `max_height` caps a long table's height:
+its rows scroll under a header that stays put.
 
 ## Usage
 
@@ -330,6 +331,34 @@ fn Demo() -> Element {
 }
 ```
 
+A long table takes `max_height`: the rows scroll, both ways, in a `ScrollArea`
+under a header that stays put. The header takes the page surface's colour; on
+another background, set it with `sx().selector("& thead th", ..)`.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Table, column};
+
+#[derive(Clone, PartialEq)]
+struct Person {
+    name: String,
+}
+
+#[component]
+fn Demo() -> Element {
+    let people: Vec<Person> = (1..=50).map(|i| Person { name: format!("Person {i}") }).collect();
+
+    rsx! {
+        Table {
+            caption: "Team members",
+            max_height: "320px",
+            data: people,
+            columns: vec![column("Name").value(|p: &Person| p.name.clone()).sortable()],
+        }
+    }
+}
+```
+
 `selectable` with a controlled `selection` of `row_key`s, and `multi_sort`:
 Shift-click a second header to break ties of the first. Each sorted header
 shows its place.
@@ -383,7 +412,8 @@ fn Demo() -> Element {
 | `column_defaults` | `ColumnDefaults` | none | Settings every column starts from: `ColumnDefaults::new().align(..).width(..).min_width(..)`. A column's own setting wins. |
 | `caption` | `Option<String>` | `None` | A visible title above the header row, and the table's accessible name. |
 | `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". |
-| `scroll` | `bool` | `false` | Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
+| `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
+| `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
 | `sort` | `Option<Vec<TableSort>>` | `None` | The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header. |
 | `default_sort` | `Vec<TableSort>` | `[]` | Seeds the sort once. Ignored when `sort` is set. |
 | `onsortchange` | `EventHandler<Vec<TableSort>>` | `None` | Called with the sort a header click asks for: ascending, then descending, then empty. |
@@ -442,8 +472,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 
 | Key | Action |
 |---|---|
-| `Tab` | With `scroll: true`: enters the scroll region, a tab stop. |
-| `Left` or `Right` or `Up` or `Down` | In the scroll region: scrolls the table. |
+| `Tab` | With `scroll` or `max_height`, when the table overflows and has no button in it: enters the scroll region, a tab stop. |
+| `Left` or `Right` or `Up` or `Down` or `PageUp` or `PageDown` | In the scroll region, or on a header button inside it: scrolls the table. |
 | `Enter` or `Space` | On a sortable header, a button: sorts by that column, flips it, then unsorts. |
 | `Shift+Enter` or `Shift+Space` | With `multi_sort`, on a sortable header: adds that column after the sorted ones. |
 | `Space` | On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row. |
@@ -452,7 +482,13 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 ### Libero handles
 
 - An unnamed table warns in a debug build.
-- With `scroll: true` the wrapper is a `role="region"` named like the table.
+- With `scroll` or `max_height`, an overflowing scroll area with no button in
+  it is a tab stop, a `role="region"` named like the table. With sort or menu
+  buttons in the header it is no stop: the arrows scroll it from a focused
+  button.
+- The column menu button shows on its header's hover or focus with a mouse,
+  always on a touch screen. An end-aligned header puts it first, in the DOM
+  too, so Tab follows what is seen.
 - Only sorted headers carry `aria-sort`. With several, each sort button's name
   adds its place, "sort order 2".
 - Each row's checkbox is named "Select" plus its row header's text, else its
@@ -476,7 +512,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - Name every table. `caption` shows a title and names it, `aria_labelledby`
   points at a heading already on the page, and `aria_label` names it without
   text.
-- Set `scroll: true` on a table wider than its container.
+- Set `scroll: true` on a table wider than its container, or `max_height` on a
+  long one.
 - Mark the column that names a row with `.row_header()`.
 - With `onrowclick`, also put a button or link for that action in a cell. A
   row is not a tab stop, so a keyboard cannot click it.

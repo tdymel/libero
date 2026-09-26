@@ -75,6 +75,9 @@ struct Person {{
 /// Wider than the preview at any width, so `scroll` has something to scroll.
 const SCROLL_WIDTH: &str = "640px";
 
+/// Shorter than the header and three rows, so `max_height` has something to scroll.
+const MAX_HEIGHT: &str = "100px";
+
 /// The `empty` switch empties `data` too, or the slot would never show.
 fn no_rows(values: &DemoValues) -> bool {
     values.str("empty") == "true"
@@ -94,7 +97,8 @@ pub fn TablePage() -> Element {
                     prop("column_defaults", "ColumnDefaults").default("none").doc("Settings every column starts from: `ColumnDefaults::new().align(..).width(..).min_width(..)`. A column's own setting wins."),
                     prop("caption", "Option<String>").default("None").doc("A visible title above the header row, and the table's accessible name."),
                     prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\"."),
-                    prop("scroll", "bool").default("false").doc("Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
+                    prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
+                    prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
                     prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header."),
                     prop("default_sort", "Vec<TableSort>").default("[]").doc("Seeds the sort once. Ignored when `sort` is set."),
                     prop("onsortchange", "EventHandler<Vec<TableSort>>").default("None").doc("Called with the sort a header click asks for: ascending, then descending, then empty."),
@@ -141,15 +145,16 @@ pub fn TablePage() -> Element {
                 ]).without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Tab"], "With `scroll: true`: enters the scroll region, a tab stop.")
-                .key(["Left", "Right", "Up", "Down"], "In the scroll region: scrolls the table.")
+                .key(["Tab"], "With `scroll` or `max_height`, when the table overflows and has no button in it: enters the scroll region, a tab stop.")
+                .key(["Left", "Right", "Up", "Down", "PageUp", "PageDown"], "In the scroll region, or on a header button inside it: scrolls the table.")
                 .key(["Enter", "Space"], "On a sortable header, a button: sorts by that column, flips it, then unsorts.")
                 .key(["Shift+Enter", "Shift+Space"],"With `multi_sort`, on a sortable header: adds that column after the sorted ones.")
                 .key(["Space"], "On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row.")
                 .key(["Enter", "Space", "Down"], "With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`.")
                 .handles([
                     "An unnamed table warns in a debug build.",
-                    "With `scroll: true` the wrapper is a `role=\"region\"` named like the table.",
+                    "With `scroll` or `max_height`, an overflowing scroll area with no button in it is a tab stop, a `role=\"region\"` named like the table. With sort or menu buttons in the header it is no stop: the arrows scroll it from a focused button.",
+                    "The column menu button shows on its header's hover or focus with a mouse, always on a touch screen. An end-aligned header puts it first, in the DOM too, so Tab follows what is seen.",
                     "Only sorted headers carry `aria-sort`. With several, each sort button's name adds its place, \"sort order 2\".",
                     "Each row's checkbox is named \"Select\" plus its row header's text, else its first cell's. The header checkbox reads mixed while some rows are selected.",
                     "A selected row carries `aria-selected=\"true\"`, and a polite live region says the new count, \"2 rows selected\", after each change.",
@@ -161,7 +166,7 @@ pub fn TablePage() -> Element {
                 ])
                 .must([
                     "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
-                    "Set `scroll: true` on a table wider than its container.",
+                    "Set `scroll: true` on a table wider than its container, or `max_height` on a long one.",
                     "Mark the column that names a row with `.row_header()`.",
                     "With `onrowclick`, also put a button or link for that action in a cell. A row is not a tab stop, so a keyboard cannot click it.",
                     "With `selectable`, give the rows a `.row_header()` column, so each checkbox is named by something unique.",
@@ -268,10 +273,13 @@ pub fn TablePage() -> Element {
                 }
                 Text {
                     Code { source: "scroll" }
-                    " wraps a table wider than its container in a region that scrolls "
-                    "sideways. The demo's switch also sets "
+                    " wraps a table wider than its container in a "
+                    Code { source: "ScrollArea" }
+                    " that scrolls sideways. The demo's switch also sets "
                     Code { source: "sx().min_width(\"640px\")" }
-                    ", so the three columns overflow at any width."
+                    ", so the three columns overflow at any width. "
+                    Code { source: "max_height" }
+                    " caps a long table's height: its rows scroll under a header that stays put."
                 }
             },
             Demo {
@@ -291,6 +299,10 @@ pub fn TablePage() -> Element {
                             "scroll: true".to_string(),
                             format!("sx: sx().min_width({SCROLL_WIDTH:?})"),
                         ],
+                        false => vec![],
+                    }),
+                    Control::switch("max_height").code(|_, values| match values.str("max_height") == "true" {
+                        true => vec![format!("max_height: {MAX_HEIGHT:?}")],
                         false => vec![],
                     }),
                     Control::switch("selectable").code(|_, values| match values.str("selectable") == "true" {
@@ -324,6 +336,7 @@ pub fn TablePage() -> Element {
                             true => sx().min_width(SCROLL_WIDTH),
                             false => sx(),
                         },
+                        max_height: (values.str("max_height") == "true").then(|| MAX_HEIGHT.to_string()),
                         selectable: values.str("selectable") == "true",
                         multi_sort: values.str("multi_sort") == "true",
                         column_menu: values.str("column_menu") == "true",

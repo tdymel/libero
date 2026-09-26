@@ -10,13 +10,13 @@ use crate::{
             names_itself, use_name_warning,
         },
         form::use_checkbox_look,
-        layout::use_box,
+        layout::{ScrollArea, ScrollAreaBase, scroll_area_base, use_box},
         overlay::MenuPart,
     },
     hooks::{listener, use_id, use_localization, use_theme},
     platform::{lays_out_captions, widens_sized_tables},
     sx::{StaticSx, Sx, sx},
-    theme::{CHECKBOX_BOX_SIZE, Size, TABLE_PAD_X, TableDefaults},
+    theme::{CHECKBOX_BOX_SIZE, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TableDefaults},
     utils::warn,
 };
 
@@ -126,11 +126,6 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-header] > [data-sort-button], & [data-header-text]",
         sx().flex("1").min_width("0"),
     )
-    // An end-aligned header keeps its text over its cells: the button goes first.
-    .selector(
-        "& th[data-align=\"end\"] [data-header]",
-        sx().flex_direction("row-reverse"),
-    )
     .selector(
         "& [data-header-text]",
         sx().padding(TableDefaults::padding()),
@@ -158,6 +153,16 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-column-menu]:focus-visible",
         inset_focus_ring_sx("0"),
     )
+    // With a mouse, shown on its header's hover or focus (todo 1260); a touch
+    // screen has no hover. Faded, not hidden, so Tab still reaches it.
+    .media(
+        "(hover: hover) and (pointer: fine)",
+        sx().selector(
+            "& th[data-menu]:not(:hover):not(:focus-within) \
+             [data-column-menu]:not([aria-expanded=\"true\"])",
+            sx().opacity("0"),
+        ),
+    )
     // As wide as its box and padding, spelled out: Blitz sizes a `width: 1px`
     // cell below its content.
     .per_size(|size| {
@@ -174,6 +179,18 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "row-click",
         sx().selector("& tbody tr:not([data-empty])", sx().cursor("pointer")),
     )
+    // On each `th`: a sticky `thead` or `tr` has no box natively. Opaque and
+    // above the rows, which scroll under it.
+    .when(
+        "sticky-header",
+        sx().selector(
+            "& thead th",
+            sx().position("sticky")
+                .top("0")
+                .z_index("1")
+                .background(NamedColorCss::SURFACE.value()),
+        ),
+    )
 });
 
 fn caption_sx() -> Sx {
@@ -186,7 +203,9 @@ fn caption_sx() -> Sx {
 /// font size and padding the web caption inherits from the table.
 static TABLE_CAPTION_SX: StaticSx = StaticSx::new(|| caption_sx().per_size(TableDefaults::size_sx));
 
-static TABLE_SCROLL_SX: StaticSx = StaticSx::new(|| sx().overflow_x("auto").max_width("100%"));
+/// As tall as the table, up to `max_height`; not the parent's height.
+static TABLE_SCROLL_SX: StaticSx =
+    StaticSx::new(|| scroll_area_base(sx().height("auto").max_width("100%")));
 
 #[derive(Props, Clone, PartialEq)]
 pub struct TableProps<T: Clone + PartialEq + 'static> {
@@ -203,9 +222,13 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Shown in one full-width row when `data` is empty.
     #[props(default)]
     empty: Option<Element>,
-    /// Wraps the table in a named, focusable region that scrolls sideways.
+    /// Scrolls a table wider than its parent sideways, in a `ScrollArea`.
     #[props(default)]
     scroll: bool,
+    /// Caps the height, a CSS length: the rows scroll in a `ScrollArea` (both
+    /// axes) under a header that stays put.
+    #[props(default, into)]
+    max_height: Option<String>,
     /// The sorted column, empty for source order; set, the sort is controlled.
     /// Only the first entry naming a sortable header applies.
     #[props(default)]
@@ -378,7 +401,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     );
     let size = props.size.copied_or(use_theme().table.size);
     let labels = use_localization().table;
-    let scroll = use_box().framework_sx(&TABLE_SCROLL_SX).prepare();
+    let bounded = props.max_height.is_some();
+    let scrolls = props.scroll || bounded;
     let size_states: Input<States> = States::new().with(size.state_name(), true).into();
     let caption_box = use_box()
         .framework_sx(&TABLE_CAPTION_SX)
@@ -543,7 +567,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     // The region takes the table's name: its caption, else the caller's label.
     let region_name: Vec<Attribute> = match &caption {
         Some(spec) => vec![attr("aria-labelledby", spec.id.clone())],
-        None if props.scroll => props
+        None if scrolls => props
             .attributes
             .iter()
             .filter(|a| matches!(a.name, "aria-label" | "aria-labelledby"))
@@ -571,6 +595,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .with(size.state_name(), true)
         .with("striped", props.striped)
         .with("row-click", props.onrowclick.is_some())
+        .with("sticky-header", bounded)
         .into();
     let empty = props.empty.unwrap_or_else(|| rsx! { "{labels.no_rows}" });
     let table = use_box()
@@ -613,7 +638,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 rsx! { "{spec.text}" },
             );
             // One box, so a flex row does not set them side by side.
-            match props.scroll || pager.is_some() {
+            match scrolls || pager.is_some() {
                 true => rsx! {
                     {caption}
                     {table}
@@ -625,12 +650,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         }
         None => table,
     };
-    let table = match props.scroll {
-        true => scroll.attr("role", "region").attr("tabindex", "0").render(
-            HtmlTag::Div,
-            region_name,
-            table,
-        ),
+    // A tab stop, a named region, only while it overflows with no header
+    // button inside to scroll it from (decision 7).
+    let table = match scrolls {
+        true => {
+            let mut attributes = region_name;
+            attributes.push(attr("data-table-scroll", "true"));
+            let max_height = props.max_height.clone();
+            rsx! {
+                ScrollArea {
+                    scrollbars: if bounded { ScrollAxis::Both } else { ScrollAxis::Horizontal },
+                    framework_sx: ScrollAreaBase(&TABLE_SCROLL_SX),
+                    sx: max_height.map(|height| sx().max_height(height)).unwrap_or_default(),
+                    attributes,
+                    {table}
+                }
+            }
+        }
         false => table,
     };
     match pager {
