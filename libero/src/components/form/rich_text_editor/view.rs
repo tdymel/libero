@@ -19,6 +19,7 @@ use super::node_view::NodeViews;
 use super::offsets::{to_dom, to_model};
 use super::render::{RenderCtx, blocks};
 use super::surface::{ROOT_ATTR, Report, Surface};
+use super::toolbar::{Group, OVERFLOW, Tool, hidden as overflow_count, tools};
 use crate::{
     components::{
         accessibility::use_announcer,
@@ -164,10 +165,12 @@ field_props! {
         /// Runs commands and reads the state from your own toolbar; see [`use_rich_text_editor`](super::handle::use_rich_text_editor).
         #[props(default, into)]
         handle: Option<RichTextHandle>,
-        /// Components for custom nodes, by node name; others draw a plain fallback.
+        /// Components by node name, built-ins too (not `code_block`); a custom node
+        /// without one draws a plain fallback.
         #[props(default)]
         nodes: NodeViews,
-        /// The caller's node types; debug builds warn about a `nodes` name it lacks.
+        /// The caller's node types: copy writes them through their codecs, and debug
+        /// builds warn about a `nodes` name it lacks.
         #[props(default, into)]
         registry: Option<NodeRegistry>,
     }
@@ -292,6 +295,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     if *keymap.peek() != props.keymap {
         let mut keymap = keymap;
         keymap.set(props.keymap.clone());
+    }
+    let registry = use_hook(|| CopyValue::new(None::<NodeRegistry>));
+    if *registry.peek() != props.registry {
+        let mut registry = registry;
+        registry.set(props.registry.clone());
     }
     #[cfg(debug_assertions)]
     {
@@ -511,21 +519,29 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         },
     );
     let empty = is_empty(live.doc());
-    let marks = [
-        MarkKind::Bold,
-        MarkKind::Italic,
-        MarkKind::Underline,
-        MarkKind::Strike,
-        MarkKind::Code,
-        MarkKind::Link,
-    ]
-    .map(|kind| (kind, state.is_active(kind)));
-    let active = move |kind: MarkKind| marks.iter().find(|(k, _)| *k == kind).map(|(_, on)| *on);
-    let list = state.list_kind();
-    let in_code = state.block_kind().is_code();
+    let mut buttons = tools(&words);
+    for tool in &mut buttons {
+        let mark = |kind| Some(state.is_active(kind));
+        tool.selected = match tool.builtin {
+            Builtin::Bold => mark(MarkKind::Bold),
+            Builtin::Italic => mark(MarkKind::Italic),
+            Builtin::Underline => mark(MarkKind::Underline),
+            Builtin::Strike => mark(MarkKind::Strike),
+            Builtin::Code => mark(MarkKind::Code),
+            Builtin::Link => mark(MarkKind::Link),
+            Builtin::BulletList => Some(state.list_kind() == Some(false)),
+            Builtin::OrderedList => Some(state.list_kind() == Some(true)),
+            Builtin::Quote => Some(state.in_quote()),
+            Builtin::CodeBlock => Some(state.block_kind().is_code()),
+            _ => None,
+        };
+        tool.disabled = match tool.builtin {
+            Builtin::Undo => !live.can_undo(),
+            Builtin::Redo => !live.can_redo(),
+            _ => false,
+        };
+    }
     let block_kind = state.block_kind().clone();
-    let quote = state.in_quote();
-    let (can_undo, can_redo) = (live.can_undo(), live.can_redo());
     drop(live);
 
     let field = use_field()
@@ -603,6 +619,40 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         );
     };
 
+    // The selection as plain text and Markdown; `false` when nothing was written.
+    let copy = move |event: &ClipboardEvent| -> bool {
+        let fragment = {
+            let live = editor.peek();
+            if live.state().selection.is_collapsed() {
+                return false;
+            }
+            live.state().selected_doc()
+        };
+        let registry = registry.peek().clone().unwrap_or_default();
+        let transfer = event.data().data_transfer();
+        let written = transfer
+            .set_data("text/plain", &fragment.plain_text_with(&registry))
+            .is_ok();
+        if written {
+            let _ = transfer.set_data("text/markdown", &fragment.to_markdown_with(&registry));
+            event.prevent_default();
+        }
+        written
+    };
+    let oncopy = move |event: ClipboardEvent| {
+        copy(&event);
+    };
+    // The browser's own cut would edit the DOM behind the model.
+    let oncut = move |event: ClipboardEvent| {
+        event.prevent_default();
+        if copy(&event) {
+            edit(
+                &|live| live.apply(Record::Step, |state| state.delete_selection()),
+                false,
+            );
+        }
+    };
+
     // Gboard opens composing regions over words the model typed; only text the browser
     // composed itself (`insertCompositionText`) is read back, or a lagging DOM undoes keys.
     let oncompositionend = move |_: CompositionEvent| {
@@ -627,6 +677,8 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .event("onkeydown", editable.then_some(onkeydown))
         .event("onbeforeinput", editable.then_some(onbeforeinput))
         .event("onpaste", editable.then_some(onpaste))
+        .event("oncopy", editable.then_some(oncopy))
+        .event("oncut", editable.then_some(oncut))
         .event("oncompositionend", editable.then_some(oncompositionend))
         .event("onfocusin", move |_: FocusEvent| focused.set(true))
         .event("onfocusout", move |_: FocusEvent| focused.set(false))
@@ -690,37 +742,93 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             })
             .collect()
     };
+    // Measured by the wrapper: the buttons a narrow bar moves into the More menu.
+    let mut crowded = use_signal(|| 0usize);
+    let more_menu = use_menu();
+    let hidden = &OVERFLOW[..crowded()];
+    let more_items: Vec<MenuEntry> = buttons
+        .iter()
+        .filter(|tool| hidden.contains(&tool.builtin))
+        .map(|tool| {
+            let builtin = tool.builtin;
+            let item = MenuItem::new(tool.label)
+                .leading(rsx! { Glyph { slot: tool.slot, icon: tool.icon } })
+                .disabled(tool.disabled)
+                .onselect(move |_| {
+                    run_command(builtin.into(), true, false);
+                });
+            match tool.selected {
+                Some(on) => item.checkbox(on),
+                None => item,
+            }
+            .into()
+        })
+        .collect();
+    let shown = |group: Group| -> Vec<Tool> {
+        buttons
+            .iter()
+            .filter(|tool| tool.group == group && !hidden.contains(&tool.builtin))
+            .copied()
+            .collect()
+    };
+    let (marks, block_tools, history) = (
+        shown(Group::Marks),
+        shown(Group::Blocks),
+        shown(Group::History),
+    );
+    let button = move |tool: Tool| {
+        rsx! {
+            ActionIcon {
+                key: "{tool.label}",
+                aria_label: tool.label,
+                selected: tool.selected,
+                disabled: tool.disabled,
+                onclick: run(tool.builtin),
+                Glyph { slot: tool.slot, icon: tool.icon }
+            }
+        }
+    };
+    let onresize = move |event: Event<ResizeData>| {
+        if let Ok(size) = event.get_content_box_size() {
+            let count = overflow_count(size.width);
+            if *crowded.peek() != count {
+                crowded.set(count);
+            }
+        }
+    };
     let toolbar = (props.toolbar && editable).then(|| {
         rsx! {
-            Toolbar { "aria-label": words.toolbar, focus_from: element, onmousedown: keep,
-                ToolbarGroup { "aria-label": words.marks,
-                    ActionIcon { aria_label: words.bold, selected: active(MarkKind::Bold), onclick: run(Builtin::Bold), Glyph { slot: IconSlot::Bold, icon: lucide::bold::outlined } }
-                    ActionIcon { aria_label: words.italic, selected: active(MarkKind::Italic), onclick: run(Builtin::Italic), Glyph { slot: IconSlot::Italic, icon: lucide::italic::outlined } }
-                    ActionIcon { aria_label: words.underline, selected: active(MarkKind::Underline), onclick: run(Builtin::Underline), Glyph { slot: IconSlot::Underline, icon: lucide::underline::outlined } }
-                    ActionIcon { aria_label: words.strike, selected: active(MarkKind::Strike), onclick: run(Builtin::Strike), Glyph { slot: IconSlot::Strikethrough, icon: lucide::strikethrough::outlined } }
-                    ActionIcon { aria_label: words.code, selected: active(MarkKind::Code), onclick: run(Builtin::Code), Glyph { slot: IconSlot::InlineCode, icon: lucide::code::outlined } }
-                    ActionIcon { aria_label: words.link, selected: active(MarkKind::Link), onclick: run(Builtin::Link), Glyph { slot: IconSlot::Link, icon: lucide::link::outlined } }
-                }
-                ToolbarSeparator {}
-                ToolbarGroup { "aria-label": words.blocks,
-                    Menu { state: block_menu, items: block_items,
-                        Button {
-                            attributes: block_menu.a11y_attributes(),
-                            "aria-label": "{words.block_type}: {block_label}",
-                            variant: "standard",
-                            color: "ink",
-                            "{block_label}"
+            div { onresize,
+                Toolbar { "aria-label": words.toolbar, focus_from: element, onmousedown: keep,
+                    ToolbarGroup { "aria-label": words.marks,
+                        for tool in marks { {button(tool)} }
+                    }
+                    ToolbarSeparator {}
+                    ToolbarGroup { "aria-label": words.blocks,
+                        Menu { state: block_menu, items: block_items,
+                            Button {
+                                attributes: block_menu.a11y_attributes(),
+                                "aria-label": "{words.block_type}: {block_label}",
+                                variant: "standard",
+                                color: "ink",
+                                "{block_label}"
+                            }
+                        }
+                        for tool in block_tools { {button(tool)} }
+                    }
+                    if !history.is_empty() {
+                        ToolbarSeparator {}
+                        ToolbarGroup { "aria-label": words.history,
+                            for tool in history { {button(tool)} }
                         }
                     }
-                    ActionIcon { aria_label: words.bullet_list, selected: Some(list == Some(false)), onclick: run(Builtin::BulletList), Glyph { slot: IconSlot::BulletList, icon: lucide::list::outlined } }
-                    ActionIcon { aria_label: words.ordered_list, selected: Some(list == Some(true)), onclick: run(Builtin::OrderedList), Glyph { slot: IconSlot::OrderedList, icon: lucide::list_ordered::outlined } }
-                    ActionIcon { aria_label: words.quote, selected: Some(quote), onclick: run(Builtin::Quote), Glyph { slot: IconSlot::Quote, icon: lucide::text_quote::outlined } }
-                    ActionIcon { aria_label: words.code_block, selected: Some(in_code), onclick: run(Builtin::CodeBlock), Glyph { slot: IconSlot::CodeBlock, icon: lucide::square_code::outlined } }
-                }
-                ToolbarSeparator {}
-                ToolbarGroup { "aria-label": words.history,
-                    ActionIcon { aria_label: words.undo, disabled: !can_undo, onclick: run(Builtin::Undo), Glyph { slot: IconSlot::Undo, icon: lucide::undo_2::outlined } }
-                    ActionIcon { aria_label: words.redo, disabled: !can_redo, onclick: run(Builtin::Redo), Glyph { slot: IconSlot::Redo, icon: lucide::redo_2::outlined } }
+                    if !more_items.is_empty() {
+                        Menu { state: more_menu, items: more_items,
+                            ActionIcon { attributes: more_menu.a11y_attributes(), aria_label: words.more,
+                                Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
+                            }
+                        }
+                    }
                 }
             }
         }

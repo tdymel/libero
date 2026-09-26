@@ -16,6 +16,7 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/nodes", || rsx! { NodesPage {} }),
     ("/rich-text-editor/code", || rsx! { CodePage {} }),
     ("/rich-text-editor/sample", || rsx! { SamplePage {} }),
+    ("/rich-text-editor/builtins", || rsx! { BuiltinsPage {} }),
 ];
 
 const SAMPLE: &str = "# Release notes\n\nSome **bold**, *italic* and `code` with a [link](https://example.com).\n\n- First item\n- Second item\n- Third item\n\n1. One\n2. Two\n\n> A quote\n\n```\nlet x = 1;\n```\n\nThe end.\n";
@@ -165,5 +166,46 @@ fn NodesPage() -> Element {
             onchange: move |next| doc.set(next),
         }
         pre { id: "out", {doc.read().plain_text()} }
+    }
+}
+
+#[component]
+fn Heading(props: NodeViewProps) -> Element {
+    let level = props
+        .attrs
+        .get("level")
+        .and_then(|level| level.as_u64())
+        .unwrap_or(0);
+    rsx! {
+        header { class: "fancy-heading", "data-level": "{level}", {props.children} }
+    }
+}
+
+#[component]
+fn Quote(props: NodeViewProps) -> Element {
+    rsx! { blockquote { class: "fancy-quote", {props.children} } }
+}
+
+#[component]
+fn Rule(props: NodeViewProps) -> Element {
+    rsx! { span { class: "fancy-rule", "data-name": props.name, "Section break" } }
+}
+
+/// Built-in blocks drawn by the caller's `NodeViews`.
+#[component]
+fn BuiltinsPage() -> Element {
+    let mut doc = use_signal(|| Doc::from_markdown("## Title\n\n> quoted\n\n---\n\nend\n"));
+
+    rsx! {
+        RichTextEditor {
+            label: "Notes",
+            nodes: NodeViews::new()
+                .with("heading", Heading)
+                .with("quote", Quote)
+                .with("rule", Rule),
+            value: doc(),
+            onchange: move |next| doc.set(next),
+        }
+        pre { id: "out", {doc.read().to_markdown()} }
     }
 }

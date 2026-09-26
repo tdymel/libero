@@ -8,6 +8,7 @@ mod node_view;
 mod offsets;
 mod render;
 mod surface;
+mod toolbar;
 mod view;
 
 pub use view::{RichTextEditor, RichTextEditorProps};

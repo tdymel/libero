@@ -1,6 +1,7 @@
-use super::{check, show, state};
+use super::{check, md, show, state};
 use crate::components::form::rich_text_editor::model::{
-    Block, BlockKind, Doc, EditorState, Inline, Mark, MarkKind, Position, Selection,
+    Block, BlockKind, Doc, EditorState, Inline, Mark, MarkKind, NodeRegistry, NodeSpec, Position,
+    Selection,
 };
 
 #[test]
@@ -436,4 +437,33 @@ fn clamp_repairs_a_stale_selection() {
 #[test]
 fn selected_text_joins_leaves() {
     assert_eq!(state("a|b\n\n- c\n\nd|e").selected_text(), "b\nc\nd");
+}
+
+#[test]
+fn selected_doc_cuts_the_end_leaves_and_keeps_containers_and_atoms() {
+    let doc = state("a|b **c**\n\n- d\n- e\n\n---\n\nf|g").selected_doc();
+    assert_eq!(md(&doc), "b **c**\n\n- d\n- e\n\n---\n\nf");
+    assert_eq!(md(&state("- a\n- b|c|d").selected_doc()), "- c");
+}
+
+#[test]
+fn plain_text_writes_caller_nodes_through_the_registry() {
+    let mut doc = Doc::from_markdown("x");
+    let leaf = doc.first_leaf();
+    *doc.get_mut(leaf).unwrap().inlines_mut() = vec![
+        Inline::text("hi "),
+        Inline::Node {
+            name: "mention".into(),
+            attrs: [("user".to_string(), "al".into())].into_iter().collect(),
+        },
+    ];
+    let mut registry = NodeRegistry::default();
+    registry
+        .register(
+            NodeSpec::inline("mention")
+                .markdown(|attrs, _| format!("@{}", attrs["user"].as_str().unwrap_or_default())),
+        )
+        .unwrap();
+    assert_eq!(doc.plain_text_with(&registry), "hi @al");
+    assert_eq!(doc.plain_text_with(&NodeRegistry::default()), "hi ");
 }

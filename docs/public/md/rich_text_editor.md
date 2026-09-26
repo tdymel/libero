@@ -88,6 +88,19 @@ fn Message() -> Element {
 }
 ```
 
+Built-in blocks draw through `NodeViews` too, under these names. Without a
+view they keep the editor's own look.
+
+| Name | `attrs` | `children` |
+|---|---|---|
+| `paragraph` | - | The text line, a `p` that holds the caret. |
+| `heading` | `level` (1 to 6) | The text line, an `h1` to `h6` that holds the caret. |
+| `quote` | - | The quoted blocks. |
+| `list` | `ordered` (bool), `start` (number) | The items, `li` elements unless `list_item` has a view. |
+| `list_item` | - | The item's blocks. |
+| `rule` | - | Nothing: the view is a non-editable island. |
+| `code_block` | - | Not overridable: it switches between source and `CodeBlock` itself. |
+
 ## Accessibility
 
 ### Keyboard
@@ -126,6 +139,9 @@ shows Ctrl.
   localization's `rich_text_editor` words. Each mark and block button reports
   `aria-pressed`.
 - The toolbar keeps focus and the selection in the text when clicked.
+- In a narrow column the toolbar stays one row: the less used buttons move
+  into a "More formatting" menu as `menuitemcheckbox` items, so the arrow keys
+  only reach what is shown. Bold, italic and the text type menu always stay.
 - A shortcut that toggles a mark, list, quote or block type is announced
   through a polite live region ("Bold on", "Heading 2").
 - The link dialog focuses its labelled URL field; a refused scheme shows as
@@ -148,6 +164,9 @@ shows Ctrl.
 
 - On Blitz (native) the document is shown read-only.
 - Paste takes plain text only, one block per line.
+- Copy and cut write the selection as plain text and as `text/markdown`;
+  custom nodes write through their `NodeSpec::markdown` (pass `registry`).
+  Cut is one undo step.
 - Drag and drop of text and spellcheck replacements are ignored, so
   `spellcheck` is off.
 
@@ -162,12 +181,12 @@ shows Ctrl.
 | `validate` | `Validators<Doc>` | - | Rules over the document, shown once the field loses focus or its form is submitted. |
 | `name` | `FieldName<Doc>` | - | A path such as `Post::FIELDS.body()` binds the document to the surrounding `Form`'s value when the editor has no `onchange`. |
 | `placeholder` | `String` | - | Shown while the document is one empty paragraph. |
-| `toolbar` | `bool` | `true` | Shows the formatting toolbar above the text: marks, link, text type menu, lists, quote, code block, undo and redo. |
+| `toolbar` | `bool` | `true` | Shows the formatting toolbar above the text: marks, link, text type menu, lists, quote, code block, undo and redo. A narrow toolbar moves what does not fit into a More menu. |
 | `keymap` | `Keymap` | `Keymap::default()` | Which chords run which commands. `Mod` is Cmd on Apple platforms and Ctrl elsewhere. |
 | `commands` | `Commands` | `Commands::default()` | What the keymap and the toolbar run. Register your own command under a name and bind a chord to it. |
 | `handle` | `RichTextHandle` | - | From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`). One handle drives one editor. |
-| `nodes` | `NodeViews` | `NodeViews::new()` | Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. |
-| `registry` | `NodeRegistry` | - | Your node types. With it, a debug build warns about a `nodes` name that is not registered, such as a typo. |
+| `nodes` | `NodeViews` | `NodeViews::new()` | Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. Built-ins (`paragraph`, `heading`, `quote`, `list`, `list_item`, `rule`) take a view under their name too; `code_block` stays fixed. |
+| `registry` | `NodeRegistry` | - | Your node types. Copy and cut write your nodes through their `to_markdown`, and a debug build warns about a `nodes` name that is not registered, such as a typo. |
 | `size` | `Size` | `md` | Padding and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
 | `label` | `Caption` | - | The field's caption, above the toolbar. It names the text. |

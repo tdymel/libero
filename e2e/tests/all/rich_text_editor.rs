@@ -345,14 +345,27 @@ fn arrow_up_enters_a_rendered_code_block_and_shift_slash_opens_help() {
     });
 }
 
+/// Polls `condition` (a JS expression) until it holds; a background page delays `ResizeObserver`.
+async fn until(page: &Page, condition: &str) -> bool {
+    eval(
+        page,
+        &format!(
+            "new Promise(r => {{ const end = Date.now() + 5000; const tick = () => {{ if ({condition}) r(true); else if (Date.now() > end) r(false); else setTimeout(tick, 50); }}; tick(); }})"
+        ),
+    )
+    .await
+}
+
+const MORE: &str = "document.querySelector('[role=toolbar] [aria-label=\"More formatting\"]')";
+
 #[test]
-fn the_toolbar_wraps_in_a_narrow_column() {
+fn a_narrow_toolbar_keeps_one_row_and_moves_the_rest_into_more() {
     block_on(async {
-        let fixture = Fixture::open("/rich-text-editor/sample", Viewport::Mobile)
+        let fixture = Fixture::open("/rich-text-editor/code", Viewport::Mobile)
             .await
             .unwrap();
         let page = &fixture.page;
-        settle(page).await;
+        assert!(until(page, MORE).await, "no More trigger");
         // [no horizontal overflow, distinct item rows]
         let (overflow, rows): (bool, u32) = eval(
             page,
@@ -362,7 +375,111 @@ fn the_toolbar_wraps_in_a_narrow_column() {
         )
         .await;
         assert!(!overflow, "the toolbar runs out of its column");
-        assert!(rows > 1, "the toolbar does not wrap");
+        assert_eq!(rows, 1, "the toolbar wraps");
+
+        // A hidden toggle runs from the menu, on the caret's block.
+        page.evaluate(format!(
+            "(() => {{ const e = {EDITOR}; e.focus(); const l = e.querySelector('[data-key]'); getSelection().selectAllChildren(l); getSelection().collapseToEnd(); }})()"
+        ))
+        .await
+        .unwrap();
+        settle(page).await;
+        page.evaluate(format!("{MORE}.click()")).await.unwrap();
+        let quote = "[...document.querySelectorAll('[role=menuitemcheckbox]')].find(i => i.textContent.includes('Quote'))";
+        assert!(until(page, quote).await, "no Quote in the More menu");
+        page.evaluate(format!("{quote}.click()")).await.unwrap();
+        let quoted = until(
+            page,
+            "document.getElementById('out').textContent.startsWith('> above')",
+        )
+        .await;
+        assert!(quoted, "{:?}", out(page).await);
+    });
+}
+
+/// Dispatches `kind` (`copy` or `cut`) on the editor; `[text/plain, text/markdown, cancelled]`.
+async fn clipboard(page: &Page, kind: &str) -> (String, String, bool) {
+    eval(
+        page,
+        &format!(
+            "(() => {{ const d = new DataTransfer(); const e = new ClipboardEvent('{kind}', {{ clipboardData: d, bubbles: true, cancelable: true }}); \
+               const kept = {EDITOR}.dispatchEvent(e); return [d.getData('text/plain'), d.getData('text/markdown'), !kept]; }})()"
+        ),
+    )
+    .await
+}
+
+#[test]
+fn copy_writes_plain_text_and_markdown_and_cut_edits_the_model() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/code", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!(
+            "(() => {{ const e = {EDITOR}; e.focus(); const l = [...e.querySelectorAll('[data-key]')]; \
+               const a = l[0].firstChild, b = l[l.length - 1].firstChild; getSelection().setBaseAndExtent(a, 0, b, b.length); }})()"
+        ))
+        .await
+        .unwrap();
+        settle(page).await;
+        let (plain, markdown, cancelled) = clipboard(page, "copy").await;
+        assert_eq!(plain, "above\nlet x = 1;\nbelow");
+        assert_eq!(markdown, "above\n\n```\nlet x = 1;\n```\n\nbelow\n");
+        assert!(cancelled, "the browser's own copy ran too");
+
+        // Cut the first paragraph's text: through the model, so `onchange` sees it.
+        page.evaluate(format!(
+            "(() => {{ const l = {EDITOR}.querySelector('[data-key]'); getSelection().selectAllChildren(l); }})()"
+        ))
+        .await
+        .unwrap();
+        settle(page).await;
+        let (plain, _, _) = clipboard(page, "cut").await;
+        assert_eq!(plain, "above");
+        let cut = until(
+            page,
+            "document.getElementById('out').textContent.startsWith('```')",
+        )
+        .await;
+        assert!(cut, "{:?}", out(page).await);
+    });
+}
+
+#[test]
+fn node_views_draw_built_in_blocks_and_keep_them_editable() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/builtins", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        settle(page).await;
+        // [heading level, h2 inside the view, quote view, rule view as an island]
+        let (level, inner, quote, rule): (String, bool, bool, bool) = eval(
+            page,
+            &format!(
+                "(() => {{ const e = {EDITOR}; const h = e.querySelector('header.fancy-heading'); \
+                   return [h?.dataset.level ?? '', !!h?.querySelector('h2[data-key]'), \
+                   !!e.querySelector('blockquote.fancy-quote p[data-key]'), \
+                   e.querySelector('.fancy-rule')?.closest('[data-key]')?.getAttribute('contenteditable') === 'false']; }})()"
+            ),
+        )
+        .await;
+        assert_eq!(level, "2");
+        assert!(inner, "the heading's text is not inside its view");
+        assert!(quote, "the quote's blocks are not inside its view");
+        assert!(rule, "the rule's view is not a non-editable island");
+
+        // The caret still finds the text inside a view.
+        page.evaluate(format!(
+            "(() => {{ const e = {EDITOR}; e.focus(); const h = e.querySelector('h2[data-key]'); getSelection().selectAllChildren(h); getSelection().collapseToEnd(); }})()"
+        ))
+        .await
+        .unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "X").await.unwrap();
+        let markdown = out(page).await;
+        assert!(markdown.starts_with("## TitleX\n"), "{markdown:?}");
     });
 }
 

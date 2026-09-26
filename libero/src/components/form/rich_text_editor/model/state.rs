@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::doc::{
-    Block, BlockKind, ContentKind, Doc, NodeKey, all_marked, marks_at, slice_inlines,
+    Block, BlockKind, Content, ContentKind, Doc, NodeKey, all_marked, marks_at, slice_inlines,
 };
 use super::mark::{MarkKind, Marks};
 
@@ -213,5 +213,41 @@ impl EditorState {
             })
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    /// The selection as a doc of its own: leaves cut to it, their containers kept.
+    pub(crate) fn selected_doc(&self) -> Doc {
+        fn cut(blocks: &[Block], ranges: &[(NodeKey, usize, usize)]) -> Vec<Block> {
+            let range = |key| {
+                ranges
+                    .iter()
+                    .find(|(k, ..)| *k == key)
+                    .map(|&(_, lo, hi)| (lo, hi))
+            };
+            blocks
+                .iter()
+                .filter_map(|block| {
+                    let content = match &block.content {
+                        Content::Blocks(children) => {
+                            let kept = cut(children, ranges);
+                            (!kept.is_empty()).then_some(Content::Blocks(kept))
+                        }
+                        Content::Inlines(inlines) => range(block.key)
+                            .map(|(lo, hi)| Content::Inlines(slice_inlines(inlines, lo, hi))),
+                        Content::Empty => range(block.key)
+                            .filter(|(lo, hi)| lo < hi)
+                            .map(|_| Content::Empty),
+                    }?;
+                    Some(Block {
+                        key: block.key,
+                        kind: block.kind.clone(),
+                        content,
+                    })
+                })
+                .collect()
+        }
+        let mut doc = Doc::empty();
+        doc.blocks = cut(&self.doc.blocks, &self.segments());
+        doc
     }
 }

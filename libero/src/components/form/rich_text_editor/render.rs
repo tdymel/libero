@@ -27,6 +27,11 @@ pub(crate) fn blocks(blocks: &[Block], ctx: RenderCtx<'_>) -> Element {
 
 fn block(block: &Block, ctx: RenderCtx<'_>) -> Element {
     let key = block.key.0.to_string();
+    if let Some(name) = builtin_name(&block.kind)
+        && ctx.views.contains(name)
+    {
+        return builtin_view(name, block, key, ctx);
+    }
     match &block.kind {
         BlockKind::Paragraph => rsx! { p { "data-key": key, {inlines(block.inlines(), ctx)} } },
         BlockKind::Heading { level } => heading(*level, key, inlines(block.inlines(), ctx)),
@@ -70,6 +75,49 @@ fn custom(
             div { "data-key": key, "data-node": "{name}", contenteditable: "false", "{name}" }
         },
         None => rsx! { div { "data-node": "{name}", {children} } },
+    }
+}
+
+/// The registered name of a built-in a caller's `NodeViews` may draw; code blocks stay fixed.
+fn builtin_name(kind: &BlockKind) -> Option<&'static str> {
+    Some(match kind {
+        BlockKind::Paragraph => "paragraph",
+        BlockKind::Heading { .. } => "heading",
+        BlockKind::Quote => "quote",
+        BlockKind::List { .. } => "list",
+        BlockKind::ListItem => "list_item",
+        BlockKind::Rule => "rule",
+        BlockKind::CodeBlock { .. } | BlockKind::Custom { .. } => return None,
+    })
+}
+
+/// A built-in through the caller's view: a leaf's text keeps its own tag and `data-key`,
+/// a container passes its rendered blocks, a rule is an island.
+fn builtin_view(name: &str, block: &Block, key: String, ctx: RenderCtx<'_>) -> Element {
+    let mut attrs = Attrs::new();
+    let children = match &block.kind {
+        BlockKind::Paragraph => {
+            rsx! { p { "data-key": key.clone(), {inlines(block.inlines(), ctx)} } }
+        }
+        BlockKind::Heading { level } => {
+            attrs.insert("level".into(), (*level).into());
+            heading(*level, key.clone(), inlines(block.inlines(), ctx))
+        }
+        BlockKind::Rule => VNode::empty(),
+        kind => {
+            if let BlockKind::List { ordered, start } = kind {
+                attrs.insert("ordered".into(), (*ordered).into());
+                attrs.insert("start".into(), (*start).into());
+            }
+            blocks(block.children(), ctx)
+        }
+    };
+    let view = ctx.views.render(name, &attrs, children);
+    match block.kind {
+        BlockKind::Rule => rsx! {
+            div { "data-key": key, "data-node": "{name}", contenteditable: "false", {view} }
+        },
+        _ => view.unwrap_or_else(VNode::empty),
     }
 }
 

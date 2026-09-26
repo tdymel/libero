@@ -28,7 +28,7 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("Shown while the document is one empty paragraph."),
                     prop("toolbar", "bool")
                         .default("true")
-                        .doc("Shows the formatting toolbar above the text: marks, link, text type menu, lists, quote, code block, undo and redo."),
+                        .doc("Shows the formatting toolbar above the text: marks, link, text type menu, lists, quote, code block, undo and redo. A narrow toolbar moves what does not fit into a More menu."),
                     prop("keymap", "Keymap")
                         .default("Keymap::default()")
                         .doc("Which chords run which commands. `Mod` is Cmd on Apple platforms and Ctrl elsewhere."),
@@ -39,9 +39,9 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`). One handle drives one editor."),
                     prop("nodes", "NodeViews")
                         .default("NodeViews::new()")
-                        .doc("Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once."),
+                        .doc("Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. Built-ins (`paragraph`, `heading`, `quote`, `list`, `list_item`, `rule`) take a view under their name too; `code_block` stays fixed."),
                     prop("registry", "NodeRegistry")
-                        .doc("Your node types. With it, a debug build warns about a `nodes` name that is not registered, such as a typo."),
+                        .doc("Your node types. Copy and cut write your nodes through their `to_markdown`, and a debug build warns about a `nodes` name that is not registered, such as a typo."),
                     prop("size", "Size").default("md").doc("Padding and font size."),
                     prop("radius", "Size")
                         .default("sm")
@@ -100,6 +100,7 @@ pub fn RichTextEditorPage() -> Element {
                     "The text is a `role=\"textbox\"` with `aria-multiline`, named by `label` and described by `description` and `helper`.",
                     "The toolbar is one tab stop with arrow-key movement, named by the localization's `rich_text_editor` words. Each mark and block button reports `aria-pressed`.",
                     "The toolbar keeps focus and the selection in the text when clicked.",
+                    "In a narrow column the toolbar stays one row: the less used buttons move into a \"More formatting\" menu as `menuitemcheckbox` items, so the arrow keys only reach what is shown. Bold, italic and the text type menu always stay.",
                     "A shortcut that toggles a mark, list, quote or block type is announced through a polite live region (\"Bold on\", \"Heading 2\").",
                     "The link dialog focuses its labelled URL field; a refused scheme shows as that field's error. Closing it puts the caret back in the text.",
                     "The text type menu is a menu button whose name includes the current type, with `menuitemradio` items.",
@@ -113,6 +114,7 @@ pub fn RichTextEditorPage() -> Element {
                 .limits([
                     "On Blitz (native) the document is shown read-only.",
                     "Paste takes plain text only, one block per line.",
+                    "Copy and cut write the selection as plain text and as `text/markdown`; custom nodes write through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.",
                     "Drag and drop of text and spellcheck replacements are ignored, so `spellcheck` is off.",
                 ]),
             lead: rich_lead(),

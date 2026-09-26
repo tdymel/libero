@@ -83,6 +83,7 @@ icon_set!(lucide: [outlined => lucide_outlined] {
     Undo => undo_2,
     Redo => redo_2,
     Link => link,
+    More => ellipsis_vertical,
 });
 
 #[cfg(feature = "icons-material")]
@@ -142,6 +143,7 @@ icon_set!(material: [
     Undo => content_undo,
     Redo => content_redo,
     Link => content_link,
+    More => navigation_more_vert,
 });
 
 #[cfg(feature = "icons-tabler")]
@@ -195,6 +197,7 @@ icon_set!(tabler: [outlined => tabler_outlined] {
     Undo => arrow_back_up,
     Redo => arrow_forward_up,
     Link => link,
+    More => dots_vertical,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -247,6 +250,7 @@ icon_set!(bootstrap: [outlined => bootstrap_outlined] {
     Undo => arrow_counterclockwise,
     Redo => arrow_clockwise,
     Link => link_45deg,
+    More => three_dots_vertical,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -306,6 +310,7 @@ icon_set!(phosphor: [
     Undo => arrow_u_up_left,
     Redo => arrow_u_up_right,
     Link => link,
+    More => dots_three_vertical,
 });
 
 #[cfg(test)]

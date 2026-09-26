@@ -113,9 +113,11 @@ pub enum IconSlot {
     Redo,
     /// A rich text editor's link button.
     Link,
+    /// A trigger for more options: a table column's menu, an overflow menu.
+    More,
 }
 
-const SLOTS: usize = IconSlot::Link as usize + 1;
+const SLOTS: usize = IconSlot::More as usize + 1;
 
 /// Glyphs by [`IconSlot`]; an empty slot keeps libero's default (lucide).
 /// A whole set starts from its constructor, one `icons-<set>` feature each:

@@ -1,4 +1,4 @@
-//! [`NodeViews`]: a caller's component per custom node type, on the view side so the
+//! [`NodeViews`]: a caller's component per node type, on the view side so the
 //! model stays free of Dioxus.
 
 use std::collections::BTreeMap;
@@ -23,6 +23,9 @@ pub struct NodeViewProps {
 
 /// One component per custom node type, by name. An atom's view is a non-editable
 /// island, so its text must name the node for screen readers.
+///
+/// Built-ins draw the same way under their names: `paragraph`, `heading` (`level`),
+/// `quote`, `list` (`ordered`, `start`), `list_item` and `rule`. `code_block` stays fixed.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -53,16 +56,17 @@ impl NodeViews {
     pub fn with(mut self, name: impl Into<String>, view: fn(NodeViewProps) -> Element) -> Self {
         let name = name.into();
         #[cfg(debug_assertions)]
-        if NodeRegistry::BUILTIN
-            .iter()
-            .any(|(builtin, _)| *builtin == name)
-        {
-            crate::utils::warn(&format!(
-                "NodeViews: \"{name}\" is a built-in node; built-ins do not render through NodeViews yet."
-            ));
+        if name == "code_block" {
+            crate::utils::warn(
+                "NodeViews: \"code_block\" stays the editor's own; its view is never used.",
+            );
         }
         self.views.insert(name, view);
         self
+    }
+
+    pub(crate) fn contains(&self, name: &str) -> bool {
+        self.views.contains_key(name)
     }
 
     pub fn names(&self) -> impl Iterator<Item = &str> {
