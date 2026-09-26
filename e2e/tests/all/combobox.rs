@@ -82,6 +82,51 @@ fn the_trigger_names_the_row_the_list_highlights() {
     });
 }
 
+/// Under RTL the box is placed with the width it will have, so it stays on screen.
+#[test]
+fn an_rtl_dropdown_stays_inside_the_viewport() {
+    block_on(async {
+        for route in ["/combobox", "/select"] {
+            let fixture = Fixture::open(route, Viewport::Mobile).await.unwrap();
+            let page = &fixture.page;
+            page.evaluate("document.documentElement.dir = 'rtl'")
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                "getComputedStyle(document.body).direction === 'rtl'",
+                "rtl",
+            )
+            .await
+            .unwrap();
+            keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            wait::for_visible(page, LISTBOX).await.unwrap();
+            page.evaluate("new Promise(r => setTimeout(() => r(1), 500))")
+                .await
+                .unwrap();
+            let edges: (f64, f64, f64) = page
+                .evaluate(
+                    "(() => { let p = document.querySelector('[role=listbox]'); \
+                     while (p && getComputedStyle(p).position !== 'fixed') p = p.parentElement; \
+                     const r = p.getBoundingClientRect(); return [r.left, r.right, innerWidth]; })()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                edges.0 >= 0.0 && edges.1 <= edges.2 + 0.5,
+                "{route}: the dropdown spans {}..{} in a {}px viewport",
+                edges.0,
+                edges.1,
+                edges.2
+            );
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// An open list with nothing to draw is not expanded for a screen reader.
 #[test]
 fn a_list_with_nothing_to_draw_is_not_expanded() {

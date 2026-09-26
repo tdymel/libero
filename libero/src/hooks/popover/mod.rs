@@ -317,7 +317,17 @@ pub(crate) fn use_popover_on(
                 width: anchor_size.width,
                 height: anchor_size.height,
             };
-            anchor_width.set(Some(anchor_size.width));
+            // The width style lands after this measure: place on the next pass, once per change.
+            let widened = *anchor_width.peek() != Some(anchor_size.width);
+            if widened {
+                anchor_width.set(Some(anchor_size.width));
+                if options.width != PopoverWidth::Auto {
+                    let mut tick = scroll_tick;
+                    let next = tick.peek().wrapping_add(1);
+                    tick.set(next);
+                    return;
+                }
+            }
             placed.set(Some(place(rect, floating_size, viewport, &options, rtl)));
         });
     }));
