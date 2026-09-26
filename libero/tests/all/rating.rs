@@ -76,6 +76,27 @@ fn format_and_the_localization_word_the_value() {
 }
 
 #[test]
+fn a_required_rating_says_so_in_its_label() {
+    fn english() -> Element {
+        rsx! {
+            LiberoProvider {
+                Rating { label: "Stars", required: true, value: 2.0, onchange: move |_| {} }
+            }
+        }
+    }
+    fn german() -> Element {
+        rsx! {
+            LiberoProvider { localization: &Localization::GERMAN,
+                Rating { label: "Sterne", required: true, value: 2.0, onchange: move |_| {} }
+            }
+        }
+    }
+    // A slider takes no `aria-required`, so the label's text carries it.
+    assert!(render(english).contains(" required<"), "no spoken word");
+    assert!(render(german).contains(" erforderlich<"), "no spoken word");
+}
+
+#[test]
 fn read_only_stays_a_tab_stop_and_draws_no_zones() {
     fn app() -> Element {
         rsx! {
