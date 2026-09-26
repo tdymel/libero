@@ -1,7 +1,7 @@
 use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
-use super::media_controls::{Captions, MediaControls, MediaFallback, use_media_keys};
+use super::media_controls::{Captions, MediaControls, MediaFallback, use_media_keys, use_sound};
 use super::{
     MediaPreload, MediaSource,
     audio::{media_sources, use_source_reload},
@@ -280,8 +280,10 @@ pub fn Video(props: VideoProps) -> Element {
     let shown = use_signal(|| shown_at_start);
     let captions = caption_track.map(|track| Captions { shown, track });
 
+    let sound = use_sound(media);
     use_media_keys(
         media,
+        sound,
         player,
         [
             Hotkey::new("f", move || fullscreen.toggle()),
@@ -393,7 +395,7 @@ pub fn Video(props: VideoProps) -> Element {
         if unsupported {
             MediaFallback { src: props.src.clone(), children: props.children }
         } else {
-            MediaControls { media, size: props.size.clone(), captions, fullscreen: Some(fullscreen) }
+            MediaControls { media, sound, size: props.size.clone(), captions, fullscreen: Some(fullscreen) }
         }
     };
 

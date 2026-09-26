@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, Parts, States},
+        common::{ComboboxState, HtmlTag, Input, Part, Parts, States},
         form::{DropdownPart, combobox::COMBOBOX_DROPDOWN_SX},
         layout::{BoxStyle, use_box},
     },
@@ -63,6 +63,7 @@ pub(super) fn dropdown_box(
 }
 
 pub(super) struct DropdownSetup<'a> {
+    pub(super) state: ComboboxState,
     pub(super) opened: bool,
     pub(super) searchable: bool,
     pub(super) search: ElementHandle,
@@ -85,6 +86,7 @@ pub(super) struct Dropdown {
 
 pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     let DropdownSetup {
+        state,
         opened,
         searchable,
         search,
@@ -98,7 +100,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     } = setup;
 
     // On the Escape stack while open, so a surrounding `HoverCard` leaves the press to it.
-    use_field_list_layer(opened);
+    use_field_list_layer(opened, use_callback(move |()| state.close()));
     let anchor = use_element();
     let popover = use_popover_on(
         anchor,

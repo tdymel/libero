@@ -122,7 +122,7 @@ pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub(crate) use resize::{is_measured_resize, on_resize};
 pub(crate) use scroll::{
     SCROLL_QUIET, clips_z_indexed, draws_own_scrollbars, fires_scroll_end, scroll_range,
-    snaps_scroll, wheel_travel_y,
+    scrolls_on_keys, snaps_scroll, wheel_travel_y,
 };
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::opens_select_picker;

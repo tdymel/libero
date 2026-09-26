@@ -154,6 +154,8 @@ parts work.
   itself becomes a tab stop while it overflows, so the arrow keys can scroll
   it. The Usage example is one. `focusable: true` keeps the stop always.
 - A debug build warns about a tab stop without a name.
+- On Blitz, which scrolls nothing on a key, the area scrolls itself on the
+  arrows, Page Up and Down, Home, End and Space, as a browser does.
 - The bar `always` draws is hidden from screen readers and takes no focus:
   the area itself scrolls by keyboard, wheel and touch. Forced colours paint
   its thumb in the system text colour.

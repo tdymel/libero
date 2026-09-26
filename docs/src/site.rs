@@ -14,6 +14,8 @@ pub(crate) static SAMPLE_IMAGE: Asset = asset!("/assets/sample.svg");
 pub(crate) const SAMPLE_AUDIO: &str = "https://upload.wikimedia.org/wikipedia/commons/transcoded/b/b6/Wikipedia_guitar_solo.ogg/Wikipedia_guitar_solo.ogg.mp3";
 /// "Big Buck Bunny", CC BY 3.0 Blender Foundation, a 480p transcode from Wikimedia Commons.
 pub(crate) const SAMPLE_VIDEO: &str = "https://upload.wikimedia.org/wikipedia/commons/transcoded/c/c0/Big_Buck_Bunny_4K.webm/Big_Buck_Bunny_4K.webm.480p.vp9.webm";
+/// Sound captions written for its opening, inline so no `.vtt` file ships.
+pub(crate) const SAMPLE_CAPTIONS: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 00:08.000%0A[Birds chirping]%0A%0A00:08.000 --> 00:20.000%0A[Gentle music]";
 /// Its Commons poster frame.
 pub(crate) const SAMPLE_POSTER: &str = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Big_Buck_Bunny_4K.webm/960px--Big_Buck_Bunny_4K.webm.jpg";
 /// Stands in for a source that failed to load.

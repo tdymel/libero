@@ -292,6 +292,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         wrapper,
         dropdown,
     } = use_cascader_dropdown(DropdownSetup {
+        state,
         opened,
         searchable,
         search,

@@ -98,11 +98,13 @@ pub fn DrawerPage() -> Element {
                     "Focus moves into the panel, and back to the trigger once it closes, as with `use_modal`.",
                     "A dismissal settles the `Opening` with `None`, so a result handler never runs on it.",
                     "An unset `aria_label` warns in a debug build.",
+                    "Android's Back button closes the drawer, as Escape does, rather than the app.",
                 ])
                 .must([
                     "Set `DrawerOptions::aria_label`, since the panel is a dialog with no name of its own.",
                     "Give its content a way to close it: it has no header close button.",
-                ]),
+                ])
+                .limits(["On Android, a drawer opened without a tap (on mount or from a timer) may let Back close the app."]),
             lead: rsx! {
                 Text {
                     "A dimmed, focus-trapped panel docked to one edge. "

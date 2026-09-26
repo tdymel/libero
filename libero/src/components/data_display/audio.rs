@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::*;
 
-use super::media_controls::{MediaControls, MediaFallback, use_media_keys};
+use super::media_controls::{MediaControls, MediaFallback, use_media_keys, use_sound};
 use crate::{
     components::{
         common::{HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
@@ -213,7 +213,8 @@ pub fn Audio(props: AudioProps) -> Element {
         }
     });
 
-    use_media_keys(media, player, []);
+    let sound = use_sound(media);
+    use_media_keys(media, sound, player, []);
 
     let error = media.error();
     let onerror = props.onerror;
@@ -249,7 +250,7 @@ pub fn Audio(props: AudioProps) -> Element {
         if unsupported {
             MediaFallback { src: props.src.clone(), children: props.children }
         } else {
-            MediaControls { media, size: props.size.clone() }
+            MediaControls { media, sound, size: props.size.clone() }
         }
     };
 

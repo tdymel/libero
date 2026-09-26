@@ -127,6 +127,8 @@ screen, from [use_fullscreen](use_fullscreen.md).
 - The play, mute and fullscreen buttons change their names (Play/Pause,
   Mute/Unmute, Fullscreen/Exit fullscreen); the captions button uses
   `aria-pressed`.
+- At volume 0 the mute button offers Unmute, which brings back the last audible
+  volume; moving the volume up while muted unmutes.
 - Where the page may not go fullscreen, the player covers the window as a fixed
   box instead, which Escape, F and a Tab out of the player leave, so focus never
   hides behind it.

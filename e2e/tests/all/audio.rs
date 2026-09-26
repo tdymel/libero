@@ -187,6 +187,95 @@ fn keys_act_inside_the_player_only() {
     });
 }
 
+/// Volume 0 counts as silent: the button offers Unmute, which brings back the
+/// last audible volume; a volume moved up while muted unmutes.
+#[test]
+fn the_mute_button_follows_silence() {
+    const VOLUME: &str = "#player [data-slot=volume] [role=slider]";
+    let mute_offers = |label: &str| {
+        format!("document.querySelector('#player button[aria-label={label}]') !== null")
+    };
+    block_on(async {
+        let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+
+        wait::for_js_true(
+            page,
+            &format!("{} === '0:00 / 0:04'", time_text("player")),
+            "the duration",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!("document.querySelector('{VOLUME}').focus()"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        keyboard::press(page, keyboard::HOME).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && {}",
+                audio("player", "a.volume === 0 && !a.muted"),
+                mute_offers("Unmute")
+            ),
+            "volume 0 to offer Unmute",
+        )
+        .await
+        .unwrap();
+
+        pointer::click(page, "#player button[aria-label=Unmute]")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && {}",
+                audio("player", "Math.abs(a.volume - 0.95) < 1e-6 && !a.muted"),
+                mute_offers("Mute")
+            ),
+            "Unmute to bring back the last audible volume",
+        )
+        .await
+        .unwrap();
+
+        pointer::click(page, "#player button[aria-label=Mute]")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &audio("player", "a.muted"), "Mute to mute")
+            .await
+            .unwrap();
+        page.evaluate(format!("document.querySelector('{VOLUME}').focus()"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && {}",
+                audio("player", "a.volume === 1 && !a.muted"),
+                mute_offers("Mute")
+            ),
+            "a volume moved up to unmute",
+        )
+        .await
+        .unwrap();
+
+        // M from volume 0 restores as the button does.
+        keyboard::press(page, keyboard::HOME).await.unwrap();
+        keyboard::press(page, M).await.unwrap();
+        wait::for_js_true(
+            page,
+            &audio("player", "a.volume === 1 && !a.muted"),
+            "M at volume 0 to bring back the volume",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("muting").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A file swapped after mount behind `sources` is loaded, not the first one kept.
 #[test]
 fn a_swapped_source_is_loaded() {

@@ -34,10 +34,56 @@ pub(super) fn icon_size(size: &Input<Size>) -> Input<ThemeAwareValue> {
     }
 }
 
+/// Mute and volume as one: silent is muted or at volume 0, and unmuting at 0
+/// brings back the last audible volume, as native controls do.
+#[derive(Clone, Copy, PartialEq)]
+pub(super) struct Sound {
+    media: MediaHandle,
+    audible: Signal<f64>,
+}
+
+impl Sound {
+    pub(super) fn silent(&self) -> bool {
+        self.media.muted() || self.media.volume() == 0.0
+    }
+
+    pub(super) fn toggle(self) {
+        let media = self.media;
+        if !self.silent() {
+            media.set_muted(true);
+            return;
+        }
+        media.set_muted(false);
+        if media.volume() == 0.0 {
+            media.set_volume(*self.audible.peek());
+        }
+    }
+
+    /// A volume above 0 unmutes.
+    fn set_volume(self, volume: f64) {
+        self.media.set_volume(volume);
+        if volume > 0.0 && self.media.muted() {
+            self.media.set_muted(false);
+        }
+    }
+}
+
+pub(super) fn use_sound(media: MediaHandle) -> Sound {
+    let mut audible = use_signal(|| 1.0);
+    use_effect(move || {
+        let volume = media.volume();
+        if volume > 0.0 {
+            audible.set(volume);
+        }
+    });
+    Sound { media, audible }
+}
+
 /// K plays and pauses, J and L jump 10 seconds, M mutes, all only with focus in
 /// `player`; `more` adds a player's own.
 pub(super) fn use_media_keys(
     media: MediaHandle,
+    sound: Sound,
     player: ElementHandle,
     more: impl IntoIterator<Item = Hotkey>,
 ) {
@@ -47,7 +93,7 @@ pub(super) fn use_media_keys(
             Hotkey::new("k", move || media.toggle()),
             Hotkey::new("j", move || jump(-10.0)),
             Hotkey::new("l", move || jump(10.0)),
-            Hotkey::new("m", move || media.set_muted(!media.muted())),
+            Hotkey::new("m", move || sound.toggle()),
         ]
         .into_iter()
         .chain(more)
@@ -77,6 +123,7 @@ impl Captions {
 #[component]
 pub(super) fn MediaControls(
     media: MediaHandle,
+    sound: Sound,
     size: Input<Size>,
     #[props(default)] captions: Option<Captions>,
     #[props(default)] fullscreen: Option<FullscreenHandle>,
@@ -90,7 +137,7 @@ pub(super) fn MediaControls(
             media.toggle();
         }
     };
-    let silent = media.muted() || media.volume() == 0.0;
+    let silent = sound.silent();
     rsx! {
         Toolbar { "aria-label": labels.controls, "data-slot": CONTROLS,
             ActionIcon {
@@ -108,9 +155,9 @@ pub(super) fn MediaControls(
                 MediaSeek { media, size: size.clone() }
             }
             ActionIcon {
-                aria_label: if media.muted() { labels.unmute } else { labels.mute },
+                aria_label: if silent { labels.unmute } else { labels.mute },
                 size: icon_size.clone(),
-                onclick: move |_| media.set_muted(!media.muted()),
+                onclick: move |_| sound.toggle(),
                 if silent {
                     Glyph { slot: IconSlot::VolumeOff, icon: lucide::volume_x::outlined }
                 } else {
@@ -125,7 +172,7 @@ pub(super) fn MediaControls(
                     step: 5.0,
                     size,
                     aria_label: labels.volume,
-                    oninput: move |event: SliderChangeEvent| media.set_volume(event.value() / 100.0),
+                    oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
                 }
             }
             if let Some(captions) = captions {

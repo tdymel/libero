@@ -195,7 +195,8 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         .into();
 
     // On the Escape stack while open, so a surrounding `HoverCard` leaves the press to it.
-    use_field_list_layer(opened);
+    let onopened = props.onopened;
+    use_field_list_layer(opened, use_callback(move |()| onopened.call(false)));
     let anchor = use_element();
     // Unstyled: catches the keys and anchors the dropdown, so `sx` goes to the dropdown.
     let wrapper = use_box().prepare();

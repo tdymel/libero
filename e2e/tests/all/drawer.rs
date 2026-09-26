@@ -4,7 +4,7 @@
 use anyhow::Result;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, Platform, eventually};
 
 use crate::modal;
 use e2e::suite::Step;
@@ -73,6 +73,33 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(a_right_drawer_hugs_the_right_edge, "/drawer", hugs_the_end);
+
+/// Android's Back closes the drawer, and the app stays (1289).
+async fn back_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    if d.platform() != Platform::Android {
+        return Ok(());
+    }
+    d.click(TRIGGER).await?;
+    eventually(d, "the drawer to open", async |d| d.exists(DIALOG).await).await?;
+    d.press_back().await?;
+    eventually(d, "Back to close the drawer", async |d| {
+        Ok(!d.exists(DIALOG).await?)
+    })
+    .await?;
+    d.click(TRIGGER).await?;
+    eventually(d, "the app to stay and open it again", async |d| {
+        d.exists(DIALOG).await
+    })
+    .await
+}
+
+e2e::scenario!(
+    android_back_closes_a_drawer,
+    "/drawer",
+    back_closes,
+    native: skip("1275: no Back key off Android"),
+    desktop: skip("1275: no Back key off Android")
+);
 
 #[test]
 fn it_honours_the_overlay_contract() {

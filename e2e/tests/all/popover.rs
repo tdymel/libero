@@ -3,7 +3,7 @@
 
 use anyhow::{Result, bail};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Rect, eventually, linger};
+use e2e::driver::{Driver, Platform, Rect, eventually, linger};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -207,6 +207,27 @@ e2e::scenario!(
     a_tap_outside_closes_it_and_one_inside_does_not,
     "/popover",
     a_tap_outside_closes
+);
+
+/// Android's Back closes the box, and the app stays (1289).
+async fn back_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    if d.platform() != Platform::Android {
+        return Ok(());
+    }
+    d.click(TRIGGER).await?;
+    shown(d, true, "the box to open").await?;
+    d.press_back().await?;
+    shown(d, false, "Back to close it").await?;
+    d.click(TRIGGER).await?;
+    shown(d, true, "the app to stay and open it again").await
+}
+
+e2e::scenario!(
+    android_back_closes_a_popover,
+    "/popover",
+    back_closes,
+    native: skip("1275: no Back key off Android"),
+    desktop: skip("1275: no Back key off Android")
 );
 
 /// Escape closes it with focus on the trigger or inside the box, and focus

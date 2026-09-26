@@ -176,7 +176,9 @@ pub(crate) fn use_dismiss_layer() -> DismissLayer {
 ///
 /// The field must close its list when focus leaves, or the list wedges Escape
 /// on top. Every field does; the public `Combobox` leaves it to its caller.
-pub(crate) fn use_field_list_layer(open: bool) {
+/// Android's Back runs `onback`, which closes the list as Escape does.
+pub(crate) fn use_field_list_layer(open: bool, onback: Callback<()>) {
+    use_back(open, onback);
     let layer = use_dismiss_layer();
     // Decided once, as in `use_dismiss`: a property of the renderer.
     let global = use_hook(|| keyboard().is_some());

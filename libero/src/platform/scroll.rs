@@ -39,6 +39,12 @@ pub(crate) fn snaps_scroll() -> bool {
     !NATIVE
 }
 
+/// Whether a focused scroll container scrolls on arrows, pages, Home, End and
+/// Space by itself. Blitz does not (todo 1267).
+pub(crate) fn scrolls_on_keys() -> bool {
+    !NATIVE
+}
+
 /// Whether a scroll container fires `scrollend`. Blitz does not (todo 949).
 pub(crate) fn fires_scroll_end() -> bool {
     !NATIVE

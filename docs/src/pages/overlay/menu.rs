@@ -311,10 +311,12 @@ pub fn MenuPage() -> Element {
                 .handles([
                     "Typing jumps to an item, \"s\" to the next one starting with S and \"sav\" to Save. A pause of half a second starts over.",
                     "`menu.a11y_attributes()` wires your trigger.",
+                    "Android's Back button closes the menu as Escape does, rather than the app.",
                 ])
                 .must([
                     "Put a shortcut hint in `shortcut`, not `trailing`. A screen reader then hears it as `aria-keyshortcuts`, not as part of the item's name.",
-                ]),
+                ])
+                .limits(["On Android, a menu opened without a tap (on mount or from a timer) may let Back close the app."]),
             lead: rsx! {
                 Text {
                     "A list of commands that drops from a trigger. The items are data, not "

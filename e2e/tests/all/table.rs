@@ -103,6 +103,10 @@ async fn a_focused_header_scrolls_the_rows<D: Driver>(d: &mut D, _route: &str) -
         bail!("the area is a tab stop beside the header buttons");
     }
     scrolls_under_the_header(d, keyboard::PAGE_DOWN).await?;
+    if d.platform() == Platform::Native {
+        // The unclipped column menu check fails on Blitz, never run there before (filed).
+        return Ok(());
+    }
     // The menu opens in a portal: the 200px area does not clip it.
     d.click("button[aria-label=\"Stock column options\"]")
         .await?;
@@ -119,7 +123,6 @@ e2e::scenario!(
     a_capped_table_scrolls_from_its_header,
     "/table/sticky",
     a_focused_header_scrolls_the_rows,
-    native: skip("Blitz scrolls nothing on a key; the wheel is native/table.rs"),
     android: skip("958: element identity on the WebView")
 );
 
@@ -143,7 +146,6 @@ e2e::scenario!(
     a_plain_capped_table_scrolls_as_a_named_region,
     "/table/sticky-plain",
     a_plain_capped_table_is_a_named_stop,
-    native: skip("Blitz scrolls nothing on a key; the wheel is native/table.rs"),
     android: skip("958: element identity on the WebView")
 );
 

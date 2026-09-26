@@ -186,10 +186,17 @@ modal.
   on its own has none of them.
 - A dismissal settles the `Opening` with `None`, so a handler written for an
   answer never runs on it.
+- Android's Back button dismisses the top modal, as Escape does, rather than
+  closing the app.
 
 ### You must
 
 - Name the `Dialog` with its `title`, or `aria_label`.
+
+### Limits
+
+- On Android, a modal opened without a tap (on mount or from a timer) may let
+  Back close the app.
 
 ## Theme defaults
 

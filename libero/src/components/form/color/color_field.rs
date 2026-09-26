@@ -266,9 +266,6 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // branches on `opened`.
     let anchor = use_element();
     let showing = opened() && has_dropdown && !readonly;
-    // On the Escape stack exactly while the key handler below would take
-    // Escape, so a `HoverCard` around this field leaves the press to it.
-    use_field_list_layer(showing);
     let popover = use_popover_on(
         anchor,
         use_element(),
@@ -317,6 +314,17 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             returning.set(false);
         }
     };
+    // On the Escape stack exactly while the key handler below would take
+    // Escape, so a `HoverCard` around this field leaves the press to it.
+    use_field_list_layer(
+        showing,
+        use_callback(move |()| {
+            if floating.query_selector(":focus").is_ok() {
+                focus_input();
+            }
+            opened.set(false);
+        }),
+    );
     let focused = move || match returning() {
         true => returning.set(false),
         false => opened.set(true),

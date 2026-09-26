@@ -1,4 +1,5 @@
 mod handle;
+mod keys;
 mod scroll_area;
 mod scrollbars;
 mod viewport;

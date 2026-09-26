@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, CodeBlock, Input, Text, Video, VideoPart},
+    components::{Code, CodeBlock, Input, MediaTrack, Text, TrackKind, Video, VideoPart},
     theme::Size,
 };
 
@@ -79,6 +79,7 @@ pub fn VideoPage() -> Element {
                 .handles([
                     "The player is a `group` named by `label`; its buttons are one `toolbar` stop, each slider its own.",
                     "The play, mute and fullscreen buttons change their names (Play/Pause, Mute/Unmute, Fullscreen/Exit fullscreen); the captions button uses `aria-pressed`.",
+                    "At volume 0 the mute button offers Unmute, which brings back the last audible volume; moving the volume up while muted unmutes.",
                     "Where the page may not go fullscreen, the player covers the window as a fixed box instead, which Escape, F and a Tab out of the player leave, so focus never hides behind it.",
                     "In fullscreen the controls overlay the bottom of the picture and fade after 3 seconds of playing untouched. A pointer move, a tap or a key brings them back. After a key they stay until the next click or tap, so keyboard focus never sits on a faded control; they never leave the Tab order, and a tap on the picture only shows them.",
                     "Below 28rem the volume slider hides and the mute button stays; below 22rem the total time hides too, so the row fits at 320px (WCAG 1.4.10).",
@@ -116,6 +117,10 @@ pub fn VideoPage() -> Element {
                     r#"label: "Big Buck Bunny""#.to_string(),
                     format!("poster: {:?}", crate::site::SAMPLE_POSTER),
                     r#"aspect_ratio: "16 / 9""#.to_string(),
+                    format!(
+                        r#"tracks: vec![MediaTrack {{ src: {:?}.into(), kind: TrackKind::Captions, srclang: "en".into(), label: "English".into(), default: true }}]"#,
+                        crate::site::SAMPLE_CAPTIONS,
+                    ),
                 ],
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl"]).default("md"),
@@ -128,6 +133,13 @@ pub fn VideoPage() -> Element {
                         label: "Big Buck Bunny",
                         poster: crate::site::SAMPLE_POSTER,
                         aspect_ratio: "16 / 9",
+                        tracks: vec![MediaTrack {
+                            src: crate::site::SAMPLE_CAPTIONS.into(),
+                            kind: TrackKind::Captions,
+                            srclang: "en".into(),
+                            label: "English".into(),
+                            default: true,
+                        }],
                         size: Input::from(Size::from(values.str("size").as_str())),
                         muted: values.str("muted") == "true",
                         looping: values.str("looping") == "true",

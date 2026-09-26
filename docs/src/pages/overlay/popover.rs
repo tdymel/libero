@@ -288,6 +288,7 @@ pub fn PopoverPage() -> Element {
                 .handles([
                     "The hook adds no role and no keys of its own. `dismiss(true)` adds the Escape key and closing on focus leaving.",
                     "With `dismiss(true)`, focus leaving the trigger and the box closes it.",
+                    "With `dismiss(true)`, Android's Back button closes the box as Escape does, rather than the app.",
                 ])
                 .must([
                     "Put a `role` on the box, and `aria-haspopup`, `aria-expanded` and `aria-controls` on the trigger, as the example does.",
@@ -298,6 +299,7 @@ pub fn PopoverPage() -> Element {
                 ])
                 .limits([
                     "Safari does not focus a button on click, so there a press outside a box opened by pointer does not close it.",
+                    "On Android, a box opened without a tap (on mount or from a timer) may let Back close the app.",
                 ]),
             lead: rsx! {
                 Text {

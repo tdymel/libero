@@ -219,8 +219,10 @@ pub fn ModalPage() -> Element {
                     "Focus moves into the modal, and back to the trigger once it closes.",
                     "The focus trap, Escape and backdrop dismissal come from the modal. A `Dialog` on its own has none of them.",
                     "A dismissal settles the `Opening` with `None`, so a handler written for an answer never runs on it.",
+                    "Android's Back button dismisses the top modal, as Escape does, rather than closing the app.",
                 ])
-                .must(["Name the `Dialog` with its `title`, or `aria_label`."]),
+                .must(["Name the `Dialog` with its `title`, or `aria_label`."])
+                .limits(["On Android, a modal opened without a tap (on mount or from a timer) may let Back close the app."]),
             lead: rsx! {
                 Text {
                     "A modal is a hook, not a component. "

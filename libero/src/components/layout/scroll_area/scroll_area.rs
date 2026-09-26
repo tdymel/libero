@@ -2,6 +2,7 @@ use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use super::{
     handle::{ScrollAreaHandle, inline_x, scroll_to_percent},
+    keys::scroll_on_key,
     scrollbars::{DrawnBars, ScrollAreaBars, ScrollMetrics},
     viewport::{ContentOffsets, ScrollGeometry, ScrollViewport},
 };
@@ -16,7 +17,8 @@ use crate::{
     hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
     platform::{
         Dimensions, ElementApi, PlatformError, SCROLL_QUIET, TimerSubscription, clips_z_indexed,
-        draws_own_scrollbars, fires_scroll_end, scroll_range, timer, when_laid_out,
+        draws_own_scrollbars, fires_scroll_end, scroll_range, scrolls_on_keys, timer,
+        when_laid_out,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
@@ -617,6 +619,10 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .attr_default("role", tab_stop.then_some("region"))
         .event("onscroll", tracks_scroll.then_some(onscroll))
         .event("onscrollend", onscroll_prop.then_some(onscrollend))
+        .event(
+            "onkeydown",
+            (!owned && !scrolls_on_keys()).then_some(move |event| scroll_on_key(root, event)),
+        )
         .event("onresize", resized)
         .render(HtmlTag::Div, attributes, body)
 }

@@ -102,6 +102,8 @@ explains how parts work.
   each slider its own.
 - The play and mute buttons change their names (Play/Pause, Mute/Unmute) rather
   than using `aria-pressed`.
+- At volume 0 the mute button offers Unmute, which brings back the last audible
+  volume; moving the volume up while muted unmutes.
 - Below 22rem the volume slider hides and the mute button stays, so the row fits
   at 320px (WCAG 1.4.10).
 - The seek slider's `aria-valuetext` reads "1:05 of 4:56" (the localization's
