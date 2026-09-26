@@ -36,6 +36,8 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
         .padding("sm")
         .border_radius("md")
+        // Forced colours repaint the fill as Canvas; a transparent border becomes the edge.
+        .border("1px solid transparent")
         .background("muted.1")
         .selector(
             KanbanColumnPart::Header.selector(),
@@ -237,13 +239,18 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         .with("sorting", (list.sorting)())
         .into();
 
+    // A custom header may hold more than the name: `label` then names the list.
+    let (name_attr, name) = match props.header {
+        Some(_) => ("aria-label", props.label.clone()),
+        None => ("aria-labelledby", header_id()),
+    };
     let items = use_box()
         .prepare()
         .element(&list.element)
         .attr("data-slot", KanbanColumnPart::List.slot())
         // Safari with VoiceOver drops a `list-style: none` list's role.
         .attr("role", "list")
-        .attr("aria-labelledby", header_id())
+        .attr(name_attr, name)
         .event("onpointermove", list.onpointermove)
         .event("onpointerup", list.onpointerup)
         .event("onpointercancel", list.onpointercancel)

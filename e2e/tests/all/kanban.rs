@@ -174,3 +174,42 @@ fn it_meets_the_baseline() {
         .focusable("#Alpha [data-slot=handle]")
         .run();
 }
+
+/// Forced colours paint the column's fill as `Canvas`, so only a border draws its edge.
+#[test]
+fn a_column_keeps_an_edge_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    use e2e::browser::{Fixture, Viewport, block_on};
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        e2e::wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let edge: String = page
+            .evaluate(
+                "(() => { const s = getComputedStyle(document.querySelector('#column-0')); \
+                 return s.borderTopWidth + ' ' + s.borderTopStyle + ' ' + s.borderTopColor; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            edge.starts_with("1px solid ") && !edge.contains("rgba(0, 0, 0, 0)"),
+            "{edge}"
+        );
+        fixture.close().await.unwrap();
+    });
+}

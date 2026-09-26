@@ -51,6 +51,23 @@ fn each_column_is_a_list_named_by_its_header() {
 }
 
 #[test]
+fn a_custom_header_leaves_the_label_as_the_lists_name() {
+    fn headed() -> Element {
+        rsx! {
+            LiberoProvider {
+                Kanban { onmove: move |_: KanbanMove| {},
+                    KanbanColumn { index: 0, label: "To do", header: rsx! { "To do (3)" } }
+                }
+            }
+        }
+    }
+    let html = body(&render(headed));
+
+    assert!(html.contains("aria-label=\"To do\""), "{html}");
+    assert!(!html.contains("aria-labelledby="), "{html}");
+}
+
+#[test]
 fn each_card_has_a_handle_two_move_buttons_and_a_move_to_menu() {
     let html = body(&render(app));
 
