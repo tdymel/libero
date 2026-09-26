@@ -4,7 +4,7 @@
 use anyhow::{Result, ensure};
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused, linger};
 use e2e::suite::Step;
 use e2e::wait;
 use e2e::{
@@ -202,6 +202,52 @@ fn a_click_on_the_dialog_text_keeps_escape_and_the_trap() {
         fixture.close().await.unwrap();
     });
 }
+
+const MENU_ITEM: &str = "[role=menuitem]";
+
+/// Android's Back closes the top layer, a menu before its dialog, and the app
+/// stays (1275). Only Android has the key.
+async fn back_closes_the_top_layer<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    if d.platform() != Platform::Android {
+        return Ok(());
+    }
+    open(d, TRIGGER).await?;
+    d.press_back().await?;
+    eventually(d, "Back to close the dialog", async |d| {
+        Ok(!d.exists(DIALOG).await?)
+    })
+    .await?;
+
+    open(d, TRIGGER).await?;
+    d.click("[role=dialog] [aria-haspopup=menu]").await?;
+    eventually(d, "the menu to open", async |d| d.exists(MENU_ITEM).await).await?;
+    d.press_back().await?;
+    eventually(d, "Back to close the menu", async |d| {
+        Ok(!d.exists(MENU_ITEM).await?)
+    })
+    .await?;
+    linger(d, 5).await;
+    ensure!(d.exists(DIALOG).await?, "one Back closed the dialog too");
+    d.press_back().await?;
+    eventually(d, "a second Back to close the dialog", async |d| {
+        Ok(!d.exists(DIALOG).await?)
+    })
+    .await?;
+    // Still in the app: the page answers.
+    ensure!(
+        d.exists(TRIGGER).await?,
+        "the app left after the layers closed"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    android_back_closes_the_top_layer,
+    "/modal/menu",
+    back_closes_the_top_layer,
+    native: skip("1275: no Back key off Android"),
+    desktop: skip("1275: no Back key off Android")
+);
 
 #[test]
 fn it_honours_the_overlay_contract() {

@@ -324,6 +324,17 @@ async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
             .is_none())
     })
     .await?;
+    // Back leaves it too, rather than the app (1275).
+    if d.platform() == Platform::Android {
+        filled(d).await?;
+        d.press_back().await?;
+        eventually(d, "Back to give the player back", async |d| {
+            Ok(d.attr("#player [role=group]", "data-fullscreen")
+                .await?
+                .is_none())
+        })
+        .await?;
+    }
     filled(d).await?;
     d.click("#player button[aria-label='Exit fullscreen']")
         .await?;

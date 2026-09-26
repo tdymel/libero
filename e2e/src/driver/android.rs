@@ -184,6 +184,11 @@ impl Driver for Android {
         input(&["keyevent".into(), code]).await
     }
 
+    /// `KEYCODE_BACK`: wry's activity hands it to the WebView's history, else finishes.
+    async fn press_back(&mut self) -> Result<()> {
+        input(&["keyevent".into(), "4".into()]).await
+    }
+
     async fn press_shift(&mut self, key: keyboard::Key) -> Result<()> {
         self.chord(SHIFT, key).await
     }

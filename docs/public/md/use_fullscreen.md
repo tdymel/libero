@@ -72,6 +72,7 @@ screen. `FullscreenHandle` is `Copy`.
   the drawn one and an Android WebView's native one.
 - Focus leaving the element leaves the drawn fullscreen, so the covered page is
   never focused unseen.
+- Android's Back button leaves either fullscreen rather than the app.
 
 ### You must
 
@@ -83,5 +84,5 @@ screen. `FullscreenHandle` is `Copy`.
 
 - Blitz and a server render have no Fullscreen API: the handle always draws it.
 - The drawn fullscreen keeps the browser's bars and the device's status bar.
-- Android's Back button closes the app, from fullscreen too, rather than leaving
-  it.
+- On Android, a fullscreen entered without a tap (from a timer, say) may let
+  Back close the app.

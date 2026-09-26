@@ -99,6 +99,8 @@ pub(crate) use keyboard::soft_keyboard_app;
 pub(crate) use keyboard::typing_target;
 pub(crate) use keyboard::warn_reserved_chord;
 pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
+#[cfg(target_os = "android")]
+pub(crate) use keyboard::{back_entry, watch_back};
 pub(crate) use max_length::fit_max_length;
 pub(crate) use media::{MediaApi, MediaState, MediaSubscription, media};
 pub use media_query::{MediaQueryApi, MediaQuerySubscription, media_query};

@@ -122,6 +122,15 @@ impl DismissLayer {
     }
 }
 
+/// Android's Back runs `onback` while `open` and this is the newest open layer
+/// (1275). Nothing elsewhere: the WebView on a desktop has no Back.
+pub(crate) fn use_back(open: bool, onback: Callback<()>) {
+    #[cfg(target_os = "android")]
+    back::use_back(open, onback);
+    #[cfg(not(target_os = "android"))]
+    let _ = (open, onback);
+}
+
 /// On the stack until dropped.
 pub(crate) struct LayerGuard {
     id: LayerId,
@@ -499,6 +508,8 @@ pub(crate) fn use_dismiss(
     use_document_escape(open && options.escape, global, move || {
         handle.close(Dismissal::FromDocument)
     });
+    let onback = use_callback(move |()| handle.close(Dismissal::FromInside));
+    use_back(open && options.escape, onback);
 
     // Empty while closed, so a move then reports nothing.
     let watched = open && options.outside;
@@ -723,6 +734,9 @@ where
         false,
     )
 }
+
+#[cfg(target_os = "android")]
+mod back;
 
 /// The Escape arbitration and layer lifetime, against a real `VirtualDom`. The
 /// web arm is untestable here: `keyboard()` is `None` off wasm.

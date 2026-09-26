@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
-use crate::hooks::{ElementHandle, FocusWithin, listener, use_focus_within};
+use crate::hooks::{ElementHandle, FocusWithin, listener, use_back, use_focus_within};
 use crate::platform::{self, FullscreenApi, FullscreenSubscription, focused_attribute, next_task};
 
 /// Set on the element while it fills the screen: `native` or `drawn`.
@@ -179,6 +179,11 @@ pub fn use_fullscreen(element: ElementHandle) -> FullscreenHandle {
         drawn,
         focus,
     };
+    // Android's Back leaves the fullscreen rather than the app (1275).
+    use_back(
+        handle.is_fullscreen(),
+        use_callback(move |()| handle.exit()),
+    );
     let slot: Rc<RefCell<Option<Box<dyn FullscreenSubscription>>>> =
         use_hook(|| Rc::new(RefCell::new(None)));
     use_drop({

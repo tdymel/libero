@@ -583,6 +583,27 @@ pub(crate) fn focus_kept(token: u64) {
     let _ = token;
 }
 
+/// Only the WebView - see [`watch_back`](crate::platform::watch_back).
+#[cfg(target_os = "android")]
+pub(crate) fn watch_back(onback: impl Fn() + 'static) -> bool {
+    #[cfg(not(feature = "native"))]
+    return webview::watch_back(onback);
+    #[cfg(feature = "native")]
+    return {
+        let _ = onback;
+        false
+    };
+}
+
+/// Only the WebView - see [`back_entry`](crate::platform::back_entry).
+#[cfg(target_os = "android")]
+pub(crate) fn back_entry(armed: bool) {
+    #[cfg(not(feature = "native"))]
+    webview::back_entry(armed);
+    #[cfg(feature = "native")]
+    let _ = armed;
+}
+
 /// Only a WebView on a phone - see [`soft_keyboard_app`](crate::platform::soft_keyboard_app).
 pub(crate) fn soft_keyboard_app() -> bool {
     #[cfg(all(

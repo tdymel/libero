@@ -2,10 +2,13 @@
 //! re-render the page, submit and reset.
 
 use dioxus::prelude::*;
+use libero::chrono::NaiveDate;
 use libero::components::{
-    Button, Checkbox, Fields, Fieldset, FileField, Files, Flex, Form, NativeSelect, Options,
-    PasswordField, PhoneField, PinField, RadioGroup, Rating, Rule, SegmentedControl, Select,
-    Switch, TagsField, TextField, min_length, not_empty, use_form,
+    Autocomplete, Button, Cascader, CascaderOption, Checkbox, ColorCode, ColorField, DateField,
+    Fields, Fieldset, FileField, Files, Flex, Form, MultiSelect, NativeSelect, NumberField,
+    Options, PasswordField, PhoneField, PinField, RadioGroup, Rating, Rule, SegmentedControl,
+    Select, Slider, SliderChangeEvent, Switch, TagsField, TextField, Textarea, min_length,
+    not_empty, use_form,
 };
 
 use crate::Routes;
@@ -34,6 +37,14 @@ fn TargetsPage() -> Element {
     let mut billing = use_signal(|| Plan::Free);
     let mut files = use_signal(Files::default);
     let mut phone = use_signal(String::new);
+    let mut color = use_signal(|| ColorCode::rgba(0, 0, 0, 1.0));
+    let mut due = use_signal(|| None::<NaiveDate>);
+    let mut category = use_signal(|| None::<String>);
+    let mut volume = use_signal(|| 0.0f64);
+    let mut city = use_signal(String::new);
+    let mut toppings = use_signal(Vec::<String>::new);
+    let mut quantity = use_signal(|| None::<u32>);
+    let mut notes = use_signal(String::new);
     rsx! {
         Form::<()> { summary_title: "Fix these:",
             RadioGroup {
@@ -96,6 +107,59 @@ fn TargetsPage() -> Element {
                 value: Some(phone()),
                 oninput: move |next: String| phone.set(next),
                 validate: min_length(5).error("Enter a number."),
+            }
+            ColorField {
+                label: "Colour",
+                value: color(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+                validate: (|_: &ColorCode| false).error("Pick a colour."),
+            }
+            DateField {
+                label: "Due",
+                value: due(),
+                onchange: move |next| due.set(next),
+                validate: not_empty.error("Pick a date."),
+            }
+            Cascader {
+                label: "Category",
+                data: vec![CascaderOption::new("fruit", "Fruit").children(vec![
+                    CascaderOption::new("apple", "Apple"),
+                ])],
+                value: category(),
+                onchange: move |next| category.set(next),
+                validate: not_empty.error("Pick a category."),
+            }
+            Slider {
+                label: "Volume",
+                value: volume(),
+                oninput: move |event: SliderChangeEvent| volume.set(event.value()),
+                validate: (|v: &f64| *v > 0.0).error("Turn it up."),
+            }
+            Autocomplete {
+                label: "City",
+                value: city(),
+                oninput: move |text| city.set(text),
+                options: vec!["Berlin".to_string(), "Paris".to_string()],
+                validate: not_empty.error("Enter a city."),
+            }
+            MultiSelect {
+                label: "Toppings",
+                options: vec!["Cheese".to_string(), "Olives".to_string()],
+                value: toppings(),
+                onchange: move |next| toppings.set(next),
+                validate: not_empty.error("Pick a topping."),
+            }
+            NumberField {
+                label: "Quantity",
+                value: quantity(),
+                onchange: move |next| quantity.set(next),
+                validate: not_empty.error("Enter a quantity."),
+            }
+            Textarea {
+                label: "Notes",
+                value: notes(),
+                oninput: move |text| notes.set(text),
+                validate: not_empty.error("Add a note."),
             }
             Button { r#type: "submit", "Send" }
         }

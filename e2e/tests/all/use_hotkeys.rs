@@ -110,12 +110,25 @@ const ITEM: &str = "[role=menuitem]";
 const SHARE: &str = "[role=menuitem][aria-haspopup=menu]";
 const SUBMENU_ITEM: &str = "[role=menu]:not(:has([aria-haspopup=menu])) [role=menuitem]";
 
+/// Focuses `selector` again until it holds focus: a popover's box renders hidden
+/// until placed, and `focus()` in it moves nothing (1276, a cold WebView).
+async fn focus_shown<D: Driver>(d: &mut D, selector: &str) -> Result<()> {
+    let settled = eventually(d, &format!("{selector} to take focus"), async |d| {
+        d.focus(selector).await?;
+        d.is_focused(selector).await
+    })
+    .await;
+    match settled {
+        Ok(()) => Ok(()),
+        Err(_) => eventually_focused(d, selector, "focusing it").await,
+    }
+}
+
 /// Opens the menu behind `trigger` and focuses its first item.
 async fn open_menu<D: Driver>(d: &mut D, trigger: &str) -> Result<()> {
     d.click(trigger).await?;
     eventually(d, "the menu to open", async |d| d.exists(ITEM).await).await?;
-    d.focus(ITEM).await?;
-    eventually_focused(d, ITEM, "focusing the first item").await
+    focus_shown(d, ITEM).await
 }
 
 async fn close_menus<D: Driver>(d: &mut D) -> Result<()> {
@@ -145,7 +158,7 @@ async fn a_menu_opened_inside_counts_as_inside<D: Driver>(d: &mut D, _route: &st
     })
     .await?;
     // A WebView's submenu opens without taking focus (958): the scope is under test, not Menu.
-    d.focus(SUBMENU_ITEM).await?;
+    focus_shown(d, SUBMENU_ITEM).await?;
     eventually(d, "focus in the submenu", async |d| {
         Ok(d.is_focused(ITEM).await? && !d.is_focused(SHARE).await?)
     })
@@ -160,13 +173,11 @@ async fn only_the_inside_box_counts<D: Driver>(
     outside: &str,
     inside: &str,
 ) -> Result<()> {
-    d.focus(outside).await?;
-    eventually_focused(d, outside, "focusing the outside box").await?;
+    focus_shown(d, outside).await?;
     d.press_ctrl(J).await?;
     linger(d, 5).await;
     count_is(d, "#count", "0").await?;
-    d.focus(inside).await?;
-    eventually_focused(d, inside, "focusing the inside box").await?;
+    focus_shown(d, inside).await?;
     d.press_ctrl(J).await?;
     count_is(d, "#count", "1").await
 }

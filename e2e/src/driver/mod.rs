@@ -112,6 +112,10 @@ pub trait Driver {
         let _ = (trigger, files);
         bail!("{:?}: no file chooser to answer", self.platform())
     }
+    /// The system Back key, which only Android has.
+    async fn press_back(&mut self) -> Result<()> {
+        bail!("{:?}: no Back key", self.platform())
+    }
     /// Whether a soft keyboard is up; `false` where there is none.
     async fn soft_keyboard_shown(&mut self) -> Result<bool> {
         Ok(false)

@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Dialog, Flex, Text},
+    components::{Button, Dialog, Flex, Menu, MenuItem, Text, use_menu},
     hooks::{ModalScope, use_modal},
 };
 
@@ -11,7 +11,45 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/modal", || rsx! { ModalPage {} }),
     ("/modal/static", || rsx! { StaticModalPage {} }),
+    ("/modal/menu", || rsx! { MenuModalPage {} }),
 ];
+
+/// A menu inside a dialog: Android's Back closes the menu, then the dialog (1275).
+#[component]
+fn MenuModalPage() -> Element {
+    let dialog = use_modal(|_: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Notes",
+                DialogMenu {}
+            }
+        }
+    });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                dialog.open();
+            },
+            "Open notes"
+        }
+    }
+}
+
+#[component]
+fn DialogMenu() -> Element {
+    let menu = use_menu();
+    rsx! {
+        Menu {
+            state: menu,
+            items: vec![
+                MenuItem::new("Rename").onselect(|_| {}).into(),
+                MenuItem::new("Delete").onselect(|_| {}).into(),
+            ],
+            Button { attributes: menu.a11y_attributes(), "Actions" }
+        }
+    }
+}
 
 /// A dialog with nothing to focus: focus has to land on the dialog itself.
 #[component]

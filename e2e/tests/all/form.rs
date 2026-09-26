@@ -106,7 +106,7 @@ fn a_blocked_submit_focuses_the_summary_and_its_lines_reach_the_fields() {
 }
 
 /// A group field has no single control to carry the id its summary line links
-/// to: the line must still focus the group's tab stop.
+/// to: the line must still focus the group's tab stop. Every validated field type (1274).
 #[test]
 fn every_summary_line_focuses_something_in_its_field() {
     block_on(async {
@@ -114,6 +114,10 @@ fn every_summary_line_focuses_something_in_its_field() {
             .await
             .unwrap();
         let page = &fixture.page;
+        // Below the fold with every field type: a click off screen hits nothing.
+        page.evaluate("document.querySelector('button[type=submit]').scrollIntoView()")
+            .await
+            .unwrap();
         pointer::click(page, "button[type=submit]").await.unwrap();
         focus::wait_for_focus(page, "[data-slot=summary]", "a blocked submit")
             .await
@@ -124,17 +128,21 @@ fn every_summary_line_focuses_something_in_its_field() {
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(lines, 10);
+        assert_eq!(lines, 18);
+        page.evaluate("window.__landed = new Set()").await.unwrap();
         for line in 0..lines {
             page.evaluate(format!(
                 "document.querySelectorAll('[data-slot=summary] a')[{line}].click()"
             ))
             .await
             .unwrap();
+            // A control no earlier line reached: each line finds its own field.
             wait::for_js_true(
                 page,
                 "(() => { const a = document.activeElement; \
-                 return a !== document.body && !a.closest('[data-slot=summary]'); })()",
+                 if (a === document.body || a.closest('[data-slot=summary]') \
+                     || window.__landed.has(a)) return false; \
+                 window.__landed.add(a); return true; })()",
                 &format!("summary line {line} to focus its field"),
             )
             .await

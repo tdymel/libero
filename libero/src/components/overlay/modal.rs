@@ -11,7 +11,7 @@ use crate::{
         overlay::Overlay,
     },
     context::ModalContext,
-    hooks::{escape_closes, use_dismiss_layer},
+    hooks::{escape_closes, use_back, use_dismiss_layer},
     platform::key_taken,
     sx::{StaticSx, sx},
     theme::CssVar,
@@ -83,6 +83,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
 
     // Stable identity, so `Overlay`'s props memoize.
     let on_backdrop_click = use_callback(move |_: MouseEvent| close());
+    use_back(true, use_callback(move |()| close()));
 
     use_box()
         .framework_sx(&MODAL_SX)

@@ -1231,6 +1231,41 @@ fn watch_media(query: &'static str, answer: impl Fn(bool) + 'static) {
     });
 }
 
+/// Back pops [`back_entry`]'s history entry: `onback` runs, unless the page took
+/// the entry back itself. Starts here, as [`watch_media`] does.
+#[cfg(target_os = "android")]
+pub(super) fn watch_back(onback: impl Fn() + 'static) -> bool {
+    if !runs_scripts() {
+        return false;
+    }
+    let script = eval_with(
+        json!(null),
+        "window.__lsxBackIgnore = 0;
+        addEventListener('popstate', () => {
+            if (window.__lsxBackIgnore > 0) window.__lsxBackIgnore--;
+            else dioxus.send(true);
+        });
+        await new Promise(() => {});",
+    );
+    spawn_forever(async move {
+        let mut script = script;
+        while script.recv::<bool>().await.is_ok() {
+            onback();
+        }
+    });
+    true
+}
+
+/// Pushed inside the opening tap's activation, or Chromium skips the entry on
+/// Back and the app closes; taken back with its `popstate` ignored.
+#[cfg(target_os = "android")]
+pub(super) fn back_entry(armed: bool) {
+    eval(match armed {
+        true => "history.pushState({ lsxBack: true }, '');",
+        false => "window.__lsxBackIgnore++; history.back();",
+    });
+}
+
 /// `false` until the page first answers, then kept live by a listener.
 pub(super) fn prefers_reduced_motion() -> bool {
     if !runs_scripts() {
