@@ -1,9 +1,10 @@
 //! `Sortable` and `use_sortable`: a handle drag reorders, a handle click stays a click (1095).
 
 use anyhow::{Result, ensure};
-use e2e::Suite;
+use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text, linger};
 use e2e::passes::keyboard;
+use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The distance between two neighbours' tops (or lefts, in a row).
 async fn pitch<D: Driver>(d: &mut D, horizontal: bool) -> Result<f64> {
@@ -265,6 +266,56 @@ async fn neighbours_slide_the_lifted_item_does_not<D: Driver>(
     Ok(())
 }
 
+/// A key past the list's end says so, and again on a repeat (a changed text).
+async fn a_move_past_the_end_is_announced<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const AT_END: &str = "Delta is already at position 4 of 4.";
+    d.focus("#Delta button").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted Delta, position 4 of 4.", "Space to lift").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_text(d, STATUS, AT_END, "ArrowDown on the last item").await?;
+    d.press(keyboard::END).await?;
+    eventually(d, "a repeat to change the region's text", async |d| {
+        let text = d.text(STATUS).await?;
+        Ok(text != AT_END && text.trim_end_matches('\u{200B}') == AT_END)
+    })
+    .await?;
+    d.press(keyboard::HOME).await?;
+    eventually_text(d, STATUS, "Delta moved to position 1 of 4.", "Home").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Delta is already at position 1 of 4.",
+        "ArrowUp at the top",
+    )
+    .await?;
+    d.press(keyboard::ESCAPE).await?;
+    Ok(())
+}
+
+/// A move `onreorder` ignored must not pull the focus back on a later, unrelated reorder.
+async fn an_ignored_move_leaves_no_refocus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#Delta button").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, STATUS, "Lifted Delta, position 4 of 4.", "Space to lift").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Dropped Delta at position 3 of 4.",
+        "Space to drop",
+    )
+    .await?;
+    d.focus("#rotate").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#order", "Delta Alpha Beta Gamma", "the rotate").await?;
+    linger(d, 4).await;
+    eventually_focused(d, "#rotate", "a reorder after an ignored move").await?;
+    Ok(())
+}
+
 /// A swipe on an item's text scrolls the page: only the handle drags (touch-action).
 #[cfg_attr(not(feature = "android"), allow(dead_code))]
 async fn a_swipe_off_the_handle_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -386,6 +437,104 @@ e2e::scenario!(
     "/sortable/long",
     a_long_handle_drag_moves_it_far
 );
+
+e2e::scenario!(
+    a_key_past_the_lists_end_announces_the_item_stays,
+    "/sortable",
+    a_move_past_the_end_is_announced
+);
+e2e::scenario!(
+    a_move_onreorder_ignored_does_not_take_the_focus_on_a_later_reorder,
+    "/sortable/ignored",
+    an_ignored_move_leaves_no_refocus
+);
+
+/// 1.4.10: a row of four is wider than 320px; it scrolls inside itself, rings unclipped.
+#[test]
+fn a_row_scrolls_inside_itself_at_320px() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    block_on(async {
+        let fixture = Fixture::open("/sortable/horizontal", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
+            .await
+            .unwrap();
+        wait::for_visible(page, "#Alpha").await.unwrap();
+        let widths: Vec<f64> = page
+            .evaluate(
+                "(() => {
+                    const list = document.querySelector('#list');
+                    const handle = document.querySelector('#Alpha button');
+                    return [document.documentElement.scrollWidth, innerWidth,
+                            list.scrollWidth, list.clientWidth,
+                            handle.getBoundingClientRect().left - list.getBoundingClientRect().left];
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let [page_width, viewport, scroll, client, inset] = widths[..] else {
+            panic!("{widths:?}");
+        };
+        assert!(
+            page_width <= viewport,
+            "the page scrolls sideways: {widths:?}"
+        );
+        assert!(scroll > client, "the row does not scroll: {widths:?}");
+        // The ring reaches offset + stripe + halo, 6px by default.
+        assert!(
+            inset >= 6.0,
+            "the first handle's ring is clipped: {widths:?}"
+        );
+        fixture.console.assert_clean("a row at 320px").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// On a touch screen the handle's description names the move buttons, not Space.
+#[test]
+fn a_touch_screen_describes_the_handle_by_the_move_buttons() {
+    use chromiumoxide::cdp::browser_protocol::page::AddScriptToEvaluateOnNewDocumentParams;
+    const DESCRIPTION: &str = "document.getElementById(document.querySelector('#Alpha button')\
+         .getAttribute('aria-describedby')).textContent";
+    // Headless Chrome reports a coarse pointer and CDP cannot emulate `pointer`: a fake list.
+    const FAKE_POINTER: &str = "{
+        const list = new EventTarget();
+        list.matches = false;
+        const real = window.matchMedia.bind(window);
+        window.matchMedia = q => q === '(pointer: coarse)' ? list : real(q);
+        window.setCoarse = on => { list.matches = on; list.dispatchEvent(new Event('change')); };
+    }";
+    block_on(async {
+        let fixture = Fixture::open("/sortable", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            page.execute(AddScriptToEvaluateOnNewDocumentParams::new(FAKE_POINTER))
+                .await?;
+            page.reload().await?;
+            wait::for_visible(page, "#Alpha").await?;
+            wait::for_js_true(
+                page,
+                &format!("{DESCRIPTION}.startsWith('Press Space')"),
+                "the keyboard description",
+            )
+            .await?;
+            page.evaluate("setCoarse(true)").await?;
+            wait::for_js_true(
+                page,
+                &format!("{DESCRIPTION} === 'Use the move buttons to reorder the item.'"),
+                "the touch description",
+            )
+            .await
+        }
+        .await;
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
 
 #[test]
 fn it_meets_the_baseline() {

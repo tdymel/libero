@@ -153,13 +153,20 @@ enum Refocus {
     Later,
 }
 
+/// The item just moved: its move took the focus off its `control`.
+#[derive(Clone, Copy, PartialEq)]
+struct Moved {
+    id: usize,
+    control: Refocus,
+    step: SortableMove,
+}
+
 /// What [`use_sortable_item`] reads from its list.
 #[derive(Clone, Copy)]
 struct SortableContext {
     registry: CopyValue<Vec<Option<Registered>>>,
     next_id: CopyValue<usize>,
-    /// The item just moved: its move took the focus off its control.
-    refocus: CopyValue<Option<(usize, Refocus)>>,
+    refocus: CopyValue<Option<Moved>>,
     pressed: CopyValue<Option<usize>>,
     session: Signal<Option<Session>>,
     /// The pointer's travel along the flow, since the press.
@@ -223,6 +230,8 @@ async fn spans(reads: Reads, vertical: bool, flipped: bool) -> Option<Vec<Span>>
     }
     Some(spans)
 }
+
+const ZERO_WIDTH: char = '\u{200B}';
 
 /// `template` with the item's `label` and position `index` of `count`.
 fn say(template: &str, label: &str, index: usize, count: usize) -> String {
@@ -306,7 +315,7 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
 
     let registry = use_hook(|| CopyValue::new(Vec::<Option<Registered>>::new()));
     let next_id = use_hook(|| CopyValue::new(0_usize));
-    let mut refocus = use_hook(|| CopyValue::new(None::<(usize, Refocus)>));
+    let mut refocus = use_hook(|| CopyValue::new(None::<Moved>));
     let mut pressed = use_hook(|| CopyValue::new(None::<usize>));
     let mut session = use_signal(|| None::<Session>);
     let mut travel = use_signal(|| 0.0_f64);
@@ -334,8 +343,22 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
         (id, label)
     };
 
+    // A status region rereads only a changed text: a repeat flips a trailing zero-width space.
+    let mut announce = move |text: String| {
+        let flip = {
+            let now = announcement.peek();
+            now.trim_end_matches(ZERO_WIDTH) == text && !now.ends_with(ZERO_WIDTH)
+        };
+        announcement.set(if flip {
+            format!("{text}{ZERO_WIDTH}")
+        } else {
+            text
+        });
+    };
+
     let mut lift = move |lifted: Session| {
-        announcement.set(say(
+        refocus.set(None);
+        announce(say(
             words.lifted,
             &lifted.label,
             lifted.from,
@@ -396,7 +419,7 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
         } else {
             words.cancelled
         };
-        announcement.set(say(words_for, &ended.label, to, count));
+        announce(say(words_for, &ended.label, to, count));
         let (id, _) = label_of(ended.from);
         let from_slot = ended.offset(travel_now) - slot_offset(&ended.spans, ended.from, to);
         if from_slot.abs() > 0.5 {
@@ -407,11 +430,16 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
             }));
         }
         if to != ended.from {
-            refocus.set(Some((id, Refocus::Handle)));
-            onreorder.call(SortableMove {
+            let step = SortableMove {
                 from: ended.from,
                 to,
-            });
+            };
+            refocus.set(Some(Moved {
+                id,
+                control: Refocus::Handle,
+                step,
+            }));
+            onreorder.call(step);
         }
     };
 
@@ -517,11 +545,13 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
         event.prevent_default();
         let next = next.clamp(0, last as isize) as usize;
         if next == to {
+            let label = session.peek().as_ref().map(|s| s.label.clone());
+            announce(say(words.unmoved, &label.unwrap_or_default(), to, count));
             return;
         }
         if let Some(lifted) = session.write().as_mut() {
             lifted.keyed = Some(next);
-            announcement.set(say(words.moved, &lifted.label, next, count));
+            announce(say(words.moved, &lifted.label, next, count));
         }
     });
 
@@ -554,9 +584,14 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
             (true, _, _) => Refocus::Later,
             (false, _, _) => Refocus::Earlier,
         };
-        refocus.set(Some((id, keep)));
-        announcement.set(say(words.moved, &label, to, total));
-        onreorder.call(SortableMove { from: index, to });
+        let step = SortableMove { from: index, to };
+        refocus.set(Some(Moved {
+            id,
+            control: keep,
+            step,
+        }));
+        announce(say(words.moved, &label, to, total));
+        onreorder.call(step);
     });
 
     use_context_provider(|| SortableContext {
@@ -633,7 +668,8 @@ pub(crate) fn use_labelled_sortable_item(
     use_effect(use_reactive!(|index, label| {
         let _ = (element.mount_token(), handle.mount_token());
         let mut items = registry.write();
-        if let Some(old) = slot.replace(Some(index))
+        let before = slot.replace(Some(index));
+        if let Some(old) = before
             && items.get(old).is_some_and(|item| owns(item, id))
         {
             items[old] = None;
@@ -653,12 +689,14 @@ pub(crate) fn use_labelled_sortable_item(
         if *count.peek() != len {
             count.set(len);
         }
-        // Moving a node in the DOM blurs it.
+        // Moving a node in the DOM blurs it. Only for that move: after an ignored one,
+        // a later unrelated change of index must not pull the focus here.
         let moved = *refocus.peek();
-        if let Some((moved, control)) = moved
-            && moved == id
-        {
+        if let Some(Moved { control, step, .. }) = moved.filter(|moved| moved.id == id) {
             refocus.set(None);
+            if (before, index) != (Some(step.from), step.to) {
+                return;
+            }
             let _ = match control {
                 Refocus::Handle => handle.focus(),
                 Refocus::Earlier => earlier.focus(),

@@ -15,8 +15,9 @@ use crate::{
         layout::use_box,
     },
     context::IconSlot,
-    hooks::{current_localization, drag_handle_sx, use_css, use_id},
+    hooks::{current_localization, drag_handle_sx, use_css, use_id, use_media_query},
     sx::{StaticSx, Sx, sx},
+    theme::FOCUS_RING_HALO_SPREAD,
 };
 
 static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -26,7 +27,14 @@ static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
         .margin("0")
         .padding("0")
         .when("vertical", sx().flex_direction("column"))
-        .when("horizontal", sx().flex_direction("row"))
+        // A row cannot wrap while it sorts, so it scrolls inside itself (1.4.10);
+        // the padding keeps the handles' focus rings clear of the scroller's clip.
+        .when(
+            "horizontal",
+            sx().flex_direction("row")
+                .overflow_x("auto")
+                .padding(FOCUS_RING_HALO_SPREAD.value()),
+        )
         .when("sorting", sx().user_select("none"))
 });
 
@@ -131,6 +139,7 @@ pub fn Sortable(props: SortableProps) -> Element {
     });
     let vertical = orientation == Orientation::Vertical;
     let words = current_localization().sortable;
+    let touch = use_media_query("(pointer: coarse)");
 
     let instructions = use_id();
     let view = SortableView {
@@ -163,10 +172,16 @@ pub fn Sortable(props: SortableProps) -> Element {
         .event("onpointercancel", list.onpointercancel)
         .render(HtmlTag::Ul, props.attributes, props.children);
 
+    // A touch screen reader's tap on the handle lifts nothing: point it to the buttons.
+    let described = match touch() && props.move_buttons {
+        true => words.touch_instructions,
+        false => words.instructions,
+    };
+
     rsx! {
         {items}
         // Hidden, not visually hidden: read only as the handles' description.
-        div { id: "{instructions}", hidden: true, {words.instructions} }
+        div { id: "{instructions}", hidden: true, {described} }
         VisuallyHidden { role: "status", {list.announcement} }
     }
 }

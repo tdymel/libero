@@ -87,8 +87,9 @@ pub fn SortablePage() -> Element {
                 .key(["Home", "End"], "Moves a lifted item to the first or last slot.")
                 .key(["Escape"], "Puts a lifted or dragged item back where it was.")
                 .handles([
-                    "Each item's handle is a button named by `SortableLabels::handle` (\"Reorder\"), at least 24px square (WCAG 2.5.8). It is described by `SortableLabels::instructions`, how to move by keyboard.",
-                    "A `role=\"status\"` region announces each lift, move, drop and cancel with the item's `label` and its position, from the `SortableLabels` templates of the active `Localization`.",
+                    "Each item's handle is a button named by `SortableLabels::handle` (\"Reorder\"), at least 24px square (WCAG 2.5.8). It is described by `SortableLabels::instructions`, how to move by keyboard; on a touch screen (`pointer: coarse`) with the move buttons shown, by `SortableLabels::touch_instructions`, which points to them.",
+                    "A `role=\"status\"` region announces each lift, move, drop and cancel with the item's `label` and its position, from the `SortableLabels` templates of the active `Localization`. A key that would move a lifted item past either end says it stays (`SortableLabels::unmoved`).",
+                    "A horizontal list scrolls inside itself when its row is wider than its container, so it never widens the page (WCAG 1.4.10). A padding the size of the focus ring keeps the handles' rings clear of the scroller's edge.",
                     "Each item has a move up and a move down button (back and forward in a row) for a single pointer (WCAG 2.5.7). The first item's move up and the last one's move down are disabled; the focus stays on the pressed button, or goes to the other one at the list's end.",
                     "A drag starts after the pointer moved 4px (8px for a touch), so a click on the handle stays a click.",
                     "Only the handle takes a touch. Swiping the rest of an item scrolls the page.",

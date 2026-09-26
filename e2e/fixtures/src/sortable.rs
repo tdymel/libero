@@ -14,6 +14,7 @@ pub const ROUTES: Routes = &[
     ("/sortable/rtl", || rsx! { RtlPage {} }),
     ("/sortable/hook", || rsx! { HookPage {} }),
     ("/sortable/long", || rsx! { LongPage {} }),
+    ("/sortable/ignored", || rsx! { IgnoredPage {} }),
 ];
 
 const NAMES: [&str; 4] = ["Alpha", "Beta", "Gamma", "Delta"];
@@ -98,6 +99,29 @@ fn RtlPage() -> Element {
                     }
                 }
                 Text { id: "order", {items().join(" ")} }
+            }
+        }
+    }
+}
+
+/// An `onreorder` that ignores every move; `#rotate` moves the last item to the top.
+#[component]
+fn IgnoredPage() -> Element {
+    let mut items = use_signal(|| NAMES.to_vec());
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Sortable {
+                id: "list",
+                onreorder: move |_: SortableMove| {},
+                for (index, name) in items().into_iter().enumerate() {
+                    SortableItem { key: "{name}", index, id: "{name}", label: name, Text { "{name}" } }
+                }
+            }
+            Text { id: "order", {items().join(" ")} }
+            Button {
+                id: "rotate",
+                onclick: move |_| items.write().rotate_right(1),
+                "Rotate"
             }
         }
     }
