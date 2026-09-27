@@ -57,6 +57,16 @@ shared with its neighbours of the same group; call `group` again for a nested
 one. `col_span` lets a row's cell cover the next columns, say a total row's
 label.
 
+`row_detail` gives a row a toggle that opens a full-width detail row under it,
+as in a master-detail view. Rows the closure answers `None` for get no toggle.
+The open details are `row_key`s, held yourself with `expanded` and
+`onexpandedchange`.
+
+`table_csv(&columns, &rows)` writes the cells as CSV, each as its column shows
+it as text, and `table_text` hands them over unjoined for another format.
+Saving is yours. A cell that starts with `=` runs as a formula in a
+spreadsheet, so neutralise text users typed first.
+
 `scroll` wraps a table wider than its container in a `ScrollArea` that
 scrolls sideways. The demo's switch also sets `sx().min_width("640px")`, so the
 three columns overflow at any width. `max_height` caps a long table's height:
@@ -490,6 +500,41 @@ fn Demo() -> Element {
 }
 ```
 
+`row_detail` with a controlled `expanded`, and the same rows as CSV:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Table, column, table_csv};
+
+#[derive(Clone, PartialEq)]
+struct Person {
+    id: u32,
+    name: String,
+    notes: Option<String>,
+}
+
+#[component]
+fn Demo() -> Element {
+    let people: Vec<Person> = Vec::new();
+    let mut expanded = use_signal(Vec::<String>::new);
+    let columns = || vec![column("Name").value(|p: &Person| p.name.clone()).row_header()];
+    let csv = table_csv(&columns(), &people);
+
+    rsx! {
+        Table {
+            caption: "Team members",
+            data: people,
+            columns: columns(),
+            row_key: |p: &Person| p.id.to_string(),
+            row_detail: |p: &Person| p.notes.clone().map(|notes| rsx! { "{notes}" }),
+            expanded: expanded(),
+            onexpandedchange: move |next| expanded.set(next),
+        }
+        pre { "{csv}" }
+    }
+}
+```
+
 ## Props
 
 ### Table
@@ -515,6 +560,10 @@ fn Demo() -> Element {
 | `onrowclick` | `EventHandler<T>` | `None` | Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action. |
 | `row_states` | `RowFn<T, States>` | `None` | A row's states, rendered as its `data-state`. Style them with `sx().selector("& tbody tr", sx().when(..))`. |
 | `row_attrs` | `RowFn<T, Vec<Attribute>>` | `None` | Extra attributes on a row's `tr`. |
+| `row_detail` | `RowFn<T, Option<Element>>` | `None` | A row's detail, from a `\|row: &T\| ..` closure. `Some` gives the row a toggle in a leading column; open, the detail shows in a full-width row under it. Called for the shown rows on every render. Set `row_key` with it, or open details stick to positions in `data`. |
+| `expanded` | `Option<Vec<String>>` | `None` | The `row_key`s of the rows whose detail shows. Set, it is controlled: pair it with `onexpandedchange`. It survives a sort. |
+| `default_expanded` | `Vec<String>` | `[]` | Seeds the open details once. Ignored when `expanded` is set. |
+| `onexpandedchange` | `EventHandler<Vec<String>>` | `None` | Called with the open details a toggle asks for. |
 | `size` | `Size` | theme (md) | Cell padding and font size. |
 | `striped` | `bool` | `false` | Shades every other body row. |
 | `page` | `Option<u32>` | `None` | The shown page, 1-based. Set, the page is controlled: pair it with `onpagechange`. A page past the end shows the last one. |
@@ -566,6 +615,13 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 
 `column()` is a builder, not a component, so it takes no shared props.
 
+### table_csv()
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `table_csv` | `fn(&[Column<T>], &[T]) -> String` | none | The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; saving the file is yours. |
+| `table_text` | `fn(&[Column<T>], &[T]) -> Vec<Vec<String>>` | none | The same cells unjoined, the header row first, for your own writer. |
+
 ## Accessibility
 
 ### Keyboard
@@ -577,6 +633,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Enter` or `Space` | On a sortable header, a button: sorts by that column, flips it, then unsorts. |
 | `Shift+Enter` or `Shift+Space` | With `multi_sort`, on a sortable header: adds that column after the sorted ones. |
 | `Space` | On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row. |
+| `Enter` or `Space` | With `row_detail`, on a row's toggle: opens or closes its detail. Tab then goes into the open detail. |
 | `Enter` or `Space` or `Down` | With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`. |
 
 ### Libero handles
@@ -597,7 +654,11 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   the new count, "2 rows selected", after each change.
 - A tap on a touch screen has no Shift key, so with `multi_sort` a tap always
   adds the column.
-- `selectable` without `row_key` warns in a debug build.
+- `selectable` or `row_detail` without `row_key` warns in a debug build.
+- Each detail toggle is a button named "Details for" plus the row's name, like
+  its checkbox, with `aria-expanded`, and `aria-controls` on the detail row
+  while it is open. The toggle column's header reads "Details" to a screen
+  reader only.
 - `.row_header()` cells render as `th scope="row"`, so a screen reader reads
   that name as it moves down any other column. They look like the other cells.
 - Paginated, the page buttons sit in a `nav` named after the caption, the
@@ -613,8 +674,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   reads it with each of their cells. A column outside any group, and the
   select-all box, span every header row.
 - Pinned columns move to their edge in the DOM too, so Tab and a screen reader
-  meet the cells in the order they are seen. The checkbox column pins with the
-  start ones.
+  meet the cells in the order they are seen. The detail toggle and checkbox
+  columns pin with the start ones.
 - A pinned column past one without a `width` warns in a debug build: its offset
   is unknown, so it would overlap.
 - A group or a `col_span` stops at a pin edge: a group over pinned and scrolled
@@ -630,8 +691,11 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - Mark the column that names a row with `.row_header()`.
 - With `onrowclick`, also put a button or link for that action in a cell. A
   row is not a tab stop, so a keyboard cannot click it.
-- With `selectable`, give the rows a `.row_header()` column, so each checkbox
-  is named by something unique.
+- With `selectable` or `row_detail`, give the rows a `.row_header()` column, so
+  each checkbox and toggle is named by something unique.
+- Before a CSV of text users typed goes to a spreadsheet, neutralise cells that
+  start with `=`, `+`, `-` or `@` (CSV injection, OWASP). `table_text`'s docs
+  show a three-line guard.
 
 ### Limits
 
@@ -685,8 +749,11 @@ default `start`.
 | `data-select` | On the checkbox column's `th` and `td`s. |
 | `aria-selected` | On every body row of a `selectable` table, `true` or `false`. |
 | `data-empty` | On the body row that holds `empty`. |
+| `data-detail-toggle` | On the toggle column's `th` and `td`s, with `row_detail`. |
+| `data-detail` | On an open detail row, right after its row. |
+| `data-stripe` | On every other body row with `striped`, detail rows not counted. |
 | `data-group` | On a column group's header cell. |
 | `data-pin` | On a pinned column's `th` and `td`s, `start` or `end`. |
 | `data-pin-edge` | On the pinned cells next to the scrolled columns, which draw a rule there. |
-| `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set, `pinned` with a pinned column and `pin-select` when the checkbox column pins too. On a body row: its active `row_states`. |
+| `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set, `pinned` with a pinned column and `pin-select` when the checkbox column pins too, `pin-detail` when the detail toggle column does. On a body row: its active `row_states`. |
 | `data-slot="range"` | On the paginated table's range text, "1–10 of 95". |

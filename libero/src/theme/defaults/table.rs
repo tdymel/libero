@@ -100,11 +100,17 @@ impl TableDefaults {
             // On the cells: a row's own border draws only when borders collapse.
             .selector("& tbody tr > *", sx().border_bottom(Self::border()))
             .selector("& tbody tr:hover", sx().background(TABLE_HOVER.value()))
+            // A row's detail is no row of its own.
+            .selector(
+                "& tbody tr[data-detail]:hover",
+                sx().background("transparent"),
+            )
             // Not on the hovered row: the stripe's selector would outrank the hover.
+            // Marked from Rust, as `nth-child` would count detail rows.
             .when(
                 "striped",
                 sx().selector(
-                    "& tbody tr:nth-child(even):not(:hover):not([aria-selected=\"true\"])",
+                    "& tbody tr[data-stripe]:not(:hover):not([aria-selected=\"true\"])",
                     sx().background(TABLE_STRIPE.value()),
                 ),
             )

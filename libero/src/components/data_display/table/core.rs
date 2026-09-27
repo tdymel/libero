@@ -266,6 +266,11 @@ pub(super) struct RowSpec {
     /// With `selectable`: whether it is selected, and its checkbox cell.
     pub selected: Option<bool>,
     pub select: Option<Element>,
+    /// With `striped`: an odd row among the shown ones, detail rows not counted.
+    pub stripe: bool,
+    /// With `row_detail`: its toggle cell, and while open its detail row's id and body.
+    pub toggle: Option<Element>,
+    pub detail: Option<(String, Element)>,
 }
 
 /// A body cell of header `column`: its text, or a caller's body, over `span`
@@ -352,6 +357,8 @@ pub(super) struct BodySpec {
     pub sort_order: &'static str,
     /// The select-all header cell, with `selectable`.
     pub select_all: Option<Element>,
+    /// The detail toggles' header cell, with `row_detail`.
+    pub detail_header: Option<Element>,
     /// With `column_menu`: each header's menu, by header index.
     pub menus: Vec<Element>,
 }
@@ -405,9 +412,12 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         touch,
         sort_order,
         select_all,
+        detail_header,
         menus,
     } = body;
-    let columns = shown.len().max(1) + usize::from(select_all.is_some());
+    let columns = shown.len().max(1)
+        + usize::from(select_all.is_some())
+        + usize::from(detail_header.is_some());
     let empty = rows.is_empty().then_some(empty);
     // The order shows only when it tells something: with two or more sorted columns.
     let ranked = active.len() > 1;
@@ -429,6 +439,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         .map(|&index| (index, headers[index].groups.as_slice()))
         .collect();
     let mut select_all = select_all;
+    let mut detail_header = detail_header;
     let head_rows: Vec<Element> = header_rows(&paths, |at| pin_edge_at(&headers, &shown, at))
         .into_iter()
         .enumerate()
@@ -475,6 +486,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
             let cells: Vec<Element> = cells.collect();
             rsx! {
                 tr { key: "{level}",
+                    {detail_header.take()}
                     {select_all.take()}
                     {cells.into_iter()}
                 }
@@ -492,44 +504,74 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                     td { colspan: "{columns}", {empty} }
                 }
             }
-            for RowSpec { key , states , attributes , cells , selected , select } in rows {
-                tr {
-                    key: "{key}",
-                    "data-state": states,
-                    aria_selected: selected.map(|selected| selected.to_string()),
-                    ..attributes,
-                    {select}
-                    for CellSpec { column , text , body , span , pin } in cells {
-                        if headers[column].row_header {
-                            th {
-                                key: "{column}",
-                                scope: "row",
-                                colspan: (span > 1).then(|| span.to_string()),
-                                "data-align": align_attr(headers[column].align),
-                                "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
-                                "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
-                                style: pin.as_ref().map(CellPin::style),
-                                "{text}"
-                                {body}
-                            }
-                        } else {
-                            td {
-                                key: "{column}",
-                                colspan: (span > 1).then(|| span.to_string()),
-                                "data-align": align_attr(headers[column].align),
-                                "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
-                                "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
-                                style: pin.as_ref().map(CellPin::style),
-                                // Text inline: a nested node per cell costs ~1 us a sort.
-                                "{text}"
-                                {body}
-                            }
-                        }
+            {rows.into_iter().flat_map(|row| body_rows(row, &headers, columns))}
+        }
+    }
+}
+
+/// A row, then its detail row while open: siblings, each keyed.
+fn body_rows(
+    row: RowSpec,
+    headers: &[HeaderSpec],
+    columns: usize,
+) -> impl Iterator<Item = Element> {
+    let RowSpec {
+        key,
+        states,
+        attributes,
+        cells,
+        selected,
+        select,
+        stripe,
+        toggle,
+        detail,
+    } = row;
+    let detail = detail.map(|(id, body)| {
+        rsx! {
+            tr { key: "{key}-detail", id, "data-detail": true,
+                td { colspan: "{columns}", {body} }
+            }
+        }
+    });
+    let row = rsx! {
+        tr {
+            key: "{key}",
+            "data-state": states,
+            "data-stripe": stripe.then_some(true),
+            aria_selected: selected.map(|selected| selected.to_string()),
+            ..attributes,
+            {toggle}
+            {select}
+            for CellSpec { column , text , body , span , pin } in cells {
+                if headers[column].row_header {
+                    th {
+                        key: "{column}",
+                        scope: "row",
+                        colspan: (span > 1).then(|| span.to_string()),
+                        "data-align": align_attr(headers[column].align),
+                        "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
+                        "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
+                        style: pin.as_ref().map(CellPin::style),
+                        "{text}"
+                        {body}
+                    }
+                } else {
+                    td {
+                        key: "{column}",
+                        colspan: (span > 1).then(|| span.to_string()),
+                        "data-align": align_attr(headers[column].align),
+                        "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
+                        "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
+                        style: pin.as_ref().map(CellPin::style),
+                        // Text inline: a nested node per cell costs ~1 us a sort.
+                        "{text}"
+                        {body}
                     }
                 }
             }
         }
-    }
+    };
+    std::iter::once(row).chain(detail)
 }
 
 /// What a header's sort button needs, shared by every header.

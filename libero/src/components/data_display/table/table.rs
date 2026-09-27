@@ -27,6 +27,7 @@ use super::{
         BodySpec, CaptionSpec, CellSpec, RowFn, RowSpec, SortedRows, TableSort, active_sort,
         header_specs, render_body,
     },
+    detail::Details,
     filter::{FilteredRows, QuickFilter, query_words},
     groups::spanned,
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
@@ -178,9 +179,51 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     // past `select_width`, the inset of a start-pinned column. Outranks the
     // field's own `[data-state~=inline]` gap whatever the stylesheet order.
     .selector("& [data-select] > [data-state]", sx().column_gap("0"))
+    .selector(
+        "& [data-detail-toggle]",
+        sx().box_sizing("border-box")
+            .width(detail_width())
+            .padding_block("0"),
+    )
+    .selector(
+        "& [data-detail-button]",
+        sx().display("flex")
+            .align_items("center")
+            .justify_content("center")
+            .width("24px")
+            .height("24px")
+            .padding("0")
+            .border("0")
+            .border_radius("4px")
+            .background("none")
+            .color("inherit")
+            .cursor("pointer"),
+    )
+    .selector(
+        "& [data-detail-button]:focus-visible",
+        inset_focus_ring_sx("0"),
+    )
+    .selector(
+        "& [data-detail-button] svg",
+        sx().width("16px")
+            .height("16px")
+            .transition("transform 150ms"),
+    )
+    // Closed, the chevron points along the reading direction.
+    .selector(
+        "& [data-detail-button][aria-expanded=\"false\"] svg",
+        sx().transform("rotate(-90deg)"),
+    )
+    .rtl(sx().selector(
+        "& [data-detail-button][aria-expanded=\"false\"] svg",
+        sx().transform("rotate(90deg)"),
+    ))
     .when(
         "row-click",
-        sx().selector("& tbody tr:not([data-empty])", sx().cursor("pointer")),
+        sx().selector(
+            "& tbody tr:not([data-empty]):not([data-detail])",
+            sx().cursor("pointer"),
+        ),
     )
     // On each `th`: a sticky `thead` or `tr` has no box natively. Opaque and
     // above the rows, which scroll under it. Group headers scroll away there.
@@ -245,7 +288,31 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             sx().z_index("3").background(NamedColorCss::SURFACE.value()),
         ),
     )
+    // The toggles lead, before the checkboxes, which they push inwards.
+    .when(
+        "pin-detail",
+        sx().selector(
+            "& [data-detail-toggle]",
+            sx().position("sticky")
+                .with("inset-inline-start", "0")
+                .z_index("1")
+                .background("inherit"),
+        )
+        .selector(
+            "& thead th[data-detail-toggle]",
+            sx().z_index("3").background(NamedColorCss::SURFACE.value()),
+        )
+        .selector(
+            "& [data-select]",
+            sx().with("inset-inline-start", detail_width()),
+        ),
+    )
 });
+
+/// The detail toggles' column width: a 24px button and the cell padding.
+fn detail_width() -> String {
+    format!("calc(24px + 2 * {})", TABLE_PAD_X.value())
+}
 
 /// The checkbox column's width, which a start-pinned column is inset by.
 fn select_width(size: Size) -> String {
@@ -332,6 +399,19 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Extra attributes on a row's `tr`.
     #[props(default, into)]
     row_attrs: RowFn<T, Vec<Attribute>>,
+    /// A row's detail, shown in a full-width row under it: `Some` gives the row
+    /// a toggle in a leading column. Called for the shown rows.
+    #[props(default, into)]
+    row_detail: RowFn<T, Option<Element>>,
+    /// The `row_key`s of the rows whose detail shows; set, it is controlled.
+    #[props(default)]
+    expanded: Option<Vec<String>>,
+    /// Seeds the open details once. Ignored when `expanded` is set.
+    #[props(default)]
+    default_expanded: Vec<String>,
+    /// The open details a toggle asks for.
+    #[props(default)]
+    onexpandedchange: Option<EventHandler<Vec<String>>>,
     /// Cell padding and font size.
     #[props(default, into)]
     size: Input<Size>,
@@ -473,6 +553,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         pinned_columns: props.pinned_columns,
         default_pinned_columns: props.default_pinned_columns,
         onpinnedcolumnschange: props.onpinnedcolumnschange,
+        expanded: props.expanded,
+        default_expanded: props.default_expanded,
+        onexpandedchange: props.onexpandedchange,
     });
     let announcer = use_announcer();
     let touch = use_hook(|| CopyValue::new(false));
@@ -483,7 +566,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                  moves to other rows when `data` changes.",
             );
         }
+        if props.row_detail.is_set() && !props.row_key.is_set() {
+            warn(
+                "Table: `row_detail` without `row_key` keys the open details by row index, so \
+                 they move to other rows when `data` changes.",
+            );
+        }
     });
+    let detail_id = use_id();
     let paginated = props.page_size.is_some()
         || props.default_page_size.is_some()
         || !props.page_sizes.is_empty();
@@ -514,17 +604,20 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         &state.hidden_columns.read(),
     );
     let pinned = state.pinned_columns.read();
-    let (layout, unknown) = pin_columns(
-        &mut headers,
-        &pinned,
-        props.selectable.then(|| select_width(size)).as_deref(),
-    );
-    let pins_select = props.selectable
-        && headers.iter().any(|spec| {
-            spec.pin
-                .as_ref()
-                .is_some_and(|pin| pin.side == PinSide::Start)
-        });
+    let has_detail = props.row_detail.is_set();
+    let lead_width = match (has_detail, props.selectable) {
+        (true, true) => Some(format!("calc({} + {})", detail_width(), select_width(size))),
+        (true, false) => Some(detail_width()),
+        (false, true) => Some(select_width(size)),
+        (false, false) => None,
+    };
+    let (layout, unknown) = pin_columns(&mut headers, &pinned, lead_width.as_deref());
+    let pins_start = headers.iter().any(|spec| {
+        spec.pin
+            .as_ref()
+            .is_some_and(|pin| pin.side == PinSide::Start)
+    });
+    let pins_select = props.selectable && pins_start;
     let pins = headers.iter().any(|spec| spec.pin.is_some());
     let mut warned = use_hook(|| CopyValue::new(Vec::<String>::new()));
     if !unknown.is_empty() && *warned.peek() != unknown {
@@ -630,7 +723,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         false => Vec::new(),
     };
     let selected: HashSet<&str> = selected_keys.iter().map(String::as_str).collect();
-    // A row's checkbox is named by its row header, else its first cell.
+    let details = has_detail.then(|| Details {
+        slice: state.expanded,
+        labels,
+        id: detail_id(),
+    });
+    let current = details.clone();
+    let toggle_detail = use_callback(move |(key, open): (String, bool)| {
+        if let Some(details) = &current {
+            details.toggle(&key, open);
+        }
+    });
+    let expanded_keys = match &details {
+        Some(_) => state.expanded.read(),
+        None => Vec::new(),
+    };
+    let expanded: HashSet<&str> = expanded_keys.iter().map(String::as_str).collect();
+    // A row's checkbox and toggle are named by its row header, else its first cell.
     let name_column = props
         .columns
         .iter()
@@ -672,11 +781,29 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     });
     let rows: Vec<RowSpec> = order
         .into_iter()
-        .map(|index| {
+        .enumerate()
+        .map(|(position, index)| {
             let row = &data[index];
             let key = match &selection {
                 Some(selection) => selection.keys[index].clone(),
                 None => key_of(index),
+            };
+            let name = || {
+                props
+                    .columns
+                    .get(name_column)
+                    .map(|column| (column.text)(row))
+                    .filter(|name| !name.is_empty())
+                    .unwrap_or_else(|| key.clone())
+            };
+            let detail = props.row_detail.call(row).flatten();
+            let open = detail.as_ref().map(|_| expanded.contains(key.as_str()));
+            let detail_cell = details
+                .as_ref()
+                .map(|details| details.row_cell(key.clone(), &name(), index, open, toggle_detail));
+            let detail = match (&details, open) {
+                (Some(details), Some(true)) => detail.map(|body| (details.row_id(index), body)),
+                _ => None,
             };
             let mut attributes = props.row_attrs.call(row).unwrap_or_default();
             if let Some(onrowclick) = props.onrowclick {
@@ -687,18 +814,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             }
             let is_selected = selection.as_ref().map(|_| selected.contains(key.as_str()));
             let select = selection.as_ref().map(|selection| {
-                let name = props
-                    .columns
-                    .get(name_column)
-                    .map(|column| (column.text)(row))
-                    .filter(|name| !name.is_empty())
-                    .unwrap_or_else(|| key.clone());
-                selection.row_cell(key.clone(), &name, is_selected == Some(true), toggle)
+                selection.row_cell(key.clone(), &name(), is_selected == Some(true), toggle)
             });
             RowSpec {
-                key,
                 selected: is_selected,
                 select,
+                stripe: props.striped && position % 2 == 1,
+                toggle: detail_cell,
+                detail,
                 states: props
                     .row_states
                     .call(row)
@@ -735,6 +858,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                         }
                     })
                     .collect(),
+                key,
             }
         })
         .collect();
@@ -785,6 +909,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         )
         .with("pinned", pins)
         .with("pin-select", pins_select)
+        .with("pin-detail", has_detail && pins_start)
         .into();
     // Rows the filter took away, not missing data: the caller's `empty` does not apply.
     let filtered_out = !words.is_empty() && (props.manual_filter || !data.is_empty());
@@ -814,6 +939,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 select_all: selection
                     .as_ref()
                     .map(|selection| selection.header_cell(&selected, group_rows + 1)),
+                detail_header: details
+                    .as_ref()
+                    .map(|details| details.header_cell(group_rows + 1)),
                 menus,
             }),
         );
@@ -886,5 +1014,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 {pager}
             }
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TABLE_SX;
+    use crate::css::Stylesheet;
+
+    #[test]
+    fn pinned_toggles_push_the_checkboxes_past_them() {
+        let stylesheet = Stylesheet::from(&*TABLE_SX);
+        let css = stylesheet.as_str();
+        let rule = |state: &str| {
+            css.find(&format!("[data-state~=\"{state}\"] [data-select]{{"))
+                .unwrap_or_else(|| panic!("{state}: {css}"))
+        };
+        // Equally specific: the later rule's inset wins.
+        assert!(rule("pin-select") < rule("pin-detail"));
     }
 }

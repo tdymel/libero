@@ -122,13 +122,13 @@ pub(super) fn span_pin(headers: &[HeaderSpec], covered: &[usize]) -> Option<Cell
 
 /// The shown columns in display order: start-pinned ones in `pinned` order,
 /// the rest in column order, then end-pinned ones. Sets each pinned header's
-/// [`CellPin`]; `select_width` is the checkbox column's, held with a start
-/// group. Returns the order and the pinned headers whose inset is unknown, as a
+/// [`CellPin`]; `lead_width` is the toggle and checkbox columns', held with a
+/// start group. Returns the order and the pinned headers whose inset is unknown, as a
 /// column further out has no `width`.
 pub(super) fn pin_columns(
     headers: &mut [HeaderSpec],
     pinned: &PinnedColumns,
-    select_width: Option<&str>,
+    lead_width: Option<&str>,
 ) -> (Vec<usize>, Vec<String>) {
     let shown = |header: &String| {
         headers
@@ -157,9 +157,7 @@ pub(super) fn pin_columns(
         .collect();
 
     let mut unknown = Vec::new();
-    let outer = select_width
-        .filter(|_| !start.is_empty())
-        .map(str::to_string);
+    let outer = lead_width.filter(|_| !start.is_empty()).map(str::to_string);
     let mut place = |group: &[usize], side: PinSide, headers: &mut [HeaderSpec]| {
         let mut widths: Vec<String> = outer
             .iter()

@@ -769,6 +769,12 @@ const TABLE_LARGE_SHAPES: &[Shape] = &[
         round: rerender_app,
     },
     Shape {
+        name: "Table 1k detail",
+        app: table_detail_app::<1_000>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
         name: "Table 1k select mount",
         app: table_select_mount_app::<1_000>,
         count: 1,
@@ -793,6 +799,31 @@ fn table_filter_app<const ROWS: usize>() -> Element {
                 quick_filter: if flip() { "12" } else { "1" },
                 onquickfilterchange,
                 default_page_size: 25,
+            }
+        }
+    }
+}
+
+/// [`table_large_app`] with a detail per row: a round opens or closes row 0's.
+fn table_detail_app<const ROWS: usize>() -> Element {
+    let data = use_hook(|| (0..ROWS as u32).collect::<Vec<u32>>());
+    let onexpandedchange = use_callback(|_: Vec<String>| {});
+    let expanded = match flip() {
+        true => vec!["0".to_string()],
+        false => Vec::new(),
+    };
+    rsx! {
+        LiberoProvider {
+            Table {
+                data: data.clone(),
+                columns: vec![
+                    column("Name").value(|n: &u32| format!("Row {n}")).row_header(),
+                    column("N").value(|n: &u32| *n).sortable(),
+                ],
+                row_key: |n: &u32| n.to_string(),
+                row_detail: |n: &u32| Some(rsx! { "Detail {n}" }),
+                expanded,
+                onexpandedchange,
             }
         }
     }

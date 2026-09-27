@@ -109,6 +109,7 @@ mod spotlight;
 mod stepper;
 mod switch;
 mod table;
+mod table_detail;
 mod table_groups;
 mod tabs;
 mod tags_field;

@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Chip, Code, PinnedColumns, Table, Text, column};
+use libero::components::{Chip, Code, PinnedColumns, RowFn, Table, Text, column};
 use libero::sx::sx;
 
 #[derive(Clone, PartialEq)]
@@ -72,6 +72,10 @@ struct Person {{
     )
 }
 
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String }
+// snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], row_key: |p: &Person| p.name.clone(), .. }
+const DETAIL: &str = r#"row_detail: |p: &Person| Some(rsx! { "{p.name} joined as {p.role}." })"#;
+
 /// Wider than the preview at any width, so `scroll` has something to scroll.
 const SCROLL_WIDTH: &str = "640px";
 
@@ -118,6 +122,10 @@ pub fn TablePage() -> Element {
                     prop("onrowclick", "EventHandler<T>").default("None").doc("Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action."),
                     prop("row_states", "RowFn<T, States>").default("None").doc("A row's states, rendered as its `data-state`. Style them with `sx().selector(\"& tbody tr\", sx().when(..))`."),
                     prop("row_attrs", "RowFn<T, Vec<Attribute>>").default("None").doc("Extra attributes on a row's `tr`."),
+                    prop("row_detail", "RowFn<T, Option<Element>>").default("None").doc("A row's detail, from a `|row: &T| ..` closure. `Some` gives the row a toggle in a leading column; open, the detail shows in a full-width row under it. Called for the shown rows on every render. Set `row_key` with it, or open details stick to positions in `data`."),
+                    prop("expanded", "Option<Vec<String>>").default("None").doc("The `row_key`s of the rows whose detail shows. Set, it is controlled: pair it with `onexpandedchange`. It survives a sort."),
+                    prop("default_expanded", "Vec<String>").default("[]").doc("Seeds the open details once. Ignored when `expanded` is set."),
+                    prop("onexpandedchange", "EventHandler<Vec<String>>").default("None").doc("Called with the open details a toggle asks for."),
                     prop("size", "Size").default("theme (md)").doc("Cell padding and font size."),
                     prop("striped", "bool").default("false").doc("Shades every other body row."),
                     prop("page", "Option<u32>").default("None").doc("The shown page, 1-based. Set, the page is controlled: pair it with `onpagechange`. A page past the end shows the last one."),
@@ -161,6 +169,10 @@ pub fn TablePage() -> Element {
                     prop("group", "String").default("None").doc("Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group."),
                     prop("col_span", "fn(&T) -> usize").default("None").doc("How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared."),
                 ]).without_base_props(),
+                props("table_csv()", vec![
+                    prop("table_csv", "fn(&[Column<T>], &[T]) -> String").default("none").doc("The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; saving the file is yours."),
+                    prop("table_text", "fn(&[Column<T>], &[T]) -> Vec<Vec<String>>").default("none").doc("The same cells unjoined, the header row first, for your own writer."),
+                ]).without_base_props(),
             ],
             accessibility: a11y()
                 .key(["Tab"], "With `scroll` or `max_height`, when the table overflows and has no button in it: enters the scroll region, a tab stop.")
@@ -168,6 +180,7 @@ pub fn TablePage() -> Element {
                 .key(["Enter", "Space"], "On a sortable header, a button: sorts by that column, flips it, then unsorts.")
                 .key(["Shift+Enter", "Shift+Space"],"With `multi_sort`, on a sortable header: adds that column after the sorted ones.")
                 .key(["Space"], "On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row.")
+                .key(["Enter", "Space"], "With `row_detail`, on a row's toggle: opens or closes its detail. Tab then goes into the open detail.")
                 .key(["Enter", "Space", "Down"], "With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`.")
                 .handles([
                     "An unnamed table warns in a debug build.",
@@ -177,13 +190,14 @@ pub fn TablePage() -> Element {
                     "Each row's checkbox is named \"Select\" plus its row header's text, else its first cell's. The header checkbox reads mixed while some rows are selected.",
                     "A selected row carries `aria-selected=\"true\"`, and a polite live region says the new count, \"2 rows selected\", after each change.",
                     "A tap on a touch screen has no Shift key, so with `multi_sort` a tap always adds the column.",
-                    "`selectable` without `row_key` warns in a debug build.",
+                    "`selectable` or `row_detail` without `row_key` warns in a debug build.",
+                    "Each detail toggle is a button named \"Details for\" plus the row's name, like its checkbox, with `aria-expanded`, and `aria-controls` on the detail row while it is open. The toggle column's header reads \"Details\" to a screen reader only.",
                     "`.row_header()` cells render as `th scope=\"row\"`, so a screen reader reads that name as it moves down any other column. They look like the other cells.",
                     "Paginated, the page buttons sit in a `nav` named after the caption, the page-size picker is labelled, and a page change announces the new range, \"4–6 of 7\", politely. The first render announces nothing.",
                     "The quick-filter field is a labelled `type=\"search\"` input, \"Search\", described by the table's caption. Once typing pauses for half a second, a polite live region says how many rows are left, \"2 rows\".",
                     "With `column_menu`, each menu button is named after its column, \"Age column options\", and the header keeps its text as its name. The Columns submenu lists checkbox items, and the last shown column cannot be hidden.",
                     "A group header is a `th scope=\"colgroup\"` over its columns, so a screen reader reads it with each of their cells. A column outside any group, and the select-all box, span every header row.",
-                    "Pinned columns move to their edge in the DOM too, so Tab and a screen reader meet the cells in the order they are seen. The checkbox column pins with the start ones.",
+                    "Pinned columns move to their edge in the DOM too, so Tab and a screen reader meet the cells in the order they are seen. The detail toggle and checkbox columns pin with the start ones.",
                     "A pinned column past one without a `width` warns in a debug build: its offset is unknown, so it would overlap.",
                     "A group or a `col_span` stops at a pin edge: a group over pinned and scrolled columns shows as two headers, and a group header never pins.",
                 ])
@@ -192,7 +206,8 @@ pub fn TablePage() -> Element {
                     "Set `scroll: true` on a table wider than its container, or `max_height` on a long one.",
                     "Mark the column that names a row with `.row_header()`.",
                     "With `onrowclick`, also put a button or link for that action in a cell. A row is not a tab stop, so a keyboard cannot click it.",
-                    "With `selectable`, give the rows a `.row_header()` column, so each checkbox is named by something unique.",
+                    "With `selectable` or `row_detail`, give the rows a `.row_header()` column, so each checkbox and toggle is named by something unique.",
+                    "Before a CSV of text users typed goes to a spreadsheet, neutralise cells that start with `=`, `+`, `-` or `@` (CSV injection, OWASP). `table_text`'s docs show a three-line guard.",
                 ])
                 .limits([
                     "On Blitz, once a `max_height` table's rows scroll, a click on a header's sort or menu button misses: Blitz hit-tests the header where it sat before the scroll. Tab to the button and press Enter instead.",
@@ -323,6 +338,28 @@ pub fn TablePage() -> Element {
                     " lets a row's cell cover the next columns, say a total row's label."
                 }
                 Text {
+                    Code { source: "row_detail" }
+                    " gives a row a toggle that opens a full-width detail row under it, as in a "
+                    "master-detail view. Rows the closure answers "
+                    Code { source: "None" }
+                    " for get no toggle. The open details are "
+                    Code { source: "row_key" }
+                    "s, held yourself with "
+                    Code { source: "expanded" }
+                    " and "
+                    Code { source: "onexpandedchange" }
+                    "."
+                }
+                Text {
+                    Code { source: "table_csv(&columns, &rows)" }
+                    " writes the cells as CSV, each as its column shows it as text, and "
+                    Code { source: "table_text" }
+                    " hands them over unjoined for another format. Saving is yours. A cell "
+                    "that starts with "
+                    Code { source: "=" }
+                    " runs as a formula in a spreadsheet, so neutralise text users typed first."
+                }
+                Text {
                     Code { source: "scroll" }
                     " wraps a table wider than its container in a "
                     Code { source: "ScrollArea" }
@@ -377,6 +414,10 @@ pub fn TablePage() -> Element {
                     }),
                     Control::switch("multi_sort"),
                     Control::switch("column_menu"),
+                    Control::switch("row_detail").code(|_, values| match values.str("row_detail") == "true" {
+                        true => vec![DETAIL.to_string()],
+                        false => vec![],
+                    }),
                     Control::switch("show_quick_filter"),
                     Control::switch("paginate").code(|_, values| match values.str("paginate") == "true" {
                         true => vec!["page_sizes: vec![2, 5, 10]".to_string()],
@@ -408,6 +449,10 @@ pub fn TablePage() -> Element {
                         selectable: values.str("selectable") == "true",
                         multi_sort: values.str("multi_sort") == "true",
                         column_menu: values.str("column_menu") == "true",
+                        row_detail: match values.str("row_detail") == "true" {
+                            true => (|p: &Person| Some(rsx! { "{p.name} joined as {p.role}." })).into(),
+                            false => RowFn::default(),
+                        },
                         show_quick_filter: values.str("show_quick_filter") == "true",
                         row_key: |p: &Person| p.name.clone(),
                         page_sizes: if values.str("paginate") == "true" { vec![2, 5, 10] } else { vec![] },

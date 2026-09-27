@@ -101,6 +101,9 @@ pub(crate) struct TableConfig {
     pub pinned_columns: Option<PinnedColumns>,
     pub default_pinned_columns: PinnedColumns,
     pub onpinnedcolumnschange: Option<EventHandler<PinnedColumns>>,
+    pub expanded: Option<Vec<String>>,
+    pub default_expanded: Vec<String>,
+    pub onexpandedchange: Option<EventHandler<Vec<String>>>,
 }
 
 /// A table's state, one slice per feature.
@@ -117,6 +120,8 @@ pub(crate) struct TableState {
     /// The quick filter's text.
     pub quick_filter: StateSlice<String>,
     pub pinned_columns: StateSlice<PinnedColumns>,
+    /// The keys of the rows whose detail shows.
+    pub expanded: StateSlice<Vec<String>>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -162,6 +167,12 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.onpinnedcolumnschange,
         "Table: a controlled `pinned_columns` without `onpinnedcolumnschange` never changes.",
     );
+    let expanded = use_state_slice(
+        config.expanded,
+        || config.default_expanded,
+        config.onexpandedchange,
+        "Table: a controlled `expanded` without `onexpandedchange` never changes.",
+    );
     TableState {
         sort,
         selection,
@@ -170,5 +181,6 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         hidden_columns,
         quick_filter,
         pinned_columns,
+        expanded,
     }
 }

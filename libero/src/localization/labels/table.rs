@@ -78,6 +78,16 @@ pub struct TableLabels {
     pub pin_start: &'static str,
     pub pin_end: &'static str,
     pub unpin: &'static str,
+    /// The header of the column of detail toggles, read out only.
+    pub details: &'static str,
+    /// A row's detail toggle, from the row header's text, else the first cell's.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.row_details)("Ada"), "Details for Ada");
+    /// ```
+    pub row_details: fn(&str) -> String,
 }
 
 /// `TableLabels::ENGLISH.select_row`. A named fn, so every copy compares equal.
@@ -144,6 +154,14 @@ fn german_column_menu(column: &str) -> String {
     format!("Optionen für Spalte {column}")
 }
 
+fn english_row_details(row: &str) -> String {
+    format!("Details for {row}")
+}
+
+fn german_row_details(row: &str) -> String {
+    format!("Details zu {row}")
+}
+
 impl TableLabels {
     pub const ENGLISH: Self = Self {
         no_rows: "No rows",
@@ -168,6 +186,8 @@ impl TableLabels {
         pin_start: "Pin to start",
         pin_end: "Pin to end",
         unpin: "Unpin",
+        details: "Details",
+        row_details: english_row_details,
     };
 
     pub const GERMAN: Self = Self {
@@ -193,5 +213,7 @@ impl TableLabels {
         pin_start: "Am Anfang fixieren",
         pin_end: "Am Ende fixieren",
         unpin: "Fixierung lösen",
+        details: "Details",
+        row_details: german_row_details,
     };
 }
