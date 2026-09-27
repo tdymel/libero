@@ -118,6 +118,7 @@ pub(super) fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         mark: _,
         hover_card: _,
         nav_link: _,
+        bottom_navigation: _,
         loader,
         indicator,
         skeleton,

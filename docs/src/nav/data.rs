@@ -143,6 +143,7 @@ fn aliases(label: &str) -> &'static [&'static str] {
         "FileField" => &["file input", "upload", "dropzone", "file picker"],
         "Anchor" => &["link", "toc", "table of contents"],
         "NavLink" => &["nav item", "menu item", "link"],
+        "BottomNavigation" => &["tab bar", "navigation bar", "mobile nav"],
         "Burger" => &["hamburger", "menu button", "nav toggle"],
         "Tabs" => &["tab list", "tabbed"],
         "Menubar" => &["menu bar"],
@@ -360,6 +361,7 @@ pub(super) fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             vec![
                 page(Route::AnchorPage {}, "Anchor"),
                 page(Route::NavLinkPage {}, "NavLink"),
+                page(Route::BottomNavigationPage {}, "BottomNavigation"),
                 page(Route::BurgerPage {}, "Burger"),
                 page(Route::TabsPage {}, "Tabs"),
                 page(Route::MenubarPage {}, "Menubar"),

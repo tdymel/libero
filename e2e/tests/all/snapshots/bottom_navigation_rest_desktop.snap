@@ -1,0 +1,28 @@
+---
+source: e2e/src/suite.rs
+description: bottom_navigation at desktop (rest)
+expression: tree
+---
+navigation "Main"
+  button "Home" [current=page]
+    StaticText "Home"
+  button "Search"
+    StaticText "Search"
+  button "Inbox, 3 unread"
+    StaticText "Inbox"
+  button "Notifications and messages"
+    StaticText "Notifications and messages"
+  button "Profile"
+    StaticText "Profile"
+navigation "Main"
+  button "Home" [current=page]
+    StaticText "Home"
+  button "Search"
+    StaticText "Search"
+  button "Inbox, 3 unread"
+    StaticText "Inbox"
+navigation "Links"
+  link "Here" [current=page]
+    StaticText "Here"
+  link "Away" [disabled]
+    StaticText "Away"

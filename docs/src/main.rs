@@ -271,6 +271,8 @@ pub(crate) enum Route {
     #[route("/layout/transition")]
     TransitionPage {},
 
+    #[route("/navigation/bottom-navigation")]
+    BottomNavigationPage {},
     #[route("/navigation/burger")]
     BurgerPage {},
     #[route("/navigation/anchor")]

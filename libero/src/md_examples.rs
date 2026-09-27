@@ -44,6 +44,7 @@ md_pages! {
     Avatar => "avatar",
     Badge => "badge",
     Blockquote => "blockquote",
+    BottomNavigation => "bottom_navigation",
     Box => "box",
     Burger => "burger",
     Button => "button",

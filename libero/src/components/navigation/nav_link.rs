@@ -23,7 +23,7 @@ use crate::{
 use crate::components::layout::render_anchor;
 
 // A literal CSS color has no lighter shade, so it falls back to the theme's.
-fn nav_link_color(value: Option<&ThemeAwareValue>) -> Option<Color> {
+pub(super) fn nav_link_color(value: Option<&ThemeAwareValue>) -> Option<Color> {
     match value {
         Some(ThemeAwareValue::Color(color)) => Some(*color),
         Some(ThemeAwareValue::ColorValue(
@@ -35,7 +35,7 @@ fn nav_link_color(value: Option<&ThemeAwareValue>) -> Option<Color> {
 
 /// An in-page anchor adds a `#fragment` to the route without leaving the page,
 /// so it's ignored - unless `to` names a fragment itself, then it must match.
-fn route_matches(route: &str, to: &str) -> bool {
+pub(crate) fn route_matches(route: &str, to: &str) -> bool {
     if to.contains('#') {
         return route == to;
     }

@@ -1,4 +1,5 @@
 mod anchor;
+mod bottom_navigation;
 mod burger;
 mod menubar;
 mod nav_link;
@@ -9,6 +10,10 @@ mod tree;
 
 pub use anchor::{Anchor, AnchorPart, AnchorProps, AnchorUnderline};
 pub(crate) use anchor::{NewTabHint, wants_new_tab_hint};
+pub use bottom_navigation::{
+    BottomNavigation, BottomNavigationItem, BottomNavigationItemProps, BottomNavigationPart,
+    BottomNavigationPosition, BottomNavigationProps, LabelVisibility,
+};
 pub use burger::{Burger, BurgerPart, BurgerProps};
 pub use menubar::{Menubar, MenubarMenu, MenubarPart, MenubarProps};
 pub use nav_link::{NavLink, NavLinkPart, NavLinkProps};

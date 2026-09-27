@@ -13,6 +13,7 @@ mod audio;
 mod autocomplete;
 mod avatar;
 mod badge;
+mod bottom_navigation;
 mod button;
 mod button_group;
 mod calendar;
@@ -149,6 +150,7 @@ const FIXTURES: &[Routes] = &[
     autocomplete::ROUTES,
     avatar::ROUTES,
     badge::ROUTES,
+    bottom_navigation::ROUTES,
     button::ROUTES,
     button_group::ROUTES,
     calendar::ROUTES,

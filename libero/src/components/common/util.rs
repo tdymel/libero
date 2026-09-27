@@ -25,9 +25,23 @@ pub(crate) fn css_string(value: &str) -> String {
     out
 }
 
+/// `base` plus whatever a notch or a home indicator takes on `side`; 0 without
+/// `viewport-fit=cover`.
+pub(crate) fn safe_area_padding(base: &str, side: &str) -> String {
+    format!("calc({base} + env(safe-area-inset-{side}, 0px))")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::css_string;
+    use super::{css_string, safe_area_padding};
+
+    #[test]
+    fn safe_area_padding_adds_the_inset_to_the_base() {
+        assert_eq!(
+            safe_area_padding("8px", "bottom"),
+            "calc(8px + env(safe-area-inset-bottom, 0px))"
+        );
+    }
 
     #[test]
     fn quotes_and_escapes_only_what_css_requires() {

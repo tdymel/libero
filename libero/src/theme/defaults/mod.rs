@@ -7,6 +7,7 @@ mod autocomplete;
 mod avatar;
 mod badge;
 mod blockquote;
+mod bottom_navigation;
 mod burger;
 mod button;
 mod carousel;
@@ -128,6 +129,7 @@ pub use blockquote::{
     BLOCKQUOTE_CITE_OPACITY, BLOCKQUOTE_COLOR, BLOCKQUOTE_PADDING_X, BLOCKQUOTE_PADDING_Y,
     BlockquoteDefaults, BlockquoteSizeLevel,
 };
+pub use bottom_navigation::BottomNavigationDefaults;
 pub use burger::{
     BURGER_COLOR, BURGER_LINE_SIZE, BURGER_SIZE, BURGER_SIZES, BURGER_TRANSITION_DURATION,
     BURGER_TRANSITION_TIMING, BurgerDefaults,

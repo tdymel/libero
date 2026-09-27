@@ -11,7 +11,10 @@ use crate::{
 
 /// The sr-only recipe, `absolute`, for hidden inputs in a `relative` label:
 /// Tab then scrolls the label into view; `fixed` did not (todo 63).
-pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {
+pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(visually_hidden_sx);
+
+/// [`VISUALLY_HIDDEN_SX`]'s recipe, for a selector inside another sheet.
+pub(crate) fn visually_hidden_sx() -> Sx {
     sx().position("absolute")
         .width("1px")
         .height("1px")
@@ -23,7 +26,7 @@ pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         // Blitz ignores `clip` and painted a speck and focus square (todo 757).
         .opacity("0")
-});
+}
 
 /// The same recipe, `fixed`, for a box with no positioned host: an absolute one
 /// would add to the page's scrollable overflow.

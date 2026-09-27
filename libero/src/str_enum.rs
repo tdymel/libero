@@ -63,6 +63,7 @@ macro_rules! str_enum {
 
     (
         $(#[doc = $enum_doc:expr])*
+        $(#[non_exhaustive $($non_exhaustive:tt)?])?
         $(#[state_prefix = $prefix:literal])?
         pub enum $name:ident {
             $(
@@ -73,6 +74,7 @@ macro_rules! str_enum {
         }
     ) => {
         $(#[doc = $enum_doc])*
+        $(#[non_exhaustive $($non_exhaustive)?])?
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
         pub enum $name {
             $(
@@ -138,8 +140,9 @@ pub(crate) use str_enum;
 mod tests {
 
     use crate::components::{
-        AnchorUnderline, DrawerAnchor, FlexDirection, FlexWrap, HeaderPosition, ImageFit,
-        LabelPosition, Orientation, PinKind, SidebarSide, Variant,
+        AnchorUnderline, BottomNavigationPosition, DrawerAnchor, FlexDirection, FlexWrap,
+        HeaderPosition, ImageFit, LabelPosition, LabelVisibility, Orientation, PinKind,
+        SidebarSide, Variant,
     };
     use crate::theme::{
         ChoiceVariant, LoaderVariant, Placement, QrRobustness, ScrollAxis, ScrollbarSize,
@@ -150,6 +153,8 @@ mod tests {
     macro_rules! for_every_str_enum {
         ($check:ident) => {
             $check!(AnchorUnderline);
+            $check!(BottomNavigationPosition);
+            $check!(LabelVisibility);
             $check!(Variant);
             $check!(ChoiceVariant);
             $check!(DrawerAnchor);

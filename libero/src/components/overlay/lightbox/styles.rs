@@ -1,7 +1,9 @@
 //! The viewer's static styles and its private CSS variables.
 
 use crate::{
-    components::common::{SVG_FIT, inset_focus_ring_sx, ring_overlay_sx, svg_fit_sx},
+    components::common::{
+        SVG_FIT, inset_focus_ring_sx, ring_overlay_sx, safe_area_padding, svg_fit_sx,
+    },
     hooks::drag_handle_sx,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
     theme::{
@@ -26,13 +28,9 @@ fn phone() -> String {
     )
 }
 
-/// The dialog's padding on one side of a phone: the usual `sm`, plus whatever
-/// a notch or a home indicator takes there.
+/// The dialog's padding on one side of a phone: the usual `sm` plus the safe area.
 fn safe_padding(side: &str) -> String {
-    format!(
-        "calc({} + env(safe-area-inset-{side}, 0px))",
-        SizeCss::SPACING.value(Size::Sm)
-    )
+    safe_area_padding(&SizeCss::SPACING.value(Size::Sm), side)
 }
 
 // On a phone the dialog is the whole screen, the stage taking the room left; it

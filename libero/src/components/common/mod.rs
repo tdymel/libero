@@ -73,7 +73,7 @@ pub(crate) use toolbar_context::{
     TOOLBAR_ITEM, ToolbarItem, ToolbarScope, use_no_toolbar, use_provide_toolbar, use_toolbar,
     use_toolbar_item,
 };
-pub(crate) use util::{attr, css_string};
+pub(crate) use util::{attr, css_string, safe_area_padding};
 pub use variant::Variant;
 pub(crate) use variant_chrome::{
     BUTTON_COLOR_VAR, BUTTON_CONTAINER_VAR, BUTTON_CONTRAST_VAR, BUTTON_FILL_VAR, BUTTON_HOVER_VAR,

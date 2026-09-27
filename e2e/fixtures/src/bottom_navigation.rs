@@ -1,0 +1,89 @@
+//! Five `BottomNavigationItem`s in a 320px column, a three-item RTL bar, and a
+//! fixed bar over a tall page with only the selected label shown.
+
+use dioxus::prelude::*;
+use libero::components::{BottomNavigation, BottomNavigationItem, Indicator, Pictogram, SvgData};
+use pictogram_icons_lucide as lucide;
+
+use crate::Routes;
+
+pub const ROUTES: Routes = &[
+    ("/bottom-navigation", || rsx! { BottomNavigationPage {} }),
+    ("/bottom-navigation/fixed", || rsx! { FixedPage {} }),
+];
+
+const ITEMS: [(&str, &str, SvgData); 5] = [
+    ("home", "Home", lucide::house::outlined),
+    ("search", "Search", lucide::search::outlined),
+    ("inbox", "Inbox", lucide::inbox::outlined),
+    ("long", "Notifications and messages", lucide::bell::outlined),
+    ("profile", "Profile", lucide::user::outlined),
+];
+
+#[component]
+fn Bar(prefix: &'static str, count: usize, show_labels: &'static str) -> Element {
+    let mut current = use_signal(|| 0usize);
+    rsx! {
+        BottomNavigation { id: "{prefix}bar", "aria-label": "Main", show_labels,
+            for (index, (id, label, icon)) in ITEMS.into_iter().take(count).enumerate() {
+                BottomNavigationItem {
+                    key: "{id}",
+                    id: "{prefix}{id}",
+                    selected: current() == index,
+                    onclick: move |_| current.set(index),
+                    "aria-label": (id == "inbox").then_some("Inbox, 3 unread"),
+                    icon: rsx! { Pictogram { icon } },
+                    badge: (id == "inbox").then(|| rsx! { Indicator { label: 3u32 } }),
+                    "{label}"
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn BottomNavigationPage() -> Element {
+    rsx! {
+        div { style: "display: flex; flex-direction: column; gap: 24px;",
+            div { id: "column", style: "width: 320px;",
+                Bar { prefix: "", count: 5, show_labels: "always" }
+            }
+            div { id: "rtl", dir: "rtl", style: "width: 320px;",
+                Bar { prefix: "rtl-", count: 3, show_labels: "always" }
+            }
+            div { style: "width: 320px;",
+                BottomNavigation { "aria-label": "Links",
+                    BottomNavigationItem { id: "link", to: "/bottom-navigation", selected: true,
+                        icon: rsx! { Pictogram { icon: lucide::house::outlined } },
+                        "Here"
+                    }
+                    BottomNavigationItem { id: "disabled", to: "/bottom-navigation/fixed", disabled: true,
+                        icon: rsx! { Pictogram { icon: lucide::user::outlined } },
+                        "Away"
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn FixedPage() -> Element {
+    rsx! {
+        div { id: "page", style: "height: 2000px; padding-bottom: var(--lsx-bottom-navigation-height);",
+            "Page"
+        }
+        BottomNavigation { id: "fixed", "aria-label": "Main", position: "fixed", show_labels: "selected",
+            for (index, (id, label, icon)) in ITEMS.into_iter().take(3).enumerate() {
+                BottomNavigationItem {
+                    key: "{id}",
+                    id: "fixed-{id}",
+                    selected: index == 0,
+                    onclick: |_| {},
+                    icon: rsx! { Pictogram { icon } },
+                    "{label}"
+                }
+            }
+        }
+    }
+}
