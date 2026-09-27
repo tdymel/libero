@@ -1,9 +1,188 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::rich_text::Doc;
-use libero::components::{Code, FieldPart, FieldStatus, RichTextEditor, Text};
+use libero::components::rich_text::{
+    Attrs, Builtin, Chord, Commands, Doc, EditorState, Keymap, NodeRegistry, NodeSpec,
+    NodeViewProps, NodeViews,
+};
+use libero::components::{Code, FieldPart, FieldStatus, Flex, RichTextEditor, Text};
 
 const SAMPLE: &str = "## Release notes\n\nStart a line with # and a space for a heading, or wrap a word in **two stars**.\n\n- Undo with Ctrl+Z\n- Bold with Ctrl+B";
+
+// What the extension switches print above the rsx; the live editor runs the functions below.
+// `static`, not `const`: the snippet scan would compile these fragments alone, not in the Demo.
+static MENTION: &str = r#"#[component]
+fn Mention(props: NodeViewProps) -> Element {
+    let user = props.attrs.get("user").and_then(|user| user.as_str()).unwrap_or("?");
+    rsx! { b { "@{user}" } }
+}
+
+fn registry() -> NodeRegistry {
+    let mut registry = NodeRegistry::default();
+    registry.register(NodeSpec::inline("mention").attr("user", "ada")).unwrap();
+    registry
+}"#;
+
+static SHOUT_COMMAND: &str = r#"    commands.register("shout", |state| {
+        let text = state.selected_text().to_uppercase();
+        !text.is_empty() && state.insert_text(&text)
+    });"#;
+
+static MENTION_COMMAND: &str = r#"    commands.register("mention", |state| {
+        let mention = registry().new_inline("mention", Attrs::new());
+        mention.is_some_and(|mention| state.insert_inline(mention))
+    });"#;
+
+static SHOUT_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+l").unwrap(), "shout");"#;
+static MENTION_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+2").unwrap(), "mention");"#;
+static KEYMAP_CHORDS: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+h").unwrap(), Builtin::Heading2);
+    keymap.unbind_command(Builtin::Underline);"#;
+
+/// The demo's extension switches: a command, a node and a keymap.
+#[derive(Clone, Copy)]
+struct Extensions {
+    shout: bool,
+    mention: bool,
+    keymap: bool,
+}
+
+impl Extensions {
+    fn of(values: &DemoValues) -> Self {
+        Self {
+            shout: values.str("commands") == "true",
+            mention: values.str("nodes") == "true",
+            keymap: values.str("keymap") == "true",
+        }
+    }
+
+    fn any(self) -> bool {
+        self.shout || self.mention || self.keymap
+    }
+}
+
+#[component]
+fn Mention(props: NodeViewProps) -> Element {
+    let user = props
+        .attrs
+        .get("user")
+        .and_then(|user| user.as_str())
+        .unwrap_or("?");
+    rsx! { b { "@{user}" } }
+}
+
+fn registry() -> NodeRegistry {
+    let mut registry = NodeRegistry::default();
+    registry
+        .register(NodeSpec::inline("mention").attr("user", "ada"))
+        .unwrap();
+    registry
+}
+
+fn shout(state: &mut EditorState) -> bool {
+    let text = state.selected_text().to_uppercase();
+    !text.is_empty() && state.insert_text(&text)
+}
+
+fn mention(state: &mut EditorState) -> bool {
+    let mention = registry().new_inline("mention", Attrs::new());
+    mention.is_some_and(|mention| state.insert_inline(mention))
+}
+
+fn chord(chord: &str) -> Chord {
+    Chord::parse(chord).expect("a valid demo chord")
+}
+
+fn demo_commands(on: Extensions) -> Commands {
+    let mut commands = Commands::default();
+    if on.shout {
+        commands.register("shout", shout);
+    }
+    if on.mention {
+        commands.register("mention", mention);
+    }
+    commands
+}
+
+fn demo_keymap(on: Extensions) -> Keymap {
+    let mut keymap = Keymap::default();
+    if on.shout {
+        keymap.bind(chord("Mod+Shift+l"), "shout");
+    }
+    if on.mention {
+        keymap.bind(chord("Mod+Shift+2"), "mention");
+    }
+    if on.keymap {
+        keymap.bind(chord("Mod+Shift+h"), Builtin::Heading2);
+        keymap.unbind_command(Builtin::Underline);
+    }
+    keymap
+}
+
+/// The items the extension switches add, printed above the rsx.
+fn wrap_extensions(values: &DemoValues, code: &str) -> String {
+    let on = Extensions::of(values);
+    if !on.any() {
+        return code.to_string();
+    }
+    let used: Vec<&str> = [
+        (on.mention, "Attrs"),
+        (on.keymap, "Builtin"),
+        (true, "Chord"),
+        (on.shout || on.mention, "Commands"),
+        (true, "Keymap"),
+        (on.mention, "NodeRegistry"),
+        (on.mention, "NodeSpec"),
+        (on.mention, "NodeViewProps"),
+        (on.mention, "NodeViews"),
+    ]
+    .into_iter()
+    .filter_map(|(on, name)| on.then_some(name))
+    .collect();
+    let mut items = vec![format!(
+        "use libero::components::rich_text::{{{}}};",
+        used.join(", ")
+    )];
+    if on.mention {
+        items.push(MENTION.to_string());
+    }
+    if on.shout || on.mention {
+        let registered: Vec<&str> = [(on.shout, SHOUT_COMMAND), (on.mention, MENTION_COMMAND)]
+            .into_iter()
+            .filter_map(|(on, line)| on.then_some(line))
+            .collect();
+        items.push(format!(
+            "fn commands() -> Commands {{\n    let mut commands = Commands::default();\n{}\n    commands\n}}",
+            registered.join("\n")
+        ));
+    }
+    let bound: Vec<&str> = [
+        (on.shout, SHOUT_CHORD),
+        (on.mention, MENTION_CHORD),
+        (on.keymap, KEYMAP_CHORDS),
+    ]
+    .into_iter()
+    .filter_map(|(on, line)| on.then_some(line))
+    .collect();
+    items.push(format!(
+        "fn keymap() -> Keymap {{\n    let mut keymap = Keymap::default();\n{}\n    keymap\n}}",
+        bound.join("\n")
+    ));
+    items.push(code.to_string());
+    items.join("\n\n")
+}
+
+/// One line per extension switch that changes what the editor does, so a reader knows what to try.
+fn captions(values: &DemoValues) -> Vec<&'static str> {
+    let on = Extensions::of(values);
+    [
+        (on.shout, "Custom command: select a word and press Ctrl+Shift+L (Cmd on a Mac) to upper-case it, one undo step."),
+        (on.mention, "Custom node: Ctrl+Shift+2 inserts an @ada mention, drawn by your own component."),
+        (on.keymap, "Custom keymap: Ctrl+Shift+H makes a heading, and Ctrl+U no longer underlines. Ctrl+/ lists the live keymap."),
+        (values.str("toolbar") != "true", "No toolbar: the keymap, or your own buttons through a handle, drive the editor."),
+    ]
+    .into_iter()
+    .filter_map(|(on, caption)| on.then_some(caption))
+    .collect()
+}
 
 #[component]
 pub fn RichTextEditorPage() -> Element {
@@ -174,33 +353,73 @@ pub fn RichTextEditorPage() -> Element {
                             _ => vec!["toolbar: false".to_string()],
                         }
                     }),
+                    // `keymap` prints the one keymap all three extension switches add to.
+                    Control::switch("commands").code(|_, values| {
+                        let on = Extensions::of(values);
+                        match on.shout || on.mention {
+                            true => vec!["commands: commands()".to_string()],
+                            false => vec![],
+                        }
+                    }),
+                    Control::switch("nodes").code(|_, values| {
+                        match values.str("nodes").as_str() {
+                            "true" => vec![
+                                "nodes: NodeViews::new().with(\"mention\", Mention)".to_string(),
+                                "registry: registry()".to_string(),
+                            ],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("keymap").code(|_, values| {
+                        match Extensions::of(values).any() {
+                            true => vec!["keymap: keymap()".to_string()],
+                            false => vec![],
+                        }
+                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
                     Control::switch("readonly"),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    RichTextEditor {
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        label: (values.str("label") == "true").then(|| "Notes".to_string()),
-                        aria_label: (values.str("label") != "true").then_some("Notes"),
-                        description: (values.str("description") == "true")
-                            .then(|| "What changed in this release.".to_string()),
-                        helper: (values.str("helper") == "true")
-                            .then(|| "Markdown shortcuts work as you type.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("Consider a shorter title.".to_string()),
-                            "error" => FieldStatus::Error("Write a few words.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
-                        placeholder: (values.str("placeholder") == "true")
-                            .then(|| "Start writing".to_string()),
-                        toolbar: values.str("toolbar") == "true",
-                        required: (values.str("required") == "true").then_some(true),
-                        disabled: (values.str("disabled") == "true").then_some(true),
-                        readonly: (values.str("readonly") == "true").then_some(true),
-                        value: doc(),
-                        onchange: move |next| doc.set(next),
+                wrap: Wrap(wrap_extensions),
+                render: move |values: DemoValues| {
+                    let on = Extensions::of(&values);
+                    let nodes = match on.mention {
+                        true => NodeViews::new().with("mention", Mention),
+                        false => NodeViews::new(),
+                    };
+                    rsx! {
+                        Flex { direction: "column", gap: "sm",
+                            RichTextEditor {
+                                size: values.str("size"),
+                                radius: values.str("radius"),
+                                label: (values.str("label") == "true").then(|| "Notes".to_string()),
+                                aria_label: (values.str("label") != "true").then_some("Notes"),
+                                description: (values.str("description") == "true")
+                                    .then(|| "What changed in this release.".to_string()),
+                                helper: (values.str("helper") == "true")
+                                    .then(|| "Markdown shortcuts work as you type.".to_string()),
+                                status: match values.str("status").as_str() {
+                                    "warning" => FieldStatus::Warning("Consider a shorter title.".to_string()),
+                                    "error" => FieldStatus::Error("Write a few words.".to_string()),
+                                    _ => FieldStatus::Valid,
+                                },
+                                placeholder: (values.str("placeholder") == "true")
+                                    .then(|| "Start writing".to_string()),
+                                toolbar: values.str("toolbar") == "true",
+                                required: (values.str("required") == "true").then_some(true),
+                                disabled: (values.str("disabled") == "true").then_some(true),
+                                readonly: (values.str("readonly") == "true").then_some(true),
+                                commands: demo_commands(on),
+                                keymap: demo_keymap(on),
+                                nodes,
+                                registry: on.mention.then(registry),
+                                value: doc(),
+                                onchange: move |next| doc.set(next),
+                            }
+                            for caption in captions(&values) {
+                                Text { size: "sm", "{caption}" }
+                            }
+                        }
                     }
                 },
             }

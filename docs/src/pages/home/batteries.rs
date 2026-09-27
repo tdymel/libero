@@ -74,8 +74,9 @@ fn Battery(title: &'static str, icon: Element, children: Element) -> Element {
                 .breakpoint(Size::Sm, sx().flex("1 1 calc(50% - 8px)")),
             Flex { direction: "column", gap: "md",
                 Flex { direction: "row", gap: "md", align: "center",
+                    // A contained variant insets the glyph; `standard` would fill the box (1345).
                     Icon {
-                        variant: "standard",
+                        variant: "tonal",
                         size: "lg",
                         radius: "md",
                         sx: sx()
