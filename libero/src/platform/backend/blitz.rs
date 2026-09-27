@@ -30,7 +30,7 @@ mod sticky;
 mod wheel;
 
 pub(super) use activate::focus_selectors;
-pub(super) use focus::{press_kept_focus, silent_focus};
+pub(super) use focus::{focus_lands_in, press_kept_focus, silent_focus};
 pub(super) use max_length::fit_pasted;
 pub(super) use placeholder::sync_soon as placeholder_drawn;
 pub(super) use resize::{on_content_change, on_resize};

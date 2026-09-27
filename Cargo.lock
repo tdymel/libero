@@ -2475,6 +2475,7 @@ version = "0.1.0"
 dependencies = [
  "dioxus",
  "dioxus-native",
+ "dioxus-ssr",
  "libero",
  "pictogram-icons-lucide",
  "pictogram-icons-simple",

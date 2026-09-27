@@ -1915,6 +1915,22 @@ pub(super) fn focused_attribute(attr: &str) -> Read<Option<String>> {
     })
 }
 
+/// Whether focus is inside an element matching `boundary`, read once the script answers.
+pub(super) fn focus_lands_in(boundary: &str) -> Read<bool> {
+    if !runs_scripts() {
+        return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
+    }
+    let read = eval_with(
+        json!(boundary),
+        "return !!document.activeElement?.closest(data);",
+    );
+    Box::pin(async move {
+        read.join::<bool>()
+            .await
+            .map_err(|_| PlatformError::Unsupported)
+    })
+}
+
 /// Keeps the focused element in the page under the returned token, for [`focus_kept`].
 pub(super) fn keep_focused() -> Option<u64> {
     if !runs_scripts() {

@@ -690,6 +690,19 @@ pub(crate) fn focus_entered_from(
     return None;
 }
 
+/// Off the web - see [`focus_lands_in`](crate::platform::focus_lands_in).
+pub(crate) fn focus_lands_in(boundary: &str) -> super::Read<bool> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::focus_lands_in(boundary);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return Box::pin(std::future::ready(Ok(blitz::focus_lands_in(boundary))));
+    #[cfg(target_arch = "wasm32")]
+    return {
+        let _ = boundary;
+        Box::pin(std::future::ready(Err(super::PlatformError::Unsupported)))
+    };
+}
+
 /// The web reads a press's target, Blitz hit-tests it - see
 /// [`focus_pressed`](crate::platform::focus_pressed).
 pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>) {

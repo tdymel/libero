@@ -150,14 +150,14 @@ fn a_select_pick_stays_in_budget() {
         pointer::click(page, "[role=combobox]").await.unwrap();
         wait::for_visible(page, "[role=option]").await.unwrap();
         let opened = settled(page, "opening the select").await;
-        // The popup's second pass is the popover placing the measured box.
+        // Popup passes: mount, the Min width landing, then placing at that width (5c038ff5c, combobox audit C5).
         assert_within(
             &opened,
             &[
                 ("Select", 1),
                 ("SelectCore", 1),
                 ("ComboboxCore", 1),
-                ("ComboboxPopup", 2),
+                ("ComboboxPopup", 3),
                 ("ComboboxDropdown", 1),
                 ("ComboboxRow", 5),
                 ("ComboboxOption", 5),
@@ -165,8 +165,8 @@ fn a_select_pick_stays_in_budget() {
                 ("ScrollAreaContent", 1),
                 // The drawn bar (1010): mount, the measure, and its re-read.
                 ("ScrollAreaBars", 3),
-                ("Fragment", 2),
-                ("PortalOutlet", 2),
+                ("Fragment", 3),
+                ("PortalOutlet", 3),
                 ("StyleOutlet", 1),
             ],
             "opening a select of five",

@@ -267,9 +267,7 @@ e2e::scenario!(
     escape_stays_put_once_focus_left_the_bar,
     "/toolbar-editor",
     leaving_the_bar_forgets_the_editor,
-    native: skip("1293: only the web reads a focusout's relatedTarget"),
-    android: skip("1293: only the web reads a focusout's relatedTarget"),
-    desktop: skip("1293: only the web reads a focusout's relatedTarget")
+    android: skip("1302: the WebView path passes on desktop, not run on Android yet")
 );
 e2e::scenario!(
     escape_still_hands_back_after_a_dialog_of_the_bar,

@@ -13,6 +13,11 @@ and `ActionIcon` size it, or set `width` and `height`. It draws in
 `currentColor`, so it takes the text color. Your attributes win over the
 glyph's own.
 
+Not every glyph is `currentColor`: the color variants of
+`pictogram-icons-lobe` and some phosphor glyphs hard-code their fills, so they
+ignore the text color and dark mode. Lobe's gradient glyphs carry fixed
+ids: two copies on one page share them.
+
 `SvgData` is pictogram's `Svg` type, so every icon of a pictogram icon crate
 passes straight in: `pictogram_icons_lucide::house::outlined`. For your own
 glyph, `SvgData::new(include_str!("logo.svg"))` splits the file at compile time.

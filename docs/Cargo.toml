@@ -39,6 +39,10 @@ dioxus-native = { git = "https://github.com/DioxusLabs/dioxus", optional = true,
     "woff",
 ] }
 
+# Render-to-string, for the tests of shared docs components; libero's dioxus rev.
+[dev-dependencies]
+dioxus-ssr = { git = "https://github.com/DioxusLabs/dioxus" }
+
 [features]
 # Render with Blitz (dioxus-native) in a winit window instead of the browser.
 # Selected by `just start-native`; `dx` needs the matching `--renderer native`.

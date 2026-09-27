@@ -2,11 +2,16 @@ use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use crate::utils::warn;
 
-/// Whether a spread `aria-label` or `aria-labelledby` names the element; `None` does not.
+/// Whether a spread `aria-label` or `aria-labelledby` names the element; `None` and a
+/// blank text do not (accname ignores an empty `aria-label`).
 pub(crate) fn names_itself(attributes: &[Attribute]) -> bool {
     attributes.iter().any(|attribute| {
         matches!(attribute.name, "aria-label" | "aria-labelledby")
-            && !matches!(attribute.value, AttributeValue::None)
+            && match &attribute.value {
+                AttributeValue::None => false,
+                AttributeValue::Text(text) => !text.trim().is_empty(),
+                _ => true,
+            }
     })
 }
 
@@ -51,6 +56,17 @@ mod tests {
         ]));
         let unset = Attribute::new("aria-label", AttributeValue::None, None, false);
         assert!(!names_itself(&[unset]));
+    }
+
+    #[test]
+    fn a_blank_label_does_not_name_an_element() {
+        for name in ["aria-label", "aria-labelledby"] {
+            for blank in ["", "  "] {
+                let attribute =
+                    Attribute::new(name, AttributeValue::Text(blank.into()), None, false);
+                assert!(!names_itself(&[attribute]), "{name}={blank:?}");
+            }
+        }
     }
 
     #[test]

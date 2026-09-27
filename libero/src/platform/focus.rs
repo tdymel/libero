@@ -77,3 +77,9 @@ pub(crate) fn focus_entered_from(
 ) -> Option<Option<Box<dyn ElementApi>>> {
     backend::focus_entered_from(event, boundary)
 }
+
+/// After a `focusout`, whether focus landed inside an element matching `boundary`:
+/// the stand-in for `relatedTarget` off the web. `Unsupported` on the web.
+pub(crate) fn focus_lands_in(boundary: &str) -> super::Read<bool> {
+    backend::focus_lands_in(boundary)
+}

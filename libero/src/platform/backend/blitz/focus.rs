@@ -258,6 +258,21 @@ impl SilentFocusApi for BlitzSilentFocus {
     }
 }
 
+/// Blitz fires `focusout` once focus has moved, so the focused node is the answer.
+pub(in crate::platform::backend) fn focus_lands_in(boundary: &str) -> bool {
+    let Some(anchor) = anchor() else {
+        return false;
+    };
+    let Some(doc) = anchor.try_doc() else {
+        return false;
+    };
+    let (Some(now), Ok(hosts)) = (doc.get_focussed_node_id(), doc.query_selector_all(boundary))
+    else {
+        return false;
+    };
+    ancestors(&doc, now).any(|id| hosts.contains(&id))
+}
+
 struct Subscription(Option<u64>, Option<Weak<Doc>>);
 
 impl SilentFocusSubscription for Subscription {}

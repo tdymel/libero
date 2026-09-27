@@ -96,6 +96,15 @@ mod tests {
     }
 
     #[test]
+    fn an_empty_spread_aria_label_stays_decorative() {
+        let html = dioxus_ssr::render_element(rsx! {
+            Pictogram { icon: STROKED, "aria-label": "" }
+        });
+        assert!(html.contains(r#"aria-hidden="true""#), "{html}");
+        assert!(!html.contains("role="), "{html}");
+    }
+
+    #[test]
     fn aria_label_names_it_an_image() {
         let html = dioxus_ssr::render_element(rsx! {
             Pictogram { icon: STROKED, aria_label: "Home" }

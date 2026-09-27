@@ -14,7 +14,8 @@ use crate::{
     hooks::{ElementHandle, Hotkey, use_element, use_focus_return, use_hotkeys},
     platform::{
         ElementApi, FocusStep, arrow_target, caret_edges, focus_among, focus_entered_from,
-        focus_selector, focused_attribute, key_taken, logical_key, silent_focus, typing_target,
+        focus_lands_in, focus_selector, focused_attribute, key_taken, logical_key, silent_focus,
+        typing_target,
     },
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, Size, SizeCss},
@@ -235,9 +236,20 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
     let onfocusin = move |_: FocusEvent| follow_focus(&bar, scope);
     // Focus leaving for the page, not for a menu the bar opened: a later Escape stays the page's.
     let onfocusout = move |event: FocusEvent| {
-        if *arrived.peek() && focus_entered_from(&event, STAYS_ARRIVED).is_some() {
-            arrived.set(false);
+        if !*arrived.peek() {
+            return;
         }
+        if focus_entered_from(&event, STAYS_ARRIVED).is_some() {
+            arrived.set(false);
+            return;
+        }
+        // Off the web there is no `relatedTarget`: ask where focus landed.
+        let landed = focus_lands_in(STAYS_ARRIVED);
+        spawn(async move {
+            if let Ok(false) = landed.await {
+                arrived.set(false);
+            }
+        });
     };
     // Blitz moves focus by script or Tab with no `focusin`; fixed per build, so the hook order holds.
     if silent_focus().is_some() {
