@@ -1888,6 +1888,23 @@ pub(super) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
     Ok(())
 }
 
+/// Queued, like [`focus_selector`]. A match that ignores `focus()` (hidden) is skipped.
+pub(super) fn focus_first_of(selectors: &[String]) -> Result<(), PlatformError> {
+    if !runs_scripts() {
+        return Err(PlatformError::Unsupported);
+    }
+    eval_with(
+        json!(selectors),
+        "for (const selector of data) {
+            for (const el of document.querySelectorAll(selector)) {
+                el.focus();
+                if (document.activeElement === el) return;
+            }
+        }",
+    );
+    Ok(())
+}
+
 /// Queued, read where it runs: the page's focus, not a mirror that may lag.
 pub(super) fn focus_among(
     attr: &str,

@@ -1,3 +1,4 @@
+use dioxus::core::AttributeValue;
 use dioxus::prelude::*;
 
 use super::visually_hidden::VISUALLY_HIDDEN_FIXED_SX;
@@ -7,13 +8,25 @@ use crate::{
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_local_state},
-    platform::{ElementApi, key_taken},
+    platform::{ElementApi, OBSERVE_ATTR, focus_first_of, key_taken},
     sx::{StaticSx, sx},
 };
 
 static FOCUS_TRAP_SX: StaticSx = StaticSx::new(|| sx().display("contents"));
 
-fn focus_first(root: &ElementHandle) {
+fn focus_first(root: &ElementHandle, tag: Option<&str>) {
+    // A WebView queries nothing: the page focuses inside the root's tag, in the same order.
+    if root.query_selector_all(FOCUSABLE_SELECTOR).is_err()
+        && let Some(tag) = tag
+    {
+        let within = format!("[{OBSERVE_ATTR}='{tag}']");
+        let _ = focus_first_of(&[
+            format!("{within} [data-autofocus]"),
+            format!("{within} :is({FOCUSABLE_SELECTOR})"),
+            format!("{within} [aria-modal=\"true\"]"),
+        ]);
+        return;
+    }
     if let Ok(target) = root.query_selector("[data-autofocus]") {
         let _ = target.focus();
         return;
@@ -138,6 +151,21 @@ base_props! {
 #[component]
 pub fn FocusTrap(props: FocusTrapProps) -> Element {
     let root = use_element();
+    // A tag the caller already spread wins: one element carries one (1255).
+    let theirs = props
+        .attributes
+        .iter()
+        .find_map(|attribute| match &attribute.value {
+            AttributeValue::Text(tag) if attribute.name == OBSERVE_ATTR => Some(tag.clone()),
+            _ => None,
+        });
+    let tag = theirs
+        .clone()
+        .or_else(|| root.tag().map(|tag| tag.to_string()));
+    let mut attributes = props.attributes;
+    if theirs.is_none() {
+        attributes.extend(root.attributes());
+    }
 
     use_box()
         .framework_sx(&FOCUS_TRAP_SX)
@@ -148,7 +176,7 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         // Not `.element(&root)`: mount and first focus share the one `onmounted`.
         .event("onmounted", move |event: Event<MountedData>| {
             (root.mount())(event);
-            focus_first(&root);
+            focus_first(&root, tag.as_deref());
         })
         .event("onkeydown", move |event: Event<KeyboardData>| {
             // A nested trap below already moved focus for this press.
@@ -159,7 +187,7 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
                 event.prevent_default();
             }
         })
-        .render(HtmlTag::Div, props.attributes, props.children)
+        .render(HtmlTag::Div, attributes, props.children)
 }
 
 /// A hidden placeholder inside a [`FocusTrap`] that takes initial focus, then leaves the tab order.

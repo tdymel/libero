@@ -67,10 +67,12 @@ pub(crate) use direction::{
     apply_direction, clear_root_direction, forget_direction, set_root_direction, store_direction,
     stored_direction,
 };
+pub(crate) use document::root_padding_right;
 pub use document::{DocumentApi, document};
 pub(crate) use element::{
-    ContentSubscription, FocusStep, SCROLL_MARGIN_VAR, focus_among, focus_kept, focus_selector,
-    focused_attribute, is_rtl, keep_focused, on_content_change, on_form_reset, set_value_by_id,
+    ContentSubscription, FocusStep, SCROLL_MARGIN_VAR, focus_among, focus_first_of, focus_kept,
+    focus_selector, focused_attribute, is_rtl, keep_focused, on_content_change, on_form_reset,
+    set_value_by_id,
 };
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;

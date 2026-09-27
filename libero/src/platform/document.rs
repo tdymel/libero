@@ -28,3 +28,8 @@ pub trait DocumentApi {
 pub fn document() -> Option<&'static dyn DocumentApi> {
     backend::document()
 }
+
+/// `:root`'s computed `padding-right` in px, where the renderer can tell (the web).
+pub(crate) fn root_padding_right() -> Option<f64> {
+    backend::root_padding_right()
+}

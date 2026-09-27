@@ -266,8 +266,7 @@ e2e::scenario!(
 e2e::scenario!(
     escape_stays_put_once_focus_left_the_bar,
     "/toolbar-editor",
-    leaving_the_bar_forgets_the_editor,
-    android: skip("1302: the WebView path passes on desktop, not run on Android yet")
+    leaving_the_bar_forgets_the_editor
 );
 e2e::scenario!(
     escape_still_hands_back_after_a_dialog_of_the_bar,

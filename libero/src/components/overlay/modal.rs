@@ -12,20 +12,21 @@ use crate::{
     },
     context::ModalContext,
     hooks::{escape_closes, use_back, use_dismiss_layer, use_element},
-    platform::{ElementApi, KeyChord, document, key_taken, keyboard},
+    platform::{ElementApi, KeyChord, document, key_taken, keyboard, root_padding_right},
     sx::{StaticSx, sx},
     theme::CssVar,
 };
 
 const MODAL_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-modal-z-index");
 
-/// The scroll lock. A page that had a classic scrollbar keeps its gutter, so
-/// the page behind does not shift when the scrollbar goes (todo 1305).
-fn scroll_lock_css(gutter: f64) -> &'static str {
+/// The scroll lock. A classic scrollbar's width is added to `:root`'s own `padding`, so the page
+/// does not shift (todo 1305); not `scrollbar-gutter`, which no backdrop covers (todo 1316).
+fn scroll_lock_css(gutter: f64, padding: f64) -> String {
     if gutter > 0.0 {
-        "html { scrollbar-gutter: stable; } body { overflow: hidden; }"
+        let padding = padding + gutter;
+        format!("html {{ padding-right: {padding}px !important; }} body {{ overflow: hidden; }}")
     } else {
-        "body { overflow: hidden; }"
+        "body { overflow: hidden; }".to_string()
     }
 }
 
@@ -135,20 +136,21 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
     });
 
     // Measured before the lock mounts: the scrollbar is gone after.
-    let mut gutter = use_signal(|| None::<f64>);
+    let mut lock = use_signal(|| None::<(f64, f64)>);
     use_effect(move || {
-        if !root.is_mounted() || gutter.peek().is_some() {
+        if !root.is_mounted() || lock.peek().is_some() {
             return;
         }
         let size = root.dimensions();
         let viewport = document().map(|document| document.viewport());
+        let padding = root_padding_right().unwrap_or(0.0);
         spawn(async move {
             let width = size.await.ok().map(|size| size.width);
             let screen = match viewport {
                 Some(read) => read.await.ok().map(|viewport| viewport.width),
                 None => None,
             };
-            gutter.set(Some(scrollbar_gutter(screen, width)));
+            lock.set(Some((scrollbar_gutter(screen, width), padding)));
         });
     });
 
@@ -182,8 +184,8 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
             rsx! {
                 // The scroll lock, mounted with the modal. Not `body:has(..)`:
                 // `:has()` never matches natively.
-                if let Some(gutter) = gutter() {
-                    style { dangerous_inner_html: scroll_lock_css(gutter) }
+                if let Some((gutter, padding)) = lock() {
+                    style { dangerous_inner_html: scroll_lock_css(gutter, padding) }
                 }
                 Overlay { z_index: 0, onclick: on_backdrop_click }
                 FocusTrap { sx: &MODAL_CONTENT_SX, {props.children} }
@@ -198,7 +200,8 @@ mod tests {
     #[test]
     fn a_classic_scrollbar_keeps_its_gutter_under_the_lock() {
         assert_eq!(scrollbar_gutter(Some(1280.0), Some(1265.0)), 15.0);
-        assert!(scroll_lock_css(15.0).contains("scrollbar-gutter: stable"));
+        // On top of the page's own padding, which it must not replace.
+        assert!(scroll_lock_css(15.0, 8.0).contains("html { padding-right: 23px !important; }"));
     }
 
     #[test]
@@ -217,6 +220,6 @@ mod tests {
                 "{viewport:?} {root:?}"
             );
         }
-        assert_eq!(scroll_lock_css(0.0), "body { overflow: hidden; }");
+        assert_eq!(scroll_lock_css(0.0, 8.0), "body { overflow: hidden; }");
     }
 }

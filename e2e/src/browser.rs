@@ -119,6 +119,8 @@ fn chrome_profile() -> std::path::PathBuf {
 struct Harness {
     runtime: Runtime,
     browser: Browser,
+    /// A second browser with classic scrollbars, launched on first use.
+    classic: tokio::sync::OnceCell<Browser>,
     /// Caps concurrent navigations: the first runs alone to fill the cold HTTP cache,
     /// then [`NAVIGATIONS`] at once (todo 823).
     navigations: tokio::sync::Semaphore,
@@ -150,34 +152,46 @@ static HARNESS: OnceLock<Harness> = OnceLock::new();
 /// closed: closing a page that set one resets every override, another test's too.
 pub static PERMISSIONS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
+/// Launches Chromium. `classic_scrollbars` drops `--hide-scrollbars`, which headless
+/// mode adds and no page can undo (todo 1317; CDP's `setScrollbarsHidden` broke permissions).
+async fn launch(classic_scrollbars: bool) -> Browser {
+    let mut config = BrowserConfig::builder()
+        // Headless, and with a window big enough that the desktop
+        // viewport override is never clamped by the outer window.
+        .window_size(1280, 900)
+        // Own profile per run: the fixed default hits "SingletonLock: File exists"
+        // after one interrupted run, or with two runs at once.
+        .user_data_dir(chrome_profile())
+        // Long enough for a cold wasm bundle.
+        .request_timeout(Duration::from_secs(120))
+        // Instant scrolls: a background page stalls smooth ones (todo 687).
+        .arg("disable-smooth-scrolling")
+        // A fake camera and microphone for `use_user_media`; the grant stays a CDP call.
+        .arg("use-fake-device-for-media-stream");
+    if classic_scrollbars {
+        // Inside the run's profile, so the runner cleans it up too.
+        config = config
+            .with_head()
+            .arg("headless")
+            .arg("mute-audio")
+            .user_data_dir(chrome_profile().join("classic-scrollbars"));
+    }
+    let config = config.build().expect("browser config");
+    let (browser, mut handler) = Browser::launch(config).await.expect("launch chromium");
+    // The handler stream drives every CDP message. Nothing works if it
+    // is not polled, and the failure looks like every call hanging.
+    tokio::spawn(async move { while handler.next().await.is_some() {} });
+    browser
+}
+
 fn harness() -> &'static Harness {
     HARNESS.get_or_init(|| {
         let runtime = Runtime::new().expect("tokio runtime");
-        let browser = runtime.block_on(async {
-            let config = BrowserConfig::builder()
-                // Headless, and with a window big enough that the desktop
-                // viewport override is never clamped by the outer window.
-                .window_size(1280, 900)
-                // Own profile per run: the fixed default hits "SingletonLock: File exists"
-                // after one interrupted run, or with two runs at once.
-                .user_data_dir(chrome_profile())
-                // Long enough for a cold wasm bundle.
-                .request_timeout(Duration::from_secs(120))
-                // Instant scrolls: a background page stalls smooth ones (todo 687).
-                .arg("disable-smooth-scrolling")
-                // A fake camera and microphone for `use_user_media`; the grant stays a CDP call.
-                .arg("use-fake-device-for-media-stream")
-                .build()
-                .expect("browser config");
-            let (browser, mut handler) = Browser::launch(config).await.expect("launch chromium");
-            // The handler stream drives every CDP message. Nothing works if it
-            // is not polled, and the failure looks like every call hanging.
-            tokio::spawn(async move { while handler.next().await.is_some() {} });
-            browser
-        });
+        let browser = runtime.block_on(launch(false));
         Harness {
             runtime,
             browser,
+            classic: tokio::sync::OnceCell::new(),
             navigations: tokio::sync::Semaphore::new(1),
             primed: std::sync::Once::new(),
         }
@@ -234,6 +248,29 @@ impl Fixture {
         scheme: Scheme,
         ready: &str,
     ) -> Result<Self> {
+        Self::open_on(&harness().browser, route, viewport, scheme, ready).await
+    }
+
+    /// [`Fixture::open`] with classic scrollbars, which every other page hides (todo 1317).
+    pub async fn open_with_scrollbars(route: &str, viewport: Viewport) -> Result<Self> {
+        let browser = harness().classic.get_or_init(|| launch(true)).await;
+        Self::open_on(
+            browser,
+            route,
+            viewport,
+            Scheme::Light,
+            "[data-fixture-ready]",
+        )
+        .await
+    }
+
+    async fn open_on(
+        browser: &Browser,
+        route: &str,
+        viewport: Viewport,
+        scheme: Scheme,
+        ready: &str,
+    ) -> Result<Self> {
         // First: panicking before Chrome launches keeps a bare `cargo test` from leaking a browser.
         let url = format!("{}{}", crate::base_url(), route);
 
@@ -261,8 +298,7 @@ impl Fixture {
 
         // Background plus focus emulation: foreground pages timed out on navigation
         // 1-2 times a run, background alone was 5x slower (measured 2026-09-19).
-        let page = harness()
-            .browser
+        let page = browser
             .new_page(
                 chromiumoxide::cdp::browser_protocol::target::CreateTargetParams::builder()
                     .url("about:blank")

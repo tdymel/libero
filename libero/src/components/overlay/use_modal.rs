@@ -248,7 +248,8 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
         // Skipped when already open: it would remember a control inside (todo 37).
         let opening = self.args.peek().is_none();
         if opening {
-            focus_return.remember_active();
+            // A WebView keeps it page-side (959).
+            focus_return.remember_focused();
         }
 
         let mut slot = self.args;

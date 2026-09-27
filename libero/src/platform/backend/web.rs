@@ -255,6 +255,17 @@ pub(super) fn document() -> Option<&'static dyn DocumentApi> {
     Some(&DOCUMENT)
 }
 
+pub(super) fn root_padding_right() -> Option<f64> {
+    let window = web_sys::window()?;
+    let root = window.document()?.document_element()?;
+    let value = window
+        .get_computed_style(&root)
+        .ok()??
+        .get_property_value("padding-right")
+        .ok()?;
+    value.strip_suffix("px")?.trim().parse().ok()
+}
+
 pub(super) fn a11y_media() -> Option<&'static dyn A11yMediaApi> {
     Some(&A11Y_MEDIA)
 }

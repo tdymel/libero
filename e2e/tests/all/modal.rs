@@ -105,6 +105,25 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView")
 );
 
+/// The trap focuses inside on open, so the first Escape is the dialog's, and focus
+/// goes back to the trigger (959, 1318).
+async fn modal_takes_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d, TRIGGER).await?;
+    eventually_focused(d, INSIDE, "opening the dialog").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "the first Escape to close the dialog", async |d| {
+        Ok(!d.exists(DIALOG).await?)
+    })
+    .await?;
+    eventually_focused(d, TRIGGER, "closing the dialog").await
+}
+
+e2e::scenario!(
+    a_modal_takes_focus_and_the_first_escape_closes_it,
+    "/modal",
+    modal_takes_focus
+);
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("modal", "/modal")
@@ -486,21 +505,33 @@ fn escape_closes_after_the_focused_control_is_removed() {
 #[test]
 fn the_scroll_lock_keeps_the_scrollbar_gutter() {
     block_on(async {
-        let fixture = Fixture::open("/modal/scrollbar", Viewport::Desktop)
+        const GUTTER: &str = "innerWidth - document.documentElement.clientWidth";
+        let hidden = Fixture::open("/modal/scrollbar", Viewport::Desktop)
             .await
             .unwrap();
-        let page = &fixture.page;
-        const WIDTH: &str = "document.querySelector('#ruler').getBoundingClientRect().width";
-        let width = async || -> f64 { page.evaluate(WIDTH).await.unwrap().into_value().unwrap() };
-        let before = width().await;
-        // The harness hides scrollbars (0 here): then the lock must add no gutter
-        // either. A headed Chromium measured the classic case, 17px.
-        let gutter: f64 = page
-            .evaluate("innerWidth - document.documentElement.clientWidth")
+        let gutter: f64 = hidden
+            .page
+            .evaluate(GUTTER)
             .await
             .unwrap()
             .into_value()
             .unwrap();
+        assert_eq!(gutter, 0.0, "the harness shows scrollbars by default");
+        hidden.close().await.unwrap();
+
+        let fixture = Fixture::open_with_scrollbars("/modal/scrollbar", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        // The page's own padding, which the lock adds to rather than replaces.
+        page.evaluate("document.documentElement.style.paddingRight = '8px'")
+            .await
+            .unwrap();
+        const WIDTH: &str = "document.querySelector('#ruler').getBoundingClientRect().width";
+        let width = async || -> f64 { page.evaluate(WIDTH).await.unwrap().into_value().unwrap() };
+        let before = width().await;
+        let gutter: f64 = page.evaluate(GUTTER).await.unwrap().into_value().unwrap();
+        assert!(gutter > 0.0, "no classic scrollbar to test with");
 
         keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
@@ -513,16 +544,14 @@ fn the_scroll_lock_keeps_the_scrollbar_gutter() {
         .unwrap();
         let open = width().await;
         assert_eq!(open, before, "the page shifted on open (gutter {gutter}px)");
-        let reserved: String = page
-            .evaluate("getComputedStyle(document.documentElement).scrollbarGutter")
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        let expected = if gutter > 0.0 { "stable" } else { "auto" };
-        assert_eq!(
-            reserved, expected,
-            "scrollbar-gutter with a {gutter}px scrollbar"
+        // Todo 1316: the backdrop dims the scrollbar's old strip too. Compared by
+        // paint: hit testing skips a `scrollbar-gutter`.
+        let (w, _) = Viewport::Desktop.size();
+        let strip = pixel(page, w as f64 - 2.0, 600.0).await;
+        let backdrop = pixel(page, w as f64 - gutter - 20.0, 600.0).await;
+        assert!(
+            strip == backdrop,
+            "the {gutter}px scrollbar strip is not dimmed by the backdrop"
         );
 
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
@@ -534,9 +563,35 @@ fn the_scroll_lock_keeps_the_scrollbar_gutter() {
         .await
         .unwrap();
         assert_eq!(width().await, before, "the page shifted on close");
+        let padding: String = page
+            .evaluate("document.documentElement.style.paddingRight")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(padding, "8px", "the page's own padding after close");
         fixture.console.assert_clean("the scrollbar modal").unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+/// One CSS px of the viewport as PNG bytes: equal bytes are equal pixels.
+async fn pixel(page: &chromiumoxide::Page, x: f64, y: f64) -> Vec<u8> {
+    use chromiumoxide::cdp::browser_protocol::page::{
+        CaptureScreenshotFormat, CaptureScreenshotParams, Viewport as Clip,
+    };
+    let clip = Clip {
+        x,
+        y,
+        width: 1.0,
+        height: 1.0,
+        scale: 1.0,
+    };
+    let params = CaptureScreenshotParams::builder()
+        .format(CaptureScreenshotFormat::Png)
+        .clip(clip)
+        .build();
+    page.screenshot(params).await.unwrap()
 }
 
 /// Todo 1306: the caller of `use_modal` unmounting while open settles the

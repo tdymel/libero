@@ -37,6 +37,12 @@ pub(crate) fn focus_selector(selector: &str) -> Result<(), PlatformError> {
     backend::focus_selector(selector)
 }
 
+/// Focuses the first match of the first of `selectors` whose match takes focus, for a
+/// WebView, where no handle can query (959). `Unsupported` elsewhere.
+pub(crate) fn focus_first_of(selectors: &[String]) -> Result<(), PlatformError> {
+    backend::focus_first_of(selectors)
+}
+
 /// Where [`focus_among`] moves focus.
 #[derive(Clone, Copy)]
 #[cfg_attr(any(target_arch = "wasm32", feature = "native"), allow(dead_code))]

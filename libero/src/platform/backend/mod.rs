@@ -341,6 +341,14 @@ pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     return webview::document();
 }
 
+/// Only the web reads it - see [`root_padding_right`](crate::platform::root_padding_right).
+pub(crate) fn root_padding_right() -> Option<f64> {
+    #[cfg(target_arch = "wasm32")]
+    return web::root_padding_right();
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
+}
+
 /// See [`color_scheme`](crate::platform::color_scheme).
 pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     #[cfg(target_arch = "wasm32")]
@@ -548,6 +556,17 @@ pub(crate) fn focus_selector(selector: &str) -> Result<(), super::PlatformError>
     #[cfg(any(target_arch = "wasm32", feature = "native"))]
     return {
         let _ = selector;
+        Err(super::PlatformError::Unsupported)
+    };
+}
+
+/// Only a WebView - see [`focus_first_of`](crate::platform::focus_first_of).
+pub(crate) fn focus_first_of(selectors: &[String]) -> Result<(), super::PlatformError> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::focus_first_of(selectors);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    return {
+        let _ = selectors;
         Err(super::PlatformError::Unsupported)
     };
 }

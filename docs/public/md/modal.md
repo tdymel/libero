@@ -217,5 +217,7 @@ modal.
 ## Data attributes
 
 The modal's root carries `data-lsx-scroll-lock`. The page behind it does not
-scroll while the modal is open, and a classic scrollbar keeps its gutter, so
-the page does not shift.
+scroll while the modal is open. A classic scrollbar's width is added to the
+`html` element's own `padding-right`, so the page does not shift and the backdrop
+covers the full width. Your own `position: fixed` element with `right: 0` still
+shifts by that width.
