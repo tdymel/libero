@@ -316,3 +316,26 @@ fn the_registry_refuses_builtin_names_and_builds_custom_nodes() {
             .is_none()
     );
 }
+
+#[test]
+fn enter_after_a_typed_fence_starts_a_code_block_in_its_language() {
+    let typed = r"\`\`\`rust|";
+    let mut editor = editor(typed);
+    assert!(editor.run(&Commands::builtin(), Builtin::SplitBlock));
+    assert_eq!(show(editor.state()), "```rust\n|\n```");
+    // A pasted fence line stays text: only the command converts.
+    let mut state = state(typed);
+    state.split_block();
+    assert_eq!(show(&state), "\\`\\`\\`rust\n\n|");
+}
+
+#[test]
+fn mod_enter_leaves_a_code_block_and_passes_elsewhere() {
+    let (keymap, commands) = (Keymap::default(), Commands::builtin());
+    let mut code = editor("```\na|\n```");
+    assert!(code.handle_key(&keymap, &commands, &press("Mod+Enter"), false));
+    assert_eq!(show(code.state()), "```\na\n```\n\n|");
+    // Unhandled, so a caller's own Mod+Enter (send) still gets the key.
+    let mut text = editor("a|");
+    assert!(!text.handle_key(&keymap, &commands, &press("Mod+Enter"), false));
+}

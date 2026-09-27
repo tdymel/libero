@@ -17,7 +17,23 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/code", || rsx! { CodePage {} }),
     ("/rich-text-editor/sample", || rsx! { SamplePage {} }),
     ("/rich-text-editor/builtins", || rsx! { BuiltinsPage {} }),
+    ("/rich-text-editor/trailing", || rsx! { TrailingPage {} }),
 ];
+
+/// A doc ending in a code block, for leaving it and the language menu.
+#[component]
+fn TrailingPage() -> Element {
+    let mut doc = use_signal(|| Doc::from_markdown("intro\n\n```rust\nlet x = 1;\n```\n"));
+
+    rsx! {
+        RichTextEditor {
+            label: "Snippet",
+            value: doc(),
+            onchange: move |next| doc.set(next),
+        }
+        pre { id: "out", {doc.read().to_markdown()} }
+    }
+}
 
 const SAMPLE: &str = "# Release notes\n\nSome **bold**, *italic* and `code` with a [link](https://example.com).\n\n- First item\n- Second item\n- Third item\n\n1. One\n2. Two\n\n> A quote\n\n```\nlet x = 1;\n```\n\nThe end.\n";
 

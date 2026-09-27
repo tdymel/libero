@@ -45,6 +45,12 @@ pub struct RichTextEditorLabels {
     pub outdent: &'static str,
     pub hard_break: &'static str,
     pub rule: &'static str,
+    /// Leaves a code block for a new paragraph after it.
+    pub exit_block: &'static str,
+    /// The code block language picker, shown while the caret is in a code block.
+    pub language: &'static str,
+    /// The picker's choice for no language.
+    pub plain_text: &'static str,
     /// Announced when a toggle turns on; `{name}` is the toggle's label.
     pub on: &'static str,
     /// Announced when a toggle turns off.
@@ -83,6 +89,9 @@ impl RichTextEditorLabels {
         outdent: "Outdent",
         hard_break: "Line break",
         rule: "Divider",
+        exit_block: "Leave code block",
+        language: "Language",
+        plain_text: "Plain text",
         on: "{name} on",
         off: "{name} off",
     };
@@ -118,6 +127,9 @@ impl RichTextEditorLabels {
         outdent: "Ausrücken",
         hard_break: "Zeilenumbruch",
         rule: "Trennlinie",
+        exit_block: "Codeblock verlassen",
+        language: "Sprache",
+        plain_text: "Klartext",
         on: "{name} an",
         off: "{name} aus",
     };

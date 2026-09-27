@@ -10,7 +10,7 @@ A rich text field over a `Doc`: paragraphs, headings, lists, quotes, code
 blocks and marks, with undo, the usual shortcuts and Markdown typing
 shortcuts. `Doc::to_markdown` and `Doc::from_markdown` convert it; the types
 live in `libero::components::rich_text`. A code block shows its source with
-fences while the caret is in it.
+fences while the caret is in it; the toolbar then shows a language menu.
 
 ## Usage
 
@@ -36,8 +36,9 @@ fn Demo() -> Element {
 
 Typing `# ` at the start of a paragraph makes a heading (`## ` to `###### `
 for the smaller ones), `- ` or `* ` a bulleted list, `1. ` a numbered list,
-`> ` a quote, `---` and a space a rule, and three backticks and a space a code
-block. Closing `` `code` ``, `**bold**`, `*italic*` or `~~strike~~` turns the
+`> ` a quote, `---` and a space a rule, and three backticks and a space (or
+Enter) a code block; a name after the backticks, as in ```` ```rust ````, sets
+its language. Closing `` `code` ``, `**bold**`, `*italic*` or `~~strike~~` turns the
 span into that mark. Code blocks take none of these.
 
 Your own toolbar: `use_rich_text_editor()` gives a handle; pass it as
@@ -122,6 +123,8 @@ shows Ctrl.
 | `Ctrl+Shift+7` | Numbered list. |
 | `Ctrl+Shift+B` | Quote. |
 | `Ctrl+Shift+Enter` | Horizontal rule. |
+| `Ctrl+Enter` | In a code block: leaves it for a new paragraph after it. Elsewhere the key passes on, so your own `Ctrl+Enter` (send) still runs. |
+| `ArrowDown` | On the last line of a code block that ends the document: leaves it for a new paragraph. Clicking below the last block does the same. |
 | `Tab` or `Shift+Tab` | In a list item: nests it under the item before, or moves it out. Elsewhere Tab moves focus on as usual. |
 | `Shift+Enter` | Line break inside the block. |
 | `Ctrl+Z` | Undo. |
@@ -139,6 +142,8 @@ shows Ctrl.
   localization's `rich_text_editor` words. Each mark and block button reports
   `aria-pressed`.
 - The toolbar keeps focus and the selection in the text when clicked.
+- Each toolbar button shows its name and its chord in a tooltip on hover and
+  keyboard focus, and carries the chord as `aria-keyshortcuts`.
 - In a narrow column the toolbar stays one row: the less used buttons move
   into a "More formatting" menu as `menuitemcheckbox` items, so the arrow keys
   only reach what is shown. Bold, italic and the text type menu always stay.
@@ -147,7 +152,7 @@ shows Ctrl.
 - The link dialog focuses its labelled URL field; a refused scheme shows as
   that field's error. Closing it puts the caret back in the text.
 - The text type menu is a menu button whose name includes the current type,
-  with `menuitemradio` items.
+  with `menuitemradio` items. So is the language menu of a code block.
 - Every edit goes through the document model, so undo, the `onchange` value
   and the screen stay in step. Input methods (IME) compose natively and are
   taken in when the composition ends.

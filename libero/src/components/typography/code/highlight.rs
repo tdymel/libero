@@ -42,6 +42,19 @@ impl Language {
         }
     }
 
+    /// The compiled-in languages after plain text: label and the name a fence uses.
+    pub(crate) fn catalog() -> impl Iterator<Item = (&'static str, &'static str)> {
+        LANGUAGE_CATALOG
+            .iter()
+            .skip(1)
+            .map(|entry| (entry.label, entry.aliases[0]))
+    }
+
+    /// The label of a fence's language name, `None` when none is compiled in.
+    pub(crate) fn label_of(value: &str) -> Option<&'static str> {
+        Self::parse(value).map(|language| language.0.label)
+    }
+
     fn grammar(self) -> Grammar {
         (self.0.grammar)()
     }

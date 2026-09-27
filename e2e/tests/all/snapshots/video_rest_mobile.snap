@@ -22,3 +22,6 @@ group "Plain"
     button "Mute"
     button "Fullscreen"
   status [atomic] [live=polite]
+tooltip "Play K"
+  StaticText "Play"
+  StaticText "K"

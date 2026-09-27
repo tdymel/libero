@@ -324,6 +324,28 @@ pub(crate) fn chord_keys(
     Some(keys)
 }
 
+/// `chord` as `aria-keyshortcuts` writes it (`Control+Shift+B`); `None` for a chord
+/// [`use_hotkeys`] would not bind.
+pub(crate) fn aria_keyshortcuts(chord: &str, apple: bool) -> Option<String> {
+    let chord = Chord::parse(chord, apple)?;
+    let mut keys: Vec<String> = [
+        (chord.ctrl, "Control"),
+        (chord.alt, "Alt"),
+        (chord.shift, "Shift"),
+        (chord.meta, "Meta"),
+    ]
+    .into_iter()
+    .filter(|(held, _)| *held)
+    .map(|(_, name)| name.to_string())
+    .collect();
+    keys.push(match chord.key {
+        Key::Character(text) if text == " " => "Space".to_string(),
+        Key::Character(text) => text.to_uppercase(),
+        other => other.to_string(),
+    });
+    Some(keys.join("+"))
+}
+
 fn held_modifiers(chord: &Chord) -> Modifiers {
     let mut modifiers = Modifiers::empty();
     modifiers.set(Modifiers::CONTROL, chord.ctrl);

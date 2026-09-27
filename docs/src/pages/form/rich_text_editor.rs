@@ -88,6 +88,8 @@ pub fn RichTextEditorPage() -> Element {
                 .key(["Ctrl+Shift+7"], "Numbered list.")
                 .key(["Ctrl+Shift+B"], "Quote.")
                 .key(["Ctrl+Shift+Enter"], "Horizontal rule.")
+                .key(["Ctrl+Enter"], "In a code block: leaves it for a new paragraph after it. Elsewhere the key passes on, so your own `Ctrl+Enter` (send) still runs.")
+                .key(["ArrowDown"], "On the last line of a code block that ends the document: leaves it for a new paragraph. Clicking below the last block does the same.")
                 .key(["Tab", "Shift+Tab"], "In a list item: nests it under the item before, or moves it out. Elsewhere Tab moves focus on as usual.")
                 .key(["Shift+Enter"], "Line break inside the block.")
                 .key(["Ctrl+Z"], "Undo.")
@@ -100,10 +102,11 @@ pub fn RichTextEditorPage() -> Element {
                     "The text is a `role=\"textbox\"` with `aria-multiline`, named by `label` and described by `description` and `helper`.",
                     "The toolbar is one tab stop with arrow-key movement, named by the localization's `rich_text_editor` words. Each mark and block button reports `aria-pressed`.",
                     "The toolbar keeps focus and the selection in the text when clicked.",
+                    "Each toolbar button shows its name and its chord in a tooltip on hover and keyboard focus, and carries the chord as `aria-keyshortcuts`.",
                     "In a narrow column the toolbar stays one row: the less used buttons move into a \"More formatting\" menu as `menuitemcheckbox` items, so the arrow keys only reach what is shown. Bold, italic and the text type menu always stay.",
                     "A shortcut that toggles a mark, list, quote or block type is announced through a polite live region (\"Bold on\", \"Heading 2\").",
                     "The link dialog focuses its labelled URL field; a refused scheme shows as that field's error. Closing it puts the caret back in the text.",
-                    "The text type menu is a menu button whose name includes the current type, with `menuitemradio` items.",
+                    "The text type menu is a menu button whose name includes the current type, with `menuitemradio` items. So is the language menu of a code block.",
                     "Every edit goes through the document model, so undo, the `onchange` value and the screen stay in step. Input methods (IME) compose natively and are taken in when the composition ends.",
                 ])
                 .must([

@@ -33,6 +33,11 @@ pub fn ActionIconPage() -> Element {
                 prop("aria_label", "String")
                     .default("required")
                     .doc("The button's accessible name."),
+                prop("tooltip", "bool")
+                    .default("false")
+                    .doc("Shows `aria_label` in a `Tooltip` on hover and keyboard focus. The text is the name itself, so a screen reader does not hear it twice."),
+                prop("shortcut", "String")
+                    .doc("The chord that runs the action, as `use_hotkeys` takes it (`\"mod+b\"`). Shown in the tooltip as keys named for the platform, and set as `aria-keyshortcuts`. Binding the key is up to you."),
                 prop("selected", "bool")
                     .doc("Makes it a toggle button. The selected look shows once `variant` or `color` is set. Leave it unset for a plain action."),
                 prop("disabled", "bool")
@@ -58,6 +63,7 @@ pub fn ActionIconPage() -> Element {
                 .handles([
                     "Below 24px (a length such as `\"20px\"`) the button still takes presses in a 24x24 box centred on it.",
                     "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
+                    "`tooltip` repeats the accessible name, and `shortcut` writes `aria-keyshortcuts` in the ARIA key names (`Control+B`).",
                 ])
                 .must([
                     "Name the button with `aria_label`: the icon gives a screen reader nothing to read.",

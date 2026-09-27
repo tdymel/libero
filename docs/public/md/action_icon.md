@@ -55,6 +55,8 @@ With both `icon` and `children` set, `icon` wins and a debug build warns.
 | `size` | `ThemeAwareValue` | `md` | A size word takes `Button`'s height at that step, so the two line up in a row, and sizes the icon inside as `Icon`'s. A length such as `"20px"` sizes the box, and the icon fills it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | required | The button's accessible name. |
+| `tooltip` | `bool` | `false` | Shows `aria_label` in a `Tooltip` on hover and keyboard focus. The text is the name itself, so a screen reader does not hear it twice. |
+| `shortcut` | `String` | - | The chord that runs the action, as `use_hotkeys` takes it (`"mod+b"`). Shown in the tooltip as keys named for the platform, and set as `aria-keyshortcuts`. Binding the key is up to you. |
 | `selected` | `bool` | - | Makes it a toggle button. The selected look shows once `variant` or `color` is set. Leave it unset for a plain action. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 | `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses. |
@@ -76,6 +78,8 @@ Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
   24x24 box centred on it.
 - `focusable_when_disabled` keeps a disabled button in the Tab order, with
   `aria-disabled`.
+- `tooltip` repeats the accessible name, and `shortcut` writes
+  `aria-keyshortcuts` in the ARIA key names (`Control+B`).
 
 ### You must
 

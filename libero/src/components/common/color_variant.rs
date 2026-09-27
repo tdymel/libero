@@ -71,13 +71,24 @@ pub(crate) fn selected_color(base: &ThemeAwareValue, filled: bool) -> Option<Str
         return None;
     };
 
-    let selected = if filled {
-        (0..SELECTED_DARKER_STEPS).fold(*shade, |shade, _| shade.darker())
-    } else {
-        SELECTED_TINT_SHADE
-    };
-
+    if !filled {
+        return tint_color(base, SELECTED_TINT_SHADE);
+    }
+    let selected = (0..SELECTED_DARKER_STEPS).fold(*shade, |shade, _| shade.darker());
     Some(ColorValue::Fill(*color, selected).value())
+}
+
+/// An unfilled control's hover or selected tint. Ink and surface have no ramp, so their
+/// tint was the label colour itself (1335): they take the muted ramp's.
+pub(crate) fn tint_color(base: &ThemeAwareValue, shade: ColorShade) -> Option<String> {
+    let ThemeAwareValue::ColorValue(ColorValue::Shade(color, _)) = base else {
+        return None;
+    };
+    let ramp = match color {
+        Color::Ink | Color::Surface => Color::Muted,
+        other => *other,
+    };
+    Some(ColorValue::Fill(ramp, shade).value())
 }
 
 /// A pinned shade of `base`'s colour. `None` for a literal base.
@@ -126,13 +137,10 @@ pub(crate) fn hover_color(base: &ThemeAwareValue, filled: bool) -> Option<String
         return None;
     };
 
-    let hover = if filled {
-        shade.darker()
-    } else {
-        HOVER_TINT_SHADE
-    };
-
-    Some(ColorValue::Fill(*color, hover).value())
+    if !filled {
+        return tint_color(base, HOVER_TINT_SHADE);
+    }
+    Some(ColorValue::Fill(*color, shade.darker()).value())
 }
 
 #[cfg(test)]
@@ -187,6 +195,17 @@ mod tests {
             hover_color(&base, false),
             Some(ColorValue::Fill(Color::Primary, HOVER_TINT_SHADE).value())
         );
+    }
+
+    /// Ink's own "tint" was ink: its label vanished on hover (1335).
+    #[test]
+    fn ink_tints_with_the_muted_ramp_and_keeps_its_label() {
+        let ink = base_color(Some(&ThemeAwareValue::Color(Color::Ink)));
+        let muted = |shade| Some(ColorValue::Fill(Color::Muted, shade).value());
+        assert_eq!(hover_color(&ink, false), muted(HOVER_TINT_SHADE));
+        assert_eq!(selected_color(&ink, false), muted(SELECTED_TINT_SHADE));
+        assert_ne!(hover_color(&ink, false), text_color(&ink));
+        assert_eq!(on_tint_color(&ink), None);
     }
 
     #[test]

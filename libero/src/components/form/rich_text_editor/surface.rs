@@ -94,15 +94,28 @@ const onArrow = (e) => {
     if (!l) return;
     const stops = [...r.querySelectorAll('[data-key], [data-code-key]')];
     const next = stops[stops.indexOf(l) + (up ? -1 : 1)];
-    if (!next || !next.hasAttribute('data-code-key')) return;
+    // Down from the last line of a trailing code block leaves it for a new paragraph.
+    const exit = !next && !up && l.closest('[data-code="source"]');
+    if (!exit && !(next && next.hasAttribute('data-code-key'))) return;
     const caret = s.getRangeAt(0).getBoundingClientRect(), box = l.getBoundingClientRect();
     const line = parseFloat(getComputedStyle(l).lineHeight) || caret.height || 16;
     const edge = caret.height === 0 || (up ? caret.top < box.top + line : caret.bottom > box.bottom - line);
     if (!edge) return;
     e.preventDefault();
-    dioxus.send({ code: [+next.dataset.codeKey, up] });
+    dioxus.send(exit ? { exit: true } : { code: [+next.dataset.codeKey, up] });
 };
 document.addEventListener('keydown', onArrow);
+// A press in the empty space under the last block puts the caret on a line there.
+const onPress = (e) => {
+    const r = root();
+    if (!r || e.target !== r || e.button !== 0 || r.contentEditable !== 'true') return;
+    const parts = r.querySelectorAll('[data-key], [data-code], [data-node]');
+    const bottom = Math.max(...[...parts].map((p) => p.getBoundingClientRect().bottom));
+    if (!parts.length || e.clientY <= bottom) return;
+    e.preventDefault();
+    dioxus.send({ end: true });
+};
+document.addEventListener('mousedown', onPress);
 while (true) {
     const m = await dioxus.recv();
     const r = root();
@@ -134,6 +147,12 @@ pub(crate) struct Report {
     pub text: Option<(u64, String)>,
     /// An arrow key left a leaf toward this rendered code block; `true` enters at its end.
     pub code: Option<(u64, bool)>,
+    /// ArrowDown on the last line of a trailing code block.
+    #[serde(default)]
+    pub exit: bool,
+    /// A press below the last block.
+    #[serde(default)]
+    pub end: bool,
     /// The DOM selection caught up with the last [`Surface::select`].
     #[serde(default)]
     pub synced: bool,

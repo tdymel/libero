@@ -21,3 +21,6 @@ button "Play"
   StaticText "Play"
 paragraph
   StaticText "supported=true duration=4"
+tooltip "Play K"
+  StaticText "Play"
+  StaticText "K"

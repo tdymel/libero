@@ -467,3 +467,20 @@ fn plain_text_writes_caller_nodes_through_the_registry() {
     assert_eq!(doc.plain_text_with(&registry), "hi @al");
     assert_eq!(doc.plain_text_with(&NodeRegistry::default()), "hi ");
 }
+
+#[test]
+fn exit_code_leaves_a_code_block_for_a_paragraph_after_it() {
+    check("```\na|b\n```", EditorState::exit_code, "```\nab\n```\n\n|");
+    check(
+        "```\nab\n```\n\nnext|",
+        EditorState::exit_code,
+        "```\nab\n```\n\nnext|",
+    );
+}
+
+#[test]
+fn exit_end_adds_a_line_only_after_a_block_without_one() {
+    check("```\na|b\n```", EditorState::exit_end, "```\nab\n```\n\n|");
+    check("x|\n\n---", EditorState::exit_end, "x\n\n---\n\n|");
+    check("|ab", EditorState::exit_end, "ab|");
+}

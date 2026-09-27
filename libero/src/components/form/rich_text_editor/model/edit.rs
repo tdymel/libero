@@ -407,6 +407,12 @@ impl EditorState {
         }
     }
 
+    /// The language of the code block at the caret; `""` for none.
+    pub(crate) fn set_code_language(&mut self, language: &str) -> bool {
+        let key = self.caret().block;
+        self.block(key).kind.is_code() && self.set_kind(key, BlockKind::code(language))
+    }
+
     fn toggle_text_kind(&mut self, kind: BlockKind) -> bool {
         let all = self
             .selected_leaf_kinds()
@@ -488,6 +494,37 @@ impl EditorState {
     pub fn insert_rule(&mut self) -> bool {
         let rule = self.doc.leaf(BlockKind::Rule, Vec::new());
         self.insert_block(rule)
+    }
+
+    /// Leaves the code block at the caret for a new paragraph right after it.
+    pub fn exit_code(&mut self) -> bool {
+        let at = self.caret();
+        if !self.block(at.block).kind.is_code() {
+            return false;
+        }
+        let paragraph = self.doc.leaf(BlockKind::Paragraph, Vec::new());
+        let key = paragraph.key;
+        self.insert_after(at.block, false, paragraph);
+        self.set_caret(Position::new(key, 0));
+        true
+    }
+
+    /// The caret into a text line after the last block: a new paragraph when the doc
+    /// ends in a code block, a rule or an atom, which have no line to click into.
+    pub(crate) fn exit_end(&mut self) -> bool {
+        let Some(last) = self.doc.leaves().last().copied() else {
+            return false;
+        };
+        let block = self.block(last);
+        if block.kind.content() == ContentKind::Inline && !block.kind.is_code() {
+            self.set_caret(Position::new(last, block.len()));
+            return true;
+        }
+        let paragraph = self.doc.leaf(BlockKind::Paragraph, Vec::new());
+        let key = paragraph.key;
+        self.doc.blocks.push(paragraph);
+        self.set_caret(Position::new(key, 0));
+        true
     }
 
     /// The container holding `key`, its kind and `key`'s index in it.

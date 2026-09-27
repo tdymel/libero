@@ -142,6 +142,8 @@ pub(super) fn MediaControls(
         Toolbar { "aria-label": labels.controls, "data-slot": CONTROLS,
             ActionIcon {
                 aria_label: if media.paused() { labels.play } else { labels.pause },
+                tooltip: true,
+                shortcut: "k",
                 size: icon_size.clone(),
                 onclick: move |_| media.toggle(),
                 if media.paused() {
@@ -156,6 +158,8 @@ pub(super) fn MediaControls(
             }
             ActionIcon {
                 aria_label: if silent { labels.unmute } else { labels.mute },
+                tooltip: true,
+                shortcut: "m",
                 size: icon_size.clone(),
                 onclick: move |_| sound.toggle(),
                 if silent {
@@ -179,6 +183,8 @@ pub(super) fn MediaControls(
                 ActionIcon {
                     aria_label: labels.captions,
                     aria_pressed: if (captions.shown)() { "true" } else { "false" },
+                    tooltip: true,
+                    shortcut: "c",
                     size: icon_size.clone(),
                     onclick: move |_| captions.toggle(media),
                     Glyph { slot: IconSlot::Captions, icon: lucide::captions::outlined }
@@ -187,6 +193,8 @@ pub(super) fn MediaControls(
             if let Some(fullscreen) = fullscreen {
                 ActionIcon {
                     aria_label: if fullscreen.is_fullscreen() { labels.exit_fullscreen } else { labels.fullscreen },
+                    tooltip: true,
+                    shortcut: "f",
                     size: icon_size.clone(),
                     onclick: move |_| fullscreen.toggle(),
                     if fullscreen.is_fullscreen() {

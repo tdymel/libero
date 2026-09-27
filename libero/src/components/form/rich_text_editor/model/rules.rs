@@ -51,6 +51,24 @@ impl EditorState {
         }
     }
 
+    /// Enter at the end of a paragraph that is a whole fence, "```rust": a code block in
+    /// that language, as a typed space after the fence makes one.
+    pub(super) fn fence_rule(&mut self) -> bool {
+        let at = self.caret();
+        let block = self.block(at.block);
+        if block.kind != BlockKind::Paragraph || at.offset != block.len() {
+            return false;
+        }
+        let [Inline::Text { text, .. }] = block.inlines() else {
+            return false;
+        };
+        let Some(BlockSyntax::Fence(_, language)) = block_syntax(text.trim_end()) else {
+            return false;
+        };
+        self.delete_range(Position::new(at.block, 0), at);
+        self.set_kind(at.block, BlockKind::code(language))
+    }
+
     /// A closing delimiter typed after its opener: `` `x` ``, `**x**`, `*x*`, `~~x~~`.
     fn inline_rule(&mut self) -> bool {
         let at = self.caret();

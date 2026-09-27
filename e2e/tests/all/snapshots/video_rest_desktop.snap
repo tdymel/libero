@@ -24,3 +24,6 @@ group "Plain"
     slider "Volume" = 100 [valuemax=100] [valuemin=0]
     button "Fullscreen"
   status [atomic] [live=polite]
+tooltip "Play K"
+  StaticText "Play"
+  StaticText "K"

@@ -90,6 +90,7 @@ builtins! {
     Redo => "redo",
     Link => "link",
     Shortcuts => "shortcuts",
+    ExitBlock => "exit_block",
 }
 
 /// A doc transform: `true` when it changed the state.
@@ -241,8 +242,12 @@ fn builtin_action(builtin: Builtin) -> Action {
         B::Indent => edit(EditorState::indent),
         B::Outdent => edit(EditorState::outdent),
         B::Rule => edit(EditorState::insert_rule),
+        B::ExitBlock => edit(EditorState::exit_code),
         B::HardBreak => edit(EditorState::insert_hard_break),
-        B::SplitBlock => edit(EditorState::split_block),
+        // Not in `split_block` itself: a pasted fence line stays text.
+        B::SplitBlock => edit(|state| {
+            state.selection.is_collapsed() && state.fence_rule() || state.split_block()
+        }),
         B::DeleteBackward => edit(EditorState::delete_backward),
         B::DeleteForward => edit(EditorState::delete_forward),
         B::SelectAll => Action::Edit(Rc::new(EditorState::select_all), Record::Skip),
@@ -414,7 +419,7 @@ pub struct Keymap {
 impl Default for Keymap {
     fn default() -> Self {
         use Builtin as B;
-        let defaults: [(&str, Builtin); 31] = [
+        let defaults: [(&str, Builtin); 32] = [
             ("Mod+b", B::Bold),
             ("Mod+i", B::Italic),
             ("Mod+u", B::Underline),
@@ -443,6 +448,7 @@ impl Default for Keymap {
             ("Mod+y", B::Redo),
             ("Mod+Shift+u", B::Unlink),
             ("Mod+Shift+Enter", B::Rule),
+            ("Mod+Enter", B::ExitBlock),
             ("Mod+Shift+x", B::Strike),
             ("Mod+k", B::Link),
             ("Mod+/", B::Shortcuts),

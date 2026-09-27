@@ -103,6 +103,7 @@ pub(crate) fn command_label(name: &CommandName, words: &RichTextEditorLabels) ->
         B::Indent => words.indent,
         B::Outdent => words.outdent,
         B::Rule => words.rule,
+        B::ExitBlock => words.exit_block,
         B::HardBreak => words.hard_break,
         B::Undo => words.undo,
         B::Redo => words.redo,

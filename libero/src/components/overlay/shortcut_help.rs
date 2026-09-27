@@ -33,6 +33,17 @@ static SHORTCUT_LIST_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+/// A chord's keys from [`chord_keys`], one [`Kbd`] each, joined by " + ".
+pub(crate) fn chord_kbd(keys: Vec<String>) -> Element {
+    let last = keys.len().saturating_sub(1);
+    rsx! {
+        for (index, key) in keys.into_iter().enumerate() {
+            Kbd { "{key}" }
+            if index < last { " + " }
+        }
+    }
+}
+
 /// One row of a [`ShortcutHelp`]: a chord as [`Hotkey`](crate::hooks::Hotkey) takes it, and
 /// what it does.
 #[derive(Clone, Debug, PartialEq)]
@@ -92,14 +103,8 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
             ));
             return None;
         };
-        let last = keys.len() - 1;
         Some(rsx! {
-            dt {
-                for (index, key) in keys.into_iter().enumerate() {
-                    Kbd { "{key}" }
-                    if index < last { " + " }
-                }
-            }
+            dt { {chord_kbd(keys)} }
             dd { "{shortcut.description}" }
         })
     });

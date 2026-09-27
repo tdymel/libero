@@ -1,7 +1,7 @@
 use crate::{
     components::common::{
         Variant, contrast_shade_color, focus_ring_sx, hover_color, hover_contrast_color,
-        on_state_sx, on_tint_color, selected_color, shade_color, shadow_sx,
+        on_state_sx, on_tint_color, selected_color, shade_color, shadow_sx, tint_color,
     },
     sx::{Sx, ThemeAwareValue, sx},
     theme::{
@@ -167,8 +167,8 @@ pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> Varian
         ),
         // A faint tint; the shadow is what actually moves.
         Variant::Elevated => (
-            shade_color(base, ColorShade::S1),
-            shade_color(base, ColorShade::S2),
+            tint_color(base, ColorShade::S1),
+            tint_color(base, ColorShade::S2),
         ),
         Variant::Gradient => (None, None),
         _ => (hover_color(base, filled), selected_color(base, filled)),

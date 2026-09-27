@@ -36,6 +36,7 @@ pub(crate) use closing_focus::use_closing_focus;
 pub(crate) use color_variant::{
     base_color, contrast_color, contrast_shade_color, fill_color, hover_color,
     hover_contrast_color, literal_contrast, on_tint_color, selected_color, shade_color, text_color,
+    tint_color,
 };
 pub(crate) use combobox_aria::{group_id, listbox_id, option_id};
 pub use combobox_state::{ComboboxState, use_combobox};

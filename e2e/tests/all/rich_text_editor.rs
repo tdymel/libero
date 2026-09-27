@@ -3,9 +3,10 @@
 
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::ImeSetCompositionParams;
-use e2e::browser::block_on;
+use e2e::browser::{Scheme, block_on};
 use e2e::passes::keyboard::{self, BACKSPACE, CTRL, ENTER, Key};
-use e2e::{Fixture, Viewport};
+use e2e::passes::{contrast, pointer};
+use e2e::{Fixture, Viewport, wait};
 
 const KEY_B: Key = Key {
     key: "b",
@@ -652,5 +653,223 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
             markdown.ends_with("```\nZlet x = 1;\n```\n"),
             "{markdown:?}"
         );
+    });
+}
+
+const TRAILING: &str = "/rich-text-editor/trailing";
+
+/// Clicks the rendered code block, which puts the caret at its end as source.
+async fn enter_code(page: &Page) {
+    const VIEW: &str = "[role=textbox] [data-code=view]";
+    let rendered: bool = eval(page, &format!("!!document.querySelector('{VIEW}')")).await;
+    if rendered {
+        pointer::click(page, VIEW).await.unwrap();
+    }
+    wait::for_js_true(
+        page,
+        "!!document.querySelector('[role=textbox] [data-code=source]')",
+        "the code block as source",
+    )
+    .await
+    .unwrap();
+    settle(page).await;
+}
+
+#[test]
+fn a_trailing_code_block_is_left_by_arrow_down_mod_enter_and_a_click_below() {
+    block_on(async {
+        let fixture = Fixture::open(TRAILING, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        settle(page).await;
+
+        enter_code(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "after").await.unwrap();
+        assert_eq!(
+            out(page).await,
+            "intro\n\n```rust\nlet x = 1;\n```\n\nafter\n"
+        );
+
+        enter_code(page).await;
+        keyboard::press_with(page, ENTER, CTRL).await.unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "mid").await.unwrap();
+        let both = "intro\n\n```rust\nlet x = 1;\n```\n\nmid\n\nafter\n";
+        assert_eq!(out(page).await, both);
+
+        // Outside a code block Mod+Enter is not the editor's: a caller's send still sees it.
+        page.evaluate(
+            "window.__free = 0; addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'Enter' && !e.defaultPrevented) __free++; })",
+        )
+        .await
+        .unwrap();
+        keyboard::press_with(page, ENTER, CTRL).await.unwrap();
+        settle(page).await;
+        let free: u32 = eval(page, "window.__free").await;
+        assert_eq!(free, 1);
+        assert_eq!(out(page).await, both);
+
+        // A fresh doc: a press in the padding under the code block opens a line there.
+        let fixture = Fixture::open(TRAILING, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        settle(page).await;
+        let (x, y): (f64, f64) = eval(
+            page,
+            &format!(
+                "(() => {{ const r = {EDITOR}.getBoundingClientRect(); return [r.left + r.width / 2, r.bottom - 3]; }})()"
+            ),
+        )
+        .await;
+        pointer::click_at(page, pointer::Point { x, y })
+            .await
+            .unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "end").await.unwrap();
+        assert_eq!(
+            out(page).await,
+            "intro\n\n```rust\nlet x = 1;\n```\n\nend\n"
+        );
+    });
+}
+
+#[test]
+fn a_typed_fence_sets_the_language_and_the_toolbar_menu_changes_it() {
+    const LANGUAGE: &str =
+        "document.querySelector('[role=toolbar] button[aria-label^=\"Language:\"]')";
+    const PLAIN: &str = "[...document.querySelectorAll('[role=menuitemradio]')].find(i => i.textContent.trim() === 'Plain text')";
+    block_on(async {
+        let fixture = Fixture::open(TRAILING, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        settle(page).await;
+
+        let shown: bool = eval(page, &format!("!!{LANGUAGE}")).await;
+        assert!(!shown, "the language menu shows outside a code block");
+        enter_code(page).await;
+        page.evaluate(format!("{LANGUAGE}.click()")).await.unwrap();
+        wait::for_js_true(page, &format!("!!{PLAIN}"), "the language menu")
+            .await
+            .unwrap();
+        page.evaluate(format!("{PLAIN}.click()")).await.unwrap();
+        assert_eq!(out(page).await, "intro\n\n```\nlet x = 1;\n```\n");
+
+        // Down out of the block, then a fence and Enter: a Python block.
+        enter_code(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "```py").await.unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        keyboard::type_text(page, "x = 1").await.unwrap();
+        assert_eq!(
+            out(page).await,
+            "intro\n\n```\nlet x = 1;\n```\n\n```py\nx = 1\n```\n"
+        );
+    });
+}
+
+#[test]
+fn toolbar_buttons_show_their_name_and_chord_in_a_tooltip() {
+    const BOLD: &str = "[role=toolbar] button[aria-label=\"Bold\"]";
+    block_on(async {
+        let fixture = Fixture::open(TRAILING, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        settle(page).await;
+        let shortcut: String = eval(
+            page,
+            &format!("document.querySelector('{BOLD}').getAttribute('aria-keyshortcuts')"),
+        )
+        .await;
+        assert_eq!(shortcut, "Control+B");
+        pointer::hover(page, BOLD).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('[role=tooltip]')",
+            "a tooltip",
+        )
+        .await
+        .unwrap();
+        let text: String = eval(
+            page,
+            "document.querySelector('[role=tooltip]').textContent.replace(/\\s+/g, ' ').trim()",
+        )
+        .await;
+        assert_eq!(text, "Bold Ctrl + B");
+    });
+}
+
+/// The contrast of `selector`'s text over its own background, both opaque.
+fn hovered_contrast(selector: &str) -> String {
+    format!(
+        "(() => {{ const s = getComputedStyle(document.querySelector('{selector}')); \
+           const lum = c => {{ const [r, g, b] = c.match(/[\\d.]+/g).slice(0, 3).map(v => {{ v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }}); return 0.2126 * r + 0.7152 * g + 0.0722 * b; }}; \
+           const [a, b] = [lum(s.color), lum(s.backgroundColor)].sort((x, y) => y - x); return (a + 0.05) / (b + 0.05); }})()"
+    )
+}
+
+/// The code block rendered and hovered, as source, and a tooltip, in both schemes.
+#[test]
+fn the_editor_overlays_keep_their_contrast_in_both_schemes() {
+    block_on(async {
+        for scheme in [Scheme::Light, Scheme::Dark] {
+            let fixture = Fixture::open_in(TRAILING, Viewport::Desktop, scheme)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            settle(page).await;
+            pointer::hover(page, "[role=textbox] [data-code=view]")
+                .await
+                .unwrap();
+            settle(page).await;
+            fixture
+                .screenshot(&format!("rte-code-view-{}", scheme.name()))
+                .await
+                .unwrap();
+            contrast::assert_clean(page, "body").await.unwrap();
+            enter_code(page).await;
+            // The pressed toggle, hovered: its state colours under the tooltip.
+            pointer::hover(
+                page,
+                "[role=toolbar] button[aria-label=\"Code block\"][aria-pressed=true]",
+            )
+            .await
+            .unwrap();
+            wait::for_js_true(
+                page,
+                "!!document.querySelector('[role=tooltip]')",
+                "a tooltip",
+            )
+            .await
+            .unwrap();
+            settle(page).await;
+            fixture
+                .screenshot(&format!("rte-code-source-{}", scheme.name()))
+                .await
+                .unwrap();
+            contrast::assert_clean(page, "body").await.unwrap();
+            // The text type button names the block's mode; hovered, it keeps its contrast.
+            pointer::hover(page, "[role=toolbar] button[aria-label^=\"Text type:\"]")
+                .await
+                .unwrap();
+            settle(page).await;
+            fixture
+                .screenshot(&format!("rte-block-type-{}", scheme.name()))
+                .await
+                .unwrap();
+            // axe skips hover states: the label over its hover fill, measured here.
+            page.evaluate("new Promise(r => setTimeout(r, 300))")
+                .await
+                .unwrap();
+            let ratio: f64 = eval(
+                page,
+                &hovered_contrast("[role=toolbar] button[aria-label^=\"Text type:\"]"),
+            )
+            .await;
+            assert!(
+                ratio >= 4.5,
+                "hovered text type button {ratio:.2}:1 in {}",
+                scheme.name()
+            );
+            contrast::assert_clean(page, "body").await.unwrap();
+        }
     });
 }

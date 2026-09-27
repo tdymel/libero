@@ -28,6 +28,7 @@ use crate::{
         form::{field_props, use_bound, use_field, use_field_frame},
         layout::use_box,
         overlay::{Menu, MenuEntry, MenuItem, Shortcut, ShortcutHelp, use_menu},
+        typography::Language,
     },
     context::IconSlot,
     hooks::{
@@ -484,6 +485,18 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 enter_code(editor, NodeKey(key), at_end);
                 changed(None, true);
             }
+            if (report.exit || report.end) && *can_edit.peek() {
+                let leave = if report.exit {
+                    EditorState::exit_code
+                } else {
+                    EditorState::exit_end
+                };
+                let before = editor.peek().doc().clone();
+                if editor.write().apply(Record::Step, leave) {
+                    focused.set(true);
+                    changed(Some(before), true);
+                }
+            }
         })
     });
 
@@ -742,6 +755,42 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             })
             .collect()
     };
+    let language_menu = use_menu();
+    let code_language = match &block_kind {
+        BlockKind::CodeBlock { language } => Some(language.clone()),
+        _ => None,
+    };
+    let language_label = code_language.as_deref().map(|language| match language {
+        "" => words.plain_text.to_string(),
+        name => Language::label_of(name).unwrap_or(name).to_string(),
+    });
+    let language_items: Vec<MenuEntry> = {
+        let current = code_language.clone().unwrap_or_default();
+        // A typed name the catalog does not know stays listed, so it shows as chosen.
+        let unknown = (!current.is_empty() && Language::label_of(&current).is_none())
+            .then(|| (current.clone(), current.clone()));
+        std::iter::once((words.plain_text.to_string(), String::new()))
+            .chain(Language::catalog().map(|(label, name)| (label.into(), name.into())))
+            .chain(unknown)
+            .map(|(label, name): (String, String)| {
+                let on = Language::label_of(&name) == Language::label_of(&current)
+                    && (name.is_empty() == current.is_empty());
+                MenuItem::new(label)
+                    .radio(on)
+                    .onselect(move |_| {
+                        let mut edit = edit;
+                        let name = name.clone();
+                        edit(
+                            &|live| {
+                                live.apply(Record::Step, |state| state.set_code_language(&name))
+                            },
+                            true,
+                        );
+                    })
+                    .into()
+            })
+            .collect()
+    };
     // The wrapper's width over the measured parts: the buttons a narrow bar moves into More.
     let mut bar_width = use_signal(|| None::<f64>);
     let metrics = use_signal(|| None::<Metrics>);
@@ -834,11 +883,18 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             Builtin::Italic => vec![listener("onmounted", italic.mount())],
             _ => Vec::new(),
         };
+        let shortcut = keymap
+            .peek()
+            .chords_for(tool.builtin)
+            .first()
+            .map(|chord| chord.to_string().to_lowercase());
         rsx! {
             ActionIcon {
                 key: "{tool.label}",
                 attributes,
                 aria_label: tool.label,
+                tooltip: true,
+                shortcut,
                 selected: tool.selected,
                 disabled: tool.disabled,
                 onclick: run(tool.builtin),
@@ -874,6 +930,17 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                                 variant: "standard",
                                 color: "ink",
                                 "{block_label}"
+                            }
+                        }
+                        if let Some(language) = language_label {
+                            Menu { state: language_menu, items: language_items,
+                                Button {
+                                    attributes: language_menu.a11y_attributes(),
+                                    "aria-label": "{words.language}: {language}",
+                                    variant: "standard",
+                                    color: "ink",
+                                    "{language}"
+                                }
                             }
                         }
                         for tool in block_tools { {button(tool)} }

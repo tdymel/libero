@@ -13,8 +13,13 @@ use crate::{
         data_display::{Pictogram, SvgData},
         feedback::Loader,
         layout::{InternalAnchor, use_box},
+        overlay::{Tooltip, chord_kbd},
     },
-    hooks::{clipped_ripple_sx, use_gradient_style, use_ripple, use_theme},
+    hooks::{
+        aria_keyshortcuts, chord_keys, clipped_ripple_sx, current_localization, use_gradient_style,
+        use_ripple, use_theme,
+    },
+    platform::mod_is_meta,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         ACTION_ICON_GLYPH, ACTION_ICON_RADIUS, ACTION_ICON_SIZE, BUTTON_HEIGHT, CssVar, Gradient,
@@ -214,6 +219,13 @@ base_props! {
         radius: Input<ThemeAwareValue>,
         /// Required: an icon-only button has no text to announce.
         aria_label: String,
+        /// Shows `aria_label` in a `Tooltip` on hover and keyboard focus.
+        #[props(default)]
+        tooltip: Option<bool>,
+        /// The chord that runs this action, as `use_hotkeys` takes it (`"mod+b"`): shown
+        /// in the tooltip and set as `aria-keyshortcuts`.
+        #[props(default, into)]
+        shortcut: Option<String>,
         #[props(default)]
         disabled: Option<bool>,
         /// With `disabled`: keeps the button in the Tab order, as on `Button`.
@@ -256,7 +268,35 @@ base_props! {
 ///
 /// Docs: <https://libero-ui.dev/buttons/action-icon>
 #[component]
-pub fn ActionIcon(mut props: ActionIconProps) -> Element {
+pub fn ActionIcon(props: ActionIconProps) -> Element {
+    if !props.tooltip.unwrap_or(false) {
+        return action_icon(props);
+    }
+    let apple = mod_is_meta();
+    let keys = props
+        .shortcut
+        .as_deref()
+        .and_then(|chord| chord_keys(chord, apple, &current_localization().shortcut_help));
+    let label = props.aria_label.clone();
+    rsx! {
+        Tooltip {
+            label: rsx! {
+                "{label}"
+                if let Some(keys) = keys {
+                    " "
+                    {chord_kbd(keys)}
+                }
+            },
+            {action_icon(props)}
+        }
+    }
+}
+
+fn action_icon(mut props: ActionIconProps) -> Element {
+    let keyshortcuts = props
+        .shortcut
+        .as_deref()
+        .and_then(|chord| aria_keyshortcuts(chord, mod_is_meta()));
     let group = use_button_group();
     fill_from_group(&mut props, group);
     let item = use_toolbar_item();
@@ -359,6 +399,7 @@ pub fn ActionIcon(mut props: ActionIconProps) -> Element {
                 .attr_default("role", "link")
                 .attr("aria-label", props.aria_label)
                 .attr("aria-disabled", "true")
+                .attr("aria-keyshortcuts", keyshortcuts)
                 .attr("tabindex", tabindex)
                 .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
                 .render(HtmlTag::A, props.attributes, glyph);
@@ -376,6 +417,7 @@ pub fn ActionIcon(mut props: ActionIconProps) -> Element {
                 states,
                 variables,
                 "aria-label": props.aria_label,
+                "aria-keyshortcuts": keyshortcuts,
                 attributes,
                 {glyph}
             }
@@ -394,6 +436,7 @@ pub fn ActionIcon(mut props: ActionIconProps) -> Element {
     boxed
         .event("onclick", handle_click)
         .attr("aria-label", props.aria_label)
+        .attr("aria-keyshortcuts", keyshortcuts)
         .attr("disabled", disabled && !soft_disabled)
         .attr("tabindex", item.map(ToolbarItem::tabindex))
         .attr(TOOLBAR_ITEM, item.map(ToolbarItem::key))
@@ -427,6 +470,8 @@ mod tests {
             size: Size::Md.into(),
             radius: Input::None,
             aria_label: "test".to_string(),
+            tooltip: None,
+            shortcut: None,
             disabled: None,
             focusable_when_disabled: None,
             selected: None,
