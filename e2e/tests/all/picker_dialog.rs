@@ -45,6 +45,62 @@ e2e::scenario!(
     a_tap_opens_only_the_calendar
 );
 
+/// Android's Back closes the dropdown, keeps the value, and the app stays (1300).
+async fn back_closes<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    if d.platform() != Platform::Android {
+        return Ok(());
+    }
+    let field = FIELDS
+        .iter()
+        .find(|(path, _)| *path == route)
+        .map(|(_, field)| *field)
+        .unwrap_or("#chrono-field");
+    let before = d.value(field).await?;
+    d.click(field).await?;
+    eventually(d, "the dropdown", async |d| d.exists(DIALOG).await).await?;
+    linger(d, 40).await;
+    // The colour's text input raises the keyboard; Android's first Back only hides it.
+    if d.soft_keyboard_shown().await? {
+        d.press_back().await?;
+        eventually(d, "Back to hide the keyboard", async |d| {
+            Ok(!d.soft_keyboard_shown().await?)
+        })
+        .await?;
+        ensure!(
+            d.exists(DIALOG).await?,
+            "Back hid the keyboard and closed the dropdown"
+        );
+    }
+    d.press_back().await?;
+    eventually(d, "Back to close the dropdown", async |d| {
+        Ok(!d.exists(DIALOG).await?)
+    })
+    .await?;
+    let after = d.value(field).await?;
+    ensure!(
+        after == before,
+        "Back changed the value: {before:?} to {after:?}"
+    );
+    // The app stayed and still opens the dropdown.
+    d.click(field).await?;
+    eventually(d, "the dropdown again", async |d| d.exists(DIALOG).await).await
+}
+
+e2e::scenario!(
+    android_back_closes_a_color_field,
+    "/color-field",
+    back_closes,
+    native: skip("1275: no Back key off Android"),
+    desktop: skip("1275: no Back key off Android")
+);
+e2e::scenario!(
+    android_back_closes_a_date_field,
+    "/chrono-field",
+    back_closes,
+    native: skip("1275: no Back key off Android"),
+    desktop: skip("1275: no Back key off Android")
+);
+
 #[test]
 fn the_color_field_meets_the_baseline() {
     Suite::new("color_field", "/color-field")

@@ -103,13 +103,15 @@ async fn a_focused_header_scrolls_the_rows<D: Driver>(d: &mut D, _route: &str) -
         bail!("the area is a tab stop beside the header buttons");
     }
     scrolls_under_the_header(d, keyboard::PAGE_DOWN).await?;
-    if d.platform() == Platform::Native {
-        // The unclipped column menu check fails on Blitz, never run there before (filed).
-        return Ok(());
-    }
     // The menu opens in a portal: the 200px area does not clip it.
-    d.click("button[aria-label=\"Stock column options\"]")
-        .await?;
+    const OPTIONS: &str = "button[aria-label=\"Stock column options\"]";
+    if d.platform() == Platform::Native {
+        // A stuck cell moves by `translate`, which Blitz's hit test ignores: keys, not a click.
+        d.focus(OPTIONS).await?;
+        d.press(keyboard::ENTER).await?;
+    } else {
+        d.click(OPTIONS).await?;
+    }
     eventually(d, "the column menu to open unclipped", async |d| {
         if !d.exists("[role=menu]").await? || d.exists(&format!("{AREA} [role=menu]")).await? {
             return Ok(false);

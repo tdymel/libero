@@ -108,7 +108,6 @@ async fn a_press_outside_keeps_its_default<D: Driver>(d: &mut D, _route: &str) -
 
 const ITEM: &str = "[role=menuitem]";
 const SHARE: &str = "[role=menuitem][aria-haspopup=menu]";
-const SUBMENU_ITEM: &str = "[role=menu]:not(:has([aria-haspopup=menu])) [role=menuitem]";
 
 /// Focuses `selector` again until it holds focus: a popover's box renders hidden
 /// until placed, and `focus()` in it moves nothing (1276, a cold WebView).
@@ -153,12 +152,18 @@ async fn a_menu_opened_inside_counts_as_inside<D: Driver>(d: &mut D, _route: &st
 
     d.focus(SHARE).await?;
     d.press(keyboard::ARROW_RIGHT).await?;
+    // By the open item's `aria-controls`: Blitz cannot parse `:has(...)`.
+    let mut submenu_item = String::new();
     eventually(d, "the submenu to open", async |d| {
-        d.exists(SUBMENU_ITEM).await
+        let Some(id) = d.attr(SHARE, "aria-controls").await? else {
+            return Ok(false);
+        };
+        submenu_item = format!("[id=\"{id}\"] {ITEM}");
+        d.exists(&submenu_item).await
     })
     .await?;
     // A WebView's submenu opens without taking focus (958): the scope is under test, not Menu.
-    focus_shown(d, SUBMENU_ITEM).await?;
+    focus_shown(d, &submenu_item).await?;
     eventually(d, "focus in the submenu", async |d| {
         Ok(d.is_focused(ITEM).await? && !d.is_focused(SHARE).await?)
     })

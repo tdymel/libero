@@ -193,7 +193,8 @@ e2e::scenario!(
 
 /// A touch on the image outside the box scrolls the page; only the box takes drags.
 async fn only_the_box_claims_touches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    let root = d.style(":has(> [data-slot=image])", "touch-action").await?;
+    // An id, not `:has(...)`, which Blitz cannot parse.
+    let root = d.style("#cropper", "touch-action").await?;
     anyhow::ensure!(root == "auto", "the cropper's touch-action is {root}");
     let frame = d.style("[data-slot=frame]", "touch-action").await?;
     anyhow::ensure!(frame == "none", "the box's touch-action is {frame}");

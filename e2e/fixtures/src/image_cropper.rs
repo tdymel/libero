@@ -48,6 +48,7 @@ fn ImageCropperPage() -> Element {
         Flex { direction: "column", gap: "md", padding: "md",
             Button { id: "before", "Before" }
             ImageCropper {
+                id: "cropper",
                 src: PICTURE,
                 alt: "A sun on blue",
                 value: crop(),

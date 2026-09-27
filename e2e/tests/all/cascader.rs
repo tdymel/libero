@@ -159,6 +159,32 @@ e2e::scenario!(
     a_disabled_row_looks_disabled
 );
 
+/// Android's Back closes the sheet, keeps the value, and the app stays (1300).
+async fn back_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    if d.platform() != Platform::Android {
+        return Ok(());
+    }
+    d.click(TRIGGER).await?;
+    eventually(d, "the roots", async |d| shown(d, EUROPE).await).await?;
+    d.press_back().await?;
+    eventually(d, "Back to close the sheet", async |d| {
+        Ok(d.attr(TRIGGER, "aria-expanded").await?.as_deref() != Some("true"))
+    })
+    .await?;
+    eventually_text(d, "#picked", "", "Back").await?;
+    // The app stayed and still opens the sheet.
+    d.click(TRIGGER).await?;
+    eventually(d, "the roots again", async |d| shown(d, EUROPE).await).await
+}
+
+e2e::scenario!(
+    android_back_closes_a_cascader,
+    "/cascader",
+    back_closes,
+    native: skip("1275: no Back key off Android"),
+    desktop: skip("1275: no Back key off Android")
+);
+
 /// The same walk in a 390px browser, below `sm`.
 #[test]
 fn a_phone_drills_into_one_level_at_a_time() {
