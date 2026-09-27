@@ -65,6 +65,11 @@ fn AudioPage() -> Element {
                 }
             }
             div { id: "broken", Audio { src: "data:audio/wav;base64,AAAA", label: "Broken" } }
+            div { id: "muted", Audio { src: src.clone(), label: "Muted", muted: true } }
+            // A shrink-wrapping parent: the bubble still takes its full width.
+            div { id: "inline", style: "display: inline-flex",
+                Audio { src: src.clone(), label: "Inline" }
+            }
             div { id: "custom",
                 audio { src, onmounted: media.mount(), ..media.attributes() }
                 Button { onclick: move |_| media.toggle(),

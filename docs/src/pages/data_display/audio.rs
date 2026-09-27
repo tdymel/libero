@@ -32,7 +32,7 @@ pub fn AudioPage() -> Element {
                     prop("preload", "MediaPreload")
                         .default("metadata")
                         .doc("How much loads before a press: `none`, `metadata` or `auto`."),
-                    prop("size", "Size").default("theme").doc("Of the buttons and sliders."),
+                    prop("size", "Size").default("theme").doc("Of the buttons and the seek slider."),
                     prop("onplay", "EventHandler<()>").default("None").doc("Playing started."),
                     prop("onpause", "EventHandler<()>").default("None").doc("Playing paused."),
                     prop("onended", "EventHandler<()>").default("None").doc("Playing reached the end."),
@@ -45,7 +45,7 @@ pub fn AudioPage() -> Element {
                 ])
                 .parts("AudioPart", vec![
                     (AudioPart::Controls, "The row of controls, a named `group`."),
-                    (AudioPart::Time, "The elapsed and total time."),
+                    (AudioPart::Time, "The time: the total until playing starts, then the elapsed."),
                     (AudioPart::Seek, "The seek slider's wrapper."),
                     (AudioPart::Volume, "The volume slider's wrapper."),
                     (AudioPart::Message, "The error text, or the fallback where nothing plays media."),
@@ -55,17 +55,16 @@ pub fn AudioPage() -> Element {
                 .key(["K"], "Plays or pauses, with focus anywhere in the player.")
                 .key(["Space"], "On a slider: plays or pauses. On a button: presses it.")
                 .key(["J", "L"], "Jumps 10 seconds back or ahead.")
-                .key(["M"], "Mutes or unmutes.")
                 .key(["Left", "Right"], "On the seek slider: 1 second; on the volume slider: 5%.")
-                .key(["Tab"], "Moves through every control in visual order: play, seek, mute, volume, speed.")
+                .key(["Tab"], "Moves through every control in visual order: play, seek, volume, speed.")
                 .handles([
                     "The player is a `group` named by `label`, its controls a `group` named \"Player controls\"; every button and slider is its own Tab stop, as in the browser's own controls.",
-                    "The speed button shows the rate (\"1×\") and is named \"Playback speed 1×\"; its menu offers 0.5× to 2× as radio items.",
-                    "The play and mute buttons change their names (Play/Pause, Mute/Unmute) rather than using `aria-pressed`.",
-                    "At volume 0 the mute button offers Unmute, which brings back the last audible volume; moving the volume up while muted unmutes.",
-                    "No control leaves the player at any width: the seek track shrinks first, below 22rem the volume slider hides (mute stays), and only then does the row wrap, so it fits at 320px and 200% zoom (WCAG 1.4.10).",
-                    "The controls bar has a border at 3:1 against the page in light and dark (WCAG 1.4.11).",
-                    "The seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`).",
+                    "The speed button shows the rate (\"1×\") and is named \"Playback speed 1×\"; a press steps to 1.5×, 2× and back to 1×, and the name follows.",
+                    "The play button changes its name (Play/Pause) rather than using `aria-pressed`.",
+                    "The visible time is hidden from screen readers: the seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`).",
+                    "There is no mute button and no M key: a muted player shows its volume slider at 0, and moving it up unmutes.",
+                    "No control leaves the player at any width: the seek track shrinks first, then the volume slider, and only then does the row wrap, so it fits at 320px and 200% zoom (WCAG 1.4.10).",
+                    "The bubble has a border at 3:1 against the page in light and dark (WCAG 1.4.11).",
                     "A polite status says \"Loading\" while playing waits for data; a failed source shows an alert.",
                     "No autoplay unless asked, and a debug warning for autoplay with sound (WCAG 1.4.2).",
                 ])
@@ -81,8 +80,8 @@ pub fn AudioPage() -> Element {
                 Text {
                     "An "
                     Code { source: "<audio>" }
-                    " with libero's own controls: play, seek, time, mute, volume and speed, in the theme's look on "
-                    "every platform that plays media. "
+                    " in one compact row, as a chat app's voice message: play, a seek track, the time, volume and a speed button, "
+                    "in the theme's look on every platform that plays media. "
                     Code { source: "use_media()" }
                     " drives the same engine for a layout of your own: spread its "
                     Code { source: "attributes()" }

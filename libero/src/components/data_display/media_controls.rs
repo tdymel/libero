@@ -92,7 +92,7 @@ impl Sound {
     }
 
     /// A volume above 0 unmutes.
-    fn set_volume(self, volume: f64) {
+    pub(super) fn set_volume(self, volume: f64) {
         self.media.set_volume(volume);
         if volume > 0.0 && self.media.muted() {
             self.media.set_muted(false);
@@ -169,13 +169,7 @@ pub(super) fn MediaControls(
 ) -> Element {
     let labels = use_localization().media;
     let icon_size = icon_size(&size);
-    // Space on a slider plays and pauses; a button keeps its own Space, so no hotkey.
-    let space_toggles = move |event: KeyboardEvent| {
-        if event.key() == Key::Character(" ".into()) && !key_taken(&event) {
-            event.prevent_default();
-            media.toggle();
-        }
-    };
+    let space_toggles = space_toggles(media);
     let silent = sound.silent();
     let no_captions = use_id();
     let play = rsx! {
@@ -283,6 +277,25 @@ pub(super) fn MediaControls(
                 {fullscreen_button}
             }
         }
+        MediaStatus { media }
+    }
+}
+
+/// Space on a slider plays and pauses; a button keeps its own Space, so no hotkey.
+pub(super) fn space_toggles(media: MediaHandle) -> impl FnMut(KeyboardEvent) + Copy {
+    move |event: KeyboardEvent| {
+        if event.key() == Key::Character(" ".into()) && !key_taken(&event) {
+            event.prevent_default();
+            media.toggle();
+        }
+    }
+}
+
+/// The error alert and the buffering status under a player's controls.
+#[component]
+pub(super) fn MediaStatus(media: MediaHandle) -> Element {
+    let labels = use_localization().media;
+    rsx! {
         if media.error().is_some() {
             p { "data-slot": MESSAGE, role: "alert", {labels.error} }
         }
@@ -342,14 +355,14 @@ fn MediaSpeed(media: MediaHandle, size: Input<Size>, overlay: bool) -> Element {
 }
 
 /// `1.5×`, or `1,5×` with a comma `separator`.
-fn times(rate: f64, separator: &str) -> String {
+pub(super) fn times(rate: f64, separator: &str) -> String {
     format!("{rate}×").replace('.', separator)
 }
 
 /// The seek slider. While dragged it shows the thumb's value, not the element's
 /// older answer, which trails on a WebView.
 #[component]
-fn MediaSeek(media: MediaHandle, size: Input<Size>) -> Element {
+pub(super) fn MediaSeek(media: MediaHandle, size: Input<Size>) -> Element {
     let labels = use_localization().media;
     let mut scrub = use_signal(|| None::<f64>);
     let duration = media.duration();
@@ -402,7 +415,7 @@ pub(super) fn MediaFallback(src: String, children: Element) -> Element {
 }
 
 /// `m:ss`, or `h:mm:ss` from an hour.
-fn clock(seconds: f64) -> String {
+pub(super) fn clock(seconds: f64) -> String {
     let total = seconds.max(0.0).floor() as u64;
     let (hours, minutes, seconds) = (total / 3600, total / 60 % 60, total % 60);
     match hours {

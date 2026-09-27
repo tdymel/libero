@@ -7,21 +7,35 @@ group "Silence"
   group "Player controls"
     button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
-    button "Mute"
     slider "Volume" = 100 [valuemax=100] [valuemin=0]
-    button "Playback speed 1×" [expanded=false] [haspopup=menu]
+    button "Playback speed 1×"
       StaticText "1×"
   status [atomic] [live=polite]
 group "Broken"
   group "Player controls"
     button "Play"
     slider "Seek" = 0 [disabled] [valuemax=1] [valuemin=0]
-    button "Mute"
     slider "Volume" = 100 [valuemax=100] [valuemin=0]
-    button "Playback speed 1×" [expanded=false] [haspopup=menu]
+    button "Playback speed 1×"
       StaticText "1×"
   alert [atomic] [live=assertive]
     StaticText "This media could not be played."
+  status [atomic] [live=polite]
+group "Muted"
+  group "Player controls"
+    button "Play"
+    slider "Seek" = 0 [valuemax=4] [valuemin=0]
+    slider "Volume" = 0 [valuemax=100] [valuemin=0]
+    button "Playback speed 1×"
+      StaticText "1×"
+  status [atomic] [live=polite]
+group "Inline"
+  group "Player controls"
+    button "Play"
+    slider "Seek" = 0 [valuemax=4] [valuemin=0]
+    slider "Volume" = 100 [valuemax=100] [valuemin=0]
+    button "Playback speed 1×"
+      StaticText "1×"
   status [atomic] [live=polite]
 button "Play"
   StaticText "Play"

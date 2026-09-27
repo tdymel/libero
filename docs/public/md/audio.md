@@ -6,8 +6,9 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_d
 Index: [index.md](index.md) lists every other page
 Description: An `<audio>` with libero's own controls, and the `use_media` hook behind them.
 
-An `<audio>` with libero's own controls: play, seek, time, mute, volume and
-speed, in the theme's look on every platform that plays media.
+An `<audio>` in one compact row, as a chat app's voice message: play, a seek
+track, the time, volume and a speed button, in the theme's look on every
+platform that plays media.
 
 ## Usage
 
@@ -60,7 +61,7 @@ Pass the handle to `Audio { media }` to drive the built-in player from outside.
 | `muted` | `bool` | `false` | Starts muted. |
 | `looping` | `bool` | `false` | Starts again at the end. |
 | `preload` | `MediaPreload` | `metadata` | How much loads before a press: `none`, `metadata` or `auto`. |
-| `size` | `Size` | theme | Of the buttons and sliders. |
+| `size` | `Size` | theme | Of the buttons and the seek slider. |
 | `onplay` | `EventHandler<()>` | `None` | Playing started. |
 | `onpause` | `EventHandler<()>` | `None` | Playing paused. |
 | `onended` | `EventHandler<()>` | `None` | Playing reached the end. |
@@ -79,7 +80,7 @@ explains how parts work.
 | Part | `data-slot` | Description |
 |---|---|---|
 | `AudioPart::Controls` | `controls` | The row of controls, a named `group`. |
-| `AudioPart::Time` | `time` | The elapsed and total time. |
+| `AudioPart::Time` | `time` | The time: the total until playing starts, then the elapsed. |
 | `AudioPart::Seek` | `seek` | The seek slider's wrapper. |
 | `AudioPart::Volume` | `volume` | The volume slider's wrapper. |
 | `AudioPart::Message` | `message` | The error text, or the fallback where nothing plays media. |
@@ -93,28 +94,27 @@ explains how parts work.
 | `K` | Plays or pauses, with focus anywhere in the player. |
 | `Space` | On a slider: plays or pauses. On a button: presses it. |
 | `J` or `L` | Jumps 10 seconds back or ahead. |
-| `M` | Mutes or unmutes. |
 | `Left` or `Right` | On the seek slider: 1 second; on the volume slider: 5%. |
-| `Tab` | Moves through every control in visual order: play, seek, mute, volume, speed. |
+| `Tab` | Moves through every control in visual order: play, seek, volume, speed. |
 
 ### Libero handles
 
 - The player is a `group` named by `label`, its controls a `group` named
   "Player controls"; every button and slider is its own Tab stop, as in the
   browser's own controls.
-- The speed button shows the rate ("1×") and is named "Playback speed 1×";
-  its menu offers 0.5× to 2× as radio items.
-- The play and mute buttons change their names (Play/Pause, Mute/Unmute) rather
-  than using `aria-pressed`.
-- At volume 0 the mute button offers Unmute, which brings back the last audible
-  volume; moving the volume up while muted unmutes.
-- No control leaves the player at any width: the seek track shrinks first,
-  below 22rem the volume slider hides (mute stays), and only then does the row
-  wrap, so it fits at 320px and 200% zoom (WCAG 1.4.10).
-- The controls bar has a border at 3:1 against the page in light and dark
-  (WCAG 1.4.11).
-- The seek slider's `aria-valuetext` reads "1:05 of 4:56" (the localization's
-  `media.position`).
+- The speed button shows the rate ("1×") and is named "Playback speed 1×"; a
+  press steps to 1.5×, 2× and back to 1×, and the name follows.
+- The play button changes its name (Play/Pause) rather than using
+  `aria-pressed`.
+- The visible time is hidden from screen readers: the seek slider's
+  `aria-valuetext` reads "1:05 of 4:56" (the localization's `media.position`).
+- There is no mute button and no `M` key: a muted player shows its volume
+  slider at 0, and moving it up unmutes.
+- No control leaves the player at any width: the seek track shrinks first, then
+  the volume slider, and only then does the row wrap, so it fits at 320px and
+  200% zoom (WCAG 1.4.10).
+- The bubble has a border at 3:1 against the page in light and dark (WCAG
+  1.4.11).
 - A polite status says "Loading" while playing waits for data; a failed source
   shows an alert.
 - No autoplay unless asked, and a debug warning for autoplay with sound (WCAG

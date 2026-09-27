@@ -64,9 +64,10 @@ fn the_controls_start_paused_with_an_unknown_duration() {
         "the speed button shows and names the rate: {html}"
     );
     assert!(html.contains(r#"aria-label="Abspielen""#), "{html}");
-    assert!(html.contains(r#"aria-label="Stummschalten""#), "{html}");
     assert!(html.contains(r#"aria-label="Position""#), "{html}");
+    // No mute button, the volume slider stays, one time value.
+    assert!(!html.contains(r#"aria-label="Stummschalten""#), "{html}");
     assert!(html.contains(r#"aria-label="Lautstärke""#), "{html}");
-    assert!(html.contains("0:00") && html.contains(" / --:--"), "{html}");
+    assert!(html.contains(">--:--<") && !html.contains(" / "), "{html}");
     assert!(html.contains(r#"role="status""#), "{html}");
 }
