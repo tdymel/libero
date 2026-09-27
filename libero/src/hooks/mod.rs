@@ -106,7 +106,8 @@ pub use timers::{IntervalHandle, TimeoutHandle, use_interval, use_timeout};
 pub(crate) use timers::{Scheduled, use_scheduled};
 pub(crate) use typeahead::{TYPEAHEAD_RESET, Typeahead, typeahead_match, use_typeahead};
 pub use user_media::{
-    UserMedia, UserMediaDevices, UserMediaOptions, use_user_media, use_user_media_devices,
+    CameraFacing, UserMedia, UserMediaDevices, UserMediaOptions, use_user_media,
+    use_user_media_devices,
 };
 
 // The overlay hooks render a component, so they live beside it (todo 178).

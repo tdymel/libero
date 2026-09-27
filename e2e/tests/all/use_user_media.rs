@@ -39,10 +39,12 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             d.press(keyboard::ESCAPE).await?;
             eventually_text(d, "#is-fullscreen", "false", "Escape").await?;
         }
-        // The runner granted the permission; the emulator's virtual camera answers.
+        // The runner revoked the permission: the first start asks, and opens once
+        // allowed, with no reload (1346). The emulator's virtual camera answers.
         Platform::Android => {
-            d.click("#start").await?;
-            eventually_text(d, "#live", "true", "a start").await?;
+            d.click("#audio").await?;
+            d.allow_permission("#start").await?;
+            eventually_text(d, "#live", "true", "the first start after a grant").await?;
             eventually_text(d, "#camera", "Granted", "a grant").await?;
             d.click("#snapshot").await?;
             eventually_text(d, "#photo", "photo.png true", "a snapshot").await?;
@@ -52,8 +54,10 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             std::thread::sleep(std::time::Duration::from_millis(1500));
             d.click("#finish").await?;
             eventually_text(d, "#recorded", "recording.webm true", "a finish").await?;
+            switch_cameras(d).await?;
             d.click("#stop").await?;
             eventually_text(d, "#live", "false", "a stop").await?;
+            record_audio_only(d).await?;
             // Native here, found by the watch's selector; the watch leaves it on Escape (1256).
             fullscreen_beside_the_capture(d).await?;
             eventually(d, "native fullscreen", async |d| {
@@ -66,6 +70,52 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         Platform::Web => {}
     }
     Ok(())
+}
+
+/// The grant lists the emulator's two cameras with no refresh; a switch reopens
+/// the stream on the other one, and back (1347).
+async fn switch_cameras<D: Driver>(d: &mut D) -> Result<()> {
+    eventually(d, "two listed cameras", async |d| {
+        Ok(d.text("#cameras").await?.parse::<u32>().unwrap_or(0) >= 2)
+    })
+    .await?;
+    let first = d.text("#camera-id").await?;
+    if first.is_empty() {
+        bail!("{:?}: no live camera id", d.platform());
+    }
+    // A running recording finishes into a clip before the switch.
+    d.click("#record").await?;
+    eventually_text(d, "#recorded", "none", "a recording start").await?;
+    std::thread::sleep(std::time::Duration::from_millis(1500));
+    d.click("#switch").await?;
+    eventually(d, "the other camera", async |d| {
+        let id = d.text("#camera-id").await?;
+        Ok(!id.is_empty() && id != first && d.text("#live").await? == "true")
+    })
+    .await?;
+    eventually_text(d, "#recording", "false", "a switch").await?;
+    eventually_text(d, "#recorded", "recording.webm true", "a switch").await?;
+    d.click("#switch").await?;
+    eventually_text(d, "#camera-id", &first, "a switch back").await
+}
+
+/// The microphone alone records an audio clip (1321); the camera comes back on after.
+async fn record_audio_only<D: Driver>(d: &mut D) -> Result<()> {
+    d.click("#camera-toggle").await?;
+    d.click("#start").await?;
+    eventually_text(d, "#live", "true", "an audio-only start").await?;
+    d.click("#record").await?;
+    eventually_text(d, "#recording", "true", "an audio recording").await?;
+    std::thread::sleep(std::time::Duration::from_millis(1500));
+    d.click("#finish").await?;
+    eventually_text(d, "#recording", "false", "an audio finish").await?;
+    eventually(d, "an audio clip", async |d| {
+        Ok(d.text("#recorded-type").await?.starts_with("audio/"))
+    })
+    .await?;
+    d.click("#stop").await?;
+    eventually_text(d, "#live", "false", "an audio stop").await?;
+    d.click("#camera-toggle").await
 }
 
 /// A WebView finds each hook's element by its own attribute: `use_fullscreen`'s
@@ -152,13 +202,12 @@ fn the_web_shows_snapshots_records_and_stops_the_camera() {
             .await
             .unwrap();
 
-        // The grant fills in the device labels.
-        click(page, "#refresh").await.unwrap();
+        // The grant fills in the device labels, with no refresh.
         reads(page, "#devices-supported", "true").await.unwrap();
         wait::for_js_true(
             page,
-            "Number(document.querySelector('#cameras').textContent) > 0",
-            "a fake camera",
+            "Number(document.querySelector('#labelled').textContent) > 0",
+            "a labelled fake camera",
         )
         .await
         .unwrap();
@@ -182,6 +231,25 @@ fn the_web_shows_snapshots_records_and_stops_the_camera() {
         )
         .await
         .unwrap();
+
+        // The microphone alone records an audio clip (1321).
+        click(page, "#camera-toggle").await.unwrap();
+        click(page, "#start").await.unwrap();
+        reads(page, "#live", "true").await.unwrap();
+        click(page, "#record").await.unwrap();
+        reads(page, "#recording", "true").await.unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+        click(page, "#finish").await.unwrap();
+        reads(page, "#recording", "false").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#recorded-type').textContent.startsWith('audio/')",
+            "an audio clip",
+        )
+        .await
+        .unwrap();
+        click(page, "#stop").await.unwrap();
+        click(page, "#camera-toggle").await.unwrap();
 
         set_permission(page, PermissionSetting::Denied)
             .await

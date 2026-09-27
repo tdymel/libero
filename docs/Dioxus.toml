@@ -31,3 +31,7 @@ identifier = "dev.libero.docs"
 location = { precision = "fine", description = "Shows your position in the location demo" }
 camera = { description = "Shows your camera in the capture demo" }
 microphone = { description = "Records your voice in the capture demo" }
+
+# wry's WebView asks it with RECORD_AUDIO; undeclared, every microphone request is denied (1346).
+[android.permissions]
+"android.permission.MODIFY_AUDIO_SETTINGS" = { description = "Records your voice in the capture demo" }

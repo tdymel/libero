@@ -112,6 +112,11 @@ pub trait Driver {
         let _ = (trigger, files);
         bail!("{:?}: no file chooser to answer", self.platform())
     }
+    /// Presses `trigger`, then allows the system permission dialog it opens.
+    async fn allow_permission(&mut self, trigger: &str) -> Result<()> {
+        let _ = trigger;
+        bail!("{:?}: no permission dialog to answer", self.platform())
+    }
     /// The system Back key, which only Android has.
     async fn press_back(&mut self) -> Result<()> {
         bail!("{:?}: no Back key", self.platform())

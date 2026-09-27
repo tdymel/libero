@@ -82,7 +82,8 @@ impl DeviceList {
 #[cfg_attr(feature = "native", allow(dead_code))]
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum CaptureEvent {
-    Live,
+    /// The camera's device id, `None` without a camera track.
+    Live(Option<String>),
     /// Every track ended: unplugged, revoked, or stopped by the system.
     Ended,
     Failed(UserMediaError),
@@ -100,8 +101,8 @@ impl CaptureEvent {
     #[cfg_attr(feature = "native", allow(dead_code))]
     pub(crate) fn from_message(message: &Value, bytes: Option<Vec<u8>>) -> Option<Self> {
         let text = |name: &str| message.get(name).and_then(Value::as_str);
-        Some(if message.get("live").is_some() {
-            Self::Live
+        Some(if let Some(camera) = message.get("live") {
+            Self::Live(camera.as_str().map(str::to_string))
         } else if message.get("ended").is_some() {
             Self::Ended
         } else if let Some(name) = text("error") {
@@ -126,17 +127,21 @@ impl CaptureEvent {
 }
 
 /// `getUserMedia` constraints for the chosen devices; `None` to open neither.
+/// `facing` (`user`, `environment`) applies to a camera chosen by no id.
 pub(crate) fn constraints(
     camera: Option<Option<&str>>,
     microphone: Option<Option<&str>>,
+    facing: Option<&str>,
 ) -> Option<Value> {
-    let track = |wanted: Option<Option<&str>>| match wanted {
-        None => Value::Bool(false),
-        Some(None) => Value::Bool(true),
-        Some(Some(id)) => serde_json::json!({ "deviceId": { "exact": id } }),
+    let track = |wanted: Option<Option<&str>>, facing: Option<&str>| match (wanted, facing) {
+        (None, _) => Value::Bool(false),
+        (Some(None), None) => Value::Bool(true),
+        (Some(None), Some(facing)) => serde_json::json!({ "facingMode": { "ideal": facing } }),
+        (Some(Some(id)), _) => serde_json::json!({ "deviceId": { "exact": id } }),
     };
-    (camera.is_some() || microphone.is_some())
-        .then(|| serde_json::json!({ "video": track(camera), "audio": track(microphone) }))
+    (camera.is_some() || microphone.is_some()).then(
+        || serde_json::json!({ "video": track(camera, facing), "audio": track(microphone, None) }),
+    )
 }
 
 /// A running capture script. Dropping it stops every track.
@@ -184,6 +189,7 @@ pub(crate) trait CaptureApi {
 /// `[attr, tag]`, `send` posts a message, `encode` readies bytes for it.
 #[cfg(not(feature = "native"))]
 pub(crate) const CAPTURE_SCRIPT: &str = "const [attr, tag] = data;
+    const GRANTED = 'lsx-capture-granted';
     const TYPES = ['video/webm;codecs=vp9,opus', 'video/webm', 'video/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
     let stream = null, ticket = 0, recorder = null, dropped = false, queue = Promise.resolve();
     const find = () => document.querySelector('[' + attr + '=\"' + tag + '\"]');
@@ -232,7 +238,9 @@ pub(crate) const CAPTURE_SCRIPT: &str = "const [attr, tag] = data;
         }
         watching.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: [attr] });
         show();
-        send({ live: true });
+        send({ live: next.getVideoTracks()[0]?.getSettings?.().deviceId ?? null });
+        // A grant reveals the device ids and labels: device lists read them again.
+        dispatchEvent(new Event(GRANTED));
     };
     const snapshot = async () => {
         const video = find();
@@ -282,8 +290,8 @@ pub(crate) const CAPTURE_SCRIPT: &str = "const [attr, tag] = data;
     };
     const session = { open, close, snapshot, record, finish };";
 
-/// The device list script: `send`s `[kind, id, label]` rows now and on each
-/// change, or `null` without the API; `stop` ends it.
+/// The device list script: `send`s `[kind, id, label]` rows now, on each
+/// change and after each capture grant, or `null` without the API; `stop` ends it.
 #[cfg(not(feature = "native"))]
 pub(crate) const DEVICES_SCRIPT: &str = "const devices = navigator.mediaDevices;
     const list = async () => {
@@ -293,7 +301,11 @@ pub(crate) const DEVICES_SCRIPT: &str = "const devices = navigator.mediaDevices;
     };
     list();
     devices?.addEventListener('devicechange', list);
-    const stop = () => devices?.removeEventListener('devicechange', list);";
+    addEventListener('lsx-capture-granted', list);
+    const stop = () => {
+        devices?.removeEventListener('devicechange', list);
+        removeEventListener('lsx-capture-granted', list);
+    };";
 
 /// `bytes` as a file a form can post, `None` where no page holds files.
 pub(crate) fn file_from_bytes(name: &str, content_type: &str, bytes: Vec<u8>) -> Option<FileData> {
@@ -512,8 +524,12 @@ mod tests {
     fn messages_become_events() {
         let event = |message, bytes| CaptureEvent::from_message(&message, bytes);
         assert_eq!(
-            event(json!({ "live": true }), None),
-            Some(CaptureEvent::Live)
+            event(json!({ "live": "c1" }), None),
+            Some(CaptureEvent::Live(Some("c1".into())))
+        );
+        assert_eq!(
+            event(json!({ "live": null }), None),
+            Some(CaptureEvent::Live(None))
         );
         assert_eq!(
             event(json!({ "error": "NotAllowedError" }), None),
@@ -557,10 +573,14 @@ mod tests {
 
     #[test]
     fn constraints_name_the_chosen_devices() {
-        assert_eq!(constraints(None, None), None);
+        assert_eq!(constraints(None, None, None), None);
         assert_eq!(
-            constraints(Some(Some("c1")), Some(None)),
+            constraints(Some(Some("c1")), Some(None), Some("user")),
             Some(json!({ "video": { "deviceId": { "exact": "c1" } }, "audio": true }))
+        );
+        assert_eq!(
+            constraints(Some(None), None, Some("environment")),
+            Some(json!({ "video": { "facingMode": { "ideal": "environment" } }, "audio": false }))
         );
     }
 }

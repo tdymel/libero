@@ -7,7 +7,7 @@ use super::web::{element, json};
 use super::{Driver, Platform, Rect};
 use crate::android::{
     ALT, CTRL, SHIFT, download, harness, input, input_text, keycode, soft_keyboard_shown, tap_node,
-    webview_view_focused,
+    tap_node_within, webview_view_focused,
 };
 use crate::passes::{focus, keyboard, pointer};
 
@@ -328,6 +328,16 @@ impl Driver for Android {
         tap_node("content-desc=\"Show roots\"").await?;
         tap_node("text=\"Downloads\"").await?;
         tap_node(&format!("text=\"{name}\"")).await
+    }
+
+    /// wry's runtime permission dialogs, each answered "While using the app":
+    /// the camera's, then the microphone's when both are asked.
+    async fn allow_permission(&mut self, trigger: &str) -> Result<()> {
+        const ALLOW: &str = "permission_allow_foreground_only_button";
+        self.click(trigger).await?;
+        tap_node(ALLOW).await?;
+        let _ = tap_node_within(ALLOW, Duration::from_secs(3)).await;
+        Ok(())
     }
 
     async fn idle(&mut self) {

@@ -34,7 +34,7 @@ use crate::platform::{
         Fix, GeolocationApi, GeolocationError, GeolocationOptions, GeolocationSubscription, Locate,
         Position,
     },
-    image_crop::{CROP_SCRIPT, Cropped, Fractions, ImageCropApi, cropped_name, encode_base64},
+    image_crop::{CROP_SCRIPT, Cropped, Fractions, ImageCropApi, cropped_name},
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
     media::{MEDIA_EVENTS, MediaApi, MediaState, MediaSubscription},
     permission::{PermissionApi, PermissionKind, PermissionState, PermissionSubscription},
@@ -47,6 +47,7 @@ use crate::platform::{
 use crate::tokens::{
     AccessibilityPreferences, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting, Contrast,
 };
+use crate::utils::encode_base64;
 
 /// Whether a page runs the current document's scripts: a server's or the no-op
 /// document fails the send. Kept in [`PageState`]: Android resets thread-locals.

@@ -16,3 +16,7 @@ identifier = "dev.libero.fixtures"
 location = { precision = "fine", description = "The geolocation fixture" }
 camera = { description = "The user media fixture" }
 microphone = { description = "The user media fixture" }
+
+# wry's WebView asks it with RECORD_AUDIO; undeclared, every microphone request is denied (1346).
+[android.permissions]
+"android.permission.MODIFY_AUDIO_SETTINGS" = { description = "The user media fixture" }

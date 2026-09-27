@@ -174,6 +174,11 @@ pub(crate) async fn download(name: &str, text: &str) -> Result<()> {
 /// Taps the first on-screen node carrying `wanted` (`text="…"`), in whatever
 /// app is on top (the system picker), once it shows.
 pub(crate) async fn tap_node(wanted: &str) -> Result<()> {
+    tap_node_within(wanted, crate::wait::timeout()).await
+}
+
+/// [`tap_node`], giving up after `budget`.
+pub(crate) async fn tap_node_within(wanted: &str, budget: std::time::Duration) -> Result<()> {
     let started = std::time::Instant::now();
     loop {
         let dump = shell(&[
@@ -183,7 +188,7 @@ pub(crate) async fn tap_node(wanted: &str) -> Result<()> {
         if let Some(centre) = node_centre(&dump, wanted) {
             return input(&["tap".into(), centre.0.to_string(), centre.1.to_string()]).await;
         }
-        if started.elapsed() > crate::wait::timeout() {
+        if started.elapsed() > budget {
             bail!("no {wanted} on screen");
         }
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;

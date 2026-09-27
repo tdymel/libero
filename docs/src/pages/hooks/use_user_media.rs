@@ -1,109 +1,184 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y};
+use dioxus::html::FileData;
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Flex, Switch, Text},
+    components::{ActionIcon, Audio, Button, Code, Flex, Image, Pictogram, Text, Video},
     hooks::{UserMedia, UserMediaError, UserMediaOptions, use_user_media, use_user_media_devices},
+    utils::data_url,
 };
+use pictogram_icons_lucide as lucide;
 
-/// The hook in one component, as `CameraBooth` renders it.
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let mut with_audio = use_signal(|| false);
-let mut media = use_user_media(UserMediaOptions { microphone: with_audio(), ..Default::default() });
+/// The hook in one component, as `CaptureBooth` renders it.
+fn code(values: &DemoValues, _: &str) -> String {
+    let camera = values.str("camera") == "true";
+    let microphone = values.str("microphone") == "true" || !camera;
+    format!(
+        r#"let mut media = use_user_media(UserMediaOptions {{
+    camera: {camera},
+    microphone: {microphone},
+    ..Default::default()
+}});
 let devices = use_user_media_devices();
+let device = if {camera} {{ "camera" }} else {{ "microphone" }};
 // Announced once per change, never per frame.
-let status = match (media.error(), media.is_recording(), media.is_live()) {
-    (Some(UserMediaError::Denied), _, _) => "Camera refused",
-    (Some(_), _, _) => "Camera unavailable",
-    (None, true, _) => "Recording",
-    (None, false, true) => "Camera on",
-    (None, false, false) if media.is_pending() => "Waiting for permission",
-    (None, false, false) => "Camera off",
-};
+let status = match (media.error(), media.is_recording(), media.is_live()) {{
+    (Some(UserMediaError::Denied), _, _) => format!("{{device}} refused"),
+    (Some(_), _, _) => format!("{{device}} unavailable"),
+    (None, true, _) => "Recording".to_string(),
+    (None, false, true) => format!("{{device}} on"),
+    (None, false, false) if media.is_pending() => "Waiting for permission".to_string(),
+    (None, false, false) => format!("{{device}} off"),
+}};
+// The camera after the live one, on a phone front and back.
+let mut switch = move || {{
+    let cameras = devices.cameras();
+    let at = cameras.iter().position(|c| Some(&c.id) == media.camera_id().as_ref());
+    if let Some(next) = cameras.get(at.map_or(0, |at| (at + 1) % cameras.len())) {{
+        media.switch_camera(next.id.clone());
+    }}
+}};
 
-rsx! {
-    Flex { direction: "column", gap: "sm",
-        video {
-            aria_label: "Camera preview",
-            autoplay: true, muted: true, playsinline: true,
-            width: "320", height: "240",
-            ..media.attributes(),
-        }
-        Switch { label: "With microphone", checked: with_audio(), onchange: move |on| with_audio.set(on) }
-        Flex { direction: "row", gap: "sm",
-            Button {
-                onclick: move |_| if media.is_live() { media.stop() } else { media.start() },
-                if media.is_live() { "Turn camera off" } else { "Turn camera on" }
-            }
-            Button { variant: "outlined", disabled: !media.is_live(), onclick: move |_| media.snapshot(), "Take photo" }
-            Button {
+rsx! {{
+    Flex {{ direction: "column", gap: "sm",
+        if {camera} {{
+            video {{
+                aria_label: "Camera preview",
+                autoplay: true, muted: true, playsinline: true,
+                width: "320", height: "240",
+                ..media.attributes(),
+            }}
+        }}
+        Flex {{ direction: "row", gap: "sm", align: "center",
+            Button {{
+                onclick: move |_| if media.is_live() {{ media.stop() }} else {{ media.start() }},
+                if media.is_live() {{ "Turn {{device}} off" }} else {{ "Turn {{device}} on" }}
+            }}
+            if {camera} {{
+                Button {{ variant: "outlined", disabled: !media.is_live(), onclick: move |_| media.snapshot(), "Take photo" }}
+            }}
+            Button {{
                 variant: "outlined",
                 disabled: !media.is_live(),
-                onclick: move |_| if media.is_recording() { media.finish() } else { media.record() },
-                if media.is_recording() { "Stop recording" } else { "Record" }
-            }
-        }
-        div { role: "status", "{status}" }
-        if let Some(photo) = media.photo() {
-            Text { "Photo: {photo.name()}, {photo.size() / 1024} KB" }
-        }
-        if let Some(clip) = media.recording() {
-            Text { "Recording: {clip.name()}, {clip.size() / 1024} KB" }
-        }
-        Text { size: "sm", "Cameras: {devices.cameras().len()}" }
-    }
-}"#
-    .to_string()
+                onclick: move |_| if media.is_recording() {{ media.finish() }} else {{ media.record() }},
+                if media.is_recording() {{ "Stop recording" }} else {{ "Record" }}
+            }}
+            // Only where there is another camera to switch to.
+            if media.is_live() && devices.cameras().len() > 1 {{
+                ActionIcon {{
+                    aria_label: "Switch camera",
+                    tooltip: true,
+                    onclick: move |_| switch(),
+                    Pictogram {{ icon: lucide::switch_camera::outlined }}
+                }}
+            }}
+        }}
+        div {{ role: "status", "{{status}}" }}
+        // `data_url` reads the file once; fine for a photo or a short clip.
+        if let Some(photo) = media.photo() {{
+            Preview {{ file: photo }}
+        }}
+        if let Some(clip) = media.recording() {{
+            Preview {{ file: clip }}
+        }}
+    }}
+}}
+
+#[component]
+fn Preview(file: dioxus::html::FileData) -> Element {{
+    let src = use_resource(use_reactive!(|file| async move {{ libero::utils::data_url(&file).await }}));
+    let kind = file.content_type().unwrap_or_default();
+    let Some(Some(src)) = src() else {{ return rsx! {{}} }};
+    rsx! {{
+        if kind.starts_with("image/") {{
+            Image {{ src, alt: "Your photo", width: "160" }}
+        }} else if kind.starts_with("audio/") {{
+            Audio {{ src, label: "Your recording" }}
+        }} else {{
+            Video {{ src, label: "Your recording" }}
+        }}
+    }}
+}}"#
+    )
 }
 
-fn status(media: &UserMedia) -> &'static str {
+/// What the status region says, `device` being "Camera" or "Microphone".
+fn status(media: &UserMedia, device: &str) -> String {
     match (media.error(), media.is_recording(), media.is_live()) {
-        (Some(UserMediaError::Denied), _, _) => "Camera refused",
-        (Some(_), _, _) => "Camera unavailable",
-        (None, true, _) => "Recording",
-        (None, false, true) => "Camera on",
-        (None, false, false) if media.is_pending() => "Waiting for permission",
-        (None, false, false) => "Camera off",
+        (Some(UserMediaError::Denied), _, _) => format!("{device} refused"),
+        (Some(_), _, _) => format!("{device} unavailable"),
+        (None, true, _) => "Recording".to_string(),
+        (None, false, true) => format!("{device} on"),
+        (None, false, false) if media.is_pending() => "Waiting for permission".to_string(),
+        (None, false, false) => format!("{device} off"),
+    }
+}
+
+/// A photo as an image, a recording as a player, from the file's own bytes.
+#[component]
+fn Preview(file: FileData) -> Element {
+    let src = use_resource(use_reactive!(|file| async move { data_url(&file).await }));
+    let kind = file.content_type().unwrap_or_default();
+    let Some(Some(src)) = src() else {
+        return rsx! {};
+    };
+    rsx! {
+        if kind.starts_with("image/") {
+            Image { src, alt: "Your photo", width: "160" }
+        } else if kind.starts_with("audio/") {
+            Audio { src, label: "Your recording" }
+        } else {
+            Video { src, label: "Your recording" }
+        }
     }
 }
 
 #[component]
-fn CameraBooth() -> Element {
-    let mut with_audio = use_signal(|| false);
+fn CaptureBooth(camera: bool, microphone: bool) -> Element {
     let mut media = use_user_media(UserMediaOptions {
-        microphone: with_audio(),
+        camera,
+        microphone: microphone || !camera,
         ..Default::default()
     });
     let devices = use_user_media_devices();
-    let status = status(&media);
-    let permission = format!("{:?}", media.camera_permission());
+    let device = if camera { "Camera" } else { "Microphone" };
+    let status = status(&media, device);
+    let noun = device.to_lowercase();
+    let mut switch = move || {
+        let cameras = devices.cameras();
+        let at = cameras
+            .iter()
+            .position(|c| Some(&c.id) == media.camera_id().as_ref());
+        if let Some(next) = cameras.get(at.map_or(0, |at| (at + 1) % cameras.len())) {
+            media.switch_camera(next.id.clone());
+        }
+    };
 
     rsx! {
         Flex { direction: "column", gap: "sm",
-            video {
-                aria_label: "Camera preview",
-                autoplay: true,
-                muted: true,
-                playsinline: true,
-                width: "320",
-                height: "240",
-                style: "background: #000; max-width: 100%;",
-                ..media.attributes(),
+            if camera {
+                video {
+                    aria_label: "Camera preview",
+                    autoplay: true,
+                    muted: true,
+                    playsinline: true,
+                    width: "320",
+                    height: "240",
+                    style: "background: #000; max-width: 100%;",
+                    ..media.attributes(),
+                }
             }
-            Switch {
-                label: "With microphone",
-                checked: with_audio(),
-                onchange: move |on| with_audio.set(on),
-            }
-            Flex { direction: "row", gap: "sm",
+            Flex { direction: "row", gap: "sm", align: "center", wrap: "wrap",
                 Button {
                     onclick: move |_| if media.is_live() { media.stop() } else { media.start() },
-                    if media.is_live() { "Turn camera off" } else { "Turn camera on" }
+                    if media.is_live() { "Turn {noun} off" } else { "Turn {noun} on" }
                 }
-                Button {
-                    variant: "outlined",
-                    disabled: !media.is_live(),
-                    onclick: move |_| media.snapshot(),
-                    "Take photo"
+                if camera {
+                    Button {
+                        variant: "outlined",
+                        disabled: !media.is_live(),
+                        onclick: move |_| media.snapshot(),
+                        "Take photo"
+                    }
                 }
                 Button {
                     variant: "outlined",
@@ -111,15 +186,22 @@ fn CameraBooth() -> Element {
                     onclick: move |_| if media.is_recording() { media.finish() } else { media.record() },
                     if media.is_recording() { "Stop recording" } else { "Record" }
                 }
+                if camera && media.is_live() && devices.cameras().len() > 1 {
+                    ActionIcon {
+                        aria_label: "Switch camera",
+                        tooltip: true,
+                        onclick: move |_| switch(),
+                        Pictogram { icon: lucide::switch_camera::outlined }
+                    }
+                }
             }
             div { role: "status", "{status}" }
             if let Some(photo) = media.photo() {
-                Text { "Photo: {photo.name()}, {photo.size() / 1024} KB" }
+                Preview { file: photo }
             }
             if let Some(clip) = media.recording() {
-                Text { "Recording: {clip.name()}, {clip.size() / 1024} KB" }
+                Preview { file: clip }
             }
-            Text { size: "sm", "Cameras: {devices.cameras().len()}, camera permission: {permission}" }
         }
     }
 }
@@ -182,11 +264,17 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "cameras()" }
                     " and "
                     Code { source: "microphones()" }
-                    " for a picker feeding "
-                    Code { source: "camera_id" }
-                    "; labels stay empty until a grant, so "
-                    Code { source: "refresh()" }
-                    " after one. A recording crosses a WebView's IPC in 1 s chunks and is dropped past "
+                    "; labels and ids fill in once a start is granted. "
+                    Code { source: "switch_camera(id)" }
+                    " reopens a live stream on another camera, "
+                    Code { source: "camera_id()" }
+                    " names the live one, and the "
+                    Code { source: "facing" }
+                    " option picks a phone's front or back. "
+                    Code { source: "libero::utils::data_url(&file)" }
+                    " turns a photo or clip into a "
+                    Code { source: "src" }
+                    ". Switch the camera off for an audio-only recording. A recording crosses a WebView's IPC in 1 s chunks and is dropped past "
                     Code { source: "max_bytes" }
                     " (50 MB by default) with "
                     Code { source: "TooLarge" }
@@ -197,7 +285,11 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "[permissions] camera" }
                     " and "
                     Code { source: "microphone" }
-                    " in Dioxus.toml; the system asks on the first start. Windows is untested. Blitz and a server render have no capture API: "
+                    " in Dioxus.toml, plus "
+                    Code { source: "\"android.permission.MODIFY_AUDIO_SETTINGS\"" }
+                    " under "
+                    Code { source: "[android.permissions]" }
+                    ": without it every microphone request is denied. The system asks on the first start. Windows is untested. Blitz and a server render have no capture API: "
                     Code { source: "is_supported()" }
                     " stays false and a start fails with "
                     Code { source: "Unsupported" }
@@ -208,8 +300,16 @@ pub fn UseUserMediaPage() -> Element {
             Demo {
                 component: "use_user_media",
                 children_text: "",
-                controls: Vec::new(),
-                render: move |_: DemoValues| rsx! { CameraBooth {} },
+                // Options, not props: `code` prints them into the hook call.
+                controls: vec![
+                    Control::switch("camera").default("true").code(|_, _| vec![]),
+                    Control::switch("microphone").code(|_, _| vec![]),
+                ],
+                render: move |values: DemoValues| {
+                    let camera = values.str("camera") == "true";
+                    let microphone = values.str("microphone") == "true";
+                    rsx! { CaptureBooth { key: "{camera}{microphone}", camera, microphone } }
+                },
                 wrap: Wrap(code),
             }
         }

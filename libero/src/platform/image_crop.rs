@@ -45,28 +45,7 @@ pub(crate) fn cropped_name(name: &str, from: &str, to: &str) -> String {
     format!("{stem}.{extension}")
 }
 
-/// Standard, padded base64, as `atob` reads it.
-pub(crate) fn encode_base64(bytes: &[u8]) -> String {
-    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut text = String::with_capacity(bytes.len().div_ceil(3) * 4);
-    for chunk in bytes.chunks(3) {
-        let triple = chunk.iter().enumerate().fold(0u32, |acc, (at, &byte)| {
-            acc | u32::from(byte) << (16 - 8 * at)
-        });
-        for at in 0..4 {
-            match at <= chunk.len() {
-                true => text.push(ALPHABET[(triple >> (18 - 6 * at) & 0x3f) as usize] as char),
-                false => text.push('='),
-            }
-        }
-    }
-    text
-}
-
-/// A `data:` URL for an `<img>`: every renderer shows one, Blitz included.
-pub(crate) fn data_url(content_type: &str, bytes: &[u8]) -> String {
-    format!("data:{content_type};base64,{}", encode_base64(bytes))
-}
+pub(crate) use crate::utils::bytes_data_url as data_url;
 
 #[cfg(target_arch = "wasm32")]
 pub(super) mod web {
@@ -217,16 +196,7 @@ pub(crate) fn image_crop() -> Option<&'static dyn ImageCropApi> {
 
 #[cfg(test)]
 mod tests {
-    use super::{cropped_name, encode_base64};
-
-    #[test]
-    fn base64_pads_as_btoa_does() {
-        assert_eq!(encode_base64(b""), "");
-        assert_eq!(encode_base64(b"f"), "Zg==");
-        assert_eq!(encode_base64(b"fo"), "Zm8=");
-        assert_eq!(encode_base64(b"foo"), "Zm9v");
-        assert_eq!(encode_base64(&[0xff, 0xfe, 0xfd, 0x00]), "//79AA==");
-    }
+    use super::cropped_name;
 
     #[test]
     fn a_changed_type_swaps_the_extension() {

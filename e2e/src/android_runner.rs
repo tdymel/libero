@@ -165,15 +165,27 @@ fn run_on(
         "dx/e2e-fixtures/{profile}/android/app/app/build/outputs/apk/debug/app-debug.apk"
     ));
     adb(serial, &["install", "-r", &apk.to_string_lossy()])?;
-    // `use_geolocation`, `use_user_media`: no driver answers wry's runtime dialog, so grant up front.
-    for permission in [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "CAMERA",
-        "RECORD_AUDIO",
-    ] {
+    // `use_geolocation`: no driver answers its dialog, so grant up front.
+    for permission in ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"] {
         let permission = format!("android.permission.{permission}");
         adb(serial, &["shell", "pm", "grant", PACKAGE, &permission])?;
+    }
+    // `use_user_media` answers wry's dialog itself (1346), so it must show even on a reused device.
+    for permission in ["CAMERA", "RECORD_AUDIO"] {
+        let permission = format!("android.permission.{permission}");
+        adb(serial, &["shell", "pm", "revoke", PACKAGE, &permission])?;
+        adb(
+            serial,
+            &[
+                "shell",
+                "pm",
+                "clear-permission-flags",
+                PACKAGE,
+                &permission,
+                "user-set",
+                "user-fixed",
+            ],
+        )?;
     }
 
     // libtest ORs its filters, so the `android` tests matching any of them are
@@ -429,6 +441,8 @@ fn boot_emulator(sdk: &Path, artifacts: &Path, port: u16) -> Result<Child> {
         .args(["-avd", &avd, "-no-window", "-gpu", &gpu, "-read-only"])
         .args(["-port", &port.to_string()])
         .args(["-no-audio", "-no-snapshot-save", "-no-boot-anim"])
+        // A second camera, as on a phone: `use_user_media` switches between them (1347).
+        .args(["-camera-front", "emulated"])
         .env_remove("DISPLAY")
         .env("ANDROID_HOME", sdk)
         .env("ANDROID_SDK_ROOT", sdk)

@@ -22,7 +22,7 @@ mod str_enum;
 pub mod sx;
 pub mod theme;
 mod tokens;
-mod utils;
+pub mod utils;
 
 /// The date types the date and time components hold, re-exported so an app
 /// names the same version.

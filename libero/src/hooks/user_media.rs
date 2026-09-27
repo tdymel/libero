@@ -17,6 +17,10 @@ pub struct UserMediaOptions {
     pub microphone: bool,
     /// A [`MediaDevice::id`] from [`use_user_media_devices`]; `None` lets the platform pick.
     pub camera_id: Option<String>,
+    /// The side a phone's camera faces; ignored while `camera_id` (or a
+    /// [`switch_camera`](UserMedia::switch_camera)) names one. A hint: a laptop's
+    /// single camera opens anyway.
+    pub facing: Option<CameraFacing>,
     pub microphone_id: Option<String>,
     /// A longer recording is dropped with [`UserMediaError::TooLarge`]; `None` sets no cap.
     pub max_bytes: Option<u64>,
@@ -30,7 +34,28 @@ impl Default for UserMediaOptions {
             microphone: false,
             camera_id: None,
             microphone_id: None,
+            facing: None,
             max_bytes: Some(50 * 1024 * 1024),
+        }
+    }
+}
+
+/// Which way a camera faces, on a phone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum CameraFacing {
+    /// Towards the user: the selfie camera.
+    User,
+    /// Away from the user: the back camera.
+    Environment,
+}
+
+impl CameraFacing {
+    /// The `facingMode` name.
+    fn name(self) -> &'static str {
+        match self {
+            Self::User => "user",
+            Self::Environment => "environment",
         }
     }
 }
@@ -57,6 +82,9 @@ impl Default for UserMediaOptions {
 #[derive(Clone, Copy)]
 pub struct UserMedia {
     options: Signal<UserMediaOptions>,
+    /// The [`switch_camera`](UserMedia::switch_camera) choice, over `options.camera_id`.
+    chosen_camera: Signal<Option<String>>,
+    camera: Signal<Option<String>>,
     tag: u64,
     supported: Signal<bool>,
     camera_permission: Signal<PermissionState>,
@@ -79,12 +107,14 @@ impl UserMedia {
             return;
         }
         let options = self.options.peek().clone();
+        let camera_id = self.chosen_camera.peek().clone().or(options.camera_id);
         fn wanted(on: bool, id: &Option<String>) -> Option<Option<&str>> {
             on.then_some(id.as_deref())
         }
         let Some(constraints) = constraints(
-            wanted(options.camera, &options.camera_id),
+            wanted(options.camera, &camera_id),
             wanted(options.microphone, &options.microphone_id),
+            options.facing.map(CameraFacing::name),
         ) else {
             self.error.set(Some(UserMediaError::Constraint));
             return;
@@ -108,6 +138,31 @@ impl UserMedia {
         }
         self.pending.set(false);
         self.live.set(false);
+        self.camera.set(None);
+    }
+
+    /// Opens the camera `id` (a [`MediaDevice::id`]) in place of the live one,
+    /// which stops first: a phone opens one camera at a time. A running
+    /// recording finishes into [`recording`](Self::recording) first. Not live,
+    /// the next [`start`](Self::start) opens it. Kept until `options.camera_id` changes.
+    ///
+    /// ```rust
+    /// # use libero::hooks::{UserMedia, UserMediaDevices};
+    /// // The camera after the live one, for a "Switch camera" button.
+    /// fn next_camera(mut media: UserMedia, devices: UserMediaDevices) {
+    ///     let cameras = devices.cameras();
+    ///     let at = cameras.iter().position(|c| Some(&c.id) == media.camera_id().as_ref());
+    ///     if let Some(next) = cameras.get(at.map_or(0, |at| (at + 1) % cameras.len())) {
+    ///         media.switch_camera(next.id.clone());
+    ///     }
+    /// }
+    /// ```
+    pub fn switch_camera(&mut self, id: impl Into<String>) {
+        self.chosen_camera.set(Some(id.into()));
+        if *self.live.peek() || *self.pending.peek() {
+            self.stop();
+            self.start();
+        }
     }
 
     /// Takes a PNG of the preview's current frame into [`photo`](Self::photo).
@@ -159,14 +214,16 @@ impl UserMedia {
 
     pub(crate) fn settle(&mut self, event: CaptureEvent) {
         match event {
-            CaptureEvent::Live => {
+            CaptureEvent::Live(camera) => {
                 self.pending.set(false);
                 self.live.set(true);
+                self.camera.set(camera);
                 self.error.set(None);
                 self.set_permissions(PermissionState::Granted);
             }
             CaptureEvent::Ended => {
                 self.live.set(false);
+                self.camera.set(None);
             }
             CaptureEvent::Failed(error) => {
                 self.pending.set(false);
@@ -256,6 +313,12 @@ impl UserMedia {
         (self.live)()
     }
 
+    /// The live camera's [`MediaDevice::id`], `None` when off or audio only.
+    /// Reactive.
+    pub fn camera_id(&self) -> Option<String> {
+        (self.camera)()
+    }
+
     /// Whether a [`start`](Self::start) waits for the user's answer. Reactive.
     pub fn is_pending(&self) -> bool {
         (self.pending)()
@@ -296,11 +359,17 @@ fn file_name(stem: &str, content_type: &str) -> String {
 /// recording once, in a status region.
 pub fn use_user_media(options: UserMediaOptions) -> UserMedia {
     let mut options_signal = use_signal(|| options.clone());
+    let mut chosen_camera = use_signal(|| None);
     if *options_signal.peek() != options {
+        if options_signal.peek().camera_id != options.camera_id {
+            chosen_camera.set(None);
+        }
         options_signal.set(options);
     }
     let mut media = UserMedia {
         options: options_signal,
+        chosen_camera,
+        camera: use_signal(|| None),
         tag: use_hook(next_observe_tag),
         supported: use_signal(|| false),
         camera_permission: use_signal(PermissionState::default),
@@ -357,8 +426,8 @@ pub fn use_user_media(options: UserMediaOptions) -> UserMedia {
 }
 
 /// The page's cameras and microphones, kept current as devices come and go.
-/// Labels stay empty until the user granted a camera or microphone; call
-/// [`refresh`](Self::refresh) after a grant.
+/// Labels stay empty until the user granted a camera or microphone; a
+/// [`UserMedia`] going live lists them again.
 #[derive(Clone, Copy)]
 pub struct UserMediaDevices {
     supported: Signal<bool>,

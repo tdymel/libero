@@ -12,7 +12,9 @@ pub const ROUTES: Routes = &[("/use-user-media", || rsx! { Captured {} })];
 #[component]
 fn Captured() -> Element {
     let mut audio = use_signal(|| false);
+    let mut camera = use_signal(|| true);
     let mut media = use_user_media(UserMediaOptions {
+        camera: camera(),
         microphone: audio(),
         ..Default::default()
     });
@@ -43,10 +45,23 @@ fn Captured() -> Element {
         button { id: "start", onclick: move |_| media.start(), "Start" }
         button { id: "stop", onclick: move |_| media.stop(), "Stop" }
         button { id: "audio", onclick: move |_| audio.toggle(), "Audio" }
+        button { id: "camera-toggle", onclick: move |_| camera.toggle(), "Camera" }
         button { id: "snapshot", onclick: move |_| media.snapshot(), "Snapshot" }
         button { id: "record", onclick: move |_| media.record(), "Record" }
         button { id: "finish", onclick: move |_| media.finish(), "Finish" }
         button { id: "refresh", onclick: move |_| devices.refresh(), "Refresh" }
+        // The camera after the live one, as a phone's switch button picks it (1347).
+        button {
+            id: "switch",
+            onclick: move |_| {
+                let cameras = devices.cameras();
+                let at = cameras.iter().position(|camera| Some(&camera.id) == media.camera_id().as_ref());
+                if let Some(next) = cameras.get(at.map_or(0, |at| (at + 1) % cameras.len())) {
+                    media.switch_camera(next.id.clone());
+                }
+            },
+            "Switch"
+        }
         p { id: "supported", "{media.is_supported()}" }
         p { id: "camera", "{media.camera_permission():?}" }
         p { id: "live", "{media.is_live()}" }
@@ -55,8 +70,11 @@ fn Captured() -> Element {
         p { id: "error", "{media.error():?}" }
         p { id: "photo", "{size(media.photo())}" }
         p { id: "recorded", "{size(media.recording())}" }
+        p { id: "recorded-type", {media.recording().and_then(|file| file.content_type()).unwrap_or_default()} }
         p { id: "cameras", "{devices.cameras().len()}" }
+        p { id: "labelled", "{devices.cameras().iter().filter(|camera| !camera.label.is_empty()).count()}" }
         p { id: "devices-supported", "{devices.is_supported()}" }
+        p { id: "camera-id", {media.camera_id().unwrap_or_default()} }
         p { id: "is-fullscreen", "{fullscreen.is_fullscreen()}" }
     }
 }
