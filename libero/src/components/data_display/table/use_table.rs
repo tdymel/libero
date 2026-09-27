@@ -95,6 +95,9 @@ pub(crate) struct TableConfig {
     pub hidden_columns: Option<Vec<String>>,
     pub default_hidden_columns: Vec<String>,
     pub onhiddencolumnschange: Option<EventHandler<Vec<String>>>,
+    pub quick_filter: Option<String>,
+    pub default_quick_filter: String,
+    pub onquickfilterchange: Option<EventHandler<String>>,
 }
 
 /// A table's state, one slice per feature.
@@ -108,6 +111,8 @@ pub(crate) struct TableState {
     pub page_size: StateSlice<usize>,
     /// The hidden columns' headers.
     pub hidden_columns: StateSlice<Vec<String>>,
+    /// The quick filter's text.
+    pub quick_filter: StateSlice<String>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -141,11 +146,18 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.onhiddencolumnschange,
         "Table: a controlled `hidden_columns` without `onhiddencolumnschange` never changes.",
     );
+    let quick_filter = use_state_slice(
+        config.quick_filter,
+        || config.default_quick_filter,
+        config.onquickfilterchange,
+        "Table: a controlled `quick_filter` without `onquickfilterchange` never changes.",
+    );
     TableState {
         sort,
         selection,
         page,
         page_size,
         hidden_columns,
+        quick_filter,
     }
 }

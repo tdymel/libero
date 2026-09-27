@@ -57,15 +57,16 @@ pub(super) fn page_of_row(row: usize, size: usize) -> u32 {
     u32::try_from(row / size.max(1) + 1).unwrap_or(u32::MAX)
 }
 
-/// Back to page 1 when the sort changes: the rows the reader paged to are gone.
+/// Back to page 1 when the sort or the filter changes: the rows the reader
+/// paged to are gone.
 pub(super) fn use_page_reset(state: TableState) {
-    let mut last = use_signal(|| state.sort.read());
+    let mut last = use_signal(|| (state.sort.read(), state.quick_filter.read()));
     use_effect(move || {
-        let sort: Vec<TableSort> = state.sort.read();
-        if *last.peek() == sort {
+        let now: (Vec<TableSort>, String) = (state.sort.read(), state.quick_filter.read());
+        if *last.peek() == now {
             return;
         }
-        last.set(sort);
+        last.set(now);
         if state.page.peek() != 1 {
             state.page.set(1);
         }

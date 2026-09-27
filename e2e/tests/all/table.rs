@@ -400,6 +400,34 @@ e2e::scenario!(
     the_pages_turn_sort_and_resize
 );
 
+/// 1156-3a: typing narrows the rows, goes back to page 1 and, once settled,
+/// announces the count; the unsearched stock column matches nothing.
+async fn the_quick_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const RANGE: &str = "[data-slot=range]";
+    const LIVE: &str = "table + [role=status]";
+    eventually_text(d, RANGE, "1–3 of 7", "the first page").await?;
+    d.click("button[aria-label=\"Go to next page\"]").await?;
+    eventually_text(d, "#page", "2", "Next").await?;
+    d.click("input[type=search]").await?;
+    eventually_focused(d, "input[type=search]", "a click").await?;
+    d.type_text("ap").await?;
+    eventually_text(d, "#query", "ap", "typing ap").await?;
+    eventually_text(d, RANGE, "1–2 of 2", "the filter").await?;
+    eventually_text(d, "tbody th", "Apple", "the filter").await?;
+    eventually_text(d, "#page", "1", "the filter's page reset").await?;
+    eventually_text(d, LIVE, "2 rows", "the settled count").await?;
+    d.press(keyboard::BACKSPACE).await?;
+    d.press(keyboard::BACKSPACE).await?;
+    d.type_text("7").await?;
+    eventually_text(d, "tbody td", "No matching rows", "a stock number").await
+}
+
+e2e::scenario!(
+    the_quick_filter_narrows_a_paged_table,
+    "/table/filter",
+    the_quick_filter_narrows_the_rows
+);
+
 /// 1156-0b: with `row_key`, a row prepended on top leaves the others' nodes alone.
 #[test]
 fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {

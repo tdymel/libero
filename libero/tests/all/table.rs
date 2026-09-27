@@ -5,7 +5,9 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Checkbox, ColumnDefaults, Mark, SortDirection, States, Table, TableSort, column},
+    components::{
+        Checkbox, Column, ColumnDefaults, Mark, SortDirection, States, Table, TableSort, column,
+    },
     localization::Localization,
     theme::Size,
 };
@@ -663,4 +665,215 @@ fn a_column_menu_puts_a_named_menu_button_in_each_shown_header() {
         name.find("data-header-text") < name.find("data-column-menu"),
         "{name}"
     );
+}
+
+#[derive(Clone, PartialEq)]
+struct City {
+    name: &'static str,
+    country: &'static str,
+    code: &'static str,
+}
+
+fn cities() -> Vec<City> {
+    vec![
+        City {
+            name: "London",
+            country: "United Kingdom",
+            code: "LON",
+        },
+        City {
+            name: "Paris",
+            country: "France",
+            code: "PAR",
+        },
+        City {
+            name: "Lyon",
+            country: "France",
+            code: "LYS",
+        },
+    ]
+}
+
+fn city_columns() -> Vec<Column<City>> {
+    vec![
+        column("City")
+            .value(|c: &City| c.name)
+            .row_header()
+            .sortable(),
+        column("Country").value(|c: &City| c.country),
+        column("Code").value(|c: &City| c.code).filterable(false),
+    ]
+}
+
+#[test]
+fn the_quick_filter_keeps_rows_whose_shown_filterable_cells_hold_every_word() {
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: cities(),
+                    columns: city_columns(),
+                    default_quick_filter: "FRANCE  ly",
+                    show_quick_filter: true,
+                }
+            }
+        }
+    });
+    let body = body(&html);
+    assert!(body.contains("Lyon"), "{body}");
+    assert!(
+        !body.contains("Paris") && !body.contains("London"),
+        "{body}"
+    );
+    let input = attributes_of(&html, "input");
+    assert_eq!(input["type"], "search");
+    assert_eq!(input["value"], "FRANCE  ly");
+    assert!(body.contains(">Search<"), "{body}");
+    assert_eq!(body.matches("role=\"status\"").count(), 1, "{body}");
+
+    // `filterable(false)` and hidden columns are not searched.
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: cities(),
+                    columns: city_columns(),
+                    default_quick_filter: "LYS",
+                }
+            }
+        }
+    });
+    assert!(!html.contains("Lyon"), "{html}");
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: cities(),
+                    columns: city_columns(),
+                    default_quick_filter: "france",
+                    default_hidden_columns: vec!["Country".into()],
+                }
+            }
+        }
+    });
+    assert!(!html.contains("Paris"), "{html}");
+}
+
+/// Each table's "Search" field is told apart by its caption.
+#[test]
+fn the_quick_filter_field_is_described_by_the_caption() {
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "Cities",
+                    data: cities(),
+                    columns: city_columns(),
+                    show_quick_filter: true,
+                }
+            }
+        }
+    });
+    let described = attributes_of(&html, "input")["aria-describedby"].clone();
+    assert_eq!(attributes_of(&html, "caption")["id"], described, "{html}");
+}
+
+#[test]
+fn a_filter_that_leaves_nothing_says_no_results_not_empty() {
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: cities(),
+                    columns: city_columns(),
+                    empty: rsx! { "No cities yet." },
+                    default_quick_filter: "Berlin",
+                }
+            }
+        }
+    });
+    assert!(html.contains("No matching rows"), "{html}");
+    assert!(!html.contains("No cities yet."), "{html}");
+
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: Vec::<City>::new(),
+                    columns: city_columns(),
+                    empty: rsx! { "No cities yet." },
+                    default_quick_filter: "Berlin",
+                }
+            }
+        }
+    });
+    assert!(html.contains("No cities yet."), "{html}");
+
+    // Filtered by a server: an empty page for a query has no results.
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: Vec::<City>::new(),
+                    columns: city_columns(),
+                    default_quick_filter: "Berlin",
+                    manual_filter: true,
+                }
+            }
+        }
+    });
+    assert!(html.contains("No matching rows"), "{html}");
+}
+
+#[test]
+fn manual_filter_draws_data_as_given() {
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: cities(),
+                    columns: city_columns(),
+                    default_quick_filter: "Berlin",
+                    manual_filter: true,
+                }
+            }
+        }
+    });
+    assert_eq!(
+        body(&html).matches("<th scope=\"row\"").count(),
+        3,
+        "{html}"
+    );
+}
+
+#[test]
+fn filter_sort_and_page_compose_and_select_all_covers_the_kept_rows() {
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: cities(),
+                    columns: city_columns(),
+                    default_quick_filter: "france",
+                    default_sort: vec![TableSort::new("City", SortDirection::Ascending)],
+                    default_page_size: 1usize,
+                    selectable: true,
+                    // Paris and Lyon by index: every kept row, so select-all is checked.
+                    default_selection: vec!["1".to_string(), "2".to_string()],
+                }
+            }
+        }
+    });
+    let body = body(&html);
+    assert!(body.contains("Lyon") && !body.contains("Paris"), "{body}");
+    assert!(body.contains("1–1 of 2"), "{body}");
+    assert!(!body.contains("aria-checked=\"mixed\""), "{body}");
 }

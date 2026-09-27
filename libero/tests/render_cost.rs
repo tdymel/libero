@@ -763,12 +763,40 @@ const TABLE_LARGE_SHAPES: &[Shape] = &[
         round: rerender_app,
     },
     Shape {
+        name: "Table 10k filter sort page",
+        app: table_filter_app::<10_000>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
         name: "Table 1k select mount",
         app: table_select_mount_app::<1_000>,
         count: 1,
         round: mount_round,
     },
 ];
+
+/// A sorted, paged table whose quick filter flips between two queries, as a
+/// keystroke does: the sort stays cached.
+fn table_filter_app<const ROWS: usize>() -> Element {
+    let data = use_hook(|| (0..ROWS as u32).collect::<Vec<u32>>());
+    let onquickfilterchange = use_callback(|_: String| {});
+    rsx! {
+        LiberoProvider {
+            Table {
+                data: data.clone(),
+                columns: vec![
+                    column("Name").value(|n: &u32| format!("Row {n}")).row_header(),
+                    column("N").value(|n: &u32| *n).sortable(),
+                ],
+                default_sort: vec![TableSort::new("N", SortDirection::Descending)],
+                quick_filter: if flip() { "12" } else { "1" },
+                onquickfilterchange,
+                default_page_size: 25,
+            }
+        }
+    }
+}
 
 /// A sorted, paged table turning between pages 1 and 2: the sort stays.
 fn table_page_turn_app<const ROWS: usize>() -> Element {

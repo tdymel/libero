@@ -27,6 +27,7 @@ use super::{
         BodySpec, CaptionSpec, CellSpec, RowFn, RowSpec, SortedRows, TableSort, active_sort,
         header_specs, render_body,
     },
+    filter::{FilteredRows, QuickFilter, query_words},
     groups::spanned,
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     selection::Selection,
@@ -332,6 +333,22 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// The column menus' `parts`: they open in a portal, out of `sx`'s reach.
     #[props(default, into)]
     column_menu_parts: Input<Parts<MenuPart>>,
+    /// The quick filter's text; set, it is controlled. A row stays when every
+    /// word occurs in one of its shown, `filterable` cells, ignoring case.
+    #[props(default, into)]
+    quick_filter: Option<String>,
+    /// Seeds the quick filter once. Ignored when `quick_filter` is set.
+    #[props(default, into)]
+    default_quick_filter: String,
+    /// The text typed into the quick-filter field.
+    #[props(default)]
+    onquickfilterchange: Option<EventHandler<String>>,
+    /// A search field above the table that drives `quick_filter`.
+    #[props(default)]
+    show_quick_filter: bool,
+    /// `data` comes filtered: the quick filter only asks via `onquickfilterchange`.
+    #[props(default)]
+    manual_filter: bool,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -387,6 +404,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         hidden_columns: props.hidden_columns,
         default_hidden_columns: props.default_hidden_columns,
         onhiddencolumnschange: props.onhiddencolumnschange,
+        quick_filter: props.quick_filter,
+        default_quick_filter: props.default_quick_filter,
+        onquickfilterchange: props.onquickfilterchange,
     });
     let announcer = use_announcer();
     let touch = use_hook(|| CopyValue::new(false));
@@ -420,6 +440,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .prepare();
     let look = use_checkbox_look(size, props.selectable);
     let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
+    let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
 
     let headers = header_specs(
         &props.columns,
@@ -475,13 +496,42 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             .call(&data[index])
             .unwrap_or_else(|| index.to_string())
     };
-    let selection = look.map(|look| Selection {
-        slice: state.selection,
-        keys: (0..data.len()).map(key_of).collect(),
-        announcer,
-        labels,
-        size,
-        look: Rc::new(look),
+    // The quick filter searches the shown, filterable columns.
+    let words = query_words(&state.quick_filter.read());
+    let searched: Vec<usize> = props
+        .columns
+        .iter()
+        .zip(&headers)
+        .enumerate()
+        .filter(|(_, (column, spec))| column.filterable && !spec.hidden)
+        .map(|(index, _)| index)
+        .collect();
+    let kept = match props.manual_filter {
+        true => None,
+        false => filtered
+            .write()
+            .kept(&data, &props.columns, &searched, &words),
+    };
+    let selection = look.map(|look| {
+        let keys: Rc<[String]> = (0..data.len()).map(key_of).collect();
+        let scope = match &kept {
+            Some(kept) => keys
+                .iter()
+                .zip(kept.iter())
+                .filter(|(_, kept)| **kept)
+                .map(|(key, _)| key.clone())
+                .collect(),
+            None => keys.clone(),
+        };
+        Selection {
+            slice: state.selection,
+            keys,
+            scope,
+            announcer,
+            labels,
+            size,
+            look: Rc::new(look),
+        }
     });
     // Stable, so a row's box memoizes when its row did not change.
     let current = selection.clone();
@@ -501,15 +551,20 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .iter()
         .position(|column| column.row_header)
         .unwrap_or(0);
-    // Sort, then page; a `manual_*` stage is the caller's.
-    let mut order = match props.manual_sort {
+    // Filter, sort, then page; a `manual_*` stage is the caller's. Filtering
+    // the sorted order keeps each stage's cache apart: a keystroke never re-sorts.
+    let mut order: Vec<usize> = match props.manual_sort {
         true => (0..data.len()).collect(),
         false => sorted.write().order(&data, &props.columns, &active),
     };
+    if let Some(kept) = &kept {
+        order.retain(|&index| kept[index]);
+    }
+    let results = order.len();
     let pager = paginated.then(|| {
         let total = match props.manual_pagination {
-            true => props.row_count.unwrap_or(data.len()),
-            false => data.len(),
+            true => props.row_count.unwrap_or(results),
+            false => results,
         };
         let page_size = state.page_size.read().max(1);
         let page = clamp_page(total, state.page.read(), page_size);
@@ -589,6 +644,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         })
         .collect();
 
+    let described_by = props.caption.as_ref().map(|_| caption_id());
     let mut caption = props.caption.map(|text| CaptionSpec {
         text,
         id: caption_id(),
@@ -633,7 +689,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             bounded && group_rows > 0 && sticks_table_heads(),
         )
         .into();
-    let empty = props.empty.unwrap_or_else(|| rsx! { "{labels.no_rows}" });
+    // Rows the filter took away, not missing data: the caller's `empty` does not apply.
+    let filtered_out = !words.is_empty() && (props.manual_filter || !data.is_empty());
+    let empty = match filtered_out {
+        true => rsx! { "{labels.no_results}" },
+        false => props.empty.unwrap_or_else(|| rsx! { "{labels.no_rows}" }),
+    };
     let table = use_box()
         .framework_sx(&TABLE_SX)
         .class(&props.class)
@@ -658,8 +719,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 menus,
             }),
         );
-    // The selection's live region: valid in no part of a table, so beside it.
-    let table = match props.selectable {
+    // The live region: valid in no part of a table, so beside it.
+    let table = match props.selectable || props.show_quick_filter {
         true => rsx! {
             {table}
             {announcer.render()}
@@ -705,11 +766,27 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         }
         false => table,
     };
-    match pager {
-        // Outside the scroll region, so the controls stay put while it scrolls.
-        Some(pager) => rsx! {
-            div { {table} {pager} }
+    let search = props.show_quick_filter.then(|| {
+        rsx! {
+            QuickFilter {
+                slice: state.quick_filter,
+                results,
+                announcer,
+                labels,
+                size,
+                caption: described_by,
+            }
+        }
+    });
+    // Outside the scroll region, so the controls stay put while it scrolls.
+    match (search, pager) {
+        (None, None) => table,
+        (search, pager) => rsx! {
+            div {
+                {search}
+                {table}
+                {pager}
+            }
         },
-        None => table,
     }
 }

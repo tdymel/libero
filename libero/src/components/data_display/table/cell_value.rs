@@ -27,6 +27,16 @@ impl SortDirection {
     }
 }
 
+/// Which filter operators a column offers, from its cell type.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub enum FilterKind {
+    #[default]
+    Text,
+    Number,
+    Boolean,
+}
+
 /// What a cell sorts by. `Text` is pre-lowercased, so a comparison during the
 /// sort allocates nothing.
 #[derive(Clone, Debug, PartialEq)]
@@ -79,6 +89,10 @@ pub trait CellValue: 'static {
     fn align() -> CellAlign {
         CellAlign::Start
     }
+
+    fn filter_kind() -> FilterKind {
+        FilterKind::Text
+    }
 }
 
 impl CellValue for String {
@@ -97,6 +111,10 @@ impl CellValue for bool {
     fn cell_text(&self) -> String {
         self.to_string()
     }
+
+    fn filter_kind() -> FilterKind {
+        FilterKind::Boolean
+    }
 }
 
 macro_rules! numeric_cell_value {
@@ -113,6 +131,10 @@ macro_rules! numeric_cell_value {
 
                 fn align() -> CellAlign {
                     CellAlign::End
+                }
+
+                fn filter_kind() -> FilterKind {
+                    FilterKind::Number
                 }
             }
         )+
@@ -133,6 +155,10 @@ impl<V: CellValue> CellValue for Option<V> {
 
     fn align() -> CellAlign {
         V::align()
+    }
+
+    fn filter_kind() -> FilterKind {
+        V::filter_kind()
     }
 }
 
@@ -168,6 +194,16 @@ mod tests {
         assert_eq!(None::<u32>.sort_key(), SortKey::Empty);
         assert_eq!(None::<u32>.cell_text(), "");
         assert_eq!(Some(7u32).sort_key(), SortKey::Num(7.0));
+    }
+
+    #[test]
+    fn the_filter_kind_follows_the_cell_type() {
+        assert_eq!(<String as CellValue>::filter_kind(), FilterKind::Text);
+        assert_eq!(<f32 as CellValue>::filter_kind(), FilterKind::Number);
+        assert_eq!(
+            <Option<bool> as CellValue>::filter_kind(),
+            FilterKind::Boolean
+        );
     }
 
     #[test]

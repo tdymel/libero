@@ -41,6 +41,12 @@ state yourself, as `sort` does. For server-side data set `manual_sort` and
 `manual_pagination`, pass the current page as `data` and the total as
 `row_count`. Select-all covers the rows on every page.
 
+`show_quick_filter` puts a search field above the table. A row stays when every
+typed word occurs in one of its shown cells; `.filterable(false)` leaves a column
+out. The rows are filtered, then sorted, then paged. Hold the text yourself with
+`quick_filter` and `onquickfilterchange`, or filter on a server with
+`manual_filter`.
+
 `column_menu` adds a menu to each header to sort, hide the column, or show and
 hide the others. `.hideable(false)` keeps a column out of it. To hold the hidden
 columns yourself, pass `hidden_columns` and update it from
@@ -406,6 +412,42 @@ fn Demo() -> Element {
 }
 ```
 
+A quick filter over the name and role, held by the caller; the id column is
+not searched.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Table, column};
+
+#[derive(Clone, PartialEq)]
+struct Person {
+    id: u32,
+    name: String,
+    role: String,
+}
+
+#[component]
+fn Demo() -> Element {
+    let people: Vec<Person> = Vec::new();
+    let mut query = use_signal(String::new);
+
+    rsx! {
+        Table {
+            caption: "Team members",
+            data: people,
+            columns: vec![
+                column("Id").value(|p: &Person| p.id).filterable(false),
+                column("Name").value(|p: &Person| p.name.clone()).row_header(),
+                column("Role").value(|p: &Person| p.role.clone()),
+            ],
+            show_quick_filter: true,
+            quick_filter: query(),
+            onquickfilterchange: move |next| query.set(next),
+        }
+    }
+}
+```
+
 ## Props
 
 ### Table
@@ -416,7 +458,7 @@ fn Demo() -> Element {
 | `columns` | `Vec<Column<T>>` | required | Built with `column(..)`. |
 | `column_defaults` | `ColumnDefaults` | none | Settings every column starts from: `ColumnDefaults::new().align(..).width(..).min_width(..)`. A column's own setting wins. |
 | `caption` | `Option<String>` | `None` | A visible title above the header row, and the table's accessible name. |
-| `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". |
+| `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". When the quick filter leaves no rows, the row reads `table.no_results`, "No matching rows", instead. |
 | `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 | `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
 | `sort` | `Option<Vec<TableSort>>` | `None` | The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header. |
@@ -426,7 +468,7 @@ fn Demo() -> Element {
 | `selectable` | `bool` | `false` | Adds a checkbox column, with a select-all box in its header. Set `row_key` with it, or the selection sticks to positions in `data`. |
 | `selection` | `Option<Vec<String>>` | `None` | The selected rows' `row_key`s. Set, the selection is controlled: pair it with `onselectionchange`. It survives a sort. |
 | `default_selection` | `Vec<String>` | `[]` | Seeds the selection once. Ignored when `selection` is set. |
-| `onselectionchange` | `EventHandler<Vec<String>>` | `None` | Called with the selection a checkbox asks for. Select-all covers every row of `data` and keeps keys of rows not in it, say from another page of a server. |
+| `onselectionchange` | `EventHandler<Vec<String>>` | `None` | Called with the selection a checkbox asks for. Select-all covers every row of `data` the quick filter keeps, and keeps keys of the other rows, say from another page of a server. |
 | `row_key` | `RowFn<T, String>` | the row's index | A row's identity, unique per row, from a `\|row: &T\| ..` closure. Its DOM node follows it through a sort or a data change, so focus and state inside a row stay with it. |
 | `onrowclick` | `EventHandler<T>` | `None` | Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action. |
 | `row_states` | `RowFn<T, States>` | `None` | A row's states, rendered as its `data-state`. Style them with `sx().selector("& tbody tr", sx().when(..))`. |
@@ -435,7 +477,7 @@ fn Demo() -> Element {
 | `striped` | `bool` | `false` | Shades every other body row. |
 | `page` | `Option<u32>` | `None` | The shown page, 1-based. Set, the page is controlled: pair it with `onpagechange`. A page past the end shows the last one. |
 | `default_page` | `u32` | `1` | Seeds the page once. Ignored when `page` is set. |
-| `onpagechange` | `EventHandler<u32>` | `None` | Called with the page a page button asks for. A sort change asks for page 1, and a new page size for the page that keeps the first shown row. |
+| `onpagechange` | `EventHandler<u32>` | `None` | Called with the page a page button asks for. A sort or quick-filter change asks for page 1, and a new page size for the page that keeps the first shown row. |
 | `page_size` | `Option<usize>` | `None` | Rows per page. Set, the size is controlled: pair it with `onpagesizechange`. Turns on pagination. |
 | `default_page_size` | `Option<usize>` | `None` | Seeds the page size once. Turns on pagination. |
 | `onpagesizechange` | `EventHandler<usize>` | `None` | Called with the size picked in the page-size picker. |
@@ -447,6 +489,11 @@ fn Demo() -> Element {
 | `default_hidden_columns` | `Vec<String>` | `[]` | Seeds the hidden columns once. Ignored when `hidden_columns` is set. |
 | `onhiddencolumnschange` | `EventHandler<Vec<String>>` | `None` | Called with the hidden columns a column menu pick asks for. |
 | `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, hide the column, and a Columns submenu that shows or hides the others. |
+| `quick_filter` | `Option<String>` | `None` | The quick filter's text. A row stays when every word occurs, ignoring case, in the text of one of its shown, `filterable` cells. Set, the filter is controlled: pair it with `onquickfilterchange`. |
+| `default_quick_filter` | `String` | `""` | Seeds the quick filter once. Ignored when `quick_filter` is set. |
+| `onquickfilterchange` | `EventHandler<String>` | `None` | Called with the text typed into the quick-filter field. |
+| `show_quick_filter` | `bool` | `false` | Puts a search field above the table that drives the quick filter. |
+| `manual_filter` | `bool` | `false` | `data` comes filtered, say from a server: the field only reports through `onquickfilterchange`. Pair it with `manual_pagination` and `row_count` when paged. |
 | `column_menu_parts` | `Parts<MenuPart>` | none | The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
@@ -467,6 +514,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `header_render` | `fn() -> Element` | `None` | Replaces the header's body, inside the sort button when sortable. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header. |
 | `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
+| `filterable` | `bool` | `true` | Whether the quick filter searches the column's cell text. Off for ids and codes that would match by accident. |
 | `hideable` | `bool` | `true` | Whether the column menu offers to hide the column. `hidden_columns` still hides it. |
 | `group` | `String` | `None` | Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group. |
 | `col_span` | `fn(&T) -> usize` | `None` | How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared. |
@@ -510,6 +558,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - Paginated, the page buttons sit in a `nav` named after the caption, the
   page-size picker is labelled, and a page change announces the new range,
   "4–6 of 7", politely. The first render announces nothing.
+- The quick-filter field is a labelled `type="search"` input, "Search", described by the table's caption. Once
+  typing pauses for half a second, a polite live region says how many rows are
+  left, "2 rows".
 - With `column_menu`, each menu button is named after its column, "Age column
   options", and the header keeps its text as its name. The Columns submenu lists
   checkbox items, and the last shown column cannot be hidden.

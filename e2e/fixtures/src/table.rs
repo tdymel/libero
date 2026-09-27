@@ -26,7 +26,38 @@ pub const ROUTES: Routes = &[
         "/table/sticky-plain",
         || rsx! { StickyTablePage { interactive: false } },
     ),
+    ("/table/filter", || rsx! { FilterTablePage {} }),
 ];
+
+/// The seven paged fruits with a quick-filter field; `#query` and `#page` echo
+/// their change handlers.
+#[component]
+fn FilterTablePage() -> Element {
+    let mut query = use_signal(String::new);
+    let mut page = use_signal(|| 0u32);
+    let data: Vec<Fruit> = ["Fig", "Apple", "Grape", "Cherry", "Elder", "Banana", "Date"]
+        .into_iter()
+        .zip(1..)
+        .map(|(name, stock)| Fruit { name, stock })
+        .collect();
+    rsx! {
+        Table {
+            caption: "Fruit",
+            data,
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()).sortable().row_header(),
+                column("Stock").value(|fruit: &Fruit| fruit.stock).filterable(false),
+            ],
+            row_key: |fruit: &Fruit| fruit.name.to_string(),
+            default_page_size: 3usize,
+            show_quick_filter: true,
+            onquickfilterchange: move |next| query.set(next),
+            onpagechange: move |next| page.set(next),
+        }
+        p { id: "query", "{query}" }
+        p { id: "page", "{page}" }
+    }
+}
 
 /// Column menus over a multi-sorted table; the name column can't be hidden.
 #[component]

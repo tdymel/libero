@@ -19,6 +19,8 @@ pub(super) struct Selection {
     pub slice: StateSlice<Vec<String>>,
     /// Every row of `data`, in source order.
     pub keys: Rc<[String]>,
+    /// The rows select-all covers: those the quick filter keeps.
+    pub scope: Rc<[String]>,
     pub announcer: Announcer,
     pub labels: TableLabels,
     /// The table's, so the box scales with its text.
@@ -37,11 +39,11 @@ impl Selection {
     /// `rowspan` covers the header rows of column groups.
     pub fn header_cell(&self, selected: &HashSet<&str>, rowspan: usize) -> Element {
         let count = self
-            .keys
+            .scope
             .iter()
             .filter(|key| selected.contains(key.as_str()))
             .count();
-        let all = count > 0 && count == self.keys.len();
+        let all = count > 0 && count == self.scope.len();
         let this = self.clone();
         rsx! {
             th {
@@ -53,8 +55,8 @@ impl Selection {
                     size: self.size,
                     checked: all,
                     indeterminate: count > 0 && !all,
-                    disabled: self.keys.is_empty(),
-                    onchange: move |on| this.set(toggle_all(&this.slice.read(), &this.keys, on)),
+                    disabled: self.scope.is_empty(),
+                    onchange: move |on| this.set(toggle_all(&this.slice.read(), &this.scope, on)),
                 }
             }
         }

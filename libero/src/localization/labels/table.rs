@@ -61,6 +61,19 @@ pub struct TableLabels {
     pub hide_column: &'static str,
     /// The submenu that shows and hides columns.
     pub columns: &'static str,
+    /// The quick-filter field's label.
+    pub search: &'static str,
+    /// The full-width row when the quick filter leaves no rows.
+    pub no_results: &'static str,
+    /// Announced once typing in the quick filter settles. A fn, for plural forms.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.results)(1), "1 row");
+    /// assert_eq!((TableLabels::GERMAN.results)(12), "12 Zeilen");
+    /// ```
+    pub results: fn(usize) -> String,
 }
 
 /// `TableLabels::ENGLISH.select_row`. A named fn, so every copy compares equal.
@@ -86,6 +99,20 @@ fn german_selected(count: usize) -> String {
     match count {
         1 => "1 Zeile ausgewählt".to_string(),
         _ => format!("{count} Zeilen ausgewählt"),
+    }
+}
+
+fn english_results(count: usize) -> String {
+    match count {
+        1 => "1 row".to_string(),
+        _ => format!("{count} rows"),
+    }
+}
+
+fn german_results(count: usize) -> String {
+    match count {
+        1 => "1 Zeile".to_string(),
+        _ => format!("{count} Zeilen"),
     }
 }
 
@@ -131,6 +158,9 @@ impl TableLabels {
         add_to_sort: "Add to sort",
         hide_column: "Hide column",
         columns: "Columns",
+        search: "Search",
+        no_results: "No matching rows",
+        results: english_results,
     };
 
     pub const GERMAN: Self = Self {
@@ -150,5 +180,8 @@ impl TableLabels {
         add_to_sort: "Zur Sortierung hinzufügen",
         hide_column: "Spalte ausblenden",
         columns: "Spalten",
+        search: "Suchen",
+        no_results: "Keine passenden Zeilen",
+        results: german_results,
     };
 }

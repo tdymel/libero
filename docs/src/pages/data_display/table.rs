@@ -96,7 +96,7 @@ pub fn TablePage() -> Element {
                     prop("columns", "Vec<Column<T>>").default("required").doc("Built with `column(..)`."),
                     prop("column_defaults", "ColumnDefaults").default("none").doc("Settings every column starts from: `ColumnDefaults::new().align(..).width(..).min_width(..)`. A column's own setting wins."),
                     prop("caption", "Option<String>").default("None").doc("A visible title above the header row, and the table's accessible name."),
-                    prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\"."),
+                    prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\". When the quick filter leaves no rows, the row reads `table.no_results`, \"No matching rows\", instead."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
                     prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header."),
@@ -106,7 +106,7 @@ pub fn TablePage() -> Element {
                     prop("selectable", "bool").default("false").doc("Adds a checkbox column, with a select-all box in its header. Set `row_key` with it, or the selection sticks to positions in `data`."),
                     prop("selection", "Option<Vec<String>>").default("None").doc("The selected rows' `row_key`s. Set, the selection is controlled: pair it with `onselectionchange`. It survives a sort."),
                     prop("default_selection", "Vec<String>").default("[]").doc("Seeds the selection once. Ignored when `selection` is set."),
-                    prop("onselectionchange", "EventHandler<Vec<String>>").default("None").doc("Called with the selection a checkbox asks for. Select-all covers every row of `data` and keeps keys of rows not in it, say from another page of a server."),
+                    prop("onselectionchange", "EventHandler<Vec<String>>").default("None").doc("Called with the selection a checkbox asks for. Select-all covers every row of `data` the quick filter keeps, and keeps keys of the other rows, say from another page of a server."),
                     prop("row_key", "RowFn<T, String>").default("the row's index").doc("A row's identity, unique per row, from a `|row: &T| ..` closure. Its DOM node follows it through a sort or a data change, so focus and state inside a row stay with it."),
                     prop("onrowclick", "EventHandler<T>").default("None").doc("Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action."),
                     prop("row_states", "RowFn<T, States>").default("None").doc("A row's states, rendered as its `data-state`. Style them with `sx().selector(\"& tbody tr\", sx().when(..))`."),
@@ -115,7 +115,7 @@ pub fn TablePage() -> Element {
                     prop("striped", "bool").default("false").doc("Shades every other body row."),
                     prop("page", "Option<u32>").default("None").doc("The shown page, 1-based. Set, the page is controlled: pair it with `onpagechange`. A page past the end shows the last one."),
                     prop("default_page", "u32").default("1").doc("Seeds the page once. Ignored when `page` is set."),
-                    prop("onpagechange", "EventHandler<u32>").default("None").doc("Called with the page a page button asks for. A sort change asks for page 1, and a new page size for the page that keeps the first shown row."),
+                    prop("onpagechange", "EventHandler<u32>").default("None").doc("Called with the page a page button asks for. A sort or quick-filter change asks for page 1, and a new page size for the page that keeps the first shown row."),
                     prop("page_size", "Option<usize>").default("None").doc("Rows per page. Set, the size is controlled: pair it with `onpagesizechange`. Turns on pagination."),
                     prop("default_page_size", "Option<usize>").default("None").doc("Seeds the page size once. Turns on pagination."),
                     prop("onpagesizechange", "EventHandler<usize>").default("None").doc("Called with the size picked in the page-size picker."),
@@ -127,6 +127,11 @@ pub fn TablePage() -> Element {
                     prop("default_hidden_columns", "Vec<String>").default("[]").doc("Seeds the hidden columns once. Ignored when `hidden_columns` is set."),
                     prop("onhiddencolumnschange", "EventHandler<Vec<String>>").default("None").doc("Called with the hidden columns a column menu pick asks for."),
                     prop("column_menu", "bool").default("false").doc("Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, hide the column, and a Columns submenu that shows or hides the others."),
+                    prop("quick_filter", "Option<String>").default("None").doc("The quick filter's text. A row stays when every word occurs, ignoring case, in the text of one of its shown, `filterable` cells. Set, the filter is controlled: pair it with `onquickfilterchange`."),
+                    prop("default_quick_filter", "String").default("\"\"").doc("Seeds the quick filter once. Ignored when `quick_filter` is set."),
+                    prop("onquickfilterchange", "EventHandler<String>").default("None").doc("Called with the text typed into the quick-filter field."),
+                    prop("show_quick_filter", "bool").default("false").doc("Puts a search field above the table that drives the quick filter."),
+                    prop("manual_filter", "bool").default("false").doc("`data` comes filtered, say from a server: the field only reports through `onquickfilterchange`. Pair it with `manual_pagination` and `row_count` when paged."),
                     prop("column_menu_parts", "Parts<MenuPart>").default("none").doc("The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`."),
                 ]),
                 props("column()", vec![
@@ -141,6 +146,7 @@ pub fn TablePage() -> Element {
                     prop("header_render", "fn() -> Element").default("None").doc("Replaces the header's body, inside the sort button when sortable. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header."),
                     prop("of", "&ColumnType<V>").default("None").doc("Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win."),
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
+                    prop("filterable", "bool").default("true").doc("Whether the quick filter searches the column's cell text. Off for ids and codes that would match by accident."),
                     prop("hideable", "bool").default("true").doc("Whether the column menu offers to hide the column. `hidden_columns` still hides it."),
                     prop("group", "String").default("None").doc("Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group."),
                     prop("col_span", "fn(&T) -> usize").default("None").doc("How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared."),
@@ -164,6 +170,7 @@ pub fn TablePage() -> Element {
                     "`selectable` without `row_key` warns in a debug build.",
                     "`.row_header()` cells render as `th scope=\"row\"`, so a screen reader reads that name as it moves down any other column. They look like the other cells.",
                     "Paginated, the page buttons sit in a `nav` named after the caption, the page-size picker is labelled, and a page change announces the new range, \"4–6 of 7\", politely. The first render announces nothing.",
+                    "The quick-filter field is a labelled `type=\"search\"` input, \"Search\", described by the table's caption. Once typing pauses for half a second, a polite live region says how many rows are left, \"2 rows\".",
                     "With `column_menu`, each menu button is named after its column, \"Age column options\", and the header keeps its text as its name. The Columns submenu lists checkbox items, and the last shown column cannot be hidden.",
                     "A group header is a `th scope=\"colgroup\"` over its columns, so a screen reader reads it with each of their cells. A column outside any group, and the select-all box, span every header row.",
                 ])
@@ -268,6 +275,20 @@ pub fn TablePage() -> Element {
                     ". Select-all covers the rows on every page."
                 }
                 Text {
+                    Code { source: "show_quick_filter" }
+                    " puts a search field above the table. A row stays when every typed word "
+                    "occurs in one of its shown cells; "
+                    Code { source: ".filterable(false)" }
+                    " leaves a column out. The rows are filtered, then sorted, then paged. Hold "
+                    "the text yourself with "
+                    Code { source: "quick_filter" }
+                    " and "
+                    Code { source: "onquickfilterchange" }
+                    ", or filter on a server with "
+                    Code { source: "manual_filter" }
+                    "."
+                }
+                Text {
                     Code { source: "column_menu" }
                     " adds a menu to each header to sort, hide the column, or show and hide "
                     "the others. "
@@ -330,6 +351,7 @@ pub fn TablePage() -> Element {
                     }),
                     Control::switch("multi_sort"),
                     Control::switch("column_menu"),
+                    Control::switch("show_quick_filter"),
                     Control::switch("paginate").code(|_, values| match values.str("paginate") == "true" {
                         true => vec!["page_sizes: vec![2, 5, 10]".to_string()],
                         false => vec![],
@@ -356,6 +378,7 @@ pub fn TablePage() -> Element {
                         selectable: values.str("selectable") == "true",
                         multi_sort: values.str("multi_sort") == "true",
                         column_menu: values.str("column_menu") == "true",
+                        show_quick_filter: values.str("show_quick_filter") == "true",
                         row_key: |p: &Person| p.name.clone(),
                         page_sizes: if values.str("paginate") == "true" { vec![2, 5, 10] } else { vec![] },
                         empty: no_rows(&values).then(|| rsx! { "No team members yet." }),

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use super::cell_value::{CellAlign, CellValue, SortKey};
+use super::cell_value::{CellAlign, CellValue, FilterKind, SortKey};
 
 /// A column waiting for its [`value`](ColumnHeader::value).
 pub struct ColumnHeader {
@@ -26,6 +26,11 @@ pub struct Column<T> {
     pub(super) sortable: bool,
     pub(super) row_header: bool,
     pub(super) hideable: bool,
+    /// Searched by the quick filter.
+    pub(super) filterable: bool,
+    /// What the cell type chose.
+    #[allow(dead_code, reason = "the column filter (3b) picks operators by it")]
+    pub(super) filter_kind: FilterKind,
     pub(super) width: Option<String>,
     pub(super) min_width: Option<String>,
     pub(super) header_render: Option<HeaderRender>,
@@ -58,6 +63,8 @@ impl ColumnHeader {
             sortable: false,
             row_header: false,
             hideable: true,
+            filterable: true,
+            filter_kind: V::filter_kind(),
             width: None,
             min_width: None,
             header_render: None,
@@ -221,6 +228,18 @@ impl<T> Column<T> {
         self
     }
 
+    /// Whether the quick filter searches its cell text; on by default.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # struct User { id: u64 }
+    /// column("Id").value(|u: &User| u.id).filterable(false);
+    /// ```
+    pub fn filterable(mut self, filterable: bool) -> Self {
+        self.filterable = filterable;
+        self
+    }
+
     /// Replaces the cell body. Sorting still uses `value`.
     ///
     /// Runs per row in `Table`'s scope: no hooks, and capture signals, not values.
@@ -332,6 +351,8 @@ impl<T> Clone for Column<T> {
             sortable: self.sortable,
             row_header: self.row_header,
             hideable: self.hideable,
+            filterable: self.filterable,
+            filter_kind: self.filter_kind,
             width: self.width.clone(),
             min_width: self.min_width.clone(),
             header_render: self.header_render.clone(),
@@ -353,6 +374,8 @@ impl<T> PartialEq for Column<T> {
             && self.sortable == other.sortable
             && self.row_header == other.row_header
             && self.hideable == other.hideable
+            && self.filterable == other.filterable
+            && self.filter_kind == other.filter_kind
             && self.width == other.width
             && self.min_width == other.min_width
             && self.groups == other.groups
