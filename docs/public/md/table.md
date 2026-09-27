@@ -520,6 +520,12 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - With `selectable`, give the rows a `.row_header()` column, so each checkbox
   is named by something unique.
 
+### Limits
+
+- On Blitz, once a `max_height` table's rows scroll, a click on a header's sort
+  or menu button misses: Blitz hit-tests the header where it sat before the
+  scroll. Tab to the button and press Enter instead.
+
 ## Theme defaults
 
 `TableDefaults` on the theme.

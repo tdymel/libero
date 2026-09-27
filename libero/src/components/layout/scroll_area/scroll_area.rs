@@ -16,9 +16,9 @@ use crate::{
     },
     hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
     platform::{
-        Dimensions, ElementApi, PlatformError, SCROLL_QUIET, TimerSubscription, clips_z_indexed,
-        draws_own_scrollbars, fires_scroll_end, scroll_range, scrolls_on_keys, timer,
-        when_laid_out,
+        Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, SCROLL_QUIET, TimerSubscription,
+        clips_z_indexed, draws_own_scrollbars, fires_scroll_end, has_match_by_tag, scroll_range,
+        scrolls_on_keys, timer, when_laid_out,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
@@ -290,20 +290,29 @@ fn needs_tab_stop(axis: ScrollAxis, view: Dimensions, content: Dimensions, inner
         }
 }
 
-/// Re-reads [`needs_tab_stop`] once laid out. A renderer that cannot query the
-/// subtree leaves the area as it was.
-fn check_tab_stop(root: ElementHandle, axis: ScrollAxis, mut stop: Signal<bool>, tries: u8) {
+/// Re-reads [`needs_tab_stop`] once laid out. A WebView queries the subtree by
+/// the root's `tag`; a renderer that cannot leaves the area as it was.
+fn check_tab_stop(
+    root: ElementHandle,
+    tag: Option<u64>,
+    axis: ScrollAxis,
+    mut stop: Signal<bool>,
+    tries: u8,
+) {
     when_laid_out(move || {
-        let inner = match root.query_selector(FOCUSABLE_SELECTOR) {
-            Ok(_) => true,
-            Err(PlatformError::NotFound) => false,
-            Err(_) => return,
+        let inner: Read<bool> = match (root.query_selector(FOCUSABLE_SELECTOR), tag) {
+            (Ok(_), _) => Box::pin(std::future::ready(Ok(true))),
+            (Err(PlatformError::NotFound), _) => Box::pin(std::future::ready(Ok(false))),
+            (Err(PlatformError::Unsupported), Some(tag)) => {
+                has_match_by_tag(tag, FOCUSABLE_SELECTOR)
+            }
+            _ => return,
         };
         let (view, content) = (root.dimensions(), root.scroll_size());
         spawn(async move {
-            if let (Ok(view), Ok(content)) = (view.await, content.await) {
+            if let (Ok(inner), Ok(view), Ok(content)) = (inner.await, view.await, content.await) {
                 if view.height <= 0.0 && tries > 0 {
-                    return check_tab_stop(root, axis, stop, tries - 1);
+                    return check_tab_stop(root, tag, axis, stop, tries - 1);
                 }
                 let next = needs_tab_stop(axis, view, content, inner);
                 if *stop.peek() != next {
@@ -390,9 +399,19 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         });
     let auto_stop = use_signal(|| false);
     let automatic = !props.focusable && !owned;
+    // A WebView finds the root by its tag: a caller's spread one wins, never a second.
+    let spread_tag = props
+        .attributes
+        .iter()
+        .find(|attribute| attribute.name == OBSERVE_ATTR)
+        .map(|attribute| match &attribute.value {
+            AttributeValue::Text(tag) => tag.parse().ok(),
+            _ => None,
+        });
+    let tag = spread_tag.unwrap_or(root.tag());
     let check_stop = move || {
         if automatic {
-            check_tab_stop(root, scrollbars, auto_stop, UNLAID_TRIES);
+            check_tab_stop(root, tag, scrollbars, auto_stop, UNLAID_TRIES);
         }
     };
     let content = use_element();
@@ -568,6 +587,9 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let mut attributes = props.attributes;
     if !has_role {
         attributes.retain(|attribute| !matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    }
+    if automatic && spread_tag.is_none() {
+        attributes.extend(root.attributes());
     }
 
     let virtualized = virtualized();

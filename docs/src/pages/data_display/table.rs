@@ -170,6 +170,9 @@ pub fn TablePage() -> Element {
                     "Mark the column that names a row with `.row_header()`.",
                     "With `onrowclick`, also put a button or link for that action in a cell. A row is not a tab stop, so a keyboard cannot click it.",
                     "With `selectable`, give the rows a `.row_header()` column, so each checkbox is named by something unique.",
+                ])
+                .limits([
+                    "On Blitz, once a `max_height` table's rows scroll, a click on a header's sort or menu button misses: Blitz hit-tests the header where it sat before the scroll. Tab to the button and press Enter instead.",
                 ]),
             lead: rsx! {
                 Text {

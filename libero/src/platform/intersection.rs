@@ -36,6 +36,12 @@ pub(crate) fn computed_px_by_tag(tag: u64, property: &str) -> super::Read<Option
     backend::computed_px_by_tag(tag, property)
 }
 
+/// Whether something under the element carrying `tag` matches `selector`, read
+/// by the page's script. `Unsupported` on every other renderer.
+pub(crate) fn has_match_by_tag(tag: u64, selector: &str) -> super::Read<bool> {
+    backend::has_match_by_tag(tag, selector)
+}
+
 /// Calls `callback` with `(is_intersecting, ratio)` at the first observation
 /// and whenever `target` crosses a threshold of its `root` (the viewport for
 /// `None`) grown by `root_margin`. The web and a WebView use an

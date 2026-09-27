@@ -80,8 +80,22 @@ async fn tops<D: Driver>(d: &mut D) -> Result<(f64, f64, f64)> {
 }
 
 /// The rows scroll under the header, which stays at the area's top, opaque.
-async fn scrolls_under_the_header<D: Driver>(d: &mut D, key: keyboard::Key) -> Result<()> {
+async fn scrolls_under_the_header<D: Driver>(
+    d: &mut D,
+    key: keyboard::Key,
+    presses: usize,
+) -> Result<()> {
     let (_, row, _) = tops(d).await?;
+    for _ in 1..presses {
+        // WebKit drops a press that lands while the last step still animates.
+        let (_, before, _) = tops(d).await?;
+        d.press(key).await?;
+        eventually(d, "a step to scroll the rows", async |d| {
+            Ok(tops(d).await?.1 < before)
+        })
+        .await?;
+        linger(d, 300).await;
+    }
     d.press(key).await?;
     eventually(d, "the rows to scroll under the header", async |d| {
         let (header, moved, area) = tops(d).await?;
@@ -99,10 +113,12 @@ async fn scrolls_under_the_header<D: Driver>(d: &mut D, key: keyboard::Key) -> R
 async fn a_focused_header_scrolls_the_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus("th:first-child [data-sort-button]").await?;
     eventually_focused(d, "th:first-child [data-sort-button]", "focus").await?;
-    if d.attr(AREA, "role").await?.is_some() {
+    if d.attr(AREA, "role").await?.is_some()
+        || d.attr(AREA, "tabindex").await?.as_deref() == Some("0")
+    {
         bail!("the area is a tab stop beside the header buttons");
     }
-    scrolls_under_the_header(d, keyboard::PAGE_DOWN).await?;
+    scrolls_under_the_header(d, keyboard::PAGE_DOWN, 1).await?;
     // The menu opens in a portal: the 200px area does not clip it.
     const OPTIONS: &str = "button[aria-label=\"Stock column options\"]";
     if d.platform() == Platform::Native {
@@ -130,8 +146,10 @@ e2e::scenario!(
 
 /// 1156-2c: no button inside, so the overflowing area is the named tab stop.
 async fn a_plain_capped_table_is_a_named_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // 1313: a WebView reads the inner focusables by the area's tag.
     eventually(d, "the area to become a region", async |d| {
-        Ok(d.attr(AREA, "role").await?.as_deref() == Some("region"))
+        Ok(d.attr(AREA, "role").await?.as_deref() == Some("region")
+            && d.attr(AREA, "tabindex").await?.as_deref() == Some("0"))
     })
     .await?;
     // Blitz draws the caption as a div before the table, under the same id.
@@ -141,7 +159,8 @@ async fn a_plain_capped_table_is_a_named_stop<D: Driver>(d: &mut D, _route: &str
     }
     d.focus(AREA).await?;
     eventually_focused(d, AREA, "focus").await?;
-    scrolls_under_the_header(d, keyboard::ARROW_DOWN).await
+    // The caption scrolls first: one WebKit arrow step (34px) leaves the header below it.
+    scrolls_under_the_header(d, keyboard::ARROW_DOWN, 2).await
 }
 
 e2e::scenario!(

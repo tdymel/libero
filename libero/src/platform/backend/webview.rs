@@ -336,6 +336,27 @@ pub(super) fn computed_px(tag: u64, property: &str) -> Read<Option<f64>> {
     })
 }
 
+/// Whether a descendant of the element tagged `tag` matches `selector`;
+/// `Unsupported` while no element carries the tag.
+pub(super) fn has_match(tag: u64, selector: &str) -> Read<bool> {
+    if !runs_scripts() {
+        return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
+    }
+    let read = eval_with(
+        json!([OBSERVE_ATTR, tag.to_string(), selector]),
+        "const [attr, tag, selector] = data;
+        const element = document.querySelector(`[${attr}=\"${tag}\"]`);
+        if (!element) return [false, false];
+        return [true, element.querySelector(selector) !== null];",
+    );
+    Box::pin(async move {
+        match read.join::<(bool, bool)>().await {
+            Ok((true, found)) => Ok(found),
+            _ => Err(PlatformError::Unsupported),
+        }
+    })
+}
+
 /// Observed in the page, keyed by the target's `INTERSECT_ATTR` and the root
 /// handle's `OBSERVE_ATTR`: it clips by every scroller up to the root and sees
 /// layout-only changes.

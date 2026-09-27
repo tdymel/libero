@@ -104,6 +104,17 @@ pub(crate) fn computed_px_by_tag(tag: u64, property: &str) -> super::Read<Option
     }
 }
 
+/// Only a WebView finds an element by its tag; see [`observes_by_tag`].
+pub(crate) fn has_match_by_tag(tag: u64, selector: &str) -> super::Read<bool> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::has_match(tag, selector);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    {
+        let _ = (tag, selector);
+        Box::pin(std::future::ready(Err(super::PlatformError::Unsupported)))
+    }
+}
+
 /// The web and a WebView have an `IntersectionObserver`; Blitz has none.
 pub(crate) fn on_intersection(
     target: &Rc<MountedData>,
