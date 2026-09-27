@@ -6,7 +6,7 @@ use libero::{
     theme::{ColorCss, ColorShade, Size},
 };
 
-use super::{cta_row_sx, tint};
+use super::{CtaStack, cta_row_sx, tint};
 use crate::{Route, site::GITHUB};
 
 const PLATFORMS: [&str; 4] = ["Web", "Desktop", "Android", "iOS"];
@@ -78,28 +78,30 @@ pub fn Hero() -> Element {
                         }
                     }
                 }
-                Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center", sx: cta_row_sx(),
-                    Button { to: Route::GettingStarted {}, size: "lg", "Get started" }
-                    Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "primary.8", "Browse components" }
-                    Button {
-                        to: GITHUB,
-                        target: "_blank",
-                        size: "lg",
-                        variant: "standard",
-                        color: "primary.8",
-                        aria_label: format!("GitHub {}", localization.anchor.new_tab),
-                        "GitHub"
+                CtaStack {
+                    Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center", sx: cta_row_sx(),
+                        Button { to: Route::GettingStarted {}, size: "lg", "Get started" }
+                        Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "primary.8", "Browse components" }
+                        Button {
+                            to: GITHUB,
+                            target: "_blank",
+                            size: "lg",
+                            variant: "standard",
+                            color: "primary.8",
+                            aria_label: format!("GitHub {}", localization.anchor.new_tab),
+                            "GitHub"
+                        }
                     }
-                }
-                CodeBlock {
-                    // copy: install
-                    source: "cargo add libero",
-                    language: "shell",
-                    label: "Add libero to your project",
-                    header: false,
-                    line_numbers: false,
-                    // copy: end
-                    sx: sx().width("100%").max_width("360px").text_align("left"),
+                    CodeBlock {
+                        // copy: install
+                        source: "cargo add libero",
+                        language: "shell",
+                        label: "Add libero to your project",
+                        header: false,
+                        line_numbers: false,
+                        // copy: end
+                        sx: sx().text_align("left"),
+                    }
                 }
             }
         }

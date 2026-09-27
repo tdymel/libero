@@ -37,9 +37,32 @@ pub(super) fn tint(color: ColorCss, percent: u8) -> String {
     )
 }
 
+/// The feature cards' background: a tint, not the full gradient (1214), so the page's text reads on it.
+pub(super) fn card_background() -> String {
+    format!(
+        "linear-gradient(45deg, {}, {})",
+        tint(ColorCss::PRIMARY, 30),
+        tint(ColorCss::SECONDARY, 30),
+    )
+}
+
 /// A row of buttons in which one that cannot share a line grows to the full width.
 pub(super) fn cta_row_sx() -> Sx {
     sx().selector("& > *", sx().flex("1 1 auto"))
+}
+
+/// The buttons over the `cargo add` block, which takes their row's width (1340).
+#[component]
+pub(super) fn CtaStack(children: Element) -> Element {
+    rsx! {
+        Flex {
+            direction: "column",
+            align: "stretch",
+            gap: "lg",
+            sx: sx().width("fit-content").max_width("100%"),
+            {children}
+        }
+    }
 }
 
 /// A tab's label with `icon` before its name; the name is still what names the tab.

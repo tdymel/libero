@@ -2,11 +2,11 @@ use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Box, Code, Flex, Icon, List, ListItem, Paper, Pictogram, Text, Title},
     sx::sx,
-    theme::Size,
+    theme::{ColorCss, ColorShade, Size},
 };
 use pictogram_icons_lucide as lucide;
 
-use super::SectionTitle;
+use super::{SectionTitle, card_background};
 use crate::site::GITHUB;
 
 /// The core batteries, one card each.
@@ -74,7 +74,15 @@ fn Battery(title: &'static str, icon: Element, children: Element) -> Element {
                 .breakpoint(Size::Sm, sx().flex("1 1 calc(50% - 8px)")),
             Flex { direction: "column", gap: "md",
                 Flex { direction: "row", gap: "md", align: "center",
-                    Icon { variant: "gradient", size: "lg", radius: "md", {icon} }
+                    Icon {
+                        variant: "standard",
+                        size: "lg",
+                        radius: "md",
+                        sx: sx()
+                            .background(card_background())
+                            .color(ColorCss::PRIMARY.role_value("text-", ColorShade::S6)),
+                        {icon}
+                    }
                     Title {
                         size: "md",
                         component: "h3",
