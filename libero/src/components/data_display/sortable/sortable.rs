@@ -16,6 +16,7 @@ use crate::{
     },
     context::IconSlot,
     hooks::{current_localization, drag_handle_sx, use_css, use_id, use_media_query},
+    localization::fill,
     sx::{StaticSx, Sx, sx},
     theme::FOCUS_RING_HALO_SPREAD,
 };
@@ -38,7 +39,9 @@ static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("sorting", sx().user_select("none"))
 });
 
-pub(crate) static SORTABLE_ITEM_SX: StaticSx = StaticSx::new(|| {
+pub(crate) static SORTABLE_ITEM_SX: StaticSx = StaticSx::new(sortable_item_sx);
+
+pub(crate) fn sortable_item_sx() -> Sx {
     sx().display("flex")
         .align_items("center")
         .gap("xs")
@@ -52,7 +55,7 @@ pub(crate) static SORTABLE_ITEM_SX: StaticSx = StaticSx::new(|| {
                 .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
         )
         .when("dragging", sx().z_index("1").transition("none"))
-});
+}
 
 pub(crate) static SORTABLE_HANDLE_SX: StaticSx =
     StaticSx::new(|| control_sx().and(drag_handle_sx()).cursor("grab"));
@@ -206,7 +209,7 @@ base_props! {
     pub struct SortableItemProps {
         /// The item's current position, from 0. Key it by its data, not this.
         index: usize,
-        /// Names the item in the announcements. Unset, "Item {n}" by where it was lifted.
+        /// Names the item in its controls and the announcements. Unset, "Item {n}" by where it was lifted.
         #[props(default, into)]
         label: Option<String>,
         children: Element,
@@ -222,6 +225,8 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
     let view = use_context::<Signal<SortableView>>()();
     let words = current_localization().sortable;
     let dragging = (item.dragging)();
+    let name = item_name(words.item, props.label.as_deref(), props.index);
+    let named = |template: &str| fill(template, &[("label", &name)]);
 
     let states: Input<States> = props
         .states
@@ -238,7 +243,7 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
         .element(&item.handle)
         .attr("data-slot", SortableItemPart::Handle.slot())
         .attr("type", "button")
-        .attr("aria-label", words.handle)
+        .attr("aria-label", named(words.handle))
         .attr("aria-describedby", view.instructions.clone())
         .event("onpointerdown", item.onpointerdown)
         .event("onkeydown", item.onkeydown)
@@ -251,8 +256,8 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
 
     let moves = view.move_buttons.then(|| {
         let (earlier, later) = match view.horizontal {
-            true => (words.move_backward, words.move_forward),
-            false => (words.move_up, words.move_down),
+            true => (named(words.move_backward), named(words.move_forward)),
+            false => (named(words.move_up), named(words.move_down)),
         };
         let (onearlier, onlater) = (item.onearlier, item.onlater);
         rsx! {
@@ -305,6 +310,11 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
                 {moves}
             },
         )
+}
+
+/// What an item's controls call it: its `label`, else `item` at its current position.
+pub(crate) fn item_name(item: &str, label: Option<&str>, index: usize) -> String {
+    label.map_or_else(|| fill(item, &[("n", &(index + 1))]), str::to_owned)
 }
 
 #[cfg(test)]

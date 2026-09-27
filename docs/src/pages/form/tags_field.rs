@@ -148,7 +148,10 @@ pub fn TagsFieldPage() -> Element {
                 .key(["Down", "Up"], "With `suggestions`: open the list and move the highlight.")
                 .key(["Enter"], "With `suggestions`: picks the highlighted row.")
                 .key(["Escape"], "With `suggestions`: closes the list.")
-                .handles(["The whole field is one tab stop, plus the clear button when `clearable` shows it."])
+                .handles([
+                    "The whole field is one tab stop, plus the clear button when `clearable` shows it.",
+                    "With `suggestions`, Android's Back button closes the list as Escape does, rather than the app.",
+                ])
                 .must([
                     "A custom `tag` must make its remove control a button with `tabindex: \"-1\"`. The arrow keys focus it, and without the tabindex each tag adds a tab stop.",
                 ]),

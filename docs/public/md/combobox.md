@@ -284,6 +284,8 @@ match at any depth inside the list.
 ### Libero handles
 
 - Focus stays on your trigger, so typing keeps working.
+- Android's Back button calls `onopened(false)` while the list is open, rather
+  than closing the app.
 
 ### You must
 

@@ -126,6 +126,8 @@ The dropdown is portaled out of the field, so its parts take the
 ### Libero handles
 
 - The country picker is a second tab stop.
+- Android's Back button closes the country list as Escape does, rather than
+  the app.
 
 ## Theme defaults
 

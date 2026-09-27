@@ -191,6 +191,7 @@ pub fn AutocompletePage() -> Element {
                 .key(["Escape", "Tab"], "Close the list.")
                 .handles([
                     "Nothing is highlighted until you arrow onto a row, so Enter on text that matches nothing still submits the form.",
+                    "Android's Back button closes the list as Escape does, rather than the app.",
                 ]),
             lead: rsx! {
                 Text {

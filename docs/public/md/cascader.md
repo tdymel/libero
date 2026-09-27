@@ -170,6 +170,8 @@ The dropdown is portaled out of the field, so its parts take the
 - Below the `sm` breakpoint the dropdown is a full-width sheet at the foot of
   the screen. It is not modal: no backdrop, no focus trap, and Escape or a
   press outside closes it.
+- Android's Back button closes the dropdown as Escape does, rather than the
+  app.
 
 ### You must
 

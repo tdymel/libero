@@ -72,11 +72,27 @@ fn each_card_has_a_handle_two_move_buttons_and_a_move_to_menu() {
     let html = body(&render(app));
 
     assert_eq!(count(&html, "<li"), 2, "{html}");
-    assert_eq!(count(&html, "aria-label=\"Reorder\""), 2, "{html}");
-    assert_eq!(count(&html, "aria-label=\"Move up\""), 2, "{html}");
-    assert_eq!(count(&html, "aria-label=\"Move down\""), 2, "{html}");
-    assert_eq!(count(&html, "aria-label=\"Move to column\""), 2, "{html}");
     assert_eq!(count(&html, "aria-haspopup=\"menu\""), 2, "{html}");
+}
+
+#[test]
+fn each_cards_controls_name_their_card() {
+    let html = body(&render(app));
+
+    for card in ["Write", "Test"] {
+        for name in [
+            format!("Reorder {card}"),
+            format!("Move {card} up"),
+            format!("Move {card} down"),
+            format!("Move {card} to column"),
+        ] {
+            assert_eq!(
+                count(&html, &format!("aria-label=\"{name}\"")),
+                1,
+                "{name}: {html}"
+            );
+        }
+    }
 }
 
 #[test]
@@ -91,6 +107,10 @@ fn move_buttons_false_keeps_the_handle_and_the_menu() {
     let html = body(&render(no_buttons_app));
 
     assert!(!html.contains("Move up"), "{html}");
-    assert!(html.contains("aria-label=\"Reorder\""), "{html}");
-    assert!(html.contains("aria-label=\"Move to column\""), "{html}");
+    // Unlabelled, a card is named by its position.
+    assert!(html.contains("aria-label=\"Reorder Item 1\""), "{html}");
+    assert!(
+        html.contains("aria-label=\"Move Item 1 to column\""),
+        "{html}"
+    );
 }

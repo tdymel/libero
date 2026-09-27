@@ -126,6 +126,8 @@ The dropdown is portaled out of the field, so its parts take the
 
 - The whole field is one tab stop, plus the clear button when `clearable` shows
   it.
+- With `suggestions`, Android's Back button closes the list as Escape does,
+  rather than the app.
 
 ### You must
 

@@ -1,6 +1,6 @@
 ---
 source: e2e/src/suite.rs
-description: kanban at desktop (rest)
+description: kanban at desktop (menu_open)
 expression: tree
 ---
 button "Before"
@@ -13,7 +13,7 @@ list "To do"
       StaticText "Alpha"
     button "Move Alpha up" [disabled]
     button "Move Alpha down"
-    button "Move Alpha to column" [expanded=false] [haspopup=menu]
+    button "Move Alpha to column" [expanded] [haspopup=menu]
   listitem [level=1]
     button "Reorder Beta"
     paragraph
@@ -45,3 +45,11 @@ paragraph
 paragraph
 button "After"
   StaticText "After"
+menu "Move Alpha to column"
+  menuitem "To do" [disabled]
+    StaticText "To do"
+  menuitem "Doing"
+    StaticText "Doing"
+  menuitem "Done"
+    StaticText "Done"
+--> aria-controls [id="lsx-N-menu"] (rendered above)

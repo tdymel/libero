@@ -129,7 +129,7 @@ fn Fruit(index: usize, name: &'static str) -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `index` | `usize` | required | The item's current position, from 0. Key the item by its data, not by this. |
-| `label` | `Option<String>` | `"Item {n}"` | Names the item in the announcements. Unset, `SortableLabels::item` with its position when it was lifted. |
+| `label` | `Option<String>` | `"Item {n}"` | Names the item in its controls and the announcements. Unset, `SortableLabels::item` with its position when it was lifted. |
 | `parts` | `Parts<SortableItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content, between the handle and the move buttons. |
 
@@ -163,8 +163,9 @@ parts work.
 
 ### Libero handles
 
-- Each item's handle is a button named by `SortableLabels::handle` ("Reorder"),
-  at least 24px square (WCAG 2.5.8). It is described by
+- Each item's handle is a button named by `SortableLabels::handle` with the
+  item's name ("Reorder Apple"), at least 24px square (WCAG 2.5.8). It is
+  described by
   `SortableLabels::instructions`, how to move by keyboard; on a touch screen
   (`pointer: coarse`) with the move buttons shown, by
   `SortableLabels::touch_instructions`, which points to them.
@@ -176,7 +177,8 @@ parts work.
   container, so it never widens the page (WCAG 1.4.10). A padding the size of
   the focus ring keeps the handles' rings clear of the scroller's edge.
 - Each item has a move up and a move down button (back and forward in a row)
-  for a single pointer (WCAG 2.5.7). The first item's move up and the last
+  for a single pointer (WCAG 2.5.7), named with the item's name too ("Move
+  Apple up"). The first item's move up and the last
   one's move down are disabled; the focus stays on the pressed button, or
   goes to the other one at the list's end.
 - A drag starts after the pointer moved 4px (8px for a touch), so a click on
@@ -190,8 +192,8 @@ parts work.
 
 ### You must
 
-- Give each `SortableItem` a `label`, or the announcements name it by position
-  ("Item 2").
+- Give each `SortableItem` a `label`, or its controls and the announcements
+  name it by position ("Item 2").
 - With `move_buttons: false`, give the reader another way to reorder without
   dragging, such as a menu.
 

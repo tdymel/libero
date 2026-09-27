@@ -204,6 +204,7 @@ The dropdown is portaled out of the field, so its parts take the
 - Disabled options are read out but skipped.
 - With `searchable` the search box takes over typing and holds the focus while
   the list is open.
+- Android's Back button closes the list as Escape does, rather than the app.
 
 ## Theme defaults
 

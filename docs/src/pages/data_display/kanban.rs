@@ -95,7 +95,7 @@ pub fn KanbanPage() -> Element {
                         .doc("The card's position in its column, from 0. Key the card by its data, not by this."),
                     prop("label", "Option<String>")
                         .default("\"Item {n}\"")
-                        .doc("Names the card in the announcements. Unset, `SortableLabels::item` with its position."),
+                        .doc("Names the card in its controls and the announcements. Unset, `SortableLabels::item` with its position."),
                     prop("parts", "Parts<KanbanCardPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                     prop("children", "Element").doc("The card's content, between the handle and the move buttons."),
@@ -115,14 +115,15 @@ pub fn KanbanPage() -> Element {
                 .key(["Escape"], "Puts a lifted or dragged card back where it was.")
                 .handles([
                     "Each column is a list named by its `label`; each card is a list item.",
-                    "Each card's handle is a button named by `SortableLabels::handle` (\"Reorder\"), at least 24px square (WCAG 2.5.8), described by `SortableLabels::instructions`.",
-                    "Each card has a move up and a move down button in its column, and a Move to column menu button named by `KanbanLabels::move_to`. The menu lists every column by `label`, the card's own disabled. Neither needs a drag (WCAG 2.5.7).",
+                    "Each card's handle is a button named by `SortableLabels::handle` with the card's name (\"Reorder Write\"), at least 24px square (WCAG 2.5.8), described by `SortableLabels::instructions`.",
+                    "Each card has a move up and a move down button in its column, and a Move to column menu button named by `KanbanLabels::move_to`, each naming the card (\"Move Write up\", \"Move Write to column\"). The menu lists every column by `label`, the card's own disabled. Neither needs a drag (WCAG 2.5.7).",
                     "A card moved to another column lands at its end, and its Move to button takes the focus there.",
                     "One `role=\"status\"` region for the board announces each lift, move, drop and cancel, and a move to another column with the column's name and the card's position, from the `SortableLabels` and `KanbanLabels` templates of the active `Localization`.",
                     "A drag starts after the pointer moved 4px (8px for a touch); only the handle takes a touch, so a swipe on the rest of a card scrolls.",
+                    "In a narrow column, where the content would get less than 8rem, the move buttons wrap below it.",
                 ])
                 .must([
-                    "Give each `KanbanCard` a `label`, or the announcements name it by position (\"Item 2\").",
+                    "Give each `KanbanCard` a `label`, or its controls and the announcements name it by position (\"Item 2\").",
                 ])
                 .limits([
                     "A pointer drag moves a card within its column only. Moving to another column is the Move to menu.",

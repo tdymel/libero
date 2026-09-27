@@ -7,29 +7,29 @@ button "Before"
   StaticText "Before"
 list
   listitem [level=1]
-    button "Reorder"
+    button "Reorder Alpha"
     paragraph
       StaticText "Alpha"
-    button "Move up" [disabled]
-    button "Move down"
+    button "Move Alpha up" [disabled]
+    button "Move Alpha down"
   listitem [level=1]
-    button "Reorder"
+    button "Reorder Beta"
     paragraph
       StaticText "Beta"
-    button "Move up"
-    button "Move down"
+    button "Move Beta up"
+    button "Move Beta down"
   listitem [level=1]
-    button "Reorder"
+    button "Reorder Gamma"
     paragraph
       StaticText "Gamma"
-    button "Move up"
-    button "Move down"
+    button "Move Gamma up"
+    button "Move Gamma down"
   listitem [level=1]
-    button "Reorder"
+    button "Reorder Delta"
     paragraph
       StaticText "Delta"
-    button "Move up"
-    button "Move down" [disabled]
+    button "Move Delta up"
+    button "Move Delta down" [disabled]
 status [atomic] [live=polite]
 paragraph
   StaticText "Alpha Beta Gamma Delta"

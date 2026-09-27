@@ -107,7 +107,10 @@ pub fn PhoneFieldPage() -> Element {
                 .key(["Up", "Down"], "Move the highlight.")
                 .key(["Enter"], "Picks the highlighted country and returns focus to the picker.")
                 .key(["Escape"], "Closes the list and returns focus to the picker.")
-                .handles(["The country picker is a second tab stop."]),
+                .handles([
+                    "The country picker is a second tab stop.",
+                    "Android's Back button closes the country list as Escape does, rather than the app.",
+                ]),
             lead: rsx! {
                 Text {
                     "A country picker in front of a "

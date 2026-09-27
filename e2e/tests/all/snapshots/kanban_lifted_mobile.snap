@@ -1,38 +1,48 @@
 ---
 source: e2e/src/suite.rs
-description: sortable at desktop (rest)
+description: kanban at mobile (lifted)
 expression: tree
 ---
 button "Before"
   StaticText "Before"
-list
+StaticText "To do"
+list "To do"
   listitem [level=1]
     button "Reorder Alpha"
     paragraph
       StaticText "Alpha"
     button "Move Alpha up" [disabled]
     button "Move Alpha down"
+    button "Move Alpha to column" [expanded=false] [haspopup=menu]
   listitem [level=1]
     button "Reorder Beta"
     paragraph
       StaticText "Beta"
     button "Move Beta up"
     button "Move Beta down"
+    button "Move Beta to column" [expanded=false] [haspopup=menu]
   listitem [level=1]
     button "Reorder Gamma"
     paragraph
       StaticText "Gamma"
     button "Move Gamma up"
-    button "Move Gamma down"
+    button "Move Gamma down" [disabled]
+    button "Move Gamma to column" [expanded=false] [haspopup=menu]
+StaticText "Doing"
+list "Doing"
   listitem [level=1]
     button "Reorder Delta"
     paragraph
       StaticText "Delta"
-    button "Move Delta up"
+    button "Move Delta up" [disabled]
     button "Move Delta down" [disabled]
+    button "Move Delta to column" [expanded=false] [haspopup=menu]
+StaticText "Done"
+list "Done"
 status [atomic] [live=polite]
+  StaticText "Lifted Alpha, position 1 of 3."
 paragraph
-  StaticText "Alpha Beta Gamma Delta"
+  StaticText "Alpha Beta Gamma | Delta |"
 paragraph
 button "After"
   StaticText "After"

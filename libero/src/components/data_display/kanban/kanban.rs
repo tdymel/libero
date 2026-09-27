@@ -8,8 +8,8 @@ use crate::{
         accessibility::{Announcer, use_announcer},
         common::{Glyph, HtmlTag, Input, Orientation, Part, States, base_props, parts_enum},
         data_display::sortable::{
-            SORTABLE_CONTENT_SX, SORTABLE_HANDLE_SX, SORTABLE_ITEM_SX, SORTABLE_MOVE_SX,
-            SortableMove, SortableOptions, use_labelled_sortable_item, use_sortable,
+            SORTABLE_CONTENT_SX, SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, SortableMove,
+            SortableOptions, item_name, sortable_item_sx, use_labelled_sortable_item, use_sortable,
         },
         layout::use_box,
         overlay::{Menu, MenuItem, use_menu},
@@ -55,6 +55,17 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
                 .min_height("48px"),
         )
         .when("sorting", sx().user_select("none"))
+});
+
+// Under 8rem for the content, as in a 220px column, the move buttons wrap below it, end-aligned.
+static KANBAN_CARD_SX: StaticSx = StaticSx::new(|| {
+    sortable_item_sx()
+        .flex_wrap("wrap")
+        .selector(KanbanCardPart::Content.selector(), sx().flex_basis("8rem"))
+        .selector(
+            "& > [data-slot='content'] + *",
+            sx().margin_inline_start("auto"),
+        )
 });
 
 /// What the columns and cards read from their [`Kanban`]. Owned here: a card
@@ -302,7 +313,7 @@ base_props! {
     pub struct KanbanCardProps {
         /// The card's position in its column, from 0. Key it by its data, not this.
         index: usize,
-        /// Names the card in the announcements. Unset, "Item {n}" by its position.
+        /// Names the card in its controls and the announcements. Unset, "Item {n}" by its position.
         #[props(default, into)]
         label: Option<String>,
         children: Element,
@@ -352,7 +363,8 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         }
     }));
 
-    let label = props.label.clone();
+    let name = item_name(words.sortable.item, props.label.as_deref(), index);
+    let named = |template: &str| fill(template, &[("label", &name)]);
     let menu = use_menu();
     let here = column_index();
     let names: Vec<(usize, String)> = board
@@ -364,22 +376,19 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .collect();
     let items = names
         .into_iter()
-        .map(|(to_column, name)| {
-            let label = label.clone();
-            MenuItem::new(name.clone())
+        .map(|(to_column, column)| {
+            let card = name.clone();
+            MenuItem::new(column.clone())
                 .disabled(to_column == here)
                 .onselect(move |()| {
                     let to = counts.peek().get(to_column).copied().unwrap_or(0);
                     let from_column = *column_index.peek();
-                    let card = label
-                        .clone()
-                        .unwrap_or_else(|| fill(words.sortable.item, &[("n", &(index + 1))]));
                     landing.set(Some((to_column, to)));
                     board.announcer.say(fill(
                         words.kanban.moved,
                         &[
                             ("label", &card),
-                            ("column", &name),
+                            ("column", &column),
                             ("n", &(to + 1)),
                             ("m", &(to + 1)),
                         ],
@@ -410,7 +419,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .element(&item.handle)
         .attr("data-slot", KanbanCardPart::Handle.slot())
         .attr("type", "button")
-        .attr("aria-label", words.sortable.handle)
+        .attr("aria-label", named(words.sortable.handle))
         .attr("aria-describedby", (column.instructions)())
         .event("onpointerdown", item.onpointerdown)
         .event("onkeydown", item.onkeydown)
@@ -428,7 +437,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
                 class: move_class.clone(),
                 r#type: "button",
                 "data-slot": KanbanCardPart::MoveEarlier.slot(),
-                "aria-label": words.sortable.move_up,
+                "aria-label": named(words.sortable.move_up),
                 disabled: (item.first)(),
                 onmounted: item.earlier.mount(),
                 onclick: move |event| onearlier.call(event),
@@ -438,7 +447,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
                 class: move_class.clone(),
                 r#type: "button",
                 "data-slot": KanbanCardPart::MoveLater.slot(),
-                "aria-label": words.sortable.move_down,
+                "aria-label": named(words.sortable.move_down),
                 disabled: (item.last)(),
                 onmounted: item.later.mount(),
                 onclick: move |event| onlater.call(event),
@@ -453,7 +462,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .attr("class", move_class.clone())
         .attr("data-slot", KanbanCardPart::MoveTo.slot())
         .attr("type", "button")
-        .attr("aria-label", words.kanban.move_to)
+        .attr("aria-label", named(words.kanban.move_to))
         .render(
             HtmlTag::Button,
             menu.a11y_attributes(),
@@ -461,7 +470,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         );
 
     use_box()
-        .framework_sx(&SORTABLE_ITEM_SX)
+        .framework_sx(&KANBAN_CARD_SX)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -484,7 +493,16 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::common::part_table;
+    use crate::{Stylesheet, components::common::part_table};
+
+    #[test]
+    fn a_narrow_card_wraps_its_buttons_below_the_content() {
+        let css = Stylesheet::from(&KANBAN_CARD_SX).as_str().to_string();
+
+        assert!(css.contains("flex-wrap:wrap"), "{css}");
+        assert!(css.contains("flex-basis:8rem"), "{css}");
+        assert!(css.contains("margin-inline-start:auto"), "{css}");
+    }
 
     /// The slot names are public: a rename here is a breaking change.
     #[test]

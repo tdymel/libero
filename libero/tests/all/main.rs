@@ -99,6 +99,7 @@ mod select;
 mod sidebar;
 mod skeleton;
 mod slider;
+mod sortable;
 mod splitter;
 mod spotlight;
 mod stepper;

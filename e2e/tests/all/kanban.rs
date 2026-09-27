@@ -5,6 +5,7 @@ use anyhow::{Result, ensure};
 use e2e::Suite;
 use e2e::driver::{Driver, eventually_focused, eventually_text, linger};
 use e2e::passes::keyboard;
+use e2e::suite::Step;
 
 const STATUS: &str = "[role=status]";
 const START: &str = "Alpha Beta Gamma | Delta | ";
@@ -172,7 +173,62 @@ e2e::scenario!(
 fn it_meets_the_baseline() {
     Suite::new("kanban", "/kanban")
         .focusable("#Alpha [data-slot=handle]")
+        .targets("#Beta [data-slot=handle]")
+        .targets("#Beta [data-slot=move-earlier]")
+        .targets("#Beta [data-slot=move-later]")
+        .targets("#Beta [data-slot=move-to]")
+        .state(
+            "menu_open",
+            &[
+                Step::TabTo("#Alpha [data-slot=move-to]"),
+                Step::Press(keyboard::ARROW_DOWN),
+            ],
+            "[role=menu]",
+        )
+        .state(
+            "lifted",
+            &[
+                Step::TabTo("#Alpha [data-slot=handle]"),
+                Step::Press(keyboard::SPACE),
+            ],
+            "#Alpha[data-state~=dragging]",
+        )
         .run();
+}
+
+/// At a 220px column the move buttons wrap below the content, which keeps 8rem or more.
+#[test]
+fn a_narrow_column_wraps_the_move_buttons_below_the_content() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
+        let measured: String = fixture
+            .page
+            .evaluate(
+                "(() => { const r = s => document.querySelector('#Beta ' + s).getBoundingClientRect(); \
+                 return [document.querySelector('#column-0').getBoundingClientRect().width, \
+                 r('[data-slot=content]').width, r('[data-slot=handle]').bottom, \
+                 r('[data-slot=move-later]').top].map(Math.round).join(' '); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let [column, content, handle_bottom, buttons_top] = measured
+            .split(' ')
+            .map(|n| n.parse::<i64>().unwrap())
+            .collect::<Vec<_>>()[..]
+        else {
+            panic!("{measured}")
+        };
+        assert!(column <= 240, "the column is not narrow: {measured}");
+        assert!(content >= 128, "the content is under 8rem: {measured}");
+        assert!(
+            buttons_top >= handle_bottom,
+            "the buttons did not wrap: {measured}"
+        );
+        fixture.close().await.unwrap();
+    });
 }
 
 /// Forced colours paint the column's fill as `Canvas`, so only a border draws its edge.

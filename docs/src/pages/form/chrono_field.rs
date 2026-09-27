@@ -126,6 +126,7 @@ pub fn ChronoFieldPage() -> Element {
                     "A pick that closes the dropdown moves focus back to the text.",
                     "Focus leaving both the text and the dropdown closes it.",
                     "A mouse click in the dropdown leaves focus in the text.",
+                    "Android's Back button closes the dropdown rather than the app. Focus in the dropdown goes back to the text.",
                 ]),
             lead: rsx! {
                 Text {

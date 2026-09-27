@@ -171,6 +171,7 @@ The dropdown is portaled out of the field, so its parts take the
 
 - Nothing is highlighted until you arrow onto a row, so Enter on text that
   matches nothing still submits the form.
+- Android's Back button closes the list as Escape does, rather than the app.
 
 ## Theme defaults
 

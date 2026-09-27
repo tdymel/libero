@@ -545,7 +545,10 @@ pub fn ComboboxPage() -> Element {
                 .key(["Home", "End"], "Jumps to the first or last row.")
                 .key(["Enter"], "Picks the highlighted row.")
                 .key(["Escape", "Tab"], "Close the list.")
-                .handles(["Focus stays on your trigger, so typing keeps working."])
+                .handles([
+                    "Focus stays on your trigger, so typing keeps working.",
+                    "Android's Back button calls `onopened(false)` while the list is open, rather than closing the app.",
+                ])
                 .must([
                     "Spread `state.a11y_attributes()` on your trigger, or screen readers cannot tie the list to it.",
                     "Close the list on your trigger's blur, or an enclosing `Modal` stops hearing Escape while the list stays open.",
