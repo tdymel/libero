@@ -53,10 +53,15 @@ fn the_controls_start_paused_with_an_unknown_duration() {
 
     let html = body(&render(app));
 
-    assert!(html.contains(r#"role="toolbar""#), "{html}");
+    // A named group of plain Tab stops, not a roving toolbar (todo 1328).
+    assert!(!html.contains(r#"role="toolbar""#), "{html}");
     assert!(
-        html.contains(r#"aria-label="Wiedergabesteuerung""#),
+        html.contains(r#"role="group" aria-label="Wiedergabesteuerung""#),
         "{html}"
+    );
+    assert!(
+        html.contains(r#"aria-label="Wiedergabegeschwindigkeit 1×""#) && html.contains(">1×<"),
+        "the speed button shows and names the rate: {html}"
     );
     assert!(html.contains(r#"aria-label="Abspielen""#), "{html}");
     assert!(html.contains(r#"aria-label="Stummschalten""#), "{html}");

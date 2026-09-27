@@ -8,7 +8,7 @@ use e2e::passes::keyboard::{self, Key};
 use e2e::passes::pointer;
 use e2e::{Fixture, Suite, Viewport, wait};
 
-const PLAY: &str = "#player [role=toolbar] button";
+const PLAY: &str = "#player [data-slot=controls] button";
 const FULLSCREEN: &str = "#player button[aria-label=Fullscreen]";
 const CAPTIONS: &str = "#player button[aria-label=Captions]";
 
@@ -33,14 +33,33 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// WCAG 1.4.10: at a phone's 412px and at 320px the whole row fits in the player,
-/// the volume slider and then the total time giving way.
+/// Every shown control of `#player` lies inside the player; `one_row`: all on one line.
+pub(crate) fn controls_fit(width: u32, one_row: bool) -> String {
+    format!(
+        "(() => {{ const player = document.querySelector('#player [role=group]').getBoundingClientRect();
+         const shown = [...document.querySelectorAll('#player [data-slot=controls] > *')]
+             .filter((e) => getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0);
+         const inside = shown.every((e) => {{ const r = e.getBoundingClientRect();
+             return r.left >= player.left && r.right <= player.right; }});
+         const tops = new Set(shown.map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)));
+         return player.width === {width} && inside && (!{one_row} || tops.size === 1); }})()"
+    )
+}
+
+/// WCAG 1.4.10, todo 1325: the seek track shrinks so the row stays one line at a
+/// phone's 412px and at 320px, the volume slider and then the total time giving
+/// way; at 160px (320px at 200% zoom) it wraps, but no control leaves the player.
 #[test]
 fn the_controls_fit_a_narrow_player() {
     block_on(async {
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        for (width, volume, total) in [(412, "none", "inline"), (320, "none", "none")] {
+        for (width, volume, total, one_row) in [
+            (512, "block", "inline", true),
+            (412, "none", "inline", true),
+            (320, "none", "none", true),
+            (160, "none", "none", false),
+        ] {
             page.evaluate(format!(
                 "document.querySelector('#player').style.width = '{width}px'"
             ))
@@ -49,14 +68,140 @@ fn the_controls_fit_a_narrow_player() {
             wait::for_js_true(
                 page,
                 &format!(
-                    "(() => {{ const player = document.querySelector('#player [role=group]').getBoundingClientRect();
-                     const button = document.querySelector('{FULLSCREEN}').getBoundingClientRect();
-                     const style = (s) => getComputedStyle(document.querySelector('#player ' + s)).display;
-                     return player.width === {width} && button.right <= player.right && button.left >= player.left
-                         && style('[data-slot=volume]') === '{volume}'
-                         && style('[data-slot=time] > span') === '{total}'; }})()"
+                    "(() => {{ const style = (s) => getComputedStyle(document.querySelector('#player ' + s)).display;
+                     return {} && style('[data-slot=volume]') === '{volume}'
+                         && style('[data-slot=time] > span') === '{total}'; }})()",
+                    controls_fit(width, one_row)
                 ),
                 &format!("the row to fit {width}px"),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1328: every control is its own Tab stop, in the order it is drawn.
+#[test]
+fn every_control_is_a_tab_stop_in_visual_order() {
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{FULLSCREEN}') !== null"),
+            "the controls",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!("document.querySelector('{PLAY}').focus()"))
+            .await
+            .unwrap();
+        let mut names = Vec::new();
+        for _ in 0..7 {
+            let name: String = page
+                .evaluate("document.activeElement.getAttribute('aria-label')")
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            names.push(name);
+            keyboard::press(page, keyboard::TAB).await.unwrap();
+        }
+        assert_eq!(
+            names,
+            [
+                "Play",
+                "Seek",
+                "Mute",
+                "Volume",
+                "Playback speed 1×",
+                "Captions",
+                "Fullscreen"
+            ]
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1323: the speed menu sets the element's rate, and the button follows it.
+#[test]
+fn the_speed_menu_sets_the_rate() {
+    const SPEED: &str = "#player button[aria-label^='Playback speed']";
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector(\"{SPEED}\") !== null"),
+            "the speed button",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, SPEED).await.unwrap();
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('[role=menuitemradio]')].some((e) => e.textContent.includes('1.5×'))",
+            "the speed menu",
+        )
+        .await
+        .unwrap();
+        page.evaluate(
+            "[...document.querySelectorAll('[role=menuitemradio]')].find((e) => e.textContent.includes('1.5×')).click()",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('#player video').playbackRate === 1.5
+                 && document.querySelector(\"{SPEED}\").getAttribute('aria-label') === 'Playback speed 1.5×'
+                 && document.querySelector(\"{SPEED}\").textContent.includes('1.5×')"
+            ),
+            "the rate and the button at 1.5×",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// WCAG 1.4.11, todo 1326: the controls bar's border holds 3:1 against the page
+/// in both schemes.
+#[test]
+fn the_controls_bar_is_bounded_in_light_and_dark() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    const RATIO: &str = r#"(() => {
+        const rgb = (s) => {
+            const m = s.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)/);
+            if (m) return [m[1] * 255, m[2] * 255, m[3] * 255];
+            return s.match(/rgba?\(([^)]+)\)/)[1].split(/[ ,\/]+/).map(Number).slice(0, 3);
+        };
+        const lum = (c) => {
+            const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        let page = document.querySelector('#player');
+        while (page && rgb(getComputedStyle(page).backgroundColor).length && /rgba\(0, 0, 0, 0\)|transparent/.test(getComputedStyle(page).backgroundColor)) page = page.parentElement;
+        const [x, y] = [lum(rgb(getComputedStyle(document.querySelector('#player [data-slot=controls]')).borderTopColor)), lum(rgb(getComputedStyle(page || document.body).backgroundColor))];
+        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+    })()"#;
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        for scheme in ["light", "dark"] {
+            page.execute(
+                SetEmulatedMediaParams::builder()
+                    .features(vec![MediaFeature::new("prefers-color-scheme", scheme)])
+                    .build(),
+            )
+            .await
+            .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("{RATIO} >= 3"),
+                &format!("a 3:1 border in {scheme}"),
             )
             .await
             .unwrap();
@@ -238,13 +383,23 @@ fn the_captions_button_and_c_toggle_the_subtitle_track() {
         .await
         .unwrap();
 
+        // Todo 1324: without tracks the button stays, disabled but focusable and explained.
         let plain: bool = page
-            .evaluate("document.querySelector('#plain button[aria-label=Captions]') === null")
+            .evaluate(
+                "(() => { const b = document.querySelector('#plain button[aria-label=Captions]');
+                 b.focus(); b.click();
+                 return document.activeElement === b && b.getAttribute('aria-disabled') === 'true'
+                     && b.getAttribute('aria-pressed') === 'false'
+                     && document.getElementById(b.getAttribute('aria-describedby')).textContent === 'No captions for this video'; })()",
+            )
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert!(plain, "a player without tracks has no captions button");
+        assert!(
+            plain,
+            "a player without tracks has a disabled, explained captions button"
+        );
 
         fixture.close().await.unwrap();
     });
@@ -269,7 +424,7 @@ async fn the_player_follows_its_element<D: Driver>(d: &mut D, _route: &str) -> R
     if d.platform() == Platform::Native {
         eventually(d, "the fallback", async |d| {
             Ok(d.exists("#player [data-slot=message] a").await?
-                && !d.exists("#player [role=toolbar]").await?)
+                && !d.exists("#player [data-slot=controls]").await?)
         })
         .await?;
         return Ok(());
@@ -475,6 +630,37 @@ e2e::scenario!(
     "/video/long",
     fullscreen_controls_fade
 );
+
+/// Todo 1324, as the docs demo: a default captions track loads its cues, starts
+/// shown, and the button hides and shows it again.
+#[test]
+fn a_default_captions_track_loads_and_toggles() {
+    block_on(async {
+        let fixture = Fixture::open("/video/captions", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let state = |mode: &str, pressed: &str| {
+            format!(
+                "(() => {{ const t = document.querySelector('#player video').textTracks[0];
+                 return t.cues !== null && t.cues.length === 1 && t.mode === '{mode}'
+                     && document.querySelector('{CAPTIONS}').getAttribute('aria-pressed') === '{pressed}'; }})()"
+            )
+        };
+        wait::for_js_true(page, &state("showing", "true"), "the cues, shown")
+            .await
+            .unwrap();
+        pointer::click(page, CAPTIONS).await.unwrap();
+        wait::for_js_true(page, &state("hidden", "false"), "the button to hide them")
+            .await
+            .unwrap();
+        pointer::click(page, CAPTIONS).await.unwrap();
+        wait::for_js_true(page, &state("showing", "true"), "the button to show them")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
 
 e2e::scenario!(
     a_tab_out_of_the_drawn_fullscreen_leaves_it,

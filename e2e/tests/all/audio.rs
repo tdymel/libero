@@ -6,7 +6,7 @@ use e2e::passes::keyboard::{self, Key};
 use e2e::passes::pointer;
 use e2e::{Fixture, Suite, Viewport, wait};
 
-const PLAY: &str = "#player [role=toolbar] button";
+const PLAY: &str = "#player [data-slot=controls] button";
 
 const M: Key = Key {
     key: "m",
@@ -29,14 +29,22 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// WCAG 1.4.10: from 360px down to 320px the whole row fits in the player, the
-/// volume slider giving way at 352px and the mute button staying.
+/// WCAG 1.4.10, todo 1325: from 380px down to 320px the whole row fits in the
+/// player on one line, the volume slider giving way once the bar's inside is
+/// 352px (22rem) and the mute button staying; at 160px (320px at 200% zoom) it
+/// wraps, but nothing leaves the player.
 #[test]
 fn the_controls_fit_a_narrow_player() {
     block_on(async {
         let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        for (width, volume) in [(360, true), (353, true), (352, false), (320, false)] {
+        for (width, volume) in [
+            (380, true),
+            (363, true),
+            (362, false),
+            (320, false),
+            (160, false),
+        ] {
             page.evaluate(format!(
                 "document.querySelector('#player').style.width = '{width}px'"
             ))
@@ -50,9 +58,11 @@ fn the_controls_fit_a_narrow_player() {
                          .filter((e) => getComputedStyle(e).display !== 'none');
                      const fits = row.every((e) => {{ const r = e.getBoundingClientRect();
                          return r.left >= player.left && r.right <= player.right; }});
+                     const lines = new Set(row.map((e) => {{ const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2); }})).size;
+                     const oneRow = {width} < 320 || lines === 1;
                      const shown = getComputedStyle(document.querySelector('#player [data-slot=volume]')).display !== 'none';
                      const mute = document.querySelector('#player button[aria-label=Mute]');
-                     return player.width === {width} && fits && shown === {volume}
+                     return player.width === {width} && fits && oneRow && shown === {volume}
                          && mute !== null && getComputedStyle(mute).display !== 'none'; }})()"
                 ),
                 &format!("the row to fit {width}px"),

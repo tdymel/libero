@@ -2,7 +2,9 @@ use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::*;
 
-use super::media_controls::{MediaControls, MediaFallback, use_media_keys, use_sound};
+use super::media_controls::{
+    MediaControls, MediaFallback, controls_sx, seek_sx, use_media_keys, use_sound,
+};
 use crate::{
     components::{
         common::{HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
@@ -40,7 +42,7 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
         .selector(
             AudioPart::Controls.selector(),
-            sx().flex_wrap("nowrap").container(CONTROLS_CONTAINER),
+            controls_sx().container(CONTROLS_CONTAINER),
         )
         .selector(
             AudioPart::Time.selector(),
@@ -48,12 +50,9 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
                 .white_space("nowrap")
                 .flex_shrink("0"),
         )
-        .selector(
-            AudioPart::Seek.selector(),
-            sx().flex("1 1 8rem").min_width("6rem"),
-        )
-        // A phone's width: the volume slider goes (mute and the keys remain), so
-        // the row fits at 320px.
+        .selector(AudioPart::Seek.selector(), seek_sx())
+        // The seek track shrinks first, then the volume slider goes (mute and the
+        // keys remain); a row wraps only past that (todo 1325).
         .selector(
             AudioPart::Volume.selector(),
             sx().flex("0 1 6rem").min_width("4rem").container_query(

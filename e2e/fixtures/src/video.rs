@@ -12,7 +12,32 @@ pub const ROUTES: Routes = &[
     ("/video/refused", || rsx! { VideoPage { refused: true } }),
     // Long enough for the fullscreen controls to fade out while playing.
     ("/video/long", || rsx! { VideoPage { seconds: 15 } }),
+    ("/video/captions", || rsx! { CaptionsPage {} }),
 ];
+
+/// As the docs demo: a captions track shown from the start.
+const CAPTIONS: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 00:15.000%0A[Silence]";
+
+#[component]
+fn CaptionsPage() -> Element {
+    let src = use_hook(|| silent_wav(15));
+    rsx! {
+        div { id: "player", max_width: "32rem",
+            Video {
+                src,
+                label: "Captioned",
+                aspect_ratio: "16 / 9",
+                tracks: vec![MediaTrack {
+                    src: CAPTIONS.into(),
+                    kind: TrackKind::Captions,
+                    srclang: "en".into(),
+                    label: "English".into(),
+                    default: true,
+                }],
+            }
+        }
+    }
+}
 
 const SUBTITLES: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 00:04.000%0ASilence";
 

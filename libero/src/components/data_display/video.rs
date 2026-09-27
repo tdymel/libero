@@ -1,7 +1,9 @@
 use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
-use super::media_controls::{Captions, MediaControls, MediaFallback, use_media_keys, use_sound};
+use super::media_controls::{
+    Captions, MediaControls, MediaFallback, controls_sx, seek_sx, use_media_keys, use_sound,
+};
 use super::{
     MediaPreload, MediaSource,
     audio::{media_sources, use_source_reload},
@@ -82,10 +84,10 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             VideoPart::Controls.selector(),
-            sx().flex_wrap("nowrap").container(CONTROLS_CONTAINER),
+            controls_sx().container(CONTROLS_CONTAINER),
         )
-        // A phone's width: the mute button stays, the volume slider goes (its
-        // hardware keys remain), then the total time, so the row fits at 320px.
+        // The seek track shrinks first; then the volume slider goes (mute and the
+        // keys remain), then the total time; a row wraps only past that (todo 1325).
         .selector(
             VideoPart::Time.selector(),
             sx().font_variant_numeric("tabular-nums")
@@ -96,14 +98,7 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                     sx().container_query(CONTROLS_CONTAINER, NARROWEST, sx().display("none")),
                 ),
         )
-        .selector(
-            VideoPart::Seek.selector(),
-            sx().flex("1 1 8rem").min_width("6rem").container_query(
-                CONTROLS_CONTAINER,
-                NARROW,
-                sx().min_width("4rem"),
-            ),
-        )
+        .selector(VideoPart::Seek.selector(), seek_sx())
         .selector(
             VideoPart::Volume.selector(),
             sx().flex("0 1 6rem").min_width("4rem").container_query(
@@ -278,7 +273,10 @@ pub fn Video(props: VideoProps) -> Element {
         .map(|(index, _)| index);
     let shown_at_start = text_tracks.clone().any(|(_, t)| t.default);
     let shown = use_signal(|| shown_at_start);
-    let captions = caption_track.map(|track| Captions { shown, track });
+    let captions = Captions {
+        shown,
+        track: caption_track,
+    };
 
     let sound = use_sound(media);
     use_media_keys(
@@ -287,12 +285,7 @@ pub fn Video(props: VideoProps) -> Element {
         player,
         [
             Hotkey::new("f", move || fullscreen.toggle()),
-            Hotkey::new("c", move || {
-                if let Some(captions) = captions {
-                    captions.toggle(media);
-                }
-            })
-            .when(move || captions.is_some()),
+            Hotkey::new("c", move || captions.toggle(media)).when(move || captions.track.is_some()),
         ],
     );
 
@@ -395,7 +388,7 @@ pub fn Video(props: VideoProps) -> Element {
         if unsupported {
             MediaFallback { src: props.src.clone(), children: props.children }
         } else {
-            MediaControls { media, sound, size: props.size.clone(), captions, fullscreen: Some(fullscreen) }
+            MediaControls { media, sound, size: props.size.clone(), captions: Some(captions), fullscreen: Some(fullscreen) }
         }
     };
 

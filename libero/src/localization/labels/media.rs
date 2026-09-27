@@ -19,6 +19,10 @@ pub struct MediaLabels {
     pub captions: &'static str,
     pub fullscreen: &'static str,
     pub exit_fullscreen: &'static str,
+    /// The speed button's name; `{rate}` is its text, such as `1.5×`.
+    pub speed: &'static str,
+    /// Why a video's captions button is disabled.
+    pub no_captions: &'static str,
 }
 
 impl MediaLabels {
@@ -38,6 +42,8 @@ impl MediaLabels {
         captions: "Captions",
         fullscreen: "Fullscreen",
         exit_fullscreen: "Exit fullscreen",
+        speed: "Playback speed {rate}",
+        no_captions: "No captions for this video",
     };
 
     pub const GERMAN: Self = Self {
@@ -56,5 +62,7 @@ impl MediaLabels {
         captions: "Untertitel",
         fullscreen: "Vollbild",
         exit_fullscreen: "Vollbild beenden",
+        speed: "Wiedergabegeschwindigkeit {rate}",
+        no_captions: "Keine Untertitel für dieses Video",
     };
 }

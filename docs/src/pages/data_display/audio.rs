@@ -44,7 +44,7 @@ pub fn AudioPage() -> Element {
                         .doc("Shown instead of the controls where nothing plays media (Blitz)."),
                 ])
                 .parts("AudioPart", vec![
-                    (AudioPart::Controls, "The row of controls, a `Toolbar`."),
+                    (AudioPart::Controls, "The row of controls, a named `group`."),
                     (AudioPart::Time, "The elapsed and total time."),
                     (AudioPart::Seek, "The seek slider's wrapper."),
                     (AudioPart::Volume, "The volume slider's wrapper."),
@@ -57,11 +57,14 @@ pub fn AudioPage() -> Element {
                 .key(["J", "L"], "Jumps 10 seconds back or ahead.")
                 .key(["M"], "Mutes or unmutes.")
                 .key(["Left", "Right"], "On the seek slider: 1 second; on the volume slider: 5%.")
+                .key(["Tab"], "Moves through every control in visual order: play, seek, mute, volume, speed.")
                 .handles([
-                    "The player is a `group` named by `label`; its buttons are one `toolbar` stop, each slider its own.",
+                    "The player is a `group` named by `label`, its controls a `group` named \"Player controls\"; every button and slider is its own Tab stop, as in the browser's own controls.",
+                    "The speed button shows the rate (\"1×\") and is named \"Playback speed 1×\"; its menu offers 0.5× to 2× as radio items.",
                     "The play and mute buttons change their names (Play/Pause, Mute/Unmute) rather than using `aria-pressed`.",
                     "At volume 0 the mute button offers Unmute, which brings back the last audible volume; moving the volume up while muted unmutes.",
-                    "Below 22rem the volume slider hides and the mute button stays, so the row fits at 320px (WCAG 1.4.10).",
+                    "No control leaves the player at any width: the seek track shrinks first, below 22rem the volume slider hides (mute stays), and only then does the row wrap, so it fits at 320px and 200% zoom (WCAG 1.4.10).",
+                    "The controls bar has a border at 3:1 against the page in light and dark (WCAG 1.4.11).",
                     "The seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`).",
                     "A polite status says \"Loading\" while playing waits for data; a failed source shows an alert.",
                     "No autoplay unless asked, and a debug warning for autoplay with sound (WCAG 1.4.2).",
@@ -78,7 +81,7 @@ pub fn AudioPage() -> Element {
                 Text {
                     "An "
                     Code { source: "<audio>" }
-                    " with libero's own controls: play, seek, time, mute and volume, in the theme's look on "
+                    " with libero's own controls: play, seek, time, mute, volume and speed, in the theme's look on "
                     "every platform that plays media. "
                     Code { source: "use_media()" }
                     " drives the same engine for a layout of your own: spread its "

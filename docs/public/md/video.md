@@ -7,7 +7,7 @@ Index: [index.md](index.md) lists every other page
 Description: A `<video>` with libero's own controls, captions and fullscreen, on the `use_media` hook.
 
 A `<video>` with libero's own controls: play, seek, time, mute, volume,
-captions and fullscreen, the same row as `Audio`'s, in the theme's look on
+speed, captions and fullscreen, the same row as `Audio`'s, in the theme's look on
 every platform that plays media. `use_media()` drives the same engine for a
 layout of your own: see [use_media](use_media.md).
 
@@ -37,8 +37,8 @@ fn Demo() -> Element {
 }
 ```
 
-A captions or subtitles track adds the captions button: it shows the default
-one, else the first. Pass a `use_media()` handle to `Video { media }` to drive
+A captions or subtitles track enables the captions button: it shows the
+default one, else the first. Without one the button stays, disabled. Pass a `use_media()` handle to `Video { media }` to drive
 the player from outside.
 
 ### Several formats
@@ -71,7 +71,7 @@ fn Demo() -> Element {
 | `label` | `String` | required | Names the player, e.g. the video's title. |
 | `poster` | `Option<String>` | `None` | A picture shown until playing starts. |
 | `aspect_ratio` | `Option<String>` | `None` | The picture's CSS `aspect-ratio`, such as `"16 / 9"`, so the box holds its shape before the file loads. Unset, the file's own. |
-| `tracks` | `Vec<MediaTrack>` | `[]` | WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track adds the captions button. |
+| `tracks` | `Vec<MediaTrack>` | `[]` | WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button. |
 | `media` | `Option<MediaHandle>` | `None` | A handle from `use_media()`, to drive or read the player from outside. |
 | `autoplay` | `bool` | `false` | Starts on load. Browsers refuse it with sound: pair it with `muted`; a debug build warns otherwise. |
 | `muted` | `bool` | `false` | Starts muted. |
@@ -96,7 +96,7 @@ explains how parts work.
 | Part | `data-slot` | Description |
 |---|---|---|
 | `VideoPart::Media` | `media` | The `<video>` element. |
-| `VideoPart::Controls` | `controls` | The row of controls, a `Toolbar`. |
+| `VideoPart::Controls` | `controls` | The row of controls, a named `group`. |
 | `VideoPart::Time` | `time` | The elapsed and total time. |
 | `VideoPart::Seek` | `seek` | The seek slider's wrapper. |
 | `VideoPart::Volume` | `volume` | The volume slider's wrapper. |
@@ -119,26 +119,37 @@ screen, from [use_fullscreen](use_fullscreen.md).
 | `F` | Enters or leaves fullscreen. |
 | `Escape` | Leaves fullscreen. |
 | `Left` or `Right` | On the seek slider: 1 second; on the volume slider: 5%. |
+| `Tab` | Moves through every control in visual order: play, seek, mute, volume, speed, captions, fullscreen. |
 
 ### Libero handles
 
-- The player is a `group` named by `label`; its buttons are one `toolbar` stop,
-  each slider its own.
+- The player is a `group` named by `label`, its controls a `group` named
+  "Player controls"; every button and slider is its own Tab stop, as in the
+  browser's own controls.
 - The play, mute and fullscreen buttons change their names (Play/Pause,
   Mute/Unmute, Fullscreen/Exit fullscreen); the captions button uses
   `aria-pressed`.
+- The speed button shows the rate ("1×") and is named "Playback speed 1×";
+  its menu offers 0.5× to 2× as radio items.
+- Without a captions or subtitles track the captions button stays, disabled
+  but focusable, and says "No captions for this video".
 - At volume 0 the mute button offers Unmute, which brings back the last audible
   volume; moving the volume up while muted unmutes.
 - Where the page may not go fullscreen, the player covers the window as a fixed
   box instead, which Escape, F and a Tab out of the player leave, so focus never
-  hides behind it.
+  hides behind it. Focus stays on the control that was pressed, inside the box,
+  and is there again when the box closes.
 - In fullscreen the controls overlay the bottom of the picture and fade after 3
   seconds of playing untouched. A pointer move, a tap or a key brings them
   back. After a key they stay until the next click or tap, so keyboard focus
   never sits on a faded control; they never leave the Tab order, and a tap on
   the picture only shows them.
-- Below 28rem the volume slider hides and the mute button stays; below 22rem
-  the total time hides too, so the row fits at 320px (WCAG 1.4.10).
+- No control leaves the player at any width: the seek track shrinks first,
+  below 28rem the volume slider hides (mute stays), below 22rem the total time,
+  and only then does the row wrap, so it fits at 320px and 200% zoom (WCAG
+  1.4.10).
+- The controls bar has a border at 3:1 against the page in light and dark
+  (WCAG 1.4.11).
 - The seek slider's `aria-valuetext` reads "1:05 of 4:56" (the localization's
   `media.position`).
 - A polite status says "Loading" while playing waits for data; a failed source
@@ -162,5 +173,11 @@ screen, from [use_fullscreen](use_fullscreen.md).
   trails by a moment.
 - In fullscreen the shown controls cover the bottom of the picture, captions
   included.
+- Captions show once playing starts: browsers draw none over the poster.
+- Fullscreen is libero's own `use_fullscreen` over the browser's Fullscreen
+  API, no library; where the API is refused, a fixed box over the window. A
+  floating mini player is the browser's own Picture-in-Picture (Firefox's
+  button on the video, Chrome's context menu): its window is outside the page,
+  so focus cannot follow it.
 - The demo's VP9 WebM may not play in older Safari: give `sources` a WebM and
   keep an MP4 (H.264) as `src`.

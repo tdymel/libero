@@ -7,19 +7,25 @@ paragraph
   StaticText "A silent clip with subtitles, and one without."
 group "Silence"
   Video
-  toolbar "Player controls"
+  group "Player controls"
     button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
     button "Mute"
+    button "Playback speed 1×" [expanded=false] [haspopup=menu]
+      StaticText "1×"
     button "Captions" [pressed=false]
     button "Fullscreen"
   status [atomic] [live=polite]
 group "Plain"
   Video
-  toolbar "Player controls"
+  group "Player controls"
     button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
     button "Mute"
+    button "Playback speed 1×" [expanded=false] [haspopup=menu]
+      StaticText "1×"
+    button "Captions" [disabled] [pressed=false]
+    StaticText "No captions for this video"
     button "Fullscreen"
   status [atomic] [live=polite]
 tooltip "Play K"

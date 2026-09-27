@@ -91,8 +91,10 @@ fn sources_render_in_order_before_src_and_the_tracks() {
     assert!(!html.contains(r#"src="/a.ogv" type"#), "{html}");
 }
 
+/// Todo 1324: without a track the captions button stays, disabled but a Tab
+/// stop, described by why.
 #[test]
-fn the_controls_add_fullscreen_and_no_captions_button_without_a_track() {
+fn the_controls_add_fullscreen_and_a_disabled_captions_button_without_a_track() {
     fn app() -> Element {
         rsx! {
             LiberoProvider { localization: &GERMAN, Video { src: "/a.webm", label: "Start" } }
@@ -107,7 +109,17 @@ fn the_controls_add_fullscreen_and_no_captions_button_without_a_track() {
     );
     assert!(html.contains(r#"aria-label="Abspielen""#), "{html}");
     assert!(html.contains(r#"aria-label="Vollbild""#), "{html}");
-    assert!(!html.contains(r#"aria-label="Untertitel""#), "{html}");
+    let named = html.find(r#"aria-label="Untertitel""#).expect(&html);
+    let captions = attributes_of(&html[html[..named].rfind("<button").unwrap()..], "button");
+    assert_eq!(captions["aria-disabled"], "true", "{html}");
+    assert_eq!(captions["aria-pressed"], "false", "{html}");
+    assert!(!captions.contains_key("disabled"), "a Tab stop: {html}");
+    let reason = &captions["aria-describedby"];
+    assert!(
+        html.contains(&format!(r#"id="{reason}""#))
+            && html.contains("Keine Untertitel für dieses Video"),
+        "{html}"
+    );
     assert!(html.contains("0:00") && html.contains(" / --:--"), "{html}");
     assert!(!html.contains("data-fullscreen"), "{html}");
 }
