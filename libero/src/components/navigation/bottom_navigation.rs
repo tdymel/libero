@@ -88,10 +88,7 @@ static BOTTOM_NAVIGATION_SX: StaticSx = StaticSx::new(|| {
         .border_top("1px solid")
         .border_top_color("muted.4")
         .z_index(Z_INDEX_HEADER.overridable())
-        // The insets are physical, so these stay physical in RTL too.
-        .padding_bottom(safe_area_padding("0px", "bottom"))
-        .padding_left(safe_area_padding("0px", "left"))
-        .padding_right(safe_area_padding("0px", "right"))
+        .with("padding-block-end", safe_area_padding("0px", "bottom"))
         .when(
             BottomNavigationPosition::Sticky.state_name(),
             sx().position("sticky").with("inset-block-end", "0"),
@@ -265,7 +262,10 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
         names_itself(&props.attributes),
         "BottomNavigation: no `aria-label` or `aria-labelledby`, so it is announced as just \"navigation\".",
     );
-    use_context_provider(ItemCount::default);
+    // Fixed per build, so the hook order holds.
+    if cfg!(debug_assertions) {
+        use_context_provider(ItemCount::default);
+    }
 
     let publishes = position != BottomNavigationPosition::Static;
     use_css(
@@ -342,25 +342,27 @@ base_props! {
 /// Docs: <https://libero-ui.dev/navigation/bottom-navigation>
 #[component]
 pub fn BottomNavigationItem(props: BottomNavigationItemProps) -> Element {
-    let count = use_hook(|| {
-        let count = try_consume_context::<ItemCount>();
-        if let Some(count) = &count {
-            count.add();
-        }
-        count
-    });
-    use_drop(move || {
-        if let Some(count) = &count {
-            count.count.set(count.count.get().saturating_sub(1));
-        }
-    });
-    use_hook(|| {
-        if props.to.as_ref().is_some() && props.onclick.is_some() {
-            warn(
-                "BottomNavigationItem: both `to` and `onclick`; `to` wins and `onclick` is not called.",
-            );
-        }
-    });
+    if cfg!(debug_assertions) {
+        let count = use_hook(|| {
+            let count = try_consume_context::<ItemCount>();
+            if let Some(count) = &count {
+                count.add();
+            }
+            count
+        });
+        use_drop(move || {
+            if let Some(count) = &count {
+                count.count.set(count.count.get().saturating_sub(1));
+            }
+        });
+        use_hook(|| {
+            if props.to.as_ref().is_some() && props.onclick.is_some() {
+                warn(
+                    "BottomNavigationItem: both `to` and `onclick`; `to` wins and `onclick` is not called.",
+                );
+            }
+        });
+    }
 
     let disabled = props.disabled.unwrap_or(false);
     let selected = props.selected.unwrap_or_else(|| match props.to.as_ref() {
