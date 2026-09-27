@@ -40,6 +40,7 @@ mod editor_probe;
 mod elevation;
 mod field_frame;
 mod field_parts;
+mod field_props;
 mod field_value;
 mod file_field;
 mod floating_window;
@@ -175,6 +176,7 @@ const FIXTURES: &[Routes] = &[
     gradient::ROUTES,
     field_frame::ROUTES,
     field_parts::ROUTES,
+    field_props::ROUTES,
     field_value::ROUTES,
     file_field::ROUTES,
     image_cropper::ROUTES,

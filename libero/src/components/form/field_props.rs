@@ -51,6 +51,7 @@ macro_rules! field_props {
                 /// `None` is "not stated", so a `Fieldset` can cascade into it.
                 #[props(default)]
                 disabled: Option<bool>,
+                /// Marks the field required: the asterisk, and the state for assistive technology.
                 #[props(default)]
                 required: Option<bool>,
                 $(

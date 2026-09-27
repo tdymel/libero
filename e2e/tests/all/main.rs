@@ -35,6 +35,7 @@ mod editor_probe;
 mod elevation;
 mod field_frame;
 mod field_parts;
+mod field_props;
 mod field_value;
 mod file_field;
 mod floating_window;
