@@ -6,6 +6,7 @@ use pictogram_icons_lucide as lucide;
 use super::{
     cell_value::{CellAlign, SortDirection, SortKey},
     column::{Column, ColumnDefaults},
+    groups::{HeaderCell, header_rows},
     use_table::StateSlice,
 };
 use crate::{
@@ -96,6 +97,8 @@ pub(super) struct HeaderSpec {
     pub style: Option<String>,
     /// A caller's header body, which replaces the text.
     pub body: Option<Element>,
+    /// The group headers above it, outermost first.
+    pub groups: Vec<String>,
 }
 
 pub(super) fn header_specs<T>(
@@ -120,6 +123,7 @@ pub(super) fn header_specs<T>(
                     true => None,
                     false => column.header_render.as_ref().map(|render| render()),
                 },
+                groups: column.groups.clone(),
             }
         })
         .collect()
@@ -251,10 +255,19 @@ pub(super) struct RowSpec {
     /// The row's `data-state`.
     pub states: Option<String>,
     pub attributes: Vec<Attribute>,
-    pub cells: Vec<(String, Option<Element>)>,
+    pub cells: Vec<CellSpec>,
     /// With `selectable`: whether it is selected, and its checkbox cell.
     pub selected: Option<bool>,
     pub select: Option<Element>,
+}
+
+/// A body cell of header `column`: its text, or a caller's body, over `span`
+/// shown columns.
+pub(super) struct CellSpec {
+    pub column: usize,
+    pub text: String,
+    pub body: Option<Element>,
+    pub span: usize,
 }
 
 /// Row indices in sorted order, one key column per sorted column, the first
@@ -386,34 +399,66 @@ pub(super) fn render_body(body: BodySpec) -> Element {
     let with_menu = !menus.is_empty();
     let mut menus = menus.into_iter().map(Some).collect::<Vec<_>>();
     let mut menu_of = move |index: usize| menus.get_mut(index).and_then(Option::take);
+    let paths: Vec<(usize, &[String])> = shown
+        .iter()
+        .map(|&index| (index, headers[index].groups.as_slice()))
+        .collect();
+    let mut select_all = select_all;
+    let head_rows: Vec<Element> = header_rows(&paths)
+        .into_iter()
+        .enumerate()
+        .map(|(level, cells)| {
+            let cells = cells
+                .into_iter()
+                .enumerate()
+                .map(|(position, cell)| match cell {
+                    HeaderCell::Group { name, span } => rsx! {
+                        th {
+                            key: "g{position}",
+                            scope: "colgroup",
+                            colspan: (span > 1).then(|| span.to_string()),
+                            "data-group": true,
+                            "{name}"
+                        }
+                    },
+                    HeaderCell::Column { index, rowspan } => {
+                        let spec = &headers[index];
+                        rsx! {
+                            th {
+                                key: "{index}",
+                                scope: "col",
+                                rowspan: (rowspan > 1).then(|| rowspan.to_string()),
+                                "data-align": align_attr(spec.align),
+                                "data-sortable": spec.sortable.then_some(true),
+                                "data-menu": with_menu.then_some(true),
+                                // Else the menu button's label joins the name every cell reads out.
+                                aria_label: with_menu.then(|| spec.header.clone()),
+                                style: spec.style.clone(),
+                                // On the sorted columns only (APG): a "none" on every
+                                // other one is read out as "not sorted" at each.
+                                aria_sort: active
+                                    .iter()
+                                    .find(|(column, _)| *column == index)
+                                    .map(|(_, direction)| direction.aria_value()),
+                                {header_cell(spec, index, &context, menu_of(index))}
+                            }
+                        }
+                    }
+                });
+            let cells: Vec<Element> = cells.collect();
+            rsx! {
+                tr { key: "{level}",
+                    {select_all.take()}
+                    {cells.into_iter()}
+                }
+            }
+        })
+        .collect();
     rsx! {
         if let Some(spec) = caption {
             caption { id: spec.id, "{spec.text}" }
         }
-        thead {
-            tr {
-                {select_all}
-                for (index , spec) in headers.iter().enumerate().filter(|(_, spec)| !spec.hidden) {
-                    th {
-                        key: "{index}",
-                        scope: "col",
-                        "data-align": align_attr(spec.align),
-                        "data-sortable": spec.sortable.then_some(true),
-                        "data-menu": with_menu.then_some(true),
-                        // Else the menu button's label joins the name every cell reads out.
-                        aria_label: with_menu.then(|| spec.header.clone()),
-                        style: spec.style.clone(),
-                        // On the sorted columns only (APG): a "none" on every
-                        // other one is read out as "not sorted" at each.
-                        aria_sort: active
-                            .iter()
-                            .find(|(column, _)| *column == index)
-                            .map(|(_, direction)| direction.aria_value()),
-                        {header_cell(spec, index, &context, menu_of(index))}
-                    }
-                }
-            }
-        }
+        thead { {head_rows.into_iter()} }
         tbody {
             if let Some(empty) = empty {
                 tr { "data-empty": true,
@@ -427,24 +472,24 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                     aria_selected: selected.map(|selected| selected.to_string()),
                     ..attributes,
                     {select}
-                    for (index , (text , body)) in cells.into_iter().enumerate() {
-                        if let Some(spec) = shown.get(index).map(|&column| &headers[column]) {
-                            if spec.row_header {
-                                th {
-                                    key: "{index}",
-                                    scope: "row",
-                                    "data-align": align_attr(spec.align),
-                                    "{text}"
-                                    {body}
-                                }
-                            } else {
-                                td {
-                                    key: "{index}",
-                                    "data-align": align_attr(spec.align),
-                                    // Text inline: a nested node per cell costs ~1 us a sort.
-                                    "{text}"
-                                    {body}
-                                }
+                    for CellSpec { column , text , body , span } in cells {
+                        if headers[column].row_header {
+                            th {
+                                key: "{column}",
+                                scope: "row",
+                                colspan: (span > 1).then(|| span.to_string()),
+                                "data-align": align_attr(headers[column].align),
+                                "{text}"
+                                {body}
+                            }
+                        } else {
+                            td {
+                                key: "{column}",
+                                colspan: (span > 1).then(|| span.to_string()),
+                                "data-align": align_attr(headers[column].align),
+                                // Text inline: a nested node per cell costs ~1 us a sort.
+                                "{text}"
+                                {body}
                             }
                         }
                     }
@@ -636,6 +681,7 @@ mod tests {
                 hidden: false,
                 style: None,
                 body: None,
+                groups: Vec::new(),
             })
             .collect()
     }

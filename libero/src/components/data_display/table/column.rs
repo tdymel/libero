@@ -29,6 +29,10 @@ pub struct Column<T> {
     pub(super) width: Option<String>,
     pub(super) min_width: Option<String>,
     pub(super) header_render: Option<HeaderRender>,
+    /// Group headers above this one, outermost first.
+    pub(super) groups: Vec<String>,
+    /// How many shown columns a row's cell covers, from this one on.
+    pub(super) col_span: Option<ColSpan<T>>,
     pub(super) sort_key: Rc<dyn Fn(&T) -> SortKey>,
     /// The cell as plain text, drawn inline in its `td`.
     pub(super) text: Rc<dyn Fn(&T) -> String>,
@@ -37,6 +41,7 @@ pub struct Column<T> {
 }
 
 type CellRender<T> = Rc<dyn Fn(&T) -> Element>;
+type ColSpan<T> = Rc<dyn Fn(&T) -> usize>;
 pub(super) type HeaderRender = Rc<dyn Fn() -> Element>;
 
 impl ColumnHeader {
@@ -56,6 +61,8 @@ impl ColumnHeader {
             width: None,
             min_width: None,
             header_render: None,
+            groups: Vec::new(),
+            col_span: None,
             sort_key: Rc::new(move |row| sort_value(row).sort_key()),
             text: Rc::new(move |row| value(row).cell_text()),
             render: None,
@@ -280,6 +287,39 @@ impl<T> Column<T> {
         self.header_render = Some(Rc::new(render));
         self
     }
+
+    /// Puts the column under a group header, shared with the adjacent columns of
+    /// the same groups. Call once per level, outermost first; a name repeated
+    /// under another parent is another group.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # struct User { first: String, last: String }
+    /// column("First").value(|u: &User| u.first.clone()).group("Person").group("Name");
+    /// column("Last").value(|u: &User| u.last.clone()).group("Person").group("Name");
+    /// ```
+    pub fn group(mut self, name: impl Into<String>) -> Self {
+        self.groups.push(name.into());
+        self
+    }
+
+    /// How many shown columns a row's cell covers, from this one on: the
+    /// covered columns' cells are left out. Clamped to the row's end.
+    ///
+    /// Compared as equal to any other: capture signals, not values, or the
+    /// spans stay stale.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # struct Line { label: String, total: bool }
+    /// column("Item")
+    ///     .value(|l: &Line| l.label.clone())
+    ///     .col_span(|l: &Line| if l.total { 2 } else { 1 });
+    /// ```
+    pub fn col_span(mut self, span: impl Fn(&T) -> usize + 'static) -> Self {
+        self.col_span = Some(Rc::new(span));
+        self
+    }
 }
 
 // Hand-written: a derive would demand `T: Clone`, which the `Rc` fields don't.
@@ -295,6 +335,8 @@ impl<T> Clone for Column<T> {
             width: self.width.clone(),
             min_width: self.min_width.clone(),
             header_render: self.header_render.clone(),
+            groups: self.groups.clone(),
+            col_span: self.col_span.clone(),
             sort_key: self.sort_key.clone(),
             text: self.text.clone(),
             render: self.render.clone(),
@@ -313,6 +355,7 @@ impl<T> PartialEq for Column<T> {
             && self.hideable == other.hideable
             && self.width == other.width
             && self.min_width == other.min_width
+            && self.groups == other.groups
     }
 }
 
@@ -387,6 +430,8 @@ mod tests {
         assert!(a != b.clone().width("4rem"));
         assert!(a != b.clone().min_width("4rem"));
         assert!(a == b.clone().header_render(|| rsx! { "x" }));
+        assert!(a == b.clone().col_span(|_| 2));
+        assert!(a != b.clone().group("G"));
         assert!(a != column("Other").value(|row: &u32| *row));
     }
 

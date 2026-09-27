@@ -46,6 +46,11 @@ hide the others. `.hideable(false)` keeps a column out of it. To hold the hidden
 columns yourself, pass `hidden_columns` and update it from
 `onhiddencolumnschange`.
 
+`column("Q1").value(..).group("Revenue")` puts a column under a group header,
+shared with its neighbours of the same group; call `group` again for a nested
+one. `col_span` lets a row's cell cover the next columns, say a total row's
+label.
+
 `scroll` wraps a table wider than its container in a `ScrollArea` that
 scrolls sideways. The demo's switch also sets `sx().min_width("640px")`, so the
 three columns overflow at any width. `max_height` caps a long table's height:
@@ -463,6 +468,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
 | `hideable` | `bool` | `true` | Whether the column menu offers to hide the column. `hidden_columns` still hides it. |
+| `group` | `String` | `None` | Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group. |
+| `col_span` | `fn(&T) -> usize` | `None` | How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared. |
 
 `column()` is a builder, not a component, so it takes no shared props.
 
@@ -506,6 +513,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - With `column_menu`, each menu button is named after its column, "Age column
   options", and the header keeps its text as its name. The Columns submenu lists
   checkbox items, and the last shown column cannot be hidden.
+- A group header is a `th scope="colgroup"` over its columns, so a screen reader
+  reads it with each of their cells. A column outside any group, and the
+  select-all box, span every header row.
 
 ### You must
 
@@ -525,6 +535,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - On Blitz, once a `max_height` table's rows scroll, a click on a header's sort
   or menu button misses: Blitz hit-tests the header where it sat before the
   scroll. Tab to the button and press Enter instead.
+- On Blitz, a `max_height` table with column groups keeps only its last header
+  row in place; the group rows scroll away with the rows.
 
 ## Theme defaults
 
@@ -567,5 +579,6 @@ default `start`.
 | `data-select` | On the checkbox column's `th` and `td`s. |
 | `aria-selected` | On every body row of a `selectable` table, `true` or `false`. |
 | `data-empty` | On the body row that holds `empty`. |
+| `data-group` | On a column group's header cell. |
 | `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set. On a body row: its active `row_states`. |
 | `data-slot="range"` | On the paginated table's range text, "1–10 of 95". |

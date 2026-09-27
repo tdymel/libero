@@ -2,6 +2,7 @@ mod cell_value;
 mod column;
 mod column_menu;
 mod core;
+mod groups;
 mod paging;
 mod selection;
 mod table;

@@ -132,7 +132,7 @@ pub(crate) use select::opens_select_picker;
 pub(crate) use session::{session_get, session_set};
 pub(crate) use system_notification::{NotificationEvent, ShownNotification, system_notification};
 pub use system_notification::{SystemNotification, SystemNotificationError};
-pub(crate) use table::{lays_out_captions, widens_sized_tables};
+pub(crate) use table::{lays_out_captions, sticks_table_heads, widens_sized_tables};
 pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};
 pub(crate) use transition::transition_property;

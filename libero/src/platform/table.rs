@@ -11,3 +11,9 @@ pub(crate) fn lays_out_captions() -> bool {
 pub(crate) fn widens_sized_tables() -> bool {
     backend::WIDENS_SIZED_TABLES
 }
+
+/// Whether a sticky `<thead>` sticks. Blitz's doesn't, so a `Table` with
+/// column groups sticks only its last header row there.
+pub(crate) fn sticks_table_heads() -> bool {
+    backend::STICKS_TABLE_HEADS
+}

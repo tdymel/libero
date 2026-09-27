@@ -34,7 +34,8 @@ impl Selection {
     }
 
     /// The select-all box: checked with every row selected, mixed with some.
-    pub fn header_cell(&self, selected: &HashSet<&str>) -> Element {
+    /// `rowspan` covers the header rows of column groups.
+    pub fn header_cell(&self, selected: &HashSet<&str>, rowspan: usize) -> Element {
         let count = self
             .keys
             .iter()
@@ -43,7 +44,10 @@ impl Selection {
         let all = count > 0 && count == self.keys.len();
         let this = self.clone();
         rsx! {
-            th { scope: "col", "data-select": true,
+            th {
+                scope: "col",
+                rowspan: (rowspan > 1).then(|| rowspan.to_string()),
+                "data-select": true,
                 Checkbox {
                     aria_label: self.labels.select_all,
                     size: self.size,

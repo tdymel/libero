@@ -142,6 +142,8 @@ pub fn TablePage() -> Element {
                     prop("of", "&ColumnType<V>").default("None").doc("Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win."),
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
                     prop("hideable", "bool").default("true").doc("Whether the column menu offers to hide the column. `hidden_columns` still hides it."),
+                    prop("group", "String").default("None").doc("Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group."),
+                    prop("col_span", "fn(&T) -> usize").default("None").doc("How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()
@@ -163,6 +165,7 @@ pub fn TablePage() -> Element {
                     "`.row_header()` cells render as `th scope=\"row\"`, so a screen reader reads that name as it moves down any other column. They look like the other cells.",
                     "Paginated, the page buttons sit in a `nav` named after the caption, the page-size picker is labelled, and a page change announces the new range, \"4–6 of 7\", politely. The first render announces nothing.",
                     "With `column_menu`, each menu button is named after its column, \"Age column options\", and the header keeps its text as its name. The Columns submenu lists checkbox items, and the last shown column cannot be hidden.",
+                    "A group header is a `th scope=\"colgroup\"` over its columns, so a screen reader reads it with each of their cells. A column outside any group, and the select-all box, span every header row.",
                 ])
                 .must([
                     "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
@@ -173,6 +176,7 @@ pub fn TablePage() -> Element {
                 ])
                 .limits([
                     "On Blitz, once a `max_height` table's rows scroll, a click on a header's sort or menu button misses: Blitz hit-tests the header where it sat before the scroll. Tab to the button and press Enter instead.",
+                    "On Blitz, a `max_height` table with column groups keeps only its last header row in place; the group rows scroll away with the rows.",
                 ]),
             lead: rsx! {
                 Text {
@@ -273,6 +277,15 @@ pub fn TablePage() -> Element {
                     " and update it from "
                     Code { source: "onhiddencolumnschange" }
                     "."
+                }
+                Text {
+                    Code { source: "column(\"Q1\").value(..).group(\"Revenue\")" }
+                    " puts a column under a group header, shared with its neighbours of the "
+                    "same group; call "
+                    Code { source: "group" }
+                    " again for a nested one. "
+                    Code { source: "col_span" }
+                    " lets a row's cell cover the next columns, say a total row's label."
                 }
                 Text {
                     Code { source: "scroll" }

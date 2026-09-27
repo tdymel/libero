@@ -286,6 +286,10 @@ pub(crate) const LAYS_OUT_CAPTIONS: bool =
 pub(crate) const WIDENS_SIZED_TABLES: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz's sticky emulation needs a box, which a `<thead>` lacks; see [`sticks_table_heads`](crate::platform::sticks_table_heads).
+pub(crate) const STICKS_TABLE_HEADS: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 /// No Blitz backend draws a `backdrop-filter`; see [`draws_backdrop_filter`](crate::platform::draws_backdrop_filter).
 pub(crate) const DRAWS_BACKDROP_FILTER: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));

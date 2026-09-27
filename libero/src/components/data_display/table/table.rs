@@ -14,7 +14,7 @@ use crate::{
         overlay::MenuPart,
     },
     hooks::{listener, use_id, use_localization, use_theme},
-    platform::{lays_out_captions, widens_sized_tables},
+    platform::{lays_out_captions, sticks_table_heads, widens_sized_tables},
     sx::{StaticSx, Sx, sx},
     theme::{CHECKBOX_BOX_SIZE, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TableDefaults},
     utils::warn,
@@ -24,9 +24,10 @@ use super::{
     column::{Column, ColumnDefaults},
     column_menu::{ColumnMenu, MenuColumn},
     core::{
-        BodySpec, CaptionSpec, RowFn, RowSpec, SortedRows, TableSort, active_sort, header_specs,
-        render_body,
+        BodySpec, CaptionSpec, CellSpec, RowFn, RowSpec, SortedRows, TableSort, active_sort,
+        header_specs, render_body,
     },
+    groups::spanned,
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     selection::Selection,
     use_table::{TableConfig, use_table},
@@ -180,16 +181,25 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         sx().selector("& tbody tr:not([data-empty])", sx().cursor("pointer")),
     )
     // On each `th`: a sticky `thead` or `tr` has no box natively. Opaque and
-    // above the rows, which scroll under it.
+    // above the rows, which scroll under it. Group headers scroll away there.
     .when(
         "sticky-header",
         sx().selector(
-            "& thead th",
+            "& thead th:not([data-group])",
             sx().position("sticky")
                 .top("0")
                 .z_index("1")
                 .background(NamedColorCss::SURFACE.value()),
         ),
+    )
+    // Several header rows can't all stick at the top: the `thead` does.
+    .when(
+        "sticky-head",
+        sx().selector("& thead", sx().position("sticky").top("0").z_index("1"))
+            .selector(
+                "& thead th",
+                sx().background(NamedColorCss::SURFACE.value()),
+            ),
     )
 });
 
@@ -417,6 +427,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         &state.hidden_columns.read(),
     );
     let active = active_sort(&headers, &state.sort.read(), props.multi_sort);
+    let shown: Vec<usize> = (0..headers.len())
+        .filter(|&index| !headers[index].hidden)
+        .collect();
+    let group_rows = shown
+        .iter()
+        .map(|&index| headers[index].groups.len())
+        .max()
+        .unwrap_or(0);
     let menus = match props.column_menu {
         true => {
             let columns: Rc<[MenuColumn]> = headers
@@ -546,16 +564,27 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     .call(row)
                     .and_then(|states| states.data_state()),
                 attributes,
-                cells: props
-                    .columns
-                    .iter()
-                    .zip(&headers)
-                    .filter(|(_, spec)| !spec.hidden)
-                    .map(|(column, _)| match &column.render {
+                cells: spanned(&shown, |index| {
+                    props.columns[index]
+                        .col_span
+                        .as_ref()
+                        .map_or(1, |span| span(row))
+                })
+                .into_iter()
+                .map(|(index, span)| {
+                    let column = &props.columns[index];
+                    let (text, body) = match &column.render {
                         Some(render) => (String::new(), Some(render(row))),
                         None => ((column.text)(row), None),
-                    })
-                    .collect(),
+                    };
+                    CellSpec {
+                        column: index,
+                        text,
+                        body,
+                        span,
+                    }
+                })
+                .collect(),
             }
         })
         .collect();
@@ -595,7 +624,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .with(size.state_name(), true)
         .with("striped", props.striped)
         .with("row-click", props.onrowclick.is_some())
-        .with("sticky-header", bounded)
+        .with(
+            "sticky-header",
+            bounded && !(group_rows > 0 && sticks_table_heads()),
+        )
+        .with(
+            "sticky-head",
+            bounded && group_rows > 0 && sticks_table_heads(),
+        )
         .into();
     let empty = props.empty.unwrap_or_else(|| rsx! { "{labels.no_rows}" });
     let table = use_box()
@@ -618,7 +654,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 sort_order: labels.sort_order,
                 select_all: selection
                     .as_ref()
-                    .map(|selection| selection.header_cell(&selected)),
+                    .map(|selection| selection.header_cell(&selected, group_rows + 1)),
                 menus,
             }),
         );

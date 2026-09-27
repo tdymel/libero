@@ -107,6 +107,7 @@ mod stepper;
 mod stylesheet;
 mod system_notification;
 mod table;
+mod table_groups;
 mod table_paging;
 mod tabs;
 mod tags_field;
