@@ -641,7 +641,7 @@ e2e::scenario!(
 );
 
 /// Todo 1324, as the docs demo: a default captions track loads its cues, starts
-/// shown, and the button hides and shows it again.
+/// shown, and the button hides and shows it again; pressed, a bar marks its icon (1370).
 #[test]
 fn a_default_captions_track_loads_and_toggles() {
     block_on(async {
@@ -650,10 +650,13 @@ fn a_default_captions_track_loads_and_toggles() {
             .unwrap();
         let page = &fixture.page;
         let state = |mode: &str, pressed: &str| {
+            let mark = if pressed == "true" { "block" } else { "none" };
             format!(
                 "(() => {{ const t = document.querySelector('#player video').textTracks[0];
+                 const button = document.querySelector('{CAPTIONS}');
                  return t.cues !== null && t.cues.length === 1 && t.mode === '{mode}'
-                     && document.querySelector('{CAPTIONS}').getAttribute('aria-pressed') === '{pressed}'; }})()"
+                     && button.getAttribute('aria-pressed') === '{pressed}'
+                     && getComputedStyle(button.querySelector('[data-mark]')).display === '{mark}'; }})()"
             )
         };
         wait::for_js_true(page, &state("showing", "true"), "the cues, shown")
@@ -676,3 +679,200 @@ e2e::scenario!(
     "/video/refused",
     tab_out_leaves_pseudo
 );
+
+/// Todo 1369: a centring flex row shrink-wraps its child, as the docs demo's
+/// preview; the player still takes the row's width, or 40rem in a wrapper the
+/// row sizes, keeps its ratio, and its buttons stay one line. Without
+/// `aspect_ratio` the box is 16:9 too, the file's metadata loaded.
+#[test]
+fn a_shrink_wrapping_parent_keeps_the_box() {
+    block_on(async {
+        let fixture = Fixture::open("/video/centered", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelector('#unsized [data-slot=time]').textContent === '0:00 / 0:04'",
+            "the unsized player's metadata",
+        )
+        .await
+        .unwrap();
+        for (row, width) in [("#row", 512), ("#wrapped", 640), ("#unsized", 512)] {
+            wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{ const player = document.querySelector('{row} [role=group]');
+                     const video = player.querySelector('video').getBoundingClientRect();
+                     const tops = new Set([...player.querySelectorAll('[data-slot=controls] button')]
+                         .map((b) => Math.round(b.getBoundingClientRect().top)));
+                     return player.getBoundingClientRect().width === {width}
+                         && Math.round(video.height) === Math.round({width} * 9 / 16) && tops.size === 1; }})()"
+                ),
+                &format!("{row}'s player {width}px wide, 16:9, one row of buttons"),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1370: in fullscreen the page's portal is outside the player, which hides
+/// it under the native API; the speed menu opens inside the player and works.
+#[test]
+fn the_speed_menu_works_in_fullscreen() {
+    const SPEED: &str = "#player button[aria-label^='Playback speed']";
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{FULLSCREEN}') !== null"),
+            "the controls",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, FULLSCREEN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{STATE} !== 'none'"),
+            "the player to fill the screen",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, SPEED).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const item = [...document.querySelectorAll('[role=menuitemradio]')]
+                 .find((e) => e.textContent.includes('1.5×'));
+             if (!item || !document.querySelector('#player [role=group]').contains(item)) return false;
+             const r = item.getBoundingClientRect();
+             return item.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); })()",
+            "the menu inside the player, on top",
+        )
+        .await
+        .unwrap();
+        page.evaluate(
+            "[...document.querySelectorAll('[role=menuitemradio]')].find((e) => e.textContent.includes('1.5×')).dataset.pick = ''",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "[data-pick]").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('#player video').playbackRate === 1.5
+                 && document.querySelector(\"{SPEED}\").textContent.includes('1.5×')"
+            ),
+            "the rate at 1.5×",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The cue box Chromium draws in the `<video>`'s own shadow tree, by its bottom edge.
+async fn cue_bottom(page: &chromiumoxide::Page) -> Option<f64> {
+    use chromiumoxide::cdp::browser_protocol::dom::{GetBoxModelParams, GetDocumentParams, Node};
+    fn find(node: &Node) -> Option<&Node> {
+        let attrs = node.attributes.as_deref().unwrap_or_default();
+        if attrs
+            .chunks(2)
+            .any(|pair| pair[0] == "pseudo" && pair[1] == "-webkit-media-text-track-display")
+        {
+            return Some(node);
+        }
+        [&node.children, &node.shadow_roots, &node.pseudo_elements]
+            .into_iter()
+            .flatten()
+            .flatten()
+            .find_map(find)
+    }
+    let document = page
+        .execute(GetDocumentParams::builder().depth(-1).pierce(true).build())
+        .await
+        .ok()?;
+    let cue = find(&document.result.root)?.backend_node_id;
+    let model = page
+        .execute(GetBoxModelParams::builder().backend_node_id(cue).build())
+        .await
+        .ok()?;
+    // Corners clockwise from the top left: the bottom edge's y is the sixth number.
+    model.result.model.border.inner().get(5).copied()
+}
+
+/// Todo 1371: the shown captions sit above the bar, not under it.
+#[test]
+fn the_captions_clear_the_bar() {
+    block_on(async {
+        let fixture = Fixture::open("/video/captions", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelector('#player video').textTracks[0].cues?.length === 1",
+            "the cues",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, PLAY).await.unwrap();
+        let seek_top: f64 = page
+            .evaluate(
+                "document.querySelector('#player [data-slot=seek]').getBoundingClientRect().top",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let started = std::time::Instant::now();
+        loop {
+            let bottom = cue_bottom(page).await;
+            if bottom.is_some_and(|bottom| bottom <= seek_top) {
+                break;
+            }
+            assert!(
+                started.elapsed().as_secs() < 5,
+                "the cue ends at {bottom:?}, below the seek row's top {seek_top}"
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1371: a press on the seek track jumps there, without a drag.
+#[test]
+fn a_press_on_the_seek_track_seeks() {
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelector('#player [data-slot=time]').textContent === '0:00 / 0:04'",
+            "the duration",
+        )
+        .await
+        .unwrap();
+        let track: pointer::Point = page
+            .evaluate(
+                "(() => { const r = document.querySelector('#player [data-slot=seek] [data-slot=track]').getBoundingClientRect();
+                 return { x: r.x + r.width * 0.75, y: r.y + r.height / 2 }; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        pointer::click_at(page, track).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#player video').currentTime === 3",
+            "the press to seek to 3 s",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

@@ -11,12 +11,13 @@ use crate::{
         common::{HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
         layout::use_box,
     },
+    context::{HostOutlet, PortalHost},
     hooks::{
         FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, listener, use_element, use_fullscreen,
-        use_media, use_timeout,
+        use_media, use_portal_slot, use_timeout,
     },
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
-    theme::{ColorCss, ColorShade, Size, SizeCss, Z_INDEX_MODAL},
+    theme::{ACTION_ICON_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, Size, SizeCss, Z_INDEX_MODAL},
     utils::warn,
 };
 
@@ -54,9 +55,15 @@ const SCRIM_FADE: &str = "2rem";
 const BLACK: &str = "#000";
 /// The scrim's floor: 3:1 for the light tracks and 4.5:1 for the white text even over a white frame.
 const SCRIM: &str = "rgba(0, 0, 0, 0.8)";
+const DEFAULT_RATIO: &str = "16 / 9";
+/// On the `<video>`: how far its captions move up to clear the shown bar.
+const BAR_VAR: &str = "--libero-video-bar";
+/// Blink and WebKit's box of the captions; Firefox has none to move.
+const CUES: &str = "::-webkit-media-text-track-container";
 
 static VIDEO_SX: StaticSx = StaticSx::new(|| {
     let controls = VideoPart::Controls.selector();
+    let media = VideoPart::Media.selector();
     let filled = sx().background_color(BLACK).selector(
         VideoPart::Media.selector(),
         sx().height("100%").aspect_ratio("auto"),
@@ -64,19 +71,35 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
     // Light tracks, as YouTube's: the theme's muted one sinks into the scrim.
     let light_track = sx().background("rgba(255, 255, 255, 0.5)");
     sx().position("relative")
+        // A size container has no content width: in a shrink-wrapping parent it collapsed (todo 1369).
+        .width("100%")
+        .with("contain-intrinsic-inline-size", "40rem")
         .min_width("0")
         .container(PLAYER_CONTAINER)
         .selector(
             VideoPart::Media.selector(),
             sx().display("block")
                 .width("100%")
+                // Before the file loads too, poster or none: no jump from the browser's 2:1 (todo 1369).
+                .aspect_ratio(DEFAULT_RATIO)
                 .background_color(BLACK)
                 .object_fit("contain")
                 // Forced colours repaint the black as Canvas, which leaves the picture's box unmarked.
                 .media(
                     FORCED_COLORS,
                     sx().outline("1px solid CanvasText").outline_offset("-1px"),
+                )
+                // The captions sit above the shown bar, as YouTube's.
+                .selector(
+                    format!("&{CUES}"),
+                    sx().transform(format!("translateY(calc(-1 * var({BAR_VAR})))"))
+                        .transition("transform 200ms ease")
+                        .media(REDUCED_MOTION, sx().transition("none")),
                 ),
+        )
+        .selector(
+            format!("&[{CONTROLS_ATTR}='hidden'] {}{CUES}", &media[2..]),
+            sx().transform("none"),
         )
         // YouTube's bar: over the bottom of the picture on a black scrim, white
         // text and icons, the seek track a row of its own above the buttons.
@@ -98,7 +121,23 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 .transition("opacity 200ms ease")
                 .media(REDUCED_MOTION, sx().transition("none"))
                 .selector("& > *", sx().flex_shrink("0"))
-                .selector("& [data-slot='track']", light_track),
+                .selector("& [data-slot='track']", light_track)
+                // Shown captions: a bar under the icon, as YouTube's; a border survives forced colours.
+                .selector(
+                    "& button[aria-pressed]",
+                    sx().position("relative").selector(
+                        "& > [data-mark]",
+                        sx().display("none")
+                            .position("absolute")
+                            .inset("auto 25% 3px")
+                            .border_bottom("3px solid currentColor")
+                            .border_radius("2px"),
+                    ),
+                )
+                .selector(
+                    "& button[aria-pressed='true'] > [data-mark]",
+                    sx().display("block"),
+                ),
         )
         // On a tiny player the bar would wrap up past the picture's top, so it sits below.
         .container_query(
@@ -110,7 +149,8 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                     .padding_top(SizeCss::SPACING.value(Size::Xs))
                     .background_image("none")
                     .background_color(BLACK),
-            ),
+            )
+            .selector(format!("{media}{CUES}"), sx().transform("none")),
         )
         // The seek track takes its row, so it shrinks with the player; below 28rem the
         // volume slider goes (mute and the keys remain), below 22rem the total time.
@@ -218,7 +258,8 @@ base_props! {
         /// A picture shown until playing starts.
         #[props(default, into)]
         poster: Option<String>,
-        /// The picture's CSS `aspect-ratio`, such as `"16 / 9"`. Unset, the file's own.
+        /// The picture's CSS `aspect-ratio`, such as `"9 / 16"` for a portrait clip.
+        /// Unset, `16 / 9`; `"auto"` follows the file, and the box jumps as it loads.
         #[props(default, into)]
         aspect_ratio: Option<String>,
         /// Captions, subtitles and more, as WebVTT files.
@@ -277,6 +318,19 @@ pub fn Video(props: VideoProps) -> Element {
     let media = props.media.unwrap_or(own);
     let player = use_element();
     let fullscreen = use_fullscreen(player);
+    // The controls' menus and tooltips portal here: the page's outlet, out of
+    // fullscreen; one inside the player in it, as nothing outside it shows.
+    let page_portal = use_portal_slot();
+    // Owned by the root: the page's outlet outlives this scope.
+    let portals =
+        use_context_provider(|| PortalHost::new(Signal::new_in_scope(Vec::new(), ScopeId::ROOT)));
+    use_drop(move || portals.entries.manually_drop());
+    let mut portaled_out = use_hook(|| CopyValue::new(false));
+    let inside = fullscreen.is_fullscreen();
+    if *portaled_out.peek() == inside {
+        portaled_out.set(!inside);
+        page_portal.show((!inside).then(|| rsx! { HostOutlet { host: portals } }));
+    }
 
     use_name_warning(
         !props.label.trim().is_empty(),
@@ -330,10 +384,18 @@ pub fn Video(props: VideoProps) -> Element {
 
     let (onplay, onpause, onended) = (props.onplay, props.onpause, props.onended);
     let unsupported = media.supported() == Some(false);
-    let aspect_ratio = props
-        .aspect_ratio
-        .as_ref()
-        .map(|ratio| format!("aspect-ratio: {ratio}"));
+    // The bar's height over the picture, bar the scrim's fade: a button row, the seek row and the gaps.
+    let button = match props.size.as_ref() {
+        Some(size) => BUTTON_HEIGHT.value(*size),
+        None => ACTION_ICON_SIZE.value(),
+    };
+    let mut style = format!(
+        "{BAR_VAR}: calc({button} + 1rem + 3 * {});",
+        SizeCss::SPACING.value(Size::Xs)
+    );
+    if let Some(ratio) = &props.aspect_ratio {
+        style.push_str(&format!("aspect-ratio: {ratio};"));
+    }
 
     // The controls overlay the picture and fade out while playing untouched, or
     // as a mouse leaves; a pointer or a key brings them back. A key keeps them until
@@ -401,7 +463,7 @@ pub fn Video(props: VideoProps) -> Element {
             "data-slot": VideoPart::Media.slot(),
             src,
             poster: props.poster.clone(),
-            style: aspect_ratio,
+            style,
             autoplay: props.autoplay,
             muted: props.muted,
             "loop": props.looping,
@@ -434,6 +496,9 @@ pub fn Video(props: VideoProps) -> Element {
                 fullscreen: Some(fullscreen),
                 overlay: true,
             }
+        }
+        if inside {
+            HostOutlet { host: portals }
         }
     };
 

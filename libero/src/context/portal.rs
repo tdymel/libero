@@ -15,7 +15,7 @@ pub(crate) struct PortalEntry {
 pub(crate) type PortalEntries = Signal<Vec<PortalEntry>>;
 
 /// Registry of portaled content, provided by [`crate::LiberoProvider`].
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub(crate) struct PortalHost {
     pub(crate) entries: PortalEntries,
 }
@@ -30,8 +30,12 @@ impl PortalHost {
 /// currently returns `Some`. Rendered once by [`crate::LiberoProvider`].
 #[component]
 pub(crate) fn PortalOutlet() -> Element {
-    let host = use_context::<PortalHost>();
+    rsx! { HostOutlet { host: use_context::<PortalHost>() } }
+}
 
+/// [`PortalOutlet`] for a host of its own, such as a fullscreen player's.
+#[component]
+pub(crate) fn HostOutlet(host: PortalHost) -> Element {
     platform::PortalRoot(rsx! {
         for (id , element , idle) in host
             .entries

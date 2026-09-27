@@ -233,6 +233,8 @@ pub(super) fn MediaControls(
                 size: icon_size.clone(),
                 onclick: move |_| captions.toggle(media),
                 Glyph { slot: IconSlot::Captions, icon: lucide::captions::outlined }
+                // The pressed state's bar under the icon; `ActionIcon`'s own pseudo-elements are taken.
+                span { "data-mark": "", "aria-hidden": "true" }
             }
             if captions.track.is_none() {
                 VisuallyHidden { id: "{no_captions}",{labels.no_captions} }
@@ -385,7 +387,11 @@ pub(super) fn MediaSeek(media: MediaHandle, size: Input<Size>) -> Element {
             aria_label: labels.seek,
             format,
             oninput: move |event: SliderChangeEvent| match event {
-                SliderChangeEvent::Start(seconds) => scrub.set(Some(seconds)),
+                // A press on the track seeks at once: a click sends no `Change`.
+                SliderChangeEvent::Start(seconds) => {
+                    scrub.set(Some(seconds));
+                    media.seek(seconds);
+                }
                 SliderChangeEvent::Change(seconds) => {
                     if scrub.peek().is_some() {
                         scrub.set(Some(seconds));

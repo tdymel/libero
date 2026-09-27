@@ -13,7 +13,25 @@ pub const ROUTES: Routes = &[
     // Long enough for the fullscreen controls to fade out while playing.
     ("/video/long", || rsx! { VideoPage { seconds: 15 } }),
     ("/video/captions", || rsx! { CaptionsPage {} }),
+    ("/video/centered", || rsx! { CenteredPage {} }),
 ];
+
+/// As the docs demo's preview: a centring flex row, which shrink-wraps its child.
+#[component]
+fn CenteredPage() -> Element {
+    let src = use_hook(|| silent_wav(4));
+    rsx! {
+        div { id: "row", display: "flex", justify_content: "center", width: "32rem",
+            Video { src: src.clone(), label: "Centred", aspect_ratio: "16 / 9" }
+        }
+        // Wrapped, the row sizes the wrapper by its content.
+        div { id: "wrapped", display: "flex", justify_content: "center", width: "60rem",
+            div { Video { src: src.clone(), label: "Wrapped", aspect_ratio: "16 / 9" } }
+        }
+        // No ratio given: 16:9 all the same, not the file's.
+        div { id: "unsized", width: "32rem", Video { src, label: "Unsized" } }
+    }
+}
 
 /// As the docs demo: a captions track shown from the start.
 const CAPTIONS: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 00:15.000%0A[Silence]";

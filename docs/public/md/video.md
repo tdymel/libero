@@ -70,7 +70,7 @@ fn Demo() -> Element {
 | `sources` | `Vec<MediaSource>` | `[]` | The file in other formats, `MediaSource::new(src, mime)`, tried in order before `src`. `src` stays the fallback and the download link. |
 | `label` | `String` | required | Names the player, e.g. the video's title. |
 | `poster` | `Option<String>` | `None` | A picture shown until playing starts. |
-| `aspect_ratio` | `Option<String>` | `None` | The picture's CSS `aspect-ratio`, such as `"16 / 9"`, so the box holds its shape before the file loads. Unset, the file's own. |
+| `aspect_ratio` | `Option<String>` | `16 / 9` | The picture's CSS `aspect-ratio`, which the box holds before the file loads, poster or not. A portrait clip wants `"9 / 16"`; `"auto"` follows the file, and the box jumps as it loads. A picture of another shape is letterboxed. |
 | `tracks` | `Vec<MediaTrack>` | `[]` | WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button. |
 | `media` | `Option<MediaHandle>` | `None` | A handle from `use_media()`, to drive or read the player from outside. |
 | `autoplay` | `bool` | `false` | Starts on load. Browsers refuse it with sound: pair it with `muted`; a debug build warns otherwise. |
@@ -128,7 +128,10 @@ screen, from [use_fullscreen](use_fullscreen.md).
   browser's own controls.
 - The play, mute and fullscreen buttons change their names (Play/Pause,
   Mute/Unmute, Fullscreen/Exit fullscreen); the captions button uses
-  `aria-pressed`.
+  `aria-pressed`, and a bar under its icon shows it pressed.
+- In fullscreen the speed menu and the tooltips open inside the player, so they
+  show over the fullscreen picture.
+- A press anywhere on the seek track jumps there; a drag scrubs.
 - The speed button shows the rate ("1×", "1,5×" under `Formats::GERMAN`) and is
   named "Playback speed 1×"; its menu offers 0.5× to 2× as radio items.
 - Without a captions or subtitles track the captions button stays, disabled
@@ -173,7 +176,10 @@ screen, from [use_fullscreen](use_fullscreen.md).
   to the file.
 - On a WebView each command and state change crosses the IPC, so the time
   trails by a moment.
-- The shown controls cover the bottom of the picture, captions included.
+- The shown controls cover the bottom of the picture. Chromium-based browsers
+  draw the captions above them, through the WebKit captions box Safari shares;
+  Firefox offers no hook to move them, so there the bar covers them until it
+  fades.
 - Captions show once playing starts: browsers draw none over the poster.
 - Fullscreen is libero's own `use_fullscreen` over the browser's Fullscreen
   API, no library; where the API is refused, a fixed box over the window. A
