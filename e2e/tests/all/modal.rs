@@ -405,6 +405,168 @@ fn a_dialog_taller_than_the_viewport_stays_reachable() {
     });
 }
 
+/// Scrolls the element `element` (a JS expression) into view the way a user
+/// can, and fails if it is off screen or only an `overflow: hidden` box or the
+/// locked page moved to show it (todo 1307).
+pub async fn assert_reachable(page: &chromiumoxide::Page, element: &str, what: &str) {
+    let probe: String = page
+        .evaluate(format!(
+            "(() => {{ const a = {element}; if (!a) return JSON.stringify({{missing: true}}); \
+             a.scrollIntoView({{block: 'nearest'}}); const r = a.getBoundingClientRect(); \
+             const locked = getComputedStyle(document.body).overflow === 'hidden'; const stuck = []; \
+             for (let el = a.parentElement; el; el = el.parentElement) {{ \
+               if (el.scrollTop <= 0) continue; \
+               const s = getComputedStyle(el).overflowY; \
+               const page = el === document.documentElement || el === document.body; \
+               if (page ? locked : !/auto|scroll/.test(s)) stuck.push(el.tagName + ' ' + s); }} \
+             return JSON.stringify({{top: r.top, bottom: r.bottom, vh: innerHeight, stuck}}); }})()"
+        ))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    let probe: serde_json::Value = serde_json::from_str(&probe).unwrap();
+    assert!(probe["missing"].is_null(), "{what}: not found");
+    let at = |key: &str| probe[key].as_f64().unwrap();
+    assert!(
+        at("top") >= -0.5 && at("bottom") <= at("vh") + 0.5,
+        "{what} cannot be scrolled on screen: {probe}"
+    );
+    assert!(
+        probe["stuck"]
+            .as_array()
+            .is_some_and(|stuck| stuck.is_empty()),
+        "{what} is shown only by scrolling a box the user cannot: {probe}"
+    );
+}
+
+/// Todo 1304: the only control removes itself, focus falls to `<body>`, and
+/// Escape still closes the dialog and hands focus back.
+#[test]
+fn escape_closes_after_the_focused_control_is_removed() {
+    block_on(async {
+        let fixture = Fixture::open("/modal/self-removing", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        focus::wait_for_focus(page, "#remove-me", "opening")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#remove-me') && document.activeElement === document.body",
+            "the button gone and focus on the body",
+        )
+        .await
+        .unwrap();
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('[role=dialog]')",
+            "Escape with focus on the body to close the dialog",
+        )
+        .await
+        .unwrap();
+        focus::wait_for_focus(page, TRIGGER, "Escape")
+            .await
+            .unwrap();
+        fixture
+            .console
+            .assert_clean("the self-removing modal")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1305: with a classic scrollbar, opening and closing does not shift the page.
+#[test]
+fn the_scroll_lock_keeps_the_scrollbar_gutter() {
+    block_on(async {
+        let fixture = Fixture::open("/modal/scrollbar", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        const WIDTH: &str = "document.querySelector('#ruler').getBoundingClientRect().width";
+        let width = async || -> f64 { page.evaluate(WIDTH).await.unwrap().into_value().unwrap() };
+        let before = width().await;
+        // The harness hides scrollbars (0 here): then the lock must add no gutter
+        // either. A headed Chromium measured the classic case, 17px.
+        let gutter: f64 = page
+            .evaluate("innerWidth - document.documentElement.clientWidth")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+
+        keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "getComputedStyle(document.body).overflow === 'hidden'",
+            "the scroll lock",
+        )
+        .await
+        .unwrap();
+        let open = width().await;
+        assert_eq!(open, before, "the page shifted on open (gutter {gutter}px)");
+        let reserved: String = page
+            .evaluate("getComputedStyle(document.documentElement).scrollbarGutter")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let expected = if gutter > 0.0 { "stable" } else { "auto" };
+        assert_eq!(
+            reserved, expected,
+            "scrollbar-gutter with a {gutter}px scrollbar"
+        );
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "getComputedStyle(document.body).overflow !== 'hidden'",
+            "the lock to lift",
+        )
+        .await
+        .unwrap();
+        assert_eq!(width().await, before, "the page shifted on close");
+        fixture.console.assert_clean("the scrollbar modal").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1306: the caller of `use_modal` unmounting while open settles the
+/// opening as a dismissal and hands focus back.
+#[test]
+fn unmounting_the_owner_settles_and_returns_focus() {
+    block_on(async {
+        let fixture = Fixture::open("/modal/owner", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, "#leave").await.unwrap();
+        pointer::click(page, "#leave").await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('[role=dialog]') && document.querySelector('#result').textContent === 'None'",
+            "the owner gone, its opening dismissed",
+        )
+        .await
+        .unwrap();
+        focus::wait_for_focus(page, TRIGGER, "the owner unmounting")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("the dropped owner").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_honours_the_overlay_contract() {
     block_on(async {

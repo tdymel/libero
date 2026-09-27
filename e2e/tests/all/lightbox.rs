@@ -1034,3 +1034,34 @@ fn the_options_sx_and_parts_style_the_viewer() {
         console.unwrap();
     });
 }
+
+/// Todo 1307: a long caption leaves the strip and the close button reachable.
+#[test]
+fn a_tall_lightbox_stays_reachable() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/lightbox-tall", viewport).await.unwrap();
+            let page = &fixture.page;
+            pointer::click(page, TRIGGER).await.unwrap();
+            wait::for_visible(page, DIALOG).await.unwrap();
+            let name = viewport.name();
+            crate::modal::assert_reachable(
+                page,
+                "[...document.querySelectorAll('[role=dialog] button')].at(-1)",
+                &format!("the last thumbnail at {name}"),
+            )
+            .await;
+            crate::modal::assert_reachable(
+                page,
+                "document.querySelector('[role=dialog] button')",
+                &format!("the first button at {name}"),
+            )
+            .await;
+            fixture
+                .console
+                .assert_clean(&format!("/lightbox-tall at {name}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}

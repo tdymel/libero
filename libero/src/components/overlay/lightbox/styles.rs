@@ -35,8 +35,8 @@ fn safe_padding(side: &str) -> String {
     )
 }
 
-// On a phone the dialog is the whole screen, the stage taking the room left.
-// A double-click zooms, so it selects nothing (todo 917).
+// On a phone the dialog is the whole screen, the stage taking the room left; it
+// scrolls when a long caption outgrows it (todo 1307). A double-click zooms, so it selects nothing (todo 917).
 pub(super) static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
         .user_select("none")
@@ -52,6 +52,7 @@ pub(super) static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {
                 .box_shadow("none")
                 .display("flex")
                 .flex_direction("column")
+                .overflow_y("auto")
                 .padding_top(safe_padding("top"))
                 .padding_right(safe_padding("right"))
                 .padding_bottom(safe_padding("bottom"))
@@ -63,23 +64,21 @@ pub(super) static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {
 pub(super) static LIGHTBOX_BODY_SX: StaticSx = StaticSx::new(|| {
     sx().media(
         phone(),
-        sx().flex("1")
-            .min_height("0")
+        sx().flex("1 0 auto")
             .display("flex")
             .flex_direction("column"),
     )
 });
 
 // On a phone the pictures bleed to the safe area's edge, and the stage is a
-// size container so a frame is `100cqh` tall.
+// size container so a frame is `100cqh` tall. Never under 60dvh: a long caption scrolls the dialog instead.
 pub(super) static LIGHTBOX_STAGE_SX: StaticSx = StaticSx::new(|| {
     let bleed = format!("calc(-1 * {})", SizeCss::SPACING.value(Size::Sm));
     sx().media(
         phone(),
         sx().margin_left(bleed.clone())
             .margin_right(bleed)
-            .flex("1")
-            .min_height("0")
+            .flex("1 0 60dvh")
             .container_type("size"),
     )
 });

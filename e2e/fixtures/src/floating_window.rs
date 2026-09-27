@@ -13,7 +13,31 @@ pub const ROUTES: Routes = &[
     ("/floating-window", || rsx! { FloatingWindowPage {} }),
     ("/floating-window-pair", || rsx! { WindowPairPage {} }),
     ("/floating-window-sized", || rsx! { SizedWindowPage {} }),
+    ("/floating-window-tall", || rsx! { TallWindowPage {} }),
 ];
+
+/// Content taller than the viewport: the window caps and its body scrolls (todo 1307).
+#[component]
+fn TallWindowPage() -> Element {
+    let window = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Terms".into()),
+            ..Default::default()
+        },
+        |window| {
+            rsx! {
+                for line in 0..60 {
+                    Text { "Clause {line}: a long line of terms the reader has to scroll to." }
+                }
+                Button { id: "window-done", variant: "text", onclick: move |_| window.close(), "Done" }
+            }
+        },
+    );
+
+    rsx! {
+        Button { id: "open-window", variant: "outlined", onclick: move |_| window.open(), "Terms" }
+    }
+}
 
 /// A caller's `sx` size is only the initial size: a resize wins over it (todo 922).
 /// `menu_parts` reaches the portaled title-bar menu's labels.

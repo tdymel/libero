@@ -14,7 +14,102 @@ pub const ROUTES: Routes = &[
     ("/modal/menu", || rsx! { MenuModalPage {} }),
     ("/modal/nested", || rsx! { NestedModalPage {} }),
     ("/modal/tall", || rsx! { TallModalPage {} }),
+    ("/modal/self-removing", || rsx! { SelfRemovingModalPage {} }),
+    ("/modal/scrollbar", || rsx! { ScrollbarModalPage {} }),
+    ("/modal/owner", || rsx! { OwnerModalPage {} }),
 ];
+
+/// A dialog whose only control removes itself: focus falls to `<body>` (todo 1304).
+#[component]
+fn SelfRemovingModalPage() -> Element {
+    let notice = use_modal(|_: ModalScope<()>| rsx! { SelfRemoving {} });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                notice.open();
+            },
+            "Open"
+        }
+    }
+}
+
+#[component]
+fn SelfRemoving() -> Element {
+    let mut shown = use_signal(|| true);
+    rsx! {
+        Dialog { title: "One step", close_button: false,
+            if shown() {
+                Button { id: "remove-me", onclick: move |_| shown.set(false), "Done" }
+            } else {
+                Text { "All done." }
+            }
+        }
+    }
+}
+
+/// A classic scrollbar on a page that scrolls: opening must not shift it (todo 1305).
+#[component]
+fn ScrollbarModalPage() -> Element {
+    let prompt = use_modal(|s: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Locked",
+                Button { id: "close", onclick: move |_| s.close(), "Close" }
+            }
+        }
+    });
+
+    rsx! {
+        // Headless Chromium draws overlay scrollbars; this one takes room.
+        style { "::-webkit-scrollbar {{ width: 17px; }} ::-webkit-scrollbar-thumb {{ background: #888; }}" }
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                prompt.open();
+            },
+            "Open"
+        }
+        div { id: "ruler", style: "height: 3000px; border-right: 1px solid;", "Tall page" }
+    }
+}
+
+/// The component that called `use_modal` goes away while it is open (todo 1306).
+#[component]
+fn OwnerModalPage() -> Element {
+    let mut owner_shown = use_signal(|| true);
+    let mut requests = use_signal(|| 0_u32);
+    let result = use_signal(String::new);
+
+    rsx! {
+        // Outside the owner, so focus has somewhere to return to.
+        Button { id: "open-modal", onclick: move |_| requests += 1, "Open" }
+        div { id: "result", "{result}" }
+        if owner_shown() {
+            Owner { requests, result, onleave: move |_| owner_shown.set(false) }
+        }
+    }
+}
+
+#[component]
+fn Owner(requests: ReadSignal<u32>, result: Signal<String>, onleave: EventHandler<()>) -> Element {
+    let modal = use_modal(move |_: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Leaving",
+                Button { id: "leave", onclick: move |_| onleave.call(()), "Leave" }
+            }
+        }
+    });
+    use_effect(move || {
+        if requests() > 0 {
+            let mut result = result;
+            modal
+                .open()
+                .onresult(move |outcome| result.set(format!("{outcome:?}")));
+        }
+    });
+    rsx! {}
+}
 
 /// A dialog taller than the viewport, as at 200% zoom or on a 320px phone.
 #[component]

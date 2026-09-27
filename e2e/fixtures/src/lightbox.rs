@@ -12,7 +12,33 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/lightbox", || rsx! { LightboxPage {} }),
     ("/lightbox-parts", || rsx! { LightboxPartsPage {} }),
+    ("/lightbox-tall", || rsx! { TallLightboxPage {} }),
 ];
+
+/// A caption long enough to outgrow the viewport: the strip below must stay reachable (todo 1307).
+#[component]
+fn TallLightboxPage() -> Element {
+    let lightbox = use_lightbox(LightboxOptions {
+        aria_label: Some("Gallery".into()),
+        ..LightboxOptions::default()
+    });
+    let caption = "A caption that runs on and on, as a long description does. ".repeat(40);
+
+    rsx! {
+        Button {
+            id: "open-lightbox",
+            variant: "outlined",
+            onclick: move |_| {
+                let items = gallery("tall")
+                    .into_iter()
+                    .map(|item| item.caption(caption.clone()))
+                    .collect::<Vec<_>>();
+                lightbox.open_with(items);
+            },
+            "Open the gallery"
+        }
+    }
+}
 
 /// `LightboxOptions::sx` styles the dialog, `parts` the caption and the thumbnails.
 #[component]

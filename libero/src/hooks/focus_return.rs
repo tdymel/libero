@@ -87,24 +87,44 @@ impl FocusReturn {
     /// Hands focus back to the trigger, or else the first connected
     /// [`fallback`](Self::fallback). A snapshot is consumed, an element kept (todos 37, 44).
     pub fn restore(&self) {
+        self.restore_with(spawn);
+    }
+
+    /// [`restore`](Self::restore) from a scope being dropped: the focus task
+    /// runs at the root, where it outlives that scope.
+    pub(crate) fn restore_detached(&self) {
+        self.restore_with(|task| {
+            dioxus::core::spawn_forever(task);
+        });
+    }
+
+    fn restore_with<T>(
+        &self,
+        spawn: impl FnOnce(std::pin::Pin<Box<dyn Future<Output = ()>>>) -> T,
+    ) {
         let mut signal = self.trigger;
-        let Some(trigger) = (*signal.peek()).clone() else {
+        let Ok(trigger) = signal.try_peek().map(|trigger| (*trigger).clone()) else {
             return;
         };
-        if matches!(trigger, Trigger::Active(_) | Trigger::Kept(_)) {
-            signal.write().take();
+        let Some(trigger) = trigger else {
+            return;
+        };
+        if matches!(trigger, Trigger::Active(_) | Trigger::Kept(_))
+            && let Ok(mut trigger) = signal.try_write()
+        {
+            trigger.take();
         }
 
         // Read outside the `spawn`: Blitz locks the document while tasks drain.
         let target = match trigger.is_connected() {
             true => Some(trigger),
-            false => self
-                .fallbacks
-                .peek()
-                .iter()
-                .copied()
-                .find(|element| element.is_connected())
-                .map(|element| Trigger::Active(Rc::new(element))),
+            false => self.fallbacks.try_peek().ok().and_then(|fallbacks| {
+                fallbacks
+                    .iter()
+                    .copied()
+                    .find(|element| element.is_connected())
+                    .map(|element| Trigger::Active(Rc::new(element)))
+            }),
         };
         // Nothing left: no blur, the browser's own pick beats `<body>`.
         let Some(target) = target else {
@@ -113,7 +133,7 @@ impl FocusReturn {
 
         // Spawned: focusing inside the closing event's dispatch panics. Through
         // the backend, not `set_focus`, which Blitz must defer (todo 189).
-        spawn(async move {
+        spawn(Box::pin(async move {
             let _ = match target {
                 Trigger::Mounted(data) => platform::element(&data).focus(),
                 Trigger::Active(element) => element.focus(),
@@ -122,7 +142,7 @@ impl FocusReturn {
                     Ok(())
                 }
             };
-        });
+        }));
     }
 }
 

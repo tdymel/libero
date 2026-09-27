@@ -214,3 +214,63 @@ fn opening_leaves_the_caller_alone_and_its_redraw_reaches_the_content() {
     dom.render_immediate(&mut NoOpMutations);
     assert!(!dioxus_ssr::render(&dom).contains("count"));
 }
+
+type Outcome = Signal<Vec<&'static str>>;
+
+thread_local! {
+    static OWNER: std::cell::Cell<Option<(Signal<bool>, Outcome)>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Todo 1306: the owner unmounting while open settles the opening as a
+/// dismissal, for a handler and an awaiting task alike.
+#[test]
+fn unmounting_the_owner_settles_an_open_modal() {
+    fn app() -> Element {
+        let shown = use_signal(|| true);
+        let outcome: Outcome = use_signal(Vec::new);
+        OWNER.set(Some((shown, outcome)));
+        rsx! {
+            LiberoProvider {
+                if shown() {
+                    Owner { outcome }
+                }
+            }
+        }
+    }
+
+    #[component]
+    fn Owner(outcome: Outcome) -> Element {
+        let modal = use_modal(|_: ModalScope<(), bool>| rsx! { Dialog { "asking" } });
+        use_hook(move || {
+            let mut outcome = outcome;
+            let opening = modal.open().onresult(move |result| {
+                assert_eq!(result, None);
+                outcome.write().push("handler");
+            });
+            // Outlives this scope, as a task awaiting a confirm usually does.
+            dioxus::core::spawn_forever(async move {
+                let result = opening.await;
+                assert_eq!(result, None);
+                outcome.write().push("awaited");
+            });
+        });
+        rsx! {}
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.process_events();
+    let (mut shown, outcome) = OWNER.get().expect("the app rendered");
+    assert!(dioxus_ssr::render(&dom).contains("asking"));
+
+    dom.in_runtime(|| shown.set(false));
+    dom.render_immediate(&mut NoOpMutations);
+    dom.process_events();
+
+    let html = dioxus_ssr::render(&dom);
+    assert!(!html.contains("asking"), "the modal should be gone: {html}");
+    let mut settled = dom.in_runtime(|| outcome.peek().clone());
+    settled.sort_unstable();
+    assert_eq!(settled, ["awaited", "handler"]);
+}

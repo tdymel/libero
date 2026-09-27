@@ -994,3 +994,36 @@ fn menu_parts_style_the_portaled_menu() {
         console.unwrap();
     });
 }
+
+/// Todo 1307: tall content scrolls inside the window; its title bar and last button stay reachable.
+#[test]
+fn a_tall_window_stays_reachable() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/floating-window-tall", viewport)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            pointer::click(page, TRIGGER).await.unwrap();
+            wait::for_visible(page, DIALOG).await.unwrap();
+            let name = viewport.name();
+            crate::modal::assert_reachable(
+                page,
+                "document.querySelector('#window-done')",
+                &format!("the Done button at {name}"),
+            )
+            .await;
+            crate::modal::assert_reachable(
+                page,
+                "document.querySelector('[role=dialog] [data-slot=title-bar] > [data-slot=close]')",
+                &format!("the close button at {name}"),
+            )
+            .await;
+            fixture
+                .console
+                .assert_clean(&format!("/floating-window-tall at {name}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}

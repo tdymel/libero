@@ -394,3 +394,35 @@ fn a_long_label_wraps_in_its_row() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 1307: a long result list leaves the search box and the last row reachable.
+#[test]
+fn a_tall_spotlight_stays_reachable() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/spotlight-tall", viewport).await.unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            wait::for_visible(page, DIALOG).await.unwrap();
+            let name = viewport.name();
+            crate::modal::assert_reachable(
+                page,
+                "[...document.querySelectorAll('[role=dialog] [role=option]')].at(-1)",
+                &format!("the last row at {name}"),
+            )
+            .await;
+            crate::modal::assert_reachable(
+                page,
+                "document.querySelector('[role=dialog] input')",
+                &format!("the search box at {name}"),
+            )
+            .await;
+            fixture
+                .console
+                .assert_clean(&format!("/spotlight-tall at {name}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}

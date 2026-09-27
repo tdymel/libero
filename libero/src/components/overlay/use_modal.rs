@@ -48,36 +48,56 @@ impl<R: 'static> Resolution<R> {
     }
 }
 
+/// What settling one opening hands back: who to tell, and where focus returns.
+struct Settled<R: 'static> {
+    handlers: Vec<Box<dyn FnMut(Option<R>)>>,
+    wakers: Vec<Waker>,
+    focus_return: FocusReturn,
+}
+
+impl<R: Clone + 'static> Settled<R> {
+    /// Records `value` for `generation` if still live; `None` when stale or settled.
+    fn take(
+        mut resolution: Signal<Resolution<R>>,
+        generation: u64,
+        value: &Option<R>,
+    ) -> Option<Self> {
+        let mut resolution = resolution.try_write().ok()?;
+        if resolution.generation != generation || resolution.outcome.is_some() {
+            return None;
+        }
+        resolution.outcome = Some(value.clone());
+        Some(Self {
+            handlers: std::mem::take(&mut resolution.handlers),
+            wakers: std::mem::take(&mut resolution.wakers),
+            focus_return: resolution.focus_return,
+        })
+    }
+
+    fn notify(self, value: Option<R>) {
+        for mut handler in self.handlers {
+            handler(value.clone());
+        }
+        for waker in self.wakers {
+            waker.wake();
+        }
+    }
+}
+
 /// Settles `generation` if still live, so a stale [`Opening`] is inert. Handlers
 /// run after the lock is released, so one may reopen this modal.
 fn finish<R: Clone + 'static>(
-    mut resolution: Signal<Resolution<R>>,
+    resolution: Signal<Resolution<R>>,
     closer: Callback<()>,
     generation: u64,
     value: Option<R>,
 ) {
-    let (handlers, wakers, focus_return) = {
-        let mut resolution = resolution.write();
-        if resolution.generation != generation || resolution.outcome.is_some() {
-            return;
-        }
-        resolution.outcome = Some(value.clone());
-        (
-            std::mem::take(&mut resolution.handlers),
-            std::mem::take(&mut resolution.wakers),
-            resolution.focus_return,
-        )
+    let Some(settled) = Settled::take(resolution, generation, &value) else {
+        return;
     };
-
     closer.call(());
-    focus_return.restore();
-
-    for mut handler in handlers {
-        handler(value.clone());
-    }
-    for waker in wakers {
-        waker.wake();
-    }
+    settled.focus_return.restore();
+    settled.notify(value);
 }
 
 /// The modal's own view of itself: its arguments, and the two ways to end it.
@@ -138,14 +158,13 @@ impl<R: Clone + 'static> Opening<R> {
     /// Runs `handler` when this opening settles - `None` if it was dismissed.
     pub fn onresult(self, mut handler: impl FnMut(Option<R>) + 'static) -> Self {
         let mut signal = self.resolution;
-        // A stale opening settled as a dismissal the moment it was superseded.
-        let settled = {
-            let resolution = signal.peek();
-            if resolution.generation == self.generation {
+        // A stale opening settled as a dismissal the moment it was superseded,
+        // or its owner unmounted.
+        let settled = match signal.try_peek() {
+            Ok(resolution) if resolution.generation == self.generation => {
                 resolution.outcome.clone()
-            } else {
-                Some(None)
             }
+            _ => Some(None),
         };
 
         match settled {
@@ -170,7 +189,10 @@ impl<R: Clone + 'static> Future for OpeningFuture<R> {
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut signal = self.opening.resolution;
-        let mut resolution = signal.write();
+        // Gone with its owner, which settled it as a dismissal.
+        let Ok(mut resolution) = signal.try_write() else {
+            return Poll::Ready(None);
+        };
         if resolution.generation != self.opening.generation {
             return Poll::Ready(None);
         }
@@ -269,6 +291,7 @@ impl<S: Default + 'static, R: Clone + 'static> ModalHandle<S, R> {
 /// Registers `render` as a modal and returns the handle that opens it.
 ///
 /// Call it in a component that outlives every trigger: the modal portals from there.
+/// If that component unmounts while open, the modal goes too: the opening settles as dismissed.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -339,6 +362,24 @@ where
         slot.show(content);
     });
     show.call(());
+
+    // The owner unmounting takes the modal with it: settle the opening as a
+    // dismissal, so an awaiting task ends, and hand focus back.
+    use_drop(move || {
+        if args.try_peek().is_ok_and(|args| args.is_none()) {
+            return;
+        }
+        let Ok(generation) = resolution
+            .try_peek()
+            .map(|resolution| resolution.generation)
+        else {
+            return;
+        };
+        if let Some(settled) = Settled::take(resolution, generation, &None) {
+            settled.focus_return.restore_detached();
+            settled.notify(None);
+        }
+    });
 
     ModalHandle {
         args,

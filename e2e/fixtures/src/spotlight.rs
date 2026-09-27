@@ -10,7 +10,34 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/spotlight", || rsx! { SpotlightPage {} }),
     ("/spotlight-long", || rsx! { SpotlightLongPage {} }),
+    ("/spotlight-tall", || rsx! { SpotlightTallPage {} }),
 ];
+
+/// Many described actions: the palette must not outgrow the viewport (todo 1307).
+#[component]
+fn SpotlightTallPage() -> Element {
+    let all = use_hook(|| {
+        (0..60)
+            .map(|i| {
+                SpotlightAction::new(format!("Action {i}"))
+                    .group(format!("Group {}", i / 6))
+                    .description("A description long enough to wrap onto a second line on a phone")
+            })
+            .collect::<Vec<_>>()
+    });
+    let spotlight = use_spotlight(SpotlightOptions {
+        actions: Some(Callback::new(move |query: String| {
+            spotlight_filter(&query, &all)
+        })),
+        aria_label: Some("Command palette".into()),
+        limit: Some(60),
+        ..Default::default()
+    });
+
+    rsx! {
+        Button { id: "open-spotlight", onclick: move |_| spotlight.open(), "Open the palette" }
+    }
+}
 
 /// One action whose label has no break opportunity, for reflow at 320px.
 #[component]
