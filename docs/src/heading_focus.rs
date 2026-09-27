@@ -42,6 +42,11 @@ pub fn use_load_fragment() {
     use_context_provider(|| LoadFragment(fragment(&history().current_route())));
 }
 
+/// The fresh load's fragment, for a page to open the tab holding that section.
+pub fn load_fragment() -> Option<String> {
+    try_consume_context::<LoadFragment>().and_then(|fragment| fragment.0)
+}
+
 fn fragment(route: &str) -> Option<String> {
     route
         .split_once('#')

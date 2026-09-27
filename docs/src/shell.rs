@@ -26,8 +26,9 @@ pub(crate) fn AppShell() -> Element {
     // The home page is full width: the nav is a drawer at every width there.
     let route = use_route::<Route>();
     let home = route == Route::Home {};
+    let section = use_context_provider(|| heading_focus::PendingSection(Signal::new(None))).0;
     // The docs search: every page, Ctrl/Cmd+K from anywhere.
-    let pages = use_hook(nav::page_actions);
+    let pages = use_hook(|| nav::page_actions(section));
     let search = use_spotlight(SpotlightOptions {
         placeholder: Some("Search the docs...".into()),
         aria_label: Some("Search the docs".into()),
@@ -38,7 +39,6 @@ pub(crate) fn AppShell() -> Element {
     });
     let mobile = use_is_mobile();
     let area = use_scroll_area();
-    let section = use_context_provider(|| heading_focus::PendingSection(Signal::new(None))).0;
     heading_focus::use_scroll_reset(route.clone(), area, content, section);
     heading_focus::use_heading_focus(route.clone(), content, section);
     heading_focus::use_fragment_landing(area, content);

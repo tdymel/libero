@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, PictogramNote, a11y, prop, props};
+use super::icon_catalogue::IconCatalogue;
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, ExtraTab, PictogramNote, a11y, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Code, Pictogram, SvgData, Text};
 use pictogram_icons_lucide as lucide;
@@ -40,6 +43,18 @@ pub fn PictogramPage() -> Element {
                     "Name a pictogram that means something on its own with `aria_label`. One next to a text label stays hidden.",
                     "For a clickable glyph, use `ActionIcon { icon }`.",
                 ]),
+            extra_tab: ExtraTab {
+                label: "Icons",
+                id: "icons",
+                content: rsx! {
+                    Text {
+                        "Every icon of a set, from its crate's "
+                        Code { source: "index" }
+                        " feature. Search by words of the name, then copy the path of the icon's const. Only lucide is listed for now. Lobe's colour variants are left out: they hard-code their fills."
+                    }
+                    IconCatalogue {}
+                },
+            },
             lead: rsx! {
                 PictogramNote {}
                 Text {
@@ -65,7 +80,7 @@ pub fn PictogramPage() -> Element {
                     " and some phosphor glyphs hard-code their fills, so they ignore the text color and dark mode. Lobe's gradient glyphs carry fixed ids: two copies on one page share them."
                 }
                 Text {
-                    "Take icon crates from pictogram's 0.4 line, the one libero builds on. A 0.5 crate brings a second "
+                    "Take icon crates from pictogram's 0.5 line, the one libero builds on. A crate of another minor, such as 0.4, brings a second "
                     Code { source: "SvgData" }
                     " type: its icons fail with a type mismatch that does not name the version."
                 }

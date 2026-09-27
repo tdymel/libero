@@ -6,8 +6,8 @@ use libero::{
 };
 use pictogram_icons_lucide as lucide;
 
-use super::{A11yDoc, A11yPanel, PartsPanel, PropGroup, PropertyTable};
-use crate::{Route, nav::neighbours};
+use super::{A11yDoc, A11yPanel, DocSection, PartsPanel, PropGroup, PropertyTable};
+use crate::{Route, heading_focus, nav::neighbours};
 use pictogram_icons_simple as simple;
 
 const REPO: &str = "https://github.com/tdymel/libero/tree/main/";
@@ -22,10 +22,21 @@ pub const TLDR_PROMPT: &str = "Summarize and analyze the key insights from {url}
 #[derive(Clone, PartialEq, Options)]
 enum DocTab {
     Usage,
+    /// The page's own `extra_tab`, labelled by it.
+    Extra,
     Properties,
     #[option(label = "Style API")]
     StyleApi,
     Accessibility,
+}
+
+/// A page's own tab after "Usage", such as the Pictogram page's icon catalogue.
+#[derive(Clone, PartialEq)]
+pub struct ExtraTab {
+    pub label: &'static str,
+    /// Its section's id: a `#id` URL or a `SectionLink` to it opens the tab.
+    pub id: &'static str,
+    pub content: Element,
 }
 
 /// A docs page: heading, lead paragraph, `DocSection`s. With `properties` or `accessibility`
@@ -46,6 +57,7 @@ pub fn DocPage(
     /// Fills an "Accessibility" tab; `None` shows no such tab.
     #[props(default)]
     accessibility: Option<A11yDoc>,
+    #[props(default)] extra_tab: Option<ExtraTab>,
     children: Element,
 ) -> Element {
     #[cfg(test)]
@@ -53,17 +65,36 @@ pub fn DocPage(
     // Assistants read the markdown mirror, else the route.
     let route = use_route::<Route>().to_string();
     let tldr_path = markdown.clone().unwrap_or(route);
-    let mut tab = use_signal(|| DocTab::Usage);
+    let pending = try_use_context::<heading_focus::PendingSection>().map(|p| p.0);
+    let extra_id = extra_tab.as_ref().map(|extra| extra.id);
+    let landing = move |id: Option<String>| id.is_some() && id.as_deref() == extra_id;
+    let mut tab = use_signal(|| {
+        let pending = pending.and_then(|p| p.peek().clone());
+        match landing(heading_focus::load_fragment()) || landing(pending) {
+            true => DocTab::Extra,
+            false => DocTab::Usage,
+        }
+    });
+    // A search action on this same page sets the section without a route change.
+    use_effect(move || {
+        if let Some(pending) = pending
+            && landing(pending())
+        {
+            tab.set(DocTab::Extra);
+        }
+    });
     let tabs: Vec<DocTab> = DocTab::options()
         .iter()
         .filter(|tab| match tab {
             DocTab::Usage => true,
+            DocTab::Extra => extra_tab.is_some(),
             DocTab::Properties => !properties.is_empty(),
             DocTab::Accessibility => accessibility.is_some(),
             DocTab::StyleApi => properties.iter().any(PropGroup::has_parts),
         })
         .cloned()
         .collect();
+    let extra_label = extra_tab.as_ref().map(|extra| extra.label);
     // Equal tabs that never shrink below icon and label: the tablist scrolls instead.
     // Child combinators, or the Tabs page's demo strip matches too.
     let tabs_sx = sx()
@@ -153,17 +184,24 @@ pub fn DocPage(
                     full_width: true,
                     sx: tabs_sx,
                     option_label: move |selected: DocTab| OptionLabel::rich(
-                        selected.label(),
+                        match (&selected, extra_label) {
+                            (DocTab::Extra, Some(label)) => label.to_string(),
+                            _ => selected.label(),
+                        },
                         rsx! {
                             Icon { variant: "standard", size: "md",
                                 match selected {
                                     DocTab::Usage => rsx! { Pictogram { icon: lucide::file::outlined } },
+                                    DocTab::Extra => rsx! { Pictogram { icon: lucide::shapes::outlined } },
                                     DocTab::Properties => rsx! { Pictogram { icon: lucide::code::outlined } },
                                     DocTab::Accessibility => rsx! { Pictogram { icon: lucide::accessibility::outlined } },
                                     DocTab::StyleApi => rsx! { Pictogram { icon: lucide::palette::outlined } },
                                 }
                             }
-                            "{selected.label()}"
+                            match (&selected, extra_label) {
+                                (DocTab::Extra, Some(label)) => label.to_string(),
+                                _ => selected.label(),
+                            }
                         },
                     ),
                     panel: move |selected| match selected {
@@ -171,6 +209,12 @@ pub fn DocPage(
                         // the tabs the page's own column `Flex` gaps them.
                         DocTab::Usage => rsx! {
                             Flex { direction: "column", gap: "xxl", {children.clone()} }
+                        },
+                        DocTab::Extra => match extra_tab.clone() {
+                            Some(extra) => rsx! {
+                                DocSection { id: extra.id, title: extra.label, {extra.content} }
+                            },
+                            None => rsx! {},
                         },
                         DocTab::Properties => rsx! {
                             PropertyTable { properties: properties.clone() }

@@ -27,17 +27,17 @@ libero-macros = { path = "../libero-macros", version = "0.1.0" }
 # path. Native turns `clock` on below for `Local`.
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 # `Pictogram`'s glyph data, and lucide for the library's own glyphs. Zero deps
-# besides core. 0.x: pinned, an app on another minor has a second `SvgData` type.
-pictogram-core = "0.4"
-pictogram-icons-lucide = "0.4"
+# besides core. 0.x: pinned to 0.5, an app on another minor has a second `SvgData` type.
+pictogram-core = "0.5"
+pictogram-icons-lucide = "0.5"
 # Brand marks: `Tldr`'s providers (lobe), `RepoButton`'s hosts (simple). Unused consts compile away.
-pictogram-icons-lobe = "0.4.1"
-pictogram-icons-simple = "0.4.1"
+pictogram-icons-lobe = "0.5"
+pictogram-icons-simple = "0.5"
 # Whole sets for `IconProvider`, one `icons-<set>` feature each (`IconSet::material_rounded()`, ...).
-pictogram-icons-bootstrap = { version = "0.4", optional = true }
-pictogram-icons-material = { version = "0.4.1", optional = true }
-pictogram-icons-phosphor = { version = "0.4", optional = true }
-pictogram-icons-tabler = { version = "0.4", optional = true }
+pictogram-icons-bootstrap = { version = "0.5", optional = true }
+pictogram-icons-material = { version = "0.5", optional = true }
+pictogram-icons-phosphor = { version = "0.5", optional = true }
+pictogram-icons-tabler = { version = "0.5", optional = true }
 # `RepoButton` reads a host's JSON reply. Already in every graph through `dioxus-document`.
 serde_json = "1"
 # The rich text editor's `Doc`, the format of record. Already in the graph through dioxus.

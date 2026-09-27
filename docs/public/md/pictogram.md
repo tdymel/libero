@@ -22,9 +22,9 @@ ids: two copies on one page share them.
 passes straight in: `pictogram_icons_lucide::house::outlined`. For your own
 glyph, `SvgData::new(include_str!("logo.svg"))` splits the file at compile time.
 
-Take icon crates from pictogram's 0.4 line, the one libero builds on. A 0.5
-crate brings a second `SvgData` type: its icons fail with a type mismatch that
-does not name the version.
+Take icon crates from pictogram's 0.5 line, the one libero builds on. A crate
+of another minor, such as 0.4, brings a second `SvgData` type: its icons fail
+with a type mismatch that does not name the version.
 
 ## Usage
 
@@ -60,6 +60,15 @@ Attributes merge by name, a later one replacing an earlier one:
 `stroke_width: "3"` replaces the glyph's attribute. `width`, `height`, `fill`,
 `stroke` and the other svg props are svg attributes, which the stylesheet
 beats: inside `Icon` or `ActionIcon` the host's CSS still sizes the glyph.
+
+## Icon catalogue
+
+The page's Icons tab (`#icons`) lists every icon of a set from its crate's `index` feature
+(`pictogram_icons_lucide::LIBRARY`), 120 per page, with the set's license,
+upstream version and repository. Search by words of the name (`arrow left`),
+then copy the path of the icon's const, e.g.
+`pictogram_icons_lucide::arrow_left::outlined`. Only lucide is listed for now.
+Lobe's colour variants are left out: they hard-code their fills.
 
 ## Props
 

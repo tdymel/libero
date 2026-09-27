@@ -5,6 +5,7 @@ mod badge;
 mod carousel;
 mod data_list;
 mod icon;
+mod icon_catalogue;
 mod icon_provider;
 mod image;
 mod image_list;

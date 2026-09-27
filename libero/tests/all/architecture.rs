@@ -40,7 +40,7 @@ const RENDERER_CRATES: [&str; 11] = [
 ];
 
 /// Every crate `docs` may name, each for one reason.
-const DOCS_CRATES: [(&str, &str); 6] = [
+const DOCS_CRATES: [(&str, &str); 7] = [
     ("dioxus", "the app itself"),
     (
         "pictogram_icons_lucide",
@@ -49,6 +49,10 @@ const DOCS_CRATES: [(&str, &str); 6] = [
     (
         "pictogram_icons_simple",
         "the GitHub and Markdown marks on every page",
+    ),
+    (
+        "pictogram_core",
+        "`Icon` and `Library`, the Pictogram page's icon catalogue",
     ),
     ("std", "the standard library"),
     (

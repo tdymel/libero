@@ -19,10 +19,12 @@ libero = { path = "../libero", default-features = false, features = [
     "icons-phosphor",
     "icons-tabler",
 ] }
-# The `Pictogram` and `Icon` demos' glyphs; libero's own pin.
-pictogram-icons-lucide = "0.4"
+# The `Pictogram` and `Icon` demos' glyphs; libero's own pin. `index`: the
+# Pictogram page's icon catalogue (1355): +477 KB raw, +95 KB brotli on the release wasm.
+pictogram-core = "0.5"
+pictogram-icons-lucide = { version = "0.5", features = ["index"] }
 # The GitHub and Markdown marks on every page's source and markdown links.
-pictogram-icons-simple = "0.4.1"
+pictogram-icons-simple = "0.5"
 # `dioxus/native` would pull this in with its default features, and its
 # default renderer (`vello-hybrid`) can't be switched off from here - so
 # `native-cpu` depends on it directly, with the default set minus the

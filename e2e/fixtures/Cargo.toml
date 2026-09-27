@@ -10,7 +10,7 @@ publish = false
 dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = true, features = ["router"] }
 # `/icon-provider`'s whole-set select (1133).
 libero = { path = "../../libero", features = ["icons-tabler"] }
-pictogram-icons-lucide = "0.4"
+pictogram-icons-lucide = "0.5"
 # The desktop driver's bridge (1126): socket thread to the eval loop.
 futures-channel = { version = "0.3", optional = true }
 futures-util = { version = "0.3", optional = true }

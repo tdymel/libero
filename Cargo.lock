@@ -2477,6 +2477,7 @@ dependencies = [
  "dioxus-native",
  "dioxus-ssr",
  "libero",
+ "pictogram-core",
  "pictogram-icons-lucide",
  "pictogram-icons-simple",
 ]
@@ -5712,69 +5713,69 @@ checksum = "5be167a7af36ee22fe3115051bc51f6e6c7054c9348e28deb4f49bd6f705a315"
 
 [[package]]
 name = "pictogram-core"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee8bffbac0ec28818b71333f4bb9ac71412275266ae3efced79002e0ccc85021"
+checksum = "eb290da473a68b491cbcff9e0813d067dd5ae0d38fe0d5121fd7ebbd170f5de3"
 
 [[package]]
 name = "pictogram-icons-bootstrap"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e11879f279b090fa758a812823c074e0f5f2e1cc324caacd7762a7d1698b8c7"
+checksum = "fe5529af3e56d1e05401554e828ba51ab99ee410f88e0cc65c5a87ca9596306f"
 dependencies = [
  "pictogram-core",
 ]
 
 [[package]]
 name = "pictogram-icons-lobe"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdae14ad61bff92cfeee73608b3e5182aa84923e4fd278bdbaa3576fafe0e597"
+checksum = "571520cd3f94a939976df74b7c22b89b4663fdd4ad0c49275985860ad9e7cc8f"
 dependencies = [
  "pictogram-core",
 ]
 
 [[package]]
 name = "pictogram-icons-lucide"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77a0051607fd71ff9598276312218be40d57e1dc390d77194e8c746c6b4fb488"
+checksum = "1ecadf6fdb8a969ca737b600e8e223d891a63dd7bd3c99a30b52d0cf410b0b11"
 dependencies = [
  "pictogram-core",
 ]
 
 [[package]]
 name = "pictogram-icons-material"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3ce1c2fcdfa861a342f00018ecf5cd3ae796fec1456161f6e258e515c1f4d91"
+checksum = "6650b1ad564c4851ba54009ff1e5a2571120952f8cc9dfe85c0a3c5b1a76e919"
 dependencies = [
  "pictogram-core",
 ]
 
 [[package]]
 name = "pictogram-icons-phosphor"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8ace4807be1608dd67657804193a8abf4890ebd9c85b3bdb5abb6c21b000e99"
+checksum = "cf32e80274132d43e28ab45b73548377c3524ece9462f0ab5d587537c3dee757"
 dependencies = [
  "pictogram-core",
 ]
 
 [[package]]
 name = "pictogram-icons-simple"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16c9d13ca0558d92581f1610425f128f494e1129a058863b254593b502a26c11"
+checksum = "a1a1a71289f21d8a0eb18da4ac31c4f307f92bee6ddf5aa7fc49dfc5a7feff6d"
 dependencies = [
  "pictogram-core",
 ]
 
 [[package]]
 name = "pictogram-icons-tabler"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da9ed4cfa636f366774e488e5b04e08e28f17a0bfc2d9810f16cd2b278975607"
+checksum = "e96961d83e38b4fe8628daec7d892e346c84321c2dfa380939d8713e8e967d62"
 dependencies = [
  "pictogram-core",
 ]
