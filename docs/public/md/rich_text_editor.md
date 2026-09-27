@@ -125,6 +125,7 @@ shows Ctrl.
 | `Ctrl+Shift+Enter` | Horizontal rule. |
 | `Ctrl+Enter` | In a code block: leaves it for a new paragraph after it. Elsewhere the key passes on, so your own `Ctrl+Enter` (send) still runs. |
 | `ArrowDown` | On the last line of a code block that ends the document: leaves it for a new paragraph. Clicking below the last block does the same. |
+| `Enter` | Twice at the end of a code block: the second drops the empty line and leaves the block, also on a touch keyboard. |
 | `Tab` or `Shift+Tab` | In a list item: nests it under the item before, or moves it out. Elsewhere Tab moves focus on as usual. |
 | `Shift+Enter` | Line break inside the block. |
 | `Ctrl+Z` | Undo. |

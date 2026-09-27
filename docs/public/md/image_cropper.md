@@ -7,7 +7,8 @@ Index: [index.md](index.md) lists every other page
 Description: A box with handles over an image, picking the part to keep by drag or arrow keys, free or at a fixed aspect, with a rect or circle mask.
 
 A box with handles over an image, picking the part to keep. Drag the box or a
-handle, or use the arrow keys on the box and its corners. `value` is a
+handle, pinch the box with two fingers, or use the arrow keys on the box and
+its corners. `value` is a
 `CropRect` in fractions of the image, so it fits any resolution; `to_pixels`
 turns it into pixels.
 
@@ -116,6 +117,9 @@ explains how parts work.
 - Each handle is a 24px target around a 12px square.
 - A drag focuses the box or the corner it grabbed, so the keys carry on from
   there.
+- On a touch screen a finger on the box drags it without scrolling the page; a
+  touch on the image outside it still scrolls. Two fingers on the box pinch it
+  larger or smaller around its centre.
 - With an `aspect`, a corner key resizes both sides together.
 - The box and the corners describe their keys.
 

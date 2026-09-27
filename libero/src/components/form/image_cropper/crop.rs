@@ -181,6 +181,25 @@ impl CropRect {
         }
     }
 
+    /// The box `factor` times as large around its centre, keeping its shape, at
+    /// least `min` on each side and shifted back inside the image.
+    pub(super) fn scaled(self, factor: f64, min: f64) -> Self {
+        if !factor.is_finite() || self.width <= 0.0 || self.height <= 0.0 {
+            return self;
+        }
+        let most = (1.0 / self.width).min(1.0 / self.height);
+        let least = (min / self.width).max(min / self.height).min(most);
+        let factor = factor.clamp(least, most);
+        let (width, height) = (self.width * factor, self.height * factor);
+        Self {
+            x: self.x + (self.width - width) / 2.0,
+            y: self.y + (self.height - height) / 2.0,
+            width,
+            height,
+        }
+        .moved(0.0, 0.0)
+    }
+
     /// The box after `grip` moved by `dx`, `dy`, inside the image and at least
     /// `min` on each side. `ratio` locks width over height, in fractions.
     pub(super) fn resized(

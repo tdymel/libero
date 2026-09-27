@@ -509,6 +509,21 @@ impl EditorState {
         true
     }
 
+    /// Enter on the empty last line of a code block: drops that line and leaves the
+    /// block, as Mod+Enter does. Touch keyboards have no other way out.
+    pub(crate) fn exit_code_on_blank_end(&mut self) -> bool {
+        let at = self.caret();
+        let block = self.block(at.block);
+        if !block.kind.is_code() || at.offset == 0 || at.offset != block.len() {
+            return false;
+        }
+        if !block.text().ends_with('\n') {
+            return false;
+        }
+        self.delete_range(Position::new(at.block, at.offset - 1), at);
+        self.exit_code()
+    }
+
     /// The caret into a text line after the last block: a new paragraph when the doc
     /// ends in a code block, a rule or an atom, which have no line to click into.
     pub(crate) fn exit_end(&mut self) -> bool {

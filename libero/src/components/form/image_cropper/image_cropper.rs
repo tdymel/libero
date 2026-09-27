@@ -10,8 +10,8 @@ use crate::{
         layout::use_box,
     },
     hooks::{
-        DragMove, DragOptions, DragStart, use_drag, use_element, use_id, use_local_state,
-        use_localization,
+        DragMove, DragOptions, DragPoint, DragStart, use_drag, use_element, use_id,
+        use_local_state, use_localization,
     },
     localization::fill,
     platform::{ElementApi, when_laid_out},
@@ -48,6 +48,62 @@ parts_enum! {
         /// One of the eight resize handles; the corners are tab stops.
         Handle = "handle" => "& > [data-slot='frame'] > [data-slot='handle']",
     }
+}
+
+/// The touches down on the box, for a two-finger pinch.
+#[derive(Clone, Copy, Default)]
+struct Touches {
+    points: [Option<(i32, DragPoint)>; 2],
+    /// The box and the fingers' spread when the second one went down.
+    pinch: Option<(CropRect, f64)>,
+    /// Set by a pinch: the first finger's drag moves nothing until it lifts.
+    pinched: bool,
+}
+
+impl Touches {
+    fn spread(&self) -> Option<f64> {
+        match self.points {
+            [Some((_, a)), Some((_, b))] => Some((a.x - b.x).hypot(a.y - b.y)),
+            _ => None,
+        }
+    }
+
+    /// Moves a known touch, else takes a free slot; `false` for neither.
+    fn put(&mut self, id: i32, point: DragPoint) -> bool {
+        let slot = match self
+            .points
+            .iter()
+            .position(|p| p.is_some_and(|(at, _)| at == id))
+        {
+            Some(slot) => slot,
+            None => match self.points.iter().position(Option::is_none) {
+                Some(slot) => slot,
+                None => return false,
+            },
+        };
+        self.points[slot] = Some((id, point));
+        true
+    }
+
+    fn knows(&self, id: i32) -> bool {
+        self.points
+            .iter()
+            .any(|p| p.is_some_and(|(at, _)| at == id))
+    }
+
+    fn lift(&mut self, id: i32) {
+        for point in &mut self.points {
+            if point.is_some_and(|(at, _)| at == id) {
+                *point = None;
+            }
+        }
+        self.pinch = None;
+    }
+}
+
+fn client(event: &Event<PointerData>) -> DragPoint {
+    let at = event.client_coordinates();
+    DragPoint { x: at.x, y: at.y }
 }
 
 fn placed() -> crate::sx::Sx {
@@ -210,7 +266,8 @@ base_props! {
 }
 
 /// A box with handles over an image, picking the part to keep. Drag the box
-/// or a handle, or use the arrow keys on the box and its corners.
+/// or a handle, pinch the box with two fingers, or use the arrow keys on the
+/// box and its corners.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -245,6 +302,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let grip = use_local_state(|| Grip::Move);
     // The box and the image's client size where a drag started.
     let start = use_local_state(|| (CropRect::FULL, 0.0_f64, 0.0_f64));
+    let touches = use_local_state(Touches::default);
 
     let interactive = !props.disabled && props.onchange.is_some();
     if props.value.is_some() && props.onchange.is_none() && !props.disabled {
@@ -401,21 +459,86 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         onmove,
         // Again at the end: Blitz moves focus off on the frame's own press.
         onend: {
-            let grip = grip.clone();
-            Callback::new(move |()| focus_grip.call(grip.get()))
+            let (grip, touches) = (grip.clone(), touches.clone());
+            Callback::new(move |()| {
+                touches.set(Touches::default());
+                focus_grip.call(grip.get());
+            })
         },
     });
 
     let press = {
-        let grip = grip.clone();
+        let (grip, touches) = (grip.clone(), touches.clone());
         move |grabbed: Grip| {
-            let grip = grip.clone();
+            let (grip, touches) = (grip.clone(), touches.clone());
             move |event: Event<PointerData>| {
                 event.stop_propagation();
+                if event.pointer_type() == "touch" {
+                    let mut now = touches.get();
+                    if !now.put(event.pointer_id(), client(&event)) {
+                        return;
+                    }
+                    // A second finger pinches the box rather than grabbing it.
+                    if let Some(spread) = now.spread() {
+                        event.prevent_default();
+                        if interactive && *drag.dragging.peek() {
+                            now.pinch = Some((shown, spread));
+                            now.pinched = true;
+                        }
+                        touches.set(now);
+                        return;
+                    }
+                    touches.set(now);
+                }
                 grip.set(grabbed);
                 drag.onpointerdown.call(event);
             }
         }
+    };
+
+    // The root sees both fingers' moves: the first finger's by capture, the
+    // second's bubbling up from its own implicit capture.
+    let onpointermove = {
+        let touches = touches.clone();
+        move |event: Event<PointerData>| {
+            let mut now = touches.get();
+            if now.knows(event.pointer_id()) {
+                now.put(event.pointer_id(), client(&event));
+                if let (Some((from, before)), Some(spread)) = (now.pinch, now.spread())
+                    && before > 0.0
+                {
+                    let rect = from.scaled(spread / before, min);
+                    if rect != shown {
+                        emit.call(rect);
+                    }
+                }
+                touches.set(now);
+            }
+            if !now.pinched {
+                drag.onpointermove.call(event);
+            }
+        }
+    };
+    let lift = {
+        let touches = touches.clone();
+        move |event: &Event<PointerData>| {
+            let mut now = touches.get();
+            if now.knows(event.pointer_id()) {
+                now.lift(event.pointer_id());
+                touches.set(now);
+            }
+        }
+    };
+    let onpointerup = {
+        let lift = lift.clone();
+        move |event: Event<PointerData>| {
+            lift(&event);
+            drag.onpointerup.call(event);
+        }
+    };
+    let onpointercancel = move |event: Event<PointerData>| {
+        lift(&event);
+        drag.onpointercancel.call(event);
     };
 
     let key = move |grabbed: Grip| {
@@ -523,9 +646,9 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         .variables(&crop_variables)
         .prepare()
         .element(&root)
-        .event("onpointermove", drag.onpointermove)
-        .event("onpointerup", drag.onpointerup)
-        .event("onpointercancel", drag.onpointercancel)
+        .event("onpointermove", onpointermove)
+        .event("onpointerup", onpointerup)
+        .event("onpointercancel", onpointercancel)
         .render(
             HtmlTag::Div,
             props.attributes,

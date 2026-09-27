@@ -269,6 +269,7 @@ pub fn RichTextEditorPage() -> Element {
                 .key(["Ctrl+Shift+Enter"], "Horizontal rule.")
                 .key(["Ctrl+Enter"], "In a code block: leaves it for a new paragraph after it. Elsewhere the key passes on, so your own `Ctrl+Enter` (send) still runs.")
                 .key(["ArrowDown"], "On the last line of a code block that ends the document: leaves it for a new paragraph. Clicking below the last block does the same.")
+                        .key(["Enter"], "Twice at the end of a code block: the second drops the empty line and leaves the block, also on a touch keyboard.")
                 .key(["Tab", "Shift+Tab"], "In a list item: nests it under the item before, or moves it out. Elsewhere Tab moves focus on as usual.")
                 .key(["Shift+Enter"], "Line break inside the block.")
                 .key(["Ctrl+Z"], "Undo.")

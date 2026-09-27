@@ -733,6 +733,27 @@ fn a_trailing_code_block_is_left_by_arrow_down_mod_enter_and_a_click_below() {
     });
 }
 
+/// The way out without arrows or Ctrl, as on a touch keyboard.
+#[test]
+fn enter_twice_at_the_end_leaves_a_trailing_code_block() {
+    block_on(async {
+        let fixture = Fixture::open(TRAILING, Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        settle(page).await;
+
+        enter_code(page).await;
+        keyboard::press(page, ENTER).await.unwrap();
+        settle(page).await;
+        keyboard::press(page, ENTER).await.unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "out").await.unwrap();
+        assert_eq!(
+            out(page).await,
+            "intro\n\n```rust\nlet x = 1;\n```\n\nout\n"
+        );
+    });
+}
+
 #[test]
 fn a_typed_fence_sets_the_language_and_the_toolbar_menu_changes_it() {
     const LANGUAGE: &str =

@@ -243,6 +243,84 @@ async fn a_tiny_box_still_moves<D: Driver>(d: &mut D, _route: &str) -> Result<()
     eventually_focused(d, BOX, "the drag").await
 }
 
+/// A finger drags the box without scrolling the page; two pinch it around its
+/// centre (1368).
+#[test]
+fn a_touch_drags_the_box_and_two_pinch_it() {
+    use e2e::passes::pointer::{self, Point};
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let crop = "document.getElementById('crop').textContent";
+        wait::for_js_true(page, &format!("{crop} === '25,25,50,50'"), "the box")
+            .await
+            .unwrap();
+        let (left, top, width, height, scroll): (f64, f64, f64, f64, f64) = page
+            .evaluate(
+                "(() => { const r = document.querySelector('[data-slot=image]').getBoundingClientRect();
+                  return [r.left, r.top, r.width, r.height, scrollY]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let centre = Point {
+            x: left + width / 2.0,
+            y: top + height / 2.0,
+        };
+        let to = Point {
+            x: centre.x - width / 10.0,
+            y: centre.y - height / 10.0,
+        };
+        pointer::touch_drag(page, centre, to, 8).await.unwrap();
+        wait::for_js_true(page, &format!("{crop} === '15,15,50,50'"), "a touch drag")
+            .await
+            .unwrap();
+        let after: f64 = page
+            .evaluate("scrollY")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(after, scroll, "the touch drag scrolled the page");
+
+        // Spread three times as far: the box grows to the whole image and no further.
+        let middle = Point {
+            x: left + width * 0.4,
+            y: top + height * 0.4,
+        };
+        pointer::pinch(page, middle, width * 0.2, width * 0.6, 8)
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("{crop} === '0,0,100,100'"), "a pinch out")
+            .await
+            .unwrap();
+        // Back to a fifth of the spread: about a fifth of the size, centred.
+        let centre_box = |text: String| -> Vec<f64> {
+            text.split(',').map(|part| part.parse().unwrap()).collect()
+        };
+        pointer::pinch(page, centre, width * 0.5, width * 0.1, 8)
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("{crop} !== '0,0,100,100'"), "a pinch in")
+            .await
+            .unwrap();
+        let shrunk: String = page.evaluate(crop).await.unwrap().into_value().unwrap();
+        let [x, y, w, h] = centre_box(shrunk.clone())[..] else {
+            panic!("{shrunk}");
+        };
+        assert!((w - 20.0).abs() <= 2.0 && (h - w).abs() <= 1.0, "{shrunk}");
+        assert!(
+            (x + w / 2.0 - 50.0).abs() <= 1.0 && (y + h / 2.0 - 50.0).abs() <= 1.0,
+            "{shrunk}"
+        );
+        fixture.console.assert_clean("the touches").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A `src` that fails calls `onerror` once, warns, and draws no box over the alt text (1265).
 #[test]
 fn a_broken_src_reports_and_draws_no_box() {

@@ -33,6 +33,19 @@ fn the_largest_box_is_centred_at_the_ratio() {
 }
 
 #[test]
+fn a_pinch_scales_the_box_around_its_centre_inside_the_image() {
+    let start = rect(0.2, 0.3, 0.4, 0.2);
+    assert_close(start.scaled(1.5, 0.05), rect(0.1, 0.25, 0.6, 0.3));
+    // Stopped at the image's size and shifted back in, the shape kept.
+    assert_close(
+        rect(0.6, 0.0, 0.4, 0.2).scaled(4.0, 0.05),
+        rect(0.0, 0.0, 1.0, 0.5),
+    );
+    // Stopped at `min` on the shorter side.
+    assert_close(start.scaled(0.01, 0.05), rect(0.35, 0.375, 0.1, 0.05));
+}
+
+#[test]
 fn an_unset_box_starts_at_four_fifths_of_the_largest() {
     assert_close(CropRect::starting(None), rect(0.1, 0.1, 0.8, 0.8));
     assert_close(CropRect::starting(Some(0.5)), rect(0.3, 0.1, 0.4, 0.8));

@@ -94,6 +94,7 @@ pub fn ImageCropperPage() -> Element {
                     "The four corners are tab stops of their own, sliders named \"Top left corner\" and so on.",
                     "Each handle is a 24px target around a 12px square.",
                     "A drag focuses the box or the corner it grabbed, so the keys carry on from there.",
+                    "On a touch screen a finger on the box drags it without scrolling the page; a touch on the image outside it still scrolls. Two fingers on the box pinch it larger or smaller around its centre.",
                     "With an `aspect`, a corner key resizes both sides together.",
                     "The box and the corners describe their keys.",
                 ])
@@ -109,7 +110,8 @@ pub fn ImageCropperPage() -> Element {
             lead: rsx! {
                 Text {
                     "A box with handles over an image, picking the part to keep. Drag the box or "
-                    "a handle, or use the arrow keys on the box and its corners. "
+                    "a handle, pinch the box with two fingers, or use the arrow keys on the box "
+                    "and its corners. "
                     Code { source: "value" }
                     " is a "
                     Code { source: "CropRect" }

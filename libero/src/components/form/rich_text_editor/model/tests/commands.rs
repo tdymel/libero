@@ -330,6 +330,20 @@ fn enter_after_a_typed_fence_starts_a_code_block_in_its_language() {
 }
 
 #[test]
+fn enter_on_the_blank_last_line_of_a_code_block_leaves_it() {
+    let commands = Commands::builtin();
+    let mut code = editor("```\na|\n```");
+    assert!(code.run(&commands, Builtin::SplitBlock));
+    assert_eq!(show(code.state()), "```\na\n|\n```");
+    assert!(code.run(&commands, Builtin::SplitBlock));
+    assert_eq!(show(code.state()), "```\na\n```\n\n|");
+    // A blank line inside the block stays.
+    let mut inside = editor("```\na\n|\nb\n```");
+    assert!(inside.run(&commands, Builtin::SplitBlock));
+    assert_eq!(show(inside.state()), "```\na\n\n|\nb\n```");
+}
+
+#[test]
 fn mod_enter_leaves_a_code_block_and_passes_elsewhere() {
     let (keymap, commands) = (Keymap::default(), Commands::builtin());
     let mut code = editor("```\na|\n```");

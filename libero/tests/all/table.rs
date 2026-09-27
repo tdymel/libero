@@ -6,8 +6,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, Column, ColumnDefaults, Mark, PinnedColumns, SortDirection, States, Table, TableSort,
-        column,
+        Checkbox, Column, ColumnDefaults, Mark, PinnedColumns, SortDirection, States, Table,
+        TableSort, column,
     },
     localization::Localization,
     theme::Size,

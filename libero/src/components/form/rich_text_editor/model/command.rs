@@ -244,9 +244,10 @@ fn builtin_action(builtin: Builtin) -> Action {
         B::Rule => edit(EditorState::insert_rule),
         B::ExitBlock => edit(EditorState::exit_code),
         B::HardBreak => edit(EditorState::insert_hard_break),
-        // Not in `split_block` itself: a pasted fence line stays text.
+        // Not in `split_block` itself: a pasted fence line or blank line stays text.
         B::SplitBlock => edit(|state| {
-            state.selection.is_collapsed() && state.fence_rule() || state.split_block()
+            state.selection.is_collapsed() && (state.fence_rule() || state.exit_code_on_blank_end())
+                || state.split_block()
         }),
         B::DeleteBackward => edit(EditorState::delete_backward),
         B::DeleteForward => edit(EditorState::delete_forward),
