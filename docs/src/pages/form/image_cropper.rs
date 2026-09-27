@@ -14,18 +14,19 @@ fn aspect_of(values: &DemoValues) -> Option<f64> {
     }
 }
 
-/// The largest centred box `aspect` allows on the sample image.
-fn largest(aspect: Option<f64>) -> CropRect {
-    let Some(ratio) = aspect.map(|aspect| aspect / SAMPLE_RATIO) else {
-        return CropRect::FULL;
+/// Where an unset cropper starts on the sample image: centred, 80% of the
+/// largest box `aspect` allows, in whole percent.
+fn starting(aspect: Option<f64>) -> CropRect {
+    let (width, height) = match aspect.map(|aspect| aspect / SAMPLE_RATIO) {
+        Some(ratio) if ratio <= 1.0 => (ratio, 1.0),
+        Some(ratio) => (1.0, 1.0 / ratio),
+        None => (1.0, 1.0),
     };
-    let (width, height) = match ratio <= 1.0 {
-        true => (ratio, 1.0),
-        false => (1.0, 1.0 / ratio),
-    };
+    let percent = |fraction: f64| (fraction * 100.0).round() / 100.0;
+    let (width, height) = (percent(width * 0.8), percent(height * 0.8));
     CropRect {
-        x: (1.0 - width) / 2.0,
-        y: (1.0 - height) / 2.0,
+        x: percent((1.0 - width) / 2.0),
+        y: percent((1.0 - height) / 2.0),
         width,
         height,
     }
@@ -44,7 +45,7 @@ pub fn ImageCropperPage() -> Element {
                         .doc("The image: any URL, a `data:` URL included."),
                     prop("alt", "String").doc("Describes the image."),
                     prop("value", "Option<CropRect>")
-                        .doc("The box, in fractions of the image. Pair it with `onchange`. Unset starts at the largest centred box `aspect` allows, and reports it once the image has loaded. A new `src` or `aspect` starts it over."),
+                        .doc("The box, in fractions of the image. Pair it with `onchange`. Unset starts centred at 80% of the largest box `aspect` allows, so it can move at once, and reports it once the image has loaded. A new `src` or `aspect` starts it over."),
                     prop("onchange", "EventHandler<CropRect>")
                         .doc("Fires on every move of the box, by a drag or a key. Without it the cropper only shows."),
                     prop("aspect", "f64")
@@ -128,6 +129,8 @@ pub fn ImageCropperPage() -> Element {
             Demo {
                 component: "ImageCropper",
                 children_text: "",
+                // Beside the controls the image drew at 318 px on a 1280 px screen (1343).
+                wide_preview: true,
                 controls: vec![
                     Control::toggle("aspect", ["free", "1", "4/3"])
                         .labels(["Free", "Square", "4:3"])
@@ -174,7 +177,7 @@ fn ImageCropperDemo(values: DemoValues) -> Element {
     let key = values.str("aspect");
     let rect = match crop() {
         Some((drawn, rect)) if drawn == key => rect,
-        _ => largest(aspect),
+        _ => starting(aspect),
     };
     let pixels = rect.to_pixels(1600, 900);
 

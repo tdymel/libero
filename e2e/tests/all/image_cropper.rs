@@ -68,9 +68,9 @@ fn the_dim_mask_stays_in_forced_colours() {
     });
 }
 
-/// A dropped PNG opens the dialog at the largest centred square; Apply hands
-/// `onchange` that 20 px square, cut by the canvas and capped by `max_size` at
-/// 16 px, still a PNG.
+/// A dropped PNG opens the dialog at 80% of the largest centred square; Apply
+/// hands `onchange` that 16 px square, cut by the canvas and held by `max_size`
+/// at 16 px, still a PNG.
 #[test]
 fn a_dropped_image_is_cropped_before_the_field_takes_it() {
     let path = std::env::temp_dir().join(format!("e2e-crop-{}.png", std::process::id()));
@@ -106,7 +106,7 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
         .unwrap();
         wait::for_js_true(
             page,
-            "document.getElementById('rect').textContent === '25,0,50,100'
+            "document.getElementById('rect').textContent === '30,10,40,80'
               && document.getElementById('out').textContent.startsWith('e2e-crop-')
               && document.getElementById('out').textContent.endsWith('.png image/png 16x16')",
             "the field to take the 16 x 16 crop",
@@ -176,7 +176,7 @@ async fn a_picked_image_is_cropped<D: Driver>(d: &mut D, _route: &str) -> Result
     })
     .await?;
     d.click(apply).await?;
-    eventually_text(d, "#rect", "25,0,50,100", "Apply").await?;
+    eventually_text(d, "#rect", "30,10,40,80", "Apply").await?;
     eventually_text(d, "#out", "e2e-crop-picked.png image/png 16x16", "the crop").await?;
     eventually(d, "the dialog to close", async |d| {
         Ok(!d.exists("[role=dialog]").await?)
@@ -223,16 +223,16 @@ e2e::scenario!(
 
 /// An uncontrolled box refits to a new aspect or picture, a moved one too (1263).
 async fn the_box_refits_a_new_picture<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    eventually_text(d, "#crop", "25,0,50,100", "the starting square").await?;
+    eventually_text(d, "#crop", "30,10,40,80", "the starting square").await?;
     d.focus(BOX).await?;
     d.press(keyboard::ARROW_RIGHT).await?;
-    eventually_text(d, "#crop", "26,0,50,100", "ArrowRight").await?;
+    eventually_text(d, "#crop", "31,10,40,80", "ArrowRight").await?;
     d.click("#widen").await?;
-    eventually_text(d, "#crop", "0,0,100,100", "a 2:1 aspect").await?;
+    eventually_text(d, "#crop", "10,10,80,80", "a 2:1 aspect").await?;
     d.click("#widen").await?;
-    eventually_text(d, "#crop", "25,0,50,100", "back to square").await?;
+    eventually_text(d, "#crop", "30,10,40,80", "back to square").await?;
     d.click("#swap").await?;
-    eventually_text(d, "#crop", "0,25,100,50", "a tall picture").await
+    eventually_text(d, "#crop", "10,30,80,40", "a tall picture").await
 }
 
 /// At `min_size` the handles' hit areas meet; a drag on the box's centre still moves it (1264).
@@ -334,14 +334,37 @@ async fn a_drag_moves_the_box<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     eventually_focused(d, BOX, "the drag").await
 }
 
-/// A square on a 2:1 picture: 200 px each way, and still square once a key
-/// shrinks it.
+/// A square on a 2:1 picture starts at 160 px each way, and stays square once
+/// a key shrinks it.
 async fn the_aspect_holds<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    eventually_text(d, "#pixels", "200x200", "the starting square").await?;
+    eventually_text(d, "#pixels", "160x160", "the starting square").await?;
     d.focus(SOUTH_EAST).await?;
     d.press(keyboard::ARROW_LEFT).await?;
-    eventually_text(d, "#pixels", "196x196", "ArrowLeft on a square crop").await
+    eventually_text(d, "#pixels", "156x156", "ArrowLeft on a square crop").await
 }
+
+/// An unset free box starts short of the edges, so a handle drag shrinks it and
+/// a box drag moves it straight away; the whole image could not move (1343).
+async fn the_starting_box_resizes_and_moves<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#crop", "10,10,80,80", "the starting box").await?;
+    let (dx, dy) = tenth_of_the_picture(d).await?;
+    d.drag(SOUTH_EAST, -dx, -dy).await?;
+    eventually_text(
+        d,
+        "#crop",
+        "10,10,70,70",
+        "a drag on the bottom right corner",
+    )
+    .await?;
+    d.drag("[data-slot=frame]", dx, dy).await?;
+    eventually_text(d, "#crop", "20,20,70,70", "a drag on the box").await
+}
+
+e2e::scenario!(
+    the_starting_box_takes_a_handle_drag_and_a_move,
+    "/image-cropper/start",
+    the_starting_box_resizes_and_moves
+);
 
 e2e::scenario!(
     the_arrows_move_the_box,

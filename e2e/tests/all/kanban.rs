@@ -261,12 +261,14 @@ e2e::scenario!(
 e2e::scenario!(
     the_move_to_menu_moves_a_card_to_the_end_of_another_column_and_keeps_the_focus,
     "/kanban",
-    the_menu_moves_a_card_across
+    the_menu_moves_a_card_across,
+    desktop: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     the_move_to_menu_lists_every_column_with_the_cards_own_disabled,
     "/kanban",
-    the_own_column_is_disabled
+    the_own_column_is_disabled,
+    desktop: skip("958: element identity on the WebView")
 );
 
 #[test]

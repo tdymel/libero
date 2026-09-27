@@ -33,6 +33,14 @@ fn the_largest_box_is_centred_at_the_ratio() {
 }
 
 #[test]
+fn an_unset_box_starts_at_four_fifths_of_the_largest() {
+    assert_close(CropRect::starting(None), rect(0.1, 0.1, 0.8, 0.8));
+    assert_close(CropRect::starting(Some(0.5)), rect(0.3, 0.1, 0.4, 0.8));
+    // A 4:3 crop of a 16:9 picture, in whole percent.
+    assert_close(CropRect::starting(Some(0.75)), rect(0.2, 0.1, 0.6, 0.8));
+}
+
+#[test]
 fn a_move_stops_at_the_edges() {
     let start = rect(0.1, 0.1, 0.5, 0.5);
     assert_close(start.moved(0.2, -0.05), rect(0.3, 0.05, 0.5, 0.5));

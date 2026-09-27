@@ -2,6 +2,7 @@
 //! and uncontrolled. `#crop` reads the box in whole percent, `#pixels` in px.
 //! `/refit` swaps the picture and the aspect; `/tiny` starts at `min_size`;
 //! `/broken` has a `src` that fails, `#error` counts its `onerror` calls.
+//! `/start` is free and unset, as the docs demo starts (1343).
 
 use dioxus::prelude::*;
 use libero::components::{Button, CropRect, CropShape, Flex, ImageCropper};
@@ -18,6 +19,7 @@ pub const ROUTES: Routes = &[
     ("/image-cropper/refit", || rsx! { RefitCropperPage {} }),
     ("/image-cropper/tiny", || rsx! { TinyCropperPage {} }),
     ("/image-cropper/broken", || rsx! { BrokenCropperPage {} }),
+    ("/image-cropper/start", || rsx! { StartCropperPage {} }),
 ];
 
 const PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23339af0'/%3E%3Ccircle cx='200' cy='100' r='60' fill='%23ffd43b'/%3E%3C/svg%3E";
@@ -151,6 +153,22 @@ fn BrokenCropperPage() -> Element {
                 onerror: move |()| errors += 1,
             }
             p { id: "error", "{errors}" }
+        }
+    }
+}
+
+#[component]
+fn StartCropperPage() -> Element {
+    let mut crop = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "md",
+            ImageCropper {
+                src: PICTURE,
+                alt: "A sun on blue",
+                onchange: move |next| crop.set(reading(next)),
+            }
+            p { id: "crop", "{crop}" }
         }
     }
 }

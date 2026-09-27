@@ -158,6 +158,20 @@ impl CropRect {
         }
     }
 
+    /// Where an unset box starts: 80% of [`Self::largest`], centred, in whole
+    /// percent, so a drag can move it at once (Cropper.js's `autoCropArea`).
+    pub(super) fn starting(ratio: Option<f64>) -> Self {
+        let percent = |fraction: f64| (fraction * 100.0).round() / 100.0;
+        let largest = Self::largest(ratio);
+        let (width, height) = (percent(largest.width * 0.8), percent(largest.height * 0.8));
+        Self {
+            x: percent((1.0 - width) / 2.0),
+            y: percent((1.0 - height) / 2.0),
+            width,
+            height,
+        }
+    }
+
     /// The box shifted by `dx`, `dy`, stopped at the image's edges.
     pub(super) fn moved(self, dx: f64, dy: f64) -> Self {
         Self {

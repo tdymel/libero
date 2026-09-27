@@ -181,8 +181,8 @@ base_props! {
         src: String,
         #[props(into)]
         alt: String,
-        /// Controlled: pair it with `onchange`. Unset starts at the largest
-        /// centred box `aspect` allows, the whole image without one.
+        /// Controlled: pair it with `onchange`. Unset starts centred at 80% of
+        /// the largest box `aspect` allows, of the whole image without one.
         #[props(default)]
         value: Option<CropRect>,
         /// Fires on every move of the box, a drag or a key.
@@ -259,7 +259,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let shown = props
         .value
         .or(held())
-        .unwrap_or_else(|| CropRect::largest(ratio));
+        .unwrap_or_else(|| CropRect::starting(ratio));
 
     let onchange = props.onchange;
     let emit = use_callback(move |rect: CropRect| {
@@ -291,7 +291,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 let ratio = aspect
                     .filter(|aspect| aspect.is_finite() && *aspect > 0.0)
                     .map(|aspect| aspect / measured);
-                let rect = CropRect::largest(ratio);
+                let rect = CropRect::starting(ratio);
                 fitted.set(Some(rect));
                 if current != Some(rect) {
                     emit.call(rect);
