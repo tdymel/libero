@@ -15,7 +15,8 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        ElementHandle, FullscreenHandle, Hotkey, MediaHandle, use_hotkeys, use_id, use_localization,
+        ElementHandle, FullscreenHandle, Hotkey, MediaHandle, use_formats, use_hotkeys, use_id,
+        use_localization,
     },
     localization::fill,
     platform::key_taken,
@@ -154,6 +155,9 @@ impl Captions {
 /// The row of controls, a video's captions and fullscreen buttons at its end,
 /// then the error and buffering messages. Those buttons come as data, not an
 /// `Element`: a memoized child would keep handlers its parent's re-render dropped.
+///
+/// `overlay` is a video's bar over the picture: the seek track a row of its own
+/// on top, then play, mute, volume and time, then captions, speed and fullscreen.
 #[component]
 pub(super) fn MediaControls(
     media: MediaHandle,
@@ -161,6 +165,7 @@ pub(super) fn MediaControls(
     size: Input<Size>,
     #[props(default)] captions: Option<Captions>,
     #[props(default)] fullscreen: Option<FullscreenHandle>,
+    #[props(default)] overlay: bool,
 ) -> Element {
     let labels = use_localization().media;
     let icon_size = icon_size(&size);
@@ -173,27 +178,27 @@ pub(super) fn MediaControls(
     };
     let silent = sound.silent();
     let no_captions = use_id();
-    // Plain Tab stops in visual order, as native controls: a roving toolbar's
-    // arrows clashed with the sliders' (todo 1328).
-    rsx! {
-        div { role: "group", "aria-label": labels.controls, "data-slot": CONTROLS,
-            ActionIcon {
-                aria_label: if media.paused() { labels.play } else { labels.pause },
-                tooltip: true,
-                shortcut: "k",
-                size: icon_size.clone(),
-                onclick: move |_| media.toggle(),
-                if media.paused() {
-                    Glyph { slot: IconSlot::Play, icon: lucide::play::outlined }
-                } else {
-                    Glyph { slot: IconSlot::Pause, icon: lucide::pause::outlined }
-                }
+    let play = rsx! {
+        ActionIcon {
+            aria_label: if media.paused() { labels.play } else { labels.pause },
+            tooltip: true,
+            shortcut: "k",
+            size: icon_size.clone(),
+            onclick: move |_| media.toggle(),
+            if media.paused() {
+                Glyph { slot: IconSlot::Play, icon: lucide::play::outlined }
+            } else {
+                Glyph { slot: IconSlot::Pause, icon: lucide::pause::outlined }
             }
-            MediaTime { media }
-            div { "data-slot": SEEK, onkeydown: space_toggles,
-                MediaSeek { media, size: size.clone() }
-            }
-            ActionIcon {
+        }
+    };
+    let seek = rsx! {
+        div { "data-slot": SEEK, onkeydown: space_toggles,
+            MediaSeek { media, size: size.clone() }
+        }
+    };
+    let sound_controls = rsx! {
+        ActionIcon {
                 aria_label: if silent { labels.unmute } else { labels.mute },
                 tooltip: true,
                 shortcut: "m",
@@ -216,38 +221,66 @@ pub(super) fn MediaControls(
                     oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
                 }
             }
-            MediaSpeed { media, size }
-            if let Some(captions) = captions {
-                // Without a track: still a Tab stop, so its reason is heard (todo 1324).
-                ActionIcon {
-                    aria_label: labels.captions,
-                    aria_pressed: if captions.track.is_some() && (captions.shown)() { "true" } else { "false" },
-                    "aria-describedby": captions.track.is_none().then(|| no_captions.cloned()),
-                    disabled: captions.track.is_none(),
-                    focusable_when_disabled: true,
-                    tooltip: true,
-                    shortcut: "c",
-                    size: icon_size.clone(),
-                    onclick: move |_| captions.toggle(media),
-                    Glyph { slot: IconSlot::Captions, icon: lucide::captions::outlined }
-                }
-                if captions.track.is_none() {
-                    VisuallyHidden { id: "{no_captions}",{labels.no_captions} }
+    };
+    let speed = rsx! {
+        MediaSpeed { media, size, overlay }
+    };
+    let captions_button = rsx! {
+        if let Some(captions) = captions {
+            // Without a track: still a Tab stop, so its reason is heard (todo 1324).
+            ActionIcon {
+                aria_label: labels.captions,
+                aria_pressed: if captions.track.is_some() && (captions.shown)() { "true" } else { "false" },
+                "aria-describedby": captions.track.is_none().then(|| no_captions.cloned()),
+                disabled: captions.track.is_none(),
+                focusable_when_disabled: true,
+                tooltip: true,
+                shortcut: "c",
+                size: icon_size.clone(),
+                onclick: move |_| captions.toggle(media),
+                Glyph { slot: IconSlot::Captions, icon: lucide::captions::outlined }
+            }
+            if captions.track.is_none() {
+                VisuallyHidden { id: "{no_captions}",{labels.no_captions} }
+            }
+        }
+    };
+    let fullscreen_button = rsx! {
+        if let Some(fullscreen) = fullscreen {
+            ActionIcon {
+                aria_label: if fullscreen.is_fullscreen() { labels.exit_fullscreen } else { labels.fullscreen },
+                tooltip: true,
+                shortcut: "f",
+                size: icon_size.clone(),
+                onclick: move |_| fullscreen.toggle(),
+                if fullscreen.is_fullscreen() {
+                    Glyph { slot: IconSlot::ExitFullscreen, icon: lucide::minimize::outlined }
+                } else {
+                    Glyph { slot: IconSlot::Fullscreen, icon: lucide::maximize::outlined }
                 }
             }
-            if let Some(fullscreen) = fullscreen {
-                ActionIcon {
-                    aria_label: if fullscreen.is_fullscreen() { labels.exit_fullscreen } else { labels.fullscreen },
-                    tooltip: true,
-                    shortcut: "f",
-                    size: icon_size.clone(),
-                    onclick: move |_| fullscreen.toggle(),
-                    if fullscreen.is_fullscreen() {
-                        Glyph { slot: IconSlot::ExitFullscreen, icon: lucide::minimize::outlined }
-                    } else {
-                        Glyph { slot: IconSlot::Fullscreen, icon: lucide::maximize::outlined }
-                    }
-                }
+        }
+    };
+    // Plain Tab stops in visual order, as native controls: a roving toolbar's
+    // arrows clashed with the sliders' (todo 1328).
+    rsx! {
+        div { role: "group", "aria-label": labels.controls, "data-slot": CONTROLS,
+            if overlay {
+                {seek}
+                {play}
+                {sound_controls}
+                MediaTime { media }
+                {captions_button}
+                {speed}
+                {fullscreen_button}
+            } else {
+                {play}
+                MediaTime { media }
+                {seek}
+                {sound_controls}
+                {speed}
+                {captions_button}
+                {fullscreen_button}
             }
         }
         if media.error().is_some() {
@@ -273,20 +306,27 @@ fn MediaTime(media: MediaHandle) -> Element {
 
 /// The speed button, "1×", and its menu of [`RATES`].
 #[component]
-fn MediaSpeed(media: MediaHandle, size: Input<Size>) -> Element {
+fn MediaSpeed(media: MediaHandle, size: Input<Size>, overlay: bool) -> Element {
     let labels = use_localization().media;
+    let separator = use_formats().decimal_separator;
     let menu = use_menu();
     let rate = media.rate();
     let items = RATES
         .into_iter()
         .map(|option| {
-            MenuItem::new(times(option))
+            MenuItem::new(times(option, separator))
                 .radio(option == rate)
                 .onselect(move |_| media.set_rate(option))
                 .into()
         })
         .collect();
-    let shown = times(rate);
+    let shown = times(rate, separator);
+    // Narrow padding: the row must fit 320px with every button. Over the
+    // picture it takes the bar's light text, as the icons do.
+    let mut look = sx().padding_inline(SizeCss::SPACING.value(Size::Xs));
+    if overlay {
+        look = look.color("inherit");
+    }
     let mut attributes = menu.a11y_attributes();
     attributes.push(Attribute::new(
         "aria-label",
@@ -296,21 +336,14 @@ fn MediaSpeed(media: MediaHandle, size: Input<Size>) -> Element {
     ));
     rsx! {
         Menu { state: menu, items, size: size.clone(),
-            // Narrow padding: the row must fit 320px with every button.
-            Button {
-                attributes,
-                variant: "standard",
-                size,
-                sx: sx().padding_inline(SizeCss::SPACING.value(Size::Xs)),
-                "{shown}"
-            }
+            Button { attributes, variant: "standard", size, sx: look, "{shown}" }
         }
     }
 }
 
-/// `1.5×`.
-fn times(rate: f64) -> String {
-    format!("{rate}×")
+/// `1.5×`, or `1,5×` with a comma `separator`.
+fn times(rate: f64, separator: &str) -> String {
+    format!("{rate}×").replace('.', separator)
 }
 
 /// The seek slider. While dragged it shows the thumb's value, not the element's
@@ -394,8 +427,15 @@ mod tests {
     #[test]
     fn a_rate_reads_without_trailing_zeros() {
         assert_eq!(
-            RATES.map(times),
+            RATES.map(|rate| times(rate, ".")),
             ["0.5×", "0.75×", "1×", "1.25×", "1.5×", "2×"]
         );
+    }
+
+    /// Todo 1352: German writes `1,5×`.
+    #[test]
+    fn a_rate_takes_the_locale_decimal_mark() {
+        assert_eq!(times(1.5, ","), "1,5×");
+        assert_eq!(times(2.0, ","), "2×");
     }
 }

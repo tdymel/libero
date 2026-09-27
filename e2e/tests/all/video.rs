@@ -33,22 +33,24 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// Every shown control of `#player` lies inside the player; `one_row`: all on one line.
-pub(crate) fn controls_fit(width: u32, one_row: bool) -> String {
+/// Every shown button and the time of `#player`'s bar lie inside the player, none
+/// above its top; `one_row`: all on one line.
+fn controls_fit(width: u32, one_row: bool) -> String {
     format!(
         "(() => {{ const player = document.querySelector('#player [role=group]').getBoundingClientRect();
-         const shown = [...document.querySelectorAll('#player [data-slot=controls] > *')]
+         const shown = [...document.querySelectorAll('#player [data-slot=controls] > :not([data-slot=seek])')]
              .filter((e) => getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0);
          const inside = shown.every((e) => {{ const r = e.getBoundingClientRect();
-             return r.left >= player.left && r.right <= player.right; }});
+             return r.left >= player.left && r.right <= player.right && r.top >= player.top; }});
          const tops = new Set(shown.map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)));
          return player.width === {width} && inside && (!{one_row} || tops.size === 1); }})()"
     )
 }
 
-/// WCAG 1.4.10, todo 1325: the seek track shrinks so the row stays one line at a
-/// phone's 412px and at 320px, the volume slider and then the total time giving
-/// way; at 160px (320px at 200% zoom) it wraps, but no control leaves the player.
+/// WCAG 1.4.10, todos 1325 and 1342: the seek track has a row of its own; the
+/// buttons stay one line at a phone's 412px and at 320px, the volume slider and
+/// then the total time giving way; at 160px (320px at 200% zoom) the bar moves
+/// below the picture and wraps, but no control leaves the player.
 #[test]
 fn the_controls_fit_a_narrow_player() {
     block_on(async {
@@ -82,7 +84,8 @@ fn the_controls_fit_a_narrow_player() {
     });
 }
 
-/// Todo 1328: every control is its own Tab stop, in the order it is drawn.
+/// Todos 1328 and 1342: every control is its own Tab stop, in the order it is
+/// drawn: the seek row, then YouTube's order of the buttons.
 #[test]
 fn every_control_is_a_tab_stop_in_visual_order() {
     block_on(async {
@@ -95,7 +98,7 @@ fn every_control_is_a_tab_stop_in_visual_order() {
         )
         .await
         .unwrap();
-        page.evaluate(format!("document.querySelector('{PLAY}').focus()"))
+        page.evaluate("document.querySelector('#player [data-slot=seek] [role=slider]').focus()")
             .await
             .unwrap();
         let mut names = Vec::new();
@@ -112,12 +115,12 @@ fn every_control_is_a_tab_stop_in_visual_order() {
         assert_eq!(
             names,
             [
-                "Play",
                 "Seek",
+                "Play",
                 "Mute",
                 "Volume",
-                "Playback speed 1×",
                 "Captions",
+                "Playback speed 1×",
                 "Fullscreen"
             ]
         );
@@ -167,29 +170,51 @@ fn the_speed_menu_sets_the_rate() {
     });
 }
 
-/// WCAG 1.4.11, todo 1326: the controls bar's border holds 3:1 against the page
-/// in both schemes.
+/// WCAG 1.4.3 and 1.4.11, todo 1342: the bar sits over the picture on a scrim
+/// whose floor, even over a white frame, keeps its text 4.5:1 and its icons,
+/// tracks and thumb 3:1, in light and dark.
 #[test]
-fn the_controls_bar_is_bounded_in_light_and_dark() {
+fn the_overlay_bar_keeps_its_contrast_over_a_white_picture() {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
-    const RATIO: &str = r#"(() => {
+    const CONTRAST: &str = r#"(() => {
         const rgb = (s) => {
-            const m = s.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)/);
-            if (m) return [m[1] * 255, m[2] * 255, m[3] * 255];
-            return s.match(/rgba?\(([^)]+)\)/)[1].split(/[ ,\/]+/).map(Number).slice(0, 3);
+            const m = s.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/);
+            if (m) return [m[1] * 255, m[2] * 255, m[3] * 255, m[4] === undefined ? 1 : +m[4]];
+            const n = s.match(/rgba?\(([^)]+)\)/)[1].split(/[ ,\/]+/).map(Number);
+            return [n[0], n[1], n[2], n[3] === undefined ? 1 : n[3]];
         };
+        const over = (c, base) => [0, 1, 2].map((i) => c[i] * c[3] + base[i] * (1 - c[3]));
         const lum = (c) => {
-            const [r, g, b] = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+            const [r, g, b] = c.slice(0, 3).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
             return 0.2126 * r + 0.7152 * g + 0.0722 * b;
         };
-        let page = document.querySelector('#player');
-        while (page && rgb(getComputedStyle(page).backgroundColor).length && /rgba\(0, 0, 0, 0\)|transparent/.test(getComputedStyle(page).backgroundColor)) page = page.parentElement;
-        const [x, y] = [lum(rgb(getComputedStyle(document.querySelector('#player [data-slot=controls]')).borderTopColor)), lum(rgb(getComputedStyle(page || document.body).backgroundColor))];
-        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+        const q = (s) => document.querySelector('#player ' + s);
+        const style = (s) => getComputedStyle(q(s));
+        const bar = style('[data-slot=controls]');
+        if (bar.position !== 'absolute') return [0, 0, 0, 0, 0];
+        const base = over(rgb(bar.backgroundImage.match(/rgba?\([^)]+\)/)[0]), [255, 255, 255]);
+        const ratio = (s) => {
+            const [x, y] = [lum(over(rgb(s), base)), lum(base)];
+            return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+        };
+        return [
+            ratio(style('[data-slot=time]').color),
+            ratio(style("button[aria-label^='Playback speed']").color),
+            ratio(style('[data-slot=controls] button').color),
+            ratio(style('[data-slot=seek] [data-slot=track]').backgroundColor),
+            ratio(style('[data-slot=seek] [role=slider]').borderTopColor),
+        ];
     })()"#;
     block_on(async {
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{FULLSCREEN}') !== null"),
+            "the controls",
+        )
+        .await
+        .unwrap();
         for scheme in ["light", "dark"] {
             page.execute(
                 SetEmulatedMediaParams::builder()
@@ -198,59 +223,14 @@ fn the_controls_bar_is_bounded_in_light_and_dark() {
             )
             .await
             .unwrap();
-            wait::for_js_true(
-                page,
-                &format!("{RATIO} >= 3"),
-                &format!("a 3:1 border in {scheme}"),
-            )
-            .await
-            .unwrap();
+            let [time, speed, icon, track, thumb]: [f64; 5] =
+                page.evaluate(CONTRAST).await.unwrap().into_value().unwrap();
+            assert!(time >= 4.5, "{scheme}: the time is {time:.2}:1");
+            assert!(speed >= 4.5, "{scheme}: the speed is {speed:.2}:1");
+            assert!(icon >= 3.0, "{scheme}: the icons are {icon:.2}:1");
+            assert!(track >= 3.0, "{scheme}: the seek track is {track:.2}:1");
+            assert!(thumb >= 3.0, "{scheme}: the thumb outline is {thumb:.2}:1");
         }
-        fixture.close().await.unwrap();
-    });
-}
-
-/// WCAG 1.4.11: in fullscreen the controls sit over the picture; over a black one
-/// the seek track and thumb outline keep 3:1 against the bar.
-#[test]
-fn the_fullscreen_controls_keep_their_non_text_contrast_over_a_dark_picture() {
-    const CONTRAST: &str = r#"(() => {
-        const rgb = (s) => {
-            const m = s.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/);
-            if (m) return [m[1] * 255, m[2] * 255, m[3] * 255, m[4] === undefined ? 1 : +m[4]];
-            const n = s.match(/rgba?\(([^)]+)\)/)[1].split(/[ ,\/]+/).map(Number);
-            return [n[0], n[1], n[2], n[3] === undefined ? 1 : n[3]];
-        };
-        const lum = (c) => {
-            const [r, g, b] = c.slice(0, 3).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
-            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-        };
-        const q = (s) => document.querySelector('#player ' + s);
-        const bar = rgb(getComputedStyle(q('[data-slot=controls]')).backgroundColor);
-        const base = [0, 1, 2].map((i) => bar[i] * bar[3]);
-        const ratio = (c) => {
-            const [x, y] = [lum(c), lum(base)];
-            return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
-        };
-        const track = q('[data-slot=seek] div div div');
-        return [
-            ratio(rgb(getComputedStyle(track).backgroundColor)),
-            ratio(rgb(getComputedStyle(q('[data-slot=seek] [role=slider]')).borderTopColor)),
-        ];
-    })()"#;
-    block_on(async {
-        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
-        let page = &fixture.page;
-        pointer::click(page, FULLSCREEN).await.unwrap();
-        wait::for_js_true(page, &format!("{STATE} !== 'none'"), "fullscreen")
-            .await
-            .unwrap();
-        let [track, thumb]: [f64; 2] = page.evaluate(CONTRAST).await.unwrap().into_value().unwrap();
-        assert!(track >= 3.0, "the seek track is {track:.2}:1 over the bar");
-        assert!(
-            thumb >= 3.0,
-            "the thumb outline is {thumb:.2}:1 over the bar"
-        );
         fixture.close().await.unwrap();
     });
 }
@@ -624,6 +604,35 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
     }
     d.press(keyboard::ESCAPE).await
 }
+
+/// Todo 1342: in the page too the bar fades while playing untouched, comes back
+/// on a tap, and stays while paused.
+async fn inline_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    if d.platform() == Platform::Native {
+        return Ok(());
+    }
+    eventually(d, "the duration", async |d| {
+        Ok(d.text("#player [data-slot=time]").await? == "0:00 / 0:15")
+    })
+    .await?;
+    d.click(PLAY).await?;
+    within(d, 8, "the controls to fade while playing", faded).await?;
+    d.click("#player video").await?;
+    within(d, 3, "a tap on the picture to show them", controls_shown).await?;
+    d.click(PLAY).await?;
+    let started = std::time::Instant::now();
+    while started.elapsed().as_secs() < 4 {
+        anyhow::ensure!(controls_shown(d).await?, "the controls faded while paused");
+        d.idle().await;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    the_controls_fade_while_playing,
+    "/video/long",
+    inline_controls_fade
+);
 
 e2e::scenario!(
     in_fullscreen_the_controls_fade_and_come_back,

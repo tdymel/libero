@@ -1,9 +1,7 @@
 use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
-use super::media_controls::{
-    Captions, MediaControls, MediaFallback, controls_sx, seek_sx, use_media_keys, use_sound,
-};
+use super::media_controls::{Captions, MediaControls, MediaFallback, use_media_keys, use_sound};
 use super::{
     MediaPreload, MediaSource,
     audio::{media_sources, use_source_reload},
@@ -18,7 +16,7 @@ use crate::{
         use_media, use_timeout,
     },
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
-    theme::{ColorCss, ColorShade, NamedColorCss, Size, SizeCss, Z_INDEX_MODAL},
+    theme::{ColorCss, ColorShade, Size, SizeCss, Z_INDEX_MODAL},
     utils::warn,
 };
 
@@ -27,7 +25,7 @@ parts_enum! {
     pub enum VideoPart {
         /// The `<video>` element.
         Media = "media" => "& > [data-slot='media']",
-        /// The row of controls.
+        /// The bar of controls over the bottom of the picture.
         Controls = "controls" => "& > [data-slot='controls']",
         /// The elapsed and total time.
         Time = "time" => "& [data-slot='time']",
@@ -40,41 +38,39 @@ parts_enum! {
     }
 }
 
-/// Set on the player while its fullscreen controls are faded out.
+/// Set on the player while its controls are faded out.
 const CONTROLS_ATTR: &str = "data-controls";
-/// How long the fullscreen controls stay after the last pointer move or key.
+/// How long the controls stay after the last pointer move or key while playing.
 const CONTROLS_IDLE_MS: u64 = 3000;
+const PLAYER_CONTAINER: &str = "libero-video";
 const CONTROLS_CONTAINER: &str = "libero-video-controls";
 const NARROW: &str = "(max-width: 28rem)";
 const NARROWEST: &str = "(max-width: 22rem)";
+/// Too small a picture to lay the wrapped bar over: it moves below.
+const TINY: &str = "(max-width: 15rem)";
+/// How far the scrim fades out above the controls.
+const SCRIM_FADE: &str = "2rem";
+/// Letterboxing and the bar's scrim stay black in either scheme, as every player draws them.
+const BLACK: &str = "#000";
+/// The scrim's floor: 3:1 for the light tracks and 4.5:1 for the white text even over a white frame.
+const SCRIM: &str = "rgba(0, 0, 0, 0.8)";
 
 static VIDEO_SX: StaticSx = StaticSx::new(|| {
     let controls = VideoPart::Controls.selector();
-    // Solid: a see-through surface left the slider tracks under 3:1 over a dark picture.
-    let overlay = sx()
-        .position("absolute")
-        .inset("auto 0 0 0")
-        .padding(SizeCss::SPACING.value(Size::Xs))
-        .background_color(NamedColorCss::SURFACE.value())
-        .transition("opacity 200ms ease")
-        .media(REDUCED_MOTION, sx().transition("none"));
-    let filled = sx()
-        .background_color(NamedColorCss::SURFACE.value())
-        .padding(SizeCss::SPACING.value(Size::Xs))
-        .selector(
-            VideoPart::Media.selector(),
-            sx().flex("1 1 0").min_height("0").aspect_ratio("auto"),
-        );
-    sx().display("flex")
-        .flex_direction("column")
-        .gap(SizeCss::SPACING.value(Size::Xs))
+    let filled = sx().background_color(BLACK).selector(
+        VideoPart::Media.selector(),
+        sx().height("100%").aspect_ratio("auto"),
+    );
+    // Light tracks, as YouTube's: the theme's muted one sinks into the scrim.
+    let light_track = sx().background("rgba(255, 255, 255, 0.5)");
+    sx().position("relative")
         .min_width("0")
+        .container(PLAYER_CONTAINER)
         .selector(
             VideoPart::Media.selector(),
             sx().display("block")
                 .width("100%")
-                // Letterboxing stays black in either scheme, as every player draws it.
-                .background_color("#000")
+                .background_color(BLACK)
                 .object_fit("contain")
                 // Forced colours repaint the black as Canvas, which leaves the picture's box unmarked.
                 .media(
@@ -82,26 +78,61 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                     sx().outline("1px solid CanvasText").outline_offset("-1px"),
                 ),
         )
+        // YouTube's bar: over the bottom of the picture on a black scrim, white
+        // text and icons, the seek track a row of its own above the buttons.
         .selector(
             VideoPart::Controls.selector(),
-            controls_sx().container(CONTROLS_CONTAINER),
+            sx().position("absolute")
+                .inset("auto 0 0 0")
+                .display("flex")
+                .flex_wrap("wrap")
+                .align_items("center")
+                .gap(SizeCss::SPACING.value(Size::Xs))
+                .padding(SizeCss::SPACING.value(Size::Xs))
+                .padding_top(SCRIM_FADE)
+                .color("#fff")
+                .background_image(format!(
+                    "linear-gradient(to top, {SCRIM} calc(100% - {SCRIM_FADE}), transparent)"
+                ))
+                .container(CONTROLS_CONTAINER)
+                .transition("opacity 200ms ease")
+                .media(REDUCED_MOTION, sx().transition("none"))
+                .selector("& > *", sx().flex_shrink("0"))
+                .selector("& [data-slot='track']", light_track),
         )
-        // The seek track shrinks first; then the volume slider goes (mute and the
-        // keys remain), then the total time; a row wraps only past that (todo 1325).
+        // On a tiny player the bar would wrap up past the picture's top, so it sits below.
+        .container_query(
+            PLAYER_CONTAINER,
+            TINY,
+            sx().selector(
+                VideoPart::Controls.selector(),
+                sx().position("static")
+                    .padding_top(SizeCss::SPACING.value(Size::Xs))
+                    .background_image("none")
+                    .background_color(BLACK),
+            ),
+        )
+        // The seek track takes its row, so it shrinks with the player; below 28rem the
+        // volume slider goes (mute and the keys remain), below 22rem the total time.
         .selector(
             VideoPart::Time.selector(),
             sx().font_variant_numeric("tabular-nums")
                 .white_space("nowrap")
-                .flex_shrink("0")
+                .padding_inline(SizeCss::SPACING.value(Size::Xs))
+                // Pushes captions, speed and fullscreen to the end.
+                .margin_inline_end("auto")
                 .selector(
                     "& > span",
                     sx().container_query(CONTROLS_CONTAINER, NARROWEST, sx().display("none")),
                 ),
         )
-        .selector(VideoPart::Seek.selector(), seek_sx())
+        .selector(
+            VideoPart::Seek.selector(),
+            sx().flex("1 0 100%").min_width("0"),
+        )
         .selector(
             VideoPart::Volume.selector(),
-            sx().flex("0 1 6rem").min_width("4rem").container_query(
+            sx().flex("0 1 5rem").min_width("4rem").container_query(
                 CONTROLS_CONTAINER,
                 NARROW,
                 sx().display("none"),
@@ -109,7 +140,8 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             VideoPart::Message.selector(),
-            sx().color(ColorCss::MUTED.value(ColorShade::S7)),
+            sx().margin_top(SizeCss::SPACING.value(Size::Xs))
+                .color(ColorCss::MUTED.value(ColorShade::S7)),
         )
         .selector("&:fullscreen", filled.clone())
         .selector(
@@ -119,7 +151,6 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 .inset("0")
                 .z_index(Z_INDEX_MODAL.value()),
         )
-        .selector(format!("&[{FULLSCREEN_ATTR}] {}", &controls[2..]), overlay)
         .selector(format!("&[{CONTROLS_ATTR}='hidden']"), sx().cursor("none"))
         .selector(
             format!("&[{CONTROLS_ATTR}='hidden'] {}", &controls[2..]),
@@ -304,9 +335,9 @@ pub fn Video(props: VideoProps) -> Element {
         .as_ref()
         .map(|ratio| format!("aspect-ratio: {ratio}"));
 
-    // In fullscreen the controls overlay the picture and fade out while playing
-    // untouched; a pointer or a key brings them back. A key keeps them until the
-    // next press of a pointer, so keyboard focus never sits on an unseen control.
+    // The controls overlay the picture and fade out while playing untouched, or
+    // as a mouse leaves; a pointer or a key brings them back. A key keeps them until
+    // the next press of a pointer, so keyboard focus never sits on an unseen control.
     let mut idle = use_signal(|| false);
     let keyboard = use_signal(|| false);
     let idle_timer = use_timeout(move || idle.set(true), CONTROLS_IDLE_MS);
@@ -317,9 +348,9 @@ pub fn Video(props: VideoProps) -> Element {
         }
         idle_timer.start();
     };
-    let (filling, playing) = (fullscreen.is_fullscreen(), !media.paused());
-    use_effect(use_reactive!(|filling, playing| {
-        if filling && playing {
+    let playing = !media.paused();
+    use_effect(use_reactive!(|playing| {
+        if playing {
             wake();
         }
     }));
@@ -327,10 +358,17 @@ pub fn Video(props: VideoProps) -> Element {
     // Tagged, so a WebView finds the player for fullscreen and the hotkeys.
     let mut attributes = props.attributes;
     attributes.extend(fullscreen.attributes());
-    // Only in fullscreen, so a WebView sends no pointer moves across the IPC otherwise.
-    if filling {
+    // Only while playing, so a WebView sends no pointer moves across the IPC otherwise.
+    if playing {
         attributes.extend([
             listener("onpointermove", move |_: Event<PointerData>| wake()),
+            // A mouse only: a touch leaves after every tap.
+            listener("onpointerleave", move |event: Event<PointerData>| {
+                if event.pointer_type() == "mouse" {
+                    idle_timer.stop();
+                    idle.set(true);
+                }
+            }),
             listener("onpointerdown", move |_: Event<PointerData>| {
                 let mut keyboard = keyboard;
                 if *keyboard.peek() {
@@ -347,7 +385,7 @@ pub fn Video(props: VideoProps) -> Element {
             }),
         ]);
     }
-    if filling && playing && idle() && !keyboard() {
+    if playing && idle() && !keyboard() {
         attributes.push(Attribute::new(
             CONTROLS_ATTR,
             AttributeValue::Text("hidden".into()),
@@ -388,7 +426,14 @@ pub fn Video(props: VideoProps) -> Element {
         if unsupported {
             MediaFallback { src: props.src.clone(), children: props.children }
         } else {
-            MediaControls { media, sound, size: props.size.clone(), captions: Some(captions), fullscreen: Some(fullscreen) }
+            MediaControls {
+                media,
+                sound,
+                size: props.size.clone(),
+                captions: Some(captions),
+                fullscreen: Some(fullscreen),
+                overlay: true,
+            }
         }
     };
 

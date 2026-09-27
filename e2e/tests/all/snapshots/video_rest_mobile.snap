@@ -8,24 +8,24 @@ paragraph
 group "Silence"
   Video
   group "Player controls"
-    button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
+    button "Play"
     button "Mute"
+    button "Captions" [pressed=false]
     button "Playback speed 1×" [expanded=false] [haspopup=menu]
       StaticText "1×"
-    button "Captions" [pressed=false]
     button "Fullscreen"
   status [atomic] [live=polite]
 group "Plain"
   Video
   group "Player controls"
-    button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
+    button "Play"
     button "Mute"
-    button "Playback speed 1×" [expanded=false] [haspopup=menu]
-      StaticText "1×"
     button "Captions" [disabled] [pressed=false]
     StaticText "No captions for this video"
+    button "Playback speed 1×" [expanded=false] [haspopup=menu]
+      StaticText "1×"
     button "Fullscreen"
   status [atomic] [live=polite]
 tooltip "Play K"
