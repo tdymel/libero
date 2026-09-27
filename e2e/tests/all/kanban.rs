@@ -29,6 +29,91 @@ async fn a_drag_reorders_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<
     Ok(())
 }
 
+/// `card`'s handle dragged by the gap between column 0 and `column`, and `slots` cards down.
+async fn drag_across<D: Driver>(d: &mut D, card: &str, column: usize, slots: f64) -> Result<()> {
+    let (from, to) = (
+        d.rect("#column-0").await?,
+        d.rect(&format!("#column-{column}")).await?,
+    );
+    let (alpha, beta) = (d.rect("#Alpha").await?, d.rect("#Beta").await?);
+    let handle = format!("#{card} [data-slot=handle]");
+    d.drag(&handle, to.x - from.x, (beta.y - alpha.y) * slots)
+        .await
+}
+
+async fn a_drag_moves_a_card_across<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // Beta, second in To do, level with the slot below Delta in Doing.
+    drag_across(d, "Beta", 1, 0.0).await?;
+    eventually_text(
+        d,
+        "#order",
+        "Alpha Gamma | Delta Beta | ",
+        "a drag to Doing",
+    )
+    .await?;
+    ensure!(
+        d.text("#moves").await? == "0.1>1.1 ",
+        "one move to column 1"
+    );
+    eventually_text(
+        d,
+        STATUS,
+        "Beta moved to Doing, position 2 of 2.",
+        "the drop across",
+    )
+    .await?;
+    eventually_focused(d, "#Beta [data-slot=handle]", "a drag across").await?;
+
+    // Gamma, now second in To do, two slots up: first in Doing.
+    drag_across(d, "Gamma", 1, -2.0).await?;
+    eventually_text(
+        d,
+        "#order",
+        "Alpha | Gamma Delta Beta | ",
+        "a drag above Delta",
+    )
+    .await?;
+    Ok(())
+}
+
+async fn a_drag_fills_an_empty_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    drag_across(d, "Gamma", 2, -2.0).await?;
+    eventually_text(d, "#order", "Alpha Beta | Delta | Gamma", "a drag to Done").await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Gamma moved to Done, position 1 of 1.",
+        "the drop in an empty column",
+    )
+    .await?;
+    eventually_focused(d, "#Gamma [data-slot=handle]", "a drag to Done").await?;
+    Ok(())
+}
+
+async fn a_drop_off_the_board_puts_it_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (alpha, board) = (d.rect("#Alpha").await?, d.rect("#board").await?);
+    d.drag(
+        "#Alpha [data-slot=handle]",
+        0.0,
+        board.y + board.height - alpha.y + alpha.height * 2.0,
+    )
+    .await?;
+    eventually_text(
+        d,
+        STATUS,
+        "Cancelled. Alpha back at position 1 of 3.",
+        "a drop below the board",
+    )
+    .await?;
+    linger(d, 4).await;
+    ensure!(
+        d.text("#order").await? == START,
+        "a drop off the board moved a card"
+    );
+    ensure!(d.text("#moves").await?.is_empty(), "a move was reported");
+    Ok(())
+}
+
 async fn the_keyboard_reorders_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus("#Beta [data-slot=handle]").await?;
     d.press(keyboard::SPACE).await?;
@@ -144,6 +229,21 @@ e2e::scenario!(
     a_drag_reorders_a_column
 );
 e2e::scenario!(
+    a_handle_drag_moves_a_card_into_another_column_at_the_slot_it_was_let_go,
+    "/kanban",
+    a_drag_moves_a_card_across
+);
+e2e::scenario!(
+    a_handle_drag_moves_a_card_into_an_empty_column,
+    "/kanban",
+    a_drag_fills_an_empty_column
+);
+e2e::scenario!(
+    a_handle_drag_let_go_off_the_board_puts_the_card_back_and_says_so,
+    "/kanban",
+    a_drop_off_the_board_puts_it_back
+);
+e2e::scenario!(
     space_lifts_an_arrow_moves_and_space_drops_in_a_column_each_step_announced,
     "/kanban",
     the_keyboard_reorders_a_column
@@ -227,6 +327,72 @@ fn a_narrow_column_wraps_the_move_buttons_below_the_content() {
             buttons_top >= handle_bottom,
             "the buttons did not wrap: {measured}"
         );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The client rect's centre of `selector`'s first match, on `page`.
+async fn centre(page: &chromiumoxide::Page, selector: &str) -> e2e::passes::pointer::Point {
+    e2e::passes::pointer::centre_of(page, selector)
+        .await
+        .unwrap()
+}
+
+/// A finger on a handle drags the card to the next column; on a card's text it scrolls the board.
+#[test]
+fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer::{Point, touch_drag};
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        let handle = centre(page, "#Beta [data-slot=handle]").await;
+        let (from, to) = (
+            centre(page, "#column-0").await,
+            centre(page, "#column-1").await,
+        );
+        let at = Point {
+            x: handle.x + (to.x - from.x),
+            y: handle.y,
+        };
+        touch_drag(page, handle, at, 12).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#order').textContent === 'Alpha Gamma | Delta Beta | '",
+            "a touch drag on the handle to move Beta to Doing",
+        )
+        .await
+        .unwrap();
+
+        // From the text's end edge leftwards, inside the viewport.
+        let text = centre(page, "#Alpha [data-slot=content]").await;
+        let (start, end) = (
+            Point {
+                x: text.x + 60.0,
+                y: text.y,
+            },
+            Point {
+                x: text.x - 90.0,
+                y: text.y,
+            },
+        );
+        touch_drag(page, start, end, 12).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#board').scrollLeft > 50",
+            "a swipe on a card's text to scroll the board",
+        )
+        .await
+        .unwrap();
+        let order: String = page
+            .evaluate("document.querySelector('#order').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(order, "Alpha Gamma | Delta Beta | ", "a swipe moved a card");
+        fixture.console.assert_clean("touch drags").unwrap();
         fixture.close().await.unwrap();
     });
 }

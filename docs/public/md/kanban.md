@@ -4,13 +4,15 @@ Crate: `libero`
 Import: `use libero::components::{Kanban, KanbanCard, KanbanColumn, KanbanMove};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/kanban>
 Index: [index.md](index.md) lists every other page
-Description: A board of columns whose cards reorder in a column by drag, keyboard or move buttons, and move to another column by a Move to menu.
+Description: A board of columns whose cards move by drag in a column or to another, by keyboard or move buttons in a column, and to another column by a Move to menu.
 
-A board of columns. A card reorders in its column by dragging its handle, by
-keyboard, or with its move buttons, and moves to another column with its Move
-to menu. `onmove` gets a `KanbanMove` with the old and new column and index,
-and `apply` does it to a `Vec<Vec<T>>`. The cards are your content: the board
-draws no card look.
+A board of columns. A card moves by dragging its handle, in its column or to
+another; by keyboard or with its move buttons in its column; and to another
+column with its Move to menu. `onmove` gets a `KanbanMove` with the old and new
+column and index, and `apply` does it to a `Vec<Vec<T>>`. The cards are your
+content: the board draws no card look. The docs demo builds Jira-style issue
+cards from `Text`, `Badge`, `Icon` and `Avatar`, with a count in each column's
+`header`.
 
 ## Usage
 
@@ -42,8 +44,9 @@ fn Demo() -> Element {
 }
 ```
 
-Key each column and card by its data, not its index. A move to another column
-lands the card at that column's end.
+Key each column and card by its data, not its index. A drag to another column
+lands the card where it was let go; the Move to menu lands it at that column's
+end.
 
 ## Props
 
@@ -114,14 +117,17 @@ parts work.
   column menu button named by `KanbanLabels::move_to`, each naming the card
   ("Move Write up", "Move Write to column"). The menu lists every column by
   `label`, the card's own disabled. Neither needs a drag (WCAG 2.5.7).
-- A card moved to another column lands at its end, and its Move to button takes
-  the focus there.
+- A card moved to another column by its Move to menu lands at that column's
+  end, and its Move to button takes the focus there. One dragged there lands
+  where it was let go, and its handle keeps the focus.
 - One `role="status"` region for the board announces each lift, move, drop and
-  cancel, and a move to another column with the column's name and the card's
+  cancel, and a move or a drop in another column with the column's name and the card's
   position, from the `SortableLabels` and `KanbanLabels` templates of the
   active `Localization`.
 - A drag starts after the pointer moved 4px (8px for a touch); only the handle
-  takes a touch, so a swipe on the rest of a card scrolls.
+  takes a touch, so a swipe on the rest of a card scrolls. The column under the
+  dragged card's centre takes it, marked `target`; let go off the board, the
+  card goes back.
 - In a narrow column, where the content would get less than 8rem, the move
   buttons wrap below it.
 
@@ -132,8 +138,10 @@ parts work.
 
 ### Limits
 
-- A pointer drag moves a card within its column only. Moving to another column
-  is the Move to menu.
+- The keyboard drag moves a card within its column only. Moving to another
+  column is the Move to menu.
+- A drag does not scroll the board or a column: drop where you can see, or use
+  the Move to menu.
 - Columns keep their place: the board has no column reorder.
 
 ## Data attributes
@@ -142,5 +150,6 @@ State tokens on `data-state`.
 
 | Token | On | Condition |
 |---|---|---|
-| `sorting` | `KanbanColumn`, `KanbanCard` | A card of the column is being dragged. |
+| `sorting` | `KanbanColumn`, `KanbanCard` | A card is being dragged: by keyboard in this column, by pointer anywhere on the board. |
 | `dragging` | `KanbanCard` | This card is the one dragged. |
+| `target` | `KanbanColumn` | A card dragged by pointer would land in this column. |

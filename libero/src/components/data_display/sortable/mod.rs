@@ -3,6 +3,7 @@ mod sortable;
 mod use_sortable;
 
 pub use reorder::SortableMove;
+pub(crate) use reorder::{Span, shift, slot_offset, target_index};
 pub(crate) use sortable::{
     SORTABLE_CONTENT_SX, SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, item_name, sortable_item_sx,
 };

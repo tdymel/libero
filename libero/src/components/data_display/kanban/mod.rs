@@ -1,4 +1,6 @@
+mod drag;
 mod kanban;
+mod lanes;
 mod moves;
 
 pub use kanban::{

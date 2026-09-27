@@ -1,7 +1,13 @@
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
-use super::moves::KanbanMove;
+use super::{
+    drag::{
+        BoardDrag, BoardDragOptions, Control, Landing, use_board_card, use_board_drag,
+        use_board_list,
+    },
+    moves::KanbanMove,
+};
 use crate::{
     CssLayer,
     components::{
@@ -55,6 +61,12 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
                 .min_height("48px"),
         )
         .when("sorting", sx().user_select("none"))
+        .when(
+            "target",
+            sx().border_color("primary")
+                .background("color-mix(in srgb, var(--lsx-primary) 8%, var(--lsx-muted-1))")
+                .media("(forced-colors: active)", sx().border_color("Highlight")),
+        )
 });
 
 // Under 8rem for the content, as in a 220px column, the move buttons wrap below it, end-aligned.
@@ -78,9 +90,10 @@ struct Board {
     counts: CopyValue<Vec<usize>>,
     onmove: Callback<KanbanMove>,
     announcer: Announcer,
-    /// Where a card moved across lands: its Move to trigger takes the focus there.
-    landing: CopyValue<Option<(usize, usize)>>,
+    /// Where a card moved by the board lands: one of its controls takes the focus there.
+    landing: CopyValue<Option<Landing>>,
     move_buttons: Signal<bool>,
+    drag: BoardDrag,
 }
 
 /// What a [`KanbanCard`] reads from its [`KanbanColumn`].
@@ -133,13 +146,25 @@ pub fn Kanban(props: KanbanProps) -> Element {
     if *move_buttons.peek() != props.move_buttons {
         move_buttons.set(props.move_buttons);
     }
-    use_context_provider(|| Board {
-        labels: Signal::new(Vec::new()),
-        counts: CopyValue::new(Vec::new()),
+    let labels = use_signal(Vec::new);
+    let landing = use_hook(|| CopyValue::new(None));
+    let drag = use_board_drag(BoardDragOptions {
         onmove: Callback::new(move |step| onmove.call(step)),
         announcer,
-        landing: CopyValue::new(None),
+        labels,
+        landing,
+    });
+    use_context_provider(|| Board {
+        labels,
+        counts: CopyValue::new(Vec::new()),
+        onmove: Callback::new(move |step| {
+            drag.unsettle();
+            onmove.call(step);
+        }),
+        announcer,
+        landing,
         move_buttons,
+        drag,
     });
 
     let board = use_box()
@@ -148,6 +173,10 @@ pub fn Kanban(props: KanbanProps) -> Element {
         .sx(&props.sx)
         .states(&props.states)
         .prepare()
+        .element(&drag.element)
+        .event("onpointermove", drag.onpointermove)
+        .event("onpointerup", drag.onpointerup)
+        .event("onpointercancel", drag.onpointercancel)
         .render(HtmlTag::Div, props.attributes, props.children);
 
     rsx! {
@@ -243,11 +272,16 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         instructions,
     });
     let words = current_localization().sortable;
+    let room = use_board_list(board.drag, column, list.element);
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with("sorting", (list.sorting)())
+        .with("sorting", (list.sorting)() || (board.drag.sorting)())
+        .with(
+            "target",
+            (board.drag.target)().is_some_and(|(at, _)| at == column),
+        )
         .into();
 
     // A custom header may hold more than the name: `label` then names the list.
@@ -255,7 +289,10 @@ pub fn KanbanColumn(props: KanbanColumnProps) -> Element {
         Some(_) => ("aria-label", props.label.clone()),
         None => ("aria-labelledby", header_id()),
     };
+    // The slot a card from another column opens grows the list, not past its edge.
+    let room = room();
     let items = use_box()
+        .style((room > 0.0).then(|| format!("padding-bottom: {room}px")))
         .prepare()
         .element(&list.element)
         .attr("data-slot", KanbanColumnPart::List.slot())
@@ -331,7 +368,16 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
     let item = use_labelled_sortable_item(props.index, props.label.clone());
     let words = current_localization();
     let index = props.index;
-    let dragging = (item.dragging)();
+    let name = item_name(words.sortable.item, props.label.as_deref(), index);
+    let carried = use_board_card(
+        board.drag,
+        column.index,
+        index,
+        (item.element, item.handle),
+        name.clone(),
+        item.onkeydown,
+    );
+    let dragging = (item.dragging)() || (carried.dragging)();
 
     // Counted under the column the card mounted in; a board keeps its columns in place.
     let mut counts = board.counts;
@@ -355,15 +401,25 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
     let trigger = use_element();
     let mut landing = board.landing;
     let column_index = column.index;
+    let handle_node = item.handle;
     use_effect(use_reactive!(|index| {
-        let _ = trigger.mount_token();
-        if *landing.peek() == Some((column_index(), index)) && trigger.mounted().is_some() {
+        let _ = (trigger.mount_token(), handle_node.mount_token());
+        let Some(Landing { control, .. }) = landing
+            .peek()
+            .filter(|at| (at.column, at.index) == (column_index(), index))
+        else {
+            return;
+        };
+        let target = match control {
+            Control::Handle => handle_node,
+            Control::MoveTo => trigger,
+        };
+        if target.mounted().is_some() {
             landing.set(None);
-            let _ = trigger.focus();
+            let _ = target.focus();
         }
     }));
 
-    let name = item_name(words.sortable.item, props.label.as_deref(), index);
     let named = |template: &str| fill(template, &[("label", &name)]);
     let menu = use_menu();
     let here = column_index();
@@ -383,7 +439,11 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
                 .onselect(move |()| {
                     let to = counts.peek().get(to_column).copied().unwrap_or(0);
                     let from_column = *column_index.peek();
-                    landing.set(Some((to_column, to)));
+                    landing.set(Some(Landing {
+                        column: to_column,
+                        index: to,
+                        control: Control::MoveTo,
+                    }));
                     board.announcer.say(fill(
                         words.kanban.moved,
                         &[
@@ -408,8 +468,13 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .states
         .unwrap_or_default()
         .with("dragging", dragging)
-        .with("sorting", (item.sorting)())
+        .with("sorting", (item.sorting)() || (board.drag.sorting)())
         .into();
+    // A keyboard move's offsets win over a dropped card's slide.
+    let style = match (item.sorting)() {
+        true => item.style(),
+        false => carried.style().unwrap_or_else(|| item.style()),
+    };
 
     let content_class = use_css(Some(&SORTABLE_CONTENT_SX), CssLayer::Framework);
     let move_class = use_css(Some(&SORTABLE_MOVE_SX), CssLayer::Framework);
@@ -421,8 +486,8 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .attr("type", "button")
         .attr("aria-label", named(words.sortable.handle))
         .attr("aria-describedby", (column.instructions)())
-        .event("onpointerdown", item.onpointerdown)
-        .event("onkeydown", item.onkeydown)
+        .event("onpointerdown", carried.onpointerdown)
+        .event("onkeydown", carried.onkeydown)
         .event("onblur", item.onblur)
         .render(
             HtmlTag::Button,
@@ -475,7 +540,7 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)
-        .style(Some(item.style()))
+        .style(Some(style))
         .prepare()
         .element(&item.element)
         .render(
@@ -502,6 +567,18 @@ mod tests {
         assert!(css.contains("flex-wrap:wrap"), "{css}");
         assert!(css.contains("flex-basis:8rem"), "{css}");
         assert!(css.contains("margin-inline-start:auto"), "{css}");
+    }
+
+    #[test]
+    fn the_column_a_dragged_card_would_land_in_is_marked() {
+        let css = Stylesheet::from(&KANBAN_COLUMN_SX).as_str().to_string();
+        let target = css
+            .split("[data-state~=\"target\"]")
+            .nth(1)
+            .unwrap_or_default();
+
+        assert!(target.contains("var(--lsx-primary)"), "{css}");
+        assert!(css.contains("Highlight"), "{css}");
     }
 
     /// The slot names are public: a rename here is a breaking change.

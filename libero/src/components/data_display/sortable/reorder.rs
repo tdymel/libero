@@ -2,9 +2,9 @@
 
 /// One item's extent along the list's axis, measured when the drag started.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) struct Span {
-    pub(super) start: f64,
-    pub(super) size: f64,
+pub(crate) struct Span {
+    pub(crate) start: f64,
+    pub(crate) size: f64,
 }
 
 impl Span {
@@ -54,7 +54,7 @@ fn pitch(spans: &[Span], from: usize) -> f64 {
 }
 
 /// The dragged item's offset, kept between the list's first and last item.
-pub(super) fn clamp_offset(spans: &[Span], from: usize, offset: f64) -> f64 {
+pub(crate) fn clamp_offset(spans: &[Span], from: usize, offset: f64) -> f64 {
     let (Some(first), Some(last)) = (spans.first(), spans.last()) else {
         return 0.0;
     };
@@ -68,7 +68,7 @@ pub(super) fn clamp_offset(spans: &[Span], from: usize, offset: f64) -> f64 {
 /// Where item `from` lands, dragged by `offset`: past every neighbour whose
 /// middle its leading edge crossed. Its middle would never get a tall item past
 /// a short last one.
-pub(super) fn target_index(spans: &[Span], from: usize, offset: f64) -> usize {
+pub(crate) fn target_index(spans: &[Span], from: usize, offset: f64) -> usize {
     let own = spans[from];
     let offset = clamp_offset(spans, from, offset);
     let after = spans[from + 1..]
@@ -87,7 +87,7 @@ pub(super) fn target_index(spans: &[Span], from: usize, offset: f64) -> usize {
 }
 
 /// How far item `from` travels to sit in slot `to`, its neighbours stepped aside.
-pub(super) fn slot_offset(spans: &[Span], from: usize, to: usize) -> f64 {
+pub(crate) fn slot_offset(spans: &[Span], from: usize, to: usize) -> f64 {
     let own = spans[from];
     match to.cmp(&from) {
         std::cmp::Ordering::Greater => spans[to].end() - own.end(),
@@ -97,7 +97,7 @@ pub(super) fn slot_offset(spans: &[Span], from: usize, to: usize) -> f64 {
 }
 
 /// How far item `index` steps aside while item `from` hovers over slot `to`.
-pub(super) fn shift(spans: &[Span], from: usize, to: usize, index: usize) -> f64 {
+pub(crate) fn shift(spans: &[Span], from: usize, to: usize, index: usize) -> f64 {
     if from < to && (from + 1..=to).contains(&index) {
         -pitch(spans, from)
     } else if to < from && (to..from).contains(&index) {
