@@ -683,7 +683,8 @@ e2e::scenario!(
 /// Todo 1369: a centring flex row shrink-wraps its child, as the docs demo's
 /// preview; the player still takes the row's width, or 40rem in a wrapper the
 /// row sizes, keeps its ratio, and its buttons stay one line. Without
-/// `aspect_ratio` the box is 16:9 too, the file's metadata loaded.
+/// `aspect_ratio` the box is 16:9 too: with the metadata loaded, before any
+/// (`preload: None`), and with a failing source (1386), so it never jumps.
 #[test]
 fn a_shrink_wrapping_parent_keeps_the_box() {
     block_on(async {
@@ -698,7 +699,20 @@ fn a_shrink_wrapping_parent_keeps_the_box() {
         )
         .await
         .unwrap();
-        for (row, width) in [("#row", 512), ("#wrapped", 640), ("#unsized", 512)] {
+        wait::for_js_true(
+            page,
+            "document.querySelector('#failing [role=alert]') !== null",
+            "the failing source's alert",
+        )
+        .await
+        .unwrap();
+        for (row, width) in [
+            ("#row", 512),
+            ("#wrapped", 640),
+            ("#unsized", 512),
+            ("#waiting", 512),
+            ("#failing", 512),
+        ] {
             wait::for_js_true(
                 page,
                 &format!(

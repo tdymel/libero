@@ -258,8 +258,8 @@ base_props! {
         /// A picture shown until playing starts.
         #[props(default, into)]
         poster: Option<String>,
-        /// The picture's CSS `aspect-ratio`, such as `"9 / 16"` for a portrait clip.
-        /// Unset, `16 / 9`; `"auto"` follows the file, and the box jumps as it loads.
+        /// The picture's CSS `aspect-ratio`. Unset, `16 / 9`, the file letterboxed in it.
+        /// Portrait clips: pass their ratio, or `"auto"` (the box then jumps as the file loads).
         #[props(default, into)]
         aspect_ratio: Option<String>,
         /// Captions, subtitles and more, as WebVTT files.

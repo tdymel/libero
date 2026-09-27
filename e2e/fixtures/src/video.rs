@@ -2,7 +2,7 @@
 //! subtitle track, plus one without tracks.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, MediaTrack, Text, TrackKind, Video};
+use libero::components::{Flex, MediaPreload, MediaTrack, Text, TrackKind, Video};
 
 use crate::Routes;
 use crate::audio::silent_wav;
@@ -29,7 +29,14 @@ fn CenteredPage() -> Element {
             div { Video { src: src.clone(), label: "Wrapped", aspect_ratio: "16 / 9" } }
         }
         // No ratio given: 16:9 all the same, not the file's.
-        div { id: "unsized", width: "32rem", Video { src, label: "Unsized" } }
+        div { id: "unsized", width: "32rem", Video { src: src.clone(), label: "Unsized" } }
+        // Todo 1386: before any metadata, and with a failing source, in the demo's row.
+        div { id: "waiting", display: "flex", justify_content: "center", width: "32rem",
+            Video { src, label: "Waiting", preload: MediaPreload::None }
+        }
+        div { id: "failing", display: "flex", justify_content: "center", width: "32rem",
+            Video { src: "/missing.webm", label: "Failing" }
+        }
     }
 }
 
