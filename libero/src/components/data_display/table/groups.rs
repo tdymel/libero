@@ -7,14 +7,18 @@ pub(super) enum HeaderCell {
 }
 
 /// The header rows, top first, over the shown columns' group paths (outermost
-/// first), by header index. Without groups, one row of the columns.
-pub(super) fn header_rows(shown: &[(usize, &[String])]) -> Vec<Vec<HeaderCell>> {
+/// first), by header index. Without groups, one row of the columns. A group
+/// splits where `split(position)` holds, as at a pin edge.
+pub(super) fn header_rows(
+    shown: &[(usize, &[String])],
+    split: impl Fn(usize) -> bool,
+) -> Vec<Vec<HeaderCell>> {
     let depth = shown.iter().map(|(_, path)| path.len()).max().unwrap_or(0);
     let mut rows: Vec<Vec<HeaderCell>> = vec![Vec::new(); depth + 1];
     for (position, &(index, path)) in shown.iter().enumerate() {
         for level in 0..path.len() {
             // Merged with the column before when the whole path down to here matches.
-            let continues = position > 0 && {
+            let continues = position > 0 && !split(position) && {
                 let before = shown[position - 1].1;
                 before.len() > level && before[..=level] == path[..=level]
             };
@@ -63,7 +67,7 @@ mod tests {
             .enumerate()
             .map(|(index, path)| (index, path.as_slice()))
             .collect();
-        header_rows(&shown)
+        header_rows(&shown, |_| false)
     }
 
     fn group(name: &str, span: usize) -> HeaderCell {
@@ -148,6 +152,21 @@ mod tests {
 
         assert_eq!(layout[0][0], group("A", 1));
         assert_eq!(layout[0][2], group("A", 1));
+    }
+
+    #[test]
+    fn a_group_splits_where_told() {
+        let paths = [path(&["A"]), path(&["A"])];
+        let shown: Vec<(usize, &[String])> = paths
+            .iter()
+            .enumerate()
+            .map(|(index, path)| (index, path.as_slice()))
+            .collect();
+
+        assert_eq!(
+            header_rows(&shown, |position| position == 1)[0],
+            vec![group("A", 1), group("A", 1)]
+        );
     }
 
     #[test]

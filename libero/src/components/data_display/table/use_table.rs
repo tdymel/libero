@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::core::TableSort;
+use super::{core::TableSort, pinning::PinnedColumns};
 use crate::utils::warn;
 
 /// One piece of table state: the caller's when controlled, else the table's own.
@@ -98,6 +98,9 @@ pub(crate) struct TableConfig {
     pub quick_filter: Option<String>,
     pub default_quick_filter: String,
     pub onquickfilterchange: Option<EventHandler<String>>,
+    pub pinned_columns: Option<PinnedColumns>,
+    pub default_pinned_columns: PinnedColumns,
+    pub onpinnedcolumnschange: Option<EventHandler<PinnedColumns>>,
 }
 
 /// A table's state, one slice per feature.
@@ -113,6 +116,7 @@ pub(crate) struct TableState {
     pub hidden_columns: StateSlice<Vec<String>>,
     /// The quick filter's text.
     pub quick_filter: StateSlice<String>,
+    pub pinned_columns: StateSlice<PinnedColumns>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -152,6 +156,12 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.onquickfilterchange,
         "Table: a controlled `quick_filter` without `onquickfilterchange` never changes.",
     );
+    let pinned_columns = use_state_slice(
+        config.pinned_columns,
+        || config.default_pinned_columns,
+        config.onpinnedcolumnschange,
+        "Table: a controlled `pinned_columns` without `onpinnedcolumnschange` never changes.",
+    );
     TableState {
         sort,
         selection,
@@ -159,5 +169,6 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         page_size,
         hidden_columns,
         quick_filter,
+        pinned_columns,
     }
 }

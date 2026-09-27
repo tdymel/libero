@@ -78,7 +78,7 @@ impl TableDefaults {
         selected_color: ColorValue::Shade(Color::Primary, ColorShade::S1),
     };
 
-    fn border() -> String {
+    pub(crate) fn border() -> String {
         format!("1px solid {}", TABLE_BORDER_COLOR.value())
     }
 

@@ -6,6 +6,7 @@ use pictogram_icons_lucide as lucide;
 use super::{
     cell_value::SortDirection,
     core::{ActiveSort, TableSort},
+    pinning::{PinSide, PinnedColumns},
     use_table::StateSlice,
 };
 use crate::{
@@ -28,7 +29,7 @@ pub(super) struct MenuColumn {
     pub hidden: bool,
 }
 
-/// A header's menu: sort, hide, and the columns to show.
+/// A header's menu: sort, pin, hide, and the columns to show.
 #[component]
 pub(super) fn ColumnMenu(
     index: usize,
@@ -37,6 +38,7 @@ pub(super) fn ColumnMenu(
     sort: StateSlice<Vec<TableSort>>,
     multi_sort: bool,
     hidden: StateSlice<Vec<String>>,
+    pinned: StateSlice<PinnedColumns>,
     labels: TableLabels,
     size: Size,
     parts: Input<Parts<MenuPart>>,
@@ -84,6 +86,23 @@ pub(super) fn ColumnMenu(
         }
         if current.is_some() {
             items.push(MenuItem::new(labels.unsort).onselect(set(None)).into());
+        }
+        items.push(MenuEntry::Separator);
+    }
+    // The side it is on is left out.
+    let side = pinned.read().side(&column.header);
+    for (label, to) in [
+        (labels.pin_start, Some(PinSide::Start)),
+        (labels.pin_end, Some(PinSide::End)),
+        (labels.unpin, None),
+    ] {
+        if to != side {
+            let header = column.header.clone();
+            items.push(
+                MenuItem::new(label)
+                    .onselect(move |_| pinned.set(pinned.read().with(&header, to)))
+                    .into(),
+            );
         }
     }
     let hideable: Vec<usize> = (0..columns.len())

@@ -74,6 +74,10 @@ pub struct TableLabels {
     /// assert_eq!((TableLabels::GERMAN.results)(12), "12 Zeilen");
     /// ```
     pub results: fn(usize) -> String,
+    /// Holds the column at the table's start edge, the left in a left-to-right page.
+    pub pin_start: &'static str,
+    pub pin_end: &'static str,
+    pub unpin: &'static str,
 }
 
 /// `TableLabels::ENGLISH.select_row`. A named fn, so every copy compares equal.
@@ -161,6 +165,9 @@ impl TableLabels {
         search: "Search",
         no_results: "No matching rows",
         results: english_results,
+        pin_start: "Pin to start",
+        pin_end: "Pin to end",
+        unpin: "Unpin",
     };
 
     pub const GERMAN: Self = Self {
@@ -183,5 +190,8 @@ impl TableLabels {
         search: "Suchen",
         no_results: "Keine passenden Zeilen",
         results: german_results,
+        pin_start: "Am Anfang fixieren",
+        pin_end: "Am Ende fixieren",
+        unpin: "Fixierung lösen",
     };
 }

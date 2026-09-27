@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Chip, Code, Table, Text, column};
+use libero::components::{Chip, Code, PinnedColumns, Table, Text, column};
 use libero::sx::sx;
 
 #[derive(Clone, PartialEq)]
@@ -78,6 +78,13 @@ const SCROLL_WIDTH: &str = "640px";
 /// Shorter than the header and three rows, so `max_height` has something to scroll.
 const MAX_HEIGHT: &str = "100px";
 
+/// Name, the outermost start column, needs no `width`; nor does Bonus at the end.
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, bonus: Option<f64> }
+// snippet: let people: Vec<Person> = Vec::new();
+// snippet: in Table { caption: "Team members", data: people, columns: Vec::new(), .. }
+const PINNED: &str =
+    r#"default_pinned_columns: PinnedColumns::default().start(["Name"]).end(["Bonus"])"#;
+
 /// The `empty` switch empties `data` too, or the slot would never show.
 fn no_rows(values: &DemoValues) -> bool {
     values.str("empty") == "true"
@@ -126,12 +133,15 @@ pub fn TablePage() -> Element {
                     prop("hidden_columns", "Option<Vec<String>>").default("None").doc("The hidden columns' headers. Set, visibility is controlled: pair it with `onhiddencolumnschange`. A hidden sorted column keeps sorting."),
                     prop("default_hidden_columns", "Vec<String>").default("[]").doc("Seeds the hidden columns once. Ignored when `hidden_columns` is set."),
                     prop("onhiddencolumnschange", "EventHandler<Vec<String>>").default("None").doc("Called with the hidden columns a column menu pick asks for."),
-                    prop("column_menu", "bool").default("false").doc("Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, hide the column, and a Columns submenu that shows or hides the others."),
                     prop("quick_filter", "Option<String>").default("None").doc("The quick filter's text. A row stays when every word occurs, ignoring case, in the text of one of its shown, `filterable` cells. Set, the filter is controlled: pair it with `onquickfilterchange`."),
                     prop("default_quick_filter", "String").default("\"\"").doc("Seeds the quick filter once. Ignored when `quick_filter` is set."),
                     prop("onquickfilterchange", "EventHandler<String>").default("None").doc("Called with the text typed into the quick-filter field."),
                     prop("show_quick_filter", "bool").default("false").doc("Puts a search field above the table that drives the quick filter."),
                     prop("manual_filter", "bool").default("false").doc("`data` comes filtered, say from a server: the field only reports through `onquickfilterchange`. Pair it with `manual_pagination` and `row_count` when paged."),
+                    prop("pinned_columns", "Option<PinnedColumns>").default("None").doc("The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly."),
+                    prop("default_pinned_columns", "PinnedColumns").default("none pinned").doc("Seeds the pinned columns once. Ignored when `pinned_columns` is set."),
+                    prop("onpinnedcolumnschange", "EventHandler<PinnedColumns>").default("None").doc("Called with the pinned columns a column menu pick asks for."),
+                    prop("column_menu", "bool").default("false").doc("Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, hide the column, and a Columns submenu that shows or hides the others."),
                     prop("column_menu_parts", "Parts<MenuPart>").default("none").doc("The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`."),
                 ]),
                 props("column()", vec![
@@ -173,6 +183,9 @@ pub fn TablePage() -> Element {
                     "The quick-filter field is a labelled `type=\"search\"` input, \"Search\", described by the table's caption. Once typing pauses for half a second, a polite live region says how many rows are left, \"2 rows\".",
                     "With `column_menu`, each menu button is named after its column, \"Age column options\", and the header keeps its text as its name. The Columns submenu lists checkbox items, and the last shown column cannot be hidden.",
                     "A group header is a `th scope=\"colgroup\"` over its columns, so a screen reader reads it with each of their cells. A column outside any group, and the select-all box, span every header row.",
+                    "Pinned columns move to their edge in the DOM too, so Tab and a screen reader meet the cells in the order they are seen. The checkbox column pins with the start ones.",
+                    "A pinned column past one without a `width` warns in a debug build: its offset is unknown, so it would overlap.",
+                    "A group or a `col_span` stops at a pin edge: a group over pinned and scrolled columns shows as two headers, and a group header never pins.",
                 ])
                 .must([
                     "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
@@ -183,6 +196,7 @@ pub fn TablePage() -> Element {
                 ])
                 .limits([
                     "On Blitz, once a `max_height` table's rows scroll, a click on a header's sort or menu button misses: Blitz hit-tests the header where it sat before the scroll. Tab to the button and press Enter instead.",
+                    "On Blitz, the same holds for a pinned column's cells once the table scrolls sideways. In a right-to-left page Blitz cannot scroll a wide table at all (todo 707), so pinning shows no effect there.",
                     "On Blitz, a `max_height` table with column groups keeps only its last header row in place; the group rows scroll away with the rows.",
                 ]),
             lead: rsx! {
@@ -318,6 +332,14 @@ pub fn TablePage() -> Element {
                     Code { source: "max_height" }
                     " caps a long table's height: its rows scroll under a header that stays put."
                 }
+                Text {
+                    Code { source: "default_pinned_columns" }
+                    " holds columns at the start or end edge while the rest scroll under "
+                    "them, and the column menu pins and unpins them. Start and end follow "
+                    "the page's direction. Give each pinned column but the outermost a "
+                    Code { source: "width" }
+                    ", so the next one knows where to sit."
+                }
             },
             Demo {
                 component: "Table",
@@ -342,6 +364,10 @@ pub fn TablePage() -> Element {
                         true => vec![format!("max_height: {MAX_HEIGHT:?}")],
                         false => vec![],
                     }),
+                    Control::switch("pinned").code(|_, values| match values.str("pinned") == "true" {
+                        true => vec![PINNED.to_string()],
+                        false => vec![],
+                    }),
                     Control::switch("selectable").code(|_, values| match values.str("selectable") == "true" {
                         true => vec![
                             "selectable: true".to_string(),
@@ -364,8 +390,8 @@ pub fn TablePage() -> Element {
                 wrap: Wrap(wrap_data),
                 render: move |values: DemoValues| rsx! {
                     Table {
-                        // A new table per switch: `page_sizes` seeds the page size once.
-                        key: "{values.str(\"paginate\")}",
+                        // A new table per switch: `page_sizes` and the pins seed once.
+                        key: "{values.str(\"paginate\")}-{values.str(\"pinned\")}",
                         caption: "Team members",
                         size: values.str("size"),
                         striped: values.str("striped") == "true",
@@ -375,6 +401,10 @@ pub fn TablePage() -> Element {
                             false => sx(),
                         },
                         max_height: (values.str("max_height") == "true").then(|| MAX_HEIGHT.to_string()),
+                        default_pinned_columns: match values.str("pinned") == "true" {
+                            true => PinnedColumns::default().start(["Name"]).end(["Bonus"]),
+                            false => PinnedColumns::default(),
+                        },
                         selectable: values.str("selectable") == "true",
                         multi_sort: values.str("multi_sort") == "true",
                         column_menu: values.str("column_menu") == "true",

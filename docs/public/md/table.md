@@ -62,6 +62,11 @@ scrolls sideways. The demo's switch also sets `sx().min_width("640px")`, so the
 three columns overflow at any width. `max_height` caps a long table's height:
 its rows scroll under a header that stays put.
 
+`default_pinned_columns` holds columns at the start or end edge while the rest
+scroll under them, and the column menu pins and unpins them. Start and end
+follow the page's direction. Give each pinned column but the outermost a
+`width`, so the next one knows where to sit.
+
 ## Usage
 
 ```rust
@@ -370,6 +375,43 @@ fn Demo() -> Element {
 }
 ```
 
+A wide table pins columns to its edges: here the ID and Name stay at the start
+and Actions at the end while the rest scroll sideways. ID, pinned further out
+than Name, has a `width`, so Name sits right after it. With `column_menu`, each
+header's menu pins and unpins its column.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{PinnedColumns, Table, column};
+
+#[derive(Clone, PartialEq)]
+struct Person {
+    id: u32,
+    name: String,
+}
+
+#[component]
+fn Demo() -> Element {
+    let people = vec![Person { id: 1, name: "Ada Lovelace".into() }];
+
+    rsx! {
+        Table {
+            caption: "Team members",
+            scroll: true,
+            column_menu: true,
+            default_pinned_columns: PinnedColumns::default().start(["ID", "Name"]).end(["Actions"]),
+            data: people,
+            columns: vec![
+                column("ID").value(|p: &Person| p.id).width("4rem"),
+                column("Name").value(|p: &Person| p.name.clone()).width("12rem"),
+                column("Notes").value(|p: &Person| format!("{} wrote the first program", p.name)),
+                column("Actions").value(|_: &Person| "Edit".to_string()),
+            ],
+        }
+    }
+}
+```
+
 `selectable` with a controlled `selection` of `row_key`s, and `multi_sort`:
 Shift-click a second header to break ties of the first. Each sorted header
 shows its place.
@@ -488,12 +530,15 @@ fn Demo() -> Element {
 | `hidden_columns` | `Option<Vec<String>>` | `None` | The hidden columns' headers. Set, visibility is controlled: pair it with `onhiddencolumnschange`. A hidden sorted column keeps sorting. |
 | `default_hidden_columns` | `Vec<String>` | `[]` | Seeds the hidden columns once. Ignored when `hidden_columns` is set. |
 | `onhiddencolumnschange` | `EventHandler<Vec<String>>` | `None` | Called with the hidden columns a column menu pick asks for. |
-| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, hide the column, and a Columns submenu that shows or hides the others. |
 | `quick_filter` | `Option<String>` | `None` | The quick filter's text. A row stays when every word occurs, ignoring case, in the text of one of its shown, `filterable` cells. Set, the filter is controlled: pair it with `onquickfilterchange`. |
 | `default_quick_filter` | `String` | `""` | Seeds the quick filter once. Ignored when `quick_filter` is set. |
 | `onquickfilterchange` | `EventHandler<String>` | `None` | Called with the text typed into the quick-filter field. |
 | `show_quick_filter` | `bool` | `false` | Puts a search field above the table that drives the quick filter. |
 | `manual_filter` | `bool` | `false` | `data` comes filtered, say from a server: the field only reports through `onquickfilterchange`. Pair it with `manual_pagination` and `row_count` when paged. |
+| `pinned_columns` | `Option<PinnedColumns>` | `None` | The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly. |
+| `default_pinned_columns` | `PinnedColumns` | none pinned | Seeds the pinned columns once. Ignored when `pinned_columns` is set. |
+| `onpinnedcolumnschange` | `EventHandler<PinnedColumns>` | `None` | Called with the pinned columns a column menu pick asks for. |
+| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, hide the column, and a Columns submenu that shows or hides the others. |
 | `column_menu_parts` | `Parts<MenuPart>` | none | The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
@@ -567,6 +612,13 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - A group header is a `th scope="colgroup"` over its columns, so a screen reader
   reads it with each of their cells. A column outside any group, and the
   select-all box, span every header row.
+- Pinned columns move to their edge in the DOM too, so Tab and a screen reader
+  meet the cells in the order they are seen. The checkbox column pins with the
+  start ones.
+- A pinned column past one without a `width` warns in a debug build: its offset
+  is unknown, so it would overlap.
+- A group or a `col_span` stops at a pin edge: a group over pinned and scrolled
+  columns shows as two headers, and a group header never pins.
 
 ### You must
 
@@ -586,6 +638,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - On Blitz, once a `max_height` table's rows scroll, a click on a header's sort
   or menu button misses: Blitz hit-tests the header where it sat before the
   scroll. Tab to the button and press Enter instead.
+- On Blitz, the same holds for a pinned column's cells once the table scrolls
+  sideways. In a right-to-left page Blitz cannot scroll a wide table at all
+  (todo 707), so pinning shows no effect there.
 - On Blitz, a `max_height` table with column groups keeps only its last header
   row in place; the group rows scroll away with the rows.
 
@@ -631,5 +686,7 @@ default `start`.
 | `aria-selected` | On every body row of a `selectable` table, `true` or `false`. |
 | `data-empty` | On the body row that holds `empty`. |
 | `data-group` | On a column group's header cell. |
-| `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set. On a body row: its active `row_states`. |
+| `data-pin` | On a pinned column's `th` and `td`s, `start` or `end`. |
+| `data-pin-edge` | On the pinned cells next to the scrolled columns, which draw a rule there. |
+| `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set, `pinned` with a pinned column and `pin-select` when the checkbox column pins too. On a body row: its active `row_states`. |
 | `data-slot="range"` | On the paginated table's range text, "1–10 of 95". |

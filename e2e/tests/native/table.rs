@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{Table, column};
+use libero::components::{PinnedColumns, Table, column};
 
 #[derive(Clone, PartialEq)]
 struct Person {
@@ -143,6 +143,88 @@ fn a_wide_scroll_table_scrolls_to_its_last_column() {
         gap.abs() <= 1.0,
         "the last column ends {gap}px past the region"
     );
+}
+
+fn pinned_app(rtl: bool) -> Element {
+    let columns = (0..6)
+        .map(|i| {
+            column(format!("C{i}"))
+                .value(|p: &Person| p.name.to_string())
+                .width("120px")
+        })
+        .collect();
+    rsx! {
+        div { width: "300px", dir: if rtl { "rtl" } else { "ltr" },
+            Table {
+                aria_label: "Wide",
+                scroll: true,
+                striped: true,
+                default_pinned_columns: PinnedColumns::default().start(["C0"]).end(["C5"]),
+                data: vec![Person { name: "Ada", age: 36 }, Person { name: "Grace", age: 85 }],
+                columns,
+            }
+        }
+    }
+}
+
+/// Wheels the wide table to its far end and checks C0 at the start edge, C5 at
+/// the end and C1 scrolled away under C0.
+fn pins_hold(mut page: Page, rtl: bool) {
+    const AREA: &str = "[data-table-scroll]";
+    let area = page.rect(AREA);
+    let c1 = page.rect("thead th:nth-child(2)").0;
+    page.hover(AREA);
+    let moved = |page: &Page| (page.rect("thead th:nth-child(2)").0 - c1).abs() > 100.0;
+    page.wheel_x(AREA, 2000.0);
+    page.wait_for(moved);
+    if !moved(&page) {
+        page.wheel_x(AREA, -2000.0);
+        page.wait_for(moved);
+    }
+    let edges = |page: &Page, selector: &str| {
+        let (x, _, width, _) = page.rect(selector);
+        match rtl {
+            true => (x + width, x),
+            false => (x, x + width),
+        }
+    };
+    let (start, end) = match rtl {
+        true => (area.0 + area.2, area.0),
+        false => (area.0, area.0 + area.2),
+    };
+    for cell in [
+        "thead th:first-child",
+        "tbody tr:nth-child(2) td:first-child",
+    ] {
+        let (at, _) = edges(&page, cell);
+        assert!(
+            (at - start).abs() <= 1.0,
+            "{cell} starts at {at}, the area at {start}: {}",
+            page.tree()
+        );
+    }
+    let (_, at) = edges(&page, "thead th:last-child");
+    assert!(
+        (at - end).abs() <= 1.0,
+        "C5 ends at {at}, the area at {end}"
+    );
+    let moved = page.rect("thead th:nth-child(2)").0;
+    assert!((moved - c1).abs() > 100.0, "C1 stayed at {moved}");
+}
+
+/// 1156-2d: Blitz's sticky emulation holds start- and end-pinned cells, the
+/// header and the body ones, at both edges.
+#[test]
+fn pinned_columns_hold_at_both_edges() {
+    pins_hold(mount(|| pinned_app(false)), false);
+}
+
+/// 1156-2d: the same in a right-to-left page, where the start edge is the right.
+/// Blitz scrolls the whole RTL table off the area instead (C0 and C5 at -240).
+#[test]
+#[ignore = "todo 707: Blitz cannot scroll an RTL ScrollArea's left overflow"]
+fn pinned_columns_hold_at_both_edges_right_to_left() {
+    pins_hold(mount(|| pinned_app(true)), true);
 }
 
 /// 1156-2a: a column's `width` sits on its header cell (Blitz ignores `<col>`)

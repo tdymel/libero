@@ -30,6 +30,7 @@ use super::{
     filter::{FilteredRows, QuickFilter, query_words},
     groups::spanned,
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
+    pinning::{PinSide, PinnedColumns, pin_columns, pin_runs, span_pin},
     selection::Selection,
     use_table::{TableConfig, use_table},
 };
@@ -170,13 +171,13 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     .per_size(|size| {
         sx().selector(
             "& [data-select]",
-            sx().box_sizing("border-box").width(format!(
-                "calc({} + 2 * {})",
-                CHECKBOX_BOX_SIZE.value(size),
-                TABLE_PAD_X.value()
-            )),
+            sx().box_sizing("border-box").width(select_width(size)),
         )
     })
+    // The boxes have no label: no gap for one, which would widen the column
+    // past `select_width`, the inset of a start-pinned column. Outranks the
+    // field's own `[data-state~=inline]` gap whatever the stylesheet order.
+    .selector("& [data-select] > [data-state]", sx().column_gap("0"))
     .when(
         "row-click",
         sx().selector("& tbody tr:not([data-empty])", sx().cursor("pointer")),
@@ -202,7 +203,58 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
                 sx().background(NamedColorCss::SURFACE.value()),
             ),
     )
+    // Opaque over the scrolled cells: a body cell takes its row's colour, which
+    // is the surface unless hovered, striped or selected.
+    .when(
+        "pinned",
+        sx().selector(
+            "& tbody tr",
+            sx().background(NamedColorCss::SURFACE.value()),
+        )
+        .selector(
+            "& [data-pin]",
+            sx().position("sticky").z_index("1").background("inherit"),
+        )
+        // Above the body cells scrolling under a sticky header, or a sticky `thead`.
+        .selector("& thead", sx().z_index("2"))
+        .selector("& thead th", sx().z_index("2"))
+        .selector(
+            "& thead th[data-pin]",
+            sx().z_index("3").background(NamedColorCss::SURFACE.value()),
+        )
+        .selector(
+            "& [data-pin=\"start\"][data-pin-edge]",
+            sx().with("border-inline-end", TableDefaults::border()),
+        )
+        .selector(
+            "& [data-pin=\"end\"][data-pin-edge]",
+            sx().with("border-inline-start", TableDefaults::border()),
+        ),
+    )
+    .when(
+        "pin-select",
+        sx().selector(
+            "& [data-select]",
+            sx().position("sticky")
+                .with("inset-inline-start", "0")
+                .z_index("1")
+                .background("inherit"),
+        )
+        .selector(
+            "& thead th[data-select]",
+            sx().z_index("3").background(NamedColorCss::SURFACE.value()),
+        ),
+    )
 });
+
+/// The checkbox column's width, which a start-pinned column is inset by.
+fn select_width(size: Size) -> String {
+    format!(
+        "calc({} + 2 * {})",
+        CHECKBOX_BOX_SIZE.value(size),
+        TABLE_PAD_X.value()
+    )
+}
 
 fn caption_sx() -> Sx {
     sx().text_align_start()
@@ -327,6 +379,17 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// The hidden columns a column menu pick asks for.
     #[props(default)]
     onhiddencolumnschange: Option<EventHandler<Vec<String>>>,
+    /// The columns held at the table's start and end edges while the rest
+    /// scroll sideways; set, pinning is controlled. Pair with `scroll` or
+    /// `max_height`, and give each pinned column but the outermost a `width`.
+    #[props(default)]
+    pinned_columns: Option<PinnedColumns>,
+    /// Seeds the pinned columns once. Ignored when `pinned_columns` is set.
+    #[props(default)]
+    default_pinned_columns: PinnedColumns,
+    /// The pinned columns a column menu pick asks for.
+    #[props(default)]
+    onpinnedcolumnschange: Option<EventHandler<PinnedColumns>>,
     /// A menu button in each header: sort, hide the column, show or hide others.
     #[props(default)]
     column_menu: bool,
@@ -407,6 +470,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         quick_filter: props.quick_filter,
         default_quick_filter: props.default_quick_filter,
         onquickfilterchange: props.onquickfilterchange,
+        pinned_columns: props.pinned_columns,
+        default_pinned_columns: props.default_pinned_columns,
+        onpinnedcolumnschange: props.onpinnedcolumnschange,
     });
     let announcer = use_announcer();
     let touch = use_hook(|| CopyValue::new(false));
@@ -442,16 +508,34 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
     let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
 
-    let headers = header_specs(
+    let mut headers = header_specs(
         &props.columns,
         &props.column_defaults,
         &state.hidden_columns.read(),
     );
+    let pinned = state.pinned_columns.read();
+    let (layout, unknown) = pin_columns(
+        &mut headers,
+        &pinned,
+        props.selectable.then(|| select_width(size)).as_deref(),
+    );
+    let pins_select = props.selectable
+        && headers.iter().any(|spec| {
+            spec.pin
+                .as_ref()
+                .is_some_and(|pin| pin.side == PinSide::Start)
+        });
+    let pins = headers.iter().any(|spec| spec.pin.is_some());
+    let mut warned = use_hook(|| CopyValue::new(Vec::<String>::new()));
+    if !unknown.is_empty() && *warned.peek() != unknown {
+        warn(&format!(
+            "Table: pinned columns {unknown:?} sit past a pinned column without `width`, so \
+             their offset is unknown and they overlap it."
+        ));
+        warned.set(unknown);
+    }
     let active = active_sort(&headers, &state.sort.read(), props.multi_sort);
-    let shown: Vec<usize> = (0..headers.len())
-        .filter(|&index| !headers[index].hidden)
-        .collect();
-    let group_rows = shown
+    let group_rows = layout
         .iter()
         .map(|&index| headers[index].groups.len())
         .max()
@@ -478,6 +562,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                             sort: state.sort,
                             multi_sort: props.multi_sort,
                             hidden: state.hidden_columns,
+                            pinned: state.pinned_columns,
                             labels,
                             size,
                             parts: props.column_menu_parts.clone(),
@@ -619,27 +704,37 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     .call(row)
                     .and_then(|states| states.data_state()),
                 attributes,
-                cells: spanned(&shown, |index| {
-                    props.columns[index]
-                        .col_span
-                        .as_ref()
-                        .map_or(1, |span| span(row))
-                })
-                .into_iter()
-                .map(|(index, span)| {
-                    let column = &props.columns[index];
-                    let (text, body) = match &column.render {
-                        Some(render) => (String::new(), Some(render(row))),
-                        None => ((column.text)(row), None),
-                    };
-                    CellSpec {
-                        column: index,
-                        text,
-                        body,
-                        span,
-                    }
-                })
-                .collect(),
+                cells: pin_runs(&headers, &layout)
+                    .flat_map(|run| {
+                        let mut at = 0;
+                        spanned(run, |index| {
+                            props.columns[index]
+                                .col_span
+                                .as_ref()
+                                .map_or(1, |span| span(row))
+                        })
+                        .into_iter()
+                        .map(move |(index, span)| {
+                            let covered = &run[at..at + span];
+                            at += span;
+                            (index, span, covered)
+                        })
+                    })
+                    .map(|(index, span, covered)| {
+                        let column = &props.columns[index];
+                        let (text, body) = match &column.render {
+                            Some(render) => (String::new(), Some(render(row))),
+                            None => ((column.text)(row), None),
+                        };
+                        CellSpec {
+                            column: index,
+                            text,
+                            body,
+                            span,
+                            pin: span_pin(&headers, covered),
+                        }
+                    })
+                    .collect(),
             }
         })
         .collect();
@@ -688,6 +783,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             "sticky-head",
             bounded && group_rows > 0 && sticks_table_heads(),
         )
+        .with("pinned", pins)
+        .with("pin-select", pins_select)
         .into();
     // Rows the filter took away, not missing data: the caller's `empty` does not apply.
     let filtered_out = !words.is_empty() && (props.manual_filter || !data.is_empty());
@@ -707,6 +804,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             render_body(BodySpec {
                 caption,
                 headers,
+                order: layout,
                 rows,
                 empty,
                 active,

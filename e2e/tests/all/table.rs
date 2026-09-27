@@ -882,6 +882,100 @@ async fn click(page: &Page) -> Result<()> {
     Ok(())
 }
 
+/// 1156-2d: scrolled to its far end, the checkbox and Name columns hold at the
+/// start edge and Supplier at the end, over the scrolled cells, in LTR and RTL.
+#[test]
+fn pinned_columns_hold_at_their_edges_in_both_directions() {
+    block_on(async {
+        for (route, rtl) in [("/table/pinned", false), ("/table/pinned-rtl", true)] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            let sign = if rtl { -1 } else { 1 };
+            // Retried: the area may not overflow yet on the first poll.
+            wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{ const r = document.querySelector({AREA:?}); \
+                     if (!r) return false; r.scrollLeft = {sign} * r.scrollWidth; \
+                     return Math.abs(r.scrollLeft) > 300; }})()"
+                ),
+                &format!("{route} to scroll"),
+            )
+            .await
+            .unwrap();
+            // Edges as [start, end] in reading order: left/right flip in RTL.
+            let state: String = page
+                .evaluate(format!(
+                    "(() => {{ const rtl = {rtl}; \
+                     const edges = s => {{ const b = document.querySelector(s).getBoundingClientRect(); \
+                       return rtl ? [b.right, b.left] : [b.left, b.right]; }}; \
+                     const area = document.querySelector({AREA:?}); \
+                     const a = area.getBoundingClientRect(); \
+                     const start = rtl ? a.right : a.left; \
+                     const end = rtl ? a.left + a.width - area.clientWidth : a.left + area.clientWidth; \
+                     const select = edges('thead th[data-select]'); \
+                     const name = edges('th[aria-label=Name]'); \
+                     const supplier = edges('th[aria-label=Supplier]'); \
+                     const origin = edges('th[aria-label=Origin]'); \
+                     const near = (x, y) => Math.abs(x - y) <= 1; \
+                     const cell = document.querySelector('tbody tr:nth-child(2) td[data-pin=start]'); \
+                     const c = cell.getBoundingClientRect(); \
+                     const hit = document.elementFromPoint(c.left + c.width / 2, c.top + c.height / 2); \
+                     const bg = getComputedStyle(cell).backgroundColor; \
+                     return [near(select[0], start), near(name[0], select[1]), \
+                       near(supplier[1], end), rtl ? origin[0] > name[0] : origin[0] < name[0], \
+                       cell.contains(hit), bg === getComputedStyle(cell.parentElement).backgroundColor, \
+                       bg !== 'rgba(0, 0, 0, 0)', \
+                       getComputedStyle(document.querySelector('th[aria-label=Name]')).zIndex === '3' \
+                       && getComputedStyle(document.querySelector('th[aria-label=Origin]')).zIndex === '2' \
+                       && getComputedStyle(cell).zIndex === '1'].join('|') + ' ' + JSON.stringify([start, end, select, name, supplier]); }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            // The edges follow, for a failure message.
+            assert!(
+                state.starts_with("true|true|true|true|true|true|true|true "),
+                "{route}: checkbox, Name at the start edge, Supplier at the end, Origin \
+                 scrolled under them; the striped pinned cell on top and opaque; a pinned \
+                 header (a corner under max_height) over the others: {state}"
+            );
+            fixture.console.assert_clean("pinned columns").unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// 1156-2d: "Pin to start" in a column's menu pins it after the pinned ones.
+async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("button[aria-label=\"Origin column options\"]")
+        .await?;
+    eventually(d, "the column menu to open", async |d| {
+        d.exists("[role=menuitem]").await
+    })
+    .await?;
+    if d.text("[role=menuitem]").await? != "Pin to start" {
+        bail!("the first entry is not Pin to start");
+    }
+    d.click("[role=menuitem]").await?;
+    eventually_text(d, "#pinned", "Name,Origin|Supplier", "Pin to start").await?;
+    eventually(d, "Origin to pin past Name", async |d| {
+        Ok(d.attr("th[aria-label=Origin]", "data-pin")
+            .await?
+            .as_deref()
+            == Some("start")
+            && d.rect("th[aria-label=Origin]").await?.x > d.rect("th[aria-label=Name]").await?.x)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_column_menu_pins_a_column,
+    "/table/pinned",
+    a_menu_pin_moves_the_column
+);
+
 /// The body reads `name:cell` per row, in order, joined by `|`.
 async fn rows(page: &Page, expected: &str) -> Result<()> {
     wait::for_js_true(

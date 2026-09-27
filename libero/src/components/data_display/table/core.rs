@@ -7,6 +7,7 @@ use super::{
     cell_value::{CellAlign, SortDirection, SortKey},
     column::{Column, ColumnDefaults},
     groups::{HeaderCell, header_rows},
+    pinning::{CellPin, pin_edge_at},
     use_table::StateSlice,
 };
 use crate::{
@@ -93,12 +94,16 @@ pub(super) struct HeaderSpec {
     pub hideable: bool,
     /// Named in `hidden_columns`: no cells drawn, its sort still applies.
     pub hidden: bool,
+    /// The resolved `width`, which a pinned column further in is inset by.
+    pub width: Option<String>,
     /// The header cell's inline `width`/`min-width`, which size the column.
     pub style: Option<String>,
     /// A caller's header body, which replaces the text.
     pub body: Option<Element>,
     /// The group headers above it, outermost first.
     pub groups: Vec<String>,
+    /// Set by [`pin_columns`](super::pinning::pin_columns).
+    pub pin: Option<CellPin>,
 }
 
 pub(super) fn header_specs<T>(
@@ -118,12 +123,14 @@ pub(super) fn header_specs<T>(
                 row_header: column.row_header,
                 hideable: column.hideable,
                 hidden,
+                width: resolved.width.map(str::to_string),
                 style: width_style(resolved.width, resolved.min_width),
                 body: match hidden {
                     true => None,
                     false => column.header_render.as_ref().map(|render| render()),
                 },
                 groups: column.groups.clone(),
+                pin: None,
             }
         })
         .collect()
@@ -268,6 +275,7 @@ pub(super) struct CellSpec {
     pub text: String,
     pub body: Option<Element>,
     pub span: usize,
+    pub pin: Option<CellPin>,
 }
 
 /// Row indices in sorted order, one key column per sorted column, the first
@@ -332,6 +340,8 @@ pub(super) struct CaptionSpec {
 pub(super) struct BodySpec {
     pub caption: Option<CaptionSpec>,
     pub headers: Vec<HeaderSpec>,
+    /// The shown headers in display order; each row's cells come in it.
+    pub order: Vec<usize>,
     pub rows: Vec<RowSpec>,
     /// The empty row's body: the caller's `empty`, else the localized text.
     pub empty: Element,
@@ -358,6 +368,24 @@ fn adds_column(touch: Option<CopyValue<bool>>, event: &MouseEvent) -> bool {
     touched || modifiers.shift() || modifiers.ctrl() || modifiers.meta()
 }
 
+fn header_style(spec: &HeaderSpec) -> Option<String> {
+    let Some(pin) = &spec.pin else {
+        return spec.style.clone();
+    };
+    // An overflowing table shrinks its columns below `width`, which the next
+    // pinned column's inset counts on.
+    let min_width = spec
+        .width
+        .as_ref()
+        .map(|width| format!("min-width:{width};"))
+        .unwrap_or_default();
+    Some(format!(
+        "{}{min_width}{}",
+        spec.style.as_deref().unwrap_or_default(),
+        pin.style()
+    ))
+}
+
 fn header_body(spec: &HeaderSpec) -> Element {
     match &spec.body {
         Some(body) => body.clone(),
@@ -369,6 +397,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
     let BodySpec {
         caption,
         headers,
+        order: shown,
         rows,
         empty,
         active,
@@ -378,10 +407,6 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         select_all,
         menus,
     } = body;
-    // Cells come for the shown columns only, in order.
-    let shown: Vec<usize> = (0..headers.len())
-        .filter(|&index| !headers[index].hidden)
-        .collect();
     let columns = shown.len().max(1) + usize::from(select_all.is_some());
     let empty = rows.is_empty().then_some(empty);
     // The order shows only when it tells something: with two or more sorted columns.
@@ -404,7 +429,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         .map(|&index| (index, headers[index].groups.as_slice()))
         .collect();
     let mut select_all = select_all;
-    let head_rows: Vec<Element> = header_rows(&paths)
+    let head_rows: Vec<Element> = header_rows(&paths, |at| pin_edge_at(&headers, &shown, at))
         .into_iter()
         .enumerate()
         .map(|(level, cells)| {
@@ -431,9 +456,11 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                 "data-align": align_attr(spec.align),
                                 "data-sortable": spec.sortable.then_some(true),
                                 "data-menu": with_menu.then_some(true),
+                                "data-pin": spec.pin.as_ref().map(|pin| pin.side.as_str()),
+                                "data-pin-edge": spec.pin.as_ref().filter(|pin| pin.edge).map(|_| true),
                                 // Else the menu button's label joins the name every cell reads out.
                                 aria_label: with_menu.then(|| spec.header.clone()),
-                                style: spec.style.clone(),
+                                style: header_style(spec),
                                 // On the sorted columns only (APG): a "none" on every
                                 // other one is read out as "not sorted" at each.
                                 aria_sort: active
@@ -472,13 +499,16 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                     aria_selected: selected.map(|selected| selected.to_string()),
                     ..attributes,
                     {select}
-                    for CellSpec { column , text , body , span } in cells {
+                    for CellSpec { column , text , body , span , pin } in cells {
                         if headers[column].row_header {
                             th {
                                 key: "{column}",
                                 scope: "row",
                                 colspan: (span > 1).then(|| span.to_string()),
                                 "data-align": align_attr(headers[column].align),
+                                "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
+                                "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
+                                style: pin.as_ref().map(CellPin::style),
                                 "{text}"
                                 {body}
                             }
@@ -487,6 +517,9 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                 key: "{column}",
                                 colspan: (span > 1).then(|| span.to_string()),
                                 "data-align": align_attr(headers[column].align),
+                                "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
+                                "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
+                                style: pin.as_ref().map(CellPin::style),
                                 // Text inline: a nested node per cell costs ~1 us a sort.
                                 "{text}"
                                 {body}
@@ -679,9 +712,11 @@ mod tests {
                 row_header: false,
                 hideable: true,
                 hidden: false,
+                width: None,
                 style: None,
                 body: None,
                 groups: Vec::new(),
+                pin: None,
             })
             .collect()
     }

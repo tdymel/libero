@@ -6,7 +6,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, Column, ColumnDefaults, Mark, SortDirection, States, Table, TableSort, column,
+        Checkbox, Column, ColumnDefaults, Mark, PinnedColumns, SortDirection, States, Table, TableSort,
+        column,
     },
     localization::Localization,
     theme::Size,
@@ -876,4 +877,100 @@ fn filter_sort_and_page_compose_and_select_all_covers_the_kept_rows() {
     assert!(body.contains("Lyon") && !body.contains("Paris"), "{body}");
     assert!(body.contains("1–1 of 2"), "{body}");
     assert!(!body.contains("aria-checked=\"mixed\""), "{body}");
+}
+
+/// The attributes of the cell, `tag`, whose text is `text`.
+fn cell_of(body: &str, tag: &str, text: &str) -> BTreeMap<String, String> {
+    let at = body
+        .find(&format!(">{text}<"))
+        .unwrap_or_else(|| panic!("no {text} in {body}"));
+    let start = body[..at].rfind(&format!("<{tag}")).unwrap();
+    attributes_of(&body[start..], tag)
+}
+
+#[test]
+fn pinned_columns_move_to_their_edges_and_stick_at_logical_insets() {
+    #[derive(Clone, PartialEq)]
+    struct Row {
+        id: u32,
+        name: &'static str,
+        city: &'static str,
+    }
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    scroll: true,
+                    default_pinned_columns: PinnedColumns::default().start(["Name", "Id"]).end(["City"]),
+                    data: vec![Row { id: 1, name: "Ada", city: "London" }],
+                    columns: vec![
+                        column("Id").value(|row: &Row| row.id).width("4rem"),
+                        column("City").value(|row: &Row| row.city.to_string()),
+                        column("Name").value(|row: &Row| row.name.to_string()).width("8rem"),
+                        column("Note").value(|_: &Row| "-".to_string()),
+                    ],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = &body(&html);
+    let at = |text: &str| body.find(text).unwrap();
+
+    // Start ones in pinned order, the rest, then end ones.
+    assert!(at(">Name<") < at(">Id<") && at(">Id<") < at(">Note<") && at(">Note<") < at(">City<"));
+    assert!(at(">Ada<") < at(">1<") && at(">1<") < at(">-<") && at(">-<") < at(">London<"));
+    assert!(
+        attributes_of(&html, "table")["data-state"].contains("pinned"),
+        "{html}"
+    );
+    let name = cell_of(body, "th", "Name");
+    assert_eq!(name["data-pin"], "start");
+    assert!(name["style"].ends_with("inset-inline-start:0;"), "{name:?}");
+    assert!(!name.contains_key("data-pin-edge"), "{name:?}");
+    let id = cell_of(body, "td", "1");
+    assert_eq!(id["style"], "inset-inline-start:8rem;");
+    assert!(id.contains_key("data-pin-edge"), "{id:?}");
+    assert!(!cell_of(body, "td", "-").contains_key("data-pin"));
+    let city = cell_of(body, "td", "London");
+    assert_eq!(city["data-pin"], "end");
+    assert_eq!(city["style"], "inset-inline-end:0;");
+    assert!(html.contains("position:sticky"), "{html}");
+}
+
+#[test]
+fn a_start_pin_holds_the_checkbox_column_and_insets_past_it() {
+    #[derive(Clone, PartialEq)]
+    struct Row {
+        name: &'static str,
+    }
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    scroll: true,
+                    selectable: true,
+                    row_key: |row: &Row| row.name.to_string(),
+                    default_pinned_columns: PinnedColumns::default().start(["Name"]),
+                    data: vec![Row { name: "Ada" }],
+                    columns: vec![column("Name").value(|row: &Row| row.name.to_string())],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let state = &attributes_of(&html, "table")["data-state"];
+
+    assert!(state.contains("pin-select"), "{state}");
+    let name = cell_of(&body(&html), "td", "Ada");
+    assert!(
+        name["style"].starts_with("inset-inline-start:calc("),
+        "{name:?}"
+    );
 }

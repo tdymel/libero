@@ -1,10 +1,12 @@
 //! `Table` with a sortable text column and a custom-rendered one; a wide one
 //! in its scroll region under a caption; keyed, clickable, striped rows; selectable,
 //! multi-sorted rows; an empty one; a paged one; sized columns; column menus; a
-//! height-capped one with a sticky header.
+//! height-capped one with a sticky header; a wide one with pinned columns, also RTL.
 
 use dioxus::prelude::*;
-use libero::components::{ColumnDefaults, SortDirection, States, Table, TableSort, column};
+use libero::components::{
+    ColumnDefaults, PinnedColumns, SortDirection, States, Table, TableSort, column,
+};
 use libero::sx::sx;
 
 use crate::Routes;
@@ -27,6 +29,11 @@ pub const ROUTES: Routes = &[
         || rsx! { StickyTablePage { interactive: false } },
     ),
     ("/table/filter", || rsx! { FilterTablePage {} }),
+    ("/table/pinned", || rsx! { PinnedTablePage { rtl: false } }),
+    (
+        "/table/pinned-rtl",
+        || rsx! { PinnedTablePage { rtl: true } },
+    ),
 ];
 
 /// The seven paged fruits with a quick-filter field; `#query` and `#page` echo
@@ -295,6 +302,44 @@ fn StickyTablePage(interactive: bool) -> Element {
             striped: true,
             data,
             columns,
+        }
+    }
+}
+
+/// The wide table, selectable with column menus: Name pinned to the start,
+/// Supplier to the end; `#pinned` echoes `onpinnedcolumnschange`. `rtl` sets
+/// `dir="rtl"` around it.
+#[component]
+fn PinnedTablePage(rtl: bool) -> Element {
+    let mut pinned = use_signal(String::new);
+    let headers = [
+        "Name", "Origin", "Season", "Colour", "Taste", "Storage", "Price", "Supplier",
+    ];
+    let columns = headers
+        .into_iter()
+        .map(|header| {
+            column(header)
+                .value(move |fruit: &Fruit| format!("{}_{header}_description", fruit.name))
+                .width("240px")
+        })
+        .collect();
+    rsx! {
+        div { dir: if rtl { "rtl" } else { "ltr" },
+            Table {
+                caption: "Fruit catalogue",
+                scroll: true,
+                selectable: true,
+                column_menu: true,
+                striped: true,
+                row_key: |fruit: &Fruit| fruit.name.to_string(),
+                default_pinned_columns: PinnedColumns::default().start(["Name"]).end(["Supplier"]),
+                onpinnedcolumnschange: move |next: PinnedColumns| {
+                    pinned.set(format!("{}|{}", next.start.join(","), next.end.join(",")))
+                },
+                data: fruit(),
+                columns,
+            }
+            p { id: "pinned", "{pinned}" }
         }
     }
 }
