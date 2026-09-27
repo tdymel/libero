@@ -50,7 +50,7 @@ e2e::scenario!(
     the_keyboard_picks_a_select_option,
     "/select/echo",
     the_keys_pick,
-    desktop: skip("1353: Enter outruns the ArrowDown's render on the WebView, ComboboxKeys")
+    desktop: skip("1367: Enter outruns the ArrowDown's render on the WebView, ComboboxKeys")
 );
 
 /// Android's Back closes the listbox, keeps the value, and the app stays (1289).
