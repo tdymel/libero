@@ -74,7 +74,7 @@ pub fn BottomNavigationPage() -> Element {
                 props("BottomNavigation", vec![
                     prop("position", "BottomNavigationPosition")
                         .default("static")
-                        .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish `--lsx-bottom-navigation-height` and keep focus clear of the bar."),
+                        .doc("`\"static\"` stays in the flow. `\"sticky\"` holds it at the bottom of its scroller, `\"fixed\"` at the viewport's; both publish the bar's measured height as `--lsx-bottom-navigation-height` and keep focus clear of the bar. In a native app `fixed` sits at the page's end for now; use `sticky` on the page's last child."),
                     prop("show_labels", "LabelVisibility")
                         .default("always")
                         .doc("`\"always\"`, `\"selected\"` (only the selected item's) or `\"never\"`. A hidden label still names its item."),

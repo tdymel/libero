@@ -55,6 +55,25 @@ pub fn ShortcutHelpPage() -> Element {
                     Code { source: "shift+?" }
                     " hotkey; here it is shown inline."
                 }
+                Text {
+                    "It belongs to the app: one dialog for the shortcuts of the screen the reader is on. "
+                    Code { source: "RichTextEditor" }
+                    " opens its own from "
+                    Kbd { "Ctrl" }
+                    " + "
+                    Kbd { "/" }
+                    ". "
+                    Code { source: "Video" }
+                    " and "
+                    Code { source: "Audio" }
+                    " list their player keys on their pages; add them to yours if the page has a player. "
+                    Code { source: "Kanban" }
+                    ", "
+                    Code { source: "Sortable" }
+                    " and "
+                    Code { source: "Table" }
+                    " have no shortcuts: their drag handles describe their keys to screen readers."
+                }
             },
             Demo {
                 component: "ShortcutHelp",

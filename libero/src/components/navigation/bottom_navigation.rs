@@ -187,11 +187,15 @@ fn pill_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Vari
 }
 
 /// The bar's height and the scroll padding that keeps focus clear of it (2.4.11).
-fn publish_css() -> String {
+/// Until measured, a bar of one-line labels: the item's content, plus the top border.
+fn publish_css(measured: Option<f64>) -> String {
+    let height = match measured {
+        Some(height) => format!("{height}px"),
+        None => safe_area_padding("64px", "bottom"),
+    };
     format!(
-        ":root{{{}:{};scroll-padding-bottom:{};}}",
+        ":root{{{}:{height};scroll-padding-bottom:{};}}",
         BOTTOM_NAVIGATION_HEIGHT_VAR.name(),
-        safe_area_padding(ITEM_HEIGHT, "bottom"),
         BOTTOM_NAVIGATION_HEIGHT_VAR.value()
     )
 }
@@ -268,8 +272,17 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
     }
 
     let publishes = position != BottomNavigationPosition::Static;
+    // Measured, so a two-line label or larger text still clears the page.
+    let mut measured = use_signal(|| None::<f64>);
+    let onresize = publishes.then_some(move |event: Event<ResizeData>| {
+        if let Ok(size) = event.get_border_box_size()
+            && *measured.peek() != Some(size.height)
+        {
+            measured.set(Some(size.height));
+        }
+    });
     use_css(
-        publishes.then(|| Stylesheet::from(publish_css().as_str())),
+        publishes.then(|| Stylesheet::from(publish_css(measured()).as_str())),
         CssLayer::Framework,
     );
 
@@ -293,6 +306,7 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
         .states(&states)
         .variables(&variables)
         .prepare()
+        .event("onresize", onresize)
         .render(HtmlTag::Nav, props.attributes, props.children)
 }
 
@@ -457,8 +471,13 @@ mod tests {
     #[test]
     fn a_docked_bar_publishes_its_height_with_the_safe_area() {
         assert_eq!(
-            publish_css(),
-            ":root{--lsx-bottom-navigation-height:calc(56px + env(safe-area-inset-bottom, 0px));\
+            publish_css(None),
+            ":root{--lsx-bottom-navigation-height:calc(64px + env(safe-area-inset-bottom, 0px));\
+             scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
+        );
+        assert_eq!(
+            publish_css(Some(79.5)),
+            ":root{--lsx-bottom-navigation-height:79.5px;\
              scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
         );
     }

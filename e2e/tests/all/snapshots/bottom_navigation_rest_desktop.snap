@@ -26,3 +26,5 @@ navigation "Links"
     StaticText "Here"
   link "Away" [disabled]
     StaticText "Away"
+  button "Off" [disabled]
+    StaticText "Off"

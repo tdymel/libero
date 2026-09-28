@@ -26,7 +26,7 @@ pub fn HeaderPage() -> Element {
             properties: vec![props("Header", vec![
                 prop("position", "HeaderPosition")
                     .default("sticky")
-                    .doc("`sticky` pins to the top of the scrolling ancestor, `static` scrolls away. `fixed` pins to the viewport, so offset your content by `var(--lsx-header-height)`."),
+                    .doc("`sticky` pins to the top of the scrolling ancestor, `static` scrolls away. `fixed` pins to the viewport, so offset your content by `var(--lsx-header-height)`. In a native app `fixed` scrolls with the page for now; use `sticky`."),
                 prop("publish_height", "bool")
                     .default("false")
                     .doc("Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky or fixed banner. Set it on the page's own banner only."),

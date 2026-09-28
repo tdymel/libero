@@ -76,7 +76,8 @@ fn Demo() -> Element {
 phone's home indicator. Pad the page by `var(--lsx-bottom-navigation-height)`
 so its end is not hidden under the bar. The page needs
 `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">`,
-or the browser reports no safe area.
+or the browser reports no safe area. In a native app `fixed` sits at the
+page's end for now; use `sticky` on the page's last child.
 
 ```rust
 use dioxus::prelude::*;
@@ -100,7 +101,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `position` | `BottomNavigationPosition` | `static` | `"static"` stays in the flow. `"sticky"` holds it at the bottom of its scroller, `"fixed"` at the viewport's; both publish `--lsx-bottom-navigation-height` and keep focus clear of the bar. |
+| `position` | `BottomNavigationPosition` | `static` | `"static"` stays in the flow. `"sticky"` holds it at the bottom of its scroller, `"fixed"` at the viewport's; both publish the bar's measured height as `--lsx-bottom-navigation-height` and keep focus clear of the bar. In a native app `fixed` sits at the page's end for now; use `sticky` on the page's last child. |
 | `show_labels` | `LabelVisibility` | `always` | `"always"`, `"selected"` (only the selected item's) or `"never"`. A hidden label still names its item. |
 | `color` | `ThemeAwareValue` | `primary` | Colours the selected item's pill. Only the color family counts: the pill is its lightest shade. |
 | `z_index` | `ThemeAwareValue` | the header's | Stacking order of a sticky or fixed bar. |
@@ -170,7 +171,7 @@ parts work.
 
 | Variable | Description |
 |---|---|
-| `--lsx-bottom-navigation-height` | On `:root` while a sticky or fixed bar is mounted: its height plus the bottom safe area. |
+| `--lsx-bottom-navigation-height` | On `:root` while a sticky or fixed bar is mounted: its measured height, bottom safe area included. |
 | `--lsx-bottom-navigation-pill` | Background of the selected item's pill, the lightest shade of the color family. |
 | `--lsx-bottom-navigation-pill-color` | Icon colour on the pill, a darker shade of the color family that reaches 4.5:1 on it. |
 

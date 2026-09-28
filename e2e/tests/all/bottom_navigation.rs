@@ -184,6 +184,103 @@ fn items_are_named_by_their_labels() {
     });
 }
 
+/// A disabled link has no `href` and leaves the Tab order but keeps its role; a
+/// disabled button ignores a click. Both are dimmed.
+#[test]
+fn disabled_items_are_skipped_and_dimmed() {
+    block_on(async {
+        let fixture = Fixture::open("/bottom-navigation", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#disabled-button").await.unwrap();
+
+        let report = js(
+            page,
+            "(() => { \
+                const link = document.querySelector('#disabled'); \
+                const button = document.querySelector('#disabled-button'); \
+                const opacity = e => parseFloat(getComputedStyle(e).opacity); \
+                return { href: link.hasAttribute('href'), tabindex: link.getAttribute('tabindex'), \
+                    aria: link.getAttribute('aria-disabled'), native: button.disabled, \
+                    dimmed: opacity(link) < 1 && opacity(button) < 1, \
+                    enabled: opacity(document.querySelector('#link')) }; \
+            })()",
+        )
+        .await;
+        assert_eq!(report["href"], false, "{report}");
+        assert_eq!(report["tabindex"], "-1", "{report}");
+        assert_eq!(report["aria"], "true", "{report}");
+        assert_eq!(report["native"], true, "{report}");
+        assert_eq!(report["dimmed"], true, "{report}");
+        assert_eq!(report["enabled"], 1.0, "{report}");
+
+        // Tab from the enabled link leaves the bar.
+        keyboard::tab_to(page, "#link", 30).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        let left = js(
+            page,
+            "!['disabled', 'disabled-button'].includes(document.activeElement.id)",
+        )
+        .await;
+        assert_eq!(left, true);
+
+        e2e::passes::pointer::click(page, "#disabled-button")
+            .await
+            .unwrap();
+        let clicked = js(page, "!!document.querySelector('#clicked')").await;
+        assert_eq!(clicked, false);
+
+        let links = e2e::ax::snapshot(page, "#disabled").await.unwrap();
+        assert!(links.contains("link \"Away\""), "{links}");
+
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The badge sits on the icon pill's top-end corner, inside the item, in both directions.
+#[test]
+fn the_badge_sits_on_the_icons_top_end_corner() {
+    block_on(async {
+        let fixture = Fixture::open("/bottom-navigation", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#inbox").await.unwrap();
+
+        let report = js(
+            page,
+            "(() => { \
+                const place = id => { \
+                    const item = document.querySelector(id).getBoundingClientRect(); \
+                    const pill = document.querySelector(id + ' > [data-slot=icon]').getBoundingClientRect(); \
+                    const svg = document.querySelector(id + ' > [data-slot=icon] > svg').getBoundingClientRect(); \
+                    const badge = document.querySelector(id + ' > [data-slot=icon] > :not(svg)').getBoundingClientRect(); \
+                    const cx = badge.left + badge.width / 2, cy = badge.top + badge.height / 2; \
+                    return { inside: badge.left >= item.left && badge.right <= item.right && badge.top >= item.top, \
+                        top: cy <= pill.top + pill.height / 2, \
+                        end: cx - (pill.left + pill.width / 2), \
+                        visible: badge.width > 4 && badge.height > 4, \
+                        covers: badge.left < svg.left && badge.right > svg.right }; \
+                }; \
+                return { ltr: place('#inbox'), rtl: place('#rtl-inbox') }; \
+            })()",
+        )
+        .await;
+        for dir in ["ltr", "rtl"] {
+            let at = &report[dir];
+            assert_eq!(at["inside"], true, "{dir}: {report}");
+            assert_eq!(at["top"], true, "{dir}: {report}");
+            assert_eq!(at["visible"], true, "{dir}: {report}");
+            assert_eq!(at["covers"], false, "{dir}: {report}");
+        }
+        assert!(report["ltr"]["end"].as_f64().unwrap() > 0.0, "{report}");
+        assert!(report["rtl"]["end"].as_f64().unwrap() < 0.0, "{report}");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A fixed bar sits on the viewport's bottom edge, publishes its height, and its
 /// hidden labels still name the items.
 #[test]
@@ -203,16 +300,26 @@ fn a_fixed_bar_docks_and_publishes_its_height() {
                 const label = document.querySelector('#fixed-search [data-slot=label]').getBoundingClientRect(); \
                 return { bottom: Math.round(bar.bottom), height: innerHeight, width: bar.width, \
                     full: innerWidth, published: root.getPropertyValue('--lsx-bottom-navigation-height').trim(), \
+                    tall: bar.height, pad: parseFloat(getComputedStyle(document.querySelector('#page')).paddingBottom), \
                     padding: root.scrollPaddingBottom, hidden: label.width <= 1 }; \
             })()",
         )
         .await;
         assert_eq!(report["bottom"], report["height"], "{report}");
         assert_eq!(report["width"], report["full"], "{report}");
-        // The env() is resolved: 0px here, no notch.
-        assert_eq!(report["published"], "calc(56px + 0px)", "{report}");
+        // The measured bar, safe area included.
+        assert_eq!(
+            report["published"],
+            format!("{}px", report["tall"]),
+            "{report}"
+        );
         assert_ne!(report["padding"], "auto", "{report}");
         assert_eq!(report["hidden"], true, "{report}");
+        // The page's padding clears the whole bar.
+        assert!(
+            report["pad"].as_f64().unwrap() >= report["tall"].as_f64().unwrap(),
+            "{report}"
+        );
 
         let tree = e2e::ax::snapshot(page, "#fixed").await.unwrap();
         assert!(tree.contains("button \"Search\""), "{tree}");

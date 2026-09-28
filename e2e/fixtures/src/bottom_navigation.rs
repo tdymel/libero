@@ -43,6 +43,7 @@ fn Bar(prefix: &'static str, count: usize, show_labels: &'static str) -> Element
 
 #[component]
 fn BottomNavigationPage() -> Element {
+    let mut clicked = use_signal(|| false);
     rsx! {
         div { style: "display: flex; flex-direction: column; gap: 24px;",
             div { id: "column", style: "width: 320px;",
@@ -61,6 +62,14 @@ fn BottomNavigationPage() -> Element {
                         icon: rsx! { Pictogram { icon: lucide::user::outlined } },
                         "Away"
                     }
+                    BottomNavigationItem { id: "disabled-button", disabled: true,
+                        onclick: move |_| clicked.set(true),
+                        icon: rsx! { Pictogram { icon: lucide::bell::outlined } },
+                        "Off"
+                    }
+                }
+                if clicked() {
+                    p { id: "clicked", "Clicked" }
                 }
             }
         }

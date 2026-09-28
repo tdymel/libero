@@ -9,7 +9,8 @@ Description: The page's banner landmark, a sticky, static or fixed `header` bar 
 The page's banner landmark, always a `header` element. This site's own header is
 one. `sticky`, the default, pins to the top of the scrolling ancestor and
 `static` scrolls away. `fixed` pins to the viewport, so offset your content by
-`var(--lsx-header-height)`.
+`var(--lsx-header-height)`. In a native app `fixed` scrolls with the page for
+now; use `sticky`.
 
 The header is at least `size` tall and grows when its content wraps. With
 `publish_height`, a `sticky` or `fixed` header publishes its `size` on `:root`
@@ -64,7 +65,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `position` | `HeaderPosition` | `sticky` | `sticky` pins to the top of the scrolling ancestor, `static` scrolls away. `fixed` pins to the viewport, so offset your content by `var(--lsx-header-height)`. |
+| `position` | `HeaderPosition` | `sticky` | `sticky` pins to the top of the scrolling ancestor, `static` scrolls away. `fixed` pins to the viewport, so offset your content by `var(--lsx-header-height)`. In a native app `fixed` scrolls with the page for now; use `sticky`. |
 | `size` | `ThemeAwareValue` | `md` | Minimum height. The header grows when its content wraps. |
 | `color` | `ThemeAwareValue` | none, a neutral background | Fills the header with shade 6 and a readable text color. With `glass`, a translucent tint of it, as on `Paper`. Under a gradient, its first stop. |
 | `glass` | `bool` | `false` | Frosted glass, as on `Paper`: content scrolling under the bar shows through, blurred. A `color` tints it, as on `Paper`. Opaque when the user reduces transparency, in forced colours, and in native windows. |

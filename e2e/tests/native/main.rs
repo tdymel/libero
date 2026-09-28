@@ -5,6 +5,7 @@ mod accessibility;
 mod alert;
 mod anchor;
 mod avatar;
+mod bottom_navigation;
 mod button;
 mod carousel;
 mod choice;
