@@ -16,7 +16,8 @@ pub struct SystemNotification {
     pub tag: Option<String>,
     /// Asks the platform for no sound or vibration. A hint only.
     pub silent: bool,
-    /// Runs when the user clicks it while this component is mounted.
+    /// Runs when the user clicks it while this component is mounted, after the
+    /// click focused the window. Behind a service worker, only if it posts the click back.
     pub on_click: Option<Callback<()>>,
 }
 
@@ -102,7 +103,8 @@ pub(crate) fn permission_of(name: Option<&str>) -> Option<PermissionState> {
 
 /// Shared by the web and the WebView. `show` resolves to an error name or
 /// `{ close, detach }`; without a `Notification` constructor (Chrome on Android)
-/// it falls back to the page's service worker, whose clicks go to the worker.
+/// it falls back to the page's service worker, which reports clicks and closes
+/// by posting `{ libero: data.libero, event: 'click' | 'close' }` to the page.
 #[cfg_attr(feature = "native", allow(dead_code))]
 pub(crate) const NOTIFICATION_SCRIPT: &str = "
     const probe = () => typeof Notification === 'undefined' ? null : Notification.permission;
@@ -120,14 +122,25 @@ pub(crate) const NOTIFICATION_SCRIPT: &str = "
                 detach: () => { shown.onclick = null; shown.onclose = null; },
             };
         } catch (error) {
-            const registration = await navigator.serviceWorker?.getRegistration();
+            const workers = navigator.serviceWorker;
+            const registration = await workers?.getRegistration();
             if (!registration) return 'Failed';
-            try { await registration.showNotification(title, options); } catch (error) { return 'Failed'; }
-            const close = async () => {
-                if (!options.tag) return;
-                for (const shown of await registration.getNotifications({ tag: options.tag })) shown.close();
+            const token = `${Date.now()}-${Math.random()}`;
+            const data = { libero: token };
+            try { await registration.showNotification(title, { ...options, data }); } catch (error) { return 'Failed'; }
+            const listen = (event) => {
+                if (event.data?.libero !== token) return;
+                if (event.data.event === 'click') { window.focus(); send('click'); }
+                if (event.data.event === 'close') send('close');
             };
-            return { close, detach: () => {} };
+            workers.addEventListener('message', listen);
+            workers.startMessages();
+            const close = async () => {
+                for (const shown of await registration.getNotifications()) {
+                    if (shown.data?.libero === token) shown.close();
+                }
+            };
+            return { close, detach: () => workers.removeEventListener('message', listen) };
         }
     };";
 

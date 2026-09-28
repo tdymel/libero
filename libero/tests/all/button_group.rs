@@ -95,7 +95,7 @@ fn outside_a_group_nothing_changes() {
 }
 
 #[test]
-fn the_css_divides_the_inner_seam_of_a_theme_toggle_pair() {
+fn the_css_divides_the_inner_seam_of_a_theme_switcher_pair() {
     fn app() -> Element {
         rsx! { LiberoProvider { ButtonGroup { Button { "A" } } } }
     }

@@ -1,0 +1,31 @@
+---
+source: e2e/src/suite.rs
+description: repository at desktop (rest)
+expression: tree
+---
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub example/repo, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"

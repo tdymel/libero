@@ -32,7 +32,7 @@ pub fn ButtonGroupPage() -> Element {
                     .doc("Disables every button inside that does not set `disabled` itself."),
                 prop("children", "Element")
                     .default("required")
-                    .doc("`Button`s, `ActionIcon`s, and components built on them, such as `ThemeToggle`."),
+                    .doc("`Button`s, `ActionIcon`s, and components built on them, such as `ThemeSwitcher`."),
             ])],
             accessibility: a11y()
                 .handles([
@@ -62,7 +62,7 @@ pub fn ButtonGroupPage() -> Element {
                     " and "
                     Code { source: "disabled" }
                     " set the default of every button inside; a button's own prop wins. "
-                    "This site's header groups its repository link, direction toggle and theme toggle, and on a phone the search."
+                    "This site's header groups its repository link, direction toggle and theme switcher, and on a phone the search."
                 }
             },
             Demo {

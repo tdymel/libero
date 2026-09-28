@@ -1,0 +1,8 @@
+---
+source: e2e/src/suite.rs
+description: theme_switcher at mobile (rest)
+expression: tree
+---
+button "Switch to the dark theme"
+paragraph
+  StaticText "Page text"

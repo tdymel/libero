@@ -110,14 +110,14 @@ pub(crate) enum Route {
     ButtonPage {},
     #[route("/buttons/button-group")]
     ButtonGroupPage {},
-    #[route("/buttons/copy-button")]
-    CopyButtonPage {},
+    #[route("/buttons/copy")]
+    CopyPage {},
     #[route("/buttons/direction-toggle")]
     DirectionTogglePage {},
-    #[route("/buttons/repo-button")]
-    RepoButtonPage {},
-    #[route("/buttons/theme-toggle")]
-    ThemeTogglePage {},
+    #[route("/buttons/repository")]
+    RepositoryPage {},
+    #[route("/buttons/theme-switcher")]
+    ThemeSwitcherPage {},
     #[route("/buttons/tldr")]
     TldrPage {},
     #[route("/buttons/toolbar")]

@@ -149,7 +149,9 @@ pub fn UseSystemNotificationPage() -> Element {
                 .limits([
                     "A denial is usually permanent for the site: the browser does not ask again, and libero cannot open its settings.",
                     "The Android WebView has no Notifications API, and libero declares no POST_NOTIFICATIONS: native notifications and FCM need app-level Kotlin.",
-                    "Where only a service worker may show notifications (Chrome on Android), clicks go to the worker, not on_click.",
+                    "Where only a service worker may show notifications (Chrome on Android), on_click runs only if the app's worker posts the click back, as the sample sw.js does.",
+                    "A click after the page closed runs nothing in the page: only a worker can open a tab then.",
+                    "In a desktop WebView, window.focus() may not raise the app's window.",
                 ]),
             lead: rsx! {
                 Text {
@@ -185,7 +187,9 @@ pub fn UseSystemNotificationPage() -> Element {
                 Text {
                     "Web: a secure context (HTTPS or localhost). Desktop WebViews: system notifications go through the page's "
                     Code { source: "Notification" }
-                    " where the WebView has one (Linux WebKitGTK denies, macOS and Windows are untested); push is web only. Android, Blitz and a server render: "
+                    " where the WebView has one (Linux WebKitGTK denies, macOS and Windows are untested); push is web only. A click focuses the page's window, then runs "
+                    Code { source: "on_click" }
+                    "; behind a service worker only if the worker posts it back, as the sample worker does. Android, Blitz and a server render: "
                     Code { source: "is_supported()" }
                     " stays false and calls fail with "
                     Code { source: "Unsupported" }

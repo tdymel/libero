@@ -12,7 +12,7 @@ ends swap under right-to-left text.
 
 `variant`, `color`, `size`, `radius` and `disabled` set the default of every
 button inside; a button's own prop wins. This site's header groups its
-repository link, direction toggle and theme toggle, and on a phone the search.
+repository link, direction toggle and theme switcher, and on a phone the search.
 
 ## Usage
 
@@ -46,7 +46,7 @@ fn Demo() -> Element {
 | `size` | `Size` | - | Default `size` of the buttons inside. |
 | `radius` | `Size` | - | The group's outer corners. The corners between two buttons are always square. |
 | `disabled` | `bool` | - | Disables every button inside that does not set `disabled` itself. |
-| `children` | `Element` | `required` | `Button`s, `ActionIcon`s, and components built on them, such as `ThemeToggle`. |
+| `children` | `Element` | `required` | `Button`s, `ActionIcon`s, and components built on them, such as `ThemeSwitcher`. |
 
 Like every component, `ButtonGroup` also takes the shared props `sx`,
 `class`, `style`, `states`, and any extra HTML attributes.

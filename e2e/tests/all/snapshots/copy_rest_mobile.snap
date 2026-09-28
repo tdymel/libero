@@ -1,0 +1,15 @@
+---
+source: e2e/src/suite.rs
+description: copy at mobile (rest)
+expression: tree
+---
+button "Copy"
+status [atomic] [live=polite]
+paragraph
+  StaticText "cargo add libero"
+button "Copy the install command"
+status [atomic] [live=polite]
+button "Copy"
+status [atomic] [live=polite]
+button "Copy" [disabled]
+status [atomic] [live=polite]

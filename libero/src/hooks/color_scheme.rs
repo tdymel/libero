@@ -8,7 +8,7 @@ use crate::{
 /// The app's colour scheme: what it is set to, what that resolves to, and how
 /// to change it. Reactive, the platform's own changes included.
 ///
-/// [`ThemeToggle`](crate::components::ThemeToggle) is the ready-made switch built on it.
+/// [`ThemeSwitcher`](crate::components::ThemeSwitcher) is the ready-made switch built on it.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

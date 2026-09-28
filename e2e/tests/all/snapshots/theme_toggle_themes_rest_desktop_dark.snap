@@ -1,8 +1,0 @@
----
-source: e2e/src/suite.rs
-description: "theme_toggle_themes at desktop (rest, dark)"
-expression: tree
----
-group "Theme"
-  button "Switch to the light theme"
-  button "Choose a theme" [expanded=false] [haspopup=menu]

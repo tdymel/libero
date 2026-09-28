@@ -1,19 +1,19 @@
 mod action_icon;
 mod button;
 mod button_group;
-mod copy_button;
+mod copy;
 mod direction_toggle;
-mod repo_button;
-mod theme_toggle;
+mod repository;
+mod theme_switcher;
 mod tldr;
 mod toolbar;
 
 pub use action_icon::ActionIconPage;
 pub use button::ButtonPage;
 pub use button_group::ButtonGroupPage;
-pub use copy_button::CopyButtonPage;
+pub use copy::CopyPage;
 pub use direction_toggle::DirectionTogglePage;
-pub use repo_button::RepoButtonPage;
-pub use theme_toggle::ThemeTogglePage;
+pub use repository::RepositoryPage;
+pub use theme_switcher::ThemeSwitcherPage;
 pub use tldr::TldrPage;
 pub use toolbar::ToolbarPage;

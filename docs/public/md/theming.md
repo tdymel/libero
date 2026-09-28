@@ -87,7 +87,7 @@ LiberoProvider {
 }
 ```
 
-[`ThemeToggle`](theme_toggle.md) is a ready-made switch.
+[`ThemeSwitcher`](theme_switcher.md) is a ready-made switch.
 
 On the web the choice is kept in `localStorage`. To restore it before the first
 paint, paste `libero::theme::COLOR_SCHEME_RESTORE_SCRIPT` into the head of your

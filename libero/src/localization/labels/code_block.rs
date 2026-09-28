@@ -1,5 +1,5 @@
 /// A `CodeBlock`'s copy button and header. The copy announcements are
-/// [`CopyButtonLabels`](super::CopyButtonLabels)'.
+/// [`CopyLabels`](super::CopyLabels)'.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CodeBlockLabels {
     /// The copy button's name.

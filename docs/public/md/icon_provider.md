@@ -121,7 +121,7 @@ fn CloseMark() -> Element {
 
 What a slot cannot change:
 
-- Brand marks (`RepoButton`'s GitHub and GitLab, `Tldr`'s providers) are not
+- Brand marks (`Repository`'s GitHub and GitLab, `Tldr`'s providers) are not
   slots: they name a service.
 - A component keeps its own tweaks on a swapped glyph: `Checkbox` draws its
   marks at `stroke-width="3"`.

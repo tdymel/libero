@@ -90,12 +90,32 @@ fn the_web_shows_closes_and_reports_a_denial() {
         click(page, "#request").await;
         reads(page, "#pending", "false").await.unwrap();
         reads(page, "#error", "None").await.unwrap();
+        // Keeps each shown notification so a click can be dispatched on it.
+        page.evaluate(
+            "window.shown = []; window.focused = 0; window.focus = () => window.focused++;
+            window.Notification = class extends Notification {
+                constructor(title, options) { super(title, options); window.shown.push(this); }
+            };",
+        )
+        .await
+        .unwrap();
         click(page, "#show").await;
         // A failed show would land in `#error` once its promise settles.
         page.evaluate("new Promise((done) => setTimeout(done, 500))")
             .await
             .unwrap();
         reads(page, "#error", "None").await.unwrap();
+        page.evaluate("window.shown.at(-1).dispatchEvent(new Event('click'))")
+            .await
+            .unwrap();
+        reads(page, "#clicks", "1").await.unwrap();
+        let focused = page
+            .evaluate("window.focused")
+            .await
+            .unwrap()
+            .into_value::<u32>()
+            .unwrap();
+        assert_eq!(focused, 1, "a click focuses the window");
         click(page, "#close").await;
 
         // The Permissions API reports the revoke; a show then fails as denied.
@@ -117,6 +137,60 @@ fn the_web_shows_closes_and_reports_a_denial() {
             .into_value::<bool>()
             .unwrap();
         assert!(registered, "the worker registers before the subscription");
+
+        // Todo 1338: without a `Notification` constructor the worker shows it, and
+        // the click the worker posts back runs `on_click`; another token is ignored.
+        set_permission(page, PermissionSetting::Granted)
+            .await
+            .unwrap();
+        reads(page, "#permission", "Granted").await.unwrap();
+        // As in Chrome on Android, where the constructor throws.
+        page.evaluate(
+            "window.focused = 0; window.focus = () => window.focused++;
+            window.Notification = class extends Notification {
+                constructor() { throw new TypeError('Illegal constructor'); }
+            };",
+        )
+        .await
+        .unwrap();
+        click(page, "#show").await;
+        let latest = "navigator.serviceWorker.getRegistration()
+            .then((r) => r.getNotifications())
+            .then((shown) => shown.find((one) => one.data?.libero)?.data.libero ?? '')";
+        let expression = format!("{latest}.then((token) => token !== '')");
+        // Polling `getNotifications` at once never sees it in headless Chromium (cause unknown).
+        page.evaluate("new Promise((done) => setTimeout(done, 1000))")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &expression, "the worker's notification")
+            .await
+            .unwrap();
+        reads(page, "#error", "None").await.unwrap();
+
+        // What the sample `sw.js` posts on a click.
+        let post = |libero: &str| {
+            format!(
+                "{latest}.then((token) => navigator.serviceWorker.dispatchEvent(
+                    new MessageEvent('message', {{ data: {{ libero: {libero}, event: 'click' }} }})))"
+            )
+        };
+        page.evaluate(post("'another'")).await.unwrap();
+        page.evaluate(post("token")).await.unwrap();
+        reads(page, "#clicks", "2").await.unwrap();
+        let focused = page
+            .evaluate("window.focused")
+            .await
+            .unwrap()
+            .into_value::<u32>()
+            .unwrap();
+        assert_eq!(focused, 1, "a worker click focuses the window");
+
+        click(page, "#close").await;
+        let gone = "navigator.serviceWorker.getRegistration()
+            .then((r) => r.getNotifications()).then((shown) => shown.length === 0)";
+        wait::for_js_true(page, gone, "the close to reach the worker's notification")
+            .await
+            .unwrap();
 
         set_permission(page, PermissionSetting::Prompt)
             .await

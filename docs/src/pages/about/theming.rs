@@ -253,7 +253,7 @@ pub fn ThemingPage() -> Element {
                 }
                 CodeBlock { source: THEME_SET, language: "rust" }
                 Text {
-                    Code { source: "ThemeToggle" }
+                    Code { source: "ThemeSwitcher" }
                     " is a ready-made switch."
                 }
             }

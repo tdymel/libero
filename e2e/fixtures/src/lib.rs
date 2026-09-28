@@ -28,7 +28,7 @@ mod color_field;
 mod color_picker;
 mod combobox;
 mod common;
-mod copy_button;
+mod copy;
 mod data_list;
 mod dialog;
 mod direction_toggle;
@@ -94,7 +94,7 @@ mod radio_group;
 mod range_slider;
 mod rating;
 mod refused;
-mod repo_button;
+mod repository;
 mod rich_text_editor;
 mod scroll_area;
 mod scroller;
@@ -118,7 +118,7 @@ mod tabs;
 mod tags_field;
 mod text_field;
 mod textarea;
-mod theme_toggle;
+mod theme_switcher;
 mod time_picker;
 mod timeline;
 mod tldr;
@@ -168,7 +168,7 @@ const FIXTURES: &[Routes] = &[
     color_field::ROUTES,
     color_picker::ROUTES,
     combobox::ROUTES,
-    copy_button::ROUTES,
+    copy::ROUTES,
     data_list::ROUTES,
     chrono_field::ROUTES,
     dialog::ROUTES,
@@ -235,7 +235,7 @@ const FIXTURES: &[Routes] = &[
     range_slider::ROUTES,
     rating::ROUTES,
     refused::ROUTES,
-    repo_button::ROUTES,
+    repository::ROUTES,
     rich_text_editor::ROUTES,
     scroll_area::ROUTES,
     scroller::ROUTES,
@@ -259,7 +259,7 @@ const FIXTURES: &[Routes] = &[
     tags_field::ROUTES,
     text_field::ROUTES,
     textarea::ROUTES,
-    theme_toggle::ROUTES,
+    theme_switcher::ROUTES,
     time_picker::ROUTES,
     timeline::ROUTES,
     tldr::ROUTES,

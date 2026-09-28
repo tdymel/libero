@@ -1,7 +1,7 @@
 //! `ButtonGroup`: bordered and borderless rows, a column, wrapped items, RTL.
 
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Button, ButtonGroup, DirectionToggle, Flex, ThemeToggle};
+use libero::components::{ActionIcon, Button, ButtonGroup, DirectionToggle, Flex, ThemeSwitcher};
 use libero::theme::ThemeSet;
 
 use crate::Routes;
@@ -28,11 +28,11 @@ fn ButtonGroupPage() -> Element {
                 Button { id: "f1", "One" }
                 Button { id: "f2", "Two" }
             }
-            // A `display: contents` wrapper, as `RepoButton`'s, and `ThemeToggle`'s own pair.
+            // A `display: contents` wrapper, as `Repository`'s, and `ThemeSwitcher`'s own pair.
             ButtonGroup { id: "mixed", "aria-label": "Mixed", size: "sm",
                 span { display: "contents", Button { id: "m1", "Wrapped" } }
                 DirectionToggle { id: "m2" }
-                ThemeToggle { id: "m3", themes: ThemeSet::CATALOGUE }
+                ThemeSwitcher { id: "m3", themes: ThemeSet::CATALOGUE }
             }
             ButtonGroup { id: "disabled", "aria-label": "Disabled", variant: "outlined", disabled: true,
                 Button { id: "d1", "Off" }
@@ -46,7 +46,7 @@ fn ButtonGroupPage() -> Element {
             // After the rest: the baseline's tab walk reaches `#v2` first.
             // The pair leads: its chevron seam needs a divider of its own.
             ButtonGroup { id: "pair", "aria-label": "Pair", size: "sm", variant: "standard",
-                ThemeToggle { id: "p1", themes: ThemeSet::CATALOGUE }
+                ThemeSwitcher { id: "p1", themes: ThemeSet::CATALOGUE }
                 Button { id: "p2", "After" }
             }
             // A hidden first child still squares its neighbour; a lone child is round.

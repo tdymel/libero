@@ -77,8 +77,8 @@ pub(super) fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         menubar,
         pagination,
         // Chrome only - read by the component, never a var.
-        theme_toggle: _,
-        repo_button: _,
+        theme_switcher: _,
+        repository: _,
         direction_toggle: _,
         tldr: _,
         anchor,

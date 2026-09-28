@@ -21,6 +21,8 @@ fn Notifying() -> Element {
         service_worker: "/sw.js".into(),
         vapid_public_key: VAPID_KEY.into(),
     });
+    let mut clicks = use_signal(|| 0);
+    let clicked = use_callback(move |()| clicks += 1);
 
     rsx! {
         button { id: "request", onclick: move |_| notifier.request(), "Request" }
@@ -29,6 +31,7 @@ fn Notifying() -> Element {
             onclick: move |_| notifier.show(SystemNotification {
                 body: Some("From the fixture".into()),
                 tag: Some("fixture".into()),
+                on_click: Some(clicked),
                 ..SystemNotification::new("Fixture")
             }),
             "Show"
@@ -39,6 +42,7 @@ fn Notifying() -> Element {
         p { id: "permission", "{notifier.permission():?}" }
         p { id: "error", "{notifier.error():?}" }
         p { id: "pending", "{notifier.is_pending()}" }
+        p { id: "clicks", "{clicks}" }
         p { id: "push-supported", "{push.is_supported()}" }
         p { id: "push-error", "{push.error():?}" }
         p { id: "push-pending", "{push.is_pending()}" }

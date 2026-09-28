@@ -125,7 +125,7 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
 | `icon` | `None` | An image URL. |
 | `tag` | `None` | Showing another with the same tag replaces it; `close(tag)` closes it. |
 | `silent` | `false` | Asks for no sound or vibration; a hint. |
-| `on_click` | `None` | Runs on a click while the component is mounted. |
+| `on_click` | `None` | Runs on a click while the component is mounted, after the click focused the page's window. |
 
 | Method of `SystemNotifier` | Description |
 |---|---|
@@ -147,11 +147,28 @@ Both handles are `Copy`. `PushOptions` apply to the next `subscribe`.
 
 | Platform | System notifications | Push |
 |---|---|---|
-| Web | Full, in a secure context. Chrome on Android shows through the page's service worker, whose clicks skip `on_click`. | Full, in a secure context; iOS Safari only for a Home Screen web app. |
+| Web | Full, in a secure context. Chrome on Android shows through the page's service worker, which must forward clicks (below). | Full, in a secure context; iOS Safari only for a Home Screen web app. |
 | Linux desktop (WebKitGTK) | Every request is `Denied`. | `Unsupported`. |
-| macOS, Windows desktop | Untested. | `Unsupported`. |
+| macOS, Windows desktop | Untested; a click runs `on_click` but may not raise the window. | `Unsupported`. |
 | Android (WebView) | `Unsupported`: the WebView has no Notifications API. Native notifications and FCM need app-level Kotlin. | `Unsupported`. |
 | Blitz, server render | `Unsupported`. | `Unsupported`. |
+
+Where the page has no `Notification` constructor, `show` goes through the
+page's service worker, and the click reaches the worker, not the page. The
+notification's `data.libero` names it; post it back to the open tabs and
+`on_click` runs (the sample `sw.js` does this):
+
+```js
+self.addEventListener('notificationclick', (event) => {
+  const libero = event.notification.data?.libero;
+  event.waitUntil(self.clients.matchAll({ type: 'window' }).then((tabs) => {
+    for (const tab of tabs) tab.postMessage({ libero, event: 'click' });
+    return tabs[0]?.focus();
+  }));
+});
+```
+
+Post `event: 'close'` from `notificationclose` the same way.
 
 ## Accessibility
 
@@ -182,4 +199,7 @@ Both handles are `Copy`. `PushOptions` apply to the next `subscribe`.
 - The Android WebView has no Notifications API, and libero declares no
   POST_NOTIFICATIONS: native notifications and FCM need app-level Kotlin.
 - Where only a service worker may show notifications (Chrome on Android),
-  clicks go to the worker, not on_click.
+  `on_click` runs only if the app's worker posts the click back.
+- A click after the page closed runs nothing in the page: only a worker can
+  open a tab then.
+- In a desktop WebView, `window.focus()` may not raise the app's window.

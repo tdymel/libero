@@ -12,14 +12,31 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// Tells the page about a notification `use_system_notification` showed here,
+// so its `on_click` runs. Pages without that notification ignore the message.
+const tell = (notification, name) => {
+  const libero = notification.data?.libero;
+  if (!libero) return Promise.resolve([]);
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((tabs) => {
+    for (const tab of tabs) tab.postMessage({ libero, event: name });
+    return tabs;
+  });
+};
+
 // Focuses an open tab of the app, else opens one.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url ?? '/';
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((tabs) => {
-      const tab = tabs.find((client) => 'focus' in client);
-      return tab ? tab.focus() : self.clients.openWindow(url);
-    }),
+    tell(event.notification, 'click')
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then((tabs) => {
+        const tab = tabs.find((client) => 'focus' in client);
+        return tab ? tab.focus() : self.clients.openWindow(url);
+      }),
   );
+});
+
+self.addEventListener('notificationclose', (event) => {
+  event.waitUntil(tell(event.notification, 'close'));
 });

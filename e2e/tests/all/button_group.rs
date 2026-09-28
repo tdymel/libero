@@ -56,7 +56,7 @@ async fn seams_and_corners<D: Driver>(d: &mut D, route: &str) -> Result<()> {
         "#o3 corners"
     );
 
-    // A `display: contents` wrapper and `ThemeToggle`'s pair join like bare buttons.
+    // A `display: contents` wrapper and `ThemeSwitcher`'s pair join like bare buttons.
     let (m1, m2) = (d.rect("#m1").await?, d.rect("#m2").await?);
     ensure!(joined(m1, m2, rtl), "wrapped item not flush: {m1:?} {m2:?}");
     ensure!(
@@ -70,7 +70,7 @@ async fn seams_and_corners<D: Driver>(d: &mut D, route: &str) -> Result<()> {
     );
     ensure!(
         !round(d, "#m3 > button", start).await?,
-        "the theme toggle's start"
+        "the theme switcher's start"
     );
     ensure!(
         round(d, "#m3 > div > button", end).await?,
@@ -168,7 +168,7 @@ async fn hidden_child<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 }
 
 e2e::scenario!(
-    a_leading_theme_toggle_pair_has_a_divider_at_its_chevron,
+    a_leading_theme_switcher_pair_has_a_divider_at_its_chevron,
     "/button-group",
     pair_leads
 );
@@ -209,6 +209,6 @@ fn it_meets_the_baseline() {
         .focusable("#o2")
         .focusable("#v2")
         .targets("#o3")
-        .dark_snapshot("the theme toggle names the next scheme, which follows the platform's")
+        .dark_snapshot("the theme switcher names the next scheme, which follows the platform's")
         .run();
 }

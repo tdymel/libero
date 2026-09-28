@@ -29,7 +29,7 @@ const CREDITS: [Row; 4] = [
     ),
     (
         "Simple Icons",
-        "The GitHub and GitLab marks in RepoButton, and the GitHub and Markdown marks on these pages.",
+        "The GitHub and GitLab marks in Repository, and the GitHub and Markdown marks on these pages.",
         "CC0 1.0",
         "https://simpleicons.org",
     ),

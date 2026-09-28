@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         ActionIcon, Anchor, Box, Burger, Button, ButtonGroup, Container, DirectionToggle, Flex,
-        Header, Icon, Kbd, Pictogram, RepoButton, ScrollArea, SpotlightOptions, ThemeToggle, Title,
-        spotlight_filter, use_scroll_area, use_spotlight,
+        Header, Icon, Kbd, Pictogram, Repository, ScrollArea, SpotlightOptions, ThemeSwitcher,
+        Title, spotlight_filter, use_scroll_area, use_spotlight,
     },
     hooks::{use_element, use_is_mobile},
     platform::ElementApi,
@@ -210,11 +210,11 @@ pub(crate) fn AppShell() -> Element {
                             }
                         }
                     }
-                    RepoButton { repo: REPO }
+                    Repository { repo: REPO }
                     // Lets a reviewer check any component right to left.
                     DirectionToggle {}
                     // In the header, so any page can be checked in every scheme and palette.
-                    ThemeToggle { themes: ThemeSet::CATALOGUE }
+                    ThemeSwitcher { themes: ThemeSet::CATALOGUE }
                 }
             }
             // The row never scrolls: the nav scrolls itself, and `ScrollArea` (not

@@ -3,7 +3,7 @@ use crate::theme::{Color, Variant};
 /// Theme defaults for `DirectionToggle`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DirectionToggleDefaults {
-    /// `Outlined`, the header chrome `ThemeToggle` wears.
+    /// `Outlined`, the header chrome `ThemeSwitcher` wears.
     pub variant: Variant,
     /// `Muted`: the accent belongs to the page, not to the chrome around it.
     pub color: Color,

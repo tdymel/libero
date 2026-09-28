@@ -54,7 +54,7 @@ pub fn CodeBlockPage() -> Element {
                     .doc("A bar above the code naming the language. Left out when there is no language and no copy button."),
                 prop("copyable", "bool")
                     .default("true")
-                    .doc("Shows a `CopyButton`. Without `header`, it floats in the top-right corner."),
+                    .doc("Shows a `Copy`. Without `header`, it floats in the top-right corner."),
                 prop("max_lines", "u32")
                     .doc("Caps the height at about this many lines and scrolls the rest. Unset, the block grows to fit."),
                 prop("line_numbers", "bool")

@@ -1,0 +1,54 @@
+---
+source: e2e/src/suite.rs
+description: theme_switcher_themes at mobile (open)
+expression: tree
+---
+group "Theme"
+  button "Switch to the dark theme"
+  button "Choose a theme" [expanded] [haspopup=menu]
+menu "Choose a theme"
+  group "Themes"
+    StaticText "Themes"
+    menuitemradio "Libero" [checked]
+      StaticText "Libero"
+    menuitemradio "Ayu" [checked=false]
+      StaticText "Ayu"
+    menuitemradio "Ayu Mirage" [checked=false]
+      StaticText "Ayu Mirage"
+    menuitemradio "Catppuccin" [checked=false]
+      StaticText "Catppuccin"
+    menuitemradio "Dracula" [checked=false]
+      StaticText "Dracula"
+    menuitemradio "Ef Night" [checked=false]
+      StaticText "Ef Night"
+    menuitemradio "Everforest" [checked=false]
+      StaticText "Everforest"
+    menuitemradio "Flexoki" [checked=false]
+      StaticText "Flexoki"
+    menuitemradio "GitHub" [checked=false]
+      StaticText "GitHub"
+    menuitemradio "Gruvbox" [checked=false]
+      StaticText "Gruvbox"
+    menuitemradio "Gruvbox Classic" [checked=false]
+      StaticText "Gruvbox Classic"
+    menuitemradio "Gruvbox Soft" [checked=false]
+      StaticText "Gruvbox Soft"
+    menuitemradio "Kanagawa" [checked=false]
+      StaticText "Kanagawa"
+    menuitemradio "Kanagawa Dragon" [checked=false]
+      StaticText "Kanagawa Dragon"
+    menuitemradio "kettek16" [checked=false]
+      StaticText "kettek16"
+    menuitemradio "Nord" [checked=false]
+      StaticText "Nord"
+    menuitemradio "One" [checked=false]
+      StaticText "One"
+    menuitemradio "Osmium" [checked=false]
+      StaticText "Osmium"
+    menuitemradio "Rosé Pine" [checked=false]
+      StaticText "Rosé Pine"
+    menuitemradio "shadcn/ui" [checked=false]
+      StaticText "shadcn/ui"
+    menuitemradio "Vague" [checked=false]
+      StaticText "Vague"
+--> aria-controls [id="lsx-N-menu"] (rendered above)

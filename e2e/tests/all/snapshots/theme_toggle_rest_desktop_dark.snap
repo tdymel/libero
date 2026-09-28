@@ -1,8 +1,0 @@
----
-source: e2e/src/suite.rs
-description: "theme_toggle at desktop (rest, dark)"
-expression: tree
----
-button "Switch to the light theme"
-paragraph
-  StaticText "Page text"

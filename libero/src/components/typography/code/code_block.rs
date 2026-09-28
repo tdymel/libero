@@ -8,7 +8,7 @@ use crate::{
     CssLayer,
     components::{
         accessibility::VisuallyHidden,
-        buttons::CopyButton,
+        buttons::Copy,
         common::{
             HtmlTag, Input, Part, States, Variables, base_props, inset_focus_ring_sx, names_itself,
             parts_enum, variables,
@@ -56,7 +56,7 @@ static CODE_BLOCK_HEADER_SX: StaticSx = StaticSx::new(|| {
         .color(CODE_BLOCK_MUTED_TEXT.value())
 });
 
-// No `variant`/`color` on the `CopyButton`, so these fully control the look.
+// No `variant`/`color` on the `Copy`, so these fully control the look.
 static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().border_radius("6px")
         .color(CODE_BLOCK_MUTED_TEXT.value())
@@ -539,7 +539,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
                 div { class: header_class, "data-slot": CodeBlockPart::Header.slot(),
                     span { "data-slot": CodeBlockPart::Language.slot(), {label} }
                     if let Some(copy_source) = copy_source.clone() {
-                        CopyButton {
+                        Copy {
                             "data-slot": CodeBlockPart::Copy.slot(),
                             value: copy_source,
                             aria_label: labels.copy,
@@ -550,7 +550,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
                     }
                 }
             } else if let Some(copy_source) = copy_source.clone() {
-                CopyButton {
+                Copy {
                     "data-slot": CodeBlockPart::Copy.slot(),
                     value: copy_source,
                     aria_label: labels.copy,

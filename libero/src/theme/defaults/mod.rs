@@ -67,7 +67,7 @@ mod progress_bar;
 mod qr_code;
 mod radio;
 mod rating;
-mod repo_button;
+mod repository;
 mod ripple;
 mod scroll_area;
 mod scroller;
@@ -87,7 +87,7 @@ mod tags_field;
 mod text;
 mod text_field;
 mod textarea;
-mod theme_toggle;
+mod theme_switcher;
 mod timeline;
 mod title;
 mod tldr;
@@ -288,7 +288,7 @@ pub use radio::{RADIO_CIRCLE, RADIO_CIRCLE_SIZE, RadioDefaults};
 pub use rating::{
     RATING_GAP, RATING_GAP_SIZE, RATING_GLYPH, RATING_GLYPH_SIZE, RatingDefaults, RatingSizeLevel,
 };
-pub use repo_button::RepoButtonDefaults;
+pub use repository::RepositoryDefaults;
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_CLIP_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
 pub(crate) use scroll_area::{SCROLL_AREA_KEYFRAMES, SCROLL_AREA_RANGE_X, SCROLL_AREA_RANGE_Y};
 pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
@@ -340,7 +340,7 @@ pub use text::{
 };
 pub use text_field::TextFieldDefaults;
 pub use textarea::TextareaDefaults;
-pub use theme_toggle::ThemeToggleDefaults;
+pub use theme_switcher::ThemeSwitcherDefaults;
 pub use timeline::{
     TIMELINE_BULLET, TIMELINE_BULLET_BACKGROUND, TIMELINE_BULLET_BACKGROUND_DEFAULT,
     TIMELINE_BULLET_SIZE, TIMELINE_COLOR, TIMELINE_CONNECTOR, TIMELINE_GAP, TIMELINE_LINE_COLOR,

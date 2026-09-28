@@ -12,7 +12,7 @@ use crate::{
     theme::{ColorCss, ColorShade, Size},
 };
 
-/// A control inside an item: the item itself, or one it wraps (`RepoButton`'s span, `ThemeToggle`'s pair).
+/// A control inside an item: the item itself, or one it wraps (`Repository`'s span, `ThemeSwitcher`'s pair).
 const CONTROL: &str = ":is(button, a)";
 
 /// The theme's hairline, `Divider`'s colour: a borderless variant has no edge to share.
@@ -26,7 +26,7 @@ fn controls(item: &str, rule: Sx) -> Sx {
         .selector(format!("& > {item} {CONTROL}"), rule)
 }
 
-/// The item's leading control, which carries the seam; `ThemeToggle`'s chevron has its own.
+/// The item's leading control, which carries the seam; `ThemeSwitcher`'s chevron has its own.
 fn seam(overlap: Sx, line: Sx) -> Sx {
     let outlined = format!(":not([data-state~=\"{}\"])", Variant::Outlined.state_name());
     ["", " > :first-child"]
@@ -38,7 +38,7 @@ fn seam(overlap: Sx, line: Sx) -> Sx {
         })
 }
 
-/// `ThemeToggle`'s pair is a group of its own: its chevron's inner seam gets the divider too.
+/// `ThemeSwitcher`'s pair is a group of its own: its chevron's inner seam gets the divider too.
 fn pair_seam(line: Sx) -> Sx {
     let borderless = format!(":not([data-state~=\"{}\"])", Variant::Outlined.state_name());
     sx().selector(

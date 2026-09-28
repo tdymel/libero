@@ -56,11 +56,11 @@ pub enum IconSlot {
     ExternalLink,
     /// An avatar with neither image nor initials.
     Person,
-    /// The theme toggle, switching to light.
+    /// The theme switcher, switching to light.
     Sun,
-    /// The theme toggle, switching to dark.
+    /// The theme switcher, switching to dark.
     Moon,
-    /// The theme toggle, handing the choice back to the platform.
+    /// The theme switcher, handing the choice back to the platform.
     SystemScheme,
     /// A carousel's or marquee's play button.
     Play,

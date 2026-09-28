@@ -44,10 +44,10 @@ fetch only the file you need.
 - [Button](button.md): A clickable action, a toggle, or a router-aware link.
 - [ActionIcon](action_icon.md): An icon-only button, rendered as a `button` or a link, with a required `aria_label`.
 - [ButtonGroup](button_group.md): Buttons and action icons side by side as one control, sharing seams and defaults.
-- [CopyButton](copy_button.md): An icon button that copies a value to the clipboard and confirms it with a check and a spoken "Copied".
+- [Copy](copy.md): An icon button that copies a value to the clipboard and confirms it with a check and a spoken "Copied".
 - [DirectionToggle](direction_toggle.md): An icon button that turns the app's text between left to right and right to left.
-- [RepoButton](repo_button.md): A link to a GitHub or GitLab repository with its star count beside the host's icon.
-- [ThemeToggle](theme_toggle.md): An icon button that flips the colour scheme, optionally through the system's too, with an optional theme picker beside it.
+- [Repository](repository.md): A link to a GitHub or GitLab repository with its star count beside the host's icon.
+- [ThemeSwitcher](theme_switcher.md): An icon button that flips the colour scheme, optionally through the system's too, with an optional theme picker beside it.
 - [Tldr](tldr.md): A menu of links that ask an AI assistant (ChatGPT, Google AI, Claude, Perplexity or your own) to summarize a page.
 - [Toolbar](toolbar.md): A row of buttons, action icons and selects that is one tab stop, moved through with the arrow keys.
 
