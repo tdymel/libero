@@ -337,7 +337,8 @@ fn MediaSpeed(media: MediaHandle, size: Input<Size>, overlay: bool) -> Element {
     ));
     rsx! {
         Menu { state: menu, items, size: size.clone(),
-            Button { attributes, variant: "standard", size, sx: look, "{shown}" }
+            // "1×" stays "1×" in a right-to-left page, not "×1".
+            Button { attributes, dir: "ltr", variant: "standard", size, sx: look, "{shown}" }
         }
     }
 }

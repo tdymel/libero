@@ -14,7 +14,18 @@ pub const ROUTES: Routes = &[
     ("/video/long", || rsx! { VideoPage { seconds: 15 } }),
     ("/video/captions", || rsx! { CaptionsPage {} }),
     ("/video/centered", || rsx! { CenteredPage {} }),
+    ("/video/variants", || rsx! { VariantsPage {} }),
 ];
+
+/// Todos 1378 and 1379: a player muted from the start, one in a right-to-left page.
+#[component]
+fn VariantsPage() -> Element {
+    let src = use_hook(|| silent_wav(4));
+    rsx! {
+        div { id: "muted", width: "32rem", Video { src: src.clone(), label: "Muted", muted: true } }
+        div { id: "rtl", dir: "rtl", width: "32rem", Video { src, label: "Right to left" } }
+    }
+}
 
 /// As the docs demo's preview: a centring flex row, which shrink-wraps its child.
 #[component]

@@ -367,6 +367,13 @@ pub fn Video(props: VideoProps) -> Element {
             Hotkey::new("c", move || captions.toggle(media)).when(move || captions.track.is_some()),
         ],
     );
+    // A `muted` attribute set after parsing mutes nothing, so the property is set once mounted.
+    let start_muted = props.muted;
+    use_effect(move || {
+        if start_muted && media.supported() == Some(true) {
+            media.set_muted(true);
+        }
+    });
 
     let error = media.error();
     let onerror = props.onerror;
@@ -411,9 +418,22 @@ pub fn Video(props: VideoProps) -> Element {
         }
     }));
 
+    let mut pressing = use_hook(|| CopyValue::new(false));
+    let by_key = move || {
+        let mut keyboard = keyboard;
+        if !*keyboard.peek() {
+            keyboard.set(true);
+        }
+        wake();
+    };
     // Tagged, so a WebView finds the player for fullscreen and the hotkeys.
     let mut attributes = props.attributes;
-    attributes.extend(fullscreen.attributes());
+    // Focus moved in without a press, by a key, code or AT, counts as a key (todo 1249).
+    attributes.extend(fullscreen.attributes_with_focusin(move |_| {
+        if playing && !*pressing.peek() {
+            by_key();
+        }
+    }));
     // Only while playing, so a WebView sends no pointer moves across the IPC otherwise.
     if playing {
         attributes.extend([
@@ -426,22 +446,23 @@ pub fn Video(props: VideoProps) -> Element {
                 }
             }),
             listener("onpointerdown", move |_: Event<PointerData>| {
+                pressing.set(true);
                 let mut keyboard = keyboard;
                 if *keyboard.peek() {
                     keyboard.set(false);
                 }
                 wake();
             }),
-            listener("onkeyup", move |_: Event<KeyboardData>| {
-                let mut keyboard = keyboard;
-                if !*keyboard.peek() {
-                    keyboard.set(true);
-                }
-                wake();
+            listener("onpointerup", move |_: Event<PointerData>| {
+                pressing.set(false)
             }),
+            listener("onkeyup", move |_: Event<KeyboardData>| by_key()),
         ]);
     }
-    if playing && idle() && !keyboard() {
+    let hidden = playing && idle() && !keyboard();
+    // A click on the picture plays or pauses, as YouTube's; a tap on hidden controls only shows them.
+    let mut tap_shows = use_hook(|| CopyValue::new(false));
+    if hidden {
         attributes.push(Attribute::new(
             CONTROLS_ATTR,
             AttributeValue::Text("hidden".into()),
@@ -464,6 +485,13 @@ pub fn Video(props: VideoProps) -> Element {
             preload: props.preload.attribute(),
             playsinline: true,
             onmounted: media.mount(),
+            onpointerdown: move |event: PointerEvent| tap_shows.set(event.pointer_type() == "touch" && hidden),
+            onclick: move |_| {
+                if !*tap_shows.peek() {
+                    media.toggle();
+                }
+                tap_shows.set(false);
+            },
             onplay: move |_| if let Some(handler) = onplay { handler.call(()) },
             onpause: move |_| if let Some(handler) = onpause { handler.call(()) },
             onended: move |_| if let Some(handler) = onended { handler.call(()) },

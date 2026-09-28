@@ -77,6 +77,15 @@ impl FullscreenHandle {
     /// Spread on the element: its [`ElementHandle::attributes`], `data-fullscreen`,
     /// and the listeners that leave the drawn fullscreen on Escape or focus leaving.
     pub fn attributes(&self) -> Vec<Attribute> {
+        self.attributes_with_focusin(|_| {})
+    }
+
+    /// [`attributes`](Self::attributes), its `focusin` also calling `extra`: an element keeps one listener per event.
+    pub(crate) fn attributes_with_focusin(
+        &self,
+        mut extra: impl FnMut(&Event<FocusData>) + 'static,
+    ) -> Vec<Attribute> {
+        let mut focusin = self.focus.focusin(0);
         let state = match ((self.active)(), (self.drawn)()) {
             (_, true) => Some("drawn"),
             (true, false) => Some("native"),
@@ -108,7 +117,10 @@ impl FullscreenHandle {
                     handle.exit();
                 }
             }),
-            listener("onfocusin", self.focus.focusin(0)),
+            listener("onfocusin", move |event: Event<FocusData>| {
+                extra(&event);
+                focusin(event);
+            }),
             listener("onfocusout", self.focus.focusout(0)),
         ]);
         attributes

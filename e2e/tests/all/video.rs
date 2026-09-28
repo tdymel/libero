@@ -409,16 +409,18 @@ async fn the_player_follows_its_element<D: Driver>(d: &mut D, _route: &str) -> R
         .await?;
         return Ok(());
     }
+    // Video's "0:00 / 0:04", Audio's "0:04".
     eventually(d, "the duration", async |d| {
-        Ok(d.text("#player [data-slot=time]").await? == "0:00 / 0:04")
+        Ok(d.text("#player [data-slot=time]").await?.ends_with("0:04"))
     })
     .await?;
+    let start = d.text("#player [data-slot=time]").await?;
     d.click(PLAY).await?;
     reads(d, "the button to offer Pause", PLAY, "aria-label", "Pause").await?;
     // Each `timeupdate` that passes the throttle moves the time on.
     eventually(d, "the time to move", async |d| {
         let time = d.text("#player [data-slot=time]").await?;
-        Ok(time != "0:00 / 0:04")
+        Ok(time != start)
     })
     .await?;
     reads(d, "the end to offer Play again", PLAY, "aria-label", "Play").await
@@ -581,15 +583,13 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
     within(d, 8, "the controls to fade while playing", faded).await?;
 
     d.click("#player video").await?;
-    within(d, 3, "a tap on the picture to show them", controls_shown).await?;
-    reads(
-        d,
-        "the tap to leave playing alone",
-        PLAY,
-        "aria-label",
-        "Pause",
-    )
-    .await?;
+    within(d, 3, "a press on the picture to show them", controls_shown).await?;
+    // A click pauses too; a tap on faded controls only shows them (todo 1362).
+    if d.platform() != Platform::Android {
+        reads(d, "the click to pause", PLAY, "aria-label", "Play").await?;
+        d.click(PLAY).await?;
+    }
+    reads(d, "playing", PLAY, "aria-label", "Pause").await?;
     within(d, 8, "the controls to fade again", faded).await?;
 
     d.press(keyboard::TAB).await?;
@@ -618,8 +618,12 @@ async fn inline_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     d.click(PLAY).await?;
     within(d, 8, "the controls to fade while playing", faded).await?;
     d.click("#player video").await?;
-    within(d, 3, "a tap on the picture to show them", controls_shown).await?;
-    d.click(PLAY).await?;
+    within(d, 3, "a press on the picture to show them", controls_shown).await?;
+    // A click pauses as well; a tap on faded controls only shows them (todo 1362).
+    if d.platform() == Platform::Android {
+        d.click(PLAY).await?;
+    }
+    reads(d, "playing to pause", PLAY, "aria-label", "Play").await?;
     let started = std::time::Instant::now();
     while started.elapsed().as_secs() < 4 {
         anyhow::ensure!(controls_shown(d).await?, "the controls faded while paused");
@@ -970,6 +974,170 @@ fn a_press_on_the_seek_track_seeks() {
             page,
             "document.querySelector('#player video').currentTime === 3",
             "the press to seek to 3 s",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Polls `js` on `page` for `secs`, past `wait`'s budget: the controls fade after 3 s.
+async fn until(page: &chromiumoxide::Page, js: &str, secs: u64, what: &str) {
+    let started = std::time::Instant::now();
+    loop {
+        let done: bool = page
+            .evaluate(js)
+            .await
+            .ok()
+            .and_then(|value| value.into_value().ok())
+            .unwrap_or(false);
+        if done {
+            return;
+        }
+        assert!(
+            started.elapsed().as_secs() < secs,
+            "gave up waiting for {what}"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+}
+
+const FADED: &str = "document.querySelector('#player [role=group]').dataset.controls === 'hidden'
+    && getComputedStyle(document.querySelector('#player [data-slot=controls]')).opacity === '0'";
+const PLAYING: &str = "!document.querySelector('#player video').paused";
+const PAUSED: &str = "document.querySelector('#player video').paused";
+const LONG_DURATION: &str =
+    "document.querySelector('#player [data-slot=time]').textContent === '0:00 / 0:15'";
+
+/// Todo 1349: in fullscreen a control's tooltip opens inside the player, on top.
+#[test]
+fn a_tooltip_shows_in_fullscreen() {
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{FULLSCREEN}') !== null"),
+            "the controls",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, FULLSCREEN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{STATE} !== 'none'"),
+            "the player to fill the screen",
+        )
+        .await
+        .unwrap();
+        pointer::hover(page, PLAY).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const tip = [...document.querySelectorAll('[role=tooltip]')].find((e) => e.textContent.includes('Play'));
+             if (!tip || !document.querySelector('#player [role=group]').contains(tip)) return false;
+             const r = tip.getBoundingClientRect();
+             return r.width > 0 && tip.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); })()",
+            "the tooltip inside the player, on top",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1362: a click on the picture plays and pauses; a tap on faded controls only
+/// shows them, and once shown a tap pauses.
+#[test]
+fn a_click_on_the_picture_plays_or_pauses() {
+    block_on(async {
+        let fixture = Fixture::open("/video/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, LONG_DURATION, "the duration")
+            .await
+            .unwrap();
+        pointer::click(page, "#player video").await.unwrap();
+        wait::for_js_true(page, PLAYING, "a click to play")
+            .await
+            .unwrap();
+        pointer::click(page, "#player video").await.unwrap();
+        wait::for_js_true(page, PAUSED, "a click to pause")
+            .await
+            .unwrap();
+
+        pointer::click(page, "#player video").await.unwrap();
+        until(page, FADED, 8, "the controls to fade").await;
+        let at = pointer::centre_of(page, "#player video").await.unwrap();
+        pointer::touch_drag(page, at, at, 0).await.unwrap();
+        until(
+            page,
+            &format!("!({FADED}) && {PLAYING}"),
+            3,
+            "a tap to show the controls and keep playing",
+        )
+        .await;
+        pointer::touch_drag(page, at, at, 0).await.unwrap();
+        wait::for_js_true(page, PAUSED, "a tap on shown controls to pause")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1249: focus moved into faded controls by code, with no key, shows them.
+#[test]
+fn focus_from_code_shows_the_faded_controls() {
+    block_on(async {
+        let fixture = Fixture::open("/video/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, LONG_DURATION, "the duration")
+            .await
+            .unwrap();
+        pointer::click(page, PLAY).await.unwrap();
+        until(page, FADED, 8, "the controls to fade").await;
+        page.evaluate(format!("document.querySelector('{FULLSCREEN}').focus()"))
+            .await
+            .unwrap();
+        until(
+            page,
+            "document.querySelector('#player [role=group]').dataset.controls === undefined
+             && getComputedStyle(document.querySelector('#player [data-slot=controls]')).opacity === '1'",
+            3,
+            "focus from code to show the row",
+        )
+        .await;
+        // As after a key, they stay while focus is in them.
+        tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+        until(page, &format!("!({FADED})"), 1, "the row to stay").await;
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todos 1379 and 1378: `muted` mutes the element; the speed reads "1×" in a right-to-left page.
+#[test]
+fn muted_mutes_and_the_speed_reads_left_to_right() {
+    block_on(async {
+        let fixture = Fixture::open("/video/variants", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelector('#muted video').muted
+             && document.querySelector('#muted [data-slot=volume] button').getAttribute('aria-label') === 'Unmute'",
+            "the muted player to be muted and offer Unmute",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const b = document.querySelector(\"#rtl button[aria-label^='Playback speed']\");
+             return b !== null && getComputedStyle(b).direction === 'ltr'
+                 && getComputedStyle(b.closest('#rtl')).direction === 'rtl'; })()",
+            "the speed button left to right in a right-to-left page",
         )
         .await
         .unwrap();

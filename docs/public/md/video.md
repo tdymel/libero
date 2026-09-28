@@ -148,8 +148,10 @@ screen, from [use_fullscreen](use_fullscreen.md).
   seconds of playing untouched or as the mouse leaves the player; while paused
   they stay. A pointer move, a tap or a key brings them back. After a key they
   stay until the next click or tap, so keyboard focus never sits on a faded
-  control; they never leave the Tab order, and a tap on the picture only shows
-  them.
+  control, and focus moved into them by code or a screen reader shows them too.
+  They never leave the Tab order.
+- A click on the picture plays or pauses, as YouTube's. A tap on it while the
+  controls are faded only shows them; once shown, a tap plays or pauses.
 - No control leaves the player at any width: the seek track has a row of its own
   and shrinks with the player, below 22rem the total time goes, and below 15rem
   the bar moves under the picture and wraps, so it fits at 320px and 200% zoom
