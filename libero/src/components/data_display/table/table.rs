@@ -1,4 +1,7 @@
-use std::{collections::HashSet, rc::Rc};
+use std::{
+    collections::{BTreeMap, HashSet},
+    rc::Rc,
+};
 
 use dioxus::prelude::*;
 
@@ -27,8 +30,8 @@ use super::{
     column_menu::{ColumnMenu, MenuColumn},
     column_order::{moved, order_unpinned},
     core::{
-        BodySpec, CaptionSpec, CellSpec, RowFn, RowSpec, SortedRows, TableSort, active_sort,
-        header_specs, render_body,
+        BodySpec, CaptionSpec, CellSpec, RowFn, RowSpec, SortedRows, TableSort, WidthSpec,
+        active_sort, header_specs, render_body,
     },
     detail::Details,
     filter::{FilteredRows, QuickFilter, query_words},
@@ -37,6 +40,7 @@ use super::{
     header_filters::HeaderFilter,
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     pinning::{PinSide, PinnedColumns, pin_columns, pin_runs, span_pin},
+    resize::{ColumnResize, ColumnWidths, MenuWidth},
     row_reorder::{ReorderSlot, RowReorder},
     selection::Selection,
     use_table::{TableConfig, use_table},
@@ -183,6 +187,33 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     .selector(
         "& [data-column-menu]:focus-visible",
         inset_focus_ring_sx("0"),
+    )
+    // The sticky rules below outrank it: a sticky cell places the grip as well.
+    .selector("& th[data-resizable]", sx().position("relative"))
+    // The header cell's box, measured for a resize's start width.
+    .selector(
+        "& [data-resize-box]",
+        sx().position("absolute")
+            .top("0")
+            .bottom("0")
+            .with("inset-inline-start", "0")
+            .with("inset-inline-end", "0")
+            .with("pointer-events", "none"),
+    )
+    .selector(
+        "& [data-resize-handle]",
+        sx().position("absolute")
+            .top("0")
+            .bottom("0")
+            .with("inset-inline-end", "0")
+            .width("8px")
+            .with("border-inline-end", "2px solid transparent")
+            .cursor("col-resize")
+            .touch_action("none"),
+    )
+    .selector(
+        "& th:hover [data-resize-handle], & [data-resize-handle][data-dragging]",
+        sx().border_color("primary.6"),
     )
     // With a mouse, shown on its header's hover or focus (todo 1260); a touch
     // screen has no hover. Faded, not hidden, so Tab still reaches it.
@@ -576,6 +607,21 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// The order a column menu's Move left or Move right asks for, every header listed.
     #[props(default)]
     oncolumnorderchange: Option<EventHandler<Vec<String>>>,
+    /// A drag grip on each header's end edge, and Widen, Narrow and Reset width
+    /// in the `column_menu`, its keyboard and drag-free way. Off per column
+    /// with `Column::resizable(false)`.
+    #[props(default)]
+    resizable_columns: bool,
+    /// Resized widths in px by header, over the columns' own `width`; set,
+    /// they are controlled.
+    #[props(default)]
+    column_widths: Option<ColumnWidths>,
+    /// Seeds the resized widths once. Ignored when `column_widths` is set.
+    #[props(default)]
+    default_column_widths: ColumnWidths,
+    /// The widths a drag's end or a column menu pick asks for.
+    #[props(default)]
+    oncolumnwidthschange: Option<EventHandler<ColumnWidths>>,
     /// A menu button in each header: sort, hide the column, show or hide others.
     #[props(default)]
     column_menu: bool,
@@ -682,6 +728,16 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         column_order: props.column_order,
         default_column_order: props.default_column_order,
         oncolumnorderchange: props.oncolumnorderchange,
+        column_widths: props.column_widths,
+        default_column_widths: props.default_column_widths,
+        oncolumnwidthschange: props.oncolumnwidthschange,
+    });
+    let preview = use_signal(|| None);
+    let measured = use_hook(|| CopyValue::new(BTreeMap::new()));
+    let resize = props.resizable_columns.then_some(ColumnResize {
+        widths: state.column_widths,
+        preview,
+        measured,
     });
     let announcer = use_announcer();
     let touch = use_hook(|| CopyValue::new(false));
@@ -713,6 +769,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             warn(
                 "Table: `onrowreorder` without `row_key` keys the rows by index, so a moved row \
                  is rebuilt and its handle loses the focus.",
+            );
+        }
+        if props.resizable_columns && !props.column_menu {
+            warn(
+                "Table: `resizable_columns` without `column_menu` resizes by drag only, out of \
+                 reach of the keyboard and of a pointer that cannot drag (WCAG 2.5.7).",
             );
         }
     });
@@ -771,10 +833,16 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
     let focused_row = use_signal(|| None::<usize>);
 
+    let widths = state.column_widths.read();
     let mut headers = header_specs(
         &props.columns,
         &props.column_defaults,
         &state.hidden_columns.read(),
+        WidthSpec {
+            resizable: props.resizable_columns,
+            widths: &widths,
+            preview: resize.and_then(|_| preview()),
+        },
     );
     let pinned = state.pinned_columns.read();
     let has_detail = props.row_detail.is_set();
@@ -840,6 +908,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                                 moved(&headers, &column_order, index, true),
                             ),
                             order: state.column_order,
+                            width: resize.zip(headers[index].resize).map(|(resize, limits)| MenuWidth {
+                                resize,
+                                limits,
+                                width: widths.get(&headers[index].header).copied(),
+                            }),
                             active: active.clone(),
                             sort: state.sort,
                             multi_sort: props.multi_sort,
@@ -1207,6 +1280,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     .map(|reorder| reorder.header_cell(group_rows + 1)),
                 reorder: reorder.clone(),
                 filters: filter_cells,
+                resize,
             }),
         );
     // The live region: valid in no part of a table, so beside it.

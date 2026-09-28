@@ -9,6 +9,7 @@ use super::{
     groups::{HeaderCell, header_rows},
     header_filters::filter_row,
     pinning::{CellPin, pin_edge_at},
+    resize::{ColumnResize, ColumnWidths, ResizeHandle, ResizeLimits},
     row_reorder::{ReorderRow, ReorderSlot, RowReorder},
     use_table::StateSlice,
     window::{BodyRows, render_window},
@@ -107,18 +108,36 @@ pub(super) struct HeaderSpec {
     pub groups: Vec<String>,
     /// Set by [`pin_columns`](super::pinning::pin_columns).
     pub pin: Option<CellPin>,
+    /// With `resizable_columns`, unless the column opted out: its resize limits.
+    pub resize: Option<ResizeLimits>,
+}
+
+/// How the table sizes its columns: `resizable_columns`, the resized widths,
+/// and a drag's width before it ends, by header index.
+pub(super) struct WidthSpec<'a> {
+    pub resizable: bool,
+    pub widths: &'a ColumnWidths,
+    pub preview: Option<(usize, f64)>,
 }
 
 pub(super) fn header_specs<T>(
     columns: &[Column<T>],
     defaults: &ColumnDefaults,
     hidden: &[String],
+    sizing: WidthSpec,
 ) -> Vec<HeaderSpec> {
     columns
         .iter()
-        .map(|column| {
+        .enumerate()
+        .map(|(index, column)| {
             let resolved = column.resolve(defaults);
             let hidden = hidden.contains(&column.header);
+            let resized = match sizing.preview {
+                Some((at, width)) if at == index => Some(width),
+                _ => sizing.widths.get(&column.header).copied(),
+            }
+            .map(|width| format!("{width}px"));
+            let width = resized.as_deref().or(resolved.width);
             HeaderSpec {
                 header: column.header.clone(),
                 align: resolved.align,
@@ -126,14 +145,15 @@ pub(super) fn header_specs<T>(
                 row_header: column.row_header,
                 hideable: column.hideable,
                 hidden,
-                width: resolved.width.map(str::to_string),
-                style: width_style(resolved.width, resolved.min_width),
+                width: width.map(str::to_string),
+                style: width_style(width, resolved.min_width),
                 body: match hidden {
                     true => None,
                     false => column.header_render.as_ref().map(|render| render()),
                 },
                 groups: column.groups.clone(),
                 pin: None,
+                resize: (sizing.resizable && column.resizable).then_some(column.resize_limits),
             }
         })
         .collect()
@@ -371,6 +391,8 @@ pub(super) struct BodySpec {
     pub reorder_header: Option<Element>,
     /// With `header_filters`: each header's filter field, by header index.
     pub filters: Option<Vec<Option<Element>>>,
+    /// With `resizable_columns`: what the headers' resize grips share.
+    pub resize: Option<ColumnResize>,
 }
 
 /// Whether a header click adds its column to the others: a modifier, or a touch,
@@ -429,6 +451,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         reorder,
         reorder_header,
         filters,
+        resize,
     } = body;
     let columns = shown.len().max(1)
         + usize::from(select_all.is_some())
@@ -484,6 +507,17 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                     },
                     HeaderCell::Column { index, rowspan } => {
                         let spec = &headers[index];
+                        let grip = resize.zip(spec.resize).map(|(resize, limits)| {
+                            rsx! {
+                                ResizeHandle {
+                                    index,
+                                    header: spec.header.clone(),
+                                    limits,
+                                    resize,
+                                }
+                            }
+                        });
+                        let resizable = grip.is_some();
                         rsx! {
                             th {
                                 key: "{index}",
@@ -492,6 +526,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                 "data-align": align_attr(spec.align),
                                 "data-sortable": spec.sortable.then_some(true),
                                 "data-menu": with_menu.then_some(true),
+                                "data-resizable": resizable.then_some(true),
                                 "data-pin": spec.pin.as_ref().map(|pin| pin.side.as_str()),
                                 "data-pin-edge": spec.pin.as_ref().filter(|pin| pin.edge).map(|_| true),
                                 // Else the menu button's label joins the name every cell reads out.
@@ -504,6 +539,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                     .find(|(column, _)| *column == index)
                                     .map(|(_, direction)| direction.aria_value()),
                                 {header_cell(spec, index, &context, menu_of(index))}
+                                {grip}
                             }
                         }
                     }
@@ -829,8 +865,44 @@ mod tests {
                 body: None,
                 groups: Vec::new(),
                 pin: None,
+                resize: None,
             })
             .collect()
+    }
+
+    static NO_WIDTHS: ColumnWidths = ColumnWidths::new();
+
+    fn unsized_spec() -> WidthSpec<'static> {
+        WidthSpec {
+            resizable: false,
+            widths: &NO_WIDTHS,
+            preview: None,
+        }
+    }
+
+    #[test]
+    fn a_resized_width_wins_and_a_drag_previews_over_it() {
+        let (_, mut columns) = ages();
+        columns[0] = columns[0].clone().width("10rem");
+        columns[1] = columns[1].clone().resizable(false);
+        let widths = ColumnWidths::from([("Name".to_string(), 120.0)]);
+        let spec = |preview| WidthSpec {
+            resizable: true,
+            widths: &widths,
+            preview,
+        };
+
+        let headers = header_specs(&columns, &ColumnDefaults::new(), &[], spec(None));
+        assert_eq!(headers[0].width.as_deref(), Some("120px"));
+        assert_eq!(headers[0].resize, Some(ResizeLimits::default()));
+        assert_eq!(headers[1].resize, None);
+
+        let headers = header_specs(&columns, &ColumnDefaults::new(), &[], spec(Some((0, 90.0))));
+        assert_eq!(headers[0].width.as_deref(), Some("90px"));
+        assert_eq!(
+            headers[0].style.as_deref(),
+            Some("box-sizing:border-box;width:90px;")
+        );
     }
 
     #[test]
@@ -963,7 +1035,7 @@ mod tests {
     #[test]
     fn a_sort_on_an_unknown_or_unsortable_header_is_inactive() {
         let (_, columns) = ages();
-        let headers = header_specs(&columns, &ColumnDefaults::new(), &[]);
+        let headers = header_specs(&columns, &ColumnDefaults::new(), &[], unsized_spec());
 
         let unknown = [TableSort::new("Height", Ascending)];
         assert!(active_sort(&headers, &unknown, true).is_empty());

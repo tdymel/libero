@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
 
-use super::{column_filter::ColumnFilter, core::TableSort, pinning::PinnedColumns};
+use super::{
+    column_filter::ColumnFilter, core::TableSort, pinning::PinnedColumns, resize::ColumnWidths,
+};
 use crate::utils::warn;
 
 /// One piece of table state: the caller's when controlled, else the table's own.
@@ -110,6 +112,9 @@ pub(crate) struct TableConfig {
     pub column_order: Option<Vec<String>>,
     pub default_column_order: Vec<String>,
     pub oncolumnorderchange: Option<EventHandler<Vec<String>>>,
+    pub column_widths: Option<ColumnWidths>,
+    pub default_column_widths: ColumnWidths,
+    pub oncolumnwidthschange: Option<EventHandler<ColumnWidths>>,
 }
 
 /// A table's state, one slice per feature.
@@ -131,6 +136,8 @@ pub(crate) struct TableState {
     pub expanded: StateSlice<Vec<String>>,
     /// The headers in display order; unlisted ones follow in column order.
     pub column_order: StateSlice<Vec<String>>,
+    /// Resized widths in px, by header.
+    pub column_widths: StateSlice<ColumnWidths>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -194,8 +201,15 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.oncolumnorderchange,
         "Table: a controlled `column_order` without `oncolumnorderchange` never changes.",
     );
+    let column_widths = use_state_slice(
+        config.column_widths,
+        || config.default_column_widths,
+        config.oncolumnwidthschange,
+        "Table: a controlled `column_widths` without `oncolumnwidthschange` never changes.",
+    );
     TableState {
         column_order,
+        column_widths,
         sort,
         selection,
         page,

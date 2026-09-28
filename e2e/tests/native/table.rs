@@ -255,6 +255,39 @@ fn a_column_width_sizes_the_whole_column() {
     assert!((cell - 200.0).abs() <= 1.0, "the cell is {cell}px wide");
 }
 
+/// 1156-4d: the grip on a header's end edge drags its width on Blitz too, from
+/// the measured width.
+#[test]
+#[ignore = "1156-4d: the press on the grip (absolute in the th, laid out at its edge) moves no width on Blitz; the column menu resizes there"]
+fn a_header_grip_drags_the_column_wider() {
+    fn app() -> Element {
+        rsx! {
+            div { width: "600px",
+                Table {
+                    aria_label: "People",
+                    resizable_columns: true,
+                    data: vec![Person { name: "Ada", age: 36 }],
+                    columns: vec![
+                        column("Name").value(|p: &Person| p.name.to_string()).width("200px"),
+                        column("Age").value(|p: &Person| p.age),
+                    ],
+                }
+            }
+        }
+    }
+    let mut page = mount(app);
+    let before = page.rect("thead th").2;
+    page.drag("thead th [data-resize-handle]", 60.0, 0.0);
+    let wider = |page: &Page| page.rect("thead th").2 > before + 50.0;
+    page.wait_for(wider);
+    assert!(
+        wider(&page),
+        "the header stayed {}px wide, from {before}px: {}",
+        page.rect("thead th").2,
+        page.tree()
+    );
+}
+
 /// Todo 734: Blitz's UA sheet centres a button's content, so a sortable header
 /// sat mid-cell while its column's cells start at the edge.
 #[test]

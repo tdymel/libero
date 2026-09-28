@@ -102,6 +102,11 @@ pub struct TableLabels {
     /// Moves the column one place left on screen, whichever the text direction.
     pub move_column_left: &'static str,
     pub move_column_right: &'static str,
+    /// Steps a resizable column's width; the drag-free way to resize it.
+    pub widen_column: &'static str,
+    pub narrow_column: &'static str,
+    /// Drops a resized column's width, back to its own.
+    pub reset_column_width: &'static str,
     /// The header of the column of row reorder handles, read out only.
     pub reorder: &'static str,
     /// The header of the column of detail toggles, read out only.
@@ -298,6 +303,9 @@ impl TableLabels {
         unpin: "Unpin",
         move_column_left: "Move left",
         move_column_right: "Move right",
+        widen_column: "Widen column",
+        narrow_column: "Narrow column",
+        reset_column_width: "Reset width",
         reorder: "Reorder",
         details: "Details",
         row_details: english_row_details,
@@ -338,6 +346,9 @@ impl TableLabels {
         unpin: "Fixierung lösen",
         move_column_left: "Nach links",
         move_column_right: "Nach rechts",
+        widen_column: "Spalte verbreitern",
+        narrow_column: "Spalte verschmälern",
+        reset_column_width: "Breite zurücksetzen",
         reorder: "Neu anordnen",
         details: "Details",
         row_details: german_row_details,

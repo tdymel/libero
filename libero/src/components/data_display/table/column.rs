@@ -2,7 +2,10 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use super::cell_value::{CellAlign, CellValue, FilterKind, SortKey};
+use super::{
+    cell_value::{CellAlign, CellValue, FilterKind, SortKey},
+    resize::ResizeLimits,
+};
 
 /// A column waiting for its [`value`](ColumnHeader::value).
 pub struct ColumnHeader {
@@ -32,6 +35,9 @@ pub struct Column<T> {
     pub(super) filter_kind: FilterKind,
     pub(super) width: Option<String>,
     pub(super) min_width: Option<String>,
+    /// Gets a resize handle with the table's `resizable_columns`.
+    pub(super) resizable: bool,
+    pub(super) resize_limits: ResizeLimits,
     pub(super) header_render: Option<HeaderRender>,
     /// Group headers above this one, outermost first.
     pub(super) groups: Vec<String>,
@@ -66,6 +72,8 @@ impl ColumnHeader {
             filter_kind: V::filter_kind(),
             width: None,
             min_width: None,
+            resizable: true,
+            resize_limits: ResizeLimits::default(),
             header_render: None,
             groups: Vec::new(),
             col_span: None,
@@ -288,6 +296,31 @@ impl<T> Column<T> {
         self
     }
 
+    /// Whether the table's `resizable_columns` gives it a resize handle; on by default.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # struct Item { id: u32 }
+    /// column("Id").value(|i: &Item| i.id).resizable(false);
+    /// ```
+    pub fn resizable(mut self, resizable: bool) -> Self {
+        self.resizable = resizable;
+        self
+    }
+
+    /// How narrow and how wide a resize takes the column, in CSS px; 50 and
+    /// unbounded by default. `min_width` still floors it on screen.
+    ///
+    /// ```rust
+    /// # use libero::components::column;
+    /// # struct User { name: String }
+    /// column("Name").value(|u: &User| u.name.clone()).resize_limits(80.0, 320.0);
+    /// ```
+    pub fn resize_limits(mut self, min: f64, max: f64) -> Self {
+        self.resize_limits = ResizeLimits::new(min, max);
+        self
+    }
+
     /// Replaces the header's body, inside the sort button when sortable. The
     /// header text stays the column's name in [`TableSort`](super::TableSort).
     ///
@@ -355,6 +388,8 @@ impl<T> Clone for Column<T> {
             filter_kind: self.filter_kind,
             width: self.width.clone(),
             min_width: self.min_width.clone(),
+            resizable: self.resizable,
+            resize_limits: self.resize_limits,
             header_render: self.header_render.clone(),
             groups: self.groups.clone(),
             col_span: self.col_span.clone(),
@@ -378,6 +413,8 @@ impl<T> PartialEq for Column<T> {
             && self.filter_kind == other.filter_kind
             && self.width == other.width
             && self.min_width == other.min_width
+            && self.resizable == other.resizable
+            && self.resize_limits == other.resize_limits
             && self.groups == other.groups
     }
 }
@@ -452,6 +489,8 @@ mod tests {
         assert!(a != b.clone().hideable(false));
         assert!(a != b.clone().width("4rem"));
         assert!(a != b.clone().min_width("4rem"));
+        assert!(a != b.clone().resizable(false));
+        assert!(a != b.clone().resize_limits(80.0, 200.0));
         assert!(a == b.clone().header_render(|| rsx! { "x" }));
         assert!(a == b.clone().col_span(|_| 2));
         assert!(a != b.clone().group("G"));

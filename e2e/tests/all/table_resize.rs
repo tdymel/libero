@@ -1,0 +1,82 @@
+//! `Table` column resize (1156-4d): a header grip drags the width within its
+//! limits; the column menu's Widen, Narrow and Reset width do it without a drag.
+
+use anyhow::{Result, bail};
+use e2e::driver::{Driver, eventually, eventually_text};
+
+const WIDTHS: &str = "#widths";
+const NAME: &str = "th[aria-label=Name]";
+
+async fn width_near<D: Driver>(d: &mut D, want: f64, after: &str) -> Result<()> {
+    eventually(d, after, async |d| {
+        Ok((d.rect(NAME).await?.width - want).abs() <= 2.0)
+    })
+    .await
+}
+
+async fn a_drag_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let grip = format!("{NAME} [data-resize-handle]");
+    width_near(d, 120.0, "the declared width").await?;
+    if d.exists("th[aria-label=Origin] [data-resize-handle]")
+        .await?
+    {
+        bail!("Origin opted out, yet has a grip");
+    }
+    d.drag(&grip, 60.0, 0.0).await?;
+    eventually_text(d, WIDTHS, "Name=180", "a 60px drag").await?;
+    width_near(d, 180.0, "the drag's end").await?;
+    // Clamped to the column's 80px floor.
+    d.drag(&grip, -400.0, 0.0).await?;
+    eventually_text(d, WIDTHS, "Name=80", "a drag past the floor").await?;
+    // The header's text and menu button keep it wider than 80px: auto layout.
+    eventually(d, "the narrowed column", async |d| {
+        Ok(d.rect(NAME).await?.width < 150.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_header_grip_drags_the_width_within_its_limits,
+    "/table-resize",
+    a_drag_resizes,
+    native: skip("1156-4d: the first grip drag resizes, a second one moves nothing")
+);
+
+/// Clicks the open menu's entry reading `label`.
+async fn pick<D: Driver>(d: &mut D, label: &str) -> Result<()> {
+    for index in 0..12 {
+        let item = format!("[role=menuitem][data-menu-index=\"{index}\"]");
+        if d.exists(&item).await? && d.text(&item).await? == label {
+            return d.click(&item).await;
+        }
+    }
+    bail!("no {label} entry")
+}
+
+async fn the_menu_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    width_near(d, 120.0, "the declared width").await?;
+    d.click("button[aria-label=\"Name column options\"]")
+        .await?;
+    eventually(d, "the column menu to open", async |d| {
+        d.exists("[role=menuitem]").await
+    })
+    .await?;
+    pick(d, "Widen column").await?;
+    eventually_text(d, WIDTHS, "Name=170", "Widen").await?;
+    width_near(d, 170.0, "Widen").await?;
+    // Widen and Narrow keep the menu open, to step again.
+    pick(d, "Narrow column").await?;
+    eventually_text(d, WIDTHS, "Name=120", "Narrow").await?;
+    pick(d, "Narrow column").await?;
+    eventually_text(d, WIDTHS, "Name=80", "Narrow to the floor").await?;
+    pick(d, "Reset width").await?;
+    eventually_text(d, WIDTHS, "", "Reset width").await?;
+    width_near(d, 120.0, "the reset").await
+}
+
+e2e::scenario!(
+    the_column_menu_widens_narrows_and_resets_a_width,
+    "/table-resize",
+    the_menu_resizes,
+    native: skip("1156-4d: no Reset width entry found after Widen and two Narrows")
+);

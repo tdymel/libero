@@ -112,6 +112,7 @@ mod table;
 mod table_detail;
 mod table_groups;
 mod table_reorder;
+mod table_resize;
 mod tabs;
 mod tags_field;
 mod text_field;
@@ -251,6 +252,7 @@ const FIXTURES: &[Routes] = &[
     table_detail::ROUTES,
     table_groups::ROUTES,
     table_reorder::ROUTES,
+    table_resize::ROUTES,
     tabs::ROUTES,
     tags_field::ROUTES,
     text_field::ROUTES,

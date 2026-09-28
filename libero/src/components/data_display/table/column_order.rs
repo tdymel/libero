@@ -90,6 +90,7 @@ mod tests {
                 body: None,
                 groups: Vec::new(),
                 pin: None,
+                resize: None,
             })
             .collect()
     }

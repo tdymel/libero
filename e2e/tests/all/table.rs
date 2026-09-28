@@ -523,14 +523,12 @@ async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) 
     d.press(keyboard::BACKSPACE).await?;
     eventually_text(d, "tbody th", "Fig", "an emptied header filter").await?;
 
-    // Filter sits above Hide column and the Columns submenu, the last entries.
+    // Filter follows the sort entries: first, as Name does not sort.
     d.focus(MENU).await?;
     d.press(keyboard::ENTER).await?;
     eventually_focused(d, "[role=menuitem]", "the opened column menu").await?;
-    d.press(keyboard::END).await?;
-    d.press(keyboard::ARROW_UP).await?;
-    d.press(keyboard::ARROW_UP).await?;
-    eventually_text(d, "[role=menuitem]:focus", "Filter", "End, Up, Up").await?;
+    d.press(keyboard::HOME).await?;
+    eventually_text(d, "[role=menuitem]:focus", "Filter", "Home").await?;
     d.press(keyboard::ENTER).await?;
     eventually(d, "the opened filter", async |d| d.exists(POPOVER).await).await?;
     eventually_focused(d, &format!("{POPOVER} input"), "the opened filter").await?;
@@ -1190,10 +1188,19 @@ async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Resu
         d.exists("[role=menuitem]").await
     })
     .await?;
-    if d.text("[role=menuitem]").await? != "Pin to start" {
-        bail!("the first entry is not Pin to start");
+    // After Filter and the moves.
+    let mut pin = None;
+    for index in 0..8 {
+        let item = format!("[role=menuitem][data-menu-index=\"{index}\"]");
+        if d.exists(&item).await? && d.text(&item).await? == "Pin to start" {
+            pin = Some(item);
+            break;
+        }
     }
-    d.click("[role=menuitem]").await?;
+    let Some(pin) = pin else {
+        bail!("no Pin to start entry");
+    };
+    d.click(&pin).await?;
     eventually_text(d, "#pinned", "Name,Origin|Supplier", "Pin to start").await?;
     eventually(d, "Origin to pin past Name", async |d| {
         Ok(d.attr("th[aria-label=Origin]", "data-pin")

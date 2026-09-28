@@ -9,6 +9,7 @@ use super::{
     core::{ActiveSort, TableSort},
     filter_popover::{FilterPopover, FilterTarget, FilteredButton},
     pinning::{PinSide, PinnedColumns},
+    resize::MenuWidth,
     use_table::StateSlice,
 };
 use crate::{
@@ -31,7 +32,7 @@ pub(super) struct MenuColumn {
     pub hidden: bool,
 }
 
-/// A header's menu: sort, pin, filter, hide, and the columns to show.
+/// A header's menu: sort, filter, move, width, pin, hide, and the columns to show.
 #[component]
 pub(super) fn ColumnMenu(
     index: usize,
@@ -45,6 +46,8 @@ pub(super) fn ColumnMenu(
     /// `None` at that edge.
     moves: (Option<Vec<String>>, Option<Vec<String>>),
     order: StateSlice<Vec<String>>,
+    /// With `resizable_columns`, unless the column opted out.
+    width: Option<MenuWidth>,
     labels: TableLabels,
     size: Size,
     parts: Input<Parts<MenuPart>>,
@@ -99,22 +102,16 @@ pub(super) fn ColumnMenu(
         }
         items.push(MenuEntry::Separator);
     }
-    // The side it is on is left out.
-    let side = pinned.read().side(&column.header);
-    for (label, to) in [
-        (labels.pin_start, Some(PinSide::Start)),
-        (labels.pin_end, Some(PinSide::End)),
-        (labels.unpin, None),
-    ] {
-        if to != side {
-            let header = column.header.clone();
-            items.push(
-                MenuItem::new(label)
-                    .onselect(move |_| pinned.set(pinned.read().with(&header, to)))
-                    .into(),
-            );
-        }
+    // Sort, filter, move, width, pin, hide.
+    if filter.is_some() {
+        items.push(
+            MenuItem::new(labels.filter)
+                .onselect(move |_| filter_open.set(true))
+                .into(),
+        );
+        items.push(MenuEntry::Separator);
     }
+    let side = pinned.read().side(&column.header);
     // A pinned column moves by its pin; the labels are physical, as the reader sees them.
     if side.is_none() {
         let (backward, forward) = moves;
@@ -138,14 +135,23 @@ pub(super) fn ColumnMenu(
             );
         }
     }
-    // After sort, pin and move, as MUI orders them.
-    if filter.is_some() {
-        items.push(MenuEntry::Separator);
-        items.push(
-            MenuItem::new(labels.filter)
-                .onselect(move |_| filter_open.set(true))
-                .into(),
-        );
+    if let Some(width) = width {
+        items.extend(width.items(&column.header, labels));
+    }
+    // The side it is on is left out.
+    for (label, to) in [
+        (labels.pin_start, Some(PinSide::Start)),
+        (labels.pin_end, Some(PinSide::End)),
+        (labels.unpin, None),
+    ] {
+        if to != side {
+            let header = column.header.clone();
+            items.push(
+                MenuItem::new(label)
+                    .onselect(move |_| pinned.set(pinned.read().with(&header, to)))
+                    .into(),
+            );
+        }
     }
     let hideable: Vec<usize> = (0..columns.len())
         .filter(|&column| columns[column].hideable)

@@ -608,7 +608,11 @@ fn Demo() -> Element {
 | `column_order` | `Option<Vec<String>>` | `None` | The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column. |
 | `default_column_order` | `Vec<String>` | `[]` | Seeds the column order once. Ignored when `column_order` is set. |
 | `oncolumnorderchange` | `EventHandler<Vec<String>>` | `None` | Called with the order a column menu's Move left or Move right asks for, every header listed. |
-| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, move the column left or right past the next shown one, filter a `filterable` column, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries. Filter opens a popover with the operators of the column's type, a value and Clear; a filtered column's header then shows a filter button that reopens it. |
+| `resizable_columns` | `bool` | `false` | Puts a drag grip on each header's end edge, and Widen column, Narrow column (50px steps, the menu stays open) and Reset width in its `column_menu`, the keyboard and drag-free way. Double-click a grip to reset. A column opts out with `.resizable(false)` and sets its range with `.resize_limits(min, max)` in px, 50 to unbounded by default. Auto layout never draws a column narrower than its content. Blitz: use the menu, the grip does not drag reliably there. |
+| `column_widths` | `Option<ColumnWidths>` | `None` | Resized widths in px by header, a `BTreeMap<String, f64>`, over the columns' own `width`. Set, the widths are controlled: pair them with `oncolumnwidthschange`. |
+| `default_column_widths` | `ColumnWidths` | `{}` | Seeds the widths once. Ignored when `column_widths` is set. |
+| `oncolumnwidthschange` | `EventHandler<ColumnWidths>` | `None` | Called with the widths a grip drag asks for when it ends, and with each Widen, Narrow or Reset width. |
+| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, filter a `filterable` column, move the column left or right past the next shown one, widen, narrow or reset it with `resizable_columns`, pin to the start or end or unpin, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries. Filter opens a popover with the operators of the column's type, a value and Clear; a filtered column's header then shows a filter button that reopens it. |
 | `column_menu_parts` | `Parts<MenuPart>` | none | The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
@@ -626,6 +630,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `align` | `CellAlign` | follows the cell type | Overrides the alignment the cell type chose and `column_defaults`. |
 | `width` | `String` | `None` | The column's width, any CSS length. Columns without one share the rest. |
 | `min_width` | `String` | `None` | The narrowest the column gets, any CSS length. |
+| `resizable` | `bool` | `true` | Whether the table's `resizable_columns` gives it a grip and menu entries. |
+| `resize_limits` | `(f64, f64)` | `(50, unbounded)` | How narrow and how wide a resize takes the column, in px. `min_width` still floors it on screen. |
 | `header_render` | `fn() -> Element` | `None` | Replaces the header's body, inside the sort button when sortable. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header. |
 | `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
