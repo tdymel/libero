@@ -74,6 +74,12 @@ async fn mouse_n(
 /// Press, move in steps, release. The steps matter: `Scroller` captures only
 /// after 5px of travel (`codebase/components/scroller`).
 pub async fn drag(page: &Page, from: Point, to: Point, steps: usize) -> Result<()> {
+    drag_held(page, from, to, steps).await?;
+    release(page, to).await
+}
+
+/// [`drag`] without the release, to read the page mid-drag; [`release`] ends it.
+pub async fn drag_held(page: &Page, from: Point, to: Point, steps: usize) -> Result<()> {
     mouse(page, DispatchMouseEventType::MouseMoved, from, 0).await?;
     mouse(page, DispatchMouseEventType::MousePressed, from, 1).await?;
     for step in 1..=steps {
@@ -84,8 +90,11 @@ pub async fn drag(page: &Page, from: Point, to: Point, steps: usize) -> Result<(
         };
         mouse(page, DispatchMouseEventType::MouseMoved, at, 1).await?;
     }
-    mouse(page, DispatchMouseEventType::MouseReleased, to, 0).await?;
     Ok(())
+}
+
+pub async fn release(page: &Page, at: Point) -> Result<()> {
+    mouse(page, DispatchMouseEventType::MouseReleased, at, 0).await
 }
 
 /// Move the pointer onto an element's centre, pressing nothing.

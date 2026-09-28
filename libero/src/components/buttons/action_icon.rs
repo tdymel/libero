@@ -253,6 +253,10 @@ base_props! {
     }
 }
 
+/// Provided above `ActionIcon`s whose tooltips open late: the media controls' (todo 1439).
+#[derive(Clone, Copy)]
+pub(crate) struct TooltipOpenDelay(pub(crate) u32);
+
 /// An icon-only button, for actions like copy or close.
 ///
 /// ```rust
@@ -278,8 +282,10 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .as_deref()
         .and_then(|chord| chord_keys(chord, apple, &current_localization().shortcut_help));
     let label = props.aria_label.clone();
+    let open_delay = try_consume_context::<TooltipOpenDelay>().map(|delay| delay.0);
     rsx! {
         Tooltip {
+            open_delay,
             label: rsx! {
                 "{label}"
                 if let Some(keys) = keys {

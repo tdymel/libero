@@ -8,6 +8,7 @@ mod theme_switcher;
 mod tldr;
 mod toolbar;
 
+pub(crate) use action_icon::TooltipOpenDelay;
 pub use action_icon::{ActionIcon, ActionIconProps};
 pub(crate) use button::button_variables;
 pub use button::{Button, ButtonPart, ButtonProps};

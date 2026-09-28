@@ -494,6 +494,64 @@ fn a_row_scrolls_inside_itself_at_320px() {
     });
 }
 
+/// A second drag still shows its preview: the neighbour steps aside before the drop (todo 1438).
+#[test]
+fn a_second_drag_still_moves_the_neighbours_before_the_drop() {
+    use e2e::passes::pointer;
+    block_on(async {
+        let fixture = Fixture::open("/sortable", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            wait::for_visible(page, "#Alpha").await?;
+            let shift = "(() => { const t = getComputedStyle(document.querySelector('#Gamma')).transform; \
+                 return t === 'none' ? 0 : new DOMMatrix(t).m42; })()";
+            for (round, (handle, order)) in [
+                ("#Alpha button", "Beta Alpha Gamma Delta"),
+                ("#Beta button", "Alpha Beta Gamma Delta"),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let from = pointer::centre_of(page, handle).await?;
+                // Gamma and Delta never move: the dropped item may still be settling.
+                let (c, d) = (
+                    pointer::centre_of(page, "#Gamma").await?,
+                    pointer::centre_of(page, "#Delta").await?,
+                );
+                let to = pointer::Point {
+                    x: from.x,
+                    y: from.y + (d.y - c.y) * 1.4,
+                };
+                pointer::drag_held(page, from, to, 8).await?;
+                // Gamma, below the dragged item's new slot, never moves; the one passed does.
+                let passed = if round == 0 { "#Beta" } else { "#Alpha" };
+                wait::for_js_true(
+                    page,
+                    &format!(
+                        "(() => {{ const t = getComputedStyle(document.querySelector('{passed}')).transform; \
+                         return t !== 'none' && new DOMMatrix(t).m42 < -1; }})()"
+                    ),
+                    &format!("drag {}: the passed item to step up", round + 1),
+                )
+                .await?;
+                let gamma: f64 = page.evaluate(shift).await?.into_value()?;
+                anyhow::ensure!(gamma.abs() < 1.0, "Gamma moved by {gamma}");
+                pointer::release(page, to).await?;
+                wait::for_js_true(
+                    page,
+                    &format!("document.querySelector('#order').textContent.trim() === '{order}'"),
+                    &format!("drag {}: the drop", round + 1),
+                )
+                .await?;
+            }
+            anyhow::Ok(())
+        }
+        .await;
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
 /// On a touch screen the handle's description names the move buttons, not Space.
 #[test]
 fn a_touch_screen_describes_the_handle_by_the_move_buttons() {

@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 
 use super::media_controls::{
     CONTROLS, MediaFallback, MediaSeek, MediaStatus, MediaVolume, SEEK, Sound, TIME, clock,
-    controls_sx, icon_size, seek_sx, space_toggles, times, use_media_keys, use_sound,
+    controls_sx, icon_size, seek_sx, space_toggles, times, use_late_tooltips, use_media_keys,
+    use_sound,
 };
 use crate::{
     components::{
@@ -364,6 +365,7 @@ fn AudioControls(
     size: Input<Size>,
     heights: [f64; BARS],
 ) -> Element {
+    use_late_tooltips();
     let labels = use_localization().media;
     rsx! {
         div { role: "group", "aria-label": labels.controls, "data-slot": CONTROLS,

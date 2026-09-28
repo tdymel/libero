@@ -541,6 +541,108 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
     });
 }
 
+/// A card is a bordered paper surface apart from its column's fill, light and dark (1437).
+#[test]
+fn a_card_stands_apart_from_its_column_in_both_schemes() {
+    use e2e::browser::{Fixture, Scheme, Viewport, block_on, emulate_media};
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        for scheme in [Scheme::Light, Scheme::Dark] {
+            emulate_media(page, scheme, None).await.unwrap();
+            e2e::wait::for_js_true(
+                page,
+                &format!(
+                    "matchMedia('(prefers-color-scheme: {})').matches",
+                    scheme.name()
+                ),
+                "the scheme to apply",
+            )
+            .await
+            .unwrap();
+            let [card, column, border]: [String; 3] = page
+                .evaluate(
+                    "(() => { const card = getComputedStyle(document.querySelector('#Alpha')); \
+                     const column = getComputedStyle(document.querySelector('#column-0')); \
+                     return [card.backgroundColor, column.backgroundColor, \
+                             card.borderTopWidth + ' ' + card.borderTopStyle + ' ' + card.borderTopColor]; })()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let name = scheme.name();
+            assert!(
+                card != column,
+                "{name}: the card shares its column's {card}"
+            );
+            assert!(!card.contains("rgba(0, 0, 0, 0)"), "{name}: a clear card");
+            assert!(
+                border.starts_with("1px solid ") && border != format!("1px solid {card}"),
+                "{name}: no visible edge, {border} on {card}"
+            );
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A second drag still slides the neighbours before the drop, as the first did (1438).
+#[test]
+fn a_second_drag_still_slides_the_neighbours() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer;
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            e2e::wait::for_visible(page, "#Gamma").await?;
+            for (round, (card, passed, order)) in [
+                ("#Alpha", "#Beta", "Beta Alpha Gamma | Delta | "),
+                ("#Beta", "#Alpha", "Alpha Beta Gamma | Delta | "),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let from = pointer::centre_of(page, &format!("{card} [data-slot=handle]")).await?;
+                // Gamma never moves: the dropped card may still be settling.
+                let (beta, gamma) = (
+                    pointer::centre_of(page, "#Beta").await?,
+                    pointer::centre_of(page, "#Gamma").await?,
+                );
+                let pitch = if round == 0 { gamma.y - beta.y } else { (gamma.y - beta.y) / 2.0 };
+                let to = pointer::Point {
+                    x: from.x,
+                    y: from.y + pitch * 1.4,
+                };
+                pointer::drag_held(page, from, to, 8).await?;
+                e2e::wait::for_js_true(
+                    page,
+                    &format!(
+                        "(() => {{ const t = getComputedStyle(document.querySelector('{passed}')).transform; \
+                         return t !== 'none' && new DOMMatrix(t).m42 < -1; }})()"
+                    ),
+                    &format!("drag {}: the passed card to step up", round + 1),
+                )
+                .await?;
+                pointer::release(page, to).await?;
+                e2e::wait::for_js_true(
+                    page,
+                    &format!(
+                        "document.querySelector('#order').textContent.trim() === '{}'",
+                        order.trim()
+                    ),
+                    &format!("drag {}: the drop", round + 1),
+                )
+                .await?;
+            }
+            anyhow::Ok(())
+        }
+        .await;
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
 /// Forced colours paint the column's fill as `Canvas`, so only a border draws its edge.
 #[test]
 fn a_column_keeps_an_edge_in_forced_colours() {

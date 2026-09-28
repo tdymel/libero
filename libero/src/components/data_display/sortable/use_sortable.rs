@@ -83,10 +83,11 @@ impl SortableItemHandle {
             true => format!("translate({px}px, 0px)"),
             false => format!("translate(0px, {px}px)"),
         };
-        let mut style = format!("transform: {}", translate(offset));
+        // Every declaration closed: the dropped settle var's reset is appended after them (1438).
+        let mut style = format!("transform: {};", translate(offset));
         if let Some(from) = (self.settle)() {
             style.push_str(&format!(
-                "; {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {}",
+                " {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {};",
                 translate(from),
                 TRANSITION_DURATION.value(),
                 TRANSITION_EASING.value()

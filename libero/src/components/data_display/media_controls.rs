@@ -8,7 +8,7 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        buttons::{ActionIcon, Button},
+        buttons::{ActionIcon, Button, TooltipOpenDelay},
         common::{Glyph, HtmlTag, Input},
         form::{Slider, SliderChangeEvent},
         layout::{paper_sx, use_box},
@@ -32,6 +32,11 @@ pub(super) const TIME: &str = "time";
 pub(super) const SEEK: &str = "seek";
 pub(super) const VOLUME: &str = "volume";
 pub(super) const MESSAGE: &str = "message";
+
+/// The buttons' tooltips open after 2s of hover; keyboard focus still opens them at once (todo 1439).
+pub(super) fn use_late_tooltips() {
+    use_context_provider(|| TooltipOpenDelay(2000));
+}
 
 /// The volume menu: a slider on a card.
 static VOLUME_MENU_SX: StaticSx = StaticSx::new(|| {
@@ -201,6 +206,7 @@ pub(super) fn MediaControls(
     #[props(default)]
     onheight: Option<EventHandler<f64>>,
 ) -> Element {
+    use_late_tooltips();
     let labels = use_localization().media;
     let icon_size = icon_size(&size);
     let space_toggles = space_toggles(media);

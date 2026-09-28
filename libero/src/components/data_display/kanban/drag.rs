@@ -481,11 +481,12 @@ impl BoardCard {
     pub(super) fn style(&self) -> Option<String> {
         let translate = |(x, y): (f64, f64)| format!("translate({x}px, {y}px)");
         if let Some(offset) = (self.offset)() {
-            return Some(format!("transform: {}", translate(offset)));
+            // Closed by `;`: a dropped settle var's reset is appended after it (1438).
+            return Some(format!("transform: {};", translate(offset)));
         }
         let from = (self.settle)()?;
         Some(format!(
-            "transform: translate(0px, 0px); {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {}",
+            "transform: translate(0px, 0px); {SORTABLE_SETTLE_FROM}: {}; animation: {SORTABLE_SETTLE} {} {};",
             translate(from),
             TRANSITION_DURATION.value(),
             TRANSITION_EASING.value()

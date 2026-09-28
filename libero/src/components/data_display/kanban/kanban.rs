@@ -25,6 +25,7 @@ use crate::{
     localization::fill,
     platform::ElementApi,
     sx::{StaticSx, sx},
+    theme::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS},
 };
 
 static KANBAN_SX: StaticSx = StaticSx::new(|| {
@@ -70,9 +71,14 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
 });
 
 // Under 8rem for the content, as in a 220px column, the move buttons wrap below it, end-aligned.
+// A paper card on the column's muted fill (todo 1437).
 static KANBAN_CARD_SX: StaticSx = StaticSx::new(|| {
     sortable_item_sx()
         .flex_wrap("wrap")
+        .padding("xs")
+        .background(PAPER_BACKGROUND.value())
+        .border(format!("1px solid {}", PAPER_BORDER_COLOR.value()))
+        .border_radius(PAPER_RADIUS.value())
         .selector(KanbanCardPart::Content.selector(), sx().flex_basis("8rem"))
         .selector(
             "& > [data-slot='content'] + *",

@@ -123,6 +123,11 @@ fn keep_dropped_vars(style: Option<String>, written: &mut Vec<String>) -> Option
         .filter(|seen| !custom_properties(&style).any(|name| name == seen.as_str()))
         .map(|name| format!("{name}:{ABSENT};"))
         .collect();
+    // An unterminated last declaration would swallow the first reset, itself invalid then (1438).
+    let open = style.trim_end();
+    if !dropped.is_empty() && !open.is_empty() && !open.ends_with(';') {
+        style.push(';');
+    }
     style.push_str(&dropped);
     (!style.is_empty()).then_some(style)
 }
@@ -234,6 +239,25 @@ mod tests {
 
         let back = keep_dropped_vars(Some("--a:blue;".into()), &mut written);
         assert_eq!(back.as_deref(), Some("--a:blue;--b:revert-layer;"));
+    }
+
+    /// The resets follow an unterminated style after a `;`; a terminated or empty one gets none.
+    #[test]
+    fn a_reset_never_joins_an_unterminated_declaration() {
+        let mut written = Vec::new();
+        keep_dropped_vars(Some("--a:1;".into()), &mut written);
+
+        let open = keep_dropped_vars(Some("transform: none".into()), &mut written);
+        assert_eq!(open.as_deref(), Some("transform: none;--a:revert-layer;"));
+
+        let closed = keep_dropped_vars(Some("transform: none; ".into()), &mut written);
+        assert_eq!(
+            closed.as_deref(),
+            Some("transform: none; --a:revert-layer;")
+        );
+
+        let empty = keep_dropped_vars(Some(String::new()), &mut written);
+        assert_eq!(empty.as_deref(), Some("--a:revert-layer;"));
     }
 
     /// A plain property is not ours to revert, and an element that never had
