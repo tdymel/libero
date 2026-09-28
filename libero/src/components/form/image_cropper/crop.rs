@@ -41,6 +41,8 @@ pub struct CropOptions {
     /// Locks the crop's width over height: `1.0` is square.
     pub aspect: Option<f64>,
     pub shape: CropShape,
+    /// The dialog's cropper in pan mode, see `ImageCropper`'s `pan`.
+    pub pan: bool,
     /// Scales the cropped image down until its longer side is at most this, in px.
     pub max_size: Option<u32>,
 }
@@ -196,6 +198,66 @@ impl CropRect {
             y: self.y + (self.height - height) / 2.0,
             width,
             height,
+        }
+        .moved(0.0, 0.0)
+    }
+
+    /// Where pan mode holds the box, in fractions of the cropper: 80% of the
+    /// largest box of its shape, centred, like [`Self::starting`] unrounded.
+    pub(super) fn frame(self) -> Self {
+        if self.width <= 0.0 || self.height <= 0.0 {
+            return self;
+        }
+        let largest = Self::largest(Some(self.width / self.height));
+        let (width, height) = (largest.width * 0.8, largest.height * 0.8);
+        Self {
+            x: (1.0 - width) / 2.0,
+            y: (1.0 - height) / 2.0,
+            width,
+            height,
+        }
+    }
+
+    /// The image's scale and offset, in fractions of the cropper, that put this
+    /// crop under [`Self::frame`].
+    pub(super) fn image_transform(self) -> (f64, f64, f64) {
+        let frame = self.frame();
+        if self.width <= 0.0 {
+            return (1.0, 0.0, 0.0);
+        }
+        let scale = frame.width / self.width;
+        (scale, frame.x - scale * self.x, frame.y - scale * self.y)
+    }
+
+    /// Pan mode: the crop under the image dragged by `dx`, `dy` fractions of
+    /// the cropper, so the crop moves the other way.
+    pub(super) fn panned(self, dx: f64, dy: f64) -> Self {
+        let frame = self.frame();
+        if frame.width <= 0.0 || frame.height <= 0.0 {
+            return self;
+        }
+        self.moved(
+            -dx * self.width / frame.width,
+            -dy * self.height / frame.height,
+        )
+    }
+
+    /// Pan mode: the image zoomed `factor` times, the point under `from`
+    /// brought under `to`, both fractions of the cropper.
+    pub(super) fn zoomed(self, factor: f64, from: (f64, f64), to: (f64, f64), min: f64) -> Self {
+        let frame = self.frame();
+        if !factor.is_finite() || factor <= 0.0 || frame.width <= 0.0 || frame.height <= 0.0 {
+            return self;
+        }
+        let (u, v) = (
+            self.x + (from.0 - frame.x) * self.width / frame.width,
+            self.y + (from.1 - frame.y) * self.height / frame.height,
+        );
+        let sized = self.scaled(1.0 / factor, min);
+        Self {
+            x: u - (to.0 - frame.x) * sized.width / frame.width,
+            y: v - (to.1 - frame.y) * sized.height / frame.height,
+            ..sized
         }
         .moved(0.0, 0.0)
     }

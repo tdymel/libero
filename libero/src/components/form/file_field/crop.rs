@@ -113,6 +113,7 @@ fn CropDialog(args: CropArgs, close: Callback<()>, resolve: Callback<CropRect>) 
                     alt,
                     aspect: options.aspect,
                     shape: options.shape,
+                    pan: options.pan,
                     value: rect(),
                     onchange: move |next| rect.set(Some(next)),
                     onerror: move |()| failed.set(true),

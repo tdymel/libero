@@ -469,3 +469,110 @@ e2e::scenario!(
     "/image-cropper/square",
     the_aspect_holds
 );
+
+const PLUS: keyboard::Key = keyboard::Key {
+    key: "+",
+    code: "Equal",
+    vk: 187,
+    text: Some("+"),
+};
+const MINUS: keyboard::Key = keyboard::Key {
+    key: "-",
+    code: "Minus",
+    vk: 189,
+    text: Some("-"),
+};
+
+/// Pan mode: the arrows move the crop, + and - zoom around the still box (1368).
+async fn the_keys_pan_and_zoom<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#crop", "30,10,40,80", "the starting square").await?;
+    anyhow::ensure!(
+        !d.exists(SOUTH_EAST).await?,
+        "pan mode drew a resize handle"
+    );
+    d.focus(BOX).await?;
+    d.press(PLUS).await?;
+    eventually_text(d, "#crop", "32,14,36,73", "+").await?;
+    eventually(d, "the box to speak the zoom", async |d| {
+        Ok(d.attr(BOX, "aria-valuetext").await?.as_deref() == Some("Zoom 110%, at 32%, 14%"))
+    })
+    .await?;
+    d.press(MINUS).await?;
+    eventually_text(d, "#crop", "30,10,40,80", "-").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_text(d, "#crop", "31,10,40,80", "ArrowRight").await
+}
+
+e2e::scenario!(
+    pan_mode_keys_move_and_zoom,
+    "/image-cropper/pan",
+    the_keys_pan_and_zoom
+);
+
+/// Pan mode: the box holds still while a finger pans the image under it and
+/// two zoom it around their midpoint; the whole cropper takes touches (1368).
+#[test]
+fn a_touch_pans_and_pinch_zooms_the_image_under_the_box() {
+    use e2e::passes::pointer::{self, Point};
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper/pan", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let crop = "document.getElementById('crop').textContent";
+        wait::for_js_true(page, &format!("{crop} === '30,10,40,80'"), "the square")
+            .await
+            .unwrap();
+        // Root left, top, width, height; frame width, height; image width; box left, width.
+        let rects = "(() => { const r = (s) => document.querySelector(s).getBoundingClientRect();
+            const [root, frame, image, box] = ['#cropper', '[data-slot=frame]', '[data-slot=image]', '[data-slot=box]'].map(r);
+            return [root.left, root.top, root.width, root.height, frame.width, frame.height,
+                image.width, box.left - root.left, box.width]; })()";
+        let before: Vec<f64> = page.evaluate(rects).await.unwrap().into_value().unwrap();
+        let (left, top, width, height) = (before[0], before[1], before[2], before[3]);
+        assert!(
+            (before[4] - width).abs() < 1.0 && (before[5] - height).abs() < 1.0,
+            "the frame does not cover the cropper: {before:?}"
+        );
+        let overflow: String = page
+            .evaluate("getComputedStyle(document.getElementById('cropper')).overflow")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(overflow, "hidden");
+
+        // A tenth of the cropper right and up: the crop moves a tenth left and down.
+        let centre = Point {
+            x: left + width / 2.0,
+            y: top + height / 2.0,
+        };
+        let to = Point {
+            x: centre.x + width / 10.0,
+            y: centre.y - height / 10.0,
+        };
+        pointer::touch_drag(page, centre, to, 8).await.unwrap();
+        wait::for_js_true(page, &format!("{crop} === '20,20,40,80'"), "a touch pan")
+            .await
+            .unwrap();
+
+        // Twice the spread around the centre: half the crop around the point there.
+        pointer::pinch(page, centre, width * 0.2, width * 0.4, 8)
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("{crop} === '30,40,20,40'"), "a pinch out")
+            .await
+            .unwrap();
+        let after: Vec<f64> = page.evaluate(rects).await.unwrap().into_value().unwrap();
+        assert!(
+            (after[6] / width - 2.0).abs() < 0.02,
+            "the image did not double: {after:?}"
+        );
+        assert!(
+            (after[7] - before[7]).abs() < 1.0 && (after[8] - before[8]).abs() < 1.0,
+            "the box moved: {before:?} -> {after:?}"
+        );
+        fixture.console.assert_clean("the touches").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

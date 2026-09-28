@@ -25,9 +25,15 @@ const CROP_X: CssVar = CssVar::new("--lsx-image-cropper-x");
 const CROP_Y: CssVar = CssVar::new("--lsx-image-cropper-y");
 const CROP_WIDTH: CssVar = CssVar::new("--lsx-image-cropper-width");
 const CROP_HEIGHT: CssVar = CssVar::new("--lsx-image-cropper-height");
+/// Pan mode: the image's scale and offset, the offset in fractions of the cropper.
+const IMAGE_SCALE: CssVar = CssVar::new("--lsx-image-cropper-scale");
+const IMAGE_X: CssVar = CssVar::new("--lsx-image-cropper-image-x");
+const IMAGE_Y: CssVar = CssVar::new("--lsx-image-cropper-image-y");
 
 /// Arrow keys move this far, Shift+arrow ten times as far.
 const KEY_STEP: f64 = 0.01;
+/// Pan mode's + and - zoom by this factor.
+const ZOOM_STEP: f64 = 1.1;
 /// The smallest box side, as a fraction of the image.
 const MIN_SIZE: f64 = 0.05;
 /// A handle's hit area (WCAG 2.5.8), around a smaller visible square.
@@ -57,8 +63,8 @@ parts_enum! {
 #[derive(Clone, Copy, Default)]
 struct Touches {
     points: [Option<(i32, DragPoint)>; 2],
-    /// The box and the fingers' spread when the second one went down.
-    pinch: Option<(CropRect, f64)>,
+    /// The box, the fingers' spread and midpoint when the second one went down.
+    pinch: Option<(CropRect, f64, DragPoint)>,
     /// Set by a pinch: the first finger's drag moves nothing until it lifts.
     pinched: bool,
 }
@@ -67,6 +73,16 @@ impl Touches {
     fn spread(&self) -> Option<f64> {
         match self.points {
             [Some((_, a)), Some((_, b))] => Some((a.x - b.x).hypot(a.y - b.y)),
+            _ => None,
+        }
+    }
+
+    fn midpoint(&self) -> Option<DragPoint> {
+        match self.points {
+            [Some((_, a)), Some((_, b))] => Some(DragPoint {
+                x: (a.x + b.x) / 2.0,
+                y: (a.y + b.y) / 2.0,
+            }),
             _ => None,
         }
     }
@@ -219,6 +235,28 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
             "circle",
             sx().selector("& > [data-slot='mask'] > *", sx().border_radius("50%")),
         )
+        // The frame holds still; the image moves under it, and the whole cropper takes touches.
+        .when(
+            "pan",
+            sx().overflow("hidden")
+                .selector(
+                    "& > [data-slot='image']",
+                    sx().with("transform-origin", "0 0").transform(format!(
+                        "translate(calc({} * 100%), calc({} * 100%)) scale({})",
+                        IMAGE_X.value_or("0"),
+                        IMAGE_Y.value_or("0"),
+                        IMAGE_SCALE.value_or("1")
+                    )),
+                )
+                .selector(
+                    "& > [data-slot='frame']",
+                    sx().left("0")
+                        .top("0")
+                        .width("100%")
+                        .height("100%")
+                        .cursor("grab"),
+                ),
+        )
         .when(
             "disabled",
             sx().opacity("0.5").cursor("not-allowed").selector(
@@ -262,6 +300,10 @@ base_props! {
         /// Masks the image outside the box with a rectangle or an ellipse.
         #[props(default)]
         shape: CropShape,
+        /// Holds the box still and moves the image under it: a drag pans the
+        /// image, a pinch or the + and - keys zoom it. No resize handles.
+        #[props(default)]
+        pan: bool,
         /// The smallest side, a fraction of the image's. Default 0.05.
         #[props(default)]
         min_size: Option<f64>,
@@ -279,7 +321,8 @@ base_props! {
 
 /// A box with handles over an image, picking the part to keep. Drag the box
 /// or a handle, pinch the box with two fingers, or use the arrow keys on the
-/// box and its corners.
+/// box and its corners. With `pan`, the image moves and zooms under a still box
+/// instead, as a phone's profile picture cropper does.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -314,8 +357,11 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let grip = use_local_state(|| Grip::Move);
     // The box and the image's client size where a drag started.
     let start = use_local_state(|| (CropRect::FULL, 0.0_f64, 0.0_f64));
+    // The cropper's client top-left there, for a pinch's midpoint.
+    let origin = use_local_state(|| (0.0_f64, 0.0_f64));
     let touches = use_local_state(Touches::default);
 
+    let pan = props.pan;
     let interactive = !props.disabled && props.onchange.is_some();
     if props.value.is_some() && props.onchange.is_none() && !props.disabled {
         warn("ImageCropper: `value` without `onchange` can never change.");
@@ -420,26 +466,36 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         use_callback(move |event: DragMove| {
             let (from, width, height) = start.get();
             let delta = event.delta();
-            let rect = from.resized(grip.get(), delta.x / width, delta.y / height, ratio, min);
+            let (dx, dy) = (delta.x / width, delta.y / height);
+            let rect = match pan {
+                true => from.panned(dx, dy),
+                false => from.resized(grip.get(), dx, dy, ratio, min),
+            };
             if rect != shown {
                 emit.call(rect);
             }
         })
     };
     let onstart = {
-        let (start, grip, early) = (start.clone(), grip.clone(), early.clone());
+        let (start, grip, early, origin) =
+            (start.clone(), grip.clone(), early.clone(), origin.clone());
         use_callback(move |event: DragStart| {
             if !interactive {
                 event.cancel.call(());
                 return;
             }
-            let (start, grabbed, early) = (start.clone(), grip.get(), early.clone());
+            let (start, grabbed, early, origin) =
+                (start.clone(), grip.get(), early.clone(), origin.clone());
             start.set((shown, 0.0, 0.0));
             early.set(None);
             // Started here, awaited in the task: under Blitz a read resolves
             // where it is called.
             let size = root.dimensions();
+            let offset = root.client_offset();
             spawn(async move {
+                if let Ok(at) = offset.await {
+                    origin.set(at);
+                }
                 let Ok(size) = size.await else {
                     event.cancel.call(());
                     return;
@@ -490,11 +546,11 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     if !now.put(event.pointer_id(), client(&event)) {
                         return;
                     }
-                    // A second finger pinches the box rather than grabbing it.
-                    if let Some(spread) = now.spread() {
+                    // A second finger pinches the box, or the image, rather than grabbing it.
+                    if let (Some(spread), Some(midpoint)) = (now.spread(), now.midpoint()) {
                         event.prevent_default();
                         if interactive && *drag.dragging.peek() {
-                            now.pinch = Some((shown, spread));
+                            now.pinch = Some((shown, spread, midpoint));
                             now.pinched = true;
                         }
                         touches.set(now);
@@ -511,15 +567,27 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     // The root sees both fingers' moves: the first finger's by capture, the
     // second's bubbling up from its own implicit capture.
     let onpointermove = {
-        let touches = touches.clone();
+        let (touches, start, origin) = (touches.clone(), start.clone(), origin.clone());
         move |event: Event<PointerData>| {
             let mut now = touches.get();
             if now.knows(event.pointer_id()) {
                 now.put(event.pointer_id(), client(&event));
-                if let (Some((from, before)), Some(spread)) = (now.pinch, now.spread())
+                if let (Some((from, before, was)), Some(spread), Some(midpoint)) =
+                    (now.pinch, now.spread(), now.midpoint())
                     && before > 0.0
                 {
-                    let rect = from.scaled(spread / before, min);
+                    let (_, width, height) = start.get();
+                    let (left, top) = origin.get();
+                    let at =
+                        |point: DragPoint| ((point.x - left) / width, (point.y - top) / height);
+                    let rect = match pan {
+                        // The image point under the fingers follows them.
+                        true if width > 0.0 && height > 0.0 => {
+                            from.zoomed(spread / before, at(was), at(midpoint), min)
+                        }
+                        true => shown,
+                        false => from.scaled(spread / before, min),
+                    };
                     if rect != shown {
                         emit.call(rect);
                     }
@@ -562,15 +630,21 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 true => KEY_STEP * 10.0,
                 false => KEY_STEP,
             };
-            let (dx, dy) = match event.key() {
-                Key::ArrowLeft => (-step, 0.0),
-                Key::ArrowRight => (step, 0.0),
-                Key::ArrowUp => (0.0, -step),
-                Key::ArrowDown => (0.0, step),
+            let centre = (0.5, 0.5);
+            let rect = match event.key() {
+                Key::ArrowLeft => shown.resized(grabbed, -step, 0.0, ratio, min),
+                Key::ArrowRight => shown.resized(grabbed, step, 0.0, ratio, min),
+                Key::ArrowUp => shown.resized(grabbed, 0.0, -step, ratio, min),
+                Key::ArrowDown => shown.resized(grabbed, 0.0, step, ratio, min),
+                Key::Character(c) if pan && (c == "+" || c == "=") => {
+                    shown.zoomed(ZOOM_STEP, centre, centre, min)
+                }
+                Key::Character(c) if pan && c == "-" => {
+                    shown.zoomed(1.0 / ZOOM_STEP, centre, centre, min)
+                }
                 _ => return,
             };
             event.prevent_default();
-            let rect = shown.resized(grabbed, dx, dy, ratio, min);
             if rect != shown {
                 emit.call(rect);
             }
@@ -578,35 +652,55 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     };
 
     let percent = |fraction: f64| (fraction * 100.0).round();
-    let valuetext = fill(
-        words.value,
-        &[
-            ("width", &percent(shown.width)),
-            ("height", &percent(shown.height)),
-            ("x", &percent(shown.x)),
-            ("y", &percent(shown.y)),
-        ],
-    );
+    let (scale, image_x, image_y) = shown.image_transform();
+    let valuetext = match pan {
+        true => fill(
+            words.pan_value,
+            &[
+                ("zoom", &percent(scale)),
+                ("x", &percent(shown.x)),
+                ("y", &percent(shown.y)),
+            ],
+        ),
+        false => fill(
+            words.value,
+            &[
+                ("width", &percent(shown.width)),
+                ("height", &percent(shown.height)),
+                ("x", &percent(shown.x)),
+                ("y", &percent(shown.y)),
+            ],
+        ),
+    };
+    let keys = if pan { words.pan_keys } else { words.keys };
     let tabindex = if interactive { "0" } else { "-1" };
-    let crop_variables: Input<Variables> = variables()
-        .with(CROP_X, shown.x.to_string())
-        .with(CROP_Y, shown.y.to_string())
-        .with(CROP_WIDTH, shown.width.to_string())
-        .with(CROP_HEIGHT, shown.height.to_string())
-        .into();
+    let placed_at = if pan { shown.frame() } else { shown };
+    let mut crop_variables = variables()
+        .with(CROP_X, placed_at.x.to_string())
+        .with(CROP_Y, placed_at.y.to_string())
+        .with(CROP_WIDTH, placed_at.width.to_string())
+        .with(CROP_HEIGHT, placed_at.height.to_string());
+    if pan {
+        crop_variables = crop_variables
+            .with(IMAGE_SCALE, scale.to_string())
+            .with(IMAGE_X, image_x.to_string())
+            .with(IMAGE_Y, image_y.to_string());
+    }
+    let crop_variables: Input<Variables> = crop_variables.into();
     let states: Input<States> = props
         .states
         .clone()
         .unwrap_or_default()
         .with("circle", props.shape == CropShape::Circle)
         .with("disabled", props.disabled)
+        .with("pan", pan)
         .into();
     let aria_label = props
         .aria_label
         .clone()
         .unwrap_or_else(|| words.label.to_string());
 
-    let handles = Grip::HANDLES.into_iter().map(|grabbed| {
+    let handles = Grip::HANDLES.into_iter().filter(|_| !pan).map(|grabbed| {
         let corner = match grabbed {
             Grip::NorthWest => Some((corners[0], words.top_left)),
             Grip::NorthEast => Some((corners[1], words.top_right)),
@@ -698,7 +792,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                         {handles}
                         div { "data-slot": "move" }
                     }
-                    span { id: keys_id(), hidden: true, "{words.keys}" }
+                    span { id: keys_id(), hidden: true, "{keys}" }
                 }
             },
         )

@@ -7,6 +7,11 @@ pub struct ImageCropperLabels {
     pub keys: &'static str,
     /// `aria-valuetext`: `{width}`, `{height}`, `{x}` and `{y}` in percent of the image.
     pub value: &'static str,
+    /// The pan mode's `keys`.
+    pub pan_keys: &'static str,
+    /// The pan mode's `value`: `{zoom}` in percent of the starting zoom, `{x}`
+    /// and `{y}` as in `value`.
+    pub pan_value: &'static str,
     pub top_left: &'static str,
     pub top_right: &'static str,
     pub bottom_right: &'static str,
@@ -26,6 +31,8 @@ impl ImageCropperLabels {
         label: "Crop area",
         keys: "Arrow keys move the crop area, or resize it from a corner. Shift moves further.",
         value: "{width}% by {height}%, at {x}%, {y}%",
+        pan_keys: "Arrow keys move the crop area, plus and minus zoom the image. Shift moves further.",
+        pan_value: "Zoom {zoom}%, at {x}%, {y}%",
         top_left: "Top left corner",
         top_right: "Top right corner",
         bottom_right: "Bottom right corner",
@@ -40,6 +47,8 @@ impl ImageCropperLabels {
         label: "Zuschnitt",
         keys: "Pfeiltasten verschieben den Zuschnitt oder ändern an einer Ecke seine Größe. Mit Umschalt weiter.",
         value: "{width} % mal {height} %, bei {x} %, {y} %",
+        pan_keys: "Pfeiltasten verschieben den Zuschnitt, Plus und Minus zoomen das Bild. Mit Umschalt weiter.",
+        pan_value: "Zoom {zoom} %, bei {x} %, {y} %",
         top_left: "Ecke oben links",
         top_right: "Ecke oben rechts",
         bottom_right: "Ecke unten rechts",

@@ -56,6 +56,9 @@ pub fn ImageCropperPage() -> Element {
                     prop("min_size", "f64")
                         .default("0.05")
                         .doc("The smallest side, a fraction of the image's."),
+                    prop("pan", "bool")
+                        .default("false")
+                        .doc("Holds the box still, centred, and moves the image under it, as a phone's profile picture cropper does: a drag pans the image, a pinch or the + and - keys zoom it. No resize handles; `value` stays the crop in fractions of the image."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Dims the cropper and takes no input."),
@@ -81,6 +84,7 @@ pub fn ImageCropperPage() -> Element {
                 props("CropOptions", vec![
                     prop("aspect", "Option<f64>").doc("As `aspect` above."),
                     prop("shape", "CropShape").default("Rect").doc("As `shape` above."),
+                    prop("pan", "bool").default("false").doc("As `pan` above."),
                     prop("max_size", "Option<u32>")
                         .doc("Scales the crop down so its longer side is at most this many pixels."),
                 ])
@@ -89,12 +93,14 @@ pub fn ImageCropperPage() -> Element {
             accessibility: a11y()
                 .key(["Arrow"], "On the box: moves it. On a corner: moves that corner, resizing the box.")
                 .key(["Shift+Arrow"], "Ten times as far.")
+                .key(["+", "-"], "With `pan`: zoom the image in or out around the box's centre.")
                 .handles([
                     "The box is a `slider` tab stop named by `aria_label`, its value spoken as \"50% by 50%, at 25%, 25%\".",
                     "The four corners are tab stops of their own, sliders named \"Top left corner\" and so on.",
                     "Each handle is a 24px target around a 12px square.",
                     "A drag focuses the box or the corner it grabbed, so the keys carry on from there.",
                     "On a touch screen a finger on the box drags it without scrolling the page; a touch on the image outside it still scrolls. Two fingers on the box pinch it larger or smaller around its centre.",
+                    "With `pan` the whole cropper takes touches: one finger pans the image, two zoom it around their midpoint. The box is spoken as \"Zoom 100%, at 10%, 10%\".",
                     "With an `aspect`, a corner key resizes both sides together.",
                     "The box and the corners describe their keys.",
                 ])
@@ -106,6 +112,7 @@ pub fn ImageCropperPage() -> Element {
                     "The edge handles are pointer-only: the corners reach every size.",
                     "A screen reader hears where the box is, not what it shows.",
                     "Under Blitz a `FileField` with `crop` keeps the whole file: the rect still reaches `oncrop`.",
+                    "Under Blitz `pan` may not draw the moved image; the keys still move and zoom the crop.",
                 ]),
             lead: rsx! {
                 Text {
@@ -159,6 +166,7 @@ pub fn ImageCropperPage() -> Element {
                             "circle" => vec!["shape: CropShape::Circle".to_string()],
                             _ => vec![],
                         }),
+                    Control::switch("pan"),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -193,6 +201,7 @@ fn ImageCropperDemo(values: DemoValues) -> Element {
                     "circle" => CropShape::Circle,
                     _ => CropShape::Rect,
                 },
+                pan: values.str("pan") == "true",
                 disabled: values.str("disabled") == "true",
                 value: rect,
                 onchange: move |next: CropRect| crop.set(Some((key.clone(), next))),
