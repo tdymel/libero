@@ -66,7 +66,14 @@ impl Status {
     }
 }
 
-pub(crate) type Runner = Rc<dyn Fn(CommandName) -> bool>;
+pub(crate) type EditFnMut<'a> = &'a mut dyn FnMut(&mut EditorState) -> bool;
+
+/// How a mounted editor runs a command, and a one-off edit.
+#[derive(Clone)]
+pub(crate) struct Runner {
+    pub run: Rc<dyn Fn(CommandName) -> bool>,
+    pub edit: Rc<dyn Fn(EditFnMut<'_>) -> bool>,
+}
 
 /// Drives one [`RichTextEditor`](super::RichTextEditor) from outside: pass it as the
 /// editor's `handle`, then run commands from your own buttons and read the state.
@@ -74,6 +81,7 @@ pub(crate) type Runner = Rc<dyn Fn(CommandName) -> bool>;
 #[derive(Clone, Copy, PartialEq)]
 pub struct RichTextHandle {
     status: Signal<Status>,
+    state: Signal<Option<Rc<EditorState>>>,
     runner: CopyValue<Option<(String, Runner)>>,
 }
 
@@ -96,16 +104,52 @@ pub struct RichTextHandle {
 /// ```
 pub fn use_rich_text_editor() -> RichTextHandle {
     let status = use_signal(Status::default);
+    let state = use_signal(|| None);
     let runner = use_hook(|| CopyValue::new(None));
-    RichTextHandle { status, runner }
+    RichTextHandle {
+        status,
+        state,
+        runner,
+    }
 }
 
 impl RichTextHandle {
+    fn runner(&self) -> Option<Runner> {
+        self.runner
+            .peek()
+            .as_ref()
+            .map(|(_, runner)| runner.clone())
+    }
+
     /// Runs the command `name` on the editor's selection and gives focus back to the text.
     /// `false` when no editor is mounted, the command is unknown, or it changed nothing.
     pub fn run(&self, name: impl Into<CommandName>) -> bool {
-        let runner = self.runner.peek().as_ref().map(|(_, run)| run.clone());
-        runner.is_some_and(|run| run(name.into()))
+        self.runner()
+            .is_some_and(|runner| (runner.run)(name.into()))
+    }
+
+    /// Runs `f` on the editor's state as one undo step and gives focus back to the text,
+    /// e.g. to insert the mention a user picked. `false` when no editor is mounted or
+    /// `f` returned `false`.
+    ///
+    /// ```rust
+    /// # use libero::components::rich_text::RichTextHandle;
+    /// fn shout(editor: RichTextHandle) {
+    ///     editor.edit(|state| state.insert_text("!"));
+    /// }
+    /// ```
+    pub fn edit(&self, f: impl FnOnce(&mut EditorState) -> bool) -> bool {
+        let Some(runner) = self.runner() else {
+            return false;
+        };
+        let mut f = Some(f);
+        (runner.edit)(&mut |state| f.take().is_some_and(|f| f(state)))
+    }
+
+    /// Reads the editor's live state, reactively: re-runs on every edit and caret move.
+    /// `None` while no editor is mounted.
+    pub fn with_state<R>(&self, f: impl FnOnce(&EditorState) -> R) -> Option<R> {
+        self.state.read().as_deref().map(f)
     }
 
     /// Whether `mark` covers the selection; `false` while no editor is mounted.
@@ -160,18 +204,27 @@ impl RichTextHandle {
             runner.set(None);
             let mut status = self.status;
             status.set(Status::default());
+            let mut state = self.state;
+            state.set(None);
         }
     }
 
-    pub(crate) fn publish(&self, owner: &str, next: Status) {
+    pub(crate) fn publish(&self, owner: &str, next: Status, live: &EditorState) {
         let owns = self
             .runner
             .peek()
             .as_ref()
             .is_some_and(|(own, _)| own == owner);
-        if owns && *self.status.peek() != next {
+        if !owns {
+            return;
+        }
+        if *self.status.peek() != next {
             let mut status = self.status;
             status.set(next);
+        }
+        if self.state.peek().as_deref() != Some(live) {
+            let mut state = self.state;
+            state.set(Some(Rc::new(live.clone())));
         }
     }
 }

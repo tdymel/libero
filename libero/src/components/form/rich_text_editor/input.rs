@@ -1,7 +1,29 @@
 //! What a `beforeinput` asks for, by its `inputType`. Everything the model does not
 //! handle is cancelled; only composition reaches the DOM (it cannot be cancelled).
 
-use super::model::Builtin;
+use super::model::{Builtin, KeyPress};
+
+/// What a [`RichTextEditor`](super::RichTextEditor)'s `intercept` sees before the editor acts.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum EditorInput {
+    /// A key press, before the keymap. Android soft keyboards report most keys as
+    /// `"Unidentified"`; Enter arrives as `Key("Enter")` all the same.
+    Key(KeyPress),
+    /// Typed text, before it is inserted. Composed text (IME, most Android typing) never
+    /// arrives here: watch the doc through the handle for that.
+    Text(String),
+}
+
+impl EditorInput {
+    /// The key's name (`"ArrowDown"`, `"Enter"`, `"a"`), `None` for text.
+    pub fn key(&self) -> Option<&str> {
+        match self {
+            Self::Key(press) => Some(&press.key),
+            Self::Text(_) => None,
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Intent {

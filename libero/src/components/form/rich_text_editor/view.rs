@@ -9,8 +9,8 @@ use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use super::dialogs::{LinkArgs, LinkChoice, LinkDialog, announcement, shortcut_rows};
-use super::handle::{RichTextHandle, Status};
-use super::input::{Intent, intent, text_diff};
+use super::handle::{RichTextHandle, Runner, Status};
+use super::input::{EditorInput, Intent, intent, text_diff};
 use super::model::{
     Action, BlockKind, Builtin, CommandName, Commands, Doc, Editor, EditorState, Inline, KeyPress,
     Keymap, Mark, MarkKind, NodeKey, NodeRegistry, Position, Record, Selection, UndoStack,
@@ -18,8 +18,10 @@ use super::model::{
 use super::node_view::NodeViews;
 use super::offsets::{to_dom, to_model};
 use super::render::{RenderCtx, blocks};
-use super::surface::{ROOT_ATTR, Report, Surface};
-use super::toolbar::{Group, Metrics, OVERFLOW, Tool, hidden as overflow_count, tools};
+use super::surface::{Caret, ROOT_ATTR, Report, Surface};
+use super::toolbar::{
+    Group, Metrics, OVERFLOW, RichTextTool, Tool, hidden as overflow_count, tools,
+};
 use crate::{
     components::{
         accessibility::use_announcer,
@@ -32,10 +34,10 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        ElementHandle, HistoryHandle, ModalScope, UndoHistory, listener, use_element, use_history,
-        use_localization, use_modal, use_theme,
+        ElementHandle, HistoryHandle, ModalScope, PopoverOptions, Rect, UndoHistory, listener,
+        place, use_element, use_history, use_id, use_localization, use_modal, use_theme,
     },
-    platform::{ElementApi, mod_is_meta},
+    platform::{Dimensions, ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
     theme::{ANCHOR_COLOR, CODE_FONT_FAMILY, ColorCss, ColorShade},
 };
@@ -174,6 +176,20 @@ field_props! {
         /// builds warn about a `nodes` name it lacks.
         #[props(default, into)]
         registry: Option<NodeRegistry>,
+        /// Sees each key press (before the keymap) and typed text first; `true` takes it
+        /// over, so the editor does nothing with it. Drives an `overlay` from the keyboard.
+        #[props(default, into)]
+        intercept: Option<Callback<EditorInput, bool>>,
+        /// Floats at the caret while `Some`, such as a mention list. Focus stays in the
+        /// text: steer it through `intercept`, insert through the handle's `edit`.
+        #[props(default, into)]
+        overlay: Option<Element>,
+        /// The id of the `overlay`'s highlighted option, so a screen reader announces it.
+        #[props(default, into)]
+        active_descendant: Option<String>,
+        /// Your buttons, after the block buttons; each runs a command by name.
+        #[props(default)]
+        tools: Vec<RichTextTool>,
     }
 }
 
@@ -427,7 +443,19 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         let handle = props.handle;
         if let Some(handle) = handle {
             let owner = token.clone();
-            handle.attach(&owner, Rc::new(move |name| run_command(name, true, false)));
+            let run = Rc::new(move |name| run_command(name, true, false));
+            let edit = Rc::new(move |f: &mut dyn FnMut(&mut EditorState) -> bool| {
+                if !*can_edit.peek() {
+                    return false;
+                }
+                let f = std::cell::RefCell::new(f);
+                let mut edit = edit;
+                edit(
+                    &|live| live.apply(Record::Step, |state| (f.borrow_mut())(state)),
+                    true,
+                )
+            });
+            handle.attach(&owner, Runner { run, edit });
         }
         handle
     });
@@ -448,13 +476,27 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 handle.publish(
                     &token,
                     Status::of(live.state(), live.can_undo(), live.can_redo()),
+                    live.state(),
                 );
             }
         });
     }
 
+    // The caret's place, kept always; redraws only while an overlay follows it.
+    let mut last_caret = use_hook(|| CopyValue::new(None::<Caret>));
+    let mut caret_tick = use_signal(|| 0u32);
+    let mut wants_caret = use_hook(|| CopyValue::new(false));
+    if *wants_caret.peek() != props.overlay.is_some() {
+        wants_caret.set(props.overlay.is_some());
+    }
     let surface = use_hook(|| {
         Surface::start(token.clone(), move |report: Report| {
+            if report.caret.is_some() && *last_caret.peek() != report.caret {
+                last_caret.set(report.caret);
+                if *wants_caret.peek() {
+                    caret_tick += 1;
+                }
+            }
             if let Some((anchor_key, anchor, head_key, head)) = report.selection {
                 if *syncing.peek() || *composing.peek() {
                     return;
@@ -554,6 +596,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             _ => false,
         };
     }
+    let custom_tools: Vec<(RichTextTool, Option<bool>)> = props
+        .tools
+        .iter()
+        .map(|tool| (tool.clone(), tool.active.map(|active| active(state))))
+        .collect();
     let block_kind = state.block_kind().clone();
     drop(live);
 
@@ -585,6 +632,10 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let element = use_element();
     let apple = mod_is_meta();
 
+    let intercept = props.intercept;
+    let taken = move |input: EditorInput| intercept.is_some_and(|intercept| intercept.call(input));
+    // Android soft keyboards press "Unidentified": their Enter shows up as an insertParagraph.
+    let mut last_key = use_hook(|| CopyValue::new(String::new()));
     let onkeydown = move |event: KeyboardEvent| {
         // Not `is_composing()`: Gboard keeps a composing region open over typed words.
         if *composing.peek() {
@@ -599,6 +650,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             alt: modifiers.alt(),
             shift: modifiers.shift(),
         };
+        last_key.set(press.key.clone());
+        if taken(EditorInput::Key(press.clone())) {
+            event.prevent_default();
+            return;
+        }
         let name = keymap.peek().command_for(&press, apple).cloned();
         if name.is_some_and(|name| run_command(name, false, true)) {
             event.prevent_default();
@@ -607,12 +663,25 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
 
     let onbeforeinput = move |event: Event<BeforeInputData>| {
         let data = event.data();
+        let key = std::mem::take(&mut *last_key.write());
         match intent(&data.input_type().to_string(), data.data()) {
             Intent::Pass => composing.set(true),
             Intent::Cancel => event.prevent_default(),
             Intent::Type(text) => {
                 event.prevent_default();
-                edit(&|live| live.type_text(&text), false);
+                if !taken(EditorInput::Text(text.clone())) {
+                    edit(&|live| live.type_text(&text), false);
+                }
+            }
+            Intent::Run(Builtin::SplitBlock)
+                if key != "Enter"
+                    && taken(EditorInput::Key(KeyPress {
+                        key: "Enter".into(),
+                        code: "Enter".into(),
+                        ..KeyPress::default()
+                    })) =>
+            {
+                event.prevent_default();
             }
             Intent::Run(builtin) => {
                 event.prevent_default();
@@ -675,12 +744,21 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         }
     };
 
+    let overlay_id = use_id();
+    let open = props.overlay.is_some();
     let surface_element = field
         .aria(control)
         .element(&element)
         .attr(ROOT_ATTR, token.clone())
         .attr("role", "textbox")
         .attr("aria-multiline", "true")
+        // Combobox-like while the overlay is open; `aria-expanded` is not allowed on a textbox.
+        .attr("aria-autocomplete", open.then_some("list"))
+        .attr("aria-controls", open.then(|| overlay_id.cloned()))
+        .attr(
+            "aria-activedescendant",
+            props.active_descendant.clone().filter(|_| open),
+        )
         .attr("aria-readonly", readonly)
         .attr("aria-placeholder", props.placeholder.clone())
         .attr("data-placeholder", props.placeholder.clone())
@@ -809,6 +887,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 language,
                 ..measured
             },
+            custom_tools.len(),
         )
     });
     // Reads start here, not in the task: Blitz fails a read made inside one.
@@ -914,6 +993,27 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             }
         }
     };
+    let custom_button = move |tool: RichTextTool, selected: Option<bool>| {
+        let shortcut = keymap
+            .peek()
+            .chords_for(tool.command.clone())
+            .first()
+            .map(|chord| chord.to_string().to_lowercase());
+        let command = tool.command.clone();
+        rsx! {
+            ActionIcon {
+                key: "{tool.command}",
+                aria_label: tool.label,
+                tooltip: true,
+                shortcut,
+                selected,
+                onclick: move |_| {
+                    run_command(command.clone(), true, false);
+                },
+                {tool.icon}
+            }
+        }
+    };
     let onresize = move |event: Event<ResizeData>| {
         if let Ok(size) = event.get_content_box_size()
             && *bar_width.peek() != Some(size.width)
@@ -965,6 +1065,14 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                         }
                         for tool in block_tools { {button(tool)} }
                     }
+                    if !custom_tools.is_empty() {
+                        ToolbarSeparator {}
+                        ToolbarGroup {
+                            for (tool, selected) in custom_tools {
+                                {custom_button(tool, selected)}
+                            }
+                        }
+                    }
                     if !history.is_empty() {
                         ToolbarSeparator {}
                         ToolbarGroup { "aria-label": words.history,
@@ -983,9 +1091,76 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         }
     });
 
+    let mut overlay_size = use_signal(|| None::<Dimensions>);
+    let overlay = props.overlay.clone().map(|overlay| {
+        let _ = caret_tick();
+        let style = match (*last_caret.peek(), overlay_size()) {
+            (Some(caret), Some(size)) => {
+                let anchor = Rect {
+                    x: caret.x,
+                    y: caret.y,
+                    width: 0.0,
+                    height: caret.height,
+                };
+                let viewport = Dimensions {
+                    width: caret.width,
+                    height: caret.viewport_height,
+                };
+                let placed = place(
+                    anchor,
+                    size,
+                    viewport,
+                    &PopoverOptions::new(4.0, 8.0),
+                    caret.rtl,
+                );
+                (placed.x - caret.box_x, placed.y - caret.box_y, "visible")
+            }
+            // Unmeasured: laid out hidden first, so the placer knows its size.
+            _ => (0.0, 0.0, "hidden"),
+        };
+        // Every property each time: a style string's diff keeps a dropped one.
+        let (left, top, visibility) = style;
+        rsx! {
+            div {
+                id: overlay_id,
+                "data-overlay": "",
+                style: "position: absolute; z-index: 300; left: {left}px; top: {top}px; visibility: {visibility}",
+                onmousedown: keep,
+                // A resize observer may report late or not at all for a fresh box: read it once.
+                onmounted: move |event: MountedEvent| {
+                    // Blitz fails a read from a task; it never edits, so never shows one.
+                    if !crate::platform::edits_rich_text() {
+                        return;
+                    }
+                    let mounted = event.data();
+                    spawn(async move {
+                        if let Ok(rect) = mounted.get_client_rect().await
+                            && overlay_size.peek().is_none()
+                        {
+                            overlay_size.set(Some(Dimensions { width: rect.width(), height: rect.height() }));
+                        }
+                    });
+                },
+                onresize: move |event: Event<ResizeData>| {
+                    // The wrapper has no padding or border: its content box is its size.
+                    if let Ok(size) = event.get_content_box_size() {
+                        let next = Some(Dimensions { width: size.width, height: size.height });
+                        if *overlay_size.peek() != next {
+                            overlay_size.set(next);
+                        }
+                    }
+                },
+                {overlay}
+            }
+        }
+    });
+
     field.render(rsx! {
         {toolbar}
-        {frame.render(surface_element)}
+        div { "data-lsx-rich-text-box": "", position: "relative",
+            {frame.render(surface_element)}
+            {overlay}
+        }
         {announcer.render()}
     })
 }

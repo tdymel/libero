@@ -80,7 +80,21 @@ const report = () => {
     const a = leafOf(s.anchorNode), f = leafOf(s.focusNode);
     if (!a || !f) return;
     dioxus.send({ selection: [+a.dataset.key, units(a, s.anchorNode, s.anchorOffset),
-        +f.dataset.key, units(f, s.focusNode, s.focusOffset)] });
+        +f.dataset.key, units(f, s.focusNode, s.focusOffset)], caret: caretAt(s, f) });
+};
+// The head's line box, the overlay's box and the viewport, all in viewport px.
+const caretAt = (s, leaf) => {
+    const r = root(), box = r.closest('[data-lsx-rich-text-box]');
+    if (!box) return null;
+    const range = document.createRange();
+    range.setStart(s.focusNode, s.focusOffset);
+    let rect = range.getClientRects()[0];
+    // An empty line has no rect: its line-box filler or the leaf stands in.
+    if (!rect) rect = (leaf.querySelector('[data-skip]') || leaf).getBoundingClientRect();
+    const b = box.getBoundingClientRect();
+    return { x: rect.left, y: rect.top, height: rect.height, box_x: b.left, box_y: b.top,
+        width: innerWidth, viewport_height: innerHeight,
+        rtl: getComputedStyle(r).direction === 'rtl' };
 };
 document.addEventListener('selectionchange', report);
 // Chrome steps over a rendered code block (contenteditable=false): step into it instead.
@@ -143,6 +157,9 @@ while (true) {
 pub(crate) struct Report {
     /// Anchor key, anchor DOM offset, head key, head DOM offset.
     pub selection: Option<(u64, usize, u64, usize)>,
+    /// With a selection: where its head is, for the overlay.
+    #[serde(default)]
+    pub caret: Option<Caret>,
     /// A leaf's key and its DOM text, asked for by [`Surface::read`].
     pub text: Option<(u64, String)>,
     /// An arrow key left a leaf toward this rendered code block; `true` enters at its end.
@@ -156,6 +173,20 @@ pub(crate) struct Report {
     /// The DOM selection caught up with the last [`Surface::select`].
     #[serde(default)]
     pub synced: bool,
+}
+
+/// The caret's line box and the editor's box (`data-lsx-rich-text-box`), in viewport px.
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
+pub(crate) struct Caret {
+    pub x: f64,
+    pub y: f64,
+    pub height: f64,
+    pub box_x: f64,
+    pub box_y: f64,
+    /// The viewport's width.
+    pub width: f64,
+    pub viewport_height: f64,
+    pub rtl: bool,
 }
 
 /// One editor's script. Dropping the editor leaves the listener until the next event.

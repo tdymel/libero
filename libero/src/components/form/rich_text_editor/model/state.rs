@@ -203,6 +203,17 @@ impl EditorState {
             .any(|(_, kind)| *kind == BlockKind::Quote)
     }
 
+    /// The caret block's text up to the caret, an inline node as U+FFFC: what a trigger
+    /// such as `@` for mentions looks at.
+    pub fn text_before_caret(&self) -> String {
+        let at = self.caret();
+        self.block(at.block)
+            .text()
+            .chars()
+            .take(at.offset)
+            .collect()
+    }
+
     /// The selected text, leaves joined by `\n`.
     pub fn selected_text(&self) -> String {
         self.segments()

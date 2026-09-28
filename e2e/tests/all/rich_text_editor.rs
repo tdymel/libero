@@ -894,3 +894,116 @@ fn the_editor_overlays_keep_their_contrast_in_both_schemes() {
         }
     });
 }
+
+#[test]
+fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/mentions", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        settle(page).await;
+        let overlay = "document.querySelector('[data-overlay]')";
+        let active = format!("{EDITOR}.getAttribute('aria-activedescendant')");
+
+        keyboard::type_text(page, "hi @a").await.unwrap();
+        settle(page).await;
+        let options: u32 = eval(page, "document.querySelectorAll('[role=option]').length").await;
+        assert_eq!(options, 2, "ada and alan");
+        let wired: bool = eval(
+            page,
+            &format!(
+                "{EDITOR}.getAttribute('aria-controls') === {overlay}.id && {EDITOR}.getAttribute('aria-autocomplete') === 'list'"
+            ),
+        )
+        .await;
+        assert!(wired);
+        assert_eq!(eval::<String>(page, &active).await, "mention-ada");
+        // Placed under the caret's line.
+        let placed: String = eval(
+            page,
+            &format!(
+                "(() => {{ const o = {overlay}.getBoundingClientRect(), l = {EDITOR}.querySelector('[data-key]').getBoundingClientRect(); return (getComputedStyle({overlay}).visibility === 'visible' && o.top >= l.bottom - 1 && o.left >= l.left) ? 'ok' : JSON.stringify([{overlay}.getAttribute('style'), o, l]); }})()"
+            ),
+        )
+        .await;
+        assert_eq!(placed, "ok");
+        // The combobox-like attributes are all allowed on a textbox.
+        let axe = contrast::run_full(page, "body").await.unwrap();
+        let aria: Vec<&str> = axe
+            .violations
+            .iter()
+            .map(|violation| violation.id.as_str())
+            .filter(|id| id.starts_with("aria"))
+            .collect();
+        assert!(aria.is_empty(), "{aria:?}");
+
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        settle(page).await;
+        assert_eq!(eval::<String>(page, &active).await, "mention-alan");
+        keyboard::press(page, ENTER).await.unwrap();
+        assert_eq!(out(page).await, "hi \u{fffc} ");
+        let mention: String = eval(
+            page,
+            &format!("{EDITOR}.querySelector('.mention').textContent"),
+        )
+        .await;
+        assert_eq!(mention, "@alan");
+        let gone: bool = eval(
+            page,
+            &format!("!{overlay} && !{EDITOR}.hasAttribute('aria-activedescendant')"),
+        )
+        .await;
+        assert!(gone);
+
+        // Escape closes the list and leaves the text.
+        keyboard::type_text(page, "@g").await.unwrap();
+        settle(page).await;
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        settle(page).await;
+        assert!(eval::<bool>(page, &format!("!{overlay}")).await);
+        assert_eq!(out(page).await, "hi \u{fffc} @g");
+
+        // The caller's toolbar button types the @; a click on an option picks it.
+        keyboard::type_text(page, " ").await.unwrap();
+        page.evaluate("document.querySelector('[aria-label=\"Mention someone\"]').click()")
+            .await
+            .unwrap();
+        settle(page).await;
+        let options: u32 = eval(page, "document.querySelectorAll('[role=option]').length").await;
+        assert_eq!(options, 4);
+        page.evaluate("document.getElementById('mention-grace').click()")
+            .await
+            .unwrap();
+        assert_eq!(out(page).await, "hi \u{fffc} @g \u{fffc} ");
+    });
+}
+
+#[test]
+fn a_mention_list_near_the_viewport_bottom_flips_above_the_caret() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/mentions", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let leaf = format!("{EDITOR}.querySelector('[data-key]')");
+        // The text line 40px above the viewport's bottom edge.
+        page.evaluate(format!(
+            "(() => {{ document.body.style.paddingTop = innerHeight + 'px'; window.scrollBy(0, {leaf}.getBoundingClientRect().bottom - (innerHeight - 40)); {EDITOR}.focus(); }})()"
+        ))
+        .await
+        .unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "@").await.unwrap();
+        settle(page).await;
+        let above: String = eval(
+            page,
+            &format!(
+                "(() => {{ const o = document.querySelector('[data-overlay]').getBoundingClientRect(), l = {leaf}.getBoundingClientRect(); return o.bottom <= l.top + 1 && o.top >= 0 ? 'ok' : JSON.stringify([o, l, innerHeight]); }})()"
+            ),
+        )
+        .await;
+        assert_eq!(above, "ok");
+    });
+}

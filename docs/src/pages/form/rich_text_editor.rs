@@ -1,10 +1,11 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::rich_text::{
-    Attrs, Builtin, Chord, Commands, Doc, EditorState, Keymap, NodeRegistry, NodeSpec,
-    NodeViewProps, NodeViews,
+    Attrs, Builtin, Chord, Commands, Doc, EditorInput, EditorState, Keymap, NodeRegistry, NodeSpec,
+    NodeViewProps, NodeViews, Position, RichTextTool, Selection, use_rich_text_editor,
 };
-use libero::components::{Code, FieldPart, FieldStatus, Flex, RichTextEditor, Text};
+use libero::components::{Code, FieldPart, FieldStatus, Flex, Paper, RichTextEditor, Text};
+use libero::sx::sx;
 
 const SAMPLE: &str = "## Release notes\n\nStart a line with # and a space for a heading, or wrap a word in **two stars**.\n\n- Undo with Ctrl+Z\n- Bold with Ctrl+B";
 
@@ -36,6 +37,114 @@ static SHOUT_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+l").unwrap
 static MENTION_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+2").unwrap(), "mention");"#;
 static KEYMAP_CHORDS: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+h").unwrap(), Builtin::Heading2);
     keymap.unbind_command(Builtin::Underline);"#;
+
+static MENTIONS_USE: &str = r#"use libero::components::rich_text::{
+    Attrs, Commands, EditorInput, EditorState, NodeRegistry, NodeSpec, NodeViewProps, NodeViews,
+    Position, RichTextTool, Selection, use_rich_text_editor,
+};
+use libero::components::{Paper, RichTextEditor};
+use libero::sx::sx;"#;
+
+static MENTIONS: &str = r##"const PEOPLE: [&str; 4] = ["ada", "alan", "grace", "linus"];
+
+/// The word after an `@` that starts a word, up to the caret.
+fn mention_query(state: &EditorState) -> Option<String> {
+    let before = state.text_before_caret();
+    let (head, query) = before.rsplit_once('@')?;
+    let starts = head.is_empty() || head.ends_with(char::is_whitespace);
+    (starts && query.chars().all(char::is_alphanumeric)).then(|| query.to_string())
+}
+
+/// Replaces `@query` before the caret with a mention of `user`.
+fn insert_mention(state: &mut EditorState, user: &str) -> bool {
+    let Some(query) = mention_query(state) else {
+        return false;
+    };
+    let at = state.caret();
+    let from = Position::new(at.block, at.offset - query.chars().count() - 1);
+    let mut attrs = Attrs::new();
+    attrs.insert("user".into(), user.into());
+    let Some(mention) = registry().new_inline("mention", attrs) else {
+        return false;
+    };
+    state.select(Selection::range(from, at));
+    state.insert_inline(mention) && state.insert_text(" ")
+}
+
+#[component]
+fn MentionEditor() -> Element {
+    let editor = use_rich_text_editor();
+    let mut active = use_signal(|| 0usize);
+    let mut dismissed = use_signal(|| None::<String>);
+    let commands = use_hook(|| {
+        let mut commands = Commands::default();
+        commands.register("at", |state| state.insert_text("@"));
+        commands
+    });
+    let query = editor.with_state(mention_query).flatten();
+    let people: Vec<&'static str> = match &query {
+        Some(query) if dismissed.read().as_ref() != Some(query) => PEOPLE
+            .into_iter()
+            .filter(|user| user.starts_with(query.as_str()))
+            .collect(),
+        _ => Vec::new(),
+    };
+    let current = active() % people.len().max(1);
+    let picked = people.get(current).copied();
+    let count = people.len();
+    let pick = move |user: &'static str| {
+        editor.edit(move |state| insert_mention(state, user));
+        let mut active = active;
+        active.set(0);
+    };
+    // The list takes the arrows, Enter and Escape while it is open; the rest types.
+    let intercept = move |input: EditorInput| -> bool {
+        let Some(user) = picked else {
+            return false;
+        };
+        match input.key() {
+            Some("ArrowDown") => active.set((current + 1) % count),
+            Some("ArrowUp") => active.set((current + count - 1) % count),
+            Some("Enter" | "Tab") => pick(user),
+            Some("Escape") => dismissed.set(query.clone()),
+            _ => return false,
+        }
+        true
+    };
+    let overlay = (!people.is_empty()).then(|| rsx! {
+        Paper { shadow: "md", bordered: true, role: "listbox", "aria-label": "People",
+            sx: sx().padding("xs").min_width("10rem"),
+            for (index, user) in people.iter().copied().enumerate() {
+                div { id: "mention-{user}", role: "option", "aria-selected": index == current,
+                    onclick: move |_| pick(user),
+                    Paper { radius: "sm", color: (index == current).then_some("primary"),
+                        sx: sx().padding("0.25rem 0.5rem"),
+                        "@{user}"
+                    }
+                }
+            }
+        }
+    });
+    rsx! {
+        RichTextEditor {
+            label: "Message",
+            placeholder: "Type @ to mention someone",
+            handle: editor,
+            commands,
+            tools: vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
+            nodes: NodeViews::new().with("mention", Mention),
+            registry: registry(),
+            intercept,
+            overlay,
+            active_descendant: picked.map(|user| format!("mention-{user}")),
+        }
+    }
+}"##;
+
+/// The mention demo's items, printed above its rsx.
+fn wrap_mentions(_: &DemoValues, code: &str) -> String {
+    [MENTIONS_USE, MENTION, MENTIONS, code].join("\n\n")
+}
 
 /// The demo's extension switches: a command, a node and a keymap.
 #[derive(Clone, Copy)]
@@ -75,6 +184,104 @@ fn registry() -> NodeRegistry {
         .register(NodeSpec::inline("mention").attr("user", "ada"))
         .unwrap();
     registry
+}
+
+const PEOPLE: [&str; 4] = ["ada", "alan", "grace", "linus"];
+
+/// The word after an `@` that starts a word, up to the caret.
+fn mention_query(state: &EditorState) -> Option<String> {
+    let before = state.text_before_caret();
+    let (head, query) = before.rsplit_once('@')?;
+    let starts = head.is_empty() || head.ends_with(char::is_whitespace);
+    (starts && query.chars().all(char::is_alphanumeric)).then(|| query.to_string())
+}
+
+/// Replaces `@query` before the caret with a mention of `user`.
+fn insert_mention(state: &mut EditorState, user: &str) -> bool {
+    let Some(query) = mention_query(state) else {
+        return false;
+    };
+    let at = state.caret();
+    let from = Position::new(at.block, at.offset - query.chars().count() - 1);
+    let mut attrs = Attrs::new();
+    attrs.insert("user".into(), user.into());
+    let Some(mention) = registry().new_inline("mention", attrs) else {
+        return false;
+    };
+    state.select(Selection::range(from, at));
+    state.insert_inline(mention) && state.insert_text(" ")
+}
+
+#[component]
+fn MentionEditor() -> Element {
+    let editor = use_rich_text_editor();
+    let mut active = use_signal(|| 0usize);
+    let mut dismissed = use_signal(|| None::<String>);
+    let commands = use_hook(|| {
+        let mut commands = Commands::default();
+        commands.register("at", |state| state.insert_text("@"));
+        commands
+    });
+    let query = editor.with_state(mention_query).flatten();
+    let people: Vec<&'static str> = match &query {
+        Some(query) if dismissed.read().as_ref() != Some(query) => PEOPLE
+            .into_iter()
+            .filter(|user| user.starts_with(query.as_str()))
+            .collect(),
+        _ => Vec::new(),
+    };
+    let current = active() % people.len().max(1);
+    let picked = people.get(current).copied();
+    let count = people.len();
+    let pick = move |user: &'static str| {
+        editor.edit(move |state| insert_mention(state, user));
+        let mut active = active;
+        active.set(0);
+    };
+    // The list takes the arrows, Enter and Escape while it is open; the rest types.
+    let intercept = move |input: EditorInput| -> bool {
+        let Some(user) = picked else {
+            return false;
+        };
+        match input.key() {
+            Some("ArrowDown") => active.set((current + 1) % count),
+            Some("ArrowUp") => active.set((current + count - 1) % count),
+            Some("Enter" | "Tab") => pick(user),
+            Some("Escape") => dismissed.set(query.clone()),
+            _ => return false,
+        }
+        true
+    };
+    let overlay = (!people.is_empty()).then(|| {
+        rsx! {
+            Paper { shadow: "md", bordered: true, role: "listbox", "aria-label": "People",
+                sx: sx().padding("xs").min_width("10rem"),
+                for (index, user) in people.iter().copied().enumerate() {
+                    div { id: "mention-{user}", role: "option", "aria-selected": index == current,
+                        onclick: move |_| pick(user),
+                        Paper { radius: "sm", color: (index == current).then_some("primary"),
+                            sx: sx().padding("0.25rem 0.5rem"),
+                            "@{user}"
+                        }
+                    }
+                }
+            }
+        }
+    });
+    rsx! {
+        RichTextEditor {
+            label: "Message",
+            placeholder: "Type @ to mention someone",
+            handle: editor,
+            commands,
+            tools: vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
+            nodes: NodeViews::new().with("mention", Mention),
+            registry: registry(),
+            intercept,
+            overlay,
+            active_descendant: picked.map(|user| format!("mention-{user}")),
+        }
+    }
 }
 
 fn shout(state: &mut EditorState) -> bool {
@@ -221,6 +428,15 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. Built-ins (`paragraph`, `heading`, `quote`, `list`, `list_item`, `rule`) take a view under their name too; `code_block` stays fixed."),
                     prop("registry", "NodeRegistry")
                         .doc("Your node types. Copy and cut write your nodes through their `to_markdown`, and a debug build warns about a `nodes` name that is not registered, such as a typo."),
+                    prop("intercept", "Callback<EditorInput, bool>")
+                        .doc("Sees each key press (`EditorInput::Key`, before the keymap) and typed text (`EditorInput::Text`) first; return `true` to take it over, and the editor does nothing with it. Android soft keyboards report most keys as `Unidentified` and compose their text, which never arrives as `Text`; Enter still arrives as a key. Read typed text through the handle's `with_state` instead."),
+                    prop("overlay", "Element")
+                        .doc("Floats at the caret while `Some`, such as a mention list: under the caret's line, above it near the window's bottom edge, mirrored in right-to-left text. Focus stays in the text; pressing the overlay does not take it."),
+                    prop("active_descendant", "String")
+                        .doc("The id of the overlay's highlighted option. While `overlay` is `Some` the text carries it as `aria-activedescendant`, with `aria-controls` naming the overlay and `aria-autocomplete=\"list\"`."),
+                    prop("tools", "Vec<RichTextTool>")
+                        .default("vec![]")
+                        .doc("Your toolbar buttons, after the block buttons: `RichTextTool::new(command, label, icon)` runs the command by name; `.active(fn)` makes it a toggle with `aria-pressed`. They never move into the More menu."),
                     prop("size", "Size").default("md").doc("Padding and font size."),
                     prop("radius", "Size")
                         .default("sm")
@@ -288,11 +504,14 @@ pub fn RichTextEditorPage() -> Element {
                     "The link dialog focuses its labelled URL field; a refused scheme shows as that field's error. Closing it puts the caret back in the text.",
                     "The text type menu is a menu button whose name includes the current type, with `menuitemradio` items. So is the language menu of a code block.",
                     "Every edit goes through the document model, so undo, the `onchange` value and the screen stay in step. Input methods (IME) compose natively and are taken in when the composition ends.",
+                    "While `overlay` is set, the text carries `aria-controls` naming it, `aria-autocomplete=\"list\"` and `aria-activedescendant` from `active_descendant`, so a screen reader announces the highlighted option.",
                 ])
                 .must([
                     "Leave `label` unset only when something else names the editor, such as an `aria_label`.",
                     "Document custom chords you bind in `keymap` for your users.",
                     "Make a `NodeViews` atom name its node in text (a mention shows `@name`): it is a non-editable island a screen reader reads as is.",
+                    "Give an `overlay` list `role=\"listbox\"` with an id per `role=\"option\"`, pass the highlighted one as `active_descendant`, and steer it with the keyboard through `intercept`; Escape should close it.",
+                    "Name each `RichTextTool` with its `label`: the button shows only its icon.",
                 ])
                 .limits([
                     "On Blitz (native) the document is shown read-only.",
@@ -423,6 +642,27 @@ pub fn RichTextEditorPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Mentions",
+                Text {
+                    "Type @ and a name. "
+                    Code { source: "intercept" }
+                    " gives the list the arrow keys, Enter and Escape while it is open; "
+                    Code { source: "overlay" }
+                    " floats it at the caret and flips it above near the window's edge; the handle's "
+                    Code { source: "edit" }
+                    " swaps the typed @name for a mention node, one undo step. The @ button is a "
+                    Code { source: "RichTextTool" }
+                    " running a custom command."
+                }
+                Demo {
+                    title: "Mentions",
+                    component: "MentionEditor",
+                    children_text: "",
+                    controls: vec![],
+                    wrap: Wrap(wrap_mentions),
+                    render: move |_: DemoValues| rsx! { MentionEditor {} },
+                }
             }
         }
     }

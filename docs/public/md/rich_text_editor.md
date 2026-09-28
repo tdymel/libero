@@ -102,6 +102,136 @@ view they keep the editor's own look.
 | `rule` | - | Nothing: the view is a non-editable island. |
 | `code_block` | - | Not overridable: it switches between source and `CodeBlock` itself. |
 
+Mentions: type `@` and a name. `intercept` sees each key press (before the
+keymap) and typed text first and takes it over by returning `true`, so the
+list gets the arrow keys, Enter and Escape while it is open. `overlay` floats
+at the caret: under its line, above it near the window's bottom edge. The
+handle's `with_state` reads the text before the caret and `edit` swaps the
+typed `@name` for a mention node as one undo step. `tools` adds your own
+toolbar button, here one that types the `@`.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::rich_text::{
+    Attrs, Commands, EditorInput, EditorState, NodeRegistry, NodeSpec, NodeViewProps, NodeViews,
+    Position, RichTextTool, Selection, use_rich_text_editor,
+};
+use libero::components::{Paper, RichTextEditor};
+use libero::sx::sx;
+
+#[component]
+fn Mention(props: NodeViewProps) -> Element {
+    let user = props.attrs.get("user").and_then(|user| user.as_str()).unwrap_or("?");
+    rsx! { b { "@{user}" } }
+}
+
+fn registry() -> NodeRegistry {
+    let mut registry = NodeRegistry::default();
+    registry.register(NodeSpec::inline("mention").attr("user", "ada")).unwrap();
+    registry
+}
+
+const PEOPLE: [&str; 4] = ["ada", "alan", "grace", "linus"];
+
+/// The word after an `@` that starts a word, up to the caret.
+fn mention_query(state: &EditorState) -> Option<String> {
+    let before = state.text_before_caret();
+    let (head, query) = before.rsplit_once('@')?;
+    let starts = head.is_empty() || head.ends_with(char::is_whitespace);
+    (starts && query.chars().all(char::is_alphanumeric)).then(|| query.to_string())
+}
+
+/// Replaces `@query` before the caret with a mention of `user`.
+fn insert_mention(state: &mut EditorState, user: &str) -> bool {
+    let Some(query) = mention_query(state) else {
+        return false;
+    };
+    let at = state.caret();
+    let from = Position::new(at.block, at.offset - query.chars().count() - 1);
+    let mut attrs = Attrs::new();
+    attrs.insert("user".into(), user.into());
+    let Some(mention) = registry().new_inline("mention", attrs) else {
+        return false;
+    };
+    state.select(Selection::range(from, at));
+    state.insert_inline(mention) && state.insert_text(" ")
+}
+
+#[component]
+fn MentionEditor() -> Element {
+    let editor = use_rich_text_editor();
+    let mut active = use_signal(|| 0usize);
+    let mut dismissed = use_signal(|| None::<String>);
+    let commands = use_hook(|| {
+        let mut commands = Commands::default();
+        commands.register("at", |state| state.insert_text("@"));
+        commands
+    });
+    let query = editor.with_state(mention_query).flatten();
+    let people: Vec<&'static str> = match &query {
+        Some(query) if dismissed.read().as_ref() != Some(query) => PEOPLE
+            .into_iter()
+            .filter(|user| user.starts_with(query.as_str()))
+            .collect(),
+        _ => Vec::new(),
+    };
+    let current = active() % people.len().max(1);
+    let picked = people.get(current).copied();
+    let count = people.len();
+    let pick = move |user: &'static str| {
+        editor.edit(move |state| insert_mention(state, user));
+        let mut active = active;
+        active.set(0);
+    };
+    // The list takes the arrows, Enter and Escape while it is open; the rest types.
+    let intercept = move |input: EditorInput| -> bool {
+        let Some(user) = picked else {
+            return false;
+        };
+        match input.key() {
+            Some("ArrowDown") => active.set((current + 1) % count),
+            Some("ArrowUp") => active.set((current + count - 1) % count),
+            Some("Enter" | "Tab") => pick(user),
+            Some("Escape") => dismissed.set(query.clone()),
+            _ => return false,
+        }
+        true
+    };
+    let overlay = (!people.is_empty()).then(|| rsx! {
+        Paper { shadow: "md", bordered: true, role: "listbox", "aria-label": "People",
+            sx: sx().padding("xs").min_width("10rem"),
+            for (index, user) in people.iter().copied().enumerate() {
+                div { id: "mention-{user}", role: "option", "aria-selected": index == current,
+                    onclick: move |_| pick(user),
+                    Paper { radius: "sm", color: (index == current).then_some("primary"),
+                        sx: sx().padding("0.25rem 0.5rem"),
+                        "@{user}"
+                    }
+                }
+            }
+        }
+    });
+    rsx! {
+        RichTextEditor {
+            label: "Message",
+            placeholder: "Type @ to mention someone",
+            handle: editor,
+            commands,
+            tools: vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
+            nodes: NodeViews::new().with("mention", Mention),
+            registry: registry(),
+            intercept,
+            overlay,
+            active_descendant: picked.map(|user| format!("mention-{user}")),
+        }
+    }
+}
+```
+
+On Android a soft keyboard reports most keys as `Unidentified` and composes
+its text, so `intercept` sees Enter but rarely the typed text; `with_state`
+still sees every word once it is composed, which is what the example reads.
+
 ## Accessibility
 
 ### Keyboard
@@ -157,6 +287,9 @@ shows Ctrl.
 - Every edit goes through the document model, so undo, the `onchange` value
   and the screen stay in step. Input methods (IME) compose natively and are
   taken in when the composition ends.
+- While `overlay` is set, the text carries `aria-controls` naming it,
+  `aria-autocomplete="list"` and `aria-activedescendant` from
+  `active_descendant`, so a screen reader announces the highlighted option.
 
 ### You must
 
@@ -165,6 +298,10 @@ shows Ctrl.
 - Document custom chords you bind in `keymap` for your users.
 - Make a `NodeViews` atom name its node in text (a mention shows `@name`): it
   is a non-editable island a screen reader reads as is.
+- Give an `overlay` list `role="listbox"` with an id per `role="option"`, pass
+  the highlighted one as `active_descendant`, and steer it with the keyboard
+  through `intercept`; Escape should close it.
+- Name each `RichTextTool` with its `label`: the button shows only its icon.
 
 ### Limits
 
@@ -193,6 +330,10 @@ shows Ctrl.
 | `handle` | `RichTextHandle` | - | From `use_rich_text_editor()`: runs commands from your own toolbar (`run`) and reads the state reactively (`is_active`, `block_kind`, `list_kind`, `in_quote`, `can_undo`, `can_redo`). One handle drives one editor. |
 | `nodes` | `NodeViews` | `NodeViews::new()` | Your component per custom node name, e.g. a mention. It gets `NodeViewProps { name, attrs, children }` and renders `children` exactly once. Built-ins (`paragraph`, `heading`, `quote`, `list`, `list_item`, `rule`) take a view under their name too; `code_block` stays fixed. |
 | `registry` | `NodeRegistry` | - | Your node types. Copy and cut write your nodes through their `to_markdown`, and a debug build warns about a `nodes` name that is not registered, such as a typo. |
+| `intercept` | `Callback<EditorInput, bool>` | - | Sees each key press (`EditorInput::Key`, before the keymap) and typed text (`EditorInput::Text`) first; return `true` to take it over, and the editor does nothing with it. Android soft keyboards report most keys as `Unidentified` and compose their text, which never arrives as `Text`; Enter still arrives as a key. Read typed text through the handle's `with_state` instead. |
+| `overlay` | `Element` | - | Floats at the caret while `Some`, such as a mention list: under the caret's line, above it near the window's bottom edge, mirrored in right-to-left text. Focus stays in the text; pressing the overlay does not take it. |
+| `active_descendant` | `String` | - | The id of the overlay's highlighted option. While `overlay` is `Some` the text carries it as `aria-activedescendant`, with `aria-controls` naming the overlay and `aria-autocomplete="list"`. |
+| `tools` | `Vec<RichTextTool>` | `vec![]` | Your toolbar buttons, after the block buttons: `RichTextTool::new(command, label, icon)` runs the command by name; `.active(fn)` makes it a toggle with `aria-pressed`. They never move into the More menu. |
 | `size` | `Size` | `md` | Padding and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
 | `label` | `Caption` | - | The field's caption, above the toolbar. It names the text. |

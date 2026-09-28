@@ -4,8 +4,9 @@
 use dioxus::prelude::*;
 use libero::components::RichTextEditor;
 use libero::components::rich_text::{
-    Attrs, Builtin, CustomContent, Doc, Inline, MarkKind, Marks, NodeRegistry, NodeSpec,
-    NodeViewProps, NodeViews, use_rich_text_editor,
+    Attrs, Builtin, Commands, CustomContent, Doc, EditorInput, EditorState, Inline, MarkKind,
+    Marks, NodeRegistry, NodeSpec, NodeViewProps, NodeViews, Position, RichTextTool, Selection,
+    use_rich_text_editor,
 };
 
 use crate::Routes;
@@ -18,6 +19,7 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/sample", || rsx! { SamplePage {} }),
     ("/rich-text-editor/builtins", || rsx! { BuiltinsPage {} }),
     ("/rich-text-editor/trailing", || rsx! { TrailingPage {} }),
+    ("/rich-text-editor/mentions", || rsx! { MentionsPage {} }),
 ];
 
 /// A doc ending in a code block, for leaving it and the language menu.
@@ -223,5 +225,109 @@ fn BuiltinsPage() -> Element {
             onchange: move |next| doc.set(next),
         }
         pre { id: "out", {doc.read().to_markdown()} }
+    }
+}
+
+const USERS: [&str; 4] = ["ada", "alan", "grace", "linus"];
+
+/// The word after an `@` that starts a word, up to the caret.
+fn mention_query(state: &EditorState) -> Option<String> {
+    let before = state.text_before_caret();
+    let (head, query) = before.rsplit_once('@')?;
+    let starts = head.is_empty() || head.ends_with(char::is_whitespace);
+    (starts && query.chars().all(char::is_alphanumeric)).then(|| query.to_string())
+}
+
+/// Replaces `@query` before the caret with a mention of `user`.
+fn insert_mention(state: &mut EditorState, user: &str) -> bool {
+    let Some(query) = mention_query(state) else {
+        return false;
+    };
+    let at = state.caret();
+    let from = Position::new(at.block, at.offset - query.chars().count() - 1);
+    let mut attrs = Attrs::new();
+    attrs.insert("user".into(), user.into());
+    let Some(mention) = registry().new_inline("mention", attrs) else {
+        return false;
+    };
+    state.select(Selection::range(from, at));
+    state.insert_inline(mention) && state.insert_text(" ")
+}
+
+/// Type `@` and a name: a list under the caret, steered by the arrow keys through
+/// `intercept`, and a toolbar button of the caller's that types the `@`.
+#[component]
+fn MentionsPage() -> Element {
+    let mut doc = use_signal(Doc::new);
+    let editor = use_rich_text_editor();
+    let mut active = use_signal(|| 0usize);
+    let mut dismissed = use_signal(|| None::<String>);
+    let commands = use_hook(|| {
+        let mut commands = Commands::default();
+        commands.register("at", |state| state.insert_text("@"));
+        commands
+    });
+    let query = editor.with_state(mention_query).flatten();
+    let users: Vec<&'static str> = match &query {
+        Some(query) if dismissed.read().as_ref() != Some(query) => USERS
+            .into_iter()
+            .filter(|user| user.starts_with(query.as_str()))
+            .collect(),
+        _ => Vec::new(),
+    };
+    let current = active() % users.len().max(1);
+    let pick = move |user: &'static str| {
+        editor.edit(move |state| insert_mention(state, user));
+        let mut active = active;
+        active.set(0);
+    };
+    let picked = users.get(current).copied();
+    let count = users.len();
+    let intercept = move |input: EditorInput| -> bool {
+        let Some(user) = picked else {
+            return false;
+        };
+        match input.key() {
+            Some("ArrowDown") => active.set((current + 1) % count),
+            Some("ArrowUp") => active.set((current + count - 1) % count),
+            Some("Enter" | "Tab") => pick(user),
+            Some("Escape") => dismissed.set(query.clone()),
+            _ => return false,
+        }
+        true
+    };
+    let overlay = (!users.is_empty()).then(|| {
+        rsx! {
+            ul { role: "listbox", id: "mention-list", "aria-label": "People",
+                style: "margin: 0; padding: 4px; list-style: none; background: white; border: 1px solid #888",
+                for (index, user) in users.iter().copied().enumerate() {
+                    li {
+                        id: "mention-{user}",
+                        role: "option",
+                        "aria-selected": index == current,
+                        style: if index == current { "background: #ddf" } else { "" },
+                        onclick: move |_| pick(user),
+                        "@{user}"
+                    }
+                }
+            }
+        }
+    });
+
+    rsx! {
+        RichTextEditor {
+            label: "Message",
+            handle: editor,
+            commands,
+            tools: vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
+            nodes: NodeViews::new().with("mention", Mention),
+            registry: registry(),
+            intercept,
+            overlay,
+            active_descendant: picked.map(|user| format!("mention-{user}")),
+            value: doc(),
+            onchange: move |next| doc.set(next),
+        }
+        pre { id: "out", {doc.read().plain_text()} }
     }
 }
