@@ -198,3 +198,25 @@ e2e::scenario!(
     "/table-reorder",
     a_menu_moves_a_column
 );
+
+/// Name's header grip dropped near Origin's end edge: one order change (1395).
+async fn a_grip_drag_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let grip = "th[aria-label=Name] [data-drag-handle]";
+    let (from, origin) = (d.rect(grip).await?, d.rect("th[aria-label=Origin]").await?);
+    let dx = origin.x + origin.width - 4.0 - (from.x + from.width / 2.0);
+    d.drag(grip, dx, 0.0).await?;
+    eventually_text(d, "#columns", "Stock Origin Name", "a drag past Origin").await?;
+    eventually(d, "Name's cells to follow, the ghost gone", async |d| {
+        Ok(d.text("tbody tr:first-child th").await? == "Cherry"
+            && d.rect("th[aria-label=Name]").await?.x > d.rect("th[aria-label=Origin]").await?.x
+            && !d.exists("[data-drag-ghost]").await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_header_grip_drag_moves_a_column,
+    "/table-reorder",
+    a_grip_drag_moves_a_column,
+    native: skip("no column drag grip on Blitz: the column menu moves columns")
+);

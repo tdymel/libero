@@ -210,15 +210,20 @@ fn a_pin_edge_splits_a_group_and_stops_a_span() {
     let body = body(&html);
     let head = &body[body.find("<thead").unwrap()..body.find("</thead>").unwrap()];
 
-    assert_eq!(
-        head.matches("<th scope=\"colgroup\" data-group=true>Name</th>")
-            .count(),
-        2,
+    // The pinned half of the group sticks with its column (todo 1359), the other scrolls.
+    assert!(
+        head.contains(
+            "<th scope=\"colgroup\" data-group=true data-pin=\"start\" data-pin-edge=true \
+             style=\"inset-inline-start:0;\">Name</th>"
+        ),
+        "{head}"
+    );
+    assert!(
+        head.contains("<th scope=\"colgroup\" data-group=true>Name</th>"),
         "{head}"
     );
     assert!(!head.contains("colgroup\" colspan"), "{head}");
-    // Group headers never pin; the column header under one does.
-    assert_eq!(head.matches("data-pin=\"start\"").count(), 1, "{head}");
+    assert_eq!(head.matches("data-pin=\"start\"").count(), 2, "{head}");
     let rows = &body[body.find("<tbody").unwrap()..];
     assert!(
         rows.contains("<td data-pin=\"start\" data-pin-edge=true style=\"inset-inline-start:0;\">Ada</td><td>Lovelace</td>"),

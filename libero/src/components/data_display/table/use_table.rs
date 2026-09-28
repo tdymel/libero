@@ -6,7 +6,7 @@ use super::{
     pinning::PinnedColumns,
     resize::ColumnWidths,
 };
-use crate::utils::warn;
+use crate::{theme::Size, utils::warn};
 
 /// One piece of table state: the caller's when controlled, else the table's own.
 /// Controlled, a change only asks via `onchange`.
@@ -121,6 +121,9 @@ pub(crate) struct TableConfig {
     pub column_widths: Option<ColumnWidths>,
     pub default_column_widths: ColumnWidths,
     pub oncolumnwidthschange: Option<EventHandler<ColumnWidths>>,
+    pub density: Option<Size>,
+    pub default_density: Option<Size>,
+    pub ondensitychange: Option<EventHandler<Size>>,
 }
 
 /// A table's state, one slice per feature.
@@ -145,6 +148,8 @@ pub(crate) struct TableState {
     pub column_order: StateSlice<Vec<String>>,
     /// Resized widths in px, by header.
     pub column_widths: StateSlice<ColumnWidths>,
+    /// The picked size, over `size`; `None` until one is picked.
+    pub density: StateSlice<Option<Size>>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -220,7 +225,20 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.oncolumnwidthschange,
         "Table: a controlled `column_widths` without `oncolumnwidthschange` never changes.",
     );
+    let ondensitychange = config.ondensitychange;
+    let density_change = use_callback(move |density: Option<Size>| {
+        if let (Some(handler), Some(density)) = (ondensitychange, density) {
+            handler.call(density);
+        }
+    });
+    let density = use_state_slice(
+        config.density.map(Some),
+        || config.default_density,
+        ondensitychange.map(|_| density_change),
+        "Table: a controlled `density` without `ondensitychange` never changes.",
+    );
     TableState {
+        density,
         column_order,
         column_widths,
         sort,

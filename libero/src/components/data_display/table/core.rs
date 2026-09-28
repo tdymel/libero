@@ -6,10 +6,12 @@ use pictogram_icons_lucide as lucide;
 use super::{
     cell_value::{CellAlign, SortDirection, SortKey},
     column::{Column, ColumnDefaults},
+    column_drag::{ColumnDrag, ColumnDragGrip},
+    detail::SlidingDetail,
     groups::{HeaderCell, header_rows},
     header_filters::filter_row,
     overlay::EmptyBody,
-    pinning::{CellPin, pin_edge_at},
+    pinning::{CellPin, pin_edge_at, span_pin},
     resize::{ColumnResize, ColumnWidths, ResizeHandle, ResizeLimits},
     row_reorder::{ReorderRow, ReorderSlot, RowReorder},
     use_table::StateSlice,
@@ -295,6 +297,9 @@ pub(super) struct RowSpec {
     /// With `row_detail`: its toggle cell, and while open its detail row's id and body.
     pub toggle: Option<Element>,
     pub detail: Option<(String, Element)>,
+    /// With `animate_details`, for a row with a toggle: its detail row's id and
+    /// whether it is open; the row then slides open and shut.
+    pub sliding: Option<(String, bool)>,
     /// With `onrowreorder`: its slot among the shown rows and its name.
     pub reorder: Option<ReorderSlot>,
 }
@@ -394,6 +399,8 @@ pub(super) struct BodySpec {
     pub filters: Option<Vec<Option<Element>>>,
     /// With `resizable_columns`: what the headers' resize grips share.
     pub resize: Option<ColumnResize>,
+    /// With `column_menu`, off Blitz: what the unpinned headers' drag grips share.
+    pub drag: Option<ColumnDrag>,
 }
 
 /// Whether a header click adds its column to the others: a modifier, or a touch,
@@ -453,6 +460,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         reorder_header,
         filters,
         resize,
+        drag,
     } = body;
     let columns = shown.len().max(1)
         + usize::from(select_all.is_some())
@@ -497,15 +505,22 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                 .into_iter()
                 .enumerate()
                 .map(|(position, cell)| match cell {
-                    HeaderCell::Group { name, span } => rsx! {
-                        th {
-                            key: "g{position}",
-                            scope: "colgroup",
-                            colspan: (span > 1).then(|| span.to_string()),
-                            "data-group": true,
-                            "{name}"
+                    HeaderCell::Group { name, start, span } => {
+                        // Groups split at a pin edge: one over pinned columns sticks with them.
+                        let pin = span_pin(&headers, &shown[start..start + span]);
+                        rsx! {
+                            th {
+                                key: "g{position}",
+                                scope: "colgroup",
+                                colspan: (span > 1).then(|| span.to_string()),
+                                "data-group": true,
+                                "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
+                                "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
+                                style: pin.as_ref().map(CellPin::style),
+                                "{name}"
+                            }
                         }
-                    },
+                    }
                     HeaderCell::Column { index, rowspan } => {
                         let spec = &headers[index];
                         let grip = resize.zip(spec.resize).map(|(resize, limits)| {
@@ -519,6 +534,13 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                             }
                         });
                         let resizable = grip.is_some();
+                        let draggable = drag.is_some() && spec.pin.is_none();
+                        // A pinned column moves by its pin.
+                        let mover = drag.filter(|_| spec.pin.is_none()).map(|drag| {
+                            rsx! {
+                                ColumnDragGrip { index, header: spec.header.clone(), drag }
+                            }
+                        });
                         rsx! {
                             th {
                                 key: "{index}",
@@ -528,6 +550,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                 "data-sortable": spec.sortable.then_some(true),
                                 "data-menu": with_menu.then_some(true),
                                 "data-resizable": resizable.then_some(true),
+                                "data-draggable": draggable.then_some(true),
                                 "data-pin": spec.pin.as_ref().map(|pin| pin.side.as_str()),
                                 "data-pin-edge": spec.pin.as_ref().filter(|pin| pin.edge).map(|_| true),
                                 // Else the menu button's label joins the name every cell reads out.
@@ -539,6 +562,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                     .iter()
                                     .find(|(column, _)| *column == index)
                                     .map(|(_, direction)| direction.aria_value()),
+                                {mover}
                                 {header_cell(spec, index, &context, menu_of(index))}
                                 {grip}
                             }
@@ -608,6 +632,7 @@ pub(super) fn body_rows(
         stripe,
         toggle,
         detail,
+        sliding,
         reorder: slot,
     } = row;
     let content = rsx! {
@@ -673,13 +698,24 @@ pub(super) fn body_rows(
                 {content}
             }
             },
-            detail.map(|(id, body)| {
-                rsx! {
-                    tr { key: "{key}-detail", id, "data-detail": true,
-                        td { colspan: "{columns}", {body} }
+            match sliding {
+                Some((id, open)) => Some(rsx! {
+                    SlidingDetail {
+                        key: "{key}-detail",
+                        id,
+                        open,
+                        body: detail.map(|(_, body)| body),
+                        columns,
                     }
-                }
-            }),
+                }),
+                None => detail.map(|(id, body)| {
+                    rsx! {
+                        tr { key: "{key}-detail", id, "data-detail": true,
+                            td { colspan: "{columns}", {body} }
+                        }
+                    }
+                }),
+            },
         ),
     };
     std::iter::once(row).chain(detail)

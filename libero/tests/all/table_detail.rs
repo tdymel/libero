@@ -70,6 +70,67 @@ fn rows_with_a_detail_get_a_closed_toggle_and_no_detail_row() {
     assert!(!body.contains("Wrote the first program"));
 }
 
+/// 1392: the predicate decides the toggles; only open rows build their detail.
+#[test]
+fn row_has_detail_builds_the_open_details_only() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static BUILT: AtomicUsize = AtomicUsize::new(0);
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "People",
+                    data: people(),
+                    columns: vec![column("Name").value(|row: &Row| row.name.to_string()).row_header()],
+                    row_key: |row: &Row| row.id.to_string(),
+                    row_detail: |row: &Row| {
+                        BUILT.fetch_add(1, Ordering::Relaxed);
+                        detail(row)
+                    },
+                    row_has_detail: |row: &Row| row.note.is_some(),
+                    default_expanded: vec!["3".to_string()],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    assert_eq!(body.matches("data-detail-button").count(), 2, "{body}");
+    assert!(body.contains("Likes tables"), "{body}");
+    assert!(!body.contains("Wrote the first program"), "{body}");
+    assert_eq!(BUILT.load(Ordering::Relaxed), 1);
+}
+
+/// 1391: an open row slides in its detail; closed rows render none.
+#[test]
+fn animate_details_wraps_the_open_detail_in_a_collapse() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "People",
+                    data: people(),
+                    columns: vec![column("Name").value(|row: &Row| row.name.to_string()).row_header()],
+                    row_key: |row: &Row| row.id.to_string(),
+                    row_detail: detail,
+                    animate_details: true,
+                    default_expanded: vec!["1".to_string()],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    assert_eq!(body.matches("data-sliding=true").count(), 1, "{body}");
+    assert!(body.contains("data-detail-body"), "{body}");
+    assert!(body.contains("Wrote the first program"), "{body}");
+    assert!(!body.contains("Likes tables"), "{body}");
+}
+
 #[test]
 fn an_open_detail_follows_its_row_across_every_column() {
     fn app() -> Element {

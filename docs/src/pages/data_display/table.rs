@@ -235,7 +235,7 @@ pub fn TablePage() -> Element {
                     prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\". When the quick filter or the column filters leave no rows, the row reads `table.no_results`, \"No matching rows\", instead."),
                     prop("no_results", "Option<Element>").default("None").doc("Shown in one full-width row when the quick filter or the column filters leave no rows, over the localized `table.no_results`."),
                     prop("loading", "bool").default("false").doc("Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, \"Loading rows\". The empty row waits until loading ends."),
-                    prop("toolbar", "Option<Element>").default("None").doc("A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls."),
+                    prop("toolbar", "Option<Element>").default("None").doc("A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton` and `TableExportButton` work only in here."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
                     prop("virtual_row_height", "Option<f64>").default("None").doc("With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. Ignored with `row_detail` or `onrowreorder`, which render every row; a debug build warns."),
@@ -252,12 +252,17 @@ pub fn TablePage() -> Element {
                     prop("onrowclick", "EventHandler<T>").default("None").doc("Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action."),
                     prop("row_states", "RowFn<T, States>").default("None").doc("A row's states, rendered as its `data-state`. Style them with `sx().selector(\"& tbody tr\", sx().when(..))`."),
                     prop("row_attrs", "RowFn<T, Vec<Attribute>>").default("None").doc("Extra attributes on a row's `tr`."),
-                    prop("row_detail", "RowFn<T, Option<Element>>").default("None").doc("A row's detail, from a `|row: &T| ..` closure. `Some` gives the row a toggle in a leading column; open, the detail shows in a full-width row under it. Called for the shown rows on every render. Set `row_key` with it, or open details stick to positions in `data`."),
+                    prop("row_detail", "RowFn<T, Option<Element>>").default("None").doc("A row's detail, from a `|row: &T| ..` closure. `Some` gives the row a toggle in a leading column; open, the detail shows in a full-width row under it. Called for the shown rows on every render, or only the open ones with `row_has_detail`. Set `row_key` with it, or open details stick to positions in `data`."),
+                    prop("row_has_detail", "RowFn<T, bool>").default("None").doc("Whether a row has a detail, without building it. Set, it decides the toggles, and `row_detail` is called for the open rows only: for large tables."),
+                    prop("animate_details", "bool").default("false").doc("Slides the detail rows open and shut, as a `Collapse`; at once under reduced motion. Not with `onrowreorder`."),
                     prop("expanded", "Option<Vec<String>>").default("None").doc("The `row_key`s of the rows whose detail shows. Set, it is controlled: pair it with `onexpandedchange`. It survives a sort."),
                     prop("default_expanded", "Vec<String>").default("[]").doc("Seeds the open details once. Ignored when `expanded` is set."),
                     prop("onexpandedchange", "EventHandler<Vec<String>>").default("None").doc("Called with the open details a toggle asks for."),
                     prop("onrowreorder", "EventHandler<SortableMove>").default("None").doc("Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted or the quick filter has text. Paged, a row moves within its page. Set `row_key` with it."),
                     prop("size", "Size").default("theme (md)").doc("Cell padding and font size."),
+                    prop("density", "Option<Size>").default("None").doc("The size a `TableDensityButton` picked, over `size`; set, it is controlled."),
+                    prop("default_density", "Option<Size>").default("None").doc("Seeds the density once. Ignored when `density` is set."),
+                    prop("ondensitychange", "Option<EventHandler<Size>>").default("None").doc("The density a `TableDensityButton` pick asks for."),
                     prop("striped", "bool").default("false").doc("Shades every other body row."),
                     prop("page", "Option<u32>").default("None").doc("The shown page, 1-based. Set, the page is controlled: pair it with `onpagechange`. A page past the end shows the last one."),
                     prop("default_page", "u32").default("1").doc("Seeds the page once. Ignored when `page` is set."),
@@ -286,7 +291,7 @@ pub fn TablePage() -> Element {
                     prop("onpinnedcolumnschange", "EventHandler<PinnedColumns>").default("None").doc("Called with the pinned columns a column menu pick asks for."),
                     prop("column_order", "Option<Vec<String>>").default("None").doc("The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column."),
                     prop("default_column_order", "Vec<String>").default("[]").doc("Seeds the column order once. Ignored when `column_order` is set."),
-                    prop("oncolumnorderchange", "EventHandler<Vec<String>>").default("None").doc("Called with the order a column menu's Move left or Move right asks for, every header listed."),
+                    prop("oncolumnorderchange", "EventHandler<Vec<String>>").default("None").doc("Called with the order a column menu's Move left or Move right, or a header drag, asks for, every header listed."),
                     prop("resizable_columns", "bool").default("false").doc("Puts a drag grip on each header's end edge, and Widen column, Narrow column (50px steps, the menu stays open) and Reset width in its `column_menu`, the keyboard and drag-free way. Double-click a grip to reset. A column opts out with `.resizable(false)` and sets its range with `.resize_limits(min, max)` in px, 50 to unbounded by default. Auto layout never draws a column narrower than its content. Blitz: use the menu, the grip does not drag reliably there."),
                     prop("column_widths", "Option<ColumnWidths>").default("None").doc("Resized widths in px by header, a `BTreeMap<String, f64>`, over the columns' own `width`. Set, the widths are controlled: pair them with `oncolumnwidthschange`."),
                     prop("default_column_widths", "ColumnWidths").default("{}").doc("Seeds the widths once. Ignored when `column_widths` is set."),
@@ -348,10 +353,12 @@ pub fn TablePage() -> Element {
                     "A group header is a `th scope=\"colgroup\"` over its columns, so a screen reader reads it with each of their cells. A column outside any group, and the select-all box, span every header row.",
                     "Pinned columns move to their edge in the DOM too, so Tab and a screen reader meet the cells in the order they are seen. The detail toggle and checkbox columns pin with the start ones.",
                     "A pinned column past one without a `width` warns in a debug build: its offset is unknown, so it would overlap.",
-                    "A group or a `col_span` stops at a pin edge: a group over pinned and scrolled columns shows as two headers, and a group header never pins.",
+                    "A group or a `col_span` stops at a pin edge: a group over pinned and scrolled columns shows as two headers, and the one over the pinned columns pins with them.",
                     "With `onrowreorder`, each row has a drag handle named \"Reorder\" plus the row's name, described by the keyboard steps, and Move up and Move down buttons, so a single pointer reorders without a drag (WCAG 2.5.7). A touch drags only from the handle; elsewhere it scrolls. Each lift, move and drop is said in a polite live region. While sorted or filtered the controls are disabled.",
                     "`onrowreorder` without `row_key` warns in a debug build.",
                     "The column menu's Move left and Move right name the screen sides in either text direction. A moved column moves in the DOM too, so Tab and a screen reader follow it, and a column moved out of its group splits the group.",
+                    "The header drag grip is pointer only and hidden from screen readers, with no tab stop: the column menu's moves are its keyboard and drag-free way (WCAG 2.5.7). Escape, or a drop outside the table, cancels the drag. Blitz has no grip; the menu moves columns there.",
+                    "Each Widen, Narrow or Reset width in the column menu says the column's new width in a polite live region, \"Name: 170 px\": the menu stays open over the change.",
                     "`loading` without shown rows marks the table `aria-busy` and hides its placeholder rows from screen readers. With rows shown it adds a progress bar named \"Loading rows\" and leaves the table unbusy, as some screen readers hold back a busy table's rows.",
                     "The `toolbar` is a plain row, not a `role=\"toolbar\"`: Tab moves through its controls as anywhere else.",
                     "With `virtual_row_height`, the table carries `aria-rowcount`, every row it holds, and each rendered row its `aria-rowindex`, so a screen reader says \"row 5 001 of 10 001\" though only a screenful is in the DOM. The scrolled-away rows leave no empty rows behind.",
@@ -490,6 +497,23 @@ pub fn TablePage() -> Element {
                     " replace the text of the row shown without data and without matches."
                 }
                 Text {
+                    "Three ready pieces go in the "
+                    Code { source: "toolbar" }
+                    ", and only there. "
+                    Code { source: "TableColumnsButton" }
+                    " opens a checklist that shows and hides the hideable columns. "
+                    Code { source: "TableDensityButton" }
+                    " picks compact, standard or comfortable rows, the "
+                    Code { source: "size" }
+                    " small, medium or large; the pick wins over "
+                    Code { source: "size" }
+                    ". "
+                    Code { source: "TableExportButton" }
+                    " hands "
+                    Code { source: "onexport" }
+                    " the filtered, sorted rows of every page as CSV, in the shown columns; you save it."
+                }
+                Text {
                     Code { source: "column_menu" }
                     "'s Filter entry, and "
                     Code { source: "header_filters" }
@@ -545,7 +569,9 @@ pub fn TablePage() -> Element {
                     " applies it. Sorted or filtered, the shown order is not your data's, so "
                     "the controls turn off. With "
                     Code { source: "column_menu" }
-                    ", Move left and Move right reorder the columns; hold the order yourself with "
+                    ", Move left and Move right reorder the columns, and a grip at each unpinned "
+                    "header's start edge drags one to a gap between the others; hold the order "
+                    "yourself with "
                     Code { source: "column_order" }
                     " and "
                     Code { source: "oncolumnorderchange" }

@@ -1,10 +1,13 @@
+use std::time::Duration;
+
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use super::{selection::toggle_row, use_table::StateSlice};
 use crate::{
-    components::{accessibility::VisuallyHidden, common::Glyph},
+    components::{accessibility::VisuallyHidden, common::Glyph, layout::Collapse},
     context::IconSlot,
+    hooks::{use_presence, use_theme},
     localization::TableLabels,
 };
 
@@ -90,6 +93,45 @@ fn DetailToggle(
                 aria_controls: open.then_some(controls),
                 onclick: move |_| toggle((row.clone(), !open)),
                 Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
+            }
+        }
+    }
+}
+
+/// A detail row that slides open and shut, with `animate_details`: it stays
+/// through its close, showing the body it last had.
+#[component]
+pub(super) fn SlidingDetail(
+    id: String,
+    open: bool,
+    body: Option<Element>,
+    columns: usize,
+) -> Element {
+    let duration = use_theme().collapse.duration;
+    // The `Collapse` inside ends on this property; its `transitionend` bubbles here.
+    let presence = use_presence(
+        open,
+        "grid-template-rows",
+        Some(Duration::from_millis(duration.into())),
+    );
+    let mut last = use_hook(|| CopyValue::new(None::<Element>));
+    if body.is_some() {
+        last.set(body);
+    }
+    if !presence.mounted() {
+        return rsx! {};
+    }
+    rsx! {
+        tr {
+            id,
+            "data-detail": true,
+            "data-sliding": true,
+            onmounted: move |_| presence.on_mounted(),
+            ontransitionend: move |event| presence.on_transition_end(&event),
+            td { colspan: "{columns}",
+                Collapse { open,
+                    div { "data-detail-body": true, {last.peek().clone()} }
+                }
             }
         }
     }

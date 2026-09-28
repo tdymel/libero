@@ -1,3 +1,5 @@
+use crate::theme::Size;
+
 /// How a `ColumnFilter` compares a cell. Text operators ignore case, `Equals`
 /// too; number operators compare the value, not the formatted text.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -116,6 +118,16 @@ pub struct TableLabels {
     pub narrow_column: &'static str,
     /// Drops a resized column's width, back to its own.
     pub reset_column_width: &'static str,
+    /// Announced after a menu Widen or Narrow step: the header and the new width in px.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.column_width)("Name", 240.0), "Name: 240 px");
+    /// ```
+    pub column_width: fn(&str, f64) -> String,
+    /// Announced after a menu Reset width, from the header text.
+    pub column_width_reset: fn(&str) -> String,
     /// The header of the column of row reorder handles, read out only.
     pub reorder: &'static str,
     /// The header of the column of detail toggles, read out only.
@@ -161,6 +173,18 @@ pub struct TableLabels {
     /// assert_eq!((TableLabels::ENGLISH.operator_name)(FilterOperator::GreaterThan), "Greater than");
     /// ```
     pub operator_name: fn(FilterOperator) -> &'static str,
+    /// The toolbar's `TableDensityButton`, which picks the row height.
+    pub density: &'static str,
+    /// A density's name in its menu: small, medium and large.
+    ///
+    /// ```
+    /// use libero::{localization::TableLabels, theme::Size};
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.density_name)(Size::Sm), "Compact");
+    /// ```
+    pub density_name: fn(Size) -> &'static str,
+    /// The toolbar's `TableExportButton`.
+    pub export: &'static str,
 }
 
 fn english_filter_column(column: &str) -> String {
@@ -291,6 +315,34 @@ fn german_column_menu(column: &str) -> String {
     format!("Optionen für Spalte {column}")
 }
 
+fn column_width(column: &str, width: f64) -> String {
+    format!("{column}: {width} px")
+}
+
+fn english_column_width_reset(column: &str) -> String {
+    format!("{column}: width reset")
+}
+
+fn german_column_width_reset(column: &str) -> String {
+    format!("{column}: Breite zurückgesetzt")
+}
+
+fn english_density_name(size: Size) -> &'static str {
+    match size {
+        Size::Xs | Size::Sm => "Compact",
+        Size::Md => "Standard",
+        _ => "Comfortable",
+    }
+}
+
+fn german_density_name(size: Size) -> &'static str {
+    match size {
+        Size::Xs | Size::Sm => "Kompakt",
+        Size::Md => "Standard",
+        _ => "Komfortabel",
+    }
+}
+
 fn english_row_details(row: &str) -> String {
     format!("Details for {row}")
 }
@@ -329,6 +381,8 @@ impl TableLabels {
         widen_column: "Widen column",
         narrow_column: "Narrow column",
         reset_column_width: "Reset width",
+        column_width,
+        column_width_reset: english_column_width_reset,
         reorder: "Reorder",
         details: "Details",
         row_details: english_row_details,
@@ -344,6 +398,9 @@ impl TableLabels {
         date_from: "From",
         date_to: "To",
         operator_name: english_operator_name,
+        density: "Density",
+        density_name: english_density_name,
+        export: "Export",
     };
 
     pub const GERMAN: Self = Self {
@@ -375,6 +432,8 @@ impl TableLabels {
         widen_column: "Spalte verbreitern",
         narrow_column: "Spalte verschmälern",
         reset_column_width: "Breite zurücksetzen",
+        column_width,
+        column_width_reset: german_column_width_reset,
         reorder: "Neu anordnen",
         details: "Details",
         row_details: german_row_details,
@@ -390,5 +449,8 @@ impl TableLabels {
         date_from: "Von",
         date_to: "Bis",
         operator_name: german_operator_name,
+        density: "Zeilenhöhe",
+        density_name: german_density_name,
+        export: "Exportieren",
     };
 }

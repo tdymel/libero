@@ -50,8 +50,29 @@ pub fn table_text<T>(columns: &[Column<T>], data: &[T]) -> Vec<Vec<String>> {
 /// assert_eq!(table_csv(&columns, &users), "Name,Age\r\n\"Lovelace, Ada\",36\r\n");
 /// ```
 pub fn table_csv<T>(columns: &[Column<T>], data: &[T]) -> String {
+    csv_of(table_text(columns, data))
+}
+
+/// [`table_csv`] of the rows at `order` in the columns at `shown`.
+pub(super) fn shown_csv<T>(
+    columns: &[Column<T>],
+    shown: &[usize],
+    data: &[T],
+    order: &[usize],
+) -> String {
+    let header = shown.iter().map(|&at| columns[at].header.clone()).collect();
+    let rows = order.iter().map(|&row| {
+        shown
+            .iter()
+            .map(|&at| (columns[at].text)(&data[row]))
+            .collect()
+    });
+    csv_of(std::iter::once(header).chain(rows))
+}
+
+fn csv_of(rows: impl IntoIterator<Item = Vec<String>>) -> String {
     let mut csv = String::new();
-    for row in table_text(columns, data) {
+    for row in rows {
         for (index, field) in row.iter().enumerate() {
             if index > 0 {
                 csv.push(',');
@@ -124,6 +145,25 @@ mod tests {
         assert_eq!(
             table_csv(&columns(), &rows),
             "Name,Price\r\n\"a,b\",$0.01\r\n\"say \"\"hi\"\"\",$0.02\r\n\"two\nlines\",$0.03\r\n"
+        );
+    }
+
+    #[test]
+    fn a_shown_csv_follows_the_order_and_the_shown_columns() {
+        let rows = [
+            Row {
+                name: "Tea",
+                cents: 250,
+            },
+            Row {
+                name: "Jam",
+                cents: 400,
+            },
+        ];
+
+        assert_eq!(
+            shown_csv(&columns(), &[1, 0], &rows, &[1, 0]),
+            "Price,Name\r\n$4.00,Jam\r\n$2.50,Tea\r\n"
         );
     }
 

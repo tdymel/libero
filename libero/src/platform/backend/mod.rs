@@ -294,6 +294,10 @@ pub(crate) const STICKS_TABLE_HEADS: bool =
 pub(crate) const MOVES_TABLE_ROWS: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz's header grip drags are unreliable; see [`drags_table_columns`](crate::platform::drags_table_columns).
+pub(crate) const DRAGS_TABLE_COLUMNS: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 /// No Blitz backend draws a `backdrop-filter`; see [`draws_backdrop_filter`](crate::platform::draws_backdrop_filter).
 pub(crate) const DRAWS_BACKDROP_FILTER: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));

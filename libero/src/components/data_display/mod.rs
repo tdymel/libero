@@ -42,8 +42,8 @@ pub use sortable::{Sortable, SortableItem, SortableItemPart, SortableItemProps, 
 pub use table::{
     CellAlign, CellValue, Column, ColumnDefaults, ColumnFilter, ColumnHeader, ColumnType,
     ColumnWidths, FilterKind, FilterLogic, FilterOperator, PinSide, PinnedColumns, RowFn,
-    SortDirection, SortKey, Table, TableProps, TableSort, TypedColumnHeader, column, table_csv,
-    table_text,
+    SortDirection, SortKey, Table, TableColumnsButton, TableDensityButton, TableExportButton,
+    TableProps, TableSort, TypedColumnHeader, column, table_csv, table_text,
 };
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelinePart, TimelineProps};
 pub use video::{MediaTrack, TrackKind, Video, VideoPart, VideoProps};

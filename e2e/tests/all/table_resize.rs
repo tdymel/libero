@@ -1,5 +1,6 @@
 //! `Table` column resize (1156-4d): a header grip drags the width within its
-//! limits; the column menu's Widen, Narrow and Reset width do it without a drag.
+//! limits; the column menu's Widen, Narrow and Reset width do it without a drag,
+//! and say the new width.
 
 use anyhow::{Result, bail};
 use e2e::driver::{Driver, eventually, eventually_text};
@@ -64,6 +65,8 @@ async fn the_menu_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     pick(d, "Widen column").await?;
     eventually_text(d, WIDTHS, "Name=170", "Widen").await?;
     width_near(d, 170.0, "Widen").await?;
+    // The open menu hides the change: it is said (todo 1415).
+    eventually_text(d, "[role=status]", "Name: 170 px", "the Widen announcement").await?;
     // Widen and Narrow keep the menu open, to step again.
     pick(d, "Narrow column").await?;
     eventually_text(d, WIDTHS, "Name=120", "Narrow").await?;
@@ -71,6 +74,13 @@ async fn the_menu_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, WIDTHS, "Name=80", "Narrow to the floor").await?;
     pick(d, "Reset width").await?;
     eventually_text(d, WIDTHS, "", "Reset width").await?;
+    eventually_text(
+        d,
+        "[role=status]",
+        "Name: width reset",
+        "the reset announcement",
+    )
+    .await?;
     width_near(d, 120.0, "the reset").await
 }
 

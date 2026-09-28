@@ -77,7 +77,8 @@ The open details are `row_key`s, held yourself with `expanded` and
 you the move, by positions in `data`, and `step.apply(&mut rows.write())`
 applies it. Sorted or filtered, the shown order is not your data's, so the
 controls turn off. With `column_menu`, Move left and Move right reorder the
-columns; hold the order yourself with `column_order` and
+columns, and a grip at each unpinned header's start edge drags one to a gap
+between the others; hold the order yourself with `column_order` and
 `oncolumnorderchange`. A sorted column stays sorted wherever it moves.
 
 `table_csv(&columns, &rows)` writes the cells as CSV, each as its column shows
@@ -417,6 +418,43 @@ fn Demo() -> Element {
 }
 ```
 
+Three ready pieces go in the `toolbar`, and only there. `TableColumnsButton`
+opens a checklist that shows and hides the hideable columns. `TableDensityButton`
+picks compact, standard or comfortable rows, the `size` small, medium or large;
+the pick wins over `size`, and `density` with `ondensitychange` holds it.
+`TableExportButton` hands `onexport` the filtered, sorted rows of every page as
+CSV, in the shown columns; you save it.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{
+    Table, TableColumnsButton, TableDensityButton, TableExportButton, column,
+};
+
+#[derive(Clone, PartialEq)]
+struct Person {
+    name: String,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut csv = use_signal(String::new);
+
+    rsx! {
+        Table {
+            caption: "Team members",
+            toolbar: rsx! {
+                TableColumnsButton {}
+                TableDensityButton {}
+                TableExportButton { onexport: move |text| csv.set(text) }
+            },
+            data: Vec::<Person>::new(),
+            columns: vec![column("Name").value(|p: &Person| p.name.clone())],
+        }
+    }
+}
+```
+
 A long table takes `max_height`: the rows scroll, both ways, in a `ScrollArea`
 under a header that stays put. The header takes the page surface's colour; on
 another background, set it with `sx().selector("& thead th", ..)`.
@@ -741,7 +779,7 @@ fn Demo() -> Element {
 | `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". When the quick filter or the column filters leave no rows, the row reads `table.no_results`, "No matching rows", instead. |
 | `no_results` | `Option<Element>` | `None` | Shown in one full-width row when the quick filter or the column filters leave no rows, over the localized `table.no_results`. |
 | `loading` | `bool` | `false` | Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, "Loading rows". The empty row waits until loading ends. |
-| `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. |
+| `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton` and `TableExportButton` work only in here. |
 | `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 | `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
 | `virtual_row_height` | `Option<f64>` | `None` | With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. Ignored with `row_detail` or `onrowreorder`, which render every row; a debug build warns. |
@@ -758,12 +796,17 @@ fn Demo() -> Element {
 | `onrowclick` | `EventHandler<T>` | `None` | Called with the clicked row. Pointer only: give keyboard users a button or link in a cell for the same action. |
 | `row_states` | `RowFn<T, States>` | `None` | A row's states, rendered as its `data-state`. Style them with `sx().selector("& tbody tr", sx().when(..))`. |
 | `row_attrs` | `RowFn<T, Vec<Attribute>>` | `None` | Extra attributes on a row's `tr`. |
-| `row_detail` | `RowFn<T, Option<Element>>` | `None` | A row's detail, from a `\|row: &T\| ..` closure. `Some` gives the row a toggle in a leading column; open, the detail shows in a full-width row under it. Called for the shown rows on every render. Set `row_key` with it, or open details stick to positions in `data`. |
+| `row_detail` | `RowFn<T, Option<Element>>` | `None` | A row's detail, from a `\|row: &T\| ..` closure. `Some` gives the row a toggle in a leading column; open, the detail shows in a full-width row under it. Called for the shown rows on every render, or only the open ones with `row_has_detail`. Set `row_key` with it, or open details stick to positions in `data`. |
+| `row_has_detail` | `RowFn<T, bool>` | `None` | Whether a row has a detail, without building it. Set, it decides the toggles, and `row_detail` is called for the open rows only: for large tables. |
+| `animate_details` | `bool` | `false` | Slides the detail rows open and shut, as a `Collapse`; at once under reduced motion. Not with `onrowreorder`. |
 | `expanded` | `Option<Vec<String>>` | `None` | The `row_key`s of the rows whose detail shows. Set, it is controlled: pair it with `onexpandedchange`. It survives a sort. |
 | `default_expanded` | `Vec<String>` | `[]` | Seeds the open details once. Ignored when `expanded` is set. |
 | `onexpandedchange` | `EventHandler<Vec<String>>` | `None` | Called with the open details a toggle asks for. |
 | `onrowreorder` | `EventHandler<SortableMove>` | `None` | Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted or the quick filter has text. Paged, a row moves within its page. Set `row_key` with it. |
 | `size` | `Size` | theme (md) | Cell padding and font size. |
+| `density` | `Option<Size>` | `None` | The size a `TableDensityButton` picked, over `size`; set, it is controlled. |
+| `default_density` | `Option<Size>` | `None` | Seeds the density once. Ignored when `density` is set. |
+| `ondensitychange` | `Option<EventHandler<Size>>` | `None` | The density a `TableDensityButton` pick asks for. |
 | `striped` | `bool` | `false` | Shades every other body row. |
 | `page` | `Option<u32>` | `None` | The shown page, 1-based. Set, the page is controlled: pair it with `onpagechange`. A page past the end shows the last one. |
 | `default_page` | `u32` | `1` | Seeds the page once. Ignored when `page` is set. |
@@ -792,7 +835,7 @@ fn Demo() -> Element {
 | `onpinnedcolumnschange` | `EventHandler<PinnedColumns>` | `None` | Called with the pinned columns a column menu pick asks for. |
 | `column_order` | `Option<Vec<String>>` | `None` | The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column. |
 | `default_column_order` | `Vec<String>` | `[]` | Seeds the column order once. Ignored when `column_order` is set. |
-| `oncolumnorderchange` | `EventHandler<Vec<String>>` | `None` | Called with the order a column menu's Move left or Move right asks for, every header listed. |
+| `oncolumnorderchange` | `EventHandler<Vec<String>>` | `None` | Called with the order a column menu's Move left or Move right, or a header drag, asks for, every header listed. |
 | `resizable_columns` | `bool` | `false` | Puts a drag grip on each header's end edge, and Widen column, Narrow column (50px steps, the menu stays open) and Reset width in its `column_menu`, the keyboard and drag-free way. Double-click a grip to reset. A column opts out with `.resizable(false)` and sets its range with `.resize_limits(min, max)` in px, 50 to unbounded by default. Auto layout never draws a column narrower than its content. Blitz: use the menu, the grip does not drag reliably there. |
 | `column_widths` | `Option<ColumnWidths>` | `None` | Resized widths in px by header, a `BTreeMap<String, f64>`, over the columns' own `width`. Set, the widths are controlled: pair them with `oncolumnwidthschange`. |
 | `default_column_widths` | `ColumnWidths` | `{}` | Seeds the widths once. Ignored when `column_widths` is set. |
@@ -900,7 +943,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - A pinned column past one without a `width` warns in a debug build: its offset
   is unknown, so it would overlap.
 - A group or a `col_span` stops at a pin edge: a group over pinned and scrolled
-  columns shows as two headers, and a group header never pins.
+  columns shows as two headers, and the one over the pinned columns pins with them.
 - With `onrowreorder`, each row has a drag handle named "Reorder" plus the
   row's name, described by the keyboard steps, and Move up and Move down
   buttons, so a single pointer reorders without a drag (WCAG 2.5.7). A touch
@@ -911,6 +954,13 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - The column menu's Move left and Move right name the screen sides in either
   text direction. A moved column moves in the DOM too, so Tab and a screen
   reader follow it, and a column moved out of its group splits the group.
+- The header drag grip is pointer only and hidden from screen readers, with no
+  tab stop: the column menu's moves are its keyboard and drag-free way (WCAG
+  2.5.7). Escape, or a drop outside the table, cancels the drag. Blitz has no
+  grip; the menu moves columns there.
+- Each Widen, Narrow or Reset width in the column menu says the column's new
+  width in a polite live region, "Name: 170 px": the menu stays open over the
+  change.
 - `loading` without shown rows marks the table `aria-busy` and hides its
   placeholder rows from screen readers. With rows shown it adds a progress bar
   named "Loading rows" and leaves the table unbusy, as some screen readers hold

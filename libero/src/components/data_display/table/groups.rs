@@ -1,9 +1,17 @@
-/// One cell of a header row: a group over adjacent columns, or a column's own
-/// header, which spans down to the last header row.
+/// One cell of a header row: a group over adjacent columns, from position
+/// `start` of the shown ones, or a column's own header, which spans down to the
+/// last header row.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum HeaderCell {
-    Group { name: String, span: usize },
-    Column { index: usize, rowspan: usize },
+    Group {
+        name: String,
+        start: usize,
+        span: usize,
+    },
+    Column {
+        index: usize,
+        rowspan: usize,
+    },
 }
 
 /// The header rows, top first, over the shown columns' group paths (outermost
@@ -26,6 +34,7 @@ pub(super) fn header_rows(
                 (true, Some(HeaderCell::Group { span, .. })) => *span += 1,
                 _ => rows[level].push(HeaderCell::Group {
                     name: path[level].clone(),
+                    start: position,
                     span: 1,
                 }),
             }
@@ -70,9 +79,10 @@ mod tests {
         header_rows(&shown, |_| false)
     }
 
-    fn group(name: &str, span: usize) -> HeaderCell {
+    fn group(name: &str, start: usize, span: usize) -> HeaderCell {
         Group {
             name: name.into(),
+            start,
             span,
         }
     }
@@ -102,7 +112,7 @@ mod tests {
             layout,
             vec![
                 vec![
-                    group("Name", 2),
+                    group("Name", 0, 2),
                     Column {
                         index: 2,
                         rowspan: 2
@@ -131,16 +141,16 @@ mod tests {
             path(&["B", "X"]),
         ]);
 
-        assert_eq!(layout[0], vec![group("A", 3), group("B", 1)]);
+        assert_eq!(layout[0], vec![group("A", 0, 3), group("B", 3, 1)]);
         assert_eq!(
             layout[1],
             vec![
-                group("X", 2),
+                group("X", 0, 2),
                 Column {
                     index: 2,
                     rowspan: 2
                 },
-                group("X", 1),
+                group("X", 3, 1),
             ]
         );
         assert_eq!(layout[2].len(), 3);
@@ -150,8 +160,8 @@ mod tests {
     fn a_group_split_by_another_column_is_two_cells() {
         let layout = rows(&[path(&["A"]), path(&[]), path(&["A"])]);
 
-        assert_eq!(layout[0][0], group("A", 1));
-        assert_eq!(layout[0][2], group("A", 1));
+        assert_eq!(layout[0][0], group("A", 0, 1));
+        assert_eq!(layout[0][2], group("A", 2, 1));
     }
 
     #[test]
@@ -165,7 +175,7 @@ mod tests {
 
         assert_eq!(
             header_rows(&shown, |position| position == 1)[0],
-            vec![group("A", 1), group("A", 1)]
+            vec![group("A", 0, 1), group("A", 1, 1)]
         );
     }
 

@@ -14,11 +14,11 @@ use crate::{
             inset_focus_ring_sx, names_itself, use_name_warning, variables,
         },
         form::use_checkbox_look,
-        layout::{ScrollArea, ScrollAreaBase, scroll_area_base, use_box},
+        layout::{ScrollArea, ScrollAreaBase, ScrollAreaHandle, scroll_area_base, use_box},
         overlay::MenuPart,
     },
     hooks::{listener, use_debounced_callback, use_id, use_localization, use_theme},
-    platform::{lays_out_captions, sticks_table_heads, widens_sized_tables},
+    platform::{drags_table_columns, lays_out_captions, sticks_table_heads, widens_sized_tables},
     sx::{StaticSx, Sx, sx},
     theme::{CHECKBOX_BOX_SIZE, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TableDefaults},
     utils::warn,
@@ -26,13 +26,15 @@ use crate::{
 
 use super::{
     column::{Column, ColumnDefaults},
+    column_drag::{DropPlan, use_column_drag},
     column_filter::{ColumnFilter, FilterLogic, cell_tests},
     column_menu::{ColumnMenu, MenuColumn},
-    column_order::{moved, order_unpinned},
+    column_order::{moved, order_unpinned, ranked},
     core::{
         BodySpec, CaptionSpec, CellSpec, RowFn, RowSpec, SortedRows, TableSort, WidthSpec,
         active_sort, header_specs, render_body,
     },
+    csv::shown_csv,
     detail::Details,
     filter::{FilteredRows, QuickFilter, query_words},
     filter_popover::FilterTarget,
@@ -44,7 +46,7 @@ use super::{
     resize::{ColumnResize, ColumnWidths, MenuWidth},
     row_reorder::{ReorderSlot, RowReorder},
     selection::Selection,
-    toolbar::TableToolbar,
+    toolbar::{TableToolbar, TableTools, ToolView},
     use_table::{TableConfig, use_table},
     window::{
         BodyRows, RowWindow, TABLE_ROW_HEIGHT_VAR, use_row_focus, window_attributes, windowed_sx,
@@ -193,10 +195,13 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         inset_focus_ring_sx("0"),
     )
     // The sticky rules below outrank it: a sticky cell places the grip as well.
-    .selector("& th[data-resizable]", sx().position("relative"))
-    // The header cell's box, measured for a resize's start width.
     .selector(
-        "& [data-resize-box]",
+        "& th[data-resizable], & th[data-draggable]",
+        sx().position("relative"),
+    )
+    // The header cell's box, measured for a resize's start width or a drag's layout.
+    .selector(
+        "& [data-resize-box], & [data-drag-box]",
         sx().position("absolute")
             .top("0")
             .bottom("0")
@@ -219,6 +224,53 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& th:hover [data-resize-handle], & [data-resize-handle][data-dragging]",
         sx().border_color("primary.6"),
     )
+    .selector(
+        "& [data-drag-handle]",
+        sx().position("absolute")
+            .top("0")
+            .bottom("0")
+            .with("inset-inline-start", "0")
+            .width("12px")
+            .display("flex")
+            .align_items("center")
+            .justify_content("center")
+            .cursor("grab")
+            .touch_action("none")
+            .opacity("0.6"),
+    )
+    .selector(
+        "& [data-drag-handle] svg",
+        sx().width("12px").height("12px"),
+    )
+    .selector(
+        "& [data-drag-handle][data-dragging]",
+        sx().cursor("grabbing"),
+    )
+    // Fixed: it follows the pointer over the scrolled and pinned cells alike.
+    .selector(
+        "& [data-drag-ghost]",
+        sx().position("fixed")
+            .z_index("10")
+            .box_sizing("border-box")
+            .display("flex")
+            .align_items("center")
+            .padding(TableDefaults::padding())
+            .overflow("hidden")
+            .white_space("nowrap")
+            .opacity("0.8")
+            .background(NamedColorCss::SURFACE.value())
+            .border(TableDefaults::border())
+            .with("pointer-events", "none"),
+    )
+    .selector(
+        "& [data-drop-line]",
+        sx().position("fixed")
+            .z_index("10")
+            .width("0")
+            .with("border-inline-start", "2px solid")
+            .border_color("primary.6")
+            .with("pointer-events", "none"),
+    )
     // With a mouse, shown on its header's hover or focus (todo 1260); a touch
     // screen has no hover. Faded, not hidden, so Tab still reaches it.
     .media(
@@ -226,6 +278,10 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         sx().selector(
             "& th[data-menu]:not(:hover):not(:focus-within) \
              [data-column-menu]:not([aria-expanded=\"true\"])",
+            sx().opacity("0"),
+        )
+        .selector(
+            "& th[data-draggable]:not(:hover) [data-drag-handle]",
             sx().opacity("0"),
         ),
     )
@@ -280,6 +336,12 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-detail-button][aria-expanded=\"false\"] svg",
         sx().transform("rotate(90deg)"),
     ))
+    // The padding moves inside the `Collapse`, so a shut row has no height left.
+    .selector("& tr[data-sliding] > td", sx().padding("0"))
+    .selector(
+        "& [data-detail-body]",
+        sx().padding(TableDefaults::padding()),
+    )
     .selector(
         "& [data-reorder]",
         sx().box_sizing("border-box")
@@ -479,7 +541,9 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// progress bar over the table's top edge.
     #[props(default)]
     loading: bool,
-    /// A row above the table, for your controls; the quick filter joins it at the end.
+    /// A row above the table, for your controls; the quick filter joins it at
+    /// the end. `TableColumnsButton`, `TableDensityButton` and `TableExportButton`
+    /// work only in here.
     #[props(default)]
     toolbar: Option<Element>,
     /// Scrolls a table wider than its parent sideways, in a `ScrollArea`.
@@ -538,9 +602,14 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default, into)]
     row_attrs: RowFn<T, Vec<Attribute>>,
     /// A row's detail, shown in a full-width row under it: `Some` gives the row
-    /// a toggle in a leading column. Called for the shown rows.
+    /// a toggle in a leading column. Called for the shown rows, or only the
+    /// open ones with `row_has_detail`.
     #[props(default, into)]
     row_detail: RowFn<T, Option<Element>>,
+    /// Whether a row has a detail, without building it: set, it decides the
+    /// toggles and `row_detail` is called for the open rows only. For large tables.
+    #[props(default, into)]
+    row_has_detail: RowFn<T, bool>,
     /// The `row_key`s of the rows whose detail shows; set, it is controlled.
     #[props(default)]
     expanded: Option<Vec<String>>,
@@ -550,6 +619,10 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// The open details a toggle asks for.
     #[props(default)]
     onexpandedchange: Option<EventHandler<Vec<String>>>,
+    /// Slides the detail rows open and shut, as a `Collapse`; at once under
+    /// reduced motion. Not with `onrowreorder`.
+    #[props(default)]
+    animate_details: bool,
     /// Adds a leading column of drag handles and move buttons; called with a
     /// move by positions in `data`, which you apply (`step.apply(&mut rows)`).
     /// Off while the rows are sorted or filtered. Not dragged on Blitz.
@@ -558,6 +631,15 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Cell padding and font size.
     #[props(default, into)]
     size: Input<Size>,
+    /// The size a `TableDensityButton` picked, over `size`; set, it is controlled.
+    #[props(default)]
+    density: Option<Size>,
+    /// Seeds the density once. Ignored when `density` is set.
+    #[props(default)]
+    default_density: Option<Size>,
+    /// The density a `TableDensityButton` pick asks for.
+    #[props(default)]
+    ondensitychange: Option<EventHandler<Size>>,
     /// Shades every other body row.
     #[props(default)]
     striped: bool,
@@ -621,7 +703,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Seeds the column order once. Ignored when `column_order` is set.
     #[props(default)]
     default_column_order: Vec<String>,
-    /// The order a column menu's Move left or Move right asks for, every header listed.
+    /// The order a column menu's Move left or Move right, or a header drag,
+    /// asks for, every header listed.
     #[props(default)]
     oncolumnorderchange: Option<EventHandler<Vec<String>>>,
     /// A drag grip on each header's end edge, and Widen, Narrow and Reset width
@@ -640,6 +723,7 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default)]
     oncolumnwidthschange: Option<EventHandler<ColumnWidths>>,
     /// A menu button in each header: sort, hide the column, show or hide others.
+    /// Off Blitz, unpinned headers also get a pointer-only drag grip to move them.
     #[props(default)]
     column_menu: bool,
     /// The column menus' `parts`: they open in a portal, out of `sx`'s reach.
@@ -761,7 +845,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         column_widths: props.column_widths,
         default_column_widths: props.default_column_widths,
         oncolumnwidthschange: props.oncolumnwidthschange,
+        density: props.density,
+        default_density: props.default_density,
+        ondensitychange: props.ondensitychange,
     });
+    let tools = use_context_provider(|| TableTools::new(state.hidden_columns, state.density));
     let preview = use_signal(|| None);
     let measured = use_hook(|| CopyValue::new(BTreeMap::new()));
     let resize = props.resizable_columns.then_some(ColumnResize {
@@ -770,6 +858,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         measured,
     });
     let announcer = use_announcer();
+    let column_drag = use_column_drag(state.column_order);
+    let drags = props.column_menu && drags_table_columns();
     let touch = use_hook(|| CopyValue::new(false));
     use_hook(|| {
         if props.selectable && !props.row_key.is_set() {
@@ -837,7 +927,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         "Table: no `caption`, `aria_label` or `aria-labelledby`, so it is announced without a \
          name.",
     );
-    let size = props.size.copied_or(use_theme().table.size);
+    // A picked density wins over `size`.
+    let size = state
+        .density
+        .read()
+        .unwrap_or(props.size.copied_or(use_theme().table.size));
     let labels = use_localization().table;
     // A column filter change announces the rows left once it settles (WCAG 4.1.3).
     let mut filtered_count = use_hook(|| CopyValue::new(0usize));
@@ -898,6 +992,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let (mut layout, unknown) = pin_columns(&mut headers, &pinned, lead_width.as_deref());
     let column_order = state.column_order.read();
     order_unpinned(&headers, &mut layout, &column_order);
+    if drags {
+        let plan = DropPlan {
+            ranked: ranked(&headers, &column_order)
+                .into_iter()
+                .map(|index| headers[index].header.clone())
+                .collect(),
+            unpinned: layout
+                .iter()
+                .filter(|&&index| headers[index].pin.is_none())
+                .map(|&index| (index, headers[index].header.clone()))
+                .collect(),
+        };
+        let mut current = column_drag.plan;
+        if *current.peek() != plan {
+            current.set(plan);
+        }
+    }
     let pins_start = headers.iter().any(|spec| {
         spec.pin
             .as_ref()
@@ -920,17 +1031,24 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .max()
         .unwrap_or(0);
     let head_rows = group_rows + 1 + usize::from(props.header_filters);
+    let menu_columns: Rc<[MenuColumn]> = headers
+        .iter()
+        .map(|spec| MenuColumn {
+            header: spec.header.clone(),
+            sortable: spec.sortable,
+            hideable: spec.hideable,
+            hidden: spec.hidden,
+        })
+        .collect();
+    if props.toolbar.is_some() {
+        tools.show(ToolView {
+            columns: menu_columns.clone(),
+            size,
+        });
+    }
     let menus = match props.column_menu {
         true => {
-            let columns: Rc<[MenuColumn]> = headers
-                .iter()
-                .map(|spec| MenuColumn {
-                    header: spec.header.clone(),
-                    sortable: spec.sortable,
-                    hideable: spec.hideable,
-                    hidden: spec.hidden,
-                })
-                .collect();
+            let columns = menu_columns;
             let active = Rc::new(active.clone());
             (0..headers.len())
                 .map(|index| {
@@ -947,6 +1065,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                                 resize,
                                 limits,
                                 width: widths.get(&headers[index].header).copied(),
+                                announcer,
                             }),
                             active: active.clone(),
                             sort: state.sort,
@@ -1076,6 +1195,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     }
     let results = order.len();
     filtered_count.set(results);
+    if props.toolbar.is_some() {
+        let (data, columns, shown, order) =
+            (data.clone(), columns.clone(), layout.clone(), order.clone());
+        let mut export = tools.export;
+        export.set(Some(Rc::new(move || {
+            shown_csv(&columns, &shown, &data, &order)
+        })));
+    }
     // The count when more rows were asked for: their arrival is said once loading ends.
     let mut asked_at = use_hook(|| CopyValue::new(None::<usize>));
     let loading = props.loading;
@@ -1141,6 +1268,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let headers = Rc::new(headers);
     let (row_headers, row_layout, row_key_at) = (headers.clone(), layout.clone(), key_at.clone());
     let (row_detail, striped, row_details) = (props.row_detail, props.striped, details.clone());
+    let row_has_detail = props.row_has_detail;
+    // A dragged row carries its detail row itself.
+    let animate_details = props.animate_details && !has_reorder;
     let row_of = move |position: usize, index: usize| {
         let row = &data[index];
         let key = row_key_at(index);
@@ -1151,11 +1281,28 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 .filter(|name| !name.is_empty())
                 .unwrap_or_else(|| key.clone())
         };
-        let detail = row_detail.call(row).flatten();
-        let open = detail.as_ref().map(|_| expanded.contains(&key));
+        let (open, detail) = match row_has_detail.call(row) {
+            Some(has) => {
+                let open = has.then(|| expanded.contains(&key));
+                let detail = match open {
+                    Some(true) => row_detail.call(row).flatten(),
+                    _ => None,
+                };
+                (open, detail)
+            }
+            None => {
+                let detail = row_detail.call(row).flatten();
+                (detail.as_ref().map(|_| expanded.contains(&key)), detail)
+            }
+        };
         let detail_cell = row_details
             .as_ref()
             .map(|details| details.row_cell(key.clone(), &name(), index, open, toggle_detail));
+        let sliding = row_details
+            .as_ref()
+            .zip(open)
+            .filter(|_| animate_details)
+            .map(|(details, open)| (details.row_id(index), open));
         let detail = match (&row_details, open) {
             (Some(details), Some(true)) => detail.map(|body| (details.row_id(index), body)),
             _ => None,
@@ -1182,6 +1329,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             stripe: striped && position % 2 == 1,
             toggle: detail_cell,
             detail,
+            sliding,
             states: row_states.call(row).and_then(|states| states.data_state()),
             attributes,
             cells: pin_runs(&row_headers, &row_layout)
@@ -1333,6 +1481,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .states(&states)
         .variables(&variables)
         .prepare()
+        .event("onmounted", column_drag.table.mount())
         .render(
             HtmlTag::Table,
             attributes,
@@ -1359,6 +1508,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 reorder: reorder.clone(),
                 filters: filter_cells,
                 resize,
+                drag: drags.then_some(column_drag),
             }),
         );
     // The live region: valid in no part of a table, so beside it.
@@ -1409,6 +1559,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     framework_sx: ScrollAreaBase(&TABLE_SCROLL_SX),
                     sx: max_height.map(|height| sx().max_height(height)).unwrap_or_default(),
                     onbottomreached: onbottomreached.map(|_| bottom_reached),
+                    // Its root, mounted by the area itself, is where a column drop counts.
+                    handle: ScrollAreaHandle { element: column_drag.region },
                     attributes,
                     {table}
                 }

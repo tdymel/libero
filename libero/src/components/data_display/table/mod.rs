@@ -1,5 +1,6 @@
 mod cell_value;
 mod column;
+mod column_drag;
 mod column_filter;
 mod column_menu;
 mod column_order;
@@ -29,3 +30,4 @@ pub use csv::{table_csv, table_text};
 pub use pinning::{PinSide, PinnedColumns};
 pub use resize::ColumnWidths;
 pub use table::{Table, TableProps};
+pub use toolbar::{TableColumnsButton, TableDensityButton, TableExportButton};

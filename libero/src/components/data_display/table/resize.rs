@@ -4,7 +4,10 @@ use dioxus::prelude::*;
 
 use super::use_table::StateSlice;
 use crate::{
-    components::overlay::{MenuEntry, MenuItem},
+    components::{
+        accessibility::Announcer,
+        overlay::{MenuEntry, MenuItem},
+    },
     hooks::{DragMove, DragOptions, DragStart, use_drag, use_element, use_resize_fallback},
     localization::TableLabels,
     platform::ElementApi,
@@ -93,6 +96,8 @@ pub(super) struct MenuWidth {
     pub limits: ResizeLimits,
     /// The resized width, `None` while the column has its own.
     pub width: Option<f64>,
+    /// Says each step's new width: the open menu shows no change (todo 1415).
+    pub announcer: Announcer,
 }
 
 impl MenuWidth {
@@ -102,12 +107,15 @@ impl MenuWidth {
             resize,
             limits,
             width,
+            announcer,
         } = self;
         let step = |by: f64| {
             let header = header.to_string();
             move |_| {
                 if let Some(width) = resize.width(&header) {
-                    resize.set(&header, Some(limits.clamp(width + by)));
+                    let next = limits.clamp(width + by);
+                    resize.set(&header, Some(next));
+                    announcer.say((labels.column_width)(&header, next));
                 }
             }
         };
@@ -125,7 +133,10 @@ impl MenuWidth {
                 .into(),
             MenuItem::new(labels.reset_column_width)
                 .disabled(width.is_none())
-                .onselect(move |_| resize.set(&reset, None))
+                .onselect(move |_| {
+                    resize.set(&reset, None);
+                    announcer.say((labels.column_width_reset)(&reset));
+                })
                 .into(),
         ]
     }

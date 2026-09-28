@@ -65,6 +65,24 @@ pub(super) fn moved(
     )
 }
 
+/// The column order, every header by rank, after dropping `header` into gap
+/// `gap` of `unpinned`, the shown unpinned headers in display order (gap `n`
+/// before its `n`th, the last after it). `None` when nothing moves.
+pub(super) fn dropped(
+    ranked: &[String],
+    unpinned: &[String],
+    header: &str,
+    gap: usize,
+) -> Option<Vec<String>> {
+    let mut next: Vec<String> = ranked.iter().filter(|h| *h != header).cloned().collect();
+    let at = match unpinned.get(gap) {
+        Some(before) => next.iter().position(|h| h == before)?,
+        None => next.iter().position(|h| Some(h) == unpinned.last())? + 1,
+    };
+    next.insert(at, header.to_string());
+    (next != ranked).then_some(next)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -139,5 +157,27 @@ mod tests {
             moved(&specs, &strings(&["C", "A"]), 2, true),
             Some(strings(&["A", "C", "B", "D"]))
         );
+    }
+
+    #[test]
+    fn a_drop_inserts_at_its_gap_and_its_own_gaps_move_nothing() {
+        // B is hidden, so the gaps lie around A, C and D only.
+        let ranked = strings(&["A", "B", "C", "D"]);
+        let unpinned = strings(&["A", "C", "D"]);
+
+        assert_eq!(
+            dropped(&ranked, &unpinned, "A", 2),
+            Some(strings(&["B", "C", "A", "D"]))
+        );
+        assert_eq!(
+            dropped(&ranked, &unpinned, "A", 3),
+            Some(strings(&["B", "C", "D", "A"]))
+        );
+        assert_eq!(
+            dropped(&ranked, &unpinned, "D", 0),
+            Some(strings(&["D", "A", "B", "C"]))
+        );
+        assert_eq!(dropped(&ranked, &unpinned, "C", 1), None);
+        assert_eq!(dropped(&ranked, &unpinned, "C", 2), None);
     }
 }

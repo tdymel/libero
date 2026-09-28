@@ -6,7 +6,13 @@ use libero::components::{Table, column};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/table-detail", || rsx! { DetailTablePage {} })];
+pub const ROUTES: Routes = &[
+    ("/table-detail", || rsx! { DetailTablePage {} }),
+    (
+        "/table-detail-animated",
+        || rsx! { DetailTablePage { animate: true } },
+    ),
+];
 
 #[derive(Clone, PartialEq)]
 struct Fruit {
@@ -35,9 +41,9 @@ fn fruit() -> Vec<Fruit> {
     ]
 }
 
-/// Banana has no detail, so no toggle.
+/// Banana has no detail, so no toggle. `animate` slides the details (1391).
 #[component]
-fn DetailTablePage() -> Element {
+fn DetailTablePage(#[props(default)] animate: bool) -> Element {
     let mut expanded = use_signal(Vec::<String>::new);
     let mut clicked = use_signal(String::new);
     rsx! {
@@ -59,6 +65,7 @@ fn DetailTablePage() -> Element {
             },
             expanded: expanded(),
             onexpandedchange: move |next| expanded.set(next),
+            animate_details: animate,
             onrowclick: move |fruit: Fruit| clicked.set(fruit.name.to_string()),
         }
         p { id: "expanded", {expanded.read().join(",")} }

@@ -100,3 +100,39 @@ e2e::scenario!(
     keyboard_opens,
     android: skip("958: element identity on the WebView")
 );
+
+/// 1391: the detail slides open to its full height, Tab reaches into it, and
+/// it stays through its slide shut before it goes.
+async fn slides_open_and_shut<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(CHERRY).await?;
+    eventually(d, "the detail to slide fully open", async |d| {
+        Ok(
+            d.exists(DETAIL).await? && d.rect(&format!("{DETAIL} p")).await?.height > 0.0 && {
+                let body = d.rect(&format!("{DETAIL} [data-detail-body]")).await?;
+                let row = d.rect(DETAIL).await?;
+                (row.height - body.height).abs() <= 2.0 && body.height > 30.0
+            },
+        )
+    })
+    .await?;
+    if d.attr(CHERRY, "aria-controls").await? != d.attr(DETAIL, "id").await? {
+        bail!("the open toggle does not point at its detail row");
+    }
+    d.focus(CHERRY).await?;
+    eventually_focused(d, CHERRY, "focus").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "[data-order=\"Cherry\"]", "Tab into the open detail").await?;
+    d.click(CHERRY).await?;
+    eventually_text(d, "#expanded", "", "the close").await?;
+    eventually(d, "the detail row to go after its slide", async |d| {
+        Ok(!d.exists(DETAIL).await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    an_animated_detail_slides_open_and_shut,
+    "/table-detail-animated",
+    slides_open_and_shut,
+    android: skip("958: element identity on the WebView")
+);

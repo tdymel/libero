@@ -133,7 +133,8 @@ pub(crate) use session::{session_get, session_set};
 pub(crate) use system_notification::{NotificationEvent, ShownNotification, system_notification};
 pub use system_notification::{SystemNotification, SystemNotificationError};
 pub(crate) use table::{
-    lays_out_captions, moves_table_rows, sticks_table_heads, widens_sized_tables,
+    drags_table_columns, lays_out_captions, moves_table_rows, sticks_table_heads,
+    widens_sized_tables,
 };
 pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};

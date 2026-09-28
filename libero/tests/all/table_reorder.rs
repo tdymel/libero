@@ -3,7 +3,10 @@ use crate::common::{body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Column, ColumnFilter, FilterOperator, SortDirection, Table, TableSort, column},
+    components::{
+        Column, ColumnFilter, FilterOperator, PinnedColumns, SortDirection, Table, TableSort,
+        column,
+    },
 };
 
 #[derive(Clone, PartialEq)]
@@ -153,4 +156,47 @@ fn row_reorder_is_off_under_a_column_filter() {
     // Two rows left, three controls each.
     assert!(!body.contains(">Linus<"), "{body}");
     assert_eq!(body.matches(" disabled").count(), 6, "{body}");
+}
+
+/// 1395: a column menu brings a pointer-only drag grip to each unpinned header.
+#[test]
+fn a_column_menu_puts_a_hidden_drag_grip_in_each_unpinned_header() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    column_menu: true,
+                    default_pinned_columns: PinnedColumns::default().start(["Name"]),
+                    data: people(),
+                    columns: columns(),
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let head = body(&html);
+    let head = &head[head.find("<thead").unwrap()..head.find("</thead>").unwrap()];
+
+    assert_eq!(head.matches("data-draggable=true").count(), 2, "{head}");
+    assert_eq!(head.matches("data-drag-handle=true").count(), 2, "{head}");
+    assert!(
+        head.contains("<div aria-hidden=\"true\" data-drag-handle=true>"),
+        "{head}"
+    );
+    assert!(!head.contains("tabindex"), "{head}");
+}
+
+#[test]
+fn without_a_column_menu_no_header_drags() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table { aria_label: "People", data: people(), columns: columns() }
+            }
+        }
+    }
+
+    assert!(!render(app).contains("data-drag-handle=true"));
 }
