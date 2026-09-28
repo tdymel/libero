@@ -95,6 +95,7 @@ explains how parts work.
 | `Space` | On a slider: plays or pauses. On a button: presses it. |
 | `J` or `L` | Jumps 10 seconds back or ahead. |
 | `M` | Mutes or unmutes. |
+| `Shift+?` | Lists these keys in a `ShortcutHelp` dialog. |
 | `Left` or `Right` | On the seek slider: 1 second; on the volume slider: 5%. |
 | `Escape` | Closes the volume menu and returns to its button. |
 | `Tab` | Moves through every control in visual order: play, seek, mute, volume, speed. In the volume menu, returns to its button. |
@@ -117,8 +118,8 @@ explains how parts work.
   keeps the keys, the press and the drag. The bars are drawn from the file's
   URL, not decoded from the sound, and are hidden from screen readers.
 - The row never wraps: the seek track shrinks first, then the time goes, then
-  the mute and volume buttons (`M` still mutes), so it fits at 320px and 200%
-  zoom (WCAG 1.4.10).
+  the buttons shrink, to 24px at the least (WCAG 2.5.8): every control stays at
+  320px and 200% zoom (WCAG 1.4.10).
 - The bubble has a border at 3:1 against the page in light and dark (WCAG
   1.4.11).
 - A polite status says "Loading" while playing waits for data; a failed source

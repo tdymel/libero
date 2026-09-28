@@ -12,13 +12,13 @@ use crate::{
         common::{Glyph, HtmlTag, Input},
         form::{Slider, SliderChangeEvent},
         layout::{paper_sx, use_box},
-        overlay::{Menu, MenuItem, use_menu},
+        overlay::{Menu, MenuItem, Shortcut, ShortcutHelp, use_menu},
     },
     context::IconSlot,
     hooks::{
-        Align, ElementHandle, FullscreenHandle, Hotkey, MediaHandle, PopoverOptions, Side,
-        owner_link, use_element, use_formats, use_hotkeys, use_id, use_localization, use_popover,
-        use_theme,
+        Align, ElementHandle, FullscreenHandle, Hotkey, MediaHandle, ModalScope, PopoverOptions,
+        Side, owner_link, use_element, use_formats, use_hotkeys, use_id, use_localization,
+        use_modal, use_popover, use_theme,
     },
     localization::fill,
     platform::{ElementApi, key_taken},
@@ -120,14 +120,30 @@ pub(super) fn use_sound(media: MediaHandle) -> Sound {
     Sound { media, audible }
 }
 
-/// K plays and pauses, J and L jump 10 seconds, M mutes, all only with focus in
-/// `player`; `more` adds a player's own.
+/// K plays and pauses, J and L jump 10 seconds, M mutes, Shift+? lists them in a
+/// `ShortcutHelp`, all only with focus in `player`; `more` adds a player's own, with
+/// its row when it applies. Call it below the player's own `PortalHost`, if any.
 pub(super) fn use_media_keys(
     media: MediaHandle,
     sound: Sound,
     player: ElementHandle,
-    more: impl IntoIterator<Item = Hotkey>,
+    more: impl IntoIterator<Item = (Hotkey, Option<Shortcut>)>,
 ) {
+    let labels = use_localization().media;
+    let (more, extra_rows): (Vec<_>, Vec<_>) = more.into_iter().unzip();
+    let shortcuts: Vec<Shortcut> = [
+        Shortcut::new("k", labels.shortcut_play),
+        Shortcut::new("j", labels.shortcut_back),
+        Shortcut::new("l", labels.shortcut_forward),
+        Shortcut::new("m", labels.shortcut_mute),
+    ]
+    .into_iter()
+    .chain(extra_rows.into_iter().flatten())
+    .chain([Shortcut::new(HELP, labels.shortcut_help)])
+    .collect();
+    let help = use_modal(move |_: ModalScope<()>| {
+        rsx! { ShortcutHelp { shortcuts: shortcuts.clone() } }
+    });
     let jump = move |by: f64| media.seek(media.current_time() + by);
     use_hotkeys(
         [
@@ -135,12 +151,18 @@ pub(super) fn use_media_keys(
             Hotkey::new("j", move || jump(-10.0)),
             Hotkey::new("l", move || jump(10.0)),
             Hotkey::new("m", move || sound.toggle()),
+            Hotkey::new(HELP, move || {
+                help.open();
+            }),
         ]
         .into_iter()
         .chain(more)
         .map(|hotkey| hotkey.within(player)),
     );
 }
+
+/// Matches the `?` a layout produces, Shift+/ or Shift+ß alike.
+const HELP: &str = "shift+?";
 
 /// A video's text track the captions button shows and hides.
 #[derive(Clone, Copy, PartialEq)]
@@ -175,6 +197,9 @@ pub(super) fn MediaControls(
     #[props(default)] captions: Option<Captions>,
     #[props(default)] fullscreen: Option<FullscreenHandle>,
     #[props(default)] overlay: bool,
+    /// The row's border-box height, each time it changes.
+    #[props(default)]
+    onheight: Option<EventHandler<f64>>,
 ) -> Element {
     let labels = use_localization().media;
     let icon_size = icon_size(&size);
@@ -246,7 +271,15 @@ pub(super) fn MediaControls(
     // Plain Tab stops in visual order, as native controls: a roving toolbar's
     // arrows clashed with the sliders' (todo 1328).
     rsx! {
-        div { role: "group", "aria-label": labels.controls, "data-slot": CONTROLS,
+        div {
+            role: "group",
+            "aria-label": labels.controls,
+            "data-slot": CONTROLS,
+            onresize: move |event: Event<ResizeData>| {
+                if let (Some(onheight), Ok(size)) = (onheight, event.get_border_box_size()) {
+                    onheight.call(size.height);
+                }
+            },
             if overlay {
                 {seek}
                 {play}

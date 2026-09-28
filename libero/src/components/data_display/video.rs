@@ -10,11 +10,12 @@ use crate::{
     components::{
         common::{HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
         layout::use_box,
+        overlay::Shortcut,
     },
     context::{HostOutlet, PortalHost},
     hooks::{
         FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, listener, use_element, use_fullscreen,
-        use_media, use_portal_slot, use_timeout,
+        use_localization, use_media, use_portal_slot, use_timeout,
     },
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
     theme::{ACTION_ICON_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, Size, SizeCss, Z_INDEX_MODAL},
@@ -54,6 +55,8 @@ const SCRIM_FADE: &str = "2rem";
 const BLACK: &str = "#000";
 /// The scrim's floor: 3:1 for the light tracks and 4.5:1 for the white text even over a white frame.
 const SCRIM: &str = "rgba(0, 0, 0, 0.8)";
+/// A hovered, pressed or open button on the scrim: white text stays above 6:1 over a white frame.
+const STATE_TINT: &str = "rgba(255, 255, 255, 0.2)";
 const DEFAULT_RATIO: &str = "16 / 9";
 /// On the `<video>`: how far its captions move up to clear the shown bar.
 const BAR_VAR: &str = "--libero-video-bar";
@@ -121,6 +124,11 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 .media(REDUCED_MOTION, sx().transition("none"))
                 .selector("& > *", sx().flex_shrink("0"))
                 .selector("& [data-slot='track']", light_track)
+                // The theme's light state tint left the white text under 3:1 (todo 1388).
+                .selector(
+                    "& button:is(:hover, :active, [aria-expanded='true']):not(:disabled)",
+                    sx().background(STATE_TINT).color("#fff"),
+                )
                 // Shown captions: a bar under the icon, as YouTube's; a border survives forced colours.
                 .selector(
                     "& button[aria-pressed]",
@@ -295,7 +303,7 @@ base_props! {
 /// captions and fullscreen.
 ///
 /// Keys while focus is inside: K, or Space on a slider, play and pause; J and L
-/// jump 10 seconds, M mutes, C toggles captions, F fullscreen.
+/// jump 10 seconds, M mutes, C toggles captions, F fullscreen; Shift+? lists them.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -358,13 +366,22 @@ pub fn Video(props: VideoProps) -> Element {
     };
 
     let sound = use_sound(media);
+    // After the `PortalHost`: in fullscreen the help shows inside the player.
+    let labels = use_localization().media;
     use_media_keys(
         media,
         sound,
         player,
         [
-            Hotkey::new("f", move || fullscreen.toggle()),
-            Hotkey::new("c", move || captions.toggle(media)).when(move || captions.track.is_some()),
+            (
+                Hotkey::new("c", move || captions.toggle(media))
+                    .when(move || captions.track.is_some()),
+                caption_track.map(|_| Shortcut::new("c", labels.shortcut_captions)),
+            ),
+            (
+                Hotkey::new("f", move || fullscreen.toggle()),
+                Some(Shortcut::new("f", labels.shortcut_fullscreen)),
+            ),
         ],
     );
     // A `muted` attribute set after parsing mutes nothing, so the property is set once mounted.
@@ -385,15 +402,22 @@ pub fn Video(props: VideoProps) -> Element {
 
     let (onplay, onpause, onended) = (props.onplay, props.onpause, props.onended);
     let unsupported = media.supported() == Some(false);
-    // The bar's height over the picture, bar the scrim's fade: a button row, the seek row and the gaps.
-    let button = match props.size.as_ref() {
-        Some(size) => BUTTON_HEIGHT.value(*size),
-        None => ACTION_ICON_SIZE.value(),
+    // The bar's height over the picture, bar the scrim's fade: measured (todo 1389), and
+    // until then a button row, a 1rem seek row and the gaps.
+    let mut bar = use_signal(|| None::<f64>);
+    let mut style = match bar() {
+        Some(height) => format!("{BAR_VAR}: calc({height}px - {SCRIM_FADE});"),
+        None => {
+            let button = match props.size.as_ref() {
+                Some(size) => BUTTON_HEIGHT.value(*size),
+                None => ACTION_ICON_SIZE.value(),
+            };
+            format!(
+                "{BAR_VAR}: calc({button} + 1rem + 3 * {});",
+                SizeCss::SPACING.value(Size::Xs)
+            )
+        }
     };
-    let mut style = format!(
-        "{BAR_VAR}: calc({button} + 1rem + 3 * {});",
-        SizeCss::SPACING.value(Size::Xs)
-    );
     if let Some(ratio) = &props.aspect_ratio {
         style.push_str(&format!("aspect-ratio: {ratio};"));
     }
@@ -517,6 +541,11 @@ pub fn Video(props: VideoProps) -> Element {
                 captions: Some(captions),
                 fullscreen: Some(fullscreen),
                 overlay: true,
+                onheight: move |height: f64| {
+                    if *bar.peek() != Some(height) {
+                        bar.set(Some(height));
+                    }
+                },
             }
         }
         if inside {

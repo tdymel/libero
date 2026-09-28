@@ -31,8 +31,8 @@ fn it_meets_the_baseline() {
 
 /// WCAG 1.4.10, todos 1325 and 1385: a bubble of at most 22rem whose row stays
 /// one line down to 160px (320px at 200% zoom), nothing leaving the player; the
-/// time goes at 240px, the volume at 160px. A shrink-wrapping parent does not
-/// collapse it.
+/// time goes at 240px, and from 208px the buttons shrink, down to 24px, rather
+/// than the volume going (todo 1393). A shrink-wrapping parent does not collapse it.
 #[test]
 fn the_controls_fit_a_narrow_player() {
     block_on(async {
@@ -43,7 +43,8 @@ fn the_controls_fit_a_narrow_player() {
             (352, 352, 5),
             (320, 320, 5),
             (240, 240, 4),
-            (160, 160, 3),
+            (208, 208, 4),
+            (160, 160, 4),
         ] {
             page.evaluate(format!(
                 "document.querySelector('#player').style.width = '{width}px'"
@@ -60,7 +61,11 @@ fn the_controls_fit_a_narrow_player() {
                      const fits = row.every((e) => {{ const r = e.getBoundingClientRect();
                          return r.left >= player.left && r.right <= player.right; }});
                      const lines = new Set(row.map((e) => {{ const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2); }})).size;
-                     return row.length === {shown} && seek.width >= 32 && player.width === {bubble} && fits && lines === 1; }})()"
+                     const buttons = [...document.querySelectorAll('#player [data-slot=controls] button')];
+                     const volume = document.querySelectorAll('#player [data-slot=volume] button');
+                     const sized = buttons.every((b) => b.getBoundingClientRect().height >= 24)
+                         && [...volume].every((b) => b.getBoundingClientRect().width > 0);
+                     return row.length === {shown} && seek.width >= 32 && player.width === {bubble} && fits && lines === 1 && sized; }})()"
                 ),
                 &format!("the row to fit {width}px"),
             )
@@ -74,6 +79,48 @@ fn the_controls_fit_a_narrow_player() {
         )
         .await
         .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Shift and the key that types `?` on a German layout, ß's.
+const QUESTION_DE: Key = Key {
+    key: "?",
+    code: "Minus",
+    vk: 219,
+    text: Some("?"),
+};
+
+/// Todo 1410: Shift+? lists the player's keys, by the `?` it types on any layout;
+/// no captions or fullscreen rows, as Audio has neither.
+#[test]
+fn shift_question_lists_the_keys() {
+    block_on(async {
+        let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{PLAY}') !== null"),
+            "the controls",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!("document.querySelector('{PLAY}').focus()"))
+            .await
+            .unwrap();
+        keyboard::press_with(page, QUESTION_DE, keyboard::SHIFT)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const text = document.querySelector('[role=dialog]')?.textContent ?? '';
+             return text.includes('Back 10 seconds') && text.includes('Show these shortcuts')
+                 && !text.includes('Captions') && !text.includes('Fullscreen'); })()",
+            "the help with Audio's rows",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("help").unwrap();
         fixture.close().await.unwrap();
     });
 }

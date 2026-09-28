@@ -56,6 +56,7 @@ pub fn AudioPage() -> Element {
                 .key(["Space"], "On a slider: plays or pauses. On a button: presses it.")
                 .key(["J", "L"], "Jumps 10 seconds back or ahead.")
                 .key(["M"], "Mutes or unmutes.")
+                .key(["Shift+?"], "Lists these keys in a `ShortcutHelp` dialog.")
                 .key(["Left", "Right"], "On the seek slider: 1 second; on the volume slider: 5%.")
                 .key(["Escape"], "Closes the volume menu and returns to its button.")
                 .key(["Tab"], "Moves through every control in visual order: play, seek, mute, volume, speed. In the volume menu, returns to its button.")
@@ -66,7 +67,7 @@ pub fn AudioPage() -> Element {
                     "The visible time is hidden from screen readers: the seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`).",
                     "The speaker button mutes and unmutes, its name following (Mute/Unmute). The chevron beside it, named \"Volume\", opens a `dialog` holding the volume slider and focuses it; moving the volume up unmutes.",
                     "The seek track is a row of bars, the played ones filled, under a slider that keeps the keys, the press and the drag. The bars are drawn from the file's URL, not decoded from the sound, and are hidden from screen readers.",
-                    "The row never wraps: the seek track shrinks first, then the time goes, then the mute and volume buttons (M still mutes), so it fits at 320px and 200% zoom (WCAG 1.4.10).",
+                    "The row never wraps: the seek track shrinks first, then the time goes, then the buttons shrink, to 24px at the least (WCAG 2.5.8): every control stays at 320px and 200% zoom (WCAG 1.4.10).",
                     "The bubble has a border at 3:1 against the page in light and dark (WCAG 1.4.11).",
                     "A polite status says \"Loading\" while playing waits for data; a failed source shows an alert.",
                     "No autoplay unless asked, and a debug warning for autoplay with sound (WCAG 1.4.2).",

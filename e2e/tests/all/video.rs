@@ -150,6 +150,17 @@ fn the_speed_menu_sets_the_rate() {
         )
         .await
         .unwrap();
+        // Todo 1388: open, the white "1×" sits on a faint white tint over the scrim, not the theme's light one.
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const s = getComputedStyle(document.querySelector(\"{SPEED}\"));
+                 return s.color === 'rgb(255, 255, 255)' && s.backgroundColor === 'rgba(255, 255, 255, 0.2)'; }})()"
+            ),
+            "the open speed button on the scrim tint",
+        )
+        .await
+        .unwrap();
         page.evaluate(
             "[...document.querySelectorAll('[role=menuitemradio]')].find((e) => e.textContent.includes('1.5×')).click()",
         )
@@ -907,44 +918,46 @@ async fn cue_bottom(page: &chromiumoxide::Page) -> Option<f64> {
     model.result.model.border.inner().get(5).copied()
 }
 
-/// Todo 1371: the shown captions sit above the bar, not under it.
+/// Todos 1371 and 1389: the shown captions sit above the bar, not under it, at xl too.
 #[test]
 fn the_captions_clear_the_bar() {
     block_on(async {
-        let fixture = Fixture::open("/video/captions", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        wait::for_js_true(
-            page,
-            "document.querySelector('#player video').textTracks[0].cues?.length === 1",
-            "the cues",
-        )
-        .await
-        .unwrap();
-        pointer::click(page, PLAY).await.unwrap();
-        let seek_top: f64 = page
-            .evaluate(
-                "document.querySelector('#player [data-slot=seek]').getBoundingClientRect().top",
-            )
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        let started = std::time::Instant::now();
-        loop {
-            let bottom = cue_bottom(page).await;
-            if bottom.is_some_and(|bottom| bottom <= seek_top) {
-                break;
-            }
-            assert!(
-                started.elapsed().as_secs() < 5,
-                "the cue ends at {bottom:?}, below the seek row's top {seek_top}"
-            );
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        for route in ["/video/captions", "/video/captions/xl"] {
+            captions_clear_the_bar(route).await;
         }
-        fixture.close().await.unwrap();
     });
+}
+
+async fn captions_clear_the_bar(route: &str) {
+    let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+    let page = &fixture.page;
+    wait::for_js_true(
+        page,
+        "document.querySelector('#player video').textTracks[0].cues?.length === 1",
+        "the cues",
+    )
+    .await
+    .unwrap();
+    pointer::click(page, PLAY).await.unwrap();
+    let seek_top: f64 = page
+        .evaluate("document.querySelector('#player [data-slot=seek]').getBoundingClientRect().top")
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    let started = std::time::Instant::now();
+    loop {
+        let bottom = cue_bottom(page).await;
+        if bottom.is_some_and(|bottom| bottom <= seek_top) {
+            break;
+        }
+        assert!(
+            started.elapsed().as_secs() < 5,
+            "{route}: the cue ends at {bottom:?}, below the seek row's top {seek_top}"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    fixture.close().await.unwrap();
 }
 
 /// Todo 1371: a press on the seek track jumps there, without a drag.
@@ -1141,6 +1154,99 @@ fn muted_mutes_and_the_speed_reads_left_to_right() {
         )
         .await
         .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Shift and the key that types `?` on a US layout.
+const QUESTION: Key = Key {
+    key: "?",
+    code: "Slash",
+    vk: 191,
+    text: Some("?"),
+};
+
+/// Todo 1410: Shift+? lists the player's keys in a `ShortcutHelp`, only with
+/// focus inside it; in fullscreen the dialog shows inside the player.
+#[test]
+fn shift_question_lists_the_keys_inside_the_player() {
+    const DIALOG: &str = "[role=dialog]";
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{FULLSCREEN}') !== null"),
+            "the controls",
+        )
+        .await
+        .unwrap();
+
+        page.evaluate("document.activeElement?.blur()")
+            .await
+            .unwrap();
+        keyboard::press_with(page, QUESTION, keyboard::SHIFT)
+            .await
+            .unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        let stray: bool = page
+            .evaluate(format!("document.querySelector('{DIALOG}') !== null"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!stray, "Shift+? outside the player opened the help");
+
+        page.evaluate(format!("document.querySelector('{PLAY}').focus()"))
+            .await
+            .unwrap();
+        keyboard::press_with(page, QUESTION, keyboard::SHIFT)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const d = document.querySelector('{DIALOG}'); const text = d?.textContent ?? '';
+                 return text.includes('Keyboard shortcuts') && text.includes('Play or pause')
+                     && text.includes('Captions on or off') && text.includes('Fullscreen on or off'); }})()"
+            ),
+            "the help with the player's rows",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('{DIALOG}') === null
+                 && document.activeElement === document.querySelector('{PLAY}')"
+            ),
+            "Escape to close the help and return to play",
+        )
+        .await
+        .unwrap();
+
+        pointer::click(page, FULLSCREEN).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#player [role=group]').hasAttribute('data-fullscreen')",
+            "fullscreen",
+        )
+        .await
+        .unwrap();
+        keyboard::press_with(page, QUESTION, keyboard::SHIFT)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('#player [role=group] {DIALOG}')?.textContent.includes('Play or pause') === true"
+            ),
+            "the help inside the fullscreen player",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("help").unwrap();
         fixture.close().await.unwrap();
     });
 }

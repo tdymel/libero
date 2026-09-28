@@ -74,6 +74,7 @@ pub fn VideoPage() -> Element {
                 .key(["M"], "Mutes or unmutes.")
                 .key(["C"], "Shows or hides the captions, with a captions or subtitles track.")
                 .key(["F"], "Enters or leaves fullscreen.")
+                .key(["Shift+?"], "Lists these keys in a `ShortcutHelp` dialog, inside the player in fullscreen.")
                 .key(["Escape"], "Closes the speed or volume menu and returns to its button; else leaves fullscreen.")
                 .key(["Left", "Right"], "On the seek slider: 1 second; on the volume slider: 5%.")
                 .key(["Tab"], "Moves through every control in visual order: seek, play, mute, volume, captions, speed, fullscreen. In the volume menu, returns to its button.")

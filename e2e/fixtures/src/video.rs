@@ -3,6 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{Flex, MediaPreload, MediaTrack, Text, TrackKind, Video};
+use libero::theme::Size;
 
 use crate::Routes;
 use crate::audio::silent_wav;
@@ -13,6 +14,11 @@ pub const ROUTES: Routes = &[
     // Long enough for the fullscreen controls to fade out while playing.
     ("/video/long", || rsx! { VideoPage { seconds: 15 } }),
     ("/video/captions", || rsx! { CaptionsPage {} }),
+    // Todo 1389: an xl slider row is taller than the 1rem the shift once assumed.
+    (
+        "/video/captions/xl",
+        || rsx! { CaptionsPage { size: Size::Xl } },
+    ),
     ("/video/centered", || rsx! { CenteredPage {} }),
     ("/video/variants", || rsx! { VariantsPage {} }),
 ];
@@ -55,13 +61,14 @@ fn CenteredPage() -> Element {
 const CAPTIONS: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 00:15.000%0A[Silence]";
 
 #[component]
-fn CaptionsPage() -> Element {
+fn CaptionsPage(#[props(default = Size::Md)] size: Size) -> Element {
     let src = use_hook(|| silent_wav(15));
     rsx! {
         div { id: "player", max_width: "32rem",
             Video {
                 src,
                 label: "Captioned",
+                size,
                 aspect_ratio: "16 / 9",
                 tracks: vec![MediaTrack {
                     src: CAPTIONS.into(),

@@ -15,8 +15,8 @@ use crate::{
     context::IconSlot,
     hooks::{MediaError, MediaHandle, use_formats, use_localization, use_media},
     localization::fill,
-    sx::{FORCED_COLORS, StaticSx, sx},
-    theme::{ColorCss, ColorShade, Size, SizeCss},
+    sx::{FORCED_COLORS, StaticSx, Sx, sx},
+    theme::{BUTTON_FONT_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, ICON_SIZE, Size, SizeCss},
     utils::warn,
 };
 use pictogram_icons_lucide as lucide;
@@ -46,6 +46,7 @@ const BARS_SLOT: &str = "bars";
 const AUDIO_CONTAINER: &str = "libero-audio";
 const NARROW: &str = "(max-width: 15rem)";
 const NARROWEST: &str = "(max-width: 13rem)";
+const TINY: &str = "(max-width: 11rem)";
 
 static AUDIO_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
@@ -57,7 +58,7 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
         .width("22rem")
         .max_width("100%")
         .container(AUDIO_CONTAINER)
-        // One row at every width: the seek track gives way, then the time and the volume.
+        // One row at every width: the seek track gives way, then the time, then the buttons shrink.
         .selector(
             AudioPart::Controls.selector(),
             controls_sx()
@@ -115,20 +116,38 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
                     sx().container_query(AUDIO_CONTAINER, NARROWEST, sx().display("none")),
                 ),
         )
-        // Gone last: M still mutes.
         .selector(
             AudioPart::Volume.selector(),
-            sx().display("flex").align_items("center").container_query(
-                AUDIO_CONTAINER,
-                NARROWEST,
-                sx().display("none"),
-            ),
+            sx().display("flex").align_items("center"),
         )
+        // Smaller buttons, not hidden ones, so mute and volume stay (WCAG 1.4.10, todo 1393).
+        .container_query(AUDIO_CONTAINER, NARROWEST, compact_buttons(Size::Sm))
+        .container_query(AUDIO_CONTAINER, TINY, compact_buttons(Size::Xs))
         .selector(
             AudioPart::Message.selector(),
             sx().color(ColorCss::MUTED.value(ColorShade::S7)),
         )
 });
+
+/// The row's buttons at `size` whatever the player's; `Xs` keeps the 24px target (WCAG 2.5.8).
+fn compact_buttons(size: Size) -> Sx {
+    let controls = AudioPart::Controls.selector();
+    sx().selector(
+        format!("{controls} button"),
+        sx().height(BUTTON_HEIGHT.value(size))
+            .font_size(BUTTON_FONT_SIZE.value(size))
+            .selector(
+                "& svg",
+                sx().width(ICON_SIZE.value(size))
+                    .height(ICON_SIZE.value(size)),
+            ),
+    )
+    // The icon buttons sit in their tooltips' wrappers; the chevron keeps its half width.
+    .selector(
+        format!("{controls} span > button"),
+        sx().width(BUTTON_HEIGHT.value(size)),
+    )
+}
 
 /// How much an `Audio` fetches before a press.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -247,7 +266,7 @@ base_props! {
 /// stepping 1×, 1.5× and 2×.
 ///
 /// Keys while focus is inside: K, or Space on a slider, play and pause; J and L
-/// jump 10 seconds; M mutes.
+/// jump 10 seconds; M mutes; Shift+? lists them.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

@@ -23,6 +23,14 @@ pub struct MediaLabels {
     pub speed: &'static str,
     /// Why a video's captions button is disabled.
     pub no_captions: &'static str,
+    /// The rows of the `ShortcutHelp` that Shift+? opens in the player.
+    pub shortcut_play: &'static str,
+    pub shortcut_back: &'static str,
+    pub shortcut_forward: &'static str,
+    pub shortcut_mute: &'static str,
+    pub shortcut_captions: &'static str,
+    pub shortcut_fullscreen: &'static str,
+    pub shortcut_help: &'static str,
 }
 
 impl MediaLabels {
@@ -44,6 +52,13 @@ impl MediaLabels {
         exit_fullscreen: "Exit fullscreen",
         speed: "Playback speed {rate}",
         no_captions: "No captions for this video",
+        shortcut_play: "Play or pause",
+        shortcut_back: "Back 10 seconds",
+        shortcut_forward: "Forward 10 seconds",
+        shortcut_mute: "Mute or unmute",
+        shortcut_captions: "Captions on or off",
+        shortcut_fullscreen: "Fullscreen on or off",
+        shortcut_help: "Show these shortcuts",
     };
 
     pub const GERMAN: Self = Self {
@@ -64,5 +79,12 @@ impl MediaLabels {
         exit_fullscreen: "Vollbild beenden",
         speed: "Wiedergabegeschwindigkeit {rate}",
         no_captions: "Keine Untertitel für dieses Video",
+        shortcut_play: "Abspielen oder pausieren",
+        shortcut_back: "10 Sekunden zurückspulen",
+        shortcut_forward: "10 Sekunden vorspulen",
+        shortcut_mute: "Stummschalten oder Ton an",
+        shortcut_captions: "Untertitel ein oder aus",
+        shortcut_fullscreen: "Vollbild ein oder aus",
+        shortcut_help: "Tastenkürzel anzeigen",
     };
 }

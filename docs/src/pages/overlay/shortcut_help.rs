@@ -66,7 +66,11 @@ pub fn ShortcutHelpPage() -> Element {
                     Code { source: "Video" }
                     " and "
                     Code { source: "Audio" }
-                    " list their player keys on their pages; add them to yours if the page has a player. "
+                    " open their own from "
+                    Kbd { "Shift" }
+                    " + "
+                    Kbd { "?" }
+                    " with focus in the player. "
                     Code { source: "Kanban" }
                     ", "
                     Code { source: "Sortable" }
