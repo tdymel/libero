@@ -130,7 +130,7 @@ static SURFACE_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "&[data-empty]::before",
             sx().content("attr(data-placeholder)")
-                .color("text-placeholder")
+                .color("text-dimmed")
                 .pointer_events("none")
                 .position("absolute"),
         )
@@ -795,10 +795,21 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let mut bar_width = use_signal(|| None::<f64>);
     let metrics = use_signal(|| None::<Metrics>);
     let (bold, italic, block_button) = (use_element(), use_element(), use_element());
-    let crowded = use_memo(move || {
-        bar_width().map_or(0, |width| {
-            overflow_count(width, metrics().unwrap_or_default())
-        })
+    // The widest language label seen, so moving between code blocks never reflows the bar.
+    let mut language_width = use_signal(|| None::<f64>);
+    let crowded = bar_width().map_or(0, |width| {
+        let measured = metrics().unwrap_or_default();
+        let language = match language_label {
+            Some(_) => language_width().unwrap_or(measured.block_type),
+            None => 0.0,
+        };
+        overflow_count(
+            width,
+            Metrics {
+                language,
+                ..measured
+            },
+        )
     });
     // Reads start here, not in the task: Blitz fails a read made inside one.
     let measure = move || {
@@ -832,6 +843,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 block_type: block
                     .width
                     .max(metrics.peek().map_or(0.0, |m| m.block_type)),
+                language: 0.0,
             });
             if *metrics.peek() != next {
                 metrics.set(next);
@@ -839,7 +851,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         });
     };
     let more_menu = use_menu();
-    let hidden = &OVERFLOW[..crowded()];
+    let hidden = &OVERFLOW[..crowded];
     let more_items: Vec<MenuEntry> = buttons
         .iter()
         .filter(|tool| hidden.contains(&tool.builtin))
@@ -914,6 +926,14 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     };
     let mut block_attributes = block_menu.a11y_attributes();
     block_attributes.extend(sized(block_button));
+    let mut language_attributes = language_menu.a11y_attributes();
+    language_attributes.push(listener("onresize", move |event: Event<ResizeData>| {
+        if let Ok(size) = event.get_border_box_size()
+            && size.width > language_width.peek().unwrap_or(0.0)
+        {
+            language_width.set(Some(size.width));
+        }
+    }));
     let toolbar = (props.toolbar && editable).then(|| {
         rsx! {
             div { onresize,
@@ -935,7 +955,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                         if let Some(language) = language_label {
                             Menu { state: language_menu, items: language_items,
                                 Button {
-                                    attributes: language_menu.a11y_attributes(),
+                                    attributes: language_attributes,
                                     "aria-label": "{words.language}: {language}",
                                     variant: "standard",
                                     color: "ink",

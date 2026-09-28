@@ -149,6 +149,8 @@ pub(super) struct Metrics {
     pub icon: f64,
     pub gap: f64,
     pub block_type: f64,
+    /// The code block's language button, `0.0` while the caret is outside one.
+    pub language: f64,
 }
 
 impl Default for Metrics {
@@ -158,6 +160,7 @@ impl Default for Metrics {
             icon: 42.0,
             gap: 4.0,
             block_type: 136.0,
+            language: 0.0,
         }
     }
 }
@@ -174,7 +177,9 @@ fn needed(hidden: usize, metrics: Metrics) -> f64 {
         icon,
         gap,
         block_type,
+        language,
     } = metrics;
+    let language = if language > 0.0 { language + gap } else { 0.0 };
     let icons = 12 - hidden + usize::from(hidden > 0);
     let history = OVERFLOW[..hidden]
         .iter()
@@ -182,7 +187,12 @@ fn needed(hidden: usize, metrics: Metrics) -> f64 {
         .count()
         < 2;
     let separators = 1 + usize::from(history);
-    icons as f64 * (icon + gap) + block_type + gap + separators as f64 * (SEPARATOR + gap) - gap
+    icons as f64 * (icon + gap)
+        + block_type
+        + gap
+        + language
+        + separators as f64 * (SEPARATOR + gap)
+        - gap
 }
 
 #[cfg(test)]
@@ -224,5 +234,16 @@ mod tests {
         };
         assert!(hidden(width, big) > base);
         assert!(hidden(width, long) > base);
+    }
+
+    /// Todo 1350: the language button of a code block takes room as well.
+    #[test]
+    fn the_language_button_hides_more() {
+        let width = 600.0;
+        let coded = Metrics {
+            language: 90.0,
+            ..Metrics::default()
+        };
+        assert!(hidden(width, coded) > hidden(width, Metrics::default()));
     }
 }

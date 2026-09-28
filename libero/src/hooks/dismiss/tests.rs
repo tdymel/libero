@@ -296,6 +296,10 @@ fn two_modals() -> Element {
 }
 
 #[test]
+#[cfg_attr(
+    feature = "native",
+    ignore = "counts the listeners of a platform without a keyboard"
+)]
 fn escape_acts_on_the_newest_modal_and_no_other() {
     dioxus::html::set_event_converter(Box::new(EscapeConverter));
     let mut dom = VirtualDom::new(two_modals);
@@ -334,6 +338,10 @@ fn escape_acts_on_the_newest_modal_and_no_other() {
 /// Popping by identity: the older modal just stops rendering, so only the guard's
 /// `Drop` pops it. A pop-the-last would take the newer one's entry instead.
 #[test]
+#[cfg_attr(
+    feature = "native",
+    ignore = "counts the listeners of a platform without a keyboard"
+)]
 fn dropping_an_older_layer_leaves_the_newer_one_on_top() {
     /// Outside both modals, so its Escape passes no layer's handler. A key, as
     /// the test converter only speaks keyboard.
@@ -792,6 +800,10 @@ fn a_held_or_composing_escape_does_not_close_the_window() {
 /// The press lands elsewhere in the modal, not on the trigger. With no
 /// `platform::keyboard()` the region never pushes, so the modal is top and closes.
 #[test]
+#[cfg_attr(
+    feature = "native",
+    ignore = "counts the listeners of a platform without a keyboard"
+)]
 fn a_layer_that_cannot_hear_escape_never_wedges_the_modal() {
     dioxus::html::set_event_converter(Box::new(EscapeConverter));
     let mut dom = VirtualDom::new(region_in_modal);
@@ -813,6 +825,10 @@ fn a_layer_that_cannot_hear_escape_never_wedges_the_modal() {
 /// Off the web, Escape must reach a portaled box whose trigger keeps focus
 /// (`initial_focus: None`). Without `anchor_events()` it fails SC 1.4.13.
 #[test]
+#[cfg_attr(
+    feature = "native",
+    ignore = "counts the listeners of a platform without a keyboard"
+)]
 fn escape_on_the_trigger_closes_the_box_where_there_is_no_document_listener() {
     fn app() -> Element {
         let region = use_signal(|| true);
@@ -851,6 +867,10 @@ fn escape_on_the_trigger_closes_the_box_where_there_is_no_document_listener() {
 /// A closed popover must not swallow Escape: the trigger outlives the box, so
 /// without the open guard its `stop_propagation` starves the `Modal` around it.
 #[test]
+#[cfg_attr(
+    feature = "native",
+    ignore = "counts the listeners of a platform without a keyboard"
+)]
 fn a_closed_box_does_not_swallow_escape_from_the_modal_around_it() {
     #[component]
     fn Shut(modal: Signal<bool>) -> Element {
@@ -1188,6 +1208,7 @@ fn escape_still_calls_onclose_when_onfocusmoved_is_set() {
 /// Todo 46: a platform that cannot say where focus is closes nothing on a
 /// focusout. The unmounted runs above are the control.
 #[test]
+#[cfg_attr(feature = "native", ignore = "the native backend reports focus")]
 fn a_platform_that_cannot_answer_ignores_focusout() {
     assert_eq!(
         send_watched(true, true, "focusout"),

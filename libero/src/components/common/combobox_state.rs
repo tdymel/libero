@@ -61,6 +61,11 @@ impl ComboboxState {
         (self.active)()
     }
 
+    /// [`active`](Self::active) unsubscribed, for a key press that must not wait for a render.
+    pub(crate) fn active_now(&self) -> Option<usize> {
+        *self.active.peek()
+    }
+
     pub fn set_active(&self, row: Option<usize>) {
         let mut active = self.active;
         active.set(row);

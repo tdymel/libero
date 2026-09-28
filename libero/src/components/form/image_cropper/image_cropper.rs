@@ -32,7 +32,10 @@ const KEY_STEP: f64 = 0.01;
 const MIN_SIZE: f64 = 0.05;
 /// A handle's hit area (WCAG 2.5.8), around a smaller visible square.
 const HANDLE_HIT: &str = "24px";
+/// A finger's hit area (WCAG 2.5.5, todo 1387).
+const HANDLE_HIT_COARSE: &str = "44px";
 const HANDLE_DOT: &str = "12px";
+const COARSE: &str = "(pointer: coarse)";
 
 parts_enum! {
     /// [`ImageCropper`]'s inner parts, for its `parts` prop.
@@ -177,18 +180,27 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                 .transform("translate(-50%, -50%)")
                 .display("flex")
                 .align_items("center")
-                .justify_content("center"),
+                .justify_content("center")
+                .media(
+                    COARSE,
+                    sx().width(HANDLE_HIT_COARSE).height(HANDLE_HIT_COARSE),
+                ),
         )
         // Over the handles between them, and at least a dot's size: a box at
         // `min_size` stays movable when the handles' hit areas meet (1264).
         .selector("& > [data-slot='frame'] > [data-slot='move']", {
-            let side = format!("max(calc(100% - {HANDLE_HIT}), min(100%, {HANDLE_DOT}))");
+            let side = |hit: &str| format!("max(calc(100% - {hit}), min(100%, {HANDLE_DOT}))");
             sx().position("absolute")
                 .left("50%")
                 .top("50%")
-                .width(side.clone())
-                .height(side)
+                .width(side(HANDLE_HIT))
+                .height(side(HANDLE_HIT))
                 .transform("translate(-50%, -50%)")
+                .media(
+                    COARSE,
+                    sx().width(side(HANDLE_HIT_COARSE))
+                        .height(side(HANDLE_HIT_COARSE)),
+                )
         })
         .selector(
             "& > [data-slot='frame'] > [data-slot='handle'] > span",

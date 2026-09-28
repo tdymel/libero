@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -20,8 +22,8 @@ pub(super) struct ComboboxContext {
     pub id: Signal<String>,
     pub size: Signal<Size>,
     pub radius: Signal<Size>,
-    /// The highlighted row's `onpick`, so Enter can fire it.
-    pub active_pick: Signal<Option<Callback<()>>>,
+    /// Each drawn row's `onpick` by index, so Enter fires the highlighted one. Not reactive.
+    pub picks: CopyValue<HashMap<usize, Callback<()>>>,
 }
 
 /// Provided per row, so `ComboboxOption` needs no props for its `id`, highlight or `disabled`.
@@ -150,7 +152,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .map(|(combobox, row)| option_id(&(combobox.id)(), row().index));
 
     let onpick = props.onpick;
-    // The one gate for click and Enter; the active row registers it as `active_pick`.
+    // The one gate for click and Enter.
     let pick = use_callback(move |()| {
         if disabled {
             return;
@@ -159,11 +161,21 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
             onpick.call(());
         }
     });
-    use_effect(use_reactive!(|active| {
-        if let (true, Some(mut context)) = (active, combobox) {
-            context.active_pick.set(Some(pick));
+    // Registered in render by index: an Enter right after an arrow must not wait for this row
+    // to re-render as the highlight (todo 1367).
+    if let (Some(context), Some(row)) = (combobox, row) {
+        let (mut picks, index) = (context.picks, row().index);
+        if picks.peek().get(&index) != Some(&pick) {
+            picks.write().insert(index, pick);
         }
-    }));
+    }
+    use_drop(move || {
+        if let Some(mut context) = combobox
+            && let Ok(mut picks) = context.picks.try_write()
+        {
+            picks.retain(|_, registered| *registered != pick);
+        }
+    });
 
     let states: Input<States> = props
         .states

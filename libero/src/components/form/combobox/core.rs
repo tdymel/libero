@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -152,29 +154,22 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     let enabled: Vec<usize> = (0..count)
         .filter(|row| !props.row_disabled.get(*row).copied().unwrap_or(false))
         .collect();
-    // Snaps a disabled highlight (from open, filter or `set_active`) to the next enabled row, else back.
-    let active_row = props
-        .active
-        .filter(|_| count > 0)
-        .map(|row| row.min(count - 1))
-        .and_then(|row| {
-            enabled
-                .iter()
-                .copied()
-                .find(|candidate| *candidate >= row)
-                .or_else(|| enabled.last().copied())
-        });
+    let active_row = snap_row(props.active, &enabled);
     if let (true, Some(row)) = (opened, active_row) {
         props.state.snap_active(props.active, row);
     }
     let set_active = props.onactive;
+    let mut enabled_rows = use_hook(|| CopyValue::new(Vec::new()));
+    if *enabled_rows.peek() != enabled {
+        enabled_rows.set(enabled);
+    }
 
     let keys = ComboboxKeys {
-        active_row,
-        arrows: arrow_targets(&enabled, active_row, opened),
+        state: props.state,
+        enabled: enabled_rows,
         set_active,
         onopened: props.onopened,
-        active_pick: context.active_pick,
+        picks: context.picks,
         opened,
         disabled: props.disabled,
         close_on_pick: props.close_on_pick,
@@ -378,29 +373,41 @@ fn use_combobox_context(state_id: String, size: Size, radius: Size) -> ComboboxC
     if *shared_radius.peek() != radius {
         shared_radius.set(radius);
     }
-    let active_pick = use_hook(|| Signal::new_in_scope(None, ScopeId::ROOT));
+    let picks = use_hook(|| CopyValue::new_in_scope(HashMap::new(), ScopeId::ROOT));
     use_drop(move || {
         id.manually_drop();
         shared_size.manually_drop();
         shared_radius.manually_drop();
-        active_pick.manually_drop();
+        picks.manually_drop();
     });
 
     ComboboxContext {
         id,
         size: shared_size,
         radius: shared_radius,
-        active_pick,
+        picks,
     }
 }
 
-/// Where each arrow lands, computed in render so the handler stays `Copy` and shareable.
+/// Where each arrow lands from the highlight.
 #[derive(Clone, Copy, PartialEq)]
 struct Arrows {
     down: Option<usize>,
     up: Option<usize>,
     first: Option<usize>,
     last: Option<usize>,
+}
+
+/// Snaps a disabled or missing highlight (from open, filter or `set_active`) to the next
+/// enabled row, else back.
+fn snap_row(active: Option<usize>, enabled: &[usize]) -> Option<usize> {
+    active.and_then(|row| {
+        enabled
+            .iter()
+            .copied()
+            .find(|candidate| *candidate >= row)
+            .or_else(|| enabled.last().copied())
+    })
 }
 
 fn arrow_targets(enabled: &[usize], active_row: Option<usize>, opened: bool) -> Arrows {
@@ -428,11 +435,13 @@ fn arrow_targets(enabled: &[usize], active_row: Option<usize>, opened: bool) -> 
 /// The one keyboard, shared by the wrapper and the portaled dropdown; `Copy` throughout.
 #[derive(Clone, Copy, PartialEq)]
 struct ComboboxKeys {
-    active_row: Option<usize>,
-    arrows: Arrows,
+    /// Its highlight is read at the press: a fast Enter can beat the arrow's re-render (todo 1367).
+    state: ComboboxState,
+    /// The rows the arrows move through, as last drawn.
+    enabled: CopyValue<Vec<usize>>,
     set_active: EventHandler<usize>,
     onopened: EventHandler<bool>,
-    active_pick: Signal<Option<Callback<()>>>,
+    picks: CopyValue<HashMap<usize, Callback<()>>>,
     opened: bool,
     disabled: bool,
     close_on_pick: bool,
@@ -455,13 +464,17 @@ pub(crate) enum CaretKeys {
 
 impl ComboboxKeys {
     fn handle(self, event: KeyboardEvent) {
-        let (opened, active_row) = (self.opened, self.active_row);
         if self.disabled {
             return;
         }
+        let opened = self.opened;
+        let enabled = self.enabled.peek().clone();
+        let active_row = snap_row(self.state.active_now(), &enabled);
+        let arrows = arrow_targets(&enabled, active_row, opened);
         let request = |next: bool| self.onopened.call(next);
         let pick = || {
-            if let Some(pick) = (self.active_pick)() {
+            let pick = active_row.and_then(|row| self.picks.peek().get(&row).copied());
+            if let Some(pick) = pick {
                 pick.call(());
             }
         };
@@ -509,19 +522,19 @@ impl ComboboxKeys {
         match event.key() {
             Key::ArrowDown => {
                 event.prevent_default();
-                go_to(self.arrows.down);
+                go_to(arrows.down);
             }
             Key::ArrowUp if opened => {
                 event.prevent_default();
-                go_to(self.arrows.up);
+                go_to(arrows.up);
             }
             Key::Home if row_keys => {
                 event.prevent_default();
-                go_to(self.arrows.first);
+                go_to(arrows.first);
             }
             Key::End if row_keys => {
                 event.prevent_default();
-                go_to(self.arrows.last);
+                go_to(arrows.last);
             }
             // Nothing highlighted: Enter bubbles, so a form still submits.
             Key::Enter if opened && active_row.is_some() => {

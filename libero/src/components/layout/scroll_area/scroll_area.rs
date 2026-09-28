@@ -750,6 +750,8 @@ mod tests {
         ));
     }
 
+    const NATIVE_RANGE: i32 = cfg!(all(not(target_arch = "wasm32"), feature = "native")) as i32;
+
     struct FakeScroll {
         top: f64,
         left: f64,
@@ -767,11 +769,12 @@ mod tests {
         fn scroll_left(&self) -> f64 {
             self.left
         }
+        // Blitz reports the range as `scroll_width`/`scroll_height`, the web the content's size.
         fn scroll_width(&self) -> i32 {
-            self.scroll.0
+            self.scroll.0 - NATIVE_RANGE * self.client.0
         }
         fn scroll_height(&self) -> i32 {
-            self.scroll.1
+            self.scroll.1 - NATIVE_RANGE * self.client.1
         }
         fn client_width(&self) -> i32 {
             self.client.0
