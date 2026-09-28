@@ -90,6 +90,10 @@ scrolls sideways. The demo's switch also sets `sx().min_width("640px")`, so the
 three columns overflow at any width. `max_height` caps a long table's height:
 its rows scroll under a header that stays put.
 
+For thousands of rows add `virtual_row_height` to `max_height`: only the rows
+in view render, each that tall. Sorting, filtering, selection and pinning work
+as before.
+
 `default_pinned_columns` holds columns at the start or end edge while the rest
 scroll under them, and the column menu pins and unpins them. Start and end
 follow the page's direction. Give each pinned column but the outermost a
@@ -435,6 +439,47 @@ fn Demo() -> Element {
 }
 ```
 
+Ten thousand rows take `virtual_row_height` too: the table renders the dozen
+in view and a few beyond each edge, each row exactly 40px tall with one line per
+cell. `aria-rowcount` and each row's `aria-rowindex` tell a screen reader where
+it is in the whole table, and the row holding focus stays rendered while it
+scrolls away.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Table, column};
+
+#[derive(Clone, PartialEq)]
+struct Stock {
+    id: u32,
+    name: String,
+    count: u32,
+}
+
+#[component]
+fn Demo() -> Element {
+    let stock: Vec<Stock> = (1..=10_000)
+        .map(|id| Stock { id, name: format!("Item {id}"), count: id * 7 % 1_000 })
+        .collect();
+
+    rsx! {
+        Table {
+            caption: "Stock",
+            max_height: "320px",
+            virtual_row_height: 40.0,
+            selectable: true,
+            row_key: |s: &Stock| s.id.to_string(),
+            data: stock,
+            columns: vec![
+                column("Id").value(|s: &Stock| s.id).sortable().row_header(),
+                column("Name").value(|s: &Stock| s.name.clone()).sortable(),
+                column("Count").value(|s: &Stock| s.count).sortable(),
+            ],
+        }
+    }
+}
+```
+
 A wide table pins columns to its edges: here the ID and Name stay at the start
 and Actions at the end while the rest scroll sideways. ID, pinned further out
 than Name, has a `width`, so Name sits right after it. With `column_menu`, each
@@ -601,6 +646,7 @@ fn Demo() -> Element {
 | `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. |
 | `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 | `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
+| `virtual_row_height` | `Option<f64>` | `None` | With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is exactly this tall in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. Ignored with `row_detail` or `onrowreorder`, which render every row; a debug build warns. |
 | `sort` | `Option<Vec<TableSort>>` | `None` | The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header. |
 | `default_sort` | `Vec<TableSort>` | `[]` | Seeds the sort once. Ignored when `sort` is set. |
 | `onsortchange` | `EventHandler<Vec<TableSort>>` | `None` | Called with the sort a header click asks for: ascending, then descending, then empty. |
@@ -772,6 +818,13 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   back a busy table's rows.
 - The `toolbar` is a plain row, not a `role="toolbar"`: Tab moves through its
   controls as anywhere else.
+- With `virtual_row_height`, the table carries `aria-rowcount`, every row it
+  holds, and each rendered row its `aria-rowindex`, so a screen reader says
+  "row 5 001 of 10 001" though only a screenful is in the DOM. The
+  scrolled-away rows leave no empty rows behind.
+- With `virtual_row_height`, Tab and Shift+Tab walk the rows' controls past the
+  rendered ones: the focused row scrolls into view and the next one renders.
+  The row holding focus stays rendered when it scrolls away, Blitz included.
 
 ### You must
 

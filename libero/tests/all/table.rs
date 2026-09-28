@@ -1279,3 +1279,26 @@ fn a_windowed_table_counts_its_header_filters_row() {
     assert!(html.contains("data-filters=true aria-rowindex=\"2\""));
     assert!(body(&html).contains("aria-rowindex=\"3\""));
 }
+
+/// 1156-5c: an empty windowed table still counts the one row it shows.
+#[test]
+fn an_empty_windowed_table_counts_its_empty_row() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Numbers",
+                    max_height: "300px",
+                    virtual_row_height: 40.0,
+                    data: Vec::<u32>::new(),
+                    columns: vec![column("N").value(|n: &u32| *n)],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert_eq!(attributes_of(&html, "table")["aria-rowcount"], "2");
+    assert!(body(&html).contains("aria-rowindex=\"2\""), "{html}");
+}

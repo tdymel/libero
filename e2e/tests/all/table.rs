@@ -187,18 +187,26 @@ async fn the_window_follows_the_scroll<D: Driver>(d: &mut D, _route: &str) -> Re
     d.click(&format!("{LAST} td[data-select] span[aria-hidden]"))
         .await?;
     eventually_text(d, "#selection", "10000", "a click on the last row's box").await?;
+    let last_box = format!("{LAST} input");
     if d.platform() == Platform::Native {
-        // A click on the drawn box focuses nothing, and a Tab or `focus()` fires no
-        // `focusin` on Blitz: the focused row is not tracked there (1156-5a).
-        d.focus("th[data-sortable] [data-sort-button]").await?;
+        // A click on the drawn box focuses nothing on Blitz and Tab fires no `focusin`:
+        // the table finds the focused row after Tab's silent move.
+        d.focus("tr[aria-rowindex=\"10000\"] input").await?;
+        d.press(keyboard::TAB).await?;
+        eventually_focused(d, &last_box, "Tab").await?;
         d.press(keyboard::HOME).await?;
-        return eventually(d, "the first rows to come back", async |d| {
+        eventually(d, "the first rows to come back", async |d| {
+            Ok(d.exists(FIRST).await? && d.is_focused(&last_box).await?)
+        })
+        .await?;
+        // Tab wraps round to the select-all box: the last row goes with the rest.
+        d.press(keyboard::TAB).await?;
+        return eventually(d, "the last row to unmount once focus left it", async |d| {
             Ok(d.exists(FIRST).await? && !d.exists(LAST).await?)
         })
         .await;
     }
     // The focused row stays rendered out of view, focus still in it.
-    let last_box = format!("{LAST} input");
     eventually_focused(d, &last_box, "a click on the last row's box").await?;
     d.press(keyboard::HOME).await?;
     eventually(d, "the first rows to come back", async |d| {
@@ -222,6 +230,43 @@ e2e::scenario!(
     a_windowed_table_renders_the_rows_in_view,
     "/table/windowed",
     the_window_follows_the_scroll
+);
+
+/// 1156-5c: Tab walks the row checkboxes past the rendered rows and back: the
+/// focused box scrolls into view, and the window renders the next row in time.
+async fn tab_walks_past_the_window<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const STEPS: usize = 30;
+    let at = |index: usize| format!("tr[aria-rowindex=\"{index}\"] input");
+    eventually(d, "the first row", async |d| d.exists(&at(2)).await).await?;
+    d.focus(&at(2)).await?;
+    // At a person's pace: the window settles after each scroll before the next key.
+    for step in 1..=STEPS {
+        let next = at(2 + step);
+        eventually(d, &format!("{next} rendered before Tab"), async |d| {
+            d.exists(&next).await
+        })
+        .await?;
+        d.press(keyboard::TAB).await?;
+        eventually_focused(d, &next, &format!("Tab {step}")).await?;
+    }
+    for step in (0..STEPS).rev() {
+        let previous = at(2 + step);
+        eventually(
+            d,
+            &format!("{previous} rendered before Shift+Tab"),
+            async |d| d.exists(&previous).await,
+        )
+        .await?;
+        d.press_shift(keyboard::TAB).await?;
+        eventually_focused(d, &previous, "Shift+Tab").await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    tab_walks_the_rows_of_a_windowed_table,
+    "/table/windowed",
+    tab_walks_past_the_window
 );
 
 /// 1156-2c: no button inside, so the overflowing area is the named tab stop.
@@ -634,6 +679,69 @@ fn a_windowed_row_keeps_its_node_through_a_sort() {
         fixture
             .console
             .assert_clean("sorting a windowed table")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// 1156-5c: a screen reader in the middle of a windowed table meets one table:
+/// the header row, then each rendered row placed in the whole count, no spacer.
+#[test]
+fn a_windowed_table_reads_as_the_whole_table() {
+    block_on(async {
+        let fixture = Fixture::open("/table/windowed", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const r = document.querySelector({AREA:?}); \
+                 if (!r) return false; r.scrollTop = r.scrollHeight; \
+                 return !!document.querySelector('tr[aria-rowindex=\"10001\"]'); }})()"
+            ),
+            "the window at the last row",
+        )
+        .await
+        .unwrap();
+        // Unsorted, a row's stock is its place in `data`: its row index less the header row.
+        let placed: String = page
+            .evaluate(
+                "(() => { const rows = [...document.querySelectorAll('table tr')]; \
+                 const at = rows.map(r => +r.getAttribute('aria-rowindex')); \
+                 const count = +document.querySelector('table').getAttribute('aria-rowcount'); \
+                 const bad = rows.slice(1).filter((r, i) => (i > 0 && at[i + 1] !== at[i] + 1) \
+                   || r.querySelector('th').textContent !== String(at[i + 1] - 1)); \
+                 return [count, at[0], rows.length, at[rows.length - 1], bad.length].join(' '); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let [count, head, rendered, last, bad] = placed
+            .split(' ')
+            .map(|n| n.parse::<usize>().unwrap())
+            .collect::<Vec<_>>()[..]
+        else {
+            panic!("{placed}");
+        };
+        assert_eq!((count, head, last, bad), (10_001, 1, 10_001, 0), "{placed}");
+        assert!(rendered < 40, "{rendered} rows rendered");
+
+        let tree = ax::snapshot(page, "table").await.unwrap();
+        assert!(tree.starts_with("table \"Fruit stock\""), "{tree}");
+        let rows = tree
+            .lines()
+            .filter(|line| line.split_whitespace().next() == Some("row"))
+            .count();
+        // Each `tr` is a row to a screen reader, the spacer padding none.
+        assert_eq!(rows, rendered, "{tree}");
+        assert!(tree.contains("rowheader \"10000\""), "{tree}");
+        assert!(tree.contains("checkbox \"Select 10000\""), "{tree}");
+
+        fixture
+            .console
+            .assert_clean("reading a windowed table")
             .unwrap();
         fixture.close().await.unwrap();
     });

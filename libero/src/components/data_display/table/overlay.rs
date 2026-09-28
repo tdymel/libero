@@ -22,11 +22,12 @@ pub(super) enum EmptyBody {
 }
 
 impl EmptyBody {
-    /// `columns` counts the leading columns too.
-    pub fn render(self, columns: usize) -> Element {
+    /// `columns` counts the leading columns too; `rowindex` is the message row's
+    /// `aria-rowindex` in a windowed table.
+    pub fn render(self, columns: usize, rowindex: Option<usize>) -> Element {
         match self {
             Self::Message(body) => rsx! {
-                tr { "data-empty": true,
+                tr { "data-empty": true, aria_rowindex: rowindex.map(|at| at.to_string()),
                     td { colspan: "{columns}", {body} }
                 }
             },

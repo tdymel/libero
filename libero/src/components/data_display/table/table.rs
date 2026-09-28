@@ -46,7 +46,9 @@ use super::{
     selection::Selection,
     toolbar::TableToolbar,
     use_table::{TableConfig, use_table},
-    window::{BodyRows, RowWindow, TABLE_ROW_HEIGHT_VAR, window_attributes, windowed_sx},
+    window::{
+        BodyRows, RowWindow, TABLE_ROW_HEIGHT_VAR, use_row_focus, window_attributes, windowed_sx,
+    },
 };
 
 static TABLE_SX: StaticSx = StaticSx::new(|| {
@@ -487,9 +489,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// axes) under a header that stays put.
     #[props(default, into)]
     max_height: Option<String>,
-    /// Phase 5 spike: with `max_height`, renders only the rows in view, each
-    /// this tall in px, one line per cell.
-    #[doc(hidden)]
+    /// With `max_height`, renders only the rows in view, each exactly this tall
+    /// in px with one line per cell. Off with `row_detail` or `onrowreorder`.
     #[props(default)]
     virtual_row_height: Option<f64>,
     /// The sorted column, empty for source order; set, the sort is controlled.
@@ -843,7 +844,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let look = use_checkbox_look(size, props.selectable);
     let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
     let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
-    let focused_row = use_signal(|| None::<usize>);
+    let row_focus = use_row_focus();
 
     let widths = state.column_widths.read();
     let mut headers = header_specs(
@@ -1179,12 +1180,15 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let rows = match row_height {
         Some(row_height) => {
             attributes.extend(window_attributes(head_rows, order.len()));
+            attributes.extend(row_focus.attributes());
+            let order: Rc<[usize]> = order.into();
+            row_focus.show(head_rows, order.clone());
             BodyRows::Window(RowWindow {
-                order: order.into(),
+                order,
                 row_height,
                 row: Rc::new(row_of),
                 key: key_at,
-                focused: focused_row,
+                focused: row_focus.focused,
             })
         }
         None => BodyRows::All(

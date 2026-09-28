@@ -54,6 +54,24 @@ pub(crate) fn use_silent_focus_in(element: ElementHandle, onin: impl Fn() + 'sta
     });
 }
 
+/// An element whose silent moves into, within or out of it call `onmove` with
+/// whether focus is in it now, for the caller to mount. `None` on the web.
+pub(crate) fn use_silent_focus_within(
+    onmove: impl Fn(ElementHandle, bool) + 'static,
+) -> Option<ElementHandle> {
+    let element = use_hook(|| silent_focus().is_some().then(ElementHandle::new));
+    use_silent_focus(move |moved| {
+        let Some((element, mounted)) = element.and_then(|e| Some((e, e.mounted()?))) else {
+            return;
+        };
+        let now = moved.is_in(&mounted);
+        if now || moved.was_in(&mounted) {
+            onmove(element, now);
+        }
+    });
+    element
+}
+
 /// Whether `element` held focus before `moved` and does not after: its `focusout`.
 fn moved_out(moved: &dyn FocusMove, element: &ElementHandle) -> bool {
     element

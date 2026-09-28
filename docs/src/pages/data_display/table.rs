@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Button, Chip, Code, PinnedColumns, RowFn, Table, Text, column};
 use libero::sx::sx;
@@ -118,6 +118,7 @@ pub fn TablePage() -> Element {
                     prop("toolbar", "Option<Element>").default("None").doc("A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
+                    prop("virtual_row_height", "Option<f64>").default("None").doc("With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is exactly this tall in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. Ignored with `row_detail` or `onrowreorder`, which render every row; a debug build warns."),
                     prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header."),
                     prop("default_sort", "Vec<TableSort>").default("[]").doc("Seeds the sort once. Ignored when `sort` is set."),
                     prop("onsortchange", "EventHandler<Vec<TableSort>>").default("None").doc("Called with the sort a header click asks for: ascending, then descending, then empty."),
@@ -232,6 +233,8 @@ pub fn TablePage() -> Element {
                     "The column menu's Move left and Move right name the screen sides in either text direction. A moved column moves in the DOM too, so Tab and a screen reader follow it, and a column moved out of its group splits the group.",
                     "`loading` without shown rows marks the table `aria-busy` and hides its placeholder rows from screen readers. With rows shown it adds a progress bar named \"Loading rows\" and leaves the table unbusy, as some screen readers hold back a busy table's rows.",
                     "The `toolbar` is a plain row, not a `role=\"toolbar\"`: Tab moves through its controls as anywhere else.",
+                    "With `virtual_row_height`, the table carries `aria-rowcount`, every row it holds, and each rendered row its `aria-rowindex`, so a screen reader says \"row 5 001 of 10 001\" though only a screenful is in the DOM. The scrolled-away rows leave no empty rows behind.",
+                    "With `virtual_row_height`, Tab and Shift+Tab walk the rows' controls past the rendered ones: the focused row scrolls into view and the next one renders. The row holding focus stays rendered when it scrolls away, Blitz included.",
                 ])
                 .must([
                     "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
@@ -446,6 +449,14 @@ pub fn TablePage() -> Element {
                     " caps a long table's height: its rows scroll under a header that stays put."
                 }
                 Text {
+                    "For thousands of rows add "
+                    Code { source: "virtual_row_height" }
+                    " to "
+                    Code { source: "max_height" }
+                    ": only the rows in view render, each that tall, as in the ten thousand "
+                    "rows below. Sorting, filtering, selection and pinning work as before."
+                }
+                Text {
                     Code { source: "default_pinned_columns" }
                     " holds columns at the start or end edge while the rest scroll under "
                     "them, and the column menu pins and unpins them. Start and end follow "
@@ -559,6 +570,114 @@ pub fn TablePage() -> Element {
                     }
                 },
             }
+            DocSection {
+                title: "Ten thousand rows",
+                Text {
+                    "Each row is 40px tall, so the table renders the dozen in view and a few "
+                    "beyond each edge, and moves them along as you scroll. Switch "
+                    Code { source: "virtual_row_height" }
+                    " off to render all ten thousand and feel the difference in a sort."
+                }
+                Demo {
+                    title: "Ten thousand rows",
+                    component: "Table",
+                    children_text: "",
+                    fixed: vec![
+                        r#"caption: "Stock""#.to_string(),
+                        format!("max_height: {STOCK_HEIGHT:?}"),
+                        "selectable: true".to_string(),
+                        "row_key: |s: &Stock| s.id.to_string()".to_string(),
+                        "data: stock".to_string(),
+                        STOCK_COLUMNS.to_string(),
+                    ],
+                    controls: vec![
+                        Control::switch("virtual_row_height").default("true").code(|_, values| {
+                            match values.str("virtual_row_height") == "true" {
+                                true => vec!["virtual_row_height: 40.0".to_string()],
+                                false => vec![],
+                            }
+                        }),
+                    ],
+                    wrap: Wrap(wrap_stock),
+                    render: move |values: DemoValues| rsx! {
+                        StockTable { windowed: values.str("virtual_row_height") == "true" }
+                    },
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq)]
+struct Stock {
+    id: u32,
+    name: String,
+    count: u32,
+}
+
+const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+
+fn stock() -> Vec<Stock> {
+    (1..=10_000)
+        .map(|id| Stock {
+            id,
+            name: format!("{} {id}", FRUITS[id as usize % FRUITS.len()]),
+            count: id * 7 % 1_000,
+        })
+        .collect()
+}
+
+const STOCK_HEIGHT: &str = "320px";
+
+// snippet: item #[derive(Clone, PartialEq)] struct Stock { id: u32, name: String, count: u32 }
+// snippet: let stock: Vec<Stock> = Vec::new();
+// snippet: in Table { caption: "Stock", data: stock, .. }
+const STOCK_COLUMNS: &str = r#"columns: vec![
+        column("Id").value(|s: &Stock| s.id).sortable().row_header(),
+        column("Name").value(|s: &Stock| s.name.clone()).sortable(),
+        column("Count").value(|s: &Stock| s.count).sortable(),
+    ]"#;
+
+fn wrap_stock(_: &DemoValues, code: &str) -> String {
+    format!(
+        r#"#[derive(Clone, PartialEq)]
+struct Stock {{
+    id: u32,
+    name: String,
+    count: u32,
+}}
+
+const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+
+let stock: Vec<Stock> = (1..=10_000)
+    .map(|id| Stock {{
+        id,
+        name: format!("{{}} {{id}}", FRUITS[id as usize % FRUITS.len()]),
+        count: id * 7 % 1_000,
+    }})
+    .collect();
+
+{code}"#
+    )
+}
+
+/// Built once: a switch flip re-renders the table, not ten thousand rows of data.
+#[component]
+fn StockTable(windowed: bool) -> Element {
+    let rows = use_hook(stock);
+    rsx! {
+        Table {
+            caption: "Stock",
+            max_height: STOCK_HEIGHT,
+            virtual_row_height: windowed.then_some(40.0),
+            selectable: true,
+            row_key: |s: &Stock| s.id.to_string(),
+            data: rows,
+            columns: vec![
+                column("Id").value(|s: &Stock| s.id).sortable().row_header(),
+                column("Name").value(|s: &Stock| s.name.clone()).sortable(),
+                column("Count").value(|s: &Stock| s.count).sortable(),
+            ],
         }
     }
 }

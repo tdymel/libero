@@ -5,7 +5,8 @@ use dioxus::prelude::*;
 use super::core::{HeaderSpec, RowSpec, body_rows};
 use crate::{
     components::{common::attr, layout::Virtualize},
-    hooks::listener,
+    hooks::{ElementHandle, listener, use_silent_focus_within},
+    platform::ElementApi,
     sx::{Sx, sx},
     theme::CssVar,
 };
@@ -41,9 +42,59 @@ pub(super) struct RowWindow {
     pub focused: Signal<Option<usize>>,
 }
 
-/// The rows the DOM leaves out still count: the header rows plus every body row.
+/// The row holding focus in a windowed body, by `data` index.
+#[derive(Clone, Copy)]
+pub(super) struct RowFocus {
+    pub focused: Signal<Option<usize>>,
+    /// The header rows and the shown rows' `data` indices, as last rendered.
+    shown: CopyValue<(usize, Rc<[usize]>)>,
+    /// The table, on Blitz only: its Tab and `focus()` fire no `focusin`.
+    table: Option<ElementHandle>,
+}
+
+pub(super) fn use_row_focus() -> RowFocus {
+    let focused = use_signal(|| None::<usize>);
+    let shown = use_hook(|| CopyValue::new((0, Rc::<[usize]>::from([]))));
+    let table = use_silent_focus_within(move |table, inside| {
+        let at = inside.then(|| focused_row(&table, &shown.peek())).flatten();
+        let mut focused = focused;
+        if *focused.peek() != at {
+            focused.set(at);
+        }
+    });
+    RowFocus {
+        focused,
+        shown,
+        table,
+    }
+}
+
+impl RowFocus {
+    /// Remembers the window's rows, so a silent move maps back to a `data` index.
+    pub fn show(mut self, head_rows: usize, order: Rc<[usize]>) {
+        self.shown.set((head_rows, order));
+    }
+
+    pub fn attributes(&self) -> Option<Attribute> {
+        self.table.map(|table| listener("onmounted", table.mount()))
+    }
+}
+
+/// The `data` index of the body row holding focus, by its `aria-rowindex`.
+fn focused_row(table: &ElementHandle, (head_rows, order): &(usize, Rc<[usize]>)) -> Option<usize> {
+    let row = table
+        .query_selector_all("tbody > tr")
+        .ok()?
+        .into_iter()
+        .find(|row| row.is_focused() || row.query_selector(":focus").is_ok())?;
+    let index: usize = row.attribute("aria-rowindex").ok()??.parse().ok()?;
+    order.get(index.checked_sub(head_rows + 1)?).copied()
+}
+
+/// The rows the DOM leaves out still count: the header rows plus every body row,
+/// or the one empty row.
 pub(super) fn window_attributes(head_rows: usize, rows: usize) -> Vec<Attribute> {
-    vec![attr("aria-rowcount", (head_rows + rows).to_string())]
+    vec![attr("aria-rowcount", (head_rows + rows.max(1)).to_string())]
 }
 
 /// Fixed layout, so a column keeps its width as rows come and go; one line

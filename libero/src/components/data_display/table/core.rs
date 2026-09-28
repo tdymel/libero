@@ -573,7 +573,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         }
         {
             let body = rsx! {
-                {empty.map(|empty| empty.render(columns))}
+                {empty.map(|empty| empty.render(columns, windowed.then_some(head_levels + 1)))}
                 match rows {
                     BodyRows::All(rows) => rsx! {
                         {rows.into_iter().flat_map(|row| body_rows(row, &headers, columns, reorder.as_ref()))}
