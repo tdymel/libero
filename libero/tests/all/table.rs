@@ -1229,6 +1229,27 @@ fn a_windowed_table_renders_a_window_and_counts_every_row() {
     assert!(!body.contains("aria-rowindex=\"1001\""));
 }
 
+/// 1156-5d: the live region that says appended rows is there before the first batch.
+#[test]
+fn an_infinite_table_renders_its_live_region_up_front() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Numbers",
+                    max_height: "300px",
+                    onbottomreached: |_| {},
+                    data: (0..50u32).collect::<Vec<_>>(),
+                    columns: vec![column("N").value(|n: &u32| *n)],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains("role=\"status\""), "{html}");
+}
+
 /// 1156-5a: a detail row breaks the one row height, so `row_detail` renders every row.
 #[test]
 fn a_windowed_table_with_row_details_renders_every_row() {

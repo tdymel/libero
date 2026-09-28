@@ -2,13 +2,17 @@
 //! in its scroll region under a caption; keyed, clickable, striped rows; selectable,
 //! multi-sorted rows; an empty one; a paged one; sized columns; column menus; a
 //! height-capped one with a sticky header; a wide one with pinned columns, also RTL;
-//! column filters through menus and header filters; a windowed one of 10k rows.
+//! column filters through menus and header filters; a windowed one of 10k rows;
+//! one that loads more rows at its bottom.
+
+use std::time::Duration;
 
 use dioxus::prelude::*;
 use libero::chrono::NaiveDate;
 use libero::components::{
     ColumnDefaults, ColumnFilter, PinnedColumns, SortDirection, States, Table, TableSort, column,
 };
+use libero::platform::{TimerSubscription, timer};
 use libero::sx::sx;
 
 use crate::Routes;
@@ -46,6 +50,7 @@ pub const ROUTES: Routes = &[
         "/table/windowed-pinned",
         || rsx! { WindowedTablePage { pinned: true } },
     ),
+    ("/table/infinite", || rsx! { InfiniteTablePage {} }),
 ];
 
 /// The seven paged fruits with a quick-filter field; `#query` and `#page` echo
@@ -484,6 +489,57 @@ fn WindowedTablePage(pinned: bool) -> Element {
             row_key: |fruit: &Fruit| fruit.stock.to_string(),
         }
         p { id: "selection", {selection.read().join(",")} }
+    }
+}
+
+/// Fifty windowed rows a batch, the next one 300 ms after the bottom is reached,
+/// three batches in all. `#asks` counts the calls.
+#[component]
+fn InfiniteTablePage() -> Element {
+    let batch = |from: u32| -> Vec<Fruit> {
+        (from + 1..=from + 50)
+            .map(|stock| Fruit {
+                name: ["Apple", "Banana", "Cherry", "Date"][stock as usize % 4],
+                stock,
+            })
+            .collect()
+    };
+    let mut rows = use_signal(|| batch(0));
+    let mut loading = use_signal(|| false);
+    let mut asks = use_signal(|| 0u32);
+    let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
+    use_drop(move || pending.set(None));
+    rsx! {
+        Table {
+            caption: "Fruit stock",
+            max_height: "300px",
+            virtual_row_height: 40.0,
+            loading: loading(),
+            onbottomreached: move |_| {
+                asks += 1;
+                let from = rows.peek().len() as u32;
+                if from >= 150 {
+                    return;
+                }
+                loading.set(true);
+                pending.set(timer().map(|timer| {
+                    timer.after(
+                        Duration::from_millis(300),
+                        Box::new(move || {
+                            rows.write().extend(batch(from));
+                            loading.set(false);
+                        }),
+                    )
+                }));
+            },
+            data: rows(),
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()),
+                column("Stock").value(|fruit: &Fruit| fruit.stock).row_header(),
+            ],
+            row_key: |fruit: &Fruit| fruit.stock.to_string(),
+        }
+        p { id: "asks", "{asks}" }
     }
 }
 

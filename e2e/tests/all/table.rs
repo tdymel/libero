@@ -269,6 +269,37 @@ e2e::scenario!(
     tab_walks_past_the_window
 );
 
+/// 1156-5d: End at the bottom asks for the next batch, each End once, and the
+/// count of rows that arrived is said; past the last batch nothing more comes.
+async fn end_loads_the_next_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const LIVE: &str = "table + [role=status]";
+    row_count_is(d, "51").await?;
+    d.focus(AREA).await?;
+    for (asks, rows, said) in [("1", "101", "100 rows"), ("2", "151", "150 rows")] {
+        d.press(keyboard::END).await?;
+        eventually_text(d, "#asks", asks, "End at the bottom").await?;
+        row_count_is(d, rows).await?;
+        eventually_text(d, LIVE, said, "the rows that arrived").await?;
+    }
+    d.press(keyboard::END).await?;
+    eventually_text(d, "#asks", "3", "End past the last batch").await?;
+    linger(d, 400).await;
+    row_count_is(d, "151").await
+}
+
+async fn row_count_is<D: Driver>(d: &mut D, rows: &str) -> Result<()> {
+    eventually(d, &format!("aria-rowcount {rows}"), async |d| {
+        Ok(d.attr("table", "aria-rowcount").await?.as_deref() == Some(rows))
+    })
+    .await
+}
+
+e2e::scenario!(
+    end_at_the_bottom_loads_more_rows,
+    "/table/infinite",
+    end_loads_the_next_rows
+);
+
 /// 1156-2c: no button inside, so the overflowing area is the named tab stop.
 async fn a_plain_capped_table_is_a_named_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     // 1313: a WebView reads the inner focusables by the area's tag.

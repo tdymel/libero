@@ -163,6 +163,9 @@ struct EdgeState {
     bottom: bool,
     start: bool,
     end: bool,
+    /// The scroll ranges, so a far edge the content grew past counts again.
+    max_x: f64,
+    max_y: f64,
 }
 
 impl EdgeState {
@@ -173,6 +176,8 @@ impl EdgeState {
         bottom: false,
         start: true,
         end: false,
+        max_x: 0.0,
+        max_y: 0.0,
     };
 
     /// From one scroll position, the x offset counted from the inline start.
@@ -182,6 +187,20 @@ impl EdgeState {
             bottom: max_y <= 0.0 || y >= max_y - 1.0,
             start: x <= 0.0,
             end: max_x <= 0.0 || x >= max_x - 1.0,
+            max_x,
+            max_y,
+        }
+    }
+
+    /// The edges reached since `previous`; the bottom and end also count when
+    /// the content grew, say rows appended, and the scroll followed to its new end.
+    fn reached_since(self, previous: Self) -> Self {
+        Self {
+            top: self.top && !previous.top,
+            bottom: self.bottom && (!previous.bottom || self.max_y > previous.max_y + 1.0),
+            start: self.start && !previous.start,
+            end: self.end && (!previous.end || self.max_x > previous.max_x + 1.0),
+            ..self
         }
     }
 }
@@ -547,17 +566,14 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             max_x,
             max_y,
         );
-        let previous = edges();
-        if new_edges.top && !previous.top {
+        let now = new_edges.reached_since(edges());
+        if now.top {
             reached(ontopreached);
         }
-        if new_edges.bottom && !previous.bottom {
+        if now.bottom {
             reached(onbottomreached);
         }
-        let (start, end) = (
-            new_edges.start && !previous.start,
-            new_edges.end && !previous.end,
-        );
+        let (start, end) = (now.start, now.end);
         if start || end {
             // Left and right stay physical: the start is the right under RTL.
             let (onstart, onend) = match root.is_rtl() {
@@ -816,6 +832,26 @@ mod tests {
         assert!(at(0.0).start && !at(0.0).end);
         assert!(at(199.5).end);
         assert!(!at(100.0).start && !at(100.0).end);
+    }
+
+    /// Rows appended at the bottom: End to the new bottom reports it once more.
+    #[test]
+    fn a_grown_bottom_is_reached_again() {
+        let at = |y, max_y| EdgeState::at(0.0, y, 0.0, max_y);
+        let bottom = at(500.0, 500.0);
+        assert!(bottom.reached_since(at(400.0, 500.0)).bottom);
+
+        // Appended: still at the old offset, then End jumps to the new bottom.
+        let grown = at(1000.0, 1000.0);
+        assert!(grown.reached_since(bottom).bottom);
+        assert!(
+            !grown.reached_since(grown).bottom,
+            "a repeat at the same bottom"
+        );
+
+        let shrunk = at(300.0, 300.0);
+        assert!(!shrunk.reached_since(bottom).bottom, "content that shrank");
+        assert!(!grown.reached_since(bottom).top);
     }
 
     /// Content that fits scrolls nowhere - the percent would divide by zero.

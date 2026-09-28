@@ -1,6 +1,11 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Button, Chip, Code, PinnedColumns, RowFn, Table, Text, column};
+use std::time::Duration;
+
+use libero::components::{
+    Button, Chip, Code, PinnedColumns, RowFn, SortDirection, Table, TableSort, Text, column,
+};
+use libero::platform::{TimerSubscription, timer};
 use libero::sx::sx;
 
 #[derive(Clone, PartialEq)]
@@ -119,6 +124,7 @@ pub fn TablePage() -> Element {
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
                     prop("virtual_row_height", "Option<f64>").default("None").doc("With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. Ignored with `row_detail` or `onrowreorder`, which render every row; a debug build warns."),
+                    prop("onbottomreached", "EventHandler<()>").default("None").doc("With `max_height`, called when the rows scroll to their bottom, by wheel, drag or End: append the next batch to `data`. Called again at the new bottom once rows were added. Not called while `loading` is set, so set it during a fetch to ask once. Without `max_height` it never fires; a debug build warns."),
                     prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header."),
                     prop("default_sort", "Vec<TableSort>").default("[]").doc("Seeds the sort once. Ignored when `sort` is set."),
                     prop("onsortchange", "EventHandler<Vec<TableSort>>").default("None").doc("Called with the sort a header click asks for: ascending, then descending, then empty."),
@@ -235,6 +241,7 @@ pub fn TablePage() -> Element {
                     "The `toolbar` is a plain row, not a `role=\"toolbar\"`: Tab moves through its controls as anywhere else.",
                     "With `virtual_row_height`, the table carries `aria-rowcount`, every row it holds, and each rendered row its `aria-rowindex`, so a screen reader says \"row 5 001 of 10 001\" though only a screenful is in the DOM. The scrolled-away rows leave no empty rows behind.",
                     "With `virtual_row_height`, Tab and Shift+Tab walk the rows' controls past the rendered ones: the focused row scrolls into view and the next one renders. The row holding focus stays rendered when it scrolls away, Blitz included.",
+                    "With `onbottomreached`, once the rows it asked for arrive a polite live region says the new count, \"200 rows\". `aria-rowcount` counts the rows loaded so far.",
                 ])
                 .must([
                     "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
@@ -578,6 +585,16 @@ pub fn TablePage() -> Element {
                     Code { source: "virtual_row_height" }
                     " off to render all ten thousand and feel the difference in a sort."
                 }
+                Text {
+                    "Switch "
+                    Code { source: "onbottomreached" }
+                    " on to fetch the rows from a fake server instead, a hundred at a time: "
+                    "scrolling to the bottom, or End, asks for the next batch, and "
+                    Code { source: "loading" }
+                    " holds off another ask until it arrives. With "
+                    Code { source: "manual_sort" }
+                    " the server sorts, so a header click fetches the first batch anew."
+                }
                 Demo {
                     title: "Ten thousand rows",
                     component: "Table",
@@ -587,7 +604,6 @@ pub fn TablePage() -> Element {
                         format!("max_height: {STOCK_HEIGHT:?}"),
                         "selectable: true".to_string(),
                         "row_key: |s: &Stock| s.id.to_string()".to_string(),
-                        "data: stock".to_string(),
                         STOCK_COLUMNS.to_string(),
                     ],
                     controls: vec![
@@ -597,10 +613,18 @@ pub fn TablePage() -> Element {
                                 false => vec![],
                             }
                         }),
+                        Control::switch("onbottomreached").code(|_, values| match from_server(values) {
+                            true => SERVER_PROPS.map(String::from).to_vec(),
+                            false => vec!["data: stock".to_string()],
+                        }),
                     ],
                     wrap: Wrap(wrap_stock),
-                    render: move |values: DemoValues| rsx! {
-                        StockTable { windowed: values.str("virtual_row_height") == "true" }
+                    render: move |values: DemoValues| {
+                        let windowed = values.str("virtual_row_height") == "true";
+                        match from_server(&values) {
+                            true => rsx! { ServerStock { windowed } },
+                            false => rsx! { StockTable { windowed } },
+                        }
                     },
                 }
             }
@@ -638,7 +662,23 @@ const STOCK_COLUMNS: &str = r#"columns: vec![
         column("Count").value(|s: &Stock| s.count).sortable(),
     ]"#;
 
-fn wrap_stock(_: &DemoValues, code: &str) -> String {
+fn from_server(values: &DemoValues) -> bool {
+    values.str("onbottomreached") == "true"
+}
+
+fn wrap_stock(values: &DemoValues, code: &str) -> String {
+    let data = match from_server(values) {
+        true => SERVER_STOCK,
+        false => {
+            r#"let stock: Vec<Stock> = (1..=10_000)
+    .map(|id| Stock {
+        id,
+        name: format!("{} {id}", FRUITS[id as usize % FRUITS.len()]),
+        count: id * 7 % 1_000,
+    })
+    .collect();"#
+        }
+    };
     format!(
         r#"#[derive(Clone, PartialEq)]
 struct Stock {{
@@ -649,16 +689,140 @@ struct Stock {{
 
 const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
 
-let stock: Vec<Stock> = (1..=10_000)
-    .map(|id| Stock {{
-        id,
-        name: format!("{{}} {{id}}", FRUITS[id as usize % FRUITS.len()]),
-        count: id * 7 % 1_000,
-    }})
-    .collect();
+{data}
 
 {code}"#
     )
+}
+
+/// The fake server and the state the server variant's props read, printed so
+/// the snippet calls nothing it does not show.
+// snippet: item #[derive(Clone, PartialEq)] struct Stock { id: u32, name: String, count: u32 }
+// snippet: item const FRUITS: [&str; 1] = ["Apple"];
+const SERVER_STOCK: &str = r#"const BATCH: usize = 100;
+/// How long the fake server takes.
+const LATENCY: Duration = Duration::from_millis(600);
+
+/// The fake server: `BATCH` rows from `from` on, sorted as asked.
+fn fetch(sort: &[TableSort], from: usize) -> Vec<Stock> {
+    let mut all: Vec<Stock> = (1..=10_000)
+        .map(|id| Stock {
+            id,
+            name: format!("{} {id}", FRUITS[id as usize % FRUITS.len()]),
+            count: id * 7 % 1_000,
+        })
+        .collect();
+    if let Some(by) = sort.first() {
+        match by.column.as_str() {
+            "Name" => all.sort_by(|a, b| a.name.cmp(&b.name)),
+            "Count" => all.sort_by_key(|s| s.count),
+            _ => {}
+        }
+        if by.direction == SortDirection::Descending {
+            all.reverse();
+        }
+    }
+    all.into_iter().skip(from).take(BATCH).collect()
+}
+
+let mut sort = use_signal(Vec::<TableSort>::new);
+let mut stock = use_signal(|| fetch(&[], 0));
+let mut loading = use_signal(|| false);
+let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
+use_drop(move || pending.set(None));
+// From 0 a new sort's first batch, else the next batch appended.
+let mut load = move |from: usize| {
+    loading.set(true);
+    pending.set(timer().map(|timer| {
+        timer.after(
+            LATENCY,
+            Box::new(move || {
+                let batch = fetch(&sort.peek(), from);
+                match from {
+                    0 => stock.set(batch),
+                    _ => stock.write().extend(batch),
+                }
+                loading.set(false);
+            }),
+        )
+    }));
+};"#;
+
+const SERVER_PROPS: [&str; 6] = [
+    "manual_sort: true",
+    "sort: sort()",
+    "onsortchange: move |next| {\n    sort.set(next);\n    load(0);\n}",
+    "loading: loading()",
+    "onbottomreached: move |_| load(stock.peek().len())",
+    "data: stock()",
+];
+
+const BATCH: usize = 100;
+const LATENCY: Duration = Duration::from_millis(600);
+
+/// The demo's fake server, as `SERVER_STOCK` prints it.
+fn fetch(sort: &[TableSort], from: usize) -> Vec<Stock> {
+    let mut all = stock();
+    if let Some(by) = sort.first() {
+        match by.column.as_str() {
+            "Name" => all.sort_by(|a, b| a.name.cmp(&b.name)),
+            "Count" => all.sort_by_key(|s| s.count),
+            _ => {}
+        }
+        if by.direction == SortDirection::Descending {
+            all.reverse();
+        }
+    }
+    all.into_iter().skip(from).take(BATCH).collect()
+}
+
+/// A hundred rows at a time from a fake server that sorts them itself.
+#[component]
+fn ServerStock(windowed: bool) -> Element {
+    let mut sort = use_signal(Vec::<TableSort>::new);
+    let mut stock = use_signal(|| fetch(&[], 0));
+    let mut loading = use_signal(|| false);
+    let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
+    use_drop(move || pending.set(None));
+    let mut load = move |from: usize| {
+        loading.set(true);
+        pending.set(timer().map(|timer| {
+            timer.after(
+                LATENCY,
+                Box::new(move || {
+                    let batch = fetch(&sort.peek(), from);
+                    match from {
+                        0 => stock.set(batch),
+                        _ => stock.write().extend(batch),
+                    }
+                    loading.set(false);
+                }),
+            )
+        }));
+    };
+    rsx! {
+        Table {
+            caption: "Stock",
+            max_height: STOCK_HEIGHT,
+            virtual_row_height: windowed.then_some(40.0),
+            selectable: true,
+            row_key: |s: &Stock| s.id.to_string(),
+            manual_sort: true,
+            sort: sort(),
+            onsortchange: move |next| {
+                sort.set(next);
+                load(0);
+            },
+            loading: loading(),
+            onbottomreached: move |_| load(stock.peek().len()),
+            data: stock(),
+            columns: vec![
+                column("Id").value(|s: &Stock| s.id).sortable().row_header(),
+                column("Name").value(|s: &Stock| s.name.clone()).sortable(),
+                column("Count").value(|s: &Stock| s.count).sortable(),
+            ],
+        }
+    }
 }
 
 /// Built once: a switch flip re-renders the table, not ten thousand rows of data.

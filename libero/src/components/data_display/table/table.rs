@@ -493,6 +493,10 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// height in px with one line per cell. Off with `row_detail` or `onrowreorder`.
     #[props(default)]
     virtual_row_height: Option<f64>,
+    /// With `max_height`, called when the rows scroll to their bottom, to append
+    /// the next batch. Not while `loading`.
+    #[props(default)]
+    onbottomreached: Option<EventHandler<()>>,
     /// The sorted column, empty for source order; set, the sort is controlled.
     /// Only the first entry naming a sortable header applies.
     #[props(default)]
@@ -783,6 +787,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         if props.virtual_row_height.is_some() && props.max_height.is_none() {
             warn("Table: `virtual_row_height` without `max_height` renders every row.");
         }
+        if props.onbottomreached.is_some() && props.max_height.is_none() {
+            warn(
+                "Table: `onbottomreached` without `max_height` never fires: the page scrolls, not the table.",
+            );
+        }
         if props.virtual_row_height.is_some()
             && (props.row_detail.is_set() || props.onrowreorder.is_some())
         {
@@ -1067,6 +1076,26 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     }
     let results = order.len();
     filtered_count.set(results);
+    // The count when more rows were asked for: their arrival is said once loading ends.
+    let mut asked_at = use_hook(|| CopyValue::new(None::<usize>));
+    let loading = props.loading;
+    use_effect(use_reactive!(|(results, loading)| {
+        if loading {
+            return;
+        }
+        if let Some(before) = asked_at.take()
+            && results > before
+        {
+            announcer.say((labels.results)(results));
+        }
+    }));
+    let onbottomreached = props.onbottomreached;
+    let bottom_reached = use_callback(move |()| {
+        if let Some(handler) = onbottomreached.filter(|_| !loading) {
+            asked_at.set(Some(results));
+            handler.call(());
+        }
+    });
     let pager = paginated.then(|| {
         let total = match props.manual_pagination {
             true => props.row_count.unwrap_or(results),
@@ -1337,7 +1366,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         || props.show_quick_filter
         || has_reorder
         || props.column_menu
-        || props.header_filters;
+        || props.header_filters
+        || onbottomreached.is_some();
     let table = match announces {
         true => rsx! {
             {table}
@@ -1378,6 +1408,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     scrollbars: if bounded { ScrollAxis::Both } else { ScrollAxis::Horizontal },
                     framework_sx: ScrollAreaBase(&TABLE_SCROLL_SX),
                     sx: max_height.map(|height| sx().max_height(height)).unwrap_or_default(),
+                    onbottomreached: onbottomreached.map(|_| bottom_reached),
                     attributes,
                     {table}
                 }

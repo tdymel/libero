@@ -113,7 +113,7 @@ fn Rows() -> Element {
 | `onscroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll with the position as a percent of each axis: `Start` when a scroll begins, `Change` while it runs, `End` when it stops. |
 | `onresize` | `EventHandler<Event<ResizeData>>` | - | Fires after the area resized. |
 | `ontopreached` | `EventHandler<()>` | - | Fires once when the top edge is reached. |
-| `onbottomreached` | `EventHandler<()>` | - | Fires once when the bottom edge is reached. |
+| `onbottomreached` | `EventHandler<()>` | - | Fires once when the bottom edge is reached, and again when content added at the bottom is scrolled to its new end, say a list loading more. |
 | `onleftreached` | `EventHandler<()>` | - | Fires once when the left edge is reached. |
 | `onrightreached` | `EventHandler<()>` | - | Fires once when the right edge is reached. |
 | `children` | `Element` | required | The scrollable content. |

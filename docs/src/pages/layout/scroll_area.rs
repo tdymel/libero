@@ -117,7 +117,7 @@ pub fn ScrollAreaPage() -> Element {
                 prop("onresize", "EventHandler<Event<ResizeData>>")
                     .doc("Fires after the area resized."),
                 prop("ontopreached", "EventHandler<()>").doc("Fires once when the top edge is reached."),
-                prop("onbottomreached", "EventHandler<()>").doc("Fires once when the bottom edge is reached."),
+                prop("onbottomreached", "EventHandler<()>").doc("Fires once when the bottom edge is reached, and again when content added at the bottom is scrolled to its new end, say a list loading more."),
                 prop("onleftreached", "EventHandler<()>").doc("Fires once when the left edge is reached."),
                 prop("onrightreached", "EventHandler<()>").doc("Fires once when the right edge is reached."),
                 prop("children", "Element").doc("The scrollable content."),
