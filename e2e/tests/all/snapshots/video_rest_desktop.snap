@@ -11,7 +11,7 @@ group "Silence"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
     button "Play"
     button "Mute"
-    slider "Volume" = 100 [valuemax=100] [valuemin=0]
+    button "Volume" [expanded=false] [haspopup=dialog]
     button "Captions" [pressed=false]
     button "Playback speed 1×" [expanded=false] [haspopup=menu]
       StaticText "1×"
@@ -23,7 +23,7 @@ group "Plain"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
     button "Play"
     button "Mute"
-    slider "Volume" = 100 [valuemax=100] [valuemin=0]
+    button "Volume" [expanded=false] [haspopup=dialog]
     button "Captions" [disabled] [pressed=false]
     StaticText "No captions for this video"
     button "Playback speed 1×" [expanded=false] [haspopup=menu]

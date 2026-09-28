@@ -3,25 +3,20 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::*;
 
 use super::media_controls::{
-    CONTROLS, MediaFallback, MediaSeek, MediaStatus, SEEK, Sound, TIME, VOLUME, clock, controls_sx,
-    icon_size, seek_sx, space_toggles, times, use_media_keys, use_sound,
+    CONTROLS, MediaFallback, MediaSeek, MediaStatus, MediaVolume, SEEK, Sound, TIME, clock,
+    controls_sx, icon_size, seek_sx, space_toggles, times, use_media_keys, use_sound,
 };
 use crate::{
     components::{
         buttons::{ActionIcon, Button},
         common::{Glyph, HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
-        form::{Slider, SliderChangeEvent},
-        layout::{paper_sx, use_box},
+        layout::use_box,
     },
     context::IconSlot,
-    hooks::{
-        Align, MediaError, MediaHandle, PopoverOptions, Side, owner_link, use_element, use_formats,
-        use_id, use_localization, use_media, use_popover, use_theme,
-    },
+    hooks::{MediaError, MediaHandle, use_formats, use_localization, use_media},
     localization::fill,
-    platform::ElementApi,
     sx::{FORCED_COLORS, StaticSx, sx},
-    theme::{ColorCss, ColorShade, Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{ColorCss, ColorShade, Size, SizeCss},
     utils::warn,
 };
 use pictogram_icons_lucide as lucide;
@@ -133,13 +128,6 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
             AudioPart::Message.selector(),
             sx().color(ColorCss::MUTED.value(ColorShade::S7)),
         )
-});
-
-/// The volume menu: a slider on a card.
-static VOLUME_MENU_SX: StaticSx = StaticSx::new(|| {
-    paper_sx()
-        .z_index(Z_INDEX_POPOVER.value())
-        .padding(SizeCss::SPACING.value(Size::Sm))
 });
 
 /// How much an `Audio` fetches before a press.
@@ -379,7 +367,7 @@ fn AudioControls(
                 MediaSeek { media, size: size.clone() }
             }
             AudioTime { media }
-            AudioVolume { media, sound, size: size.clone() }
+            MediaVolume { media, sound, size: size.clone() }
             AudioSpeed { media, size }
         }
         MediaStatus { media }
@@ -431,112 +419,6 @@ fn played_bars(elapsed: f64, duration: Option<f64>) -> usize {
             ((elapsed / total).clamp(0.0, 1.0) * BARS as f64).round() as usize
         }
         _ => 0,
-    }
-}
-
-/// The speaker mutes and unmutes; the chevron beside it opens the volume slider
-/// in a menu, which keeps the row narrow.
-#[component]
-fn AudioVolume(media: MediaHandle, sound: Sound, size: Input<Size>) -> Element {
-    let labels = use_localization().media;
-    let theme = use_theme();
-    let silent = sound.silent();
-    let mut opened = use_signal(|| false);
-    let anchor = use_element();
-    let menu_id = use_id();
-    let popover = use_popover(
-        anchor,
-        opened(),
-        PopoverOptions::new(theme.popover.gap, theme.popover.padding)
-            .side(Side::Top)
-            .align(Align::Center)
-            .dismiss(true),
-    );
-    popover.on_dismiss(move || opened.set(false));
-    let floating = *popover.floating();
-    let card = use_box()
-        .framework_sx(&VOLUME_MENU_SX)
-        .style(popover.style())
-        .prepare();
-
-    // Focus goes to the slider once the card is placed, once per opening.
-    let mut entered = use_signal(|| false);
-    use_effect(move || match (opened(), popover.placed()) {
-        (true, true) if !*entered.peek() => {
-            entered.set(true);
-            let _ = floating
-                .query_selector("[role='slider']")
-                .and_then(|thumb| thumb.focus());
-        }
-        (false, _) => entered.set(false),
-        _ => {}
-    });
-
-    popover.show(opened().then(|| {
-        let mut attributes = popover.floating_events();
-        attributes.extend(owner_link(&anchor));
-        card.element(&floating)
-            .attr("id", menu_id.cloned())
-            .attr("role", "dialog")
-            .attr("aria-label", labels.volume)
-            // Tab leaves the card for its trigger, as a menu does.
-            .event("onkeydown", move |event: KeyboardEvent| {
-                if event.key() == Key::Tab {
-                    event.prevent_default();
-                    opened.set(false);
-                    let _ = anchor.focus();
-                } else {
-                    let mut space_toggles = space_toggles(media);
-                    space_toggles(event);
-                }
-            })
-            .render(
-                HtmlTag::Div,
-                attributes,
-                rsx! {
-                    Slider::<f64> {
-                        value: media.volume() * 100.0,
-                        min: 0.0,
-                        max: 100.0,
-                        step: 5.0,
-                        size: size.clone(),
-                        aria_label: labels.volume,
-                        // The card sizes to its content, which a `100%` track has none of.
-                        sx: sx().width("8rem"),
-                        oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
-                    }
-                },
-            )
-    }));
-
-    rsx! {
-        div { "data-slot": VOLUME,
-            ActionIcon {
-                aria_label: if silent { labels.unmute } else { labels.mute },
-                tooltip: true,
-                shortcut: "m",
-                size: icon_size(&size),
-                onclick: move |_| sound.toggle(),
-                if silent {
-                    Glyph { slot: IconSlot::VolumeOff, icon: lucide::volume_x::outlined }
-                } else {
-                    Glyph { slot: IconSlot::Volume, icon: lucide::volume_2::outlined }
-                }
-            }
-            ActionIcon {
-                aria_label: labels.volume,
-                aria_haspopup: "dialog",
-                aria_expanded: if opened() { "true" } else { "false" },
-                "aria-controls": opened().then(|| menu_id.cloned()),
-                size: icon_size(&size),
-                // Half a button: it only opens the menu, so the speaker stays the target.
-                sx: sx().min_width("1.25em").width("1.25em"),
-                attributes: popover.anchor_events(),
-                onmounted: anchor.mount(),
-                onclick: move |_| opened.toggle(),
-                Glyph { slot: IconSlot::ChevronUp, icon: lucide::chevron_up::outlined }
-            }
-        }
     }
 }
 

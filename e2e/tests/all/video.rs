@@ -47,20 +47,20 @@ fn controls_fit(width: u32, one_row: bool) -> String {
     )
 }
 
-/// WCAG 1.4.10, todos 1325 and 1342: the seek track has a row of its own; the
-/// buttons stay one line at a phone's 412px and at 320px, the volume slider and
-/// then the total time giving way; at 160px (320px at 200% zoom) the bar moves
-/// below the picture and wraps, but no control leaves the player.
+/// WCAG 1.4.10, todos 1325, 1342 and 1399: the seek track has a row of its own;
+/// the buttons, mute and the volume menu's chevron included, stay one line at a
+/// phone's 412px and at 320px, the total time giving way; at 160px (320px at 200%
+/// zoom) the bar moves below the picture and wraps, but no control leaves the player.
 #[test]
 fn the_controls_fit_a_narrow_player() {
     block_on(async {
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         for (width, volume, total, one_row) in [
-            (512, "block", "inline", true),
-            (412, "none", "inline", true),
-            (320, "none", "none", true),
-            (160, "none", "none", false),
+            (512, "flex", "inline", true),
+            (412, "flex", "inline", true),
+            (320, "flex", "none", true),
+            (160, "flex", "none", false),
         ] {
             page.evaluate(format!(
                 "document.querySelector('#player').style.width = '{width}px'"
@@ -780,6 +780,92 @@ fn the_speed_menu_works_in_fullscreen() {
                  && document.querySelector(\"{SPEED}\").textContent.includes('1.5×')"
             ),
             "the rate at 1.5×",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1399: the speaker mutes and unmutes; the chevron opens the volume slider
+/// in a dialog, inside the player in fullscreen, focused, and a moved volume unmutes.
+#[test]
+fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
+    const SPEAKER: &str = "#player [data-slot=volume] button:not([aria-haspopup])";
+    const CHEVRON: &str = "#player [data-slot=volume] button[aria-haspopup]";
+    const DIALOG: &str = "[role=dialog][aria-label=Volume]";
+    const VIDEO: &str = "document.querySelector('#player video')";
+    block_on(async {
+        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let speaker = |name: &str| {
+            format!("document.querySelector('{SPEAKER}')?.getAttribute('aria-label') === '{name}'")
+        };
+        wait::for_js_true(page, &speaker("Mute"), "the speaker")
+            .await
+            .unwrap();
+        pointer::click(page, SPEAKER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{VIDEO}.muted && {}", speaker("Unmute")),
+            "the speaker to mute",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, SPEAKER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!{VIDEO}.muted && {}", speaker("Mute")),
+            "the speaker to unmute",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, SPEAKER).await.unwrap();
+        wait::for_js_true(page, &format!("{VIDEO}.muted"), "the speaker to mute again")
+            .await
+            .unwrap();
+
+        pointer::click(page, FULLSCREEN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{STATE} !== 'none'"),
+            "the player to fill the screen",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, CHEVRON).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const dialog = document.querySelector('{DIALOG}');
+                 if (!dialog || !document.querySelector('#player [role=group]').contains(dialog)) return false;
+                 const r = dialog.getBoundingClientRect();
+                 return dialog.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2))
+                     && document.activeElement?.closest('{DIALOG}') !== null
+                     && document.activeElement.getAttribute('role') === 'slider'
+                     && document.querySelector('{CHEVRON}').getAttribute('aria-expanded') === 'true'; }})()"
+            ),
+            "the volume dialog inside the player, on top, its slider focused",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!{VIDEO}.muted && Math.abs({VIDEO}.volume - 0.95) < 1e-6"),
+            "a moved volume to unmute",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('{DIALOG}') === null
+                 && document.activeElement === document.querySelector('{CHEVRON}')
+                 && {STATE} !== 'none'"
+            ),
+            "Escape to close the dialog only and return to the chevron",
         )
         .await
         .unwrap();

@@ -9,19 +9,21 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::{ActionIcon, Button},
-        common::{Glyph, Input},
+        common::{Glyph, HtmlTag, Input},
         form::{Slider, SliderChangeEvent},
+        layout::{paper_sx, use_box},
         overlay::{Menu, MenuItem, use_menu},
     },
     context::IconSlot,
     hooks::{
-        ElementHandle, FullscreenHandle, Hotkey, MediaHandle, use_formats, use_hotkeys, use_id,
-        use_localization,
+        Align, ElementHandle, FullscreenHandle, Hotkey, MediaHandle, PopoverOptions, Side,
+        owner_link, use_element, use_formats, use_hotkeys, use_id, use_localization, use_popover,
+        use_theme,
     },
     localization::fill,
-    platform::key_taken,
-    sx::{Sx, ThemeAwareValue, sx},
-    theme::{PaperDefaults, Size, SizeCss},
+    platform::{ElementApi, key_taken},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{PaperDefaults, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
 /// The part slots both players name alike.
@@ -30,6 +32,13 @@ pub(super) const TIME: &str = "time";
 pub(super) const SEEK: &str = "seek";
 pub(super) const VOLUME: &str = "volume";
 pub(super) const MESSAGE: &str = "message";
+
+/// The volume menu: a slider on a card.
+static VOLUME_MENU_SX: StaticSx = StaticSx::new(|| {
+    paper_sx()
+        .z_index(Z_INDEX_POPOVER.value())
+        .padding(SizeCss::SPACING.value(Size::Sm))
+});
 
 /// The speeds the speed menu offers.
 const RATES: [f64; 6] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
@@ -157,7 +166,7 @@ impl Captions {
 /// `Element`: a memoized child would keep handlers its parent's re-render dropped.
 ///
 /// `overlay` is a video's bar over the picture: the seek track a row of its own
-/// on top, then play, mute, volume and time, then captions, speed and fullscreen.
+/// on top, then play, mute with its volume menu and time, then captions, speed and fullscreen.
 #[component]
 pub(super) fn MediaControls(
     media: MediaHandle,
@@ -170,7 +179,6 @@ pub(super) fn MediaControls(
     let labels = use_localization().media;
     let icon_size = icon_size(&size);
     let space_toggles = space_toggles(media);
-    let silent = sound.silent();
     let no_captions = use_id();
     let play = rsx! {
         ActionIcon {
@@ -192,29 +200,7 @@ pub(super) fn MediaControls(
         }
     };
     let sound_controls = rsx! {
-        ActionIcon {
-                aria_label: if silent { labels.unmute } else { labels.mute },
-                tooltip: true,
-                shortcut: "m",
-                size: icon_size.clone(),
-                onclick: move |_| sound.toggle(),
-                if silent {
-                    Glyph { slot: IconSlot::VolumeOff, icon: lucide::volume_x::outlined }
-                } else {
-                    Glyph { slot: IconSlot::Volume, icon: lucide::volume_2::outlined }
-                }
-            }
-            div { "data-slot": VOLUME, onkeydown: space_toggles,
-                Slider::<f64> {
-                    value: media.volume() * 100.0,
-                    min: 0.0,
-                    max: 100.0,
-                    step: 5.0,
-                    size: size.clone(),
-                    aria_label: labels.volume,
-                    oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
-                }
-            }
+        MediaVolume { media, sound, size: size.clone() }
     };
     let speed = rsx! {
         MediaSpeed { media, size, overlay }
@@ -352,6 +338,112 @@ fn MediaSpeed(media: MediaHandle, size: Input<Size>, overlay: bool) -> Element {
     rsx! {
         Menu { state: menu, items, size: size.clone(),
             Button { attributes, variant: "standard", size, sx: look, "{shown}" }
+        }
+    }
+}
+
+/// The speaker mutes and unmutes; the chevron beside it opens the volume slider
+/// in a menu, which keeps the row narrow.
+#[component]
+pub(super) fn MediaVolume(media: MediaHandle, sound: Sound, size: Input<Size>) -> Element {
+    let labels = use_localization().media;
+    let theme = use_theme();
+    let silent = sound.silent();
+    let mut opened = use_signal(|| false);
+    let anchor = use_element();
+    let menu_id = use_id();
+    let popover = use_popover(
+        anchor,
+        opened(),
+        PopoverOptions::new(theme.popover.gap, theme.popover.padding)
+            .side(Side::Top)
+            .align(Align::Center)
+            .dismiss(true),
+    );
+    popover.on_dismiss(move || opened.set(false));
+    let floating = *popover.floating();
+    let card = use_box()
+        .framework_sx(&VOLUME_MENU_SX)
+        .style(popover.style())
+        .prepare();
+
+    // Focus goes to the slider once the card is placed, once per opening.
+    let mut entered = use_signal(|| false);
+    use_effect(move || match (opened(), popover.placed()) {
+        (true, true) if !*entered.peek() => {
+            entered.set(true);
+            let _ = floating
+                .query_selector("[role='slider']")
+                .and_then(|thumb| thumb.focus());
+        }
+        (false, _) => entered.set(false),
+        _ => {}
+    });
+
+    popover.show(opened().then(|| {
+        let mut attributes = popover.floating_events();
+        attributes.extend(owner_link(&anchor));
+        card.element(&floating)
+            .attr("id", menu_id.cloned())
+            .attr("role", "dialog")
+            .attr("aria-label", labels.volume)
+            // Tab leaves the card for its trigger, as a menu does.
+            .event("onkeydown", move |event: KeyboardEvent| {
+                if event.key() == Key::Tab {
+                    event.prevent_default();
+                    opened.set(false);
+                    let _ = anchor.focus();
+                } else {
+                    let mut space_toggles = space_toggles(media);
+                    space_toggles(event);
+                }
+            })
+            .render(
+                HtmlTag::Div,
+                attributes,
+                rsx! {
+                    Slider::<f64> {
+                        value: media.volume() * 100.0,
+                        min: 0.0,
+                        max: 100.0,
+                        step: 5.0,
+                        size: size.clone(),
+                        aria_label: labels.volume,
+                        // The card sizes to its content, which a `100%` track has none of.
+                        sx: sx().width("8rem"),
+                        oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
+                    }
+                },
+            )
+    }));
+
+    rsx! {
+        div { "data-slot": VOLUME,
+            ActionIcon {
+                aria_label: if silent { labels.unmute } else { labels.mute },
+                tooltip: true,
+                shortcut: "m",
+                size: icon_size(&size),
+                onclick: move |_| sound.toggle(),
+                if silent {
+                    Glyph { slot: IconSlot::VolumeOff, icon: lucide::volume_x::outlined }
+                } else {
+                    Glyph { slot: IconSlot::Volume, icon: lucide::volume_2::outlined }
+                }
+            }
+            ActionIcon {
+                aria_label: labels.volume,
+                aria_haspopup: "dialog",
+                aria_expanded: if opened() { "true" } else { "false" },
+                "aria-controls": opened().then(|| menu_id.cloned()),
+                size: icon_size(&size),
+                // Half a button: it only opens the menu, so the speaker stays the target.
+                sx: sx().min_width("1.25em").width("1.25em"),
+                attributes: popover.anchor_events(),
+                onmounted: anchor.mount(),
+                onclick: move |_| opened.toggle(),
+                Glyph { slot: IconSlot::ChevronUp, icon: lucide::chevron_up::outlined }
+            }
         }
     }
 }

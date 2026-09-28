@@ -32,7 +32,7 @@ parts_enum! {
         Time = "time" => "& [data-slot='time']",
         /// The seek slider's wrapper.
         Seek = "seek" => "& [data-slot='seek']",
-        /// The volume slider's wrapper.
+        /// The mute button and the volume menu's trigger.
         Volume = "volume" => "& [data-slot='volume']",
         /// The text shown when the source fails, or nothing plays media.
         Message = "message" => "& > [data-slot='message']",
@@ -45,7 +45,6 @@ const CONTROLS_ATTR: &str = "data-controls";
 const CONTROLS_IDLE_MS: u64 = 3000;
 const PLAYER_CONTAINER: &str = "libero-video";
 const CONTROLS_CONTAINER: &str = "libero-video-controls";
-const NARROW: &str = "(max-width: 28rem)";
 const NARROWEST: &str = "(max-width: 22rem)";
 /// Too small a picture to lay the wrapped bar over: it moves below.
 const TINY: &str = "(max-width: 15rem)";
@@ -152,8 +151,7 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
             )
             .selector(format!("{media}{CUES}"), sx().transform("none")),
         )
-        // The seek track takes its row, so it shrinks with the player; below 28rem the
-        // volume slider goes (mute and the keys remain), below 22rem the total time.
+        // The seek track takes its row, so it shrinks with the player; below 22rem the total time goes.
         .selector(
             VideoPart::Time.selector(),
             sx().font_variant_numeric("tabular-nums")
@@ -172,11 +170,7 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             VideoPart::Volume.selector(),
-            sx().flex("0 1 5rem").min_width("4rem").container_query(
-                CONTROLS_CONTAINER,
-                NARROW,
-                sx().display("none"),
-            ),
+            sx().display("flex").align_items("center"),
         )
         .selector(
             VideoPart::Message.selector(),

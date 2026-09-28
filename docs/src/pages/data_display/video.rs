@@ -63,7 +63,7 @@ pub fn VideoPage() -> Element {
                     (VideoPart::Controls, "The bar of controls over the bottom of the picture, a named `group`."),
                     (VideoPart::Time, "The elapsed and total time."),
                     (VideoPart::Seek, "The seek slider's wrapper."),
-                    (VideoPart::Volume, "The volume slider's wrapper."),
+                    (VideoPart::Volume, "The mute button and the volume menu's trigger."),
                     (VideoPart::Message, "The error text, or the fallback where nothing plays media."),
                 ]),
             ],
@@ -74,20 +74,21 @@ pub fn VideoPage() -> Element {
                 .key(["M"], "Mutes or unmutes.")
                 .key(["C"], "Shows or hides the captions, with a captions or subtitles track.")
                 .key(["F"], "Enters or leaves fullscreen.")
-                .key(["Escape"], "Leaves fullscreen.")
+                .key(["Escape"], "Closes the speed or volume menu and returns to its button; else leaves fullscreen.")
                 .key(["Left", "Right"], "On the seek slider: 1 second; on the volume slider: 5%.")
-                .key(["Tab"], "Moves through every control in visual order: seek, play, mute, volume, captions, speed, fullscreen.")
+                .key(["Tab"], "Moves through every control in visual order: seek, play, mute, volume, captions, speed, fullscreen. In the volume menu, returns to its button.")
                 .handles([
                     "The player is a `group` named by `label`, its controls a `group` named \"Player controls\"; every button and slider is its own Tab stop, as in the browser's own controls.",
                     "The play, mute and fullscreen buttons change their names (Play/Pause, Mute/Unmute, Fullscreen/Exit fullscreen); the captions button uses `aria-pressed`, and a bar under its icon shows it pressed.",
-                    "In fullscreen the speed menu and the tooltips open inside the player, so they show over the fullscreen picture.",
+                    "In fullscreen the speed and volume menus and the tooltips open inside the player, so they show over the fullscreen picture.",
                     "A press anywhere on the seek track jumps there; a drag scrubs.",
                     "The speed button shows the rate (\"1×\", \"1,5×\" under `Formats::GERMAN`) and is named \"Playback speed 1×\"; its menu offers 0.5× to 2× as radio items.",
                     "Without a captions or subtitles track the captions button stays, disabled but focusable, and says \"No captions for this video\".",
+                    "The speaker button mutes and unmutes. The chevron beside it, named \"Volume\", opens a `dialog` holding the volume slider and focuses it, as `Audio`'s.",
                     "At volume 0 the mute button offers Unmute, which brings back the last audible volume; moving the volume up while muted unmutes.",
                     "Where the page may not go fullscreen, the player covers the window as a fixed box instead, which Escape, F and a Tab out of the player leave, so focus never hides behind it. Focus stays on the control that was pressed, inside the box, and is there again when the box closes.",
                     "The controls overlay the bottom of the picture, as YouTube's, and fade after 3 seconds of playing untouched or as the mouse leaves the player; while paused they stay. A pointer move, a tap or a key brings them back. After a key they stay until the next click or tap, so keyboard focus never sits on a faded control; they never leave the Tab order, and a tap on the picture only shows them.",
-                    "No control leaves the player at any width: the seek track has a row of its own and shrinks with the player, below 28rem the volume slider hides (mute stays), below 22rem the total time, and below 15rem the bar moves under the picture and wraps, so it fits at 320px and 200% zoom (WCAG 1.4.10).",
+                    "No control leaves the player at any width: the seek track has a row of its own and shrinks with the player, below 22rem the total time goes, and below 15rem the bar moves under the picture and wraps, so it fits at 320px and 200% zoom (WCAG 1.4.10).",
                     "A black scrim under the bar keeps its white text at 4.5:1 and its icons, tracks and thumbs at 3:1 over any picture, a white one included, in light and dark (WCAG 1.4.3, 1.4.11).",
                     "The seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`).",
                     "A polite status says \"Loading\" while playing waits for data; a failed source shows an alert.",

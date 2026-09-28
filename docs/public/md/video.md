@@ -99,7 +99,7 @@ explains how parts work.
 | `VideoPart::Controls` | `controls` | The bar of controls over the bottom of the picture, a named `group`. |
 | `VideoPart::Time` | `time` | The elapsed and total time. |
 | `VideoPart::Seek` | `seek` | The seek slider's wrapper. |
-| `VideoPart::Volume` | `volume` | The volume slider's wrapper. |
+| `VideoPart::Volume` | `volume` | The mute button and the volume menu's trigger. |
 | `VideoPart::Message` | `message` | The error text, or the fallback where nothing plays media. |
 
 The player carries `data-fullscreen="native"` or `"drawn"` while it fills the
@@ -117,9 +117,9 @@ screen, from [use_fullscreen](use_fullscreen.md).
 | `M` | Mutes or unmutes. |
 | `C` | Shows or hides the captions, with a captions or subtitles track. |
 | `F` | Enters or leaves fullscreen. |
-| `Escape` | Leaves fullscreen. |
+| `Escape` | Closes the speed or volume menu and returns to its button; else leaves fullscreen. |
 | `Left` or `Right` | On the seek slider: 1 second; on the volume slider: 5%. |
-| `Tab` | Moves through every control in visual order: seek, play, mute, volume, captions, speed, fullscreen. |
+| `Tab` | Moves through every control in visual order: seek, play, mute, volume, captions, speed, fullscreen. In the volume menu, returns to its button. |
 
 ### Libero handles
 
@@ -129,13 +129,15 @@ screen, from [use_fullscreen](use_fullscreen.md).
 - The play, mute and fullscreen buttons change their names (Play/Pause,
   Mute/Unmute, Fullscreen/Exit fullscreen); the captions button uses
   `aria-pressed`, and a bar under its icon shows it pressed.
-- In fullscreen the speed menu and the tooltips open inside the player, so they
-  show over the fullscreen picture.
+- In fullscreen the speed and volume menus and the tooltips open inside the
+  player, so they show over the fullscreen picture.
 - A press anywhere on the seek track jumps there; a drag scrubs.
 - The speed button shows the rate ("1×", "1,5×" under `Formats::GERMAN`) and is
   named "Playback speed 1×"; its menu offers 0.5× to 2× as radio items.
 - Without a captions or subtitles track the captions button stays, disabled
   but focusable, and says "No captions for this video".
+- The speaker button mutes and unmutes. The chevron beside it, named "Volume",
+  opens a `dialog` holding the volume slider and focuses it, as `Audio`'s.
 - At volume 0 the mute button offers Unmute, which brings back the last audible
   volume; moving the volume up while muted unmutes.
 - Where the page may not go fullscreen, the player covers the window as a fixed
@@ -149,9 +151,9 @@ screen, from [use_fullscreen](use_fullscreen.md).
   control; they never leave the Tab order, and a tap on the picture only shows
   them.
 - No control leaves the player at any width: the seek track has a row of its own
-  and shrinks with the player, below 28rem the volume slider hides (mute stays),
-  below 22rem the total time, and below 15rem the bar moves under the picture
-  and wraps, so it fits at 320px and 200% zoom (WCAG 1.4.10).
+  and shrinks with the player, below 22rem the total time goes, and below 15rem
+  the bar moves under the picture and wraps, so it fits at 320px and 200% zoom
+  (WCAG 1.4.10).
 - A black scrim under the bar keeps its white text at 4.5:1 and its icons,
   tracks and thumbs at 3:1 over any picture, a white one included, in light and
   dark (WCAG 1.4.3, 1.4.11).
