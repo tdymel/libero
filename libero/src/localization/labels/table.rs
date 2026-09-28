@@ -17,6 +17,13 @@ pub enum FilterOperator {
     IsNotEmpty,
     /// A boolean column's value, `"true"` or `"false"`.
     Is,
+    /// Date operators: the value is an ISO day, `2024-03-09`.
+    Before,
+    After,
+    OnOrBefore,
+    OnOrAfter,
+    /// From `value` to `value_to`, both days kept, in either order; an empty end is open.
+    Between,
 }
 
 /// Every string `Table` puts in front of a reader.
@@ -143,6 +150,9 @@ pub struct TableLabels {
     /// A boolean filter's `true` and `false`.
     pub yes: &'static str,
     pub no: &'static str,
+    /// A `Between` date filter's first and last day fields.
+    pub date_from: &'static str,
+    pub date_to: &'static str,
     /// An operator's name in the operator picker.
     ///
     /// ```
@@ -185,6 +195,11 @@ fn english_operator_name(operator: FilterOperator) -> &'static str {
         IsEmpty => "Is empty",
         IsNotEmpty => "Is not empty",
         Is => "Is",
+        Before => "Before",
+        After => "After",
+        OnOrBefore => "On or before",
+        OnOrAfter => "On or after",
+        Between => "Between",
     }
 }
 
@@ -204,6 +219,11 @@ fn german_operator_name(operator: FilterOperator) -> &'static str {
         IsEmpty => "Ist leer",
         IsNotEmpty => "Ist nicht leer",
         Is => "Ist",
+        Before => "Vor",
+        After => "Nach",
+        OnOrBefore => "Am oder vor",
+        OnOrAfter => "Am oder nach",
+        Between => "Zwischen",
     }
 }
 
@@ -321,6 +341,8 @@ impl TableLabels {
         any: "Any",
         yes: "Yes",
         no: "No",
+        date_from: "From",
+        date_to: "To",
         operator_name: english_operator_name,
     };
 
@@ -365,6 +387,8 @@ impl TableLabels {
         any: "Alle",
         yes: "Ja",
         no: "Nein",
+        date_from: "Von",
+        date_to: "Bis",
         operator_name: german_operator_name,
     };
 }

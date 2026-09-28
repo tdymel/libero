@@ -106,6 +106,33 @@ e2e::scenario!(
     a_drag_moves_a_row
 );
 
+/// Cherry's open detail drags with it: one row's travel past Apple moves it,
+/// though the detail sits between them (1397).
+async fn a_detail_drags_with_its_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let apple = d.rect("tbody tr:nth-child(3)").await?;
+    d.drag(&handle("Cherry"), 0.0, apple.height).await?;
+    eventually_text(
+        d,
+        ORDER,
+        "Apple Cherry Banana Damson",
+        "a drag one row down",
+    )
+    .await?;
+    eventually(d, "the detail right under its row, at rest", async |d| {
+        let row = d.rect("tbody tr:nth-child(2)").await?;
+        let detail = d.rect("tbody tr[data-detail]").await?;
+        Ok(d.text("tbody tr:nth-child(2) th").await? == "Cherry"
+            && (detail.y - (row.y + row.height)).abs() <= 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    an_open_detail_drags_with_its_row,
+    "/table-reorder-detail",
+    a_detail_drags_with_its_row
+);
+
 async fn sorted_is_off<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("th [data-sort-button]").await?;
     eventually_text(d, "tbody tr:first-child th", "Apple", "the sort").await?;

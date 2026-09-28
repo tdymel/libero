@@ -1,5 +1,5 @@
 use super::{
-    cell_value::{FilterKind, SortKey},
+    cell_value::{FilterKind, SortKey, date_number},
     column::Column,
 };
 
@@ -19,6 +19,8 @@ pub struct ColumnFilter {
     /// What the cell is compared with. Empty, the filter keeps every row
     /// unless `operator` takes no value.
     pub value: String,
+    /// `Between`'s last day; empty, the range is open at that end.
+    pub value_to: String,
 }
 
 impl ColumnFilter {
@@ -31,6 +33,24 @@ impl ColumnFilter {
             column: column.into(),
             operator,
             value: value.into(),
+            value_to: String::new(),
+        }
+    }
+
+    /// Days from `from` to `to`, both kept, as ISO dates; an empty end is open.
+    ///
+    /// ```rust
+    /// # use libero::components::ColumnFilter;
+    /// let march = ColumnFilter::between("Due", "2024-03-01", "2024-03-31");
+    /// ```
+    pub fn between(
+        column: impl Into<String>,
+        from: impl Into<String>,
+        to: impl Into<String>,
+    ) -> Self {
+        Self {
+            value_to: to.into(),
+            ..Self::new(column, FilterOperator::Between, from)
         }
     }
 }
@@ -69,6 +89,10 @@ impl FilterOperator {
                 IsNotEmpty,
             ],
             FilterKind::Boolean => &[Is],
+            FilterKind::Date => &[
+                Equals, NotEquals, Before, After, OnOrBefore, OnOrAfter, Between, IsEmpty,
+                IsNotEmpty,
+            ],
         }
     }
 
@@ -88,6 +112,14 @@ pub(super) fn parse_number(text: &str) -> Option<f64> {
     text.parse::<f64>().ok().filter(|value| value.is_finite())
 }
 
+/// An ISO day as its sort number, `None` when it does not parse.
+fn parse_date(text: &str) -> Option<f64> {
+    text.trim()
+        .parse::<chrono::NaiveDate>()
+        .ok()
+        .map(date_number)
+}
+
 /// A filter ready to run against cells.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum CellTest {
@@ -95,6 +127,8 @@ pub(super) enum CellTest {
     Number(FilterOperator, f64),
     Boolean(bool),
     Empty(bool),
+    /// Days kept, from and to, either end open.
+    Days(Option<f64>, Option<f64>),
 }
 
 impl CellTest {
@@ -109,6 +143,9 @@ impl CellTest {
         if !operator.takes_value() {
             return Some(Self::Empty(operator == IsEmpty));
         }
+        if kind == FilterKind::Date {
+            return Self::days(filter);
+        }
         let value = filter.value.trim();
         if value.is_empty() {
             return None;
@@ -121,6 +158,31 @@ impl CellTest {
                 _ => None,
             },
             _ => Some(Self::Text(operator, value.to_lowercase())),
+        }
+    }
+
+    /// A date filter as the days it keeps. `NotEquals` stays a number test: it
+    /// keeps the days on both sides.
+    fn days(filter: &ColumnFilter) -> Option<Self> {
+        use FilterOperator::*;
+        let day = parse_date(&filter.value);
+        match filter.operator {
+            Between => {
+                let to = parse_date(&filter.value_to);
+                match (day, to) {
+                    (None, None) => None,
+                    // Typed the wrong way round: still the days between.
+                    (Some(from), Some(to)) if from > to => Some(Self::Days(Some(to), Some(from))),
+                    _ => Some(Self::Days(day, to)),
+                }
+            }
+            Equals => day.map(|day| Self::Days(Some(day), Some(day))),
+            NotEquals => day.map(|day| Self::Number(NotEquals, day)),
+            Before => day.map(|day| Self::Days(None, Some(day - 1.0))),
+            After => day.map(|day| Self::Days(Some(day + 1.0), None)),
+            OnOrBefore => day.map(|day| Self::Days(None, Some(day))),
+            OnOrAfter => day.map(|day| Self::Days(Some(day), None)),
+            _ => None,
         }
     }
 
@@ -156,6 +218,12 @@ impl CellTest {
                 }
             }
             Self::Boolean(value) => *key == SortKey::text(value.to_string()),
+            Self::Days(from, to) => {
+                let SortKey::Num(day) = key else {
+                    return false;
+                };
+                from.is_none_or(|from| *day >= from) && to.is_none_or(|to| *day <= to)
+            }
         }
     }
 }
@@ -177,12 +245,31 @@ pub(super) fn cell_tests<T>(
         .collect()
 }
 
-/// Whether `row` passes every test.
-pub(super) fn passes_all<T>(row: &T, columns: &[Column<T>], tests: &[(usize, CellTest)]) -> bool {
-    tests.iter().all(|(index, test)| {
+/// How a table's column filters join: a row stays when it passes all of them,
+/// or any one. The quick filter applies on top either way.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub enum FilterLogic {
+    #[default]
+    And,
+    Or,
+}
+
+/// Whether `row` passes the tests, joined by `logic`.
+pub(super) fn passes_all<T>(
+    row: &T,
+    columns: &[Column<T>],
+    tests: &[(usize, CellTest)],
+    logic: FilterLogic,
+) -> bool {
+    let passes = |(index, test): &(usize, CellTest)| {
         let column = &columns[*index];
         test.passes(&(column.text)(row), &(column.sort_key)(row))
-    })
+    };
+    match logic {
+        FilterLogic::And => tests.iter().all(passes),
+        FilterLogic::Or => tests.is_empty() || tests.iter().any(passes),
+    }
 }
 
 /// `column`'s filter in `filters`, if any.
@@ -190,7 +277,8 @@ pub(super) fn filter_of<'a>(filters: &'a [ColumnFilter], column: &str) -> Option
     filters.iter().find(|filter| filter.column == column)
 }
 
-/// `filters` with `column`'s item replaced by `next`, or dropped for `None`.
+/// `filters` with `column`'s first item replaced by `next`, or dropped for
+/// `None`; the column's other items stay.
 pub(super) fn with_filter(
     filters: &[ColumnFilter],
     column: &str,
@@ -198,15 +286,28 @@ pub(super) fn with_filter(
 ) -> Vec<ColumnFilter> {
     let mut out: Vec<ColumnFilter> = Vec::with_capacity(filters.len() + 1);
     let mut next = next;
+    let mut first = true;
     for filter in filters {
-        if filter.column != column {
+        if filter.column != column || !first {
             out.push(filter.clone());
-        } else if let Some(next) = next.take() {
-            out.push(next);
+            continue;
         }
+        first = false;
+        out.extend(next.take());
     }
-    out.extend(next);
+    if first {
+        out.extend(next);
+    }
     out
+}
+
+/// `filters` without any of `column`'s items.
+pub(super) fn without_column(filters: &[ColumnFilter], column: &str) -> Vec<ColumnFilter> {
+    filters
+        .iter()
+        .filter(|filter| filter.column != column)
+        .cloned()
+        .collect()
 }
 
 #[cfg(test)]
@@ -278,6 +379,41 @@ mod tests {
     }
 
     #[test]
+    fn dates_compare_by_day_and_between_keeps_both_ends() {
+        let day = |d| chrono::NaiveDate::from_ymd_opt(2024, 3, d).unwrap();
+        let passes = |filter: ColumnFilter, d: Option<u32>| {
+            let key = d.map_or(SortKey::Empty, |d| day(d).sort_key());
+            CellTest::new(&filter, FilterKind::Date)
+                .unwrap()
+                .passes("", &key)
+        };
+        let on = |operator| ColumnFilter::new("A", operator, "2024-03-10");
+        assert!(passes(on(Equals), Some(10)) && !passes(on(Equals), Some(11)));
+        assert!(passes(on(NotEquals), None) && !passes(on(NotEquals), Some(10)));
+        assert!(passes(on(Before), Some(9)) && !passes(on(Before), Some(10)));
+        assert!(passes(on(After), Some(11)) && !passes(on(After), Some(10)));
+        assert!(passes(on(OnOrBefore), Some(10)) && passes(on(OnOrAfter), Some(10)));
+        let range = ColumnFilter::between("A", "2024-03-05", "2024-03-10");
+        assert!(passes(range.clone(), Some(5)) && passes(range.clone(), Some(10)));
+        assert!(!passes(range.clone(), Some(11)) && !passes(range, None));
+        // An empty end is open.
+        assert!(passes(
+            ColumnFilter::between("A", "", "2024-03-10"),
+            Some(1)
+        ));
+        assert!(passes(
+            ColumnFilter::between("A", "2024-03-05", ""),
+            Some(31)
+        ));
+        assert!(passes(
+            ColumnFilter::between("A", "2024-03-10", "2024-03-05"),
+            Some(7)
+        ));
+        assert_eq!(test(FilterKind::Date, Between, ""), None);
+        assert_eq!(test(FilterKind::Date, Before, "03/10/2024"), None);
+    }
+
+    #[test]
     fn a_comma_is_the_decimal_point_only_alone() {
         assert_eq!(parse_number("1,5"), Some(1.5));
         assert_eq!(parse_number("1.5"), Some(1.5));
@@ -304,8 +440,40 @@ mod tests {
             ],
         );
         assert_eq!(tests.len(), 1);
-        assert!(passes_all(&Row { name: "Ada", id: 2 }, &columns, &tests));
-        assert!(!passes_all(&Row { name: "Bob", id: 1 }, &columns, &tests));
+        let and = FilterLogic::And;
+        assert!(passes_all(
+            &Row { name: "Ada", id: 2 },
+            &columns,
+            &tests,
+            and
+        ));
+        assert!(!passes_all(
+            &Row { name: "Bob", id: 1 },
+            &columns,
+            &tests,
+            and
+        ));
+    }
+
+    #[test]
+    fn or_keeps_a_row_passing_any_item_of_a_column() {
+        let columns = vec![column("Name").value(|r: &String| r.clone())];
+        let tests = cell_tests(
+            &columns,
+            &[
+                ColumnFilter::new("Name", StartsWith, "a"),
+                ColumnFilter::new("Name", StartsWith, "b"),
+            ],
+        );
+        let pass = |row: &str, logic| passes_all(&row.to_string(), &columns, &tests, logic);
+        assert!(pass("Bob", FilterLogic::Or) && pass("Ada", FilterLogic::Or));
+        assert!(!pass("Cy", FilterLogic::Or) && !pass("Bob", FilterLogic::And));
+        assert!(passes_all(
+            &"Cy".to_string(),
+            &columns,
+            &[],
+            FilterLogic::Or
+        ));
     }
 
     #[test]
@@ -324,5 +492,12 @@ mod tests {
             1
         );
         assert_eq!(filter_of(&filters, "B"), Some(&filters[1]));
+        // A column's second item stays through edits of its first.
+        let two = [filters.clone(), vec![ColumnFilter::new("A", Equals, "z")]].concat();
+        assert_eq!(
+            with_filter(&two, "A", None),
+            [two[1].clone(), two[2].clone()]
+        );
+        assert_eq!(without_column(&two, "A"), [two[1].clone()]);
     }
 }

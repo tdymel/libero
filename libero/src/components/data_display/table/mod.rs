@@ -23,7 +23,7 @@ mod window;
 
 pub use cell_value::{CellAlign, CellValue, FilterKind, SortDirection, SortKey};
 pub use column::{Column, ColumnDefaults, ColumnHeader, ColumnType, TypedColumnHeader, column};
-pub use column_filter::{ColumnFilter, FilterOperator};
+pub use column_filter::{ColumnFilter, FilterLogic, FilterOperator};
 pub use core::{RowFn, TableSort};
 pub use csv::{table_csv, table_text};
 pub use pinning::{PinSide, PinnedColumns};

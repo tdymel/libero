@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use super::{
     column::Column,
-    column_filter::{CellTest, passes_all},
+    column_filter::{CellTest, FilterLogic, passes_all},
     use_table::StateSlice,
 };
 use crate::{
@@ -89,6 +89,7 @@ type FilterInput<T> = (
     Vec<usize>,
     Vec<String>,
     Vec<(usize, CellTest)>,
+    FilterLogic,
 );
 
 impl<T> Default for FilteredRows<T> {
@@ -109,26 +110,28 @@ impl<T: PartialEq> FilteredRows<T> {
         searched: &[usize],
         words: &[String],
         tests: &[(usize, CellTest)],
+        logic: FilterLogic,
     ) -> Option<Rc<Vec<bool>>> {
         if words.is_empty() && tests.is_empty() {
             *self = Self::default();
             return None;
         }
-        let fresh = self
-            .input
-            .as_ref()
-            .is_some_and(|(rows, cols, cells, query, checks)| {
-                query == words
-                    && checks == tests
-                    && cells == searched
-                    && cols.as_slice() == columns
-                    && (Rc::ptr_eq(rows, data) || rows == data)
-            });
+        let fresh =
+            self.input
+                .as_ref()
+                .is_some_and(|(rows, cols, cells, query, checks, joined)| {
+                    query == words
+                        && checks == tests
+                        && *joined == logic
+                        && cells == searched
+                        && cols.as_slice() == columns
+                        && (Rc::ptr_eq(rows, data) || rows == data)
+                });
         if !fresh {
             let mut kept = quick_filter(data, columns, searched, words);
             if !tests.is_empty() {
                 for (keep, row) in kept.iter_mut().zip(data.iter()) {
-                    *keep = *keep && passes_all(row, columns, tests);
+                    *keep = *keep && passes_all(row, columns, tests, logic);
                 }
             }
             self.kept = Rc::new(kept);
@@ -138,6 +141,7 @@ impl<T: PartialEq> FilteredRows<T> {
                 searched.to_vec(),
                 words.to_vec(),
                 tests.to_vec(),
+                logic,
             ));
         }
         Some(self.kept.clone())
@@ -215,17 +219,28 @@ mod tests {
         let mut filtered = FilteredRows::default();
         let words = query_words("york");
         let first = filtered
-            .kept(&data, &columns, &[0, 1], &words, &[])
+            .kept(&data, &columns, &[0, 1], &words, &[], FilterLogic::And)
             .unwrap();
         let again = filtered
-            .kept(&data, &columns, &[0, 1], &words, &[])
+            .kept(&data, &columns, &[0, 1], &words, &[], FilterLogic::And)
             .unwrap();
         assert!(Rc::ptr_eq(&first, &again));
         let other = filtered
-            .kept(&data, &columns, &[0, 1], &query_words("ada"), &[])
+            .kept(
+                &data,
+                &columns,
+                &[0, 1],
+                &query_words("ada"),
+                &[],
+                FilterLogic::And,
+            )
             .unwrap();
         assert_eq!(*other, [true, false, false]);
-        assert!(filtered.kept(&data, &columns, &[0, 1], &[], &[]).is_none());
+        assert!(
+            filtered
+                .kept(&data, &columns, &[0, 1], &[], &[], FilterLogic::And)
+                .is_none()
+        );
     }
 
     #[test]
@@ -239,11 +254,18 @@ mod tests {
         );
         let mut filtered = FilteredRows::default();
         let only_tests = filtered
-            .kept(&data, &columns, &[0, 1], &[], &tests)
+            .kept(&data, &columns, &[0, 1], &[], &tests, FilterLogic::And)
             .unwrap();
         assert_eq!(*only_tests, [true, true, false]);
         let both = filtered
-            .kept(&data, &columns, &[0, 1], &query_words("alan"), &tests)
+            .kept(
+                &data,
+                &columns,
+                &[0, 1],
+                &query_words("alan"),
+                &tests,
+                FilterLogic::And,
+            )
             .unwrap();
         assert_eq!(*both, [false, true, false]);
     }

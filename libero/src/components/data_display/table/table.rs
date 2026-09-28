@@ -26,7 +26,7 @@ use crate::{
 
 use super::{
     column::{Column, ColumnDefaults},
-    column_filter::{ColumnFilter, cell_tests},
+    column_filter::{ColumnFilter, FilterLogic, cell_tests},
     column_menu::{ColumnMenu, MenuColumn},
     column_order::{moved, order_unpinned},
     core::{
@@ -668,6 +668,16 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// The column filters a filter popover or a header filter asks for.
     #[props(default)]
     oncolumnfilterschange: Option<EventHandler<Vec<ColumnFilter>>>,
+    /// How the column filters join: a row passes all of them, or any one.
+    /// Set, it is controlled. A column may hold several filters.
+    #[props(default)]
+    filter_logic: Option<FilterLogic>,
+    /// Seeds the filter logic once. Ignored when `filter_logic` is set.
+    #[props(default)]
+    default_filter_logic: FilterLogic,
+    /// The filter logic a pick asks for.
+    #[props(default)]
+    onfilterlogicchange: Option<EventHandler<FilterLogic>>,
     /// A row of filter fields under the headers, one per `filterable` column.
     #[props(default)]
     header_filters: bool,
@@ -732,6 +742,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         column_filters: props.column_filters,
         default_column_filters: props.default_column_filters,
         oncolumnfilterschange: props.oncolumnfilterschange,
+        filter_logic: props.filter_logic,
+        default_filter_logic: props.default_filter_logic,
+        onfilterlogicchange: props.onfilterlogicchange,
         pinned_columns: props.pinned_columns,
         default_pinned_columns: props.default_pinned_columns,
         onpinnedcolumnschange: props.onpinnedcolumnschange,
@@ -977,9 +990,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let tests = cell_tests(&props.columns, &state.column_filters.read());
     let kept = match props.manual_filter {
         true => None,
-        false => filtered
-            .write()
-            .kept(&data, &props.columns, &searched, &words, &tests),
+        false => filtered.write().kept(
+            &data,
+            &props.columns,
+            &searched,
+            &words,
+            &tests,
+            state.filter_logic.read(),
+        ),
     };
     let selection = look.map(|look| {
         let keys: Rc<[String]> = (0..data.len()).map(&key_of).collect();

@@ -610,13 +610,6 @@ pub(super) fn body_rows(
         detail,
         reorder: slot,
     } = row;
-    let detail = detail.map(|(id, body)| {
-        rsx! {
-            tr { key: "{key}-detail", id, "data-detail": true,
-                td { colspan: "{columns}", {body} }
-            }
-        }
-    });
     let content = rsx! {
             {toggle}
             {select}
@@ -648,22 +641,29 @@ pub(super) fn body_rows(
                 }
             }
     };
-    let row = match (reorder, slot) {
-        (Some(reorder), Some(ReorderSlot { slot, label })) => rsx! {
-            ReorderRow {
-                key: "{key}",
-                slot,
-                label,
-                disabled: reorder.disabled,
-                instructions: reorder.instructions.clone(),
-                states,
-                stripe,
-                selected,
-                attributes,
-                {content}
-            }
-        },
-        _ => rsx! {
+    let (row, detail) = match (reorder, slot) {
+        // The row draws its detail row: it moves with the row.
+        (Some(reorder), Some(ReorderSlot { slot, label })) => (
+            rsx! {
+                ReorderRow {
+                    key: "{key}",
+                    slot,
+                    label,
+                    disabled: reorder.disabled,
+                    instructions: reorder.instructions.clone(),
+                    states,
+                    stripe,
+                    selected,
+                    attributes,
+                    detail,
+                    columns,
+                    {content}
+                }
+            },
+            None,
+        ),
+        _ => (
+            rsx! {
             tr {
                 key: "{key}",
                 "data-state": states,
@@ -672,7 +672,15 @@ pub(super) fn body_rows(
                 ..attributes,
                 {content}
             }
-        },
+            },
+            detail.map(|(id, body)| {
+                rsx! {
+                    tr { key: "{key}-detail", id, "data-detail": true,
+                        td { colspan: "{columns}", {body} }
+                    }
+                }
+            }),
+        ),
     };
     std::iter::once(row).chain(detail)
 }

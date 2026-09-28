@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use super::{
-    column_filter::ColumnFilter, core::TableSort, pinning::PinnedColumns, resize::ColumnWidths,
+    column_filter::{ColumnFilter, FilterLogic},
+    core::TableSort,
+    pinning::PinnedColumns,
+    resize::ColumnWidths,
 };
 use crate::utils::warn;
 
@@ -103,6 +106,9 @@ pub(crate) struct TableConfig {
     pub column_filters: Option<Vec<ColumnFilter>>,
     pub default_column_filters: Vec<ColumnFilter>,
     pub oncolumnfilterschange: Option<EventHandler<Vec<ColumnFilter>>>,
+    pub filter_logic: Option<FilterLogic>,
+    pub default_filter_logic: FilterLogic,
+    pub onfilterlogicchange: Option<EventHandler<FilterLogic>>,
     pub pinned_columns: Option<PinnedColumns>,
     pub default_pinned_columns: PinnedColumns,
     pub onpinnedcolumnschange: Option<EventHandler<PinnedColumns>>,
@@ -131,6 +137,7 @@ pub(crate) struct TableState {
     /// The quick filter's text.
     pub quick_filter: StateSlice<String>,
     pub column_filters: StateSlice<Vec<ColumnFilter>>,
+    pub filter_logic: StateSlice<FilterLogic>,
     pub pinned_columns: StateSlice<PinnedColumns>,
     /// The keys of the rows whose detail shows.
     pub expanded: StateSlice<Vec<String>>,
@@ -183,6 +190,12 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.oncolumnfilterschange,
         "Table: a controlled `column_filters` without `oncolumnfilterschange` never changes.",
     );
+    let filter_logic = use_state_slice(
+        config.filter_logic,
+        || config.default_filter_logic,
+        config.onfilterlogicchange,
+        "Table: a controlled `filter_logic` without `onfilterlogicchange` never changes.",
+    );
     let pinned_columns = use_state_slice(
         config.pinned_columns,
         || config.default_pinned_columns,
@@ -217,6 +230,7 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         hidden_columns,
         quick_filter,
         column_filters,
+        filter_logic,
         pinned_columns,
         expanded,
     }

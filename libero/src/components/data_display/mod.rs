@@ -41,8 +41,9 @@ pub use qr_code::{QrCode, QrCodeProps};
 pub use sortable::{Sortable, SortableItem, SortableItemPart, SortableItemProps, SortableProps};
 pub use table::{
     CellAlign, CellValue, Column, ColumnDefaults, ColumnFilter, ColumnHeader, ColumnType,
-    ColumnWidths, FilterKind, FilterOperator, PinSide, PinnedColumns, RowFn, SortDirection,
-    SortKey, Table, TableProps, TableSort, TypedColumnHeader, column, table_csv, table_text,
+    ColumnWidths, FilterKind, FilterLogic, FilterOperator, PinSide, PinnedColumns, RowFn,
+    SortDirection, SortKey, Table, TableProps, TableSort, TypedColumnHeader, column, table_csv,
+    table_text,
 };
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelinePart, TimelineProps};
 pub use video::{MediaTrack, TrackKind, Video, VideoPart, VideoProps};

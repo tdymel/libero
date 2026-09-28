@@ -611,6 +611,59 @@ e2e::scenario!(
     the_column_filters_narrow_the_rows
 );
 
+/// 1401: a date header filter keeps the typed day; the menu's Filter set to
+/// Between keeps the days from its From field on, the To field left open.
+async fn a_date_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const DUE: &str = "input[aria-label=\"Filter Due\"]";
+    const POPOVER: &str = "[data-filter-popover]";
+    if d.attr(DUE, "type").await?.as_deref() != Some("date") {
+        bail!("the Due header filter is no date input");
+    }
+    // Chromium's en-US date input takes month, day, then year.
+    d.click(DUE).await?;
+    d.type_text("03102024").await?;
+    eventually_text(d, "#filters", "Equals 2024-03-10..", "a typed day").await?;
+    eventually_text(d, "tbody th", "Grape", "Due on the 10th").await?;
+
+    d.click("[aria-label=\"Due column options\"]").await?;
+    eventually_focused(d, "[role=menuitem]", "the opened column menu").await?;
+    d.press(keyboard::HOME).await?;
+    eventually_text(d, "[role=menuitem]:focus", "Filter", "Home").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "the opened filter", async |d| d.exists(POPOVER).await).await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, &format!("{POPOVER} select"), "Shift+Tab").await?;
+    // Equals, then Does not equal, Before, After, On or before, On or after, Between.
+    for _ in 0..6 {
+        d.press(keyboard::ARROW_DOWN).await?;
+    }
+    eventually_text(
+        d,
+        "#filters",
+        "Between 2024-03-10..",
+        "Between from the 10th",
+    )
+    .await?;
+    eventually(d, "the 10th, 15th and 20th", async |d| {
+        Ok(d.exists("tbody tr:nth-child(3)").await?
+            && !d.exists("tbody tr:nth-child(4)").await?
+            && d.text("tbody tr:first-child th").await? == "Grape")
+    })
+    .await?;
+    let fields = d.text(POPOVER).await?;
+    if !(fields.contains("From") && fields.contains("To")) {
+        bail!("Between shows no From and To fields: {fields:?}");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_date_filter_narrows_a_table,
+    "/table/date-filter",
+    a_date_filter_narrows_the_rows,
+    android: skip("Chromium's typed date segments only")
+);
+
 /// 1156-0b: with `row_key`, a row prepended on top leaves the others' nodes alone.
 #[test]
 fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {

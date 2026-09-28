@@ -9,7 +9,10 @@ use libero::{
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/table-reorder", || rsx! { ReorderTablePage {} })];
+pub const ROUTES: Routes = &[
+    ("/table-reorder", || rsx! { ReorderTablePage {} }),
+    ("/table-reorder-detail", || rsx! { ReorderDetailPage {} }),
+];
 
 #[derive(Clone, PartialEq)]
 struct Fruit {
@@ -58,5 +61,32 @@ fn ReorderTablePage() -> Element {
         p { id: "order", {order.join(" ")} }
         p { id: "moves", "{moves}" }
         p { id: "columns", {columns.read().join(" ")} }
+    }
+}
+
+/// Cherry's detail open, a tall one: it moves with its row (1397).
+#[component]
+fn ReorderDetailPage() -> Element {
+    let mut rows = use_signal(fruit);
+    let order: Vec<&str> = rows.read().iter().map(|fruit| fruit.name).collect();
+    rsx! {
+        Table {
+            aria_label: "Fruit",
+            data: rows(),
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()).row_header(),
+                column("Stock").value(|fruit: &Fruit| fruit.stock),
+            ],
+            row_key: |fruit: &Fruit| fruit.name.to_string(),
+            row_detail: |fruit: &Fruit| {
+                let origin = fruit.origin;
+                Some(rsx! {
+                    p { style: "height: 80px; margin: 0", "From {origin}" }
+                })
+            },
+            default_expanded: vec!["Cherry".to_string()],
+            onrowreorder: move |step: SortableMove| step.apply(&mut rows.write()),
+        }
+        p { id: "order", {order.join(" ")} }
     }
 }

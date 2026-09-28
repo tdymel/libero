@@ -3,7 +3,7 @@ use pictogram_icons_lucide as lucide;
 
 use super::{
     cell_value::FilterKind,
-    column_filter::{ColumnFilter, FilterOperator, filter_of, with_filter},
+    column_filter::{ColumnFilter, FilterOperator, filter_of, with_filter, without_column},
     use_table::StateSlice,
 };
 use crate::{
@@ -57,13 +57,28 @@ fn operator_of(filters: &[ColumnFilter], column: &str, kind: FilterKind) -> Filt
     filter_of(filters, column).map_or(FilterOperator::of(kind)[0], |filter| filter.operator)
 }
 
-/// Writes `column`'s filter value, keeping its operator. Emptied with the
-/// default operator, the item goes: it holds nothing worth keeping.
-fn commit(slice: StateSlice<Vec<ColumnFilter>>, column: &str, kind: FilterKind, value: String) {
+/// Writes `column`'s filter value, or with `to` its `value_to`, keeping the
+/// rest. Emptied with the default operator, the item goes: it holds nothing worth keeping.
+fn commit(
+    slice: StateSlice<Vec<ColumnFilter>>,
+    column: &str,
+    kind: FilterKind,
+    to: bool,
+    value: String,
+) {
     let filters = slice.peek();
     let operator = operator_of(&filters, column, kind);
-    let next = (!value.is_empty() || operator != FilterOperator::of(kind)[0])
-        .then(|| ColumnFilter::new(column, operator, value));
+    let mut next = filter_of(&filters, column)
+        .cloned()
+        .unwrap_or_else(|| ColumnFilter::new(column, operator, ""));
+    match to {
+        true => next.value_to = value,
+        false => next.value = value,
+    }
+    let keeps = !next.value.is_empty()
+        || !next.value_to.is_empty()
+        || operator != FilterOperator::of(kind)[0];
+    let next = keeps.then_some(next);
     if filter_of(&filters, column) != next.as_ref() {
         slice.set(with_filter(&filters, column, next));
     }
@@ -91,6 +106,8 @@ pub(super) struct FilterEditor {
     pub ontext: Callback<String>,
     /// A boolean pick, applied at once; `None` is any.
     pub onpick: Callback<Option<bool>>,
+    /// A date field's change, applied at once: `true` for `Between`'s last day.
+    pub onday: Callback<(bool, String)>,
 }
 
 pub(super) fn use_filter_editor(target: &FilterTarget) -> FilterEditor {
@@ -110,7 +127,7 @@ pub(super) fn use_filter_editor(target: &FilterTarget) -> FilterEditor {
                 if draft.peek().as_ref() != Some(&text) {
                     return;
                 }
-                commit(slice, &column, kind, text);
+                commit(slice, &column, kind, false, text);
                 draft.set(None);
                 onfilter.call(());
             },
@@ -121,6 +138,13 @@ pub(super) fn use_filter_editor(target: &FilterTarget) -> FilterEditor {
         draft.set(Some(text.clone()));
         apply.call(text);
     });
+    let onday = {
+        let column = column.clone();
+        use_callback(move |(to, text): (bool, String)| {
+            commit(slice, &column, kind, to, text);
+            onfilter.call(());
+        })
+    };
     let onpick = use_callback(move |on: Option<bool>| {
         let next =
             on.map(|on| ColumnFilter::new(column.clone(), FilterOperator::Is, on.to_string()));
@@ -131,6 +155,7 @@ pub(super) fn use_filter_editor(target: &FilterTarget) -> FilterEditor {
         draft,
         ontext,
         onpick,
+        onday,
     }
 }
 
@@ -190,6 +215,41 @@ pub(super) fn FilterValue(
     }
     if !operator.takes_value() {
         return rsx! {};
+    }
+    if kind == FilterKind::Date {
+        let (from, to) = current.map_or_else(Default::default, |filter| {
+            (filter.value.clone(), filter.value_to.clone())
+        });
+        // A native date input on the web and Android; Blitz takes the ISO day typed.
+        let day = |end: bool, value: String, label: Option<String>, aria_label: Option<String>| {
+            rsx! {
+                TextField {
+                    label,
+                    aria_label,
+                    size,
+                    value,
+                    r#type: "date",
+                    "data-filter-value": (!end).then_some(true),
+                    oninput: move |text: String| editor.onday.call((end, text)),
+                }
+            }
+        };
+        if operator != FilterOperator::Between {
+            return day(false, from, label, aria_label);
+        }
+        let named = |end: &str| match &label {
+            Some(_) => (Some(end.to_string()), None),
+            None => (
+                None,
+                Some(format!("{}, {end}", (labels.filter_column)(&column))),
+            ),
+        };
+        let ((from_label, from_aria), (to_label, to_aria)) =
+            (named(labels.date_from), named(labels.date_to));
+        return rsx! {
+            {day(false, from, from_label, from_aria)}
+            {day(true, to, to_label, to_aria)}
+        };
     }
     let text = draft
         .or_else(|| current.map(|filter| filter.value.clone()))
@@ -343,11 +403,14 @@ pub(super) fn FilterPopover(
                                     .or_else(|| filter_of(&filters, &column).map(|f| f.value.clone()))
                                     .unwrap_or_default();
                                 draft.set(None);
-                                slice.set(with_filter(
-                                    &filters,
-                                    &column,
-                                    Some(ColumnFilter::new(column.clone(), choice.value, value)),
-                                ));
+                                let value_to = filter_of(&filters, &column)
+                                    .map(|f| f.value_to.clone())
+                                    .unwrap_or_default();
+                                let next = ColumnFilter {
+                                    value_to,
+                                    ..ColumnFilter::new(column.clone(), choice.value, value)
+                                };
+                                slice.set(with_filter(&filters, &column, Some(next)));
                                 onfilter.call(());
                             },
                         }
@@ -367,7 +430,7 @@ pub(super) fn FilterPopover(
                         disabled: filter.is_none(),
                         onclick: move |_| {
                             draft.set(None);
-                            slice.set(with_filter(&slice.peek(), &clear_column, None));
+                            slice.set(without_column(&slice.peek(), &clear_column));
                             onfilter.call(());
                         },
                         "{labels.clear_filter}"
@@ -413,5 +476,10 @@ fn operator_key(operator: FilterOperator) -> &'static str {
         IsEmpty => "is-empty",
         IsNotEmpty => "is-not-empty",
         Is => "is",
+        Before => "before",
+        After => "after",
+        OnOrBefore => "on-or-before",
+        OnOrAfter => "on-or-after",
+        Between => "between",
     }
 }

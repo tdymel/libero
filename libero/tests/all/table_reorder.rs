@@ -3,7 +3,7 @@ use crate::common::{body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Column, SortDirection, Table, TableSort, column},
+    components::{Column, ColumnFilter, FilterOperator, SortDirection, Table, TableSort, column},
 };
 
 #[derive(Clone, PartialEq)]
@@ -127,4 +127,30 @@ fn row_reorder_is_off_while_sorted() {
     let body = body(&html);
 
     assert_eq!(body.matches(" disabled").count(), 9, "{body}");
+}
+
+/// A column filter hides rows from the slots: nothing moves (1396).
+#[test]
+fn row_reorder_is_off_under_a_column_filter() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    data: people(),
+                    columns: columns(),
+                    row_key: |row: &Person| row.name.to_string(),
+                    default_column_filters: vec![ColumnFilter::new("Age", FilterOperator::GreaterThan, "30")],
+                    onrowreorder: |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    // Two rows left, three controls each.
+    assert!(!body.contains(">Linus<"), "{body}");
+    assert_eq!(body.matches(" disabled").count(), 6, "{body}");
 }

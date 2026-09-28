@@ -35,6 +35,7 @@ pub enum FilterKind {
     Text,
     Number,
     Boolean,
+    Date,
 }
 
 /// What a cell sorts by. `Text` is pre-lowercased, so a comparison during the
@@ -143,6 +144,27 @@ macro_rules! numeric_cell_value {
 
 numeric_cell_value!(i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, f32, f64);
 
+/// Printed as `2024-03-09`; give the column a `.format` for a local form.
+impl CellValue for chrono::NaiveDate {
+    fn cell_text(&self) -> String {
+        self.format("%Y-%m-%d").to_string()
+    }
+
+    fn sort_key(&self) -> SortKey {
+        SortKey::num(date_number(*self))
+    }
+
+    fn filter_kind() -> FilterKind {
+        FilterKind::Date
+    }
+}
+
+/// A day as the number it sorts and filters by.
+pub(super) fn date_number(date: chrono::NaiveDate) -> f64 {
+    use chrono::Datelike;
+    f64::from(date.num_days_from_ce())
+}
+
 /// `None` renders empty and sorts last, but keeps the inner type's alignment.
 impl<V: CellValue> CellValue for Option<V> {
     fn cell_text(&self) -> String {
@@ -203,6 +225,17 @@ mod tests {
         assert_eq!(
             <Option<bool> as CellValue>::filter_kind(),
             FilterKind::Boolean
+        );
+    }
+
+    #[test]
+    fn dates_print_iso_and_sort_by_day() {
+        let day = |d| chrono::NaiveDate::from_ymd_opt(2024, 3, d).unwrap();
+        assert_eq!(day(9).cell_text(), "2024-03-09");
+        assert!(day(9).sort_key().compare(&day(10).sort_key()).is_lt());
+        assert_eq!(
+            <chrono::NaiveDate as CellValue>::filter_kind(),
+            FilterKind::Date
         );
     }
 

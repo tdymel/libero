@@ -106,6 +106,8 @@ struct Registered {
     id: usize,
     element: Mounted,
     handle: Mounted,
+    /// A sibling node the item spans to, a table row's open detail row.
+    extent: Mounted,
     label: Option<String>,
 }
 
@@ -182,51 +184,77 @@ struct SortableContext {
     onstep: Callback<(usize, bool)>,
 }
 
-/// Every item's position read, started at once: see `ElementApi::dimensions`.
-type Reads = Vec<(Read<(f64, f64)>, Read<Dimensions>)>;
+/// One node's position read, started at once: see `ElementApi::dimensions`.
+type NodeRead = (Read<(f64, f64)>, Read<Dimensions>);
 
-/// Each item's mounted node and handle, in order; `None` while a slot is empty.
-fn mounted(registry: &[Option<Registered>]) -> Option<Vec<(Rc<MountedData>, Mounted)>> {
+/// Every item's read, and its extent's.
+type Reads = Vec<(NodeRead, Option<NodeRead>)>;
+
+/// An item's mounted node, handle and extent.
+type MountedItem = (Rc<MountedData>, Mounted, Mounted);
+
+/// Each item's mounted nodes, in order; `None` while a slot is empty.
+fn mounted(registry: &[Option<Registered>]) -> Option<Vec<MountedItem>> {
     registry
         .iter()
         .map(|item| {
             let item = item.as_ref()?;
-            Some((item.element.clone()?, item.handle.clone()))
+            Some((
+                item.element.clone()?,
+                item.handle.clone(),
+                item.extent.clone(),
+            ))
         })
         .collect()
 }
 
-fn start_reads(items: &[(Rc<MountedData>, Mounted)]) -> Reads {
+fn read_node(node: &Rc<MountedData>) -> NodeRead {
+    let node = platform::element(node);
+    (node.client_offset(), node.dimensions())
+}
+
+fn start_reads(items: &[MountedItem]) -> Reads {
     items
         .iter()
-        .map(|(item, _)| {
-            let item = platform::element(item);
-            (item.client_offset(), item.dimensions())
-        })
+        .map(|(item, _, extent)| (read_node(item), extent.as_ref().map(read_node)))
         .collect()
 }
 
-/// The spans along the flow, `None` when a read failed.
+/// A node's span along the flow, `None` when a read failed.
+async fn node_span((offset, size): NodeRead, vertical: bool, flipped: bool) -> Option<Span> {
+    let (Ok((x, y)), Ok(size)) = (offset.await, size.await) else {
+        return None;
+    };
+    Some(match (vertical, flipped) {
+        (true, _) => Span {
+            start: y,
+            size: size.height,
+        },
+        (false, false) => Span {
+            start: x,
+            size: size.width,
+        },
+        (false, true) => Span {
+            start: -(x + size.width),
+            size: size.width,
+        },
+    })
+}
+
+/// The spans along the flow, each item's up to its extent's far edge; `None` when a read failed.
 async fn spans(reads: Reads, vertical: bool, flipped: bool) -> Option<Vec<Span>> {
     let mut spans = Vec::with_capacity(reads.len());
-    for (offset, size) in reads {
-        let (Ok((x, y)), Ok(size)) = (offset.await, size.await) else {
-            return None;
-        };
-        spans.push(match (vertical, flipped) {
-            (true, _) => Span {
-                start: y,
-                size: size.height,
-            },
-            (false, false) => Span {
-                start: x,
-                size: size.width,
-            },
-            (false, true) => Span {
-                start: -(x + size.width),
-                size: size.width,
-            },
-        });
+    for (item, extent) in reads {
+        let mut span = node_span(item, vertical, flipped).await?;
+        if let Some(extent) = extent {
+            let extent = node_span(extent, vertical, flipped).await?;
+            let start = span.start.min(extent.start);
+            span = Span {
+                start,
+                size: span.end().max(extent.end()) - start,
+            };
+        }
+        spans.push(span);
     }
     Some(spans)
 }
@@ -647,6 +675,16 @@ pub(crate) fn use_labelled_sortable_item(
     index: usize,
     label: Option<String>,
 ) -> SortableItemHandle {
+    use_spanning_sortable_item(index, label, None)
+}
+
+/// [`use_labelled_sortable_item`] whose item runs on to `extent`, a sibling
+/// node after it that moves with it: measured as one span.
+pub(crate) fn use_spanning_sortable_item(
+    index: usize,
+    label: Option<String>,
+    extent: Option<ElementHandle>,
+) -> SortableItemHandle {
     let context = try_use_context::<SortableContext>()
         .expect("use_sortable_item: no `use_sortable` list above this component.");
     let element = use_element();
@@ -665,8 +703,12 @@ pub(crate) fn use_labelled_sortable_item(
     let mut refocus = context.refocus;
     let mut count = context.count;
     // After the mount and every reorder: the DOM is in its new order by then.
-    use_effect(use_reactive!(|index, label| {
-        let _ = (element.mount_token(), handle.mount_token());
+    use_effect(use_reactive!(|index, label, extent| {
+        let _ = (
+            element.mount_token(),
+            handle.mount_token(),
+            extent.map(|extent| extent.mount_token()),
+        );
         let mut items = registry.write();
         let before = slot.replace(Some(index));
         if let Some(old) = before
@@ -681,6 +723,7 @@ pub(crate) fn use_labelled_sortable_item(
             id,
             element: element.mounted(),
             handle: handle.mounted(),
+            extent: extent.and_then(|extent| extent.mounted()),
             label: label.clone(),
         });
         trim(&mut items);

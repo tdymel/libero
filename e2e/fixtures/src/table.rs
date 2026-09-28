@@ -5,6 +5,7 @@
 //! column filters through menus and header filters; a windowed one of 10k rows.
 
 use dioxus::prelude::*;
+use libero::chrono::NaiveDate;
 use libero::components::{
     ColumnDefaults, ColumnFilter, PinnedColumns, SortDirection, States, Table, TableSort, column,
 };
@@ -31,6 +32,7 @@ pub const ROUTES: Routes = &[
     ),
     ("/table/filter", || rsx! { FilterTablePage {} }),
     ("/table/column-filter", || rsx! { ColumnFilterTablePage {} }),
+    ("/table/date-filter", || rsx! { DateFilterTablePage {} }),
     ("/table/pinned", || rsx! { PinnedTablePage { rtl: false } }),
     (
         "/table/pinned-rtl",
@@ -101,6 +103,49 @@ fn ColumnFilterTablePage() -> Element {
                 let text: Vec<String> = next
                     .iter()
                     .map(|filter| format!("{} {:?} {}", filter.column, filter.operator, filter.value))
+                    .collect();
+                filters.set(text.join("; "));
+            },
+        }
+        p { id: "filters", "{filters}" }
+    }
+}
+
+/// Five deliveries due on the 1st, 5th, 10th, 15th and 20th of March 2024, with
+/// a date column's menu and header filter (1401); `#filters` echoes the change.
+#[component]
+fn DateFilterTablePage() -> Element {
+    #[derive(Clone, PartialEq)]
+    struct Delivery {
+        name: &'static str,
+        due: NaiveDate,
+    }
+    let mut filters = use_signal(String::new);
+    let data: Vec<Delivery> = ["Fig", "Apple", "Grape", "Cherry", "Elder"]
+        .into_iter()
+        .zip([1, 5, 10, 15, 20])
+        .filter_map(|(name, day)| {
+            Some(Delivery {
+                name,
+                due: NaiveDate::from_ymd_opt(2024, 3, day)?,
+            })
+        })
+        .collect();
+    rsx! {
+        Table {
+            caption: "Deliveries",
+            data,
+            columns: vec![
+                column("Name").value(|row: &Delivery| row.name.to_string()).row_header(),
+                column("Due").value(|row: &Delivery| row.due),
+            ],
+            row_key: |row: &Delivery| row.name.to_string(),
+            column_menu: true,
+            header_filters: true,
+            oncolumnfilterschange: move |next: Vec<ColumnFilter>| {
+                let text: Vec<String> = next
+                    .iter()
+                    .map(|filter| format!("{:?} {}..{}", filter.operator, filter.value, filter.value_to))
                     .collect();
                 filters.set(text.join("; "));
             },

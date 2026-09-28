@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use super::super::sortable::{
-    SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, SortableMove, SortableOptions,
-    use_labelled_sortable_item, use_sortable,
+    SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, SortableMove, SortableOptions, use_sortable,
+    use_spanning_sortable_item,
 };
 use crate::{
     CssLayer,
@@ -12,7 +12,7 @@ use crate::{
         common::{Glyph, Orientation},
     },
     context::IconSlot,
-    hooks::{current_localization, use_css, use_media_query},
+    hooks::{current_localization, use_css, use_element, use_media_query},
     localization::{TableLabels, fill},
     platform::moves_table_rows,
 };
@@ -118,9 +118,18 @@ pub(super) fn ReorderRow(
     stripe: bool,
     selected: Option<bool>,
     attributes: Vec<Attribute>,
+    /// While open: the detail row's id and body, and the table's column count.
+    detail: Option<(String, Element)>,
+    columns: usize,
     children: Element,
 ) -> Element {
-    let item = use_labelled_sortable_item(slot, Some(label.clone()));
+    // The open detail row moves with its row, one span with it.
+    let extent = use_element();
+    let item = use_spanning_sortable_item(
+        slot,
+        Some(label.clone()),
+        detail.is_some().then_some(extent),
+    );
     let words = current_localization().sortable;
     let named = |template: &str| fill(template, &[("label", &label)]);
     let handle_class = use_css(Some(&SORTABLE_HANDLE_SX), CssLayer::Framework);
@@ -132,10 +141,23 @@ pub(super) fn ReorderRow(
     // At rest no transform: it would make each row a stacking context under the sticky cells.
     let style = item.style();
     let moving = item.offset() != 0.0 || style.contains("animation");
+    let style = (moves_table_rows() && moving).then_some(style);
+    let detail = detail.map(|(id, body)| {
+        rsx! {
+            tr {
+                id,
+                onmounted: extent.mount(),
+                style: style.clone(),
+                "data-detail": true,
+                "data-dragging": (item.dragging)().then_some(true),
+                td { colspan: "{columns}", {body} }
+            }
+        }
+    });
     rsx! {
         tr {
             onmounted: item.element.mount(),
-            style: (moves_table_rows() && moving).then_some(style),
+            style,
             "data-state": states,
             "data-stripe": stripe.then_some(true),
             "data-dragging": (item.dragging)().then_some(true),
@@ -187,5 +209,6 @@ pub(super) fn ReorderRow(
             }
             {children}
         }
+        {detail}
     }
 }
