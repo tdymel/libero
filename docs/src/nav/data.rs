@@ -55,7 +55,7 @@ pub fn page_actions(section: Signal<Option<String>>) -> Vec<SpotlightAction> {
             // The section is a keyword too: "Accessibility" finds its "Overview".
             action.keywords = group
                 .into_iter()
-                .chain(aliases(label).iter().copied())
+                .chain(aliases(group, label).iter().copied())
                 .map(str::to_string)
                 .collect();
             action.group = group.map(str::to_string);
@@ -105,35 +105,93 @@ pub fn page_label(route: &Route) -> Option<&'static str> {
         .map(|(_, label, _)| label)
 }
 
-// Hidden search names other libraries use for a page, by its label. Add a row to extend.
-fn aliases(label: &str) -> &'static [&'static str] {
+// Pages sharing a label ("Getting started", "Overview") get theirs by section.
+fn aliases(group: Option<&str>, label: &str) -> &'static [&'static str] {
+    match (group, label) {
+        (Some("About"), "Getting started") => &[
+            "install",
+            "installation",
+            "setup",
+            "quick start",
+            "introduction",
+            "cargo add",
+        ],
+        (Some("Form"), "Getting started") => &["forms", "use_field", "validation", "form state"],
+        (Some("Accessibility"), "Overview") => &[
+            "a11y",
+            "aria",
+            "screen reader",
+            "keyboard navigation",
+            "wcag",
+        ],
+        (Some("Hooks"), "Overview") => &["hooks", "use_", "utilities"],
+        _ => label_aliases(label),
+    }
+}
+
+// Hidden search names other libraries use for a page, and related words, by its label.
+fn label_aliases(label: &str) -> &'static [&'static str] {
     match label {
-        "Box" => &["div"],
-        "Paper" => &["card", "surface"],
-        "Flex" => &["stack", "row", "column", "group"],
-        "Grid" => &["simple grid", "layout"],
-        "Center" => &["centre"],
-        "Container" => &["max width"],
+        "Philosophy" => &["principles", "design goals", "vision"],
+        "Styling" => &["css", "sx", "style props", "class", "custom styles"],
+        "Theming" => &[
+            "theme",
+            "colors",
+            "colours",
+            "palette",
+            "design tokens",
+            "css variables",
+            "dark mode",
+        ],
+        "Localization" => &[
+            "i18n",
+            "l10n",
+            "translation",
+            "language",
+            "locale",
+            "internationalization",
+        ],
+        "Providers" => &["context", "provider", "setup", "icon provider"],
+        "Platform" => &["web", "desktop", "mobile", "native", "blitz", "wasm"],
+        "Credits" => &["license", "attribution", "acknowledgements", "thanks"],
+        "Box" => &["div", "element", "polymorphic"],
+        "Paper" => &["card", "surface", "panel", "shadow", "elevation"],
+        "Flex" => &[
+            "stack", "row", "column", "group", "flexbox", "hstack", "vstack",
+        ],
+        "Grid" => &["simple grid", "layout", "css grid", "columns"],
+        "Center" => &["centre", "align", "middle"],
+        "Container" => &["max width", "wrapper", "content width"],
         "AspectRatio" => &["aspect ratio", "ratio"],
         "Divider" => &["separator", "rule", "hr"],
-        "Collapse" => &["expand", "disclosure", "details"],
+        "Collapse" => &["expand", "disclosure", "details", "show hide"],
         "Float" => &["floating"],
         "Header" => &["app bar", "top bar", "navbar"],
-        "Sidebar" => &["navbar", "aside", "app shell"],
+        "Sidebar" => &["navbar", "aside", "app shell", "side nav", "sidenav"],
         "Splitter" => &["resizable", "split pane", "panel group"],
         "Transition" => &["animate", "fade", "slide", "enter", "exit", "motion"],
-        "ScrollArea" => &["scrollbar", "overflow"],
-        "Button" => &["btn"],
+        "ScrollArea" => &["scrollbar", "overflow", "scroll", "custom scrollbar"],
+        "Scroller" => &["horizontal scroll", "scroll buttons", "overflow", "strip"],
+        "Button" => &["btn", "click", "submit"],
         "ActionIcon" => &["icon button", "iconbutton"],
+        "ButtonGroup" => &["button group", "attached buttons", "split button"],
         "Copy" => &["clipboard", "copy"],
         "DirectionToggle" => &["rtl", "ltr", "direction"],
         "Repository" => &["github", "repository"],
         "ThemeSwitcher" => &["dark mode", "color scheme", "light dark"],
         "Tldr" => &["summarize", "summary", "ai", "chatgpt", "claude"],
-        "Form" => &["form field"],
+        "Toolbar" => &["tool bar", "action bar", "button bar"],
+        "Form" => &["form field", "validation", "submit"],
         "Fieldset" => &["group", "legend"],
-        "TextField" => &["input", "text input", "textinput"],
+        "TextField" => &["input", "text input", "textinput", "text box", "textbox"],
         "Textarea" => &["multiline", "text area"],
+        "RichTextEditor" => &[
+            "wysiwyg",
+            "rich text",
+            "text editor",
+            "markdown editor",
+            "contenteditable",
+        ],
         "PasswordField" => &["password input", "secret"],
         "PhoneField" => &["phone input", "tel", "telephone"],
         "NumberField" => &["number input", "numeric", "spinner", "stepper"],
@@ -147,7 +205,7 @@ fn aliases(label: &str) -> &'static [&'static str] {
         "Combobox" => &["combo box", "dropdown", "autocomplete"],
         "Checkbox" => &["check box", "tick"],
         "Chip" => &["tag", "pill", "toggle chip"],
-        "Switch" => &["toggle"],
+        "Switch" => &["toggle", "toggle switch", "on off"],
         "RadioGroup" => &["radio", "radio button", "option group"],
         "SegmentedControl" => &["segmented button", "button group", "toggle group"],
         "Slider" => &["range", "track"],
@@ -172,6 +230,7 @@ fn aliases(label: &str) -> &'static [&'static str] {
             "datetime",
         ],
         "FileField" => &["file input", "upload", "dropzone", "file picker"],
+        "ImageCropper" => &["crop", "cropper", "image crop", "avatar editor"],
         "Anchor" => &["link", "toc", "table of contents"],
         "NavLink" => &["nav item", "menu item", "link"],
         "BottomNavigation" => &["tab bar", "navigation bar", "mobile nav"],
@@ -180,7 +239,7 @@ fn aliases(label: &str) -> &'static [&'static str] {
         "Menubar" => &["menu bar"],
         "Pagination" => &["pager", "paging", "page numbers"],
         "Stepper" => &["steps", "wizard", "progress steps"],
-        "Tree" => &["treeview", "tree view", "hierarchy"],
+        "Tree" => &["treeview", "tree view", "hierarchy", "file tree"],
         "Overlay" => &["backdrop", "scrim"],
         "Modal" => &["dialog", "popup"],
         "Dialog" => &["modal", "alert dialog", "confirm"],
@@ -193,29 +252,45 @@ fn aliases(label: &str) -> &'static [&'static str] {
         "ShortcutHelp" => &["keyboard shortcuts", "hotkeys", "cheat sheet"],
         "Lightbox" => &["image viewer", "gallery", "zoom"],
         "FloatingWindow" => &["window", "draggable", "floating panel"],
-        "Alert" => &["banner", "callout", "message"],
-        "Notifications" => &["toast", "snackbar", "notify"],
+        "Alert" => &["banner", "callout", "message", "notice", "warning"],
+        "Notifications" => &["toast", "snackbar", "notify", "notification"],
         "Loader" => &["spinner", "loading", "activity indicator"],
         "ProgressBar" => &["progress", "meter"],
         "Skeleton" => &["placeholder", "shimmer", "loading"],
-        "Icon" => &["glyph", "icon box"],
-        "Pictogram" => &["svg", "lucide", "inline svg"],
-        "IconProvider" => &["icon set", "icon theme", "swap icons", "lucide"],
+        // "icons" on all three, so "Icon" and "Icons" list the providers too (1445).
+        "Icon" => &["icons", "glyph", "icon box"],
+        "Pictogram" => &["icons", "svg", "lucide", "inline svg", "glyph"],
+        "IconProvider" => &[
+            "icons",
+            "icon provider",
+            "icon set",
+            "icon theme",
+            "swap icons",
+            "lucide",
+            "material",
+            "tabler",
+            "bootstrap",
+            "phosphor",
+        ],
         "Badge" => &["label", "tag", "pill", "chip"],
         "Indicator" => &["dot", "status dot", "notification badge"],
         "Avatar" => &["profile picture", "user picture", "initials"],
         "Image" => &["img", "picture", "photo"],
         "ImageList" => &["gallery", "masonry", "image grid"],
+        "Audio" => &["sound", "music", "audio player", "podcast"],
+        "Video" => &["video player", "movie", "media player", "clip"],
         "Carousel" => &["slideshow", "slider", "swiper"],
         "List" => &["ul", "ol", "bullet list"],
         "DataList" => &["description list", "definition list", "key value"],
-        "Table" => &["data grid", "datagrid", "datatable"],
+        "Sortable" => &["drag and drop", "dnd", "reorder", "sortable list"],
+        "Kanban" => &["board", "task board", "trello", "drag and drop", "columns"],
+        "Table" => &["data grid", "datagrid", "datatable", "spreadsheet", "rows"],
         "Timeline" => &["history", "activity feed"],
         "Accordion" => &["expansion panel", "collapsible", "disclosure"],
         "Marquee" => &["ticker", "scrolling text"],
         "QrCode" => &["qr", "qrcode", "barcode"],
         "Title" => &["heading", "h1", "headline"],
-        "Text" => &["typography", "paragraph"],
+        "Text" => &["typography", "paragraph", "body text", "font"],
         "Mark" => &["highlight"],
         "Code" => &["inline code", "monospace"],
         "Kbd" => &["keyboard", "key", "shortcut"],
@@ -532,7 +607,6 @@ mod tests {
         assert!(hit("Overview") && hit("FocusTrap") && hit("Focus return"));
     }
 
-    /// The a11y hooks moved from Hooks to Accessibility: their old links still land.
     #[test]
     fn the_icon_catalogue_lands_on_its_tab() {
         let dom = VirtualDom::new(VNode::empty);
@@ -541,6 +615,38 @@ mod tests {
         assert_eq!(hits[0].label, "Icon catalogue");
     }
 
+    #[test]
+    fn icon_and_icons_list_the_icon_providers() {
+        let dom = VirtualDom::new(VNode::empty);
+        let actions = dom.in_scope(ScopeId::ROOT, || page_actions(Signal::new(None)));
+        for query in ["Icon", "Icons"] {
+            let hits = spotlight_filter(query, &actions);
+            for label in ["Icon", "Pictogram", "IconProvider"] {
+                assert!(
+                    hits.iter().any(|hit| hit.label == label),
+                    "{query}: {label}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn every_page_has_search_words() {
+        for (path, label, group) in pages() {
+            assert!(!aliases(group, label).is_empty(), "{path}");
+        }
+    }
+
+    #[test]
+    fn a_shared_label_takes_its_sections_words() {
+        let dom = VirtualDom::new(VNode::empty);
+        let actions = dom.in_scope(ScopeId::ROOT, || page_actions(Signal::new(None)));
+        let hits = spotlight_filter("a11y", &actions);
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].group.as_deref(), Some("Accessibility"));
+    }
+
+    /// The a11y hooks moved from Hooks to Accessibility: their old links still land.
     #[test]
     fn a_moved_hook_page_keeps_its_old_url() {
         for (old, route) in [
