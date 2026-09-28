@@ -489,8 +489,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// axes) under a header that stays put.
     #[props(default, into)]
     max_height: Option<String>,
-    /// With `max_height`, renders only the rows in view, each exactly this tall
-    /// in px with one line per cell. Off with `row_detail` or `onrowreorder`.
+    /// With `max_height`, renders only the rows in view, each clipped to this
+    /// height in px with one line per cell. Off with `row_detail` or `onrowreorder`.
     #[props(default)]
     virtual_row_height: Option<f64>,
     /// The sorted column, empty for source order; set, the sort is controlled.
