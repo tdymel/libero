@@ -2,7 +2,7 @@
 //! in its scroll region under a caption; keyed, clickable, striped rows; selectable,
 //! multi-sorted rows; an empty one; a paged one; sized columns; column menus; a
 //! height-capped one with a sticky header; a wide one with pinned columns, also RTL;
-//! column filters through menus and header filters.
+//! column filters through menus and header filters; a windowed one of 10k rows.
 
 use dioxus::prelude::*;
 use libero::components::{
@@ -35,6 +35,14 @@ pub const ROUTES: Routes = &[
     (
         "/table/pinned-rtl",
         || rsx! { PinnedTablePage { rtl: true } },
+    ),
+    (
+        "/table/windowed",
+        || rsx! { WindowedTablePage { pinned: false } },
+    ),
+    (
+        "/table/windowed-pinned",
+        || rsx! { WindowedTablePage { pinned: true } },
     ),
 ];
 
@@ -376,6 +384,61 @@ fn PinnedTablePage(rtl: bool) -> Element {
             }
             p { id: "pinned", "{pinned}" }
         }
+    }
+}
+
+/// Ten thousand selectable rows, 40px each under a 300px `max_height`: only
+/// the rows in view render. `pinned` adds six 240px columns, Name pinned to the
+/// start and Supplier to the end.
+#[component]
+fn WindowedTablePage(pinned: bool) -> Element {
+    let mut selection = use_signal(Vec::<String>::new);
+    // Longer names at the end: auto layout would widen the column there.
+    let data: Vec<Fruit> = (1..=10_000)
+        .map(|stock| Fruit {
+            name: match stock > 9_950 {
+                true => "Elderberry from the far north",
+                false => ["Apple", "Banana", "Cherry", "Date"][stock as usize % 4],
+            },
+            stock,
+        })
+        .collect();
+    let mut columns = vec![
+        column("Name")
+            .value(|fruit: &Fruit| fruit.name.to_string())
+            .sortable(),
+        column("Stock")
+            .value(|fruit: &Fruit| fruit.stock)
+            .sortable()
+            .row_header(),
+    ];
+    if pinned {
+        columns[0] = columns[0].clone().width("240px");
+        columns.extend(
+            ["Origin", "Season", "Colour", "Taste", "Storage", "Supplier"].map(|header| {
+                column(header)
+                    .value(move |fruit: &Fruit| format!("{}_{header}", fruit.name))
+                    .width("240px")
+            }),
+        );
+    }
+    rsx! {
+        Table {
+            caption: "Fruit stock",
+            max_height: "300px",
+            virtual_row_height: 40.0,
+            selectable: true,
+            selection: selection(),
+            onselectionchange: move |next| selection.set(next),
+            default_pinned_columns: match pinned {
+                true => PinnedColumns::default().start(["Name"]).end(["Supplier"]),
+                false => PinnedColumns::default(),
+            },
+            data,
+            columns,
+            row_key: |fruit: &Fruit| fruit.stock.to_string(),
+        }
+        p { id: "selection", {selection.read().join(",")} }
     }
 }
 

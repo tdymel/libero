@@ -144,6 +144,86 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView")
 );
 
+/// 1156-5a: 10k rows under a 300px cap: only the rows in view render, End brings
+/// the last one in under the header, and each row keeps its place in the count.
+async fn the_window_follows_the_scroll<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const FIRST: &str = "tr[aria-rowindex=\"2\"]";
+    const LAST: &str = "tr[aria-rowindex=\"10001\"]";
+    eventually(d, "only the first rows to render", async |d| {
+        Ok(
+            d.attr("table", "aria-rowcount").await?.as_deref() == Some("10001")
+                && d.exists(FIRST).await?
+                && !d.exists("tr[aria-rowindex=\"60\"]").await?,
+        )
+    })
+    .await?;
+    let row = d.rect("tbody th").await?;
+    if (row.height - 40.0).abs() > 1.0 {
+        bail!("a row is {}px, not its 40px row_height", row.height);
+    }
+    const NAME: &str = "thead th:nth-child(2)";
+    let width = d.rect(NAME).await?.width;
+    d.focus("th[data-sortable] [data-sort-button]").await?;
+    d.press(keyboard::END).await?;
+    eventually(d, "the last row to show under the header", async |d| {
+        if !d.exists(LAST).await? || d.exists(FIRST).await? {
+            return Ok(false);
+        }
+        let (area, header, last) = (
+            d.rect(AREA).await?,
+            d.rect("thead th").await?,
+            d.rect(&format!("{LAST} th")).await?,
+        );
+        Ok((header.y - area.y).abs() <= 1.0
+            && last.y >= header.y + header.height - 1.0
+            && last.y + last.height <= area.y + area.height + 1.0)
+    })
+    .await?;
+    // Fixed layout: the longer names down here do not widen their column.
+    let scrolled = d.rect(NAME).await?.width;
+    if (scrolled - width).abs() > 0.5 {
+        bail!("the Name column went from {width}px to {scrolled}px while scrolling");
+    }
+    d.click(&format!("{LAST} td[data-select] span[aria-hidden]"))
+        .await?;
+    eventually_text(d, "#selection", "10000", "a click on the last row's box").await?;
+    if d.platform() == Platform::Native {
+        // A click on the drawn box focuses nothing, and a Tab or `focus()` fires no
+        // `focusin` on Blitz: the focused row is not tracked there (1156-5a).
+        d.focus("th[data-sortable] [data-sort-button]").await?;
+        d.press(keyboard::HOME).await?;
+        return eventually(d, "the first rows to come back", async |d| {
+            Ok(d.exists(FIRST).await? && !d.exists(LAST).await?)
+        })
+        .await;
+    }
+    // The focused row stays rendered out of view, focus still in it.
+    let last_box = format!("{LAST} input");
+    eventually_focused(d, &last_box, "a click on the last row's box").await?;
+    d.press(keyboard::HOME).await?;
+    eventually(d, "the first rows to come back", async |d| {
+        Ok(d.exists(FIRST).await? && !d.exists("tr[aria-rowindex=\"9990\"]").await?)
+    })
+    .await?;
+    eventually_focused(d, &last_box, "Home").await?;
+    let first_box = format!("{FIRST} input");
+    d.click(&format!("{FIRST} td[data-select] span[aria-hidden]"))
+        .await?;
+    eventually_focused(d, &first_box, "a click on the first row's box").await?;
+    d.press(keyboard::END).await?;
+    eventually(d, "the last rows to come back", async |d| {
+        Ok(d.exists(LAST).await? && !d.exists("tr[aria-rowindex=\"10\"]").await?)
+    })
+    .await?;
+    eventually_focused(d, &first_box, "End").await
+}
+
+e2e::scenario!(
+    a_windowed_table_renders_the_rows_in_view,
+    "/table/windowed",
+    the_window_follows_the_scroll
+);
+
 /// 1156-2c: no button inside, so the overflowing area is the named tab stop.
 async fn a_plain_capped_table_is_a_named_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     // 1313: a WebView reads the inner focusables by the area's tag.
@@ -516,6 +596,47 @@ fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {
         .unwrap();
 
         fixture.console.assert_clean("prepending a row").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// 1156-5a: a windowed row is keyed by `row_key`, not its place, so a sort moves its node.
+#[test]
+fn a_windowed_row_keeps_its_node_through_a_sort() {
+    block_on(async {
+        let fixture = Fixture::open("/table/windowed", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        const ROW: &str = "[...document.querySelectorAll('tbody tr')]\
+                           .find(row => row.querySelector('th').textContent === '4')";
+
+        wait::for_js_true(page, &format!("!!{ROW}"), "the row of stock 4")
+            .await
+            .unwrap();
+        page.evaluate(format!("{ROW}.marked = true")).await.unwrap();
+        page.find_element("th[data-sortable] [data-sort-button]")
+            .await
+            .unwrap()
+            .click()
+            .await
+            .unwrap();
+        // Name ascending: the Apples (4, 8, ...) on top, in source order.
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('tr[aria-rowindex=\"2\"] th').textContent === '4' \
+                 && {ROW}.marked === true"
+            ),
+            "stock 4 on top, on its own node",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("sorting a windowed table")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }
@@ -1004,6 +1125,60 @@ fn pinned_columns_hold_at_their_edges_in_both_directions() {
             fixture.console.assert_clean("pinned columns").unwrap();
             fixture.close().await.unwrap();
         }
+    });
+}
+
+/// 1156-5a: windowed and scrolled both ways, the header sticks and the pinned
+/// columns hold at their edges, body cells in line with their headers.
+#[test]
+fn a_windowed_table_keeps_its_header_and_pins_while_scrolled() {
+    block_on(async {
+        let fixture = Fixture::open("/table/windowed-pinned", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const r = document.querySelector({AREA:?}); \
+                 if (!r) return false; r.scrollLeft = r.scrollWidth; r.scrollTop = 200000; \
+                 return r.scrollLeft > 300 && !!document.querySelector('tr[aria-rowindex=\"5005\"]') \
+                   && !document.querySelector('tr[aria-rowindex=\"2\"]'); }})()"
+            ),
+            "the window to move down and right",
+        )
+        .await
+        .unwrap();
+        let state: String = page
+            .evaluate(format!(
+                "(() => {{ const box = s => document.querySelector(s).getBoundingClientRect(); \
+                 const area = document.querySelector({AREA:?}); \
+                 const a = area.getBoundingClientRect(); \
+                 const end = a.left + area.clientWidth; \
+                 const row = 'tr[aria-rowindex=\"5005\"] '; \
+                 const select = box('thead th[data-select]'), name = box('thead th[data-pin=start]'); \
+                 const origin = box('thead th:nth-child(4)'), supplier = box('thead th[data-pin=end]'); \
+                 const cell = box(row + 'td[data-pin=start]'), last = box(row + 'td[data-pin=end]'); \
+                 const near = (x, y) => Math.abs(x - y) <= 1; \
+                 return [near(select.left, a.left), near(name.left, select.right), \
+                   near(cell.left, name.left), near(cell.width, name.width), \
+                   near(supplier.right, end), near(last.right, end), origin.left < name.left, \
+                   near(name.top, a.top)].join('|') + ' ' + JSON.stringify([a, select, name, cell, supplier, last]); }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            state.starts_with("true|true|true|true|true|true|true|true "),
+            "checkbox and Name at the start, Supplier at the end, body cells under their \
+             headers, Origin scrolled under, the header at the top: {state}"
+        );
+        fixture
+            .console
+            .assert_clean("a windowed pinned table")
+            .unwrap();
+        fixture.close().await.unwrap();
     });
 }
 

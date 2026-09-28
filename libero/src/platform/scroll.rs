@@ -50,6 +50,12 @@ pub(crate) fn fires_scroll_end() -> bool {
     !NATIVE
 }
 
+/// Whether `scroll_to` and scroll-into-view fire a `scroll` event. Blitz's do
+/// not; there only [`scroll`] reports them.
+pub(crate) fn fires_scroll_on_scroll_to() -> bool {
+    !NATIVE
+}
+
 /// Where `scrollend` does not fire, how long a scroll stays quiet before it
 /// counts as ended: longer than the gap between two wheel ticks.
 pub(crate) const SCROLL_QUIET: Duration = Duration::from_millis(150);

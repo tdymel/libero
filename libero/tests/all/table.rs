@@ -1108,3 +1108,58 @@ fn a_start_pin_holds_the_checkbox_column_and_insets_past_it() {
         "{name:?}"
     );
 }
+
+/// 1156-5a: a windowed body renders a screenful, each row placed in the whole count.
+#[test]
+fn a_windowed_table_renders_a_window_and_counts_every_row() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Numbers",
+                    max_height: "300px",
+                    virtual_row_height: 40.0,
+                    data: (0..1000u32).collect::<Vec<_>>(),
+                    columns: vec![column("N").value(|n: &u32| *n)],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    assert_eq!(attributes_of(&html, "table")["aria-rowcount"], "1001");
+    // The server has no viewport: a 1080px window, never all 1000 rows.
+    let rows = body.matches("<tr").count();
+    assert!((2..100).contains(&rows), "{rows} rows rendered");
+    assert!(body.contains("aria-rowindex=\"1\""));
+    assert!(body.contains("aria-rowindex=\"2\""));
+    assert!(!body.contains("aria-rowindex=\"1001\""));
+}
+
+/// 1156-5a: a detail row breaks the one row height, so `row_detail` renders every row.
+#[test]
+fn a_windowed_table_with_row_details_renders_every_row() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Numbers",
+                    max_height: "300px",
+                    virtual_row_height: 40.0,
+                    data: (0..200u32).collect::<Vec<_>>(),
+                    columns: vec![column("N").value(|n: &u32| *n)],
+                    row_key: |n: &u32| n.to_string(),
+                    row_detail: |n: &u32| Some(rsx! { "Detail {n}" }),
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(!attributes_of(&html, "table").contains_key("aria-rowcount"));
+    // The header row, then all 200.
+    assert_eq!(body(&html).matches("<tr").count(), 201);
+}

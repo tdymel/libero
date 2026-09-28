@@ -642,6 +642,35 @@ fn table_large_app<const ROWS: usize, const SORT: bool, const PAGE: usize>() -> 
     }
 }
 
+/// [`table_large_app`] windowed under a 600px cap: only the rows in view render.
+fn table_windowed_app<const ROWS: usize, const SORT: bool>() -> Element {
+    let data = use_hook(|| (0..ROWS as u32).collect::<Vec<u32>>());
+    let onsortchange = use_callback(|_: Vec<TableSort>| {});
+    let direction = match SORT && flip() {
+        true => SortDirection::Descending,
+        false => SortDirection::Ascending,
+    };
+    let mut rows = data.clone();
+    if !SORT && flip() {
+        rows[0] = ROWS as u32;
+    }
+    rsx! {
+        LiberoProvider {
+            Table {
+                data: rows,
+                columns: vec![
+                    column("Name").value(|n: &u32| format!("Row {n}")).row_header(),
+                    column("N").value(|n: &u32| *n).sortable(),
+                ],
+                sort: vec![TableSort::new("N", direction)],
+                onsortchange,
+                max_height: "600px",
+                virtual_row_height: 40.0,
+            }
+        }
+    }
+}
+
 /// [`table_large_app`] with a checkbox per row: a round selects or clears row 0.
 fn table_select_app<const ROWS: usize>() -> Element {
     let data = use_hook(|| (0..ROWS as u32).collect::<Vec<u32>>());
@@ -729,6 +758,18 @@ const TABLE_LARGE_SHAPES: &[Shape] = &[
     Shape {
         name: "Table 10k sort",
         app: table_large_app::<10_000, true, 0>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 10k windowed",
+        app: table_windowed_app::<10_000, false>,
+        count: 1,
+        round: rerender_app,
+    },
+    Shape {
+        name: "Table 10k sort windowed",
+        app: table_windowed_app::<10_000, true>,
         count: 1,
         round: rerender_app,
     },

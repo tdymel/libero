@@ -127,6 +127,8 @@ fn Rows() -> Element {
 | `item` | `Callback<usize, Element>` | required | Renders one row. Called only for the rows in view. |
 | `item_size` | `f64` | measured | A row's height plus the gap below it, in px. Unset, it is measured from the first rows. Every row must have the same height. |
 | `overscan` | `usize` | `4` | Rows rendered beyond each edge, so a fast scroll has something to show. |
+| `keep_rendered` | `usize` | none | An index rendered even out of view, e.g. the row holding focus, so scrolling it away keeps the focus. |
+| `item_key` | `Callback<usize, String>` | the index | A row's identity, such as its data's id. A row's state (focus, typed text, open details) follows its key, so set it when rows can be sorted, inserted or removed. |
 
 Like every component, `ScrollArea` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.

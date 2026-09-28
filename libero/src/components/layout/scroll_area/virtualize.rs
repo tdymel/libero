@@ -1,7 +1,7 @@
-use dioxus::prelude::*;
+use dioxus::{core::DynamicValues, prelude::*};
 
 use super::viewport::{
-    ContentOffsets, ScrollGeometry, ScrollViewport, Window, probed_pitch, window,
+    ContentOffsets, ScrollGeometry, ScrollViewport, Window, keep_beside, probed_pitch, window,
 };
 use crate::{hooks::use_theme, platform::ElementApi, utils::warn};
 
@@ -98,6 +98,13 @@ pub fn Virtualize(
     /// Rows kept beyond each edge; `theme.scroll_area.overscan` by default.
     #[props(default)]
     overscan: Option<usize>,
+    /// An index rendered even out of view, e.g. the row holding focus.
+    #[props(default)]
+    keep_rendered: Option<usize>,
+    /// The row's identity, e.g. its data's id; the index when unset. A row's
+    /// state (focus, input, open details) follows it, so set it when rows can move.
+    #[props(default)]
+    item_key: Option<Callback<usize, String>>,
 ) -> Element {
     let theme = use_theme();
     let viewport = try_use_context::<ScrollViewport>();
@@ -144,15 +151,20 @@ pub fn Virtualize(
     let geometry = viewport
         .as_ref()
         .and_then(|viewport| *viewport.geometry.read());
+    let mut kept = None;
     let visible = match (owned, stage, geometry) {
         // Don't wait for a measurement: server renders never get one, and
         // waiting rendered every row.
-        (true, Probe::Settled(Some(pitch)), geometry) => window(
-            count,
-            pitch,
-            geometry.unwrap_or(UNMEASURED),
-            overscan.unwrap_or(theme.scroll_area.overscan),
-        ),
+        (true, Probe::Settled(Some(pitch)), geometry) => {
+            let mut visible = window(
+                count,
+                pitch,
+                geometry.unwrap_or(UNMEASURED),
+                overscan.unwrap_or(theme.scroll_area.overscan),
+            );
+            kept = keep_beside(&mut visible, keep_rendered, count, pitch);
+            visible
+        }
         // Still probing: render just enough to measure, for one frame.
         (true, stage, _) => match stage.rows(count) {
             Some(rows) => Window {
@@ -182,11 +194,38 @@ pub fn Virtualize(
         }
     });
 
+    let (before, after) = match kept {
+        Some((index, true)) => (Some(index), None),
+        Some((index, false)) => (None, Some(index)),
+        None => (None, None),
+    };
+    // Keyed: unkeyed, a row's node would pass to the next row as the window shifts.
+    let rows = before
+        .into_iter()
+        .chain(visible.range)
+        .chain(after)
+        .map(|index| {
+            let key = match item_key {
+                Some(item_key) => item_key.call(index),
+                None => index.to_string(),
+            };
+            item.call(index).map(|row| keyed(row, key))
+        });
     rsx! {
-        for index in visible.range {
-            {item.call(index)}
-        }
+        {rows}
     }
+}
+
+/// `row` under `key`; a `Fragment` wrapper would cost a component render per row.
+fn keyed(row: VNode, key: String) -> VNode {
+    VNode::new(
+        *row.template(),
+        DynamicValues::from_parts(
+            Some(key),
+            row.dynamic_node_values().into(),
+            row.dynamic_attr_values().into(),
+        ),
+    )
 }
 
 #[cfg(test)]

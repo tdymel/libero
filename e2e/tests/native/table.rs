@@ -341,3 +341,54 @@ fn a_capped_table_keeps_its_header_over_the_scrolled_rows() {
         "the header is not painted over the rows"
     );
 }
+
+fn windowed() -> Element {
+    let data: Vec<Person> = (1..=10_000)
+        .map(|age| Person { name: "Ada", age })
+        .collect();
+    rsx! {
+        Table {
+            aria_label: "People",
+            max_height: "300px",
+            virtual_row_height: 40.0,
+            data,
+            columns: vec![
+                column("Name").value(|p: &Person| p.name.to_string()),
+                column("Age").value(|p: &Person| p.age).sortable(),
+            ],
+        }
+    }
+}
+
+fn row_indices(page: &Page) -> Vec<usize> {
+    page.query_all("tbody tr")
+        .into_iter()
+        .filter_map(|id| page.attr_of(id, "aria-rowindex")?.parse().ok())
+        .collect()
+}
+
+/// 1156-5a: a wheel renders the rows it scrolls to, under the stuck header.
+#[test]
+fn a_wheel_moves_the_window() {
+    let mut page = mount(windowed);
+    page.wait_for(|page| {
+        row_indices(page)
+            .iter()
+            .max()
+            .is_some_and(|&last| last < 40)
+    });
+    page.hover("tbody td");
+    page.wheel("tbody td", 20_000.0);
+    page.wait_for(|page| {
+        row_indices(page)
+            .iter()
+            .min()
+            .is_some_and(|&first| first > 400)
+    });
+    let (_, header, _, _) = page.rect("thead th");
+    let (_, area, _, _) = page.rect("[data-table-scroll]");
+    assert!(
+        (header - area).abs() <= 1.0,
+        "header at {header}, area at {area}"
+    );
+}

@@ -11,6 +11,7 @@ use super::{
     pinning::{CellPin, pin_edge_at},
     row_reorder::{ReorderRow, ReorderSlot, RowReorder},
     use_table::StateSlice,
+    window::{BodyRows, render_window},
 };
 use crate::{
     components::{accessibility::VisuallyHidden, common::Glyph},
@@ -348,10 +349,10 @@ pub(super) struct CaptionSpec {
 /// Everything inside the `<table>`, with `T` gone.
 pub(super) struct BodySpec {
     pub caption: Option<CaptionSpec>,
-    pub headers: Vec<HeaderSpec>,
+    pub headers: Rc<Vec<HeaderSpec>>,
     /// The shown headers in display order; each row's cells come in it.
     pub order: Vec<usize>,
-    pub rows: Vec<RowSpec>,
+    pub rows: BodyRows,
     /// The empty row's body: the caller's `empty`, else the localized text.
     pub empty: Element,
     pub active: ActiveSort,
@@ -384,9 +385,11 @@ fn adds_column(touch: Option<CopyValue<bool>>, event: &MouseEvent) -> bool {
     touched || modifiers.shift() || modifiers.ctrl() || modifiers.meta()
 }
 
-fn header_style(spec: &HeaderSpec) -> Option<String> {
+/// `share` stands in for an unsized column's width.
+fn header_style(spec: &HeaderSpec, share: Option<&str>) -> Option<String> {
+    let style = spec.style.as_deref().or(share);
     let Some(pin) = &spec.pin else {
-        return spec.style.clone();
+        return style.map(str::to_string);
     };
     // An overflowing table shrinks its columns below `width`, which the next
     // pinned column's inset counts on.
@@ -397,7 +400,7 @@ fn header_style(spec: &HeaderSpec) -> Option<String> {
         .unwrap_or_default();
     Some(format!(
         "{}{min_width}{}",
-        spec.style.as_deref().unwrap_or_default(),
+        style.unwrap_or_default(),
         pin.style()
     ))
 }
@@ -442,10 +445,13 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         )
     });
     let empty = rows.is_empty().then_some(empty);
+    let windowed = matches!(rows, BodyRows::Window(_));
+    // Blitz sizes columns by content even in fixed layout: an unsized one gets
+    // an even share, so rows scrolling in can't widen it.
+    let share = windowed.then(|| format!("width: {}%", 100.0 / shown.len().max(1) as f64));
     // The order shows only when it tells something: with two or more sorted columns.
     let ranked = active.len() > 1;
     let active = Rc::new(active);
-    let headers = Rc::new(headers);
     let context = SortContext {
         active: active.clone(),
         headers: headers.clone(),
@@ -495,7 +501,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                 "data-pin-edge": spec.pin.as_ref().filter(|pin| pin.edge).map(|_| true),
                                 // Else the menu button's label joins the name every cell reads out.
                                 aria_label: with_menu.then(|| spec.header.clone()),
-                                style: header_style(spec),
+                                style: header_style(spec, share.as_deref()),
                                 // On the sorted columns only (APG): a "none" on every
                                 // other one is read out as "not sorted" at each.
                                 aria_sort: active
@@ -509,7 +515,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                 });
             let cells: Vec<Element> = cells.collect();
             rsx! {
-                tr { key: "{level}",
+                tr { key: "{level}", aria_rowindex: windowed.then(|| (level + 1).to_string()),
                     {reorder_header.take()}
                     {detail_header.take()}
                     {select_all.take()}
@@ -518,6 +524,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
             }
         })
         .collect();
+    let head_levels = head_rows.len();
     rsx! {
         if let Some(spec) = caption {
             caption { id: spec.id, "{spec.text}" }
@@ -533,7 +540,12 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                         td { colspan: "{columns}", {empty} }
                     }
                 }
-                {rows.into_iter().flat_map(|row| body_rows(row, &headers, columns, reorder.as_ref()))}
+                match rows {
+                    BodyRows::All(rows) => rsx! {
+                        {rows.into_iter().flat_map(|row| body_rows(row, &headers, columns, reorder.as_ref()))}
+                    },
+                    BodyRows::Window(window) => render_window(window, headers, head_levels),
+                }
             };
             match &reorder {
                 Some(reorder) => reorder.body(body),
@@ -546,7 +558,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
 }
 
 /// A row, then its detail row while open: siblings, each keyed.
-fn body_rows(
+pub(super) fn body_rows(
     row: RowSpec,
     headers: &[HeaderSpec],
     columns: usize,

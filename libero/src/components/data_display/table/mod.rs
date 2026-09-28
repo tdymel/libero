@@ -16,6 +16,7 @@ mod row_reorder;
 mod selection;
 mod table;
 mod use_table;
+mod window;
 
 pub use cell_value::{CellAlign, CellValue, FilterKind, SortDirection, SortKey};
 pub use column::{Column, ColumnDefaults, ColumnHeader, ColumnType, TypedColumnHeader, column};

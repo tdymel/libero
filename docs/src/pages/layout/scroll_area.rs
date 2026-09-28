@@ -137,6 +137,11 @@ pub fn ScrollAreaPage() -> Element {
                 prop("overscan", "usize")
                     .default("4")
                     .doc("Rows rendered beyond each edge, so a fast scroll has something to show."),
+                prop("keep_rendered", "usize")
+                    .doc("An index rendered even out of view, e.g. the row holding focus, so scrolling it away keeps the focus."),
+                prop("item_key", "Callback<usize, String>")
+                    .default("the index")
+                    .doc("A row's identity, such as its data's id. A row's state (focus, typed text, open details) follows its key, so set it when rows can be sorted, inserted or removed."),
             ]).without_base_props()],
             accessibility: a11y()
                 .handles([

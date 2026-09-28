@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use super::{
@@ -17,8 +19,8 @@ use crate::{
     hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
     platform::{
         Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, SCROLL_QUIET, TimerSubscription,
-        clips_z_indexed, draws_own_scrollbars, fires_scroll_end, has_match_by_tag, scroll_range,
-        scrolls_on_keys, timer, when_laid_out,
+        clips_z_indexed, draws_own_scrollbars, fires_scroll_end, fires_scroll_on_scroll_to,
+        has_match_by_tag, scroll, scroll_range, scrolls_on_keys, timer, when_laid_out,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
@@ -451,9 +453,25 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             measure_area(root, geometry, UNLAID_TRIES);
         }
     };
+    // Blitz's `scroll_to` and scroll-into-view fire no `scroll` event: its
+    // platform scroll report stands in for them.
+    let platform_scrolls = use_signal(|| 0u64);
+    use_hook(|| {
+        let api = scroll().filter(|_| !fires_scroll_on_scroll_to());
+        Rc::new(api.map(|api| {
+            api.on_scroll(Box::new(move || {
+                if *virtualized.peek() {
+                    let mut scrolls = platform_scrolls;
+                    let next = scrolls.peek().wrapping_add(1);
+                    scrolls.set(next);
+                }
+            }))
+        }))
+    });
     // Re-runs once the root is mounted, and once a `Virtualize` asks: only then
     // do scroll and resize events keep the geometry current.
     use_effect(move || {
+        platform_scrolls();
         if virtualized() {
             measure();
         }

@@ -117,6 +117,25 @@ pub(super) fn window(
     }
 }
 
+/// Where `keep` renders when the window left it out: right before the window
+/// (`Some(true)`) or right after it, one pitch taken from that side's padding
+/// so every other row stays put.
+pub(super) fn keep_beside(
+    window: &mut Window,
+    keep: Option<usize>,
+    count: usize,
+    pitch: f64,
+) -> Option<(usize, bool)> {
+    let keep = keep.filter(|&keep| keep < count && !window.range.contains(&keep))?;
+    let before = keep < window.range.start;
+    let side = match before {
+        true => &mut window.offsets.leading,
+        false => &mut window.offsets.trailing,
+    };
+    *side = (*side - pitch).max(0.0);
+    Some((keep, before))
+}
+
 /// Row pitch from two probe renders, one row then `rows`: the subtraction
 /// cancels whatever else shares the scroll area.
 pub(super) fn probed_pitch(single: f64, batch: f64, rows: usize) -> Option<f64> {
@@ -200,6 +219,44 @@ mod tests {
     #[test]
     fn an_unmeasured_pitch_renders_everything() {
         assert_eq!(window(1000, 0.0, GEOMETRY, 2), Window::all(1000));
+    }
+
+    #[test]
+    fn a_kept_row_above_the_window_takes_a_pitch_of_the_leading_space() {
+        let geometry = ScrollGeometry {
+            offset: 10_000.0,
+            ..GEOMETRY
+        };
+        let mut window = window(1000, 20.0, geometry, 0);
+        let leading = window.offsets.leading;
+
+        assert_eq!(
+            keep_beside(&mut window, Some(5), 1000, 20.0),
+            Some((5, true))
+        );
+        assert_eq!(window.offsets.leading, leading - 20.0);
+    }
+
+    #[test]
+    fn a_kept_row_below_the_window_takes_a_pitch_of_the_trailing_space() {
+        let mut window = window(1000, 20.0, GEOMETRY, 0);
+        let trailing = window.offsets.trailing;
+
+        assert_eq!(
+            keep_beside(&mut window, Some(500), 1000, 20.0),
+            Some((500, false))
+        );
+        assert_eq!(window.offsets.trailing, trailing - 20.0);
+    }
+
+    #[test]
+    fn a_kept_row_in_the_window_or_past_the_list_changes_nothing() {
+        let mut window = window(1000, 20.0, GEOMETRY, 0);
+        let before = window.clone();
+
+        assert_eq!(keep_beside(&mut window, Some(2), 1000, 20.0), None);
+        assert_eq!(keep_beside(&mut window, Some(1000), 1000, 20.0), None);
+        assert_eq!(window, before);
     }
 
     /// The probe renders 1 row then 8; 8 rows of 20px with an 4px gap between
