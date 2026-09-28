@@ -2,11 +2,13 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y};
 use dioxus::html::FileData;
 use dioxus::prelude::*;
 use libero::{
-    components::{ActionIcon, Audio, Button, Code, Flex, Image, Pictogram, Text, Video},
-    hooks::{UserMedia, UserMediaError, UserMediaOptions, use_user_media, use_user_media_devices},
+    components::{Audio, Button, Code, Flex, Image, NativeSelect, Text, Video},
+    hooks::{
+        MediaDevice, UserMedia, UserMediaError, UserMediaOptions, use_user_media,
+        use_user_media_devices,
+    },
     utils::data_url,
 };
-use pictogram_icons_lucide as lucide;
 
 /// The hook in one component, as `CaptureBooth` renders it.
 fn code(values: &DemoValues, _: &str) -> String {
@@ -29,14 +31,9 @@ let status = match (media.error(), media.is_recording(), media.is_live()) {{
     (None, false, false) if media.is_pending() => "Waiting for permission".to_string(),
     (None, false, false) => format!("{{device}} off"),
 }};
-// The camera after the live one, on a phone front and back.
-let mut switch = move || {{
-    let cameras = devices.cameras();
-    let at = cameras.iter().position(|c| Some(&c.id) == media.camera_id().as_ref());
-    if let Some(next) = cameras.get(at.map_or(0, |at| (at + 1) % cameras.len())) {{
-        media.switch_camera(next.id.clone());
-    }}
-}};
+// Ids and labels fill in once a start is granted.
+let cameras: Vec<MediaDevice> = devices.cameras().into_iter().filter(|c| !c.id.is_empty()).collect();
+let ids: Vec<String> = cameras.iter().map(|c| c.id.clone()).collect();
 
 rsx! {{
     Flex {{ direction: "column", gap: "sm",
@@ -62,14 +59,16 @@ rsx! {{
                 onclick: move |_| if media.is_recording() {{ media.finish() }} else {{ media.record() }},
                 if media.is_recording() {{ "Stop recording" }} else {{ "Record" }}
             }}
-            // Only where there is another camera to switch to.
-            if media.is_live() && devices.cameras().len() > 1 {{
-                ActionIcon {{
-                    aria_label: "Switch camera",
-                    tooltip: true,
-                    onclick: move |_| switch(),
-                    Pictogram {{ icon: lucide::switch_camera::outlined }}
-                }}
+        }}
+        // Only where there is another camera to switch to.
+        if {camera} && media.is_live() && cameras.len() > 1 {{
+            NativeSelect {{
+                label: "Camera",
+                placeholder: "Default camera",
+                options: ids,
+                option_label: move |id: String| camera_name(&cameras, &id),
+                value: media.camera_id(),
+                onchange: move |id: String| media.switch_camera(id),
             }}
         }}
         div {{ role: "status", "{{status}}" }}
@@ -80,6 +79,15 @@ rsx! {{
         if let Some(clip) = media.recording() {{
             Preview {{ file: clip }}
         }}
+    }}
+}}
+
+/// The camera's label, or "Camera 2" where the platform gives none.
+fn camera_name(cameras: &[MediaDevice], id: &str) -> String {{
+    let at = cameras.iter().position(|c| c.id == id).unwrap_or_default();
+    match cameras.get(at) {{
+        Some(camera) if !camera.label.is_empty() => camera.label.clone(),
+        _ => format!("Camera {{}}", at + 1),
     }}
 }}
 
@@ -113,6 +121,15 @@ fn status(media: &UserMedia, device: &str) -> String {
     }
 }
 
+/// The camera's label, or "Camera 2" where the platform gives none.
+fn camera_name(cameras: &[MediaDevice], id: &str) -> String {
+    let at = cameras.iter().position(|c| c.id == id).unwrap_or_default();
+    match cameras.get(at) {
+        Some(camera) if !camera.label.is_empty() => camera.label.clone(),
+        _ => format!("Camera {}", at + 1),
+    }
+}
+
 /// A photo as an image, a recording as a player, from the file's own bytes.
 #[component]
 fn Preview(file: FileData) -> Element {
@@ -143,15 +160,13 @@ fn CaptureBooth(camera: bool, microphone: bool) -> Element {
     let device = if camera { "Camera" } else { "Microphone" };
     let status = status(&media, device);
     let noun = device.to_lowercase();
-    let mut switch = move || {
-        let cameras = devices.cameras();
-        let at = cameras
-            .iter()
-            .position(|c| Some(&c.id) == media.camera_id().as_ref());
-        if let Some(next) = cameras.get(at.map_or(0, |at| (at + 1) % cameras.len())) {
-            media.switch_camera(next.id.clone());
-        }
-    };
+    // Ids and labels fill in once a start is granted.
+    let cameras: Vec<MediaDevice> = devices
+        .cameras()
+        .into_iter()
+        .filter(|c| !c.id.is_empty())
+        .collect();
+    let ids: Vec<String> = cameras.iter().map(|c| c.id.clone()).collect();
 
     rsx! {
         Flex { direction: "column", gap: "sm",
@@ -186,13 +201,15 @@ fn CaptureBooth(camera: bool, microphone: bool) -> Element {
                     onclick: move |_| if media.is_recording() { media.finish() } else { media.record() },
                     if media.is_recording() { "Stop recording" } else { "Record" }
                 }
-                if camera && media.is_live() && devices.cameras().len() > 1 {
-                    ActionIcon {
-                        aria_label: "Switch camera",
-                        tooltip: true,
-                        onclick: move |_| switch(),
-                        Pictogram { icon: lucide::switch_camera::outlined }
-                    }
+            }
+            if camera && media.is_live() && cameras.len() > 1 {
+                NativeSelect {
+                    label: "Camera",
+                    placeholder: "Default camera",
+                    options: ids,
+                    option_label: move |id: String| camera_name(&cameras, &id),
+                    value: media.camera_id(),
+                    onchange: move |id: String| media.switch_camera(id),
                 }
             }
             div { role: "status", "{status}" }
