@@ -111,6 +111,7 @@ mod switch;
 mod table;
 mod table_detail;
 mod table_groups;
+mod table_overlay;
 mod table_reorder;
 mod table_resize;
 mod tabs;
@@ -251,6 +252,7 @@ const FIXTURES: &[Routes] = &[
     table::ROUTES,
     table_detail::ROUTES,
     table_groups::ROUTES,
+    table_overlay::ROUTES,
     table_reorder::ROUTES,
     table_resize::ROUTES,
     tabs::ROUTES,

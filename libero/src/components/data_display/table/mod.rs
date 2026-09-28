@@ -10,12 +10,14 @@ mod filter;
 mod filter_popover;
 mod groups;
 mod header_filters;
+mod overlay;
 mod paging;
 mod pinning;
 mod resize;
 mod row_reorder;
 mod selection;
 mod table;
+mod toolbar;
 mod use_table;
 mod window;
 

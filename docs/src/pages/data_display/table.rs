@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Chip, Code, PinnedColumns, RowFn, Table, Text, column};
+use libero::components::{Button, Chip, Code, PinnedColumns, RowFn, Table, Text, column};
 use libero::sx::sx;
 
 #[derive(Clone, PartialEq)]
@@ -76,6 +76,11 @@ struct Person {{
 // snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], row_key: |p: &Person| p.name.clone(), .. }
 const DETAIL: &str = r#"row_detail: |p: &Person| Some(rsx! { "{p.name} joined as {p.role}." })"#;
 
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
+// snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], .. }
+const TOOLBAR: &str =
+    r#"toolbar: rsx! { Button { variant: "outlined", size: "sm", "Add member" } }"#;
+
 /// Wider than the preview at any width, so `scroll` has something to scroll.
 const SCROLL_WIDTH: &str = "640px";
 
@@ -108,6 +113,9 @@ pub fn TablePage() -> Element {
                     prop("column_defaults", "ColumnDefaults").default("none").doc("Settings every column starts from: `ColumnDefaults::new().align(..).width(..).min_width(..)`. A column's own setting wins."),
                     prop("caption", "Option<String>").default("None").doc("A visible title above the header row, and the table's accessible name."),
                     prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\". When the quick filter or the column filters leave no rows, the row reads `table.no_results`, \"No matching rows\", instead."),
+                    prop("no_results", "Option<Element>").default("None").doc("Shown in one full-width row when the quick filter or the column filters leave no rows, over the localized `table.no_results`."),
+                    prop("loading", "bool").default("false").doc("Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, \"Loading rows\". The empty row waits until loading ends."),
+                    prop("toolbar", "Option<Element>").default("None").doc("A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
                     prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header."),
@@ -222,6 +230,8 @@ pub fn TablePage() -> Element {
                     "With `onrowreorder`, each row has a drag handle named \"Reorder\" plus the row's name, described by the keyboard steps, and Move up and Move down buttons, so a single pointer reorders without a drag (WCAG 2.5.7). A touch drags only from the handle; elsewhere it scrolls. Each lift, move and drop is said in a polite live region. While sorted or filtered the controls are disabled.",
                     "`onrowreorder` without `row_key` warns in a debug build.",
                     "The column menu's Move left and Move right name the screen sides in either text direction. A moved column moves in the DOM too, so Tab and a screen reader follow it, and a column moved out of its group splits the group.",
+                    "`loading` without shown rows marks the table `aria-busy` and hides its placeholder rows from screen readers. With rows shown it adds a progress bar named \"Loading rows\" and leaves the table unbusy, as some screen readers hold back a busy table's rows.",
+                    "The `toolbar` is a plain row, not a `role=\"toolbar\"`: Tab moves through its controls as anywhere else.",
                 ])
                 .must([
                     "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
@@ -341,6 +351,18 @@ pub fn TablePage() -> Element {
                     ", or filter on a server with "
                     Code { source: "manual_filter" }
                     "."
+                }
+                Text {
+                    Code { source: "toolbar" }
+                    " puts your own controls in a row above the table, the search field at its "
+                    "end. "
+                    Code { source: "loading" }
+                    " shows placeholder rows while there are none yet, and a progress bar over "
+                    "the rows while new ones load. "
+                    Code { source: "empty" }
+                    " and "
+                    Code { source: "no_results" }
+                    " replace the text of the row shown without data and without matches."
                 }
                 Text {
                     Code { source: "column_menu" }
@@ -473,6 +495,11 @@ pub fn TablePage() -> Element {
                         false => vec![],
                     }),
                     Control::switch("show_quick_filter"),
+                    Control::switch("toolbar").code(|_, values| match values.str("toolbar") == "true" {
+                        true => vec![TOOLBAR.to_string()],
+                        false => vec![],
+                    }),
+                    Control::switch("loading"),
                     Control::switch("header_filters"),
                     Control::switch("paginate").code(|_, values| match values.str("paginate") == "true" {
                         true => vec!["page_sizes: vec![2, 5, 10]".to_string()],
@@ -509,6 +536,10 @@ pub fn TablePage() -> Element {
                             false => RowFn::default(),
                         },
                         show_quick_filter: values.str("show_quick_filter") == "true",
+                        toolbar: (values.str("toolbar") == "true").then(|| rsx! {
+                            Button { variant: "outlined", size: "sm", "Add member" }
+                        }),
+                        loading: values.str("loading") == "true",
                         header_filters: values.str("header_filters") == "true",
                         row_key: |p: &Person| p.name.clone(),
                         page_sizes: if values.str("paginate") == "true" { vec![2, 5, 10] } else { vec![] },

@@ -47,6 +47,11 @@ out. The rows are filtered, then sorted, then paged. Hold the text yourself with
 `quick_filter` and `onquickfilterchange`, or filter on a server with
 `manual_filter`.
 
+`toolbar` puts your own controls in a row above the table, the search field at
+its end. `loading` shows placeholder rows while there are none yet, and a
+progress bar over the rows while new ones load. `empty` and `no_results`
+replace the text of the row shown without data and without matches.
+
 `column_menu`'s Filter entry, and `header_filters`' row of fields under the
 headers, filter one column each, with operators for its type: contains or
 starts with for text, greater than for numbers, yes or no for booleans. The
@@ -370,6 +375,38 @@ fn Demo() -> Element {
 }
 ```
 
+While rows load, `loading` fills an empty body with placeholder rows, or lays a
+progress bar over the rows already shown. `toolbar` holds your controls above
+the table, with the quick filter's field at its end.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Button, Table, column};
+
+#[derive(Clone, PartialEq)]
+struct Person {
+    name: String,
+}
+
+#[component]
+fn Demo() -> Element {
+    let people: Vec<Person> = Vec::new();
+    let loading = use_signal(|| true);
+
+    rsx! {
+        Table {
+            caption: "Team members",
+            loading: loading(),
+            show_quick_filter: true,
+            toolbar: rsx! { Button { variant: "outlined", size: "sm", "Add member" } },
+            no_results: rsx! { "No member matches." },
+            data: people,
+            columns: vec![column("Name").value(|p: &Person| p.name.clone()).sortable()],
+        }
+    }
+}
+```
+
 A long table takes `max_height`: the rows scroll, both ways, in a `ScrollArea`
 under a header that stays put. The header takes the page surface's colour; on
 another background, set it with `sx().selector("& thead th", ..)`.
@@ -559,6 +596,9 @@ fn Demo() -> Element {
 | `column_defaults` | `ColumnDefaults` | none | Settings every column starts from: `ColumnDefaults::new().align(..).width(..).min_width(..)`. A column's own setting wins. |
 | `caption` | `Option<String>` | `None` | A visible title above the header row, and the table's accessible name. |
 | `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". When the quick filter or the column filters leave no rows, the row reads `table.no_results`, "No matching rows", instead. |
+| `no_results` | `Option<Element>` | `None` | Shown in one full-width row when the quick filter or the column filters leave no rows, over the localized `table.no_results`. |
+| `loading` | `bool` | `false` | Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, "Loading rows". The empty row waits until loading ends. |
+| `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. |
 | `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 | `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
 | `sort` | `Option<Vec<TableSort>>` | `None` | The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header. |
@@ -726,6 +766,12 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - The column menu's Move left and Move right name the screen sides in either
   text direction. A moved column moves in the DOM too, so Tab and a screen
   reader follow it, and a column moved out of its group splits the group.
+- `loading` without shown rows marks the table `aria-busy` and hides its
+  placeholder rows from screen readers. With rows shown it adds a progress bar
+  named "Loading rows" and leaves the table unbusy, as some screen readers hold
+  back a busy table's rows.
+- The `toolbar` is a plain row, not a `role="toolbar"`: Tab moves through its
+  controls as anywhere else.
 
 ### You must
 
@@ -801,7 +847,10 @@ default `start`.
 | `data-sort-order` | On the place badge inside a sorted header's button, with two or more sorted columns. |
 | `data-select` | On the checkbox column's `th` and `td`s. |
 | `aria-selected` | On every body row of a `selectable` table, `true` or `false`. |
-| `data-empty` | On the body row that holds `empty`. |
+| `data-empty` | On the body row that holds `empty`, `no_results` or their text. |
+| `data-skeleton` | On each placeholder row of a `loading` table without shown rows. |
+| `data-loading-bar` | On the box holding the progress bar of a `loading` table with shown rows. |
+| `data-toolbar` | On the row above the table with `toolbar`; `data-toolbar-end` on the quick filter's box in it. |
 | `data-detail-toggle` | On the toggle column's `th` and `td`s, with `row_detail`. |
 | `data-detail` | On an open detail row, right after its row. |
 | `data-stripe` | On every other body row with `striped`, detail rows not counted. |

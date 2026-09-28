@@ -38,11 +38,13 @@ use super::{
     filter_popover::FilterTarget,
     groups::spanned,
     header_filters::HeaderFilter,
+    overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     pinning::{PinSide, PinnedColumns, pin_columns, pin_runs, span_pin},
     resize::{ColumnResize, ColumnWidths, MenuWidth},
     row_reorder::{ReorderSlot, RowReorder},
     selection::Selection,
+    toolbar::TableToolbar,
     use_table::{TableConfig, use_table},
     window::{BodyRows, RowWindow, TABLE_ROW_HEIGHT_VAR, window_attributes, windowed_sx},
 };
@@ -302,7 +304,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     .when(
         "row-click",
         sx().selector(
-            "& tbody tr:not([data-empty]):not([data-detail])",
+            "& tbody tr:not([data-empty]):not([data-detail]):not([data-skeleton])",
             sx().cursor("pointer"),
         ),
     )
@@ -468,6 +470,16 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Shown in one full-width row when `data` is empty.
     #[props(default)]
     empty: Option<Element>,
+    /// Shown in one full-width row when the filters leave no rows.
+    #[props(default)]
+    no_results: Option<Element>,
+    /// Rows are on their way: placeholder rows while none show, else a
+    /// progress bar over the table's top edge.
+    #[props(default)]
+    loading: bool,
+    /// A row above the table, for your controls; the quick filter joins it at the end.
+    #[props(default)]
+    toolbar: Option<Element>,
     /// Scrolls a table wider than its parent sideways, in a `ScrollArea`.
     #[props(default)]
     scroll: bool,
@@ -1063,6 +1075,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     if has_reorder {
         shown_rows.set(order.clone());
     }
+    let skeleton = (props.loading && order.is_empty()).then(|| match paginated {
+        true => state.page_size.read().max(1),
+        false => SKELETON_ROWS,
+    });
     // Owned, so a virtualised body can project its rows as they scroll in.
     let (row_attrs, row_states, onrowclick) = (props.row_attrs, props.row_states, props.onrowclick);
     let row_selection = selection.clone();
@@ -1156,6 +1172,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .virtual_row_height
         .filter(|_| bounded && !has_detail && !has_reorder);
     let mut attributes = props.attributes;
+    // Only while no row shows: some readers hold back a busy subtree's rows.
+    if skeleton.is_some() {
+        attributes.push(attr("aria-busy", "true"));
+    }
     let rows = match row_height {
         Some(row_height) => {
             attributes.extend(window_attributes(head_rows, order.len()));
@@ -1238,9 +1258,16 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     });
     // Rows the filter took away, not missing data: the caller's `empty` does not apply.
     let filtered_out = !(words.is_empty() && tests.is_empty()) && (props.manual_filter || has_data);
-    let empty = match filtered_out {
-        true => rsx! { "{labels.no_results}" },
-        false => props.empty.unwrap_or_else(|| rsx! { "{labels.no_rows}" }),
+    let empty = match (skeleton, filtered_out) {
+        (Some(rows), _) => EmptyBody::Skeleton(rows),
+        (None, true) => EmptyBody::Message(
+            props
+                .no_results
+                .unwrap_or_else(|| rsx! { "{labels.no_results}" }),
+        ),
+        (None, false) => {
+            EmptyBody::Message(props.empty.unwrap_or_else(|| rsx! { "{labels.no_rows}" }))
+        }
     };
     let variables: Input<Variables> = variables()
         .with(
@@ -1348,6 +1375,22 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             }
         }
     });
+    // A placeholder while off, so toggling `loading` keeps the table's nodes.
+    let bar = (props.loading && skeleton.is_none()).then(|| {
+        rsx! {
+            LoadingBar { labels }
+        }
+    });
+    let table = rsx! {
+        {bar}
+        {table}
+    };
+    let search = match props.toolbar {
+        Some(content) => Some(rsx! {
+            TableToolbar { content, search }
+        }),
+        None => search,
+    };
     // Outside the scroll region, so the controls stay put while it scrolls.
     match (search, pager) {
         (None, None) => table,

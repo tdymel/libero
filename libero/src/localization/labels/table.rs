@@ -95,6 +95,8 @@ pub struct TableLabels {
     /// assert_eq!((TableLabels::GERMAN.results)(12), "12 Zeilen");
     /// ```
     pub results: fn(usize) -> String,
+    /// The progress bar over a `loading` table that still shows rows.
+    pub loading: &'static str,
     /// Holds the column at the table's start edge, the left in a left-to-right page.
     pub pin_start: &'static str,
     pub pin_end: &'static str,
@@ -298,6 +300,7 @@ impl TableLabels {
         search: "Search",
         no_results: "No matching rows",
         results: english_results,
+        loading: "Loading rows",
         pin_start: "Pin to start",
         pin_end: "Pin to end",
         unpin: "Unpin",
@@ -341,6 +344,7 @@ impl TableLabels {
         search: "Suchen",
         no_results: "Keine passenden Zeilen",
         results: german_results,
+        loading: "Zeilen werden geladen",
         pin_start: "Am Anfang fixieren",
         pin_end: "Am Ende fixieren",
         unpin: "Fixierung lösen",

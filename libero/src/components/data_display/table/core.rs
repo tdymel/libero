@@ -8,6 +8,7 @@ use super::{
     column::{Column, ColumnDefaults},
     groups::{HeaderCell, header_rows},
     header_filters::filter_row,
+    overlay::EmptyBody,
     pinning::{CellPin, pin_edge_at},
     resize::{ColumnResize, ColumnWidths, ResizeHandle, ResizeLimits},
     row_reorder::{ReorderRow, ReorderSlot, RowReorder},
@@ -373,8 +374,8 @@ pub(super) struct BodySpec {
     /// The shown headers in display order; each row's cells come in it.
     pub order: Vec<usize>,
     pub rows: BodyRows,
-    /// The empty row's body: the caller's `empty`, else the localized text.
-    pub empty: Element,
+    /// Drawn when no row shows.
+    pub empty: EmptyBody,
     pub active: ActiveSort,
     pub sort: StateSlice<Vec<TableSort>>,
     /// Set with `multi_sort`: whether the press before a header click was a touch.
@@ -572,11 +573,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         }
         {
             let body = rsx! {
-                if let Some(empty) = empty {
-                    tr { "data-empty": true,
-                        td { colspan: "{columns}", {empty} }
-                    }
-                }
+                {empty.map(|empty| empty.render(columns))}
                 match rows {
                     BodyRows::All(rows) => rsx! {
                         {rows.into_iter().flat_map(|row| body_rows(row, &headers, columns, reorder.as_ref()))}

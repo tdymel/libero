@@ -299,6 +299,97 @@ fn the_empty_slot_spans_every_column_only_without_rows() {
     assert!(!full.contains("data-empty"));
 }
 
+fn loading_table(data: Vec<Item>, page_size: Option<usize>) -> Element {
+    rsx! {
+        LiberoProvider {
+            Table {
+                aria_label: "Stock",
+                loading: true,
+                page_size,
+                data,
+                columns: vec![
+                    column("Name").value(|item: &Item| item.name.to_string()),
+                    column("Also").value(|item: &Item| item.name.to_string()),
+                ],
+            }
+        }
+    }
+}
+
+#[test]
+fn a_loading_table_without_rows_shows_hidden_skeleton_rows_and_is_busy() {
+    let html = render(|| loading_table(Vec::new(), None));
+    let rows = body(&html);
+    assert_eq!(rows.matches("data-skeleton").count(), 5, "{rows}");
+    assert_eq!(rows.matches("<td").count(), 10);
+    assert!(!rows.contains("data-empty"));
+    assert!(!rows.contains("data-loading-bar"));
+    assert_eq!(attributes_of(&html, "table")["aria-busy"], "true");
+
+    // Paged: a page of placeholders.
+    let paged = body(&render(|| loading_table(Vec::new(), Some(3))));
+    assert_eq!(paged.matches("data-skeleton").count(), 3);
+}
+
+#[test]
+fn a_loading_table_with_rows_keeps_them_under_a_named_bar() {
+    let html = render(|| loading_table(vec![Item { name: "Apple" }], None));
+    let body = body(&html);
+    assert!(body.contains("Apple"));
+    assert!(!body.contains("data-skeleton"));
+    assert!(body.contains("data-loading-bar"));
+    assert!(body.contains("aria-label=\"Loading rows\""), "{body}");
+    // The rows stay usable, so the table is not busy.
+    assert!(!attributes_of(&html, "table").contains_key("aria-busy"));
+}
+
+#[test]
+fn the_no_results_slot_replaces_the_text_when_the_filter_leaves_nothing() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Stock",
+                    empty: rsx! { "Nothing in stock" },
+                    no_results: rsx! { "Try another word" },
+                    quick_filter: "pear",
+                    data: vec![Item { name: "Apple" }],
+                    columns: vec![column("Name").value(|item: &Item| item.name.to_string())],
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    assert!(body.contains("Try another word"), "{body}");
+    assert!(!body.contains("Nothing in stock"));
+    assert!(!body.contains("No matching rows"));
+}
+
+#[test]
+fn the_toolbar_holds_the_callers_controls_then_the_quick_filter() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Stock",
+                    show_quick_filter: true,
+                    toolbar: rsx! { button { "Export" } },
+                    data: vec![Item { name: "Apple" }],
+                    columns: vec![column("Name").value(|item: &Item| item.name.to_string())],
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let toolbar = body.find("data-toolbar=").expect(&body);
+    let export = body.find("Export").unwrap();
+    let search = body.find("data-toolbar-end").unwrap();
+    assert!(toolbar < export && export < search && search < body.find("<table").unwrap());
+    assert!(!body.contains("role=\"toolbar\""));
+}
+
 #[derive(Clone, PartialEq)]
 struct Stock {
     id: u32,

@@ -111,6 +111,7 @@ mod switch;
 mod table;
 mod table_detail;
 mod table_groups;
+mod table_overlay;
 mod table_reorder;
 mod table_resize;
 mod tabs;
