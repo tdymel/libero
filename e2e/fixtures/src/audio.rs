@@ -66,6 +66,7 @@ fn AudioPage() -> Element {
             }
             div { id: "broken", Audio { src: "data:audio/wav;base64,AAAA", label: "Broken" } }
             div { id: "muted", Audio { src: src.clone(), label: "Muted", muted: true } }
+            div { id: "rtl", dir: "rtl", Audio { src: src.clone(), label: "Right to left" } }
             // A shrink-wrapping parent: the bubble still takes its full width.
             div { id: "inline", style: "display: inline-flex",
                 Audio { src: src.clone(), label: "Inline" }

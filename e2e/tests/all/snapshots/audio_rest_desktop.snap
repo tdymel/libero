@@ -7,7 +7,8 @@ group "Silence"
   group "Player controls"
     button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
-    slider "Volume" = 100 [valuemax=100] [valuemin=0]
+    button "Mute"
+    button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
   status [atomic] [live=polite]
@@ -15,7 +16,8 @@ group "Broken"
   group "Player controls"
     button "Play"
     slider "Seek" = 0 [disabled] [valuemax=1] [valuemin=0]
-    slider "Volume" = 100 [valuemax=100] [valuemin=0]
+    button "Mute"
+    button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
   alert [atomic] [live=assertive]
@@ -25,7 +27,17 @@ group "Muted"
   group "Player controls"
     button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
-    slider "Volume" = 0 [valuemax=100] [valuemin=0]
+    button "Unmute"
+    button "Volume" [expanded=false] [haspopup=dialog]
+    button "Playback speed 1×"
+      StaticText "1×"
+  status [atomic] [live=polite]
+group "Right to left"
+  group "Player controls"
+    button "Play"
+    slider "Seek" = 0 [valuemax=4] [valuemin=0]
+    button "Mute"
+    button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
   status [atomic] [live=polite]
@@ -33,7 +45,8 @@ group "Inline"
   group "Player controls"
     button "Play"
     slider "Seek" = 0 [valuemax=4] [valuemin=0]
-    slider "Volume" = 100 [valuemax=100] [valuemin=0]
+    button "Mute"
+    button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
   status [atomic] [live=polite]

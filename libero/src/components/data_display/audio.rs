@@ -4,22 +4,24 @@ use dioxus::prelude::*;
 
 use super::media_controls::{
     CONTROLS, MediaFallback, MediaSeek, MediaStatus, SEEK, Sound, TIME, VOLUME, clock, controls_sx,
-    icon_size, seek_sx, space_toggles, times, use_sound,
+    icon_size, seek_sx, space_toggles, times, use_media_keys, use_sound,
 };
 use crate::{
     components::{
         buttons::{ActionIcon, Button},
         common::{Glyph, HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
         form::{Slider, SliderChangeEvent},
-        layout::use_box,
+        layout::{paper_sx, use_box},
     },
     context::IconSlot,
     hooks::{
-        Hotkey, MediaError, MediaHandle, use_formats, use_hotkeys, use_localization, use_media,
+        Align, MediaError, MediaHandle, PopoverOptions, Side, owner_link, use_element, use_formats,
+        use_id, use_localization, use_media, use_popover, use_theme,
     },
     localization::fill,
-    sx::{StaticSx, sx},
-    theme::{ColorCss, ColorShade, Size, SizeCss},
+    platform::ElementApi,
+    sx::{FORCED_COLORS, StaticSx, sx},
+    theme::{ColorCss, ColorShade, Size, SizeCss, Z_INDEX_POPOVER},
     utils::warn,
 };
 use pictogram_icons_lucide as lucide;
@@ -31,9 +33,9 @@ parts_enum! {
         Controls = "controls" => "& > [data-slot='controls']",
         /// The time: the total until playing starts, then the elapsed.
         Time = "time" => "& [data-slot='time']",
-        /// The seek slider's wrapper.
+        /// The seek track's wrapper: the bars and the slider over them.
         Seek = "seek" => "& [data-slot='seek']",
-        /// The volume slider's wrapper.
+        /// The mute button and the volume menu's trigger.
         Volume = "volume" => "& [data-slot='volume']",
         /// The text shown when the source fails, or nothing plays media.
         Message = "message" => "& > [data-slot='message']",
@@ -43,41 +45,101 @@ parts_enum! {
 /// The speeds the speed button steps through, as chat apps offer.
 const SPEEDS: [f64; 3] = [1.0, 1.5, 2.0];
 
+/// The seek track's bars: few enough to stay apart at the track's `2rem` minimum.
+const BARS: usize = 28;
+const BARS_SLOT: &str = "bars";
+const AUDIO_CONTAINER: &str = "libero-audio";
+const NARROW: &str = "(max-width: 15rem)";
+const NARROWEST: &str = "(max-width: 13rem)";
+
 static AUDIO_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
         .gap(SizeCss::SPACING.value(Size::Xs))
         .min_width("0")
-        // A voice message's bubble: a page-wide container does not stretch it.
-        .width("100%")
-        .max_width("22rem")
+        // A voice message's bubble: a page-wide container does not stretch it. A
+        // fixed width, not `100%`, so a shrink-wrapping parent cannot zero the container.
+        .width("22rem")
+        .max_width("100%")
+        .container(AUDIO_CONTAINER)
+        // One row at every width: the seek track gives way, then the time and the volume.
         .selector(
             AudioPart::Controls.selector(),
-            controls_sx().border_radius(SizeCss::RADIUS.value(Size::Xl)),
+            controls_sx()
+                .flex_wrap("nowrap")
+                .border_radius(SizeCss::RADIUS.value(Size::Xl)),
         )
         .selector(
             AudioPart::Time.selector(),
             sx().font_variant_numeric("tabular-nums")
                 .white_space("nowrap")
-                .color(ColorCss::MUTED.value(ColorShade::S7)),
+                .color(ColorCss::MUTED.value(ColorShade::S7))
+                .container_query(AUDIO_CONTAINER, NARROW, sx().display("none")),
         )
-        .selector(AudioPart::Seek.selector(), seek_sx())
-        // Gives way only after the seek track is down to its minimum; then the row wraps.
         .selector(
-            AudioPart::Volume.selector(),
-            sx().flex("0 1 6rem")
-                .min_width("4.5rem")
+            AudioPart::Seek.selector(),
+            seek_sx()
+                .flex_shrink("1")
+                .position("relative")
+                // The bars draw the track; the slider keeps the thumb, the keys and the drag.
+                .selector(
+                    "& [data-slot='track'], & [data-slot='bar']",
+                    sx().background("transparent"),
+                )
+                // As tall as the bars, so a press anywhere on them seeks.
+                .selector("& [data-slot='track']", sx().height("1.5rem")),
+        )
+        .selector(
+            format!("& [data-slot='{BARS_SLOT}']"),
+            sx().position("absolute")
+                .top("0")
+                .bottom("0")
+                .left("0.5rem")
+                .right("0.5rem")
                 .display("flex")
                 .align_items("center")
-                .gap("0.125rem")
-                .color(ColorCss::MUTED.value(ColorShade::S7))
-                .selector("& > svg", sx().flex_shrink("0").width("1em").height("1em"))
-                .selector("& > div", sx().flex("1 1 0").min_width("0")),
+                .justify_content("space-between")
+                .pointer_events("none")
+                .selector(
+                    "& > span",
+                    sx().flex("0 1 2px")
+                        .min_width("1px")
+                        .border_radius("999px")
+                        // 3:1 against the surface, as the slider's track (WCAG 1.4.11).
+                        .background("muted.6")
+                        .media(FORCED_COLORS, sx().background("CanvasText")),
+                )
+                .selector(
+                    "& > span[data-played]",
+                    sx().background("primary.6")
+                        .media(FORCED_COLORS, sx().background("Highlight")),
+                )
+                // Half the bars where the track is short, or they run together.
+                .selector(
+                    "& > span:nth-child(even)",
+                    sx().container_query(AUDIO_CONTAINER, NARROWEST, sx().display("none")),
+                ),
+        )
+        // Gone last: M still mutes.
+        .selector(
+            AudioPart::Volume.selector(),
+            sx().display("flex").align_items("center").container_query(
+                AUDIO_CONTAINER,
+                NARROWEST,
+                sx().display("none"),
+            ),
         )
         .selector(
             AudioPart::Message.selector(),
             sx().color(ColorCss::MUTED.value(ColorShade::S7)),
         )
+});
+
+/// The volume menu: a slider on a card.
+static VOLUME_MENU_SX: StaticSx = StaticSx::new(|| {
+    paper_sx()
+        .z_index(Z_INDEX_POPOVER.value())
+        .padding(SizeCss::SPACING.value(Size::Sm))
 });
 
 /// How much an `Audio` fetches before a press.
@@ -193,10 +255,11 @@ base_props! {
 }
 
 /// An audio player in one compact row, as a chat app's voice message: play, a
-/// seek track, the time, volume and a speed button stepping 1×, 1.5× and 2×.
+/// track of bars to seek, the time, mute with a volume menu, and a speed button
+/// stepping 1×, 1.5× and 2×.
 ///
 /// Keys while focus is inside: K, or Space on a slider, play and pause; J and L
-/// jump 10 seconds.
+/// jump 10 seconds; M mutes.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -226,18 +289,8 @@ pub fn Audio(props: AudioProps) -> Element {
         }
     });
 
-    // No M: without a mute button nothing would show why it is silent.
-    let jump = move |by: f64| media.seek(media.current_time() + by);
-    use_hotkeys(
-        [
-            Hotkey::new("k", move || media.toggle()),
-            Hotkey::new("j", move || jump(-10.0)),
-            Hotkey::new("l", move || jump(10.0)),
-        ]
-        .map(|hotkey| hotkey.within(player)),
-    );
-
     let sound = use_sound(media);
+    use_media_keys(media, sound, player, []);
     // A `muted` attribute set after parsing mutes nothing, so the property is set once mounted.
     let start_muted = props.muted;
     use_effect(move || {
@@ -279,7 +332,7 @@ pub fn Audio(props: AudioProps) -> Element {
         if unsupported {
             MediaFallback { src: props.src.clone(), children: props.children }
         } else {
-            AudioControls { media, sound, size: props.size.clone() }
+            AudioControls { media, sound, size: props.size.clone(), heights: bar_heights(&props.src) }
         }
     };
 
@@ -296,16 +349,15 @@ pub fn Audio(props: AudioProps) -> Element {
         .render(HtmlTag::Div, attributes, body)
 }
 
-/// One row: play, seek, time, volume, speed; then the error and buffering messages.
+/// One row: play, seek, time, mute and volume, speed; then the error and buffering messages.
 #[component]
-fn AudioControls(media: MediaHandle, sound: Sound, size: Input<Size>) -> Element {
+fn AudioControls(
+    media: MediaHandle,
+    sound: Sound,
+    size: Input<Size>,
+    heights: [f64; BARS],
+) -> Element {
     let labels = use_localization().media;
-    // Muted shows as 0, so a `muted` player says why it is silent; moving it up unmutes.
-    let volume = if media.muted() {
-        0.0
-    } else {
-        media.volume() * 100.0
-    };
     rsx! {
         div { role: "group", "aria-label": labels.controls, "data-slot": CONTROLS,
             ActionIcon {
@@ -323,29 +375,168 @@ fn AudioControls(media: MediaHandle, sound: Sound, size: Input<Size>) -> Element
                 }
             }
             div { "data-slot": SEEK, onkeydown: space_toggles(media),
+                AudioBars { media, heights }
                 MediaSeek { media, size: size.clone() }
             }
             AudioTime { media }
-            div { "data-slot": VOLUME, onkeydown: space_toggles(media),
-                // Tells the two tracks apart; the slider's name says it to a screen reader.
-                if volume == 0.0 {
+            AudioVolume { media, sound, size: size.clone() }
+            AudioSpeed { media, size }
+        }
+        MediaStatus { media }
+    }
+}
+
+/// The bars behind the seek slider, those played filled; its own component, so
+/// a time tick re-renders only this.
+#[component]
+fn AudioBars(media: MediaHandle, heights: [f64; BARS]) -> Element {
+    let played = played_bars(media.current_time(), media.duration());
+    rsx! {
+        div { "data-slot": BARS_SLOT, "aria-hidden": "true",
+            for (index, height) in heights.into_iter().enumerate() {
+                span {
+                    key: "{index}",
+                    "data-played": (index < played).then_some(""),
+                    style: "height: {height * 100.0:.0}%",
+                }
+            }
+        }
+    }
+}
+
+/// Heights from 0.2 to 1, drawn from `src`: nothing is decoded, and a file
+/// looks the same each time.
+fn bar_heights(src: &str) -> [f64; BARS] {
+    // FNV-1a seeds an xorshift; neighbours blend in lightly so it reads as a waveform.
+    let mut state = src.bytes().fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3)
+    }) | 1;
+    let raw: [f64; BARS] = std::array::from_fn(|_| {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        (state >> 11) as f64 / (1u64 << 53) as f64
+    });
+    std::array::from_fn(|index| {
+        let before = raw[index.saturating_sub(1)];
+        let after = raw[(index + 1).min(BARS - 1)];
+        0.2 + 0.8 * (before + 4.0 * raw[index] + after) / 6.0
+    })
+}
+
+/// How many of the [`BARS`] are played at `elapsed`.
+fn played_bars(elapsed: f64, duration: Option<f64>) -> usize {
+    match duration {
+        Some(total) if total > 0.0 => {
+            ((elapsed / total).clamp(0.0, 1.0) * BARS as f64).round() as usize
+        }
+        _ => 0,
+    }
+}
+
+/// The speaker mutes and unmutes; the chevron beside it opens the volume slider
+/// in a menu, which keeps the row narrow.
+#[component]
+fn AudioVolume(media: MediaHandle, sound: Sound, size: Input<Size>) -> Element {
+    let labels = use_localization().media;
+    let theme = use_theme();
+    let silent = sound.silent();
+    let mut opened = use_signal(|| false);
+    let anchor = use_element();
+    let menu_id = use_id();
+    let popover = use_popover(
+        anchor,
+        opened(),
+        PopoverOptions::new(theme.popover.gap, theme.popover.padding)
+            .side(Side::Top)
+            .align(Align::Center)
+            .dismiss(true),
+    );
+    popover.on_dismiss(move || opened.set(false));
+    let floating = *popover.floating();
+    let card = use_box()
+        .framework_sx(&VOLUME_MENU_SX)
+        .style(popover.style())
+        .prepare();
+
+    // Focus goes to the slider once the card is placed, once per opening.
+    let mut entered = use_signal(|| false);
+    use_effect(move || match (opened(), popover.placed()) {
+        (true, true) if !*entered.peek() => {
+            entered.set(true);
+            let _ = floating
+                .query_selector("[role='slider']")
+                .and_then(|thumb| thumb.focus());
+        }
+        (false, _) => entered.set(false),
+        _ => {}
+    });
+
+    popover.show(opened().then(|| {
+        let mut attributes = popover.floating_events();
+        attributes.extend(owner_link(&anchor));
+        card.element(&floating)
+            .attr("id", menu_id.cloned())
+            .attr("role", "dialog")
+            .attr("aria-label", labels.volume)
+            // Tab leaves the card for its trigger, as a menu does.
+            .event("onkeydown", move |event: KeyboardEvent| {
+                if event.key() == Key::Tab {
+                    event.prevent_default();
+                    opened.set(false);
+                    let _ = anchor.focus();
+                } else {
+                    let mut space_toggles = space_toggles(media);
+                    space_toggles(event);
+                }
+            })
+            .render(
+                HtmlTag::Div,
+                attributes,
+                rsx! {
+                    Slider::<f64> {
+                        value: media.volume() * 100.0,
+                        min: 0.0,
+                        max: 100.0,
+                        step: 5.0,
+                        size: size.clone(),
+                        aria_label: labels.volume,
+                        // The card sizes to its content, which a `100%` track has none of.
+                        sx: sx().width("8rem"),
+                        oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
+                    }
+                },
+            )
+    }));
+
+    rsx! {
+        div { "data-slot": VOLUME,
+            ActionIcon {
+                aria_label: if silent { labels.unmute } else { labels.mute },
+                tooltip: true,
+                shortcut: "m",
+                size: icon_size(&size),
+                onclick: move |_| sound.toggle(),
+                if silent {
                     Glyph { slot: IconSlot::VolumeOff, icon: lucide::volume_x::outlined }
                 } else {
                     Glyph { slot: IconSlot::Volume, icon: lucide::volume_2::outlined }
                 }
-                Slider::<f64> {
-                    value: volume,
-                    min: 0.0,
-                    max: 100.0,
-                    step: 5.0,
-                    size: size.clone(),
-                    aria_label: labels.volume,
-                    oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
-                }
             }
-            AudioSpeed { media, size }
+            ActionIcon {
+                aria_label: labels.volume,
+                aria_haspopup: "dialog",
+                aria_expanded: if opened() { "true" } else { "false" },
+                "aria-controls": opened().then(|| menu_id.cloned()),
+                size: icon_size(&size),
+                // Half a button: it only opens the menu, so the speaker stays the target.
+                sx: sx().min_width("1.25em").width("1.25em"),
+                attributes: popover.anchor_events(),
+                onmounted: anchor.mount(),
+                onclick: move |_| opened.toggle(),
+                Glyph { slot: IconSlot::ChevronUp, icon: lucide::chevron_up::outlined }
+            }
         }
-        MediaStatus { media }
     }
 }
 
@@ -419,6 +610,22 @@ mod tests {
         assert_eq!(shown_time(true, 0.0, Some(65.0)), "1:05");
         assert_eq!(shown_time(false, 0.0, Some(65.0)), "0:00");
         assert_eq!(shown_time(true, 3.0, Some(65.0)), "0:03");
+    }
+
+    #[test]
+    fn the_bars_are_stable_per_file_and_in_range() {
+        let heights = bar_heights("/voice.ogg");
+        assert_eq!(heights, bar_heights("/voice.ogg"));
+        assert_ne!(heights, bar_heights("/other.ogg"));
+        assert!(heights.iter().all(|height| (0.2..=1.0).contains(height)));
+    }
+
+    #[test]
+    fn the_played_bars_follow_the_time() {
+        assert_eq!(played_bars(5.0, None), 0);
+        assert_eq!(played_bars(0.0, Some(60.0)), 0);
+        assert_eq!(played_bars(30.0, Some(60.0)), BARS / 2);
+        assert_eq!(played_bars(90.0, Some(60.0)), BARS);
     }
 
     /// The slot names are public: a rename here is a breaking change.

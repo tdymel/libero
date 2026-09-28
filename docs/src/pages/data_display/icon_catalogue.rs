@@ -2,9 +2,7 @@ use std::sync::LazyLock;
 
 use dioxus::prelude::*;
 use libero::{
-    components::{
-        Anchor, Box, Code, CopyButton, Flex, Pagination, Pictogram, Select, Text, TextField,
-    },
+    components::{Anchor, Box, Code, Flex, Pagination, Pictogram, Select, Text, TextField},
     hooks::use_debounced_value,
     sx::{StaticSx, sx},
 };
@@ -171,17 +169,14 @@ pub fn IconCatalogue() -> Element {
                         align: "center",
                         gap: "xs",
                         sx: sx().padding("xs").min_width("0"),
+                        // The const's path on hover; no copy button per cell (todo 1384).
+                        title: set.rust_path(icon),
                         Pictogram { icon: icon.svg, width: "24px", height: "24px" }
                         Text {
                             size: "xs",
                             sx: sx().max_width("100%").overflow("hidden").text_overflow("ellipsis").white_space("nowrap"),
                             title: icon.name,
                             "{icon.name}"
-                        }
-                        CopyButton {
-                            value: set.rust_path(icon),
-                            size: "sm",
-                            label: icon.name,
                         }
                     }
                 }

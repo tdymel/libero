@@ -50,7 +50,7 @@ pub fn PictogramPage() -> Element {
                     Text {
                         "Every icon of a set, from its crate's "
                         Code { source: "index" }
-                        " feature. Search by words of the name, then copy the path of the icon's const. Only lucide is listed for now. Lobe's colour variants are left out: they hard-code their fills."
+                        " feature. Search by words of the name; hovering an icon shows the path of its const. Only lucide is listed for now. Lobe's colour variants are left out: they hard-code their fills."
                     }
                     IconCatalogue {}
                 },

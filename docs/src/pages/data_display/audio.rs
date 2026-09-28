@@ -46,8 +46,8 @@ pub fn AudioPage() -> Element {
                 .parts("AudioPart", vec![
                     (AudioPart::Controls, "The row of controls, a named `group`."),
                     (AudioPart::Time, "The time: the total until playing starts, then the elapsed."),
-                    (AudioPart::Seek, "The seek slider's wrapper."),
-                    (AudioPart::Volume, "The volume slider's wrapper."),
+                    (AudioPart::Seek, "The seek track's wrapper: the bars and the slider over them."),
+                    (AudioPart::Volume, "The mute button and the volume menu's trigger."),
                     (AudioPart::Message, "The error text, or the fallback where nothing plays media."),
                 ]),
             ],
@@ -55,15 +55,18 @@ pub fn AudioPage() -> Element {
                 .key(["K"], "Plays or pauses, with focus anywhere in the player.")
                 .key(["Space"], "On a slider: plays or pauses. On a button: presses it.")
                 .key(["J", "L"], "Jumps 10 seconds back or ahead.")
+                .key(["M"], "Mutes or unmutes.")
                 .key(["Left", "Right"], "On the seek slider: 1 second; on the volume slider: 5%.")
-                .key(["Tab"], "Moves through every control in visual order: play, seek, volume, speed.")
+                .key(["Escape"], "Closes the volume menu and returns to its button.")
+                .key(["Tab"], "Moves through every control in visual order: play, seek, mute, volume, speed. In the volume menu, returns to its button.")
                 .handles([
                     "The player is a `group` named by `label`, its controls a `group` named \"Player controls\"; every button and slider is its own Tab stop, as in the browser's own controls.",
                     "The speed button shows the rate (\"1×\") and is named \"Playback speed 1×\"; a press steps to 1.5×, 2× and back to 1×, and the name follows.",
                     "The play button changes its name (Play/Pause) rather than using `aria-pressed`.",
                     "The visible time is hidden from screen readers: the seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`).",
-                    "There is no mute button and no M key: a muted player shows its volume slider at 0, and moving it up unmutes.",
-                    "No control leaves the player at any width: the seek track shrinks first, then the volume slider, and only then does the row wrap, so it fits at 320px and 200% zoom (WCAG 1.4.10).",
+                    "The speaker button mutes and unmutes, its name following (Mute/Unmute). The chevron beside it, named \"Volume\", opens a `dialog` holding the volume slider and focuses it; moving the volume up unmutes.",
+                    "The seek track is a row of bars, the played ones filled, under a slider that keeps the keys, the press and the drag. The bars are drawn from the file's URL, not decoded from the sound, and are hidden from screen readers.",
+                    "The row never wraps: the seek track shrinks first, then the time goes, then the mute and volume buttons (M still mutes), so it fits at 320px and 200% zoom (WCAG 1.4.10).",
                     "The bubble has a border at 3:1 against the page in light and dark (WCAG 1.4.11).",
                     "A polite status says \"Loading\" while playing waits for data; a failed source shows an alert.",
                     "No autoplay unless asked, and a debug warning for autoplay with sound (WCAG 1.4.2).",
@@ -80,7 +83,7 @@ pub fn AudioPage() -> Element {
                 Text {
                     "An "
                     Code { source: "<audio>" }
-                    " in one compact row, as a chat app's voice message: play, a seek track, the time, volume and a speed button, "
+                    " in one compact row, as a chat app's voice message: play, a track of bars to seek, the time, mute with a volume menu and a speed button, "
                     "in the theme's look on every platform that plays media. "
                     Code { source: "use_media()" }
                     " drives the same engine for a layout of your own: spread its "

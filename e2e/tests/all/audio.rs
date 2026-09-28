@@ -29,16 +29,22 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// WCAG 1.4.10, todo 1325: a bubble of at most 22rem; from 352px down to 320px
-/// the row, volume included, fits on one line; at 160px (320px at 200% zoom)
-/// it may wrap, but nothing leaves the player. A shrink-wrapping parent does
-/// not collapse it.
+/// WCAG 1.4.10, todos 1325 and 1385: a bubble of at most 22rem whose row stays
+/// one line down to 160px (320px at 200% zoom), nothing leaving the player; the
+/// time goes at 240px, the volume at 160px. A shrink-wrapping parent does not
+/// collapse it.
 #[test]
 fn the_controls_fit_a_narrow_player() {
     block_on(async {
         let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        for (width, bubble) in [(500, 352), (352, 352), (320, 320), (240, 240), (160, 160)] {
+        for (width, bubble, shown) in [
+            (500, 352, 5),
+            (352, 352, 5),
+            (320, 320, 5),
+            (240, 240, 4),
+            (160, 160, 3),
+        ] {
             page.evaluate(format!(
                 "document.querySelector('#player').style.width = '{width}px'"
             ))
@@ -48,12 +54,13 @@ fn the_controls_fit_a_narrow_player() {
                 page,
                 &format!(
                     "(() => {{ const player = document.querySelector('#player [role=group]').getBoundingClientRect();
-                     const row = [...document.querySelectorAll('#player [data-slot=controls] > *')];
+                     const row = [...document.querySelectorAll('#player [data-slot=controls] > *')]
+                         .filter((e) => e.getBoundingClientRect().width > 0);
+                     const seek = document.querySelector('#player [data-slot=seek]').getBoundingClientRect();
                      const fits = row.every((e) => {{ const r = e.getBoundingClientRect();
                          return r.left >= player.left && r.right <= player.right; }});
                      const lines = new Set(row.map((e) => {{ const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2); }})).size;
-                     const oneRow = {width} < 320 || lines === 1;
-                     return row.length === 5 && player.width === {bubble} && fits && oneRow; }})()"
+                     return row.length === {shown} && seek.width >= 32 && player.width === {bubble} && fits && lines === 1; }})()"
                 ),
                 &format!("the row to fit {width}px"),
             )
@@ -71,38 +78,137 @@ fn the_controls_fit_a_narrow_player() {
     });
 }
 
-/// No mute button: a muted player shows its volume at 0, and moving it up unmutes.
+/// Todo 1385: the speaker mutes and unmutes; the chevron opens the volume
+/// slider in a dialog, focused, and Escape returns to the chevron.
 #[test]
-fn a_muted_player_shows_volume_0() {
-    const VOLUME: &str = "#muted [data-slot=volume] [role=slider]";
+fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
+    const SPEAKER: &str = "#muted [data-slot=volume] button:not([aria-haspopup])";
+    const CHEVRON: &str = "#muted [data-slot=volume] button[aria-haspopup]";
+    const DIALOG: &str = "[role=dialog][aria-label=Volume]";
     block_on(async {
         let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
+        let label = |selector: &str, name: &str| {
+            format!("document.querySelector('{selector}').getAttribute('aria-label') === '{name}'")
+        };
 
         wait::for_js_true(
             page,
             &format!(
-                "{} && document.querySelector('{VOLUME}').getAttribute('aria-valuenow') === '0'
-                 && document.querySelector('#muted button[aria-label=Mute], #muted button[aria-label=Unmute]') === null",
-                audio("muted", "a.muted")
+                "{} && {}",
+                audio("muted", "a.muted"),
+                label(SPEAKER, "Unmute")
             ),
-            "the muted volume at 0, no mute button",
+            "a muted player to offer Unmute",
         )
         .await
         .unwrap();
-        page.evaluate(format!("document.querySelector('{VOLUME}').focus()"))
-            .await
-            .unwrap();
-        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        pointer::click(page, SPEAKER).await.unwrap();
         wait::for_js_true(
             page,
-            &audio("muted", "!a.muted && Math.abs(a.volume - 0.05) < 1e-6"),
-            "a volume moved up to unmute",
+            &format!(
+                "{} && {}",
+                audio("muted", "!a.muted"),
+                label(SPEAKER, "Mute")
+            ),
+            "the speaker to unmute",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, SPEAKER).await.unwrap();
+        wait::for_js_true(page, &audio("muted", "a.muted"), "the speaker to mute")
+            .await
+            .unwrap();
+
+        pointer::click(page, CHEVRON).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.activeElement?.closest('{DIALOG}') !== null
+                 && document.activeElement.getAttribute('role') === 'slider'
+                 && document.querySelector('{DIALOG} [data-slot=track]').getBoundingClientRect().width >= 100
+                 && document.querySelector('{CHEVRON}').getAttribute('aria-expanded') === 'true'"
+            ),
+            "the volume dialog open, its slider focused",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        wait::for_js_true(
+            page,
+            &audio("muted", "!a.muted && Math.abs(a.volume - 0.95) < 1e-6"),
+            "a moved volume to unmute",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('{DIALOG}') === null
+                 && document.activeElement === document.querySelector('{CHEVRON}')"
+            ),
+            "Escape to close the dialog and return to the chevron",
         )
         .await
         .unwrap();
 
         fixture.console.assert_clean("muted").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1385: the bars fill as the time moves, from the start side, and a
+/// click on them seeks; right to left the start is the right.
+#[test]
+fn the_bars_follow_the_time_and_a_click_seeks() {
+    block_on(async {
+        let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        for (id, from_right) in [("player", false), ("rtl", true)] {
+            let bars = format!("document.querySelectorAll('#{id} [data-slot=bars] > span')");
+            wait::for_js_true(
+                page,
+                &format!(
+                    "{} === '0:04' && {bars}.length === 28
+                     && document.querySelectorAll('#{id} [data-slot=bars] > [data-played]').length === 0",
+                    time_text(id)
+                ),
+                "28 bars, none played",
+            )
+            .await
+            .unwrap();
+            let track: (f64, f64, f64) = page
+                .evaluate(format!(
+                    "(() => {{ const r = document.querySelector('#{id} [data-slot=bars]').getBoundingClientRect();
+                     return [r.left, r.width, r.top + r.height / 2]; }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let fraction = if from_right { 0.25 } else { 0.75 };
+            let at = pointer::Point {
+                x: track.0 + track.1 * fraction,
+                y: track.2,
+            };
+            pointer::click_at(page, at).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "{} && (() => {{ const b = [...{bars}];
+                     const played = b.filter((e) => e.hasAttribute('data-played'));
+                     const first = b[0].getBoundingClientRect(), last = b[27].getBoundingClientRect();
+                     return played.length >= 18 && played.length <= 24 && played[0] === b[0]
+                         && (first.left > last.left) === {from_right}; }})()",
+                    audio(id, "Math.abs(a.currentTime - 3) < 0.5")
+                ),
+                &format!("a click three quarters in to seek and fill, {id}"),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.console.assert_clean("bars").unwrap();
         fixture.close().await.unwrap();
     });
 }
@@ -167,8 +273,7 @@ fn the_controls_follow_the_element() {
     });
 }
 
-/// L jumps ahead, but only with focus inside the player; M mutes nothing, as
-/// there is no mute button to show it.
+/// L jumps ahead and M mutes, but only with focus inside the player.
 #[test]
 fn keys_act_inside_the_player_only() {
     block_on(async {
@@ -184,6 +289,7 @@ fn keys_act_inside_the_player_only() {
         .unwrap();
         // Outside: nothing.
         keyboard::press(page, L).await.unwrap();
+        keyboard::press(page, M).await.unwrap();
         keyboard::tab_to(page, PLAY, 5).await.unwrap();
         let time: f64 = page
             .evaluate(audio("player", "a.currentTime"))
@@ -192,6 +298,13 @@ fn keys_act_inside_the_player_only() {
             .into_value()
             .unwrap();
         assert_eq!(time, 0.0, "L outside the player jumped");
+        let muted: bool = page
+            .evaluate(audio("player", "a.muted"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!muted, "M outside the player muted");
 
         keyboard::press(page, M).await.unwrap();
         // Space on the seek slider plays; the hotkeys stay off Space, which a button keeps.
@@ -201,8 +314,8 @@ fn keys_act_inside_the_player_only() {
         keyboard::press(page, keyboard::SPACE).await.unwrap();
         wait::for_js_true(
             page,
-            &audio("player", "!a.paused && !a.muted"),
-            "Space on the slider to play, M to leave the sound on",
+            &audio("player", "!a.paused && a.muted"),
+            "Space on the slider to play, M to mute",
         )
         .await
         .unwrap();

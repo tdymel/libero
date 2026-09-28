@@ -65,9 +65,13 @@ fn the_controls_start_paused_with_an_unknown_duration() {
     );
     assert!(html.contains(r#"aria-label="Abspielen""#), "{html}");
     assert!(html.contains(r#"aria-label="Position""#), "{html}");
-    // No mute button, the volume slider stays, one time value.
-    assert!(!html.contains(r#"aria-label="Stummschalten""#), "{html}");
-    assert!(html.contains(r#"aria-label="Lautstärke""#), "{html}");
+    // A mute button and the volume menu's closed trigger (todo 1385), one time value.
+    assert!(html.contains(r#"aria-label="Stummschalten""#), "{html}");
+    assert!(
+        html.contains(r#"aria-label="Lautstärke""#) && html.contains(r#"aria-haspopup="dialog""#),
+        "{html}"
+    );
+    assert!(!html.contains(r#"role="dialog""#), "{html}");
     assert!(html.contains(">--:--<") && !html.contains(" / "), "{html}");
     assert!(html.contains(r#"role="status""#), "{html}");
 }

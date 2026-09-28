@@ -65,8 +65,8 @@ beats: inside `Icon` or `ActionIcon` the host's CSS still sizes the glyph.
 
 The page's Icons tab (`#icons`) lists every icon of a set from its crate's `index` feature
 (`pictogram_icons_lucide::LIBRARY`), 120 per page, with the set's license,
-upstream version and repository. Search by words of the name (`arrow left`),
-then copy the path of the icon's const, e.g.
+upstream version and repository. Search by words of the name (`arrow left`);
+hovering an icon shows the path of its const, e.g.
 `pictogram_icons_lucide::arrow_left::outlined`. Only lucide is listed for now.
 Lobe's colour variants are left out: they hard-code their fills.
 
