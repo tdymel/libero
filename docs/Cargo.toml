@@ -19,10 +19,11 @@ libero = { path = "../libero", default-features = false, features = [
     "icons-phosphor",
     "icons-tabler",
 ] }
-# The `Pictogram` and `Icon` demos' glyphs; libero's own pin. `index`: the
-# Pictogram page's icon catalogue (1355): +477 KB raw, +95 KB brotli on the release wasm.
+# The `Pictogram` and `Icon` demos' glyphs; libero's own pin.
 pictogram-core = "0.5"
-pictogram-icons-lucide = { version = "0.5", features = ["index"] }
+pictogram-icons-lucide = "0.5"
+# The icon catalogue's fetched JSON (1358). Already in every graph through dioxus.
+serde_json = "1"
 # The GitHub and Markdown marks on every page's source and markdown links.
 pictogram-icons-simple = "0.5"
 # `dioxus/native` would pull this in with its default features, and its
@@ -40,6 +41,11 @@ dioxus-native = { git = "https://github.com/DioxusLabs/dioxus", optional = true,
     "file-dialog",
     "woff",
 ] }
+
+# `build.rs` writes the icon catalogue from every set's index; host only, not in the wasm.
+[build-dependencies]
+pictogram = { version = "0.5", features = ["index"] }
+serde_json = "1"
 
 # Render-to-string, for the tests of shared docs components; libero's dioxus rev.
 [dev-dependencies]

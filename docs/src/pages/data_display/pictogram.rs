@@ -46,14 +46,7 @@ pub fn PictogramPage() -> Element {
             extra_tab: ExtraTab {
                 label: "Icons",
                 id: "icons",
-                content: rsx! {
-                    Text {
-                        "Every icon of a set, from its crate's "
-                        Code { source: "index" }
-                        " feature. Search by words of the name; hovering an icon shows the path of its const. Only lucide is listed for now. Lobe's colour variants are left out: they hard-code their fills."
-                    }
-                    IconCatalogue {}
-                },
+                content: rsx! { IconCatalogue {} },
             },
             lead: rsx! {
                 PictogramNote {}

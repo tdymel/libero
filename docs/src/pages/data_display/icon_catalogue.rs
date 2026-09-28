@@ -1,4 +1,7 @@
-use std::sync::LazyLock;
+use std::{
+    collections::HashMap,
+    sync::{LazyLock, Mutex},
+};
 
 use dioxus::prelude::*;
 use libero::{
@@ -6,10 +9,16 @@ use libero::{
     hooks::use_debounced_value,
     sx::{StaticSx, sx},
 };
-use pictogram_core::{Icon, Library};
+use pictogram_core::{Icon, Svg};
 
 /// Cells per page: enough to browse, few enough inline svgs for Blitz.
 const PER_PAGE: usize = 120;
+
+/// The set shown first, the one the demos draw from.
+const FIRST_SET: &str = "lucide";
+
+/// `build.rs` writes one `<set>-<variant>.json` per set and variant in here.
+static ICON_FILES: Asset = asset!("/assets/icons", AssetOptions::folder());
 
 static GRID_SX: StaticSx = StaticSx::new(|| {
     sx().display("grid")
@@ -17,8 +26,8 @@ static GRID_SX: StaticSx = StaticSx::new(|| {
         .gap("xs")
 });
 
-/// One icon set as the catalogue lists it. Only how the list is filled may change (1358).
-#[derive(Clone, PartialEq)]
+/// One icon set as the catalogue lists it; its icons are fetched per variant.
+#[derive(Clone, Copy, PartialEq)]
 pub struct CatalogueSet {
     /// The crate's set name, e.g. `lucide`.
     pub name: &'static str,
@@ -26,41 +35,32 @@ pub struct CatalogueSet {
     pub license: &'static str,
     pub repository: &'static str,
     pub upstream_version: &'static str,
-    pub variants: Vec<&'static str>,
-    pub icons: Vec<Icon>,
+    /// Lobe's colour variants are left out by `build.rs`.
+    pub variants: &'static [&'static str],
 }
 
+// `ICON_SETS`: every set of pictogram's index, from `build.rs`.
+include!(concat!(env!("OUT_DIR"), "/icon_sets.rs"));
+
 impl CatalogueSet {
-    /// A set from its crate's index, colour variants left out.
-    fn from_library(library: &Library) -> Self {
-        Self {
-            name: library.name,
-            title: library.title,
-            license: library.license,
-            repository: library.repository,
-            upstream_version: library.upstream_version,
-            variants: library
-                .variants
-                .iter()
-                .copied()
-                .filter(|v| shown(v))
-                .collect(),
-            icons: library
-                .icons
-                .iter()
-                .copied()
-                .filter(|i| shown(i.variant))
-                .collect(),
-        }
+    fn named(name: &str) -> &'static Self {
+        ICON_SETS
+            .iter()
+            .find(|set| set.name == name)
+            .unwrap_or(&ICON_SETS[0])
     }
 
-    /// The icons of `variant` that match `query`, in index order.
-    fn filtered(&self, variant: &str, query: &str) -> Vec<Icon> {
-        self.icons
+    /// `variant` as the set's own `'static` name, else its first variant.
+    fn variant(&self, variant: &str) -> &'static str {
+        self.variants
             .iter()
-            .filter(|icon| icon.variant == variant && icon.matches(query))
             .copied()
-            .collect()
+            .find(|v| *v == variant)
+            .unwrap_or(self.variants[0])
+    }
+
+    fn file(&self, variant: &str) -> String {
+        format!("{}-{variant}.json", self.name)
     }
 
     /// The path of the icon's const, as an app writes it.
@@ -74,16 +74,54 @@ impl CatalogueSet {
     }
 }
 
-/// Lobe's colour variants hard-code fills and share gradient ids across copies.
-fn shown(variant: &str) -> bool {
-    variant != "color" && !variant.ends_with("_color")
+/// A file's `[name, module, view_box, attrs, body]` rows as icons. Leaked: `Pictogram`
+/// takes `'static` parts, and `load` keeps each file once.
+fn parse(json: &str, variant: &'static str) -> Result<Vec<Icon>, serde_json::Error> {
+    let rows: Vec<(String, String, String, String, String)> = serde_json::from_str(json)?;
+    Ok(rows
+        .into_iter()
+        .map(|(name, module, view_box, attrs, body)| Icon {
+            name: name.leak(),
+            module: module.leak(),
+            variant,
+            svg: Svg {
+                view_box: view_box.leak(),
+                attrs: attrs.leak(),
+                body: body.leak(),
+            },
+        })
+        .collect())
 }
 
-/// Every set the catalogue offers.
-fn catalogue_sets() -> &'static [CatalogueSet] {
-    static SETS: LazyLock<Vec<CatalogueSet>> =
-        LazyLock::new(|| vec![CatalogueSet::from_library(&pictogram_icons_lucide::LIBRARY)]);
-    &SETS
+/// The icons of one set and variant, fetched once (web) or read from the bundle (native).
+async fn load(
+    set: &'static CatalogueSet,
+    variant: &'static str,
+) -> Result<&'static [Icon], String> {
+    static LOADED: LazyLock<Mutex<HashMap<String, &'static [Icon]>>> =
+        LazyLock::new(Default::default);
+    let file = set.file(variant);
+    if let Some(icons) = LOADED.lock().unwrap().get(&file) {
+        return Ok(icons);
+    }
+    let bytes = dioxus::asset_resolver::read_asset_bytes(format!("{ICON_FILES}/{file}"))
+        .await
+        .map_err(|err| format!("{file}: {err}"))?;
+    let json = String::from_utf8_lossy(&bytes);
+    let icons: &'static [Icon] = parse(&json, variant)
+        .map_err(|err| format!("{file}: {err}"))?
+        .leak();
+    LOADED.lock().unwrap().insert(file, icons);
+    Ok(icons)
+}
+
+/// The icons that match `query`, in index order.
+fn filtered(icons: &[Icon], query: &str) -> Vec<Icon> {
+    icons
+        .iter()
+        .filter(|icon| icon.matches(query))
+        .copied()
+        .collect()
 }
 
 /// Page count for `len` icons; at least one, so an empty search keeps its page.
@@ -98,12 +136,11 @@ fn page_slice(icons: &[Icon], page: u32) -> &[Icon] {
     &icons[start..(start + PER_PAGE).min(icons.len())]
 }
 
-/// Every icon of the sets docs carries the index of, by set and variant, with search.
+/// Every icon of pictogram's sets, by set and variant, with search.
 #[component]
 pub fn IconCatalogue() -> Element {
-    let sets = catalogue_sets();
-    let mut set_name = use_signal(|| sets[0].name.to_string());
-    let mut variant = use_signal(|| sets[0].variants[0].to_string());
+    let mut set_name = use_signal(|| FIRST_SET.to_string());
+    let mut variant = use_signal(|| CatalogueSet::named(FIRST_SET).variants[0].to_string());
     let mut query = use_signal(String::new);
     let settled = use_debounced_value(query.into(), 200);
     let mut page = use_signal(|| 1u32);
@@ -111,12 +148,21 @@ pub fn IconCatalogue() -> Element {
         settled.read();
         page.set(1);
     });
+    let loaded = use_resource(move || async move {
+        let set = CatalogueSet::named(&set_name());
+        load(set, set.variant(&variant())).await
+    });
 
-    let set = sets
-        .iter()
-        .find(|set| set.name == set_name())
-        .unwrap_or(&sets[0]);
-    let icons = set.filtered(&variant(), &settled());
+    let set = CatalogueSet::named(&set_name());
+    let (icons, status) = match &*loaded.read() {
+        Some(Ok(icons)) => {
+            let icons = filtered(icons, &settled());
+            let status = format!("{} icons", icons.len());
+            (icons, status)
+        }
+        Some(Err(err)) => (Vec::new(), format!("Could not load the icons: {err}")),
+        None => (Vec::new(), "Loading icons".to_string()),
+    };
     let count = icons.len();
     let shown = page_slice(&icons, page());
 
@@ -131,12 +177,11 @@ pub fn IconCatalogue() -> Element {
             Flex { direction: "row", gap: "sm", wrap: "wrap", align: "flex-end",
                 Select {
                     label: "Set",
-                    options: sets.iter().map(|set| set.name.to_string()).collect::<Vec<_>>(),
+                    options: ICON_SETS.iter().map(|set| set.name.to_string()).collect::<Vec<_>>(),
                     value: Some(set_name()),
                     onchange: move |next: Option<String>| {
                         if let Some(next) = next {
-                            let first = sets.iter().find(|set| set.name == next).map(|set| set.variants[0]);
-                            variant.set(first.unwrap_or_default().to_string());
+                            variant.set(CatalogueSet::named(&next).variants[0].to_string());
                             set_name.set(next);
                             page.set(1);
                         }
@@ -160,7 +205,7 @@ pub fn IconCatalogue() -> Element {
                     oninput: move |text| query.set(text),
                 }
             }
-            Text { size: "sm", role: "status", "{count} icons" }
+            Text { size: "sm", role: "status", "{status}" }
             Box { framework_sx: &GRID_SX,
                 for icon in shown.iter() {
                     Flex {
@@ -196,33 +241,50 @@ mod tests {
     use super::*;
     use libero::context::LiberoProvider;
 
-    fn lucide() -> &'static CatalogueSet {
-        &catalogue_sets()[0]
+    /// A file as `build.rs` wrote it, read from disk: no fetch on the host.
+    fn read(set: &str, variant: &'static str) -> Vec<Icon> {
+        let path = format!(
+            "{}/assets/icons/{set}-{variant}.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        parse(&std::fs::read_to_string(&path).unwrap(), variant).unwrap()
     }
 
     #[test]
-    fn lucide_is_indexed() {
-        let set = lucide();
-        assert_eq!(set.name, "lucide");
-        assert_eq!(set.variants, ["outlined"]);
-        assert!(set.icons.len() > 1500);
+    fn every_set_is_listed() {
+        assert_eq!(ICON_SETS.len(), 14);
+        assert_eq!(CatalogueSet::named("lucide").variants, ["outlined"]);
+        assert_eq!(
+            CatalogueSet::named("lobe").variants,
+            ["brand", "mono", "text", "text_cn"]
+        );
+        assert_eq!(CatalogueSet::named("material").license, "Apache-2.0");
+    }
+
+    #[test]
+    fn every_variant_has_a_file() {
+        for set in ICON_SETS {
+            for variant in set.variants {
+                assert!(!read(set.name, variant).is_empty(), "{}", set.file(variant));
+            }
+        }
+        assert!(read("lucide", "outlined").len() > 1500);
     }
 
     #[test]
     fn search_narrows_by_words() {
-        let found = lucide().filtered("outlined", "arrow left");
+        let found = filtered(&read("lucide", "outlined"), "arrow left");
         assert!(found.iter().any(|icon| icon.name == "arrow-left"));
         assert!(
             found
                 .iter()
                 .all(|icon| icon.name.contains("arrow") && icon.name.contains("left"))
         );
-        assert!(lucide().filtered("filled", "").is_empty());
     }
 
     #[test]
     fn pages_hold_at_most_120_and_clamp() {
-        let icons = lucide().filtered("outlined", "");
+        let icons = read("lucide", "outlined");
         let last = page_count(icons.len());
         assert_eq!(page_slice(&icons, 1).len(), PER_PAGE);
         assert_eq!(page_slice(&icons, 1)[0], icons[0]);
@@ -233,26 +295,24 @@ mod tests {
 
     #[test]
     fn path_is_the_const() {
-        let set = lucide();
-        let icon = set
-            .icons
-            .iter()
-            .find(|icon| icon.name == "arrow-up")
-            .unwrap();
+        let set = CatalogueSet::named("font-awesome");
+        let icons = read(set.name, "solid");
+        let icon = icons.iter().find(|icon| icon.name == "arrow-up").unwrap();
         assert_eq!(
             set.rust_path(icon),
-            "pictogram_icons_lucide::arrow_up::outlined"
+            "pictogram_icons_font_awesome::arrow_up::solid"
         );
     }
 
     #[test]
-    fn colour_variants_are_hidden() {
-        assert!(shown("mono") && shown("brand") && shown("outlined"));
-        assert!(!shown("color") && !shown("brand_color") && !shown("text_color"));
+    fn unknown_names_fall_back() {
+        let set = CatalogueSet::named("nope");
+        assert_eq!(set.name, ICON_SETS[0].name);
+        assert_eq!(set.variant("nope"), set.variants[0]);
     }
 
     #[test]
-    fn renders_the_first_page() {
+    fn renders_the_set_before_its_icons() {
         fn app() -> Element {
             rsx! {
                 LiberoProvider { IconCatalogue {} }
@@ -262,9 +322,6 @@ mod tests {
         dom.rebuild_in_place();
         let html = dioxus_ssr::render(&dom);
         assert!(html.contains("ISC"), "{html}");
-        assert!(html.contains(">a-arrow-down<"), "{html}");
-        let total = lucide().icons.len();
-        assert!(html.contains(&format!("{total} icons")), "{html}");
-        assert!(html.matches("<svg").count() >= PER_PAGE);
+        assert!(html.contains("Loading icons"), "{html}");
     }
 }

@@ -40,7 +40,7 @@ const RENDERER_CRATES: [&str; 11] = [
 ];
 
 /// Every crate `docs` may name, each for one reason.
-const DOCS_CRATES: [(&str, &str); 7] = [
+const DOCS_CRATES: [(&str, &str); 9] = [
     ("dioxus", "the app itself"),
     (
         "pictogram_icons_lucide",
@@ -52,8 +52,13 @@ const DOCS_CRATES: [(&str, &str); 7] = [
     ),
     (
         "pictogram_core",
-        "`Icon` and `Library`, the Pictogram page's icon catalogue",
+        "`Icon` and `Svg`, the Pictogram page's icon catalogue",
     ),
+    (
+        "pictogram",
+        "`build.rs` writes the icon catalogue's files from every set's index",
+    ),
+    ("serde_json", "reads and writes the icon catalogue's files"),
     ("std", "the standard library"),
     (
         "dioxus_native",

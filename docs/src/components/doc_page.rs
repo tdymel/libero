@@ -6,7 +6,7 @@ use libero::{
 };
 use pictogram_icons_lucide as lucide;
 
-use super::{A11yDoc, A11yPanel, DocSection, PartsPanel, PropGroup, PropertyTable};
+use super::{A11yDoc, A11yPanel, PartsPanel, PropGroup, PropertyTable};
 use crate::{Route, heading_focus, nav::neighbours};
 use pictogram_icons_simple as simple;
 
@@ -210,9 +210,10 @@ pub fn DocPage(
                         DocTab::Usage => rsx! {
                             Flex { direction: "column", gap: "xxl", {children.clone()} }
                         },
+                        // No heading: the tab already names it (1358).
                         DocTab::Extra => match extra_tab.clone() {
                             Some(extra) => rsx! {
-                                DocSection { id: extra.id, title: extra.label, {extra.content} }
+                                Flex { id: extra.id, direction: "column", gap: "sm", {extra.content} }
                             },
                             None => rsx! {},
                         },

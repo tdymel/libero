@@ -1,5 +1,6 @@
 //! Lists the components `libero::components` exports, so the docs count them
 //! instead of writing a number down. `src/exports.rs` includes the output.
+//! Also writes the icon catalogue's files, see `icon_catalogue`.
 
 use std::{env, fs, path::Path};
 
@@ -29,6 +30,60 @@ fn main() {
         out,
     )
     .unwrap();
+    icon_catalogue();
+}
+
+/// The Pictogram page's catalogue (1358): one `assets/icons/<set>-<variant>.json` per set and
+/// variant from pictogram's index, fetched on demand, and the sets' facts as `icon_sets.rs`.
+fn icon_catalogue() {
+    let dir = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("assets/icons");
+    let mut sets = String::from("pub static ICON_SETS: &[CatalogueSet] = &[\n");
+    for library in pictogram::LIBRARIES {
+        let variants: Vec<&str> = library
+            .variants
+            .iter()
+            .copied()
+            .filter(|variant| shown(variant))
+            .collect();
+        for variant in &variants {
+            let icons: Vec<_> = library
+                .variant(variant)
+                .map(|icon| {
+                    let svg = icon.svg;
+                    (icon.name, icon.module, svg.view_box, svg.attrs, svg.body)
+                })
+                .collect();
+            let json = serde_json::to_string(&icons).unwrap();
+            write_if_changed(&dir.join(format!("{}-{variant}.json", library.name)), &json);
+        }
+        sets += &format!(
+            "    CatalogueSet {{ name: {:?}, title: {:?}, license: {:?}, repository: {:?}, upstream_version: {:?}, variants: &{variants:?} }},\n",
+            library.name,
+            library.title,
+            library.license,
+            library.repository,
+            library.upstream_version,
+        );
+    }
+    sets += "];\n";
+    fs::write(
+        Path::new(&env::var("OUT_DIR").unwrap()).join("icon_sets.rs"),
+        sets,
+    )
+    .unwrap();
+}
+
+/// Lobe's colour variants hard-code fills and share gradient ids across copies.
+fn shown(variant: &str) -> bool {
+    variant != "color" && !variant.ends_with("_color")
+}
+
+/// Leaves an unchanged file alone, so `dx` sees no asset change on a rerun.
+fn write_if_changed(path: &Path, contents: &str) {
+    if fs::read_to_string(path).is_ok_and(|old| old == contents) {
+        return;
+    }
+    fs::write(path, contents).unwrap();
 }
 
 /// Every `pub fn` at the top of a file with a capitalised name that returns

@@ -63,12 +63,13 @@ beats: inside `Icon` or `ActionIcon` the host's CSS still sizes the glyph.
 
 ## Icon catalogue
 
-The page's Icons tab (`#icons`) lists every icon of a set from its crate's `index` feature
-(`pictogram_icons_lucide::LIBRARY`), 120 per page, with the set's license,
-upstream version and repository. Search by words of the name (`arrow left`);
-hovering an icon shows the path of its const, e.g.
-`pictogram_icons_lucide::arrow_left::outlined`. Only lucide is listed for now.
-Lobe's colour variants are left out: they hard-code their fills.
+The page's Icons tab (`#icons`) lists every icon of all 14 pictogram sets, one set
+and variant at a time, 120 per page, with the set's license, upstream version and
+repository. The docs build writes each set and variant from the crates' `index`
+feature (`pictogram::LIBRARIES`) as a JSON file, which the page fetches when you
+pick it. Search by words of the name (`arrow left`); hovering an icon shows the
+path of its const, e.g. `pictogram_icons_lucide::arrow_left::outlined`. Lobe's
+colour variants are left out: they hard-code their fills.
 
 ## Props
 
