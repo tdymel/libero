@@ -117,7 +117,10 @@ pub(super) fn ColumnMenu(
             true => (forward, backward),
             false => (backward, forward),
         };
-        for (label, next) in [(labels.move_left, left), (labels.move_right, right)] {
+        for (label, next) in [
+            (labels.move_column_left, left),
+            (labels.move_column_right, right),
+        ] {
             items.push(
                 MenuItem::new(label)
                     .disabled(next.is_none())
