@@ -1410,6 +1410,35 @@ e2e::scenario!(
     a_menu_pin_moves_the_column
 );
 
+/// WCAG 2.4.11: Shift+Tab up a capped table's rows never leaves the focused
+/// checkbox under the sticky header.
+async fn a_focused_row_stays_below_the_header<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("tbody tr:nth-child(1) input").await?;
+    let mut worst = f64::MAX;
+    for _ in 0..30 {
+        d.press(keyboard::TAB).await?;
+        linger(d, 100).await;
+    }
+    for _ in 0..30 {
+        d.press_shift(keyboard::TAB).await?;
+        linger(d, 100).await;
+        let header = d.rect("thead th").await?;
+        let focused = d.rect("input:focus").await?;
+        worst = worst.min(focused.y - (header.y + header.height));
+    }
+    if worst < -1.0 {
+        bail!("a focused row control sat {worst}px under the sticky header");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_focused_row_control_is_not_hidden_by_the_sticky_header,
+    "/table/sticky-select",
+    a_focused_row_stays_below_the_header,
+    android: skip("958: element identity on the WebView")
+);
+
 /// The body reads `name:cell` per row, in order, joined by `|`.
 async fn rows(page: &Page, expected: &str) -> Result<()> {
     wait::for_js_true(

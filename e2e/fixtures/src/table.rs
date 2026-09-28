@@ -34,6 +34,7 @@ pub const ROUTES: Routes = &[
         "/table/sticky-plain",
         || rsx! { StickyTablePage { interactive: false } },
     ),
+    ("/table/sticky-select", || rsx! { StickySelectPage {} }),
     ("/table/filter", || rsx! { FilterTablePage {} }),
     ("/table/column-filter", || rsx! { ColumnFilterTablePage {} }),
     ("/table/date-filter", || rsx! { DateFilterTablePage {} }),
@@ -395,6 +396,31 @@ fn StickyTablePage(interactive: bool) -> Element {
             striped: true,
             data,
             columns,
+        }
+    }
+}
+
+/// Forty selectable fruits under a 200px `max_height`: each row has a tab stop
+/// that scrolling by focus must keep clear of the sticky header (WCAG 2.4.11).
+#[component]
+fn StickySelectPage() -> Element {
+    let data: Vec<Fruit> = (1..=40)
+        .map(|stock| Fruit {
+            name: ["Apple", "Banana", "Cherry", "Date"][stock as usize % 4],
+            stock,
+        })
+        .collect();
+    rsx! {
+        Table {
+            caption: "Fruit stock",
+            max_height: "200px",
+            selectable: true,
+            row_key: |fruit: &Fruit| fruit.stock.to_string(),
+            data,
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()),
+                column("Stock").value(|fruit: &Fruit| fruit.stock).row_header(),
+            ],
         }
     }
 }

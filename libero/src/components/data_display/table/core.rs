@@ -401,6 +401,8 @@ pub(super) struct BodySpec {
     pub resize: Option<ColumnResize>,
     /// With `column_menu`, off Blitz: what the unpinned headers' drag grips share.
     pub drag: Option<ColumnDrag>,
+    /// With a sticky header: told its height, so a focus scroll clears it.
+    pub head_height: Option<EventHandler<f64>>,
 }
 
 /// Whether a header click adds its column to the others: a modifier, or a touch,
@@ -461,6 +463,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         filters,
         resize,
         drag,
+        head_height,
     } = body;
     let columns = shown.len().max(1)
         + usize::from(select_all.is_some())
@@ -592,6 +595,11 @@ pub(super) fn render_body(body: BodySpec) -> Element {
             caption { id: spec.id, "{spec.text}" }
         }
         thead {
+            onresize: move |event: Event<ResizeData>| {
+                if let (Some(told), Ok(size)) = (head_height, event.get_border_box_size()) {
+                    told.call(size.height);
+                }
+            },
             {head_rows.into_iter()}
             {filter_row}
         }

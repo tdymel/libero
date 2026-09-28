@@ -951,6 +951,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         })
     };
     let bounded = props.max_height.is_some();
+    let mut head = use_signal(|| 0.0);
     let scrolls = props.scroll || bounded;
     let size_states: Input<States> = States::new().with(size.state_name(), true).into();
     let caption_box = use_box()
@@ -1509,6 +1510,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 filters: filter_cells,
                 resize,
                 drag: drags.then_some(column_drag),
+                head_height: bounded.then(|| EventHandler::new(move |height| head.set(height))),
             }),
         );
     // The live region: valid in no part of a table, so beside it.
@@ -1557,7 +1559,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 ScrollArea {
                     scrollbars: if bounded { ScrollAxis::Both } else { ScrollAxis::Horizontal },
                     framework_sx: ScrollAreaBase(&TABLE_SCROLL_SX),
-                    sx: max_height.map(|height| sx().max_height(height)).unwrap_or_default(),
+                    sx: max_height
+                        .map(|height| {
+                            // The sticky header covers the top; a focus scroll stops below it.
+                            sx().max_height(height)
+                                .with("scroll-padding-top", format!("{}px", head()))
+                        })
+                        .unwrap_or_default(),
                     onbottomreached: onbottomreached.map(|_| bottom_reached),
                     // Its root, mounted by the area itself, is where a column drop counts.
                     handle: ScrollAreaHandle { element: column_drag.region },
