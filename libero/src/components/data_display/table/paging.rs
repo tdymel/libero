@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use dioxus::prelude::*;
 
-use super::{core::TableSort, use_table::TableState};
+use super::use_table::TableState;
 use crate::{
     components::{
         accessibility::use_announcer,
@@ -60,9 +60,16 @@ pub(super) fn page_of_row(row: usize, size: usize) -> u32 {
 /// Back to page 1 when the sort or the filter changes: the rows the reader
 /// paged to are gone.
 pub(super) fn use_page_reset(state: TableState) {
-    let mut last = use_signal(|| (state.sort.read(), state.quick_filter.read()));
+    let read = move || {
+        (
+            state.sort.read(),
+            state.quick_filter.read(),
+            state.column_filters.read(),
+        )
+    };
+    let mut last = use_signal(read);
     use_effect(move || {
-        let now: (Vec<TableSort>, String) = (state.sort.read(), state.quick_filter.read());
+        let now = read();
         if *last.peek() == now {
             return;
         }

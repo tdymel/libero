@@ -7,6 +7,7 @@ use super::{
     cell_value::{CellAlign, SortDirection, SortKey},
     column::{Column, ColumnDefaults},
     groups::{HeaderCell, header_rows},
+    header_filters::filter_row,
     pinning::{CellPin, pin_edge_at},
     row_reorder::{ReorderRow, ReorderSlot, RowReorder},
     use_table::StateSlice,
@@ -367,6 +368,8 @@ pub(super) struct BodySpec {
     /// With `onrowreorder`: the leading column of handles, and its header cell.
     pub reorder: Option<RowReorder>,
     pub reorder_header: Option<Element>,
+    /// With `header_filters`: each header's filter field, by header index.
+    pub filters: Option<Vec<Option<Element>>>,
 }
 
 /// Whether a header click adds its column to the others: a modifier, or a touch,
@@ -422,11 +425,22 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         menus,
         reorder,
         reorder_header,
+        filters,
     } = body;
     let columns = shown.len().max(1)
         + usize::from(select_all.is_some())
         + usize::from(detail_header.is_some())
         + usize::from(reorder.is_some());
+    let filter_row = filters.map(|cells| {
+        filter_row(
+            &headers,
+            &shown,
+            cells,
+            reorder.is_some(),
+            detail_header.is_some(),
+            select_all.is_some(),
+        )
+    });
     let empty = rows.is_empty().then_some(empty);
     // The order shows only when it tells something: with two or more sorted columns.
     let ranked = active.len() > 1;
@@ -508,7 +522,10 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         if let Some(spec) = caption {
             caption { id: spec.id, "{spec.text}" }
         }
-        thead { {head_rows.into_iter()} }
+        thead {
+            {head_rows.into_iter()}
+            {filter_row}
+        }
         {
             let body = rsx! {
                 if let Some(empty) = empty {

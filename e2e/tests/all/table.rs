@@ -428,6 +428,66 @@ e2e::scenario!(
     the_quick_filter_narrows_the_rows
 );
 
+/// 1156-3b/3c: a header filter narrows by value once typing settles; the menu's
+/// Filter opens a dialog on the value field, whose operator and Clear apply at once.
+async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const LIVE: &str = "table + [role=status]";
+    const STOCK: &str = "input[aria-label=\"Filter Stock\"]";
+    const POPOVER: &str = "[data-filter-popover]";
+    const MENU: &str = "[aria-label=\"Name column options\"]";
+    d.click(STOCK).await?;
+    d.type_text("3").await?;
+    eventually_text(d, "#filters", "Stock Equals 3", "a header filter").await?;
+    eventually_text(d, "tbody th", "Grape", "Stock = 3").await?;
+    eventually_text(d, LIVE, "1 row", "the settled count").await?;
+    d.press(keyboard::BACKSPACE).await?;
+    eventually_text(d, "tbody th", "Fig", "an emptied header filter").await?;
+
+    // Filter sits above Hide column and the Columns submenu, the last entries.
+    d.focus(MENU).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_focused(d, "[role=menuitem]", "the opened column menu").await?;
+    d.press(keyboard::END).await?;
+    d.press(keyboard::ARROW_UP).await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_text(d, "[role=menuitem]:focus", "Filter", "End, Up, Up").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "the opened filter", async |d| d.exists(POPOVER).await).await?;
+    eventually_focused(d, &format!("{POPOVER} input"), "the opened filter").await?;
+    d.type_text("an").await?;
+    eventually_text(d, "tbody th", "Banana", "Name contains an").await?;
+    eventually(d, "the filtered button", async |d| {
+        d.exists("[data-filtered]").await
+    })
+    .await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, &format!("{POPOVER} select"), "Shift+Tab").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_text(d, "#filters", "Name DoesNotContain an", "the next operator").await?;
+    eventually_text(d, "tbody th", "Fig", "Name lacks an").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "the closed filter", async |d| {
+        Ok(!d.exists(POPOVER).await?)
+    })
+    .await?;
+    eventually_focused(d, MENU, "Escape").await?;
+
+    d.click("[data-filtered]").await?;
+    eventually(d, "the reopened filter", async |d| d.exists(POPOVER).await).await?;
+    d.click(&format!("{POPOVER} button")).await?;
+    eventually(d, "a cleared filter", async |d| {
+        Ok(!d.exists("[data-filtered]").await?)
+    })
+    .await?;
+    eventually_text(d, "#filters", "", "Clear").await
+}
+
+e2e::scenario!(
+    the_column_filters_narrow_a_table,
+    "/table/column-filter",
+    the_column_filters_narrow_the_rows
+);
+
 /// 1156-0b: with `row_key`, a row prepended on top leaves the others' nodes alone.
 #[test]
 fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {

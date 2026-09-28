@@ -47,6 +47,12 @@ out. The rows are filtered, then sorted, then paged. Hold the text yourself with
 `quick_filter` and `onquickfilterchange`, or filter on a server with
 `manual_filter`.
 
+`column_menu`'s Filter entry, and `header_filters`' row of fields under the
+headers, filter one column each, with operators for its type: contains or
+starts with for text, greater than for numbers, yes or no for booleans. The
+filters all apply, together with the quick filter. Hold them yourself with
+`column_filters` and `oncolumnfilterschange`.
+
 `column_menu` adds a menu to each header to sort, hide the column, or show and
 hide the others. `.hideable(false)` keeps a column out of it. To hold the hidden
 columns yourself, pass `hidden_columns` and update it from
@@ -552,7 +558,7 @@ fn Demo() -> Element {
 | `columns` | `Vec<Column<T>>` | required | Built with `column(..)`. |
 | `column_defaults` | `ColumnDefaults` | none | Settings every column starts from: `ColumnDefaults::new().align(..).width(..).min_width(..)`. A column's own setting wins. |
 | `caption` | `Option<String>` | `None` | A visible title above the header row, and the table's accessible name. |
-| `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". When the quick filter leaves no rows, the row reads `table.no_results`, "No matching rows", instead. |
+| `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". When the quick filter or the column filters leave no rows, the row reads `table.no_results`, "No matching rows", instead. |
 | `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 | `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
 | `sort` | `Option<Vec<TableSort>>` | `None` | The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header. |
@@ -591,14 +597,18 @@ fn Demo() -> Element {
 | `default_quick_filter` | `String` | `""` | Seeds the quick filter once. Ignored when `quick_filter` is set. |
 | `onquickfilterchange` | `EventHandler<String>` | `None` | Called with the text typed into the quick-filter field. |
 | `show_quick_filter` | `bool` | `false` | Puts a search field above the table that drives the quick filter. |
-| `manual_filter` | `bool` | `false` | `data` comes filtered, say from a server: the field only reports through `onquickfilterchange`. Pair it with `manual_pagination` and `row_count` when paged. |
+| `manual_filter` | `bool` | `false` | `data` comes filtered, say from a server: the quick filter and the column filters only report through `onquickfilterchange` and `oncolumnfilterschange`. Pair it with `manual_pagination` and `row_count` when paged. |
+| `column_filters` | `Option<Vec<ColumnFilter>>` | `None` | One filter per column, by header: `ColumnFilter::new("Age", FilterOperator::GreaterThan, "30")`. A row stays when it passes all of them and the quick filter. Text operators ignore case, `Equals` too; number operators compare the value, not its formatted text, and take `1,5` as 1.5. An empty value, a number that does not parse, or an operator the column's type does not offer keeps every row. A hidden column's filter keeps filtering. Set, the filters are controlled: pair them with `oncolumnfilterschange`. |
+| `default_column_filters` | `Vec<ColumnFilter>` | `[]` | Seeds the column filters once. Ignored when `column_filters` is set. |
+| `oncolumnfilterschange` | `EventHandler<Vec<ColumnFilter>>` | `None` | Called with the filters a filter popover or a header filter asks for. Typed values arrive once typing pauses for 300 ms, an operator or yes/no pick at once. |
+| `header_filters` | `bool` | `false` | Adds a row of filter fields under the headers, one per `filterable` column: a text field, or Any/Yes/No for a boolean column. A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers. |
 | `pinned_columns` | `Option<PinnedColumns>` | `None` | The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly. |
 | `default_pinned_columns` | `PinnedColumns` | none pinned | Seeds the pinned columns once. Ignored when `pinned_columns` is set. |
 | `onpinnedcolumnschange` | `EventHandler<PinnedColumns>` | `None` | Called with the pinned columns a column menu pick asks for. |
 | `column_order` | `Option<Vec<String>>` | `None` | The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column. |
 | `default_column_order` | `Vec<String>` | `[]` | Seeds the column order once. Ignored when `column_order` is set. |
 | `oncolumnorderchange` | `EventHandler<Vec<String>>` | `None` | Called with the order a column menu's Move left or Move right asks for, every header listed. |
-| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, move the column left or right past the next shown one, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries. |
+| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, move the column left or right past the next shown one, filter a `filterable` column, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries. Filter opens a popover with the operators of the column's type, a value and Clear; a filtered column's header then shows a filter button that reopens it. |
 | `column_menu_parts` | `Parts<MenuPart>` | none | The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
@@ -619,7 +629,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `header_render` | `fn() -> Element` | `None` | Replaces the header's body, inside the sort button when sortable. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header. |
 | `of` | `&ColumnType<V>` | `None` | Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
-| `filterable` | `bool` | `true` | Whether the quick filter searches the column's cell text. Off for ids and codes that would match by accident. |
+| `filterable` | `bool` | `true` | Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident. |
 | `hideable` | `bool` | `true` | Whether the column menu offers to hide the column. `hidden_columns` still hides it. |
 | `group` | `String` | `None` | Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group. |
 | `col_span` | `fn(&T) -> usize` | `None` | How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared. |
@@ -647,6 +657,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Enter` or `Space` | With `row_detail`, on a row's toggle: opens or closes its detail. Tab then goes into the open detail. |
 | `Enter` or `Space` or `Down` | With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`. |
 | `Space` or `Enter` | With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back. |
+| `Escape` | In a filter popover: closes it and returns focus to the column's menu button. |
+| `Tab` or `Shift+Tab` | In a filter popover: moves between its fields; past either end it closes and Tab goes on from the menu button. |
 
 ### Libero handles
 
@@ -682,6 +694,12 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - With `column_menu`, each menu button is named after its column, "Age column
   options", and the header keeps its text as its name. The Columns submenu lists
   checkbox items, and the last shown column cannot be hidden.
+- The filter popover is a `role="dialog"` named "Filter" plus the column, with
+  labelled Operator and Value fields; focus moves to the value on open, or to
+  the operator when it takes none. A filtered header's button reads "Age is
+  filtered". Each header filter field is named "Filter" plus its column.
+- A column filter change announces the rows left, "2 rows", in the same polite
+  live region, once it settles.
 - A group header is a `th scope="colgroup"` over its columns, so a screen reader
   reads it with each of their cells. A column outside any group, and the
   select-all box, span every header row.
@@ -728,10 +746,14 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   sideways. In a right-to-left page Blitz cannot scroll a wide table at all
   (todo 707), so pinning shows no effect there.
 - On Blitz, a `max_height` table with column groups keeps only its last header
-  row in place; the group rows scroll away with the rows.
+  row in place; the group rows scroll away with the rows. The same holds for
+  the `header_filters` row.
 - On Blitz, a row's handle does not drag: Blitz paints no moved table row. The
   keyboard and the move buttons reorder there.
 - Columns reorder from the column menu only, not by dragging a header.
+- On Android, the filter popover cannot look into itself, so Tab does not close
+  it at its ends and focus lands on the popover rather than its value field;
+  Escape and Back close it.
 
 ## Theme defaults
 

@@ -14,7 +14,7 @@ use crate::{
         layout::{ScrollArea, ScrollAreaBase, scroll_area_base, use_box},
         overlay::MenuPart,
     },
-    hooks::{listener, use_id, use_localization, use_theme},
+    hooks::{listener, use_debounced_callback, use_id, use_localization, use_theme},
     platform::{lays_out_captions, sticks_table_heads, widens_sized_tables},
     sx::{StaticSx, Sx, sx},
     theme::{CHECKBOX_BOX_SIZE, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TableDefaults},
@@ -23,6 +23,7 @@ use crate::{
 
 use super::{
     column::{Column, ColumnDefaults},
+    column_filter::{ColumnFilter, cell_tests},
     column_menu::{ColumnMenu, MenuColumn},
     column_order::{moved, order_unpinned},
     core::{
@@ -31,7 +32,9 @@ use super::{
     },
     detail::Details,
     filter::{FilteredRows, QuickFilter, query_words},
+    filter_popover::FilterTarget,
     groups::spanned,
+    header_filters::HeaderFilter,
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     pinning::{PinSide, PinnedColumns, pin_columns, pin_runs, span_pin},
     row_reorder::{ReorderSlot, RowReorder},
@@ -153,8 +156,28 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .cursor("pointer"),
     )
     .selector(
-        "& [data-column-menu] svg",
+        "& [data-column-menu] svg, & [data-filtered] svg",
         sx().width("16px").height("16px"),
+    )
+    // A filtered header's button: as the menu button, but always shown.
+    .selector(
+        "& [data-filtered]",
+        sx().display("flex")
+            .align_items("center")
+            .justify_content("center")
+            .width("24px")
+            .height("24px")
+            .padding("0")
+            .border("0")
+            .border_radius("4px")
+            .background("none")
+            .color("inherit")
+            .cursor("pointer"),
+    )
+    .selector("& [data-filtered]:focus-visible", inset_focus_ring_sx("0"))
+    .selector(
+        "& [data-filter-cell]",
+        sx().padding_block("4px").font_weight("400"),
     )
     .selector(
         "& [data-column-menu]:focus-visible",
@@ -268,7 +291,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "sticky-head",
         sx().selector("& thead", sx().position("sticky").top("0").z_index("1"))
             .selector(
-                "& thead th",
+                "& thead th, & thead td",
                 sx().background(NamedColorCss::SURFACE.value()),
             ),
     )
@@ -286,9 +309,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         )
         // Above the body cells scrolling under a sticky header, or a sticky `thead`.
         .selector("& thead", sx().z_index("2"))
-        .selector("& thead th", sx().z_index("2"))
+        .selector("& thead th, & thead td", sx().z_index("2"))
         .selector(
-            "& thead th[data-pin]",
+            "& thead th[data-pin], & thead td[data-pin]",
             sx().z_index("3").background(NamedColorCss::SURFACE.value()),
         )
         .selector(
@@ -310,7 +333,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
                 .background("inherit"),
         )
         .selector(
-            "& thead th[data-select]",
+            "& thead th[data-select], & thead td[data-select]",
             sx().z_index("3").background(NamedColorCss::SURFACE.value()),
         ),
     )
@@ -325,7 +348,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
                 .background("inherit"),
         )
         .selector(
-            "& thead th[data-detail-toggle]",
+            "& thead th[data-detail-toggle], & thead td[data-detail-toggle]",
             sx().z_index("3").background(NamedColorCss::SURFACE.value()),
         )
         .selector(
@@ -344,7 +367,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
                 .background("inherit"),
         )
         .selector(
-            "& thead th[data-reorder]",
+            "& thead th[data-reorder], & thead td[data-reorder]",
             sx().z_index("3").background(NamedColorCss::SURFACE.value()),
         )
         .selector(
@@ -565,9 +588,23 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// A search field above the table that drives `quick_filter`.
     #[props(default)]
     show_quick_filter: bool,
-    /// `data` comes filtered: the quick filter only asks via `onquickfilterchange`.
+    /// `data` comes filtered: the quick filter and the column filters only ask
+    /// via their change handlers.
     #[props(default)]
     manual_filter: bool,
+    /// The column filters, one per column, all applying; set, they are
+    /// controlled. A hidden column's filter keeps filtering.
+    #[props(default)]
+    column_filters: Option<Vec<ColumnFilter>>,
+    /// Seeds the column filters once. Ignored when `column_filters` is set.
+    #[props(default)]
+    default_column_filters: Vec<ColumnFilter>,
+    /// The column filters a filter popover or a header filter asks for.
+    #[props(default)]
+    oncolumnfilterschange: Option<EventHandler<Vec<ColumnFilter>>>,
+    /// A row of filter fields under the headers, one per `filterable` column.
+    #[props(default)]
+    header_filters: bool,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -626,6 +663,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         quick_filter: props.quick_filter,
         default_quick_filter: props.default_quick_filter,
         onquickfilterchange: props.onquickfilterchange,
+        column_filters: props.column_filters,
+        default_column_filters: props.default_column_filters,
+        oncolumnfilterschange: props.oncolumnfilterschange,
         pinned_columns: props.pinned_columns,
         default_pinned_columns: props.default_pinned_columns,
         onpinnedcolumnschange: props.onpinnedcolumnschange,
@@ -684,6 +724,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     );
     let size = props.size.copied_or(use_theme().table.size);
     let labels = use_localization().table;
+    // A column filter change announces the rows left once it settles (WCAG 4.1.3).
+    let mut filtered_count = use_hook(|| CopyValue::new(0usize));
+    let onfilter = use_debounced_callback(
+        move |()| announcer.say((labels.results)(*filtered_count.peek())),
+        500,
+    );
+    let filter_target = |index: usize| {
+        let column = &props.columns[index];
+        column.filterable.then(|| FilterTarget {
+            column: column.header.clone(),
+            kind: column.filter_kind,
+            slice: state.column_filters,
+            labels,
+            size,
+            onfilter,
+        })
+    };
     let bounded = props.max_height.is_some();
     let scrolls = props.scroll || bounded;
     let size_states: Input<States> = States::new().with(size.state_name(), true).into();
@@ -740,6 +797,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .map(|&index| headers[index].groups.len())
         .max()
         .unwrap_or(0);
+    let head_rows = group_rows + 1 + usize::from(props.header_filters);
     let menus = match props.column_menu {
         true => {
             let columns: Rc<[MenuColumn]> = headers
@@ -771,6 +829,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                             labels,
                             size,
                             parts: props.column_menu_parts.clone(),
+                            filter: filter_target(index),
                         }
                     }
                 })
@@ -778,6 +837,17 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         }
         false => Vec::new(),
     };
+    let filter_cells = props.header_filters.then(|| {
+        (0..headers.len())
+            .map(|index| {
+                filter_target(index).map(|target| {
+                    rsx! {
+                        HeaderFilter { key: "{target.column}", target }
+                    }
+                })
+            })
+            .collect::<Vec<_>>()
+    });
 
     let data = Rc::new(props.data);
     let key_of = |index: usize| {
@@ -796,11 +866,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .filter(|(_, (column, spec))| column.filterable && !spec.hidden)
         .map(|(index, _)| index)
         .collect();
+    let tests = cell_tests(&props.columns, &state.column_filters.read());
     let kept = match props.manual_filter {
         true => None,
         false => filtered
             .write()
-            .kept(&data, &props.columns, &searched, &words),
+            .kept(&data, &props.columns, &searched, &words, &tests),
     };
     let selection = look.map(|look| {
         let keys: Rc<[String]> = (0..data.len()).map(key_of).collect();
@@ -867,6 +938,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         order.retain(|&index| kept[index]);
     }
     let results = order.len();
+    filtered_count.set(results);
     let pager = paginated.then(|| {
         let total = match props.manual_pagination {
             true => props.row_count.unwrap_or(results),
@@ -1021,11 +1093,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .with("row-click", props.onrowclick.is_some())
         .with(
             "sticky-header",
-            bounded && !(group_rows > 0 && sticks_table_heads()),
+            bounded && !(head_rows > 1 && sticks_table_heads()),
         )
         .with(
             "sticky-head",
-            bounded && group_rows > 0 && sticks_table_heads(),
+            bounded && head_rows > 1 && sticks_table_heads(),
         )
         .with("pinned", pins)
         .with("pin-select", pins_select)
@@ -1039,13 +1111,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let reorder = has_reorder.then(|| RowReorder {
         onreorder: reorder_rows,
         // The shown order is not `data`'s: a move between slots means nothing there.
-        disabled: !active.is_empty() || !words.is_empty(),
+        disabled: !active.is_empty() || !words.is_empty() || !tests.is_empty(),
         announcer,
         labels,
         instructions: instructions_id(),
     });
     // Rows the filter took away, not missing data: the caller's `empty` does not apply.
-    let filtered_out = !words.is_empty() && (props.manual_filter || !data.is_empty());
+    let filtered_out =
+        !(words.is_empty() && tests.is_empty()) && (props.manual_filter || !data.is_empty());
     let empty = match filtered_out {
         true => rsx! { "{labels.no_results}" },
         false => props.empty.unwrap_or_else(|| rsx! { "{labels.no_rows}" }),
@@ -1080,10 +1153,16 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     .as_ref()
                     .map(|reorder| reorder.header_cell(group_rows + 1)),
                 reorder: reorder.clone(),
+                filters: filter_cells,
             }),
         );
     // The live region: valid in no part of a table, so beside it.
-    let table = match props.selectable || props.show_quick_filter || has_reorder {
+    let announces = props.selectable
+        || props.show_quick_filter
+        || has_reorder
+        || props.column_menu
+        || props.header_filters;
+    let table = match announces {
         true => rsx! {
             {table}
             {announcer.render()}

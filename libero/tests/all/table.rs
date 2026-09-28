@@ -6,8 +6,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, Column, ColumnDefaults, Mark, PinnedColumns, SortDirection, States, Table,
-        TableSort, column,
+        Checkbox, Column, ColumnDefaults, ColumnFilter, FilterOperator, Mark, PinnedColumns,
+        SortDirection, States, Table, TableSort, column,
     },
     localization::Localization,
     theme::Size,
@@ -877,6 +877,140 @@ fn filter_sort_and_page_compose_and_select_all_covers_the_kept_rows() {
     assert!(body.contains("Lyon") && !body.contains("Paris"), "{body}");
     assert!(body.contains("1–1 of 2"), "{body}");
     assert!(!body.contains("aria-checked=\"mixed\""), "{body}");
+}
+
+#[derive(Clone, PartialEq)]
+struct Produce {
+    item: &'static str,
+    count: u32,
+    sold_out: bool,
+}
+
+fn produce() -> Vec<Produce> {
+    vec![
+        Produce {
+            item: "Apples",
+            count: 12,
+            sold_out: false,
+        },
+        Produce {
+            item: "Pears",
+            count: 3,
+            sold_out: false,
+        },
+        Produce {
+            item: "Plums",
+            count: 0,
+            sold_out: true,
+        },
+    ]
+}
+
+fn produce_columns() -> Vec<Column<Produce>> {
+    vec![
+        column("Item").value(|p: &Produce| p.item).row_header(),
+        column("Count")
+            .value(|p: &Produce| p.count)
+            .format(|p: &Produce| format!("{} pcs", p.count)),
+        column("Sold out").value(|p: &Produce| p.sold_out),
+    ]
+}
+
+// A macro: `render` takes a fn pointer, which captures nothing.
+macro_rules! produce_html {
+    ($($filter:expr),+ $(,)?) => {
+        render(|| {
+            rsx! {
+                LiberoProvider {
+                    Table {
+                        aria_label: "Produce",
+                        data: produce(),
+                        columns: produce_columns(),
+                        default_column_filters: vec![$($filter),+],
+                    }
+                }
+            }
+        })
+    };
+}
+
+#[test]
+fn column_filters_compare_by_type_and_all_apply() {
+    use FilterOperator::*;
+    // By value, not the "pcs" text, and with a decimal comma.
+    let html = produce_html!(ColumnFilter::new("Count", GreaterThan, "2,5"));
+    assert!(html.contains("Apples") && html.contains("Pears"), "{html}");
+    assert!(!html.contains("Plums"), "{html}");
+
+    let html = produce_html!(
+        ColumnFilter::new("Count", GreaterThan, "2"),
+        ColumnFilter::new("Item", StartsWith, "P"),
+    );
+    assert!(html.contains("Pears") && !html.contains("Apples"), "{html}");
+
+    let html = produce_html!(ColumnFilter::new("Sold out", Is, "true"));
+    assert!(html.contains("Plums") && !html.contains("Pears"), "{html}");
+
+    // An unfinished filter keeps every row.
+    let html = produce_html!(ColumnFilter::new("Count", LessThan, "-"));
+    assert_eq!(
+        body(&html).matches("<th scope=\"row\"").count(),
+        3,
+        "{html}"
+    );
+
+    let html = produce_html!(ColumnFilter::new("Item", Equals, "kiwis"));
+    assert!(html.contains("No matching rows"), "{html}");
+}
+
+#[test]
+fn header_filters_draw_a_labelled_field_per_filterable_column() {
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: cities(),
+                    columns: city_columns(),
+                    header_filters: true,
+                    default_column_filters: vec![ColumnFilter::new("Country", FilterOperator::Contains, "fra")],
+                }
+            }
+        }
+    });
+    let head = &html[html.find("<thead").unwrap()..html.find("</thead>").unwrap()];
+    assert_eq!(head.matches("data-filter-cell").count(), 3, "{head}");
+    assert!(head.contains("aria-label=\"Filter City\""), "{head}");
+    assert!(head.contains("value=\"fra\""), "{head}");
+    // `filterable(false)` leaves its cell empty.
+    assert!(!head.contains("aria-label=\"Filter Code\""), "{head}");
+    assert!(!body(&html).contains("London"), "{html}");
+}
+
+#[test]
+fn a_filtered_column_shows_a_button_beside_its_menu() {
+    let html = render(|| {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Cities",
+                    data: cities(),
+                    columns: city_columns(),
+                    column_menu: true,
+                    default_column_filters: vec![
+                        ColumnFilter::new("Country", FilterOperator::Contains, "fra"),
+                        // No value yet: nothing filters, so no button.
+                        ColumnFilter::new("City", FilterOperator::Contains, ""),
+                    ],
+                }
+            }
+        }
+    });
+    assert_eq!(body(&html).matches("data-filtered").count(), 1, "{html}");
+    assert!(
+        html.contains("aria-label=\"Country is filtered\""),
+        "{html}"
+    );
 }
 
 /// The attributes of the cell, `tag`, whose text is `text`.

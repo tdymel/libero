@@ -1,12 +1,15 @@
 mod cell_value;
 mod column;
+mod column_filter;
 mod column_menu;
 mod column_order;
 mod core;
 mod csv;
 mod detail;
 mod filter;
+mod filter_popover;
 mod groups;
+mod header_filters;
 mod paging;
 mod pinning;
 mod row_reorder;
@@ -16,6 +19,7 @@ mod use_table;
 
 pub use cell_value::{CellAlign, CellValue, FilterKind, SortDirection, SortKey};
 pub use column::{Column, ColumnDefaults, ColumnHeader, ColumnType, TypedColumnHeader, column};
+pub use column_filter::{ColumnFilter, FilterOperator};
 pub use core::{RowFn, TableSort};
 pub use csv::{table_csv, table_text};
 pub use pinning::{PinSide, PinnedColumns};

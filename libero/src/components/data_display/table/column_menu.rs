@@ -5,7 +5,9 @@ use pictogram_icons_lucide as lucide;
 
 use super::{
     cell_value::SortDirection,
+    column_filter::{CellTest, filter_of},
     core::{ActiveSort, TableSort},
+    filter_popover::{FilterPopover, FilterTarget, FilteredButton},
     pinning::{PinSide, PinnedColumns},
     use_table::StateSlice,
 };
@@ -29,7 +31,7 @@ pub(super) struct MenuColumn {
     pub hidden: bool,
 }
 
-/// A header's menu: sort, pin, hide, and the columns to show.
+/// A header's menu: sort, pin, filter, hide, and the columns to show.
 #[component]
 pub(super) fn ColumnMenu(
     index: usize,
@@ -46,9 +48,12 @@ pub(super) fn ColumnMenu(
     labels: TableLabels,
     size: Size,
     parts: Input<Parts<MenuPart>>,
+    /// Set for a filterable column: the menu offers its filter popover.
+    filter: Option<FilterTarget>,
 ) -> Element {
     let menu = use_menu();
     let trigger = use_element();
+    let mut filter_open = use_signal(|| false);
     let column = &columns[index];
     let shown = columns.iter().filter(|column| !column.hidden).count();
     let mut items: Vec<MenuEntry> = Vec::new();
@@ -133,6 +138,15 @@ pub(super) fn ColumnMenu(
             );
         }
     }
+    // After sort, pin and move, as MUI orders them.
+    if filter.is_some() {
+        items.push(MenuEntry::Separator);
+        items.push(
+            MenuItem::new(labels.filter)
+                .onselect(move |_| filter_open.set(true))
+                .into(),
+        );
+    }
     let hideable: Vec<usize> = (0..columns.len())
         .filter(|&column| columns[column].hideable)
         .collect();
@@ -175,7 +189,14 @@ pub(super) fn ColumnMenu(
         None,
         false,
     ));
+    let filtered = filter.as_ref().is_some_and(|target| {
+        filter_of(&target.slice.read(), &target.column)
+            .is_some_and(|item| CellTest::new(item, target.kind).is_some())
+    });
     rsx! {
+        if filtered {
+            FilteredButton { column: column.header.clone(), labels, open: filter_open }
+        }
         Menu {
             state: menu,
             items,
@@ -189,6 +210,9 @@ pub(super) fn ColumnMenu(
                 ..attributes,
                 Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
             }
+        }
+        if let Some(target) = filter {
+            FilterPopover { target, anchor: trigger, open: filter_open }
         }
     }
 }

@@ -2,7 +2,11 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use super::{column::Column, use_table::StateSlice};
+use super::{
+    column::Column,
+    column_filter::{CellTest, passes_all},
+    use_table::StateSlice,
+};
 use crate::{
     components::{accessibility::Announcer, form::TextField},
     hooks::use_debounced_callback,
@@ -72,14 +76,20 @@ pub(super) fn quick_filter<T>(
         .collect()
 }
 
-/// [`quick_filter`] across renders: only a change of rows, columns or query
-/// reruns it, so a sort or page change does not.
+/// [`quick_filter`] and the column filters across renders: only a change of
+/// rows, columns or filters reruns them, so a sort or page change does not.
 pub(super) struct FilteredRows<T> {
     input: Option<FilterInput<T>>,
     kept: Rc<Vec<bool>>,
 }
 
-type FilterInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, Vec<usize>, Vec<String>);
+type FilterInput<T> = (
+    Rc<Vec<T>>,
+    Vec<Column<T>>,
+    Vec<usize>,
+    Vec<String>,
+    Vec<(usize, CellTest)>,
+);
 
 impl<T> Default for FilteredRows<T> {
     fn default() -> Self {
@@ -91,34 +101,43 @@ impl<T> Default for FilteredRows<T> {
 }
 
 impl<T: PartialEq> FilteredRows<T> {
-    /// `None` when the query keeps every row.
+    /// `None` when the query and the tests keep every row.
     pub fn kept(
         &mut self,
         data: &Rc<Vec<T>>,
         columns: &[Column<T>],
         searched: &[usize],
         words: &[String],
+        tests: &[(usize, CellTest)],
     ) -> Option<Rc<Vec<bool>>> {
-        if words.is_empty() {
+        if words.is_empty() && tests.is_empty() {
             *self = Self::default();
             return None;
         }
         let fresh = self
             .input
             .as_ref()
-            .is_some_and(|(rows, cols, cells, query)| {
+            .is_some_and(|(rows, cols, cells, query, checks)| {
                 query == words
+                    && checks == tests
                     && cells == searched
                     && cols.as_slice() == columns
                     && (Rc::ptr_eq(rows, data) || rows == data)
             });
         if !fresh {
-            self.kept = Rc::new(quick_filter(data, columns, searched, words));
+            let mut kept = quick_filter(data, columns, searched, words);
+            if !tests.is_empty() {
+                for (keep, row) in kept.iter_mut().zip(data.iter()) {
+                    *keep = *keep && passes_all(row, columns, tests);
+                }
+            }
+            self.kept = Rc::new(kept);
             self.input = Some((
                 data.clone(),
                 columns.to_vec(),
                 searched.to_vec(),
                 words.to_vec(),
+                tests.to_vec(),
             ));
         }
         Some(self.kept.clone())
@@ -195,13 +214,37 @@ mod tests {
         let columns = columns();
         let mut filtered = FilteredRows::default();
         let words = query_words("york");
-        let first = filtered.kept(&data, &columns, &[0, 1], &words).unwrap();
-        let again = filtered.kept(&data, &columns, &[0, 1], &words).unwrap();
+        let first = filtered
+            .kept(&data, &columns, &[0, 1], &words, &[])
+            .unwrap();
+        let again = filtered
+            .kept(&data, &columns, &[0, 1], &words, &[])
+            .unwrap();
         assert!(Rc::ptr_eq(&first, &again));
         let other = filtered
-            .kept(&data, &columns, &[0, 1], &query_words("ada"))
+            .kept(&data, &columns, &[0, 1], &query_words("ada"), &[])
             .unwrap();
         assert_eq!(*other, [true, false, false]);
-        assert!(filtered.kept(&data, &columns, &[0, 1], &[]).is_none());
+        assert!(filtered.kept(&data, &columns, &[0, 1], &[], &[]).is_none());
+    }
+
+    #[test]
+    fn column_filters_and_the_quick_filter_both_apply() {
+        use super::super::column_filter::{ColumnFilter, FilterOperator, cell_tests};
+        let data = Rc::new(Vec::from(USERS));
+        let columns = columns();
+        let tests = cell_tests(
+            &columns,
+            &[ColumnFilter::new("Age", FilterOperator::LessThan, "50")],
+        );
+        let mut filtered = FilteredRows::default();
+        let only_tests = filtered
+            .kept(&data, &columns, &[0, 1], &[], &tests)
+            .unwrap();
+        assert_eq!(*only_tests, [true, true, false]);
+        let both = filtered
+            .kept(&data, &columns, &[0, 1], &query_words("alan"), &tests)
+            .unwrap();
+        assert_eq!(*both, [false, true, false]);
     }
 }

@@ -1,3 +1,24 @@
+/// How a `ColumnFilter` compares a cell. Text operators ignore case, `Equals`
+/// too; number operators compare the value, not the formatted text.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum FilterOperator {
+    Contains,
+    DoesNotContain,
+    Equals,
+    NotEquals,
+    StartsWith,
+    EndsWith,
+    GreaterThan,
+    GreaterOrEqual,
+    LessThan,
+    LessOrEqual,
+    IsEmpty,
+    IsNotEmpty,
+    /// A boolean column's value, `"true"` or `"false"`.
+    Is,
+}
+
 /// Every string `Table` puts in front of a reader.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(
@@ -93,6 +114,90 @@ pub struct TableLabels {
     /// assert_eq!((TableLabels::ENGLISH.row_details)("Ada"), "Details for Ada");
     /// ```
     pub row_details: fn(&str) -> String,
+    /// The column menu entry that opens the column's filter.
+    pub filter: &'static str,
+    /// The filter popover and a header filter field, from the header text.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.filter_column)("Age"), "Filter Age");
+    /// ```
+    pub filter_column: fn(&str) -> String,
+    /// The button a filtered header shows, which opens its filter.
+    pub filtered: fn(&str) -> String,
+    /// The filter's operator picker.
+    pub operator: &'static str,
+    /// The filter's value field.
+    pub value: &'static str,
+    pub clear_filter: &'static str,
+    /// A boolean filter that keeps every row.
+    pub any: &'static str,
+    /// A boolean filter's `true` and `false`.
+    pub yes: &'static str,
+    pub no: &'static str,
+    /// An operator's name in the operator picker.
+    ///
+    /// ```
+    /// use libero::{components::FilterOperator, localization::TableLabels};
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.operator_name)(FilterOperator::GreaterThan), "Greater than");
+    /// ```
+    pub operator_name: fn(FilterOperator) -> &'static str,
+}
+
+fn english_filter_column(column: &str) -> String {
+    format!("Filter {column}")
+}
+
+fn german_filter_column(column: &str) -> String {
+    format!("{column} filtern")
+}
+
+fn english_filtered(column: &str) -> String {
+    format!("{column} is filtered")
+}
+
+fn german_filtered(column: &str) -> String {
+    format!("{column} ist gefiltert")
+}
+
+fn english_operator_name(operator: FilterOperator) -> &'static str {
+    use FilterOperator::*;
+    match operator {
+        Contains => "Contains",
+        DoesNotContain => "Does not contain",
+        Equals => "Equals",
+        NotEquals => "Does not equal",
+        StartsWith => "Starts with",
+        EndsWith => "Ends with",
+        GreaterThan => "Greater than",
+        GreaterOrEqual => "Greater than or equal",
+        LessThan => "Less than",
+        LessOrEqual => "Less than or equal",
+        IsEmpty => "Is empty",
+        IsNotEmpty => "Is not empty",
+        Is => "Is",
+    }
+}
+
+fn german_operator_name(operator: FilterOperator) -> &'static str {
+    use FilterOperator::*;
+    match operator {
+        Contains => "Enthält",
+        DoesNotContain => "Enthält nicht",
+        Equals => "Ist gleich",
+        NotEquals => "Ist ungleich",
+        StartsWith => "Beginnt mit",
+        EndsWith => "Endet mit",
+        GreaterThan => "Größer als",
+        GreaterOrEqual => "Größer oder gleich",
+        LessThan => "Kleiner als",
+        LessOrEqual => "Kleiner oder gleich",
+        IsEmpty => "Ist leer",
+        IsNotEmpty => "Ist nicht leer",
+        Is => "Ist",
+    }
 }
 
 /// `TableLabels::ENGLISH.select_row`. A named fn, so every copy compares equal.
@@ -196,6 +301,16 @@ impl TableLabels {
         reorder: "Reorder",
         details: "Details",
         row_details: english_row_details,
+        filter: "Filter",
+        filter_column: english_filter_column,
+        filtered: english_filtered,
+        operator: "Operator",
+        value: "Value",
+        clear_filter: "Clear filter",
+        any: "Any",
+        yes: "Yes",
+        no: "No",
+        operator_name: english_operator_name,
     };
 
     pub const GERMAN: Self = Self {
@@ -226,5 +341,15 @@ impl TableLabels {
         reorder: "Neu anordnen",
         details: "Details",
         row_details: german_row_details,
+        filter: "Filtern",
+        filter_column: german_filter_column,
+        filtered: german_filtered,
+        operator: "Operator",
+        value: "Wert",
+        clear_filter: "Filter entfernen",
+        any: "Alle",
+        yes: "Ja",
+        no: "Nein",
+        operator_name: german_operator_name,
     };
 }

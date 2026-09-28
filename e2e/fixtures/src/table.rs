@@ -1,11 +1,12 @@
 //! `Table` with a sortable text column and a custom-rendered one; a wide one
 //! in its scroll region under a caption; keyed, clickable, striped rows; selectable,
 //! multi-sorted rows; an empty one; a paged one; sized columns; column menus; a
-//! height-capped one with a sticky header; a wide one with pinned columns, also RTL.
+//! height-capped one with a sticky header; a wide one with pinned columns, also RTL;
+//! column filters through menus and header filters.
 
 use dioxus::prelude::*;
 use libero::components::{
-    ColumnDefaults, PinnedColumns, SortDirection, States, Table, TableSort, column,
+    ColumnDefaults, ColumnFilter, PinnedColumns, SortDirection, States, Table, TableSort, column,
 };
 use libero::sx::sx;
 
@@ -29,6 +30,7 @@ pub const ROUTES: Routes = &[
         || rsx! { StickyTablePage { interactive: false } },
     ),
     ("/table/filter", || rsx! { FilterTablePage {} }),
+    ("/table/column-filter", || rsx! { ColumnFilterTablePage {} }),
     ("/table/pinned", || rsx! { PinnedTablePage { rtl: false } }),
     (
         "/table/pinned-rtl",
@@ -63,6 +65,39 @@ fn FilterTablePage() -> Element {
         }
         p { id: "query", "{query}" }
         p { id: "page", "{page}" }
+    }
+}
+
+/// The seven fruits with column menus and header filters; `#filters` echoes
+/// `oncolumnfilterschange`. Unsorted, so a menu's first item is Filter.
+#[component]
+fn ColumnFilterTablePage() -> Element {
+    let mut filters = use_signal(String::new);
+    let data: Vec<Fruit> = ["Fig", "Apple", "Grape", "Cherry", "Elder", "Banana", "Date"]
+        .into_iter()
+        .zip(1..)
+        .map(|(name, stock)| Fruit { name, stock })
+        .collect();
+    rsx! {
+        Table {
+            caption: "Fruit",
+            data,
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()).row_header(),
+                column("Stock").value(|fruit: &Fruit| fruit.stock),
+            ],
+            row_key: |fruit: &Fruit| fruit.name.to_string(),
+            column_menu: true,
+            header_filters: true,
+            oncolumnfilterschange: move |next: Vec<ColumnFilter>| {
+                let text: Vec<String> = next
+                    .iter()
+                    .map(|filter| format!("{} {:?} {}", filter.column, filter.operator, filter.value))
+                    .collect();
+                filters.set(text.join("; "));
+            },
+        }
+        p { id: "filters", "{filters}" }
     }
 }
 

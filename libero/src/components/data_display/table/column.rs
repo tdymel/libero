@@ -26,10 +26,9 @@ pub struct Column<T> {
     pub(super) sortable: bool,
     pub(super) row_header: bool,
     pub(super) hideable: bool,
-    /// Searched by the quick filter.
+    /// Searched by the quick filter, offered a column filter.
     pub(super) filterable: bool,
-    /// What the cell type chose.
-    #[allow(dead_code, reason = "the column filter (3b) picks operators by it")]
+    /// What the cell type chose; picks the column filter's operators.
     pub(super) filter_kind: FilterKind,
     pub(super) width: Option<String>,
     pub(super) min_width: Option<String>,
@@ -228,7 +227,8 @@ impl<T> Column<T> {
         self
     }
 
-    /// Whether the quick filter searches its cell text; on by default.
+    /// Whether the quick filter searches its cell text and a column filter
+    /// applies to it; on by default.
     ///
     /// ```rust
     /// # use libero::components::column;

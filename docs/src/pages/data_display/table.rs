@@ -107,7 +107,7 @@ pub fn TablePage() -> Element {
                     prop("columns", "Vec<Column<T>>").default("required").doc("Built with `column(..)`."),
                     prop("column_defaults", "ColumnDefaults").default("none").doc("Settings every column starts from: `ColumnDefaults::new().align(..).width(..).min_width(..)`. A column's own setting wins."),
                     prop("caption", "Option<String>").default("None").doc("A visible title above the header row, and the table's accessible name."),
-                    prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\". When the quick filter leaves no rows, the row reads `table.no_results`, \"No matching rows\", instead."),
+                    prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\". When the quick filter or the column filters leave no rows, the row reads `table.no_results`, \"No matching rows\", instead."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
                     prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header."),
@@ -146,14 +146,18 @@ pub fn TablePage() -> Element {
                     prop("default_quick_filter", "String").default("\"\"").doc("Seeds the quick filter once. Ignored when `quick_filter` is set."),
                     prop("onquickfilterchange", "EventHandler<String>").default("None").doc("Called with the text typed into the quick-filter field."),
                     prop("show_quick_filter", "bool").default("false").doc("Puts a search field above the table that drives the quick filter."),
-                    prop("manual_filter", "bool").default("false").doc("`data` comes filtered, say from a server: the field only reports through `onquickfilterchange`. Pair it with `manual_pagination` and `row_count` when paged."),
+                    prop("manual_filter", "bool").default("false").doc("`data` comes filtered, say from a server: the quick filter and the column filters only report through `onquickfilterchange` and `oncolumnfilterschange`. Pair it with `manual_pagination` and `row_count` when paged."),
+                    prop("column_filters", "Option<Vec<ColumnFilter>>").default("None").doc("One filter per column, by header: `ColumnFilter::new(\"Age\", FilterOperator::GreaterThan, \"30\")`. A row stays when it passes all of them and the quick filter. Text operators ignore case, `Equals` too; number operators compare the value, not its formatted text, and take `1,5` as 1.5. An empty value, a number that does not parse, or an operator the column's type does not offer keeps every row. A hidden column's filter keeps filtering. Set, the filters are controlled: pair them with `oncolumnfilterschange`."),
+                    prop("default_column_filters", "Vec<ColumnFilter>").default("[]").doc("Seeds the column filters once. Ignored when `column_filters` is set."),
+                    prop("oncolumnfilterschange", "EventHandler<Vec<ColumnFilter>>").default("None").doc("Called with the filters a filter popover or a header filter asks for. Typed values arrive once typing pauses for 300 ms, an operator or yes/no pick at once."),
+                    prop("header_filters", "bool").default("false").doc("Adds a row of filter fields under the headers, one per `filterable` column: a text field, or Any/Yes/No for a boolean column. A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers."),
                     prop("pinned_columns", "Option<PinnedColumns>").default("None").doc("The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly."),
                     prop("default_pinned_columns", "PinnedColumns").default("none pinned").doc("Seeds the pinned columns once. Ignored when `pinned_columns` is set."),
                     prop("onpinnedcolumnschange", "EventHandler<PinnedColumns>").default("None").doc("Called with the pinned columns a column menu pick asks for."),
                     prop("column_order", "Option<Vec<String>>").default("None").doc("The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column."),
                     prop("default_column_order", "Vec<String>").default("[]").doc("Seeds the column order once. Ignored when `column_order` is set."),
                     prop("oncolumnorderchange", "EventHandler<Vec<String>>").default("None").doc("Called with the order a column menu's Move left or Move right asks for, every header listed."),
-                    prop("column_menu", "bool").default("false").doc("Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, move the column left or right past the next shown one, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries."),
+                    prop("column_menu", "bool").default("false").doc("Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, move the column left or right past the next shown one, filter a `filterable` column, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries. Filter opens a popover with the operators of the column's type, a value and Clear; a filtered column's header then shows a filter button that reopens it."),
                     prop("column_menu_parts", "Parts<MenuPart>").default("none").doc("The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`."),
                 ]),
                 props("column()", vec![
@@ -168,7 +172,7 @@ pub fn TablePage() -> Element {
                     prop("header_render", "fn() -> Element").default("None").doc("Replaces the header's body, inside the sort button when sortable. The header text stays the column's name in `TableSort`. Capture signals, not values: the closure is not compared, so a changed value does not redraw the header."),
                     prop("of", "&ColumnType<V>").default("None").doc("Before `value`: starts the column from a shared `const` type, its alignment, widths and a `format` over the value. `V` must match `value`'s; the column's own settings win."),
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
-                    prop("filterable", "bool").default("true").doc("Whether the quick filter searches the column's cell text. Off for ids and codes that would match by accident."),
+                    prop("filterable", "bool").default("true").doc("Whether the quick filter searches the column's cell text, and whether it takes a column filter. Off for ids and codes that would match by accident."),
                     prop("hideable", "bool").default("true").doc("Whether the column menu offers to hide the column. `hidden_columns` still hides it."),
                     prop("group", "String").default("None").doc("Puts the column under a group header, shared with the adjacent columns of the same groups. Call it once per level, outermost first. The same name under another parent is another group, and a hidden column leaves its group."),
                     prop("col_span", "fn(&T) -> usize").default("None").doc("How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared."),
@@ -187,6 +191,8 @@ pub fn TablePage() -> Element {
                 .key(["Enter", "Space"], "With `row_detail`, on a row's toggle: opens or closes its detail. Tab then goes into the open detail.")
                 .key(["Enter", "Space", "Down"], "With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`.")
                 .key(["Space", "Enter"], "With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back.")
+                .key(["Escape"], "In a filter popover: closes it and returns focus to the column's menu button.")
+                .key(["Tab", "Shift+Tab"], "In a filter popover: moves between its fields; past either end it closes and Tab goes on from the menu button.")
                 .handles([
                     "An unnamed table warns in a debug build.",
                     "With `scroll` or `max_height`, an overflowing scroll area with no button in it is a tab stop, a `role=\"region\"` named like the table. With sort or menu buttons in the header it is no stop: the arrows scroll it from a focused button.",
@@ -201,6 +207,8 @@ pub fn TablePage() -> Element {
                     "Paginated, the page buttons sit in a `nav` named after the caption, the page-size picker is labelled, and a page change announces the new range, \"4–6 of 7\", politely. The first render announces nothing.",
                     "The quick-filter field is a labelled `type=\"search\"` input, \"Search\", described by the table's caption. Once typing pauses for half a second, a polite live region says how many rows are left, \"2 rows\".",
                     "With `column_menu`, each menu button is named after its column, \"Age column options\", and the header keeps its text as its name. The Columns submenu lists checkbox items, and the last shown column cannot be hidden.",
+                    "The filter popover is a `role=\"dialog\"` named \"Filter\" plus the column, with labelled Operator and Value fields; focus moves to the value on open, or to the operator when it takes none. A filtered header's button reads \"Age is filtered\". Each header filter field is named \"Filter\" plus its column.",
+                    "A column filter change announces the rows left, \"2 rows\", in the same polite live region, once it settles.",
                     "A group header is a `th scope=\"colgroup\"` over its columns, so a screen reader reads it with each of their cells. A column outside any group, and the select-all box, span every header row.",
                     "Pinned columns move to their edge in the DOM too, so Tab and a screen reader meet the cells in the order they are seen. The detail toggle and checkbox columns pin with the start ones.",
                     "A pinned column past one without a `width` warns in a debug build: its offset is unknown, so it would overlap.",
@@ -220,9 +228,10 @@ pub fn TablePage() -> Element {
                 .limits([
                     "On Blitz, once a `max_height` table's rows scroll, a click on a header's sort or menu button misses: Blitz hit-tests the header where it sat before the scroll. Tab to the button and press Enter instead.",
                     "On Blitz, the same holds for a pinned column's cells once the table scrolls sideways. In a right-to-left page Blitz cannot scroll a wide table at all (todo 707), so pinning shows no effect there.",
-                    "On Blitz, a `max_height` table with column groups keeps only its last header row in place; the group rows scroll away with the rows.",
+                    "On Blitz, a `max_height` table with column groups keeps only its last header row in place; the group rows scroll away with the rows. The same holds for the `header_filters` row.",
                     "On Blitz, a row's handle does not drag: Blitz paints no moved table row. The keyboard and the move buttons reorder there.",
                     "Columns reorder from the column menu only, not by dragging a header.",
+                    "On Android, the filter popover cannot look into itself, so Tab does not close it at its ends and focus lands on the popover rather than its value field; Escape and Back close it.",
                 ]),
             lead: rsx! {
                 Text {
@@ -325,6 +334,19 @@ pub fn TablePage() -> Element {
                     Code { source: "onquickfilterchange" }
                     ", or filter on a server with "
                     Code { source: "manual_filter" }
+                    "."
+                }
+                Text {
+                    Code { source: "column_menu" }
+                    "'s Filter entry, and "
+                    Code { source: "header_filters" }
+                    "' row of fields under the headers, filter one column each, with operators "
+                    "for its type: contains or starts with for text, greater than for numbers, "
+                    "yes or no for booleans. The filters all apply, together with the quick filter. "
+                    "Hold them yourself with "
+                    Code { source: "column_filters" }
+                    " and "
+                    Code { source: "oncolumnfilterschange" }
                     "."
                 }
                 Text {
@@ -445,6 +467,7 @@ pub fn TablePage() -> Element {
                         false => vec![],
                     }),
                     Control::switch("show_quick_filter"),
+                    Control::switch("header_filters"),
                     Control::switch("paginate").code(|_, values| match values.str("paginate") == "true" {
                         true => vec!["page_sizes: vec![2, 5, 10]".to_string()],
                         false => vec![],
@@ -480,6 +503,7 @@ pub fn TablePage() -> Element {
                             false => RowFn::default(),
                         },
                         show_quick_filter: values.str("show_quick_filter") == "true",
+                        header_filters: values.str("header_filters") == "true",
                         row_key: |p: &Person| p.name.clone(),
                         page_sizes: if values.str("paginate") == "true" { vec![2, 5, 10] } else { vec![] },
                         empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
