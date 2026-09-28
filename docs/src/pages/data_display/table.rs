@@ -3,8 +3,10 @@ use dioxus::prelude::*;
 use std::time::Duration;
 
 use libero::components::{
-    Button, Chip, Code, PinnedColumns, RowFn, SortDirection, Table, TableSort, Text, column,
+    Button, Chip, Code, Column, ColumnWidths, PinnedColumns, RowFn, SortDirection, Table,
+    TableSort, Text, column,
 };
+use libero::hooks::SortableMove;
 use libero::platform::{TimerSubscription, timer};
 use libero::sx::sx;
 
@@ -50,19 +52,68 @@ const COLUMNS: &str = r#"columns: vec![
             .sortable(),
     ]"#;
 
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, bonus: Option<f64> }
+// snippet: let people: Vec<Person> = Vec::new();
+// snippet: in Table { caption: "Team members", data: people, .. }
+const GROUPED_COLUMNS: &str = r#"columns: vec![
+        column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
+        column("Role")
+            .value(|p: &Person| p.role.clone())
+            .sortable()
+            .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } })
+            .group("Membership"),
+        column("Bonus")
+            .value(|p: &Person| p.bonus)
+            .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+            .sortable()
+            .group("Membership"),
+    ]"#;
+
+fn team_columns(grouped: bool) -> Vec<Column<Person>> {
+    let group = |column: Column<Person>| match grouped {
+        true => column.group("Membership"),
+        false => column,
+    };
+    vec![
+        column("Name")
+            .value(|p: &Person| p.name.clone())
+            .sortable()
+            .row_header(),
+        group(
+            column("Role")
+                .value(|p: &Person| p.role.clone())
+                .sortable()
+                .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
+        ),
+        group(
+            column("Bonus")
+                .value(|p: &Person| p.bonus)
+                .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+                .sortable(),
+        ),
+    ]
+}
+
 /// The rows are the fixture, and the snippet only compiles with them, so the
 /// code block carries the struct and the data above the `Table` itself.
 fn wrap_data(values: &DemoValues, code: &str) -> String {
-    let people = match no_rows(values) {
-        true => "let people: Vec<Person> = Vec::new();",
-        false => {
-            r#"let people = vec![
+    const ROWS: &str = r#"vec![
     Person { name: "Ada Lovelace".into(), role: "Owner".into(), bonus: Some(12.5) },
     Person { name: "Grace Hopper".into(), role: "Admin".into(), bonus: Some(8.0) },
     Person { name: "Alan Turing".into(), role: "Viewer".into(), bonus: None },
-];"#
+]"#;
+    // Reordered rows and resized widths need a signal to land in.
+    let mut people = match (no_rows(values), reorders(values)) {
+        (true, false) => "let people: Vec<Person> = Vec::new();".to_string(),
+        (false, false) => format!("let people = {ROWS};"),
+        (true, true) => {
+            "let mut rows = use_signal(Vec::<Person>::new);\nlet people = rows();".to_string()
         }
+        (false, true) => format!("let mut rows = use_signal(|| {ROWS});\nlet people = rows();"),
     };
+    if resizes(values) {
+        people.push_str("\nlet mut widths = use_signal(ColumnWidths::new);");
+    }
     format!(
         r#"#[derive(Clone, PartialEq)]
 struct Person {{
@@ -102,6 +153,70 @@ const PINNED: &str =
 /// The `empty` switch empties `data` too, or the slot would never show.
 fn no_rows(values: &DemoValues) -> bool {
     values.str("empty") == "true"
+}
+
+fn reorders(values: &DemoValues) -> bool {
+    values.str("reorder_rows") == "true"
+}
+
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
+// snippet: let mut rows = use_signal(Vec::<Person>::new);
+// snippet: in Table { caption: "Team members", data: rows(), columns: vec![], row_key: |p: &Person| p.name.clone(), .. }
+const REORDER: &str = "onrowreorder: move |step: SortableMove| step.apply(&mut rows.write())";
+
+fn resizes(values: &DemoValues) -> bool {
+    values.str("resizable_columns") == "true"
+}
+
+/// The main demo's table: a component, so reordered rows and resized widths have a signal to land in.
+#[component]
+fn TeamTable(values: DemoValues) -> Element {
+    let mut rows = use_signal(people);
+    let mut widths = use_signal(ColumnWidths::new);
+    let on = |name: &str| values.str(name) == "true";
+    rsx! {
+        Table {
+            // A new table per switch: `page_sizes` and the pins seed once.
+            key: "{values.str(\"paginate\")}-{values.str(\"pinned\")}",
+            caption: "Team members",
+            size: values.str("size"),
+            striped: on("striped"),
+            scroll: on("scroll"),
+            sx: match on("scroll") {
+                true => sx().min_width(SCROLL_WIDTH),
+                false => sx(),
+            },
+            max_height: on("max_height").then(|| MAX_HEIGHT.to_string()),
+            default_pinned_columns: match on("pinned") {
+                true => PinnedColumns::default().start(["Name"]).end(["Bonus"]),
+                false => PinnedColumns::default(),
+            },
+            selectable: on("selectable"),
+            multi_sort: on("multi_sort"),
+            column_menu: on("column_menu"),
+            row_detail: match on("row_detail") {
+                true => (|p: &Person| Some(rsx! { "{p.name} joined as {p.role}." })).into(),
+                false => RowFn::default(),
+            },
+            onrowreorder: reorders(&values).then(|| {
+                EventHandler::new(move |step: SortableMove| step.apply(&mut rows.write()))
+            }),
+            show_quick_filter: on("show_quick_filter"),
+            toolbar: on("toolbar").then(|| rsx! {
+                Button { variant: "outlined", size: "sm", "Add member" }
+            }),
+            loading: on("loading"),
+            header_filters: on("header_filters"),
+            resizable_columns: resizes(&values),
+            column_widths: resizes(&values).then(|| widths.cloned()),
+            oncolumnwidthschange: move |next: ColumnWidths| widths.set(next),
+            row_key: |p: &Person| p.name.clone(),
+            page_sizes: if on("paginate") { vec![2, 5, 10] } else { vec![] },
+            empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
+            data: if no_rows(&values) { Vec::new() } else { rows() },
+            columns: team_columns(on("column_groups")),
+        }
+    }
 }
 
 #[component]
@@ -471,14 +586,26 @@ pub fn TablePage() -> Element {
                     Code { source: "width" }
                     ", so the next one knows where to sit."
                 }
+                Text {
+                    Code { source: "resizable_columns" }
+                    " puts a grip on each header's end edge: drag it, or double-click it to "
+                    "reset the width. With "
+                    Code { source: "column_menu" }
+                    ", Widen column, Narrow column and Reset width do the same without a drag. "
+                    "The demo holds the widths itself with "
+                    Code { source: "column_widths" }
+                    " and "
+                    Code { source: "oncolumnwidthschange" }
+                    ", say to save them with a view."
+                }
             },
             Demo {
                 component: "Table",
                 children_text: "",
                 fixed: vec![
                     r#"caption: "Team members""#.to_string(),
+                    "row_key: |p: &Person| p.name.clone()".to_string(),
                     "data: people".to_string(),
-                    COLUMNS.to_string(),
                 ],
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
@@ -499,13 +626,7 @@ pub fn TablePage() -> Element {
                         true => vec![PINNED.to_string()],
                         false => vec![],
                     }),
-                    Control::switch("selectable").code(|_, values| match values.str("selectable") == "true" {
-                        true => vec![
-                            "selectable: true".to_string(),
-                            "row_key: |p: &Person| p.name.clone()".to_string(),
-                        ],
-                        false => vec![],
-                    }),
+                    Control::switch("selectable"),
                     Control::switch("multi_sort"),
                     Control::switch("column_menu"),
                     Control::switch("row_detail").code(|_, values| match values.str("row_detail") == "true" {
@@ -527,54 +648,27 @@ pub fn TablePage() -> Element {
                         true => vec![r#"empty: rsx! { "No team members yet." }"#.to_string()],
                         false => vec![],
                     }),
+                    Control::switch("reorder_rows").code(|_, values| match reorders(values) {
+                        true => vec![REORDER.to_string()],
+                        false => vec![],
+                    }),
+                    Control::switch("resizable_columns").code(|_, values| match resizes(values) {
+                        true => vec![
+                            "resizable_columns: true".to_string(),
+                            "column_widths: widths()".to_string(),
+                            "oncolumnwidthschange: move |next: ColumnWidths| widths.set(next)".to_string(),
+                        ],
+                        false => vec![],
+                    }),
+                    // Last, as it prints the columns: no `column_groups` prop exists.
+                    Control::switch("column_groups").code(|_, values| match values.str("column_groups") == "true" {
+                        true => vec![GROUPED_COLUMNS.to_string()],
+                        false => vec![COLUMNS.to_string()],
+                    }),
                 ],
                 wrap: Wrap(wrap_data),
                 render: move |values: DemoValues| rsx! {
-                    Table {
-                        // A new table per switch: `page_sizes` and the pins seed once.
-                        key: "{values.str(\"paginate\")}-{values.str(\"pinned\")}",
-                        caption: "Team members",
-                        size: values.str("size"),
-                        striped: values.str("striped") == "true",
-                        scroll: values.str("scroll") == "true",
-                        sx: match values.str("scroll") == "true" {
-                            true => sx().min_width(SCROLL_WIDTH),
-                            false => sx(),
-                        },
-                        max_height: (values.str("max_height") == "true").then(|| MAX_HEIGHT.to_string()),
-                        default_pinned_columns: match values.str("pinned") == "true" {
-                            true => PinnedColumns::default().start(["Name"]).end(["Bonus"]),
-                            false => PinnedColumns::default(),
-                        },
-                        selectable: values.str("selectable") == "true",
-                        multi_sort: values.str("multi_sort") == "true",
-                        column_menu: values.str("column_menu") == "true",
-                        row_detail: match values.str("row_detail") == "true" {
-                            true => (|p: &Person| Some(rsx! { "{p.name} joined as {p.role}." })).into(),
-                            false => RowFn::default(),
-                        },
-                        show_quick_filter: values.str("show_quick_filter") == "true",
-                        toolbar: (values.str("toolbar") == "true").then(|| rsx! {
-                            Button { variant: "outlined", size: "sm", "Add member" }
-                        }),
-                        loading: values.str("loading") == "true",
-                        header_filters: values.str("header_filters") == "true",
-                        row_key: |p: &Person| p.name.clone(),
-                        page_sizes: if values.str("paginate") == "true" { vec![2, 5, 10] } else { vec![] },
-                        empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
-                        data: if no_rows(&values) { Vec::new() } else { people() },
-                        columns: vec![
-                            column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
-                            column("Role")
-                                .value(|p: &Person| p.role.clone())
-                                .sortable()
-                                .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-                            column("Bonus")
-                                .value(|p: &Person| p.bonus)
-                                .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
-                                .sortable(),
-                        ],
-                    }
+                    TeamTable { values }
                 },
             }
             DocSection {

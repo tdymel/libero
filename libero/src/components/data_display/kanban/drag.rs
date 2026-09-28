@@ -7,21 +7,24 @@ use std::{collections::BTreeMap, rc::Rc};
 use dioxus::prelude::*;
 
 use super::{
-    lanes::{Lane, Lanes, Rect},
+    lanes::{Lane, Lanes, Rect, edge_step},
     moves::KanbanMove,
 };
 use crate::{
     components::accessibility::Announcer,
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, current_localization, use_distance_drag,
-        use_element,
+        use_element, use_interval,
     },
     localization::fill,
-    platform::{self, Dimensions, Read},
+    platform::{self, Dimensions, ElementApi, Read},
     theme::{SORTABLE_SETTLE, SORTABLE_SETTLE_FROM, TRANSITION_DURATION, TRANSITION_EASING},
 };
 
 type Mounted = Option<Rc<MountedData>>;
+
+/// The auto-scroll tick near a side edge. Natively each costs a thread, only while there.
+const AUTO_SCROLL_MS: u64 = 40;
 
 /// A card's place and nodes. Not its `ElementHandle`s: the board reading those is a cross-scope read.
 #[derive(Clone)]
@@ -38,6 +41,13 @@ struct Placed {
 struct Lifted {
     lanes: Lanes,
     label: String,
+    /// The board's rect when it scrolls sideways, else `None`.
+    board: Option<Rect>,
+    /// The board's scroll offset at the lift.
+    scroll: (f64, f64),
+    /// The least and most `scrollLeft`, measured before the lifted card's
+    /// transform widened the board's overflow.
+    scroll_range: (f64, f64),
 }
 
 /// The card just dropped at `column`, `index`: it slides in from `offset` px (1129).
@@ -88,6 +98,8 @@ pub(super) struct BoardDrag {
     pressed: CopyValue<Option<usize>>,
     lifted: Signal<Option<Lifted>>,
     travel: Signal<(f64, f64)>,
+    /// Px the board scrolled sideways since the lift: the cards moved the other way.
+    scrolled: Signal<f64>,
     settle: Signal<Option<Settle>>,
     onpointerdown: Callback<Event<PointerData>>,
     cancel: Callback<()>,
@@ -144,14 +156,45 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
     let mut pressed = use_hook(|| CopyValue::new(None::<usize>));
     let mut lifted = use_signal(|| None::<Lifted>);
     let mut travel = use_signal(|| (0.0_f64, 0.0_f64));
+    let mut scrolled = use_signal(|| 0.0_f64);
     let mut settle = use_signal(|| None::<Settle>);
     // A release can land before the measure: (measuring, released).
     let mut starting = use_hook(|| CopyValue::new((false, false)));
 
     let target = use_memo(move || {
         let (dx, dy) = travel();
-        lifted.read().as_ref()?.lanes.target(dx, dy)
+        lifted.read().as_ref()?.lanes.target(dx + scrolled(), dy)
     });
+
+    // Near a side edge the board scrolls by `edge` px per tick, its cards' geometry with it.
+    let mut edge = use_hook(|| CopyValue::new(0.0_f64));
+    let auto_scroll = use_interval(
+        move || {
+            let step = *edge.peek();
+            let Some((from, (least, most))) = lifted
+                .peek()
+                .as_ref()
+                .map(|up| (up.scroll, up.scroll_range))
+            else {
+                return;
+            };
+            let now = from.0 + *scrolled.peek();
+            let next = (now + step).clamp(least, most);
+            if next == now {
+                return;
+            }
+            let _ = element.scroll_to(next, from.1);
+            let at = element.scroll_offset();
+            spawn(async move {
+                if let Ok((x, _)) = at.await
+                    && lifted.peek().is_some()
+                {
+                    scrolled.set(x - from.0);
+                }
+            });
+        },
+        AUTO_SCROLL_MS,
+    );
     let sorting = use_memo(move || lifted.read().is_some());
 
     let mut lift = move |up: Lifted| {
@@ -195,7 +238,25 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             return;
         };
         settle.set(None);
+        let rtl = element.is_rtl();
+        let board_reads = (
+            (element.client_offset(), element.dimensions()),
+            element.scroll_size(),
+            element.scroll_offset(),
+        );
         spawn(async move {
+            let (board, content, scroll) = board_reads;
+            let board = rect(board).await;
+            let content = content.await.map_or(0.0, |size| size.width);
+            let scroll = scroll.await.unwrap_or_default();
+            // A board that fits has nothing to scroll: no ticks.
+            let board = board.filter(|board| content > board.width + 0.5);
+            let most = board.map_or(0.0, |board| content - board.width);
+            // Right to left, `scrollLeft` runs from 0 down to minus the overflow.
+            let scroll_range = match rtl {
+                true => (-most, 0.0),
+                false => (0.0, most),
+            };
             let mut lanes = Vec::with_capacity(list_reads.len());
             for (list, column) in list_reads.into_iter().zip(card_reads) {
                 let mut cards = Vec::with_capacity(column.len());
@@ -227,6 +288,9 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                     from: card.index,
                 },
                 label: card.label,
+                board,
+                scroll,
+                scroll_range,
             }));
         });
     };
@@ -237,13 +301,17 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             return;
         };
         let (dx, dy) = *travel.peek();
+        let dx = dx + *scrolled.peek();
         let lanes = &ended.lanes;
         let from = (lanes.from_column, lanes.from);
         // Let go off the board, it goes back.
         let landed = commit.then(|| lanes.target(dx, dy)).flatten();
         let to = landed.unwrap_or(from);
+        edge.set(0.0);
+        auto_scroll.stop();
         lifted.set(None);
         travel.set((0.0, 0.0));
+        scrolled.set(0.0);
         pressed.set(None);
         let count = lanes.lanes[to.0].cards.len();
         let label = &ended.label;
@@ -316,6 +384,14 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         onmove: use_callback(move |step: DragMove| {
             let delta = step.delta();
             travel.set((delta.x, delta.y));
+            let board = lifted.peek().as_ref().and_then(|up| up.board);
+            let next = board.map_or(0.0, |board| edge_step(step.client.x, board));
+            edge.set(next);
+            match (next != 0.0, auto_scroll.active()) {
+                (true, false) => auto_scroll.start(),
+                (false, true) => auto_scroll.stop(),
+                _ => {}
+            }
         }),
         onend: use_callback(move |()| {
             if starting.peek().0 {
@@ -340,6 +416,7 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         pressed,
         lifted,
         travel,
+        scrolled,
         settle,
         onpointerdown: drag.onpointerdown,
         cancel,
@@ -456,6 +533,7 @@ pub(super) fn use_board_card(
     let BoardDrag {
         lifted,
         travel,
+        scrolled,
         target,
         settle,
         ..
@@ -465,7 +543,8 @@ pub(super) fn use_board_card(
         let lanes = &lifted.as_ref()?.lanes;
         let at = column();
         if (lanes.from_column, lanes.from) == (at, index) {
-            return Some(travel());
+            let (dx, dy) = travel();
+            return Some((dx + scrolled(), dy));
         }
         Some((0.0, target().map_or(0.0, |to| lanes.step(at, index, to))))
     }));

@@ -99,6 +99,12 @@ scroll under them, and the column menu pins and unpins them. Start and end
 follow the page's direction. Give each pinned column but the outermost a
 `width`, so the next one knows where to sit.
 
+`resizable_columns` puts a grip on each header's end edge: drag it, or
+double-click it to reset the width. With `column_menu`, Widen column, Narrow
+column and Reset width do the same without a drag. The demo holds the widths
+itself with `column_widths` and `oncolumnwidthschange`, say to save them with a
+view.
+
 ## Usage
 
 ```rust

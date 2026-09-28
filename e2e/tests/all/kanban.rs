@@ -340,6 +340,148 @@ async fn centre(page: &chromiumoxide::Page, selector: &str) -> e2e::passes::poin
         .unwrap()
 }
 
+/// One left-button mouse event at `at`, the button held when `held`.
+async fn mouse_at(
+    page: &chromiumoxide::Page,
+    kind: chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType,
+    at: e2e::passes::pointer::Point,
+    held: bool,
+) {
+    use chromiumoxide::cdp::browser_protocol::input::{DispatchMouseEventParams, MouseButton};
+    let event = DispatchMouseEventParams::builder()
+        .r#type(kind)
+        .x(at.x)
+        .y(at.y)
+        .button(MouseButton::Left)
+        .buttons(i64::from(held))
+        .click_count(1)
+        .build()
+        .unwrap();
+    page.execute(event).await.unwrap();
+}
+
+/// A card held still at the board's end edge scrolls the board, and drops in the column it brought in (1364).
+#[test]
+fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
+    use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer::Point;
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        let hidden: bool = page
+            .evaluate(
+                "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
+                 return document.querySelector('#column-2').getBoundingClientRect().left >= b.right; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(hidden, "Done starts in view: nothing to scroll to");
+        let right: f64 = page
+            .evaluate("document.querySelector('#board').getBoundingClientRect().right")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let (handle, alpha) = (
+            centre(page, "#Gamma [data-slot=handle]").await,
+            centre(page, "#Alpha [data-slot=handle]").await,
+        );
+        mouse_at(page, Kind::MouseMoved, handle, false).await;
+        mouse_at(page, Kind::MousePressed, handle, true).await;
+        let edge = Point {
+            x: right - 8.0,
+            y: alpha.y,
+        };
+        for step in 1..=10 {
+            let t = f64::from(step) / 10.0;
+            let at = Point {
+                x: handle.x + (edge.x - handle.x) * t,
+                y: handle.y + (edge.y - handle.y) * t,
+            };
+            mouse_at(page, Kind::MouseMoved, at, true).await;
+        }
+        // Held still: only the ticks scroll, up to Done's end edge and no further.
+        wait::for_js_true(
+            page,
+            "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
+             return Math.abs(document.querySelector('#column-2').getBoundingClientRect().right - b.right) < 2; })()",
+            "a card held at the end edge to scroll the board to its end",
+        )
+        .await
+        .unwrap();
+        // A few more ticks' time, held at the edge.
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        let past: bool = page
+            .evaluate(
+                "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
+                 return document.querySelector('#column-2').getBoundingClientRect().right < b.right - 2; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            !past,
+            "the board scrolled past its end into the dragged card's overflow"
+        );
+        let done = centre(page, "#column-2").await;
+        let over = Point {
+            x: done.x,
+            y: alpha.y,
+        };
+        mouse_at(page, Kind::MouseMoved, over, true).await;
+        mouse_at(page, Kind::MouseReleased, over, false).await;
+        wait::for_js_true(
+            page,
+            "document.querySelector('#order').textContent === 'Alpha Beta | Delta | Gamma'",
+            "a drop in the column the scroll brought in",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("an edge drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The Move to menu, keyboard only, scrolls the board to a hidden column it moves the card to.
+#[test]
+fn a_menu_move_to_a_hidden_column_scrolls_it_into_view() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.querySelector('#Beta [data-slot=move-to]').focus()")
+            .await
+            .unwrap();
+        // ArrowUp opens the menu on its last item: Done.
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.getAttribute('role') === 'menuitem'",
+            "ArrowUp on the Move to trigger",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
+             const c = document.querySelector('#Beta').getBoundingClientRect(); \
+             return document.querySelector('#order').textContent === 'Alpha Gamma | Delta | Beta' \
+             && c.left >= b.left - 1 && c.right <= b.right + 1; })()",
+            "Beta moved to Done and in view",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A finger on a handle drags the card to the next column; on a card's text it scrolls the board.
 #[test]
 fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {

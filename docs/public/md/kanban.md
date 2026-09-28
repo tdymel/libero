@@ -128,6 +128,9 @@ parts work.
   takes a touch, so a swipe on the rest of a card scrolls. The column under the
   dragged card's centre takes it, marked `target`; let go off the board, the
   card goes back.
+- On a board wider than its container, a card dragged within 48px of a side
+  edge scrolls the board that way, faster the closer, until that edge's column
+  is in view.
 - In a narrow column, where the content would get less than 8rem, the move
   buttons wrap below it.
 
@@ -140,8 +143,8 @@ parts work.
 
 - The keyboard drag moves a card within its column only. Moving to another
   column is the Move to menu.
-- A drag does not scroll the board or a column: drop where you can see, or use
-  the Move to menu.
+- A drag scrolls the board sideways only, not the page: to reach a card or
+  column above or below the window, use the Move to menu.
 - Columns keep their place: the board has no column reorder.
 
 ## Data attributes

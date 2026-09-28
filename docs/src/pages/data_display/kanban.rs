@@ -343,6 +343,7 @@ pub fn KanbanPage() -> Element {
                     "A card moved to another column by its Move to menu lands at that column's end, and its Move to button takes the focus there. One dragged there lands where it was let go, and its handle keeps the focus.",
                     "One `role=\"status\"` region for the board announces each lift, move, drop and cancel, and a move or a drop in another column with the column's name and the card's position, from the `SortableLabels` and `KanbanLabels` templates of the active `Localization`.",
                     "A drag starts after the pointer moved 4px (8px for a touch); only the handle takes a touch, so a swipe on the rest of a card scrolls. The column under the dragged card's centre takes it, marked `target`; let go off the board, the card goes back.",
+                    "On a board wider than its container, a card dragged within 48px of a side edge scrolls the board that way, faster the closer, until that edge's column is in view.",
                     "In a narrow column, where the content would get less than 8rem, the move buttons wrap below it.",
                 ])
                 .must([
@@ -350,7 +351,7 @@ pub fn KanbanPage() -> Element {
                 ])
                 .limits([
                     "The keyboard drag moves a card within its column only. Moving to another column is the Move to menu.",
-                    "A drag does not scroll the board or a column: drop where you can see, or use the Move to menu.",
+                    "A drag scrolls the board sideways only, not the page: to reach a card or column above or below the window, use the Move to menu.",
                     "Columns keep their place: the board has no column reorder.",
                 ]),
             lead: rsx! {
