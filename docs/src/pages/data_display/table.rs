@@ -126,6 +126,7 @@ pub fn TablePage() -> Element {
                     prop("expanded", "Option<Vec<String>>").default("None").doc("The `row_key`s of the rows whose detail shows. Set, it is controlled: pair it with `onexpandedchange`. It survives a sort."),
                     prop("default_expanded", "Vec<String>").default("[]").doc("Seeds the open details once. Ignored when `expanded` is set."),
                     prop("onexpandedchange", "EventHandler<Vec<String>>").default("None").doc("Called with the open details a toggle asks for."),
+                    prop("onrowreorder", "EventHandler<SortableMove>").default("None").doc("Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted or the quick filter has text. Paged, a row moves within its page. Set `row_key` with it."),
                     prop("size", "Size").default("theme (md)").doc("Cell padding and font size."),
                     prop("striped", "bool").default("false").doc("Shades every other body row."),
                     prop("page", "Option<u32>").default("None").doc("The shown page, 1-based. Set, the page is controlled: pair it with `onpagechange`. A page past the end shows the last one."),
@@ -149,7 +150,10 @@ pub fn TablePage() -> Element {
                     prop("pinned_columns", "Option<PinnedColumns>").default("None").doc("The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly."),
                     prop("default_pinned_columns", "PinnedColumns").default("none pinned").doc("Seeds the pinned columns once. Ignored when `pinned_columns` is set."),
                     prop("onpinnedcolumnschange", "EventHandler<PinnedColumns>").default("None").doc("Called with the pinned columns a column menu pick asks for."),
-                    prop("column_menu", "bool").default("false").doc("Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, hide the column, and a Columns submenu that shows or hides the others."),
+                    prop("column_order", "Option<Vec<String>>").default("None").doc("The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column."),
+                    prop("default_column_order", "Vec<String>").default("[]").doc("Seeds the column order once. Ignored when `column_order` is set."),
+                    prop("oncolumnorderchange", "EventHandler<Vec<String>>").default("None").doc("Called with the order a column menu's Move left or Move right asks for, every header listed."),
+                    prop("column_menu", "bool").default("false").doc("Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, move the column left or right past the next shown one, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries."),
                     prop("column_menu_parts", "Parts<MenuPart>").default("none").doc("The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`."),
                 ]),
                 props("column()", vec![
@@ -182,6 +186,7 @@ pub fn TablePage() -> Element {
                 .key(["Space"], "On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row.")
                 .key(["Enter", "Space"], "With `row_detail`, on a row's toggle: opens or closes its detail. Tab then goes into the open detail.")
                 .key(["Enter", "Space", "Down"], "With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`.")
+                .key(["Space", "Enter"], "With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back.")
                 .handles([
                     "An unnamed table warns in a debug build.",
                     "With `scroll` or `max_height`, an overflowing scroll area with no button in it is a tab stop, a `role=\"region\"` named like the table. With sort or menu buttons in the header it is no stop: the arrows scroll it from a focused button.",
@@ -200,6 +205,9 @@ pub fn TablePage() -> Element {
                     "Pinned columns move to their edge in the DOM too, so Tab and a screen reader meet the cells in the order they are seen. The detail toggle and checkbox columns pin with the start ones.",
                     "A pinned column past one without a `width` warns in a debug build: its offset is unknown, so it would overlap.",
                     "A group or a `col_span` stops at a pin edge: a group over pinned and scrolled columns shows as two headers, and a group header never pins.",
+                    "With `onrowreorder`, each row has a drag handle named \"Reorder\" plus the row's name, described by the keyboard steps, and Move up and Move down buttons, so a single pointer reorders without a drag (WCAG 2.5.7). A touch drags only from the handle; elsewhere it scrolls. Each lift, move and drop is said in a polite live region. While sorted or filtered the controls are disabled.",
+                    "`onrowreorder` without `row_key` warns in a debug build.",
+                    "The column menu's Move left and Move right name the screen sides in either text direction. A moved column moves in the DOM too, so Tab and a screen reader follow it, and a column moved out of its group splits the group.",
                 ])
                 .must([
                     "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
@@ -213,6 +221,8 @@ pub fn TablePage() -> Element {
                     "On Blitz, once a `max_height` table's rows scroll, a click on a header's sort or menu button misses: Blitz hit-tests the header where it sat before the scroll. Tab to the button and press Enter instead.",
                     "On Blitz, the same holds for a pinned column's cells once the table scrolls sideways. In a right-to-left page Blitz cannot scroll a wide table at all (todo 707), so pinning shows no effect there.",
                     "On Blitz, a `max_height` table with column groups keeps only its last header row in place; the group rows scroll away with the rows.",
+                    "On Blitz, a row's handle does not drag: Blitz paints no moved table row. The keyboard and the move buttons reorder there.",
+                    "Columns reorder from the column menu only, not by dragging a header.",
                 ]),
             lead: rsx! {
                 Text {
@@ -349,6 +359,22 @@ pub fn TablePage() -> Element {
                     " and "
                     Code { source: "onexpandedchange" }
                     "."
+                }
+                Text {
+                    Code { source: "onrowreorder" }
+                    " gives each row a drag handle and move buttons. The table hands you the "
+                    "move, by positions in "
+                    Code { source: "data" }
+                    ", and "
+                    Code { source: "step.apply(&mut rows.write())" }
+                    " applies it. Sorted or filtered, the shown order is not your data's, so "
+                    "the controls turn off. With "
+                    Code { source: "column_menu" }
+                    ", Move left and Move right reorder the columns; hold the order yourself with "
+                    Code { source: "column_order" }
+                    " and "
+                    Code { source: "oncolumnorderchange" }
+                    ". A sorted column stays sorted wherever it moves."
                 }
                 Text {
                     Code { source: "table_csv(&columns, &rows)" }

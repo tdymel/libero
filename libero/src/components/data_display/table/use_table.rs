@@ -104,6 +104,9 @@ pub(crate) struct TableConfig {
     pub expanded: Option<Vec<String>>,
     pub default_expanded: Vec<String>,
     pub onexpandedchange: Option<EventHandler<Vec<String>>>,
+    pub column_order: Option<Vec<String>>,
+    pub default_column_order: Vec<String>,
+    pub oncolumnorderchange: Option<EventHandler<Vec<String>>>,
 }
 
 /// A table's state, one slice per feature.
@@ -122,6 +125,8 @@ pub(crate) struct TableState {
     pub pinned_columns: StateSlice<PinnedColumns>,
     /// The keys of the rows whose detail shows.
     pub expanded: StateSlice<Vec<String>>,
+    /// The headers in display order; unlisted ones follow in column order.
+    pub column_order: StateSlice<Vec<String>>,
 }
 
 pub(crate) fn use_table(config: TableConfig) -> TableState {
@@ -173,7 +178,14 @@ pub(crate) fn use_table(config: TableConfig) -> TableState {
         config.onexpandedchange,
         "Table: a controlled `expanded` without `onexpandedchange` never changes.",
     );
+    let column_order = use_state_slice(
+        config.column_order,
+        || config.default_column_order,
+        config.oncolumnorderchange,
+        "Table: a controlled `column_order` without `oncolumnorderchange` never changes.",
+    );
     TableState {
+        column_order,
         sort,
         selection,
         page,

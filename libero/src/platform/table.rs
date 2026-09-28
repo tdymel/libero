@@ -17,3 +17,9 @@ pub(crate) fn widens_sized_tables() -> bool {
 pub(crate) fn sticks_table_heads() -> bool {
     backend::STICKS_TABLE_HEADS
 }
+
+/// Whether a `transform` on a `<tr>` paints. Blitz's `tr` has no box, so a
+/// `Table`'s rows reorder there by key and buttons only, not by drag.
+pub(crate) fn moves_table_rows() -> bool {
+    backend::MOVES_TABLE_ROWS
+}

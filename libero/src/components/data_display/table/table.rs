@@ -2,6 +2,7 @@ use std::{collections::HashSet, rc::Rc};
 
 use dioxus::prelude::*;
 
+use super::super::sortable::SortableMove;
 use crate::{
     components::{
         accessibility::use_announcer,
@@ -23,6 +24,7 @@ use crate::{
 use super::{
     column::{Column, ColumnDefaults},
     column_menu::{ColumnMenu, MenuColumn},
+    column_order::{moved, order_unpinned},
     core::{
         BodySpec, CaptionSpec, CellSpec, RowFn, RowSpec, SortedRows, TableSort, active_sort,
         header_specs, render_body,
@@ -32,6 +34,7 @@ use super::{
     groups::spanned,
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
     pinning::{PinSide, PinnedColumns, pin_columns, pin_runs, span_pin},
+    row_reorder::{ReorderSlot, RowReorder},
     selection::Selection,
     use_table::{TableConfig, use_table},
 };
@@ -218,6 +221,29 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-detail-button][aria-expanded=\"false\"] svg",
         sx().transform("rotate(90deg)"),
     ))
+    .selector(
+        "& [data-reorder]",
+        sx().box_sizing("border-box")
+            .width(reorder_width())
+            .padding_block("0"),
+    )
+    .selector(
+        "& [data-reorder-controls]",
+        sx().display("flex").align_items("center"),
+    )
+    // As `Sortable`'s items: the neighbours slide only while a row drags.
+    .selector(
+        "& tbody[data-sorting] > tr",
+        sx().transition("transform 150ms ease")
+            .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
+    )
+    .selector(
+        "& tbody > tr[data-dragging]",
+        sx().position("relative")
+            .z_index("2")
+            .transition("none")
+            .background(NamedColorCss::SURFACE.value()),
+    )
     .when(
         "row-click",
         sx().selector(
@@ -307,7 +333,41 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             sx().with("inset-inline-start", detail_width()),
         ),
     )
+    // The handles lead all: the toggles and checkboxes move in past them.
+    .when(
+        "pin-reorder",
+        sx().selector(
+            "& [data-reorder]",
+            sx().position("sticky")
+                .with("inset-inline-start", "0")
+                .z_index("1")
+                .background("inherit"),
+        )
+        .selector(
+            "& thead th[data-reorder]",
+            sx().z_index("3").background(NamedColorCss::SURFACE.value()),
+        )
+        .selector(
+            "& [data-detail-toggle], & [data-select]",
+            sx().with("inset-inline-start", reorder_width()),
+        ),
+    )
+    .when(
+        "pin-reorder-detail",
+        sx().selector(
+            "& [data-select]",
+            sx().with(
+                "inset-inline-start",
+                format!("calc({} + {})", reorder_width(), detail_width()),
+            ),
+        ),
+    )
 });
+
+/// The reorder column's width: a handle and two move buttons, 24px each, and the cell padding.
+fn reorder_width() -> String {
+    format!("calc(72px + 2 * {})", TABLE_PAD_X.value())
+}
 
 /// The detail toggles' column width: a 24px button and the cell padding.
 fn detail_width() -> String {
@@ -412,6 +472,11 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// The open details a toggle asks for.
     #[props(default)]
     onexpandedchange: Option<EventHandler<Vec<String>>>,
+    /// Adds a leading column of drag handles and move buttons; called with a
+    /// move by positions in `data`, which you apply (`step.apply(&mut rows)`).
+    /// Off while the rows are sorted or filtered. Not dragged on Blitz.
+    #[props(default)]
+    onrowreorder: Option<EventHandler<SortableMove>>,
     /// Cell padding and font size.
     #[props(default, into)]
     size: Input<Size>,
@@ -470,6 +535,17 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// The pinned columns a column menu pick asks for.
     #[props(default)]
     onpinnedcolumnschange: Option<EventHandler<PinnedColumns>>,
+    /// The headers in display order; set, the order is controlled. Unlisted
+    /// columns follow the listed ones in `columns` order. Pinned columns keep
+    /// their pinned order.
+    #[props(default)]
+    column_order: Option<Vec<String>>,
+    /// Seeds the column order once. Ignored when `column_order` is set.
+    #[props(default)]
+    default_column_order: Vec<String>,
+    /// The order a column menu's Move left or Move right asks for, every header listed.
+    #[props(default)]
+    oncolumnorderchange: Option<EventHandler<Vec<String>>>,
     /// A menu button in each header: sort, hide the column, show or hide others.
     #[props(default)]
     column_menu: bool,
@@ -556,6 +632,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         expanded: props.expanded,
         default_expanded: props.default_expanded,
         onexpandedchange: props.onexpandedchange,
+        column_order: props.column_order,
+        default_column_order: props.default_column_order,
+        oncolumnorderchange: props.oncolumnorderchange,
     });
     let announcer = use_announcer();
     let touch = use_hook(|| CopyValue::new(false));
@@ -571,6 +650,24 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 "Table: `row_detail` without `row_key` keys the open details by row index, so \
                  they move to other rows when `data` changes.",
             );
+        }
+        if props.onrowreorder.is_some() && !props.row_key.is_set() {
+            warn(
+                "Table: `onrowreorder` without `row_key` keys the rows by index, so a moved row \
+                 is rebuilt and its handle loses the focus.",
+            );
+        }
+    });
+    let instructions_id = use_id();
+    // The shown rows' indices in `data`, which a reorder's slots map to.
+    let mut shown_rows = use_hook(|| CopyValue::new(Vec::<usize>::new()));
+    let onrowreorder = props.onrowreorder;
+    let reorder_rows = use_callback(move |step: SortableMove| {
+        let shown = shown_rows.peek();
+        if let (Some(onrowreorder), Some(&from), Some(&to)) =
+            (onrowreorder, shown.get(step.from), shown.get(step.to))
+        {
+            onrowreorder.call(SortableMove { from, to });
         }
     });
     let detail_id = use_id();
@@ -605,13 +702,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     );
     let pinned = state.pinned_columns.read();
     let has_detail = props.row_detail.is_set();
-    let lead_width = match (has_detail, props.selectable) {
-        (true, true) => Some(format!("calc({} + {})", detail_width(), select_width(size))),
-        (true, false) => Some(detail_width()),
-        (false, true) => Some(select_width(size)),
-        (false, false) => None,
+    let has_reorder = props.onrowreorder.is_some();
+    let leads: Vec<String> = [
+        has_reorder.then(reorder_width),
+        has_detail.then(detail_width),
+        props.selectable.then(|| select_width(size)),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    let lead_width = match leads.as_slice() {
+        [] => None,
+        [one] => Some(one.clone()),
+        many => Some(format!("calc({})", many.join(" + "))),
     };
-    let (layout, unknown) = pin_columns(&mut headers, &pinned, lead_width.as_deref());
+    let (mut layout, unknown) = pin_columns(&mut headers, &pinned, lead_width.as_deref());
+    let column_order = state.column_order.read();
+    order_unpinned(&headers, &mut layout, &column_order);
     let pins_start = headers.iter().any(|spec| {
         spec.pin
             .as_ref()
@@ -651,6 +758,11 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                         ColumnMenu {
                             index,
                             columns: columns.clone(),
+                            moves: (
+                                moved(&headers, &column_order, index, false),
+                                moved(&headers, &column_order, index, true),
+                            ),
+                            order: state.column_order,
                             active: active.clone(),
                             sort: state.sort,
                             multi_sort: props.multi_sort,
@@ -779,6 +891,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             }
         }
     });
+    if has_reorder {
+        shown_rows.set(order.clone());
+    }
     let rows: Vec<RowSpec> = order
         .into_iter()
         .enumerate()
@@ -816,7 +931,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             let select = selection.as_ref().map(|selection| {
                 selection.row_cell(key.clone(), &name(), is_selected == Some(true), toggle)
             });
+            let reorder = has_reorder.then(|| ReorderSlot {
+                slot: position,
+                label: name(),
+            });
             RowSpec {
+                reorder,
                 selected: is_selected,
                 select,
                 stripe: props.striped && position % 2 == 1,
@@ -910,7 +1030,20 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .with("pinned", pins)
         .with("pin-select", pins_select)
         .with("pin-detail", has_detail && pins_start)
+        .with("pin-reorder", has_reorder && pins_start)
+        .with(
+            "pin-reorder-detail",
+            has_reorder && has_detail && pins_start,
+        )
         .into();
+    let reorder = has_reorder.then(|| RowReorder {
+        onreorder: reorder_rows,
+        // The shown order is not `data`'s: a move between slots means nothing there.
+        disabled: !active.is_empty() || !words.is_empty(),
+        announcer,
+        labels,
+        instructions: instructions_id(),
+    });
     // Rows the filter took away, not missing data: the caller's `empty` does not apply.
     let filtered_out = !words.is_empty() && (props.manual_filter || !data.is_empty());
     let empty = match filtered_out {
@@ -943,13 +1076,18 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     .as_ref()
                     .map(|details| details.header_cell(group_rows + 1)),
                 menus,
+                reorder_header: reorder
+                    .as_ref()
+                    .map(|reorder| reorder.header_cell(group_rows + 1)),
+                reorder: reorder.clone(),
             }),
         );
     // The live region: valid in no part of a table, so beside it.
-    let table = match props.selectable || props.show_quick_filter {
+    let table = match props.selectable || props.show_quick_filter || has_reorder {
         true => rsx! {
             {table}
             {announcer.render()}
+            {reorder.as_ref().map(RowReorder::instructions)}
         },
         false => table,
     };

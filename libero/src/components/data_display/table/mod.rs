@@ -1,6 +1,7 @@
 mod cell_value;
 mod column;
 mod column_menu;
+mod column_order;
 mod core;
 mod csv;
 mod detail;
@@ -8,6 +9,7 @@ mod filter;
 mod groups;
 mod paging;
 mod pinning;
+mod row_reorder;
 mod selection;
 mod table;
 mod use_table;

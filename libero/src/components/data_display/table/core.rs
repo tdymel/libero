@@ -8,6 +8,7 @@ use super::{
     column::{Column, ColumnDefaults},
     groups::{HeaderCell, header_rows},
     pinning::{CellPin, pin_edge_at},
+    row_reorder::{ReorderRow, ReorderSlot, RowReorder},
     use_table::StateSlice,
 };
 use crate::{
@@ -271,6 +272,8 @@ pub(super) struct RowSpec {
     /// With `row_detail`: its toggle cell, and while open its detail row's id and body.
     pub toggle: Option<Element>,
     pub detail: Option<(String, Element)>,
+    /// With `onrowreorder`: its slot among the shown rows and its name.
+    pub reorder: Option<ReorderSlot>,
 }
 
 /// A body cell of header `column`: its text, or a caller's body, over `span`
@@ -361,6 +364,9 @@ pub(super) struct BodySpec {
     pub detail_header: Option<Element>,
     /// With `column_menu`: each header's menu, by header index.
     pub menus: Vec<Element>,
+    /// With `onrowreorder`: the leading column of handles, and its header cell.
+    pub reorder: Option<RowReorder>,
+    pub reorder_header: Option<Element>,
 }
 
 /// Whether a header click adds its column to the others: a modifier, or a touch,
@@ -414,10 +420,13 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         select_all,
         detail_header,
         menus,
+        reorder,
+        reorder_header,
     } = body;
     let columns = shown.len().max(1)
         + usize::from(select_all.is_some())
-        + usize::from(detail_header.is_some());
+        + usize::from(detail_header.is_some())
+        + usize::from(reorder.is_some());
     let empty = rows.is_empty().then_some(empty);
     // The order shows only when it tells something: with two or more sorted columns.
     let ranked = active.len() > 1;
@@ -440,6 +449,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         .collect();
     let mut select_all = select_all;
     let mut detail_header = detail_header;
+    let mut reorder_header = reorder_header;
     let head_rows: Vec<Element> = header_rows(&paths, |at| pin_edge_at(&headers, &shown, at))
         .into_iter()
         .enumerate()
@@ -486,6 +496,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
             let cells: Vec<Element> = cells.collect();
             rsx! {
                 tr { key: "{level}",
+                    {reorder_header.take()}
                     {detail_header.take()}
                     {select_all.take()}
                     {cells.into_iter()}
@@ -498,13 +509,21 @@ pub(super) fn render_body(body: BodySpec) -> Element {
             caption { id: spec.id, "{spec.text}" }
         }
         thead { {head_rows.into_iter()} }
-        tbody {
-            if let Some(empty) = empty {
-                tr { "data-empty": true,
-                    td { colspan: "{columns}", {empty} }
+        {
+            let body = rsx! {
+                if let Some(empty) = empty {
+                    tr { "data-empty": true,
+                        td { colspan: "{columns}", {empty} }
+                    }
                 }
+                {rows.into_iter().flat_map(|row| body_rows(row, &headers, columns, reorder.as_ref()))}
+            };
+            match &reorder {
+                Some(reorder) => reorder.body(body),
+                None => rsx! {
+                    tbody { {body} }
+                },
             }
-            {rows.into_iter().flat_map(|row| body_rows(row, &headers, columns))}
         }
     }
 }
@@ -514,6 +533,7 @@ fn body_rows(
     row: RowSpec,
     headers: &[HeaderSpec],
     columns: usize,
+    reorder: Option<&RowReorder>,
 ) -> impl Iterator<Item = Element> {
     let RowSpec {
         key,
@@ -525,6 +545,7 @@ fn body_rows(
         stripe,
         toggle,
         detail,
+        reorder: slot,
     } = row;
     let detail = detail.map(|(id, body)| {
         rsx! {
@@ -533,13 +554,7 @@ fn body_rows(
             }
         }
     });
-    let row = rsx! {
-        tr {
-            key: "{key}",
-            "data-state": states,
-            "data-stripe": stripe.then_some(true),
-            aria_selected: selected.map(|selected| selected.to_string()),
-            ..attributes,
+    let content = rsx! {
             {toggle}
             {select}
             for CellSpec { column , text , body , span , pin } in cells {
@@ -569,7 +584,32 @@ fn body_rows(
                     }
                 }
             }
-        }
+    };
+    let row = match (reorder, slot) {
+        (Some(reorder), Some(ReorderSlot { slot, label })) => rsx! {
+            ReorderRow {
+                key: "{key}",
+                slot,
+                label,
+                disabled: reorder.disabled,
+                instructions: reorder.instructions.clone(),
+                states,
+                stripe,
+                selected,
+                attributes,
+                {content}
+            }
+        },
+        _ => rsx! {
+            tr {
+                key: "{key}",
+                "data-state": states,
+                "data-stripe": stripe.then_some(true),
+                aria_selected: selected.map(|selected| selected.to_string()),
+                ..attributes,
+                {content}
+            }
+        },
     };
     std::iter::once(row).chain(detail)
 }

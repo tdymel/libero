@@ -15,7 +15,7 @@ use crate::{
         overlay::{Menu, MenuEntry, MenuItem, MenuPart, use_menu},
     },
     context::IconSlot,
-    hooks::Align,
+    hooks::{Align, use_element},
     localization::TableLabels,
     theme::Size,
 };
@@ -39,11 +39,16 @@ pub(super) fn ColumnMenu(
     multi_sort: bool,
     hidden: StateSlice<Vec<String>>,
     pinned: StateSlice<PinnedColumns>,
+    /// The column order after a move towards the start and towards the end;
+    /// `None` at that edge.
+    moves: (Option<Vec<String>>, Option<Vec<String>>),
+    order: StateSlice<Vec<String>>,
     labels: TableLabels,
     size: Size,
     parts: Input<Parts<MenuPart>>,
 ) -> Element {
     let menu = use_menu();
+    let trigger = use_element();
     let column = &columns[index];
     let shown = columns.iter().filter(|column| !column.hidden).count();
     let mut items: Vec<MenuEntry> = Vec::new();
@@ -105,6 +110,26 @@ pub(super) fn ColumnMenu(
             );
         }
     }
+    // A pinned column moves by its pin; the labels are physical, as the reader sees them.
+    if side.is_none() {
+        let (backward, forward) = moves;
+        let (left, right) = match trigger.is_rtl() {
+            true => (forward, backward),
+            false => (backward, forward),
+        };
+        for (label, next) in [(labels.move_left, left), (labels.move_right, right)] {
+            items.push(
+                MenuItem::new(label)
+                    .disabled(next.is_none())
+                    .onselect(move |_| {
+                        if let Some(next) = next.clone() {
+                            order.set(next);
+                        }
+                    })
+                    .into(),
+            );
+        }
+    }
     let hideable: Vec<usize> = (0..columns.len())
         .filter(|&column| columns[column].hideable)
         .collect();
@@ -157,6 +182,7 @@ pub(super) fn ColumnMenu(
             button {
                 r#type: "button",
                 "data-column-menu": true,
+                onmounted: trigger.mount(),
                 ..attributes,
                 Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
             }

@@ -110,6 +110,7 @@ mod table;
 mod table_detail;
 mod table_groups;
 mod table_paging;
+mod table_reorder;
 mod tabs;
 mod tags_field;
 mod text;

@@ -62,6 +62,13 @@ as in a master-detail view. Rows the closure answers `None` for get no toggle.
 The open details are `row_key`s, held yourself with `expanded` and
 `onexpandedchange`.
 
+`onrowreorder` gives each row a drag handle and move buttons. The table hands
+you the move, by positions in `data`, and `step.apply(&mut rows.write())`
+applies it. Sorted or filtered, the shown order is not your data's, so the
+controls turn off. With `column_menu`, Move left and Move right reorder the
+columns; hold the order yourself with `column_order` and
+`oncolumnorderchange`. A sorted column stays sorted wherever it moves.
+
 `table_csv(&columns, &rows)` writes the cells as CSV, each as its column shows
 it as text, and `table_text` hands them over unjoined for another format.
 Saving is yours. A cell that starts with `=` runs as a formula in a
@@ -564,6 +571,7 @@ fn Demo() -> Element {
 | `expanded` | `Option<Vec<String>>` | `None` | The `row_key`s of the rows whose detail shows. Set, it is controlled: pair it with `onexpandedchange`. It survives a sort. |
 | `default_expanded` | `Vec<String>` | `[]` | Seeds the open details once. Ignored when `expanded` is set. |
 | `onexpandedchange` | `EventHandler<Vec<String>>` | `None` | Called with the open details a toggle asks for. |
+| `onrowreorder` | `EventHandler<SortableMove>` | `None` | Adds a leading column with a drag handle and Move up and Move down buttons per row. Called with a move by positions in `data`; apply it with `step.apply(&mut rows)`, the table shows the old order until you do. Off while the rows are sorted or the quick filter has text. Paged, a row moves within its page. Set `row_key` with it. |
 | `size` | `Size` | theme (md) | Cell padding and font size. |
 | `striped` | `bool` | `false` | Shades every other body row. |
 | `page` | `Option<u32>` | `None` | The shown page, 1-based. Set, the page is controlled: pair it with `onpagechange`. A page past the end shows the last one. |
@@ -587,7 +595,10 @@ fn Demo() -> Element {
 | `pinned_columns` | `Option<PinnedColumns>` | `None` | The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly. |
 | `default_pinned_columns` | `PinnedColumns` | none pinned | Seeds the pinned columns once. Ignored when `pinned_columns` is set. |
 | `onpinnedcolumnschange` | `EventHandler<PinnedColumns>` | `None` | Called with the pinned columns a column menu pick asks for. |
-| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, hide the column, and a Columns submenu that shows or hides the others. |
+| `column_order` | `Option<Vec<String>>` | `None` | The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column. |
+| `default_column_order` | `Vec<String>` | `[]` | Seeds the column order once. Ignored when `column_order` is set. |
+| `oncolumnorderchange` | `EventHandler<Vec<String>>` | `None` | Called with the order a column menu's Move left or Move right asks for, every header listed. |
+| `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, pin to the start or end or unpin, move the column left or right past the next shown one, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries. |
 | `column_menu_parts` | `Parts<MenuPart>` | none | The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
@@ -635,6 +646,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Space` | On a row's checkbox: selects or deselects the row. On the header checkbox: selects or clears every row. |
 | `Enter` or `Space` | With `row_detail`, on a row's toggle: opens or closes its detail. Tab then goes into the open detail. |
 | `Enter` or `Space` or `Down` | With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`. |
+| `Space` or `Enter` | With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back. |
 
 ### Libero handles
 
@@ -680,6 +692,16 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   is unknown, so it would overlap.
 - A group or a `col_span` stops at a pin edge: a group over pinned and scrolled
   columns shows as two headers, and a group header never pins.
+- With `onrowreorder`, each row has a drag handle named "Reorder" plus the
+  row's name, described by the keyboard steps, and Move up and Move down
+  buttons, so a single pointer reorders without a drag (WCAG 2.5.7). A touch
+  drags only from the handle; elsewhere it scrolls. Each lift, move and drop is
+  said in a polite live region. While sorted or filtered the controls are
+  disabled.
+- `onrowreorder` without `row_key` warns in a debug build.
+- The column menu's Move left and Move right name the screen sides in either
+  text direction. A moved column moves in the DOM too, so Tab and a screen
+  reader follow it, and a column moved out of its group splits the group.
 
 ### You must
 
@@ -707,6 +729,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   (todo 707), so pinning shows no effect there.
 - On Blitz, a `max_height` table with column groups keeps only its last header
   row in place; the group rows scroll away with the rows.
+- On Blitz, a row's handle does not drag: Blitz paints no moved table row. The
+  keyboard and the move buttons reorder there.
+- Columns reorder from the column menu only, not by dragging a header.
 
 ## Theme defaults
 
@@ -752,8 +777,10 @@ default `start`.
 | `data-detail-toggle` | On the toggle column's `th` and `td`s, with `row_detail`. |
 | `data-detail` | On an open detail row, right after its row. |
 | `data-stripe` | On every other body row with `striped`, detail rows not counted. |
+| `data-reorder` | On the reorder column's `th` and `td`s, with `onrowreorder`. |
+| `data-dragging` | On the body row being dragged or moved by keyboard. |
 | `data-group` | On a column group's header cell. |
 | `data-pin` | On a pinned column's `th` and `td`s, `start` or `end`. |
 | `data-pin-edge` | On the pinned cells next to the scrolled columns, which draw a rule there. |
-| `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set, `pinned` with a pinned column and `pin-select` when the checkbox column pins too, `pin-detail` when the detail toggle column does. On a body row: its active `row_states`. |
+| `data-state` | On the table: `size-{size}`, plus `striped` and `row-click` when set, `pinned` with a pinned column and `pin-select` when the checkbox column pins too, `pin-detail` when the detail toggle column does, `pin-reorder` when the reorder column does. On a body row: its active `row_states`. |
 | `data-slot="range"` | On the paginated table's range text, "1–10 of 95". |

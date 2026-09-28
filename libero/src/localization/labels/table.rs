@@ -78,6 +78,11 @@ pub struct TableLabels {
     pub pin_start: &'static str,
     pub pin_end: &'static str,
     pub unpin: &'static str,
+    /// Moves the column one place left on screen, whichever the text direction.
+    pub move_left: &'static str,
+    pub move_right: &'static str,
+    /// The header of the column of row reorder handles, read out only.
+    pub reorder: &'static str,
     /// The header of the column of detail toggles, read out only.
     pub details: &'static str,
     /// A row's detail toggle, from the row header's text, else the first cell's.
@@ -186,6 +191,9 @@ impl TableLabels {
         pin_start: "Pin to start",
         pin_end: "Pin to end",
         unpin: "Unpin",
+        move_left: "Move left",
+        move_right: "Move right",
+        reorder: "Reorder",
         details: "Details",
         row_details: english_row_details,
     };
@@ -213,6 +221,9 @@ impl TableLabels {
         pin_start: "Am Anfang fixieren",
         pin_end: "Am Ende fixieren",
         unpin: "Fixierung lösen",
+        move_left: "Nach links verschieben",
+        move_right: "Nach rechts verschieben",
+        reorder: "Neu anordnen",
         details: "Details",
         row_details: german_row_details,
     };
