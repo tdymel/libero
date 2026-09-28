@@ -1164,8 +1164,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         instructions: instructions_id(),
     });
     // Rows the filter took away, not missing data: the caller's `empty` does not apply.
-    let filtered_out =
-        !(words.is_empty() && tests.is_empty()) && (props.manual_filter || has_data);
+    let filtered_out = !(words.is_empty() && tests.is_empty()) && (props.manual_filter || has_data);
     let empty = match filtered_out {
         true => rsx! { "{labels.no_results}" },
         false => props.empty.unwrap_or_else(|| rsx! { "{labels.no_rows}" }),
