@@ -434,18 +434,13 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         + usize::from(select_all.is_some())
         + usize::from(detail_header.is_some())
         + usize::from(reorder.is_some());
-    let filter_row = filters.map(|cells| {
-        filter_row(
-            &headers,
-            &shown,
-            cells,
-            reorder.is_some(),
-            detail_header.is_some(),
-            select_all.is_some(),
-        )
-    });
     let empty = rows.is_empty().then_some(empty);
     let windowed = matches!(rows, BodyRows::Window(_));
+    let leads = (
+        reorder.is_some(),
+        detail_header.is_some(),
+        select_all.is_some(),
+    );
     // Blitz sizes columns by content even in fixed layout: an unsized one gets
     // an even share, so rows scrolling in can't widen it.
     let share = windowed.then(|| format!("width: {}%", 100.0 / shown.len().max(1) as f64));
@@ -524,7 +519,13 @@ pub(super) fn render_body(body: BodySpec) -> Element {
             }
         })
         .collect();
-    let head_levels = head_rows.len();
+    // Under the header rows, so it counts after them.
+    let filter_row = filters.map(|cells| {
+        let (reorder, detail, select) = leads;
+        let rowindex = windowed.then_some(head_rows.len() + 1);
+        filter_row(&headers, &shown, cells, reorder, detail, select, rowindex)
+    });
+    let head_levels = head_rows.len() + usize::from(filter_row.is_some());
     rsx! {
         if let Some(spec) = caption {
             caption { id: spec.id, "{spec.text}" }

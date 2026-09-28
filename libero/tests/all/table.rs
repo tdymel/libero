@@ -1163,3 +1163,28 @@ fn a_windowed_table_with_row_details_renders_every_row() {
     // The header row, then all 200.
     assert_eq!(body(&html).matches("<tr").count(), 201);
 }
+
+/// 1156-5a with 3b: the header filters row counts among the windowed rows.
+#[test]
+fn a_windowed_table_counts_its_header_filters_row() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Numbers",
+                    max_height: "300px",
+                    virtual_row_height: 40.0,
+                    header_filters: true,
+                    data: (0..1000u32).collect::<Vec<_>>(),
+                    columns: vec![column("N").value(|n: &u32| *n)],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert_eq!(attributes_of(&html, "table")["aria-rowcount"], "1002");
+    assert!(html.contains("data-filters=true aria-rowindex=\"2\""));
+    assert!(body(&html).contains("aria-rowindex=\"3\""));
+}

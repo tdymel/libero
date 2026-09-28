@@ -1085,7 +1085,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut attributes = props.attributes;
     let rows = match row_height {
         Some(row_height) => {
-            attributes.extend(window_attributes(group_rows + 1, order.len()));
+            attributes.extend(window_attributes(head_rows, order.len()));
             BodyRows::Window(RowWindow {
                 order: order.into(),
                 row_height,

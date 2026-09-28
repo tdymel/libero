@@ -31,6 +31,7 @@ const FILTERS_KEY: &str = "filters";
 
 /// The header filters row: a field under each filterable shown column, by
 /// header index in `cells`, and empty cells under the rest and the lead columns.
+/// `rowindex` is its `aria-rowindex` in a windowed table.
 pub(super) fn filter_row(
     headers: &[HeaderSpec],
     shown: &[usize],
@@ -38,6 +39,7 @@ pub(super) fn filter_row(
     reorder: bool,
     detail: bool,
     select: bool,
+    rowindex: Option<usize>,
 ) -> Element {
     let cells: Vec<Element> = shown
         .iter()
@@ -56,7 +58,7 @@ pub(super) fn filter_row(
         })
         .collect();
     rsx! {
-        tr { key: "{FILTERS_KEY}", "data-filters": true,
+        tr { key: "{FILTERS_KEY}", "data-filters": true, aria_rowindex: rowindex.map(|index| index.to_string()),
             if reorder {
                 td { "data-reorder": true }
             }
