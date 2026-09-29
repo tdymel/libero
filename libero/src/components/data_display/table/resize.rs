@@ -71,6 +71,7 @@ pub(super) struct ColumnResize {
     pub preview: Signal<Option<(usize, f64)>>,
     /// Each header cell's last rendered width, by header text.
     pub measured: CopyValue<BTreeMap<String, f64>>,
+    pub labels: TableLabels,
 }
 
 impl ColumnResize {
@@ -142,8 +143,33 @@ impl MenuWidth {
     }
 }
 
-/// A header's resize grip at its inline end. Pointer only: the column menu is
-/// the keyboard and drag-free way (WCAG 2.5.7).
+/// How far an arrow key moves a grip, in CSS px; Shift moves it `MENU_STEP`.
+const KEY_STEP: f64 = 10.0;
+
+/// What a key does to a grip's column.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) enum KeyResize {
+    By(f64),
+    Min,
+    Max,
+}
+
+/// An arrow moves the grip the way it points, so under RTL, where the grip is
+/// the column's left edge, Left widens.
+pub(super) fn key_resize(key: &Key, shift: bool, rtl: bool) -> Option<KeyResize> {
+    let step = if shift { MENU_STEP } else { KEY_STEP };
+    let outward = if rtl { -step } else { step };
+    match key {
+        Key::ArrowRight => Some(KeyResize::By(outward)),
+        Key::ArrowLeft => Some(KeyResize::By(-outward)),
+        Key::Home => Some(KeyResize::Min),
+        Key::End => Some(KeyResize::Max),
+        _ => None,
+    }
+}
+
+/// A header's resize grip at its inline end: a pointer drag, or a focusable
+/// separator the arrow keys move. The column menu is the drag-free way too (WCAG 2.5.7).
 #[component]
 pub(super) fn ResizeHandle(
     index: usize,
@@ -158,12 +184,39 @@ pub(super) fn ResizeHandle(
     let mut rtl = use_hook(|| CopyValue::new(false));
     let mut preview = resize.preview;
     let mut measured = resize.measured;
+    // The rendered width, so `aria-valuenow` follows it.
+    let mut shown = use_signal(|| None::<f64>);
     let onresize = {
         let header = header.clone();
         move |event: Event<ResizeData>| {
             if let Ok(size) = event.get_border_box_size() {
                 measured.write().insert(header.clone(), size.width);
+                if *shown.peek() != Some(size.width.round()) {
+                    shown.set(Some(size.width.round()));
+                }
             }
+        }
+    };
+    let onkeydown = {
+        let header = header.clone();
+        move |event: Event<KeyboardData>| {
+            let Some(step) = key_resize(&event.key(), event.modifiers().shift(), cell.is_rtl())
+            else {
+                return;
+            };
+            let Some(width) = resize.width(&header) else {
+                return;
+            };
+            let next = match step {
+                KeyResize::By(by) => limits.clamp(width + by),
+                KeyResize::Min => limits.min,
+                KeyResize::Max if limits.max.is_finite() => limits.max,
+                KeyResize::Max => return,
+            };
+            // Not the scroll area's arrow keys too.
+            event.prevent_default();
+            event.stop_propagation();
+            resize.set(&header, Some(next));
         }
     };
     use_resize_fallback(cell, onresize.clone());
@@ -205,6 +258,8 @@ pub(super) fn ResizeHandle(
         }),
     });
     let dragging = (drag.dragging)();
+    // The resized width at once; the measured one lags a layout behind it.
+    let now = resize.widths.read().get(&header).copied().or(shown());
     // Siblings: Blitz hits nothing under a `pointer-events: none` box.
     rsx! {
         div {
@@ -216,8 +271,15 @@ pub(super) fn ResizeHandle(
         div {
             "data-resize-handle": true,
             "data-dragging": dragging.then_some(true),
-            aria_hidden: "true",
+            role: "separator",
+            tabindex: "0",
+            aria_orientation: "vertical",
+            aria_label: (resize.labels.resize_column)(&header),
+            aria_valuenow: now.map(|width| width.round().to_string()),
+            aria_valuemin: limits.min.to_string(),
+            aria_valuemax: limits.max.is_finite().then(|| limits.max.to_string()),
             onmounted: grip.mount(),
+            onkeydown,
             onpointerdown: move |event| drag.onpointerdown.call(event),
             onpointermove: move |event| drag.onpointermove.call(event),
             onpointerup: move |event| drag.onpointerup.call(event),
@@ -241,6 +303,25 @@ mod tests {
         assert_eq!(limits.clamp(999.0), 200.0);
         assert_eq!(ResizeLimits::new(100.0, 40.0).clamp(10.0), 100.0);
         assert_eq!(ResizeLimits::default().clamp(5000.0), 5000.0);
+    }
+
+    #[test]
+    fn arrows_move_the_grip_the_way_they_point() {
+        assert_eq!(
+            key_resize(&Key::ArrowRight, false, false),
+            Some(KeyResize::By(10.0))
+        );
+        assert_eq!(
+            key_resize(&Key::ArrowLeft, true, false),
+            Some(KeyResize::By(-50.0))
+        );
+        // Under RTL the grip is the left edge: Left widens.
+        assert_eq!(
+            key_resize(&Key::ArrowLeft, false, true),
+            Some(KeyResize::By(10.0))
+        );
+        assert_eq!(key_resize(&Key::Home, false, true), Some(KeyResize::Min));
+        assert_eq!(key_resize(&Key::Enter, false, false), None);
     }
 
     #[test]

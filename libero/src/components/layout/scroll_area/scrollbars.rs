@@ -33,6 +33,9 @@ static DRAWN_BARS_SX: StaticSx = StaticSx::new(|| {
     // Above any row, inside the area's own stacking context.
     layer()
         .z_index("2147483647")
+        // Never the scroll anchor: Firefox scrolled on after it as it followed
+        // the offset, a runaway to the bottom (todo 1455).
+        .with("overflow-anchor", "none")
         .selector("& > [data-scrollbars-x]", layer())
         .selector(
             "& [data-slot='scrollbar']",
@@ -141,8 +144,14 @@ pub(super) struct Bars {
     pub y: Option<Bar>,
 }
 
-/// The bars to draw: one per scrolled axis that overflows.
-pub(super) fn bars(axis: ScrollAxis, metrics: ScrollMetrics, thickness: f64) -> Bars {
+/// The bars to draw: one per scrolled axis that overflows. The vertical track
+/// starts `inset_top` px down, below a sticky header say.
+pub(super) fn bars(
+    axis: ScrollAxis,
+    metrics: ScrollMetrics,
+    thickness: f64,
+    inset_top: f64,
+) -> Bars {
     // A pixel of slack, as for the tab stop: a rounded box is not overflow.
     let over = |content: f64, view: f64| content > view + 1.0;
     let y = matches!(axis, ScrollAxis::Vertical | ScrollAxis::Both)
@@ -157,7 +166,7 @@ pub(super) fn bars(axis: ScrollAxis, metrics: ScrollMetrics, thickness: f64) -> 
                 metrics.view_height,
                 metrics.content_height,
                 metrics.y,
-                metrics.view_height - corner(x),
+                metrics.view_height - corner(x) - inset_top.max(0.0),
             )
         })
         .flatten(),
@@ -254,11 +263,12 @@ pub(super) fn ScrollAreaBars(
     state: DrawnBars,
     scrollbars: ScrollAxis,
     size: ScrollbarSize,
+    inset_top: f64,
 ) -> Element {
     let DrawnBars { root, metrics, .. } = state;
     let thick = thickness(size);
     let current = move |axis: Axis| {
-        let drawn = bars(scrollbars, (*metrics.peek())?, thick);
+        let drawn = bars(scrollbars, (*metrics.peek())?, thick, inset_top);
         match axis {
             Axis::X => drawn.x,
             Axis::Y => drawn.y,
@@ -352,7 +362,7 @@ pub(super) fn ScrollAreaBars(
     let Some(measured) = measured else {
         return render(None);
     };
-    let drawn = bars(scrollbars, measured, thick);
+    let drawn = bars(scrollbars, measured, thick, inset_top);
     if drawn.x.is_none() && drawn.y.is_none() {
         return render(None);
     }
@@ -369,7 +379,7 @@ pub(super) fn ScrollAreaBars(
                 div {
                     "data-slot": ScrollAreaPart::Scrollbar.slot(),
                     "data-orientation": "vertical",
-                    style: "bottom: {corner(drawn.x)}px; width: {thick}px",
+                    style: "top: {inset_top.max(0.0)}px; bottom: {corner(drawn.x)}px; width: {thick}px",
                     onpointerdown: press(Axis::Y),
                     div {
                         "data-slot": ScrollAreaPart::Thumb.slot(),
@@ -427,7 +437,7 @@ mod tests {
 
     #[test]
     fn the_thumb_is_the_visible_share_of_the_track() {
-        let bar = bars(ScrollAxis::Vertical, TALL, 8.0).y.unwrap();
+        let bar = bars(ScrollAxis::Vertical, TALL, 8.0, 0.0).y.unwrap();
 
         assert_eq!((bar.track, bar.thumb, bar.at), (100.0, 25.0, 0.0));
     }
@@ -437,8 +447,14 @@ mod tests {
         let half = ScrollMetrics { y: 150.0, ..TALL };
         let end = ScrollMetrics { y: 300.0, ..TALL };
 
-        assert_eq!(bars(ScrollAxis::Vertical, half, 8.0).y.unwrap().at, 37.5);
-        assert_eq!(bars(ScrollAxis::Vertical, end, 8.0).y.unwrap().at, 75.0);
+        assert_eq!(
+            bars(ScrollAxis::Vertical, half, 8.0, 0.0).y.unwrap().at,
+            37.5
+        );
+        assert_eq!(
+            bars(ScrollAxis::Vertical, end, 8.0, 0.0).y.unwrap().at,
+            75.0
+        );
     }
 
     #[test]
@@ -449,7 +465,7 @@ mod tests {
         };
 
         assert_eq!(
-            bars(ScrollAxis::Vertical, long, 8.0).y.unwrap().thumb,
+            bars(ScrollAxis::Vertical, long, 8.0, 0.0).y.unwrap().thumb,
             MIN_THUMB
         );
     }
@@ -461,12 +477,15 @@ mod tests {
             ..TALL
         };
 
-        assert_eq!(bars(ScrollAxis::Vertical, fits, 8.0).y, None);
+        assert_eq!(bars(ScrollAxis::Vertical, fits, 8.0, 0.0).y, None);
         assert_eq!(
-            bars(ScrollAxis::Horizontal, TALL, 8.0),
+            bars(ScrollAxis::Horizontal, TALL, 8.0, 0.0),
             Bars { x: None, y: None }
         );
-        assert_eq!(bars(ScrollAxis::None, TALL, 8.0), Bars { x: None, y: None });
+        assert_eq!(
+            bars(ScrollAxis::None, TALL, 8.0, 0.0),
+            Bars { x: None, y: None }
+        );
     }
 
     #[test]
@@ -475,15 +494,30 @@ mod tests {
             content_width: 800.0,
             ..TALL
         };
-        let drawn = bars(ScrollAxis::Both, both, 8.0);
+        let drawn = bars(ScrollAxis::Both, both, 8.0, 0.0);
 
         assert_eq!(drawn.y.unwrap().track, 92.0);
         assert_eq!(drawn.x.unwrap().track, 192.0);
     }
 
+    /// Todo 1454: below a 30px sticky header, the track and its thumb shrink by it.
+    #[test]
+    fn a_top_inset_shortens_the_vertical_track_only() {
+        let both = ScrollMetrics {
+            content_width: 800.0,
+            content_height: 200.0,
+            ..TALL
+        };
+        let drawn = bars(ScrollAxis::Both, both, 8.0, 30.0);
+
+        assert_eq!(drawn.y.unwrap().track, 62.0);
+        assert_eq!(drawn.y.unwrap().thumb, 31.0);
+        assert_eq!(drawn.x.unwrap().track, 192.0);
+    }
+
     #[test]
     fn a_thumb_position_maps_back_to_its_offset() {
-        let bar = bars(ScrollAxis::Vertical, TALL, 8.0).y.unwrap();
+        let bar = bars(ScrollAxis::Vertical, TALL, 8.0, 0.0).y.unwrap();
 
         assert_eq!(bar.offset_at(37.5), 150.0);
         assert_eq!(bar.offset_at(-10.0), 0.0);

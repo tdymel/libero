@@ -3,7 +3,8 @@
 //! and say the new width.
 
 use anyhow::{Result, bail};
-use e2e::driver::{Driver, eventually, eventually_text};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
+use e2e::passes::keyboard;
 
 const WIDTHS: &str = "#widths";
 const NAME: &str = "th[aria-label=Name]";
@@ -41,6 +42,38 @@ e2e::scenario!(
     "/table-resize",
     a_drag_resizes,
     native: skip("1156-4d: the first grip drag resizes, a second one moves nothing")
+);
+
+/// Todo 1451: the grip is a separator Tab reaches; the arrows step it, Home and End go to the limits.
+async fn the_keys_resize<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let grip = format!("{NAME} [data-resize-handle]");
+    width_near(d, 120.0, "the declared width").await?;
+    if d.attr(&grip, "role").await?.as_deref() != Some("separator")
+        || d.attr(&grip, "aria-label").await?.as_deref() != Some("Resize Name")
+    {
+        bail!("the grip is no named separator");
+    }
+    d.focus(&grip).await?;
+    eventually_focused(d, &grip, "focus").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually_text(d, WIDTHS, "Name=130", "ArrowRight").await?;
+    d.press_shift(keyboard::ARROW_LEFT).await?;
+    eventually_text(d, WIDTHS, "Name=80", "Shift+ArrowLeft").await?;
+    d.press(keyboard::END).await?;
+    eventually_text(d, WIDTHS, "Name=300", "End").await?;
+    width_near(d, 300.0, "End").await?;
+    eventually(d, "aria-valuenow to follow", async |d| {
+        Ok(d.attr(&grip, "aria-valuenow").await?.as_deref() == Some("300"))
+    })
+    .await?;
+    d.press(keyboard::HOME).await?;
+    eventually_text(d, WIDTHS, "Name=80", "Home").await
+}
+
+e2e::scenario!(
+    the_keys_resize_a_column_from_its_grip,
+    "/table-resize",
+    the_keys_resize
 );
 
 /// Clicks the open menu's entry reading `label`.

@@ -54,7 +54,8 @@ replace the text of the row shown without data and without matches.
 
 `column_menu`'s Filter entry, and `header_filters`' row of fields under the
 headers, filter one column each, with operators for its type: contains or
-starts with for text, greater than for numbers, yes or no for booleans. The
+starts with for text, greater than for numbers, before, after or between for
+dates, as the Joined and Review columns show, yes or no for booleans. The
 filters all apply, together with the quick filter. Hold them yourself with
 `column_filters` and `oncolumnfilterschange`.
 
@@ -88,20 +89,22 @@ spreadsheet, so neutralise text users typed first.
 
 `scroll` wraps a table wider than its container in a `ScrollArea` that
 scrolls sideways. The demo's switch also sets `sx().min_width("640px")`, so the
-three columns overflow at any width. `max_height` caps a long table's height:
+columns overflow at any width. `max_height` caps a long table's height:
 its rows scroll under a header that stays put.
 
 For thousands of rows add `virtual_row_height` to `max_height`: only the rows
-in view render, each that tall. Sorting, filtering, selection and pinning work
-as before.
+in view render, each that tall. The demo's switch swaps in ten thousand
+people, 40px a row under a 320px cap, and hides the switches that render every
+row. Sorting, filtering, selection and pinning work as before.
 
 `default_pinned_columns` holds columns at the start or end edge while the rest
 scroll under them, and the column menu pins and unpins them. Start and end
 follow the page's direction. Give each pinned column but the outermost a
 `width`, so the next one knows where to sit.
 
-`resizable_columns` puts a grip on each header's end edge: drag it, or
-double-click it to reset the width. With `column_menu`, Widen column, Narrow
+`resizable_columns` puts a grip on each header's end edge, a short line that
+lights up on hover: drag it, or double-click it to reset the width. Tab reaches
+it too, and the arrow keys step the width, Home and End to its limits. With `column_menu`, Widen column, Narrow
 column and Reset width do the same without a drag. The demo holds the widths
 itself with `column_widths` and `oncolumnwidthschange`, say to save them with a
 view.
@@ -150,6 +153,8 @@ fn Demo() -> Element {
 Strings sort as text and align left. Every integer and float sorts numerically
 and aligns right. `bool` prints `true` or `false`. `Option<V>` keeps the inner
 type's alignment, renders `None` empty and sorts it last in both directions.
+A `libero::chrono::NaiveDate` prints as `2024-03-09`, sorts by day, and filters
+with Before, After, Between and the other date operators.
 
 ```rust,ignore
 |p: &Person| p.name.clone()  // String      -> text sort, start-aligned
@@ -781,7 +786,7 @@ fn Demo() -> Element {
 | `loading` | `bool` | `false` | Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, "Loading rows". The empty row waits until loading ends. |
 | `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton` and `TableExportButton` work only in here. |
 | `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
-| `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
+| `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
 | `virtual_row_height` | `Option<f64>` | `None` | With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. Ignored with `row_detail` or `onrowreorder`, which render every row; a debug build warns. |
 | `onbottomreached` | `EventHandler<()>` | `None` | With `max_height`, called when the rows scroll to their bottom, by wheel, drag or End: append the next batch to `data`. Called again at the new bottom once rows were added. Not called while `loading` is set, so set it during a fetch to ask once. Without `max_height` it never fires; a debug build warns. |
 | `sort` | `Option<Vec<TableSort>>` | `None` | The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header. |
@@ -836,10 +841,10 @@ fn Demo() -> Element {
 | `column_order` | `Option<Vec<String>>` | `None` | The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column. |
 | `default_column_order` | `Vec<String>` | `[]` | Seeds the column order once. Ignored when `column_order` is set. |
 | `oncolumnorderchange` | `EventHandler<Vec<String>>` | `None` | Called with the order a column menu's Move left or Move right, or a header drag, asks for, every header listed. |
-| `resizable_columns` | `bool` | `false` | Puts a drag grip on each header's end edge, and Widen column, Narrow column (50px steps, the menu stays open) and Reset width in its `column_menu`, the keyboard and drag-free way. Double-click a grip to reset. A column opts out with `.resizable(false)` and sets its range with `.resize_limits(min, max)` in px, 50 to unbounded by default. Auto layout never draws a column narrower than its content. Blitz: use the menu, the grip does not drag reliably there. |
+| `resizable_columns` | `bool` | `false` | Puts a visible grip on each header's end edge, and Widen column, Narrow column (50px steps, the menu stays open) and Reset width in its `column_menu`, the drag-free way. Drag a grip, or double-click it to reset. A focused grip takes the keys: Left and Right move it 10px the way they point, 50px with Shift, Home and End go to the limits. A column opts out with `.resizable(false)` and sets its range with `.resize_limits(min, max)` in px, 50 to unbounded by default. Auto layout never draws a column narrower than its content. Blitz: use the menu, the grip does not drag reliably there. |
 | `column_widths` | `Option<ColumnWidths>` | `None` | Resized widths in px by header, a `BTreeMap<String, f64>`, over the columns' own `width`. Set, the widths are controlled: pair them with `oncolumnwidthschange`. |
 | `default_column_widths` | `ColumnWidths` | `{}` | Seeds the widths once. Ignored when `column_widths` is set. |
-| `oncolumnwidthschange` | `EventHandler<ColumnWidths>` | `None` | Called with the widths a grip drag asks for when it ends, and with each Widen, Narrow or Reset width. |
+| `oncolumnwidthschange` | `EventHandler<ColumnWidths>` | `None` | Called with the widths a grip drag asks for when it ends, each grip key, and with each Widen, Narrow or Reset width. |
 | `column_menu` | `bool` | `false` | Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, filter a `filterable` column, move the column left or right past the next shown one, widen, narrow or reset it with `resizable_columns`, pin to the start or end or unpin, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries. Filter opens a popover with the operators of the column's type, a value and Clear; a filtered column's header then shows a filter button that reopens it. |
 | `column_menu_parts` | `Parts<MenuPart>` | none | The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`. |
 
@@ -891,6 +896,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `Enter` or `Space` | With `row_detail`, on a row's toggle: opens or closes its detail. Tab then goes into the open detail. |
 | `Enter` or `Space` or `Down` | With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`. |
 | `Space` or `Enter` | With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back. |
+| `Left` or `Right` | With `resizable_columns`, on a header's resize grip: moves it 10px the way the arrow points, 50px with Shift. |
+| `Home` or `End` | On a resize grip: narrows the column to its minimum, or widens it to its maximum when it has one. |
 | `Escape` | In a filter popover: closes it and returns focus to the column's menu button. |
 | `Tab` or `Shift+Tab` | In a filter popover: moves between its fields; past either end it closes and Tab goes on from the menu button. |
 
@@ -958,6 +965,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   tab stop: the column menu's moves are its keyboard and drag-free way (WCAG
   2.5.7). Escape, or a drop outside the table, cancels the drag. Blitz has no
   grip; the menu moves columns there.
+- Each resize grip is a tab stop, a vertical `role="separator"` named "Resize"
+  plus the column, with `aria-valuenow` its width in px and `aria-valuemin` and
+  `aria-valuemax` its limits.
 - Each Widen, Narrow or Reset width in the column menu says the column's new
   width in a polite live region, "Name: 170 px": the menu stays open over the
   change.
@@ -1001,6 +1011,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - On Blitz, the same holds for a pinned column's cells once the table scrolls
   sideways. In a right-to-left page Blitz cannot scroll a wide table at all
   (todo 707), so pinning shows no effect there.
+- On Blitz, a `max_height` table's scrollbar is the native one and runs past
+  the header too.
 - On Blitz, a `max_height` table with column groups keeps only its last header
   row in place; the group rows scroll away with the rows. The same holds for
   the `header_filters` row.

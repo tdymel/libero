@@ -727,6 +727,89 @@ fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {
     });
 }
 
+/// Todo 1455: scrolled step by step, the rendered rows always cover the area under the header.
+#[test]
+fn a_windowed_table_has_no_blank_rows_while_scrolling() {
+    block_on(async {
+        let fixture = Fixture::open("/table/windowed", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('tr[aria-rowindex=\"2\"]')",
+            "the first rows",
+        )
+        .await
+        .unwrap();
+        // The px of the area under the header that no rendered row covers.
+        const GAP: &str = "(() => { const area = document.querySelector('[data-table-scroll]'); \
+             const a = area.getBoundingClientRect(); \
+             const top = document.querySelector('thead').getBoundingClientRect().bottom; \
+             const bottom = a.top + area.clientHeight; \
+             const rows = [...document.querySelectorAll('tbody tr')].map(r => r.getBoundingClientRect()); \
+             const first = Math.min(...rows.map(r => r.top)), last = Math.max(...rows.map(r => r.bottom)); \
+             return Math.max(0, first - top) + Math.max(0, bottom - last); })()";
+        // Firefox anchored on the drawn scrollbar layer and scrolled on after it, to the bottom.
+        let anchor: String = page
+            .evaluate(
+                "getComputedStyle(document.querySelector('[data-table-scroll] > [data-slot=scrollbars]')).overflowAnchor",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            anchor, "none",
+            "the drawn scrollbar layer can be a scroll anchor"
+        );
+        // Todo 1454: the scrollbar runs beside the rows, not over the header.
+        let bar: String = page
+            .evaluate(
+                "(() => { const bar = document.querySelector('[data-table-scroll] [data-orientation=vertical]'); \
+                 const head = document.querySelector('thead').getBoundingClientRect(); \
+                 const area = document.querySelector('[data-table-scroll]').getBoundingClientRect(); \
+                 const b = bar.getBoundingClientRect(); \
+                 return [Math.abs(b.top - head.bottom) <= 1, Math.abs(b.bottom - area.bottom) <= 1].join('|') \
+                   + ' ' + JSON.stringify([b, head, area]); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            bar.starts_with("true|true "),
+            "the scrollbar spans the header: {bar}"
+        );
+        let mut report = Vec::new();
+        for step in 1..=20 {
+            let at = step * 150;
+            page.evaluate(format!("document.querySelector({AREA:?}).scrollTop = {at}"))
+                .await
+                .unwrap();
+            let settled =
+                wait::for_js_true(page, &format!("{GAP} < 1"), "the rows to cover the area").await;
+            let (gap, top): (f64, f64) = page
+                .evaluate(format!(
+                    "[{GAP}, document.querySelector({AREA:?}).scrollTop]"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            if settled.is_err() || (top - at as f64).abs() > 1.0 {
+                report.push(format!("at {at}px: {gap}px blank, scrolled on to {top}px"));
+            }
+        }
+        assert!(report.is_empty(), "{report:?}");
+        fixture
+            .console
+            .assert_clean("scrolling a windowed table")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 1156-5a: a windowed row is keyed by `row_key`, not its place, so a sort moves its node.
 #[test]
 fn a_windowed_row_keeps_its_node_through_a_sort() {

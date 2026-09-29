@@ -216,13 +216,30 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .bottom("0")
             .with("inset-inline-end", "0")
             .width("8px")
-            .with("border-inline-end", "2px solid transparent")
+            // A short line at rest, so the edge reads as draggable (todo 1451).
+            .color("muted.6")
+            .with(
+                "background-image",
+                "linear-gradient(currentColor, currentColor)",
+            )
+            .with("background-repeat", "no-repeat")
+            .with("background-size", "2px 50%")
+            .with("background-position", "right center")
             .cursor("col-resize")
             .touch_action("none"),
     )
+    .rtl(sx().selector(
+        "& [data-resize-handle]",
+        sx().with("background-position", "left center"),
+    ))
     .selector(
-        "& th:hover [data-resize-handle], & [data-resize-handle][data-dragging]",
-        sx().border_color("primary.6"),
+        "& th:hover [data-resize-handle], & [data-resize-handle][data-dragging], \
+         & [data-resize-handle]:focus-visible",
+        sx().color("primary.6").with("background-size", "2px 100%"),
+    )
+    .selector(
+        "& [data-resize-handle]:focus-visible",
+        inset_focus_ring_sx("0"),
     )
     .selector(
         "& [data-drag-handle]",
@@ -852,11 +869,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let tools = use_context_provider(|| TableTools::new(state.hidden_columns, state.density));
     let preview = use_signal(|| None);
     let measured = use_hook(|| CopyValue::new(BTreeMap::new()));
-    let resize = props.resizable_columns.then_some(ColumnResize {
-        widths: state.column_widths,
-        preview,
-        measured,
-    });
     let announcer = use_announcer();
     let column_drag = use_column_drag(state.column_order);
     let drags = props.column_menu && drags_table_columns();
@@ -933,6 +945,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .read()
         .unwrap_or(props.size.copied_or(use_theme().table.size));
     let labels = use_localization().table;
+    let resize = props.resizable_columns.then_some(ColumnResize {
+        widths: state.column_widths,
+        preview,
+        measured,
+        labels,
+    });
     // A column filter change announces the rows left once it settles (WCAG 4.1.3).
     let mut filtered_count = use_hook(|| CopyValue::new(0usize));
     let onfilter = use_debounced_callback(
@@ -1412,8 +1430,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         None => Vec::new(),
     };
 
-    // Blitz skips a `<caption>`: there it is a div before the table, naming it.
-    let before = if lays_out_captions() {
+    // Blitz skips a `<caption>`, and a capped table's would scroll away over its
+    // sticky header: a div before the table then, naming it.
+    let before = if lays_out_captions() && !bounded {
         None
     } else {
         caption.take()
@@ -1528,24 +1547,29 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         },
         false => table,
     };
+    let before = before.map(|spec| {
+        caption_box.render(
+            HtmlTag::Div,
+            vec![attr("id", spec.id)],
+            rsx! { "{spec.text}" },
+        )
+    });
+    // Capped, above the scroll area: the header then starts at its top (todo 1454).
+    let (before, above) = match bounded {
+        true => (None, before),
+        false => (before, None),
+    };
     let table = match before {
-        Some(spec) => {
-            let caption = caption_box.render(
-                HtmlTag::Div,
-                vec![attr("id", spec.id)],
-                rsx! { "{spec.text}" },
-            );
-            // One box, so a flex row does not set them side by side.
-            match scrolls || pager.is_some() {
-                true => rsx! {
-                    {caption}
-                    {table}
-                },
-                false => rsx! {
-                    div { {caption} {table} }
-                },
-            }
-        }
+        // One box, so a flex row does not set them side by side.
+        Some(caption) => match scrolls || pager.is_some() {
+            true => rsx! {
+                {caption}
+                {table}
+            },
+            false => rsx! {
+                div { {caption} {table} }
+            },
+        },
         None => table,
     };
     // A tab stop, a named region, only while it overflows with no header
@@ -1567,6 +1591,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                         })
                         .unwrap_or_default(),
                     onbottomreached: onbottomreached.map(|_| bottom_reached),
+                    // The scrollbar runs beside the rows only, not the sticky header (todo 1454).
+                    bar_inset_top: bounded.then(|| *head.read()),
                     // Its root, mounted by the area itself, is where a column drop counts.
                     handle: ScrollAreaHandle { element: column_drag.region },
                     attributes,
@@ -1594,9 +1620,18 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             LoadingBar { labels }
         }
     });
-    let table = rsx! {
-        {bar}
-        {table}
+    let table = match above {
+        Some(caption) => rsx! {
+            div {
+                {caption}
+                {bar}
+                {table}
+            }
+        },
+        None => rsx! {
+            {bar}
+            {table}
+        },
     };
     let search = match props.toolbar {
         Some(content) => Some(rsx! {

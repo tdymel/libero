@@ -1,43 +1,95 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
-use std::time::Duration;
+use std::cell::OnceCell;
+use std::rc::Rc;
 
+use libero::chrono::{NaiveDate, TimeDelta};
 use libero::components::{
-    Button, Chip, Code, Column, ColumnWidths, PinnedColumns, RowFn, SortDirection, Table,
-    TableSort, Text, column,
+    Button, Chip, Code, Column, ColumnWidths, PinnedColumns, RowFn, Table, Text, column,
 };
 use libero::hooks::SortableMove;
-use libero::platform::{TimerSubscription, timer};
 use libero::sx::sx;
 
 #[derive(Clone, PartialEq)]
 struct Person {
     name: String,
     role: String,
+    joined: NaiveDate,
+    review: Option<NaiveDate>,
     bonus: Option<f64>,
 }
 
+fn day(year: i32, month: u32, day: u32) -> NaiveDate {
+    NaiveDate::from_ymd_opt(year, month, day).unwrap_or_default()
+}
+
+/// Six rows, so the date filters have dates on both sides to keep and drop.
 fn people() -> Vec<Person> {
+    let person = |name: &str, role: &str, joined, review, bonus| Person {
+        name: name.into(),
+        role: role.into(),
+        joined,
+        review,
+        bonus,
+    };
     vec![
-        Person {
-            name: "Ada Lovelace".into(),
-            role: "Owner".into(),
-            bonus: Some(12.5),
-        },
-        Person {
-            name: "Grace Hopper".into(),
-            role: "Admin".into(),
-            bonus: Some(8.0),
-        },
-        Person {
-            name: "Alan Turing".into(),
-            role: "Viewer".into(),
-            bonus: None,
-        },
+        person(
+            "Ada Lovelace",
+            "Owner",
+            day(2019, 3, 4),
+            Some(day(2025, 1, 15)),
+            Some(12.5),
+        ),
+        person(
+            "Grace Hopper",
+            "Admin",
+            day(2021, 7, 19),
+            Some(day(2024, 11, 2)),
+            Some(8.0),
+        ),
+        person("Alan Turing", "Viewer", day(2023, 2, 1), None, None),
+        person(
+            "Katherine Johnson",
+            "Admin",
+            day(2020, 10, 12),
+            Some(day(2025, 4, 30)),
+            Some(6.5),
+        ),
+        person(
+            "Edsger Dijkstra",
+            "Viewer",
+            day(2024, 5, 27),
+            None,
+            Some(2.0),
+        ),
+        person(
+            "Barbara Liskov",
+            "Owner",
+            day(2018, 1, 8),
+            Some(day(2024, 9, 9)),
+            Some(10.0),
+        ),
     ]
 }
 
-// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, bonus: Option<f64> }
+const ROLES: [&str; 3] = ["Owner", "Admin", "Viewer"];
+
+/// Ten thousand made-up people for the `virtual_row_height` switch, as `wrap_data` prints them.
+fn crowd() -> Vec<Person> {
+    (1..=10_000)
+        .map(|n: u32| Person {
+            name: format!("Person {n}"),
+            role: ROLES[n as usize % ROLES.len()].into(),
+            joined: day(2015, 1, 1) + TimeDelta::days(i64::from(n % 3_650)),
+            review: (!n.is_multiple_of(3))
+                .then(|| day(2025, 1, 1) + TimeDelta::days(i64::from(n % 365))),
+            bonus: (!n.is_multiple_of(4)).then(|| f64::from(n % 150) / 10.0),
+        })
+        .collect()
+}
+
+// snippet: item use libero::chrono::NaiveDate;
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate, review: Option<NaiveDate>, bonus: Option<f64> }
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const COLUMNS: &str = r#"columns: vec![
@@ -46,13 +98,16 @@ const COLUMNS: &str = r#"columns: vec![
             .value(|p: &Person| p.role.clone())
             .sortable()
             .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
+        column("Joined").value(|p: &Person| p.joined).sortable(),
+        column("Review").value(|p: &Person| p.review).sortable(),
         column("Bonus")
             .value(|p: &Person| p.bonus)
             .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
             .sortable(),
     ]"#;
 
-// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, bonus: Option<f64> }
+// snippet: item use libero::chrono::NaiveDate;
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate, review: Option<NaiveDate>, bonus: Option<f64> }
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const GROUPED_COLUMNS: &str = r#"columns: vec![
@@ -62,6 +117,8 @@ const GROUPED_COLUMNS: &str = r#"columns: vec![
             .sortable()
             .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } })
             .group("Membership"),
+        column("Joined").value(|p: &Person| p.joined).sortable().group("Membership"),
+        column("Review").value(|p: &Person| p.review).sortable().group("Membership"),
         column("Bonus")
             .value(|p: &Person| p.bonus)
             .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
@@ -85,6 +142,8 @@ fn team_columns(grouped: bool) -> Vec<Column<Person>> {
                 .sortable()
                 .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
         ),
+        group(column("Joined").value(|p: &Person| p.joined).sortable()),
+        group(column("Review").value(|p: &Person| p.review).sortable()),
         group(
             column("Bonus")
                 .value(|p: &Person| p.bonus)
@@ -98,28 +157,56 @@ fn team_columns(grouped: bool) -> Vec<Column<Person>> {
 /// code block carries the struct and the data above the `Table` itself.
 fn wrap_data(values: &DemoValues, code: &str) -> String {
     const ROWS: &str = r#"vec![
-    Person { name: "Ada Lovelace".into(), role: "Owner".into(), bonus: Some(12.5) },
-    Person { name: "Grace Hopper".into(), role: "Admin".into(), bonus: Some(8.0) },
-    Person { name: "Alan Turing".into(), role: "Viewer".into(), bonus: None },
+    Person { name: "Ada Lovelace".into(), role: "Owner".into(), joined: day(2019, 3, 4), review: Some(day(2025, 1, 15)), bonus: Some(12.5) },
+    Person { name: "Grace Hopper".into(), role: "Admin".into(), joined: day(2021, 7, 19), review: Some(day(2024, 11, 2)), bonus: Some(8.0) },
+    Person { name: "Alan Turing".into(), role: "Viewer".into(), joined: day(2023, 2, 1), review: None, bonus: None },
+    Person { name: "Katherine Johnson".into(), role: "Admin".into(), joined: day(2020, 10, 12), review: Some(day(2025, 4, 30)), bonus: Some(6.5) },
+    Person { name: "Edsger Dijkstra".into(), role: "Viewer".into(), joined: day(2024, 5, 27), review: None, bonus: Some(2.0) },
+    Person { name: "Barbara Liskov".into(), role: "Owner".into(), joined: day(2018, 1, 8), review: Some(day(2024, 9, 9)), bonus: Some(10.0) },
 ]"#;
+    const CROWD: &str = r#"(1..=10_000)
+    .map(|n: u32| Person {
+        name: format!("Person {n}"),
+        role: ["Owner", "Admin", "Viewer"][n as usize % 3].into(),
+        joined: day(2015, 1, 1) + TimeDelta::days(i64::from(n % 3_650)),
+        review: (!n.is_multiple_of(3)).then(|| day(2025, 1, 1) + TimeDelta::days(i64::from(n % 365))),
+        bonus: (!n.is_multiple_of(4)).then(|| f64::from(n % 150) / 10.0),
+    })
+    .collect::<Vec<_>>()"#;
+    let rows = match windowed(values) {
+        true => CROWD,
+        false => ROWS,
+    };
     // Reordered rows and resized widths need a signal to land in.
     let mut people = match (no_rows(values), reorders(values)) {
         (true, false) => "let people: Vec<Person> = Vec::new();".to_string(),
-        (false, false) => format!("let people = {ROWS};"),
+        (false, false) => format!("let people = {rows};"),
         (true, true) => {
             "let mut rows = use_signal(Vec::<Person>::new);\nlet people = rows();".to_string()
         }
-        (false, true) => format!("let mut rows = use_signal(|| {ROWS});\nlet people = rows();"),
+        (false, true) => format!("let mut rows = use_signal(|| {rows});\nlet people = rows();"),
     };
     if resizes(values) {
         people.push_str("\nlet mut widths = use_signal(ColumnWidths::new);");
     }
+    let uses = match windowed(values) {
+        true => "use libero::chrono::{NaiveDate, TimeDelta};",
+        false => "use libero::chrono::NaiveDate;",
+    };
     format!(
-        r#"#[derive(Clone, PartialEq)]
+        r#"{uses}
+
+#[derive(Clone, PartialEq)]
 struct Person {{
     name: String,
     role: String,
+    joined: NaiveDate,
+    review: Option<NaiveDate>,
     bonus: Option<f64>,
+}}
+
+fn day(year: i32, month: u32, day: u32) -> NaiveDate {{
+    NaiveDate::from_ymd_opt(year, month, day).unwrap_or_default()
 }}
 
 {people}
@@ -140,7 +227,7 @@ const TOOLBAR: &str =
 /// Wider than the preview at any width, so `scroll` has something to scroll.
 const SCROLL_WIDTH: &str = "640px";
 
-/// Shorter than the header and three rows, so `max_height` has something to scroll.
+/// Shorter than the header and two rows, so `max_height` has something to scroll.
 const MAX_HEIGHT: &str = "100px";
 
 /// Name, the outermost start column, needs no `width`; nor does Bonus at the end.
@@ -150,13 +237,30 @@ const MAX_HEIGHT: &str = "100px";
 const PINNED: &str =
     r#"default_pinned_columns: PinnedColumns::default().start(["Name"]).end(["Bonus"])"#;
 
+/// The `virtual_row_height` switch's cap: a dozen 40px rows.
+const WINDOW_HEIGHT: &str = "320px";
+
+/// The switches `virtual_row_height` hides: it sets the cap, the rest render every row.
+const WINDOW_HIDES: [&str; 5] = [
+    "max_height",
+    "row_detail",
+    "reorder_rows",
+    "paginate",
+    "empty",
+];
+
+/// Ten thousand rows, windowed.
+fn windowed(values: &DemoValues) -> bool {
+    values.str("virtual_row_height") == "true"
+}
+
 /// The `empty` switch empties `data` too, or the slot would never show.
 fn no_rows(values: &DemoValues) -> bool {
-    values.str("empty") == "true"
+    values.str("empty") == "true" && !windowed(values)
 }
 
 fn reorders(values: &DemoValues) -> bool {
-    values.str("reorder_rows") == "true"
+    values.str("reorder_rows") == "true" && !windowed(values)
 }
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
@@ -172,12 +276,16 @@ fn resizes(values: &DemoValues) -> bool {
 #[component]
 fn TeamTable(values: DemoValues) -> Element {
     let mut rows = use_signal(people);
+    // Built on the first flip only, then kept: a flip re-renders the table, not the data.
+    let many = use_hook(|| Rc::new(OnceCell::<Vec<Person>>::new()));
     let mut widths = use_signal(ColumnWidths::new);
-    let on = |name: &str| values.str(name) == "true";
+    let windowed = windowed(&values);
+    // A switch the windowed table hides counts as off.
+    let on = |name: &str| values.str(name) == "true" && !(windowed && WINDOW_HIDES.contains(&name));
     rsx! {
         Table {
             // A new table per switch: `page_sizes` and the pins seed once.
-            key: "{values.str(\"paginate\")}-{values.str(\"pinned\")}",
+            key: "{values.str(\"paginate\")}-{values.str(\"pinned\")}-{windowed}",
             caption: "Team members",
             size: values.str("size"),
             striped: on("striped"),
@@ -186,7 +294,11 @@ fn TeamTable(values: DemoValues) -> Element {
                 true => sx().min_width(SCROLL_WIDTH),
                 false => sx(),
             },
-            max_height: on("max_height").then(|| MAX_HEIGHT.to_string()),
+            max_height: match windowed {
+                true => Some(WINDOW_HEIGHT.to_string()),
+                false => on("max_height").then(|| MAX_HEIGHT.to_string()),
+            },
+            virtual_row_height: windowed.then_some(40.0),
             default_pinned_columns: match on("pinned") {
                 true => PinnedColumns::default().start(["Name"]).end(["Bonus"]),
                 false => PinnedColumns::default(),
@@ -213,7 +325,11 @@ fn TeamTable(values: DemoValues) -> Element {
             row_key: |p: &Person| p.name.clone(),
             page_sizes: if on("paginate") { vec![2, 5, 10] } else { vec![] },
             empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
-            data: if no_rows(&values) { Vec::new() } else { rows() },
+            data: match (windowed, no_rows(&values)) {
+                (true, _) => many.get_or_init(crowd).clone(),
+                (false, true) => Vec::new(),
+                (false, false) => rows(),
+            },
             columns: team_columns(on("column_groups")),
         }
     }
@@ -237,7 +353,7 @@ pub fn TablePage() -> Element {
                     prop("loading", "bool").default("false").doc("Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, \"Loading rows\". The empty row waits until loading ends."),
                     prop("toolbar", "Option<Element>").default("None").doc("A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton` and `TableExportButton` work only in here."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
-                    prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
+                    prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
                     prop("virtual_row_height", "Option<f64>").default("None").doc("With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. Ignored with `row_detail` or `onrowreorder`, which render every row; a debug build warns."),
                     prop("onbottomreached", "EventHandler<()>").default("None").doc("With `max_height`, called when the rows scroll to their bottom, by wheel, drag or End: append the next batch to `data`. Called again at the new bottom once rows were added. Not called while `loading` is set, so set it during a fetch to ask once. Without `max_height` it never fires; a debug build warns."),
                     prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header."),
@@ -292,10 +408,10 @@ pub fn TablePage() -> Element {
                     prop("column_order", "Option<Vec<String>>").default("None").doc("The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column."),
                     prop("default_column_order", "Vec<String>").default("[]").doc("Seeds the column order once. Ignored when `column_order` is set."),
                     prop("oncolumnorderchange", "EventHandler<Vec<String>>").default("None").doc("Called with the order a column menu's Move left or Move right, or a header drag, asks for, every header listed."),
-                    prop("resizable_columns", "bool").default("false").doc("Puts a drag grip on each header's end edge, and Widen column, Narrow column (50px steps, the menu stays open) and Reset width in its `column_menu`, the keyboard and drag-free way. Double-click a grip to reset. A column opts out with `.resizable(false)` and sets its range with `.resize_limits(min, max)` in px, 50 to unbounded by default. Auto layout never draws a column narrower than its content. Blitz: use the menu, the grip does not drag reliably there."),
+                    prop("resizable_columns", "bool").default("false").doc("Puts a visible grip on each header's end edge, and Widen column, Narrow column (50px steps, the menu stays open) and Reset width in its `column_menu`, the drag-free way. Drag a grip, or double-click it to reset. A focused grip takes the keys: Left and Right move it 10px the way they point, 50px with Shift, Home and End go to the limits. A column opts out with `.resizable(false)` and sets its range with `.resize_limits(min, max)` in px, 50 to unbounded by default. Auto layout never draws a column narrower than its content. Blitz: use the menu, the grip does not drag reliably there."),
                     prop("column_widths", "Option<ColumnWidths>").default("None").doc("Resized widths in px by header, a `BTreeMap<String, f64>`, over the columns' own `width`. Set, the widths are controlled: pair them with `oncolumnwidthschange`."),
                     prop("default_column_widths", "ColumnWidths").default("{}").doc("Seeds the widths once. Ignored when `column_widths` is set."),
-                    prop("oncolumnwidthschange", "EventHandler<ColumnWidths>").default("None").doc("Called with the widths a grip drag asks for when it ends, and with each Widen, Narrow or Reset width."),
+                    prop("oncolumnwidthschange", "EventHandler<ColumnWidths>").default("None").doc("Called with the widths a grip drag asks for when it ends, each grip key, and with each Widen, Narrow or Reset width."),
                     prop("column_menu", "bool").default("false").doc("Puts a menu button in each header: sort ascending or descending, unsort, add to the sort with `multi_sort`, filter a `filterable` column, move the column left or right past the next shown one, widen, narrow or reset it with `resizable_columns`, pin to the start or end or unpin, hide the column, and a Columns submenu that shows or hides the others. A pinned column has no move entries. Filter opens a popover with the operators of the column's type, a value and Clear; a filtered column's header then shows a filter button that reopens it."),
                     prop("column_menu_parts", "Parts<MenuPart>").default("none").doc("The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`."),
                 ]),
@@ -332,6 +448,8 @@ pub fn TablePage() -> Element {
                 .key(["Enter", "Space"], "With `row_detail`, on a row's toggle: opens or closes its detail. Tab then goes into the open detail.")
                 .key(["Enter", "Space", "Down"], "With `column_menu`, on a header's menu button: opens the column menu, keyed like `Menu`.")
                 .key(["Space", "Enter"], "With `onrowreorder`, on a row's handle: lifts the row, then drops it. Up and Down move the lifted row, Home and End to the first or last place, Escape puts it back.")
+                .key(["Left", "Right"], "With `resizable_columns`, on a header's resize grip: moves it 10px the way the arrow points, 50px with Shift.")
+                .key(["Home", "End"], "On a resize grip: narrows the column to its minimum, or widens it to its maximum when it has one.")
                 .key(["Escape"], "In a filter popover: closes it and returns focus to the column's menu button.")
                 .key(["Tab", "Shift+Tab"], "In a filter popover: moves between its fields; past either end it closes and Tab goes on from the menu button.")
                 .handles([
@@ -358,6 +476,7 @@ pub fn TablePage() -> Element {
                     "`onrowreorder` without `row_key` warns in a debug build.",
                     "The column menu's Move left and Move right name the screen sides in either text direction. A moved column moves in the DOM too, so Tab and a screen reader follow it, and a column moved out of its group splits the group.",
                     "The header drag grip is pointer only and hidden from screen readers, with no tab stop: the column menu's moves are its keyboard and drag-free way (WCAG 2.5.7). Escape, or a drop outside the table, cancels the drag. Blitz has no grip; the menu moves columns there.",
+                    "Each resize grip is a tab stop, a vertical `role=\"separator\"` named \"Resize\" plus the column, with `aria-valuenow` its width in px and `aria-valuemin` and `aria-valuemax` its limits.",
                     "Each Widen, Narrow or Reset width in the column menu says the column's new width in a polite live region, \"Name: 170 px\": the menu stays open over the change.",
                     "`loading` without shown rows marks the table `aria-busy` and hides its placeholder rows from screen readers. With rows shown it adds a progress bar named \"Loading rows\" and leaves the table unbusy, as some screen readers hold back a busy table's rows.",
                     "The `toolbar` is a plain row, not a `role=\"toolbar\"`: Tab moves through its controls as anywhere else.",
@@ -376,6 +495,7 @@ pub fn TablePage() -> Element {
                 .limits([
                     "On Blitz, once a `max_height` table's rows scroll, a click on a header's sort or menu button misses: Blitz hit-tests the header where it sat before the scroll. Tab to the button and press Enter instead.",
                     "On Blitz, the same holds for a pinned column's cells once the table scrolls sideways. In a right-to-left page Blitz cannot scroll a wide table at all (todo 707), so pinning shows no effect there.",
+                    "On Blitz, a `max_height` table's scrollbar is the native one and runs past the header too.",
                     "On Blitz, a `max_height` table with column groups keeps only its last header row in place; the group rows scroll away with the rows. The same holds for the `header_filters` row.",
                     "On Blitz, a row's handle does not drag: Blitz paints no moved table row. The keyboard and the move buttons reorder there.",
                     "Columns reorder from the column menu only, not by dragging a header.",
@@ -519,6 +639,7 @@ pub fn TablePage() -> Element {
                     Code { source: "header_filters" }
                     "' row of fields under the headers, filter one column each, with operators "
                     "for its type: contains or starts with for text, greater than for numbers, "
+                    "before, after or between for dates, as the Joined and Review columns show, "
                     "yes or no for booleans. The filters all apply, together with the quick filter. "
                     "Hold them yourself with "
                     Code { source: "column_filters" }
@@ -592,7 +713,7 @@ pub fn TablePage() -> Element {
                     Code { source: "ScrollArea" }
                     " that scrolls sideways. The demo's switch also sets "
                     Code { source: "sx().min_width(\"640px\")" }
-                    ", so the three columns overflow at any width. "
+                    ", so the columns overflow at any width. "
                     Code { source: "max_height" }
                     " caps a long table's height: its rows scroll under a header that stays put."
                 }
@@ -601,8 +722,9 @@ pub fn TablePage() -> Element {
                     Code { source: "virtual_row_height" }
                     " to "
                     Code { source: "max_height" }
-                    ": only the rows in view render, each that tall, as in the ten thousand "
-                    "rows below. Sorting, filtering, selection and pinning work as before."
+                    ": only the rows in view render, each that tall. The demo's switch swaps in "
+                    "ten thousand people, 40px a row under a 320px cap, and hides the switches "
+                    "that render every row. Sorting, filtering, selection and pinning work as before."
                 }
                 Text {
                     Code { source: "default_pinned_columns" }
@@ -614,8 +736,9 @@ pub fn TablePage() -> Element {
                 }
                 Text {
                     Code { source: "resizable_columns" }
-                    " puts a grip on each header's end edge: drag it, or double-click it to "
-                    "reset the width. With "
+                    " puts a grip on each header's end edge, a short line that lights up on "
+                    "hover: drag it, or double-click it to reset the width. Tab reaches it too, "
+                    "and the arrow keys step the width, Home and End to its limits. With "
                     Code { source: "column_menu" }
                     ", Widen column, Narrow column and Reset width do the same without a drag. "
                     "The demo holds the widths itself with "
@@ -647,6 +770,13 @@ pub fn TablePage() -> Element {
                     Control::switch("max_height").code(|_, values| match values.str("max_height") == "true" {
                         true => vec![format!("max_height: {MAX_HEIGHT:?}")],
                         false => vec![],
+                    }).hidden_when(windowed),
+                    Control::switch("virtual_row_height").code(|_, values| match windowed(values) {
+                        true => vec![
+                            format!("max_height: {WINDOW_HEIGHT:?}"),
+                            "virtual_row_height: 40.0".to_string(),
+                        ],
+                        false => vec![],
                     }),
                     Control::switch("pinned").code(|_, values| match values.str("pinned") == "true" {
                         true => vec![PINNED.to_string()],
@@ -658,7 +788,7 @@ pub fn TablePage() -> Element {
                     Control::switch("row_detail").code(|_, values| match values.str("row_detail") == "true" {
                         true => vec![DETAIL.to_string()],
                         false => vec![],
-                    }),
+                    }).hidden_when(windowed),
                     Control::switch("show_quick_filter"),
                     Control::switch("toolbar").code(|_, values| match values.str("toolbar") == "true" {
                         true => vec![TOOLBAR.to_string()],
@@ -669,15 +799,15 @@ pub fn TablePage() -> Element {
                     Control::switch("paginate").code(|_, values| match values.str("paginate") == "true" {
                         true => vec!["page_sizes: vec![2, 5, 10]".to_string()],
                         false => vec![],
-                    }),
+                    }).hidden_when(windowed),
                     Control::switch("empty").code(|_, values| match no_rows(values) {
                         true => vec![r#"empty: rsx! { "No team members yet." }"#.to_string()],
                         false => vec![],
-                    }),
+                    }).hidden_when(windowed),
                     Control::switch("reorder_rows").code(|_, values| match reorders(values) {
                         true => vec![REORDER.to_string()],
                         false => vec![],
-                    }),
+                    }).hidden_when(windowed),
                     Control::switch("resizable_columns").code(|_, values| match resizes(values) {
                         true => vec![
                             "resizable_columns: true".to_string(),
@@ -697,271 +827,6 @@ pub fn TablePage() -> Element {
                     TeamTable { values }
                 },
             }
-            DocSection {
-                title: "Ten thousand rows",
-                Text {
-                    "Each row is 40px tall, so the table renders the dozen in view and a few "
-                    "beyond each edge, and moves them along as you scroll. Switch "
-                    Code { source: "virtual_row_height" }
-                    " off to render all ten thousand and feel the difference in a sort."
-                }
-                Text {
-                    "Switch "
-                    Code { source: "onbottomreached" }
-                    " on to fetch the rows from a fake server instead, a hundred at a time: "
-                    "scrolling to the bottom, or End, asks for the next batch, and "
-                    Code { source: "loading" }
-                    " holds off another ask until it arrives. With "
-                    Code { source: "manual_sort" }
-                    " the server sorts, so a header click fetches the first batch anew."
-                }
-                Demo {
-                    title: "Ten thousand rows",
-                    component: "Table",
-                    children_text: "",
-                    fixed: vec![
-                        r#"caption: "Stock""#.to_string(),
-                        format!("max_height: {STOCK_HEIGHT:?}"),
-                        "selectable: true".to_string(),
-                        "row_key: |s: &Stock| s.id.to_string()".to_string(),
-                        STOCK_COLUMNS.to_string(),
-                    ],
-                    controls: vec![
-                        Control::switch("virtual_row_height").default("true").code(|_, values| {
-                            match values.str("virtual_row_height") == "true" {
-                                true => vec!["virtual_row_height: 40.0".to_string()],
-                                false => vec![],
-                            }
-                        }),
-                        Control::switch("onbottomreached").code(|_, values| match from_server(values) {
-                            true => SERVER_PROPS.map(String::from).to_vec(),
-                            false => vec!["data: stock".to_string()],
-                        }),
-                    ],
-                    wrap: Wrap(wrap_stock),
-                    render: move |values: DemoValues| {
-                        let windowed = values.str("virtual_row_height") == "true";
-                        match from_server(&values) {
-                            true => rsx! { ServerStock { windowed } },
-                            false => rsx! { StockTable { windowed } },
-                        }
-                    },
-                }
-            }
-        }
-    }
-}
-
-#[derive(Clone, PartialEq)]
-struct Stock {
-    id: u32,
-    name: String,
-    count: u32,
-}
-
-const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
-
-fn stock() -> Vec<Stock> {
-    (1..=10_000)
-        .map(|id| Stock {
-            id,
-            name: format!("{} {id}", FRUITS[id as usize % FRUITS.len()]),
-            count: id * 7 % 1_000,
-        })
-        .collect()
-}
-
-const STOCK_HEIGHT: &str = "320px";
-
-// snippet: item #[derive(Clone, PartialEq)] struct Stock { id: u32, name: String, count: u32 }
-// snippet: let stock: Vec<Stock> = Vec::new();
-// snippet: in Table { caption: "Stock", data: stock, .. }
-const STOCK_COLUMNS: &str = r#"columns: vec![
-        column("Id").value(|s: &Stock| s.id).sortable().row_header(),
-        column("Name").value(|s: &Stock| s.name.clone()).sortable(),
-        column("Count").value(|s: &Stock| s.count).sortable(),
-    ]"#;
-
-fn from_server(values: &DemoValues) -> bool {
-    values.str("onbottomreached") == "true"
-}
-
-fn wrap_stock(values: &DemoValues, code: &str) -> String {
-    let data = match from_server(values) {
-        true => SERVER_STOCK,
-        false => {
-            r#"let stock: Vec<Stock> = (1..=10_000)
-    .map(|id| Stock {
-        id,
-        name: format!("{} {id}", FRUITS[id as usize % FRUITS.len()]),
-        count: id * 7 % 1_000,
-    })
-    .collect();"#
-        }
-    };
-    format!(
-        r#"#[derive(Clone, PartialEq)]
-struct Stock {{
-    id: u32,
-    name: String,
-    count: u32,
-}}
-
-const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
-
-{data}
-
-{code}"#
-    )
-}
-
-/// The fake server and the state the server variant's props read, printed so
-/// the snippet calls nothing it does not show.
-// snippet: item #[derive(Clone, PartialEq)] struct Stock { id: u32, name: String, count: u32 }
-// snippet: item const FRUITS: [&str; 1] = ["Apple"];
-const SERVER_STOCK: &str = r#"const BATCH: usize = 100;
-/// How long the fake server takes.
-const LATENCY: Duration = Duration::from_millis(600);
-
-/// The fake server: `BATCH` rows from `from` on, sorted as asked.
-fn fetch(sort: &[TableSort], from: usize) -> Vec<Stock> {
-    let mut all: Vec<Stock> = (1..=10_000)
-        .map(|id| Stock {
-            id,
-            name: format!("{} {id}", FRUITS[id as usize % FRUITS.len()]),
-            count: id * 7 % 1_000,
-        })
-        .collect();
-    if let Some(by) = sort.first() {
-        match by.column.as_str() {
-            "Name" => all.sort_by(|a, b| a.name.cmp(&b.name)),
-            "Count" => all.sort_by_key(|s| s.count),
-            _ => {}
-        }
-        if by.direction == SortDirection::Descending {
-            all.reverse();
-        }
-    }
-    all.into_iter().skip(from).take(BATCH).collect()
-}
-
-let mut sort = use_signal(Vec::<TableSort>::new);
-let mut stock = use_signal(|| fetch(&[], 0));
-let mut loading = use_signal(|| false);
-let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
-use_drop(move || pending.set(None));
-// From 0 a new sort's first batch, else the next batch appended.
-let mut load = move |from: usize| {
-    loading.set(true);
-    pending.set(timer().map(|timer| {
-        timer.after(
-            LATENCY,
-            Box::new(move || {
-                let batch = fetch(&sort.peek(), from);
-                match from {
-                    0 => stock.set(batch),
-                    _ => stock.write().extend(batch),
-                }
-                loading.set(false);
-            }),
-        )
-    }));
-};"#;
-
-const SERVER_PROPS: [&str; 6] = [
-    "manual_sort: true",
-    "sort: sort()",
-    "onsortchange: move |next| {\n    sort.set(next);\n    load(0);\n}",
-    "loading: loading()",
-    "onbottomreached: move |_| load(stock.peek().len())",
-    "data: stock()",
-];
-
-const BATCH: usize = 100;
-const LATENCY: Duration = Duration::from_millis(600);
-
-/// The demo's fake server, as `SERVER_STOCK` prints it.
-fn fetch(sort: &[TableSort], from: usize) -> Vec<Stock> {
-    let mut all = stock();
-    if let Some(by) = sort.first() {
-        match by.column.as_str() {
-            "Name" => all.sort_by(|a, b| a.name.cmp(&b.name)),
-            "Count" => all.sort_by_key(|s| s.count),
-            _ => {}
-        }
-        if by.direction == SortDirection::Descending {
-            all.reverse();
-        }
-    }
-    all.into_iter().skip(from).take(BATCH).collect()
-}
-
-/// A hundred rows at a time from a fake server that sorts them itself.
-#[component]
-fn ServerStock(windowed: bool) -> Element {
-    let mut sort = use_signal(Vec::<TableSort>::new);
-    let mut stock = use_signal(|| fetch(&[], 0));
-    let mut loading = use_signal(|| false);
-    let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
-    use_drop(move || pending.set(None));
-    let mut load = move |from: usize| {
-        loading.set(true);
-        pending.set(timer().map(|timer| {
-            timer.after(
-                LATENCY,
-                Box::new(move || {
-                    let batch = fetch(&sort.peek(), from);
-                    match from {
-                        0 => stock.set(batch),
-                        _ => stock.write().extend(batch),
-                    }
-                    loading.set(false);
-                }),
-            )
-        }));
-    };
-    rsx! {
-        Table {
-            caption: "Stock",
-            max_height: STOCK_HEIGHT,
-            virtual_row_height: windowed.then_some(40.0),
-            selectable: true,
-            row_key: |s: &Stock| s.id.to_string(),
-            manual_sort: true,
-            sort: sort(),
-            onsortchange: move |next| {
-                sort.set(next);
-                load(0);
-            },
-            loading: loading(),
-            onbottomreached: move |_| load(stock.peek().len()),
-            data: stock(),
-            columns: vec![
-                column("Id").value(|s: &Stock| s.id).sortable().row_header(),
-                column("Name").value(|s: &Stock| s.name.clone()).sortable(),
-                column("Count").value(|s: &Stock| s.count).sortable(),
-            ],
-        }
-    }
-}
-
-/// Built once: a switch flip re-renders the table, not ten thousand rows of data.
-#[component]
-fn StockTable(windowed: bool) -> Element {
-    let rows = use_hook(stock);
-    rsx! {
-        Table {
-            caption: "Stock",
-            max_height: STOCK_HEIGHT,
-            virtual_row_height: windowed.then_some(40.0),
-            selectable: true,
-            row_key: |s: &Stock| s.id.to_string(),
-            data: rows,
-            columns: vec![
-                column("Id").value(|s: &Stock| s.id).sortable().row_header(),
-                column("Name").value(|s: &Stock| s.name.clone()).sortable(),
-                column("Count").value(|s: &Stock| s.count).sortable(),
-            ],
         }
     }
 }

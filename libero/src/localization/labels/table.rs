@@ -128,6 +128,15 @@ pub struct TableLabels {
     pub column_width: fn(&str, f64) -> String,
     /// Announced after a menu Reset width, from the header text.
     pub column_width_reset: fn(&str) -> String,
+    /// A header's resize grip, a separator the arrow keys move, from the header text.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.resize_column)("Name"), "Resize Name");
+    /// assert_eq!((TableLabels::GERMAN.resize_column)("Name"), "Breite von Name ändern");
+    /// ```
+    pub resize_column: fn(&str) -> String,
     /// The header of the column of row reorder handles, read out only.
     pub reorder: &'static str,
     /// The header of the column of detail toggles, read out only.
@@ -327,6 +336,14 @@ fn german_column_width_reset(column: &str) -> String {
     format!("{column}: Breite zurückgesetzt")
 }
 
+fn english_resize_column(column: &str) -> String {
+    format!("Resize {column}")
+}
+
+fn german_resize_column(column: &str) -> String {
+    format!("Breite von {column} ändern")
+}
+
 fn english_density_name(size: Size) -> &'static str {
     match size {
         Size::Xs | Size::Sm => "Compact",
@@ -383,6 +400,7 @@ impl TableLabels {
         reset_column_width: "Reset width",
         column_width,
         column_width_reset: english_column_width_reset,
+        resize_column: english_resize_column,
         reorder: "Reorder",
         details: "Details",
         row_details: english_row_details,
@@ -434,6 +452,7 @@ impl TableLabels {
         reset_column_width: "Breite zurücksetzen",
         column_width,
         column_width_reset: german_column_width_reset,
+        resize_column: german_resize_column,
         reorder: "Neu anordnen",
         details: "Details",
         row_details: german_row_details,

@@ -235,6 +235,10 @@ base_props! {
         #[doc(hidden)]
         #[props(default)]
         framework_sx: Option<ScrollAreaBase>,
+        /// Crate-internal: px the drawn vertical track starts down, below a sticky header.
+        #[doc(hidden)]
+        #[props(default)]
+        bar_inset_top: Option<f64>,
         #[props(default)]
         onscroll: Option<EventHandler<ScrollPositionEvent>>,
         /// After the area resized and re-measured itself. A prop, so it doesn't
@@ -629,7 +633,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let virtualized = virtualized();
     let body = rsx! {
         if own_bars {
-            ScrollAreaBars { state: drawn_bars, scrollbars, size }
+            ScrollAreaBars { state: drawn_bars, scrollbars, size, inset_top: props.bar_inset_top.unwrap_or(0.0) }
         }
         ScrollAreaContent { content, {props.children} }
     };
