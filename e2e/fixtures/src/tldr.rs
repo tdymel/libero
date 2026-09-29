@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{MenuPart, Parts, SummaryProvider, Tldr},
+    components::{Flex, MenuPart, Parts, SummaryProvider, Text, Tldr},
     hooks::use_localization_handle,
     localization::Localization,
     sx::sx,
@@ -16,6 +16,7 @@ pub const ROUTES: Routes = &[
     ("/tldr/german", || rsx! { TldrGermanPage {} }),
     ("/tldr/custom", || rsx! { TldrCustomPage {} }),
     ("/tldr/sized", || rsx! { TldrSizedPage {} }),
+    ("/tldr/column", || rsx! { TldrColumnPage {} }),
 ];
 
 const PAGE: &str = "https://libero-ui.dev/md/menu.md";
@@ -58,6 +59,18 @@ fn TldrSizedPage() -> Element {
         div { id: "icon-big", Tldr { url: PAGE, icon_only: true, size: "xl" } }
         div { id: "icon-tight", Tldr { url: PAGE, icon_only: true, radius: "xs" } }
         div { id: "icon-round", Tldr { url: PAGE, icon_only: true, radius: "xl" } }
+    }
+}
+
+/// The docs demo's shape: the trigger and a long line in a column `Flex`.
+#[component]
+fn TldrColumnPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            div { id: "labelled", Tldr { url: PAGE } }
+            div { id: "icon", Tldr { url: PAGE, icon_only: true } }
+            Text { "A line of prose that is far wider than the trigger, as the prompt preview is." }
+        }
     }
 }
 

@@ -1,0 +1,17 @@
+---
+source: e2e/src/suite.rs
+description: tldr_sized at desktop (rest)
+expression: tree
+---
+button "TLDR" [expanded=false] [haspopup=menu]
+  StaticText "TLDR"
+button "TLDR" [expanded=false] [haspopup=menu]
+  StaticText "TLDR"
+button "TLDR" [expanded=false] [haspopup=menu]
+  StaticText "TLDR"
+button "TLDR" [expanded=false] [haspopup=menu]
+  StaticText "TLDR"
+button "Summarize with AI" [expanded=false] [haspopup=menu]
+button "Summarize with AI" [expanded=false] [haspopup=menu]
+button "Summarize with AI" [expanded=false] [haspopup=menu]
+button "Summarize with AI" [expanded=false] [haspopup=menu]

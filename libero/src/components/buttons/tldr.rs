@@ -138,7 +138,7 @@ base_props! {
         /// Unset, `theme.tldr.variant`.
         #[props(default, into)]
         variant: Input<Variant>,
-        /// The trigger's size step. Unset, `sm`.
+        /// The trigger's size step. Unset, `md`.
         #[props(default, into)]
         size: Input<Size>,
         /// Corner radius, independent of `size`. Unset, the trigger's own: `xl` on the chip, `sm` icon-only.
@@ -229,7 +229,8 @@ pub fn Tldr(props: TldrProps) -> Element {
                         Icon { variant: "standard", size: "sm", color: "inherit", Glyph { slot: IconSlot::Sparkles, icon: lucide::sparkles::outlined } }
                     },
                     // A block chip: in the menu's block wrapper an inline one sits on a line box.
-                    sx: sx().display("flex").and(props.sx.clone().into_option().unwrap_or_default()),
+                    // `fit-content`: Blitz stretches a block `<button>` the web shrinks.
+                    sx: sx().display("flex").width("fit-content").and(props.sx.clone().into_option().unwrap_or_default()),
                     class: props.class.clone(),
                     states: props.states.clone(),
                     // A no-op `onclick` makes it a `<button>`; the click bubbles to the menu.

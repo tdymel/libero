@@ -4,11 +4,34 @@ use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::suite::Step;
+use e2e::{Fixture, Suite, Viewport, wait};
 
 /// `a11y_attributes()` gives the trigger a generated id, so the attribute finds it.
 const TRIGGER: &str = "[aria-haspopup=menu]";
 const ITEMS: &str = "[role=menu] a[role=menuitem]";
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("tldr", "/tldr")
+        .focusable(TRIGGER)
+        .targets(TRIGGER)
+        .state(
+            "open",
+            &[Step::TabTo(TRIGGER), Step::Press(keyboard::ARROW_DOWN)],
+            "[role=menu]",
+        )
+        .run();
+}
+
+/// Both triggers at every size step the page shows, so each is measured and ringed.
+#[test]
+fn the_sized_triggers_meet_the_baseline() {
+    Suite::new("tldr_sized", "/tldr/sized")
+        .focusable(TRIGGER)
+        .targets(TRIGGER)
+        .run();
+}
 /// `https://libero-ui.dev/md/menu.md`, percent-encoded.
 const PAGE: &str = "https%3A%2F%2Flibero-ui.dev%2Fmd%2Fmenu.md";
 
@@ -150,6 +173,26 @@ async fn size_and_radius_reach_the_trigger<D: Driver>(d: &mut D, _route: &str) -
     Ok(())
 }
 
+async fn the_trigger_keeps_its_own_width<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the triggers to mount", async |d| {
+        d.exists("#icon [aria-haspopup=menu]").await
+    })
+    .await?;
+    for kind in ["labelled", "icon"] {
+        let width = d.rect(&format!("#{kind} {TRIGGER}")).await?.width;
+        ensure!(
+            width < 150.0,
+            "{kind}: the trigger spans {width}px of its column"
+        );
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_trigger_in_a_column_keeps_its_own_width,
+    "/tldr/column",
+    the_trigger_keeps_its_own_width
+);
 e2e::scenario!(
     size_and_radius_reach_both_triggers,
     "/tldr/sized",

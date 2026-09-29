@@ -1,0 +1,21 @@
+---
+source: e2e/src/suite.rs
+description: tldr at mobile (open)
+expression: tree
+---
+heading "A page" [level=1]
+  StaticText "A page"
+button "TLDR" [expanded] [haspopup=menu]
+  StaticText "TLDR"
+menu "TLDR"
+  group "Summarize with"
+    StaticText "Summarize with"
+    menuitem "ChatGPT"
+      StaticText "ChatGPT"
+    menuitem "Google AI"
+      StaticText "Google AI"
+    menuitem "Claude"
+      StaticText "Claude"
+    menuitem "Perplexity"
+      StaticText "Perplexity"
+--> aria-controls [id="lsx-N-menu"] (rendered above)

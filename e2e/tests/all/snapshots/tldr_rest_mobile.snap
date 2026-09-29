@@ -1,0 +1,9 @@
+---
+source: e2e/src/suite.rs
+description: tldr at mobile (rest)
+expression: tree
+---
+heading "A page" [level=1]
+  StaticText "A page"
+button "TLDR" [expanded=false] [haspopup=menu]
+  StaticText "TLDR"

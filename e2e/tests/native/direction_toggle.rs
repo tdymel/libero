@@ -49,6 +49,20 @@ fn a_click_and_enter_turn_the_root_and_rename_the_button() {
     );
 }
 
+#[test]
+fn space_turns_the_root_like_enter() {
+    let mut page = mount(app);
+    page.focus(BUTTON);
+    page.press(Key::Character(" ".into()));
+    assert_eq!(
+        page.attr("html", "dir").as_deref(),
+        Some("rtl"),
+        "{}",
+        page.tree()
+    );
+    assert!(page.is_focused(BUTTON), "focus left the button");
+}
+
 fn set_during_first_render() -> Element {
     let direction = use_direction();
     use_hook(|| direction.set(Direction::Rtl));
