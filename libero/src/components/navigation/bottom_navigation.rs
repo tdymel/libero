@@ -188,17 +188,24 @@ fn pill_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Vari
 
 /// The bar's height and the scroll padding that keeps focus clear of it (2.4.11).
 /// Until measured, a bar of one-line labels: the item's content, plus the top border.
-fn publish_css(measured: Option<f64>) -> String {
+fn publish_css(measured: Option<f64>, sticky: bool) -> String {
     let height = match measured {
         Some(height) => format!("{height}px"),
         None => safe_area_padding("64px", "bottom"),
     };
-    // A sticky bar's own pane scrolls, not the page. Its own rule: a browser without `:has` drops it alone.
+    let (var, value) = (
+        BOTTOM_NAVIGATION_HEIGHT_VAR,
+        BOTTOM_NAVIGATION_HEIGHT_VAR.value(),
+    );
+    let name = var.name();
+    if !sticky {
+        return format!(":root{{{name}:{height};scroll-padding-bottom:{value};}}");
+    }
+    // A sticky bar's pane may scroll rather than the page, and no selector reaches it
+    // without `:has`: the focused element carries the margin instead.
     format!(
-        ":root{{{name}:{height};scroll-padding-bottom:{value};}}\
-         :has(> nav[data-state~=\"sticky\"] > [data-slot=\"item\"]){{scroll-padding-bottom:{value};}}",
-        name = BOTTOM_NAVIGATION_HEIGHT_VAR.name(),
-        value = BOTTOM_NAVIGATION_HEIGHT_VAR.value()
+        ":root{{{name}:{height};}}:focus{{scroll-margin-bottom:{value};}}\
+         nav[data-state~=\"sticky\"] > :focus{{scroll-margin-bottom:0;}}"
     )
 }
 
@@ -284,7 +291,10 @@ pub fn BottomNavigation(props: BottomNavigationProps) -> Element {
         }
     });
     use_css(
-        publishes.then(|| Stylesheet::from(publish_css(measured()).as_str())),
+        publishes.then(|| {
+            let sticky = position == BottomNavigationPosition::Sticky;
+            Stylesheet::from(publish_css(measured(), sticky).as_str())
+        }),
         CssLayer::Framework,
     );
 
@@ -472,21 +482,21 @@ mod tests {
 
     #[test]
     fn a_docked_bar_publishes_its_height_with_the_safe_area() {
-        let pane = ":has(> nav[data-state~=\"sticky\"] > [data-slot=\"item\"]){\
-                    scroll-padding-bottom:var(--lsx-bottom-navigation-height);}";
         assert_eq!(
-            publish_css(None),
-            format!(
-                ":root{{--lsx-bottom-navigation-height:calc(64px + env(safe-area-inset-bottom, 0px));\
-                 scroll-padding-bottom:var(--lsx-bottom-navigation-height);}}{pane}"
-            )
+            publish_css(None, false),
+            ":root{--lsx-bottom-navigation-height:calc(64px + env(safe-area-inset-bottom, 0px));\
+             scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
         );
         assert_eq!(
-            publish_css(Some(79.5)),
-            format!(
-                ":root{{--lsx-bottom-navigation-height:79.5px;\
-                 scroll-padding-bottom:var(--lsx-bottom-navigation-height);}}{pane}"
-            )
+            publish_css(Some(79.5), false),
+            ":root{--lsx-bottom-navigation-height:79.5px;\
+             scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
+        );
+        assert_eq!(
+            publish_css(Some(79.5), true),
+            ":root{--lsx-bottom-navigation-height:79.5px;}\
+             :focus{scroll-margin-bottom:var(--lsx-bottom-navigation-height);}\
+             nav[data-state~=\"sticky\"] > :focus{scroll-margin-bottom:0;}"
         );
     }
 
