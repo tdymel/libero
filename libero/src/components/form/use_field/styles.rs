@@ -15,6 +15,8 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
     FieldDefaults::theme_vars()
         .display("flex")
         .flex_direction("column")
+        // Shrinks below its input's intrinsic width in a flex row (WCAG 1.4.10).
+        .min_width("0")
         .selector(FIELD_CAPTIONS, sx().color("muted.7"))
         .selector(
             "& label > [data-slot='required']",

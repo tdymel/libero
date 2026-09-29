@@ -1,12 +1,71 @@
 //! Clearable fields (620): Tab out past the x must close the list, via the control's blur,
 //! unlike `ColorField`'s old input-only settle.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Viewport, wait};
 
 const CONTROL: &str = "[role=combobox]";
 const CLEAR: &str = "[aria-label=Clear]";
+
+fn control(route: &str) -> &'static str {
+    match route.ends_with("tags-field") {
+        true => "[data-frame] input",
+        false => CONTROL,
+    }
+}
+
+async fn the_x_is_gone<D: Driver>(d: &mut D) -> Result<()> {
+    eventually(d, "the x to go with the value", async |d| {
+        Ok(!d.exists(CLEAR).await?)
+    })
+    .await
+}
+
+/// A press on the x empties the field and hands the focus to its control.
+async fn a_press_clears_and_refocuses<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    d.click(CLEAR).await?;
+    the_x_is_gone(d).await?;
+    eventually_focused(d, control(route), "a press on the x").await
+}
+
+/// Enter on the focused x does the same.
+async fn enter_clears_and_refocuses<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    d.focus(control(route)).await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CLEAR, "Tab from the control").await?;
+    d.press(keyboard::ENTER).await?;
+    the_x_is_gone(d).await?;
+    eventually_focused(d, control(route), "Enter on the x").await
+}
+
+e2e::scenario!(
+    a_press_on_the_select_x_clears_it,
+    "/trailing-button/select",
+    a_press_clears_and_refocuses
+);
+e2e::scenario!(
+    a_press_on_the_autocomplete_x_clears_it,
+    "/trailing-button/autocomplete",
+    a_press_clears_and_refocuses
+);
+e2e::scenario!(
+    a_press_on_the_tags_x_clears_it,
+    "/trailing-button/tags-field",
+    a_press_clears_and_refocuses
+);
+e2e::scenario!(
+    enter_on_the_select_x_clears_it,
+    "/trailing-button/select",
+    enter_clears_and_refocuses
+);
+e2e::scenario!(
+    enter_on_the_cascader_x_clears_it,
+    "/trailing-button/cascader",
+    enter_clears_and_refocuses
+);
 
 #[test]
 fn tab_out_past_the_clear_button_closes_the_list() {

@@ -5,15 +5,45 @@ use dioxus::prelude::*;
 use libero::{
     chrono::{NaiveDate, NaiveTime},
     components::{
-        Autocomplete, Cascader, CascaderOption, ChronoField, ColorCode, ColorField, FileField,
-        Files, Flex, MultiSelect, NativeSelect, NumberField, PhoneField, PinField, Select,
-        SliderChangeEvent, TagsField, TextField, Textarea, TimeField,
+        Autocomplete, Cascader, CascaderOption, ChronoField, ColorCode, ColorField, FieldStatus,
+        FileField, Files, Flex, MultiSelect, NativeSelect, NumberField, PhoneField, PinField,
+        Select, SliderChangeEvent, TagsField, TextField, Textarea, TimeField,
     },
 };
 
 use crate::{Routes, common::Fruit};
 
-pub const ROUTES: Routes = &[("/field-frame", || rsx! { FieldFramePage {} })];
+pub const ROUTES: Routes = &[
+    ("/field-frame", || rsx! { FieldFramePage {} }),
+    ("/field-frame/narrow", || rsx! { NarrowPage {} }),
+];
+
+/// Fields as the only item of a row flex box narrower than their inputs' intrinsic width.
+#[component]
+fn NarrowPage() -> Element {
+    rsx! {
+        div {
+            id: "stage",
+            style: "display: flex; width: 220px;",
+            NumberField::<i32> {
+                label: "Quantity",
+                steppers: true,
+                value: Some(3),
+                onchange: |_| {},
+            }
+        }
+        div {
+            id: "stage-text",
+            style: "display: flex; width: 220px;",
+            TextField {
+                label: "Handle",
+                leading: rsx! { "@" },
+                trailing: rsx! { "3/20" },
+                value: "ada",
+            }
+        }
+    }
+}
 
 #[component]
 fn FieldFramePage() -> Element {
@@ -166,6 +196,13 @@ fn FieldFramePage() -> Element {
                     label: "Topics",
                     value: topics(),
                     onchange: move |next| topics.set(next),
+                }
+            }
+            div { "data-case": "warning",
+                TextField {
+                    label: "Nickname",
+                    status: FieldStatus::Warning("Already taken".to_string()),
+                    value: "ada",
                 }
             }
         }

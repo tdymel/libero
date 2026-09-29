@@ -47,7 +47,8 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         })
         .selector("& :focus-visible ~ [data-ring]", focus_ring_sx())
         .when("error", sx().border_color("error.7"))
-        .when("warning", sx().border_color("warning.7"))
+        // Shade 9: `warning.7` is 2.17:1 on white (WCAG 1.4.11).
+        .when("warning", sx().border_color("warning.9"))
         .when(
             "disabled",
             sx().opacity("0.5")

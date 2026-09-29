@@ -11,6 +11,7 @@ use chromiumoxide::cdp::browser_protocol::page::{
     EventFileChooserOpened, SetInterceptFileChooserDialogParams,
 };
 use e2e::browser::block_on;
+use e2e::driver::Driver;
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 use futures::StreamExt;
@@ -406,6 +407,53 @@ fn a_frame_border_parts_at_3_to_1() {
          return [
              ['frame border on the page', RATIO(border, PAGE(frame))],
              ['frame border on its surface', RATIO(border, CSS(frame, 'backgroundColor'))],
+         ];",
+    );
+}
+
+/// WCAG 1.4.10: a field in a row flex box narrower than its input's intrinsic
+/// width shrinks to it, and its slot buttons keep a 24px target.
+async fn a_field_shrinks_into_a_narrow_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for stage in ["#stage", "#stage-text"] {
+        let outer = d.rect(stage).await?;
+        let frame = d.rect(&format!("{stage} [data-frame]")).await?;
+        assert!(
+            frame.x + frame.width <= outer.x + outer.width + 0.5,
+            "{:?}: {stage}'s frame ends at {}, its box at {}",
+            d.platform(),
+            frame.x + frame.width,
+            outer.x + outer.width
+        );
+    }
+    for button in ["button[aria-label=Increase]", "button[aria-label=Decrease]"] {
+        let rect = d.rect(&format!("#stage {button}")).await?;
+        assert!(
+            rect.width >= 24.0 || rect.height >= 24.0,
+            "{:?}: {button} squeezed to {}x{}",
+            d.platform(),
+            rect.width,
+            rect.height
+        );
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_field_shrinks_into_a_narrow_flex_row,
+    "/field-frame/narrow",
+    a_field_shrinks_into_a_narrow_row
+);
+
+/// WCAG 1.4.11: the warning state recolours the border, so it must still reach 3:1.
+#[test]
+fn a_warning_frame_border_at_3_to_1() {
+    crate::boundary::assert_boundaries(
+        "/field-frame",
+        "const frame = document.querySelector('[data-case=warning] [data-frame]');
+         const border = CSS(frame, 'borderTopColor');
+         return [
+             ['warning border on the page', RATIO(border, PAGE(frame))],
+             ['warning border on its surface', RATIO(border, CSS(frame, 'backgroundColor'))],
          ];",
     );
 }
