@@ -2,7 +2,9 @@
 //! selected one `aria-current`; 48px targets and no overflow at 320px; RTL;
 //! a fixed bar at the viewport's bottom that publishes its height.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -291,6 +293,14 @@ fn a_fixed_bar_docks_and_publishes_its_height() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#fixed-home").await.unwrap();
+        // The 64px fallback holds until the bar is measured.
+        wait::for_js_true(
+            page,
+            "getComputedStyle(document.documentElement).getPropertyValue('--lsx-bottom-navigation-height').trim().endsWith('px')",
+            "the measured bar height",
+        )
+        .await
+        .unwrap();
 
         let report = js(
             page,
@@ -327,3 +337,114 @@ fn a_fixed_bar_docks_and_publishes_its_height() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Tab walks the five items in order and skips nothing but the disabled ones;
+/// Enter and a pointer click both select, one `aria-current` at a time.
+async fn items_take_the_keyboard_and_the_pointer<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#home").await?;
+    for next in ["search", "inbox", "long", "profile"] {
+        d.press(keyboard::TAB).await?;
+        eventually_focused(d, &format!("#{next}"), "Tab").await?;
+    }
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, "#long", "Shift+Tab").await?;
+
+    d.focus("#search").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Enter to select Search", async |d| {
+        Ok(
+            d.attr("#search", "aria-current").await?.as_deref() == Some("page")
+                && d.attr("#home", "aria-current").await?.is_none(),
+        )
+    })
+    .await?;
+
+    d.click("#profile").await?;
+    eventually(d, "a click to select Profile", async |d| {
+        Ok(
+            d.attr("#profile", "aria-current").await?.as_deref() == Some("page")
+                && d.attr("#search", "aria-current").await?.is_none(),
+        )
+    })
+    .await?;
+
+    d.focus("#link").await?;
+    d.press(keyboard::TAB).await?;
+    let skipped = d.focused_id().await?;
+    if skipped == "disabled" || skipped == "disabled-button" {
+        anyhow::bail!(
+            "{:?}: Tab landed on the disabled item {skipped}",
+            d.platform()
+        );
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    items_take_the_keyboard_and_the_pointer_everywhere,
+    "/bottom-navigation",
+    items_take_the_keyboard_and_the_pointer
+);
+
+/// 2.4.11: a link tabbed to in the pane a sticky bar closes is not left under the bar.
+async fn a_sticky_bar_in_a_pane_leaves_the_focused_link_clear<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.focus("#row-0").await?;
+    for _ in 0..10 {
+        d.press(keyboard::TAB).await?;
+    }
+    eventually_focused(d, "#row-10", "ten Tabs").await?;
+    eventually(
+        d,
+        "the pane to scroll the link clear of the bar",
+        async |d| {
+            let row = d.rect("#row-10").await?;
+            let bar = d.rect("#sticky").await?;
+            Ok(row.y + row.height <= bar.y + 1.0)
+        },
+    )
+    .await
+}
+
+e2e::scenario!(
+    a_sticky_bar_in_a_pane_clears_the_focused_link,
+    "/bottom-navigation/scroller",
+    a_sticky_bar_in_a_pane_leaves_the_focused_link_clear,
+    native: skip("Blitz's focus scroll ignores scroll-padding; see the native unit")
+);
+
+/// A fixed bar docks to the viewport's bottom edge, spans its width, publishes the
+/// height it measures, and a scroll leaves it there.
+async fn a_fixed_bar_docks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the bar to dock", async |d| {
+        let (width, height) = d.viewport().await?;
+        let bar = d.rect("#fixed").await?;
+        Ok((bar.y + bar.height - height).abs() < 1.0 && (bar.width - width).abs() < 1.0)
+    })
+    .await?;
+    d.scroll_by(600.0).await?;
+    d.idle().await;
+    let (_, height) = d.viewport().await?;
+    let bar = d.rect("#fixed").await?;
+    anyhow::ensure!(
+        (bar.y + bar.height - height).abs() < 1.0,
+        "{:?}: the bar left the bottom after a scroll: {bar:?} in {height}",
+        d.platform()
+    );
+    let page = d.rect("#page").await?;
+    anyhow::ensure!(
+        page.y < -100.0,
+        "{:?}: the page did not scroll",
+        d.platform()
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_fixed_bar_docks_everywhere,
+    "/bottom-navigation/fixed",
+    a_fixed_bar_docks,
+    native: skip("Blitz lays position: fixed out as absolute; see the native unit")
+);

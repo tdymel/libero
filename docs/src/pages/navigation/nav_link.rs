@@ -79,7 +79,8 @@ pub fn NavLinkPage() -> Element {
                     "Enter or Space on the disclosure button toggles the panel, and the link still navigates.",
                     "A `target: \"_blank\"` link draws a small external icon and reads a hidden \"(opens in a new tab)\". `new_tab_hint: false` drops both.",
                 ])
-                .must(["Wrap a list of them in a `<nav>` to make a navigation landmark."]),
+                .must(["Wrap a list of them in a `<nav>` to make a navigation landmark."])
+                .limits(["In a native app, Tab still enters the nested links of a closed panel."]),
             lead: rsx! {
                 Text {
                     "A navigation list item for a sidebar or nav bar. It is an "

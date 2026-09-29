@@ -10,6 +10,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/bottom-navigation", || rsx! { BottomNavigationPage {} }),
     ("/bottom-navigation/fixed", || rsx! { FixedPage {} }),
+    ("/bottom-navigation/scroller", || rsx! { ScrollerPage {} }),
 ];
 
 const ITEMS: [(&str, &str, SvgData); 5] = [
@@ -70,6 +71,30 @@ fn BottomNavigationPage() -> Element {
                 }
                 if clicked() {
                     p { id: "clicked", "Clicked" }
+                }
+            }
+        }
+    }
+}
+
+/// A sticky bar closing a scrolling pane of links, as in a phone frame.
+#[component]
+fn ScrollerPage() -> Element {
+    rsx! {
+        div { id: "pane", style: "width: 320px; height: 300px; overflow-y: auto;",
+            for index in 0..20 {
+                a { key: "{index}", id: "row-{index}", href: "#row-{index}", style: "display: block; padding: 12px;", "Row {index}" }
+            }
+            BottomNavigation { id: "sticky", "aria-label": "Main", position: "sticky",
+                for (index, (id, label, icon)) in ITEMS.into_iter().take(3).enumerate() {
+                    BottomNavigationItem {
+                        key: "{id}",
+                        id: "sticky-{id}",
+                        selected: index == 0,
+                        onclick: |_| {},
+                        icon: rsx! { Pictogram { icon } },
+                        "{label}"
+                    }
                 }
             }
         }

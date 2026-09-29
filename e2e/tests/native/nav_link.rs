@@ -24,6 +24,31 @@ fn edges(page: &Page) -> Vec<[u8; 4]> {
     ])
 }
 
+fn closed_panel() -> Element {
+    rsx! {
+        div { width: "240px", padding: "16px",
+            NavLink { id: "docs", to: "/docs", nested: rsx! {
+                NavLink { id: "install", to: "/install", "Install" }
+            }, "Docs" }
+        }
+    }
+}
+
+/// Blitz's Tab walk enters a link under `visibility: hidden`, so a closed disclosure's
+/// nested links stay in the tab order (every `Collapse`).
+#[test]
+#[ignore = "Blitz's Tab traversal does not skip visibility: hidden; a filed todo"]
+fn a_closed_panels_links_are_out_of_the_tab_order() {
+    let mut page = mount(closed_panel);
+    page.focus("#docs + button");
+    page.tab();
+    assert!(
+        !page.is_focused("#install"),
+        "Tab entered the closed panel: {}",
+        page.focus_owner()
+    );
+}
+
 /// The start bar sits at the start edge: the left one here (todo 764: in the bar colour).
 #[test]
 fn the_active_bar_sits_at_the_start_edge() {

@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -28,6 +28,35 @@ e2e::scenario!(
     a_click_on_the_toggle_shows_the_nested_links,
     "/nav-link/states",
     the_toggle_shows_nested
+);
+
+/// Tab from the parent link reaches the toggle, Enter opens the panel with focus kept on
+/// the toggle, and the next Tab enters the nested links.
+async fn the_toggle_works_from_the_keyboard<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const TOGGLE: &str = "#docs + button";
+    d.focus("#docs").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, TOGGLE, "Tab from the link").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "aria-expanded true", async |d| {
+        Ok(d.attr(TOGGLE, "aria-expanded").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    eventually_focused(d, TOGGLE, "Enter").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#install", "Tab into the opened panel").await?;
+    d.focus(TOGGLE).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually(d, "aria-expanded false", async |d| {
+        Ok(d.attr(TOGGLE, "aria-expanded").await?.as_deref() == Some("false"))
+    })
+    .await
+}
+
+e2e::scenario!(
+    the_toggle_works_from_the_keyboard_everywhere,
+    "/nav-link/states",
+    the_toggle_works_from_the_keyboard
 );
 
 /// The link's bottom plus its 8rem margin meets the sidebar's bottom.
@@ -283,6 +312,103 @@ fn a_parent_link_discloses_its_nested_links() {
             .assert_clean("opening a parent link")
             .unwrap();
         fixture.close().await.unwrap();
+    });
+}
+
+/// Tab leaves the closed disclosure for the next control, not for a hidden nested link.
+#[test]
+fn a_closed_panels_links_are_out_of_the_tab_order() {
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#docs + button", 20).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        let id: String = page
+            .evaluate("document.activeElement.id || document.activeElement.tagName")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            id != "install" && id != "theming",
+            "focus entered a closed panel: {id}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Without `active`, a link to the route's path is current whatever query or
+/// fragment the address carries.
+#[test]
+fn a_query_on_the_address_keeps_the_route_link_current() {
+    block_on(async {
+        for route in [
+            "/nav-link/states",
+            "/nav-link/states?tab=2",
+            "/nav-link/states?tab=2#top",
+        ] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let current = fixture
+                .page
+                .evaluate("document.querySelector('#auto').getAttribute('aria-current')")
+                .await
+                .unwrap()
+                .into_value::<Option<String>>()
+                .unwrap();
+            assert_eq!(current.as_deref(), Some("page"), "{route}");
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// The description's contrast against the surface under it, as a string `"4.52"`.
+const DESCRIPTION_RATIO: &str = r#"(id => {
+  const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const rgba = c => { ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = '#000'; ctx.fillStyle = c; ctx.fillRect(0, 0, 1, 1); const d = ctx.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2], d[3] / 255]; };
+  const over = (f, b) => [0, 1, 2].map(i => f[i] * f[3] + b[i] * (1 - f[3])).concat([1]);
+  const bg = el => { const chain = []; for (let e = el; e; e = e.parentElement) chain.push(rgba(getComputedStyle(e).backgroundColor)); let out = [255, 255, 255, 1]; for (const c of chain.reverse()) out = over(c, out); return out; };
+  const lum = c => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const el = document.querySelector(id + ' [data-slot=description]');
+  const back = bg(el), front = over(rgba(getComputedStyle(el).color), back);
+  const [x, y] = [lum(front), lum(back)];
+  return ((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)).toFixed(2);
+})"#;
+
+/// 1.4.3: the description is 12px text, so 4.5:1 on the active tint and on the
+/// hover grey too, in both schemes.
+#[test]
+fn the_description_reads_on_the_active_tint_and_on_hover() {
+    use e2e::Scheme;
+    block_on(async {
+        for scheme in [Scheme::Light, Scheme::Dark] {
+            let fixture = Fixture::open_in("/nav-link/states", Viewport::Desktop, scheme)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            let ratio = |id: &'static str| {
+                let expression = format!("({DESCRIPTION_RATIO})('{id}')");
+                async move {
+                    let text: String = page
+                        .evaluate(expression)
+                        .await
+                        .unwrap()
+                        .into_value()
+                        .unwrap();
+                    text.parse::<f64>().unwrap()
+                }
+            };
+            let active = ratio("#described-active").await;
+            e2e::passes::pointer::hover(page, "#docs").await.unwrap();
+            let hovered = ratio("#docs").await;
+            assert!(
+                active >= 4.5 && hovered >= 4.5,
+                "{}: description on the active tint {active}:1, on hover {hovered}:1",
+                scheme.name()
+            );
+            fixture.close().await.unwrap();
+        }
     });
 }
 

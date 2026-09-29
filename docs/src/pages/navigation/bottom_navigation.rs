@@ -114,6 +114,10 @@ pub fn BottomNavigationPage() -> Element {
                     "Name the bar with an `aria-label`, such as \"Main\"; a debug build warns without one.",
                     "Put a badge's count in the item's `aria-label`, starting with the visible label: \"Inbox, 3 unread\".",
                     "With `position: \"fixed\"`, pad the page by `var(--lsx-bottom-navigation-height)`.",
+                ])
+                .limits([
+                    "A native app has no line clamp: a long label wraps onto more lines and grows the bar.",
+                    "A native app's focus scroll ignores that padding, so a link reached with Tab can sit under a sticky bar.",
                 ]),
             lead: rsx! {
                 Text {

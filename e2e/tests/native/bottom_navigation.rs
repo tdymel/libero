@@ -53,6 +53,65 @@ fn a_sticky_bar_holds_at_the_bottom_and_publishes_its_height() {
     assert_eq!(bottom(&page, "#bar"), window, "{}", page.tree());
 }
 
+fn crowded() -> Element {
+    rsx! {
+        div { width: "320px",
+            BottomNavigation { id: "bar", "aria-label": "Main",
+                BottomNavigationItem { id: "long", onclick: |_| {}, icon: rsx! { "N" },
+                    "Notifications and messages"
+                }
+                for label in ["Home", "Search", "Inbox", "Profile"] {
+                    BottomNavigationItem { key: "{label}", onclick: |_| {}, icon: rsx! { "i" }, "{label}" }
+                }
+            }
+        }
+    }
+}
+
+fn pane() -> Element {
+    rsx! {
+        div { id: "pane", width: "320px", height: "300px", overflow_y: "auto",
+            for index in 0..20 {
+                a { key: "{index}", id: "row-{index}", href: "#row-{index}", display: "block", padding: "12px", "Row {index}" }
+            }
+            BottomNavigation { id: "sticky", "aria-label": "Main", position: "sticky",
+                BottomNavigationItem { selected: true, onclick: |_| {}, icon: rsx! { "H" }, "Home" }
+                BottomNavigationItem { onclick: |_| {}, icon: rsx! { "S" }, "Search" }
+            }
+        }
+    }
+}
+
+/// A link tabbed to in the pane a sticky bar closes ends up clear of the bar.
+#[test]
+#[ignore = "Blitz's focus scroll ignores scroll-padding; a filed todo"]
+fn a_tabbed_link_in_a_pane_is_clear_of_a_sticky_bar() {
+    let mut page = mount(pane);
+    page.focus("#row-0");
+    for _ in 0..10 {
+        page.tab();
+    }
+    page.settle();
+    let (_, y, _, height) = page.rect("#row-10");
+    let bar = page.rect("#sticky").1;
+    assert!(page.is_focused("#row-10"), "{}", page.focus_owner());
+    assert!(
+        y + height <= bar + 1.0,
+        "row bottom {} under bar top {bar}",
+        y + height
+    );
+}
+
+/// Blitz has no `-webkit-line-clamp`: a long label grows to four lines and the bar with it.
+#[test]
+#[ignore = "Blitz has no -webkit-line-clamp; a filed todo"]
+fn a_long_label_stops_at_two_lines() {
+    let page = mount(crowded);
+    let (_, _, _, height) = page.rect("#long [data-slot=label]");
+    let line = 12.0 * 1.25;
+    assert!(height <= 2.0 * line + 1.0, "the label is {height}px tall");
+}
+
 /// Blitz lays `fixed` out as `absolute`: the bar sits at the document's end.
 #[test]
 #[ignore = "Blitz lays position: fixed out as absolute; a platform shim is a filed todo"]

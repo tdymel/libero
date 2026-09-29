@@ -37,8 +37,16 @@ fn NavStatesPage() -> Element {
             nav { aria_label: "Sections",
                 NavLink { id: "active", to: "/nav-link/states", active: true, "Active" }
                 NavLink { id: "idle", to: "/nav-link", "Idle" }
+                NavLink { id: "auto", to: "/nav-link/states", "Auto" }
                 NavLink { id: "disabled", to: "/nav-link", disabled: true, "Disabled" }
                 NavLink { id: "disabled-active", to: "/nav-link", active: true, disabled: true, "Disabled active" }
+                NavLink {
+                    id: "described-active",
+                    to: "/nav-link/states",
+                    active: true,
+                    description: "Where you are",
+                    "Described active"
+                }
                 NavLink {
                     id: "docs",
                     to: "/nav-link",

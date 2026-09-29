@@ -93,7 +93,13 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
                 )
                 // Clear of the focus ring's 2px stripe.
                 .focus_visible(on_start_bar_sx("2px", &NAV_LINK_ACTIVE_BAR_VAR.value()))
-                .and(forced_on_sx()),
+                .and(forced_on_sx())
+                .selector(NavLinkPart::Description.selector(), sx().color("inherit")),
+        )
+        // The dimmed grey is under 4.5:1 on the hover grey and the active tint.
+        .selector(
+            "&:hover:not(:where([data-state~=\"disabled\"])) > [data-slot='body'] > [data-slot='description']",
+            sx().color("inherit"),
         )
         // Without `href` it has nothing to follow.
         .when("disabled", disabled_look_sx("not-allowed"))

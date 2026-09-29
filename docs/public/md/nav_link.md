@@ -139,6 +139,10 @@ parts work.
 
 - Wrap a list of them in a `<nav>` to make a navigation landmark.
 
+### Limits
+
+- In a native app, Tab still enters the nested links of a closed panel.
+
 ## Theme defaults
 
 `NavLinkDefaults` on the theme.

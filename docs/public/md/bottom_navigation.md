@@ -159,6 +159,13 @@ parts work.
   label: "Inbox, 3 unread".
 - With `position: "fixed"`, pad the page by `var(--lsx-bottom-navigation-height)`.
 
+### Limits
+
+- A native app has no line clamp: a long label wraps onto more lines and grows
+  the bar.
+- A native app's focus scroll ignores that padding, so a link reached with Tab
+  can sit under a sticky bar.
+
 ## Theme defaults
 
 `BottomNavigationDefaults` on the theme.

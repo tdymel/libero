@@ -193,10 +193,12 @@ fn publish_css(measured: Option<f64>) -> String {
         Some(height) => format!("{height}px"),
         None => safe_area_padding("64px", "bottom"),
     };
+    // A sticky bar's own pane scrolls, not the page. Its own rule: a browser without `:has` drops it alone.
     format!(
-        ":root{{{}:{height};scroll-padding-bottom:{};}}",
-        BOTTOM_NAVIGATION_HEIGHT_VAR.name(),
-        BOTTOM_NAVIGATION_HEIGHT_VAR.value()
+        ":root{{{name}:{height};scroll-padding-bottom:{value};}}\
+         :has(> nav[data-state~=\"sticky\"] > [data-slot=\"item\"]){{scroll-padding-bottom:{value};}}",
+        name = BOTTOM_NAVIGATION_HEIGHT_VAR.name(),
+        value = BOTTOM_NAVIGATION_HEIGHT_VAR.value()
     )
 }
 
@@ -470,15 +472,21 @@ mod tests {
 
     #[test]
     fn a_docked_bar_publishes_its_height_with_the_safe_area() {
+        let pane = ":has(> nav[data-state~=\"sticky\"] > [data-slot=\"item\"]){\
+                    scroll-padding-bottom:var(--lsx-bottom-navigation-height);}";
         assert_eq!(
             publish_css(None),
-            ":root{--lsx-bottom-navigation-height:calc(64px + env(safe-area-inset-bottom, 0px));\
-             scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
+            format!(
+                ":root{{--lsx-bottom-navigation-height:calc(64px + env(safe-area-inset-bottom, 0px));\
+                 scroll-padding-bottom:var(--lsx-bottom-navigation-height);}}{pane}"
+            )
         );
         assert_eq!(
             publish_css(Some(79.5)),
-            ":root{--lsx-bottom-navigation-height:79.5px;\
-             scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
+            format!(
+                ":root{{--lsx-bottom-navigation-height:79.5px;\
+                 scroll-padding-bottom:var(--lsx-bottom-navigation-height);}}{pane}"
+            )
         );
     }
 
