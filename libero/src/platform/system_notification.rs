@@ -344,6 +344,7 @@ mod desktop {
 
 /// `None` without a Notifications API: Blitz off Linux, a server, a browser without one.
 /// A WebView and Blitz on Linux answer `Some`; [`probe`](SystemNotificationApi::probe) tells.
+/// A desktop WebView app turns on `desktop` for native notifications on Linux.
 pub(crate) fn system_notification() -> Option<&'static dyn SystemNotificationApi> {
     #[cfg(target_arch = "wasm32")]
     return web::has_notification()
