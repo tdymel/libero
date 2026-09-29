@@ -1189,6 +1189,41 @@ fn focus_from_code_shows_the_faded_controls() {
     });
 }
 
+/// Todo 1418: a press the browser cancels ends too, so focus from code shows the row after it.
+#[test]
+fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {
+    block_on(async {
+        let fixture = Fixture::open("/video/long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, LONG_DURATION, "the duration")
+            .await
+            .unwrap();
+        pointer::click(page, PLAY).await.unwrap();
+        wait::for_js_true(page, PLAYING, "playing").await.unwrap();
+        page.evaluate(
+            "(() => { const video = document.querySelector('#player video');
+             for (const type of ['pointerdown', 'pointercancel'])
+                 video.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: 'touch' })); })()",
+        )
+        .await
+        .unwrap();
+        until(page, FADED, 8, "the controls to fade").await;
+        page.evaluate(format!("document.querySelector('{FULLSCREEN}').focus()"))
+            .await
+            .unwrap();
+        until(
+            page,
+            &format!("!({FADED})"),
+            3,
+            "focus from code to show the row",
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todos 1379 and 1378: `muted` mutes the element; the speed reads "1×" in a right-to-left page.
 #[test]
 fn muted_mutes_and_the_speed_reads_left_to_right() {

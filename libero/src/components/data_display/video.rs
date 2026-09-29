@@ -62,6 +62,8 @@ const DEFAULT_RATIO: &str = "16 / 9";
 const BAR_VAR: &str = "--libero-video-bar";
 /// Blink and WebKit's box of the captions; Firefox has none to move.
 const CUES: &str = "::-webkit-media-text-track-container";
+/// Light tracks, as YouTube's: the theme's muted one sinks into the scrim.
+const LIGHT_TRACK: &str = "rgba(255, 255, 255, 0.5)";
 
 static VIDEO_SX: StaticSx = StaticSx::new(|| {
     let controls = VideoPart::Controls.selector();
@@ -70,8 +72,7 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
         VideoPart::Media.selector(),
         sx().height("100%").aspect_ratio("auto"),
     );
-    // Light tracks, as YouTube's: the theme's muted one sinks into the scrim.
-    let light_track = sx().background("rgba(255, 255, 255, 0.5)");
+    let light_track = sx().background(LIGHT_TRACK);
     sx().position("relative")
         // A size container has no content width: in a shrink-wrapping parent it collapsed (todo 1369).
         .width("100%")
@@ -458,17 +459,30 @@ pub fn Video(props: VideoProps) -> Element {
             by_key();
         }
     }));
+    // Every press ends here, also one released outside or paused on the way (todo 1418);
+    // a leave without capture comes after the press's own focusin.
+    let released = move |_: Event<PointerData>| {
+        let mut pressing = pressing;
+        if *pressing.peek() {
+            pressing.set(false);
+        }
+    };
+    attributes.extend([
+        listener("onpointerup", released),
+        listener("onpointercancel", released),
+        listener("onpointerleave", move |event: Event<PointerData>| {
+            released(event.clone());
+            // A mouse only: a touch leaves after every tap.
+            if playing && event.pointer_type() == "mouse" {
+                idle_timer.stop();
+                idle.set(true);
+            }
+        }),
+    ]);
     // Only while playing, so a WebView sends no pointer moves across the IPC otherwise.
     if playing {
         attributes.extend([
             listener("onpointermove", move |_: Event<PointerData>| wake()),
-            // A mouse only: a touch leaves after every tap.
-            listener("onpointerleave", move |event: Event<PointerData>| {
-                if event.pointer_type() == "mouse" {
-                    idle_timer.stop();
-                    idle.set(true);
-                }
-            }),
             listener("onpointerdown", move |_: Event<PointerData>| {
                 pressing.set(true);
                 let mut keyboard = keyboard;
@@ -476,9 +490,6 @@ pub fn Video(props: VideoProps) -> Element {
                     keyboard.set(false);
                 }
                 wake();
-            }),
-            listener("onpointerup", move |_: Event<PointerData>| {
-                pressing.set(false)
             }),
             listener("onkeyup", move |_: Event<KeyboardData>| by_key()),
         ]);
@@ -600,5 +611,27 @@ mod tests {
                 VideoPart::Message.slot(),
             ]
         );
+    }
+
+    fn alpha(rgba: &str) -> f32 {
+        rgba.trim_end_matches(')')
+            .rsplit(", ")
+            .next()
+            .unwrap()
+            .parse()
+            .unwrap()
+    }
+
+    /// Over a white frame the scrim keeps the white text at 4.5:1 and the light seek track at 3:1.
+    #[test]
+    fn the_scrim_holds_its_contrast_over_a_white_frame() {
+        use crate::tokens::HexColor;
+        let grey = |level: f32| HexColor::new(level.round() as u32 * 0x01_01_01);
+        let under = 255.0 * (1.0 - alpha(SCRIM));
+        let track = 255.0 * alpha(LIGHT_TRACK) + under * (1.0 - alpha(LIGHT_TRACK));
+        let text = HexColor::new(0xFF_FF_FF).contrast_ratio(grey(under));
+        let track = grey(track).contrast_ratio(grey(under));
+        assert!(text >= 4.5, "the text is {text:.2}:1");
+        assert!(track >= 3.0, "the track is {track:.2}:1");
     }
 }

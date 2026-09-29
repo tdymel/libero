@@ -372,3 +372,13 @@ pub(crate) fn system_notification() -> Option<&'static dyn SystemNotificationApi
     ))]
     return super::backend::webview_system_notification();
 }
+
+/// Raises the desktop WebView's window on a click: its `window.focus()` may not (todo 1424).
+/// Without a `DesktopContext` (Blitz, liveview, tests) it does nothing.
+pub(crate) fn raise_window() {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    if let Some(desktop) = dioxus::prelude::try_consume_context::<dioxus_desktop::DesktopContext>()
+    {
+        desktop.window.set_focus();
+    }
+}

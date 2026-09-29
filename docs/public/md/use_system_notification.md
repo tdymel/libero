@@ -154,8 +154,8 @@ Both handles are `Copy`. `PushOptions` apply to the next `subscribe`.
 | Platform | System notifications | Push |
 |---|---|---|
 | Web | Full, in a secure context. Chrome on Android shows through the page's service worker, which must forward clicks (below). | Full, in a secure context; iOS Safari only for a Home Screen web app. |
-| Linux desktop (WebKitGTK) | With libero's `desktop` feature, the desktop's notification server, always `Granted`; a click runs `on_click` without raising the window. Without it every request is `Denied`. | `Unsupported`. |
-| macOS, Windows desktop | Untested; a click runs `on_click` but may not raise the window. | `Unsupported`. |
+| Linux desktop (WebKitGTK) | With libero's `desktop` feature, the desktop's notification server, always `Granted`; a click raises the window and runs `on_click`. Without it every request is `Denied`. | `Unsupported`. |
+| macOS, Windows desktop | Untested; a click runs `on_click` and, with libero's `desktop` feature, raises the window. | `Unsupported`. |
 | Android (WebView) | Full, through the system's `NotificationManager`, with `notifications` under `[permissions]`; one channel named after the app. `icon` is ignored. | `Unsupported`; FCM needs app-level Kotlin (recipe below). |
 | Blitz on Linux | Full, through the desktop's notification server; always `Granted`. A click runs `on_click` without raising the window. | `Unsupported`. |
 | Blitz on macOS and Windows, server render | `Unsupported`. | `Unsupported`. |
@@ -317,10 +317,11 @@ server, its service account and the sending stay outside libero.
   also after a restart; it cannot tell a dismissed dialog from a refusal.
 - Android ignores `icon` (the launcher icon shows), and a tap on a notification
   from before a restart only opens the app.
-- Blitz and the desktop WebView on Linux cannot raise the window on a click:
-  `on_click` runs, the window stays where it is.
+- Blitz cannot raise the window on a click: `on_click` runs, the window stays
+  where it is.
 - Where only a service worker may show notifications (Chrome on Android),
   `on_click` runs only if the app's worker posts the click back.
 - A click after the page closed runs nothing in the page: only a worker can
   open a tab then.
-- In a desktop WebView, `window.focus()` may not raise the app's window.
+- A desktop WebView raises its window on a click only with libero's `desktop`
+  feature; without it, `window.focus()` may not.

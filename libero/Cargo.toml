@@ -95,6 +95,10 @@ arboard = { version = "3.6", optional = true, default-features = false }
 rfd = { version = "0.17", optional = true, default-features = false, features = ["xdg-portal"] }
 # Turns Blitz's callback-style fetch into a future. Already in dioxus's tree.
 futures-channel = { version = "0.3", optional = true }
+# The `desktop` feature's window handle, to raise it on a notification click (todo 1424).
+# Already in every desktop app's tree, defaults on (dioxus asks for them); without
+# these two it does not build alone. The same crate as Android's entry.
+dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["tokio_runtime", "devtools"], optional = true }
 
 # The desktop portal's accessibility settings, which Blitz's stylo cannot match (todo 954).
 # The lock's copy (tao's).
@@ -123,7 +127,7 @@ archunit = "0.0.1"
 native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cursor-icon", "dep:style", "dep:arboard", "dep:rfd", "dep:futures-channel", "dep:dbus"]
 # The desktop WebView (`dioxus/desktop`) on Linux: WebKitGTK denies the page's
 # `Notification`, so system notifications go over the session bus (todo 1470).
-desktop = ["dep:futures-channel", "dep:dbus"]
+desktop = ["dep:futures-channel", "dep:dbus", "dep:dioxus-desktop"]
 default = [
     "code-lang-rust",
     "code-lang-bash",

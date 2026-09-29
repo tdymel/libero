@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::platform::{
     NotificationEvent, PermissionKind, PermissionState, PermissionSubscription, ShownNotification,
-    SystemNotification, SystemNotificationError, permission, system_notification,
+    SystemNotification, SystemNotificationError, permission, raise_window, system_notification,
 };
 
 /// A notification still on screen, by the id this hook gave it.
@@ -127,6 +127,7 @@ impl SystemNotifier {
         for (id, event) in events {
             match event {
                 NotificationEvent::Click => {
+                    raise_window();
                     let on_click = self
                         .shown
                         .peek()

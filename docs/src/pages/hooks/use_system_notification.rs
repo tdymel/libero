@@ -150,10 +150,10 @@ pub fn UseSystemNotificationPage() -> Element {
                     "A denial is usually permanent for the site: the browser does not ask again, and libero cannot open its settings.",
                     "Android reads Prompt until the first request and Denied after a refusal, also after a restart; it cannot tell a dismissed dialog from a refusal.",
                     "Android ignores icon (the launcher icon shows), and a tap on a notification from before a restart only opens the app.",
-                    "Blitz and the desktop WebView on Linux cannot raise the window on a click: on_click runs, the window stays where it is.",
+                    "Blitz cannot raise the window on a click: on_click runs, the window stays where it is.",
                     "Where only a service worker may show notifications (Chrome on Android), on_click runs only if the app's worker posts the click back, as the sample sw.js does.",
                     "A click after the page closed runs nothing in the page: only a worker can open a tab then.",
-                    "In a desktop WebView, window.focus() may not raise the app's window.",
+                    "A desktop WebView raises its window on a click only with libero's desktop feature; without it, window.focus() may not.",
                 ]),
             lead: rsx! {
                 Text {

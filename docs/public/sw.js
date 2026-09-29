@@ -29,6 +29,8 @@ self.addEventListener('notificationclick', (event) => {
   const url = event.notification.data?.url ?? '/';
   event.waitUntil(
     tell(event.notification, 'click')
+      // A close from here fires no `notificationclose`, so the page forgets it now.
+      .then(() => tell(event.notification, 'close'))
       .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
       .then((tabs) => {
         const tab = tabs.find((client) => 'focus' in client);

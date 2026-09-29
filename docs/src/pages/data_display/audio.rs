@@ -110,13 +110,18 @@ pub fn AudioPage() -> Element {
                     Control::switch("muted"),
                     Control::switch("looping"),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    Audio {
-                        src: crate::site::SAMPLE_AUDIO,
-                        label: "Wikipedia guitar solo",
-                        size: Input::from(Size::from(values.str("size").as_str())),
-                        muted: values.str("muted") == "true",
-                        looping: values.str("looping") == "true",
+                // `muted` only sets the start, so the switch remounts the player (todo 1419).
+                render: move |values: DemoValues| {
+                    let muted = values.str("muted");
+                    rsx! {
+                        Audio {
+                            key: "{muted}",
+                            src: crate::site::SAMPLE_AUDIO,
+                            label: "Wikipedia guitar solo",
+                            size: Input::from(Size::from(values.str("size").as_str())),
+                            muted: muted == "true",
+                            looping: values.str("looping") == "true",
+                        }
                     }
                 },
             }
