@@ -260,6 +260,17 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-drag-handle] svg",
         sx().width("12px").height("12px"),
     )
+    // A 24px press target over the header's start padding (WCAG 2.5.8). Not where
+    // an end-aligned header's menu button sits right after the grip.
+    .selector(
+        "& th:not([data-align=\"end\"][data-menu]) [data-drag-handle]::before",
+        sx().content("\"\"")
+            .position("absolute")
+            .top("0")
+            .bottom("0")
+            .with("inset-inline-start", "0")
+            .width("24px"),
+    )
     // An `:active` style makes Chromium's touch adjustment count the grip as a
     // tap target; without one a touch on it snaps to the sort button (1463).
     .selector(

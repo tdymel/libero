@@ -269,7 +269,7 @@ e2e::scenario!(
     "/table-column-drag",
     two_grip_drags_move_columns,
     native: skip("no column drag grip on Blitz: the column menu moves columns"),
-    android: skip("1463: touch adjustment at times snaps the 12px grip to a header button")
+    android: skip("1463: a touch on an end-aligned header's grip at times snaps to its menu button")
 );
 
 /// Name's grip held at the scroll region's end edge scrolls Origin's end into
