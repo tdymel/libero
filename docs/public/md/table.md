@@ -60,9 +60,10 @@ filters all apply, together with the quick filter. Hold them yourself with
 `column_filters` and `oncolumnfilterschange`.
 
 A date column, one whose value is a `chrono::NaiveDate`, filters with before,
-after, on or before, on or after, and between. Its value field is a date input
-holding an ISO day (`2026-10-03`); Blitz has none, so there it is a text field
-you type the ISO day into. `ColumnFilter::between("Joined", from, to)` sets both
+after, on or before, on or after, and between. Its value field is a `DateField`,
+whose calendar opens inside the filter; on a WebView (desktop, Android) it is the
+native date input. Both hold an ISO day (`2026-10-03`).
+`ColumnFilter::between("Joined", from, to)` sets both
 ends, in `value` and `value_to`: an empty end leaves that side open, and ends
 given the wrong way round are swapped. `filter_logic: FilterLogic::Or` keeps a
 row that passes any one column filter instead of all; the quick filter still

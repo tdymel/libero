@@ -1471,6 +1471,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 row: Rc::new(row_of),
                 key: key_at,
                 focused: row_focus.focused,
+                moves: row_focus.moves,
             })
         }
         None => BodyRows::All(

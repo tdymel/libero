@@ -2,7 +2,8 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Button, Flex, Text},
+    chrono::NaiveDate,
+    components::{Box, Button, ChronoField, Flex, Text},
     hooks::{Align, PopoverOptions, PopoverWidth, Side, use_element, use_popover},
     sx::sx,
     use_theme,
@@ -12,6 +13,7 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/popover", || rsx! { PopoverPage {} }),
+    ("/popover/field", || rsx! { PopoverPage { field: true } }),
     (
         "/popover/place/below",
         || rsx! { PlacedPage { left: "200px", top: "100px" } },
@@ -92,9 +94,11 @@ fn PlacedPage(
 }
 
 /// A click-opened box with a control in it, and plain text beside the
-/// trigger for a press that lands on nothing focusable.
+/// trigger for a press that lands on nothing focusable. `field` adds a
+/// `ChronoField` whose dropdown portals out of the box (todo 1425).
 #[component]
-fn PopoverPage() -> Element {
+fn PopoverPage(#[props(default)] field: bool) -> Element {
+    let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 25));
     let theme = use_theme();
     let mut opened = use_signal(|| false);
     let anchor = use_element();
@@ -116,6 +120,15 @@ fn PopoverPage() -> Element {
                 sx: sx().background("surface").padding("8px").z_index("var(--lsx-z-index-popover)"),
                 Text { id: "box-text", "Popover content" }
                 Button { id: "in-box", "Inside" }
+                if field {
+                    ChronoField {
+                        id: "box-field",
+                        label: "Arrival",
+                        today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                        value: day(),
+                        onchange: move |next| day.set(next),
+                    }
+                }
             }
         }
     }));

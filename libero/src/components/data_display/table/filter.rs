@@ -63,33 +63,43 @@ pub(super) fn query_words(query: &str) -> Vec<String> {
     query.split_whitespace().map(str::to_lowercase).collect()
 }
 
-/// Which of `data`'s rows the quick filter keeps, by index: every word occurs
-/// in the cell text of one of the `searched` columns, ignoring case.
-pub(super) fn quick_filter<T>(
+/// Each row's `searched` cell texts, lowercased and joined by a newline, which
+/// no query word holds, so a word never matches across two cells.
+pub(super) fn searched_texts<T>(
     data: &[T],
     columns: &[Column<T>],
     searched: &[usize],
-    words: &[String],
-) -> Vec<bool> {
+) -> Vec<String> {
     data.iter()
         .map(|row| {
-            let texts: Vec<String> = searched
+            let cells: Vec<String> = searched
                 .iter()
-                .map(|&index| (columns[index].text)(row).to_lowercase())
+                .map(|&index| (columns[index].text)(row))
                 .collect();
-            words
-                .iter()
-                .all(|word| texts.iter().any(|text| text.contains(word.as_str())))
+            cells.join("\n").to_lowercase()
         })
+        .collect()
+}
+
+/// Which rows the quick filter keeps, by index: every word occurs in the row's
+/// [`searched_texts`].
+pub(super) fn quick_filter(texts: &[String], words: &[String]) -> Vec<bool> {
+    texts
+        .iter()
+        .map(|text| words.iter().all(|word| text.contains(word.as_str())))
         .collect()
 }
 
 /// [`quick_filter`] and the column filters across renders: only a change of
 /// rows, columns or filters reruns them, so a sort or page change does not.
+/// The lowercased cell texts outlive a query change, so typing skips them.
 pub(super) struct FilteredRows<T> {
     input: Option<FilterInput<T>>,
     kept: Rc<Vec<bool>>,
+    texts: Option<(TextInput<T>, Vec<String>)>,
 }
+
+type TextInput<T> = (Rc<Vec<T>>, Vec<Column<T>>, Vec<usize>);
 
 type FilterInput<T> = (
     Rc<Vec<T>>,
@@ -105,8 +115,13 @@ impl<T> Default for FilteredRows<T> {
         Self {
             input: None,
             kept: Rc::default(),
+            texts: None,
         }
     }
+}
+
+fn same_rows<T: PartialEq>(cached: &Rc<Vec<T>>, data: &Rc<Vec<T>>) -> bool {
+    Rc::ptr_eq(cached, data) || cached == data
 }
 
 impl<T: PartialEq> FilteredRows<T> {
@@ -121,7 +136,8 @@ impl<T: PartialEq> FilteredRows<T> {
         logic: FilterLogic,
     ) -> Option<Rc<Vec<bool>>> {
         if words.is_empty() && tests.is_empty() {
-            *self = Self::default();
+            self.input = None;
+            self.kept = Rc::default();
             return None;
         }
         let fresh =
@@ -133,10 +149,13 @@ impl<T: PartialEq> FilteredRows<T> {
                         && *joined == logic
                         && cells == searched
                         && cols.as_slice() == columns
-                        && (Rc::ptr_eq(rows, data) || rows == data)
+                        && same_rows(rows, data)
                 });
         if !fresh {
-            let mut kept = quick_filter(data, columns, searched, words);
+            let mut kept = match words.is_empty() {
+                true => vec![true; data.len()],
+                false => quick_filter(self.texts(data, columns, searched), words),
+            };
             if !tests.is_empty() {
                 for (keep, row) in kept.iter_mut().zip(data.iter()) {
                     *keep = *keep && passes_all(row, columns, tests, logic);
@@ -153,6 +172,17 @@ impl<T: PartialEq> FilteredRows<T> {
             ));
         }
         Some(self.kept.clone())
+    }
+
+    fn texts(&mut self, data: &Rc<Vec<T>>, columns: &[Column<T>], searched: &[usize]) -> &[String] {
+        let fresh = self.texts.as_ref().is_some_and(|((rows, cols, cells), _)| {
+            cells == searched && cols.as_slice() == columns && same_rows(rows, data)
+        });
+        if !fresh {
+            let texts = searched_texts(data, columns, searched);
+            self.texts = Some(((data.clone(), columns.to_vec(), searched.to_vec()), texts));
+        }
+        self.texts.as_ref().map_or(&[], |(_, texts)| texts)
     }
 }
 
@@ -195,7 +225,10 @@ mod tests {
     }
 
     fn kept(query: &str, searched: &[usize]) -> Vec<bool> {
-        quick_filter(&USERS, &columns(), searched, &query_words(query))
+        quick_filter(
+            &searched_texts(&USERS, &columns(), searched),
+            &query_words(query),
+        )
     }
 
     #[test]
@@ -213,6 +246,12 @@ mod tests {
     #[test]
     fn every_word_must_match_but_in_any_column() {
         assert_eq!(kept("london ada", &[0, 1, 2]), [true, false, false]);
+    }
+
+    #[test]
+    fn a_word_never_spans_two_cells() {
+        assert_eq!(kept("lacelon", &[0, 1]), [false, false, false]);
+        assert_eq!(kept("lovelace", &[0, 1]), [true, false, false]);
     }
 
     #[test]

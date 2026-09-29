@@ -126,6 +126,36 @@ pub async fn press_with(page: &Page, key: Key, modifiers: i64) -> Result<()> {
     dispatch(page, key, modifiers).await
 }
 
+/// Hold a key down for `presses` presses, the later ones auto-repeats sent back
+/// to back, before the page renders between them, then release it once.
+pub async fn hold(page: &Page, key: Key, modifiers: i64, presses: usize) -> Result<()> {
+    let base = |kind: DispatchKeyEventType| {
+        DispatchKeyEventParams::builder()
+            .r#type(kind)
+            .key(key.key)
+            .code(key.code)
+            .windows_virtual_key_code(key.vk)
+            .native_virtual_key_code(key.vk)
+            .modifiers(modifiers)
+    };
+    for press in 0..presses {
+        page.execute(
+            base(DispatchKeyEventType::RawKeyDown)
+                .auto_repeat(press > 0)
+                .build()
+                .map_err(anyhow::Error::msg)?,
+        )
+        .await?;
+    }
+    page.execute(
+        base(DispatchKeyEventType::KeyUp)
+            .build()
+            .map_err(anyhow::Error::msg)?,
+    )
+    .await?;
+    Ok(())
+}
+
 /// Ctrl+PageUp/PageDown/Tab switch the browser's tab unseen; a later Alt+ArrowLeft
 /// then sends another test's page Back to `about:blank` (todo 597).
 fn switches_tabs(key: Key, modifiers: i64) -> bool {

@@ -663,32 +663,71 @@ e2e::scenario!(
 
 /// 1401: a date header filter keeps the typed day; the menu's Filter set to
 /// Between keeps the days from its From field on, the To field left open.
+/// 1425: a `DateField`, whose calendar counts as inside the filter popover; a
+/// WebView keeps its native date input.
 async fn a_date_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const DUE: &str = "input[aria-label=\"Filter Due\"]";
     const POPOVER: &str = "[data-filter-popover]";
-    // Blitz edits no date input: a text field there.
-    let input = match d.platform() {
-        Platform::Native => "text",
-        _ => "date",
-    };
-    if d.attr(DUE, "type").await?.as_deref() != Some(input) {
-        bail!("the Due header filter is no {input} input");
+    const CALENDAR: &str = "[role=dialog]:not([data-filter-popover])";
+    let webview = matches!(d.platform(), Platform::Android | Platform::Desktop);
+    let native_input = d.attr(DUE, "type").await?.as_deref() == Some("date");
+    if native_input != webview {
+        bail!(
+            "{:?}: the Due header filter's type=date is {native_input}",
+            d.platform()
+        );
     }
-    // Chromium's en-US date input takes month, day, then year; Blitz's the ISO day.
     d.click(DUE).await?;
-    match d.platform() {
-        Platform::Native => d.type_text("2024-03-10").await?,
-        _ => d.type_text("03102024").await?,
+    match native_input {
+        // Chromium's en-US date input takes month, day, then year.
+        true => d.type_text("03102024").await?,
+        false => {
+            d.type_text("March 10, 2024").await?;
+            d.press(keyboard::ENTER).await?;
+            d.press(keyboard::ESCAPE).await?;
+            eventually(
+                d,
+                "Escape to close the header filter's calendar",
+                async |d| Ok(!d.exists(CALENDAR).await?),
+            )
+            .await?;
+        }
     }
     eventually_text(d, "#filters", "Equals 2024-03-10..", "a typed day").await?;
     eventually_text(d, "tbody th", "Grape", "Due on the 10th").await?;
 
-    d.click("[aria-label=\"Due column options\"]").await?;
+    d.focus("[aria-label=\"Due column options\"]").await?;
+    d.press(keyboard::ENTER).await?;
     eventually_focused(d, "[role=menuitem]", "the opened column menu").await?;
     d.press(keyboard::HOME).await?;
     eventually_text(d, "[role=menuitem]:focus", "Filter", "Home").await?;
     d.press(keyboard::ENTER).await?;
     eventually(d, "the opened filter", async |d| d.exists(POPOVER).await).await?;
+    if !native_input {
+        // Into the value field's calendar and back: the popover stays open throughout.
+        let value = format!("{POPOVER} input[data-filter-value]");
+        eventually_focused(d, &value, "the opened filter").await?;
+        d.press(keyboard::ARROW_DOWN).await?;
+        eventually_focused(
+            d,
+            &format!("{CALENDAR} [data-slot=day][tabindex=\"0\"]"),
+            "Arrow Down into the calendar",
+        )
+        .await?;
+        // A close on that focus would land a task later, long before Escape's round trip.
+        d.press(keyboard::ESCAPE).await?;
+        eventually_focused(d, &value, "Escape").await?;
+        eventually(d, "Escape to close the calendar", async |d| {
+            Ok(!d.exists(CALENDAR).await?)
+        })
+        .await?;
+        if !d.exists(POPOVER).await? {
+            bail!(
+                "{:?}: focus in the calendar or its Escape closed the filter",
+                d.platform()
+            );
+        }
+    }
     d.press_shift(keyboard::TAB).await?;
     eventually_focused(d, &format!("{POPOVER} {PICKER}"), "Shift+Tab").await?;
     // Equals, then Does not equal, Before, After, On or before, On or after, Between.
@@ -871,6 +910,75 @@ fn a_windowed_row_keeps_its_node_through_a_sort() {
         fixture
             .console
             .assert_clean("sorting a windowed table")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1420: held Tab and Shift+Tab walk the row checkboxes one by one; the window
+/// never falls behind, so focus never leaves the body.
+#[test]
+fn a_held_tab_walks_a_windowed_body_row_by_row() {
+    block_on(async {
+        let fixture = Fixture::open("/table/windowed", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        const FOCUSED_ROW: &str = "(() => { const row = document.activeElement.closest('tbody tr'); \
+             return row ? row.getAttribute('aria-rowindex') : String(document.activeElement.tagName); })()";
+        wait::for_js_true(
+            page,
+            "(() => { const box = document.querySelector('tr[aria-rowindex=\"2\"] input[type=checkbox]'); \
+             if (!box) return false; box.focus(); return document.activeElement === box; })()",
+            "the first row's checkbox focused",
+        )
+        .await
+        .unwrap();
+        // Bursts of back-to-back presses; after each, the window keeps 10 rows ahead of
+        // the focus, past the default overscan of 4, for the next burst to land in.
+        const BURST: usize = 10;
+        const BURSTS: usize = 6;
+        for (modifiers, step) in [(0, BURST as i64), (keyboard::SHIFT, -(BURST as i64))] {
+            for _ in 0..BURSTS {
+                let from: String = page
+                    .evaluate(FOCUSED_ROW)
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                let expected = from.parse::<i64>().unwrap() + step;
+                keyboard::hold(page, keyboard::TAB, modifiers, BURST)
+                    .await
+                    .unwrap();
+                let at = format!("{FOCUSED_ROW} === '{expected}'");
+                if wait::for_js_true(page, &at, "focus on the expected row")
+                    .await
+                    .is_err()
+                {
+                    let landed: String = page
+                        .evaluate(FOCUSED_ROW)
+                        .await
+                        .unwrap()
+                        .into_value()
+                        .unwrap();
+                    panic!(
+                        "held Tab (modifiers {modifiers}) landed on {landed}, not row {expected}"
+                    );
+                }
+                let caught_up = format!(
+                    "(() => {{ const rows = [...document.querySelectorAll('tbody tr[aria-rowindex]')] \
+                     .map(row => Number(row.getAttribute('aria-rowindex'))); \
+                     return {step} > 0 ? Math.max(...rows) >= {expected} + {step} \
+                     : Math.min(...rows) <= Math.max(2, {expected} + {step}); }})()"
+                );
+                wait::for_js_true(page, &caught_up, "the window caught up with the focus")
+                    .await
+                    .unwrap();
+            }
+        }
+        fixture
+            .console
+            .assert_clean("holding Tab in a windowed table")
             .unwrap();
         fixture.close().await.unwrap();
     });

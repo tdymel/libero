@@ -20,6 +20,11 @@ pub(crate) fn element_contains(outer: &Rc<MountedData>, inner: &Rc<MountedData>)
     backend::element_contains(outer, inner)
 }
 
+/// Whether [`element_contains`] and [`focus_is_in`] answer: not on a WebView.
+pub(crate) const fn reads_dom_synchronously() -> bool {
+    cfg!(any(target_arch = "wasm32", feature = "native"))
+}
+
 /// Focus moves a renderer makes without firing any focus event.
 pub(crate) trait SilentFocusApi {
     /// Calls `callback` after such a move has landed, until the returned

@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
@@ -10,7 +11,7 @@ use crate::{
     components::{
         buttons::Button,
         common::{FOCUSABLE_SELECTOR, Glyph, HtmlTag, Options, attr},
-        form::{NativeSelect, TextField},
+        form::{DateField, NativeSelect, TextField},
         layout::{paper_sx, use_box},
     },
     context::IconSlot,
@@ -19,7 +20,7 @@ use crate::{
         use_theme,
     },
     localization::TableLabels,
-    platform::{ElementApi, edits_date_inputs, when_laid_out},
+    platform::{ElementApi, reads_dom_synchronously, when_laid_out},
     sx::StaticSx,
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -248,20 +249,30 @@ pub(super) fn FilterValue(
         let (from, to) = current.map_or_else(Default::default, |filter| {
             (filter.value.clone(), filter.value_to.clone())
         });
-        // A native date input on the web and Android; Blitz edits none, so a text field there.
-        let (input, placeholder) = match edits_date_inputs() {
-            true => ("date", None),
-            false => ("text", Some("YYYY-MM-DD")),
-        };
         let day = |end: bool, value: String, label: Option<String>, aria_label: Option<String>| {
+            if reads_dom_synchronously() {
+                return rsx! {
+                    DateField {
+                        label,
+                        aria_label,
+                        size,
+                        value: value.parse::<NaiveDate>().ok(),
+                        "data-filter-value": (!end).then_some(true),
+                        onchange: move |day: Option<NaiveDate>| {
+                            // `Display` is ISO 8601, as the native input posts.
+                            onday.call((end, day.map(|day| day.to_string()).unwrap_or_default()));
+                        },
+                    }
+                };
+            }
+            // A WebView cannot count the portaled calendar inside the popover: its native date input then.
             rsx! {
                 TextField {
                     label,
                     aria_label,
                     size,
                     value,
-                    r#type: input,
-                    placeholder: placeholder.map(str::to_string),
+                    r#type: "date",
                     "data-filter-value": (!end).then_some(true),
                     oninput: move |text: String| onday.call((end, text)),
                 }

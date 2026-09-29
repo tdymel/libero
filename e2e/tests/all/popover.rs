@@ -3,7 +3,7 @@
 
 use anyhow::{Result, bail};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, Rect, eventually, linger};
+use e2e::driver::{Driver, Platform, Rect, eventually, eventually_focused, linger};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -207,6 +207,46 @@ e2e::scenario!(
     a_tap_outside_closes_it_and_one_inside_does_not,
     "/popover",
     a_tap_outside_closes
+);
+
+/// Todo 1425: a field's portaled dropdown, opened from inside the box, counts as
+/// inside it: Arrow Down into it keeps the box open, Escape closes one at a time.
+async fn a_field_dropdown_stays_inside<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const FIELD: &str = "#box-field";
+    const DROPDOWN: &str = "[role=dialog]:not(#box)";
+    // The calendar's one tab stop, as Blitz sets no `:focus-within` on a silent move.
+    const ENTERED: &str = "[role=dialog]:not(#box) [data-slot=day][tabindex=\"0\"]";
+    d.click(TRIGGER).await?;
+    shown(d, true, "the box to open").await?;
+    d.click(FIELD).await?;
+    eventually(d, "the field's dropdown", async |d| {
+        d.exists(DROPDOWN).await
+    })
+    .await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_focused(d, ENTERED, "Arrow Down into the dropdown").await?;
+    // A close on that focus would land a task later, long before Escape's round trip.
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to close only the dropdown", async |d| {
+        Ok(!d.exists(DROPDOWN).await? && d.focused_id().await? == "box-field")
+    })
+    .await?;
+    if !d.exists(BOX).await? {
+        bail!(
+            "{:?}: focus in the field's dropdown or its Escape closed the box",
+            d.platform()
+        );
+    }
+    d.press(keyboard::ESCAPE).await?;
+    shown(d, false, "a second Escape to close the box").await
+}
+
+e2e::scenario!(
+    a_field_dropdown_opened_inside_counts_as_inside,
+    "/popover/field",
+    a_field_dropdown_stays_inside,
+    android: skip("1425: no synchronous containment on the WebView"),
+    desktop: skip("1425: no synchronous containment on the WebView")
 );
 
 /// Android's Back closes the box, and the app stays (1289).

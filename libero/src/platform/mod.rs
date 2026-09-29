@@ -82,7 +82,7 @@ pub(crate) use file_dialog::pick_files;
 pub(crate) use focus::{
     FocusMove, SilentFocusApi, SilentFocusSubscription, blur_counts, element_contains,
     focus_entered_from, focus_is_in, focus_lands_in, focus_pressed, focus_selectors, focus_visible,
-    silent_focus,
+    reads_dom_synchronously, silent_focus,
 };
 pub(crate) use form::{lifts_legends, submit_event, submit_listeners};
 pub(crate) use fullscreen::{FullscreenApi, FullscreenSubscription, fullscreen};
@@ -136,8 +136,8 @@ pub(crate) use system_notification::{
 };
 pub use system_notification::{SystemNotification, SystemNotificationError};
 pub(crate) use table::{
-    drags_table_columns, edits_date_inputs, lays_out_captions, moves_table_rows,
-    sticks_table_heads, widens_sized_tables,
+    drags_table_columns, lays_out_captions, moves_table_rows, sticks_table_heads,
+    widens_sized_tables,
 };
 pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};

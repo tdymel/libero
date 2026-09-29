@@ -761,9 +761,11 @@ pub fn TablePage() -> Element {
                     "A date column, one whose value is a "
                     Code { source: "chrono::NaiveDate" }
                     ", filters with before, after, on or before, on or after, and between. Its "
-                    "value field is a date input holding an ISO day ("
+                    "value field is a "
+                    Code { source: "DateField" }
+                    ", whose calendar opens inside the filter; on a WebView (desktop, Android) it is the native date input. Both hold an ISO day ("
                     Code { source: "2026-10-03" }
-                    "); Blitz has none, so there it is a text field you type the ISO day into. "
+                    "). "
                     Code { source: "ColumnFilter::between(\"Joined\", from, to)" }
                     " sets both ends, in "
                     Code { source: "value" }

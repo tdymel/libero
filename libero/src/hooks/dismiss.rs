@@ -15,7 +15,7 @@ use dioxus::prelude::*;
 use crate::{
     hooks::{
         ElementHandle, FocusChange, FocusReturn, FocusWithin, focus_return::use_focus_return,
-        use_focus_within,
+        popover::focus_in_popup_of, use_focus_within,
     },
     platform::{
         ElementApi, KeySubscription, PRESS_MARKER_ATTR, PlatformError, PressSubscription,
@@ -382,6 +382,7 @@ impl DismissHandle {
         match change.in_group {
             _ if change.within => {}
             Some(true) => {}
+            Some(false) if self.focus_in_owned_popup() => {}
             // Landed already, heard at `Outlet`'s flush: recorded for the
             // effect in `use_dismiss`, as Escape is.
             Some(false) => {
@@ -419,6 +420,9 @@ impl DismissHandle {
     /// `None` when a mounted element cannot answer and none said yes. Asks
     /// `:focus` for a descendant and `is_focused()` for the element itself.
     fn focus_inside(&self) -> Option<bool> {
+        if self.focus_in_owned_popup() {
+            return Some(true);
+        }
         let inside = self.inside.peek();
         let elements = [&self.anchor, &self.floating]
             .into_iter()
@@ -434,6 +438,14 @@ impl DismissHandle {
                 Err(_) => Some(false),
             }
         }))
+    }
+
+    /// Whether focus is in a popup opened from inside the box, a field's portaled
+    /// dropdown say, following the portal-owner chain. Never on a WebView.
+    fn focus_in_owned_popup(&self) -> bool {
+        self.floating
+            .mounted()
+            .is_some_and(|floating| focus_in_popup_of(&floating))
     }
 
     /// Asks the consumer to close a task later (a synchronous close panics), then

@@ -302,10 +302,6 @@ pub(crate) const STICKS_TABLE_HEADS: bool =
 pub(crate) const MOVES_TABLE_ROWS: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
-/// Blitz edits no `<input type=date>`; see [`edits_date_inputs`](crate::platform::edits_date_inputs).
-pub(crate) const EDITS_DATE_INPUTS: bool =
-    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
-
 /// Blitz's header grip drags are unreliable; see [`drags_table_columns`](crate::platform::drags_table_columns).
 pub(crate) const DRAGS_TABLE_COLUMNS: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));

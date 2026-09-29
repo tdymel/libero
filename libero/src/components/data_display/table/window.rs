@@ -6,10 +6,14 @@ use super::core::{HeaderSpec, RowSpec, body_rows};
 use crate::{
     components::{common::attr, layout::Virtualize},
     hooks::{ElementHandle, listener, use_silent_focus_within},
-    platform::ElementApi,
+    platform::{ElementApi, next_task},
     sx::{Sx, sx},
     theme::CssVar,
 };
+
+/// Rows kept beyond each edge while a row holds focus: a held Tab outruns the
+/// scroll's re-render by a few rows, and must find the next one there (todo 1420).
+const FOCUSED_OVERSCAN: usize = 24;
 
 /// Every row's height in a windowed body.
 pub(super) const TABLE_ROW_HEIGHT_VAR: CssVar = CssVar::new("--lsx-table-row-height");
@@ -40,12 +44,15 @@ pub(super) struct RowWindow {
     pub key: Rc<dyn Fn(usize) -> String>,
     /// The `data` index of the row holding focus, kept rendered out of view.
     pub focused: Signal<Option<usize>>,
+    pub moves: CopyValue<u64>,
 }
 
 /// The row holding focus in a windowed body, by `data` index.
 #[derive(Clone, Copy)]
 pub(super) struct RowFocus {
     pub focused: Signal<Option<usize>>,
+    /// Bumped by each row `focusin`: a `focusout` clears `focused` only if none followed.
+    pub moves: CopyValue<u64>,
     /// The header rows and the shown rows' `data` indices, as last rendered.
     shown: CopyValue<(usize, Rc<[usize]>)>,
     /// The table, on Blitz only: its Tab and `focus()` fire no `focusin`.
@@ -55,6 +62,7 @@ pub(super) struct RowFocus {
 pub(super) fn use_row_focus() -> RowFocus {
     let focused = use_signal(|| None::<usize>);
     let shown = use_hook(|| CopyValue::new((0, Rc::<[usize]>::from([]))));
+    let moves = use_hook(|| CopyValue::new(0u64));
     let table = use_silent_focus_within(move |table, inside| {
         let at = inside.then(|| focused_row(&table, &shown.peek())).flatten();
         let mut focused = focused;
@@ -64,6 +72,7 @@ pub(super) fn use_row_focus() -> RowFocus {
     });
     RowFocus {
         focused,
+        moves,
         shown,
         table,
     }
@@ -123,6 +132,7 @@ pub(super) fn render_window(
         row,
         key,
         mut focused,
+        mut moves,
     } = window;
     let keep_rendered = focused().and_then(|index| order.iter().position(|&at| at == index));
     let keyed = order.clone();
@@ -130,18 +140,28 @@ pub(super) fn render_window(
         Virtualize {
             count: order.len(),
             item_size: row_height,
+            overscan: keep_rendered.map(|_| FOCUSED_OVERSCAN),
             keep_rendered,
             item_key: move |position: usize| key(keyed[position]),
             item: move |position: usize| {
                 let index = order[position];
                 let mut spec = row(position, index);
                 spec.attributes.push(listener("onfocusin", move |_: Event<FocusData>| {
-                    focused.set(Some(index));
-                }));
-                spec.attributes.push(listener("onfocusout", move |_: Event<FocusData>| {
-                    if focused.peek().is_some_and(|at| at == index) {
-                        focused.set(None);
+                    *moves.write() += 1;
+                    if *focused.peek() != Some(index) {
+                        focused.set(Some(index));
                     }
+                }));
+                // A task later: Tab to the next row is no moment without a focused row,
+                // whose shrunk overscan would drop the rows above it and jump the scroll.
+                spec.attributes.push(listener("onfocusout", move |_: Event<FocusData>| {
+                    let left = *moves.peek();
+                    spawn(async move {
+                        next_task().await;
+                        if *moves.peek() == left && *focused.peek() == Some(index) {
+                            focused.set(None);
+                        }
+                    });
                 }));
                 spec.attributes.push(attr("aria-rowindex", (head_rows + position + 1).to_string()));
                 body_rows(spec, &headers, 0, None)
