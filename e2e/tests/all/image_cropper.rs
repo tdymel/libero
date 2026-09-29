@@ -494,13 +494,27 @@ async fn the_keys_pan_and_zoom<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     d.press(PLUS).await?;
     eventually_text(d, "#crop", "32,14,36,73", "+").await?;
     eventually(d, "the box to speak the zoom", async |d| {
-        Ok(d.attr(BOX, "aria-valuetext").await?.as_deref() == Some("Zoom 110%, at 32%, 14%"))
+        Ok(d.attr(BOX, "aria-valuetext").await?.as_deref()
+            == Some("36% by 73%, at 32%, 14%, zoom 110%"))
     })
     .await?;
+    let (root, image) = (
+        d.rect("#cropper").await?,
+        d.rect("[data-slot=image]").await?,
+    );
+    anyhow::ensure!(
+        (image.width / root.width - 1.1).abs() < 0.02,
+        "the image did not zoom: {} of {}",
+        image.width,
+        root.width
+    );
     d.press(MINUS).await?;
     eventually_text(d, "#crop", "30,10,40,80", "-").await?;
     d.press(keyboard::ARROW_RIGHT).await?;
-    eventually_text(d, "#crop", "31,10,40,80", "ArrowRight").await
+    eventually_text(d, "#crop", "31,10,40,80", "ArrowRight").await?;
+    // The image dragged a tenth of the cropper right: the crop a tenth left.
+    d.drag("[data-slot=frame]", root.width / 10.0, 0.0).await?;
+    eventually_text(d, "#crop", "21,10,40,80", "a drag").await
 }
 
 e2e::scenario!(

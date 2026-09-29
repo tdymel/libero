@@ -100,7 +100,7 @@ pub fn ImageCropperPage() -> Element {
                     "Each handle is a 24px target around a 12px square.",
                     "A drag focuses the box or the corner it grabbed, so the keys carry on from there.",
                     "On a touch screen a finger on the box drags it without scrolling the page; a touch on the image outside it still scrolls. Two fingers on the box pinch it larger or smaller around its centre.",
-                    "With `pan` the whole cropper takes touches: one finger pans the image, two zoom it around their midpoint. The box is spoken as \"Zoom 100%, at 10%, 10%\".",
+                    "With `pan` the whole cropper takes touches: one finger pans the image, two zoom it around their midpoint. Its value adds the zoom: \"40% by 80%, at 30%, 10%, zoom 100%\".",
                     "With an `aspect`, a corner key resizes both sides together.",
                     "The box and the corners describe their keys.",
                 ])
@@ -112,7 +112,6 @@ pub fn ImageCropperPage() -> Element {
                     "The edge handles are pointer-only: the corners reach every size.",
                     "A screen reader hears where the box is, not what it shows.",
                     "Under Blitz a `FileField` with `crop` keeps the whole file: the rect still reaches `oncrop`.",
-                    "Under Blitz `pan` may not draw the moved image; the keys still move and zoom the crop.",
                 ]),
             lead: rsx! {
                 Text {

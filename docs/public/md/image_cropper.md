@@ -124,7 +124,8 @@ explains how parts work.
   touch on the image outside it still scrolls. Two fingers on the box pinch it
   larger or smaller around its centre.
 - With `pan` the whole cropper takes touches: one finger pans the image, two
-  zoom it around their midpoint. The box is spoken as "Zoom 100%, at 10%, 10%".
+  zoom it around their midpoint. Its value adds the zoom: "40% by 80%, at 30%,
+  10%, zoom 100%".
 - With an `aspect`, a corner key resizes both sides together.
 - The box and the corners describe their keys.
 
@@ -139,8 +140,6 @@ explains how parts work.
 - A screen reader hears where the box is, not what it shows.
 - Under Blitz a `FileField` with `crop` keeps the whole file: the rect still
   reaches `oncrop`.
-- Under Blitz `pan` may not draw the moved image; the keys still move and zoom
-  the crop.
 
 ## Localization
 
@@ -148,8 +147,8 @@ explains how parts work.
 (`keys`), the corner names, and the crop dialog's `title`, `apply` and
 `cancel`. `value` is the spoken box, with the holes `{width}`, `{height}`, `{x}`
 and `{y}` in percent: "{width}% by {height}%, at {x}%, {y}%" in English. With
-`pan`, `pan_keys` and `pan_value` take their place; `pan_value` has `{zoom}`, in
-percent of the starting zoom, `{x}` and `{y}`: "Zoom {zoom}%, at {x}%, {y}%".
+`pan`, `pan_keys` and `pan_value` take their place; `pan_value` adds `{zoom}`, in
+percent of the starting zoom: "{width}% by {height}%, at {x}%, {y}%, zoom {zoom}%".
 
 ## CSS variables
 

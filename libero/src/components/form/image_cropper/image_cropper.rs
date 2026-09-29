@@ -658,6 +658,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             words.pan_value,
             &[
                 ("zoom", &percent(scale)),
+                ("width", &percent(shown.width)),
+                ("height", &percent(shown.height)),
                 ("x", &percent(shown.x)),
                 ("y", &percent(shown.y)),
             ],
