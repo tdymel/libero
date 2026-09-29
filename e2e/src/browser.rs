@@ -11,6 +11,7 @@ use chromiumoxide::cdp::browser_protocol::emulation::{
 use chromiumoxide::cdp::browser_protocol::page::{
     CaptureScreenshotFormat, CaptureScreenshotParams,
 };
+use chromiumoxide::cdp::browser_protocol::target::SetAutoAttachParams;
 use chromiumoxide::{Browser, BrowserConfig, Page};
 use futures::StreamExt;
 use tokio::runtime::Runtime;
@@ -329,6 +330,19 @@ impl Fixture {
         page.execute(SetFocusEmulationEnabledParams::new(true))
             .await
             .context("emulate a focused page")?;
+
+        // chromiumoxide auto-attaches with waitForDebuggerOnStart: a new service worker in
+        // this origin then waits until every open page resumes it, which can be never (todo 1354).
+        page.execute(
+            SetAutoAttachParams::builder()
+                .auto_attach(true)
+                .wait_for_debugger_on_start(false)
+                .flatten(true)
+                .build()
+                .map_err(anyhow::Error::msg)?,
+        )
+        .await
+        .context("auto-attach without pausing new workers")?;
 
         if scheme == Scheme::Dark {
             emulate_media(&page, scheme, None)

@@ -188,14 +188,12 @@ fn the_web_shows_closes_and_reports_a_denial() {
             .then((r) => r.getNotifications())
             .then((shown) => shown.find((one) => one.data?.libero)?.data.libero ?? '')";
         let expression = format!("{latest}.then((token) => token !== '')");
-        // Polling `getNotifications` at once never sees it in headless Chromium (cause unknown).
-        page.evaluate("new Promise((done) => setTimeout(done, 1000))")
-            .await
-            .unwrap();
+        // The earlier denial clears once `showNotification` resolved. Polling
+        // `getNotifications` before that starves the show under load (todo 1354).
+        reads(page, "#error", "None").await.unwrap();
         wait::for_js_true(page, &expression, "the worker's notification")
             .await
             .unwrap();
-        reads(page, "#error", "None").await.unwrap();
 
         // What the sample `sw.js` posts on a click.
         let post = |libero: &str| {

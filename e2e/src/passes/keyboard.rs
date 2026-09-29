@@ -173,17 +173,35 @@ async fn dispatch(page: &Page, key: Key, modifiers: i64) -> Result<()> {
     Ok(())
 }
 
-/// Type text one character at a time, as a user would.
+/// Type text one character at a time, as a user would: a `keydown` (which inserts the
+/// text) and a `keyup` per character, so keydown handlers such as typeahead see it (todo 1405).
 pub async fn type_text(page: &Page, text: &str) -> Result<()> {
     for ch in text.chars() {
-        page.execute(
-            DispatchKeyEventParams::builder()
-                .r#type(DispatchKeyEventType::Char)
-                .text(ch.to_string())
-                .build()
-                .map_err(anyhow::Error::msg)?,
-        )
-        .await?;
+        let key = ch.to_string();
+        let code = match ch {
+            'a'..='z' | 'A'..='Z' => Some((
+                format!("Key{}", ch.to_ascii_uppercase()),
+                ch.to_ascii_uppercase() as i64,
+            )),
+            '0'..='9' => Some((format!("Digit{ch}"), ch as i64)),
+            _ => None,
+        };
+        let event = |kind: DispatchKeyEventType| {
+            let down = kind == DispatchKeyEventType::KeyDown;
+            let mut b = DispatchKeyEventParams::builder().r#type(kind).key(&key);
+            if let Some((code, vk)) = &code {
+                b = b
+                    .code(code)
+                    .windows_virtual_key_code(*vk)
+                    .native_virtual_key_code(*vk);
+            }
+            if down {
+                b = b.text(&key);
+            }
+            b.build().map_err(anyhow::Error::msg)
+        };
+        page.execute(event(DispatchKeyEventType::KeyDown)?).await?;
+        page.execute(event(DispatchKeyEventType::KeyUp)?).await?;
     }
     Ok(())
 }

@@ -139,17 +139,30 @@ mod web {
             let listener = Rc::new(StatusListener::default());
             let held = listener.clone();
             wasm_bindgen_futures::spawn_local(async move {
-                let Some(status) = status(kind).await else {
+                let Some(listened) = status(kind).await else {
                     return callback(PermissionState::Unknown);
                 };
                 if held.stopped.get() {
                     return;
                 }
-                callback(state_of(&status));
-                let read = status.clone();
-                let change = Closure::<dyn Fn()>::new(move || callback(state_of(&read)));
-                let _ = Reflect::set(&status, &"onchange".into(), change.as_ref());
-                held.status.replace(Some((status, change)));
+                let last = Rc::new(Cell::new(state_of(&listened)));
+                callback(last.get());
+                let report = Rc::new(move |state: PermissionState| {
+                    if last.replace(state) != state {
+                        callback(state);
+                    }
+                });
+                let read = listened.clone();
+                let on_change = report.clone();
+                let change = Closure::<dyn Fn()>::new(move || on_change(state_of(&read)));
+                let _ = Reflect::set(&listened, &"onchange".into(), change.as_ref());
+                held.status.replace(Some((listened, change)));
+                // A change between the query and the listener fires no event; a second
+                // query, sent after the listener, sees it.
+                let again = status(kind).await;
+                if let Some(again) = again.filter(|_| !held.stopped.get()) {
+                    report(state_of(&again));
+                }
             });
             Box::new(WebPermissionListener(listener))
         }

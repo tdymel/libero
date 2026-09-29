@@ -80,6 +80,27 @@ async fn enter_opens_and_escape_closes<D: Driver>(d: &mut D, _route: &str) -> Re
     eventually_focused(d, TRIGGER, "Escape").await
 }
 
+/// APG typeahead: a typed letter moves focus to the next item it starts (todo 1405).
+async fn a_typed_letter_moves_to_its_item<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.press(keyboard::ENTER).await?;
+    expanded(d, true).await?;
+    eventually_focused(
+        d,
+        "[role=menu] [data-menu-index=\"0\"]",
+        "Enter on the trigger",
+    )
+    .await?;
+    d.type_text("s").await?;
+    eventually_focused(d, "[role=menu] [data-menu-index=\"1\"]", "s to Save").await
+}
+
+e2e::scenario!(
+    a_typed_letter_moves_focus_to_the_item_it_starts,
+    "/menu-keep-open",
+    a_typed_letter_moves_to_its_item
+);
+
 /// A click outside closes it and leaves focus where the click put it.
 async fn a_click_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(TRIGGER).await?;
