@@ -60,7 +60,7 @@ Pass the handle to `Audio { media }` to drive the built-in player from outside.
 | `autoplay` | `bool` | `false` | Starts on load. Browsers refuse it with sound: pair it with `muted`; a debug build warns otherwise. |
 | `muted` | `bool` | `false` | Starts muted. |
 | `looping` | `bool` | `false` | Starts again at the end. |
-| `preload` | `MediaPreload` | `metadata` | How much loads before a press: `none`, `metadata` or `auto`. |
+| `preload` | `MediaPreload` | `metadata` | How much loads before a press: `none`, `metadata` or `auto`. Unless `none`, the whole file is fetched once to draw the bars. |
 | `size` | `Size` | theme | Of the buttons and the seek slider. |
 | `onplay` | `EventHandler<()>` | `None` | Playing started. |
 | `onpause` | `EventHandler<()>` | `None` | Playing paused. |
@@ -115,8 +115,8 @@ explains how parts work.
   chevron beside it, named "Volume", opens a `dialog` holding the volume slider
   and focuses it; moving the volume up unmutes.
 - The seek track is a row of bars, the played ones filled, under a slider that
-  keeps the keys, the press and the drag. The bars are drawn from the file's
-  URL, not decoded from the sound, and are hidden from screen readers.
+  keeps the keys, the press and the drag. The bars follow the sound's
+  loudness, decoded from the file, and are hidden from screen readers.
 - The row never wraps: the seek track shrinks first, then the time goes, then
   the buttons shrink, to 24px at the least (WCAG 2.5.8): every control stays at
   320px and 200% zoom (WCAG 1.4.10).
@@ -138,3 +138,5 @@ explains how parts work.
   to the file.
 - On a WebView each command and state change crosses the IPC, so the time
   trails by a moment.
+- The bars need the file readable by the page: a file on another origin
+  without CORS, or `preload: none`, keeps placeholder bars drawn from the URL.

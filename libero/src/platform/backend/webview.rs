@@ -43,6 +43,7 @@ use crate::platform::{
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
     media::{MEDIA_EVENTS, MediaApi, MediaState, MediaSubscription},
     permission::{PermissionApi, PermissionKind, PermissionState, PermissionSubscription},
+    waveform::{PEAKS_SCRIPT, Peaks, WaveformApi},
 };
 use crate::tokens::{
     AccessibilityPreferences, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting, Contrast,
@@ -89,6 +90,10 @@ pub(crate) fn file_dialog() -> Option<&'static dyn FileDialogApi> {
 
 pub(crate) fn image_crop() -> Option<&'static dyn ImageCropApi> {
     runs_scripts().then_some(&IMAGE_CROP as &'static dyn ImageCropApi)
+}
+
+pub(crate) fn waveform() -> Option<&'static dyn WaveformApi> {
+    runs_scripts().then_some(&WAVEFORM as &'static dyn WaveformApi)
 }
 
 struct WebViewDocument;
@@ -1183,6 +1188,28 @@ impl ImageCropApi for WebViewImageCrop {
                 decode_base64(&encoded)?,
             ))
         })
+    }
+}
+
+struct WebViewWaveform;
+
+static WAVEFORM: WebViewWaveform = WebViewWaveform;
+
+impl WaveformApi for WebViewWaveform {
+    fn peaks(&self, src: &str, bars: usize) -> Peaks {
+        let script = eval_with(
+            json!([src, bars]),
+            &format!(
+                "{PEAKS_SCRIPT}
+                const [src, bars] = data;
+                try {{
+                    return await peaks(src, bars);
+                }} catch (error) {{
+                    return null;
+                }}"
+            ),
+        );
+        Box::pin(async move { script.join::<Option<Vec<f64>>>().await.ok().flatten() })
     }
 }
 

@@ -111,6 +111,24 @@ fn the_controls_fit_a_narrow_player() {
     });
 }
 
+/// Todo 1377: the bars follow the decoded sound. Silence decodes flat, which
+/// the bars drawn from the URL never are.
+#[test]
+fn the_bars_follow_the_decoded_sound() {
+    block_on(async {
+        let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "(() => { const bars = [...document.querySelectorAll('#player [data-slot=bars] > span')];
+             return bars.length === 28 && bars.every((bar) => bar.style.height === '20%'); })()",
+            "every bar of the silent file at its floor",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Shift and the key that types `?` on a German layout, ß's.
 const QUESTION_DE: Key = Key {
     key: "?",

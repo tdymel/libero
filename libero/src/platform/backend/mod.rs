@@ -51,6 +51,8 @@ pub(crate) use webview::permission as webview_permission;
     not(feature = "native")
 ))]
 pub(crate) use webview::system_notification as webview_system_notification;
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+pub(crate) use webview::waveform as webview_waveform;
 #[cfg(all(target_os = "linux", feature = "desktop", not(feature = "native")))]
 pub(crate) use webview::wry_page;
 

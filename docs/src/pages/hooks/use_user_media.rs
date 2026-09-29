@@ -7,6 +7,7 @@ use libero::{
         MediaDevice, UserMedia, UserMediaError, UserMediaOptions, use_user_media,
         use_user_media_devices,
     },
+    sx::sx,
     utils::data_url,
 };
 
@@ -36,7 +37,8 @@ let cameras: Vec<MediaDevice> = devices.cameras().into_iter().filter(|c| !c.id.i
 let ids: Vec<String> = cameras.iter().map(|c| c.id.clone()).collect();
 
 rsx! {{
-    Flex {{ direction: "column", gap: "sm",
+    // A recording's `Video` is 40rem wide unsized: the cap keeps it, and the photo, in a phone's width.
+    Flex {{ direction: "column", gap: "sm", sx: sx().max_width("100%"),
         if {camera} {{
             video {{
                 aria_label: "Camera preview",
@@ -169,7 +171,7 @@ fn CaptureBooth(camera: bool, microphone: bool) -> Element {
     let ids: Vec<String> = cameras.iter().map(|c| c.id.clone()).collect();
 
     rsx! {
-        Flex { direction: "column", gap: "sm",
+        Flex { direction: "column", gap: "sm", sx: sx().max_width("100%"),
             if camera {
                 video {
                     aria_label: "Camera preview",

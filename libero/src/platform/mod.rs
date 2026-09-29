@@ -44,6 +44,7 @@ mod table;
 mod task;
 mod timer;
 mod transition;
+mod waveform;
 
 pub(crate) use a11y_media::{
     A11yAnswers, A11yMediaApi, a11y_media, answer_a11y_media, answers_a11y_media,
@@ -141,3 +142,4 @@ pub(crate) use table::{
 pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};
 pub(crate) use transition::transition_property;
+pub(crate) use waveform::waveform;

@@ -16,6 +16,7 @@ use crate::{
     context::IconSlot,
     hooks::{MediaError, MediaHandle, use_formats, use_localization, use_media},
     localization::fill,
+    platform::waveform,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{BUTTON_FONT_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, ICON_SIZE, Size, SizeCss},
     utils::warn,
@@ -114,7 +115,7 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
                 // Half the bars where the track is short, or they run together.
                 .selector(
                     "& > span:nth-child(even)",
-                    sx().container_query(AUDIO_CONTAINER, NARROWEST, sx().display("none")),
+                    sx().container_query(AUDIO_CONTAINER, NARROW, sx().display("none")),
                 ),
         )
         .selector(
@@ -322,6 +323,12 @@ pub fn Audio(props: AudioProps) -> Element {
     attributes.extend(player.attributes());
 
     use_source_reload(media, &props.src, &props.sources);
+    // `preload: None` promises no fetch before a press, so it keeps the drawn bars.
+    let decoded = use_waveform(
+        &props.src,
+        props.preload != MediaPreload::None && !unsupported,
+    );
+    let heights = decoded.unwrap_or_else(|| bar_heights(&props.src));
     let (src, sources) = media_sources(&props.src, &props.sources);
     let body = rsx! {
         audio {
@@ -340,7 +347,7 @@ pub fn Audio(props: AudioProps) -> Element {
         if unsupported {
             MediaFallback { src: props.src.clone(), children: props.children }
         } else {
-            AudioControls { media, sound, size: props.size.clone(), heights: bar_heights(&props.src) }
+            AudioControls { media, sound, size: props.size.clone(), heights }
         }
     };
 
@@ -413,7 +420,46 @@ fn AudioBars(media: MediaHandle, heights: [f64; BARS]) -> Element {
     }
 }
 
-/// Heights from 0.2 to 1, drawn from `src`: nothing is decoded, and a file
+/// The bars' heights decoded from `src` once it answers; `None` until then, or
+/// where it fails (a cross-origin file without CORS, no Web Audio, Blitz).
+fn use_waveform(src: &str, decode: bool) -> Option<[f64; BARS]> {
+    let mut decoded = use_signal(|| None::<(String, [f64; BARS])>);
+    let src = src.to_string();
+    use_effect(use_reactive!(|src, decode| {
+        let Some(api) = waveform().filter(|_| decode) else {
+            return;
+        };
+        // Started here, not in the task: a WebView's eval needs the calling scope.
+        let peaks = api.peaks(&src, BARS);
+        spawn(async move {
+            if let Some(heights) = peaks.await.as_deref().and_then(scaled_heights) {
+                decoded.set(Some((src, heights)));
+            }
+        });
+    }));
+    let decoded = decoded.read();
+    decoded
+        .as_ref()
+        .filter(|(of, _)| *of == src)
+        .map(|(_, heights)| *heights)
+}
+
+/// Loudness per bar as heights from 0.2 to 1, the loudest full; silence stays at 0.2.
+fn scaled_heights(peaks: &[f64]) -> Option<[f64; BARS]> {
+    if peaks.len() != BARS || peaks.iter().any(|peak| !peak.is_finite()) {
+        return None;
+    }
+    let loudest = peaks.iter().copied().fold(0.0, f64::max);
+    Some(std::array::from_fn(|index| {
+        if loudest > 0.0 {
+            0.2 + 0.8 * peaks[index] / loudest
+        } else {
+            0.2
+        }
+    }))
+}
+
+/// Heights from 0.2 to 1, drawn from `src` until the decode answers: a file
 /// looks the same each time.
 fn bar_heights(src: &str) -> [f64; BARS] {
     // FNV-1a seeds an xorshift; neighbours blend in lightly so it reads as a waveform.
@@ -521,6 +567,18 @@ mod tests {
         assert_eq!(heights, bar_heights("/voice.ogg"));
         assert_ne!(heights, bar_heights("/other.ogg"));
         assert!(heights.iter().all(|height| (0.2..=1.0).contains(height)));
+    }
+
+    #[test]
+    fn decoded_peaks_scale_to_the_loudest() {
+        let mut peaks = [0.25; BARS];
+        peaks[3] = 0.5;
+        let heights = scaled_heights(&peaks).unwrap();
+        assert_eq!(heights[3], 1.0);
+        assert!((heights[0] - 0.6).abs() < 1e-9);
+        assert_eq!(scaled_heights(&[0.0; BARS]), Some([0.2; BARS]));
+        assert_eq!(scaled_heights(&[0.5; 3]), None);
+        assert_eq!(scaled_heights(&[f64::NAN; BARS]), None);
     }
 
     #[test]
