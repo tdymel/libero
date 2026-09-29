@@ -18,6 +18,11 @@ use serde_json::{Value, json};
 use crate::platform::a11y_media::{
     A11yMediaSubscription, REDUCED_MOTION_STORAGE_KEY, kept_reduced_motion, parse_reduced_motion,
 };
+#[cfg(not(target_os = "android"))]
+use crate::platform::system_notification::{
+    Answer, NOTIFICATION_SCRIPT, NotificationEvent, Shown, ShownNotification, SystemNotification,
+    SystemNotificationApi, SystemNotificationError, options_of, permission_of,
+};
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
     DocumentApi, ElementApi, FocusStep, INTERSECT_ATTR, KeyChord, KeySubscription, KeyboardApi,
@@ -38,11 +43,6 @@ use crate::platform::{
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
     media::{MEDIA_EVENTS, MediaApi, MediaState, MediaSubscription},
     permission::{PermissionApi, PermissionKind, PermissionState, PermissionSubscription},
-    system_notification::{
-        Answer, NOTIFICATION_SCRIPT, NotificationEvent, Shown, ShownNotification,
-        SystemNotification, SystemNotificationApi, SystemNotificationError, options_of,
-        permission_of,
-    },
 };
 use crate::tokens::{
     AccessibilityPreferences, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting, Contrast,
@@ -983,14 +983,19 @@ impl CaptureSession for WebViewCaptureSession {
 
 impl CaptureSubscription for WebViewListener {}
 
+/// Android has its own, over JNI (`platform::system_notification`).
+#[cfg(not(target_os = "android"))]
 pub(crate) fn system_notification() -> Option<&'static dyn SystemNotificationApi> {
     runs_scripts().then_some(&SYSTEM_NOTIFICATION as &'static dyn SystemNotificationApi)
 }
 
+#[cfg(not(target_os = "android"))]
 struct WebViewSystemNotification;
 
+#[cfg(not(target_os = "android"))]
 static SYSTEM_NOTIFICATION: WebViewSystemNotification = WebViewSystemNotification;
 
+#[cfg(not(target_os = "android"))]
 impl SystemNotificationApi for WebViewSystemNotification {
     fn probe(&self) -> Answer<Option<PermissionState>> {
         let read = eval(&format!("{NOTIFICATION_SCRIPT}\nreturn probe();"));
@@ -1062,17 +1067,20 @@ impl SystemNotificationApi for WebViewSystemNotification {
 }
 
 /// Dropping the slot ends the parked script, which detaches the handlers.
+#[cfg(not(target_os = "android"))]
 struct WebViewShown {
     task: Task,
     slot: Slot,
 }
 
+#[cfg(not(target_os = "android"))]
 impl ShownNotification for WebViewShown {
     fn close(&self) {
         self.slot.call("close", Value::Null);
     }
 }
 
+#[cfg(not(target_os = "android"))]
 impl Drop for WebViewShown {
     fn drop(&mut self) {
         self.task.cancel();

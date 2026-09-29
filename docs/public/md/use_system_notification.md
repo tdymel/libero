@@ -24,8 +24,12 @@ anywhere in the repo, so nothing ever pushes to it. A sample worker is
 Web: a secure context (HTTPS or localhost). Desktop WebViews: system
 notifications go through the page's `Notification` where the WebView has one
 (Linux WebKitGTK denies, macOS and Windows are untested); push is web only.
-Android, Blitz and a server render: `is_supported()` stays false and calls
-fail with `Unsupported`.
+Android: the system's notifications over JNI, after
+`notifications = { description = ".." }` under `[permissions]` in the app's
+`Dioxus.toml`; a tap reopens the app and runs `on_click`. Blitz on Linux: the
+desktop's notification server over D-Bus, no permission to ask. Blitz on macOS
+and Windows, and a server render: `is_supported()` stays false and calls fail
+with `Unsupported`.
 
 ## Usage
 
@@ -150,8 +154,9 @@ Both handles are `Copy`. `PushOptions` apply to the next `subscribe`.
 | Web | Full, in a secure context. Chrome on Android shows through the page's service worker, which must forward clicks (below). | Full, in a secure context; iOS Safari only for a Home Screen web app. |
 | Linux desktop (WebKitGTK) | Every request is `Denied`. | `Unsupported`. |
 | macOS, Windows desktop | Untested; a click runs `on_click` but may not raise the window. | `Unsupported`. |
-| Android (WebView) | `Unsupported`: the WebView has no Notifications API. Native notifications and FCM need app-level Kotlin. | `Unsupported`. |
-| Blitz, server render | `Unsupported`. | `Unsupported`. |
+| Android (WebView) | Full, through the system's `NotificationManager`, with `notifications` under `[permissions]`; one channel named after the app. `icon` is ignored. | `Unsupported`; FCM needs app-level Kotlin. |
+| Blitz on Linux | Full, through the desktop's notification server; always `Granted`. A click runs `on_click` without raising the window. | `Unsupported`. |
+| Blitz on macOS and Windows, server render | `Unsupported`. | `Unsupported`. |
 
 Where the page has no `Notification` constructor, `show` goes through the
 page's service worker, and the click reaches the worker, not the page. The
@@ -196,8 +201,12 @@ Post `event: 'close'` from `notificationclose` the same way.
 
 - A denial is usually permanent for the site: the browser does not ask again,
   and libero cannot open its settings.
-- The Android WebView has no Notifications API, and libero declares no
-  POST_NOTIFICATIONS: native notifications and FCM need app-level Kotlin.
+- Android reads `Prompt` until the first request and `Denied` after a refusal,
+  also after a restart; it cannot tell a dismissed dialog from a refusal.
+- Android ignores `icon` (the launcher icon shows), and a tap on a notification
+  from before a restart only opens the app.
+- Blitz on Linux cannot raise its window on a click: `on_click` runs, the
+  window stays where it is.
 - Where only a service worker may show notifications (Chrome on Android),
   `on_click` runs only if the app's worker posts the click back.
 - A click after the page closed runs nothing in the page: only a worker can

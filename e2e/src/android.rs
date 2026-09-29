@@ -179,20 +179,47 @@ pub(crate) async fn tap_node(wanted: &str) -> Result<()> {
 
 /// [`tap_node`], giving up after `budget`.
 pub(crate) async fn tap_node_within(wanted: &str, budget: std::time::Duration) -> Result<()> {
+    tap_any_node_within(&[wanted], budget).await
+}
+
+/// Taps the first of `wanted` on screen, giving up after `budget`.
+pub(crate) async fn tap_any_node_within(
+    wanted: &[&str],
+    budget: std::time::Duration,
+) -> Result<()> {
     let started = std::time::Instant::now();
     loop {
         let dump = shell(&[
             "uiautomator dump /sdcard/lsx-ui.xml >/dev/null && cat /sdcard/lsx-ui.xml".into(),
         ])
         .await?;
-        if let Some(centre) = node_centre(&dump, wanted) {
+        if let Some(centre) = wanted.iter().find_map(|wanted| node_centre(&dump, wanted)) {
             return input(&["tap".into(), centre.0.to_string(), centre.1.to_string()]).await;
         }
         if started.elapsed() > budget {
-            bail!("no {wanted} on screen");
+            bail!("none of {wanted:?} on screen");
         }
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     }
+}
+
+/// The posted notifications of `package`, as `dumpsys notification` lists them.
+pub(crate) async fn posted_notifications(package: &str) -> Result<String> {
+    let dump = shell(&["dumpsys".into(), "notification".into(), "--noredact".into()]).await?;
+    Ok(dump
+        .lines()
+        .filter(|line| line.contains(package))
+        .collect::<Vec<_>>()
+        .join("\n"))
+}
+
+/// Opens the notification shade and taps the notification titled `title`.
+pub(crate) async fn tap_notification(title: &str) -> Result<()> {
+    shell(&["cmd statusbar expand-notifications".into()]).await?;
+    tap_node(&format!("text=\"{title}\"")).await?;
+    // The shade can stay down over the app.
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    shell(&["cmd statusbar collapse".into()]).await.map(drop)
 }
 
 /// The centre of the first `<node>` carrying `attribute`, from its `bounds="[x1,y1][x2,y2]"`.

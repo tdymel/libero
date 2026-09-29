@@ -25,12 +25,13 @@ title = "libero"
 # the generated gradle project, the APK and the emulator's package list.
 identifier = "dev.libero.docs"
 
-# The capture and location demos (1220, 1221); an app without the manifest
-# entry is denied at once, with no prompt.
+# The capture, location and system notification demos (1220, 1221, 1348); an
+# app without the manifest entry is denied at once, with no prompt.
 [permissions]
 location = { precision = "fine", description = "Shows your position in the location demo" }
 camera = { description = "Shows your camera in the capture demo" }
 microphone = { description = "Records your voice in the capture demo" }
+notifications = { description = "Shows the system notification demo" }
 
 # wry's WebView asks it with RECORD_AUDIO; undeclared, every microphone request is denied (1346).
 [android.permissions]

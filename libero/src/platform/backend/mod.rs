@@ -45,7 +45,11 @@ pub(crate) use webview::image_crop as webview_image_crop;
 pub(crate) use webview::media as webview_media;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::permission as webview_permission;
-#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    not(target_os = "android"),
+    not(feature = "native")
+))]
 pub(crate) use webview::system_notification as webview_system_notification;
 
 /// What HTML counts as interactive content, plus anything a caller made

@@ -1,6 +1,6 @@
 //! `use_system_notification` and `use_push_subscription`: mounting asks nothing;
 //! on the web a granted show and close, a denial, and push registering its worker.
-//! Blitz and Android have no Notifications API; push is web only.
+//! Android's dialog, posted notification and tap (1348); push is web only.
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -8,7 +8,7 @@ use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
 };
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Platform, eventually_text, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts until asked; elsewhere than the web, push is unsupported.
@@ -25,7 +25,45 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         eventually_text(d, selector, expected, "mount").await?;
     }
     match d.platform() {
-        Platform::Native | Platform::Android => {
+        // Todo 1348: the system's notifications over JNI; the runner revokes the permission.
+        Platform::Android => {
+            eventually_text(d, "#supported", "true", "mount").await?;
+            eventually_text(d, "#permission", "Prompt", "mount").await?;
+            d.allow_permission("#request").await?;
+            eventually_text(d, "#permission", "Granted", "the dialog's answer").await?;
+            d.click("#show").await?;
+            eventually(d, "the notification to post", async |d| {
+                Ok(d.posted_notifications().await?.contains("tag=fixture"))
+            })
+            .await?;
+            eventually_text(d, "#error", "None", "a show").await?;
+            d.tap_notification("Fixture").await?;
+            eventually_text(d, "#clicks", "1", "a tap on the notification").await?;
+            // The first tap after the tap's relaunch of the activity can go nowhere.
+            eventually(d, "the second notification to post", async |d| {
+                d.click("#show").await?;
+                linger(d, 20).await;
+                Ok(d.posted_notifications().await?.contains("tag=fixture"))
+            })
+            .await?;
+            d.click("#close").await?;
+            eventually(d, "the close to cancel it", async |d| {
+                Ok(!d.posted_notifications().await?.contains("tag=fixture"))
+            })
+            .await?;
+            d.click("#subscribe").await?;
+            eventually_text(d, "#push-error", "Some(Unsupported)", "a subscribe").await?;
+        }
+        // Blitz on Linux asks the session's notification server; without one it is unsupported.
+        Platform::Native => {
+            eventually(d, "the notification server's answer", async |d| {
+                Ok(d.text("#permission").await? != "Unknown")
+            })
+            .await?;
+            if d.text("#supported").await? == "true" {
+                eventually_text(d, "#permission", "Granted", "mount").await?;
+                return Ok(());
+            }
             eventually_text(d, "#supported", "false", "mount").await?;
             eventually_text(d, "#permission", "Unsupported", "mount").await?;
             d.click("#show").await?;

@@ -42,7 +42,7 @@ pub enum SystemNotificationError {
 }
 
 impl SystemNotificationError {
-    #[cfg_attr(feature = "native", allow(dead_code))]
+    #[cfg_attr(any(feature = "native", target_os = "android"), allow(dead_code))]
     pub(crate) fn from_name(name: &str) -> Self {
         match name {
             "Unsupported" => Self::Unsupported,
@@ -60,7 +60,7 @@ pub(crate) enum NotificationEvent {
 }
 
 impl NotificationEvent {
-    #[cfg_attr(feature = "native", allow(dead_code))]
+    #[cfg_attr(any(feature = "native", target_os = "android"), allow(dead_code))]
     pub(crate) fn from_name(name: &str) -> Option<Self> {
         match name {
             "click" => Some(Self::Click),
@@ -93,7 +93,7 @@ pub(crate) trait SystemNotificationApi {
 }
 
 /// Maps `Notification.permission`; `default` means a request would prompt.
-#[cfg_attr(feature = "native", allow(dead_code))]
+#[cfg_attr(any(feature = "native", target_os = "android"), allow(dead_code))]
 pub(crate) fn permission_of(name: Option<&str>) -> Option<PermissionState> {
     Some(match name? {
         "default" => PermissionState::Prompt,
@@ -105,7 +105,7 @@ pub(crate) fn permission_of(name: Option<&str>) -> Option<PermissionState> {
 /// `{ close, detach }`; without a `Notification` constructor (Chrome on Android)
 /// it falls back to the page's service worker, which reports clicks and closes
 /// by posting `{ libero: data.libero, event: 'click' | 'close' }` to the page.
-#[cfg_attr(feature = "native", allow(dead_code))]
+#[cfg_attr(any(feature = "native", target_os = "android"), allow(dead_code))]
 pub(crate) const NOTIFICATION_SCRIPT: &str = "
     const probe = () => typeof Notification === 'undefined' ? null : Notification.permission;
     const request = async () => typeof Notification === 'undefined'
@@ -145,7 +145,7 @@ pub(crate) const NOTIFICATION_SCRIPT: &str = "
     };";
 
 /// The `NotificationOptions` dictionary.
-#[cfg_attr(feature = "native", allow(dead_code))]
+#[cfg_attr(any(feature = "native", target_os = "android"), allow(dead_code))]
 pub(crate) fn options_of(notification: &SystemNotification) -> serde_json::Value {
     let mut options = serde_json::json!({ "silent": notification.silent });
     for (name, value) in [
@@ -276,14 +276,34 @@ mod web {
     pub(super) static SYSTEM_NOTIFICATION: WebSystemNotification = WebSystemNotification;
 }
 
-/// `None` without a Notifications API: Blitz, a server, a browser without one.
-/// A WebView answers `Some`; its [`probe`](SystemNotificationApi::probe) tells.
+#[cfg(all(target_os = "android", not(feature = "native")))]
+#[path = "system_notification_android.rs"]
+mod android;
+#[cfg(all(target_os = "linux", feature = "native"))]
+#[path = "system_notification_freedesktop.rs"]
+mod freedesktop;
+
+/// `None` without a Notifications API: Blitz off Linux, a server, a browser without one.
+/// A WebView and Blitz on Linux answer `Some`; [`probe`](SystemNotificationApi::probe) tells.
 pub(crate) fn system_notification() -> Option<&'static dyn SystemNotificationApi> {
     #[cfg(target_arch = "wasm32")]
     return web::has_notification()
         .then_some(&web::SYSTEM_NOTIFICATION as &'static dyn SystemNotificationApi);
-    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    // The unit tests must not pop notifications on the desktop running them.
+    #[cfg(all(target_os = "linux", feature = "native", not(test)))]
+    return Some(&freedesktop::SYSTEM_NOTIFICATION);
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        any(not(target_os = "linux"), test),
+        feature = "native"
+    ))]
     return None;
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    #[cfg(all(target_os = "android", not(feature = "native")))]
+    return Some(&android::SYSTEM_NOTIFICATION);
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_os = "android"),
+        not(feature = "native")
+    ))]
     return super::backend::webview_system_notification();
 }

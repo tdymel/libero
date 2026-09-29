@@ -117,6 +117,15 @@ pub trait Driver {
         let _ = trigger;
         bail!("{:?}: no permission dialog to answer", self.platform())
     }
+    /// The app's posted system notifications, one record per line; only Android reads them.
+    async fn posted_notifications(&mut self) -> Result<String> {
+        bail!("{:?}: no system notifications to read", self.platform())
+    }
+    /// Opens the notification shade and taps the one titled `title`.
+    async fn tap_notification(&mut self, title: &str) -> Result<()> {
+        let _ = title;
+        bail!("{:?}: no notification shade", self.platform())
+    }
     /// The system Back key, which only Android has.
     async fn press_back(&mut self) -> Result<()> {
         bail!("{:?}: no Back key", self.platform())

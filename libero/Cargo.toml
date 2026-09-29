@@ -101,6 +101,12 @@ futures-channel = { version = "0.3", optional = true }
 [target.'cfg(target_os = "linux")'.dependencies]
 dbus = { version = "0.9", optional = true }
 
+# Android system notifications (todo 1348): JNI on the main thread through wry's
+# `dispatch`, and tao's `Opened` for a tap. Already in every dioxus mobile app's tree.
+[target.'cfg(target_os = "android")'.dependencies]
+dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus", default-features = false }
+futures-channel = "0.3"
+
 # Render-to-string, for the component tests in `tests/` - the same dioxus rev
 # this crate builds against.
 [dev-dependencies]

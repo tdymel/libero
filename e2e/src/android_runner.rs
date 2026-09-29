@@ -171,7 +171,8 @@ fn run_on(
         adb(serial, &["shell", "pm", "grant", PACKAGE, &permission])?;
     }
     // `use_user_media` answers wry's dialog itself (1346), so it must show even on a reused device.
-    for permission in ["CAMERA", "RECORD_AUDIO"] {
+    // `use_system_notification` too (1348).
+    for permission in ["CAMERA", "RECORD_AUDIO", "POST_NOTIFICATIONS"] {
         let permission = format!("android.permission.{permission}");
         adb(serial, &["shell", "pm", "revoke", PACKAGE, &permission])?;
         adb(

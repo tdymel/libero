@@ -6,8 +6,8 @@ use chromiumoxide::Page;
 use super::web::{element, json};
 use super::{Driver, Platform, Rect};
 use crate::android::{
-    ALT, CTRL, SHIFT, download, harness, input, input_text, keycode, soft_keyboard_shown, tap_node,
-    tap_node_within, webview_view_focused,
+    ALT, CTRL, SHIFT, download, harness, input, input_text, keycode, posted_notifications,
+    soft_keyboard_shown, tap_any_node_within, tap_node, tap_notification, webview_view_focused,
 };
 use crate::passes::{focus, keyboard, pointer};
 
@@ -330,14 +330,26 @@ impl Driver for Android {
         tap_node(&format!("text=\"{name}\"")).await
     }
 
-    /// wry's runtime permission dialogs, each answered "While using the app":
-    /// the camera's, then the microphone's when both are asked.
+    /// The runtime permission dialogs, each answered "While using the app" (camera,
+    /// then microphone when both are asked) or "Allow" (notifications).
     async fn allow_permission(&mut self, trigger: &str) -> Result<()> {
-        const ALLOW: &str = "permission_allow_foreground_only_button";
+        const ALLOW: [&str; 2] = [
+            "permission_allow_foreground_only_button",
+            "permission_allow_button",
+        ];
         self.click(trigger).await?;
-        tap_node(ALLOW).await?;
-        let _ = tap_node_within(ALLOW, Duration::from_secs(3)).await;
+        tap_any_node_within(&ALLOW, crate::wait::timeout()).await?;
+        let _ = tap_any_node_within(&ALLOW, Duration::from_secs(3)).await;
         Ok(())
+    }
+
+    async fn posted_notifications(&mut self) -> Result<String> {
+        // The fixtures app's identifier, as in the runner's `PACKAGE`.
+        posted_notifications("dev.libero.fixtures").await
+    }
+
+    async fn tap_notification(&mut self, title: &str) -> Result<()> {
+        tap_notification(title).await
     }
 
     async fn idle(&mut self) {

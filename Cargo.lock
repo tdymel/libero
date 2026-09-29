@@ -4467,6 +4467,7 @@ dependencies = [
  "cursor-icon",
  "dbus",
  "dioxus",
+ "dioxus-desktop",
  "dioxus-html",
  "dioxus-native-dom",
  "dioxus-ssr",
