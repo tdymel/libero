@@ -188,7 +188,7 @@ e2e::scenario!(
     a_picked_image_is_cropped_through_the_page,
     "/file-field/crop",
     a_picked_image_is_cropped,
-    native: skip("Blitz has no canvas: the field takes the image uncropped")
+    native: skip("Blitz runs no script to stub the picker; `crop_bytes` unit tests cover the cut")
 );
 
 /// A touch on the image outside the box scrolls the page; only the box takes drags.

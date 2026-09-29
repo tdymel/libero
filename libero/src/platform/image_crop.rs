@@ -9,7 +9,7 @@ pub(crate) type Fractions = [f64; 4];
 /// The cropped file, `None` when the image would not decode or encode.
 pub(crate) type Cropped = Pin<Box<dyn Future<Output = Option<FileData>>>>;
 
-/// Cuts an image file to a crop, through the page's canvas.
+/// Cuts an image file to a crop, through the page's canvas or, on Blitz, the `image` crate.
 pub(crate) trait ImageCropApi {
     /// `file` cut to `rect`, its longer side scaled down to `max` px. Keeps
     /// a PNG, JPEG or WebP's type; anything else comes back a PNG.
@@ -35,7 +35,6 @@ pub(crate) const CROP_SCRIPT: &str = "const crop = async (bytes, type, [x, y, w,
 };";
 
 /// The file's name for its new type: the extension swapped when the type changed.
-#[cfg(any(test, not(feature = "native")))]
 pub(crate) fn cropped_name(name: &str, from: &str, to: &str) -> String {
     if from == to {
         return name.to_string();
@@ -184,14 +183,148 @@ pub(super) mod web {
     }
 }
 
-/// `None` where no page can crop: Blitz and a server render. Call it after mount.
+/// Blitz has no canvas: decode, cut and encode in Rust (`native` only).
+#[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+mod native {
+    use std::io::Cursor;
+
+    use dioxus::html::FileData;
+    use image::{
+        DynamicImage, ImageDecoder, ImageFormat, ImageReader, codecs::jpeg::JpegEncoder,
+        imageops::FilterType,
+    };
+
+    use super::{Cropped, Fractions, ImageCropApi, cropped_name};
+    use crate::platform::file_dialog::held_file;
+
+    pub(super) struct NativeImageCrop;
+
+    pub(super) static IMAGE_CROP: NativeImageCrop = NativeImageCrop;
+
+    impl ImageCropApi for NativeImageCrop {
+        fn crop(&self, file: FileData, rect: Fractions, max: Option<u32>) -> Cropped {
+            Box::pin(async move {
+                let bytes = file.read_bytes().await.ok()?;
+                let from = file.content_type().unwrap_or_default();
+                let (to, out) = crop_bytes(&bytes, &from, rect, max)?;
+                let name = cropped_name(&file.name(), &from, to);
+                Some(held_file(name, to.to_string(), file.last_modified(), out))
+            })
+        }
+    }
+
+    /// The canvas script's cut in Rust: same rounding, same kept types, JPEG at 0.92.
+    pub(super) fn crop_bytes(
+        bytes: &[u8],
+        from: &str,
+        [x, y, w, h]: Fractions,
+        max: Option<u32>,
+    ) -> Option<(&'static str, Vec<u8>)> {
+        let mut decoder = ImageReader::new(Cursor::new(bytes))
+            .with_guessed_format()
+            .ok()?
+            .into_decoder()
+            .ok()?;
+        // As `createImageBitmap`: the picture turned as its EXIF says.
+        let orientation = decoder.orientation().ok();
+        let mut image = DynamicImage::from_decoder(decoder).ok()?;
+        if let Some(orientation) = orientation {
+            image.apply_orientation(orientation);
+        }
+        let (width, height) = (f64::from(image.width()), f64::from(image.height()));
+        let sx = ((x * width).round() as u32).min(image.width() - 1);
+        let sy = ((y * height).round() as u32).min(image.height() - 1);
+        let sw = ((w * width).round() as u32).clamp(1, image.width() - sx);
+        let sh = ((h * height).round() as u32).clamp(1, image.height() - sy);
+        let scale = max.map_or(1.0, |max| (f64::from(max) / f64::from(sw.max(sh))).min(1.0));
+        let mut cut = image.crop_imm(sx, sy, sw, sh);
+        if scale < 1.0 {
+            let fit = |side: u32| ((f64::from(side) * scale).round() as u32).max(1);
+            cut = cut.resize_exact(fit(sw), fit(sh), FilterType::Triangle);
+        }
+        let mut out = Cursor::new(Vec::new());
+        let to = match from {
+            "image/jpeg" => {
+                let encoder = JpegEncoder::new_with_quality(&mut out, 92);
+                DynamicImage::ImageRgb8(cut.to_rgb8())
+                    .write_with_encoder(encoder)
+                    .ok()?;
+                "image/jpeg"
+            }
+            "image/webp" => {
+                cut.to_rgba8().write_to(&mut out, ImageFormat::WebP).ok()?;
+                "image/webp"
+            }
+            _ => {
+                cut.write_to(&mut out, ImageFormat::Png).ok()?;
+                "image/png"
+            }
+        };
+        Some((to, out.into_inner()))
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use std::io::Cursor;
+
+        use image::{ImageFormat, RgbaImage};
+
+        use super::crop_bytes;
+
+        fn png(width: u32, height: u32) -> Vec<u8> {
+            let mut out = Cursor::new(Vec::new());
+            RgbaImage::new(width, height)
+                .write_to(&mut out, ImageFormat::Png)
+                .unwrap();
+            out.into_inner()
+        }
+
+        fn size(bytes: &[u8]) -> (u32, u32) {
+            let image = image::load_from_memory(bytes).unwrap();
+            (image.width(), image.height())
+        }
+
+        #[test]
+        fn a_crop_cuts_the_fraction_and_keeps_the_type() {
+            let (to, out) =
+                crop_bytes(&png(200, 100), "image/png", [0.5, 0.0, 0.5, 0.5], None).unwrap();
+            assert_eq!(to, "image/png");
+            assert_eq!(size(&out), (100, 50));
+        }
+
+        #[test]
+        fn max_scales_the_longer_side_down() {
+            let (_, out) =
+                crop_bytes(&png(200, 100), "image/png", [0.0, 0.0, 1.0, 1.0], Some(16)).unwrap();
+            assert_eq!(size(&out), (16, 8));
+        }
+
+        #[test]
+        fn a_jpeg_stays_a_jpeg_and_other_types_become_png() {
+            let (to, out) =
+                crop_bytes(&png(10, 10), "image/jpeg", [0.0, 0.0, 1.0, 1.0], None).unwrap();
+            assert_eq!(to, "image/jpeg");
+            assert_eq!(image::guess_format(&out).unwrap(), ImageFormat::Jpeg);
+            let (to, _) =
+                crop_bytes(&png(10, 10), "image/bmp", [0.0, 0.0, 1.0, 1.0], None).unwrap();
+            assert_eq!(to, "image/png");
+        }
+
+        #[test]
+        fn undecodable_bytes_crop_to_nothing() {
+            assert!(crop_bytes(b"not an image", "image/png", [0.0, 0.0, 1.0, 1.0], None).is_none());
+        }
+    }
+}
+
+/// `None` where no page can crop: a server render. Call it after mount.
 pub(crate) fn image_crop() -> Option<&'static dyn ImageCropApi> {
     #[cfg(target_arch = "wasm32")]
     return Some(&web::IMAGE_CROP);
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return super::backend::webview_image_crop();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-    return None;
+    return Some(&native::IMAGE_CROP);
 }
 
 #[cfg(test)]

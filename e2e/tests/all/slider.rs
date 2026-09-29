@@ -175,8 +175,45 @@ async fn a_release_outside_ends<D: Driver>(d: &mut D, _route: &str) -> Result<()
 e2e::scenario!(
     a_drag_released_past_the_end_tracks_and_ends,
     "/slider/scroll",
-    a_release_outside_ends,
-    android: skip("1179: not yet run on the emulator")
+    a_release_outside_ends
+);
+
+/// Todo 1200: a 6px drag ending on the thumb commits once and holds; the
+/// swallowed click (1179) is only that one, a later tap on the track still jumps.
+async fn a_short_drag_on_the_thumb<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.drag(SCROLL_THUMB, 6.0, 0.0).await?;
+    eventually(d, "the short drag to commit", async |d| {
+        let value = d.attr(SCROLL_THUMB, "aria-valuenow").await?;
+        Ok(value.as_deref() == Some(d.text("#slider-end").await?.as_str()))
+    })
+    .await?;
+    let committed = d.text("#slider-end").await?;
+    linger(d, 8).await;
+    let value = d.attr(SCROLL_THUMB, "aria-valuenow").await?;
+    ensure!(
+        value.as_deref() == Some(committed.as_str()),
+        "the release's click moved it from {committed} to {value:?}"
+    );
+    let before: f64 = committed.parse()?;
+    let thumb = d.rect(SCROLL_THUMB).await?;
+    d.click_at(
+        thumb.x + thumb.width / 2.0 + 100.0,
+        thumb.y + thumb.height / 2.0,
+    )
+    .await?;
+    eventually(d, "a later tap on the track to jump", async |d| {
+        let committed = d.text("#slider-end").await?;
+        Ok(committed
+            .parse::<f64>()
+            .is_ok_and(|value| value >= before + 25.0))
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_short_drag_ending_on_the_thumb_holds_and_the_next_tap_lands,
+    "/slider/scroll",
+    a_short_drag_on_the_thumb
 );
 
 /// Todo 483: the label focuses the thumb it names by id.

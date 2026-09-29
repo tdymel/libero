@@ -97,8 +97,8 @@ field_props! {
         #[props(default)]
         onchange: Option<EventHandler<Files>>,
         /// Crops a single picked PNG, JPEG, WebP, BMP or AVIF in a dialog before
-        /// `onchange` gets it, cut where a page can cut it (web, WebView) and
-        /// whole on Blitz. Cancel drops the pick. Ignored with `multiple`.
+        /// `onchange` gets it, cut on every platform but an AVIF on Blitz, which
+        /// stays whole. Cancel drops the pick. Ignored with `multiple`.
         #[props(default)]
         crop: Option<CropOptions>,
         /// The crop the dialog applied, on every platform.

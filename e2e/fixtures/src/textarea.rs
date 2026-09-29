@@ -1,5 +1,6 @@
 //! `Textarea { counter }` with `maxlength="20"`: one controlled, one owning its
-//! own text (todo 584), and one in a `Form` that resets (todo 679).
+//! own text (todo 584), and one in a `Form` that resets (todo 679). `/textarea/scroller`
+//! puts one in a scrolling ancestor (1201).
 
 use dioxus::prelude::*;
 use libero::components::{Button, Flex, Form, Text, TextField, Textarea, use_form};
@@ -11,7 +12,21 @@ pub const ROUTES: Routes = &[
     ("/textarea/reset", || rsx! { ResetPage {} }),
     ("/textarea/raw-reset", || rsx! { RawResetPage {} }),
     ("/textarea/echo", || rsx! { EchoPage {} }),
+    ("/textarea/scroller", || rsx! { ScrollerPage {} }),
 ];
+
+/// Todo 1201: a three-line textarea between spacers in a short scroller, which
+/// an arrow on the first or last line must not scroll.
+#[component]
+fn ScrollerPage() -> Element {
+    rsx! {
+        div { id: "scroller", style: "height: 160px; max-width: 320px; overflow-y: auto",
+            div { style: "height: 240px" }
+            Textarea { label: "Long note", initial_value: "one\ntwo\nthree" }
+            div { style: "height: 240px" }
+        }
+    }
+}
 
 /// The typed value echoed in `#echo`, for the shared web/native scenarios.
 #[component]

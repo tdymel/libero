@@ -53,7 +53,7 @@ pub fn FileFieldPage() -> Element {
                         .default("false")
                         .doc("Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that."),
                     prop("crop", "CropOptions")
-                        .doc("A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. Under Blitz the field keeps the whole file. Ignored on a `multiple` field."),
+                        .doc("A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. Under Blitz an AVIF stays whole. Ignored on a `multiple` field."),
                     prop("oncrop", "EventHandler<CropRect>")
                         .doc("The box picked in the crop dialog, before the cut file reaches `onchange`."),
                     prop("selection","Callback<SelectionArgs<FileData>, Element>")

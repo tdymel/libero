@@ -211,8 +211,8 @@ impl futures_core::Stream for Whole {
     }
 }
 
-/// A file a WebView's picker read into memory: its path is only its name.
-#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+/// A file in memory, a WebView's pick or a native crop: its path is only its name.
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn held_file(
     name: String,
     content_type: String,
@@ -227,7 +227,7 @@ pub(crate) fn held_file(
     })
 }
 
-#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+#[cfg(not(target_arch = "wasm32"))]
 struct HeldFile {
     name: String,
     content_type: Option<String>,
@@ -235,7 +235,7 @@ struct HeldFile {
     bytes: dioxus::html::bytes::Bytes,
 }
 
-#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+#[cfg(not(target_arch = "wasm32"))]
 impl dioxus::html::NativeFileData for HeldFile {
     fn name(&self) -> String {
         self.name.clone()

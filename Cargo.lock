@@ -4474,6 +4474,7 @@ dependencies = [
  "fast_qr",
  "futures-channel",
  "futures-core",
+ "image",
  "js-sys",
  "libero-macros",
  "pictogram-core",
