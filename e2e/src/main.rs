@@ -194,7 +194,10 @@ fn main() -> Result<()> {
     let profile = target_dir.join(format!("e2e-chrome-{}", std::process::id()));
     guard.tell(&format!("profile {}", profile.display()));
 
-    eprintln!("e2e: server is up, running the suite");
+    eprintln!(
+        "e2e: server is up after {} s, running the suite",
+        started.elapsed().unwrap_or_default().as_secs()
+    );
     // The runner's arguments go to libtest after `--`, so filters and `--nocapture` both work.
     let status = Command::new(env!("CARGO"))
         .current_dir(&root)
