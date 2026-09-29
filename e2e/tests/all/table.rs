@@ -1522,20 +1522,23 @@ e2e::scenario!(
 /// checkbox under the sticky header.
 async fn a_focused_row_stays_below_the_header<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus("tbody tr:nth-child(1) input").await?;
-    let mut worst = f64::MAX;
     for _ in 0..30 {
         d.press(keyboard::TAB).await?;
-        linger(d, 100).await;
+        linger(d, 4).await;
     }
-    for _ in 0..30 {
+    // Polls each step instead of a fixed `linger(d, 100)`, 2.5 s per Tab and
+    // 150 s of the table unit (823). The page may scroll a frame after the focus.
+    for step in 0..30 {
         d.press_shift(keyboard::TAB).await?;
-        linger(d, 100).await;
-        let header = d.rect("thead th").await?;
-        let focused = d.rect("input:focus").await?;
-        worst = worst.min(focused.y - (header.y + header.height));
-    }
-    if worst < -1.0 {
-        bail!("a focused row control sat {worst}px under the sticky header");
+        eventually(
+            d,
+            &format!("the focused row control below the sticky header, Shift+Tab {step}"),
+            async |d| {
+                let header = d.rect("thead th").await?;
+                Ok(d.rect("input:focus").await?.y - (header.y + header.height) >= -1.0)
+            },
+        )
+        .await?;
     }
     Ok(())
 }

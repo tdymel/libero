@@ -129,7 +129,25 @@ fn main() -> Result<()> {
         .context("start dx run")?;
     guard.tell(&format!("group {}", server.id()));
 
+    // The test binary builds while `dx` builds the wasm: cargo locks per profile dir (823).
+    // Its errors show again in the real run below.
+    let mut prebuild = Command::new(env!("CARGO"))
+        .current_dir(&root)
+        .args(["test", "-p", "e2e", "--test", test, "--no-run", "--target-dir"])
+        .arg(&target_dir)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .process_group(0)
+        .spawn()
+        .context("prebuild the tests")?;
+    guard.tell(&format!("group {}", prebuild.id()));
+
     let ready = wait_for_app(&base_url, title, &mut server, &dx_log);
+    if ready.is_ok() {
+        let _ = prebuild.wait();
+    } else {
+        stop(&mut prebuild);
+    }
     if let Err(error) = ready {
         stop(&mut server);
         guard.done();
