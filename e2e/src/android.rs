@@ -219,7 +219,20 @@ pub(crate) async fn tap_notification(title: &str) -> Result<()> {
     tap_node(&format!("text=\"{title}\"")).await?;
     // The shade can stay down over the app.
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-    shell(&["cmd statusbar collapse".into()]).await.map(drop)
+    shell(&["cmd statusbar collapse".into()]).await?;
+    // Its window takes touches for ~300 ms after the collapse, so the app's next tap went to it (1471).
+    crate::wait::until("the notification shade to hide", || async {
+        let windows = shell(&["dumpsys window windows".into()]).await?;
+        Ok(!shade_shown(&windows).unwrap_or(false))
+    })
+    .await
+}
+
+/// Whether `dumpsys window windows` lists the `NotificationShade` window as `VISIBLE`.
+fn shade_shown(dump: &str) -> Option<bool> {
+    let shade = &dump[dump.find("NotificationShade}")?..];
+    let visibility = shade.split("mViewVisibility=").nth(1)?;
+    Some(visibility.split_whitespace().next()? == "0x0")
 }
 
 /// The centre of the first `<node>` carrying `attribute`, from its `bounds="[x1,y1][x2,y2]"`.
@@ -310,7 +323,7 @@ pub(crate) fn input_text(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{node_centre, view_focused};
+    use super::{node_centre, shade_shown, view_focused};
 
     #[test]
     fn a_node_is_found_by_its_text_and_tapped_at_its_centre() {
@@ -326,5 +339,18 @@ mod tests {
         assert_eq!(view_focused(&dump(".F......")), Some(true));
         assert_eq!(view_focused(&dump("........")), Some(false));
         assert_eq!(view_focused("no web view"), None);
+    }
+
+    #[test]
+    fn the_shade_reads_its_own_view_visibility() {
+        let dump = |shade: &str| {
+            format!(
+                "  Window #2 Window{{1 u0 StatusBar}}:\n    mViewVisibility=0x0 mHaveFrame=true\n  \
+                 Window #3 Window{{2 u0 NotificationShade}}:\n    mViewVisibility={shade} mHaveFrame=true"
+            )
+        };
+        assert_eq!(shade_shown(&dump("0x0")), Some(true));
+        assert_eq!(shade_shown(&dump("0x4")), Some(false));
+        assert_eq!(shade_shown("no shade"), None);
     }
 }

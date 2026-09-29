@@ -150,7 +150,7 @@ pub fn UseSystemNotificationPage() -> Element {
                     "A denial is usually permanent for the site: the browser does not ask again, and libero cannot open its settings.",
                     "Android reads Prompt until the first request and Denied after a refusal, also after a restart; it cannot tell a dismissed dialog from a refusal.",
                     "Android ignores icon (the launcher icon shows), and a tap on a notification from before a restart only opens the app.",
-                    "Blitz on Linux cannot raise its window on a click: on_click runs, the window stays where it is.",
+                    "Blitz and the desktop WebView on Linux cannot raise the window on a click: on_click runs, the window stays where it is.",
                     "Where only a service worker may show notifications (Chrome on Android), on_click runs only if the app's worker posts the click back, as the sample sw.js does.",
                     "A click after the page closed runs nothing in the page: only a worker can open a tab then.",
                     "In a desktop WebView, window.focus() may not raise the app's window.",
@@ -184,12 +184,14 @@ pub fn UseSystemNotificationPage() -> Element {
                     Code { source: "PushEndpoint" }
                     " your server stores and pushes to; the worker shows what arrives. Sending, VAPID signing, FCM and APNs stay on your server. The demo's key is a throwaway public key: no private key exists anywhere in the repo, so nothing ever pushes to it. A sample worker is "
                     Code { source: "docs/public/sw.js" }
-                    "."
+                    ". Push on Android is Firebase Cloud Messaging in the app itself, with no libero code: the markdown version of this page has a recipe."
                 }
                 Text {
-                    "Web: a secure context (HTTPS or localhost). Desktop WebViews: system notifications go through the page's "
+                    "Web: a secure context (HTTPS or localhost). Desktop WebView on Linux: with libero's "
+                    Code { source: "desktop" }
+                    " feature, the desktop's notification server over D-Bus, as for Blitz; without it WebKitGTK denies every request. macOS and Windows WebViews go through the page's "
                     Code { source: "Notification" }
-                    " where the WebView has one (Linux WebKitGTK denies, macOS and Windows are untested); push is web only. A click focuses the page's window, then runs "
+                    ", untested. Push is web only. A click focuses the page's window, then runs "
                     Code { source: "on_click" }
                     "; behind a service worker only if the worker posts it back, as the sample worker does. Android: the system's notifications over JNI, after "
                     Code { source: "notifications = { description = \"..\" }" }

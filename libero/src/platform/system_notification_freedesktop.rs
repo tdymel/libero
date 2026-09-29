@@ -1,4 +1,5 @@
-//! Blitz on Linux: the freedesktop notification server over D-Bus (todo 1348).
+//! Blitz and the desktop WebView on Linux: the freedesktop notification server
+//! over D-Bus (todos 1348, 1470).
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -35,7 +36,7 @@ enum Command {
     Show {
         notification: Content,
         events: mpsc::UnboundedSender<NotificationEvent>,
-        reply: oneshot::Sender<Option<u32>>,
+        reply: oneshot::Sender<Result<u32, SystemNotificationError>>,
     },
     Close(u32),
 }
@@ -145,7 +146,7 @@ fn handle(connection: Option<&LocalConnection>, routes: &RefCell<Routes>, comman
             reply,
         } => {
             let Some(proxy) = proxy else {
-                let _ = reply.send(None);
+                let _ = reply.send(Err(SystemNotificationError::Unsupported));
                 return;
             };
             let replaces = routes.borrow().replaces(notification.tag.as_deref());
@@ -170,8 +171,10 @@ fn handle(connection: Option<&LocalConnection>, routes: &RefCell<Routes>, comman
                     -1i32,
                 ),
             );
-            let id = shown.ok().map(|(id,)| id);
-            if let Some(id) = id {
+            let id = shown
+                .map(|(id,)| id)
+                .map_err(|error| error_of(error.name()));
+            if let Ok(id) = id {
                 routes.borrow_mut().shown(id, notification.tag, events);
             }
             let _ = reply.send(id);
@@ -181,6 +184,22 @@ fn handle(connection: Option<&LocalConnection>, routes: &RefCell<Routes>, comman
                 let _: Result<(), _> = proxy.method_call(INTERFACE, "CloseNotification", (id,));
             }
         }
+    }
+}
+
+/// No server answering is `Unsupported`, as the probe reports it; a refusal is `Failed`.
+fn error_of(name: Option<&str>) -> SystemNotificationError {
+    match name {
+        Some(
+            "org.freedesktop.DBus.Error.ServiceUnknown"
+            | "org.freedesktop.DBus.Error.NameHasNoOwner"
+            | "org.freedesktop.DBus.Error.NoReply"
+            | "org.freedesktop.DBus.Error.Timeout"
+            | "org.freedesktop.DBus.Error.TimedOut"
+            | "org.freedesktop.DBus.Error.Spawn.ChildExited"
+            | "org.freedesktop.DBus.Error.Spawn.Failed",
+        ) => SystemNotificationError::Unsupported,
+        _ => SystemNotificationError::Failed,
     }
 }
 
@@ -235,9 +254,7 @@ impl SystemNotificationApi for FreedesktopNotification {
         Box::pin(async move {
             let id = answer
                 .await
-                .ok()
-                .flatten()
-                .ok_or(SystemNotificationError::Failed)?;
+                .unwrap_or(Err(SystemNotificationError::Failed))?;
             let task = spawn(async move {
                 while let Some(event) = poll_fn(|cx| Pin::new(&mut receiver).poll_next(cx)).await {
                     events(event);
@@ -284,6 +301,19 @@ mod tests {
         assert_eq!(receiver.try_recv().ok(), Some(NotificationEvent::Close));
         assert_eq!(routes.replaces(Some("build")), 0);
         assert!(routes.events.is_empty());
+    }
+
+    #[test]
+    fn no_server_is_unsupported_and_a_refusal_failed() {
+        assert_eq!(
+            error_of(Some("org.freedesktop.DBus.Error.ServiceUnknown")),
+            SystemNotificationError::Unsupported
+        );
+        assert_eq!(
+            error_of(Some("org.freedesktop.DBus.Error.InvalidArgs")),
+            SystemNotificationError::Failed
+        );
+        assert_eq!(error_of(None), SystemNotificationError::Failed);
     }
 
     #[test]

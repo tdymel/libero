@@ -106,7 +106,8 @@ Early: focus traps and tree keys do nothing in a WebView yet, as on Android.
 
 A window with the system WebView inside: WebKitGTK on Linux, WebView2 on
 Windows, WKWebView on macOS. The pages look and behave like the web build. Turn
-on dioxus's `desktop` feature; libero needs no feature of its own.
+on dioxus's `desktop` feature, and libero's `desktop` for system notifications
+on Linux.
 
 ```shell
 dx serve --platform desktop --renderer webview
@@ -176,6 +177,7 @@ Every feature is additive.
 | `code-lang-<name>` | One grammar for [Code](code.md) and [CodeBlock](code_block.md), 30 in all. Rust, Bash, Markdown, HTML and CSS are the default. |
 | `full-polymorphism` | [Box](box.md) renders the rarer HTML elements too (metadata, media, web components). Without it they fall back to a `div`. |
 | `native` | Element access through Blitz, for apps on `dioxus-native`. |
+| `desktop` | System notifications over D-Bus in a desktop WebView on Linux, where WebKitGTK denies them. |
 
 ```toml
 libero = { version = "0.1", default-features = false, features = [

@@ -989,6 +989,22 @@ pub(crate) fn system_notification() -> Option<&'static dyn SystemNotificationApi
     runs_scripts().then_some(&SYSTEM_NOTIFICATION as &'static dyn SystemNotificationApi)
 }
 
+/// Whether the page is a wry WebView, which defines `window.ipc`; a liveview tab has none.
+#[cfg(all(target_os = "linux", feature = "desktop"))]
+pub(crate) fn wry_page() -> Answer<bool> {
+    static WRY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if let Some(wry) = WRY.get() {
+        return Box::pin(std::future::ready(*wry));
+    }
+    let read = eval("return typeof window.ipc?.postMessage === 'function';");
+    Box::pin(async move {
+        match read.join::<bool>().await {
+            Ok(wry) => *WRY.get_or_init(|| wry),
+            Err(_) => false,
+        }
+    })
+}
+
 #[cfg(not(target_os = "android"))]
 struct WebViewSystemNotification;
 

@@ -10,7 +10,7 @@ use libero::{
     sx::sx,
 };
 
-const FEATURES: [(&str, &str); 3] = [
+const FEATURES: [(&str, &str); 4] = [
     (
         "code-lang-<name>",
         "One grammar for Code and CodeBlock, 30 in all. Rust, Bash, Markdown, HTML and CSS are the default.",
@@ -22,6 +22,10 @@ const FEATURES: [(&str, &str); 3] = [
     (
         "native",
         "Element access through Blitz, for apps on dioxus-native.",
+    ),
+    (
+        "desktop",
+        "System notifications over D-Bus in a desktop WebView on Linux, where WebKitGTK denies them.",
     ),
 ];
 
@@ -277,7 +281,9 @@ fn DesktopPanel() -> Element {
                 "A window with the system WebView inside: WebKitGTK on Linux, WebView2 on Windows, WKWebView on macOS. "
                 "The pages look and behave like the web build. Turn on dioxus's "
                 Code { source: "desktop" }
-                " feature; libero needs no feature of its own."
+                " feature, and libero's "
+                Code { source: "desktop" }
+                " for system notifications on Linux."
             }
             CodeBlock { source: DESKTOP_COMMANDS, language: "shell" }
             Text { "On Linux you need:" }

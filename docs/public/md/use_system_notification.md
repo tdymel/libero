@@ -19,11 +19,13 @@ service worker and subscribes with your server's VAPID public key.
 worker shows what arrives. Sending, VAPID signing, FCM and APNs stay on your
 server. The demo's key is a throwaway public key: no private key exists
 anywhere in the repo, so nothing ever pushes to it. A sample worker is
-`docs/public/sw.js`.
+`docs/public/sw.js`. Push on Android is Firebase Cloud Messaging in the app
+itself, with no libero code: see the recipe below.
 
-Web: a secure context (HTTPS or localhost). Desktop WebViews: system
-notifications go through the page's `Notification` where the WebView has one
-(Linux WebKitGTK denies, macOS and Windows are untested); push is web only.
+Web: a secure context (HTTPS or localhost). Desktop WebView on Linux: with
+libero's `desktop` feature, the desktop's notification server over D-Bus, as
+for Blitz; without it WebKitGTK denies every request. macOS and Windows
+WebViews go through the page's `Notification`, untested. Push is web only.
 Android: the system's notifications over JNI, after
 `notifications = { description = ".." }` under `[permissions]` in the app's
 `Dioxus.toml`; a tap reopens the app and runs `on_click`. Blitz on Linux: the
@@ -152,9 +154,9 @@ Both handles are `Copy`. `PushOptions` apply to the next `subscribe`.
 | Platform | System notifications | Push |
 |---|---|---|
 | Web | Full, in a secure context. Chrome on Android shows through the page's service worker, which must forward clicks (below). | Full, in a secure context; iOS Safari only for a Home Screen web app. |
-| Linux desktop (WebKitGTK) | Every request is `Denied`. | `Unsupported`. |
+| Linux desktop (WebKitGTK) | With libero's `desktop` feature, the desktop's notification server, always `Granted`; a click runs `on_click` without raising the window. Without it every request is `Denied`. | `Unsupported`. |
 | macOS, Windows desktop | Untested; a click runs `on_click` but may not raise the window. | `Unsupported`. |
-| Android (WebView) | Full, through the system's `NotificationManager`, with `notifications` under `[permissions]`; one channel named after the app. `icon` is ignored. | `Unsupported`; FCM needs app-level Kotlin. |
+| Android (WebView) | Full, through the system's `NotificationManager`, with `notifications` under `[permissions]`; one channel named after the app. `icon` is ignored. | `Unsupported`; FCM needs app-level Kotlin (recipe below). |
 | Blitz on Linux | Full, through the desktop's notification server; always `Granted`. A click runs `on_click` without raising the window. | `Unsupported`. |
 | Blitz on macOS and Windows, server render | `Unsupported`. | `Unsupported`. |
 
@@ -174,6 +176,116 @@ self.addEventListener('notificationclick', (event) => {
 ```
 
 Post `event: 'close'` from `notificationclose` the same way.
+
+### Push on Android (FCM)
+
+The Android WebView has no Web Push, and libero ships no Firebase code. The
+app adds Firebase Cloud Messaging itself through `dx`'s Android knobs. A
+recipe, not run in libero's CI:
+
+1. Build once, then copy the manifest `dx` generated
+   (`target/dx/<app>/debug/android/app/app/src/main/AndroidManifest.xml`) to
+   `android/AndroidManifest.xml`. A custom manifest replaces the generated one
+   as is, so keep its `<uses-permission>` lines, including
+   `android.permission.POST_NOTIFICATIONS`, and add the service inside
+   `<application>`:
+
+   ```xml
+   <service android:name="dev.dioxus.main.PushService" android:exported="false">
+       <intent-filter>
+           <action android:name="com.google.firebase.MESSAGING_EVENT" />
+       </intent-filter>
+   </service>
+   ```
+
+2. Point `Dioxus.toml` at it, at your own `MainActivity.kt`, and at the
+   Firebase library:
+
+   ```toml
+   [application]
+   android_manifest = "android/AndroidManifest.xml"
+   android_main_activity = "android/MainActivity.kt"
+
+   [android]
+   gradle_dependencies = ["com.google.firebase:firebase-messaging:24.1.0"]
+   ```
+
+3. Write `android/MainActivity.kt`. `dx` compiles only this one Kotlin file,
+   so the service lives in it too. Firebase starts from options in code, as
+   the `google-services` Gradle plugin needs a classpath line `dx` does not
+   write:
+
+   ```kotlin
+   package dev.dioxus.main
+
+   import android.app.NotificationChannel
+   import android.app.NotificationManager
+   import android.app.PendingIntent
+   import android.content.Intent
+   import android.os.Build
+   import android.os.Bundle
+   import com.google.firebase.FirebaseApp
+   import com.google.firebase.FirebaseOptions
+   import com.google.firebase.messaging.FirebaseMessaging
+   import com.google.firebase.messaging.FirebaseMessagingService
+   import com.google.firebase.messaging.RemoteMessage
+
+   // Your `[android] identifier`, as in the generated file.
+   typealias BuildConfig = com.example.app.BuildConfig
+
+   class MainActivity : WryActivity() {
+       override fun onCreate(savedInstanceState: Bundle?) {
+           super.onCreate(savedInstanceState)
+           if (FirebaseApp.getApps(this).isEmpty()) {
+               // From the Firebase console's project settings.
+               val options = FirebaseOptions.Builder()
+                   .setApplicationId("<mobilesdk_app_id>")
+                   .setApiKey("<api key>")
+                   .setProjectId("<project id>")
+                   .setGcmSenderId("<project number>")
+                   .build()
+               FirebaseApp.initializeApp(this, options)
+           }
+           FirebaseMessaging.getInstance().token.addOnSuccessListener { token -> sendToServer(token) }
+       }
+   }
+
+   class PushService : FirebaseMessagingService() {
+       override fun onNewToken(token: String) = sendToServer(token)
+
+       // Data messages always land here; notification messages only while the app is in front.
+       override fun onMessageReceived(message: RemoteMessage) {
+           val manager = getSystemService(NotificationManager::class.java)
+           // libero's channel, so the user finds all of the app's notifications in one place.
+           val builder = if (Build.VERSION.SDK_INT >= 26) {
+               val label = applicationInfo.loadLabel(packageManager)
+               manager.createNotificationChannel(
+                   NotificationChannel("libero", label, NotificationManager.IMPORTANCE_DEFAULT))
+               android.app.Notification.Builder(this, "libero")
+           } else {
+               @Suppress("DEPRECATION") android.app.Notification.Builder(this)
+           }
+           val open = PendingIntent.getActivity(this, 0,
+               Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+           val notification = builder
+               .setSmallIcon(applicationInfo.icon)
+               .setContentTitle(message.notification?.title ?: message.data["title"])
+               .setContentText(message.notification?.body ?: message.data["body"])
+               .setContentIntent(open)
+               .setAutoCancel(true)
+               .build()
+           manager.notify(message.messageId, 0, notification)
+       }
+   }
+
+   // POST the token to your server, which sends through the FCM HTTP v1 API.
+   fun sendToServer(token: String) { /* ... */ }
+   ```
+
+`use_system_notification().request()` still asks for the notification
+permission, from a control in the page. A tap on a pushed notification opens
+the app; `on_click` runs only for notifications the page showed itself. The
+server, its service account and the sending stay outside libero.
 
 ## Accessibility
 
@@ -205,8 +317,8 @@ Post `event: 'close'` from `notificationclose` the same way.
   also after a restart; it cannot tell a dismissed dialog from a refusal.
 - Android ignores `icon` (the launcher icon shows), and a tap on a notification
   from before a restart only opens the app.
-- Blitz on Linux cannot raise its window on a click: `on_click` runs, the
-  window stays where it is.
+- Blitz and the desktop WebView on Linux cannot raise the window on a click:
+  `on_click` runs, the window stays where it is.
 - Where only a service worker may show notifications (Chrome on Android),
   `on_click` runs only if the app's worker posts the click back.
 - A click after the page closed runs nothing in the page: only a worker can

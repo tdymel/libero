@@ -121,6 +121,9 @@ archunit = "0.0.1"
 # Nothing forces it on: without it `platform::backend` falls back to dioxus's
 # portable mounted handle, which cannot query a subtree or report focus.
 native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cursor-icon", "dep:style", "dep:arboard", "dep:rfd", "dep:futures-channel", "dep:dbus"]
+# The desktop WebView (`dioxus/desktop`) on Linux: WebKitGTK denies the page's
+# `Notification`, so system notifications go over the session bus (todo 1470).
+desktop = ["dep:futures-channel", "dep:dbus"]
 default = [
     "code-lang-rust",
     "code-lang-bash",

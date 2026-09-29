@@ -39,10 +39,8 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             eventually_text(d, "#error", "None", "a show").await?;
             d.tap_notification("Fixture").await?;
             eventually_text(d, "#clicks", "1", "a tap on the notification").await?;
-            // The first tap after the tap's relaunch of the activity can go nowhere.
+            d.click("#show").await?;
             eventually(d, "the second notification to post", async |d| {
-                d.click("#show").await?;
-                linger(d, 20).await;
                 Ok(d.posted_notifications().await?.contains("tag=fixture"))
             })
             .await?;
@@ -54,8 +52,9 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             d.click("#subscribe").await?;
             eventually_text(d, "#push-error", "Some(Unsupported)", "a subscribe").await?;
         }
-        // Blitz on Linux asks the session's notification server; without one it is unsupported.
-        Platform::Native => {
+        // Blitz and the WebView on Linux (1470) ask the session's notification
+        // server; without one it is unsupported.
+        Platform::Native | Platform::Desktop => {
             eventually(d, "the notification server's answer", async |d| {
                 Ok(d.text("#permission").await? != "Unknown")
             })
@@ -70,13 +69,6 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             eventually_text(d, "#error", "Some(Unsupported)", "a show").await?;
             d.click("#subscribe").await?;
             eventually_text(d, "#push-error", "Some(Unsupported)", "a subscribe").await?;
-        }
-        // WebKitGTK has a `Notification`, but wry answers no permission request.
-        Platform::Desktop => {
-            eventually_text(d, "#supported", "true", "mount").await?;
-            d.click("#request").await?;
-            eventually_text(d, "#error", "Some(Denied)", "a request").await?;
-            eventually_text(d, "#permission", "Denied", "a denial").await?;
         }
         Platform::Web => {
             eventually_text(d, "#supported", "true", "mount").await?;

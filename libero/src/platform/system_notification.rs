@@ -279,9 +279,68 @@ mod web {
 #[cfg(all(target_os = "android", not(feature = "native")))]
 #[path = "system_notification_android.rs"]
 mod android;
-#[cfg(all(target_os = "linux", feature = "native"))]
+#[cfg(all(target_os = "linux", any(feature = "native", feature = "desktop")))]
 #[path = "system_notification_freedesktop.rs"]
 mod freedesktop;
+
+/// The desktop WebView on Linux: WebKitGTK denies the page's `Notification`, so the
+/// session bus shows them; a liveview page keeps the browser's (todo 1470).
+#[cfg(all(target_os = "linux", feature = "desktop", not(feature = "native")))]
+mod desktop {
+    use super::{
+        Answer, NotificationEvent, Shown, SystemNotification, SystemNotificationApi,
+        SystemNotificationError, freedesktop,
+    };
+    use crate::platform::PermissionState;
+    use crate::platform::backend::{webview_system_notification, wry_page};
+
+    type Api = &'static dyn SystemNotificationApi;
+
+    /// The page's impl is read before the first `await`, while a scope is current.
+    async fn route(page: Option<Api>) -> Option<Api> {
+        let page = page?;
+        Some(if wry_page().await {
+            &freedesktop::SYSTEM_NOTIFICATION
+        } else {
+            page
+        })
+    }
+
+    pub(super) struct DesktopNotification;
+
+    pub(super) static SYSTEM_NOTIFICATION: DesktopNotification = DesktopNotification;
+
+    impl SystemNotificationApi for DesktopNotification {
+        fn probe(&self) -> Answer<Option<PermissionState>> {
+            let page = webview_system_notification();
+            Box::pin(async move { route(page).await?.probe().await })
+        }
+
+        fn request(&self) -> Answer<PermissionState> {
+            let page = webview_system_notification();
+            Box::pin(async move {
+                match route(page).await {
+                    Some(api) => api.request().await,
+                    None => PermissionState::Unsupported,
+                }
+            })
+        }
+
+        fn show(
+            &self,
+            notification: &SystemNotification,
+            events: Box<dyn Fn(NotificationEvent)>,
+        ) -> Shown {
+            let (page, notification) = (webview_system_notification(), notification.clone());
+            Box::pin(async move {
+                let api = route(page)
+                    .await
+                    .ok_or(SystemNotificationError::Unsupported)?;
+                api.show(&notification, events).await
+            })
+        }
+    }
+}
 
 /// `None` without a Notifications API: Blitz off Linux, a server, a browser without one.
 /// A WebView and Blitz on Linux answer `Some`; [`probe`](SystemNotificationApi::probe) tells.
@@ -300,10 +359,14 @@ pub(crate) fn system_notification() -> Option<&'static dyn SystemNotificationApi
     return None;
     #[cfg(all(target_os = "android", not(feature = "native")))]
     return Some(&android::SYSTEM_NOTIFICATION);
+    #[cfg(all(target_os = "linux", feature = "desktop", not(feature = "native")))]
+    return super::backend::webview_system_notification()
+        .map(|_| &desktop::SYSTEM_NOTIFICATION as &'static dyn SystemNotificationApi);
     #[cfg(all(
         not(target_arch = "wasm32"),
         not(target_os = "android"),
-        not(feature = "native")
+        not(feature = "native"),
+        not(all(target_os = "linux", feature = "desktop"))
     ))]
     return super::backend::webview_system_notification();
 }
