@@ -4,28 +4,52 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Flex, Paper, Text, Transition, TransitionKind};
 
-const KINDS: [&str; 9] = [
+const KINDS: [&str; 21] = [
     "Fade",
     "FadeUp",
     "FadeDown",
+    "FadeLeft",
+    "FadeRight",
     "Scale",
+    "ScaleX",
+    "ScaleY",
     "SlideUp",
     "SlideDown",
     "SlideLeft",
     "SlideRight",
     "Pop",
+    "PopTopLeft",
+    "PopTopRight",
+    "PopBottomLeft",
+    "PopBottomRight",
+    "SkewUp",
+    "SkewDown",
+    "RotateLeft",
+    "RotateRight",
 ];
 
 fn kind_of(name: &str) -> TransitionKind {
     match name {
         "FadeUp" => TransitionKind::FadeUp,
         "FadeDown" => TransitionKind::FadeDown,
+        "FadeLeft" => TransitionKind::FadeLeft,
+        "FadeRight" => TransitionKind::FadeRight,
         "Scale" => TransitionKind::Scale,
+        "ScaleX" => TransitionKind::ScaleX,
+        "ScaleY" => TransitionKind::ScaleY,
         "SlideUp" => TransitionKind::SlideUp,
         "SlideDown" => TransitionKind::SlideDown,
         "SlideLeft" => TransitionKind::SlideLeft,
         "SlideRight" => TransitionKind::SlideRight,
         "Pop" => TransitionKind::Pop,
+        "PopTopLeft" => TransitionKind::PopTopLeft,
+        "PopTopRight" => TransitionKind::PopTopRight,
+        "PopBottomLeft" => TransitionKind::PopBottomLeft,
+        "PopBottomRight" => TransitionKind::PopBottomRight,
+        "SkewUp" => TransitionKind::SkewUp,
+        "SkewDown" => TransitionKind::SkewDown,
+        "RotateLeft" => TransitionKind::RotateLeft,
+        "RotateRight" => TransitionKind::RotateRight,
         _ => TransitionKind::Fade,
     }
 }
@@ -77,7 +101,7 @@ pub fn TransitionPage() -> Element {
             properties: vec![props("Transition", vec![
                 prop("kind", "TransitionKind")
                     .default("Fade")
-                    .doc("How the children move in and out: `Fade`, `FadeUp`, `FadeDown`, `Scale`, `SlideUp`, `SlideDown`, `SlideLeft`, `SlideRight` or `Pop`. All of them also fade. The slides travel the children's own size, in physical directions."),
+                    .doc("How the children move in and out. Travel: `Fade`, `FadeUp`, `FadeDown`, `FadeLeft`, `FadeRight`, `SlideUp`, `SlideDown`, `SlideLeft`, `SlideRight`. Grow: `Scale`, `ScaleX`, `ScaleY`, `Pop`, `PopTopLeft`, `PopTopRight`, `PopBottomLeft`, `PopBottomRight`. Lean or turn: `SkewUp`, `SkewDown`, `RotateLeft`, `RotateRight`. All of them also fade. The slides travel the children's own size; left and right are physical directions."),
                 prop("open", "bool")
                     .default("true")
                     .doc("Omitted, the children animate in once on mount and never exit. Passed, they enter and exit as it flips; the first value does not animate. You own this state."),

@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 use e2e::native::mount;
-use libero::components::{Collapse, Transition};
+use libero::components::{Collapse, Transition, TransitionKind};
 
 fn collapse_app() -> Element {
     let mut open = use_signal(|| true);
@@ -51,6 +51,23 @@ fn a_closed_transition_unmounts_its_content_on_the_exit_timer() {
         "the closed content is still mounted:\n{}",
         page.tree()
     );
+}
+
+fn corner_app() -> Element {
+    rsx! {
+        Transition { id: "corner", kind: TransitionKind::PopTopLeft, div { "Details" } }
+        Transition { id: "skew", kind: TransitionKind::SkewUp, open: false, div { "Details" } }
+    }
+}
+
+/// Blitz folds `transform-origin` and `skew` into the painted matrix, so these kinds run natively.
+#[test]
+fn the_origin_and_skew_kinds_resolve_natively() {
+    let mut page = mount(corner_app);
+    page.advance(1.0);
+    assert_eq!(page.computed("#corner", "transform-origin"), "0% 0% 0px");
+    let skew = page.computed("#skew", "transform");
+    assert!(skew.contains("skew("), "{skew}");
 }
 
 static ENDED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);

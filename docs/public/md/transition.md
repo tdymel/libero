@@ -43,7 +43,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `kind` | `TransitionKind` | `Fade` | How the children move in and out: `Fade`, `FadeUp`, `FadeDown`, `Scale`, `SlideUp`, `SlideDown`, `SlideLeft`, `SlideRight` or `Pop`. All of them also fade. The slides travel the children's own size, in physical directions. |
+| `kind` | `TransitionKind` | `Fade` | How the children move in and out. Travel: `Fade`, `FadeUp`, `FadeDown`, `FadeLeft`, `FadeRight`, `SlideUp`, `SlideDown`, `SlideLeft`, `SlideRight`. Grow: `Scale`, `ScaleX`, `ScaleY`, `Pop`, `PopTopLeft`, `PopTopRight`, `PopBottomLeft`, `PopBottomRight`. Lean or turn: `SkewUp`, `SkewDown`, `RotateLeft`, `RotateRight`. All of them also fade. The slides travel the children's own size; left and right are physical directions. |
 | `open` | `bool` | `true` | Omitted, the children animate in once on mount and never exit. Passed, they enter and exit as it flips; the first value does not animate. You own this state. |
 | `duration` | `u32` | `200` | Animation length in milliseconds. `0` turns the animation off. |
 | `children` | `Element` | required | The content that animates. It is unmounted once the exit ends. |
@@ -74,9 +74,11 @@ Like every component, `Transition` also takes the shared props `sx`, `class`,
 |---|---|---|---|
 | `duration` | `u32` | `200` | Milliseconds the enter and exit take. |
 | `easing` | `&'static str` | `"ease"` | The CSS timing function. |
-| `distance` | `&'static str` | `"1rem"` | How far `FadeUp` and `FadeDown` travel. |
+| `distance` | `&'static str` | `"1rem"` | How far the `Fade*`, `Skew*` and `Rotate*` kinds travel. |
 | `scale` | `&'static str` | `"0.9"` | The factor `Scale` grows from. |
 | `pop_scale` | `&'static str` | `"0.8"` | The factor `Pop` grows from. |
+| `rotate` | `&'static str` | `"5deg"` | The angle the `Rotate*` kinds turn from. |
+| `skew` | `&'static str` | `"10deg"` | The angle the `Skew*` kinds lean from. |
 
 ## CSS variables
 
@@ -84,9 +86,11 @@ Like every component, `Transition` also takes the shared props `sx`, `class`,
 |---|---|
 | `--lsx-transition-duration` | Duration of the transition, as a CSS time. |
 | `--lsx-transition-easing` | Timing function of the transition. |
-| `--lsx-transition-distance` | Travel of `FadeUp` and `FadeDown`, a CSS length. |
+| `--lsx-transition-distance` | Travel of the `Fade*`, `Skew*` and `Rotate*` kinds, a CSS length. |
 | `--lsx-transition-scale` | Starting factor of `Scale`. |
 | `--lsx-transition-pop-scale` | Starting factor of `Pop`. |
+| `--lsx-transition-rotate` | Starting angle of the `Rotate*` kinds. |
+| `--lsx-transition-skew` | Starting angle of the `Skew*` kinds. |
 
 ## Data attributes
 

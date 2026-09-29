@@ -51,6 +51,34 @@ e2e::scenario!(
     enters_on_mount
 );
 
+/// Closed it is shrunk to nothing; open it is untransformed, its origin the bottom right corner.
+async fn grows_from_its_corner<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let closed = d.style(ROOT, "transform").await?;
+    ensure!(
+        closed.starts_with("matrix(0, 0, 0, 0"),
+        "closed transform {closed}"
+    );
+    d.click(TOGGLE).await?;
+    eventually(d, "the corner transition to settle open", async |d| {
+        Ok(opacity(d).await? > 0.99 && d.style(ROOT, "transform").await? == "none")
+    })
+    .await?;
+    let corner = format!(
+        "{} {}",
+        d.style(ROOT, "width").await?,
+        d.style(ROOT, "height").await?
+    );
+    let origin = d.style(ROOT, "transform-origin").await?;
+    ensure!(origin == corner, "origin {origin}, corner {corner}");
+    Ok(())
+}
+
+e2e::scenario!(
+    it_grows_an_origin_kind_from_its_corner,
+    "/transition-corner",
+    grows_from_its_corner
+);
+
 /// Under reduced motion nothing transitions. The same check at `no-preference` must see
 /// motion first, so green means the reduced arm worked.
 #[test]

@@ -5,12 +5,16 @@ use crate::theme::CssVar;
 /// The enter/exit duration; the `duration` prop sets the `-override` twin.
 pub const TRANSITION_DURATION: CssVar = CssVar::new("--lsx-transition-duration");
 pub const TRANSITION_EASING: CssVar = CssVar::new("--lsx-transition-easing");
-/// How far the `Fade*` kinds travel.
+/// How far the `Fade*`, `Skew*` and `Rotate*` kinds travel.
 pub const TRANSITION_DISTANCE: CssVar = CssVar::new("--lsx-transition-distance");
 /// The size the `Scale` kind grows from.
 pub const TRANSITION_SCALE: CssVar = CssVar::new("--lsx-transition-scale");
 /// The size the `Pop` kind grows from.
 pub const TRANSITION_POP_SCALE: CssVar = CssVar::new("--lsx-transition-pop-scale");
+/// The angle the `Rotate*` kinds turn from.
+pub const TRANSITION_ROTATE: CssVar = CssVar::new("--lsx-transition-rotate");
+/// The angle the `Skew*` kinds lean from.
+pub const TRANSITION_SKEW: CssVar = CssVar::new("--lsx-transition-skew");
 
 /// Theme defaults for `Transition`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,6 +28,10 @@ pub struct TransitionDefaults {
     pub scale: &'static str,
     /// A unitless factor below `scale`.
     pub pop_scale: &'static str,
+    /// A CSS angle.
+    pub rotate: &'static str,
+    /// A CSS angle.
+    pub skew: &'static str,
 }
 
 impl TransitionDefaults {
@@ -33,6 +41,8 @@ impl TransitionDefaults {
         distance: "1rem",
         scale: "0.9",
         pop_scale: "0.8",
+        rotate: "5deg",
+        skew: "10deg",
     };
 }
 
@@ -44,6 +54,8 @@ impl ToCssDeclarations for TransitionDefaults {
             TRANSITION_DISTANCE.declare(self.distance),
             TRANSITION_SCALE.declare(self.scale),
             TRANSITION_POP_SCALE.declare(self.pop_scale),
+            TRANSITION_ROTATE.declare(self.rotate),
+            TRANSITION_SKEW.declare(self.skew),
         ]
     }
 }

@@ -11,7 +11,7 @@ use crate::{
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
         CssVar, TRANSITION_DISTANCE, TRANSITION_DURATION, TRANSITION_EASING, TRANSITION_POP_SCALE,
-        TRANSITION_SCALE,
+        TRANSITION_ROTATE, TRANSITION_SCALE, TRANSITION_SKEW,
     },
 };
 
@@ -21,6 +21,8 @@ const EXIT_PROPERTY: &str = "opacity";
 
 /// The closed `transform`, set per instance from the [`TransitionKind`].
 const TRANSITION_FROM: CssVar = CssVar::new("--lsx-transition-from");
+/// The `transform-origin`, per kind; outside the states so it never jumps mid-transition.
+const TRANSITION_ORIGIN: CssVar = CssVar::new("--lsx-transition-origin");
 
 /// Each reduced-motion guard sits in its state's `when(..)` block, or loses on specificity.
 /// `visibility`, not `aria-hidden`/`inert`, drops closed content from focus and the a11y tree.
@@ -29,23 +31,24 @@ static TRANSITION_BASE_SX: StaticSx = StaticSx::new(|| {
     let easing = TRANSITION_EASING.value();
     let motion = format!("opacity {duration} {easing}, transform {duration} {easing}");
 
-    sx().when(
-        "open",
-        sx().opacity("1")
-            .transform("none")
-            .visibility("visible")
-            .transition(format!("{motion}, visibility 0s linear 0s"))
-            .media(REDUCED_MOTION, sx().transition("none")),
-    )
-    .when(
-        "closed",
-        sx().opacity("0")
-            .transform(TRANSITION_FROM.value())
-            .visibility("hidden")
-            // Delayed so the content stays announced until the exit ends.
-            .transition(format!("{motion}, visibility 0s linear {duration}"))
-            .media(REDUCED_MOTION, sx().transition("none")),
-    )
+    sx().transform_origin(TRANSITION_ORIGIN.value())
+        .when(
+            "open",
+            sx().opacity("1")
+                .transform("none")
+                .visibility("visible")
+                .transition(format!("{motion}, visibility 0s linear 0s"))
+                .media(REDUCED_MOTION, sx().transition("none")),
+        )
+        .when(
+            "closed",
+            sx().opacity("0")
+                .transform(TRANSITION_FROM.value())
+                .visibility("hidden")
+                // Delayed so the content stays announced until the exit ends.
+                .transition(format!("{motion}, visibility 0s linear {duration}"))
+                .media(REDUCED_MOTION, sx().transition("none")),
+        )
 });
 
 /// How `Transition` enters and exits; all of them also fade.
@@ -70,12 +73,39 @@ pub enum TransitionKind {
     SlideRight,
     /// Grows from `theme.transition.pop_scale`, smaller than `Scale`.
     Pop,
+    /// Moves left into place (physical, not logical).
+    FadeLeft,
+    /// Moves right into place (physical, not logical).
+    FadeRight,
+    /// Grows its width from zero, out of the left edge.
+    ScaleX,
+    /// Grows its height from zero, out of the top edge.
+    ScaleY,
+    /// Rises into place, leaning by `theme.transition.skew`; Mantine's `skew-up` sinks instead.
+    SkewUp,
+    /// Sinks into place, leaning by `theme.transition.skew`.
+    SkewDown,
+    /// Rises into place, turning clockwise from `theme.transition.rotate`.
+    RotateLeft,
+    /// Rises into place, turning counter-clockwise from `theme.transition.rotate`.
+    RotateRight,
+    /// Grows from zero out of the top left corner.
+    PopTopLeft,
+    /// Grows from zero out of the top right corner.
+    PopTopRight,
+    /// Grows from zero out of the bottom left corner.
+    PopBottomLeft,
+    /// Grows from zero out of the bottom right corner.
+    PopBottomRight,
 }
 
 impl TransitionKind {
     /// The `transform` of the closed state.
     fn closed_transform(self) -> String {
         let distance = TRANSITION_DISTANCE.value();
+        let rotate = TRANSITION_ROTATE.value();
+        let skew = TRANSITION_SKEW.value();
+        let lean = format!("skew(calc({skew} * -1), calc({skew} * -0.5))");
         match self {
             Self::Fade => "none".to_string(),
             Self::FadeUp => format!("translateY({distance})"),
@@ -86,6 +116,41 @@ impl TransitionKind {
             Self::SlideLeft => "translateX(100%)".to_string(),
             Self::SlideRight => "translateX(-100%)".to_string(),
             Self::Pop => format!("scale({})", TRANSITION_POP_SCALE.value()),
+            Self::FadeLeft => format!("translateX({distance})"),
+            Self::FadeRight => format!("translateX(calc({distance} * -1))"),
+            Self::ScaleX => "scaleX(0)".to_string(),
+            Self::ScaleY => "scaleY(0)".to_string(),
+            Self::SkewUp => format!("translateY({distance}) {lean}"),
+            Self::SkewDown => format!("translateY(calc({distance} * -1)) {lean}"),
+            Self::RotateLeft => format!("translateY({distance}) rotate(calc({rotate} * -1))"),
+            Self::RotateRight => format!("translateY({distance}) rotate({rotate})"),
+            Self::PopTopLeft | Self::PopTopRight | Self::PopBottomLeft | Self::PopBottomRight => {
+                "scale(0)".to_string()
+            }
+        }
+    }
+
+    /// The `transform-origin` the kind grows, leans or turns around.
+    fn origin(self) -> &'static str {
+        match self {
+            Self::ScaleX => "left",
+            Self::ScaleY | Self::SkewDown | Self::RotateRight => "top",
+            Self::SkewUp | Self::RotateLeft => "bottom",
+            Self::PopTopLeft => "top left",
+            Self::PopTopRight => "top right",
+            Self::PopBottomLeft => "bottom left",
+            Self::PopBottomRight => "bottom right",
+            Self::Fade
+            | Self::FadeUp
+            | Self::FadeDown
+            | Self::FadeLeft
+            | Self::FadeRight
+            | Self::Scale
+            | Self::SlideUp
+            | Self::SlideDown
+            | Self::SlideLeft
+            | Self::SlideRight
+            | Self::Pop => "center",
         }
     }
 }
@@ -98,6 +163,7 @@ fn transition_variables(kind: TransitionKind, duration: Option<u32>) -> Variable
             duration.map(|ms| format!("{ms}ms")),
         )
         .with(TRANSITION_FROM, Some(kind.closed_transform()))
+        .with(TRANSITION_ORIGIN, Some(kind.origin().to_string()))
 }
 
 base_props! {
@@ -226,13 +292,67 @@ mod tests {
                 TransitionKind::Pop,
                 "scale(var(--lsx-transition-pop-scale))",
             ),
+            (
+                TransitionKind::FadeLeft,
+                "translateX(var(--lsx-transition-distance))",
+            ),
+            (
+                TransitionKind::FadeRight,
+                "translateX(calc(var(--lsx-transition-distance) * -1))",
+            ),
+            (TransitionKind::ScaleX, "scaleX(0)"),
+            (TransitionKind::ScaleY, "scaleY(0)"),
+            (
+                TransitionKind::SkewUp,
+                "translateY(var(--lsx-transition-distance)) skew(calc(var(--lsx-transition-skew) * -1), calc(var(--lsx-transition-skew) * -0.5))",
+            ),
+            (
+                TransitionKind::SkewDown,
+                "translateY(calc(var(--lsx-transition-distance) * -1)) skew(calc(var(--lsx-transition-skew) * -1), calc(var(--lsx-transition-skew) * -0.5))",
+            ),
+            (
+                TransitionKind::RotateLeft,
+                "translateY(var(--lsx-transition-distance)) rotate(calc(var(--lsx-transition-rotate) * -1))",
+            ),
+            (
+                TransitionKind::RotateRight,
+                "translateY(var(--lsx-transition-distance)) rotate(var(--lsx-transition-rotate))",
+            ),
+            (TransitionKind::PopTopLeft, "scale(0)"),
+            (TransitionKind::PopTopRight, "scale(0)"),
+            (TransitionKind::PopBottomLeft, "scale(0)"),
+            (TransitionKind::PopBottomRight, "scale(0)"),
         ];
         for (kind, transform) in expected {
             let variables = transition_variables(kind, None).to_string();
-            assert_eq!(
-                variables,
-                format!("--lsx-transition-from:{transform};"),
-                "{kind:?}"
+            assert!(
+                variables.starts_with(&format!("--lsx-transition-from:{transform};")),
+                "{kind:?}: {variables}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_kind_sets_its_origin() {
+        let expected = [
+            (TransitionKind::Fade, "center"),
+            (TransitionKind::Pop, "center"),
+            (TransitionKind::ScaleX, "left"),
+            (TransitionKind::ScaleY, "top"),
+            (TransitionKind::SkewUp, "bottom"),
+            (TransitionKind::SkewDown, "top"),
+            (TransitionKind::RotateLeft, "bottom"),
+            (TransitionKind::RotateRight, "top"),
+            (TransitionKind::PopTopLeft, "top left"),
+            (TransitionKind::PopTopRight, "top right"),
+            (TransitionKind::PopBottomLeft, "bottom left"),
+            (TransitionKind::PopBottomRight, "bottom right"),
+        ];
+        for (kind, origin) in expected {
+            let variables = transition_variables(kind, None).to_string();
+            assert!(
+                variables.ends_with(&format!("--lsx-transition-origin:{origin};")),
+                "{kind:?}: {variables}"
             );
         }
     }
