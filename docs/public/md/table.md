@@ -950,12 +950,14 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 - Paginated, the page buttons sit in a `nav` named after the caption, the
   page-size picker is labelled, and a page change announces the new range,
   "4–6 of 7", politely. The first render announces nothing.
-- The quick-filter field is a labelled `type="search"` input, "Search", described by the table's caption. Once
-  typing pauses for half a second, a polite live region says how many rows are
+- The quick-filter field is a labelled `type="search"` input, "Search", described by the table's caption, else its `aria_labelledby` or `aria_label`,
+  so two tables' fields differ. Once typing pauses for half a second, a polite live region says how many rows are
   left, "2 rows".
 - With `column_menu`, each menu button is named after its column, "Age column
   options", and the header keeps its text as its name. The Columns submenu lists
-  checkbox items, and the last shown column cannot be hidden.
+  checkbox items, and the last shown column cannot be hidden. After a pin moves
+  the column, focus stays on its menu button; after Hide column it moves to the
+  next shown column's, else the previous one's.
 - The filter popover is a `role="dialog"` named "Filter" plus the column, with
   labelled Operator and Value fields; focus moves to the value on open, or to
   the operator when it takes none. A filtered header's button reads "Age is
@@ -1040,7 +1042,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   the `header_filters` row.
 - On Blitz, a row's handle does not drag: Blitz paints no moved table row. The
   keyboard and the move buttons reorder there.
-- Columns reorder from the column menu only, not by dragging a header.
+- On Blitz, a header has no drag grip: columns reorder from the column menu
+  there.
 - On Android, the filter popover cannot look into itself, so Tab does not close
   it at its ends and focus lands on the popover rather than its value field;
   Escape and Back close it.

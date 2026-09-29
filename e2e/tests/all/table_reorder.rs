@@ -199,6 +199,91 @@ e2e::scenario!(
     a_menu_moves_a_column
 );
 
+fn menu_button(header: &str) -> String {
+    format!("button[aria-label=\"{header} column options\"]")
+}
+
+/// Opens `header`'s menu from the keyboard and picks `entry` with the arrows.
+async fn pick_by_keys<D: Driver>(d: &mut D, header: &str, entry: &str) -> Result<()> {
+    let button = menu_button(header);
+    d.focus(&button).await?;
+    eventually_focused(d, &button, "the menu button").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "the column menu to open", async |d| {
+        d.exists("[role=menuitem]").await
+    })
+    .await?;
+    let mut item = None;
+    for index in 0..12 {
+        let at = format!("[role=menuitem][data-menu-index=\"{index}\"]");
+        if d.exists(&at).await? && d.text(&at).await? == entry {
+            item = Some(at);
+            break;
+        }
+    }
+    let Some(item) = item else {
+        bail!("no {entry:?} in {header}'s menu");
+    };
+    for _ in 0..12 {
+        if d.is_focused(&item).await? {
+            d.press(keyboard::ENTER).await?;
+            return Ok(());
+        }
+        d.press(keyboard::ARROW_DOWN).await?;
+    }
+    bail!("the arrows never reached {entry:?}")
+}
+
+/// TM1 (todo 1427): a pin that moves the header keeps focus on its menu
+/// button; Hide sends it to the next column's.
+async fn menu_picks_keep_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    pick_by_keys(d, "Name", "Pin to end").await?;
+    eventually(d, "Name to pin at the end", async |d| {
+        Ok(d.rect("th[aria-label=Name]").await?.x > d.rect("th[aria-label=Origin]").await?.x)
+    })
+    .await?;
+    eventually_focused(d, &menu_button("Name"), "Pin to end").await?;
+    pick_by_keys(d, "Stock", "Hide column").await?;
+    eventually(d, "Stock to hide", async |d| {
+        Ok(!d.exists("th[aria-label=Stock]").await?)
+    })
+    .await?;
+    eventually_focused(d, &menu_button("Origin"), "Hide column").await
+}
+
+e2e::scenario!(
+    a_pin_or_hide_from_the_menu_keeps_focus_on_a_menu_button,
+    "/table-reorder",
+    menu_picks_keep_focus,
+    android: skip("958: element identity on the WebView")
+);
+
+/// Todo 1483: every draggable header's grip owns a 24px lane, its menu button
+/// and label past it, an end-aligned one's too.
+async fn grips_keep_their_lane<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for header in ["Name", "Stock", "Origin"] {
+        let cell = format!("th[aria-label={header}]");
+        let grip = d.rect(&format!("{cell} [data-drag-handle]")).await?;
+        let menu = d.rect(&format!("{cell} [data-column-menu]")).await?;
+        let label = d.rect(&format!("{cell} [data-sort-button]")).await?;
+        let lane = grip.x + grip.width;
+        if grip.width < 23.5 || menu.x < lane - 0.5 || label.x < lane - 0.5 {
+            bail!(
+                "{header} ({:?}): grip {grip:?}, menu {menu:?}, label {label:?}",
+                d.attr(&cell, "data-align").await?
+            );
+        }
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_header_grip_has_its_own_lane,
+    "/table-column-drag",
+    grips_keep_their_lane,
+    native: skip("no column drag grip on Blitz: the column menu moves columns")
+);
+
 /// Name's header grip dropped near Origin's end edge: one order change (1395).
 async fn a_grip_drag_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let grip = "th[aria-label=Name] [data-drag-handle]";

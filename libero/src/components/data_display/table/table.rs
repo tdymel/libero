@@ -28,7 +28,7 @@ use super::{
     column::{Column, ColumnDefaults},
     column_drag::{DropPlan, use_column_drag},
     column_filter::{ColumnFilter, FilterLogic, cell_tests},
-    column_menu::{ColumnMenu, MenuColumn},
+    column_menu::{ColumnMenu, MenuColumn, use_menu_focus},
     column_order::{moved, order_unpinned, ranked},
     core::{
         BodySpec, CaptionSpec, CellSpec, RowFn, RowSpec, SortedRows, TableSort, WidthSpec,
@@ -53,6 +53,9 @@ use super::{
         BodyRows, RowWindow, TABLE_ROW_HEIGHT_VAR, use_row_focus, window_attributes, windowed_sx,
     },
 };
+
+/// A draggable header's grip lane, its press target.
+const GRIP_LANE: &str = "24px";
 
 static TABLE_SX: StaticSx = StaticSx::new(|| {
     let vars = TableDefaults::theme_vars();
@@ -242,13 +245,33 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-resize-handle]:focus-visible",
         inset_focus_ring_sx("0"),
     )
+    // The grip owns a 24px lane (WCAG 2.5.8): the header's content, its menu
+    // button too, starts past it (todo 1483).
+    .selector(
+        "& th[data-draggable]",
+        sx().with(
+            "padding-inline-start",
+            format!("max({GRIP_LANE}, {})", TABLE_PAD_X.value()),
+        ),
+    )
+    .selector(
+        "& th[data-draggable][data-sortable], & th[data-draggable][data-menu]",
+        sx().with("padding-inline-start", GRIP_LANE),
+    )
+    .selector(
+        "& th[data-draggable] [data-sort-button], & th[data-draggable] [data-header-text]",
+        sx().with(
+            "padding-inline-start",
+            format!("max(0px, calc({} - {GRIP_LANE}))", TABLE_PAD_X.value()),
+        ),
+    )
     .selector(
         "& [data-drag-handle]",
         sx().position("absolute")
             .top("0")
             .bottom("0")
             .with("inset-inline-start", "0")
-            .width("12px")
+            .width(GRIP_LANE)
             .display("flex")
             .align_items("center")
             .justify_content("center")
@@ -259,17 +282,6 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     .selector(
         "& [data-drag-handle] svg",
         sx().width("12px").height("12px"),
-    )
-    // A 24px press target over the header's start padding (WCAG 2.5.8). Not where
-    // an end-aligned header's menu button sits right after the grip.
-    .selector(
-        "& th:not([data-align=\"end\"][data-menu]) [data-drag-handle]::before",
-        sx().content("\"\"")
-            .position("absolute")
-            .top("0")
-            .bottom("0")
-            .with("inset-inline-start", "0")
-            .width("24px"),
     )
     // An `:active` style makes Chromium's touch adjustment count the grip as a
     // tap target; without one a touch on it snaps to the sort button (1463).
@@ -892,6 +904,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let measured = use_hook(|| CopyValue::new(BTreeMap::new()));
     let announcer = use_announcer();
     let column_drag = use_column_drag(state.column_order);
+    let menu_focus = use_menu_focus();
     let drags = props.column_menu && drags_table_columns();
     let touch = use_hook(|| CopyValue::new(false));
     use_hook(|| {
@@ -1095,6 +1108,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             let active = Rc::new(active.clone());
             (0..headers.len())
                 .map(|index| {
+                    // The next shown column, else the one before.
+                    let at = layout.iter().position(|&shown| shown == index);
+                    let neighbour = at.and_then(|at| {
+                        layout
+                            .get(at + 1)
+                            .or_else(|| at.checked_sub(1).and_then(|before| layout.get(before)))
+                            .copied()
+                    });
                     rsx! {
                         ColumnMenu {
                             index,
@@ -1120,6 +1141,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                             parts: props.column_menu_parts.clone(),
                             filter: filter_target(index),
                             panel: props.filter_panel.then_some(panel),
+                            focus: menu_focus,
+                            neighbour,
                         }
                     }
                 })
@@ -1462,6 +1485,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             .collect(),
         None => Vec::new(),
     };
+    // Without a caption, the table's own name tells its quick filter apart (todo 1376).
+    let text_attr = |name: &str| {
+        attributes
+            .iter()
+            .find(|a| a.name == name)
+            .and_then(|a| match &a.value {
+                dioxus::core::AttributeValue::Text(text) => Some(text.clone()),
+                _ => None,
+            })
+    };
+    let (described_by, table_label) = match described_by {
+        Some(id) => (Some(id), None),
+        None => match text_attr("aria-labelledby") {
+            Some(ids) => (Some(ids), None),
+            None => (None, text_attr("aria-label")),
+        },
+    };
 
     // Blitz skips a `<caption>`, and a capped table's would scroll away over its
     // sticky header: a div before the table then, naming it.
@@ -1645,6 +1685,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 labels,
                 size,
                 caption: described_by,
+                table_label,
             }
         }
     });

@@ -106,3 +106,20 @@ e2e::scenario!(
     "/table-overlay",
     toolbar_layout
 );
+
+/// Todo 1376: with only `aria_label`, the quick filter is described by the
+/// table's name, so two tables' Search fields differ.
+async fn quick_filter_names_its_table<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let field = "[data-toolbar-end] input";
+    let Some(id) = d.attr(field, "aria-describedby").await? else {
+        bail!("the quick filter has no description");
+    };
+    let description = format!("[id=\"{id}\"]");
+    eventually_text(d, &description, "Fruit", "the table's name").await
+}
+
+e2e::scenario!(
+    a_quick_filter_is_described_by_its_tables_label,
+    "/table-overlay",
+    quick_filter_names_its_table
+);

@@ -9,7 +9,7 @@ use super::{
 };
 use crate::{
     components::{accessibility::Announcer, form::TextField},
-    hooks::use_debounced_callback,
+    hooks::{use_debounced_callback, use_id},
     localization::TableLabels,
     sx::sx,
     theme::Size,
@@ -25,9 +25,14 @@ pub(super) fn QuickFilter(
     announcer: Announcer,
     labels: TableLabels,
     size: Size,
-    /// The caption's id, which tells this field from another table's.
+    /// The caption's or the table's `aria-labelledby` ids, which tell this
+    /// field from another table's.
     caption: Option<String>,
+    /// Else the table's `aria-label`, read out as the field's description.
+    table_label: Option<String>,
 ) -> Element {
+    let label_id = use_id();
+    let described_by = caption.or_else(|| table_label.as_ref().map(|_| label_id()));
     let mut latest = use_hook(|| CopyValue::new(results));
     latest.set(results);
     let announce = use_debounced_callback(
@@ -35,12 +40,15 @@ pub(super) fn QuickFilter(
         500,
     );
     rsx! {
+        if let Some(text) = table_label {
+            span { id: label_id, hidden: true, "{text}" }
+        }
         TextField {
             r#type: "search",
             label: labels.search,
             size,
             value: slice.read(),
-            aria_describedby: caption,
+            aria_describedby: described_by,
             sx: sx().max_width("20rem").margin("0 0 8px"),
             oninput: move |text| {
                 slice.set(text);

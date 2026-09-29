@@ -1,6 +1,9 @@
-use std::rc::Rc;
+use std::{collections::BTreeMap, rc::Rc};
 
-use dioxus::prelude::*;
+use dioxus::{
+    core::{ScopeId, current_scope_id},
+    prelude::*,
+};
 use pictogram_icons_lucide as lucide;
 
 use super::{
@@ -19,8 +22,9 @@ use crate::{
         overlay::{Menu, MenuEntry, MenuItem, MenuPart, use_menu},
     },
     context::IconSlot,
-    hooks::{Align, use_element},
+    hooks::{Align, ElementHandle},
     localization::TableLabels,
+    platform::ElementApi,
     theme::Size,
 };
 
@@ -31,6 +35,49 @@ pub(super) struct MenuColumn {
     pub sortable: bool,
     pub hideable: bool,
     pub hidden: bool,
+}
+
+/// Focus after a menu pick that moved its header in the DOM (a pin) or removed
+/// it (Hide): the trigger, or a neighbour's. Owned by the table.
+#[derive(Clone, Copy, PartialEq)]
+pub(super) struct MenuFocus {
+    /// The menu buttons by header index.
+    triggers: CopyValue<BTreeMap<usize, ElementHandle>>,
+    owed: Signal<Option<usize>>,
+    owner: ScopeId,
+}
+
+pub(super) fn use_menu_focus() -> MenuFocus {
+    let mut focus = MenuFocus {
+        triggers: use_hook(|| CopyValue::new(BTreeMap::new())),
+        owed: use_signal(|| None),
+        owner: current_scope_id(),
+    };
+    // After the render that moved or dropped the header: the node is in place.
+    use_effect(move || {
+        let Some(index) = (focus.owed)() else {
+            return;
+        };
+        focus.owed.set(None);
+        if let Some(trigger) = focus.triggers.peek().get(&index) {
+            let _ = trigger.focus();
+        }
+    });
+    focus
+}
+
+impl MenuFocus {
+    fn trigger(self, index: usize) -> ElementHandle {
+        let mut triggers = self.triggers;
+        *triggers
+            .write()
+            .entry(index)
+            .or_insert_with(|| ElementHandle::new_in_scope(self.owner))
+    }
+
+    fn owe(mut self, index: usize) {
+        self.owed.set(Some(index));
+    }
 }
 
 /// A header's menu: sort, filter, move, width, pin, hide, and the columns to show.
@@ -57,9 +104,12 @@ pub(super) fn ColumnMenu(
     /// Set with `filter_panel`: Filter opens the panel on this column's line.
     #[props(default)]
     panel: Option<PanelControl>,
+    focus: MenuFocus,
+    /// The shown column whose menu button takes focus after Hide.
+    neighbour: Option<usize>,
 ) -> Element {
     let menu = use_menu();
-    let trigger = use_element();
+    let trigger = focus.trigger(index);
     let mut filter_open = use_signal(|| false);
     let column = &columns[index];
     let shown = columns.iter().filter(|column| !column.hidden).count();
@@ -162,7 +212,10 @@ pub(super) fn ColumnMenu(
             let header = column.header.clone();
             items.push(
                 MenuItem::new(label)
-                    .onselect(move |_| pinned.set(pinned.read().with(&header, to)))
+                    .onselect(move |_| {
+                        pinned.set(pinned.read().with(&header, to));
+                        focus.owe(index);
+                    })
                     .into(),
             );
         }
@@ -178,7 +231,12 @@ pub(super) fn ColumnMenu(
         items.push(
             MenuItem::new(labels.hide_column)
                 .disabled(shown <= 1)
-                .onselect(move |_| hidden.set(toggle_column(&hidden.read(), &header, false)))
+                .onselect(move |_| {
+                    hidden.set(toggle_column(&hidden.read(), &header, false));
+                    if let Some(neighbour) = neighbour {
+                        focus.owe(neighbour);
+                    }
+                })
                 .into(),
         );
     }
