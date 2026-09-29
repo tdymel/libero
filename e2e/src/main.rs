@@ -13,6 +13,7 @@ mod desktop_runner;
 mod dx;
 mod http;
 mod process;
+mod units;
 
 use dx::{dx, workspace_root};
 use http::{free_port, wait_for_app};
@@ -87,6 +88,11 @@ fn main() -> Result<()> {
                 .as_millis()
                 .to_string(),
         );
+        // sccache for `dx` and the test build too, unless the caller chose a wrapper: a cold
+        // fixture wasm took 204 s, 133 s from a warm cache; cargo's fingerprints ignore it.
+        if std::env::var_os("RUSTC_WRAPPER").is_none() && has_sccache() {
+            std::env::set_var("RUSTC_WRAPPER", "sccache");
+        }
     }
 
     // dx's own output, kept rather than discarded: when the fixture crate fails
@@ -116,8 +122,7 @@ fn main() -> Result<()> {
         server.arg("--release");
     }
     let mut server = server
-        // The env var, since `dx` takes no `--target-dir`. `RUSTC_WRAPPER` is
-        // left alone: `dx` drives it itself for hot-patching.
+        // The env var, since `dx` takes no `--target-dir`.
         .env("CARGO_TARGET_DIR", &target_dir)
         .stdout(Stdio::from(
             log_handle.try_clone().context("clone the log handle")?,
@@ -150,6 +155,26 @@ fn main() -> Result<()> {
         .context("prebuild the tests")?;
     guard.tell(&format!("group {}", prebuild.id()));
 
+    // A unit filter is expanded once the test binary is built, before the wasm is: a
+    // filter that matches nothing stops here.
+    let mut test_args = passthrough.clone();
+    if units::wanted(&passthrough) {
+        let _ = prebuild.wait();
+        let exact =
+            list_tests(&root, test, &target_dir).map(|listed| units::exact(&listed, &passthrough));
+        match exact {
+            Ok(exact) if !exact.is_empty() => test_args = exact,
+            outcome => {
+                stop(&mut server);
+                guard.done();
+                outcome?;
+                bail!("no test ran: the name filter {passthrough:?} matched no test");
+            }
+        }
+        let names = test_args.iter().skip_while(|arg| *arg != "--exact").count() - 1;
+        eprintln!("e2e: the filter selects {names} test(s), run --exact");
+    }
+
     let ready = wait_for_app(&base_url, title, &mut server, &dx_log);
     if ready.is_ok() {
         let _ = prebuild.wait();
@@ -177,7 +202,7 @@ fn main() -> Result<()> {
         .arg(&target_dir)
         // Before the `--`, or cargo silently builds into `target/main`.
         .arg("--")
-        .args(&passthrough)
+        .args(&test_args)
         .env("E2E_BASE_URL", &base_url)
         .env("E2E_SWEEP_REPORT", root.join("target/a11y-sweep/report.md"))
         .env("E2E_CHROME_PROFILE", &profile)
@@ -334,6 +359,29 @@ fn main() -> Result<()> {
         bail!("no test ran: the name filter {passthrough:?} matched no test");
     }
     Ok(())
+}
+
+fn has_sccache() -> bool {
+    Command::new("sccache")
+        .arg("--version")
+        .output()
+        .is_ok_and(|output| output.status.success())
+}
+
+/// The test names of the `test` binary, from libtest's `--list`.
+fn list_tests(root: &Path, test: &str, target_dir: &Path) -> Result<Vec<String>> {
+    let output = Command::new(env!("CARGO"))
+        .current_dir(root)
+        .args(["test", "-q", "-p", "e2e", "--test", test, "--target-dir"])
+        .arg(target_dir)
+        .args(["--", "--list"])
+        .stderr(Stdio::inherit())
+        .output()
+        .context("list the tests")?;
+    if !output.status.success() {
+        bail!("listing the tests failed: {}", output.status);
+    }
+    Ok(units::listed(&String::from_utf8_lossy(&output.stdout)))
 }
 
 /// Writes the verdict to `RED`, so `prune_old_runs` keeps the directory a week.
