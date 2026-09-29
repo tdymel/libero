@@ -207,9 +207,19 @@ pub(super) fn FilterPanel(
     popover.on_dismiss(move || dismiss(true));
     let floating = *popover.floating();
     let filters = slice.read();
-    // Opened from the button: the first line, else Add.
+    // Opened from the button: the first line, else Add. Once per opening: a
+    // re-placement (natively a picker's listbox opening) must not move focus.
+    let mut entered = use_hook(|| CopyValue::new(false));
     use_effect(move || {
-        if open() && popover.placed() && focus.peek().is_none() {
+        let (open, placed) = (open(), popover.placed());
+        if !open {
+            entered.set(false);
+            return;
+        }
+        if !placed || entered.replace(true) {
+            return;
+        }
+        if focus.peek().is_none() {
             let first = match slice.peek().is_empty() {
                 true => PanelFocus::Add,
                 false => PanelFocus::Line(0),
@@ -225,7 +235,10 @@ pub(super) fn FilterPanel(
             return;
         }
         let selector = match target {
-            PanelFocus::Line(line) => format!("[data-filter-line=\"{line}\"] select"),
+            // Natively `NativeSelect` draws a listbox combobox, no `<select>`.
+            PanelFocus::Line(line) => {
+                format!("[data-filter-line=\"{line}\"] :is(select, [role=combobox])")
+            }
             PanelFocus::Add => "[data-filter-add]".to_string(),
         };
         // The lines render in a portal after this pass.
@@ -316,7 +329,10 @@ pub(super) fn FilterPanel(
                             // Focus moves first: a focused node going would dismiss the panel.
                             let next = match line {
                                 0 => "[data-filter-add]".to_string(),
-                                _ => format!("[data-filter-line=\"{}\"] select", line - 1),
+                                _ => format!(
+                                    "[data-filter-line=\"{}\"] :is(select, [role=combobox])",
+                                    line - 1
+                                ),
                             };
                             if let Ok(next) = floating.query_selector(&next) {
                                 let _ = next.focus();

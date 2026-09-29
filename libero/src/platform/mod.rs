@@ -71,9 +71,9 @@ pub(crate) use direction::{
 pub(crate) use document::root_padding_right;
 pub use document::{DocumentApi, document};
 pub(crate) use element::{
-    ContentSubscription, FocusStep, SCROLL_MARGIN_VAR, focus_among, focus_first_of, focus_kept,
-    focus_selector, focused_attribute, is_rtl, keep_focused, on_content_change, on_form_reset,
-    set_value_by_id,
+    ContentSubscription, FocusStep, SCROLL_MARGIN_VAR, SCROLL_PADDING_VARS, focus_among,
+    focus_first_of, focus_kept, focus_selector, focused_attribute, is_rtl, keep_focused,
+    on_content_change, on_form_reset, set_value_by_id,
 };
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
@@ -136,8 +136,8 @@ pub(crate) use system_notification::{
 };
 pub use system_notification::{SystemNotification, SystemNotificationError};
 pub(crate) use table::{
-    drags_table_columns, lays_out_captions, moves_table_rows, sticks_table_heads,
-    widens_sized_tables,
+    drags_table_columns, edits_date_inputs, lays_out_captions, moves_table_rows,
+    sticks_table_heads, widens_sized_tables,
 };
 pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};

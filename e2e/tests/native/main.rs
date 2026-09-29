@@ -31,6 +31,7 @@ mod gradient;
 mod header;
 mod hit;
 mod home;
+mod hover;
 mod image;
 mod image_list;
 mod inline_spaces;

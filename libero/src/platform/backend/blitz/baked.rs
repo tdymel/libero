@@ -43,6 +43,10 @@ pub(super) fn rebuild_all(doc: &mut BaseDocument) {
 
 /// Rebuilds the boxes under what gained or lost `:hover`, before the restyle
 /// (634). Blitz has moved hover by the time `pointermove` runs.
+///
+/// Also hovers the DOM ancestors Blitz skips: it walks layout parents, so a
+/// cell's `tr` never matched `:hover`. A pointer leaving the window keeps them
+/// hovered until the next move, as does a layout shift under a still pointer.
 pub(super) fn on_hover_change() {
     let (Some(anchor), Some(state)) = (anchor(), doc()) else {
         return;
@@ -60,7 +64,7 @@ pub(super) fn on_hover_change() {
         chain.reverse();
         chain
     };
-    let (old, new) = (chain(before), chain(now));
+    let (mut old, new) = (chain(before), chain(now));
     let shared = old.iter().zip(&new).take_while(|(a, b)| a == b).count();
     let roots: Vec<NodeId> = old
         .get(shared)
@@ -72,7 +76,9 @@ pub(super) fn on_hover_change() {
     if roots.is_empty() {
         return;
     }
+    let left = old.split_off(shared);
     let rebuild_under = move |doc: &mut BaseDocument| {
+        hover_dom_chain(doc, &left, &new);
         let mut subtree = Vec::new();
         let mut stack = roots;
         while let Some(id) = stack.pop() {
@@ -84,6 +90,33 @@ pub(super) fn on_hover_change() {
         rebuild(doc, subtree, true);
     };
     run_or_defer(&anchor, rebuild_under);
+}
+
+/// Sets `:hover` on every node of `entered`, the new hover chain, and clears it
+/// on `left`, the old chain's nodes outside it. Snapshotted, for stylo to restyle.
+fn hover_dom_chain(doc: &mut BaseDocument, left: &[NodeId], entered: &[NodeId]) {
+    let mut set = |id: NodeId, hover: bool| {
+        let Some(node) = doc.get_node(id) else {
+            return;
+        };
+        if node.element_data().is_none() || node.is_hovered() == hover {
+            return;
+        }
+        // With the attributes: a state-only snapshot panics on a sheet change (837).
+        doc.snapshot_node(id);
+        if let Some(node) = doc.get_node_mut(id) {
+            match hover {
+                true => node.hover(),
+                false => node.unhover(),
+            }
+        }
+    };
+    for &id in left {
+        set(id, false);
+    }
+    for &id in entered {
+        set(id, true);
+    }
 }
 
 /// A press or key reached the wrapper, or libero moved focus: [`check`] once

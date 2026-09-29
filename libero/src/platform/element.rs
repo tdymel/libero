@@ -93,6 +93,15 @@ pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
 /// does not parse `scroll-margin`. Set it beside `scroll-margin`.
 pub(crate) const SCROLL_MARGIN_VAR: &str = "--lsx-scroll-margin";
 
+/// A scroller's `scroll-padding` per side (top, right, bottom, left) for Blitz,
+/// whose stylo lacks the property: set them beside it.
+pub(crate) const SCROLL_PADDING_VARS: [&str; 4] = [
+    "--lsx-scroll-padding-top",
+    "--lsx-scroll-padding-right",
+    "--lsx-scroll-padding-bottom",
+    "--lsx-scroll-padding-left",
+];
+
 /// An element's rendered pixel size.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Dimensions {

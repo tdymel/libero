@@ -394,3 +394,49 @@ fn a_taller_pane_renders_rows_to_its_new_bottom() {
     let (_, last) = rows(&page);
     assert!(last >= 29, "rows to {last} for a 600px pane");
 }
+
+fn edged() -> Element {
+    let mut reached = use_signal(|| 0u32);
+    rsx! {
+        span { id: "reached", "{reached}" }
+        div { id: "list-pane", height: "120px",
+            ScrollArea {
+                focusable: true,
+                aria_label: "Rows",
+                onbottomreached: move |_| reached += 1,
+                for i in 0..30 {
+                    div { "data-row": i, height: "20px", "Row {i}" }
+                }
+            }
+        }
+    }
+}
+
+/// Settles, then reads how often the bottom was reached.
+fn reached_after(page: &mut Page) -> String {
+    page.wait_for(|page| page.text("#reached") != "0");
+    for _ in 0..5 {
+        page.wait(Duration::from_millis(20));
+    }
+    page.text("#reached")
+}
+
+/// Blitz's `scroll` event and its platform scroll report both see a wheel to
+/// the bottom: `onbottomreached` fires once all the same.
+#[test]
+fn a_wheel_to_the_bottom_reaches_it_once() {
+    let mut page = mount(edged);
+    page.hover("[data-row='2']");
+    page.wheel("[data-row='2']", 2000.0);
+    assert_eq!(reached_after(&mut page), "1");
+}
+
+/// End scrolls through `scroll_to`, which fires no `scroll` natively: the
+/// platform report checks the edge (todo 1484).
+#[test]
+fn end_reaches_the_bottom_once() {
+    let mut page = mount(edged);
+    page.focus(&format!("{PANE} > [role=region]"));
+    page.press(e2e::native::Key::End);
+    assert_eq!(reached_after(&mut page), "1");
+}

@@ -103,7 +103,8 @@ async fn a_drag_moves_a_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_handle_drag_moves_a_row,
     "/table-reorder",
-    a_drag_moves_a_row
+    a_drag_moves_a_row,
+    native: skip("Blitz paints no `transform` on a `tr`; no native pointer row drag by decision (1156 Phase 4b), keyboard lift and Move buttons cover it")
 );
 
 /// Cherry's open detail drags with it: one row's travel past Apple moves it,
@@ -130,7 +131,8 @@ async fn a_detail_drags_with_its_row<D: Driver>(d: &mut D, _route: &str) -> Resu
 e2e::scenario!(
     an_open_detail_drags_with_its_row,
     "/table-reorder-detail",
-    a_detail_drags_with_its_row
+    a_detail_drags_with_its_row,
+    native: skip("Blitz paints no `transform` on a `tr`; no native pointer row drag by decision (1156 Phase 4b), keyboard lift and Move buttons cover it")
 );
 
 async fn sorted_is_off<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

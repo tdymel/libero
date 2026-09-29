@@ -109,7 +109,8 @@ async fn slides_open_and_shut<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
         Ok(
             d.exists(DETAIL).await? && d.rect(&format!("{DETAIL} p")).await?.height > 0.0 && {
                 let body = d.rect(&format!("{DETAIL} [data-detail-body]")).await?;
-                let row = d.rect(DETAIL).await?;
+                // The cell: Blitz lays out no box for a `tr`.
+                let row = d.rect(&format!("{DETAIL} > td")).await?;
                 (row.height - body.height).abs() <= 2.0 && body.height > 30.0
             },
         )

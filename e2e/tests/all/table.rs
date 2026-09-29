@@ -69,6 +69,25 @@ e2e::scenario!(
 
 const AREA: &str = "[data-table-scroll]";
 
+/// A `NativeSelect`: natively a listbox combobox, no `<select>`.
+const PICKER: &str = ":is(select, [role=combobox])";
+
+/// Steps the focused `NativeSelect` `steps` options on. Natively the first
+/// arrow opens its listbox on the current option and Enter picks.
+async fn pick_later<D: Driver>(d: &mut D, steps: usize) -> Result<()> {
+    let native = d.platform() == Platform::Native;
+    if native {
+        d.press(keyboard::ARROW_DOWN).await?;
+    }
+    for _ in 0..steps {
+        d.press(keyboard::ARROW_DOWN).await?;
+    }
+    if native {
+        d.press(keyboard::ENTER).await?;
+    }
+    Ok(())
+}
+
 /// The header row's top, the first body row's top and the area's top.
 async fn tops<D: Driver>(d: &mut D) -> Result<(f64, f64, f64)> {
     Ok((
@@ -615,8 +634,8 @@ async fn the_column_filters_narrow_the_rows<D: Driver>(d: &mut D, _route: &str) 
     })
     .await?;
     d.press_shift(keyboard::TAB).await?;
-    eventually_focused(d, &format!("{POPOVER} select"), "Shift+Tab").await?;
-    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_focused(d, &format!("{POPOVER} {PICKER}"), "Shift+Tab").await?;
+    pick_later(d, 1).await?;
     eventually_text(d, "#filters", "Name DoesNotContain an", "the next operator").await?;
     eventually_text(d, "tbody th", "Fig", "Name lacks an").await?;
     d.press(keyboard::ESCAPE).await?;
@@ -647,12 +666,20 @@ e2e::scenario!(
 async fn a_date_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const DUE: &str = "input[aria-label=\"Filter Due\"]";
     const POPOVER: &str = "[data-filter-popover]";
-    if d.attr(DUE, "type").await?.as_deref() != Some("date") {
-        bail!("the Due header filter is no date input");
+    // Blitz edits no date input: a text field there.
+    let input = match d.platform() {
+        Platform::Native => "text",
+        _ => "date",
+    };
+    if d.attr(DUE, "type").await?.as_deref() != Some(input) {
+        bail!("the Due header filter is no {input} input");
     }
-    // Chromium's en-US date input takes month, day, then year.
+    // Chromium's en-US date input takes month, day, then year; Blitz's the ISO day.
     d.click(DUE).await?;
-    d.type_text("03102024").await?;
+    match d.platform() {
+        Platform::Native => d.type_text("2024-03-10").await?,
+        _ => d.type_text("03102024").await?,
+    }
     eventually_text(d, "#filters", "Equals 2024-03-10..", "a typed day").await?;
     eventually_text(d, "tbody th", "Grape", "Due on the 10th").await?;
 
@@ -663,11 +690,9 @@ async fn a_date_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> R
     d.press(keyboard::ENTER).await?;
     eventually(d, "the opened filter", async |d| d.exists(POPOVER).await).await?;
     d.press_shift(keyboard::TAB).await?;
-    eventually_focused(d, &format!("{POPOVER} select"), "Shift+Tab").await?;
+    eventually_focused(d, &format!("{POPOVER} {PICKER}"), "Shift+Tab").await?;
     // Equals, then Does not equal, Before, After, On or before, On or after, Between.
-    for _ in 0..6 {
-        d.press(keyboard::ARROW_DOWN).await?;
-    }
+    pick_later(d, 6).await?;
     eventually_text(
         d,
         "#filters",
@@ -1548,7 +1573,7 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
     eventually(d, "the opened panel", async |d| d.exists(PANEL).await).await?;
     eventually_focused(d, "[data-filter-add]", "an empty panel").await?;
     d.press(keyboard::ENTER).await?;
-    eventually_focused(d, &format!("{LINE_0} select"), "Add").await?;
+    eventually_focused(d, &format!("{LINE_0} {PICKER}"), "Add").await?;
     eventually_text(d, "#filters", "Name Contains ", "the added line").await?;
     d.click(&format!("{LINE_0} input")).await?;
     d.type_text("e").await?;
@@ -1556,7 +1581,7 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
 
     // Add takes the first column without a line: Stock.
     d.click("[data-filter-add]").await?;
-    eventually_focused(d, &format!("{LINE_1} select"), "a second Add").await?;
+    eventually_focused(d, &format!("{LINE_1} {PICKER}"), "a second Add").await?;
     d.click(&format!("{LINE_1} input")).await?;
     d.type_text("1").await?;
     eventually_text(
@@ -1571,9 +1596,9 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
         Ok(!d.exists("tbody th").await?)
     })
     .await?;
-    d.focus(&format!("{PANEL} select:not([data-filter-line] select)"))
-        .await?;
-    d.press(keyboard::ARROW_DOWN).await?;
+    // The first: the logic sits above the lines.
+    d.focus(&format!("{PANEL} {PICKER}")).await?;
+    pick_later(d, 1).await?;
     eventually_text(d, "#logic", "Or", "the logic pick").await?;
     eventually_text(
         d,
@@ -1585,7 +1610,7 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
 
     d.click(&format!("{LINE_1} [data-filter-remove]")).await?;
     eventually_text(d, "#filters", "Name Contains e", "a removed line").await?;
-    eventually_focused(d, &format!("{LINE_0} select"), "the remove").await?;
+    eventually_focused(d, &format!("{LINE_0} {PICKER}"), "the remove").await?;
     d.press(keyboard::ESCAPE).await?;
     eventually(d, "the closed panel", async |d| {
         Ok(!d.exists(PANEL).await?)
@@ -1617,7 +1642,7 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
         d.exists(PANEL).await
     })
     .await?;
-    eventually_focused(d, &format!("{LINE_1} select"), "the menu's Filter").await
+    eventually_focused(d, &format!("{LINE_1} {PICKER}"), "the menu's Filter").await
 }
 
 e2e::scenario!(

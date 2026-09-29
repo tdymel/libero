@@ -297,6 +297,21 @@ fn measure_area(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometry>
     });
 }
 
+/// Reads the area's position once laid out, for `check` (`x`, `y`, `max_x`, `max_y`).
+fn measure_edges(root: ElementHandle, check: impl Fn(f64, f64, f64, f64) + 'static) {
+    when_laid_out(move || {
+        let (size, view, offset) = (root.scroll_size(), root.dimensions(), root.scroll_offset());
+        spawn(async move {
+            let (Ok(size), Ok(view), Ok((x, y))) = (size.await, view.await, offset.await) else {
+                return;
+            };
+            let max_x = (size.width - view.width).max(0.0);
+            let max_y = (size.height - view.height).max(0.0);
+            check(inline_x(x), y, max_x, max_y);
+        });
+    });
+}
+
 /// Whether the area has to be a tab stop itself: it overflows on an axis it
 /// scrolls, and nothing inside can take focus and scroll it instead.
 fn needs_tab_stop(axis: ScrollAxis, view: Dimensions, content: Dimensions, inner: bool) -> bool {
@@ -464,7 +479,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     }
 
     let mut is_scrolling = use_signal(|| false);
-    let mut edges = use_signal(|| EdgeState::AT_ORIGIN);
+    let edges = use_signal(|| EdgeState::AT_ORIGIN);
 
     let mut geometry = use_signal(|| None::<ScrollGeometry>);
     let offsets = use_signal(ContentOffsets::default);
@@ -476,6 +491,17 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             measure_area(root, geometry, UNLAID_TRIES);
         }
     };
+    let watches_edges = [
+        props.ontopreached,
+        props.onbottomreached,
+        props.onleftreached,
+        props.onrightreached,
+    ]
+    .iter()
+    .any(Option::is_some);
+    // Read by the platform scroll report, outside any render.
+    let mut reports_edges = use_hook(|| CopyValue::new(false));
+    reports_edges.set(watches_edges);
     // Blitz's `scroll_to` and scroll-into-view fire no `scroll` event: its
     // platform scroll report stands in for them.
     let platform_scrolls = use_signal(|| 0u64);
@@ -483,7 +509,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         let api = scroll().filter(|_| !fires_scroll_on_scroll_to());
         Rc::new(api.map(|api| {
             api.on_scroll(Box::new(move || {
-                if *virtualized.peek() {
+                if *virtualized.peek() || *reports_edges.peek() {
                     let mut scrolls = platform_scrolls;
                     let next = scrolls.peek().wrapping_add(1);
                     scrolls.set(next);
@@ -491,15 +517,6 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             }))
         }))
     });
-    // Re-runs once the root is mounted, and once a `Virtualize` asks: only then
-    // do scroll and resize events keep the geometry current.
-    use_effect(move || {
-        platform_scrolls();
-        if virtualized() {
-            measure();
-        }
-    });
-
     let onscroll = props.onscroll;
     let onscroll_prop = onscroll.is_some();
     let scrolled = move |event: ScrollPositionEvent| {
@@ -516,6 +533,47 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let onbottomreached = props.onbottomreached;
     let onleftreached = props.onleftreached;
     let onrightreached = props.onrightreached;
+
+    // One check, and `edges` its one latch, for `scroll` events and the platform
+    // report alike: whichever comes second finds no new edge. `x` from the inline start.
+    let check_edges = move |x: f64, y: f64, max_x: f64, max_y: f64| {
+        let mut edges = edges;
+        let new_edges = EdgeState::at(x, y, max_x, max_y);
+        let now = new_edges.reached_since(*edges.peek());
+        if now.top {
+            reached(ontopreached);
+        }
+        if now.bottom {
+            reached(onbottomreached);
+        }
+        let (start, end) = (now.start, now.end);
+        if start || end {
+            // Left and right stay physical: the start is the right under RTL.
+            let (onstart, onend) = match root.is_rtl() {
+                true => (onrightreached, onleftreached),
+                false => (onleftreached, onrightreached),
+            };
+            if start {
+                reached(onstart);
+            }
+            if end {
+                reached(onend);
+            }
+        }
+        edges.set(new_edges);
+    };
+
+    // Re-runs once the root is mounted, and once a `Virtualize` asks: only then
+    // do scroll and resize events keep the geometry current.
+    use_effect(move || {
+        let reports = platform_scrolls();
+        if virtualized() {
+            measure();
+        }
+        if reports > 0 && *reports_edges.peek() && root.is_mounted() {
+            measure_edges(root, check_edges);
+        }
+    });
 
     let mut ended = move |(x_pct, y_pct): (f64, f64)| {
         if is_scrolling() {
@@ -564,34 +622,12 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             scrolled(ScrollPositionEvent::Start(x_pct, y_pct));
         }
 
-        let new_edges = EdgeState::at(
+        check_edges(
             inline_x(data.scroll_left()),
             data.scroll_top(),
             max_x,
             max_y,
         );
-        let now = new_edges.reached_since(edges());
-        if now.top {
-            reached(ontopreached);
-        }
-        if now.bottom {
-            reached(onbottomreached);
-        }
-        let (start, end) = (now.start, now.end);
-        if start || end {
-            // Left and right stay physical: the start is the right under RTL.
-            let (onstart, onend) = match root.is_rtl() {
-                true => (onrightreached, onleftreached),
-                false => (onleftreached, onrightreached),
-            };
-            if start {
-                reached(onstart);
-            }
-            if end {
-                reached(onend);
-            }
-        }
-        edges.set(new_edges);
     };
 
     let onscrollend = move |event: Event<ScrollData>| {

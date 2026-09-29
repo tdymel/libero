@@ -17,8 +17,14 @@ use crate::{
         layout::{ScrollArea, ScrollAreaBase, ScrollAreaHandle, scroll_area_base, use_box},
         overlay::MenuPart,
     },
-    hooks::{listener, use_debounced_callback, use_id, use_localization, use_theme},
-    platform::{drags_table_columns, lays_out_captions, sticks_table_heads, widens_sized_tables},
+    hooks::{
+        listener, use_debounced_callback, use_element, use_id, use_localization,
+        use_resize_fallback, use_theme,
+    },
+    platform::{
+        SCROLL_PADDING_VARS, drags_table_columns, lays_out_captions, sticks_table_heads,
+        widens_sized_tables,
+    },
     sx::{StaticSx, Sx, sx},
     theme::{CHECKBOX_BOX_SIZE, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TableDefaults},
     utils::warn,
@@ -1004,6 +1010,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     };
     let bounded = props.max_height.is_some();
     let mut head = use_signal(|| 0.0);
+    let head_element = use_element();
+    use_resize_fallback(head_element, move |event| {
+        if let (true, Ok(size)) = (bounded, event.get_border_box_size()) {
+            head.set(size.height);
+        }
+    });
     let scrolls = props.scroll || bounded;
     let size_states: Input<States> = States::new().with(size.state_name(), true).into();
     let caption_box = use_box()
@@ -1603,6 +1615,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 resize,
                 drag: drags.then_some(column_drag),
                 head_height: bounded.then(|| EventHandler::new(move |height| head.set(height))),
+                head: head_element,
             }),
         );
     // The live region: valid in no part of a table, so beside it.
@@ -1660,8 +1673,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                     sx: max_height
                         .map(|height| {
                             // The sticky header covers the top; a focus scroll stops below it.
+                            let pad = format!("{}px", head());
                             sx().max_height(height)
-                                .with("scroll-padding-top", format!("{}px", head()))
+                                .with("scroll-padding-top", pad.clone())
+                                .with(SCROLL_PADDING_VARS[0], pad)
                         })
                         .unwrap_or_default(),
                     onbottomreached: onbottomreached.map(|_| bottom_reached),

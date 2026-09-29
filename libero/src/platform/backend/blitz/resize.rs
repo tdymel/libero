@@ -212,6 +212,14 @@ fn measure(doc: &BaseDocument, watched: &Watched) -> Option<((f32, f32), Dimensi
         width: f64::from(width),
         height: f64::from(height),
     };
+    if let Kind::Resize(_) = watched.kind
+        && size.width == 0.0
+        && size.height == 0.0
+        && let Some((width, height)) = boxless_size(doc, node.id)
+    {
+        let outer = dimensions(width, height);
+        return Some(((width, height), outer, outer));
+    }
     let outer = dimensions(size.width, size.height);
     let inner = dimensions(
         (size.width - padding.left - padding.right - border.left - border.right).max(0.0),
@@ -225,4 +233,34 @@ fn measure(doc: &BaseDocument, watched: &Watched) -> Option<((f32, f32), Dimensi
         ),
     };
     Some((compared, outer, inner))
+}
+
+/// The union of the boxes under `id`, which lays out none itself: a table row
+/// or row group in Blitz. `None` when nothing under it has a box.
+fn boxless_size(doc: &BaseDocument, id: NodeId) -> Option<(f32, f32)> {
+    let (mut start, mut end) = ((f64::MAX, f64::MAX), (f64::MIN, f64::MIN));
+    let mut stack = vec![id];
+    while let Some(id) = stack.pop() {
+        let Some(node) = doc.get_node(id) else {
+            continue;
+        };
+        for &child in &node.children {
+            let Some(child_node) = doc.get_node(child).filter(|node| node.is_element()) else {
+                continue;
+            };
+            let size = child_node.final_layout().size;
+            if size.width == 0.0 && size.height == 0.0 {
+                stack.push(child);
+                continue;
+            }
+            if let Some(rect) = doc.get_client_bounding_rect(child) {
+                start = (start.0.min(rect.x), start.1.min(rect.y));
+                end = (
+                    end.0.max(rect.x + rect.width),
+                    end.1.max(rect.y + rect.height),
+                );
+            }
+        }
+    }
+    (end.0 >= start.0).then_some(((end.0 - start.0) as f32, (end.1 - start.1) as f32))
 }

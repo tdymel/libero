@@ -20,6 +20,7 @@ use super::{
 use crate::{
     components::{accessibility::VisuallyHidden, common::Glyph},
     context::IconSlot,
+    hooks::ElementHandle,
     localization::fill,
 };
 
@@ -404,6 +405,8 @@ pub(super) struct BodySpec {
     pub drag: Option<ColumnDrag>,
     /// With a sticky header: told its height, so a focus scroll clears it.
     pub head_height: Option<EventHandler<f64>>,
+    /// The `thead`, which Blitz measures for `head_height`.
+    pub head: ElementHandle,
 }
 
 /// Whether a header click adds its column to the others: a modifier, or a touch,
@@ -465,6 +468,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         resize,
         drag,
         head_height,
+        head,
     } = body;
     let columns = shown.len().max(1)
         + usize::from(select_all.is_some())
@@ -596,6 +600,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
             caption { id: spec.id, "{spec.text}" }
         }
         thead {
+            onmounted: head.mount(),
             onresize: move |event: Event<ResizeData>| {
                 if let (Some(told), Ok(size)) = (head_height, event.get_border_box_size()) {
                     told.call(size.height);

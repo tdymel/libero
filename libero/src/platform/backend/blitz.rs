@@ -39,8 +39,8 @@ use super::{INTERACTIVE, origin::Origin};
 use crate::{
     platform::{
         ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
-        KeySubscription, KeyboardApi, PlatformError, Read, SCROLL_MARGIN_VAR, ScrollApi,
-        ScrollSubscription, TimerSubscription,
+        KeySubscription, KeyboardApi, PlatformError, Read, SCROLL_MARGIN_VAR, SCROLL_PADDING_VARS,
+        ScrollApi, ScrollSubscription, TimerSubscription,
         keyboard::{takes_arrows, takes_typing},
         warn_reserved_chord,
     },
@@ -2282,12 +2282,13 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
         let (border, bar) = (layout.border, layout.scrollbar_size);
         let view_width = f64::from(layout.size.width - border.left - border.right - bar.width);
         let view_height = f64::from(layout.size.height - border.top - border.bottom - bar.height);
+        let [top, right, bottom, left] = SCROLL_PADDING_VARS.map(|var| px_var(doc, id, var));
         let dx = match x {
             true => nearest(
                 target.0,
                 target.2,
-                view.0 + f64::from(border.left),
-                view_width,
+                view.0 + f64::from(border.left) + left,
+                view_width - left - right,
             ),
             false => 0.0,
         };
@@ -2295,8 +2296,8 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
             true => nearest(
                 target.1,
                 target.3,
-                view.1 + f64::from(border.top),
-                view_height,
+                view.1 + f64::from(border.top) + top,
+                view_height - top - bottom,
             ),
             false => 0.0,
         };
@@ -2319,10 +2320,15 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
     }
 }
 
-/// [`SCROLL_MARGIN_VAR`] in px: a `px` length, or `rem` of the root's font
-/// size. `0` for anything else.
+/// [`SCROLL_MARGIN_VAR`] in px.
 fn scroll_margin(doc: &BaseDocument, node_id: NodeId) -> f64 {
-    let value = resolved_style_value(doc, node_id, SCROLL_MARGIN_VAR);
+    px_var(doc, node_id, SCROLL_MARGIN_VAR)
+}
+
+/// A custom property in px: a `px` length, or `rem` of the root's font size.
+/// `0` for anything else.
+fn px_var(doc: &BaseDocument, node_id: NodeId, var: &str) -> f64 {
+    let value = resolved_style_value(doc, node_id, var);
     let value = value.trim();
     let px = |value: &str| value.trim().parse::<f64>().ok();
     if let Some(rem) = value.strip_suffix("rem") {

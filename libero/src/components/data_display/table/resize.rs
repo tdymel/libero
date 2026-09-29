@@ -204,19 +204,31 @@ pub(super) fn ResizeHandle(
             else {
                 return;
             };
-            let Some(width) = resize.width(&header) else {
+            let next = move |width: f64| match step {
+                KeyResize::By(by) => Some(limits.clamp(width + by)),
+                KeyResize::Min => Some(limits.min),
+                KeyResize::Max if limits.max.is_finite() => Some(limits.max),
+                KeyResize::Max => None,
+            };
+            let width = resize.width(&header);
+            if width.is_some_and(|width| next(width).is_none()) {
                 return;
-            };
-            let next = match step {
-                KeyResize::By(by) => limits.clamp(width + by),
-                KeyResize::Min => limits.min,
-                KeyResize::Max if limits.max.is_finite() => limits.max,
-                KeyResize::Max => return,
-            };
+            }
             // Not the scroll area's arrow keys too.
             event.prevent_default();
             event.stop_propagation();
-            resize.set(&header, Some(next));
+            match width {
+                Some(width) => resize.set(&header, next(width)),
+                // Not measured yet (Blitz's first frames): read it, then step.
+                None => {
+                    let (read, header) = (cell.dimensions(), header.clone());
+                    spawn(async move {
+                        if let Some(width) = read.await.ok().and_then(|size| next(size.width)) {
+                            resize.set(&header, Some(width));
+                        }
+                    });
+                }
+            }
         }
     };
     use_resize_fallback(cell, onresize.clone());

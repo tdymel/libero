@@ -19,7 +19,7 @@ use crate::{
         use_theme,
     },
     localization::TableLabels,
-    platform::ElementApi,
+    platform::{ElementApi, edits_date_inputs, when_laid_out},
     sx::StaticSx,
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -248,7 +248,11 @@ pub(super) fn FilterValue(
         let (from, to) = current.map_or_else(Default::default, |filter| {
             (filter.value.clone(), filter.value_to.clone())
         });
-        // A native date input on the web and Android; Blitz takes the ISO day typed.
+        // A native date input on the web and Android; Blitz edits none, so a text field there.
+        let (input, placeholder) = match edits_date_inputs() {
+            true => ("date", None),
+            false => ("text", Some("YYYY-MM-DD")),
+        };
         let day = |end: bool, value: String, label: Option<String>, aria_label: Option<String>| {
             rsx! {
                 TextField {
@@ -256,7 +260,8 @@ pub(super) fn FilterValue(
                     aria_label,
                     size,
                     value,
-                    r#type: "date",
+                    r#type: input,
+                    placeholder: placeholder.map(str::to_string),
                     "data-filter-value": (!end).then_some(true),
                     oninput: move |text: String| onday.call((end, text)),
                 }
@@ -338,7 +343,7 @@ pub(super) fn FilterPopover(
             entered.set(true);
             let target = floating
                 .query_selector("input[data-filter-value]")
-                .or_else(|_| floating.query_selector("select"))
+                .or_else(|_| floating.query_selector(":is(select, [role=combobox])"))
                 .ok();
             match target {
                 Some(target) => {
@@ -478,7 +483,11 @@ pub(super) fn FilteredButton(
             aria_expanded: "{open()}",
             onclick: move |_| match onopen {
                 Some(onopen) => onopen.call(()),
-                None => open.toggle(),
+                // Blitz focuses the button after the click and reports it at the
+                // poll's end, which would dismiss a popover opened in it.
+                None => when_laid_out(move || {
+                    open.toggle();
+                }),
             },
             Glyph { slot: IconSlot::Filter, icon: lucide::funnel::outlined }
         }

@@ -54,12 +54,14 @@ async fn the_pieces_work<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     )
     .await?;
 
-    let before = d.rect("tbody tr").await?.height;
+    // A cell: Blitz lays out no box for a `tr`.
+    const CELL: &str = "tbody tr > *";
+    let before = d.rect(CELL).await?.height;
     open(d, "density").await?;
     pick(d, "Comfortable").await?;
     eventually_text(d, "#density", "Lg", "a density pick").await?;
     eventually(d, "taller rows", async |d| {
-        Ok(d.rect("tbody tr").await?.height > before + 2.0)
+        Ok(d.rect(CELL).await?.height > before + 2.0)
     })
     .await
 }
