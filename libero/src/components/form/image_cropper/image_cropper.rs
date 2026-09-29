@@ -7,6 +7,7 @@ use crate::{
             HtmlTag, Input, Part, States, Variables, base_props, focus_ring_sx,
             has_shortcut_modifier, parts_enum, variables,
         },
+        form::{Slider, SliderChangeEvent},
         layout::use_box,
     },
     hooks::{
@@ -14,9 +15,9 @@ use crate::{
         use_local_state, use_localization,
     },
     localization::fill,
-    platform::{ElementApi, when_laid_out},
+    platform::{self, ElementApi, when_laid_out},
     sx::{StaticSx, sx},
-    theme::CssVar,
+    theme::{CssVar, PAPER_BACKGROUND},
     utils::warn,
 };
 
@@ -56,6 +57,8 @@ parts_enum! {
         Frame = "frame" => "& > [data-slot='frame']",
         /// One of the eight resize handles; the corners are tab stops.
         Handle = "handle" => "& > [data-slot='frame'] > [data-slot='handle']",
+        /// Pan mode: the bar over the image's foot holding the zoom slider.
+        Zoom = "zoom" => "& > [data-slot='zoom']",
     }
 }
 
@@ -255,6 +258,18 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                         .width("100%")
                         .height("100%")
                         .cursor("grab"),
+                )
+                // A single-pointer zoom (WCAG 2.5.1), on the page's paper for contrast.
+                .selector(
+                    "& > [data-slot='zoom']",
+                    sx().position("absolute")
+                        .left("0")
+                        .right("0")
+                        .bottom("0")
+                        .padding_inline("sm")
+                        .padding_block("xs")
+                        .line_height("normal")
+                        .background(PAPER_BACKGROUND.value()),
                 ),
         )
         .when(
@@ -301,7 +316,7 @@ base_props! {
         #[props(default)]
         shape: CropShape,
         /// Holds the box still and moves the image under it: a drag pans the
-        /// image, a pinch or the + and - keys zoom it. No resize handles.
+        /// image, a pinch, the wheel or the + and - keys zoom it. No resize handles.
         #[props(default)]
         pan: bool,
         /// The smallest side, a fraction of the image's. Default 0.05.
@@ -651,6 +666,45 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         }
     };
 
+    // Pan mode: a wheel notch zooms by ZOOM_STEP about the pointer, a trackpad pinch (ctrl+wheel)
+    // by its spread. Wheel events before the next render chain from the last one's rect.
+    let wheeled = use_local_state(|| None::<(CropRect, CropRect)>);
+    let onwheel = move |event: Event<WheelData>| {
+        if !pan || !interactive {
+            return;
+        }
+        event.prevent_default();
+        let travel = platform::wheel_travel_y(&event.data(), 40.0, 20.0);
+        let factor = match event.modifiers().ctrl() {
+            true => (-travel / 100.0).exp(),
+            false => ZOOM_STEP.powf(-travel / 100.0),
+        };
+        let client = event.client_coordinates();
+        let (size, offset) = (root.dimensions(), root.client_offset());
+        let wheeled = wheeled.clone();
+        spawn(async move {
+            let (Ok(size), Ok((left, top))) = (size.await, offset.await) else {
+                return;
+            };
+            if size.width <= 0.0 || size.height <= 0.0 {
+                return;
+            }
+            let base = match wheeled.get() {
+                Some((before, after)) if before == shown => after,
+                _ => shown,
+            };
+            let at = (
+                (client.x - left) / size.width,
+                (client.y - top) / size.height,
+            );
+            let rect = base.zoomed(factor, at, at, min);
+            wheeled.set(Some((shown, rect)));
+            if rect != base {
+                emit.call(rect);
+            }
+        });
+    };
+
     let percent = |fraction: f64| (fraction * 100.0).round();
     let (scale, image_x, image_y) = shown.image_transform();
     let valuetext = match pan {
@@ -674,6 +728,12 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             ],
         ),
     };
+    // The zoom at the largest and the smallest crop of this shape.
+    let zoom_range = (
+        shown.scaled(f64::MAX, min).image_transform().0,
+        shown.scaled(0.0, min).image_transform().0,
+    );
+    let zoom_text = use_callback(move |zoom: f64| fill(words.zoom_value, &[("zoom", &zoom)]));
     let keys = if pan { words.pan_keys } else { words.keys };
     let tabindex = if interactive { "0" } else { "-1" };
     let placed_at = if pan { shown.frame() } else { shown };
@@ -791,10 +851,31 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     div {
                         "data-slot": ImageCropperPart::Frame.slot(),
                         onpointerdown: onpointerdown_box,
+                        onwheel,
                         {handles}
                         div { "data-slot": "move" }
                     }
                     span { id: keys_id(), hidden: true, "{keys}" }
+                    if pan {
+                        div { "data-slot": ImageCropperPart::Zoom.slot(),
+                            Slider::<f64> {
+                                value: percent(scale),
+                                min: percent(zoom_range.0),
+                                max: percent(zoom_range.1),
+                                step: 1.0,
+                                disabled: !interactive,
+                                aria_label: words.zoom,
+                                format: zoom_text,
+                                oninput: move |event: SliderChangeEvent| {
+                                    let factor = event.value() / 100.0 / scale;
+                                    let rect = shown.zoomed(factor, (0.5, 0.5), (0.5, 0.5), min);
+                                    if rect != shown {
+                                        emit.call(rect);
+                                    }
+                                },
+                            }
+                        }
+                    }
                 }
             },
         )

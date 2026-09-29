@@ -97,6 +97,17 @@ const caretAt = (s, leaf) => {
         rtl: getComputedStyle(r).direction === 'rtl' };
 };
 document.addEventListener('selectionchange', report);
+// A scroll or resize moves the caret in the viewport: re-place an open overlay. Both fire
+// at most once a frame; no requestAnimationFrame, which a background tab never runs.
+const onMove = () => {
+    const r = root();
+    if (!r) { removeEventListener('scroll', onMove, true); removeEventListener('resize', onMove); return; }
+    const s = document.getSelection(), f = s && leafOf(s.focusNode);
+    const box = r.closest('[data-lsx-rich-text-box]');
+    if (f && box && box.querySelector('[data-overlay]')) dioxus.send({ caret: caretAt(s, f) });
+};
+addEventListener('scroll', onMove, { capture: true, passive: true });
+addEventListener('resize', onMove);
 // Chrome steps over a rendered code block (contenteditable=false): step into it instead.
 const onArrow = (e) => {
     const up = e.key === 'ArrowUp';
@@ -157,7 +168,7 @@ while (true) {
 pub(crate) struct Report {
     /// Anchor key, anchor DOM offset, head key, head DOM offset.
     pub selection: Option<(u64, usize, u64, usize)>,
-    /// With a selection: where its head is, for the overlay.
+    /// With a selection, or alone after a scroll or resize: where its head is, for the overlay.
     #[serde(default)]
     pub caret: Option<Caret>,
     /// A leaf's key and its DOM text, asked for by [`Surface::read`].

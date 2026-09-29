@@ -477,8 +477,12 @@ pub(super) fn MediaVolume(media: MediaHandle, sound: Sound, size: Input<Size>) -
                 aria_expanded: if opened() { "true" } else { "false" },
                 "aria-controls": opened().then(|| menu_id.cloned()),
                 size: icon_size(&size),
-                // Half a button: it only opens the menu, so the speaker stays the target.
-                sx: sx().min_width("1.25em").width("1.25em"),
+                // Half a button: it only opens the menu, so the speaker stays the target. At xs
+                // 1.25em is under 24px, and its 24px hit area took the speaker's (WCAG 2.5.8).
+                sx: match size.as_ref() {
+                    Some(Size::Xs) => sx().min_width("24px").width("24px"),
+                    _ => sx().min_width("1.25em").width("1.25em"),
+                },
                 attributes: popover.anchor_events(),
                 onmounted: anchor.mount(),
                 onclick: move |_| opened.toggle(),

@@ -102,6 +102,8 @@ static SURFACE_SX: StaticSx = StaticSx::new(|| {
             sx().margin_bottom("0"),
         )
         .selector("& pre", sx().font_family("monospace").margin("0"))
+        // A shown code block scrolls inside itself: its longest line must not widen the editor (1466).
+        .selector("& [data-code='view']", sx().with("contain", "inline-size"))
         // List items hold paragraphs: no paragraph gaps between bullets.
         .selector("& li > p", sx().margin("0"))
         // Inline code, links and quotes as `Code`, `Anchor` and `Blockquote` draw them.

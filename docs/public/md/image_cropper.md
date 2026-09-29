@@ -62,7 +62,7 @@ FileField {
 | `aspect` | `f64` | - | Locks width over height, in image pixels: `1.0` is square, `16.0 / 9.0` wide. Unset is free. |
 | `shape` | `CropShape` | `Rect` | `Circle` masks outside an ellipse, for an avatar. The rect is the same either way. |
 | `min_size` | `f64` | `0.05` | The smallest side, a fraction of the image's. |
-| `pan` | `bool` | `false` | Holds the box still, centred, and moves the image under it, as a phone's profile picture cropper does: a drag pans the image, a pinch or the + and - keys zoom it. No resize handles; `value` stays the crop in fractions of the image. |
+| `pan` | `bool` | `false` | Holds the box still, centred, and moves the image under it, as a phone's profile picture cropper does: a drag pans the image, a pinch, the wheel or the + and - keys zoom it. No resize handles; `value` stays the crop in fractions of the image. |
 | `disabled` | `bool` | `false` | Dims the cropper and takes no input. |
 | `aria_label` | `String` | - | Names the box; the localization's `image_cropper.label` ("Crop area") when unset. |
 | `onerror` | `EventHandler<()>` | - | Fires when `src` fails to load. The box is not drawn until `src` changes, so the alt text shows. |
@@ -100,6 +100,7 @@ explains how parts work.
 | `ImageCropperPart::Box` | `box` | The crop box, a tab stop. |
 | `ImageCropperPart::Frame` | `frame` | Over the box: takes its drags and holds the handles. |
 | `ImageCropperPart::Handle` | `handle` | One of the eight resize handles. |
+| `ImageCropperPart::Zoom` | `zoom` | With `pan`: the bar over the image's foot holding the zoom slider. |
 
 ## Accessibility
 
@@ -124,8 +125,12 @@ explains how parts work.
   touch on the image outside it still scrolls. Two fingers on the box pinch it
   larger or smaller around its centre.
 - With `pan` the whole cropper takes touches: one finger pans the image, two
-  zoom it around their midpoint. Its value adds the zoom: "40% by 80%, at 30%,
-  10%, zoom 100%".
+  zoom it around their midpoint. The mouse wheel and a trackpad pinch zoom it
+  around the pointer. Its value adds the zoom: "40% by 80%, at 30%, 10%, zoom
+  100%".
+- With `pan` a slider named "Zoom" over the image's foot zooms around the box's
+  centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Its
+  value is the zoom, "100%".
 - With an `aspect`, a corner key resizes both sides together.
 - The box and the corners describe their keys.
 
@@ -149,6 +154,8 @@ explains how parts work.
 and `{y}` in percent: "{width}% by {height}%, at {x}%, {y}%" in English. With
 `pan`, `pan_keys` and `pan_value` take their place; `pan_value` adds `{zoom}`, in
 percent of the starting zoom: "{width}% by {height}%, at {x}%, {y}%, zoom {zoom}%".
+The pan mode's zoom slider is named by `zoom` ("Zoom") and speaks `zoom_value`
+("{zoom}%").
 
 ## CSS variables
 

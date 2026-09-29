@@ -19,6 +19,11 @@ pub const ROUTES: Routes = &[
         "/video/captions/xl",
         || rsx! { CaptionsPage { size: Size::Xl } },
     ),
+    // Todo 1426: the volume chevron's 24px hit area beside the speaker.
+    (
+        "/video/captions/xs",
+        || rsx! { CaptionsPage { size: Size::Xs } },
+    ),
     ("/video/centered", || rsx! { CenteredPage {} }),
     ("/video/variants", || rsx! { VariantsPage {} }),
 ];

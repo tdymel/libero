@@ -1035,6 +1035,31 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
     });
 }
 
+/// Todo 1466: a shown code block scrolls inside itself, the editor stays in its row.
+#[test]
+fn a_long_code_line_does_not_widen_the_editor() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/narrow", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let fits = "(() => { const row = document.getElementById('row'), r = row.getBoundingClientRect(); \
+            const editor = row.firstElementChild.getBoundingClientRect(); \
+            const scroll = row.querySelector('[data-code=view] [data-slot=scroll]'); \
+            return scroll && editor.right <= r.right + 0.5 && row.scrollWidth <= row.clientWidth \
+                && scroll.scrollWidth > scroll.clientWidth ? 'ok' \
+                : JSON.stringify([r.width, editor.width, row.scrollWidth, scroll && scroll.scrollWidth]); })()";
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('#row [data-code=view]')",
+            "the code block",
+        )
+        .await
+        .unwrap();
+        assert_eq!(eval::<String>(page, fits).await, "ok");
+    });
+}
+
 #[test]
 fn a_mention_list_near_the_viewport_bottom_flips_above_the_caret() {
     block_on(async {
@@ -1060,5 +1085,22 @@ fn a_mention_list_near_the_viewport_bottom_flips_above_the_caret() {
         )
         .await;
         assert_eq!(above, "ok");
+
+        // Scrolled to the middle, the list moves back under the line. Headless Chrome may hold
+        // the scroll event until its next frame, so one is sent too.
+        page.evaluate(
+            "document.body.style.paddingBottom = innerHeight + 'px'; window.scrollBy(0, innerHeight / 2); document.dispatchEvent(new Event('scroll'))",
+        )
+        .await
+        .unwrap();
+        settle(page).await;
+        let below: String = eval(
+            page,
+            &format!(
+                "(() => {{ const o = document.querySelector('[data-overlay]').getBoundingClientRect(), l = {leaf}.getBoundingClientRect(); return o.top >= l.bottom - 1 ? 'ok' : JSON.stringify([o, l, innerHeight]); }})()"
+            ),
+        )
+        .await;
+        assert_eq!(below, "ok");
     });
 }

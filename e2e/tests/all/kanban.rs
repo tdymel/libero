@@ -298,7 +298,8 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// At a 220px column the move buttons wrap below the content, which keeps 8rem or more.
+/// At a 220px column the move buttons wrap below the content together, end-aligned;
+/// the content keeps 8rem or more.
 #[test]
 fn a_narrow_column_wraps_the_move_buttons_below_the_content() {
     use e2e::browser::{Fixture, Viewport, block_on};
@@ -310,13 +311,24 @@ fn a_narrow_column_wraps_the_move_buttons_below_the_content() {
                 "(() => { const r = s => document.querySelector('#Beta ' + s).getBoundingClientRect(); \
                  return [document.querySelector('#column-0').getBoundingClientRect().width, \
                  r('[data-slot=content]').width, r('[data-slot=handle]').bottom, \
-                 r('[data-slot=move-later]').top].map(Math.round).join(' '); })()",
+                 r('[data-slot=move-earlier]').top, r('[data-slot=move-later]').top, \
+                 r('[data-slot=move-to]').top, \
+                 document.querySelector('#Beta').getBoundingClientRect().right - r('[data-slot=move-to]').right] \
+                 .map(Math.round).join(' '); })()",
             )
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        let [column, content, handle_bottom, buttons_top] = measured
+        let [
+            column,
+            content,
+            handle_bottom,
+            earlier,
+            later,
+            move_to,
+            end_gap,
+        ] = measured
             .split(' ')
             .map(|n| n.parse::<i64>().unwrap())
             .collect::<Vec<_>>()[..]
@@ -326,9 +338,23 @@ fn a_narrow_column_wraps_the_move_buttons_below_the_content() {
         assert!(column <= 240, "the column is not narrow: {measured}");
         assert!(content >= 128, "the content is under 8rem: {measured}");
         assert!(
-            buttons_top >= handle_bottom,
-            "the buttons did not wrap: {measured}"
+            earlier >= handle_bottom && earlier == later && (later - move_to).abs() <= 2,
+            "the buttons did not wrap together: {measured}"
         );
+        assert!(end_gap <= 12, "the buttons are not end-aligned: {measured}");
+        // Room for 8rem and the buttons: one line.
+        let one_line: bool = fixture
+            .page
+            .evaluate(
+                "(() => { const c = document.querySelector('#Beta'); c.parentElement.style.width = '420px'; \
+                 const r = s => c.querySelector(s).getBoundingClientRect(); \
+                 return ['move-earlier', 'move-later', 'move-to'].every(s => r(`[data-slot=${s}]`).top < r('[data-slot=handle]').bottom); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(one_line, "a wide card wrapped its buttons");
         fixture.close().await.unwrap();
     });
 }

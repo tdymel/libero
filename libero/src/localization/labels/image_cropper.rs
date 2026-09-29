@@ -12,6 +12,10 @@ pub struct ImageCropperLabels {
     /// The pan mode's `value`: `value`'s holes and `{zoom}`, in percent of the
     /// starting zoom.
     pub pan_value: &'static str,
+    /// Names the pan mode's zoom slider.
+    pub zoom: &'static str,
+    /// The zoom slider's `aria-valuetext`: `{zoom}` in percent of the starting zoom.
+    pub zoom_value: &'static str,
     pub top_left: &'static str,
     pub top_right: &'static str,
     pub bottom_right: &'static str,
@@ -33,6 +37,8 @@ impl ImageCropperLabels {
         value: "{width}% by {height}%, at {x}%, {y}%",
         pan_keys: "Arrow keys move the crop area, plus and minus zoom the image. Shift moves further.",
         pan_value: "{width}% by {height}%, at {x}%, {y}%, zoom {zoom}%",
+        zoom: "Zoom",
+        zoom_value: "{zoom}%",
         top_left: "Top left corner",
         top_right: "Top right corner",
         bottom_right: "Bottom right corner",
@@ -49,6 +55,8 @@ impl ImageCropperLabels {
         value: "{width} % mal {height} %, bei {x} %, {y} %",
         pan_keys: "Pfeiltasten verschieben den Zuschnitt, Plus und Minus zoomen das Bild. Mit Umschalt weiter.",
         pan_value: "{width} % mal {height} %, bei {x} %, {y} %, Zoom {zoom} %",
+        zoom: "Zoom",
+        zoom_value: "{zoom} %",
         top_left: "Ecke oben links",
         top_right: "Ecke oben rechts",
         bottom_right: "Ecke unten rechts",

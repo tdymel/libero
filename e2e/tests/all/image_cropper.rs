@@ -590,3 +590,106 @@ fn a_touch_pans_and_pinch_zooms_the_image_under_the_box() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Pan mode: a wheel notch zooms by the + key's step around the pointer, a trackpad
+/// pinch (ctrl+wheel) by its spread (1456).
+#[test]
+fn the_wheel_and_a_trackpad_pinch_zoom_the_image() {
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchMouseEventParams, DispatchMouseEventType,
+    };
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper/pan", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let crop = "document.getElementById('crop').textContent";
+        wait::for_js_true(page, &format!("{crop} === '30,10,40,80'"), "the square")
+            .await
+            .unwrap();
+        let centre = e2e::passes::pointer::centre_of(page, "#cropper")
+            .await
+            .unwrap();
+        let wheel = async |delta_y: f64, ctrl: bool| {
+            let event = DispatchMouseEventParams::builder()
+                .r#type(DispatchMouseEventType::MouseWheel)
+                .x(centre.x)
+                .y(centre.y)
+                .delta_x(0.0)
+                .delta_y(delta_y)
+                .modifiers(if ctrl { 2 } else { 0 })
+                .build()
+                .unwrap();
+            page.execute(event).await.unwrap();
+        };
+
+        wheel(-100.0, false).await;
+        wait::for_js_true(page, &format!("{crop} === '32,14,36,73'"), "a notch in")
+            .await
+            .unwrap();
+        wheel(100.0, false).await;
+        wait::for_js_true(page, &format!("{crop} === '30,10,40,80'"), "a notch out")
+            .await
+            .unwrap();
+        // A pinch to twice the spread: half the crop around the centre.
+        wheel(-100.0 * 2f64.ln(), true).await;
+        wait::for_js_true(page, &format!("{crop} === '40,30,20,40'"), "a pinch")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("the wheel").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Pan mode: a zoom slider is the single-pointer and keyboard zoom (WCAG 2.5.1, 1458).
+#[test]
+fn the_zoom_slider_zooms_with_one_pointer() {
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper/pan", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let crop = "document.getElementById('crop').textContent";
+        let thumb = "#cropper [data-slot=zoom] [role=slider]";
+        let spoken = format!("document.querySelector('{thumb}').getAttribute('aria-valuetext')");
+        wait::for_js_true(
+            page,
+            &format!(
+                "{crop} === '30,10,40,80' && {spoken} === '100%' \
+                 && document.querySelector('{thumb}').getAttribute('aria-label') === 'Zoom'"
+            ),
+            "the slider at 100%",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!("document.querySelector('{thumb}').focus()"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::HOME).await.unwrap();
+        // The largest crop of the box's shape.
+        wait::for_js_true(
+            page,
+            &format!("{crop} === '25,0,50,100' && {spoken} === '80%'"),
+            "Home to the widest zoom",
+        )
+        .await
+        .unwrap();
+        // One click on the track's middle zooms in, around the box's centre.
+        let track = e2e::passes::pointer::centre_of(page, "#cropper [data-slot=zoom]")
+            .await
+            .unwrap();
+        e2e::passes::pointer::click_at(page, track).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const [x, y, w, h] = {crop}.split(',').map(Number); \
+                 return w < 40 && Math.abs(x + w / 2 - 50) <= 1 && Math.abs(y + h / 2 - 50) <= 1; }})()"
+            ),
+            "a click to zoom in",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the slider").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

@@ -20,7 +20,28 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/builtins", || rsx! { BuiltinsPage {} }),
     ("/rich-text-editor/trailing", || rsx! { TrailingPage {} }),
     ("/rich-text-editor/mentions", || rsx! { MentionsPage {} }),
+    ("/rich-text-editor/narrow", || rsx! { NarrowPage {} }),
 ];
+
+/// Todo 1466: a long code line in a 20rem centring row, as the docs preview.
+#[component]
+fn NarrowPage() -> Element {
+    let mut doc = use_signal(|| {
+        Doc::from_markdown(
+            "intro\n\n```rust\nprintln!(\"a line far longer than the twenty rem row it sits in\");\n```\n",
+        )
+    });
+
+    rsx! {
+        div { id: "row", display: "flex", justify_content: "center", width: "20rem",
+            RichTextEditor {
+                label: "Snippet",
+                value: doc(),
+                onchange: move |next| doc.set(next),
+            }
+        }
+    }
+}
 
 /// A doc ending in a code block, for leaving it and the language menu.
 #[component]

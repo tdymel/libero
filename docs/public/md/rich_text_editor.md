@@ -305,7 +305,9 @@ shows Ctrl.
   `Cmd+H`, `Cmd+M`). A chord you unbind goes back to the browser: without
   Underline, `Ctrl+U` opens the page source. `Ctrl+P`, `Ctrl+S`, `Ctrl+D`,
   `Ctrl+F`, `Ctrl+L` and `Ctrl+Shift+I`/`J`/`C` belong to the browser too. On
-  Windows `Ctrl+Alt` is AltGr, which types characters on many layouts.
+  Windows `Ctrl+Alt` is AltGr, which types characters on many layouts: where it
+  types one, the character wins over the chord (`Ctrl+Alt+2` types `²` on a
+  German layout).
 - Make a `NodeViews` atom name its node in text (a mention shows `@name`): it
   is a non-editable island a screen reader reads as is.
 - Give an `overlay` list `role="listbox"` with an id per `role="option"`, pass

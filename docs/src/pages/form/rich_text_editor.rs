@@ -535,7 +535,7 @@ pub fn RichTextEditorPage() -> Element {
                 .must([
                     "Leave `label` unset only when something else names the editor, such as an `aria_label`.",
                     "Document custom chords you bind in `keymap` for your users.",
-                    "Bind chords the browser leaves to the page. `Ctrl+N`, `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab` and their Shift forms never reach it (on a Mac also `Cmd+Q`, `Cmd+H`, `Cmd+M`). A chord you unbind goes back to the browser: without Underline, `Ctrl+U` opens the page source. `Ctrl+P`, `Ctrl+S`, `Ctrl+D`, `Ctrl+F`, `Ctrl+L` and `Ctrl+Shift+I`/`J`/`C` belong to the browser too. On Windows `Ctrl+Alt` is AltGr, which types characters on many layouts.",
+                    "Bind chords the browser leaves to the page. `Ctrl+N`, `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab` and their Shift forms never reach it (on a Mac also `Cmd+Q`, `Cmd+H`, `Cmd+M`). A chord you unbind goes back to the browser: without Underline, `Ctrl+U` opens the page source. `Ctrl+P`, `Ctrl+S`, `Ctrl+D`, `Ctrl+F`, `Ctrl+L` and `Ctrl+Shift+I`/`J`/`C` belong to the browser too. On Windows `Ctrl+Alt` is AltGr, which types characters on many layouts: where it types one, the character wins over the chord (`Ctrl+Alt+2` types `²` on a German layout).",
                     "Make a `NodeViews` atom name its node in text (a mention shows `@name`): it is a non-editable island a screen reader reads as is.",
                     "Give an `overlay` list `role=\"listbox\"` with an id per `role=\"option\"`, pass the highlighted one as `active_descendant`, and steer it with the keyboard through `intercept`; Escape should close it.",
                     "Name each `RichTextTool` with its `label`: the button shows only its icon.",

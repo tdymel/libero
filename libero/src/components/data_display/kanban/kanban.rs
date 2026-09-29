@@ -70,6 +70,22 @@ static KANBAN_COLUMN_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+/// The content's basis beside the handle and `buttons` 24px buttons: the rest of the line
+/// while 8rem fit, else the whole line, so the buttons wrap below it together.
+fn card_content_basis(buttons: u8) -> String {
+    let slot = "(24px + var(--lsx-spacing-xs))";
+    let line = format!("calc(100% - {slot})");
+    let rest = format!("calc(100% - {} * {slot} - 1px)", buttons + 1);
+    let room = format!("calc((8rem + {} * {slot} - 100%) * 999)", buttons + 1);
+    format!("max({rest}, min({line}, {room}))")
+}
+
+/// The content's basis beside Move to alone, or with the move buttons too (no `:has()` under Blitz).
+static CARD_CONTENT_ONE_SX: StaticSx =
+    StaticSx::new(|| sx().selector("&[data-slot]", sx().flex_basis(card_content_basis(1))));
+static CARD_CONTENT_THREE_SX: StaticSx =
+    StaticSx::new(|| sx().selector("&[data-slot]", sx().flex_basis(card_content_basis(3))));
+
 // Under 8rem for the content, as in a 220px column, the move buttons wrap below it, end-aligned.
 // A paper card on the column's muted fill (todo 1437).
 static KANBAN_CARD_SX: StaticSx = StaticSx::new(|| {
@@ -79,7 +95,6 @@ static KANBAN_CARD_SX: StaticSx = StaticSx::new(|| {
         .background(PAPER_BACKGROUND.value())
         .border(format!("1px solid {}", PAPER_BORDER_COLOR.value()))
         .border_radius(PAPER_RADIUS.value())
-        .selector(KanbanCardPart::Content.selector(), sx().flex_basis("8rem"))
         .selector(
             "& > [data-slot='content'] + *",
             sx().margin_inline_start("auto"),
@@ -483,6 +498,17 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
     };
 
     let content_class = use_css(Some(&SORTABLE_CONTENT_SX), CssLayer::Framework);
+    let basis_one = use_css(Some(&CARD_CONTENT_ONE_SX), CssLayer::Framework);
+    let basis_three = use_css(Some(&CARD_CONTENT_THREE_SX), CssLayer::Framework);
+    let basis_class = match (board.move_buttons)() {
+        true => basis_three,
+        false => basis_one,
+    };
+    let content_class = [content_class, basis_class]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" ");
     let move_class = use_css(Some(&SORTABLE_MOVE_SX), CssLayer::Framework);
     let handle = use_box()
         .framework_sx(&SORTABLE_HANDLE_SX)
@@ -569,9 +595,12 @@ mod tests {
     #[test]
     fn a_narrow_card_wraps_its_buttons_below_the_content() {
         let css = Stylesheet::from(&KANBAN_CARD_SX).as_str().to_string();
+        let basis = Stylesheet::from(&CARD_CONTENT_THREE_SX)
+            .as_str()
+            .to_string();
 
         assert!(css.contains("flex-wrap:wrap"), "{css}");
-        assert!(css.contains("flex-basis:8rem"), "{css}");
+        assert!(basis.contains("flex-basis:max(calc(100% - 4 * "), "{basis}");
         assert!(css.contains("margin-inline-start:auto"), "{css}");
     }
 

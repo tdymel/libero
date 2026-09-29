@@ -393,11 +393,14 @@ impl Chord {
     }
 
     /// Matches by `code` when the key itself is not a plain letter or digit:
-    /// Shift+7 reports `&`, Alt+c on a Mac `ç`. Never overrides the layout's letters.
+    /// Shift+7 reports `&`, Alt+c on a Mac `ç`. Never overrides the layout's letters,
+    /// nor AltGr's characters off a Mac (Ctrl+Alt there): AltGr+2 types `²` in German.
     fn matches_by_code(&self, press: &KeyPress, apple: bool) -> bool {
         let plain =
             press.key.chars().count() == 1 && press.key.chars().all(|c| c.is_ascii_alphanumeric());
+        let alt_graph = !apple && press.ctrl && press.alt;
         !plain
+            && !alt_graph
             && self.modifiers_match(press, apple)
             && key_of_code(&press.code).as_deref() == Some(self.key.as_str())
     }

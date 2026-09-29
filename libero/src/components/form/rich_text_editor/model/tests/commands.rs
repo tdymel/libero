@@ -132,6 +132,36 @@ fn shifted_digits_match_by_code_but_letters_follow_the_layout() {
 }
 
 #[test]
+fn alt_graph_characters_type_instead_of_running_a_chord() {
+    let keymap = Keymap::default();
+    // Windows, German layout: AltGr+2 is Ctrl+Alt+2 and types `²`.
+    let squared = KeyPress {
+        key: "²".into(),
+        code: "Digit2".into(),
+        ctrl: true,
+        alt: true,
+        ..KeyPress::default()
+    };
+    assert_eq!(keymap.command_for(&squared, false), None);
+    // A key AltGr leaves free still runs its chord; so does Cmd+Option+2 on a Mac.
+    assert_eq!(
+        keymap.command_for(&press("Mod+Alt+2"), false),
+        Some(&Builtin::Heading2.into())
+    );
+    let mac = KeyPress {
+        key: "“".into(),
+        code: "Digit2".into(),
+        meta: true,
+        alt: true,
+        ..KeyPress::default()
+    };
+    assert_eq!(
+        keymap.command_for(&mac, true),
+        Some(&Builtin::Heading2.into())
+    );
+}
+
+#[test]
 fn a_caller_rebinds_and_adds_commands() {
     let mut commands = Commands::builtin();
     commands.register("shout", |state| {

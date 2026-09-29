@@ -888,6 +888,38 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
     });
 }
 
+/// Todo 1426: at xs the speaker and the volume chevron each own 24px or more of the row.
+#[test]
+fn at_xs_the_speaker_and_the_chevron_each_own_a_24px_target() {
+    block_on(async {
+        let fixture = Fixture::open("/video/captions/xs", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let owned =
+            "(() => { const b = l => document.querySelector(`#player button[aria-label=${l}]`);
+            const mute = b('Mute'), chevron = b('Volume');
+            if (!mute || !chevron) return null;
+            const m = mute.getBoundingClientRect(), c = chevron.getBoundingClientRect();
+            const y = m.top + m.height / 2, own = { Mute: 0, Volume: 0 };
+            for (let x = m.left - 12; x <= c.right + 12; x += 0.5) {
+                const hit = document.elementFromPoint(x, y)?.closest('button');
+                if (hit === mute) own.Mute += 0.5;
+                if (hit === chevron) own.Volume += 0.5;
+            }
+            return JSON.stringify(own); })()";
+        wait::for_js_true(page, &format!("{owned} !== null"), "the volume buttons")
+            .await
+            .unwrap();
+        let measured: String = page.evaluate(owned).await.unwrap().into_value().unwrap();
+        let own: serde_json::Value = serde_json::from_str(&measured).unwrap();
+        for button in ["Mute", "Volume"] {
+            assert!(own[button].as_f64().unwrap() >= 24.0, "{measured}");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The cue box Chromium draws in the `<video>`'s own shadow tree, by its bottom edge.
 async fn cue_bottom(page: &chromiumoxide::Page) -> Option<f64> {
     use chromiumoxide::cdp::browser_protocol::dom::{GetBoxModelParams, GetDocumentParams, Node};
