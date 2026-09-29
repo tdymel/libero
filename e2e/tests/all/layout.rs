@@ -77,6 +77,36 @@ fn every_wrapper_reflows_inside_320px() {
     });
 }
 
+/// A child past `Center`'s box spills toward the end, where the page scrolls to it, not
+/// past the start, where nothing does (WCAG 1.4.10).
+#[test]
+fn an_oversized_child_of_center_spills_toward_the_end() {
+    block_on(async {
+        let fixture = Fixture::open("/center-overflow", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#wide").await.unwrap();
+
+        let edges: Vec<f64> = page
+            .evaluate(
+                "(() => { const stage = document.querySelector('#stage').getBoundingClientRect(); \
+                   const wide = document.querySelector('#wide').getBoundingClientRect(); \
+                   return [wide.left - stage.left, wide.top - stage.top]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            edges.iter().all(|edge| *edge >= -1.0),
+            "the child starts past the stage's start edges (left, top): {edges:?}"
+        );
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A nested Flex takes its own direction's defaults, not its ancestor's props.
 #[test]
 fn a_nested_flex_does_not_inherit_its_ancestors_props() {

@@ -36,9 +36,11 @@ pub fn CenterPage() -> Element {
                 prop("children", "Element").doc("The centered content."),
             ])],
             accessibility: a11y()
-                .handles(["`Center` adds no roles and moves nothing, so tab and reading order match the code."])
+                .handles([
+                    "`Center` adds no roles and moves nothing, so tab and reading order match the code.",
+                    "A child larger than the box spills toward the end, where scrolling reaches it, never past the start.",
+                ])
                 .must([
-                    "Size it with `sx().min_height(..)`, not a fixed `height`: a child taller than the box spills past its top as well, where no scrolling reaches.",
                     "`Center` always renders a `div`: for a list or a nav, put a `Box` with `component: \"ul\"` or `\"nav\"` inside.",
                 ]),
             lead: rsx! {

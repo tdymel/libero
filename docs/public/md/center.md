@@ -47,11 +47,11 @@ Like every component, `Center` also takes the shared props `sx`, `class`,
 
 - `Center` adds no roles and moves nothing, so tab and reading order match the
   code.
+- A child larger than the box spills toward the end, where scrolling reaches it,
+  never past the start.
 
 ### You must
 
-- Size it with `sx().min_height(..)`, not a fixed `height`: a child taller than
-  the box spills past its top as well, where no scrolling reaches.
 - `Center` always renders a `div`: for a list or a nav, put a `Box` with
   `component: "ul"` or `"nav"` inside.
 

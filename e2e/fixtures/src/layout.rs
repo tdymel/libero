@@ -3,10 +3,26 @@
 
 use dioxus::prelude::*;
 use libero::components::{AspectRatio, Box as LBox, Center, Container, Flex, Float, Sidebar};
+use libero::sx::sx;
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/layout", || rsx! { LayoutPage {} })];
+pub const ROUTES: Routes = &[
+    ("/layout", || rsx! { LayoutPage {} }),
+    ("/center-overflow", || rsx! { CenterOverflowPage {} }),
+];
+
+/// A child wider and taller than its `Center`: centring must not push it past the start edges.
+#[component]
+fn CenterOverflowPage() -> Element {
+    rsx! {
+        div { id: "column", max_width: "320px",
+            Center { id: "stage", sx: sx().height("40px"),
+                LBox { id: "wide", sx: sx().white_space("nowrap").height("80px"), "Wider and taller than the stage, and it will not wrap at all" }
+            }
+        }
+    }
+}
 
 #[component]
 fn LayoutPage() -> Element {

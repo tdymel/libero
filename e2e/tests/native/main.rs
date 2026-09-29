@@ -8,6 +8,7 @@ mod avatar;
 mod bottom_navigation;
 mod button;
 mod carousel;
+mod center;
 mod choice;
 mod code;
 mod code_block;

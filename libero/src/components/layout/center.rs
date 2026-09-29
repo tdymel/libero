@@ -10,9 +10,10 @@ use crate::{
 };
 
 static CENTER_BASE_SX: StaticSx = StaticSx::new(|| {
+    // `safe`: an oversized child spills toward the end, where scrolling reaches it.
     sx().display(CENTER_DISPLAY.overridable())
-        .align_items("center")
-        .justify_content("center")
+        .align_items("safe center")
+        .justify_content("safe center")
 });
 
 fn center_variables(props: &CenterProps) -> Variables {
