@@ -133,7 +133,15 @@ fn main() -> Result<()> {
     // Its errors show again in the real run below.
     let mut prebuild = Command::new(env!("CARGO"))
         .current_dir(&root)
-        .args(["test", "-p", "e2e", "--test", test, "--no-run", "--target-dir"])
+        .args([
+            "test",
+            "-p",
+            "e2e",
+            "--test",
+            test,
+            "--no-run",
+            "--target-dir",
+        ])
         .arg(&target_dir)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
