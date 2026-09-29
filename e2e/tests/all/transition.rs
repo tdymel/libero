@@ -61,8 +61,9 @@ e2e::scenario!(
 /// Closed it is shrunk to nothing; open it is untransformed, its origin the bottom right corner.
 async fn grows_from_its_corner<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let closed = d.style(ROOT, "transform").await?;
+    // Chromium resolves the computed transform to a matrix, Blitz keeps the specified `scale(0)`.
     ensure!(
-        closed.starts_with("matrix(0, 0, 0, 0"),
+        closed.starts_with("matrix(0, 0, 0, 0") || closed == "scale(0)",
         "closed transform {closed}"
     );
     d.click(TOGGLE).await?;
@@ -76,7 +77,11 @@ async fn grows_from_its_corner<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         d.style(ROOT, "height").await?
     );
     let origin = d.style(ROOT, "transform-origin").await?;
-    ensure!(origin == corner, "origin {origin}, corner {corner}");
+    // Blitz keeps the specified percentages and reports width and height as `auto`.
+    ensure!(
+        origin == corner || origin.starts_with("100% 100%"),
+        "origin {origin}, corner {corner}"
+    );
     Ok(())
 }
 

@@ -30,12 +30,17 @@ impl PortalHost {
 /// currently returns `Some`. Rendered once by [`crate::LiberoProvider`].
 #[component]
 pub(crate) fn PortalOutlet() -> Element {
-    rsx! { HostOutlet { host: use_context::<PortalHost>() } }
+    // Not a `HostOutlet` child: a deeper scope renders after `StyleOutlet`, which then runs twice (1511).
+    outlet(use_context::<PortalHost>())
 }
 
 /// [`PortalOutlet`] for a host of its own, such as a fullscreen player's.
 #[component]
 pub(crate) fn HostOutlet(host: PortalHost) -> Element {
+    outlet(host)
+}
+
+fn outlet(host: PortalHost) -> Element {
     platform::PortalRoot(rsx! {
         for (id , element , idle) in host
             .entries
