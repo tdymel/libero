@@ -4,7 +4,7 @@
 use anyhow::Result;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused};
 
 use crate::modal;
 use e2e::suite::Step;
@@ -55,24 +55,30 @@ e2e::scenario!(
     a_drawer_moves_focus_in_and_traps_tab,
     "/drawer",
     traps_tab,
-    android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    android: skip("959: Tab leaves the drawer for the body on the WebView"),
+    desktop: skip("959: Shift+Tab from the first control leaves the drawer on the WebView")
 );
-e2e::scenario!(
-    a_backdrop_click_closes_a_drawer,
-    "/drawer",
-    backdrop_closes,
-    android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
-);
+e2e::scenario!(a_backdrop_click_closes_a_drawer, "/drawer", backdrop_closes);
 e2e::scenario!(
     a_button_in_a_drawer_closes_it_and_focus_returns,
     "/drawer",
-    close_button_closes,
-    android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    close_button_closes
 );
 e2e::scenario!(a_right_drawer_hugs_the_right_edge, "/drawer", hugs_the_end);
+
+/// Opening moves focus in; the first Escape closes it and hands focus to the trigger.
+async fn escape_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    modal::open(d, TRIGGER).await?;
+    eventually_focused(d, "[role=dialog], [role=dialog] *", "opening the drawer").await?;
+    d.press(keyboard::ESCAPE).await?;
+    modal::closed_with_focus_on(d, TRIGGER, "Escape").await
+}
+
+e2e::scenario!(
+    escape_closes_a_drawer_and_returns_focus,
+    "/drawer",
+    escape_closes
+);
 
 /// Android's Back closes the drawer, and the app stays (1289).
 async fn back_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -146,6 +152,35 @@ fn a_drawer_taller_than_the_viewport_scrolls() {
             assert!(
                 reachable,
                 "the last control is off screen at {}",
+                viewport.name()
+            );
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// 1.4.10: the widest size is capped by the viewport, not pushed past its edge.
+#[test]
+fn a_wide_drawer_stays_inside_a_narrow_viewport() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/drawer/wide", viewport).await.unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            e2e::wait::for_visible(page, DIALOG).await.unwrap();
+            let (right, width): (f64, f64) = page
+                .evaluate(
+                    "(() => { const b = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+                     return [b.right, innerWidth]; })()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                right <= width + 1.0,
+                "the drawer ends at {right}px in a {width}px viewport at {}",
                 viewport.name()
             );
             fixture.close().await.unwrap();

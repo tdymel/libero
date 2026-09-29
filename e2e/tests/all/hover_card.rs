@@ -1,7 +1,9 @@
 //! `HoverCard`: a non-modal dialog on hover delays or at once on focus. The card is
 //! portaled, so Tab is carried into it and back out past the trigger (406).
 
-use anyhow::Result;
+use std::time::{Duration, Instant};
+
+use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::clock::HELD_CLOCK;
 use e2e::driver::{Driver, eventually, eventually_focused};
@@ -73,6 +75,74 @@ e2e::scenario!(
     escape_closes_a_select_list_in_the_card_before_the_card,
     "/hover-card-select",
     escape_closes_the_list_first
+);
+
+/// Tab crosses into the portaled card and out past its last control; Shift+Tab walks back.
+async fn tab_crosses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(BEFORE).await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, TRIGGER, "Tab from Before").await?;
+    shown(d, CARD, true, "Tab onto the trigger").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CARD_FIRST, "Tab from the trigger into the card").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CARD_LAST, "Tab within the card").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, AFTER, "Tab out of the card").await?;
+    shown(d, CARD, false, "Tab out of the card").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, TRIGGER, "Shift+Tab back to the trigger").await?;
+    shown(d, CARD, true, "Shift+Tab back to the trigger").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, CARD_FIRST, "Tab into the card again").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, TRIGGER, "Shift+Tab from the card's first control").await?;
+    ensure!(d.exists(CARD).await?, "the card closed on Shift+Tab");
+    Ok(())
+}
+
+/// The pointer rests to open, may cross into the card, and leaving closes it.
+async fn pointer_crosses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.hover(TRIGGER).await?;
+    shown(d, CARD, true, "hovering the trigger").await?;
+    d.hover(CARD_FIRST).await?;
+    // Past the close delay, which a card the pointer left would have used up.
+    let started = Instant::now();
+    while started.elapsed() < Duration::from_millis(u64::from(CLOSE_MS) + 300) {
+        d.idle().await;
+    }
+    ensure!(
+        d.exists(CARD).await?,
+        "the card closed with the pointer on it"
+    );
+    d.hover(BEFORE).await?;
+    shown(d, CARD, false, "the pointer leaving").await
+}
+
+/// The docs' touch claim: a tap on the trigger opens the card, a tap elsewhere closes it.
+async fn tap_opens_and_tap_elsewhere_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    shown(d, CARD, true, "a tap on the trigger").await?;
+    d.click(BEFORE).await?;
+    shown(d, CARD, false, "a tap elsewhere").await
+}
+
+e2e::scenario!(
+    a_tap_opens_the_card_and_a_tap_elsewhere_closes_it,
+    "/hover-card",
+    tap_opens_and_tap_elsewhere_closes
+);
+e2e::scenario!(
+    tab_crosses_into_the_portaled_card_and_back_on_every_backend,
+    "/hover-card",
+    tab_crosses,
+    android: skip("958: the Tab bridge reads the card's focusables inside a handler"),
+    desktop: skip("958: the Tab bridge reads the card's focusables inside a handler")
+);
+e2e::scenario!(
+    the_pointer_crosses_into_the_card_and_leaving_closes_it,
+    "/hover-card",
+    pointer_crosses
 );
 
 const TRIGGER: &str = "#trigger";

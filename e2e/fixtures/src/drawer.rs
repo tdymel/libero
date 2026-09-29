@@ -11,7 +11,35 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/drawer", || rsx! { DrawerPage {} }),
     ("/drawer/tall", || rsx! { TallDrawerPage {} }),
+    ("/drawer/wide", || rsx! { WideDrawerPage {} }),
 ];
+
+/// The widest size, wider than a phone.
+#[component]
+fn WideDrawerPage() -> Element {
+    let nav = use_drawer(
+        DrawerOptions {
+            size: "xxl".into(),
+            aria_label: Some("Menu".into()),
+            ..Default::default()
+        },
+        |s: ModalScope<()>| {
+            rsx! {
+                Button { id: "drawer-close", variant: "text", onclick: move |_| s.close(), "Close" }
+            }
+        },
+    );
+
+    rsx! {
+        Button {
+            id: "open-drawer",
+            onclick: move |_| {
+                nav.open();
+            },
+            "Open menu"
+        }
+    }
+}
 
 /// A drawer whose content outgrows the viewport.
 #[component]

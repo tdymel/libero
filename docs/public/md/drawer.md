@@ -133,6 +133,8 @@ behave the same. See [Modal](modal.md).
 
 - On Android, a drawer opened without a tap (on mount or from a timer) may let
   Back close the app.
+- On the desktop WebView, Shift+Tab from the panel's first control leaves it;
+  on Android, Tab does.
 
 ## Theme defaults
 

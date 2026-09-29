@@ -95,6 +95,8 @@ Like every component, `HoverCard` also takes the shared props `sx`, `class`,
 - On desktop and mobile, Escape works only while focus is on the trigger or
   in the card, so a card the pointer opened cannot be dismissed from the
   keyboard there (WCAG 1.4.13).
+- On the desktop WebView and Android, Tab on the trigger does not move into
+  the card, so its links and buttons take a pointer or a tap there.
 
 ## Theme defaults
 
