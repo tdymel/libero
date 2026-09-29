@@ -3,7 +3,10 @@ use crate::common::{body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Table, TableColumnsButton, TableDensityButton, TableExportButton, column},
+    components::{
+        ColumnFilter, FilterOperator, Table, TableColumnsButton, TableDensityButton,
+        TableExportButton, column,
+    },
     theme::Size,
 };
 
@@ -69,4 +72,38 @@ fn a_piece_outside_a_table_renders_nothing() {
 
     let html = render(app);
     assert!(!html.contains("data-table-tool"), "{html}");
+}
+
+/// 1400: `filter_panel` puts a Filters button first in the row, named with the
+/// active count; the count it shows is hidden from readers. The dialog waits for a click.
+#[test]
+fn the_filter_panel_button_leads_the_row_and_names_the_count() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "People",
+                    filter_panel: true,
+                    toolbar: rsx! { TableExportButton { onexport: |_| {} } },
+                    default_column_filters: vec![
+                        ColumnFilter::new("Name", FilterOperator::Contains, "a"),
+                        ColumnFilter::new("Name", FilterOperator::Contains, ""),
+                    ],
+                    data: names(),
+                    columns: vec![column("Name").value(|name: &String| name.clone())],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let button = body.find("data-filter-panel-button").expect(&body);
+    assert!(
+        button < body.find("data-table-tool=\"export\"").unwrap(),
+        "{body}"
+    );
+    assert!(body.contains("aria-label=\"Filters, 1 active\""), "{body}");
+    assert!(body.contains("data-filter-count"), "{body}");
+    assert!(!body.contains("data-filter-panel=true"), "{body}");
 }

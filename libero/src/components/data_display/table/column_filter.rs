@@ -56,7 +56,7 @@ impl ColumnFilter {
 }
 
 // Defined with the labels, which name each operator: localization sits below components.
-pub use crate::localization::FilterOperator;
+pub use crate::localization::{FilterLogic, FilterOperator};
 
 impl FilterOperator {
     /// The operators a column of `kind` offers, its default first.
@@ -243,16 +243,6 @@ pub(super) fn cell_tests<T>(
             CellTest::new(filter, columns[index].filter_kind).map(|test| (index, test))
         })
         .collect()
-}
-
-/// How a table's column filters join: a row stays when it passes all of them,
-/// or any one. The quick filter applies on top either way.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-#[non_exhaustive]
-pub enum FilterLogic {
-    #[default]
-    And,
-    Or,
 }
 
 /// Whether `row` passes the tests, joined by `logic`.

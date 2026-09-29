@@ -21,7 +21,9 @@ pub(super) fn HeaderFilter(target: FilterTarget) -> Element {
             size: target.size,
             filter,
             draft: editor.draft.read().clone(),
-            editor,
+            ontext: editor.ontext,
+            onpick: editor.onpick,
+            onday: editor.onday,
         }
     }
 }

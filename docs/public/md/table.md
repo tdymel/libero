@@ -59,6 +59,16 @@ dates, as the Joined and Review columns show, yes or no for booleans. The
 filters all apply, together with the quick filter. Hold them yourself with
 `column_filters` and `oncolumnfilterschange`.
 
+A date column, one whose value is a `chrono::NaiveDate`, filters with before,
+after, on or before, on or after, and between. Its value field is a date input
+holding an ISO day (`2026-10-03`); Blitz has none, so there it is a text field
+you type the ISO day into. `ColumnFilter::between("Joined", from, to)` sets both
+ends, in `value` and `value_to`: an empty end leaves that side open, and ends
+given the wrong way round are swapped. `filter_logic: FilterLogic::Or` keeps a
+row that passes any one column filter instead of all; the quick filter still
+applies on top. A column may hold several filters; the popover and the header
+field edit its first, and `filter_panel` all of them.
+
 `column_menu` adds a menu to each header to sort, hide the column, or show and
 hide the others. `.hideable(false)` keeps a column out of it. To hold the hidden
 columns yourself, pass `hidden_columns` and update it from
@@ -831,10 +841,14 @@ fn Demo() -> Element {
 | `onquickfilterchange` | `EventHandler<String>` | `None` | Called with the text typed into the quick-filter field. |
 | `show_quick_filter` | `bool` | `false` | Puts a search field above the table that drives the quick filter. |
 | `manual_filter` | `bool` | `false` | `data` comes filtered, say from a server: the quick filter and the column filters only report through `onquickfilterchange` and `oncolumnfilterschange`. Pair it with `manual_pagination` and `row_count` when paged. |
-| `column_filters` | `Option<Vec<ColumnFilter>>` | `None` | One filter per column, by header: `ColumnFilter::new("Age", FilterOperator::GreaterThan, "30")`. A row stays when it passes all of them and the quick filter. Text operators ignore case, `Equals` too; number operators compare the value, not its formatted text, and take `1,5` as 1.5. An empty value, a number that does not parse, or an operator the column's type does not offer keeps every row. A hidden column's filter keeps filtering. Set, the filters are controlled: pair them with `oncolumnfilterschange`. |
+| `column_filters` | `Option<Vec<ColumnFilter>>` | `None` | Filters by header: `ColumnFilter::new("Age", FilterOperator::GreaterThan, "30")`, or `ColumnFilter::between("Joined", "2026-01-01", "2026-06-30")` for a date range. A row stays when it passes all of them (or any, with `filter_logic`) and the quick filter. Dates take an ISO day. Text operators ignore case, `Equals` too; number operators compare the value, not its formatted text, and take `1,5` as 1.5. An empty value, a number that does not parse, or an operator the column's type does not offer keeps every row. A hidden column's filter keeps filtering. Set, the filters are controlled: pair them with `oncolumnfilterschange`. |
 | `default_column_filters` | `Vec<ColumnFilter>` | `[]` | Seeds the column filters once. Ignored when `column_filters` is set. |
 | `oncolumnfilterschange` | `EventHandler<Vec<ColumnFilter>>` | `None` | Called with the filters a filter popover or a header filter asks for. Typed values arrive once typing pauses for 300 ms, an operator or yes/no pick at once. |
+| `filter_logic` | `Option<FilterLogic>` | `None` | How the column filters join: `FilterLogic::And` keeps a row that passes all of them, `Or` one that passes any. The quick filter applies on top either way. Set, it is controlled. |
+| `default_filter_logic` | `FilterLogic` | `And` | Seeds the filter logic once. Ignored when `filter_logic` is set. |
+| `onfilterlogicchange` | `EventHandler<FilterLogic>` | `None` | Called with the filter logic a pick asks for. |
 | `header_filters` | `bool` | `false` | Adds a row of filter fields under the headers, one per `filterable` column: a text field, or Any/Yes/No for a boolean column. A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers. |
+| `filter_panel` | `bool` | `false` | A Filters button at the start of the toolbar row, showing the active filters' count, opens a dialog of every column filter, one line each: column, operator, value and a remove button. Add filter appends a line for the first column without one; from two lines a Match pick sets `filter_logic`. Lines apply as the popover does. `column_menu`'s Filter then opens the panel on its column's line instead of the popover. |
 | `pinned_columns` | `Option<PinnedColumns>` | `None` | The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly. |
 | `default_pinned_columns` | `PinnedColumns` | none pinned | Seeds the pinned columns once. Ignored when `pinned_columns` is set. |
 | `onpinnedcolumnschange` | `EventHandler<PinnedColumns>` | `None` | Called with the pinned columns a column menu pick asks for. |
@@ -939,6 +953,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   labelled Operator and Value fields; focus moves to the value on open, or to
   the operator when it takes none. A filtered header's button reads "Age is
   filtered". Each header filter field is named "Filter" plus its column.
+- The filter panel is a `role="dialog"` named "Filters"; its button reads "Filters, 2 active", the count it shows hidden from readers. Each line's controls are named with their column, "Name: operator", "Name: value", "Remove Name filter". Opening focuses the first line, else Add filter; Add focuses the new line, a remove the line before it, else Add filter; Escape, or Tab past either end, closes it onto its button.
 - A column filter change announces the rows left, "2 rows", in the same polite
   live region, once it settles.
 - A group header is a `th scope="colgroup"` over its columns, so a screen reader

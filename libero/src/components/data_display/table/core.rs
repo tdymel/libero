@@ -45,7 +45,7 @@ impl TableSort {
 }
 
 /// A per-row closure for a [`Table`](super::Table) prop, as `row_key`, or none
-/// by default. Compares equal to any other, as a column's closures do.
+/// by default. Two set ones compare equal, as a column's closures do.
 ///
 /// ```rust
 /// # use libero::components::RowFn;
@@ -86,9 +86,10 @@ impl<T, R> Clone for RowFn<T, R> {
     }
 }
 
+// Set against unset differs, so turning a prop on re-renders the table (1440).
 impl<T, R> PartialEq for RowFn<T, R> {
-    fn eq(&self, _: &Self) -> bool {
-        true
+    fn eq(&self, other: &Self) -> bool {
+        self.is_set() == other.is_set()
     }
 }
 

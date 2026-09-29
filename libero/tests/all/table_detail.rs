@@ -3,7 +3,7 @@ use crate::common::{body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{PinnedColumns, Table, column},
+    components::{PinnedColumns, RowFn, Table, column},
 };
 
 #[derive(Clone, PartialEq)]
@@ -227,4 +227,45 @@ fn a_start_pin_holds_the_toggles_and_insets_past_them_and_the_checkboxes() {
     let cell = &body[body[..ada].rfind("<td").unwrap()..ada];
     // The toggle column's 24px, then the checkbox column's.
     assert!(cell.contains("inset-inline-start:calc(calc(24px"), "{cell}");
+}
+
+/// 1440: turning `row_detail` on re-renders the table; `RowFn` compared equal
+/// to an unset one, so the toggles never showed.
+#[test]
+fn setting_row_detail_later_shows_the_toggles() {
+    use std::cell::Cell;
+    thread_local!(static ON: Cell<Option<Signal<bool>>> = const { Cell::new(None) });
+
+    #[component]
+    fn People(on: bool) -> Element {
+        rsx! {
+            Table {
+                caption: "People",
+                data: people(),
+                columns: vec![column("Name").value(|row: &Row| row.name.to_string()).row_header()],
+                row_key: |row: &Row| row.id.to_string(),
+                row_detail: match on {
+                    true => detail.into(),
+                    false => RowFn::default(),
+                },
+            }
+        }
+    }
+
+    fn app() -> Element {
+        let on = use_signal(|| false);
+        ON.set(Some(on));
+        rsx! {
+            LiberoProvider { People { on: on() } }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    assert!(!body(&dioxus_ssr::render(&dom)).contains("data-detail-button"));
+    dom.in_runtime(|| ON.get().expect("the switch").set(true));
+    dom.process_events();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let html = body(&dioxus_ssr::render(&dom));
+    assert_eq!(html.matches("data-detail-button").count(), 2, "{html}");
 }

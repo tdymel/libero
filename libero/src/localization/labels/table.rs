@@ -1,5 +1,15 @@
 use crate::theme::Size;
 
+/// How a table's column filters join: a row stays when it passes all of them,
+/// or any one. The quick filter applies on top either way.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub enum FilterLogic {
+    #[default]
+    And,
+    Or,
+}
+
 /// How a `ColumnFilter` compares a cell. Text operators ignore case, `Equals`
 /// too; number operators compare the value, not the formatted text.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -194,6 +204,33 @@ pub struct TableLabels {
     pub density_name: fn(Size) -> &'static str,
     /// The toolbar's `TableExportButton`.
     pub export: &'static str,
+    /// The `filter_panel` button's text and the panel's name.
+    pub filters: &'static str,
+    /// The `filter_panel` button's name, from the active filters' count.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.active_filters)(2), "Filters, 2 active");
+    /// assert_eq!((TableLabels::ENGLISH.active_filters)(0), "Filters");
+    /// ```
+    pub active_filters: fn(usize) -> String,
+    pub add_filter: &'static str,
+    /// The filter panel's pick of how its filters join.
+    pub logic: &'static str,
+    pub logic_name: fn(FilterLogic) -> &'static str,
+    /// A panel line's controls, from its column's header.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::GERMAN.filter_line_value)("Name"), "Name: Wert");
+    /// assert_eq!((TableLabels::ENGLISH.remove_filter)("Name"), "Remove Name filter");
+    /// ```
+    pub filter_line_column: fn(&str) -> String,
+    pub filter_line_operator: fn(&str) -> String,
+    pub filter_line_value: fn(&str) -> String,
+    pub remove_filter: fn(&str) -> String,
 }
 
 fn english_filter_column(column: &str) -> String {
@@ -360,6 +397,66 @@ fn german_density_name(size: Size) -> &'static str {
     }
 }
 
+fn english_active_filters(count: usize) -> String {
+    match count {
+        0 => "Filters".to_string(),
+        _ => format!("Filters, {count} active"),
+    }
+}
+
+fn german_active_filters(count: usize) -> String {
+    match count {
+        0 => "Filter".to_string(),
+        _ => format!("Filter, {count} aktiv"),
+    }
+}
+
+fn english_logic_name(logic: FilterLogic) -> &'static str {
+    match logic {
+        FilterLogic::And => "All filters",
+        FilterLogic::Or => "Any filter",
+    }
+}
+
+fn german_logic_name(logic: FilterLogic) -> &'static str {
+    match logic {
+        FilterLogic::And => "Alle Filter",
+        FilterLogic::Or => "Ein beliebiger Filter",
+    }
+}
+
+fn english_line_column(column: &str) -> String {
+    format!("{column}: column")
+}
+
+fn german_line_column(column: &str) -> String {
+    format!("{column}: Spalte")
+}
+
+fn line_operator(column: &str) -> String {
+    format!("{column}: operator")
+}
+
+fn german_line_operator(column: &str) -> String {
+    format!("{column}: Operator")
+}
+
+fn english_line_value(column: &str) -> String {
+    format!("{column}: value")
+}
+
+fn german_line_value(column: &str) -> String {
+    format!("{column}: Wert")
+}
+
+fn english_remove_filter(column: &str) -> String {
+    format!("Remove {column} filter")
+}
+
+fn german_remove_filter(column: &str) -> String {
+    format!("{column}-Filter entfernen")
+}
+
 fn english_row_details(row: &str) -> String {
     format!("Details for {row}")
 }
@@ -419,6 +516,15 @@ impl TableLabels {
         density: "Density",
         density_name: english_density_name,
         export: "Export",
+        filters: "Filters",
+        active_filters: english_active_filters,
+        add_filter: "Add filter",
+        logic: "Match",
+        logic_name: english_logic_name,
+        filter_line_column: english_line_column,
+        filter_line_operator: line_operator,
+        filter_line_value: english_line_value,
+        remove_filter: english_remove_filter,
     };
 
     pub const GERMAN: Self = Self {
@@ -471,5 +577,37 @@ impl TableLabels {
         density: "Zeilenhöhe",
         density_name: german_density_name,
         export: "Exportieren",
+        filters: "Filter",
+        active_filters: german_active_filters,
+        add_filter: "Filter hinzufügen",
+        logic: "Übereinstimmung",
+        logic_name: german_logic_name,
+        filter_line_column: german_line_column,
+        filter_line_operator: german_line_operator,
+        filter_line_value: german_line_value,
+        remove_filter: german_remove_filter,
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 1400: every panel line control names its column, and the button its count.
+    #[test]
+    fn the_filter_panel_labels_name_their_column_and_count() {
+        for labels in [TableLabels::ENGLISH, TableLabels::GERMAN] {
+            for name in [
+                labels.filter_line_column,
+                labels.filter_line_operator,
+                labels.filter_line_value,
+                labels.remove_filter,
+            ] {
+                assert!(name("Stock").contains("Stock"), "{}", name("Stock"));
+            }
+            assert!((labels.active_filters)(3).contains('3'));
+            assert!((labels.active_filters)(3).starts_with(labels.filters));
+            assert_eq!((labels.active_filters)(0), labels.filters);
+        }
+    }
 }

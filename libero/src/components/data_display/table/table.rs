@@ -37,6 +37,7 @@ use super::{
     csv::shown_csv,
     detail::Details,
     filter::{FilteredRows, QuickFilter, query_words},
+    filter_panel::{FilterPanel, FilterPanelButton, PanelColumn, use_panel_control},
     filter_popover::FilterTarget,
     groups::spanned,
     header_filters::HeaderFilter,
@@ -786,6 +787,11 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// A row of filter fields under the headers, one per `filterable` column.
     #[props(default)]
     header_filters: bool,
+    /// A Filters button at the toolbar's start opening a dialog of every column
+    /// filter, several per column, joined by `filter_logic`. `column_menu`'s
+    /// Filter then opens it.
+    #[props(default)]
+    filter_panel: bool,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -866,6 +872,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         default_density: props.default_density,
         ondensitychange: props.ondensitychange,
     });
+    let panel = use_panel_control();
     let tools = use_context_provider(|| TableTools::new(state.hidden_columns, state.density));
     let preview = use_signal(|| None);
     let measured = use_hook(|| CopyValue::new(BTreeMap::new()));
@@ -1095,6 +1102,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                             size,
                             parts: props.column_menu_parts.clone(),
                             filter: filter_target(index),
+                            panel: props.filter_panel.then_some(panel),
                         }
                     }
                 })
@@ -1135,6 +1143,16 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .map(|(index, _)| index)
         .collect();
     let tests = cell_tests(&props.columns, &state.column_filters.read());
+    let active_filters = tests.len();
+    let panel_columns: Vec<PanelColumn> = props
+        .columns
+        .iter()
+        .filter(|column| column.filterable)
+        .map(|column| PanelColumn {
+            header: column.header.clone(),
+            kind: column.filter_kind,
+        })
+        .collect();
     let kept = match props.manual_filter {
         true => None,
         false => filtered.write().kept(
@@ -1538,6 +1556,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         || has_reorder
         || props.column_menu
         || props.header_filters
+        || props.filter_panel
         || onbottomreached.is_some();
     let table = match announces {
         true => rsx! {
@@ -1633,11 +1652,26 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             {table}
         },
     };
-    let search = match props.toolbar {
-        Some(content) => Some(rsx! {
-            TableToolbar { content, search }
+    let start = props.filter_panel.then(|| {
+        let columns: Rc<[PanelColumn]> = panel_columns.into();
+        rsx! {
+            FilterPanelButton { control: panel, labels, size, active: active_filters }
+            FilterPanel {
+                control: panel,
+                columns,
+                slice: state.column_filters,
+                logic: state.filter_logic,
+                labels,
+                size,
+                onfilter,
+            }
+        }
+    });
+    let search = match (start, props.toolbar) {
+        (None, None) => search,
+        (start, content) => Some(rsx! {
+            TableToolbar { start, content, search }
         }),
-        None => search,
     };
     // Outside the scroll region, so the controls stay put while it scrolls.
     match (search, pager) {

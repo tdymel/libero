@@ -24,7 +24,7 @@ use crate::{
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
 
-static FILTER_POPOVER_SX: StaticSx = StaticSx::new(|| {
+pub(super) static FILTER_POPOVER_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
         .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Md))
@@ -36,10 +36,10 @@ static FILTER_POPOVER_SX: StaticSx = StaticSx::new(|| {
 
 /// A pick in a filter's `NativeSelect`: its value, its label and a unique key.
 #[derive(Clone, PartialEq)]
-struct Choice<V: Clone + PartialEq + 'static> {
-    value: V,
-    key: &'static str,
-    label: &'static str,
+pub(super) struct Choice<V: Clone + PartialEq + 'static> {
+    pub value: V,
+    pub key: &'static str,
+    pub label: &'static str,
 }
 
 impl<V: Clone + PartialEq + 'static> Options for Choice<V> {
@@ -50,6 +50,27 @@ impl<V: Clone + PartialEq + 'static> Options for Choice<V> {
     fn value(&self) -> String {
         self.key.to_string()
     }
+}
+
+/// `kind`'s operators to pick from, and `current` among them.
+pub(super) fn operator_choices(
+    kind: FilterKind,
+    current: FilterOperator,
+    labels: TableLabels,
+) -> (Vec<Choice<FilterOperator>>, Option<Choice<FilterOperator>>) {
+    let choices: Vec<Choice<FilterOperator>> = FilterOperator::of(kind)
+        .iter()
+        .map(|&operator| Choice {
+            value: operator,
+            key: operator_key(operator),
+            label: (labels.operator_name)(operator),
+        })
+        .collect();
+    let picked = choices
+        .iter()
+        .find(|choice| choice.value == current)
+        .cloned();
+    (choices, picked)
 }
 
 /// The operator `column` filters with now: its item's, else `kind`'s default.
@@ -170,14 +191,21 @@ pub(super) fn FilterValue(
     /// The column's filter now.
     filter: Option<ColumnFilter>,
     draft: Option<String>,
-    editor: FilterEditor,
-    /// Shown above the field; else it is named by `filter_column`.
+    /// Typing, to apply once it settles.
+    ontext: EventHandler<String>,
+    /// A boolean pick; `None` is any.
+    onpick: EventHandler<Option<bool>>,
+    /// A date field's change: `true` for `Between`'s last day.
+    onday: EventHandler<(bool, String)>,
+    /// Shown above the field; else it is named `name`, or by `filter_column`.
     #[props(default)]
     label: Option<String>,
+    #[props(default)] name: Option<String>,
 ) -> Element {
     let current = filter.as_ref();
     let operator = current.map_or(FilterOperator::of(kind)[0], |filter| filter.operator);
-    let aria_label = label.is_none().then(|| (labels.filter_column)(&column));
+    let name = name.unwrap_or_else(|| (labels.filter_column)(&column));
+    let aria_label = label.is_none().then(|| name.clone());
     if kind == FilterKind::Boolean {
         let choices = vec![
             Choice {
@@ -209,7 +237,7 @@ pub(super) fn FilterValue(
                 size,
                 value,
                 options: choices,
-                onchange: move |choice: Choice<Option<bool>>| editor.onpick.call(choice.value),
+                onchange: move |choice: Choice<Option<bool>>| onpick.call(choice.value),
             }
         };
     }
@@ -230,7 +258,7 @@ pub(super) fn FilterValue(
                     value,
                     r#type: "date",
                     "data-filter-value": (!end).then_some(true),
-                    oninput: move |text: String| editor.onday.call((end, text)),
+                    oninput: move |text: String| onday.call((end, text)),
                 }
             }
         };
@@ -239,10 +267,7 @@ pub(super) fn FilterValue(
         }
         let named = |end: &str| match &label {
             Some(_) => (Some(end.to_string()), None),
-            None => (
-                None,
-                Some(format!("{}, {end}", (labels.filter_column)(&column))),
-            ),
+            None => (None, Some(format!("{name}, {end}"))),
         };
         let ((from_label, from_aria), (to_label, to_aria)) =
             (named(labels.date_from), named(labels.date_to));
@@ -262,7 +287,7 @@ pub(super) fn FilterValue(
             value: text,
             inputmode: (kind == FilterKind::Number).then_some("decimal"),
             "data-filter-value": true,
-            oninput: move |text: String| editor.ontext.call(text),
+            oninput: move |text: String| ontext.call(text),
         }
     }
 }
@@ -332,18 +357,7 @@ pub(super) fn FilterPopover(
     let filter = filter_of(&filters, &column).cloned();
     let operator = operator_of(&filters, &column, kind);
     let shown_draft = draft.read().clone();
-    let operators: Vec<Choice<FilterOperator>> = FilterOperator::of(kind)
-        .iter()
-        .map(|&operator| Choice {
-            value: operator,
-            key: operator_key(operator),
-            label: (labels.operator_name)(operator),
-        })
-        .collect();
-    let picked = operators
-        .iter()
-        .find(|choice| choice.value == operator)
-        .cloned();
+    let (operators, picked) = operator_choices(kind, operator, labels);
     let name = (labels.filter_column)(&column);
     let panel = use_box().framework_sx(&FILTER_POPOVER_SX).prepare();
     let content = open().then(|| {
@@ -422,7 +436,9 @@ pub(super) fn FilterPopover(
                         size,
                         filter: filter.clone(),
                         draft: shown_draft.clone(),
-                        editor,
+                        ontext: editor.ontext,
+                        onpick: editor.onpick,
+                        onday: editor.onday,
                         label: labels.value.to_string(),
                     }
                     Button {
@@ -444,7 +460,14 @@ pub(super) fn FilterPopover(
 
 /// The button a filtered header shows: opens the column's filter.
 #[component]
-pub(super) fn FilteredButton(column: String, labels: TableLabels, open: Signal<bool>) -> Element {
+pub(super) fn FilteredButton(
+    column: String,
+    labels: TableLabels,
+    open: Signal<bool>,
+    /// Set with `filter_panel`: opens the panel instead.
+    #[props(default)]
+    onopen: Option<EventHandler<()>>,
+) -> Element {
     let mut open = open;
     rsx! {
         button {
@@ -453,7 +476,10 @@ pub(super) fn FilteredButton(column: String, labels: TableLabels, open: Signal<b
             aria_label: (labels.filtered)(&column),
             aria_haspopup: "dialog",
             aria_expanded: "{open()}",
-            onclick: move |_| open.toggle(),
+            onclick: move |_| match onopen {
+                Some(onopen) => onopen.call(()),
+                None => open.toggle(),
+            },
             Glyph { slot: IconSlot::Filter, icon: lucide::funnel::outlined }
         }
     }

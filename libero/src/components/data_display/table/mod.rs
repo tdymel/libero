@@ -8,6 +8,7 @@ mod core;
 mod csv;
 mod detail;
 mod filter;
+mod filter_panel;
 mod filter_popover;
 mod groups;
 mod header_filters;

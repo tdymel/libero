@@ -7,6 +7,7 @@ use super::{
     cell_value::SortDirection,
     column_filter::{CellTest, filter_of},
     core::{ActiveSort, TableSort},
+    filter_panel::PanelControl,
     filter_popover::{FilterPopover, FilterTarget, FilteredButton},
     pinning::{PinSide, PinnedColumns},
     resize::MenuWidth,
@@ -53,6 +54,9 @@ pub(super) fn ColumnMenu(
     parts: Input<Parts<MenuPart>>,
     /// Set for a filterable column: the menu offers its filter popover.
     filter: Option<FilterTarget>,
+    /// Set with `filter_panel`: Filter opens the panel on this column's line.
+    #[props(default)]
+    panel: Option<PanelControl>,
 ) -> Element {
     let menu = use_menu();
     let trigger = use_element();
@@ -103,10 +107,20 @@ pub(super) fn ColumnMenu(
         items.push(MenuEntry::Separator);
     }
     // Sort, filter, move, width, pin, hide.
+    let target = filter.clone();
+    let open_panel = use_callback(move |()| {
+        if let (Some(panel), Some(target)) = (panel, &target) {
+            panel.open_for(target);
+        }
+    });
+    let open_panel = (panel.is_some() && filter.is_some()).then_some(open_panel);
     if filter.is_some() {
         items.push(
             MenuItem::new(labels.filter)
-                .onselect(move |_| filter_open.set(true))
+                .onselect(move |_| match open_panel {
+                    Some(open_panel) => open_panel.call(()),
+                    None => filter_open.set(true),
+                })
                 .into(),
         );
         items.push(MenuEntry::Separator);
@@ -201,7 +215,7 @@ pub(super) fn ColumnMenu(
     });
     rsx! {
         if filtered {
-            FilteredButton { column: column.header.clone(), labels, open: filter_open }
+            FilteredButton { column: column.header.clone(), labels, open: filter_open, onopen: open_panel }
         }
         Menu {
             state: menu,
@@ -217,7 +231,7 @@ pub(super) fn ColumnMenu(
                 Glyph { slot: IconSlot::More, icon: lucide::ellipsis_vertical::outlined }
             }
         }
-        if let Some(target) = filter {
+        if let Some(target) = filter.filter(|_| panel.is_none()) {
             FilterPopover { target, anchor: trigger, open: filter_open }
         }
     }

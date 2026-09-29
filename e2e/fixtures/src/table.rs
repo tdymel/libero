@@ -38,6 +38,7 @@ pub const ROUTES: Routes = &[
     ("/table/filter", || rsx! { FilterTablePage {} }),
     ("/table/column-filter", || rsx! { ColumnFilterTablePage {} }),
     ("/table/date-filter", || rsx! { DateFilterTablePage {} }),
+    ("/table/filter-panel", || rsx! { FilterPanelTablePage {} }),
     ("/table/pinned", || rsx! { PinnedTablePage { rtl: false } }),
     (
         "/table/pinned-rtl",
@@ -114,6 +115,42 @@ fn ColumnFilterTablePage() -> Element {
             },
         }
         p { id: "filters", "{filters}" }
+    }
+}
+
+/// The seven fruits with the filter panel and column menus (1400); `#filters`
+/// and `#logic` echo the changes.
+#[component]
+fn FilterPanelTablePage() -> Element {
+    let mut filters = use_signal(String::new);
+    let mut logic = use_signal(String::new);
+    let data: Vec<Fruit> = ["Fig", "Apple", "Grape", "Cherry", "Elder", "Banana", "Date"]
+        .into_iter()
+        .zip(1..)
+        .map(|(name, stock)| Fruit { name, stock })
+        .collect();
+    rsx! {
+        Table {
+            caption: "Fruit",
+            data,
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()).row_header(),
+                column("Stock").value(|fruit: &Fruit| fruit.stock),
+            ],
+            row_key: |fruit: &Fruit| fruit.name.to_string(),
+            column_menu: true,
+            filter_panel: true,
+            oncolumnfilterschange: move |next: Vec<ColumnFilter>| {
+                let text: Vec<String> = next
+                    .iter()
+                    .map(|filter| format!("{} {:?} {}", filter.column, filter.operator, filter.value))
+                    .collect();
+                filters.set(text.join("; "));
+            },
+            onfilterlogicchange: move |next| logic.set(format!("{next:?}")),
+        }
+        p { id: "filters", "{filters}" }
+        p { id: "logic", "{logic}" }
     }
 }
 

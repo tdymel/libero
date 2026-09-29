@@ -1535,3 +1535,94 @@ async fn rows(page: &Page, expected: &str) -> Result<()> {
     )
     .await
 }
+
+/// 1400: the filter panel adds lines, joins them by the logic, and moves the
+/// focus as Linus set: Add to the new line, remove to the previous one,
+/// close to the Filters button; a column menu's Filter opens it on its line.
+async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const BUTTON: &str = "[data-filter-panel-button]";
+    const PANEL: &str = "[data-filter-panel]";
+    const LINE_0: &str = "[data-filter-line=\"0\"]";
+    const LINE_1: &str = "[data-filter-line=\"1\"]";
+    d.click(BUTTON).await?;
+    eventually(d, "the opened panel", async |d| d.exists(PANEL).await).await?;
+    eventually_focused(d, "[data-filter-add]", "an empty panel").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_focused(d, &format!("{LINE_0} select"), "Add").await?;
+    eventually_text(d, "#filters", "Name Contains ", "the added line").await?;
+    d.click(&format!("{LINE_0} input")).await?;
+    d.type_text("e").await?;
+    eventually_text(d, "#filters", "Name Contains e", "typing in a line").await?;
+
+    // Add takes the first column without a line: Stock.
+    d.click("[data-filter-add]").await?;
+    eventually_focused(d, &format!("{LINE_1} select"), "a second Add").await?;
+    d.click(&format!("{LINE_1} input")).await?;
+    d.type_text("1").await?;
+    eventually_text(
+        d,
+        "#filters",
+        "Name Contains e; Stock Equals 1",
+        "a second line",
+    )
+    .await?;
+    // Names with an e and a stock of 1: none.
+    eventually(d, "no rows under And", async |d| {
+        Ok(!d.exists("tbody th").await?)
+    })
+    .await?;
+    d.focus(&format!("{PANEL} select:not([data-filter-line] select)"))
+        .await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_text(d, "#logic", "Or", "the logic pick").await?;
+    eventually_text(
+        d,
+        "tbody tr:first-child th",
+        "Fig",
+        "Or keeps Fig by its stock",
+    )
+    .await?;
+
+    d.click(&format!("{LINE_1} [data-filter-remove]")).await?;
+    eventually_text(d, "#filters", "Name Contains e", "a removed line").await?;
+    eventually_focused(d, &format!("{LINE_0} select"), "the remove").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "the closed panel", async |d| {
+        Ok(!d.exists(PANEL).await?)
+    })
+    .await?;
+    eventually_focused(d, BUTTON, "Escape").await?;
+    if d.attr(BUTTON, "aria-label").await?.as_deref() != Some("Filters, 1 active") {
+        bail!("the button does not name the active count");
+    }
+
+    d.click("[aria-label=\"Stock column options\"]").await?;
+    eventually(d, "the column menu", async |d| {
+        d.exists("[role=menuitem]").await
+    })
+    .await?;
+    let mut picked = false;
+    for index in 0..12 {
+        let item = format!("[role=menuitem][data-menu-index=\"{index}\"]");
+        if d.exists(&item).await? && d.text(&item).await?.trim() == "Filter" {
+            d.click(&item).await?;
+            picked = true;
+            break;
+        }
+    }
+    if !picked {
+        bail!("no Filter entry");
+    }
+    eventually(d, "the panel from the menu", async |d| {
+        d.exists(PANEL).await
+    })
+    .await?;
+    eventually_focused(d, &format!("{LINE_1} select"), "the menu's Filter").await
+}
+
+e2e::scenario!(
+    the_filter_panel_edits_every_filter,
+    "/table/filter-panel",
+    the_filter_panel_edits_every_filter,
+    android: skip("958: element identity on the WebView")
+);
