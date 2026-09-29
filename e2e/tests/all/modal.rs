@@ -94,15 +94,32 @@ e2e::scenario!(
     tab_cycles_through_every_button_in_a_modal,
     "/modal",
     modal_tab_cycles,
-    android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    android: skip("959: the trap cannot wrap Tab on a WebView"),
+    desktop: skip("959: the trap cannot wrap Tab on a WebView")
+);
+
+/// A WebView's trap cannot cycle, but Tab must still move between the dialog's buttons: the
+/// modal used to swallow every Tab there, leaving all but the first button out of reach.
+async fn modal_tab_moves_on<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d, TRIGGER).await?;
+    assert_inside(d, "opening").await?;
+    d.focus("#keep").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#discard", "Tab from Keep editing").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, "#keep", "Shift+Tab from Discard").await
+}
+
+e2e::scenario!(
+    tab_moves_between_the_buttons_of_a_modal,
+    "/modal",
+    modal_tab_moves_on
 );
 e2e::scenario!(
     a_backdrop_click_closes_a_modal,
     "/modal",
     modal_backdrop_closes,
-    android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView")
 );
 
 /// The trap focuses inside on open, so the first Escape is the dialog's, and focus

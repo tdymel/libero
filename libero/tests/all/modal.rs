@@ -274,3 +274,50 @@ fn unmounting_the_owner_settles_an_open_modal() {
     settled.sort_unstable();
     assert_eq!(settled, ["awaited", "handler"]);
 }
+
+thread_local! {
+    static HANDLE: std::cell::Cell<Option<(ModalHandle<(), bool>, Outcome)>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// A task awaiting an opening that a second `open` replaces ends with `None`,
+/// as the docs say, instead of waiting forever.
+#[test]
+fn a_replaced_opening_ends_its_awaiting_task_with_no_result() {
+    fn app() -> Element {
+        let outcome: Outcome = use_signal(Vec::new);
+        rsx! {
+            LiberoProvider { Owner { outcome } }
+        }
+    }
+
+    #[component]
+    fn Owner(outcome: Outcome) -> Element {
+        let modal = use_modal(|_: ModalScope<(), bool>| rsx! { Dialog { "asking" } });
+        use_hook(move || {
+            HANDLE.set(Some((modal, outcome)));
+            let mut outcome = outcome;
+            let first = modal.open();
+            dioxus::core::spawn_forever(async move {
+                let result = first.await;
+                assert_eq!(result, None);
+                outcome.write().push("first awaited");
+            });
+        });
+        rsx! {}
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.process_events();
+    let (modal, outcome) = HANDLE.get().expect("the app rendered");
+    assert!(dom.in_runtime(|| outcome.peek().is_empty()));
+
+    dom.in_runtime(|| {
+        modal.open();
+    });
+    dom.render_immediate(&mut NoOpMutations);
+    dom.process_events();
+
+    assert_eq!(dom.in_runtime(|| outcome.peek().clone()), ["first awaited"]);
+}

@@ -197,6 +197,8 @@ modal.
 
 - On Android, a modal opened without a tap (on mount or from a timer) may let
   Back close the app.
+- In a desktop WebView or on Android, Tab and Shift+Tab move between the
+  controls but can leave the modal at its ends.
 
 ## Theme defaults
 

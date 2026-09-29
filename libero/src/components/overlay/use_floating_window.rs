@@ -25,7 +25,8 @@ impl FloatingWindowHandle {
         if *self.open.peek() {
             return;
         }
-        self.focus_return.remember_active();
+        // A WebView keeps it page-side (959).
+        self.focus_return.remember_focused();
         let mut page = self.page;
         page.set(
             document()

@@ -6,7 +6,7 @@ use super::use_modal::use_modal_z_index;
 use crate::{
     components::{
         accessibility::FocusTrap,
-        common::{HtmlTag, Input, Variables, base_props, variables},
+        common::{FOCUSABLE_SELECTOR, HtmlTag, Input, Variables, base_props, variables},
         layout::use_box,
         overlay::Overlay,
     },
@@ -172,9 +172,12 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
             if escape_closes(&event) && layer.is_top() {
                 close();
             }
-            // A Tab the trap left alone found nothing to focus: stay put
-            // rather than walk out to the page behind.
-            if event.key() == Key::Tab && !key_taken(&event) {
+            // A Tab the trap left alone found nothing to focus: stay put rather than
+            // walk out to the page behind. A WebView queries nothing, so Tab stays native.
+            if event.key() == Key::Tab
+                && !key_taken(&event)
+                && root.query_selector_all(FOCUSABLE_SELECTOR).is_ok()
+            {
                 event.prevent_default();
             }
         })

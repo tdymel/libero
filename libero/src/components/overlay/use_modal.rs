@@ -236,14 +236,18 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
     /// Opens with `args`, superseding whatever this modal was showing.
     pub fn open_with(&self, args: impl Into<S>) -> Opening<R> {
         let mut signal = self.resolution;
-        let (generation, focus_return) = {
+        let (generation, focus_return, replaced) = {
             let mut resolution = signal.write();
             resolution.generation += 1;
             resolution.outcome = None;
             resolution.handlers.clear();
-            resolution.wakers.clear();
-            (resolution.generation, resolution.focus_return)
+            let replaced = std::mem::take(&mut resolution.wakers);
+            (resolution.generation, resolution.focus_return, replaced)
         };
+        // A task awaiting the replaced opening polls again and finds it stale.
+        for waker in replaced {
+            waker.wake();
+        }
         // Still in the trigger's handler, so the active element is the trigger.
         // Skipped when already open: it would remember a control inside (todo 37).
         let opening = self.args.peek().is_none();

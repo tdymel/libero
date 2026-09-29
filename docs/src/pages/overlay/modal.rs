@@ -222,7 +222,10 @@ pub fn ModalPage() -> Element {
                     "Android's Back button dismisses the top modal, as Escape does, rather than closing the app.",
                 ])
                 .must(["Name the `Dialog` with its `title`, or `aria_label`."])
-                .limits(["On Android, a modal opened without a tap (on mount or from a timer) may let Back close the app."]),
+                .limits([
+                    "On Android, a modal opened without a tap (on mount or from a timer) may let Back close the app.",
+                    "In a desktop WebView or on Android, Tab and Shift+Tab move between the controls but can leave the modal at its ends.",
+                ]),
             lead: rsx! {
                 Text {
                     "A modal is a hook, not a component. "

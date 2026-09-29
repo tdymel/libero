@@ -132,6 +132,11 @@ explains how parts work.
 - Pick a `placement` that does not cover the page's controls: the page behind
   a window still takes Tab.
 
+### Limits
+
+- In a desktop WebView or on Android, F6 does not move focus, and the Move and
+  Resize step buttons do not take focus when they appear: Tab reaches them.
+
 ## Theme defaults
 
 `FloatingWindowDefaults` on the theme: `placement`, `radius`, `shadow`,

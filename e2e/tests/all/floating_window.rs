@@ -918,9 +918,7 @@ e2e::scenario!(
 e2e::scenario!(
     enter_opens_it_with_focus_inside_and_escape_hands_it_back,
     "/floating-window",
-    enter_and_escape,
-    android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    enter_and_escape
 );
 e2e::scenario!(
     f6_moves_focus_between_the_window_and_the_page,
