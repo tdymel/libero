@@ -323,3 +323,45 @@ fn a_grip_held_at_the_region_edge_scrolls_to_the_last_gap() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 1450: held mid-drag, the ghost header and the drop line are each the
+/// top box near their leading edge, so nothing covers or clips them.
+#[test]
+fn the_ghost_and_the_drop_line_show_mid_drag() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer;
+    block_on(async {
+        let fixture = Fixture::open("/table-reorder", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let grip = "th[aria-label=Name] [data-drag-handle]";
+        let from = pointer::centre_of(page, grip).await.unwrap();
+        let origin = pointer::centre_of(page, "th[aria-label=Origin]")
+            .await
+            .unwrap();
+        pointer::drag_held(page, from, origin, 8).await.unwrap();
+        // Hit-testable for the probe only: both are `pointer-events: none`.
+        let state: String = page
+            .evaluate(
+                "(() => { const top = s => { const el = document.querySelector(s); \
+                 if (!el) return 'missing'; const r = el.getBoundingClientRect(); \
+                 el.style.pointerEvents = 'auto'; \
+                 const hit = document.elementFromPoint(r.x + Math.min(r.width / 2, 8), r.y + r.height / 2); \
+                 el.style.pointerEvents = ''; \
+                 return hit === el ? 'top' : 'under ' + (hit && hit.outerHTML.slice(0, 80)); }; \
+                 return top('[data-drag-ghost]') + '|' + top('[data-drop-line]'); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        if state != "top|top" {
+            let shot = fixture.screenshot("table-column-drag-held").await.unwrap();
+            panic!("ghost|drop line mid-drag: {state} ({})", shot.display());
+        }
+        pointer::release(page, origin).await.unwrap();
+        fixture.console.assert_clean("a held column drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

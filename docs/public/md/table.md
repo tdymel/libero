@@ -438,12 +438,14 @@ fn Demo() -> Element {
 }
 ```
 
-Three ready pieces go in the `toolbar`, and only there. `TableColumnsButton`
+Four ready pieces go in the `toolbar`, and only there. `TableColumnsButton`
 opens a checklist that shows and hides the hideable columns. `TableDensityButton`
 picks compact, standard or comfortable rows, the `size` small, medium or large;
 the pick wins over `size`, and `density` with `ondensitychange` holds it.
 `TableExportButton` hands `onexport` the filtered, sorted rows of every page as
-CSV, in the shown columns; you save it.
+CSV, in the shown columns; you save it. `TableFilterButton` opens
+`filter_panel`'s dialog from where you put it; with a `toolbar`, the table
+leaves the Filters button to it.
 
 ```rust
 use dioxus::prelude::*;
@@ -799,7 +801,7 @@ fn Demo() -> Element {
 | `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". When the quick filter or the column filters leave no rows, the row reads `table.no_results`, "No matching rows", instead. |
 | `no_results` | `Option<Element>` | `None` | Shown in one full-width row when the quick filter or the column filters leave no rows, over the localized `table.no_results`. |
 | `loading` | `bool` | `false` | Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, "Loading rows". The empty row waits until loading ends. |
-| `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton` and `TableExportButton` work only in here. |
+| `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton`, `TableFilterButton` and `TableExportButton` work only in here. |
 | `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 | `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
 | `virtual_row_height` | `Option<f64>` | `None` | With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. Ignored with `row_detail` or `onrowreorder`, which render every row; a debug build warns. |
@@ -853,7 +855,7 @@ fn Demo() -> Element {
 | `default_filter_logic` | `FilterLogic` | `And` | Seeds the filter logic once. Ignored when `filter_logic` is set. |
 | `onfilterlogicchange` | `EventHandler<FilterLogic>` | `None` | Called with the filter logic a pick asks for. |
 | `header_filters` | `bool` | `false` | Adds a row of filter fields under the headers, one per `filterable` column: a text field, or Any/Yes/No for a boolean column. A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers. |
-| `filter_panel` | `bool` | `false` | A Filters button at the start of the toolbar row, showing the active filters' count, opens a dialog of every column filter, one line each: column, operator, value and a remove button. Add filter appends a line for the first column without one; from two lines a Match pick sets `filter_logic`. Lines apply as the popover does. `column_menu`'s Filter then opens the panel on its column's line instead of the popover. |
+| `filter_panel` | `bool` | `false` | A Filters button at the start of the toolbar row, showing the active filters' count, opens a dialog of every column filter; with a `toolbar`, put `TableFilterButton` in it where the button goes instead, one line each: column, operator, value and a remove button. Add filter appends a line for the first column without one; from two lines a Match pick sets `filter_logic`. Lines apply as the popover does. `column_menu`'s Filter then opens the panel on its column's line instead of the popover. |
 | `pinned_columns` | `Option<PinnedColumns>` | `None` | The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly. |
 | `default_pinned_columns` | `PinnedColumns` | none pinned | Seeds the pinned columns once. Ignored when `pinned_columns` is set. |
 | `onpinnedcolumnschange` | `EventHandler<PinnedColumns>` | `None` | Called with the pinned columns a column menu pick asks for. |

@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 
 use super::{
     column_menu::{MenuColumn, toggle_column},
+    filter_panel::{FilterPanelButton, PanelControl},
     use_table::StateSlice,
 };
 use crate::{
@@ -61,24 +62,33 @@ pub(super) struct TableTools {
     pub density: StateSlice<Option<Size>>,
     /// The CSV of the filtered, sorted rows over every page, shown columns only.
     pub export: CopyValue<Option<Rc<dyn Fn() -> String>>>,
+    pub panel: PanelControl,
 }
 
 #[derive(Clone, PartialEq)]
 pub(super) struct ToolView {
     pub columns: Rc<[MenuColumn]>,
     pub size: Size,
+    /// The active filters' count, `None` without a `filter_panel`.
+    pub filters: Option<usize>,
 }
 
 impl TableTools {
-    pub fn new(hidden: StateSlice<Vec<String>>, density: StateSlice<Option<Size>>) -> Self {
+    pub fn new(
+        hidden: StateSlice<Vec<String>>,
+        density: StateSlice<Option<Size>>,
+        panel: PanelControl,
+    ) -> Self {
         Self {
             view: Signal::new(ToolView {
                 columns: Rc::new([]),
                 size: Size::Md,
+                filters: None,
             }),
             hidden,
             density,
             export: CopyValue::new(None),
+            panel,
         }
     }
 
@@ -226,6 +236,45 @@ pub fn TableExportButton(onexport: EventHandler<String>) -> Element {
             },
             "{labels.export}"
         }
+    }
+}
+
+/// The Filters button with the active filters' count: opens the dialog of
+/// every column filter. Goes in the `toolbar` of a `Table` with `filter_panel`.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Table, TableFilterButton, column};
+/// # fn app() -> Element {
+/// rsx! {
+///     Table {
+///         caption: "Users",
+///         filter_panel: true,
+///         toolbar: rsx! { TableFilterButton {} },
+///         data: vec!["Ada".to_string()],
+///         columns: vec![column("Name").value(|name: &String| name.clone())],
+///     }
+/// }
+/// # }
+/// ```
+#[component]
+pub fn TableFilterButton() -> Element {
+    let tools = use_tools("TableFilterButton");
+    let labels = use_localization().table;
+    let mut warned = use_hook(|| CopyValue::new(false));
+    let Some(tools) = tools else {
+        return rsx! {};
+    };
+    let view = tools.view.read();
+    let Some(active) = view.filters else {
+        if !warned() {
+            warned.set(true);
+            warn("TableFilterButton: the `Table` has no `filter_panel`, so it renders nothing.");
+        }
+        return rsx! {};
+    };
+    rsx! {
+        FilterPanelButton { control: tools.panel, labels, size: view.size, active }
     }
 }
 

@@ -1,10 +1,10 @@
-//! `Table` toolbar pieces (1416): Columns, Density and Export over a paged,
-//! sorted table; the exported CSV and the picked density printed below.
+//! `Table` toolbar pieces (1416, 1448): Columns, Density, Filters and Export over
+//! a paged, sorted table; the exported CSV and the picked density printed below.
 
 use dioxus::prelude::*;
 use libero::components::{
-    SortDirection, Table, TableColumnsButton, TableDensityButton, TableExportButton, TableSort,
-    column,
+    SortDirection, Table, TableColumnsButton, TableDensityButton, TableExportButton,
+    TableFilterButton, TableSort, column,
 };
 
 use crate::Routes;
@@ -45,8 +45,10 @@ fn ToolbarTablePage() -> Element {
             toolbar: rsx! {
                 TableColumnsButton {}
                 TableDensityButton {}
+                TableFilterButton {}
                 TableExportButton { onexport: move |text: String| csv.set(text.replace("\r\n", "|")) }
             },
+            filter_panel: true,
             data: fruit(),
             columns: vec![
                 column("Name").value(|fruit: &Fruit| fruit.name.to_string()).sortable().row_header(),

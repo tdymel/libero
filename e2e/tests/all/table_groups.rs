@@ -55,3 +55,59 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView"),
     native: skip("Blitz scrolls on no key and sticks the last header row only: tests/native/table_groups.rs")
 );
+
+const PINNED_GROUP: &str = "thead tr:nth-child(1) th[data-group][data-pin=start]";
+const REVENUE: &str = "thead tr:nth-child(1) th[data-group]:not([data-pin])";
+
+/// Todo 1449: scrolled sideways, the pinned Place group holds over its pinned
+/// columns while Revenue slides under it.
+async fn the_pinned_group_holds<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let area = d.rect(AREA).await?.x;
+    let place = d.rect(PINNED_GROUP).await?;
+    let revenue = d.rect(REVENUE).await?.x;
+    let columns = d.rect(CITY).await?.width + d.rect(REGION).await?.width;
+    if (place.x - area).abs() > 1.0 || (place.width - columns).abs() > 1.0 {
+        bail!(
+            "Place is at {} and {}px wide; the area at {area}, its columns {columns}px",
+            place.x,
+            place.width
+        );
+    }
+    d.focus("th[data-sortable] button").await?;
+    for _ in 0..4 {
+        d.press(keyboard::ARROW_RIGHT).await?;
+    }
+    let slid = eventually(
+        d,
+        "Revenue to slide under the held Place group",
+        async |d| {
+            let held = d.rect(PINNED_GROUP).await?.x;
+            let city = d.rect(CITY).await?.x;
+            Ok(d.rect(REVENUE).await?.x < revenue - 40.0
+                && (held - place.x).abs() <= 1.0
+                && (city - place.x).abs() <= 1.0)
+        },
+    )
+    .await;
+    if slid.is_err() {
+        bail!(
+            "Revenue {revenue} -> {}, Place {} -> {}, City at {}",
+            d.rect(REVENUE).await?.x,
+            place.x,
+            d.rect(PINNED_GROUP).await?.x,
+            d.rect(CITY).await?.x
+        );
+    }
+    let background = d.style(PINNED_GROUP, "background-color").await?;
+    if background == "rgba(0, 0, 0, 0)" || background == "transparent" {
+        bail!("the pinned group is see-through: {background}");
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_pinned_group_holds_while_the_body_scrolls_sideways,
+    "/table-groups/pinned",
+    the_pinned_group_holds,
+    android: skip("958: element identity on the WebView")
+);

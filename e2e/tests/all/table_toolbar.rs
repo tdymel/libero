@@ -2,7 +2,7 @@
 //! shown columns, Columns hides one, Density sets the row height.
 
 use anyhow::{Result, bail};
-use e2e::driver::{Driver, eventually, eventually_text};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 
 /// Clicks the open menu's entry reading `label`.
@@ -68,4 +68,35 @@ e2e::scenario!(
     the_toolbar_pieces_export_hide_columns_and_set_the_density,
     "/table-toolbar",
     the_pieces_work
+);
+
+/// 1448: the Filters piece sits where the toolbar puts it, opens the panel
+/// under itself and takes the focus back on Escape.
+async fn the_filter_piece_opens_the_panel<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const BUTTON: &str = "[data-filter-panel-button]";
+    let (button, density) = (
+        d.rect(BUTTON).await?,
+        d.rect("[data-table-tool=density]").await?,
+    );
+    if button.x <= density.x || button.x >= d.rect("[data-table-tool=export]").await?.x {
+        bail!("the Filters button is not between Density and Export");
+    }
+    d.click(BUTTON).await?;
+    eventually(d, "the panel under the button", async |d| {
+        Ok(d.exists("[data-filter-panel]").await?
+            && d.rect("[data-filter-panel]").await?.y >= button.y + button.height)
+    })
+    .await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "the closed panel", async |d| {
+        Ok(!d.exists("[data-filter-panel]").await?)
+    })
+    .await?;
+    eventually_focused(d, BUTTON, "Escape").await
+}
+
+e2e::scenario!(
+    the_filter_piece_opens_the_panel_under_itself,
+    "/table-toolbar",
+    the_filter_piece_opens_the_panel
 );

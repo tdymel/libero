@@ -31,4 +31,4 @@ pub use csv::{table_csv, table_text};
 pub use pinning::{PinSide, PinnedColumns};
 pub use resize::ColumnWidths;
 pub use table::{Table, TableProps};
-pub use toolbar::{TableColumnsButton, TableDensityButton, TableExportButton};
+pub use toolbar::{TableColumnsButton, TableDensityButton, TableExportButton, TableFilterButton};

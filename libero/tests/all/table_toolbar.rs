@@ -5,7 +5,7 @@ use libero::{
     LiberoProvider,
     components::{
         ColumnFilter, FilterOperator, Table, TableColumnsButton, TableDensityButton,
-        TableExportButton, column,
+        TableExportButton, TableFilterButton, column,
     },
     theme::Size,
 };
@@ -74,17 +74,21 @@ fn a_piece_outside_a_table_renders_nothing() {
     assert!(!html.contains("data-table-tool"), "{html}");
 }
 
-/// 1400: `filter_panel` puts a Filters button first in the row, named with the
-/// active count; the count it shows is hidden from readers. The dialog waits for a click.
+/// 1400/1448: `TableFilterButton` puts a Filters button where the toolbar has it,
+/// named with the active count; the count it shows is hidden from readers. The
+/// dialog waits for a click.
 #[test]
-fn the_filter_panel_button_leads_the_row_and_names_the_count() {
+fn the_filter_button_sits_in_the_row_and_names_the_count() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
                 Table {
                     caption: "People",
                     filter_panel: true,
-                    toolbar: rsx! { TableExportButton { onexport: |_| {} } },
+                    toolbar: rsx! {
+                        TableFilterButton {}
+                        TableExportButton { onexport: |_| {} }
+                    },
                     default_column_filters: vec![
                         ColumnFilter::new("Name", FilterOperator::Contains, "a"),
                         ColumnFilter::new("Name", FilterOperator::Contains, ""),
@@ -106,4 +110,44 @@ fn the_filter_panel_button_leads_the_row_and_names_the_count() {
     assert!(body.contains("aria-label=\"Filters, 1 active\""), "{body}");
     assert!(body.contains("data-filter-count"), "{body}");
     assert!(!body.contains("data-filter-panel=true"), "{body}");
+    assert_eq!(
+        body.matches("data-filter-panel-button").count(),
+        1,
+        "{body}"
+    );
+}
+
+/// 1448: with no `toolbar` the table puts the button there itself; with one,
+/// only its `TableFilterButton` does. Without `filter_panel` the piece is empty.
+#[test]
+fn the_table_places_the_filter_button_only_without_a_toolbar() {
+    fn table(panel: bool, toolbar: Option<Element>) -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "People",
+                    filter_panel: panel,
+                    toolbar,
+                    data: names(),
+                    columns: vec![column("Name").value(|name: &String| name.clone())],
+                }
+            }
+        }
+    }
+    let cases: [(fn() -> Element, usize); 3] = [
+        (|| table(true, None), 1),
+        (
+            || table(true, Some(rsx! { TableExportButton { onexport: |_| {} } })),
+            0,
+        ),
+        (|| table(false, Some(rsx! { TableFilterButton {} })), 0),
+    ];
+    for (index, (app, buttons)) in cases.into_iter().enumerate() {
+        let html = render(app);
+        assert_eq!(
+            html.matches("data-filter-panel-button").count(),
+            buttons,
+            "case {index}: {html}"
+        );
+    }
 }

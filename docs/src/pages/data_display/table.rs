@@ -6,7 +6,8 @@ use std::time::Duration;
 
 use libero::chrono::{NaiveDate, TimeDelta};
 use libero::components::{
-    Button, Chip, Code, Column, ColumnWidths, PinnedColumns, RowFn, Table, Text, column,
+    Button, Chip, Code, Column, ColumnWidths, PinnedColumns, RowFn, Table, TableFilterButton, Text,
+    column,
 };
 use libero::hooks::SortableMove;
 use libero::platform::{TimerSubscription, timer};
@@ -287,6 +288,13 @@ const DETAIL: &str = r#"row_detail: |p: &Person| Some(rsx! { "{p.name} joined as
 const TOOLBAR: &str =
     r#"toolbar: rsx! { Button { variant: "outlined", size: "sm", "Add member" } }"#;
 
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
+// snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], filter_panel: true, .. }
+const TOOLBAR_FILTERS: &str = r#"toolbar: rsx! {
+    TableFilterButton {}
+    Button { variant: "outlined", size: "sm", "Add member" }
+}"#;
+
 /// Wider than the preview at any width, so `scroll` has something to scroll.
 const SCROLL_WIDTH: &str = "640px";
 
@@ -400,6 +408,9 @@ fn TeamTable(values: DemoValues) -> Element {
             }),
             show_quick_filter: on("show_quick_filter"),
             toolbar: on("toolbar").then(|| rsx! {
+                if on("filter_panel") {
+                    TableFilterButton {}
+                }
                 Button { variant: "outlined", size: "sm", "Add member" }
             }),
             loading: on("loading") || (server && fetching()),
@@ -439,7 +450,7 @@ pub fn TablePage() -> Element {
                     prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\". When the quick filter or the column filters leave no rows, the row reads `table.no_results`, \"No matching rows\", instead."),
                     prop("no_results", "Option<Element>").default("None").doc("Shown in one full-width row when the quick filter or the column filters leave no rows, over the localized `table.no_results`."),
                     prop("loading", "bool").default("false").doc("Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, \"Loading rows\". The empty row waits until loading ends."),
-                    prop("toolbar", "Option<Element>").default("None").doc("A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton` and `TableExportButton` work only in here."),
+                    prop("toolbar", "Option<Element>").default("None").doc("A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton`, `TableFilterButton` and `TableExportButton` work only in here."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
                     prop("virtual_row_height", "Option<f64>").default("None").doc("With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. Ignored with `row_detail` or `onrowreorder`, which render every row; a debug build warns."),
@@ -493,7 +504,7 @@ pub fn TablePage() -> Element {
                     prop("default_filter_logic", "FilterLogic").default("And").doc("Seeds the filter logic once. Ignored when `filter_logic` is set."),
                     prop("onfilterlogicchange", "EventHandler<FilterLogic>").default("None").doc("Called with the filter logic a pick asks for."),
                     prop("header_filters", "bool").default("false").doc("Adds a row of filter fields under the headers, one per `filterable` column: a text field, or Any/Yes/No for a boolean column. A field edits its column's filter with the operator the filter popover set, else the type's first: Contains for text, Equals for numbers."),
-                    prop("filter_panel", "bool").default("false").doc("A Filters button at the start of the toolbar row, showing the active filters' count, opens a dialog of every column filter, one line each: column, operator, value and a remove button. Add filter appends a line for the first column without one; from two lines a Match pick sets `filter_logic`. Lines apply as the popover does. `column_menu`'s Filter then opens the panel on its column's line instead of the popover."),
+                    prop("filter_panel", "bool").default("false").doc("A Filters button at the start of the toolbar row, showing the active filters' count, opens a dialog of every column filter; with a `toolbar`, put `TableFilterButton` in it where the button goes instead, one line each: column, operator, value and a remove button. Add filter appends a line for the first column without one; from two lines a Match pick sets `filter_logic`. Lines apply as the popover does. `column_menu`'s Filter then opens the panel on its column's line instead of the popover."),
                     prop("pinned_columns", "Option<PinnedColumns>").default("None").doc("The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly."),
                     prop("default_pinned_columns", "PinnedColumns").default("none pinned").doc("Seeds the pinned columns once. Ignored when `pinned_columns` is set."),
                     prop("onpinnedcolumnschange", "EventHandler<PinnedColumns>").default("None").doc("Called with the pinned columns a column menu pick asks for."),
@@ -710,7 +721,7 @@ pub fn TablePage() -> Element {
                     " replace the text of the row shown without data and without matches."
                 }
                 Text {
-                    "Three ready pieces go in the "
+                    "Four ready pieces go in the "
                     Code { source: "toolbar" }
                     ", and only there. "
                     Code { source: "TableColumnsButton" }
@@ -724,7 +735,13 @@ pub fn TablePage() -> Element {
                     Code { source: "TableExportButton" }
                     " hands "
                     Code { source: "onexport" }
-                    " the filtered, sorted rows of every page as CSV, in the shown columns; you save it."
+                    " the filtered, sorted rows of every page as CSV, in the shown columns; you save it. "
+                    Code { source: "TableFilterButton" }
+                    " opens "
+                    Code { source: "filter_panel" }
+                    "'s dialog from where you put it; with a "
+                    Code { source: "toolbar" }
+                    ", the table leaves the Filters button to it."
                 }
                 Text {
                     Code { source: "column_menu" }
@@ -920,9 +937,10 @@ pub fn TablePage() -> Element {
                         false => vec![],
                     }).hidden_when(windowed),
                     Control::switch("show_quick_filter"),
-                    Control::switch("toolbar").code(|_, values| match values.str("toolbar") == "true" {
-                        true => vec![TOOLBAR.to_string()],
-                        false => vec![],
+                    Control::switch("toolbar").code(|_, values| match (values.str("toolbar") == "true", values.str("filter_panel") == "true") {
+                        (true, true) => vec![TOOLBAR_FILTERS.to_string()],
+                        (true, false) => vec![TOOLBAR.to_string()],
+                        (false, _) => vec![],
                     }),
                     Control::switch("loading").hidden_when(from_server),
                     Control::switch("header_filters"),

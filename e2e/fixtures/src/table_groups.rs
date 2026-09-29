@@ -2,11 +2,14 @@
 //! row whose label spans two columns.
 
 use dioxus::prelude::*;
-use libero::components::{Table, column};
+use libero::components::{PinnedColumns, Table, column};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/table-groups", || rsx! { GroupsTablePage {} })];
+pub const ROUTES: Routes = &[
+    ("/table-groups", || rsx! { GroupsTablePage {} }),
+    ("/table-groups/pinned", || rsx! { PinnedGroupsTablePage {} }),
+];
 
 #[derive(Clone, PartialEq)]
 struct Sale {
@@ -51,6 +54,36 @@ fn GroupsTablePage() -> Element {
                 column("Q1").value(|sale: &Sale| sale.q1).group("Revenue").group("Half 1"),
                 column("Q2").value(|sale: &Sale| sale.q2).group("Revenue").group("Half 1"),
             ],
+        }
+    }
+}
+
+/// A Place group pinned at the start of a table wider than its 320px box (todo 1449).
+#[component]
+fn PinnedGroupsTablePage() -> Element {
+    let data: Vec<Sale> = (1..=4)
+        .map(|n| Sale {
+            city: ["Lyon", "Turin", "Graz"][n as usize % 3],
+            region: ["South", "North"][n as usize % 2],
+            q1: n,
+            q2: n * 2,
+        })
+        .collect();
+    rsx! {
+        div { style: "width: 320px",
+            Table {
+                caption: "Pinned sales",
+                scroll: true,
+                default_pinned_columns: PinnedColumns::default().start(["City", "Region"]),
+                data,
+                columns: vec![
+                    column("City").value(|sale: &Sale| sale.city).group("Place").width("6rem"),
+                    column("Region").value(|sale: &Sale| sale.region).group("Place").width("6rem"),
+                    column("Q1").value(|sale: &Sale| sale.q1).group("Revenue").min_width("10rem").sortable(),
+                    column("Q2").value(|sale: &Sale| sale.q2).group("Revenue").min_width("10rem"),
+                    column("Q3").value(|sale: &Sale| sale.q1 * 3).group("Revenue").min_width("10rem"),
+                ],
+            }
         }
     }
 }

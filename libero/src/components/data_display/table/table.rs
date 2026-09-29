@@ -789,9 +789,9 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// A row of filter fields under the headers, one per `filterable` column.
     #[props(default)]
     header_filters: bool,
-    /// A Filters button at the toolbar's start opening a dialog of every column
-    /// filter, several per column, joined by `filter_logic`. `column_menu`'s
-    /// Filter then opens it.
+    /// A dialog of every column filter, several per column, joined by
+    /// `filter_logic`, opened by a Filters button at the toolbar's start, or
+    /// with a `toolbar`, by its `TableFilterButton`. `column_menu`'s Filter opens it too.
     #[props(default)]
     filter_panel: bool,
     #[props(extends = GlobalAttributes)]
@@ -875,7 +875,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         ondensitychange: props.ondensitychange,
     });
     let panel = use_panel_control();
-    let tools = use_context_provider(|| TableTools::new(state.hidden_columns, state.density));
+    let tools =
+        use_context_provider(|| TableTools::new(state.hidden_columns, state.density, panel));
     let preview = use_signal(|| None);
     let measured = use_hook(|| CopyValue::new(BTreeMap::new()));
     let announcer = use_announcer();
@@ -1068,10 +1069,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             hidden: spec.hidden,
         })
         .collect();
+    let tests = cell_tests(&props.columns, &state.column_filters.read());
+    let active_filters = tests.len();
     if props.toolbar.is_some() {
         tools.show(ToolView {
             columns: menu_columns.clone(),
             size,
+            filters: props.filter_panel.then_some(active_filters),
         });
     }
     let menus = match props.column_menu {
@@ -1144,8 +1148,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .filter(|(_, (column, spec))| column.filterable && !spec.hidden)
         .map(|(index, _)| index)
         .collect();
-    let tests = cell_tests(&props.columns, &state.column_filters.read());
-    let active_filters = tests.len();
     let panel_columns: Vec<PanelColumn> = props
         .columns
         .iter()
@@ -1654,10 +1656,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             {table}
         },
     };
+    // With a `toolbar`, its `TableFilterButton` stands in for the button (todo 1448).
+    let own_button = props.toolbar.is_none();
     let start = props.filter_panel.then(|| {
         let columns: Rc<[PanelColumn]> = panel_columns.into();
         rsx! {
-            FilterPanelButton { control: panel, labels, size, active: active_filters }
+            if own_button {
+                FilterPanelButton { control: panel, labels, size, active: active_filters }
+            }
             FilterPanel {
                 control: panel,
                 columns,
