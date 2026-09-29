@@ -8,10 +8,10 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_presence, use_theme},
-    sx::{REDUCED_MOTION, StaticSx, sx},
+    sx::{REDUCED_MOTION, StaticSx, Sx, SxEntry, sx},
     theme::{
-        CssVar, TRANSITION_DISTANCE, TRANSITION_DURATION, TRANSITION_EASING, TRANSITION_POP_SCALE,
-        TRANSITION_ROTATE, TRANSITION_SCALE, TRANSITION_SKEW,
+        CssVar, TRANSITION_APPEAR, TRANSITION_DISTANCE, TRANSITION_DURATION, TRANSITION_EASING,
+        TRANSITION_POP_SCALE, TRANSITION_ROTATE, TRANSITION_SCALE, TRANSITION_SKEW,
     },
 };
 
@@ -19,37 +19,79 @@ use crate::{
 /// so it is the one property all of them transition.
 const EXIT_PROPERTY: &str = "opacity";
 
-/// The closed `transform`, set per instance from the [`TransitionKind`].
+/// The closed `transform`, set per instance from the [`TransitionKind`]; `TRANSITION_KEYFRAMES` reads it too.
 const TRANSITION_FROM: CssVar = CssVar::new("--lsx-transition-from");
 /// The `transform-origin`, per kind; outside the states so it never jumps mid-transition.
 const TRANSITION_ORIGIN: CssVar = CssVar::new("--lsx-transition-origin");
+
+/// `opacity` and `transform`, plus any `extra` properties, each over the duration.
+fn motion(extra: &[&str]) -> String {
+    let duration = TRANSITION_DURATION.overridable();
+    let easing = TRANSITION_EASING.value();
+    ["opacity", "transform"]
+        .iter()
+        .chain(extra)
+        .map(|property| format!("{property} {duration} {easing}"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// Both states' `transition`; `visibility` flips at once on open, after the exit on close.
+fn state_transitions(extra: &[&str]) -> Sx {
+    let duration = TRANSITION_DURATION.overridable();
+    let motion = motion(extra);
+    sx().when(
+        "open",
+        sx().transition(format!("{motion}, visibility 0s linear 0s"))
+            .media(REDUCED_MOTION, sx().transition("none")),
+    )
+    .when(
+        "closed",
+        sx().transition(format!("{motion}, visibility 0s linear {duration}"))
+            .media(REDUCED_MOTION, sx().transition("none")),
+    )
+}
 
 /// Each reduced-motion guard sits in its state's `when(..)` block, or loses on specificity.
 /// `visibility`, not `aria-hidden`/`inert`, drops closed content from focus and the a11y tree.
 static TRANSITION_BASE_SX: StaticSx = StaticSx::new(|| {
     let duration = TRANSITION_DURATION.overridable();
     let easing = TRANSITION_EASING.value();
-    let motion = format!("opacity {duration} {easing}, transform {duration} {easing}");
 
     sx().transform_origin(TRANSITION_ORIGIN.value())
         .when(
             "open",
-            sx().opacity("1")
-                .transform("none")
-                .visibility("visible")
-                .transition(format!("{motion}, visibility 0s linear 0s"))
-                .media(REDUCED_MOTION, sx().transition("none")),
+            sx().opacity("1").transform("none").visibility("visible"),
         )
         .when(
             "closed",
             sx().opacity("0")
                 .transform(TRANSITION_FROM.value())
-                .visibility("hidden")
-                // Delayed so the content stays announced until the exit ends.
-                .transition(format!("{motion}, visibility 0s linear {duration}"))
-                .media(REDUCED_MOTION, sx().transition("none")),
+                .visibility("hidden"),
         )
+        // A keyframe, not a state flip: the server markup is already open and visible.
+        .when(
+            "appear",
+            sx().animation(format!("{TRANSITION_APPEAR} {duration} {easing} backwards"))
+                .media(REDUCED_MOTION, sx().animation("none")),
+        )
+        .and(state_transitions(&[]))
 });
+
+/// The caller's from-state under `closed`, its top-level properties added to `transition`.
+fn from_sx(from: &Sx) -> Sx {
+    let extra: Vec<&str> = from
+        .entries()
+        .iter()
+        .filter_map(|entry| match entry {
+            SxEntry::Declaration { property, .. } => Some(property.as_str()),
+            SxEntry::Nested { .. } => None,
+        })
+        .filter(|property| !matches!(*property, "opacity" | "transform" | "transition"))
+        .collect();
+    sx().when("closed", from.clone())
+        .and(state_transitions(&extra))
+}
 
 /// How `Transition` enters and exits; all of them also fade.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -178,6 +220,10 @@ base_props! {
         /// Milliseconds, defaulting to `theme.transition.duration`. `0` disables it.
         #[props(default)]
         duration: Option<u32>,
+        /// Extra styles of the closed state, on top of `kind`'s; every property it sets animates.
+        /// Needs a passed `open`: the mount entrance animates only the `kind`.
+        #[props(default, into)]
+        from: Option<Sx>,
         children: Element,
     }
 }
@@ -204,23 +250,29 @@ pub fn Transition(props: TransitionProps) -> Element {
     let theme = use_theme();
     let duration = props.duration.unwrap_or(theme.transition.duration);
 
-    // The first render is the closed markup, so the browser sees the from-state; a
-    // passed `open` has no enter-on-mount, like `Collapse`.
-    let mut entered = use_signal(|| props.open.is_some());
+    // A passed `open` has no enter-on-mount, like `Collapse`; an omitted one renders open
+    // with the `appear` keyframe, so server and client agree and no JS is needed.
     let presence = use_presence(
         props.open.unwrap_or(true),
         EXIT_PROPERTY,
         Some(Duration::from_millis(duration.into())),
     );
-    let shown = presence.visible() && entered();
+    let shown = presence.visible();
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with("open", shown)
         .with("closed", !shown)
+        .with("appear", props.open.is_none())
         .into();
     let variables: Input<Variables> = transition_variables(props.kind, props.duration).into();
+    let sx: Input<Sx> = match &props.from {
+        Some(from) => from_sx(from)
+            .and(props.sx.clone().unwrap_or_default())
+            .into(),
+        None => props.sx.clone(),
+    };
     let content = rsx! {
         {presence.mounted().then_some(props.children)}
     };
@@ -228,13 +280,12 @@ pub fn Transition(props: TransitionProps) -> Element {
     use_box()
         .framework_sx(&TRANSITION_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .states(&states)
         .variables(&variables)
         .prepare()
         .event("onmounted", move |_: Event<MountedData>| {
-            presence.on_mounted();
-            entered.set(true);
+            presence.on_mounted()
         })
         .event("ontransitionend", move |event: Event<TransitionData>| {
             presence.on_transition_end(&event)

@@ -1,7 +1,10 @@
 //! `Transition`, for the enter/exit and reduced-motion checks.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Text, Transition, TransitionKind};
+use libero::{
+    components::{Button, Flex, Text, Transition, TransitionKind},
+    sx::sx,
+};
 
 use crate::Routes;
 
@@ -9,7 +12,28 @@ pub const ROUTES: Routes = &[
     ("/transition", || rsx! { ExitPage {} }),
     ("/transition-mount", || rsx! { MountPage {} }),
     ("/transition-corner", || rsx! { CornerPage {} }),
+    ("/transition-from", || rsx! { FromPage {} }),
 ];
+
+/// A caller's from-state: blurred while closed, sharp once open.
+#[component]
+fn FromPage() -> Element {
+    let mut open = use_signal(|| false);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button {
+                id: "toggle",
+                variant: "outlined",
+                onclick: move |_| open.toggle(),
+                "Toggle"
+            }
+            Transition { id: "panel", open: open(), from: sx().filter("blur(4px)"),
+                Text { id: "panel-text", "Hello" }
+            }
+        }
+    }
+}
 
 /// An origin-based kind: grows from scale(0) out of its bottom right corner.
 #[component]

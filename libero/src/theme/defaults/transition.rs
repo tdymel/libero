@@ -16,6 +16,11 @@ pub const TRANSITION_ROTATE: CssVar = CssVar::new("--lsx-transition-rotate");
 /// The angle the `Skew*` kinds lean from.
 pub const TRANSITION_SKEW: CssVar = CssVar::new("--lsx-transition-skew");
 
+/// The mount entrance of an omitted `open`, from the kind's closed transform.
+pub const TRANSITION_APPEAR: &str = "lsx-transition-appear";
+pub const TRANSITION_KEYFRAMES: &str =
+    "@keyframes lsx-transition-appear{from{opacity:0;transform:var(--lsx-transition-from);}}";
+
 /// Theme defaults for `Transition`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TransitionDefaults {

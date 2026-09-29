@@ -46,6 +46,7 @@ fn Demo() -> Element {
 | `kind` | `TransitionKind` | `Fade` | How the children move in and out. Travel: `Fade`, `FadeUp`, `FadeDown`, `FadeLeft`, `FadeRight`, `SlideUp`, `SlideDown`, `SlideLeft`, `SlideRight`. Grow: `Scale`, `ScaleX`, `ScaleY`, `Pop`, `PopTopLeft`, `PopTopRight`, `PopBottomLeft`, `PopBottomRight`. Lean or turn: `SkewUp`, `SkewDown`, `RotateLeft`, `RotateRight`. All of them also fade. The slides travel the children's own size; left and right are physical directions. |
 | `open` | `bool` | `true` | Omitted, the children animate in once on mount and never exit. Passed, they enter and exit as it flips; the first value does not animate. You own this state. |
 | `duration` | `u32` | `200` | Animation length in milliseconds. `0` turns the animation off. |
+| `from` | `Sx` | none | Extra styles of the closed state, stacked on the `kind`'s; every property it sets also animates, and a `transform` in it replaces the kind's. Needs a passed `open`: the mount entrance animates only the `kind`. |
 | `children` | `Element` | required | The content that animates. It is unmounted once the exit ends. |
 
 Like every component, `Transition` also takes the shared props `sx`, `class`,
@@ -58,13 +59,13 @@ Like every component, `Transition` also takes the shared props `sx`, `class`,
 - Closed children are hidden from the focus order and screen readers once the
   exit ends, and removed from the DOM.
 - Under reduced motion the children switch instantly.
+- With `open` omitted, the server markup is already visible: the entrance is a
+  CSS animation that needs no JavaScript.
 
 ### You must
 
 - Move focus yourself when focused content exits: use
   [`use_focus_return`](use_focus_return.md).
-- Do not hide content that must be announced behind an omitted `open` on the
-  server: it renders in its from-state until the page hydrates.
 
 ## Theme defaults
 
@@ -100,3 +101,4 @@ On the root's `data-state`, where a caller's `sx`, `class` and `states` land.
 |---|---|
 | `open` | The children are shown, or are animating in. |
 | `closed` | The children are hidden, or are animating out. |
+| `appear` | `open` is omitted: the children enter by a CSS animation on mount. |

@@ -2,7 +2,10 @@ use crate::components::{
     Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Flex, Paper, Text, Transition, TransitionKind};
+use libero::{
+    components::{Button, Code, Flex, Paper, Text, Transition, TransitionKind},
+    sx::sx,
+};
 
 const KINDS: [&str; 21] = [
     "Fade",
@@ -54,6 +57,15 @@ fn kind_of(name: &str) -> TransitionKind {
     }
 }
 
+/// The `filter` of the demo's `from` state; `none` passes no `from`.
+fn from_filter(values: &DemoValues) -> Option<String> {
+    match values.str("from").as_str() {
+        "blur" => Some("blur(4px)".to_string()),
+        "grayscale" => Some("grayscale(1)".to_string()),
+        _ => None,
+    }
+}
+
 /// Prints the trigger and its `show` signal: `open` is the caller's, and the paste needs it to compile.
 fn wrap_page(_values: &DemoValues, source: &str) -> String {
     let transition = indent(&indent(source));
@@ -75,7 +87,7 @@ fn wrap_page(_values: &DemoValues, source: &str) -> String {
 /// Its own component: a hook in `render` would land in `Demo`'s scope.
 /// **Kept in step with `wrap_page` by hand.**
 #[component]
-fn TransitionDemo(kind: TransitionKind, duration: Option<u32>) -> Element {
+fn TransitionDemo(kind: TransitionKind, duration: Option<u32>, filter: Option<String>) -> Element {
     let mut show = use_signal(|| false);
 
     rsx! {
@@ -84,7 +96,7 @@ fn TransitionDemo(kind: TransitionKind, duration: Option<u32>) -> Element {
             align: "flex-start",
             gap: "sm",
             Button { onclick: move |_| show.toggle(), "Toggle" }
-            Transition { kind, duration, open: show(),
+            Transition { kind, duration, open: show(), from: filter.map(|filter| sx().filter(filter)),
                 Paper { Text { "Hello" } }
             }
         }
@@ -108,16 +120,18 @@ pub fn TransitionPage() -> Element {
                 prop("duration", "u32")
                     .default("200")
                     .doc("Animation length in milliseconds. `0` turns the animation off."),
+                prop("from", "Sx")
+                    .doc("Extra styles of the closed state, stacked on the `kind`'s; every property it sets also animates, and a `transform` in it replaces the kind's. Needs a passed `open`: the mount entrance animates only the `kind`."),
                 prop("children", "Element").doc("The content that animates. It is unmounted once the exit ends."),
             ])],
             accessibility: a11y()
                 .handles([
                     "Closed children are hidden from the focus order and screen readers once the exit ends, and removed from the DOM.",
                     "Under reduced motion the children switch instantly.",
+                    "With `open` omitted, the server markup is already visible: the entrance is a CSS animation that needs no JavaScript.",
                 ])
                 .must([
                     "Move focus yourself when focused content exits: use `use_focus_return`.",
-                    "Do not hide content that must be announced behind an omitted `open` on the server: it renders in its from-state until the page hydrates.",
                 ]),
             lead: rsx! {
                 Text {
@@ -153,6 +167,12 @@ pub fn TransitionPage() -> Element {
                                 false => vec![format!("duration: {value}")],
                             }
                         }),
+                    Control::select("from", ["none", "blur", "grayscale"])
+                        .labels(["None", "Blur", "Grayscale"])
+                        .code(|_, values| match from_filter(values) {
+                            Some(filter) => vec![format!("from: sx().filter({filter:?})")],
+                            None => vec![],
+                        }),
                 ],
                 wrap: Wrap(wrap_page),
                 render: move |values: DemoValues| {
@@ -162,7 +182,11 @@ pub fn TransitionPage() -> Element {
                     };
 
                     rsx! {
-                        TransitionDemo { kind: kind_of(&values.str("kind")), duration }
+                        TransitionDemo {
+                            kind: kind_of(&values.str("kind")),
+                            duration,
+                            filter: from_filter(&values),
+                        }
                     }
                 },
             }

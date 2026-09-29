@@ -10,7 +10,7 @@ use crate::{
         NOTIFICATION_KEYFRAMES, NamedColorCss, PAPER_BACKGROUND, PROGRESS_BAR_KEYFRAMES,
         RIPPLE_KEYFRAMES, SCROLL_AREA_KEYFRAMES, SKELETON_KEYFRAMES, SORTABLE_KEYFRAMES, Size,
         TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,
-        TOOLTIP_KEYFRAMES, Theme, ThemeSet,
+        TOOLTIP_KEYFRAMES, TRANSITION_KEYFRAMES, Theme, ThemeSet,
     },
 };
 
@@ -99,6 +99,7 @@ fn base_layer_and_keyframes(theme: &Theme, color_scheme: &str) -> String {
     css.push_str(MARQUEE_KEYFRAMES);
     css.push_str(NOTIFICATION_KEYFRAMES);
     css.push_str(TOOLTIP_KEYFRAMES);
+    css.push_str(TRANSITION_KEYFRAMES);
     css.push_str(SCROLL_AREA_KEYFRAMES);
     css.push_str(SORTABLE_KEYFRAMES);
     css

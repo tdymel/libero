@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{Transition, TransitionKind},
+    sx::sx,
 };
 
 fn open_app() -> Element {
@@ -58,13 +59,69 @@ fn an_initially_closed_transition_renders_no_children() {
     assert_eq!(attributes_of(&html, "div")["data-state"], "closed");
 }
 
-/// The server sends the from-state, so the client's first paint is the one to animate from.
+/// The server sends visible open markup; the entrance is a keyframe, so it needs no JS.
 #[test]
-fn an_omitted_open_renders_the_children_in_the_closed_state() {
+fn an_omitted_open_renders_the_children_open_with_the_appear_keyframe() {
     let html = render(omitted_app);
+    let class = root_class(&html);
 
     assert!(body(&html).contains("panel body"), "{}", body(&html));
-    assert_eq!(attributes_of(&html, "div")["data-state"], "closed");
+    assert_eq!(attributes_of(&html, "div")["data-state"], "open appear");
+    assert!(
+        html.contains("@keyframes lsx-transition-appear{from{opacity:0;transform:var(--lsx-transition-from);}}"),
+        "{html}"
+    );
+    assert!(
+        html.contains(&format!(
+            ".{class}[data-state~=\"appear\"]{{animation:lsx-transition-appear var(--lsx-transition-duration-override,"
+        )),
+        "{html}"
+    );
+    assert!(
+        html.contains(&format!(
+            "@media (prefers-reduced-motion: reduce){{.{class}[data-state~=\"appear\"]{{animation:none;}}}}"
+        )),
+        "{html}"
+    );
+}
+
+/// A passed `open` never carries the mount keyframe.
+#[test]
+fn a_passed_open_does_not_appear() {
+    for app in [open_app, closed_app] {
+        let html = render(app);
+        let state = &attributes_of(&html, "div")["data-state"];
+        assert!(!state.contains("appear"), "{state}");
+    }
+}
+
+fn from_app() -> Element {
+    rsx! {
+        LiberoProvider {
+            Transition {
+                open: true,
+                from: sx().filter("blur(4px)").hover(sx().color("red")),
+                "panel body"
+            }
+        }
+    }
+}
+
+/// `from` lands under `closed`, and its top-level properties join both states' transition.
+#[test]
+fn a_from_state_is_closed_only_and_animates_its_properties() {
+    let html = render(from_app);
+
+    assert!(
+        html.contains("[data-state~=\"closed\"]{filter:blur(4px);"),
+        "{html}"
+    );
+    let filter_motion = "filter var(--lsx-transition-duration-override,";
+    assert_eq!(html.matches(filter_motion).count(), 2, "{html}");
+    assert!(
+        !html.contains("color var(--lsx-transition-duration"),
+        "{html}"
+    );
 }
 
 #[test]
@@ -116,10 +173,11 @@ fn the_reduced_motion_guard_is_nested_inside_each_state() {
             "{html}"
         );
     }
+    // Two transition guards and the `appear` keyframe's.
     assert_eq!(
         html.matches("@media (prefers-reduced-motion: reduce)")
             .count(),
-        2,
+        3,
         "{html}"
     );
 }

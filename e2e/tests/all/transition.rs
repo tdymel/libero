@@ -37,8 +37,15 @@ e2e::scenario!(
     enters_and_exits
 );
 
-/// An omitted `open` starts from the closed state and settles open on its own.
+/// An omitted `open` renders open at once and enters by the `appear` keyframe, not a state flip.
 async fn enters_on_mount<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let state = d.attr(ROOT, "data-state").await?.unwrap_or_default();
+    ensure!(state == "open appear", "data-state {state}");
+    let animation = d.style(ROOT, "animation-name").await?;
+    ensure!(
+        animation == "lsx-transition-appear",
+        "animation {animation}"
+    );
     eventually(d, "the mounted transition to be fully opaque", async |d| {
         Ok(d.exists(CONTENT).await? && opacity(d).await? > 0.99)
     })
@@ -77,6 +84,28 @@ e2e::scenario!(
     it_grows_an_origin_kind_from_its_corner,
     "/transition-corner",
     grows_from_its_corner
+);
+
+/// A caller's `from` blurs the closed state, animates with the rest, and clears once open.
+async fn blurs_from_its_from_state<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let closed = d.style(ROOT, "filter").await?;
+    ensure!(closed == "blur(4px)", "closed filter {closed}");
+    let properties = d.style(ROOT, "transition-property").await?;
+    ensure!(
+        properties.contains("filter"),
+        "transition-property {properties}"
+    );
+    d.click(TOGGLE).await?;
+    eventually(d, "the from-state to clear once open", async |d| {
+        Ok(opacity(d).await? > 0.99 && d.style(ROOT, "filter").await? == "none")
+    })
+    .await
+}
+
+e2e::scenario!(
+    it_animates_a_callers_from_state,
+    "/transition-from",
+    blurs_from_its_from_state
 );
 
 /// Under reduced motion nothing transitions. The same check at `no-preference` must see
