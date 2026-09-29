@@ -1673,16 +1673,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             TableToolbar { start, content, search }
         }),
     };
-    // Outside the scroll region, so the controls stay put while it scrolls.
-    match (search, pager) {
-        (None, None) => table,
-        (search, pager) => rsx! {
-            div {
-                {search}
-                {table}
-                {pager}
-            }
-        },
+    // Outside the scroll region, so the controls stay put while it scrolls. One box,
+    // or a flex parent squeezes the zero-height loading bar to no width (todo 1461).
+    rsx! {
+        div {
+            {search}
+            {table}
+            {pager}
+        }
     }
 }
 

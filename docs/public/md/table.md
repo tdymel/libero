@@ -107,6 +107,11 @@ in view render, each that tall. The demo's switch swaps in ten thousand
 people, 40px a row under a 320px cap, and hides the switches that render every
 row. Sorting, filtering, selection and pinning work as before.
 
+`onbottomreached` asks for more rows once the table scrolls to its bottom, by
+wheel, drag or End. The demo's switch, shown with `virtual_row_height`, fetches
+the people from a fake server instead, a hundred at a time, and `loading` holds
+off another ask until the batch arrives.
+
 `default_pinned_columns` holds columns at the start or end edge while the rest
 scroll under them, and the column menu pins and unpins them. Start and end
 follow the page's direction. Give each pinned column but the outermost a

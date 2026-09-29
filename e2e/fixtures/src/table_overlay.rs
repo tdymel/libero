@@ -2,11 +2,14 @@
 //! toggle `loading` and empty the rows.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Table, column};
+use libero::components::{Button, RowFn, Table, column};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/table-overlay", || rsx! { OverlayTablePage {} })];
+pub const ROUTES: Routes = &[
+    ("/table-overlay", || rsx! { OverlayTablePage {} }),
+    ("/table-overlay-bare", || rsx! { BareTablePage {} }),
+];
 
 #[derive(Clone, PartialEq)]
 struct Fruit {
@@ -60,6 +63,34 @@ fn OverlayTablePage() -> Element {
                 columns: vec![
                     column("Name").value(|fruit: &Fruit| fruit.name.to_string()).row_header(),
                     column("Stock").value(|fruit: &Fruit| fruit.stock).sortable(),
+                ],
+                row_key: |fruit: &Fruit| fruit.name.to_string(),
+            }
+        }
+    }
+}
+
+/// No toolbar, in a flex row as the docs preview is: the buttons outside switch
+/// `loading` and `row_detail` on (todos 1440, 1461).
+#[component]
+fn BareTablePage() -> Element {
+    let mut loading = use_signal(|| false);
+    let mut detail = use_signal(|| false);
+    rsx! {
+        button { id: "toggle-loading", onclick: move |_| loading.toggle(), "Loading" }
+        button { id: "toggle-detail", onclick: move |_| detail.toggle(), "Detail" }
+        div { style: "display: flex; width: 480px",
+            Table {
+                aria_label: "Fruit",
+                loading: loading(),
+                row_detail: match detail() {
+                    true => (|fruit: &Fruit| Some(rsx! { "{fruit.name} in stock" })).into(),
+                    false => RowFn::default(),
+                },
+                data: FRUIT.to_vec(),
+                columns: vec![
+                    column("Name").value(|fruit: &Fruit| fruit.name.to_string()).row_header(),
+                    column("Stock").value(|fruit: &Fruit| fruit.stock),
                 ],
                 row_key: |fruit: &Fruit| fruit.name.to_string(),
             }

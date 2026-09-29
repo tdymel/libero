@@ -46,6 +46,44 @@ e2e::scenario!(
     loading_overlays
 );
 
+/// Without a toolbar, in a flex row: the bar spans the table, and a `row_detail`
+/// switched on gives the rows their toggles (todos 1440, 1461).
+async fn bare_table<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#toggle-loading").await?;
+    eventually(d, "the loading bar", async |d| {
+        d.exists("[data-loading-bar] [role=progressbar]").await
+    })
+    .await?;
+    let bar = d.rect("[data-loading-bar] [role=progressbar]").await?;
+    let table = d.rect(TABLE).await?;
+    if (bar.width - table.width).abs() > 2.0 {
+        bail!(
+            "the bar is {} wide over a {} wide table",
+            bar.width,
+            table.width
+        );
+    }
+    d.click("#toggle-detail").await?;
+    eventually(d, "the detail toggles", async |d| {
+        d.exists("button[aria-label=\"Details for Cherry\"]").await
+    })
+    .await?;
+    d.click("button[aria-label=\"Details for Cherry\"]").await?;
+    eventually_text(
+        d,
+        "tbody tr[data-detail]",
+        "Cherry in stock",
+        "the detail row",
+    )
+    .await
+}
+
+e2e::scenario!(
+    a_table_without_toolbar_shows_its_loading_bar_and_details,
+    "/table-overlay-bare",
+    bare_table
+);
+
 async fn toolbar_layout<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let toolbar = d.rect("[data-toolbar]").await?;
     let first = d.rect("#toggle-loading").await?;

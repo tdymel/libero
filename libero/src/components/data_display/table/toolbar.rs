@@ -157,6 +157,17 @@ pub fn TableColumnsButton() -> Element {
     }
 }
 
+const DENSITIES: [Size; 3] = [Size::Sm, Size::Md, Size::Lg];
+
+/// The density a size outside the three reads as, so one item is always marked (todo 1459).
+fn nearest_density(size: Size) -> Size {
+    match size {
+        Size::Xs => Size::Sm,
+        Size::Xl | Size::Xxl => Size::Lg,
+        size => size,
+    }
+}
+
 /// A menu of three row densities, the table's `size` small, medium or large;
 /// a pick drives `density`. Goes in a `Table`'s `toolbar`.
 #[component]
@@ -169,11 +180,12 @@ pub fn TableDensityButton() -> Element {
     };
     let size = tools.view.read().size;
     let density = tools.density;
-    let items: Vec<MenuEntry> = [Size::Sm, Size::Md, Size::Lg]
+    let marked = nearest_density(size);
+    let items: Vec<MenuEntry> = DENSITIES
         .into_iter()
         .map(|pick| {
             MenuItem::new((labels.density_name)(pick))
-                .radio(pick == size)
+                .radio(pick == marked)
                 .onselect(move |_| density.set(Some(pick)))
                 .into()
         })
@@ -214,5 +226,20 @@ pub fn TableExportButton(onexport: EventHandler<String>) -> Element {
             },
             "{labels.export}"
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DENSITIES, nearest_density};
+    use crate::theme::Size;
+
+    #[test]
+    fn every_size_marks_one_density() {
+        for size in [Size::Xs, Size::Sm, Size::Md, Size::Lg, Size::Xl, Size::Xxl] {
+            assert!(DENSITIES.contains(&nearest_density(size)), "{size:?}");
+        }
+        assert_eq!(nearest_density(Size::Xs), Size::Sm);
+        assert_eq!(nearest_density(Size::Xl), Size::Lg);
     }
 }

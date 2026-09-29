@@ -2,12 +2,14 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, pr
 use dioxus::prelude::*;
 use std::cell::OnceCell;
 use std::rc::Rc;
+use std::time::Duration;
 
 use libero::chrono::{NaiveDate, TimeDelta};
 use libero::components::{
     Button, Chip, Code, Column, ColumnWidths, PinnedColumns, RowFn, Table, Text, column,
 };
 use libero::hooks::SortableMove;
+use libero::platform::{TimerSubscription, timer};
 use libero::sx::sx;
 
 #[derive(Clone, PartialEq)]
@@ -74,18 +76,78 @@ fn people() -> Vec<Person> {
 
 const ROLES: [&str; 3] = ["Owner", "Admin", "Viewer"];
 
-/// Ten thousand made-up people for the `virtual_row_height` switch, as `wrap_data` prints them.
+/// Made-up person `n` of the crowd, as `wrap_data` prints it.
+fn member(n: u32) -> Person {
+    Person {
+        name: format!("Person {n}"),
+        role: ROLES[n as usize % ROLES.len()].into(),
+        joined: day(2015, 1, 1) + TimeDelta::days(i64::from(n % 3_650)),
+        review: (!n.is_multiple_of(3))
+            .then(|| day(2025, 1, 1) + TimeDelta::days(i64::from(n % 365))),
+        bonus: (!n.is_multiple_of(4)).then(|| f64::from(n % 150) / 10.0),
+    }
+}
+
+/// Ten thousand made-up people for the `virtual_row_height` switch.
 fn crowd() -> Vec<Person> {
-    (1..=10_000)
-        .map(|n: u32| Person {
+    (1..=10_000).map(member).collect()
+}
+
+const BATCH: usize = 100;
+const LATENCY: Duration = Duration::from_millis(600);
+
+/// The `onbottomreached` switch's fake server, as `SERVER` prints it.
+fn fetch(from: usize) -> Vec<Person> {
+    (1..=10_000).skip(from).take(BATCH).map(member).collect()
+}
+
+/// The fake server and the state the `onbottomreached` props read, printed so
+/// the snippet calls nothing it does not show.
+// snippet: item use libero::chrono::{NaiveDate, TimeDelta};
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate, review: Option<NaiveDate>, bonus: Option<f64> }
+// snippet: item fn day(year: i32, month: u32, day: u32) -> NaiveDate { NaiveDate::from_ymd_opt(year, month, day).unwrap_or_default() }
+const SERVER: &str = r#"const BATCH: usize = 100;
+/// How long the fake server takes.
+const LATENCY: Duration = Duration::from_millis(600);
+
+/// The fake server: `BATCH` people from `from` on, of ten thousand.
+fn fetch(from: usize) -> Vec<Person> {
+    (1..=10_000u32)
+        .skip(from)
+        .take(BATCH)
+        .map(|n| Person {
             name: format!("Person {n}"),
-            role: ROLES[n as usize % ROLES.len()].into(),
+            role: ["Owner", "Admin", "Viewer"][n as usize % 3].into(),
             joined: day(2015, 1, 1) + TimeDelta::days(i64::from(n % 3_650)),
-            review: (!n.is_multiple_of(3))
-                .then(|| day(2025, 1, 1) + TimeDelta::days(i64::from(n % 365))),
+            review: (!n.is_multiple_of(3)).then(|| day(2025, 1, 1) + TimeDelta::days(i64::from(n % 365))),
             bonus: (!n.is_multiple_of(4)).then(|| f64::from(n % 150) / 10.0),
         })
         .collect()
+}
+
+let mut loaded = use_signal(|| fetch(0));
+let mut loading = use_signal(|| false);
+let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
+use_drop(move || pending.set(None));
+// The next batch, appended once the fake server answers.
+let mut load = move || {
+    loading.set(true);
+    pending.set(timer().map(|timer| {
+        timer.after(
+            LATENCY,
+            Box::new(move || {
+                let batch = fetch(loaded.peek().len());
+                loaded.write().extend(batch);
+                loading.set(false);
+            }),
+        )
+    }));
+};
+let people = loaded();"#;
+
+/// People a batch at a time from the fake server, with `virtual_row_height`.
+fn from_server(values: &DemoValues) -> bool {
+    windowed(values) && values.str("onbottomreached") == "true"
 }
 
 // snippet: item use libero::chrono::NaiveDate;
@@ -93,38 +155,38 @@ fn crowd() -> Vec<Person> {
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const COLUMNS: &str = r#"columns: vec![
-        column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
-        column("Role")
-            .value(|p: &Person| p.role.clone())
-            .sortable()
-            .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-        column("Joined").value(|p: &Person| p.joined).sortable(),
-        column("Review").value(|p: &Person| p.review).sortable(),
-        column("Bonus")
-            .value(|p: &Person| p.bonus)
-            .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
-            .sortable(),
-    ]"#;
+    column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
+    column("Role")
+        .value(|p: &Person| p.role.clone())
+        .sortable()
+        .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
+    column("Joined").value(|p: &Person| p.joined).sortable(),
+    column("Review").value(|p: &Person| p.review).sortable(),
+    column("Bonus")
+        .value(|p: &Person| p.bonus)
+        .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+        .sortable(),
+]"#;
 
 // snippet: item use libero::chrono::NaiveDate;
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, joined: NaiveDate, review: Option<NaiveDate>, bonus: Option<f64> }
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const GROUPED_COLUMNS: &str = r#"columns: vec![
-        column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
-        column("Role")
-            .value(|p: &Person| p.role.clone())
-            .sortable()
-            .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } })
-            .group("Membership"),
-        column("Joined").value(|p: &Person| p.joined).sortable().group("Membership"),
-        column("Review").value(|p: &Person| p.review).sortable().group("Membership"),
-        column("Bonus")
-            .value(|p: &Person| p.bonus)
-            .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
-            .sortable()
-            .group("Membership"),
-    ]"#;
+    column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
+    column("Role")
+        .value(|p: &Person| p.role.clone())
+        .sortable()
+        .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } })
+        .group("Membership"),
+    column("Joined").value(|p: &Person| p.joined).sortable().group("Membership"),
+    column("Review").value(|p: &Person| p.review).sortable().group("Membership"),
+    column("Bonus")
+        .value(|p: &Person| p.bonus)
+        .format(|p: &Person| p.bonus.map(|b| format!("{b:.1} %")).unwrap_or_default())
+        .sortable()
+        .group("Membership"),
+]"#;
 
 fn team_columns(grouped: bool) -> Vec<Column<Person>> {
     let group = |column: Column<Person>| match grouped {
@@ -179,6 +241,7 @@ fn wrap_data(values: &DemoValues, code: &str) -> String {
     };
     // Reordered rows and resized widths need a signal to land in.
     let mut people = match (no_rows(values), reorders(values)) {
+        _ if from_server(values) => SERVER.to_string(),
         (true, false) => "let people: Vec<Person> = Vec::new();".to_string(),
         (false, false) => format!("let people = {rows};"),
         (true, true) => {
@@ -279,13 +342,35 @@ fn TeamTable(values: DemoValues) -> Element {
     // Built on the first flip only, then kept: a flip re-renders the table, not the data.
     let many = use_hook(|| Rc::new(OnceCell::<Vec<Person>>::new()));
     let mut widths = use_signal(ColumnWidths::new);
+    let mut loaded = use_signal(|| fetch(0));
+    let mut fetching = use_signal(|| false);
+    let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
+    use_drop(move || pending.set(None));
+    let mut load = move || {
+        fetching.set(true);
+        pending.set(timer().map(|timer| {
+            timer.after(
+                LATENCY,
+                Box::new(move || {
+                    let batch = fetch(loaded.peek().len());
+                    loaded.write().extend(batch);
+                    fetching.set(false);
+                }),
+            )
+        }));
+    };
     let windowed = windowed(&values);
-    // A switch the windowed table hides counts as off.
-    let on = |name: &str| values.str(name) == "true" && !(windowed && WINDOW_HIDES.contains(&name));
+    let server = from_server(&values);
+    // A switch the windowed table hides counts as off, `loading` too while the server sets it.
+    let on = |name: &str| {
+        values.str(name) == "true"
+            && !(windowed && WINDOW_HIDES.contains(&name))
+            && !(server && name == "loading")
+    };
     rsx! {
         Table {
             // A new table per switch: `page_sizes` and the pins seed once.
-            key: "{values.str(\"paginate\")}-{values.str(\"pinned\")}-{windowed}",
+            key: "{values.str(\"paginate\")}-{values.str(\"pinned\")}-{windowed}-{server}",
             caption: "Team members",
             size: values.str("size"),
             striped: on("striped"),
@@ -317,7 +402,8 @@ fn TeamTable(values: DemoValues) -> Element {
             toolbar: on("toolbar").then(|| rsx! {
                 Button { variant: "outlined", size: "sm", "Add member" }
             }),
-            loading: on("loading"),
+            loading: on("loading") || (server && fetching()),
+            onbottomreached: server.then(|| EventHandler::new(move |()| load())),
             header_filters: on("header_filters"),
             filter_panel: on("filter_panel"),
             resizable_columns: resizes(&values),
@@ -327,6 +413,7 @@ fn TeamTable(values: DemoValues) -> Element {
             page_sizes: if on("paginate") { vec![2, 5, 10] } else { vec![] },
             empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
             data: match (windowed, no_rows(&values)) {
+                _ if server => loaded(),
                 (true, _) => many.get_or_init(crowd).clone(),
                 (false, true) => Vec::new(),
                 (false, false) => rows(),
@@ -754,6 +841,15 @@ pub fn TablePage() -> Element {
                     "that render every row. Sorting, filtering, selection and pinning work as before."
                 }
                 Text {
+                    Code { source: "onbottomreached" }
+                    " asks for more rows once the table scrolls to its bottom, by wheel, drag or "
+                    "End. The demo's switch, shown with "
+                    Code { source: "virtual_row_height" }
+                    ", fetches the people from a fake server instead, a hundred at a time, and "
+                    Code { source: "loading" }
+                    " holds off another ask until the batch arrives."
+                }
+                Text {
                     Code { source: "default_pinned_columns" }
                     " holds columns at the start or end edge while the rest scroll under "
                     "them, and the column menu pins and unpins them. Start and end follow "
@@ -805,6 +901,13 @@ pub fn TablePage() -> Element {
                         ],
                         false => vec![],
                     }),
+                    Control::switch("onbottomreached").code(|_, values| match from_server(values) {
+                        true => vec![
+                            "loading: loading()".to_string(),
+                            "onbottomreached: move |_| load()".to_string(),
+                        ],
+                        false => vec![],
+                    }).hidden_when(|values| !windowed(values)),
                     Control::switch("pinned").code(|_, values| match values.str("pinned") == "true" {
                         true => vec![PINNED.to_string()],
                         false => vec![],
@@ -821,7 +924,7 @@ pub fn TablePage() -> Element {
                         true => vec![TOOLBAR.to_string()],
                         false => vec![],
                     }),
-                    Control::switch("loading"),
+                    Control::switch("loading").hidden_when(from_server),
                     Control::switch("header_filters"),
                     Control::switch("filter_panel"),
                     Control::switch("paginate").code(|_, values| match values.str("paginate") == "true" {
