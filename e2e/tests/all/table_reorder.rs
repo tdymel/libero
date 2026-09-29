@@ -220,3 +220,106 @@ e2e::scenario!(
     a_grip_drag_moves_a_column,
     native: skip("no column drag grip on Blitz: the column menu moves columns")
 );
+
+/// Drags `header`'s grip so its centre lands at client `x`.
+async fn drag_grip_to<D: Driver>(d: &mut D, header: &str, x: f64) -> Result<()> {
+    let grip = format!("th[aria-label={header}] [data-drag-handle]");
+    let from = d.rect(&grip).await?;
+    d.drag(&grip, x - (from.x + from.width / 2.0), 0.0).await
+}
+
+/// A second drag after the first, of the moved column and then another (1463).
+async fn two_grip_drags_move_columns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let origin = d.rect("th[aria-label=Origin]").await?;
+    drag_grip_to(d, "Name", origin.x + origin.width - 4.0).await?;
+    eventually_text(d, "#columns", "Stock Origin Name", "the first drag").await?;
+    eventually(d, "the ghost gone", async |d| {
+        Ok(!d.exists("[data-drag-ghost]").await?)
+    })
+    .await?;
+    let stock = d.rect("th[aria-label=Stock]").await?;
+    drag_grip_to(d, "Name", stock.x + 4.0).await?;
+    eventually_text(d, "#columns", "Name Stock Origin", "Name dragged back").await?;
+    let origin = d.rect("th[aria-label=Origin]").await?;
+    drag_grip_to(d, "Stock", origin.x + origin.width - 4.0).await?;
+    eventually_text(d, "#columns", "Name Origin Stock", "Stock past Origin").await?;
+    eventually(d, "headers and cells in the new order", async |d| {
+        let (name, origin, stock) = (
+            d.rect("th[aria-label=Name]").await?.x,
+            d.rect("th[aria-label=Origin]").await?.x,
+            d.rect("th[aria-label=Stock]").await?.x,
+        );
+        Ok(name < origin
+            && origin < stock
+            && d.text("tbody tr:first-child th").await? == "Cherry"
+            && !d.exists("[data-drag-ghost]").await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    header_grip_drags_move_columns_twice,
+    "/table-reorder",
+    two_grip_drags_move_columns,
+    native: skip("no column drag grip on Blitz: the column menu moves columns")
+);
+
+e2e::scenario!(
+    header_grip_drags_move_its_own_columns_twice,
+    "/table-column-drag",
+    two_grip_drags_move_columns,
+    native: skip("no column drag grip on Blitz: the column menu moves columns"),
+    android: skip("1463: touch adjustment at times snaps the 12px grip to a header button")
+);
+
+/// Name's grip held at the scroll region's end edge scrolls Origin's end into
+/// view, then drops after it (1463, the edge scroll as Kanban's 1364).
+#[test]
+fn a_grip_held_at_the_region_edge_scrolls_to_the_last_gap() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer::{self, Point};
+    use e2e::wait;
+    const REGION: &str = "document.querySelector('[data-table-scroll]').getBoundingClientRect()";
+    const ORIGIN: &str = "document.querySelector('th[aria-label=Origin]').getBoundingClientRect()";
+    block_on(async {
+        let fixture = Fixture::open("/table-column-scroll", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let ends: Vec<f64> = page
+            .evaluate(format!("[{REGION}.right, {ORIGIN}.right]"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            ends[1] > ends[0] + 50.0,
+            "Origin's end starts in view: {ends:?}"
+        );
+        let from = pointer::centre_of(page, "th[aria-label=Name] [data-drag-handle]")
+            .await
+            .unwrap();
+        let edge = Point {
+            x: ends[0] - 6.0,
+            y: from.y,
+        };
+        pointer::drag_held(page, from, edge, 10).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("Math.abs({ORIGIN}.right - {REGION}.right) < 2"),
+            "a grip held at the end edge to scroll the region to its end",
+        )
+        .await
+        .unwrap();
+        pointer::release(page, edge).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#columns').textContent === 'Stock Origin Name'",
+            "a drop at the gap the scroll brought in",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("an edge column drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

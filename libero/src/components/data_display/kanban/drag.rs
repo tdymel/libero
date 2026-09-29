@@ -7,14 +7,14 @@ use std::{collections::BTreeMap, rc::Rc};
 use dioxus::prelude::*;
 
 use super::{
-    lanes::{Lane, Lanes, Rect, edge_step},
+    lanes::{Lane, Lanes, Rect},
     moves::KanbanMove,
 };
 use crate::{
     components::accessibility::Announcer,
     hooks::{
-        DragMove, DragOptions, DragStart, ElementHandle, current_localization, use_distance_drag,
-        use_element, use_interval,
+        DragMove, DragOptions, DragStart, ElementHandle, current_localization, edge_scroll_step,
+        use_distance_drag, use_element, use_interval,
     },
     localization::fill,
     platform::{self, Dimensions, ElementApi, Read},
@@ -385,7 +385,9 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
             let delta = step.delta();
             travel.set((delta.x, delta.y));
             let board = lifted.peek().as_ref().and_then(|up| up.board);
-            let next = board.map_or(0.0, |board| edge_step(step.client.x, board));
+            let next = board.map_or(0.0, |board| {
+                edge_scroll_step(step.client.x, board.x, board.width)
+            });
             edge.set(next);
             match (next != 0.0, auto_scroll.active()) {
                 (true, false) => auto_scroll.start(),

@@ -3,8 +3,9 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Table, column},
+    components::{Chip, Table, column},
     hooks::SortableMove,
+    sx::sx,
 };
 
 use crate::Routes;
@@ -12,6 +13,8 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/table-reorder", || rsx! { ReorderTablePage {} }),
     ("/table-reorder-detail", || rsx! { ReorderDetailPage {} }),
+    ("/table-column-drag", || rsx! { ColumnDragPage {} }),
+    ("/table-column-scroll", || rsx! { ColumnScrollPage {} }),
 ];
 
 #[derive(Clone, PartialEq)]
@@ -61,6 +64,55 @@ fn ReorderTablePage() -> Element {
         p { id: "order", {order.join(" ")} }
         p { id: "moves", "{moves}" }
         p { id: "columns", {columns.read().join(" ")} }
+    }
+}
+
+/// The docs demo's shape: the table holds the order itself, a caption, a rendered column.
+#[component]
+fn ColumnDragPage() -> Element {
+    let mut columns = use_signal(String::new);
+    rsx! {
+        Table {
+            caption: "Fruit",
+            data: fruit(),
+            columns: vec![
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()).sortable().row_header(),
+                column("Stock")
+                    .value(|fruit: &Fruit| fruit.stock)
+                    .sortable()
+                    .render(|fruit: &Fruit| rsx! { Chip { size: "xs", "{fruit.stock}" } }),
+                column("Origin").value(|fruit: &Fruit| fruit.origin.to_string()).sortable(),
+            ],
+            row_key: |fruit: &Fruit| fruit.name.to_string(),
+            column_menu: true,
+            oncolumnorderchange: move |next: Vec<String>| columns.set(next.join(" ")),
+        }
+        p { id: "columns", "{columns}" }
+    }
+}
+
+/// A table wider than its 320px scroll region: Origin's end starts out of view.
+#[component]
+fn ColumnScrollPage() -> Element {
+    let mut columns = use_signal(String::new);
+    rsx! {
+        div { style: "width: 320px",
+            Table {
+                aria_label: "Fruit",
+                data: fruit(),
+                columns: vec![
+                    column("Name").value(|fruit: &Fruit| fruit.name.to_string()).row_header(),
+                    column("Stock").value(|fruit: &Fruit| fruit.stock),
+                    column("Origin").value(|fruit: &Fruit| fruit.origin.to_string()),
+                ],
+                row_key: |fruit: &Fruit| fruit.name.to_string(),
+                column_menu: true,
+                scroll: true,
+                sx: sx().min_width("640px"),
+                oncolumnorderchange: move |next: Vec<String>| columns.set(next.join(" ")),
+            }
+        }
+        p { id: "columns", "{columns}" }
     }
 }
 

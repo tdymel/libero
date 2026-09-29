@@ -11,7 +11,8 @@ use crate::{
     components::common::Glyph,
     context::IconSlot,
     hooks::{
-        DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_escape_dismiss,
+        DragMove, DragOptions, DragStart, ElementHandle, edge_scroll_step, use_drag, use_element,
+        use_escape_dismiss, use_interval,
     },
     platform::{ElementApi, PlatformError},
 };
@@ -72,7 +73,12 @@ struct Dragging {
     index: usize,
     start_x: f64,
     x: f64,
+    y: f64,
+    /// How far the region scrolled since the start, by the drag's own edge scroll.
+    scrolled: f64,
     gap: Option<usize>,
+    /// Let go before the measure came back (the WebView reads over IPC): it drops on arrival.
+    released: bool,
 }
 
 /// The layout a drag measured at its start.
@@ -81,9 +87,49 @@ struct Geometry {
     cell: Rect,
     /// The table, cut to its scroll region: where a drop counts.
     area: Rect,
-    /// Each gap's x, gap `n` before the `n`th unpinned column; `None` out of view.
-    gaps: Vec<Option<f64>>,
+    /// Each gap's x at the start, gap `n` before the `n`th unpinned column.
+    gaps: Vec<f64>,
+    /// Set when the region scrolls sideways: a drag near its edge scrolls it.
+    scroll: Option<Scroll>,
 }
+
+/// A region's `scrollLeft`, `scrollTop` at the drag's start, and the `scrollLeft` range.
+#[derive(Clone, Copy, Default, PartialEq)]
+struct Scroll {
+    from: (f64, f64),
+    range: (f64, f64),
+}
+
+impl Geometry {
+    /// Gap `gap`'s x once the region scrolled by `scrolled`; `None` out of view.
+    fn gap_x(&self, gap: usize, scrolled: f64) -> Option<f64> {
+        let x = self.gaps[gap] - scrolled;
+        // A px of slack: the last column's end sums to a hair past the table's.
+        (self.area.x - 1.0..=self.area.right() + 1.0)
+            .contains(&x)
+            .then_some(x)
+    }
+
+    /// The gap a pointer at `x`, `y` points at; outside the table a drop cancels.
+    fn gap_at(&self, x: f64, y: f64, scrolled: f64) -> Option<usize> {
+        let gaps: Vec<_> = (0..self.gaps.len())
+            .map(|gap| self.gap_x(gap, scrolled))
+            .collect();
+        self.area
+            .contains(x, y)
+            .then(|| nearest_gap(&gaps, x))
+            .flatten()
+    }
+
+    /// Px per tick the region scrolls by with the pointer at `x`.
+    fn edge_step(&self, x: f64) -> f64 {
+        self.scroll
+            .map_or(0.0, |_| edge_scroll_step(x, self.area.x, self.area.width))
+    }
+}
+
+/// The edge scroll's tick.
+const AUTO_SCROLL_MS: u64 = 40;
 
 /// A table's column drag state, shared by its header grips.
 #[derive(Clone, Copy, PartialEq)]
@@ -158,13 +204,55 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
     let grip = use_element();
     let mut dragging = drag.dragging;
     let mut geometry = drag.geometry;
+    let ours_now = move || (*dragging.peek()).filter(|active| active.index == index);
+    let auto_scroll = use_interval(
+        move || {
+            let Some(active) = ours_now() else {
+                return;
+            };
+            let Some((step, scroll)) = geometry
+                .peek()
+                .as_ref()
+                .and_then(|geometry| Some((geometry.edge_step(active.x), geometry.scroll?)))
+            else {
+                return;
+            };
+            let now = scroll.from.0 + active.scrolled;
+            let next = (now + step).clamp(scroll.range.0, scroll.range.1);
+            if next == now {
+                return;
+            }
+            let _ = drag.region.scroll_to(next, scroll.from.1);
+            let at = drag.region.scroll_offset();
+            spawn(async move {
+                let (Ok((x, _)), Some(mut active)) = (at.await, ours_now()) else {
+                    return;
+                };
+                active.scrolled = x - scroll.from.0;
+                active.gap = geometry
+                    .peek()
+                    .as_ref()
+                    .and_then(|geometry| geometry.gap_at(active.x, active.y, active.scrolled));
+                dragging.set(Some(active));
+            });
+        },
+        AUTO_SCROLL_MS,
+    );
     let cancel = use_callback(move |()| {
+        auto_scroll.stop();
         dragging.set(None);
         geometry.set(None);
     });
     let ours = dragging.read().is_some_and(|active| active.index == index);
     let _ = use_escape_dismiss(ours, true, cancel);
     let end_header = header.clone();
+    let drop_at = use_callback(move |gap: usize| {
+        let plan = drag.plan.peek();
+        let names: Vec<String> = plan.unpinned.iter().map(|(_, h)| h.clone()).collect();
+        if let Some(next) = dropped(&plan.ranked, &names, &end_header, gap) {
+            drag.order.set(next);
+        }
+    });
     let handle = use_drag(DragOptions {
         capture: grip,
         onstart: Callback::new(move |start: DragStart| {
@@ -185,12 +273,20 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
                 return;
             }
             let (table, region) = (read_rect(&drag.table), read_rect(&drag.region));
+            let (content, offset) = (drag.region.scroll_size(), drag.region.scroll_offset());
             dragging.set(Some(Dragging {
                 index,
                 start_x: start.client.x,
                 x: start.client.x,
+                y: start.client.y,
+                scrolled: 0.0,
                 gap: None,
+                released: false,
             }));
+            let fail = move || {
+                start.cancel.call(());
+                cancel.call(());
+            };
             spawn(async move {
                 let mut edges = Vec::with_capacity(columns.len());
                 for column in columns {
@@ -199,24 +295,45 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
                             true => (rect.right(), rect.x),
                             false => (rect.x, rect.right()),
                         }),
-                        Err(_) => return start.cancel.call(()),
+                        Err(_) => return fail(),
                     }
                 }
                 let (Ok(cell), Ok(table)) = (own.await, table.await) else {
-                    return start.cancel.call(());
+                    return fail();
                 };
-                let area = match region.await {
-                    Ok(region) => table.clip(region),
-                    Err(_) => table,
+                let region = region.await.ok();
+                let area = region.map_or(table, |region| table.clip(region));
+                let (content, offset) = (content.await, offset.await);
+                // Scrolls sideways: wider content than its box.
+                let scroll = match (region, content, offset) {
+                    (Some(region), Ok(content), Ok(from)) if content.width > region.width + 0.5 => {
+                        let most = content.width - region.width;
+                        // Right to left, `scrollLeft` runs from 0 down to minus the overflow.
+                        let range = if rtl { (-most, 0.0) } else { (0.0, most) };
+                        Some(Scroll { from, range })
+                    }
+                    _ => None,
                 };
-                // Out of the region's view, a gap is no target.
-                let gaps = gap_edges(&edges)
-                    .into_iter()
-                    .map(|x| (area.x..=area.right()).contains(&x).then_some(x))
-                    .collect();
-                // Still ours: an Escape or a release may have come first.
-                if dragging.peek().is_some_and(|active| active.index == index) {
-                    geometry.set(Some(Geometry { cell, area, gaps }));
+                let gaps = gap_edges(&edges);
+                // Still ours: an Escape may have come first.
+                let Some(mut active) = (*dragging.peek()).filter(|active| active.index == index)
+                else {
+                    return;
+                };
+                let measured = Geometry {
+                    cell,
+                    area,
+                    gaps,
+                    scroll,
+                };
+                active.gap = measured.gap_at(active.x, active.y, 0.0);
+                if !active.released {
+                    dragging.set(Some(active));
+                    return geometry.set(Some(measured));
+                }
+                dragging.set(None);
+                if let Some(gap) = active.gap {
+                    drop_at.call(gap);
                 }
             });
         }),
@@ -227,44 +344,47 @@ pub(super) fn ColumnDragGrip(index: usize, header: String, drag: ColumnDrag) -> 
             if active.index != index {
                 return;
             }
-            active.x = step.client.x;
+            (active.x, active.y) = (step.client.x, step.client.y);
             // Outside the table a drop cancels: no line.
-            active.gap = geometry.peek().as_ref().and_then(|geometry| {
-                geometry
-                    .area
-                    .contains(step.client.x, step.client.y)
-                    .then(|| nearest_gap(&geometry.gaps, step.client.x))
-                    .flatten()
+            let (gap, step) = geometry.peek().as_ref().map_or((None, 0.0), |geometry| {
+                (
+                    geometry.gap_at(active.x, active.y, active.scrolled),
+                    geometry.edge_step(active.x),
+                )
             });
+            active.gap = gap;
             dragging.set(Some(active));
+            match (step != 0.0, auto_scroll.active()) {
+                (true, false) => auto_scroll.start(),
+                (false, true) => auto_scroll.stop(),
+                _ => {}
+            }
         }),
         onend: Callback::new(move |()| {
-            let active = dragging.take();
-            geometry.set(None);
-            let Some(Dragging {
-                index: dragged,
-                gap: Some(gap),
-                ..
-            }) = active
-            else {
+            let Some(mut active) = (*dragging.peek()).filter(|active| active.index == index) else {
                 return;
             };
-            if dragged != index {
+            // Unmeasured yet: the measure drops it where it was let go.
+            if geometry.peek().is_none() {
+                active.released = true;
+                dragging.set(Some(active));
                 return;
             }
-            let plan = drag.plan.peek();
-            let names: Vec<String> = plan.unpinned.iter().map(|(_, h)| h.clone()).collect();
-            if let Some(next) = dropped(&plan.ranked, &names, &end_header, gap) {
-                drag.order.set(next);
+            cancel.call(());
+            if let Some(gap) = active.gap {
+                drop_at.call(gap);
             }
         }),
     });
     let active = (*dragging.read()).filter(|active| active.index == index);
     let shown = geometry.read().clone().zip(active);
     let overlay = shown.map(|(geometry, active)| {
-        let Geometry { cell, area, gaps } = geometry;
+        let (cell, area) = (geometry.cell, geometry.area);
         let left = cell.x + active.x - active.start_x;
-        let line = active.gap.and_then(|gap| gaps[gap]).map(|x| x - 1.0);
+        let line = active
+            .gap
+            .and_then(|gap| geometry.gap_x(gap, active.scrolled))
+            .map(|x| x - 1.0);
         rsx! {
             div {
                 "data-drag-ghost": true,

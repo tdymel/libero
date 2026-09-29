@@ -21,26 +21,6 @@ impl Rect {
     }
 }
 
-/// How far from a scrolling board's side edge a dragged card starts scrolling it, in px.
-const EDGE: f64 = 48.0;
-
-/// The most a board scrolls per auto-scroll tick, at its very edge.
-pub(super) const EDGE_STEP: f64 = 16.0;
-
-/// The px a drag at client `x` scrolls `board` by per tick: negative near its
-/// left edge, positive near its right, faster the closer, 0 elsewhere.
-pub(super) fn edge_step(x: f64, board: Rect) -> f64 {
-    let depth = |distance: f64| ((EDGE - distance) / EDGE).clamp(0.0, 1.0);
-    let (left, right) = (depth(x - board.x), depth(board.x + board.width - x));
-    // At least a px, so a pointer just inside the zone still moves.
-    let step = |depth: f64| (EDGE_STEP * depth).max(1.0);
-    match (left > 0.0, right > 0.0) {
-        (true, _) => -step(left),
-        (_, true) => step(right),
-        _ => 0.0,
-    }
-}
-
 /// One column: its card list and its cards in order.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct Lane {
@@ -206,24 +186,6 @@ mod tests {
             from_column,
             from,
         }
-    }
-
-    #[test]
-    fn a_drag_near_a_side_edge_scrolls_that_way_faster_the_closer() {
-        let board = Rect {
-            x: 100.0,
-            y: 0.0,
-            width: 600.0,
-            height: 300.0,
-        };
-        assert_eq!(edge_step(400.0, board), 0.0);
-        assert_eq!(edge_step(148.0, board), 0.0);
-        assert_eq!(edge_step(100.0, board), -EDGE_STEP);
-        assert_eq!(edge_step(124.0, board), -EDGE_STEP / 2.0);
-        assert_eq!(edge_step(700.0, board), EDGE_STEP);
-        // Past the edge, the pointer off the board, still the full step.
-        assert_eq!(edge_step(760.0, board), EDGE_STEP);
-        assert_eq!(edge_step(147.9, board), -1.0);
     }
 
     #[test]

@@ -260,8 +260,10 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-drag-handle] svg",
         sx().width("12px").height("12px"),
     )
+    // An `:active` style makes Chromium's touch adjustment count the grip as a
+    // tap target; without one a touch on it snaps to the sort button (1463).
     .selector(
-        "& [data-drag-handle][data-dragging]",
+        "& [data-drag-handle][data-dragging], & [data-drag-handle]:active",
         sx().cursor("grabbing"),
     )
     // Fixed: it follows the pointer over the scrolled and pinned cells alike.
