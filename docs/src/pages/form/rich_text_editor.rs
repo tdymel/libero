@@ -7,7 +7,32 @@ use libero::components::rich_text::{
 use libero::components::{Code, FieldPart, FieldStatus, Flex, Paper, RichTextEditor, Text};
 use libero::sx::sx;
 
-const SAMPLE: &str = "## Release notes\n\nStart a line with # and a space for a heading, or wrap a word in **two stars**.\n\n- Undo with Ctrl+Z\n- Bold with Ctrl+B";
+static SAMPLE: &str = r#"## Release notes
+
+Start a line with # and a space for a heading, or wrap a word in **two stars**. Marks mix: *italic*, <u>underline</u>, ~~strike~~, `code` and [links](https://libero-ui.dev).
+
+### Shortcuts
+
+- Undo with Ctrl+Z
+- Bold with Ctrl+B
+  - Nest an item with Tab
+
+1. Type three backticks and a language
+2. Press Enter for a code block
+
+> A quote holds its own paragraphs.
+>
+> - and lists
+
+```rust
+fn main() {
+    println!("Click to edit");
+}
+```
+
+---
+
+Below the rule, the next section starts."#;
 
 // What the extension switches print above the rsx; the live editor runs the functions below.
 // `static`, not `const`: the snippet scan would compile these fragments alone, not in the Demo.
@@ -33,10 +58,10 @@ static MENTION_COMMAND: &str = r#"    commands.register("mention", |state| {
         mention.is_some_and(|mention| state.insert_inline(mention))
     });"#;
 
-static SHOUT_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+l").unwrap(), "shout");"#;
+static SHOUT_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+1").unwrap(), "shout");"#;
 static MENTION_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+2").unwrap(), "mention");"#;
 static KEYMAP_CHORDS: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+h").unwrap(), Builtin::Heading2);
-    keymap.unbind_command(Builtin::Underline);"#;
+    keymap.unbind_command(Builtin::Rule);"#;
 
 static MENTIONS_USE: &str = r#"use libero::components::rich_text::{
     Attrs, Commands, EditorInput, EditorState, NodeRegistry, NodeSpec, NodeViewProps, NodeViews,
@@ -312,14 +337,14 @@ fn demo_commands(on: Extensions) -> Commands {
 fn demo_keymap(on: Extensions) -> Keymap {
     let mut keymap = Keymap::default();
     if on.shout {
-        keymap.bind(chord("Mod+Shift+l"), "shout");
+        keymap.bind(chord("Mod+Shift+1"), "shout");
     }
     if on.mention {
         keymap.bind(chord("Mod+Shift+2"), "mention");
     }
     if on.keymap {
         keymap.bind(chord("Mod+Shift+h"), Builtin::Heading2);
-        keymap.unbind_command(Builtin::Underline);
+        keymap.unbind_command(Builtin::Rule);
     }
     keymap
 }
@@ -381,9 +406,9 @@ fn wrap_extensions(values: &DemoValues, code: &str) -> String {
 fn captions(values: &DemoValues) -> Vec<&'static str> {
     let on = Extensions::of(values);
     [
-        (on.shout, "Custom command: select a word and press Ctrl+Shift+L (Cmd on a Mac) to upper-case it, one undo step."),
+        (on.shout, "Custom command: select a word and press Ctrl+Shift+1 (Cmd on a Mac) to upper-case it, one undo step."),
         (on.mention, "Custom node: Ctrl+Shift+2 inserts an @ada mention, drawn by your own component."),
-        (on.keymap, "Custom keymap: Ctrl+Shift+H makes a heading, and Ctrl+U no longer underlines. Ctrl+/ lists the live keymap."),
+        (on.keymap, "Custom keymap: Ctrl+Shift+H makes a heading, and Ctrl+Shift+Enter no longer adds a rule. Ctrl+/ lists the live keymap."),
         (values.str("toolbar") != "true", "No toolbar: the keymap, or your own buttons through a handle, drive the editor."),
     ]
     .into_iter()
@@ -479,6 +504,7 @@ pub fn RichTextEditorPage() -> Element {
                 .key(["Ctrl+Alt+0"], "Paragraph.")
                 .key(["Ctrl+Alt+1"], "Heading 1. `Ctrl+Alt+2` to `Ctrl+Alt+6` make headings 2 to 6.")
                 .key(["Ctrl+Alt+C"], "Code block.")
+                .key(["Ctrl+Shift+L"], "In a code block: opens its language menu. Choosing or Escape returns to the caret.")
                 .key(["Ctrl+Shift+8"], "Bulleted list.")
                 .key(["Ctrl+Shift+7"], "Numbered list.")
                 .key(["Ctrl+Shift+B"], "Quote.")
@@ -502,13 +528,14 @@ pub fn RichTextEditorPage() -> Element {
                     "In a narrow column the toolbar stays one row: the less used buttons move into a \"More formatting\" menu as `menuitemcheckbox` items, so the arrow keys only reach what is shown. Bold, italic and the text type menu always stay.",
                     "A shortcut that toggles a mark, list, quote or block type is announced through a polite live region (\"Bold on\", \"Heading 2\").",
                     "The link dialog focuses its labelled URL field; a refused scheme shows as that field's error. Closing it puts the caret back in the text.",
-                    "The text type menu is a menu button whose name includes the current type, with `menuitemradio` items. So is the language menu of a code block.",
+                    "The text type menu is a menu button whose name includes the current type, with `menuitemradio` items. So is the language menu of a code block, in the toolbar and on its opening fence (\"Code language: Rust\"); the fence button is not a tab stop, `Ctrl+Shift+L` reaches it.",
                     "Every edit goes through the document model, so undo, the `onchange` value and the screen stay in step. Input methods (IME) compose natively and are taken in when the composition ends.",
                     "While `overlay` is set, the text carries `aria-controls` naming it, `aria-autocomplete=\"list\"` and `aria-activedescendant` from `active_descendant`, so a screen reader announces the highlighted option.",
                 ])
                 .must([
                     "Leave `label` unset only when something else names the editor, such as an `aria_label`.",
                     "Document custom chords you bind in `keymap` for your users.",
+                    "Bind chords the browser leaves to the page. `Ctrl+N`, `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab` and their Shift forms never reach it (on a Mac also `Cmd+Q`, `Cmd+H`, `Cmd+M`). A chord you unbind goes back to the browser: without Underline, `Ctrl+U` opens the page source. `Ctrl+P`, `Ctrl+S`, `Ctrl+D`, `Ctrl+F`, `Ctrl+L` and `Ctrl+Shift+I`/`J`/`C` belong to the browser too. On Windows `Ctrl+Alt` is AltGr, which types characters on many layouts.",
                     "Make a `NodeViews` atom name its node in text (a mention shows `@name`): it is a non-editable island a screen reader reads as is.",
                     "Give an `overlay` list `role=\"listbox\"` with an id per `role=\"option\"`, pass the highlighted one as `active_descendant`, and steer it with the keyboard through `intercept`; Escape should close it.",
                     "Name each `RichTextTool` with its `label`: the button shows only its icon.",
@@ -680,7 +707,7 @@ fn rich_lead() -> Element {
             Code { source: "Doc::from_markdown" }
             " convert it; the types live in "
             Code { source: "libero::components::rich_text" }
-            ". A code block shows its source with fences while the caret is in it."
+            ". A code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language."
         }
     }
 }

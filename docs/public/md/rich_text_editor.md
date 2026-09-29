@@ -10,7 +10,8 @@ A rich text field over a `Doc`: paragraphs, headings, lists, quotes, code
 blocks and marks, with undo, the usual shortcuts and Markdown typing
 shortcuts. `Doc::to_markdown` and `Doc::from_markdown` convert it; the types
 live in `libero::components::rich_text`. A code block shows its source with
-fences while the caret is in it; the toolbar then shows a language menu.
+fences while the caret is in it; the language button on its opening fence,
+the toolbar's language menu or `Ctrl+Shift+L` change its language.
 
 ## Usage
 
@@ -249,6 +250,7 @@ shows Ctrl.
 | `Ctrl+Alt+0` | Paragraph. |
 | `Ctrl+Alt+1` | Heading 1. `Ctrl+Alt+2` to `Ctrl+Alt+6` make headings 2 to 6. |
 | `Ctrl+Alt+C` | Code block. |
+| `Ctrl+Shift+L` | In a code block: opens its language menu. Choosing or Escape returns to the caret. |
 | `Ctrl+Shift+8` | Bulleted list. |
 | `Ctrl+Shift+7` | Numbered list. |
 | `Ctrl+Shift+B` | Quote. |
@@ -283,7 +285,9 @@ shows Ctrl.
 - The link dialog focuses its labelled URL field; a refused scheme shows as
   that field's error. Closing it puts the caret back in the text.
 - The text type menu is a menu button whose name includes the current type,
-  with `menuitemradio` items. So is the language menu of a code block.
+  with `menuitemradio` items. So is the language menu of a code block, in
+  the toolbar and on its opening fence ("Code language: Rust"); the fence
+  button is not a tab stop, `Ctrl+Shift+L` reaches it.
 - Every edit goes through the document model, so undo, the `onchange` value
   and the screen stay in step. Input methods (IME) compose natively and are
   taken in when the composition ends.
@@ -296,6 +300,12 @@ shows Ctrl.
 - Leave `label` unset only when something else names the editor, such as an
   `aria_label`.
 - Document custom chords you bind in `keymap` for your users.
+- Bind chords the browser leaves to the page. `Ctrl+N`, `Ctrl+T`, `Ctrl+W`,
+  `Ctrl+Tab` and their Shift forms never reach it (on a Mac also `Cmd+Q`,
+  `Cmd+H`, `Cmd+M`). A chord you unbind goes back to the browser: without
+  Underline, `Ctrl+U` opens the page source. `Ctrl+P`, `Ctrl+S`, `Ctrl+D`,
+  `Ctrl+F`, `Ctrl+L` and `Ctrl+Shift+I`/`J`/`C` belong to the browser too. On
+  Windows `Ctrl+Alt` is AltGr, which types characters on many layouts.
 - Make a `NodeViews` atom name its node in text (a mention shows `@name`): it
   is a non-editable island a screen reader reads as is.
 - Give an `overlay` list `role="listbox"` with an id per `role="option"`, pass

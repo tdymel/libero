@@ -15,6 +15,8 @@ pub(crate) struct RenderCtx<'a> {
     pub on_code: Option<EventHandler<NodeKey>>,
     /// The caller's components for custom nodes.
     pub views: &'a NodeViews,
+    /// The language button on the source block's opening fence.
+    pub fence: Option<&'a Element>,
 }
 
 pub(crate) fn blocks(blocks: &[Block], ctx: RenderCtx<'_>) -> Element {
@@ -140,7 +142,12 @@ fn code(block: &Block, language: &str, ctx: RenderCtx<'_>) -> Element {
         let filler = text.is_empty() || text.ends_with('\n');
         return rsx! {
             div { "data-code": "source",
-                div { contenteditable: "false", "data-fence": "", "```{language}" }
+                div { contenteditable: "false", "data-fence": "",
+                    {match ctx.fence {
+                        Some(button) => rsx! { "```" {button.clone()} },
+                        None => rsx! { "```{language}" },
+                    }}
+                }
                 pre { "data-key": key.0.to_string(),
                     "{text}"
                     if filler {

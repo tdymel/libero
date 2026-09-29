@@ -90,6 +90,7 @@ builtins! {
     Redo => "redo",
     Link => "link",
     Shortcuts => "shortcuts",
+    CodeLanguage => "code_language",
     ExitBlock => "exit_block",
 }
 
@@ -254,7 +255,7 @@ fn builtin_action(builtin: Builtin) -> Action {
         B::SelectAll => Action::Edit(Rc::new(EditorState::select_all), Record::Skip),
         B::Undo => Action::Undo,
         B::Redo => Action::Redo,
-        B::Link | B::Shortcuts => Action::View,
+        B::Link | B::Shortcuts | B::CodeLanguage => Action::View,
     }
 }
 
@@ -420,7 +421,7 @@ pub struct Keymap {
 impl Default for Keymap {
     fn default() -> Self {
         use Builtin as B;
-        let defaults: [(&str, Builtin); 32] = [
+        let defaults: [(&str, Builtin); 33] = [
             ("Mod+b", B::Bold),
             ("Mod+i", B::Italic),
             ("Mod+u", B::Underline),
@@ -453,6 +454,7 @@ impl Default for Keymap {
             ("Mod+Shift+x", B::Strike),
             ("Mod+k", B::Link),
             ("Mod+/", B::Shortcuts),
+            ("Mod+Shift+l", B::CodeLanguage),
         ];
         let mut keymap = Self::empty();
         for (chord, builtin) in defaults {

@@ -26,7 +26,7 @@ use crate::{
     components::{
         accessibility::use_announcer,
         buttons::{ActionIcon, Button, Toolbar, ToolbarGroup, ToolbarSeparator},
-        common::{Glyph, HtmlTag, Input},
+        common::{Glyph, HtmlTag, Input, attr},
         form::{field_props, use_bound, use_field, use_field_frame},
         layout::use_box,
         overlay::{Menu, MenuEntry, MenuItem, Shortcut, ShortcutHelp, use_menu},
@@ -128,6 +128,11 @@ static SURFACE_SX: StaticSx = StaticSx::new(|| {
             sx().font_family("monospace")
                 .color("text-dimmed")
                 .user_select("none"),
+        )
+        // The language menu's wrapper, beside the backticks.
+        .selector(
+            "& [data-fence] > div",
+            sx().display("inline-block").margin_inline_start("0.25rem"),
         )
         .selector(
             "&[data-empty]::before",
@@ -377,6 +382,8 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let link_modal = use_modal(|scope: ModalScope<LinkArgs, LinkChoice>| {
         rsx! { LinkDialog { args: scope.args(), onchoose: move |choice| scope.resolve(choice) } }
     });
+    let fence_menu = use_menu();
+    let mut fence_key = use_hook(|| CopyValue::new(false));
     let help_modal = use_modal(move |scope: ModalScope<Vec<Shortcut>>| {
         rsx! { ShortcutHelp { title: words.shortcuts, shortcuts: scope.args() } }
     });
@@ -407,6 +414,13 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     changed(None, true);
                 });
             return true;
+        }
+        if *name == Builtin::CodeLanguage.into() {
+            let in_code = editor.peek().state().block_kind().is_code();
+            if in_code {
+                fence_menu.open();
+            }
+            return in_code;
         }
         if *name == Builtin::Shortcuts.into() {
             help_modal
@@ -565,14 +579,6 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             changed(None, true);
         })
     });
-    let content = blocks(
-        &live.doc().blocks,
-        RenderCtx {
-            source_code,
-            on_code,
-            views: &props.nodes,
-        },
-    );
     let empty = is_empty(live.doc());
     let mut buttons = tools(&words);
     for tool in &mut buttons {
@@ -603,6 +609,82 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .collect();
     let block_kind = state.block_kind().clone();
     drop(live);
+
+    let language_menu = use_menu();
+    let code_language = match &block_kind {
+        BlockKind::CodeBlock { language } => Some(language.clone()),
+        _ => None,
+    };
+    let language_label = code_language.as_deref().map(|language| match language {
+        "" => words.plain_text.to_string(),
+        name => Language::label_of(name).unwrap_or(name).to_string(),
+    });
+    let language_items: Vec<MenuEntry> = {
+        let current = code_language.clone().unwrap_or_default();
+        // A typed name the catalog does not know stays listed, so it shows as chosen.
+        let unknown = (!current.is_empty() && Language::label_of(&current).is_none())
+            .then(|| (current.clone(), current.clone()));
+        std::iter::once((words.plain_text.to_string(), String::new()))
+            .chain(Language::catalog().map(|(label, name)| (label.into(), name.into())))
+            .chain(unknown)
+            .map(|(label, name): (String, String)| {
+                let on = Language::label_of(&name) == Language::label_of(&current)
+                    && (name.is_empty() == current.is_empty());
+                MenuItem::new(label)
+                    .radio(on)
+                    .onselect(move |_| {
+                        let mut edit = edit;
+                        let name = name.clone();
+                        edit(
+                            &|live| {
+                                live.apply(Record::Step, |state| state.set_code_language(&name))
+                            },
+                            true,
+                        );
+                    })
+                    .into()
+            })
+            .collect()
+    };
+    // The same menu on the block's opening fence, also without a toolbar.
+    let fence = source_code.filter(|_| editable).map(|_| {
+        let mut attributes = fence_menu.a11y_attributes();
+        attributes.extend([
+            attr("tabindex", "-1"),
+            attr(
+                "aria-label",
+                format!(
+                    "{}: {}",
+                    words.code_language,
+                    language_label.clone().unwrap_or_default()
+                ),
+            ),
+            listener("onmousedown", |event: MouseEvent| event.prevent_default()),
+            // The button's keys are the menu's, not the text's.
+            listener("onkeydown", move |_: KeyboardEvent| fence_key.set(true)),
+        ]);
+        let shown = match code_language.as_deref() {
+            Some("") | None => words.plain_text.to_string(),
+            Some(name) => name.to_string(),
+        };
+        rsx! {
+            Menu { state: fence_menu, items: language_items.clone(),
+                Button { attributes, variant: "outlined", color: "ink", size: "xs", "{shown}" }
+            }
+        }
+    });
+    let content = {
+        let live = editor.peek();
+        blocks(
+            &live.doc().blocks,
+            RenderCtx {
+                source_code,
+                on_code,
+                views: &props.nodes,
+                fence: fence.as_ref(),
+            },
+        )
+    };
 
     let field = use_field()
         .label(&props.label)
@@ -638,7 +720,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let mut last_key = use_hook(|| CopyValue::new(String::new()));
     let onkeydown = move |event: KeyboardEvent| {
         // Not `is_composing()`: Gboard keeps a composing region open over typed words.
-        if *composing.peek() {
+        if std::mem::take(&mut *fence_key.write()) || *composing.peek() {
             return;
         }
         let modifiers = event.modifiers();
@@ -772,7 +854,12 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .event("oncut", editable.then_some(oncut))
         .event("oncompositionend", editable.then_some(oncompositionend))
         .event("onfocusin", move |_: FocusEvent| focused.set(true))
-        .event("onfocusout", move |_: FocusEvent| focused.set(false))
+        // The fence's language menu takes focus from the text; the source stays meanwhile.
+        .event("onfocusout", move |_: FocusEvent| {
+            if !fence_menu.is_open() {
+                focused.set(false);
+            }
+        })
         .render(
             HtmlTag::Div,
             props.attributes,
@@ -782,6 +869,21 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 }
             },
         );
+
+    // The fence's menu closed: focus back in the text gets the caret, focus elsewhere ends editing.
+    let mut fence_was_open = use_hook(|| CopyValue::new(false));
+    use_effect(move || {
+        let open = fence_menu.is_open();
+        let was_open = std::mem::replace(&mut *fence_was_open.write(), open);
+        if open || !was_open {
+            return;
+        }
+        if element.is_focused() || element.query_selector(":focus").is_ok() {
+            changed(None, true);
+        } else {
+            focused.set(false);
+        }
+    });
 
     let run = move |builtin: Builtin| {
         move |_: MouseEvent| {
@@ -828,42 +930,6 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     .radio(on)
                     .onselect(move |_| {
                         run_command(builtin.into(), true, false);
-                    })
-                    .into()
-            })
-            .collect()
-    };
-    let language_menu = use_menu();
-    let code_language = match &block_kind {
-        BlockKind::CodeBlock { language } => Some(language.clone()),
-        _ => None,
-    };
-    let language_label = code_language.as_deref().map(|language| match language {
-        "" => words.plain_text.to_string(),
-        name => Language::label_of(name).unwrap_or(name).to_string(),
-    });
-    let language_items: Vec<MenuEntry> = {
-        let current = code_language.clone().unwrap_or_default();
-        // A typed name the catalog does not know stays listed, so it shows as chosen.
-        let unknown = (!current.is_empty() && Language::label_of(&current).is_none())
-            .then(|| (current.clone(), current.clone()));
-        std::iter::once((words.plain_text.to_string(), String::new()))
-            .chain(Language::catalog().map(|(label, name)| (label.into(), name.into())))
-            .chain(unknown)
-            .map(|(label, name): (String, String)| {
-                let on = Language::label_of(&name) == Language::label_of(&current)
-                    && (name.is_empty() == current.is_empty());
-                MenuItem::new(label)
-                    .radio(on)
-                    .onselect(move |_| {
-                        let mut edit = edit;
-                        let name = name.clone();
-                        edit(
-                            &|live| {
-                                live.apply(Record::Step, |state| state.set_code_language(&name))
-                            },
-                            true,
-                        );
                     })
                     .into()
             })

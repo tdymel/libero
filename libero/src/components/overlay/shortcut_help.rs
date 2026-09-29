@@ -23,6 +23,9 @@ static SHORTCUT_LIST_SX: StaticSx = StaticSx::new(|| {
         .row_gap("xs")
         .align_items("baseline")
         .margin("0")
+        // A long keymap scrolls inside, so the dialog fits a short window or panel.
+        .max_height("min(24rem, 60vh)")
+        .overflow_y("auto")
         .container(SHORTCUT_LIST)
         .selector("& > dd", sx().margin("0"))
         .container_query(
@@ -115,7 +118,8 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
             sx: props.sx,
             states: props.states,
             attributes: props.attributes,
-            dl { class: list_class, {rows} }
+            // Focusable, so the keyboard scrolls it: no row takes focus.
+            dl { class: list_class, tabindex: "0", {rows} }
         }
     }
 }

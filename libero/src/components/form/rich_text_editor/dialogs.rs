@@ -109,6 +109,7 @@ pub(crate) fn command_label(name: &CommandName, words: &RichTextEditorLabels) ->
         B::Redo => words.redo,
         B::Link => words.link,
         B::Shortcuts => words.shortcuts,
+        B::CodeLanguage => words.code_language,
         _ => return None,
     };
     Some(word.to_string())

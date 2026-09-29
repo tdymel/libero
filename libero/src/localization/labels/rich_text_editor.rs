@@ -51,6 +51,8 @@ pub struct RichTextEditorLabels {
     pub language: &'static str,
     /// The picker's choice for no language.
     pub plain_text: &'static str,
+    /// The language button on a code block's opening fence, and its shortcut.
+    pub code_language: &'static str,
     /// Announced when a toggle turns on; `{name}` is the toggle's label.
     pub on: &'static str,
     /// Announced when a toggle turns off.
@@ -92,6 +94,7 @@ impl RichTextEditorLabels {
         exit_block: "Leave code block",
         language: "Language",
         plain_text: "Plain text",
+        code_language: "Code language",
         on: "{name} on",
         off: "{name} off",
     };
@@ -130,6 +133,7 @@ impl RichTextEditorLabels {
         exit_block: "Codeblock verlassen",
         language: "Sprache",
         plain_text: "Klartext",
+        code_language: "Codesprache",
         on: "{name} an",
         off: "{name} aus",
     };

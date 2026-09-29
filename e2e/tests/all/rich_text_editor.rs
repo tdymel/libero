@@ -789,6 +789,61 @@ fn a_typed_fence_sets_the_language_and_the_toolbar_menu_changes_it() {
 }
 
 #[test]
+fn the_fence_button_and_mod_shift_l_change_the_language_and_return_to_the_caret() {
+    const FENCE: &str = "document.querySelector('[role=textbox] [data-fence] button')";
+    const PLAIN: &str = "[...document.querySelectorAll('[role=menuitemradio]')].find(i => i.textContent.trim() === 'Plain text')";
+    const IN_TEXT: &str = "document.activeElement?.getAttribute('role') === 'textbox'";
+    const KEY_L: Key = Key {
+        key: "L",
+        code: "KeyL",
+        vk: 76,
+        text: None,
+    };
+    block_on(async {
+        let fixture = Fixture::open(TRAILING, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        settle(page).await;
+
+        enter_code(page).await;
+        let (name, tabindex): (String, String) = eval(
+            page,
+            &format!("[{FENCE}.getAttribute('aria-label'), {FENCE}.getAttribute('tabindex')]"),
+        )
+        .await;
+        assert_eq!(name, "Code language: Rust");
+        assert_eq!(tabindex, "-1");
+        page.evaluate(format!("{FENCE}.click()")).await.unwrap();
+        wait::for_js_true(page, &format!("!!{PLAIN}"), "the fence's language menu")
+            .await
+            .unwrap();
+        page.evaluate(format!("{PLAIN}.click()")).await.unwrap();
+        assert_eq!(out(page).await, "intro\n\n```\nlet x = 1;\n```\n");
+        wait::for_js_true(page, IN_TEXT, "focus back in the text")
+            .await
+            .unwrap();
+
+        // From the keyboard: the chord opens the menu, Escape returns to the caret.
+        keyboard::press_with(page, KEY_L, CTRL | keyboard::SHIFT)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.getAttribute('role') === 'menuitemradio'",
+            "focus in the language menu",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(page, IN_TEXT, "focus back in the text after Escape")
+            .await
+            .unwrap();
+        settle(page).await;
+        keyboard::type_text(page, "z").await.unwrap();
+        assert_eq!(out(page).await, "intro\n\n```\nlet x = 1;z\n```\n");
+    });
+}
+
+#[test]
 fn toolbar_buttons_show_their_name_and_chord_in_a_tooltip() {
     const BOLD: &str = "[role=toolbar] button[aria-label=\"Bold\"]";
     block_on(async {

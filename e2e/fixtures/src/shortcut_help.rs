@@ -1,4 +1,4 @@
-//! `ShortcutHelp` inline, in a narrow and a wide column.
+//! `ShortcutHelp` inline, in a narrow and a wide column, and one with a long keymap.
 
 use dioxus::prelude::*;
 use libero::components::{Shortcut, ShortcutHelp};
@@ -22,6 +22,12 @@ fn Widths() -> Element {
         }
         div { id: "wide", style: "width: 600px",
             ShortcutHelp { title: "Wide", shortcuts: shortcuts() }
+        }
+        div { id: "long", style: "width: 600px",
+            ShortcutHelp {
+                title: "Long",
+                shortcuts: (1..=40).map(|n| Shortcut::new(format!("mod+alt+{}", n % 10), format!("Command {n}"))).collect(),
+            }
         }
     }
 }
