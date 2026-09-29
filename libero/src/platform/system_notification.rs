@@ -281,6 +281,7 @@ mod web {
 mod android;
 #[cfg(all(target_os = "linux", any(feature = "native", feature = "desktop")))]
 #[path = "system_notification_freedesktop.rs"]
+#[cfg_attr(all(test, feature = "native"), allow(dead_code))]
 mod freedesktop;
 
 /// The desktop WebView on Linux: WebKitGTK denies the page's `Notification`, so the

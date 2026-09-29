@@ -733,7 +733,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         shown.scaled(f64::MAX, min).image_transform().0,
         shown.scaled(0.0, min).image_transform().0,
     );
-    let zoom_text = use_callback(move |zoom: f64| fill(words.zoom_value, &[("zoom", &zoom)]));
+    let zoom_text =
+        use_callback(move |zoom: f64| fill(words.zoom_value, &[("zoom", &percent(zoom.exp()))]));
     let keys = if pan { words.pan_keys } else { words.keys };
     let tabindex = if interactive { "0" } else { "-1" };
     let placed_at = if pan { shown.frame() } else { shown };
@@ -858,16 +859,17 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     span { id: keys_id(), hidden: true, "{keys}" }
                     if pan {
                         div { "data-slot": ImageCropperPart::Zoom.slot(),
+                            // On ln(zoom), so every step zooms by the same factor (1476).
                             Slider::<f64> {
-                                value: percent(scale),
-                                min: percent(zoom_range.0),
-                                max: percent(zoom_range.1),
-                                step: 1.0,
+                                value: scale.ln(),
+                                min: zoom_range.0.ln(),
+                                max: zoom_range.1.ln(),
+                                step: 0.01,
                                 disabled: !interactive,
                                 aria_label: words.zoom,
                                 format: zoom_text,
                                 oninput: move |event: SliderChangeEvent| {
-                                    let factor = event.value() / 100.0 / scale;
+                                    let factor = event.value().exp() / scale;
                                     let rect = shown.zoomed(factor, (0.5, 0.5), (0.5, 0.5), min);
                                     if rect != shown {
                                         emit.call(rect);

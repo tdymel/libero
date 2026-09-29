@@ -29,6 +29,34 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 1465: a control's tooltip opens only after 2s of hover, as Video's does.
+#[test]
+fn a_control_tooltip_waits_two_seconds_on_hover() {
+    const TIP: &str = "[...document.querySelectorAll('[role=tooltip]')].some((e) => !e.hidden && e.textContent.includes('Play'))";
+    block_on(async {
+        let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{PLAY}') !== null"),
+            "the controls",
+        )
+        .await
+        .unwrap();
+        let start = std::time::Instant::now();
+        pointer::hover(page, PLAY).await.unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+        let early: bool = page.evaluate(TIP).await.unwrap().into_value().unwrap();
+        assert!(!early, "the tooltip opened within a second");
+        wait::for_js_true(page, TIP, "the tooltip after the delay")
+            .await
+            .unwrap();
+        let waited = start.elapsed().as_millis();
+        assert!(waited >= 1900, "opened after {waited}ms");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// WCAG 1.4.10, todos 1325 and 1385: a bubble of at most 22rem whose row stays
 /// one line down to 160px (320px at 200% zoom), nothing leaving the player; the
 /// time goes at 240px, and from 208px the buttons shrink, down to 24px, rather

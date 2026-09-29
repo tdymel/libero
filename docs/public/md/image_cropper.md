@@ -129,8 +129,8 @@ explains how parts work.
   around the pointer. Its value adds the zoom: "40% by 80%, at 30%, 10%, zoom
   100%".
 - With `pan` a slider named "Zoom" over the image's foot zooms around the box's
-  centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Its
-  value is the zoom, "100%".
+  centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Every
+  step zooms by the same factor. Its value is the zoom, "100%".
 - With an `aspect`, a corner key resizes both sides together.
 - The box and the corners describe their keys.
 

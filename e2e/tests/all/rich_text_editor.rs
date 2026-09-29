@@ -1057,6 +1057,22 @@ fn a_long_code_line_does_not_widen_the_editor() {
         .await
         .unwrap();
         assert_eq!(eval::<String>(page, fits).await, "ok");
+
+        // Todo 1475: so does its source while the caret is in it.
+        let code = pointer::centre_of(page, "#row [data-code=view]")
+            .await
+            .unwrap();
+        pointer::click_at(page, code).await.unwrap();
+        let source = "(() => { const row = document.getElementById('row'), r = row.getBoundingClientRect(); \
+            const editor = row.firstElementChild.getBoundingClientRect(); \
+            const pre = row.querySelector('[data-code=source] > pre'); \
+            return pre && editor.right <= r.right + 0.5 && row.scrollWidth <= row.clientWidth \
+                && pre.scrollWidth > pre.clientWidth ? 'ok' \
+                : JSON.stringify([r.width, editor.width, row.scrollWidth, pre && pre.scrollWidth]); })()";
+        wait::for_js_true(page, &format!("{source} === 'ok'"), "the source to fit")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("the code block").unwrap();
     });
 }
 
