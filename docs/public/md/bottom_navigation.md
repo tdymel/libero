@@ -158,6 +158,9 @@ parts work.
 - Put a badge's count in the item's `aria-label`, starting with the visible
   label: "Inbox, 3 unread".
 - With `position: "fixed"`, pad the page by `var(--lsx-bottom-navigation-height)`.
+- A sticky bar closing a scrolling pane of its own: give the pane
+  `scroll-padding-bottom: var(--lsx-bottom-navigation-height)`, so a focused
+  element in it scrolls clear of the bar.
 
 ### Limits
 
