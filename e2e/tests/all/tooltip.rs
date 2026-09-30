@@ -15,6 +15,8 @@ const AWAY: pointer::Point = pointer::Point { x: 2.0, y: 2.0 };
 
 // On `/tooltip/quick`: 10 ms delays, `#before`, `#away`.
 const OPEN: &str = "#save-tip:not([hidden])";
+/// The touch open delay (libero's `LONG_PRESS`).
+const LONG_PRESS_MS: u32 = 500;
 
 async fn is_open<D: Driver>(d: &mut D, open: bool, after: &str) -> Result<()> {
     eventually(d, &format!("{after}: bubble open={open}"), async |d| {
@@ -91,12 +93,21 @@ async fn tab_focus_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 /// closes a while after the release.
 async fn long_press_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     ensure!(!d.exists(OPEN).await?, "open at rest");
-    d.long_press(TRIGGER, 100).await?;
-    linger(d, 8).await;
-    ensure!(!d.exists(OPEN).await?, "a short touch opened it");
     d.long_press(TRIGGER, 800).await?;
     is_open(d, true, "a long press").await?;
-    is_open(d, false, "the release").await
+    is_open(d, false, "the release").await?;
+    // Held only now: the long press above needs the real clock.
+    if d.hold_timers(&[LONG_PRESS_MS]).await? {
+        d.long_press(TRIGGER, 100).await?;
+        d.settle().await?;
+        d.fire_timers(LONG_PRESS_MS).await?;
+        d.settle().await?;
+    } else {
+        d.long_press(TRIGGER, 100).await?;
+        linger(d, 8).await;
+    }
+    ensure!(!d.exists(OPEN).await?, "a short touch opened it");
+    Ok(())
 }
 
 e2e::scenario!(

@@ -352,6 +352,13 @@ impl Driver for Android {
         tap_notification(title).await
     }
 
+    /// The app runs outside the WebView: the idle rounds of `settle` carry the frame's report.
+    async fn frame(&mut self) -> Result<bool> {
+        crate::clock::next_frame(&self.page).await?;
+        self.settle().await?;
+        Ok(true)
+    }
+
     async fn idle(&mut self) {
         tokio::time::sleep(Duration::from_millis(25)).await;
     }

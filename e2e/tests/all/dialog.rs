@@ -2,7 +2,7 @@
 //! `VisuallyHidden`.
 
 use e2e::browser::block_on;
-use e2e::passes::focus;
+use e2e::passes::{focus, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const CLOSE: &str = "#inline button[aria-label='Close']";
@@ -52,12 +52,7 @@ fn the_close_button_of_an_inline_dialog_calls_onclose() {
         let fixture = Fixture::open("/dialog", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_selector(page, "#inline").await.unwrap();
-        page.find_element(CLOSE)
-            .await
-            .unwrap()
-            .click()
-            .await
-            .unwrap();
+        pointer::click(page, CLOSE).await.unwrap();
         wait::for_js_true(
             page,
             "!document.querySelector('#inline')",

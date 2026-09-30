@@ -27,10 +27,14 @@ async fn an_arrow_at_an_edge_line_stays<D: Driver>(d: &mut D, _route: &str) -> R
     d.focus(area).await?;
     for (to, arrow) in [(HOME, ARROW_UP), (END, ARROW_DOWN)] {
         d.press_ctrl(to).await?;
-        linger(d, 5).await;
+        if !d.frame().await? {
+            linger(d, 5).await;
+        }
         let before = d.rect(area).await?.y;
         d.press(arrow).await?;
-        linger(d, 10).await;
+        if !d.frame().await? {
+            linger(d, 10).await;
+        }
         let after = d.rect(area).await?.y;
         ensure!(
             (after - before).abs() < 1.0 && d.is_focused(area).await?,

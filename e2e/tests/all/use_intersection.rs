@@ -25,11 +25,21 @@ async fn state_reads(page: &chromiumoxide::Page, expected: &str) {
 }
 
 /// Scrolls by a quarter screen per poll (the target must stay up for a few polls) until `#state` reads `expected`.
+/// On the web it stops scrolling once the target is in (`dy` > 0) or out of the viewport.
 async fn scroll_until<D: Driver>(d: &mut D, expected: &str, dy: f64) -> Result<()> {
     let (_, height) = d.viewport().await?;
+    let web = d.platform() == Platform::Web;
     eventually(d, &format!("#state to read {expected}"), async |d| {
         if d.text("#state").await? == expected {
             return Ok(true);
+        }
+        if web {
+            let target = d.rect("#target").await?;
+            let shown = target.y < height && target.y + target.height > 0.0;
+            if shown != (dy > 0.0) {
+                d.scroll_by(dy * height / 4.0).await?;
+            }
+            return Ok(false);
         }
         d.scroll_by(dy * height / 4.0).await?;
         // The observer reports after a frame; a scroll that does not wait overshoots it.
@@ -62,7 +72,9 @@ e2e::scenario!(
 
 async fn a_clipped_target_stays_out<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "#state", "shown in, hidden out", "the first measure").await?;
-    linger(d, 20).await;
+    if !d.frame().await? {
+        linger(d, 20).await;
+    }
     eventually_text(d, "#state", "shown in, hidden out", "a clipped target").await
 }
 
@@ -86,7 +98,9 @@ async fn keeps_the_first_sighting<D: Driver>(d: &mut D, _route: &str) -> Result<
     // The control is the viewport scenario: there the same scroll flips it back.
     let (_, height) = d.viewport().await?;
     d.scroll_by(-height * 2.0).await?;
-    linger(d, 20).await;
+    if !d.frame().await? {
+        linger(d, 20).await;
+    }
     eventually_text(d, "#state", "seen", "scrolling away").await
 }
 

@@ -113,6 +113,20 @@ pub async fn settle(page: &Page) -> Result<()> {
     Ok(())
 }
 
+/// Returns once the page drew its next frame. Up to a second in a tab not in front.
+pub async fn next_frame(page: &Page) -> Result<()> {
+    page.evaluate("new Promise((done) => requestAnimationFrame(() => done(true)))")
+        .await?;
+    Ok(())
+}
+
+/// [`next_frame`], then [`settle`]: what that frame queued (an observer's report, a scroll
+/// event) has run.
+pub async fn frame(page: &Page) -> Result<()> {
+    next_frame(page).await?;
+    settle(page).await
+}
+
 /// Fires every pending timer of `ms` (an interval stays armed); returns how many ran.
 pub async fn fire_all(page: &Page, ms: u32) -> Result<usize> {
     Ok(page

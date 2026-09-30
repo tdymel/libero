@@ -5,7 +5,7 @@ use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text, linger};
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const SORT: &str = "th[data-sortable] button";
@@ -783,12 +783,7 @@ fn a_keyed_row_keeps_its_node_when_a_row_is_prepended() {
         page.evaluate("document.querySelector('tr[data-name=\"Apple\"]').marked = true")
             .await
             .unwrap();
-        page.find_element("#prepend")
-            .await
-            .unwrap()
-            .click()
-            .await
-            .unwrap();
+        pointer::click(page, "#prepend").await.unwrap();
         wait::for_js_true(
             page,
             "document.querySelector('tbody tr').dataset.name === 'Apricot' \
@@ -901,10 +896,7 @@ fn a_windowed_row_keeps_its_node_through_a_sort() {
             .await
             .unwrap();
         page.evaluate(format!("{ROW}.marked = true")).await.unwrap();
-        page.find_element("th[data-sortable] [data-sort-button]")
-            .await
-            .unwrap()
-            .click()
+        pointer::click(page, "th[data-sortable] [data-sort-button]")
             .await
             .unwrap();
         // Name ascending: the Apples (4, 8, ...) on top, in source order.
@@ -1172,10 +1164,7 @@ fn only_the_sorted_header_carries_aria_sort_and_the_others_still_hint() {
         e2e::passes::pointer::hover(page, second).await.unwrap();
         arrow_opacity(page, second, "0.5").await.unwrap();
 
-        page.find_element(&format!("{first} button"))
-            .await
-            .unwrap()
-            .click()
+        pointer::click(page, &format!("{first} button"))
             .await
             .unwrap();
         wait::for_js_true(
@@ -1286,10 +1275,7 @@ fn a_column_width_and_a_rendered_header_reach_the_browser() {
         .await
         .unwrap();
         assert_eq!(count(page, "th[data-sortable]").await, 1.0);
-        page.find_element("thead th:nth-child(2) button")
-            .await
-            .unwrap()
-            .click()
+        pointer::click(page, "thead th:nth-child(2) button")
             .await
             .unwrap();
         wait::for_js_true(
@@ -1319,12 +1305,12 @@ fn a_column_menu_sorts_hides_and_shows_columns() {
 
         // Opens `header`'s menu, then clicks the item labelled `item` once it shows.
         async fn pick(page: &Page, header: &str, item: &str) {
-            page.find_element(format!("button[aria-label=\"{header} column options\"]"))
-                .await
-                .unwrap()
-                .click()
-                .await
-                .unwrap();
+            pointer::click(
+                page,
+                &format!("button[aria-label=\"{header} column options\"]"),
+            )
+            .await
+            .unwrap();
             choose(page, item).await;
         }
         async fn choose(page: &Page, item: &str) {
@@ -1476,9 +1462,9 @@ fn a_row_header_column_names_its_rows() {
     });
 }
 
+/// Not `Element::click`: its IntersectionObserver waits a frame, a second in a background tab.
 async fn click(page: &Page) -> Result<()> {
-    page.find_element(SORT).await?.click().await?;
-    Ok(())
+    pointer::click(page, SORT).await
 }
 
 /// 1156-2d: scrolled to its far end, the checkbox and Name columns hold at the

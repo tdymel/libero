@@ -9,6 +9,7 @@ use chromiumoxide::cdp::browser_protocol::browser::{
 };
 use e2e::browser::{PERMISSIONS, block_on};
 use e2e::driver::{Driver, Platform, eventually, eventually_text};
+use e2e::passes::pointer;
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts until asked; elsewhere than the web, push is unsupported.
@@ -95,13 +96,9 @@ async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {
     wait::for_js_true(page, &expression, &format!("{selector} to read {text}")).await
 }
 
+/// Not `Element::click`: its IntersectionObserver waits a frame, a second in a background tab.
 async fn click(page: &Page, selector: &str) {
-    page.find_element(selector)
-        .await
-        .unwrap()
-        .click()
-        .await
-        .unwrap();
+    pointer::click(page, selector).await.unwrap();
 }
 
 #[test]
@@ -120,18 +117,20 @@ fn the_web_shows_closes_and_reports_a_denial() {
         click(page, "#request").await;
         reads(page, "#pending", "false").await.unwrap();
         reads(page, "#error", "None").await.unwrap();
-        // Keeps each shown notification so a click can be dispatched on it.
+        // Keeps each shown notification so a click can be dispatched on it, and counts closes.
         page.evaluate(
-            "window.shown = []; window.focused = 0; window.focus = () => window.focused++;
+            "window.shown = []; window.closes = 0; window.focused = 0;
+            window.focus = () => window.focused++;
             window.Notification = class extends Notification {
                 constructor(title, options) { super(title, options); window.shown.push(this); }
+                close() { window.closes++; super.close(); }
             };",
         )
         .await
         .unwrap();
         click(page, "#show").await;
-        // A failed show would land in `#error` once its promise settles.
-        page.evaluate("new Promise((done) => setTimeout(done, 500))")
+        // A constructed notification is a shown one: a failed show throws before the push.
+        wait::for_js_true(page, "window.shown.length === 1", "the notification")
             .await
             .unwrap();
         reads(page, "#error", "None").await.unwrap();
@@ -147,6 +146,13 @@ fn the_web_shows_closes_and_reports_a_denial() {
             .unwrap();
         assert_eq!(focused, 1, "a click focuses the window");
         click(page, "#close").await;
+        wait::for_js_true(
+            page,
+            "window.closes === 1",
+            "the close to reach the notification",
+        )
+        .await
+        .unwrap();
 
         // The Permissions API reports the revoke; a show then fails as denied.
         set_permission(page, PermissionSetting::Denied)

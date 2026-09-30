@@ -561,6 +561,15 @@ async fn within<D: Driver>(
 /// The controls' idle timer (libero's CONTROLS_IDLE_MS).
 const IDLE_MS: u32 = 3000;
 
+/// How long the controls may take to show: 3 s, before the real idle timer fades them again;
+/// a held clock cannot, so the poll budget (a background tab's fade-in runs at ~1 frame/s).
+fn show_secs<D: Driver>(d: &D, held: bool) -> u64 {
+    match held {
+        true => d.budget().as_secs(),
+        false => 3,
+    }
+}
+
 /// Waits for the controls to fade: on a held clock fires the idle timer once it is armed,
 /// elsewhere waits out the real 3 s.
 async fn until_faded<D: Driver>(d: &mut D, held: bool, what: &str) -> Result<()> {
@@ -644,7 +653,13 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
     until_faded(d, held, "the controls to fade again").await?;
 
     d.press(keyboard::TAB).await?;
-    within(d, 3, "keyboard focus to show them", controls_shown).await?;
+    within(
+        d,
+        show_secs(d, held),
+        "keyboard focus to show them",
+        controls_shown,
+    )
+    .await?;
     stay_shown(d, held, "under keyboard focus").await?;
     d.press(keyboard::ESCAPE).await
 }
@@ -1057,25 +1072,10 @@ fn a_press_on_the_seek_track_seeks() {
     });
 }
 
-/// Polls `js` on `page` for `secs`, past `wait`'s budget: the controls fade after 3 s.
-async fn until(page: &chromiumoxide::Page, js: &str, secs: u64, what: &str) {
-    let started = std::time::Instant::now();
-    loop {
-        let done: bool = page
-            .evaluate(js)
-            .await
-            .ok()
-            .and_then(|value| value.into_value().ok())
-            .unwrap_or(false);
-        if done {
-            return;
-        }
-        assert!(
-            started.elapsed().as_secs() < secs,
-            "gave up waiting for {what}"
-        );
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
+/// Polls `js` on `page` until it holds. Every caller holds the idle timer, so nothing fades
+/// the controls meanwhile; a background tab runs their transition at about a frame a second.
+async fn until(page: &chromiumoxide::Page, js: &str, what: &str) {
+    wait::for_js_true(page, js, what).await.unwrap();
 }
 
 /// Fires the held idle timer once armed and waits for the fade.
@@ -1084,7 +1084,7 @@ async fn fade(page: &chromiumoxide::Page) {
         .await
         .unwrap();
     clock::fire(page, IDLE_MS).await.unwrap();
-    until(page, FADED, 3, "the controls to fade").await;
+    until(page, FADED, "the controls to fade").await;
 }
 
 const FADED: &str = "document.querySelector('#player [role=group]').dataset.controls === 'hidden'
@@ -1200,7 +1200,6 @@ fn a_click_on_the_picture_plays_or_pauses() {
         until(
             page,
             &format!("!({FADED}) && {PLAYING}"),
-            3,
             "a tap to show the controls and keep playing",
         )
         .await;
@@ -1234,7 +1233,6 @@ fn focus_from_code_shows_the_faded_controls() {
             page,
             "document.querySelector('#player [role=group]').dataset.controls === undefined
              && getComputedStyle(document.querySelector('#player [data-slot=controls]')).opacity === '1'",
-            3,
             "focus from code to show the row",
         )
         .await;
@@ -1276,7 +1274,6 @@ fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {
         until(
             page,
             &format!("!({FADED})"),
-            3,
             "focus from code to show the row",
         )
         .await;

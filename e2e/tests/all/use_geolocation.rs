@@ -10,6 +10,7 @@ use chromiumoxide::cdp::browser_protocol::browser::{
 use chromiumoxide::cdp::browser_protocol::emulation::SetGeolocationOverrideParams;
 use e2e::browser::{PERMISSIONS, block_on};
 use e2e::driver::{Driver, Platform, eventually, eventually_text};
+use e2e::passes::pointer;
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or locates until asked; Blitz has no Geolocation API.
@@ -108,32 +109,17 @@ fn the_web_locates_watches_and_reports_a_denial() {
         move_to(page, 52.52, 13.405).await.unwrap();
         reads(page, "#permission", "Granted").await.unwrap();
 
-        page.find_element("#locate")
-            .await
-            .unwrap()
-            .click()
-            .await
-            .unwrap();
+        pointer::click(page, "#locate").await.unwrap();
         reads(page, "#position", "52.520, 13.405 ±20")
             .await
             .unwrap();
         reads(page, "#pending", "false").await.unwrap();
 
-        page.find_element("#watch")
-            .await
-            .unwrap()
-            .click()
-            .await
-            .unwrap();
+        pointer::click(page, "#watch").await.unwrap();
         reads(page, "#watching", "true").await.unwrap();
         move_to(page, 48.857, 2.352).await.unwrap();
         reads(page, "#position", "48.857, 2.352 ±20").await.unwrap();
-        page.find_element("#watch")
-            .await
-            .unwrap()
-            .click()
-            .await
-            .unwrap();
+        pointer::click(page, "#watch").await.unwrap();
         reads(page, "#watching", "false").await.unwrap();
 
         // The Permissions API reports the revoke; a request then fails as denied.
@@ -141,12 +127,7 @@ fn the_web_locates_watches_and_reports_a_denial() {
             .await
             .unwrap();
         reads(page, "#permission", "Denied").await.unwrap();
-        page.find_element("#locate")
-            .await
-            .unwrap()
-            .click()
-            .await
-            .unwrap();
+        pointer::click(page, "#locate").await.unwrap();
         reads(page, "#error", "Some(Denied)").await.unwrap();
         reads(page, "#position", "48.857, 2.352 ±20").await.unwrap();
 

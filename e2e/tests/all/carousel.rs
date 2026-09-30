@@ -131,7 +131,9 @@ async fn an_arrow_at_the_fields_end_stays<D: Driver>(d: &mut D, _route: &str) ->
     let before = d.rect(FIRST_SLIDE).await?.x;
     d.press(keyboard::ARROW_RIGHT).await?;
     // A native scroll moves on a later frame and sends nothing to await before it.
-    linger(d, 10).await;
+    if !d.frame().await? {
+        linger(d, 10).await;
+    }
     let after = d.rect(FIRST_SLIDE).await?.x;
     ensure!(
         (after - before).abs() < 1.0 && d.is_focused(TEXT).await?,

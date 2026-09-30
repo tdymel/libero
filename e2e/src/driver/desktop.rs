@@ -437,6 +437,23 @@ impl Driver for Desktop {
         self.json("document.activeElement?.outerHTML.slice(0, 200) ?? 'nothing'")
     }
 
+    /// The bridge answers synchronously: a flag the frame sets, polled; then `settle`'s idle
+    /// rounds, as the app runs outside the WebView.
+    async fn frame(&mut self) -> Result<bool> {
+        self.run(
+            "window.__e2eFrame = false; requestAnimationFrame(() => { window.__e2eFrame = true; })",
+        )?;
+        let started = Instant::now();
+        while !self.json::<bool>("window.__e2eFrame")? {
+            if started.elapsed() > self.budget() {
+                bail!("the WebView drew no frame within {:?}", self.budget());
+            }
+            self.idle().await;
+        }
+        self.settle().await?;
+        Ok(true)
+    }
+
     async fn idle(&mut self) {
         std::thread::sleep(Duration::from_millis(25));
     }

@@ -41,6 +41,18 @@ pub(super) async fn json<T: serde::de::DeserializeOwned>(
     Ok(serde_json::from_str(&json)?)
 }
 
+/// Runs `gesture` with the page in front: a tab behind it draws about a frame a second, and
+/// each pointer move or touch event waits for one. Gestures take turns, as `frames::start`.
+async fn in_front(
+    page: &chromiumoxide::Page,
+    gesture: impl Future<Output = Result<()>>,
+) -> Result<()> {
+    let front = crate::frames::bring_to_front(page).await?;
+    let done = gesture.await;
+    front.release().await?;
+    done
+}
+
 pub(super) fn element(selector: &str) -> String {
     format!("document.querySelector({selector:?})")
 }
@@ -101,11 +113,12 @@ impl Driver for Web {
             x: from.x + dx,
             y: from.y + dy,
         };
-        pointer::drag(page, from, to, 8).await
+        in_front(page, pointer::drag(page, from, to, 8)).await
     }
 
     async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
-        pointer::long_press(&self.fixture.page, selector, ms).await
+        let page = &self.fixture.page;
+        in_front(page, pointer::long_press(page, selector, ms)).await
     }
 
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {
@@ -116,8 +129,9 @@ impl Driver for Web {
     }
 
     async fn pinch(&mut self, selector: &str, from: f64, to: f64) -> Result<()> {
-        let at = pointer::centre_of(&self.fixture.page, selector).await?;
-        pointer::pinch(&self.fixture.page, at, from, to, 8).await
+        let page = &self.fixture.page;
+        let at = pointer::centre_of(page, selector).await?;
+        in_front(page, pointer::pinch(page, at, from, to, 8)).await
     }
 
     async fn focus(&mut self, selector: &str) -> Result<()> {
@@ -193,6 +207,11 @@ impl Driver for Web {
 
     async fn settle(&mut self) -> Result<()> {
         crate::clock::settle(&self.fixture.page).await
+    }
+
+    async fn frame(&mut self) -> Result<bool> {
+        crate::clock::frame(&self.fixture.page).await?;
+        Ok(true)
     }
 
     async fn idle(&mut self) {

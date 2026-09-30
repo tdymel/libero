@@ -8,7 +8,7 @@ use chromiumoxide::cdp::browser_protocol::browser::{
 };
 use e2e::browser::{PERMISSIONS, block_on};
 use e2e::driver::{Driver, Platform, eventually, eventually_text};
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or opens until asked; Blitz has no capture API.
@@ -181,9 +181,9 @@ async fn until_a_chunk(page: &Page) -> Result<()> {
     wait::for_js_true(page, "window.__chunks > 0", "a recorded chunk").await
 }
 
+/// Not `Element::click`: its IntersectionObserver waits a frame, a second in a background tab.
 async fn click(page: &Page, selector: &str) -> Result<()> {
-    page.find_element(selector).await?.click().await?;
-    Ok(())
+    pointer::click(page, selector).await
 }
 
 #[test]
