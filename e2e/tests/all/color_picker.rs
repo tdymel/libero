@@ -367,6 +367,22 @@ async fn the_arrows_step_the_hue<D: Driver>(d: &mut D, _route: &str) -> Result<(
     .await
 }
 
+/// Todo 1545: 360 is hue 0, so End must stop the thumb at the right, not wrap it left.
+async fn end_keeps_the_hue_at_the_right<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(HUE).await?;
+    for (key, name) in [
+        (keyboard::END, "End"),
+        (keyboard::ARROW_RIGHT, "ArrowRight"),
+    ] {
+        d.press(key).await?;
+        eventually(d, &format!("{name} to leave the hue at 359"), async |d| {
+            Ok(d.attr(HUE, "aria-valuenow").await?.as_deref() == Some("359"))
+        })
+        .await?;
+    }
+    Ok(())
+}
+
 async fn a_swatch_click_picks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const GREEN: &str = "[aria-label='#40c057']";
     d.click(GREEN).await?;
@@ -402,6 +418,11 @@ e2e::scenario!(
     the_arrows_step_the_hue,
     "/color-picker",
     the_arrows_step_the_hue
+);
+e2e::scenario!(
+    end_keeps_the_hue_thumb_at_the_right,
+    "/color-picker",
+    end_keeps_the_hue_at_the_right
 );
 e2e::scenario!(
     a_click_on_a_swatch_picks_its_colour,

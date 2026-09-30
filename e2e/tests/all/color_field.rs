@@ -219,6 +219,40 @@ fn blur_on_unparsable_text_keeps_it_with_an_error() {
     });
 }
 
+/// Todo 1548: the default `fix_on_blur` reverts no color on blur, and says why.
+#[test]
+fn a_reverting_blur_says_the_error() {
+    block_on(async {
+        let fixture = Fixture::open("/color-field/alpha", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+            .await
+            .unwrap();
+        keyboard::type_text(page, "nope").await.unwrap();
+        page.evaluate("document.getElementById('after').focus()")
+            .await
+            .unwrap();
+        let error = "Not a valid color";
+        expect(
+            page,
+            &format!(
+                "(() => {{ const input = document.querySelector({INPUT:?}); \
+                 return document.activeElement.id === 'after' \
+                   && input.value !== 'nope' \
+                   && input.getAttribute('aria-invalid') !== 'true' \
+                   && [...document.querySelectorAll('[role=status]')].some(s => s.textContent === {error:?}); }})()"
+            ),
+            "a blur from unparsable text to revert it and announce the error",
+        )
+        .await;
+        fixture.console.assert_clean("a reverted color").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn expect(page: &chromiumoxide::Page, check: &str, what: &str) {
     if let Err(error) = wait::for_js_true(page, check, what).await {
         let focus: String = page

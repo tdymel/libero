@@ -35,6 +35,8 @@ input_from_str!(ColorFormat);
 const COLOR_PICKER_SWATCHES_WIDTH: CssVar = CssVar::new("--lsx-color-picker-swatches-width");
 /// The value's alpha, for the preview beside the alpha slider.
 const COLOR_PICKER_ALPHA: CssVar = CssVar::new("--lsx-color-picker-alpha");
+/// The hue slider's last step: 360 is the same hue as 0.
+const MAX_HUE: f64 = 359.0;
 
 static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
     let spacing = COLOR_PICKER_SPACING.value();
@@ -278,8 +280,9 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     };
     // One identity across renders, so a slider whose own value did not move -
     // the hue during a drag on the panel - skips the re-render.
+    // `ColorCode` wraps 360 to 0, which would snap the thumb from the right end to the left.
     let hue_input = use_callback(move |event: SliderChangeEvent<f64>| {
-        emit(event, ColorCode::with_hue);
+        emit(event, |color, hue| color.with_hue(hue.min(MAX_HUE)));
     });
     let alpha_input = use_callback(move |event: SliderChangeEvent<f64>| {
         emit(event, ColorCode::with_alpha);

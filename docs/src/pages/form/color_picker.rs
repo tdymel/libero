@@ -48,7 +48,7 @@ Text { size: "sm", "{alpha()}" }"#;
 
 const COLOR_SWATCH: &str = r#"ColorSwatch { color: ColorCode::hex(0x228be6) }
 ColorSwatch { color: "rgba(250, 82, 82, 0.4)".parse().unwrap() }
-ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, "✓" }"#;
+ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, aria_label: "Green", "✓" }"#;
 
 /// The preview prints the value in three formats under the picker, which is
 /// how the page shows that one `ColorCode` converts to every CSS form.
@@ -161,7 +161,11 @@ pub fn ColorPickerPage() -> Element {
                     "The saturation panel meets the 24px target size of WCAG 2.5.8 at every size.",
                     "The swatch equal to the value is pressed and checked.",
                 ])
-                .must(["Name swatches with `Swatches::labelled`. By default they are named by their hex, which a screen reader spells out."])
+                .must([
+                    "Name swatches with `Swatches::labelled`. By default they are named by their hex, which a screen reader spells out.",
+                    "Give a `ColorSwatch` with `onclick` an `aria-label`; without one it is just \"button\", and it warns.",
+                    "Name the color in text beside a plain `ColorSwatch`, or give it `role: \"img\"` and an `aria-label`: on its own it says nothing.",
+                ])
                 .limits(["The hue and alpha tracks meet the 24px target size of WCAG 2.5.8 from `md` up, not at `sm` or `xs`."]),
             lead: rsx! {
                 Text {
@@ -234,7 +238,7 @@ pub fn ColorPickerPage() -> Element {
                         Flex { direction: "row", gap: "sm", align: "center",
                             ColorSwatch { color: ColorCode::hex(0x228be6) }
                             ColorSwatch { color: ColorCode::rgba(250, 82, 82, 0.4) }
-                            ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, "✓" }
+                            ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, aria_label: "Green", "✓" }
                         }
                     },
                     _ => rsx! { ColorPickerDemo { values } },

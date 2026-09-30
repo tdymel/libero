@@ -106,6 +106,28 @@ fn a_searchable_field_meets_the_baseline() {
         .run();
 }
 
+/// Todo 1547: the focused search box draws an inset ring, not just the caret.
+async fn the_search_box_shows_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "the search box to take focus", async |d| {
+        d.is_focused(SEARCH).await
+    })
+    .await?;
+    eventually(
+        d,
+        "the focused search box to draw an inset ring",
+        async |d| Ok(d.style(SEARCH, "box-shadow").await?.contains("inset")),
+    )
+    .await
+}
+
+e2e::scenario!(
+    the_focused_search_box_draws_a_ring,
+    "/select/field",
+    the_search_box_shows_focus
+);
+
 /// `[active row is the selected one, the selected row's image, an unselected idle row's
 /// image]`.
 fn rows_js() -> String {

@@ -2,13 +2,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Part},
+        common::{HtmlTag, Part, inset_focus_ring_sx},
         form::{ComboboxState, DropdownPart, PreparedField},
         layout::BoxStyle,
     },
     hooks::ElementHandle,
     platform::{ElementApi, blur_counts},
     sx::{StaticSx, sx},
+    theme::FOCUS_RING_WIDTH,
 };
 
 /// The search box above the rows, as on `Select`. Not a field control, so it carries its own chrome.
@@ -26,6 +27,11 @@ pub(super) static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
         // The box's only boundary: 3:1, as a field frame (WCAG 1.4.11, todo 490).
         .border_color("muted.6")
         .selector("::placeholder", sx().color("text-dimmed"))
+        // Inset: the dropdown clips an outset ring (todo 1547).
+        .focus_visible(inset_focus_ring_sx(&format!(
+            "calc(-1 * {})",
+            FOCUS_RING_WIDTH.value()
+        )))
 });
 
 /// [`CASCADER_SEARCH_SX`]'s padding plus bottom border, for a drawn placeholder.

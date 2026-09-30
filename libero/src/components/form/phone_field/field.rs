@@ -5,7 +5,9 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     components::{
-        common::{ComboboxState, Glyph, HtmlTag, Input, Part, Parts, use_combobox},
+        common::{
+            ComboboxState, Glyph, HtmlTag, Input, Part, Parts, inset_focus_ring_sx, use_combobox,
+        },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX,
             field_parts_enum, field_props, use_bound, use_field, use_field_frame,
@@ -20,7 +22,7 @@ use crate::{
     localization::fill,
     platform::ElementApi,
     sx::{StaticSx, sx},
-    theme::Size,
+    theme::{FOCUS_RING_WIDTH, Size},
 };
 
 use super::countries::{self, COUNTRIES, Country};
@@ -78,6 +80,11 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         // The box's only boundary: 3:1, as a field frame (WCAG 1.4.11, todo 490).
         .border_color("muted.6")
         .selector("::placeholder", sx().color("text-dimmed"))
+        // Inset: the dropdown clips an outset ring (todo 1547).
+        .focus_visible(inset_focus_ring_sx(&format!(
+            "calc(-1 * {})",
+            FOCUS_RING_WIDTH.value()
+        )))
 });
 
 /// [`SEARCH_SX`]'s padding and bottom border, where a drawn placeholder sits.

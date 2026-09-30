@@ -338,12 +338,14 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             .is_some_and(|text| text.parse::<ColorCode>().is_err())
     };
     let blurred = move || {
-        if fix_on_blur || !unparsable() {
-            draft.set(None);
-        } else if !*rejected.peek() {
-            // Said once, so a blur after Enter does not repeat it.
+        let unparsable = unparsable();
+        // Said once, so a blur after Enter does not repeat it; a revert says it too (todo 1548).
+        if unparsable && !*rejected.peek() {
             rejected.set(true);
             announcer.say(labels.invalid.to_string());
+        }
+        if fix_on_blur || !unparsable {
+            draft.set(None);
         }
     };
     // Element 0 is the text input, 1 the dropdown; the box closes once focus

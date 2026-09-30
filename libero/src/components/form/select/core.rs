@@ -6,8 +6,8 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{
             ComboboxState, Glyph, HtmlTag, Input, Part, Parts, States, TOOLBAR_ITEM, ToolbarItem,
-            attr, focus_ring_sx, has_shortcut_modifier, navigation_chord, ring_overlay,
-            use_toolbar_item,
+            attr, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx, navigation_chord,
+            ring_overlay, use_toolbar_item,
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, clear_button,
@@ -23,7 +23,7 @@ use crate::{
     },
     platform::{ElementApi, blur_counts, logical_key},
     sx::{StaticSx, sx},
-    theme::Size,
+    theme::{FOCUS_RING_WIDTH, Size},
 };
 
 /// The chevron sits inside the control, so clicking it opens the list. A multi-select's trigger sits in `MULTI_VALUE_SX`'s flow.
@@ -125,6 +125,11 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         // The box's only boundary: 3:1, as a field frame (WCAG 1.4.11, todo 490).
         .border_color("muted.6")
         .selector("::placeholder", sx().color("text-dimmed"))
+        // Inset: the dropdown clips an outset ring (todo 1547).
+        .focus_visible(inset_focus_ring_sx(&format!(
+            "calc(-1 * {})",
+            FOCUS_RING_WIDTH.value()
+        )))
 });
 
 /// [`SEARCH_SX`]'s padding and bottom border, where a drawn placeholder sits.

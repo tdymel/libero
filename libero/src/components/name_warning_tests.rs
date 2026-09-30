@@ -7,9 +7,9 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup, Rating,
-        ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, Toolbar,
-        use_spotlight,
+        ActionIcon, Anchor, Checkbox, ColorCode, ColorSwatch, Dialog, Drawer, ProgressBar, Radio,
+        RadioGroup, Rating, ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions,
+        Switch, Toolbar, use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     utils::take_warnings,
@@ -296,6 +296,24 @@ fn an_action_icon_with_an_empty_label_warns() {
     ));
     assert!(!warns(
         || rsx! { LiberoProvider { ActionIcon { aria_label: "", "aria-labelledby": "copy", "x" } } },
+        prefix
+    ));
+}
+
+/// Todo 1549: only the clickable swatch is a button; a plain one is a picture.
+#[test]
+fn an_unnamed_clickable_swatch_warns() {
+    let prefix = "ColorSwatch:";
+    assert!(warns(
+        || rsx! { LiberoProvider { ColorSwatch { color: ColorCode::default(), onclick: |_| {} } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { ColorSwatch { color: ColorCode::default(), onclick: |_| {}, aria_label: "Blue" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { ColorSwatch { color: ColorCode::default() } } },
         prefix
     ));
 }

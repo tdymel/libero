@@ -162,7 +162,7 @@ fn ChipFieldsetPage() -> Element {
                     svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
                 }
                 // Todo 514: the other button-rooted components.
-                ColorSwatch { id: "fs-swatch", color: ColorCode::hex(0x40c057), onclick: move |_| {} }
+                ColorSwatch { id: "fs-swatch", color: ColorCode::hex(0x40c057), onclick: move |_| {}, aria_label: "Green" }
                 TreeItem { id: "fs-tree-item", "Item" }
                 div { id: "fs-phone", PhoneField { label: "Phone", value: "", oninput: move |_| {} } }
                 div { id: "fs-image", width: "32px", height: "32px",

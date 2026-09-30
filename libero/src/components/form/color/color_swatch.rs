@@ -3,12 +3,16 @@ use dioxus::prelude::*;
 use super::{ColorCode, color_slider::CHECKERBOARD};
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, Variables, base_props, shadow_sx, variables},
+        common::{
+            HtmlTag, Input, States, Variables, base_props, names_itself, shadow_sx,
+            use_name_warning, variables,
+        },
         layout::use_box,
     },
     hooks::use_theme,
     sx::{StaticSx, sx},
     theme::{COLOR_SWATCH_RADIUS, COLOR_SWATCH_SIZE, ColorSwatchDefaults, CssVar, Size},
+    tokens::HexColor,
 };
 
 const COLOR_SWATCH_COLOR: CssVar = CssVar::new("--lsx-color-swatch-color");
@@ -82,6 +86,10 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
     let size = props.size.copied_or(theme.color_swatch.size);
     let radius = props.radius.copied_or(theme.color_swatch.radius);
     let clickable = props.onclick.is_some();
+    use_name_warning(
+        !clickable || names_itself(&props.attributes),
+        "ColorSwatch: an `onclick` without an `aria-label`, so it is announced as just \"button\".",
+    );
 
     let states: Input<States> = props
         .states
@@ -117,6 +125,35 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
 /// Whether `color` is light enough that the children need to be black.
 fn on_light(color: ColorCode) -> bool {
     let (r, g, b, a) = color.to_rgba_channels();
-    // Mostly transparent shows the light checkerboard.
-    a < 0.5 || (r as u32 * 299 + g as u32 * 587 + b as u32 * 114) / 1000 >= 150
+    let rgb = ((r as u32) << 16) | ((g as u32) << 8) | b as u32;
+    // Mostly transparent shows the light checkerboard. Above 0.179 black out-contrasts white.
+    a < 0.5 || HexColor::new(rgb).relative_luminance() > 0.179
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 1544: white on these mid-light greens and cyans was under 3:1.
+    #[test]
+    fn the_mark_takes_the_colour_with_the_better_contrast() {
+        let black = HexColor::new(0x00_00_00);
+        let white = HexColor::new(0xFF_FF_FF);
+        for rgb in [
+            0x40_c0_57, 0x12_b8_86, 0x15_aa_bf, 0x22_8b_e6, 0xfa_52_52, 0xfd_7e_14, 0x79_50_f2,
+            0xff_ff_ff, 0x00_00_00, 0x86_8e_96,
+        ] {
+            let fill = HexColor::new(rgb);
+            let color = ColorCode::rgba((rgb >> 16) as u8, (rgb >> 8) as u8, rgb as u8, 1.0);
+            let (mark, other) = match on_light(color) {
+                true => (black, white),
+                false => (white, black),
+            };
+            assert!(
+                fill.contrast_ratio(mark) >= fill.contrast_ratio(other),
+                "{rgb:06x}"
+            );
+            assert!(fill.contrast_ratio(mark) >= 3.0, "{rgb:06x}");
+        }
+    }
 }

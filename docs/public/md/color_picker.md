@@ -157,6 +157,10 @@ explains how parts work. `ColorSwatch` is one element and has no parts.
 
 - Name swatches with `Swatches::labelled`. By default they are named by their
   hex, which a screen reader spells out.
+- Give a `ColorSwatch` with `onclick` an `aria-label`; without one it is just
+  "button", and it warns.
+- Name the color in text beside a plain `ColorSwatch`, or give it `role: "img"`
+  and an `aria-label`: on its own it says nothing.
 
 ### Limits
 
