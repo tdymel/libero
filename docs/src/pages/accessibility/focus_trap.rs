@@ -1,6 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, FocusTrap, Text};
+use libero::{
+    components::{Button, Flex, FocusTrap, Text},
+    hooks::use_focus_return,
+};
 
 const TRAPPED: &str = r#"Flex {
     direction: "row",
@@ -47,8 +50,9 @@ pub fn FocusTrapPage() -> Element {
                 Text {
                     "Keeps Tab and Shift+Tab cycling inside its children, as inside an open "
                     "dialog. It focuses its first focusable child on mount and adds no box of "
-                    "its own. Switch it on below, and Tab cycles First, Second and Third "
-                    "without reaching Before or After."
+                    "its own. Switch it on below, and Tab cycles First, Second, Third and "
+                    "Release without reaching Before or After. Release or Escape switches "
+                    "it off and puts focus back on the switch."
                 }
             },
             Demo {
@@ -60,34 +64,70 @@ pub fn FocusTrapPage() -> Element {
                     // nothing and `wrap_page` drops the component itself.
                     Control::switch("activate_focus_trap").code(|_, _| vec![]),
                 ],
-                render: move |values: DemoValues| {
-                    let trapped = rsx! {
-                        Flex {
-                            direction: "row",
-                            gap: "sm",
-                            Button { variant: "outlined", "First" }
-                            Button { variant: "outlined", "Second" }
-                            Button { variant: "outlined", "Third" }
-                        }
-                    };
-
-                    rsx! {
-                        Flex {
-                            direction: "column",
-                            gap: "sm",
-                            align: "flex-start",
-                            Button { variant: "text", "Before" }
-                            if values.str("activate_focus_trap") == "true" {
-                                FocusTrap { {trapped} }
-                            } else {
-                                {trapped}
-                            }
-                            Button { variant: "text", "After" }
-                        }
-                    }
+                render: move |values: DemoValues| rsx! {
+                    Preview { values }
                 },
                 wrap: Wrap(wrap_page),
             }
         }
     }
+}
+
+/// Before, the three buttons and After. On, the buttons sit in a trap that Release or
+/// Escape switches off, handing focus back to the switch (2.1.2, todo 1528).
+#[component]
+fn Preview(values: DemoValues) -> Element {
+    let back = use_focus_return();
+    let release = {
+        let values = values.clone();
+        move || {
+            values.set("activate_focus_trap", "false");
+            back.restore();
+        }
+    };
+    let on_escape = release.clone();
+    let on_click = release;
+
+    rsx! {
+        Flex {
+            direction: "column",
+            gap: "sm",
+            align: "flex-start",
+            Button { variant: "text", "Before" }
+            if values.str("activate_focus_trap") == "true" {
+                FocusTrap {
+                    Remember { onrender: move |_| back.remember_active() }
+                    Flex {
+                        direction: "row",
+                        gap: "sm",
+                        onkeydown: move |event: KeyboardEvent| {
+                            if event.key() == Key::Escape {
+                                on_escape();
+                            }
+                        },
+                        Button { variant: "outlined", "First" }
+                        Button { variant: "outlined", "Second" }
+                        Button { variant: "outlined", "Third" }
+                        Button { variant: "filled", onclick: move |_| on_click(), "Release" }
+                    }
+                }
+            } else {
+                Flex {
+                    direction: "row",
+                    gap: "sm",
+                    Button { variant: "outlined", "First" }
+                    Button { variant: "outlined", "Second" }
+                    Button { variant: "outlined", "Third" }
+                }
+            }
+            Button { variant: "text", "After" }
+        }
+    }
+}
+
+/// Remembers what held focus as the trap renders, before the trap's mount moves it.
+#[component]
+fn Remember(onrender: Callback) -> Element {
+    use_hook(|| onrender.call(()));
+    rsx! {}
 }

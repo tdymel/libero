@@ -114,7 +114,7 @@ pub fn HoverCardPage() -> Element {
                     .doc("Renders `children` alone, with no card."),
             ])],
             accessibility: a11y()
-                .key(["Tab"], "On the trigger: moves into the card, and past its last link to whatever follows the trigger.")
+                .key(["Tab"], "On the trigger's last link or button: moves into the card, and past its last link to whatever follows the trigger.")
                 .key(["Shift+Tab"], "Walks back.")
                 .key(["Escape"], "Closes the card and returns focus to the trigger if focus was inside. On the web it works wherever focus is.")
                 .handles([

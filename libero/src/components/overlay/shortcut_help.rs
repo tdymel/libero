@@ -3,12 +3,13 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        common::{Input, base_props},
+        common::{HtmlTag, Input, base_props, inset_focus_ring_sx},
+        layout::use_box,
         overlay::Dialog,
         typography::Kbd,
     },
-    hooks::{chord_keys, current_localization, use_css},
-    platform::mod_is_meta,
+    hooks::{chord_keys, current_localization, use_css, use_element},
+    platform::{ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
     utils::warn,
 };
@@ -23,9 +24,6 @@ static SHORTCUT_LIST_SX: StaticSx = StaticSx::new(|| {
         .row_gap("xs")
         .align_items("baseline")
         .margin("0")
-        // A long keymap scrolls inside, so the dialog fits a short window or panel.
-        .max_height("min(24rem, 60vh)")
-        .overflow_y("auto")
         .container(SHORTCUT_LIST)
         .selector("& > dd", sx().margin("0"))
         .container_query(
@@ -34,6 +32,13 @@ static SHORTCUT_LIST_SX: StaticSx = StaticSx::new(|| {
             sx().selector("& > dt, & > dd", sx().grid_column("1 / -1"))
                 .selector("& > dt:not(:first-child)", sx().margin_top("sm")),
         )
+});
+
+// A long keymap scrolls inside, so the dialog fits a short window or panel.
+static SHORTCUT_SCROLL_SX: StaticSx = StaticSx::new(|| {
+    sx().max_height("min(24rem, 60vh)")
+        .overflow_y("auto")
+        .focus_visible(inset_focus_ring_sx("-2px"))
 });
 
 /// A chord's keys from [`chord_keys`], one [`Kbd`] each, joined by " + ".
@@ -111,15 +116,46 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
             dd { "{shortcut.description}" }
         })
     });
+    let title = props.title.unwrap_or_else(|| words.title.to_string());
+
+    // A named tab stop only while it scrolls, so the keyboard can scroll it (todo 1615).
+    let scroll_element = use_element();
+    let mut overflows = use_signal(|| false);
+    let measure = move || {
+        if !scroll_element.is_mounted() {
+            return;
+        }
+        let (content, size) = (scroll_element.scroll_size(), scroll_element.dimensions());
+        spawn(async move {
+            if let (Ok(content), Ok(size)) = (content.await, size.await) {
+                let next = content.height > size.height + 1.0;
+                if next != *overflows.peek() {
+                    overflows.set(next);
+                }
+            }
+        });
+    };
+    let scrolls = overflows();
+    // `role=region` on the `dl` itself would drop its list semantics.
+    let scroll_box = use_box()
+        .framework_sx(&SHORTCUT_SCROLL_SX)
+        .prepare()
+        .element(&scroll_element)
+        .event("onresize", move |_: Event<ResizeData>| measure())
+        .attr("tabindex", scrolls.then_some("0"))
+        .attr("role", scrolls.then_some("region"))
+        .attr("aria-label", scrolls.then(|| title.clone()));
+
     rsx! {
         Dialog {
-            title: props.title.unwrap_or_else(|| words.title.to_string()),
+            title,
             class: props.class,
             sx: props.sx,
             states: props.states,
             attributes: props.attributes,
-            // Focusable, so the keyboard scrolls it: no row takes focus.
-            dl { class: list_class, tabindex: "0", {rows} }
+            {scroll_box.render(HtmlTag::Div, Vec::new(), rsx! {
+                dl { class: list_class, {rows} }
+            })}
         }
     }
 }

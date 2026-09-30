@@ -271,16 +271,20 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                     },
                     onfocusin: focus.focusin(0),
                     onfocusout: focus.focusout(0),
-                    onkeydown: move |event| trigger_tab(&event, open && placed, floating),
+                    onkeydown: move |event| trigger_tab(&event, open && placed, anchor, floating),
                     {props.children}
                 }
             },
         )
 }
 
-/// Tab on the trigger enters the card, which is portaled out of the Tab order.
-fn trigger_tab(event: &KeyboardEvent, open: bool, floating: ElementHandle) {
+/// Tab on the trigger's last focusable enters the card, which is portaled out of
+/// the Tab order; an earlier one Tabs on inside the trigger (todo 1614).
+fn trigger_tab(event: &KeyboardEvent, open: bool, anchor: ElementHandle, floating: ElementHandle) {
     if !open || event.key() != Key::Tab || event.modifiers().shift() {
+        return;
+    }
+    if !last_focusable(anchor).is_some_and(|last| last.is_focused()) {
         return;
     }
     let first = floating
@@ -295,8 +299,16 @@ fn trigger_tab(event: &KeyboardEvent, open: bool, floating: ElementHandle) {
     }
 }
 
-/// Tab past either end goes back via the trigger, so the browser's Tab moves on
-/// from there, not from the portal outlet. `Menu`'s `tab_out`.
+/// The trigger's last focusable: where the card sits in the Tab order.
+fn last_focusable(anchor: ElementHandle) -> Option<Box<dyn ElementApi>> {
+    anchor
+        .query_selector_all(FOCUSABLE_SELECTOR)
+        .ok()
+        .and_then(|items| items.into_iter().last())
+}
+
+/// Tab past either end goes back via the trigger's last focusable, so the browser's
+/// Tab moves on from there, not from the portal outlet. `Menu`'s `tab_out`.
 fn card_tab(event: &KeyboardEvent, anchor: ElementHandle, floating: ElementHandle) {
     if event.key() != Key::Tab {
         return;
@@ -312,7 +324,7 @@ fn card_tab(event: &KeyboardEvent, anchor: ElementHandle, floating: ElementHandl
     if !edge.is_some_and(|item| item.is_focused()) {
         return;
     }
-    let Ok(trigger) = anchor.query_selector(FOCUSABLE_SELECTOR) else {
+    let Some(trigger) = last_focusable(anchor) else {
         return;
     };
     if backwards {

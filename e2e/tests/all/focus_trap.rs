@@ -90,6 +90,36 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView")
 );
 
+const SWITCH: &str = "[aria-label='activate focus trap']";
+
+/// The docs demo's exit: Escape and Release each switch the trap off and hand
+/// focus back to the switch that mounted it (1528).
+async fn the_trap_lets_go<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(SWITCH).await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_focused(d, "#first", "the switch mounting the trap").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually_focused(d, SWITCH, "Escape in the trap").await?;
+    ensure!(!d.exists("#first").await?, "Escape left the trap mounted");
+
+    d.press(keyboard::SPACE).await?;
+    eventually_focused(d, "#first", "the switch mounting the trap again").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#release", "Tab to Release").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_focused(d, SWITCH, "Release").await?;
+    ensure!(!d.exists("#first").await?, "Release left the trap mounted");
+    Ok(())
+}
+
+e2e::scenario!(
+    escape_or_release_hands_focus_back_to_the_switch,
+    "/focus-trap/exit",
+    the_trap_lets_go,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
+
 /// Both traps used to answer the one press: focus skipped a stop and walked
 /// out into the outer trap.
 async fn a_nested_trap_moves_focus_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

@@ -68,7 +68,7 @@ Like every component, `HoverCard` also takes the shared props `sx`, `class`,
 
 | Key | Action |
 |---|---|
-| `Tab` | On the trigger: moves into the card, and past its last link to whatever follows the trigger. |
+| `Tab` | On the trigger's last link or button: moves into the card, and past its last link to whatever follows the trigger. |
 | `Shift+Tab` | Walks back. |
 | `Escape` | Closes the card and returns focus to the trigger if focus was inside. On the web it works wherever focus is. |
 

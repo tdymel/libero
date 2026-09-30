@@ -16,7 +16,32 @@ pub const ROUTES: Routes = &[
     ("/hover-card-text", || rsx! { TextTriggerPage {} }),
     ("/hover-card-sides", || rsx! { SidesPage {} }),
     ("/hover-card-select", || rsx! { SelectInCardPage {} }),
+    ("/hover-card-pair", || rsx! { PairTriggerPage {} }),
 ];
+
+/// A trigger holding two buttons: the card sits after the second (todo 1614).
+#[component]
+fn PairTriggerPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                content: rsx! {
+                    Flex { direction: "column", gap: "xs",
+                        Button { id: "card-first", variant: "outlined", "Profile" }
+                        Button { id: "card-last", variant: "outlined", "Follow" }
+                    }
+                },
+                Flex { gap: "xs",
+                    Button { id: "trigger", variant: "outlined", "Ada Lovelace" }
+                    Button { id: "trigger-second", variant: "outlined", "Remove" }
+                }
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
 
 /// A `Select` in the card, whose open list is a layer of its own (todo 348).
 #[component]
