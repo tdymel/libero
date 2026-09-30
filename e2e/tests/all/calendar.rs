@@ -48,7 +48,7 @@ fn a_disabled_day_grays_out_in_forced_colours() {
 #[test]
 fn the_keys_move_focus_through_the_grid() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/calendar", viewport).await.unwrap();
             let page = &fixture.page;
@@ -135,7 +135,8 @@ fn the_keys_move_focus_through_the_grid() {
                 .assert_clean(&format!("the calendar keys at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

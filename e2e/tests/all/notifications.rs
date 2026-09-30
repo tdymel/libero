@@ -59,6 +59,21 @@ const ANNOUNCEMENTS: &str = r#"(text) => {
     return document.querySelectorAll('[aria-live]').length;
 }"#;
 
+/// Records in `window.__longReal` (once set to a list) each real timeout or interval of 1 s
+/// or more, with its caller. Installed before the held clock, so a held delay never reaches
+/// it. A close that bypasses timers altogether (a frame loop reading the time) goes unseen.
+const LONG_REAL_TIMERS: &str = r#"(() => {
+    const set = window.setTimeout, every = window.setInterval;
+    const note = (kind, ms) => {
+        if (!window.__longReal || !(ms >= 1000)) return;
+        const caller = (new Error().stack || '').split('\n').slice(3, 6).join(' <- ');
+        window.__longReal.push(`${kind}(${ms}) from ${caller}`);
+    };
+    window.setTimeout = function (fn, ms, ...args) { note('setTimeout', ms); return set.call(window, fn, ms, ...args); };
+    window.setInterval = function (fn, ms, ...args) { note('setInterval', ms); return every.call(window, fn, ms, ...args); };
+    return true;
+})()"#;
+
 async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expression: String) -> T {
     page.evaluate(expression.as_str())
         .await
@@ -72,7 +87,7 @@ async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expressi
 #[test]
 fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/notifications", viewport).await.unwrap();
             let page = &fixture.page;
@@ -82,6 +97,7 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
                 serde_json::to_string(TIMED_MESSAGE).unwrap()
             );
 
+            let _: bool = js(page, LONG_REAL_TIMERS.into()).await;
             let _: bool = js(
                 page,
                 format!("(({HELD_CLOCK})([{AUTO_CLOSE_MS}, {EXIT_MS}]), true)"),
@@ -99,6 +115,18 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
 
             // Appears.
             keyboard::tab_to(page, TIMED_TRIGGER, 10).await.unwrap();
+            // The probe sees a real timer of its own through the held clock's wrapper.
+            let seen: usize = js(
+                page,
+                "(window.__longReal = [], clearTimeout(setTimeout(() => {}, 1001)), \
+                 window.__longReal.splice(0).length)"
+                    .into(),
+            )
+            .await;
+            assert_eq!(
+                seen, 1,
+                "at {at}: the long real timer probe saw {seen} timers"
+            );
             keyboard::press(page, keyboard::ENTER).await.unwrap();
             wait::for_js_true(
                 page,
@@ -132,26 +160,14 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
                 "at {at}: the exit is armed before the auto-close fired"
             );
 
-            // Control on the held clock: once, the real delay passes and the notification must
-            // stay, or a timer bypassing the wrapper closes it on its own (~4.5 s).
-            if viewport == Viewport::ALL[0] {
-                tokio::time::sleep(std::time::Duration::from_millis(
-                    u64::from(AUTO_CLOSE_MS) + 500,
-                ))
-                .await;
-                let shown: usize = js(page, format!("{item}.length")).await;
-                assert_eq!(
-                    shown, 1,
-                    "the notification closed after its real {AUTO_CLOSE_MS}ms, so its timer \
-                     did not go through the held clock and nothing here is being driven"
-                );
-                let still_armed: usize =
-                    js(page, format!("window.__heldClock.armed({AUTO_CLOSE_MS})")).await;
-                assert_eq!(
-                    still_armed, 1,
-                    "at {at}: the held auto-close timer vanished"
-                );
-            }
+            // Control on the held clock: no long real timer was armed since the press, so
+            // none can close it behind the held one (todo 1638, was a 4.8 s real wait).
+            let long_real: Vec<String> = js(page, "window.__longReal".into()).await;
+            assert!(
+                long_real.is_empty(),
+                "at {at}: real timers of 1 s or more armed past the held clock, so it does \
+                 not drive everything that could close the notification: {long_real:#?}"
+            );
 
             // Announced once, without taking focus (WCAG 4.1.3).
             e2e::passes::focus::assert_focused(page, TIMED_TRIGGER, "showing a notification")
@@ -212,7 +228,8 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
                 .assert_clean(&format!("the notification timeline at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -325,7 +342,7 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
 #[test]
 fn its_close_button_takes_presses_in_a_24px_box() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/notifications", viewport).await.unwrap();
             let page = &fixture.page;
 
@@ -347,7 +364,8 @@ fn its_close_button_takes_presses_in_a_24px_box() {
             target_size::assert_sizes(CLOSE, &measured).unwrap();
 
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -356,7 +374,7 @@ fn its_close_button_takes_presses_in_a_24px_box() {
 #[test]
 fn closing_one_hands_focus_on_and_back_out_of_an_empty_stack() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/notifications", viewport).await.unwrap();
             let page = &fixture.page;
@@ -420,7 +438,8 @@ fn closing_one_hands_focus_on_and_back_out_of_an_empty_stack() {
                 .assert_clean(&format!("closing notifications at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -480,7 +499,7 @@ fn a_contained_host_unmounting_hands_focus_back_out() {
     const DROP: &str = ".drop-host";
 
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/notifications-host", viewport)
                 .await
@@ -514,7 +533,8 @@ fn a_contained_host_unmounting_hands_focus_back_out() {
                 .assert_clean(&format!("unmounting the host at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -525,7 +545,7 @@ fn a_contained_host_unmounting_with_its_opener_focuses_the_control_before_it() {
     const DROP: &str = ".drop-host";
 
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/notifications-host-inside", viewport)
                 .await
@@ -558,7 +578,8 @@ fn a_contained_host_unmounting_with_its_opener_focuses_the_control_before_it() {
                 .assert_clean(&format!("unmounting the host at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -569,7 +590,7 @@ fn clearing_with_focus_inside_hands_focus_back_out() {
     const CLEAR: &str = ".clear-all";
 
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/notifications-clear", viewport)
                 .await
@@ -607,7 +628,8 @@ fn clearing_with_focus_inside_hands_focus_back_out() {
                 .assert_clean(&format!("clearing notifications at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

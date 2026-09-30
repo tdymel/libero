@@ -71,7 +71,7 @@ fn it_meets_the_baseline() {
 #[test]
 fn it_honours_the_overlay_contract() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/spotlight", viewport).await.unwrap();
 
             Overlay {
@@ -89,7 +89,8 @@ fn it_honours_the_overlay_contract() {
                 .assert_clean(&format!("the spotlight contract at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -399,7 +400,7 @@ fn a_long_label_wraps_in_its_row() {
 #[test]
 fn a_tall_spotlight_stays_reachable() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/spotlight-tall", viewport).await.unwrap();
             let page = &fixture.page;
             keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
@@ -423,6 +424,7 @@ fn a_tall_spotlight_stays_reachable() {
                 .assert_clean(&format!("/spotlight-tall at {name}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }

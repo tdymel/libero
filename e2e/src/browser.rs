@@ -41,6 +41,15 @@ impl Viewport {
     }
 }
 
+/// Runs `run` at both viewports at once, as `Suite` runs its pages: each waits mostly
+/// on the browser. A panic in either fails the test.
+pub async fn at_every_viewport<T>(run: impl AsyncFn(Viewport) -> T) -> [T; 2] {
+    let _pages = page_permit(Viewport::ALL.len()).await;
+    let [first, second] = Viewport::ALL;
+    let (first, second) = futures::join!(run(first), run(second));
+    [first, second]
+}
+
 /// The colour scheme a page is opened under, through the system case:
 /// `prefers-color-scheme`, which is what an app naming no theme follows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

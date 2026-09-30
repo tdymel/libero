@@ -10,31 +10,41 @@ use e2e::{Fixture, Viewport, wait};
 /// `is_err()` also passes on a check that gave up earlier for another reason.
 async fn must_fail<F, Fut>(route: &str, what: &str, because: &str, check: F)
 where
-    F: FnOnce(Fixture) -> Fut,
+    F: Fn(Fixture) -> Fut,
     Fut: std::future::Future<Output = (Fixture, anyhow::Result<()>)>,
 {
-    let fixture = Fixture::open(route, Viewport::Desktop)
-        .await
-        .unwrap_or_else(|e| panic!("opening {route}: {e}"));
+    // A short budget first; a wrong reason may be a setup step timed out, so it reruns longer.
+    let mut quick = None;
+    for share in [wait::QUICK_FAILURE_SHARE, 3] {
+        let fixture = Fixture::open(route, Viewport::Desktop)
+            .await
+            .unwrap_or_else(|e| panic!("opening {route}: {e}"));
 
-    let (fixture, outcome) = wait::expecting_failure(check(fixture)).await;
+        let (fixture, outcome) = wait::expecting_failure_in(share, check(fixture)).await;
 
-    let _ = fixture.close().await;
+        let _ = fixture.close().await;
 
-    match outcome {
-        Ok(()) => panic!(
-            "{what} passed against {route}, which is deliberately broken. \
-             The pass is not detecting what it claims to detect, and every \
-             component relying on it is unguarded."
-        ),
-        Err(error) => {
-            let error = format!("{error:#}");
-            assert!(
-                error.contains(because),
-                "{what} failed on {route}, but not for the reason the fixture \
-                 breaks.\n  expected: {because:?}\n  got: {error}"
-            );
-            println!("{what} correctly failed on {route}: {error}");
+        match outcome {
+            Ok(()) => panic!(
+                "{what} passed against {route}, which is deliberately broken. \
+                 The pass is not detecting what it claims to detect, and every \
+                 component relying on it is unguarded."
+            ),
+            Err(error) => {
+                let error = format!("{error:#}");
+                if error.contains(because) {
+                    println!("{what} correctly failed on {route}: {error}");
+                    return;
+                }
+                if let Some(quick) = &quick {
+                    panic!(
+                        "{what} failed on {route}, but not for the reason the fixture \
+                         breaks.\n  expected: {because:?}\n  got: {error}\n  at the short \
+                         budget: {quick}"
+                    );
+                }
+                quick = Some(error);
+            }
         }
     }
 }

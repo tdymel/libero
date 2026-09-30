@@ -159,7 +159,7 @@ fn it_meets_the_baseline() {
 #[test]
 fn a_drag_leaves_the_divider_focused_for_the_arrow_keys() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/splitter", viewport).await.unwrap();
             let page = &fixture.page;
@@ -196,7 +196,8 @@ fn a_drag_leaves_the_divider_focused_for_the_arrow_keys() {
                 .assert_clean(&format!("a splitter drag at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

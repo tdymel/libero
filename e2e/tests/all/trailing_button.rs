@@ -69,14 +69,17 @@ e2e::scenario!(
 
 #[test]
 fn tab_out_past_the_clear_button_closes_the_list() {
+    const ROUTES: [&str; 5] = [
+        "/trailing-button/select",
+        "/trailing-button/multi-select",
+        "/trailing-button/autocomplete",
+        "/trailing-button/cascader",
+        "/trailing-button/tags-field",
+    ];
+    // The pages run at once, as `Suite`'s do.
     block_on(async {
-        for route in [
-            "/trailing-button/select",
-            "/trailing-button/multi-select",
-            "/trailing-button/autocomplete",
-            "/trailing-button/cascader",
-            "/trailing-button/tags-field",
-        ] {
+        let _pages = e2e::browser::page_permit(ROUTES.len()).await;
+        futures::future::join_all(ROUTES.map(async |route| {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
 
@@ -100,7 +103,8 @@ fn tab_out_past_the_clear_button_closes_the_list() {
 
             fixture.console.assert_clean(route).unwrap();
             fixture.close().await.unwrap();
-        }
+        }))
+        .await;
     });
 }
 

@@ -457,7 +457,7 @@ fn a_click_on_the_label_focuses_the_trigger() {
 #[test]
 fn the_keyboard_walks_the_levels() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/cascader", viewport).await.unwrap();
             let page = &fixture.page;
@@ -560,7 +560,8 @@ fn the_keyboard_walks_the_levels() {
                 .assert_clean(&format!("the cascader keys at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

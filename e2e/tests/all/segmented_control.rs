@@ -112,7 +112,7 @@ fn it_meets_the_baseline() {
 #[test]
 fn it_honours_the_radio_group_contract() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/segmented-control", viewport).await.unwrap();
 
             RadioSet {
@@ -132,7 +132,8 @@ fn it_honours_the_radio_group_contract() {
                 ))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

@@ -234,7 +234,7 @@ fn it_meets_the_baseline() {
 #[test]
 fn the_thumb_tracks_a_drag() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/slider", viewport).await.unwrap();
 
             // Drag right with intermediate moves: a bare press and release never reaches
@@ -273,7 +273,8 @@ fn the_thumb_tracks_a_drag() {
                 .assert_clean(&format!("a drag at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -510,7 +511,7 @@ fn the_thumb_moves_with_the_arrow_keys() {
 #[test]
 fn the_thumb_takes_the_pointer_over_24px() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/slider", viewport).await.unwrap();
             let centre = pointer::centre_of(&fixture.page, THUMB).await.unwrap();
 
@@ -549,7 +550,8 @@ fn the_thumb_takes_the_pointer_over_24px() {
                 )
             });
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

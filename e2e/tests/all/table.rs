@@ -1113,7 +1113,7 @@ fn a_header_click_sorts_and_flips_the_rows() {
 #[test]
 fn the_sort_button_keeps_focus_and_draws_the_library_ring() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/table", viewport).await.unwrap();
             let page = &fixture.page;
@@ -1144,7 +1144,8 @@ fn the_sort_button_keeps_focus_and_draws_the_library_ring() {
 
             fixture.console.assert_clean("sorting by keyboard").unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -1630,7 +1631,7 @@ async fn a_focused_row_stays_below_the_header<D: Driver>(d: &mut D, _route: &str
     d.focus("tbody tr:nth-child(1) input").await?;
     for _ in 0..30 {
         d.press(keyboard::TAB).await?;
-        linger(d, 4).await;
+        d.settle().await?;
     }
     // Polls each step instead of a fixed `linger(d, 100)`, 2.5 s per Tab and
     // 150 s of the table unit (823). The page may scroll a frame after the focus.

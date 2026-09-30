@@ -37,7 +37,7 @@ fn it_meets_the_baseline() {
 #[test]
 fn it_honours_the_overlay_contract() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/lightbox", viewport).await.unwrap();
 
             Overlay {
@@ -55,7 +55,8 @@ fn it_honours_the_overlay_contract() {
                 .assert_clean(&format!("the lightbox contract at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -137,7 +138,7 @@ fn the_current_thumbnail_shows_in_forced_colours() {
 #[test]
 fn arrows_move_the_picture_and_tab_skips_inert_slides() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/lightbox", viewport).await.unwrap();
             arrows_and_tab(&fixture.page)
                 .await
@@ -147,7 +148,8 @@ fn arrows_move_the_picture_and_tab_skips_inert_slides() {
                 .assert_clean(&format!("the lightbox arrows at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -766,13 +768,14 @@ async fn click_pan(page: &Page) -> Result<()> {
 #[test]
 fn the_current_picture_is_centred_in_the_viewport() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/lightbox", viewport).await.unwrap();
             centred(&fixture.page)
                 .await
                 .unwrap_or_else(|e| panic!("at {}: {e}", viewport.name()));
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -829,6 +832,7 @@ async fn assert_centred(page: &Page, index: usize) -> Result<()> {
 #[test]
 fn a_gallery_swap_jumps_and_fetches_only_around_the_new_index() {
     block_on(async {
+        // One at a time: a fetch the other page made first may be served without an entry.
         for viewport in Viewport::ALL {
             let fixture = Fixture::open("/lightbox", viewport).await.unwrap();
             gallery_swap(&fixture.page, viewport)
@@ -896,17 +900,22 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     wait_showing(page, 2).await?;
     wait_picture_focused(page, 2).await?;
     // Past any smooth scroll (about 300ms from 5 to 2): the track holds still
-    // between two polls, and every eager picture of the new gallery has loaded.
+    // between two polls, and every eager picture of the new gallery has loaded. At desktop
+    // also its resource entry: `complete` came before it under load (fetched [], 1513).
+    let timed = viewport == Viewport::Desktop;
     wait::for_js_true(
         page,
-        "(() => { const track = [...document.querySelectorAll('[role=dialog] *')] \
-            .filter(el => el.querySelector(':scope [data-lightbox-frame]') && el.scrollWidth > el.clientWidth) \
-            .pop(); \
-          const still = !!track && window.__swapLeft === track.scrollLeft; \
-          window.__swapLeft = track?.scrollLeft; \
-          return still && [...document.querySelectorAll('[role=dialog] img')] \
-            .filter(img => img.src.endsWith('?second') && img.loading !== 'lazy') \
-            .every(img => img.complete); })()",
+        &format!(
+            "(() => {{ const track = [...document.querySelectorAll('[role=dialog] *')] \
+                .filter(el => el.querySelector(':scope [data-lightbox-frame]') && el.scrollWidth > el.clientWidth) \
+                .pop(); \
+              const still = !!track && window.__swapLeft === track.scrollLeft; \
+              window.__swapLeft = track?.scrollLeft; \
+              const eager = [...document.querySelectorAll('[role=dialog] img')] \
+                .filter(img => img.src.endsWith('?second') && img.loading !== 'lazy'); \
+              return still && eager.length > 0 && eager.every(img => img.complete \
+                  && (!{timed} || performance.getEntriesByName(img.src).length > 0)); }})()"
+        ),
         "the swapped track to settle and its eager pictures to load",
     )
     .await?;
@@ -1059,7 +1068,7 @@ fn the_options_sx_and_parts_style_the_viewer() {
 #[test]
 fn a_tall_lightbox_stays_reachable() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/lightbox-tall", viewport).await.unwrap();
             let page = &fixture.page;
             pointer::click(page, TRIGGER).await.unwrap();
@@ -1082,6 +1091,7 @@ fn a_tall_lightbox_stays_reachable() {
                 .assert_clean(&format!("/lightbox-tall at {name}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }

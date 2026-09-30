@@ -6,19 +6,19 @@ use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
 tokio::task_local! {
-    static EXPECTING_FAILURE: ();
+    static EXPECTING_FAILURE: u32;
 }
 
 /// `E2E_TIMEOUT_MS`, default 15 s: the right budget depends on machine load.
-/// A third of it inside [`expecting_failure`].
+/// A share of it inside [`expecting_failure`].
 pub(crate) fn timeout() -> Duration {
     let budget = std::env::var("E2E_TIMEOUT_MS")
         .ok()
         .and_then(|v| v.parse().ok())
         .map(Duration::from_millis)
         .unwrap_or(Duration::from_secs(15));
-    match EXPECTING_FAILURE.try_with(|_| ()) {
-        Ok(()) => budget / 3,
+    match EXPECTING_FAILURE.try_with(|share| *share) {
+        Ok(share) => budget / share,
         Err(_) => budget,
     }
 }
@@ -26,7 +26,16 @@ pub(crate) fn timeout() -> Duration {
 /// Runs a check meant to fail on a planted defect: a defect never heals, so the wait that
 /// catches it need not run out the full budget (12 planted checks spent 15 s each on it).
 pub async fn expecting_failure<F: std::future::Future>(check: F) -> F::Output {
-    EXPECTING_FAILURE.scope((), check).await
+    expecting_failure_in(3, check).await
+}
+
+/// The share a planted check tries first: 1 s of the default 15 s.
+pub const QUICK_FAILURE_SHARE: u32 = 15;
+
+/// [`expecting_failure`] with every wait at `1 / share` of the budget. A short share can
+/// time out a setup step under load, so retry a wrong reason at the share of 3.
+pub async fn expecting_failure_in<F: std::future::Future>(share: u32, check: F) -> F::Output {
+    EXPECTING_FAILURE.scope(share.max(1), check).await
 }
 
 const POLL: Duration = Duration::from_millis(25);

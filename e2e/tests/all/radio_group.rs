@@ -41,7 +41,7 @@ fn it_meets_the_baseline() {
 #[test]
 fn it_honours_the_radio_group_contract() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/radio-group", viewport).await.unwrap();
 
             RadioSet {
@@ -58,7 +58,8 @@ fn it_honours_the_radio_group_contract() {
                 .assert_clean(&format!("the radio group contract at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -206,7 +207,7 @@ e2e::scenario!(
 #[test]
 fn its_rows_are_undersized_so_the_spacing_exception_is_load_bearing() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/radio-group", viewport).await.unwrap();
             let heights: Vec<f64> = fixture
                 .page
@@ -234,7 +235,8 @@ fn its_rows_are_undersized_so_the_spacing_exception_is_load_bearing() {
                 );
             }
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

@@ -33,13 +33,13 @@ impl Overlay<'_> {
         }
 
         keyboard::press(page, keyboard::ESCAPE).await?;
-        let focus_returned = self.wait_for_close_signal(page).await?;
+        let focus_waited = self.wait_for_close_signal(page).await?;
 
         // Read at the close signal: waiting for hidden first masked a phantom panel (review 7, E6).
         dismissal::assert_gone_from_at(page, self.panel).await?;
 
         // Given time: a component may return focus once its exit has ended.
-        if !focus_returned {
+        if !focus_waited {
             let _ = self.wait_for_focus_on_trigger(page).await;
         }
         focus::assert_focused(page, self.trigger, "Escape closing the overlay").await?;
@@ -47,7 +47,7 @@ impl Overlay<'_> {
     }
 
     /// Waits for `aria-expanded="false"`, or for a dialog, for focus on the trigger.
-    /// Returns whether focus is already back.
+    /// Returns whether focus has had its wait already (a second one doubled a failing run).
     async fn wait_for_close_signal(&self, page: &Page) -> Result<bool> {
         let trigger = serde_json::to_string(self.trigger)?;
         let has_state: bool = page
@@ -68,7 +68,8 @@ impl Overlay<'_> {
             .await?;
             return Ok(false);
         }
-        Ok(self.wait_for_focus_on_trigger(page).await.is_ok())
+        let _ = self.wait_for_focus_on_trigger(page).await;
+        Ok(true)
     }
 
     async fn wait_for_focus_on_trigger(&self, page: &Page) -> Result<()> {

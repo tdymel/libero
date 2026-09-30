@@ -35,7 +35,7 @@ fn it_meets_the_baseline() {
 #[test]
 fn it_honours_the_overlay_contract() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/menu", viewport).await.unwrap();
 
             Overlay {
@@ -53,7 +53,8 @@ fn it_honours_the_overlay_contract() {
                 .assert_clean(&format!("the menu contract at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

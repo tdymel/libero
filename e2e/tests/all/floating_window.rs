@@ -57,7 +57,7 @@ fn it_meets_the_baseline() {
 #[test]
 fn it_honours_the_overlay_contract() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/floating-window", viewport).await.unwrap();
 
             Overlay {
@@ -77,7 +77,8 @@ fn it_honours_the_overlay_contract() {
                 .assert_clean(&format!("the window contract at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -997,7 +998,7 @@ fn menu_parts_style_the_portaled_menu() {
 #[test]
 fn a_tall_window_stays_reachable() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/floating-window-tall", viewport)
                 .await
                 .unwrap();
@@ -1022,6 +1023,7 @@ fn a_tall_window_stays_reachable() {
                 .assert_clean(&format!("/floating-window-tall at {name}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }

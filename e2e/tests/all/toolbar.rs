@@ -381,7 +381,7 @@ fn it_meets_the_baseline() {
 #[test]
 fn it_honours_the_roving_tabindex_contract() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             for (route, orientation, wraps) in [
                 ("/toolbar", Orientation::Horizontal, true),
                 ("/toolbar-vertical", Orientation::Vertical, false),
@@ -403,6 +403,7 @@ fn it_honours_the_roving_tabindex_contract() {
                     .unwrap();
                 fixture.close().await.unwrap();
             }
-        }
+        })
+        .await;
     });
 }

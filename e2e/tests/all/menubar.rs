@@ -118,7 +118,7 @@ fn it_meets_the_baseline() {
 #[test]
 fn its_bar_honours_the_roving_tabindex_contract() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/menubar", viewport).await.unwrap();
 
             RovingTabindex {
@@ -136,14 +136,15 @@ fn its_bar_honours_the_roving_tabindex_contract() {
                 .assert_clean(&format!("the menubar contract at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
 #[test]
 fn its_menu_honours_the_overlay_contract() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/menubar", viewport).await.unwrap();
 
             Overlay {
@@ -162,7 +163,8 @@ fn its_menu_honours_the_overlay_contract() {
                 .assert_clean(&format!("the menubar menu at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

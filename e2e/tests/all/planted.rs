@@ -12,36 +12,45 @@ use crate::carousel;
 /// run `check`, and require it to fail with an error containing `because`.
 async fn must_fail<F, Fut>(route: &str, defect: Option<&str>, because: &str, check: F)
 where
-    F: FnOnce(Fixture) -> Fut,
+    F: Fn(Fixture) -> Fut,
     Fut: std::future::Future<Output = (Fixture, anyhow::Result<()>)>,
 {
-    let fixture = Fixture::open(route, Viewport::Desktop)
-        .await
-        .unwrap_or_else(|e| panic!("opening {route}: {e}"));
-    if let Some(defect) = defect {
-        fixture
-            .page
-            .evaluate(defect)
+    // A short budget first; a wrong reason may be a setup step timed out, so it reruns longer.
+    let mut quick = None;
+    for share in [wait::QUICK_FAILURE_SHARE, 3] {
+        let fixture = Fixture::open(route, Viewport::Desktop)
             .await
-            .unwrap_or_else(|e| panic!("planting the defect on {route}: {e}"));
-    }
+            .unwrap_or_else(|e| panic!("opening {route}: {e}"));
+        if let Some(defect) = defect {
+            fixture
+                .page
+                .evaluate(defect)
+                .await
+                .unwrap_or_else(|e| panic!("planting the defect on {route}: {e}"));
+        }
 
-    let (fixture, outcome) = wait::expecting_failure(check(fixture)).await;
-    let _ = fixture.close().await;
+        let (fixture, outcome) = wait::expecting_failure_in(share, check(fixture)).await;
+        let _ = fixture.close().await;
 
-    match outcome {
-        Ok(()) => panic!(
-            "the pass stayed green on {route} with a defect planted. It cannot see the \
-             defect it exists for on this component."
-        ),
-        Err(error) => {
-            let error = format!("{error:#}");
-            assert!(
-                error.contains(because),
-                "the pass failed on {route}, but not for the planted reason.\n  expected: \
-                 {because:?}\n  got: {error}"
-            );
-            println!("planted defect on {route} correctly caught: {error}");
+        match outcome {
+            Ok(()) => panic!(
+                "the pass stayed green on {route} with a defect planted. It cannot see the \
+                 defect it exists for on this component."
+            ),
+            Err(error) => {
+                let error = format!("{error:#}");
+                if error.contains(because) {
+                    println!("planted defect on {route} correctly caught: {error}");
+                    return;
+                }
+                if let Some(quick) = &quick {
+                    panic!(
+                        "the pass failed on {route}, but not for the planted reason.\n  \
+                         expected: {because:?}\n  got: {error}\n  at the short budget: {quick}"
+                    );
+                }
+                quick = Some(error);
+            }
         }
     }
 }

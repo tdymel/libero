@@ -13,7 +13,7 @@ const HOURS: &str = "#digital [data-column='Hours']";
 #[test]
 fn a_digital_column_turns_by_keys_presses_wheel_and_drag() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/time-picker", viewport).await.unwrap();
             let page = &fixture.page;
@@ -86,7 +86,8 @@ fn a_digital_column_turns_by_keys_presses_wheel_and_drag() {
                 .assert_clean(&format!("the digital clock at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -155,7 +156,7 @@ fn the_date_time_range_steps_meet_the_baseline() {
 #[test]
 fn a_date_time_range_takes_the_days_then_both_times() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/time-picker/range", viewport).await.unwrap();
             let page = &fixture.page;
@@ -240,7 +241,8 @@ fn a_date_time_range_takes_the_days_then_both_times() {
                 .assert_clean(&format!("the range steps at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -282,7 +284,7 @@ async fn wheel(page: &chromiumoxide::Page, selector: &str, dy: f64) {
 #[test]
 fn an_analog_pick_takes_the_hour_then_the_minute() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/time-picker", viewport).await.unwrap();
             let page = &fixture.page;
@@ -308,7 +310,8 @@ fn an_analog_pick_takes_the_hour_then_the_minute() {
                 .assert_clean(&format!("the analog picks at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

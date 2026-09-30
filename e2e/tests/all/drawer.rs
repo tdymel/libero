@@ -191,7 +191,7 @@ fn a_wide_drawer_stays_inside_a_narrow_viewport() {
 #[test]
 fn it_honours_the_overlay_contract() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/drawer", viewport).await.unwrap();
 
             Overlay {
@@ -209,6 +209,7 @@ fn it_honours_the_overlay_contract() {
                 .assert_clean(&format!("the drawer contract at {}", viewport.name()))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
