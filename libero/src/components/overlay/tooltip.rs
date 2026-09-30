@@ -150,6 +150,9 @@ base_props! {
 
 /// A hover and keyboard-focus label for its `children`.
 ///
+/// The bubble carries `data-closing` while the pointer has left and `close_delay` counts down;
+/// the pointer coming back or the close firing removes it.
+///
 /// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Button, Tooltip};
@@ -440,6 +443,7 @@ fn TooltipBubble(
             .element(&floating)
             .attr("role", "tooltip")
             .attr("id", tooltip.label_id.clone())
+            .attr("data-closing", hover.closing())
             .event("onmouseenter", move |_: MouseEvent| hover.hover(true, 0))
             .event("onmouseleave", move |_: MouseEvent| {
                 hover.hover(false, close_delay)

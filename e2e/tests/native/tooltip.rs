@@ -1,8 +1,6 @@
 //! `Tooltip` under Blitz's hit-testing and paint: bubble and bridge take presses, a padded
 //! block's trigger hovers, a stacking scroller clips. The rest are shared scenarios.
 
-use std::time::Duration;
-
 use dioxus::prelude::*;
 use e2e::native::mount;
 use libero::components::{Button, Tooltip};
@@ -98,8 +96,10 @@ fn hover_opens_it_inside_a_padded_block() {
     }
     let mut page = mount(padded);
     page.hover(TRIGGER);
-    page.wait(Duration::from_millis(100));
-    assert!(page.exists(OPEN), "hovering did not open it");
+    assert!(
+        page.wait_for(|page| page.exists(OPEN)),
+        "hovering did not open it"
+    );
 }
 
 /// That `z-index` paints past a plain scroller's clip; a stacking-context

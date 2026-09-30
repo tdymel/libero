@@ -17,8 +17,8 @@ fn it_meets_the_baseline() {
         .focusable("#link")
         .targets("#rust")
         .targets("#action")
-        // An xs chip is 20px tall; a row of them conforms through the spacing.
-        .targets_spaced("#small")
+        // An xs chip is 24px tall, the minimum on its own (1494).
+        .targets("#small")
         .state(
             "ticked",
             &[Step::TabTo("#css > input"), Step::Press(SPACE)],

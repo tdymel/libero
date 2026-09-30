@@ -105,6 +105,52 @@ e2e::scenario!(
     tab_clears_the_control
 );
 
+/// Todo 1625: the strip is a tab stop only while it overflows with nothing focusable
+/// inside; a strip that fits, or one of buttons, adds none.
+#[test]
+fn the_strip_is_a_tab_stop_only_while_it_overflows() {
+    block_on(async {
+        let fixture = Fixture::open("/scroller/plain", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let wide = "#wide > [data-slot=viewport]";
+        let narrow = "#narrow > [data-slot=viewport]";
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{wide}').getAttribute('tabindex') === '0'"),
+            "the overflowing strip to become a tab stop",
+        )
+        .await
+        .unwrap();
+        let narrow_stop: Option<String> = page
+            .evaluate(format!(
+                "document.querySelector('{narrow}').getAttribute('tabindex')"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(narrow_stop.as_deref(), Some("-1"), "a strip that fits");
+        keyboard::tab_to(page, "#before", 3).await.unwrap();
+        keyboard::tab_to(page, wide, 3).await.unwrap();
+        // The forward control, then After: no stop on the strip that fits.
+        keyboard::tab_to(page, "#after", 2).await.unwrap();
+        fixture.console.assert_clean("plain strips").unwrap();
+        fixture.close().await.unwrap();
+
+        // A strip of buttons: they take the focus, the strip none.
+        let fixture = Fixture::open("/scroller", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#before", 3).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::assert_focused(page, "#tag-0", "Tab from Before")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The backward control, then the forward one.
 const BACK: &str = "#strip > button:first-of-type";
 const FORWARD: &str = "#strip > button:last-of-type";

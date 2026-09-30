@@ -1,4 +1,4 @@
-//! `Scroller`'s rendered contract: a named, focusable region between two
+//! `Scroller`'s rendered contract: a named region between two
 //! step controls, neither of which offers to go anywhere until the strip has
 //! been measured.
 
@@ -14,10 +14,10 @@ fn buttons(html: &str) -> Vec<String> {
         .collect()
 }
 
-/// The region is the tab stop, so a strip of plain text or images can be
-/// reached and arrowed through - and a tab stop has to be named.
+/// The region is named, and no tab stop before a measure finds it overflowing
+/// (1625); the e2e unit checks the stop once it does.
 #[test]
-fn the_strip_is_a_named_focusable_region() {
+fn the_strip_is_a_named_region_and_no_stop_unmeasured() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -32,7 +32,7 @@ fn the_strip_is_a_named_focusable_region() {
     let region = attributes_of(&html[open..], "div");
 
     assert_eq!(region["aria-label"], "Tags", "{region:?}");
-    assert_eq!(region["tabindex"], "0", "{region:?}");
+    assert_eq!(region["tabindex"], "-1", "{region:?}");
     assert!(region.contains_key("id"), "{region:?}");
 }
 

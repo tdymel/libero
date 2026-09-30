@@ -59,7 +59,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `sm` | Font size of the bubble. |
 | `z_index` | `ThemeAwareValue` | the popover layer | Overrides the stacking level, for a bubble hidden by another overlay. |
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest before the bubble appears. |
-| `close_delay` | `u32` | `0` | Milliseconds the bubble stays after the pointer leaves. |
+| `close_delay` | `u32` | `0` | Milliseconds the bubble stays after the pointer leaves. While it counts down, the bubble carries `data-closing`. |
 | `open` | `bool` | unset | Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape. |
 | `disabled` | `bool` | `false` | Renders `children` alone, with no wrapper and no bubble. |
 | `label_id` | `String` | - | The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too. |

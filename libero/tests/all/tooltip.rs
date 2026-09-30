@@ -70,6 +70,8 @@ fn an_open_tooltip_portals_its_bubble() {
 
     assert_eq!(bubble["role"], "tooltip");
     assert!(!bubble.contains_key("hidden"), "{bubble:?}");
+    // No close counts down on a bubble nobody left.
+    assert!(!bubble.contains_key("data-closing"), "{bubble:?}");
     assert!(bubble["data-state"].contains("size-sm"), "{bubble:?}");
     assert!(bubble["style"].contains("position:fixed;"), "{bubble:?}");
     assert!(!bubble["style"].contains("max-width"), "{bubble:?}");

@@ -37,7 +37,8 @@ field_props! {
         /// render, so it can translate.
         #[props(default)]
         format: Option<Callback<V, String>>,
-        /// Ticks on the track, a labeled one captioned. Replaces derived marks.
+        /// Ticks on the track, a labeled one captioned. Replaces derived marks;
+        /// one outside the track (past an off-grid `max`'s last step too) is dropped.
         #[props(default)]
         marks: Vec<SliderMark<V>>,
         /// Names the thumb without a `label`; one in `attributes` lands on the wrapper.

@@ -312,7 +312,7 @@ parts_enum! {
 base_props! {
     parts(ScrollerPart);
     pub struct ScrollerProps {
-        /// Names the scrollable region, which is a tab stop.
+        /// Names the scrollable region, a tab stop while it overflows.
         #[props(into)]
         aria_label: String,
         /// Pixels one control press scrolls. Defaults to the theme's.
@@ -579,8 +579,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             handle: area,
             scrollbars: "horizontal",
             scrollbar_visibility: "hidden",
-            // A strip of plain images or text still scrolls by keyboard; hence the name.
-            focusable: true,
+            // No `focusable`: the area's own check makes it a tab stop only while it overflows.
             framework_sx: ScrollAreaBase(&SCROLLER_VIEWPORT_SX),
             states: viewport_states,
             "data-slot": ScrollerPart::Viewport.slot(),

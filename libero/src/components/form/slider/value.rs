@@ -59,6 +59,13 @@ fn snap_towards(value: f64, min: f64, step: f64, down: bool) -> f64 {
     round_to(min + step * steps, decimals(step).max(decimals(min)))
 }
 
+/// Whether `value` lies on `min..=max`, give or take float drift. A mark off it
+/// would clamp to the track's end, over the last step's (1640).
+pub(super) fn on_track(value: f64, min: f64, max: f64) -> bool {
+    let drift = 1e-9 * (max - min).abs().max(1.0);
+    (min - drift..=max + drift).contains(&value)
+}
+
 /// `value`'s position in `min..=max` as a 0-1 fraction. A zero-width range
 /// has no position, so it reads as empty.
 pub(super) fn fraction(value: f64, min: f64, max: f64) -> f64 {
@@ -252,6 +259,17 @@ mod tests {
         assert_eq!(grid_bounds(0.0, 100.0, 0.0), (0.0, 100.0));
         let (min, max) = grid_bounds(0.0, 100.0, 30.0);
         assert_eq!(fraction(snap(100.0, min, max, 30.0), min, max), 1.0);
+    }
+
+    /// A mark at 100 on 0..100 by 30 would clamp onto 90's spot (1640).
+    #[test]
+    fn a_mark_past_the_grid_max_is_off_the_track() {
+        let (min, max) = grid_bounds(0.0, 100.0, 30.0);
+        assert!(on_track(90.0, min, max));
+        assert!(on_track(0.0, min, max));
+        assert!(!on_track(100.0, min, max));
+        assert!(!on_track(-1.0, min, max));
+        assert!(on_track(0.1 + 0.2, 0.0, 0.3));
     }
 
     /// A `NaN` value would otherwise reach the CSS as `NaN%`.

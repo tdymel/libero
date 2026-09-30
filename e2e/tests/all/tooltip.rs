@@ -42,20 +42,33 @@ async fn hover_places_and_leaving_closes<D: Driver>(d: &mut D, _route: &str) -> 
     is_open(d, false, "leaving").await
 }
 
+/// Until no close counts down: the bubble's `data-closing` is gone, or the bubble is.
+async fn no_close_pending<D: Driver>(d: &mut D) -> Result<()> {
+    eventually(d, "the pending close to clear", async |d| {
+        Ok(!d.exists(OPEN).await? || d.attr(OPEN, "data-closing").await?.is_none())
+    })
+    .await
+}
+
 async fn rests_on_the_bubble<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     hover_open(d).await?;
-    // A close the move armed and did not cancel runs at the fire; elsewhere 20 delays pass.
-    if d.hold_timers(&[10]).await? {
-        d.hover(OPEN).await?;
-        d.settle().await?;
-        d.fire_timers(10).await?;
-        d.settle().await?;
-    } else {
-        d.hover(OPEN).await?;
-        linger(d, 8).await;
-    }
+    // The trigger's leave armed the close, the bubble's enter must have cancelled it.
+    d.hover(OPEN).await?;
+    no_close_pending(d).await?;
     ensure!(d.exists(OPEN).await?, "moving onto the bubble closed it");
-    Ok(())
+    // The mark the wait above relies on, held where the clock can be.
+    if d.hold_timers(&[10]).await? {
+        d.hover("#away").await?;
+        d.settle().await?;
+        ensure!(
+            d.attr(OPEN, "data-closing").await?.as_deref() == Some("true"),
+            "leaving armed no close mark"
+        );
+        d.fire_timers(10).await?;
+    } else {
+        d.hover("#away").await?;
+    }
+    is_open(d, false, "leaving the bubble").await
 }
 
 async fn escape_under_the_pointer<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -132,9 +145,15 @@ async fn settle(page: &chromiumoxide::Page) {
     crate::settle::painted(page).await.unwrap();
 }
 
-/// A wrong close still shows through its 150 ms fade, so only time tells it.
-async fn past_the_fade() {
-    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+/// Until no close counts down: a wrong one has then fired and taken the bubble.
+async fn no_close_pending_on(page: &chromiumoxide::Page) {
+    wait::for_js_true(
+        page,
+        "!document.querySelector('#save-tip')?.hasAttribute('data-closing')",
+        "the pending close to clear",
+    )
+    .await
+    .unwrap();
 }
 
 #[test]
@@ -221,11 +240,11 @@ fn hover_shows_the_bubble_and_the_pointer_can_cross_the_gap() {
         pointer::move_to(page, pointer::Point { x: gap.x, y: gap.y })
             .await
             .unwrap();
-        past_the_fade().await;
+        no_close_pending_on(page).await;
         assert!(wait::is_visible(page, BUBBLE).await.unwrap(), "in the gap");
 
         pointer::hover(page, BUBBLE).await.unwrap();
-        past_the_fade().await;
+        no_close_pending_on(page).await;
         assert!(
             wait::is_visible(page, BUBBLE).await.unwrap(),
             "on the bubble"

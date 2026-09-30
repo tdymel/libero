@@ -29,9 +29,10 @@ impl ChipDefaults {
         size: Size::Md,
         radius: Size::Xl,
         sizes: Sizes::new(
+            // 24px like `sm`: the WCAG 2.5.8 minimum target (1494).
             ChipSizeLevel {
                 font_size: "0.6875rem",
-                height: "1.25rem",
+                height: "1.5rem",
                 padding_x: "0.5rem",
             },
             ChipSizeLevel {

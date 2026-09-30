@@ -47,13 +47,15 @@ fn a_count_on_a_fill_takes_the_label_colour() {
 }
 
 /// Replaces `fetch` with one answering `body` (`null`: a network error) and
-/// recording each URL, then mounts both buttons and waits for both to have asked.
+/// recording each URL and counting settled answers in `__settled`, then mounts
+/// both buttons and waits for both to have asked.
 async fn mount_with_fetch(page: &Page, body: &str) {
     page.evaluate(format!(
-        "(() => {{ sessionStorage.clear(); window.__urls = []; \
+        "(() => {{ sessionStorage.clear(); window.__urls = []; window.__settled = 0; \
          window.fetch = (url) => {{ window.__urls.push(url); const body = {body}; \
-         return body === null ? Promise.reject(new TypeError('blocked')) \
-         : Promise.resolve(new Response(JSON.stringify(body))); }}; \
+         const p = body === null ? Promise.reject(new TypeError('blocked')) \
+         : Promise.resolve(new Response(JSON.stringify(body))); \
+         p.catch(() => {{}}).finally(() => window.__settled++); return p; }}; \
          document.querySelector('#mount').click(); }})()"
     ))
     .await
@@ -67,12 +69,15 @@ async fn mount_with_fetch(page: &Page, body: &str) {
     .unwrap();
 }
 
-/// The link's name, text, width and height, once the count had time to land.
-async fn link(page: &Page, selector: &str) -> (String, String, f64, f64) {
-    // The answer is a resolved promise: a few frames settle it.
-    page.evaluate("new Promise((r) => setTimeout(r, 300))")
-        .await
-        .unwrap();
+/// The link's name, text, width and height, once its text reads `text`.
+async fn link(page: &Page, selector: &str, text: &str) -> (String, String, f64, f64) {
+    wait::for_js_true(
+        page,
+        &format!("document.querySelector('{selector}')?.textContent.trim() === '{text}'"),
+        &format!("{selector} to read '{text}'"),
+    )
+    .await
+    .unwrap();
     page.evaluate(format!(
         "(() => {{ const a = document.querySelector('{selector}'); \
          const r = a.getBoundingClientRect(); \
@@ -98,7 +103,10 @@ fn a_failed_fetch_leaves_the_plain_icon() {
         let fixture = open().await;
         let page = &fixture.page;
         mount_with_fetch(page, "null").await;
-        let (name, text, width, height) = link(page, GITHUB).await;
+        wait::for_js_true(page, "window.__settled === 2", "both fetches to fail")
+            .await
+            .unwrap();
+        let (name, text, width, height) = link(page, GITHUB, "").await;
         assert_eq!(name, "GitHub example/repo (opens in a new tab)");
         assert_eq!(text, "", "a count showed after an error");
         assert_eq!(width, height, "the icon box changed shape");
@@ -119,7 +127,15 @@ fn zero_stars_leave_the_plain_icon() {
         let fixture = open().await;
         let page = &fixture.page;
         mount_with_fetch(page, "{ stargazers_count: 0, star_count: 0 }").await;
-        let (name, text, width, height) = link(page, GITHUB).await;
+        // A zero is cached too: both stored means both answers were read.
+        wait::for_js_true(
+            page,
+            "sessionStorage.length === 2",
+            "both zeros to be cached",
+        )
+        .await
+        .unwrap();
+        let (name, text, width, height) = link(page, GITHUB, "").await;
         assert_eq!(name, "GitHub example/repo (opens in a new tab)");
         assert_eq!(text, "");
         assert_eq!(width, height);
@@ -134,8 +150,8 @@ fn each_host_asks_its_endpoint_and_links_its_page() {
         let fixture = open().await;
         let page = &fixture.page;
         mount_with_fetch(page, "{ stargazers_count: 12, star_count: 3 }").await;
-        let (github, _, _, _) = link(page, GITHUB).await;
-        let (gitlab, _, _, _) = link(page, GITLAB).await;
+        let (github, _, _, _) = link(page, GITHUB, "12").await;
+        let (gitlab, _, _, _) = link(page, GITLAB, "3").await;
         assert_eq!(github, "GitHub example/repo, 12 stars (opens in a new tab)");
         assert_eq!(
             gitlab,
@@ -174,7 +190,7 @@ fn a_count_joins_the_icon_and_is_cached_for_the_session() {
         let fixture = open().await;
         let page = &fixture.page;
         mount_with_fetch(page, "{ stargazers_count: 1234, star_count: 1234 }").await;
-        let (name, text, width, height) = link(page, GITHUB).await;
+        let (name, text, width, height) = link(page, GITHUB, "1.2k").await;
         assert_eq!(name, "GitHub example/repo, 1.2k stars (opens in a new tab)");
         assert_eq!(text, "1.2k");
         assert!(width > height, "no pill: {width}x{height}");
@@ -192,7 +208,7 @@ fn a_count_joins_the_icon_and_is_cached_for_the_session() {
         page.evaluate("document.querySelector('#mount').click()")
             .await
             .unwrap();
-        let (_, text, _, _) = link(page, GITHUB).await;
+        let (_, text, _, _) = link(page, GITHUB, "1.2k").await;
         assert_eq!(text, "1.2k");
         let calls: u32 = page
             .evaluate("window.__urls.length")
@@ -214,7 +230,7 @@ fn aria_label_replaces_the_name_while_the_count_shows() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#named").await.unwrap();
-        let (name, text, _, _) = link(page, "#named").await;
+        let (name, text, _, _) = link(page, "#named", "1.2k").await;
         assert_eq!(name, "Example source (new tab)");
         assert_eq!(text, "1.2k", "the seeded count did not show");
         fixture.close().await.unwrap();

@@ -65,7 +65,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `aria_label` | `String` | required | Names the strip, which is a tab stop. |
+| `aria_label` | `String` | required | Names the strip, a tab stop while it overflows with nothing focusable inside. |
 | `scroll_amount` | `u32` | `200` | Pixels one control press scrolls. |
 | `controls` | `ScrollerControls` | `auto` | `auto` shows each control while there is content that way. `always` keeps both, dimmed at their end. `never` shows neither. |
 | `control_size` | `Size` | `md` | Width of each control and its glyph. |
@@ -101,13 +101,15 @@ parts work.
 
 ### Libero handles
 
-- The strip is a tab stop.
+- The strip is a tab stop while it overflows with nothing focusable inside.
+  Focusable children take the focus themselves, and the strip scrolls each
+  into view.
 - A control at its own end leaves the tab order, but keeps focus if it had it.
 
 ### You must
 
-- Name the strip with `aria_label`. It is required, as the strip is a tab
-  stop.
+- Name the strip with `aria_label`. It is required, as the strip is a named
+  region and can be a tab stop.
 
 ## Theme defaults
 

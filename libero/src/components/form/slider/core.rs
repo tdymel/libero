@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use super::slider_value::{SliderChangeEvent, SliderMark};
-use super::value::{SliderCoreValue, fraction, grid_bounds};
+use super::value::{SliderCoreValue, fraction, grid_bounds, on_track};
 use crate::{
     CssLayer,
     components::{
@@ -710,7 +710,18 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         }
     });
 
-    let marks_labeled = props.marks.iter().any(|mark| mark.label.is_some());
+    let marks: Vec<SliderMark> = props
+        .marks
+        .iter()
+        .filter(|mark| on_track(mark.value, min, max))
+        .cloned()
+        .collect();
+    if marks.len() < props.marks.len() {
+        warn(
+            "Slider: a mark outside `min..=max` (or past an off-grid `max`'s last step) is dropped.",
+        );
+    }
+    let marks_labeled = marks.iter().any(|mark| mark.label.is_some());
 
     let states: Input<States> = props
         .states
@@ -779,7 +790,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         interactive,
                         disabled,
                         label: props.label,
-                        marks: props.marks,
+                        marks,
                         captions_hidden: props.captions_hidden,
                         aria_labels: [props.aria_label, props.aria_label_to],
                         labelledby: props.labelledby,

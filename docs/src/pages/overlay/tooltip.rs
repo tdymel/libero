@@ -64,7 +64,7 @@ pub fn TooltipPage() -> Element {
                     .doc("Milliseconds the pointer must rest before the bubble appears."),
                 prop("close_delay", "u32")
                     .default("0")
-                    .doc("Milliseconds the bubble stays after the pointer leaves."),
+                    .doc("Milliseconds the bubble stays after the pointer leaves. While it counts down, the bubble carries `data-closing`."),
                 prop("open", "bool")
                     .default("unset")
                     .doc("Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape."),
