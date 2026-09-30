@@ -4,7 +4,7 @@ use crate::{
     components::{
         common::{
             ButtonGroupContext, HtmlTag, Input, Orientation, States, Variant, base_props,
-            use_provide_button_group,
+            names_itself, use_name_warning, use_provide_button_group,
         },
         layout::use_box,
     },
@@ -75,6 +75,16 @@ static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
             Orientation::Vertical.state_name(),
             sx().flex_direction("column")
                 .align_items("stretch")
+                // A set width (`ActionIcon`) is never stretched; the pair's toggle grows beside its chevron.
+                .selector(format!("& > {CONTROL}"), sx().width("100%"))
+                .selector(
+                    format!("& > :not([role=\"group\"]) > {CONTROL}"),
+                    sx().width("100%"),
+                )
+                .selector(
+                    format!("& > [role=\"group\"] > {CONTROL}"),
+                    sx().flex_grow("1"),
+                )
                 .and(controls(
                     ":not(:first-child)",
                     sx().border_top_left_radius("0")
@@ -143,6 +153,10 @@ base_props! {
 #[component]
 pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
+    use_name_warning(
+        names_itself(&props.attributes),
+        "ButtonGroup: no `aria-label` or `aria-labelledby`, so it is announced as just \"group\".",
+    );
     use_provide_button_group(ButtonGroupContext {
         size: props.size.as_ref().copied(),
         radius: props.radius.as_ref().copied(),

@@ -7,9 +7,9 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, Checkbox, ColorCode, ColorSwatch, Dialog, Drawer, ProgressBar, Radio,
-        RadioGroup, RangeSlider, Rating, ScrollArea, SegmentedControl, Slider, Splitter,
-        SpotlightOptions, Switch, Tabs, Toolbar, ToolbarGroup, use_spotlight,
+        ActionIcon, Anchor, Button, ButtonGroup, Checkbox, ColorCode, ColorSwatch, Dialog, Drawer,
+        ProgressBar, Radio, RadioGroup, RangeSlider, Rating, ScrollArea, SegmentedControl, Slider,
+        Splitter, SpotlightOptions, Switch, Tabs, Toolbar, ToolbarGroup, use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     utils::take_warnings,
@@ -100,6 +100,22 @@ fn an_unnamed_splitter_divider_warns() {
             }
         },
         "Splitter:"
+    ));
+}
+
+#[test]
+fn an_unnamed_button_group_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { ButtonGroup { Button { "Left" } } } },
+        "ButtonGroup:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { ButtonGroup { "aria-label": "Alignment", Button { "Left" } } } },
+        "ButtonGroup:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { ButtonGroup { "aria-labelledby": "heading", Button { "Left" } } } },
+        "ButtonGroup:"
     ));
 }
 

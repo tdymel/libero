@@ -221,9 +221,9 @@ pub fn Repository(props: RepositoryProps) -> Element {
         .into_option()
         .or(group.color)
         .unwrap_or_else(|| theme.repository.color.into());
-    // An unfilled label may miss 4.5:1 (`warning` is 3.27:1).
+    // An unfilled label may miss 4.5:1 (`warning` is 3.27:1); a gradient's label is contrast-picked.
     let ink = match variant {
-        Variant::Filled => false,
+        Variant::Filled | Variant::Gradient => false,
         Variant::Tonal => color == ThemeAwareValue::from(Color::Muted),
         _ => true,
     };

@@ -57,6 +57,13 @@ fn ButtonGroupPage() -> Element {
             ButtonGroup { id: "hidden-out", "aria-label": "Hidden out", variant: "outlined",
                 Button { id: "h3", "Shown" }
             }
+            // Set-width items in a column: an icon, a wrapped icon, the pair.
+            ButtonGroup { id: "vertical-mixed", "aria-label": "Vertical mixed", variant: "outlined", orientation: "vertical",
+                Button { id: "vm1", "A wider label" }
+                ActionIcon { id: "vm2", aria_label: "Two", "2" }
+                span { display: "contents", ActionIcon { id: "vm3", aria_label: "Three", "3" } }
+                ThemeSwitcher { id: "vm4", themes: ThemeSet::CATALOGUE }
+            }
         }
     }
 }

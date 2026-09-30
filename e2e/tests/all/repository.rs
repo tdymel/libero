@@ -18,6 +18,34 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// A filled or gradient count takes the fill's label colour, not the page's ink.
+#[test]
+fn a_count_on_a_fill_takes_the_label_colour() {
+    block_on(async {
+        let fixture = Fixture::open("/repository/stubbed", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#gradient [data-slot='count']")
+            .await
+            .unwrap();
+        for id in ["#filled", "#gradient"] {
+            let (label, count): (String, String) = page
+                .evaluate(format!(
+                    "(() => {{ const a = document.querySelector('{id}'); \
+                     const c = a.querySelector('[data-slot=\"count\"]'); \
+                     return [getComputedStyle(a).color, getComputedStyle(c).color]; }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(count, label, "{id}'s count left the label colour");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Replaces `fetch` with one answering `body` (`null`: a network error) and
 /// recording each URL, then mounts both buttons and waits for both to have asked.
 async fn mount_with_fetch(page: &Page, body: &str) {

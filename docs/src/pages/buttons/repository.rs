@@ -72,8 +72,8 @@ pub fn RepositoryPage() -> Element {
                             ],
                             _ => vec!["repo: \"tdymel/libero\"".to_string()],
                         }),
-                    Control::toggle("variant", ["outlined", "filled", "tonal", "standard"])
-                        .labels(["Outlined", "Filled", "Tonal", "Standard"])
+                    Control::toggle("variant", ["outlined", "filled", "gradient", "tonal", "standard"])
+                        .labels(["Outlined", "Filled", "Gradient", "Tonal", "Standard"])
                         .default("outlined"),
                     // `muted` is what an unset `color` resolves to, so that
                     // swatch prints nothing.

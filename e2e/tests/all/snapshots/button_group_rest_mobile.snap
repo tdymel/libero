@@ -1,6 +1,5 @@
 ---
 source: e2e/src/suite.rs
-assertion_line: 510
 description: button_group at mobile (rest)
 expression: tree
 ---
@@ -47,3 +46,13 @@ group "Hidden in"
 group "Hidden out"
   button "Shown"
     StaticText "Shown"
+group "Vertical mixed"
+  button "A wider label"
+    StaticText "A wider label"
+  button "Two"
+    StaticText "2"
+  button "Three"
+    StaticText "3"
+  group "Theme"
+    button "Switch to the dark theme"
+    button "Choose a theme" [expanded=false] [haspopup=menu]

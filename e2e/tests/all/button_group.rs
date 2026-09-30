@@ -118,6 +118,27 @@ async fn vertical<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
+/// Items with a set width stretch too: icons, a wrapped icon, the theme pair.
+async fn vertical_stretches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let widest = d.rect("#vm1").await?.width;
+    for item in ["#vm2", "#vm3", "#vm4"] {
+        let width = d.rect(item).await?.width;
+        ensure!(
+            (width - widest).abs() < 0.5,
+            "{item} is {width}px, not {widest}px"
+        );
+    }
+    let (toggle, chevron) = (
+        d.rect("#vm4 > button").await?,
+        d.rect("#vm4 > div > button").await?,
+    );
+    ensure!(
+        toggle.width > chevron.width,
+        "the toggle did not grow: {toggle:?} {chevron:?}"
+    );
+    Ok(())
+}
+
 async fn the_ring_rises<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus("#o1").await?;
     d.press(keyboard::TAB).await?;
@@ -191,6 +212,11 @@ e2e::scenario!(
     a_vertical_group_joins_top_to_bottom,
     "/button-group",
     vertical
+);
+e2e::scenario!(
+    a_vertical_group_stretches_set_width_items,
+    "/button-group",
+    vertical_stretches
 );
 e2e::scenario!(
     the_focused_button_is_lifted_over_its_neighbours,
