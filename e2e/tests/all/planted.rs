@@ -26,7 +26,7 @@ where
             .unwrap_or_else(|e| panic!("planting the defect on {route}: {e}"));
     }
 
-    let (fixture, outcome) = check(fixture).await;
+    let (fixture, outcome) = wait::expecting_failure(check(fixture)).await;
     let _ = fixture.close().await;
 
     match outcome {

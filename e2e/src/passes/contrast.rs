@@ -94,9 +94,6 @@ async fn inject(page: &Page) -> Result<()> {
 /// One axe run: its violations, and the nodes it could not decide.
 #[derive(Debug, Deserialize)]
 pub struct Run {
-    /// `Some` when lifting the scroll lock changed the layout, which would make
-    /// every reading in this run one of a page nobody sees.
-    moved: Option<String>,
     pub violations: Vec<Violation>,
     /// Text over an image, a gradient or a pseudo-element: axe measures no ratio.
     pub incomplete: Vec<Violation>,
@@ -109,13 +106,42 @@ pub async fn run(page: &Page, selector: &str) -> Result<Vec<Violation>> {
 
 /// [`run`], keeping axe's undecided nodes too.
 pub async fn run_full(page: &Page, selector: &str) -> Result<Run> {
+    let audit = run_axe(page, selector, RULES, &[]).await?;
+    Ok(Run {
+        violations: audit.violations,
+        incomplete: audit.incomplete,
+    })
+}
+
+#[derive(Debug, Deserialize)]
+struct Coverage {
+    /// On-screen elements holding their own text, under the selector.
+    wanted: usize,
+    /// Of those, the ones `color-contrast` never evaluated.
+    missing: Vec<String>,
+}
+
+/// One axe run over `root` with `rules`, and the coverage of each of `covers` read from it.
+#[derive(Debug, Deserialize)]
+struct Audit {
+    /// `Some` when lifting the scroll lock changed the layout, which would make
+    /// every reading in this run one of a page nobody sees.
+    moved: Option<String>,
+    violations: Vec<Violation>,
+    incomplete: Vec<Violation>,
+    coverage: Vec<Coverage>,
+}
+
+/// One `axe.run` serves both the violations and every coverage selector: it is the
+/// battery's main cost, and `color-contrast` reads the same in a run with more rules.
+async fn run_axe(page: &Page, root: &str, rules: &[&str], covers: &[&str]) -> Result<Audit> {
     inject(page).await?;
 
     let script = format!(
         r#"(async () => {{
             {UNLOCK}
-            const result = await window.axe.run(document.querySelector({}), {{
-                runOnly: {{ type: 'rule', values: {} }},
+            const result = await window.axe.run(document.querySelector({root}), {{
+                runOnly: {{ type: 'rule', values: {rules} }},
             }});
             const shape = v => ({{
                 id: v.id,
@@ -125,48 +151,6 @@ pub async fn run_full(page: &Page, selector: &str) -> Result<Run> {
                     failure_summary: n.failureSummary || null,
                     target: n.target.flat().join(' > '),
                 }})),
-            }});
-            return {{
-                moved: __moved,
-                violations: result.violations.map(shape),
-                incomplete: result.incomplete.map(shape),
-            }};
-            {RELOCK}
-        }})()"#,
-        serde_json::to_string(selector)?,
-        serde_json::to_string(RULES)?,
-    );
-
-    let run: Run = page.evaluate(script).await?.into_value()?;
-    if let Some(moved) = &run.moved {
-        bail!(
-            "lifting the modal scroll lock for the axe run changed the layout ({moved}), \
-             so the contrast reading would be of a page nobody sees. See `UNLOCK` in \
-             `passes/contrast.rs` and todo 327."
-        );
-    }
-    Ok(run)
-}
-
-#[derive(Debug, Deserialize)]
-struct Coverage {
-    moved: Option<String>,
-    /// On-screen elements holding their own text, under the selector.
-    wanted: usize,
-    /// Of those, the ones `color-contrast` never evaluated.
-    missing: Vec<String>,
-}
-
-/// Every on-screen element under `selector` holding its own text must appear in axe's
-/// `color-contrast` passes, violations or incomplete: "found nothing" is not "looked" (todo 327).
-pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<usize> {
-    inject(page).await?;
-
-    let script = format!(
-        r#"(async () => {{
-            {UNLOCK}
-            const result = await window.axe.run(document.querySelector({root}), {{
-                runOnly: {{ type: 'rule', values: ['color-contrast'] }},
             }});
 
             // Still inside the lift: `wanted` must judge the same layout axe judged.
@@ -218,8 +202,9 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
                 return false;
             }};
 
+            const coverage = {covers}.map(selector => {{
             const wanted = [];
-            for (const host of document.querySelectorAll({selector})) {{
+            for (const host of document.querySelectorAll(selector)) {{
                 for (const el of [host, ...host.querySelectorAll('*')]) {{
                     // Axe reports the element owning the text, with a letter or digit
                     // (`ignoreUnicode` skips punctuation-only text).
@@ -245,24 +230,61 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
             }}
 
             return {{
-                moved: __moved,
                 wanted: wanted.length,
                 missing: wanted.filter(el => !seen.has(el))
                     .map(el => el.outerHTML.slice(0, 200)),
             }};
+            }});
+
+            return {{
+                moved: __moved,
+                violations: result.violations.map(shape),
+                incomplete: result.incomplete.map(shape),
+                coverage,
+            }};
             {RELOCK}
         }})()"#,
         root = serde_json::to_string(root)?,
-        selector = serde_json::to_string(selector)?,
+        rules = serde_json::to_string(rules)?,
+        covers = serde_json::to_string(covers)?,
     );
 
-    let coverage: Coverage = page.evaluate(script).await?.into_value()?;
-    if let Some(moved) = coverage.moved {
+    let audit: Audit = page.evaluate(script).await?.into_value()?;
+    if let Some(moved) = &audit.moved {
         bail!(
-            "lifting the modal scroll lock for the coverage run changed the layout ({moved}). \
-             See `UNLOCK` in `passes/contrast.rs` and todo 327."
+            "lifting the modal scroll lock for the axe run changed the layout ({moved}), \
+             so the contrast reading would be of a page nobody sees. See `UNLOCK` in \
+             `passes/contrast.rs` and todo 327."
         );
     }
+    Ok(audit)
+}
+
+/// Every on-screen element under `selector` holding its own text must appear in axe's
+/// `color-contrast` passes, violations or incomplete: "found nothing" is not "looked" (todo 327).
+pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<usize> {
+    let mut audit = run_axe(page, root, &["color-contrast"], &[selector]).await?;
+    check_coverage(selector, audit.coverage.remove(0))
+}
+
+/// The violations under `root` past the waivers, then each of `covers` as [`assert_covers`],
+/// from one axe run. Returns the text count each cover held.
+pub async fn assert_clean_and_covered(
+    page: &Page,
+    root: &str,
+    waivers: &[Waiver],
+    covers: &[&str],
+) -> Result<Vec<usize>> {
+    let audit = run_axe(page, root, RULES, covers).await?;
+    check_violations(audit.violations, root, waivers)?;
+    covers
+        .iter()
+        .zip(audit.coverage)
+        .map(|(selector, coverage)| check_coverage(selector, coverage))
+        .collect()
+}
+
+fn check_coverage(selector: &str, coverage: Coverage) -> Result<usize> {
     if !coverage.missing.is_empty() {
         let mut report = String::new();
         for html in &coverage.missing {
@@ -309,7 +331,10 @@ pub async fn assert_clean(page: &Page, selector: &str) -> Result<()> {
 
 /// As `assert_clean`, but tolerating the named waivers.
 pub async fn assert_clean_except(page: &Page, selector: &str, waivers: &[Waiver]) -> Result<()> {
-    let all = run(page, selector).await?;
+    check_violations(run(page, selector).await?, selector, waivers)
+}
+
+fn check_violations(all: Vec<Violation>, selector: &str, waivers: &[Waiver]) -> Result<()> {
     let mut violations = Vec::new();
     let mut waived = Vec::new();
 

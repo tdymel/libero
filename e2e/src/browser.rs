@@ -201,6 +201,7 @@ fn harness() -> &'static Harness {
 
 /// Run an async body on the shared runtime. Tests are ordinary `#[test]` fns.
 pub fn block_on<F: std::future::Future>(fut: F) -> F::Output {
+    crate::journal::time_this_test();
     harness().runtime.block_on(fut)
 }
 

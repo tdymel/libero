@@ -3,7 +3,7 @@
 
 use std::io::Write;
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// The runner's start in epoch ms, so both processes log offsets into the same run.
 pub const RUN_STARTED: &str = "E2E_RUN_STARTED_MS";
@@ -85,12 +85,61 @@ pub fn note(text: &str) {
     );
 }
 
+/// One line per browser test that ran past [`slow_budget`], for the runner to list.
+pub const SLOW_TESTS: &str = "slow-tests.log";
+
+/// `E2E_SLOW_TEST_S`, default 20 s.
+pub fn slow_budget() -> Duration {
+    std::env::var("E2E_SLOW_TEST_S")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .map(Duration::from_secs)
+        .unwrap_or(Duration::from_secs(20))
+}
+
+/// Times the calling test thread from its first call. libtest runs each test on a
+/// thread of its own, so the clock's drop at the thread's exit ends the test, pass or panic.
+pub fn time_this_test() {
+    TEST_CLOCK.with(|_| {});
+}
+
+struct TestClock {
+    started: Instant,
+    test: String,
+}
+
+thread_local! {
+    static TEST_CLOCK: TestClock = TestClock {
+        started: Instant::now(),
+        test: std::thread::current().name().unwrap_or("unnamed").to_string(),
+    };
+}
+
+impl Drop for TestClock {
+    fn drop(&mut self) {
+        let took = self.started.elapsed();
+        if let Some(dir) = dir()
+            && took >= slow_budget()
+        {
+            append_to(
+                &dir,
+                SLOW_TESTS,
+                &format!("{:.1} {}\n", took.as_secs_f64(), self.test),
+            );
+        }
+    }
+}
+
 fn append(dir: &std::path::Path, line: &str) {
+    append_to(dir, "waits.log", line);
+}
+
+fn append_to(dir: &std::path::Path, file: &str, line: &str) {
     // A short O_APPEND write is atomic on Linux, so no lock is needed.
     let _ = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(dir.join("waits.log"))
+        .open(dir.join(file))
         .and_then(|mut file| file.write_all(line.as_bytes()));
 }
 

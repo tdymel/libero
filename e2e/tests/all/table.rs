@@ -113,7 +113,16 @@ async fn scrolls_under_the_header<D: Driver>(
             Ok(tops(d).await?.1 < before)
         })
         .await?;
-        linger(d, 300).await;
+        // Held still over 4 idle rounds, not a fixed 7.5 s.
+        let mut last = tops(d).await?.1;
+        eventually(d, "the step's scroll to settle", async |d| {
+            linger(d, 4).await;
+            let now = tops(d).await?.1;
+            let still = now == last;
+            last = now;
+            Ok(still)
+        })
+        .await?;
     }
     d.press(key).await?;
     eventually(d, "the rows to scroll under the header", async |d| {
@@ -302,7 +311,8 @@ async fn end_loads_the_next_rows<D: Driver>(d: &mut D, _route: &str) -> Result<(
     }
     d.press(keyboard::END).await?;
     eventually_text(d, "#asks", "3", "End past the last batch").await?;
-    linger(d, 400).await;
+    // Three times the fixture's 300 ms batch delay, not 10 s.
+    linger(d, 40).await;
     row_count_is(d, "151").await
 }
 

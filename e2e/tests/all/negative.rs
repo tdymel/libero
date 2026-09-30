@@ -17,7 +17,7 @@ where
         .await
         .unwrap_or_else(|e| panic!("opening {route}: {e}"));
 
-    let (fixture, outcome) = check(fixture).await;
+    let (fixture, outcome) = wait::expecting_failure(check(fixture)).await;
 
     let _ = fixture.close().await;
 

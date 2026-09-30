@@ -252,6 +252,7 @@ fn main() -> Result<()> {
         });
 
     let red = !matches!(&status, Ok((status, ..)) if status.success());
+    report_slow_tests(&artifacts);
     let (browser, set_aside) = status
         .as_ref()
         .map(|(_, _, browser, set_aside)| (*browser, *set_aside))
@@ -404,6 +405,27 @@ fn own_target_dir() -> Result<std::path::PathBuf> {
         .find(|dir| dir.join("CACHEDIR.TAG").is_file())
         .map(Path::to_path_buf)
         .with_context(|| format!("no cargo target directory above {}", exe.display()))
+}
+
+/// Lists the browser tests that ran past `E2E_SLOW_TEST_S`, slowest first; never fails the run.
+fn report_slow_tests(artifacts: &Path) {
+    let Ok(log) = std::fs::read_to_string(artifacts.join(e2e::journal::SLOW_TESTS)) else {
+        return;
+    };
+    let mut slow: Vec<(f64, &str)> = log
+        .lines()
+        .filter_map(|line| line.split_once(' '))
+        .filter_map(|(seconds, test)| Some((seconds.parse().ok()?, test)))
+        .collect();
+    slow.sort_by(|a, b| b.0.total_cmp(&a.0));
+    eprintln!(
+        "e2e: {} test(s) over the {} s budget (E2E_SLOW_TEST_S):",
+        slow.len(),
+        e2e::journal::slow_budget().as_secs()
+    );
+    for (seconds, test) in slow {
+        eprintln!("  {seconds:>6.1} s  {test}");
+    }
 }
 
 /// Deletes artifact directories older than a day, or a week when marked `RED` (todo 364).

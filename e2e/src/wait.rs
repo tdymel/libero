@@ -5,13 +5,28 @@ use std::time::{Duration, Instant};
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
+tokio::task_local! {
+    static EXPECTING_FAILURE: ();
+}
+
 /// `E2E_TIMEOUT_MS`, default 15 s: the right budget depends on machine load.
+/// A third of it inside [`expecting_failure`].
 pub(crate) fn timeout() -> Duration {
-    std::env::var("E2E_TIMEOUT_MS")
+    let budget = std::env::var("E2E_TIMEOUT_MS")
         .ok()
         .and_then(|v| v.parse().ok())
         .map(Duration::from_millis)
-        .unwrap_or(Duration::from_secs(15))
+        .unwrap_or(Duration::from_secs(15));
+    match EXPECTING_FAILURE.try_with(|_| ()) {
+        Ok(()) => budget / 3,
+        Err(_) => budget,
+    }
+}
+
+/// Runs a check meant to fail on a planted defect: a defect never heals, so the wait that
+/// catches it need not run out the full budget (12 planted checks spent 15 s each on it).
+pub async fn expecting_failure<F: std::future::Future>(check: F) -> F::Output {
+    EXPECTING_FAILURE.scope((), check).await
 }
 
 const POLL: Duration = Duration::from_millis(25);

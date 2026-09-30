@@ -268,10 +268,10 @@ impl Suite {
         }
 
         // Contrast and the ARIA-validity rules, at rest.
-        contrast::assert_clean_except(page, self.root, self.waivers).await?;
         let covers = self.coverage_selectors();
         let mut covered: Vec<usize> = vec![0; covers.len()];
-        self.assert_coverage(page, &covers, &mut covered).await?;
+        self.assert_clean_and_covered(page, &covers, &mut covered)
+            .await?;
 
         // A ring on every control that can be tabbed to, and enough contrast on
         // it to be seen.
@@ -294,8 +294,8 @@ impl Suite {
         // Then every declared state, snapshotted and axe-checked in place.
         for state in &self.states {
             self.reach(page, state).await?;
-            contrast::assert_clean_except(page, self.root, self.waivers).await?;
-            self.assert_coverage(page, &covers, &mut covered).await?;
+            self.assert_clean_and_covered(page, &covers, &mut covered)
+                .await?;
             if light {
                 self.measure_targets(page, &mut seen).await?;
             }
@@ -334,17 +334,18 @@ impl Suite {
         Ok(())
     }
 
-    /// `covered[i]` accumulates the most text `covers[i]` ever held, so a
-    /// selector that matches only in an open state still counts.
-    async fn assert_coverage(
+    /// Axe at rest or in a state, one run for the violations and the coverage. `covered[i]`
+    /// accumulates the most text `covers[i]` ever held, so a selector matching only in an open state counts.
+    async fn assert_clean_and_covered(
         &self,
         page: &chromiumoxide::Page,
         covers: &[&'static str],
         covered: &mut [usize],
     ) -> anyhow::Result<()> {
-        for (index, selector) in covers.iter().enumerate() {
-            let wanted = contrast::assert_covers(page, self.root, selector).await?;
-            covered[index] = covered[index].max(wanted);
+        let wanted =
+            contrast::assert_clean_and_covered(page, self.root, self.waivers, covers).await?;
+        for (most, wanted) in covered.iter_mut().zip(wanted) {
+            *most = (*most).max(wanted);
         }
         Ok(())
     }
