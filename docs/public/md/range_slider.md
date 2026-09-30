@@ -146,7 +146,7 @@ form.getAll("price") // ["20", "80"]
 | `label` | `Caption` | - | The caption above the track. Both thumbs' names start with it. |
 | `description` | `Caption` | - | Between the label and the track. What the range means. |
 | `helper` | `Caption` | - | Under the track, below the mark captions. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value. |
 | `disabled` | `bool` | `false` | Takes the thumbs out of the tab order and dims the slider. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead. |

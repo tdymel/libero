@@ -165,7 +165,7 @@ pub fn AutocompletePage() -> Element {
                     prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
                     prop("required", "bool").default("false").doc("Sets `aria-required` and marks the label."),
                     prop("disabled", "bool").default("false").doc("Takes the input out of the tab order and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),

@@ -29,6 +29,7 @@ pub(crate) struct FieldBuilder<'a> {
     pub(super) status: Option<&'a Input<FieldStatus>>,
     pub(super) rules: Option<FieldStatus>,
     pub(super) name: Option<&'a str>,
+    pub(super) aria_label: Option<&'a str>,
     pub(super) hook: Option<Rc<FieldHook>>,
     pub(super) required: bool,
     pub(super) required_word: Option<&'static str>,
@@ -59,6 +60,7 @@ impl Default for FieldBuilder<'_> {
             status: None,
             rules: None,
             name: None,
+            aria_label: None,
             hook: None,
             required: false,
             required_word: None,
@@ -119,6 +121,13 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn name(mut self, name: Option<&'a str>) -> Self {
         self.name = name;
+        self
+    }
+
+    /// An `aria_label` prop, naming the field's summary line when it has no text label.
+    #[inline]
+    pub fn aria_label(mut self, aria_label: Option<&'a str>) -> Self {
+        self.aria_label = aria_label;
         self
     }
 

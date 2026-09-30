@@ -34,6 +34,8 @@ pub struct FileFieldLabels {
     /// A card's file size units, bytes to terabytes, in powers of 1000. The
     /// decimal separator is [`Formats::decimal_separator`](crate::localization::Formats).
     pub size_units: [&'static str; 5],
+    /// The picture's alt text in a `crop` dialog; `{name}` is the file's name.
+    pub crop_image: &'static str,
 }
 
 /// `FileFieldLabels::ENGLISH.any_of`. A named fn, so every copy compares equal.
@@ -60,6 +62,7 @@ impl FileFieldLabels {
         drop_files: "Drop files here, or click to pick",
         any_of: english_any_of,
         size_units: ["B", "kB", "MB", "GB", "TB"],
+        crop_image: "Picture to crop: {name}",
     };
 
     pub const GERMAN: Self = Self {
@@ -69,5 +72,6 @@ impl FileFieldLabels {
         drop_files: "Dateien hier ablegen oder zum Auswählen klicken",
         any_of: german_any_of,
         size_units: ["B", "kB", "MB", "GB", "TB"],
+        crop_image: "Zu beschneidendes Bild: {name}",
     };
 }

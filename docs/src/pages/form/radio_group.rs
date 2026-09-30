@@ -105,7 +105,7 @@ pub fn RadioGroupPage() -> Element {
                         .doc("Under the options. What the choice changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
                     prop("required", "bool")
                         .default("false")
                         .doc("Sets `aria-required` on the group and marks the label."),

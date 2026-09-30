@@ -42,7 +42,7 @@ pub fn CheckboxPage() -> Element {
                         .doc("Under the description, in the label's column."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
                     prop("required", "bool")
                         .default("false")
                         .doc("Sets `aria-required` and marks the label with an asterisk."),

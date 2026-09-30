@@ -179,7 +179,7 @@ fn Demo() -> Element {
 | `label` | `Caption` | - | The caption above the control, and the select's name. A string or an `Element`. |
 | `description` | `Caption` | - | Between the label and the control. What to pick. |
 | `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label. An untouched select is not announced invalid. `validate` or the surrounding `Form` enforces it. |
 | `disabled` | `bool` | `false` | Disables and dims the field. A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that. |
 

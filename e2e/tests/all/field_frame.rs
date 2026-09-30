@@ -11,7 +11,7 @@ use chromiumoxide::cdp::browser_protocol::page::{
     EventFileChooserOpened, SetInterceptFileChooserDialogParams,
 };
 use e2e::browser::block_on;
-use e2e::driver::Driver;
+use e2e::driver::{Driver, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 use futures::StreamExt;
@@ -479,3 +479,36 @@ async fn expanded(page: &Page, selector: &str, open: bool) -> Result<()> {
 async fn truthy(page: &Page, expression: &str, what: &str) -> Result<()> {
     wait::for_js_true(page, expression, what).await
 }
+
+/// A warning says it is one before its message, not by colour only (1527); an
+/// empty label and status draw nothing and mark nothing invalid (1525).
+async fn a_warning_says_so_and_a_blank_status_is_none<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    eventually_text(
+        d,
+        "[data-case=warning] [data-slot=status]",
+        "Warning: Already taken",
+        "a warning status",
+    )
+    .await?;
+    for part in ["label", "[data-slot=status]"] {
+        anyhow::ensure!(
+            !d.exists(&format!("[data-case=blank] {part}")).await?,
+            "a blank caption drew a {part}"
+        );
+    }
+    let invalid = d.attr("[data-case=blank] input", "aria-invalid").await?;
+    anyhow::ensure!(
+        invalid.is_none(),
+        "a blank status is aria-invalid={invalid:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_warning_says_so_and_a_blank_status_is_none,
+    "/field-frame",
+    a_warning_says_so_and_a_blank_status_is_none
+);

@@ -73,7 +73,7 @@ pub fn ImageCropperPage() -> Element {
                     (ImageCropperPart::Box, "The crop box, a tab stop."),
                     (ImageCropperPart::Frame, "Over the box: takes its drags and holds the handles."),
                     (ImageCropperPart::Handle, "One of the eight resize handles."),
-                    (ImageCropperPart::Zoom, "With `pan`: the bar over the image's foot holding the zoom slider."),
+                    (ImageCropperPart::Zoom, "With `pan`: the bar under the image holding the zoom slider."),
                 ]),
                 props("CropRect", vec![
                     prop("x, y", "f64").doc("The top left corner, a fraction of the image's width and height."),
@@ -102,7 +102,7 @@ pub fn ImageCropperPage() -> Element {
                     "A drag focuses the box or the corner it grabbed, so the keys carry on from there.",
                     "On a touch screen a finger on the box drags it without scrolling the page; a touch on the image outside it still scrolls. Two fingers on the box pinch it larger or smaller around its centre.",
                     "With `pan` the whole cropper takes touches: one finger pans the image, two zoom it around their midpoint. The mouse wheel and a trackpad pinch zoom it around the pointer. Its value adds the zoom: \"40% by 80%, at 30%, 10%, zoom 100%\".",
-                    "With `pan` a slider named \"Zoom\" over the image's foot zooms around the box's centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Every step zooms by the same factor. Its value is the zoom, \"100%\".",
+                    "With `pan` a slider named \"Zoom\" under the image zooms around the box's centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Every step zooms by the same factor. Its value is the zoom, \"100%\".",
                     "With an `aspect`, a corner key resizes both sides together.",
                     "The box and the corners describe their keys.",
                 ])

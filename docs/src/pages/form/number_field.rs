@@ -115,7 +115,7 @@ pub fn NumberFieldPage() -> Element {
                         .doc("Under the control. Units, ranges, what the number means."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
                     prop("required", "bool")
                         .default("false")
                         .doc("Marks the field required and adds an asterisk to the label."),

@@ -351,7 +351,7 @@ shows Ctrl.
 | `label` | `Caption` | - | The field's caption, above the toolbar. It names the text. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules or limits. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
 | `disabled` | `bool` | `false` | Disables and dims the field and hides the toolbar. |
 | `readonly` | `bool` | `false` | Shows the document, focusable but not editable, without the toolbar. |

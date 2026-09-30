@@ -133,7 +133,7 @@ fn Demo() -> Element {
 | `label` | `Caption` | - | The caption above the track, and the thumb's name. |
 | `description` | `Caption` | - | Between the label and the track. What the value means. |
 | `helper` | `Caption` | - | Under the track, below the mark captions. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value. |
 | `disabled` | `bool` | `false` | Takes the thumb out of the tab order and dims the slider. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead. |

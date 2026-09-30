@@ -297,7 +297,7 @@ pub fn SliderPage() -> Element {
                         .doc("Under the track, below the mark captions."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
                     prop("required", "bool")
                         .default("false")
                         .doc("Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value."),

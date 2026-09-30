@@ -281,6 +281,7 @@ pub fn Rating(props: RatingProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
+        .aria_label(props.aria_label.as_deref())
         .attributes(&props.attributes)
         .prepare();
     use_name_warning(

@@ -202,10 +202,14 @@ pub fn FormPage() -> Element {
                 ]).without_base_props(),
             ],
             accessibility: a11y()
-                .handles(["A form becomes a `form` landmark only once it has a name. A form without a name is still valid."])
+                .handles([
+                    "A form becomes a `form` landmark only once it has a name. A form without a name is still valid.",
+                    "Each summary line starts with its field's label, or its `aria_label` when it has no text label.",
+                ])
                 .must([
                     "Name the form when the page holds more than one form, or when the form is the page's main task, such as a checkout. Pass `aria-labelledby` pointing at a visible heading, or `aria-label`.",
                     "Join intro text through `aria-describedby`, if any.",
+                    "Put the field's name into its messages when its label is markup (`Caption::Node`): the summary cannot read markup, so the line has no name.",
                 ]),
             lead: rsx! {
                 Text {

@@ -171,6 +171,8 @@ explains how parts work. The fields take their own `parts`.
 
 - A form becomes a `form` landmark only once it has a name. A form without a
   name is still valid.
+- Each summary line starts with its field's label, or its `aria_label` when it
+  has no text label.
 
 ### You must
 
@@ -178,6 +180,8 @@ explains how parts work. The fields take their own `parts`.
   page's main task, such as a checkout. Pass `aria-labelledby` pointing at a
   visible heading, or `aria-label`.
 - Join intro text through `aria-describedby`, if any.
+- Put the field's name into its messages when its label is markup
+  (`Caption::Node`): the summary cannot read markup, so the line has no name.
 
 ```rust,ignore
 h2 { id: "checkout-title", "Checkout" }

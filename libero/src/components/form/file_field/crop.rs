@@ -14,6 +14,7 @@ use crate::{
         overlay::Dialog,
     },
     hooks::{ModalScope, use_localization, use_modal},
+    localization::fill,
     platform,
     sx::sx,
 };
@@ -37,7 +38,7 @@ pub(super) fn croppable(files: &Files) -> Option<FileData> {
 #[derive(Clone, PartialEq)]
 struct CropArgs {
     src: String,
-    alt: String,
+    name: String,
     options: CropOptions,
 }
 
@@ -73,7 +74,7 @@ pub(super) fn CropGate(
             let kind = file.content_type().unwrap_or_default();
             let args = CropArgs {
                 src: platform::data_url(&kind, &bytes),
-                alt: file.name(),
+                name: file.name(),
                 options,
             };
             let Some(rect) = dialog.open_with(args).await else {
@@ -100,8 +101,10 @@ pub(super) fn CropGate(
 
 #[component]
 fn CropDialog(args: CropArgs, close: Callback<()>, resolve: Callback<CropRect>) -> Element {
-    let words = use_localization().image_cropper;
-    let CropArgs { src, alt, options } = args;
+    let localization = use_localization();
+    let words = localization.image_cropper;
+    let CropArgs { src, name, options } = args;
+    let alt = fill(localization.file_field.crop_image, &[("name", &name)]);
     let mut rect = use_signal(|| None::<CropRect>);
     let mut failed = use_signal(|| false);
 

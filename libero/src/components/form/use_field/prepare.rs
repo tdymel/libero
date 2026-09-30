@@ -13,7 +13,7 @@ use crate::{
         form::{Caption, FieldEntry, FieldPart, FieldStatus, worst},
         layout::use_box,
     },
-    hooks::{ElementHandle, use_root_id, use_silent_focus_out},
+    hooks::{ElementHandle, use_localization, use_root_id, use_silent_focus_out},
 };
 
 impl FieldBuilder<'_> {
@@ -21,6 +21,7 @@ impl FieldBuilder<'_> {
     pub fn prepare(self) -> PreparedField {
         let id = use_root_id(self.attributes);
         let id_value = id();
+        let warning_word = use_localization().common.warning;
 
         // One hook for the touched flag, the form registration, the binding and
         // their cleanup: every field pays for it, validated or not.
@@ -53,7 +54,12 @@ impl FieldBuilder<'_> {
                 key,
                 FieldEntry {
                     id: id_value.clone(),
-                    label: label.text().map(|text| text.to_string()),
+                    // A field named by `aria_label` only is still told apart in the summary (1526).
+                    label: label
+                        .text()
+                        .or(self.aria_label)
+                        .map(str::to_string)
+                        .or_else(|| attribute_text(self.attributes, "aria-label")),
                     name: name.clone(),
                     status: worst(explicit.clone(), rules.clone()),
                     owner: hook.owner,
@@ -171,7 +177,7 @@ impl FieldBuilder<'_> {
             labelled_by: (self.labelled_by || self.label_with_id) && !label.is_none(),
             description: slot_node(FieldPart::Description.slot(), &id_value, description),
             helper: slot_node(FieldPart::Helper.slot(), &id_value, helper),
-            status: status_node(&id_value, status),
+            status: status_node(&id_value, status, warning_word),
             id: id_value,
             text_slots: self.text_slots,
             describedby,

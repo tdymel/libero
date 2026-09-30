@@ -113,7 +113,7 @@ Autocomplete {
 | `label` | `Caption` | - | The caption above the control, and the field's name. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
 | `disabled` | `bool` | `false` | Takes the input out of the tab order and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |

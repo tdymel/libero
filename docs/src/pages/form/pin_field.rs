@@ -37,7 +37,7 @@ pub fn PinFieldPage() -> Element {
                     prop("helper", "Caption").doc("Under the cells. How long the code lasts, how to get another."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables and dims every cell."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),

@@ -96,7 +96,7 @@ pub fn FieldsetPage() -> Element {
                 prop("helper", "Caption").doc("Under the fields."),
                 prop("status", "FieldStatus")
                     .default("Valid")
-                    .doc("The group's own status, under the fields. A bare `&str` is an error."),
+                    .doc("The group's own status, under the fields. A bare `&str` is an error, an empty one `Valid`."),
                 prop("value", "Store<V>")
                     .doc("The group's own value, for a fieldset outside a `Form`. A fieldset with no `value`, `path` or rules needs `Fieldset::<()>` so Rust can infer its type."),
                 prop("validate", "Validators<V>")

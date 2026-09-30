@@ -2,6 +2,8 @@ use dioxus::prelude::*;
 
 /// The text around a field's control: its label, description or helper.
 /// Only `Text` joins `aria-describedby`; a `Node` caller owns its own a11y.
+/// A `Node` label also stays out of a `Form`'s error summary, which names the
+/// field by its `aria_label` then, or not at all.
 #[derive(Clone, Default, PartialEq)]
 pub enum Caption {
     #[default]
@@ -35,15 +37,19 @@ impl std::fmt::Debug for Caption {
     }
 }
 
+/// An empty or blank text is `None`: no empty `<label>` or description (1525).
 impl From<&str> for Caption {
     fn from(text: &str) -> Self {
-        Self::Text(text.to_string())
+        Self::from(text.to_string())
     }
 }
 
 impl From<String> for Caption {
     fn from(text: String) -> Self {
-        Self::Text(text)
+        match text.trim().is_empty() {
+            true => Self::None,
+            false => Self::Text(text),
+        }
     }
 }
 
@@ -55,9 +61,19 @@ impl From<Element> for Caption {
 
 impl From<Option<String>> for Caption {
     fn from(text: Option<String>) -> Self {
-        match text {
-            Some(text) => Self::Text(text),
-            None => Self::None,
-        }
+        text.map_or(Self::None, Self::from)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_empty_or_blank_text_is_none() {
+        assert!(Caption::from("").is_none());
+        assert!(Caption::from("  ".to_string()).is_none());
+        assert!(Caption::from(Some(String::new())).is_none());
+        assert_eq!(Caption::from("Email").text(), Some("Email"));
     }
 }

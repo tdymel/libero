@@ -154,10 +154,18 @@ pub(in crate::components::form) fn slot_node(
 pub(in crate::components::form) fn status_node(
     id: &str,
     status: Option<&FieldStatus>,
+    warning_word: &'static str,
 ) -> Option<Element> {
     let message = status.and_then(FieldStatus::message)?;
+    // An error is `aria-invalid`; a warning says what it is, as GOV.UK's "Error:" does (1527).
+    let warning = status.is_some_and(FieldStatus::is_warning);
 
     Some(rsx! {
-        span { "data-slot": FieldPart::Status.slot(), id: "{id}-status", "{message}" }
+        span { "data-slot": FieldPart::Status.slot(), id: "{id}-status",
+            if warning {
+                VisuallyHidden { "{warning_word} " }
+            }
+            "{message}"
+        }
     })
 }

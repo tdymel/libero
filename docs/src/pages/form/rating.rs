@@ -61,7 +61,7 @@ pub fn RatingPage() -> Element {
                 prop("helper", "Caption").doc("Under the stars."),
                 prop("status", "FieldStatus")
                     .default("Valid")
-                    .doc("Validation state, under the helper. A bare `&str` is an error."),
+                    .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
                 prop("required", "bool")
                     .default("false")
                     .doc("Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider."),

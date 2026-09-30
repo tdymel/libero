@@ -85,7 +85,7 @@ RadioGroup {
 | `label` | `Caption` | - | The question, and the group's name. |
 | `description` | `Caption` | - | Between the question and the options. How to choose. |
 | `helper` | `Caption` | - | Under the options. What the choice changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` on the group and marks the label. |
 | `disabled` | `bool` | `false` | Disables every option and dims the group. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. Chromium does not announce read-only on a group, so say it in the label or description where it matters. |

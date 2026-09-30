@@ -13,6 +13,9 @@ pub struct CommonLabels {
     pub loading: &'static str,
     /// A search box's placeholder.
     pub search: &'static str,
+    /// Read before a field's warning message, visually hidden: the warning is
+    /// otherwise told apart from helper text by its colour only.
+    pub warning: &'static str,
 }
 
 impl CommonLabels {
@@ -22,6 +25,7 @@ impl CommonLabels {
         remove: "Remove {label}",
         loading: "Loading",
         search: "Search",
+        warning: "Warning:",
     };
 
     pub const GERMAN: Self = Self {
@@ -30,5 +34,6 @@ impl CommonLabels {
         remove: "{label} entfernen",
         loading: "Wird geladen",
         search: "Suchen",
+        warning: "Warnung:",
     };
 }

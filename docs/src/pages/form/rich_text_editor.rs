@@ -474,7 +474,7 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("Under the control. Formatting rules or limits."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
                     prop("required", "bool")
                         .default("false")
                         .doc("Marks the field required and adds an asterisk to the label."),

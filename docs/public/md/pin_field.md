@@ -61,7 +61,7 @@ fn Demo() -> Element {
 | `label` | `Caption` | - | The field's caption, above the cells. It names the group of cells. |
 | `description` | `Caption` | - | Between the label and the cells. Where the code came from. |
 | `helper` | `Caption` | - | Under the cells. How long the code lasts, how to get another. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
 | `disabled` | `bool` | `false` | Disables and dims every cell. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |

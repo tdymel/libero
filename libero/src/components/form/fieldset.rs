@@ -203,7 +203,11 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     ));
     children.push(props.children);
     children.extend(slot_node(FieldsetPart::Helper.slot(), &id, &props.helper));
-    children.extend(status_node(&id, Some(&status)));
+    children.extend(status_node(
+        &id,
+        Some(&status),
+        crate::hooks::use_localization().common.warning,
+    ));
 
     let mut states = props.states.as_ref().cloned().unwrap_or_default();
     if let Some(state) = status.state() {

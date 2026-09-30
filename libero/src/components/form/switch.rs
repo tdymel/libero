@@ -241,6 +241,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
+        .aria_label(props.aria_label.as_deref())
         .attributes(&props.attributes)
         .prepare();
     // A `<label for>` names it, so there is no label id to ask the field for.

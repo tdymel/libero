@@ -107,6 +107,7 @@ fn a_blocked_submit_focuses_the_summary_and_its_lines_reach_the_fields() {
 
 /// A group field has no single control to carry the id its summary line links
 /// to: the line must still focus the group's tab stop. Every validated field type (1274).
+/// A field named by `aria_label` only is named in its line (1526).
 #[test]
 fn every_summary_line_focuses_something_in_its_field() {
     block_on(async {
@@ -128,7 +129,22 @@ fn every_summary_line_focuses_something_in_its_field() {
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(lines, 18);
+        assert_eq!(lines, 20);
+        // A field named by `aria_label` only still names its line (1526).
+        let texts: Vec<String> = page
+            .evaluate(
+                "[...document.querySelectorAll('[data-slot=summary] a')].map((a) => a.textContent)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        for line in ["Newsletter: Tick the box.", "Nickname: Enter a nickname."] {
+            assert!(
+                texts.iter().any(|text| text == line),
+                "no {line:?} in {texts:?}"
+            );
+        }
         page.evaluate("window.__landed = new Set()").await.unwrap();
         for line in 0..lines {
             page.evaluate(format!(

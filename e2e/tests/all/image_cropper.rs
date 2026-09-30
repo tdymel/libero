@@ -68,9 +68,9 @@ fn the_dim_mask_stays_in_forced_colours() {
     });
 }
 
-/// A dropped PNG opens the dialog at 80% of the largest centred square; Apply
-/// hands `onchange` that 16 px square, cut by the canvas and held by `max_size`
-/// at 16 px, still a PNG.
+/// A dropped PNG opens the dialog at 80% of the largest centred square, the
+/// picture named as one to crop (1612); Apply hands `onchange` that 16 px
+/// square, cut by the canvas and held by `max_size` at 16 px, still a PNG.
 #[test]
 fn a_dropped_image_is_cropped_before_the_field_takes_it() {
     let path = std::env::temp_dir().join(format!("e2e-crop-{}.png", std::process::id()));
@@ -88,8 +88,10 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
         .await;
         wait::for_js_true(
             page,
-            "!!document.querySelector('[role=dialog] [data-slot=box]')",
-            "the crop dialog to open",
+            "!!document.querySelector('[role=dialog] [data-slot=box]')
+              && document.querySelector('[role=dialog] [data-slot=image]').alt
+                .startsWith('Picture to crop: e2e-crop-')",
+            "the crop dialog to open, its picture named",
         )
         .await
         .unwrap();
@@ -523,6 +525,34 @@ e2e::scenario!(
     the_keys_pan_and_zoom
 );
 
+/// Pan mode: the zoom bar sits under the image, clear of the still box's lower
+/// edge, and the frame covers the image only (1613).
+async fn the_zoom_bar_leaves_the_box_clear<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#crop", "30,10,40,80", "the starting square").await?;
+    let (frame, crop, zoom) = (
+        d.rect("[data-slot=frame]").await?,
+        d.rect(BOX).await?,
+        d.rect("[data-slot=zoom]").await?,
+    );
+    anyhow::ensure!(
+        crop.y + crop.height <= zoom.y + 0.5,
+        "the zoom bar at {} covers the box's foot at {}",
+        zoom.y,
+        crop.y + crop.height
+    );
+    anyhow::ensure!(
+        (frame.y + frame.height - zoom.y).abs() < 1.0 && (frame.width - zoom.width).abs() < 1.0,
+        "the frame {frame:?} does not end on the zoom bar {zoom:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    the_zoom_bar_leaves_the_box_clear,
+    "/image-cropper/pan",
+    the_zoom_bar_leaves_the_box_clear
+);
+
 /// Pan mode: the box holds still while a finger pans the image under it and
 /// two zoom it around their midpoint; the whole cropper takes touches (1368).
 #[test]
@@ -537,16 +567,17 @@ fn a_touch_pans_and_pinch_zooms_the_image_under_the_box() {
         wait::for_js_true(page, &format!("{crop} === '30,10,40,80'"), "the square")
             .await
             .unwrap();
-        // Root left, top, width, height; frame width, height; image width; box left, width.
+        // Root left, top, width, height less the zoom bar; frame width, height; image
+        // width; box left, width.
         let rects = "(() => { const r = (s) => document.querySelector(s).getBoundingClientRect();
-            const [root, frame, image, box] = ['#cropper', '[data-slot=frame]', '[data-slot=image]', '[data-slot=box]'].map(r);
-            return [root.left, root.top, root.width, root.height, frame.width, frame.height,
+            const [root, frame, image, box, zoom] = ['#cropper', '[data-slot=frame]', '[data-slot=image]', '[data-slot=box]', '[data-slot=zoom]'].map(r);
+            return [root.left, root.top, root.width, root.height - zoom.height, frame.width, frame.height,
                 image.width, box.left - root.left, box.width]; })()";
         let before: Vec<f64> = page.evaluate(rects).await.unwrap().into_value().unwrap();
         let (left, top, width, height) = (before[0], before[1], before[2], before[3]);
         assert!(
             (before[4] - width).abs() < 1.0 && (before[5] - height).abs() < 1.0,
-            "the frame does not cover the cropper: {before:?}"
+            "the frame does not cover the picture: {before:?}"
         );
         let overflow: String = page
             .evaluate("getComputedStyle(document.getElementById('cropper')).overflow")
@@ -607,7 +638,7 @@ fn the_wheel_and_a_trackpad_pinch_zoom_the_image() {
         wait::for_js_true(page, &format!("{crop} === '30,10,40,80'"), "the square")
             .await
             .unwrap();
-        let centre = e2e::passes::pointer::centre_of(page, "#cropper")
+        let centre = e2e::passes::pointer::centre_of(page, "#cropper [data-slot=frame]")
             .await
             .unwrap();
         let wheel = async |delta_y: f64, ctrl: bool| {

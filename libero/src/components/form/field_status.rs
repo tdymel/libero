@@ -40,16 +40,20 @@ impl FieldStatus {
     }
 }
 
-/// A bare message is an error; a warning has to be spelled out.
+/// A bare message is an error; a warning has to be spelled out. An empty or
+/// blank message is `Valid`, so `""` can stand for "all is well" (1525).
 impl From<&str> for FieldStatus {
     fn from(message: &str) -> Self {
-        Self::Error(message.to_string())
+        Self::from(message.to_string())
     }
 }
 
 impl From<String> for FieldStatus {
     fn from(message: String) -> Self {
-        Self::Error(message)
+        match message.trim().is_empty() {
+            true => Self::Valid,
+            false => Self::Error(message),
+        }
     }
 }
 
@@ -110,6 +114,14 @@ mod tests {
             FieldStatus::from("required".to_string()),
             FieldStatus::Error("required".to_string())
         );
+    }
+
+    #[test]
+    fn an_empty_or_blank_message_is_valid() {
+        assert_eq!(FieldStatus::from(""), FieldStatus::Valid);
+        assert_eq!(FieldStatus::from(" \n".to_string()), FieldStatus::Valid);
+        let status: Input<FieldStatus> = "".into();
+        assert_eq!(status.as_ref(), Some(&FieldStatus::Valid));
     }
 
     #[test]

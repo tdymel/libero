@@ -83,7 +83,7 @@ Form {
 | `label` | `Caption` | - | The group's caption, rendered as its `<legend>`. |
 | `description` | `Caption` | - | Under the label. |
 | `helper` | `Caption` | - | Under the fields. |
-| `status` | `FieldStatus` | `Valid` | The group's own status, under the fields. A bare `&str` is an error. |
+| `status` | `FieldStatus` | `Valid` | The group's own status, under the fields. A bare `&str` is an error, an empty one `Valid`. |
 | `value` | `Store<V>` | - | The group's own value, for a fieldset outside a `Form`. A fieldset with no `value`, `path` or rules needs `Fieldset::<()>` so Rust can infer its type. |
 | `validate` | `Validators<V>` | - | Rules over the group's value, one or an array. A rule with `.on(..)` shows on the fields it names. One without shows under the fields once any field in the group was touched. |
 | `path` | `FieldName<V>` | - | Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it. |

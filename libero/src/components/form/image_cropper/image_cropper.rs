@@ -57,7 +57,7 @@ parts_enum! {
         Frame = "frame" => "& > [data-slot='frame']",
         /// One of the eight resize handles; the corners are tab stops.
         Handle = "handle" => "& > [data-slot='frame'] > [data-slot='handle']",
-        /// Pan mode: the bar over the image's foot holding the zoom slider.
+        /// Pan mode: the bar under the image holding the zoom slider.
         Zoom = "zoom" => "& > [data-slot='zoom']",
     }
 }
@@ -239,17 +239,27 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
             sx().selector("& > [data-slot='mask'] > *", sx().border_radius("50%")),
         )
         // The frame holds still; the image moves under it, and the whole cropper takes touches.
+        // A grid row under the image holds the zoom bar, and the box's parts place in the
+        // image's cell, so the bar never covers the box (1613).
         .when(
             "pan",
-            sx().overflow("hidden")
+            sx().display("inline-grid")
+                .overflow("hidden")
                 .selector(
                     "& > [data-slot='image']",
-                    sx().with("transform-origin", "0 0").transform(format!(
-                        "translate(calc({} * 100%), calc({} * 100%)) scale({})",
-                        IMAGE_X.value_or("0"),
-                        IMAGE_Y.value_or("0"),
-                        IMAGE_SCALE.value_or("1")
-                    )),
+                    sx().grid_area("1 / 1")
+                        .with("transform-origin", "0 0")
+                        .transform(format!(
+                            "translate(calc({} * 100%), calc({} * 100%)) scale({})",
+                            IMAGE_X.value_or("0"),
+                            IMAGE_Y.value_or("0"),
+                            IMAGE_SCALE.value_or("1")
+                        )),
+                )
+                .selector(
+                    "& > [data-slot='mask'], & > [data-slot='box'], & > [data-slot='frame']",
+                    // All four lines: an absolute item's `auto` line is the padding edge.
+                    sx().grid_area("1 / 1 / 2 / 2"),
                 )
                 .selector(
                     "& > [data-slot='frame']",
@@ -259,13 +269,11 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                         .height("100%")
                         .cursor("grab"),
                 )
-                // A single-pointer zoom (WCAG 2.5.1), on the page's paper for contrast.
+                // A single-pointer zoom (WCAG 2.5.1), on the page's paper over the zoomed image.
                 .selector(
                     "& > [data-slot='zoom']",
-                    sx().position("absolute")
-                        .left("0")
-                        .right("0")
-                        .bottom("0")
+                    sx().grid_area("2 / 1")
+                        .position("relative")
                         .padding_inline("sm")
                         .padding_block("xs")
                         .line_height("normal")
@@ -362,6 +370,9 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let words = use_localization().image_cropper;
     let root = use_element();
     let image = use_element();
+    // Pan mode's image cell, the cropper less the zoom bar.
+    let frame = use_element();
+    let stage = if props.pan { frame } else { root };
     let box_element = use_element();
     let corners = [use_element(), use_element(), use_element(), use_element()];
     let keys_id = use_id();
@@ -505,8 +516,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             early.set(None);
             // Started here, awaited in the task: under Blitz a read resolves
             // where it is called.
-            let size = root.dimensions();
-            let offset = root.client_offset();
+            let size = stage.dimensions();
+            let offset = stage.client_offset();
             spawn(async move {
                 if let Ok(at) = offset.await {
                     origin.set(at);
@@ -680,7 +691,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             false => ZOOM_STEP.powf(-travel / 100.0),
         };
         let client = event.client_coordinates();
-        let (size, offset) = (root.dimensions(), root.client_offset());
+        let (size, offset) = (stage.dimensions(), stage.client_offset());
         let wheeled = wheeled.clone();
         spawn(async move {
             let (Ok(size), Ok((left, top))) = (size.await, offset.await) else {
@@ -851,6 +862,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     }
                     div {
                         "data-slot": ImageCropperPart::Frame.slot(),
+                        onmounted: frame.mount(),
                         onpointerdown: onpointerdown_box,
                         onwheel,
                         {handles}

@@ -136,7 +136,7 @@ MultiSelect {
 | `label` | `Caption` | - | The caption above the control, and the select's name. |
 | `description` | `Caption` | - | Between the label and the control. What to pick. |
 | `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
 | `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |

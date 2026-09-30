@@ -45,6 +45,8 @@ fn TargetsPage() -> Element {
     let mut toppings = use_signal(Vec::<String>::new);
     let mut quantity = use_signal(|| None::<u32>);
     let mut notes = use_signal(String::new);
+    let mut news = use_signal(|| false);
+    let mut nickname = use_signal(String::new);
     rsx! {
         Form::<()> { summary_title: "Fix these:",
             RadioGroup {
@@ -160,6 +162,19 @@ fn TargetsPage() -> Element {
                 value: notes(),
                 oninput: move |text| notes.set(text),
                 validate: not_empty.error("Add a note."),
+            }
+            // Named by `aria_label` only: the summary line still says which (1526).
+            Checkbox {
+                aria_label: "Newsletter",
+                checked: news(),
+                onchange: move |next| news.set(next),
+                validate: not_empty.error("Tick the box."),
+            }
+            TextField {
+                "aria-label": "Nickname",
+                value: nickname(),
+                oninput: move |text| nickname.set(text),
+                validate: not_empty.error("Enter a nickname."),
             }
             Button { r#type: "submit", "Send" }
         }

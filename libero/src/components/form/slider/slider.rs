@@ -148,6 +148,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
+        .aria_label(props.aria_label.as_deref())
         .attributes(&props.attributes)
         .prepare();
     crate::components::common::use_name_warning(
