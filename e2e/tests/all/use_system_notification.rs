@@ -8,14 +8,14 @@ use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
 };
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_text};
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts until asked; elsewhere than the web, push is unsupported.
 async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let web = d.platform() == Platform::Web;
     eventually_text(d, "#push-supported", &web.to_string(), "mount").await?;
-    linger(d, 3).await;
+    d.settle().await?;
     for (selector, expected) in [
         ("#error", "None"),
         ("#pending", "false"),

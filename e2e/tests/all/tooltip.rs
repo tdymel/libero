@@ -44,8 +44,16 @@ async fn hover_places_and_leaving_closes<D: Driver>(d: &mut D, _route: &str) -> 
 
 async fn rests_on_the_bubble<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     hover_open(d).await?;
-    d.hover(OPEN).await?;
-    linger(d, 8).await;
+    // A close the move armed and did not cancel runs at the fire; elsewhere 20 delays pass.
+    if d.hold_timers(&[10]).await? {
+        d.hover(OPEN).await?;
+        d.settle().await?;
+        d.fire_timers(10).await?;
+        d.settle().await?;
+    } else {
+        d.hover(OPEN).await?;
+        linger(d, 8).await;
+    }
     ensure!(d.exists(OPEN).await?, "moving onto the bubble closed it");
     Ok(())
 }

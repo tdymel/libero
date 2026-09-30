@@ -3,7 +3,7 @@
 
 use anyhow::{Result, bail};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, Rect, eventually, eventually_focused, linger};
+use e2e::driver::{Driver, Platform, Rect, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -195,7 +195,7 @@ async fn a_tap_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     d.click(TRIGGER).await?;
     shown(d, true, "the box to reopen").await?;
     d.click(BOX_TEXT).await?;
-    linger(d, 8).await;
+    d.settle().await?;
     if !d.exists(BOX).await? {
         bail!("{:?}: a tap on the box's text closed it", d.platform());
     }

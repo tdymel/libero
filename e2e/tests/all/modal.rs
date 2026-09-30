@@ -4,7 +4,7 @@
 use anyhow::{Result, ensure};
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused};
 use e2e::suite::Step;
 use e2e::wait;
 use e2e::{
@@ -262,7 +262,7 @@ async fn back_closes_the_top_layer<D: Driver>(d: &mut D, _route: &str) -> Result
         Ok(!d.exists(MENU_ITEM).await?)
     })
     .await?;
-    linger(d, 5).await;
+    d.settle().await?;
     ensure!(d.exists(DIALOG).await?, "one Back closed the dialog too");
     d.press_back().await?;
     eventually(d, "a second Back to close the dialog", async |d| {

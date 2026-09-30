@@ -165,7 +165,7 @@ async fn a_release_outside_ends<D: Driver>(d: &mut D, _route: &str) -> Result<()
     d.drag(SCROLL_THUMB, 400.0, 60.0).await?;
     eventually_text(d, "#slider-end", &max, "a release past the end").await?;
     d.hover(RANGE_THUMB).await?;
-    linger(d, 8).await;
+    d.settle().await?;
     let value = d.attr(SCROLL_THUMB, "aria-valuenow").await?;
     ensure!(
         value.as_deref() == Some(max.as_str()),
@@ -190,7 +190,7 @@ async fn a_short_drag_on_the_thumb<D: Driver>(d: &mut D, _route: &str) -> Result
     })
     .await?;
     let committed = d.text("#slider-end").await?;
-    linger(d, 8).await;
+    d.settle().await?;
     let value = d.attr(SCROLL_THUMB, "aria-valuenow").await?;
     ensure!(
         value.as_deref() == Some(committed.as_str()),

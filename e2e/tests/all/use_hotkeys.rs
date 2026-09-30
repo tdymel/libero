@@ -3,7 +3,7 @@
 //! `within` hotkey fires only with focus in its elements.
 
 use anyhow::Result;
-use e2e::driver::{Driver, eventually, eventually_focused, linger};
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard::{self, Key};
 
 /// A chord's key carries no text: a held Ctrl types nothing.
@@ -142,7 +142,7 @@ async fn close_menus<D: Driver>(d: &mut D) -> Result<()> {
 async fn a_menu_opened_inside_counts_as_inside<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     open_menu(d, "#outside button").await?;
     d.press_ctrl(J).await?;
-    linger(d, 5).await;
+    d.settle().await?;
     count_is(d, "#count", "0").await?;
     close_menus(d).await?;
 
@@ -180,7 +180,7 @@ async fn only_the_inside_box_counts<D: Driver>(
 ) -> Result<()> {
     focus_shown(d, outside).await?;
     d.press_ctrl(J).await?;
-    linger(d, 5).await;
+    d.settle().await?;
     count_is(d, "#count", "0").await?;
     focus_shown(d, inside).await?;
     d.press_ctrl(J).await?;

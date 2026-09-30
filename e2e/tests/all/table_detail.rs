@@ -2,7 +2,7 @@
 //! its row, which follows the row through a sort; the toggle is no row click.
 
 use anyhow::{Result, bail};
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text, linger};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 
 const CHERRY: &str = "button[aria-label=\"Details for Cherry\"]";
@@ -31,7 +31,7 @@ async fn opens_under_its_row<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     if (detail.y - (row.y + row.height)).abs() > 2.0 || detail.width < table.width - 2.0 {
         bail!("the detail is not a full-width row under Cherry: {detail:?}, {row:?}, {table:?}");
     }
-    linger(d, 5).await;
+    d.settle().await?;
     if !d.text("#clicked").await?.is_empty() {
         bail!("the toggle also clicked its row");
     }

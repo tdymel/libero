@@ -23,35 +23,48 @@ async fn pressing_is<D: Driver>(d: &mut D, expected: &str) -> Result<()> {
     .await
 }
 
-/// Long enough for a wrong late callback or click to have landed.
-async fn linger<D: Driver>(d: &mut D) {
+/// The press timer (`LongPressOptions::default().ms`).
+const PRESS_MS: u32 = 400;
+
+/// Until a wrong late callback or click would have landed: on a held clock fires every
+/// pending press timer and settles, elsewhere waits 500 ms.
+async fn past_the_delay<D: Driver>(d: &mut D, held: bool) -> Result<()> {
+    if held {
+        d.fire_timers(PRESS_MS).await?;
+        return d.settle().await;
+    }
     let started = Instant::now();
     while started.elapsed() < Duration::from_millis(500) {
         d.idle().await;
     }
+    Ok(())
 }
 
 async fn a_held_touch_fires_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.long_press(TARGET, 900).await?;
     text_is(d, "#holds", "1").await?;
-    linger(d).await;
+    // Held only now: the first press timer has to run on the real clock.
+    let held = d.hold_timers(&[PRESS_MS]).await?;
+    past_the_delay(d, held).await?;
     text_is(d, "#holds", "1").await?;
     text_is(d, "#taps", "0").await?;
     pressing_is(d, "false").await
 }
 
 async fn a_short_touch_is_a_tap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let held = d.hold_timers(&[PRESS_MS]).await?;
     d.long_press(TARGET, 100).await?;
     text_is(d, "#taps", "1").await?;
-    linger(d).await;
+    past_the_delay(d, held).await?;
     text_is(d, "#holds", "0").await?;
     pressing_is(d, "false").await
 }
 
 async fn a_click_is_a_tap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let held = d.hold_timers(&[PRESS_MS]).await?;
     d.click(TARGET).await?;
     text_is(d, "#taps", "1").await?;
-    linger(d).await;
+    past_the_delay(d, held).await?;
     text_is(d, "#holds", "0").await
 }
 

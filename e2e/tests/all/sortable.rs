@@ -2,7 +2,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text, linger};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -46,7 +46,7 @@ async fn a_drag_up_moves_it<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 async fn a_short_drag_moves_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let pitch = pitch(d, false).await?;
     d.drag("#Beta button", 0.0, pitch * 0.3).await?;
-    linger(d, 4).await;
+    d.settle().await?;
     ensure!(
         d.text("#order").await? == "Alpha Beta Gamma Delta",
         "a drag short of the next middle reordered"
@@ -129,7 +129,7 @@ async fn escape_puts_it_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         "Escape to cancel",
     )
     .await?;
-    linger(d, 4).await;
+    d.settle().await?;
     ensure!(
         d.text("#order").await? == "Alpha Beta Gamma Delta",
         "a cancelled move reordered"
@@ -311,7 +311,7 @@ async fn an_ignored_move_leaves_no_refocus<D: Driver>(d: &mut D, _route: &str) -
     d.focus("#rotate").await?;
     d.press(keyboard::ENTER).await?;
     eventually_text(d, "#order", "Delta Alpha Beta Gamma", "the rotate").await?;
-    linger(d, 4).await;
+    d.settle().await?;
     eventually_focused(d, "#rotate", "a reorder after an ignored move").await?;
     Ok(())
 }
@@ -326,7 +326,7 @@ async fn a_swipe_off_the_handle_scrolls<D: Driver>(d: &mut D, _route: &str) -> R
         Ok(d.rect("#Item12").await?.y < before - 50.0)
     })
     .await?;
-    linger(d, 4).await;
+    d.settle().await?;
     ensure!(
         d.text("#order").await? == order,
         "a swipe on the text reordered"

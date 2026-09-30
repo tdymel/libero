@@ -276,6 +276,20 @@ impl Drop for ClosesOnDrop {
     }
 }
 
+/// A tab no test closes, the active one after [`crate::frames::Front::release`]: closing a
+/// test's active tab would activate another test's and end its fullscreen.
+pub(crate) async fn home() -> Result<&'static Page> {
+    static HOME: tokio::sync::OnceCell<Page> = tokio::sync::OnceCell::const_new();
+    HOME.get_or_try_init(|| async {
+        harness()
+            .browser
+            .new_page("about:blank")
+            .await
+            .context("open the home tab")
+    })
+    .await
+}
+
 impl Fixture {
     /// Opens a fixture route and waits for `data-fixture-ready`: during its first build
     /// `dx` serves a placeholder at a success status (`codebase/testing`).

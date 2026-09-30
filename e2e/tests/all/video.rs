@@ -89,6 +89,7 @@ fn the_controls_fit_a_narrow_player() {
 #[test]
 fn every_control_is_a_tab_stop_in_visual_order() {
     block_on(async {
+        let _fullscreen = e2e::frames::keep_fullscreen().await;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_js_true(
@@ -217,6 +218,7 @@ fn the_overlay_bar_keeps_its_contrast_over_a_white_picture() {
         ];
     })()"#;
     block_on(async {
+        let _fullscreen = e2e::frames::keep_fullscreen().await;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_js_true(
@@ -283,6 +285,7 @@ const STATE: &str = "(document.querySelector('#player [role=group]').dataset.ful
 #[test]
 fn fullscreen_takes_the_player_and_escape_or_f_gives_it_back() {
     block_on(async {
+        let _fullscreen = e2e::frames::keep_fullscreen().await;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
@@ -450,6 +453,7 @@ e2e::scenario!(
 
 /// Native or pseudo, whichever the renderer grants; Blitz has no controls to press.
 async fn fullscreen_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let _fullscreen = e2e::frames::keep_fullscreen().await;
     if d.platform() == Platform::Native {
         return Ok(());
     }
@@ -504,6 +508,7 @@ fn pseudo_state(fullscreen: Option<String>) -> bool {
 /// a Tab between its controls does not. The route refuses the Fullscreen API, so
 /// WebKitGTK, which grants it, draws the box too.
 async fn tab_out_leaves_pseudo<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let _fullscreen = e2e::frames::keep_fullscreen().await;
     if d.platform() == Platform::Native {
         return Ok(());
     }
@@ -604,6 +609,7 @@ async fn controls_shown<D: Driver>(d: &mut D) -> Result<bool> {
 /// In fullscreen the controls overlay the picture and fade while playing
 /// untouched; keyboard focus and a tap on the picture bring them back.
 async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let _fullscreen = e2e::frames::keep_fullscreen().await;
     if d.platform() == Platform::Native {
         return Ok(());
     }
@@ -776,6 +782,7 @@ fn a_shrink_wrapping_parent_keeps_the_box() {
 fn the_speed_menu_works_in_fullscreen() {
     const SPEED: &str = "#player button[aria-label^='Playback speed']";
     block_on(async {
+        let _fullscreen = e2e::frames::keep_fullscreen().await;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_js_true(
@@ -834,6 +841,7 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
     const DIALOG: &str = "[role=dialog][aria-label=Volume]";
     const VIDEO: &str = "document.querySelector('#player video')";
     block_on(async {
+        let _fullscreen = e2e::frames::keep_fullscreen().await;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         let speaker = |name: &str| {
@@ -1090,6 +1098,7 @@ const LONG_DURATION: &str =
 #[test]
 fn a_tooltip_shows_in_fullscreen() {
     block_on(async {
+        let _fullscreen = e2e::frames::keep_fullscreen().await;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_js_true(
@@ -1203,6 +1212,7 @@ fn a_click_on_the_picture_plays_or_pauses() {
 #[test]
 fn focus_from_code_shows_the_faded_controls() {
     block_on(async {
+        let _fullscreen = e2e::frames::keep_fullscreen().await;
         let fixture = Fixture::open("/video/long", Viewport::Desktop)
             .await
             .unwrap();
@@ -1237,6 +1247,7 @@ fn focus_from_code_shows_the_faded_controls() {
 #[test]
 fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {
     block_on(async {
+        let _fullscreen = e2e::frames::keep_fullscreen().await;
         let fixture = Fixture::open("/video/long", Viewport::Desktop)
             .await
             .unwrap();
@@ -1312,6 +1323,7 @@ const QUESTION: Key = Key {
 fn shift_question_lists_the_keys_inside_the_player() {
     const DIALOG: &str = "[role=dialog]";
     block_on(async {
+        let _fullscreen = e2e::frames::keep_fullscreen().await;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_js_true(

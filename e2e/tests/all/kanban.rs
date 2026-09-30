@@ -3,7 +3,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::Suite;
-use e2e::driver::{Driver, eventually_focused, eventually_text, linger};
+use e2e::driver::{Driver, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 use e2e::suite::Step;
 
@@ -105,7 +105,7 @@ async fn a_drop_off_the_board_puts_it_back<D: Driver>(d: &mut D, _route: &str) -
         "a drop below the board",
     )
     .await?;
-    linger(d, 4).await;
+    d.settle().await?;
     ensure!(
         d.text("#order").await? == START,
         "a drop off the board moved a card"
@@ -140,7 +140,7 @@ async fn escape_puts_it_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         "Escape to cancel",
     )
     .await?;
-    linger(d, 4).await;
+    d.settle().await?;
     ensure!(d.text("#order").await? == START, "a cancel reordered");
     ensure!(d.text("#moves").await?.is_empty(), "a move was reported");
     Ok(())
@@ -386,6 +386,28 @@ async fn mouse_at(
     page.execute(event).await.unwrap();
 }
 
+/// The board's auto-scroll tick (libero's kanban `AUTO_SCROLL_MS`).
+const AUTO_SCROLL_MS: u32 = 40;
+
+/// Runs held auto-scroll ticks, each with the scroll read it spawned, until `done` or
+/// `most` ticks, in the page: a round trip per tick took longer than the real clock.
+async fn ticks(page: &chromiumoxide::Page, done: &str, most: u32) -> bool {
+    page.evaluate(format!(
+        "(async () => {{
+            for (let n = 0; !({done}) && n < {most}; n++) {{
+                const armed = window.__heldClock.fireAll({AUTO_SCROLL_MS});
+                if (armed !== 1) throw new Error(`${{armed}} auto-scroll ticks armed`);
+                await new Promise((r) => setTimeout(() => setTimeout(r, 0), 0));
+            }}
+            return {done};
+        }})()"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
 /// A card held still at the board's end edge scrolls the board, and drops in the column it brought in (1364).
 #[test]
 fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
@@ -396,6 +418,7 @@ fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
     block_on(async {
         let fixture = Fixture::open("/kanban", Viewport::Mobile).await.unwrap();
         let page = &fixture.page;
+        e2e::clock::hold(page, &[AUTO_SCROLL_MS]).await.unwrap();
         let hidden: bool = page
             .evaluate(
                 "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
@@ -431,16 +454,14 @@ fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
             mouse_at(page, Kind::MouseMoved, at, true).await;
         }
         // Held still: only the ticks scroll, up to Done's end edge and no further.
-        wait::for_js_true(
-            page,
-            "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
-             return Math.abs(document.querySelector('#column-2').getBoundingClientRect().right - b.right) < 2; })()",
-            "a card held at the end edge to scroll the board to its end",
-        )
-        .await
-        .unwrap();
-        // A few more ticks' time, held at the edge.
-        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        let at_end = "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
+             return Math.abs(document.querySelector('#column-2').getBoundingClientRect().right - b.right) < 2; })()";
+        assert!(
+            ticks(page, at_end, 200).await,
+            "a card held at the end edge did not scroll the board to its end"
+        );
+        // A few more ticks, held at the edge.
+        ticks(page, "false", 8).await;
         let past: bool = page
             .evaluate(
                 "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \

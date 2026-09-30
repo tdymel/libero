@@ -9,14 +9,14 @@ use chromiumoxide::cdp::browser_protocol::browser::{
 };
 use chromiumoxide::cdp::browser_protocol::emulation::SetGeolocationOverrideParams;
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_text};
 use e2e::{Fixture, Viewport, wait};
 
 /// Nothing prompts or locates until asked; Blitz has no Geolocation API.
 async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let supported = (d.platform() != Platform::Native).to_string();
     eventually_text(d, "#supported", &supported, "mount").await?;
-    linger(d, 3).await;
+    d.settle().await?;
     for (selector, expected) in [
         ("#position", "none"),
         ("#error", "None"),

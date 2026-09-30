@@ -66,16 +66,50 @@ fn percentile(sorted: &[f64], fraction: f64) -> f64 {
     sorted[rank.clamp(1, sorted.len()) - 1]
 }
 
-/// Starts recording; a recorder already on the page is stopped and replaced. The tab is
-/// brought to front first: in a background tab every input event waits out a 500 ms frame.
-pub async fn start(page: &Page) -> Result<()> {
+/// Activating a tab exits fullscreen in the others: a test in fullscreen holds this shared
+/// ([`keep_fullscreen`]), [`bring_to_front`] takes it alone.
+static FOREGROUND: tokio::sync::RwLock<()> = tokio::sync::RwLock::const_new(());
+
+/// Held from entering fullscreen to the test's end, no other tab is brought to front.
+pub async fn keep_fullscreen() -> tokio::sync::RwLockReadGuard<'static, ()> {
+    FOREGROUND.read().await
+}
+
+/// A page in front; no test enters fullscreen until [`Front::release`].
+#[must_use = "release it before closing the page"]
+pub struct Front {
+    _alone: tokio::sync::RwLockWriteGuard<'static, ()>,
+}
+
+impl Front {
+    /// Brings the harness's home tab to front; call it before closing the page.
+    pub async fn release(self) -> Result<()> {
+        crate::browser::home()
+            .await?
+            .bring_to_front()
+            .await
+            .context("bring the home tab to front")?;
+        Ok(())
+    }
+}
+
+/// Brings `page` to front once no test holds [`keep_fullscreen`].
+pub async fn bring_to_front(page: &Page) -> Result<Front> {
+    let alone = FOREGROUND.write().await;
     page.bring_to_front()
         .await
         .context("bring the page to front")?;
+    Ok(Front { _alone: alone })
+}
+
+/// Starts recording; a recorder already on the page is stopped and replaced. The tab is
+/// brought to front first: in a background tab every input event waits out a 500 ms frame.
+pub async fn start(page: &Page) -> Result<Front> {
+    let front = bring_to_front(page).await?;
     page.evaluate(RECORDER)
         .await
         .context("inject the frame recorder")?;
-    Ok(())
+    Ok(front)
 }
 
 /// Waits until the recorder holds `count` frames past the warm-up.

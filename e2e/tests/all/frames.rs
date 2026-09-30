@@ -27,9 +27,10 @@ fn the_recorder_sees_a_page_that_burns_fifty_milliseconds_per_frame() {
         )
         .await
         .unwrap();
-        frames::start(page).await.unwrap();
+        let front = frames::start(page).await.unwrap();
         frames::until_recorded(page, 5).await.unwrap();
         let stats = frames::stop(page).await.unwrap();
+        front.release().await.unwrap();
         assert!(stats.count > 0, "no frames recorded: {stats:?}");
         assert!(
             stats.max >= 50.0,
@@ -52,10 +53,11 @@ fn frame_time_of_a_scroll_area_under_the_wheel() {
         let page = &fixture.page;
         let at = pointer::centre_of(page, "#list-pane").await.unwrap();
 
-        frames::start(page).await.unwrap();
+        let front = frames::start(page).await.unwrap();
         tokio::time::sleep(Duration::from_millis(3000)).await;
         frames::report("idle_control", frames::stop(page).await.unwrap()).unwrap();
-        frames::start(page).await.unwrap();
+        front.release().await.unwrap();
+        let front = frames::start(page).await.unwrap();
         for _ in 0..40 {
             page.execute(
                 DispatchMouseEventParams::builder()
@@ -72,6 +74,7 @@ fn frame_time_of_a_scroll_area_under_the_wheel() {
             tokio::time::sleep(Duration::from_millis(16)).await;
         }
         let stats = frames::stop(page).await.unwrap();
+        front.release().await.unwrap();
 
         frames::report("scroll_area_wheel", stats).unwrap();
         assert!(stats.count > 0, "no frames recorded: {stats:?}");
@@ -103,10 +106,12 @@ mod scroll_area_swipe {
                     .unwrap()
             };
             let before = first_row().await;
-            frames::start(&page).await.unwrap();
+            // One WebView page: nothing to hand the front back to.
+            let front = frames::start(&page).await.unwrap();
             tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
             frames::report("android_idle_control", frames::stop(&page).await.unwrap()).unwrap();
-            frames::start(&page).await.unwrap();
+            drop(front);
+            let _front = frames::start(&page).await.unwrap();
             // One way: drags back and forth ended where they began (todo 1163).
             for _ in 0..12 {
                 driver.drag("#list-pane", 0.0, -100.0).await.unwrap();

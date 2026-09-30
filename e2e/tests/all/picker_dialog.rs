@@ -34,8 +34,11 @@ async fn a_tap_opens_only_the_calendar<D: Driver>(d: &mut D, _route: &str) -> Re
         "{:?}: inputmode {inputmode:?}",
         d.platform()
     );
-    linger(d, 40).await;
-    ensure!(!d.soft_keyboard_shown().await?, "the soft keyboard came up");
+    // Only Android reports a soft keyboard; it rises a while after the tap.
+    if android {
+        linger(d, 40).await;
+        ensure!(!d.soft_keyboard_shown().await?, "the soft keyboard came up");
+    }
     Ok(())
 }
 

@@ -45,7 +45,7 @@ e2e::scenario!(a_click_picks_the_half_it_lands_on, "/rating", clicks);
 async fn keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(STARS).await?;
     d.press(keyboard::ARROW_LEFT).await?;
-    linger(d, 4).await;
+    d.settle().await?;
     ensure!(
         value_of(d, STARS).await? == 0.0,
         "ArrowLeft raised an unrated value"
@@ -139,7 +139,7 @@ async fn fixed<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus("#fixed").await?;
     ensure!(d.is_focused("#fixed").await?, "read-only lost its tab stop");
     d.press(keyboard::END).await?;
-    linger(d, 4).await;
+    d.settle().await?;
     ensure!(value_of(d, "#fixed").await? == 2.0, "read-only changed");
     ensure!(
         d.attr("#average", "role").await?.as_deref() == Some("img"),

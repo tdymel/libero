@@ -14,7 +14,7 @@ fn a_chord_in_one_page_does_not_navigate_another() {
         let sender = Fixture::open("/menu", Viewport::Desktop).await.unwrap();
         let page = &sender.page;
         // The active tab takes the Back, as after `frames::start` in a full run.
-        other.page.bring_to_front().await.unwrap();
+        let front = e2e::frames::bring_to_front(&other.page).await.unwrap();
         let outcome = async {
             let refused = keyboard::press_with(page, keyboard::PAGE_DOWN, keyboard::CTRL).await;
             anyhow::ensure!(refused.is_err(), "Ctrl+PageDown was sent");
@@ -28,9 +28,11 @@ fn a_chord_in_one_page_does_not_navigate_another() {
             Ok(())
         }
         .await;
+        let released = front.release().await;
         let _ = sender.close().await;
         let _ = other.close().await;
         outcome.unwrap();
+        released.unwrap();
     });
 }
 

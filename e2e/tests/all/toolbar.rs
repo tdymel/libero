@@ -3,7 +3,7 @@
 use anyhow::{Result, ensure};
 use e2e::archetypes::{Orientation, RovingTabindex};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, linger};
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -219,7 +219,7 @@ async fn leaving_the_bar_forgets_the_editor<D: Driver>(d: &mut D, _route: &str) 
     d.click("#italic").await?;
     eventually_focused(d, "#italic", "a click back in").await?;
     d.press(keyboard::ESCAPE).await?;
-    linger(d, 5).await;
+    d.settle().await?;
     eventually_focused(d, "#italic", "Escape after leaving").await
 }
 

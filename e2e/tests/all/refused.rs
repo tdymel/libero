@@ -2,13 +2,13 @@
 //! click, an `inert` subtree neither a click nor focus. Blitz gave both.
 
 use anyhow::{Result, ensure};
-use e2e::driver::{Driver, Platform, eventually_focused, linger};
+use e2e::driver::{Driver, Platform, eventually_focused};
 use e2e::passes::keyboard::TAB;
 
 async fn a_disabled_button<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#off-label").await?;
     d.click("#off-in-card").await?;
-    linger(d, 3).await;
+    d.settle().await?;
     ensure!(
         d.text("#clicks").await? == "0",
         "a disabled button's handler ran"
@@ -18,7 +18,7 @@ async fn a_disabled_button<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 
 async fn an_inert_button<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#asleep-button").await?;
-    linger(d, 3).await;
+    d.settle().await?;
     ensure!(
         d.text("#clicks").await? == "0",
         "an inert button's handler ran"
@@ -37,11 +37,11 @@ async fn focus_after_a_press<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#first").await?;
     eventually_focused(d, "#first", "a click on #first").await?;
     d.click("#off-in-card").await?;
-    linger(d, 3).await;
+    d.settle().await?;
     let in_card = d.focused_id().await?;
     d.click("#first").await?;
     d.click("#off").await?;
-    linger(d, 3).await;
+    d.settle().await?;
     let off = d.focused_id().await?;
     // A touch on a disabled control sends no mouse events, so focus stays; a
     // plain `<button disabled>` does the same on the WebView (990).

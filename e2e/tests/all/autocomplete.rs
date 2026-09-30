@@ -4,7 +4,7 @@
 use anyhow::{Result, ensure};
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, linger};
+use e2e::driver::{Driver, eventually};
 use e2e::passes::{contrast, dismissal, keyboard, live_region};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -197,7 +197,7 @@ async fn typing_keeps_the_list_honest<D: Driver>(d: &mut D, _route: &str) -> Res
     eventually(d, "the list to open", async |d| d.exists(LISTBOX).await).await?;
     for key in [keyboard::HOME, keyboard::END] {
         d.press(key).await?;
-        linger(d, 2).await;
+        d.settle().await?;
         let active = d.attr(TRIGGER, "aria-activedescendant").await?;
         ensure!(
             active.is_none(),

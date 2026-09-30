@@ -55,7 +55,7 @@ async fn typing_stops_at_maxlength<D: Driver>(d: &mut D, _route: &str) -> Result
     d.type_text("0123456789012345678xyz").await?;
     eventually_text(d, "[data-slot=counter]", "20/20", "typing past the limit").await?;
     d.press(ENTER).await?;
-    linger(d, 3).await;
+    d.settle().await?;
     eventually_text(d, "[data-slot=counter]", "20/20", "Enter at the limit").await?;
     d.press(BACKSPACE).await?;
     eventually_text(d, "[data-slot=counter]", "19/20", "a Backspace").await?;
