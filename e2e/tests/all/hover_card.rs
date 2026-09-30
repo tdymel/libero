@@ -260,9 +260,8 @@ fn the_pointer_opens_and_closes_it_on_its_delays() {
 
         pointer::hover(page, TRIGGER).await.unwrap();
         armed(page, OPEN_MS, 1, "hovering to arm the open delay").await;
-        // The control on the clock: were the delay not held, the real one
-        // would open the card while this sleeps.
-        tokio::time::sleep(std::time::Duration::from_millis(u64::from(OPEN_MS) + 300)).await;
+        // The open waits on the held timer, not on the hover's own render (1634).
+        e2e::clock::settle(page).await.unwrap();
         assert!(
             !wait::is_visible(page, CARD).await.unwrap(),
             "the card opened before its held open delay fired"

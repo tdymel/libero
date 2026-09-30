@@ -282,8 +282,8 @@ pub async fn assert_chords_ignored_with(
                 continue;
             }
             press_with(page, *key, modifier).await?;
-            page.evaluate("new Promise(r => setTimeout(() => r(1), 60))")
-                .await?;
+            // Past the chord's handlers and renders; a reaction on a timer is not waited for (1631).
+            crate::clock::settle(page).await?;
             let after: String = page.evaluate(read.as_str()).await?.into_value()?;
             if after != before {
                 bail!(

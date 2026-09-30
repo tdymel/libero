@@ -427,12 +427,14 @@ fn modifier_chords_are_left_to_the_browser() {
         keyboard::HOME,
         keyboard::END,
     ];
-    block_on(async {
-        for (path, stop) in [
+    // The three pages at once, as a `Suite` runs its pages.
+    block_on(futures::future::join_all(
+        [
             ("/calendar", STOP),
             ("/calendar/month", "[role=grid] [data-date='2026-03-01']"),
             ("/calendar/mini", "[data-date='2026-03-18']"),
-        ] {
+        ]
+        .map(|(path, stop)| async move {
             let fixture = Fixture::open(path, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
             keyboard::tab_to(page, stop, 10).await.unwrap();
@@ -440,8 +442,8 @@ fn modifier_chords_are_left_to_the_browser() {
                 .await
                 .unwrap_or_else(|e| panic!("{path}: {e}"));
             fixture.close().await.unwrap();
-        }
-    });
+        }),
+    ));
 }
 
 /// Waits until focus is on `date`'s own cell in the grid titled `month`.

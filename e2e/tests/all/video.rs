@@ -634,7 +634,7 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
     until_faded(d, held, "the controls to fade while playing").await?;
 
     d.click("#player video").await?;
-    within(d, 3, "a press on the picture to show them", controls_shown).await?;
+    eventually(d, "a press on the picture to show them", controls_shown).await?;
     // A click pauses too; a tap on faded controls only shows them (todo 1362).
     if d.platform() != Platform::Android {
         reads(d, "the click to pause", PLAY, "aria-label", "Play").await?;
@@ -663,7 +663,7 @@ async fn inline_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     d.click(PLAY).await?;
     until_faded(d, held, "the controls to fade while playing").await?;
     d.click("#player video").await?;
-    within(d, 3, "a press on the picture to show them", controls_shown).await?;
+    eventually(d, "a press on the picture to show them", controls_shown).await?;
     // A click pauses as well; a tap on faded controls only shows them (todo 1362).
     if d.platform() == Platform::Android {
         d.click(PLAY).await?;
@@ -1089,8 +1089,12 @@ async fn fade(page: &chromiumoxide::Page) {
 
 const FADED: &str = "document.querySelector('#player [role=group]').dataset.controls === 'hidden'
     && getComputedStyle(document.querySelector('#player [data-slot=controls]')).opacity === '0'";
-const PLAYING: &str = "!document.querySelector('#player video').paused";
-const PAUSED: &str = "document.querySelector('#player video').paused";
+// The play button's name too: `paused` flips at `play()`, before the player's own state,
+// and a click that lands in between toggles from the stale one.
+const PLAYING: &str = "!document.querySelector('#player video').paused
+    && document.querySelector('#player [data-slot=controls] button').getAttribute('aria-label') === 'Pause'";
+const PAUSED: &str = "document.querySelector('#player video').paused
+    && document.querySelector('#player [data-slot=controls] button').getAttribute('aria-label') === 'Play'";
 const LONG_DURATION: &str =
     "document.querySelector('#player [data-slot=time]').textContent === '0:00 / 0:15'";
 

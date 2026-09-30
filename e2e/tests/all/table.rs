@@ -1744,28 +1744,34 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
         bail!("the button does not name the active count");
     }
 
+    // What the close queued runs first: a press in the same task lost its menu (todo 1632).
+    d.settle().await?;
     d.click("[aria-label=\"Stock column options\"]").await?;
-    eventually(d, "the column menu", async |d| {
-        d.exists("[role=menuitem]").await
+    // Todo 1502: the menu's entries, not only its first, before reading them.
+    eventually(d, "the column menu's Filter entry", async |d| {
+        Ok(filter_entry(d).await?.is_some())
     })
     .await?;
-    let mut picked = false;
-    for index in 0..12 {
-        let item = format!("[role=menuitem][data-menu-index=\"{index}\"]");
-        if d.exists(&item).await? && d.text(&item).await?.trim() == "Filter" {
-            d.click(&item).await?;
-            picked = true;
-            break;
-        }
-    }
-    if !picked {
+    let Some(item) = filter_entry(d).await? else {
         bail!("no Filter entry");
-    }
+    };
+    d.click(&item).await?;
     eventually(d, "the panel from the menu", async |d| {
         d.exists(PANEL).await
     })
     .await?;
     eventually_focused(d, &format!("{LINE_1} {PICKER}"), "the menu's Filter").await
+}
+
+/// The open column menu's Filter entry.
+async fn filter_entry<D: Driver>(d: &mut D) -> Result<Option<String>> {
+    for index in 0..12 {
+        let item = format!("[role=menuitem][data-menu-index=\"{index}\"]");
+        if d.exists(&item).await? && d.text(&item).await?.trim() == "Filter" {
+            return Ok(Some(item));
+        }
+    }
+    Ok(None)
 }
 
 e2e::scenario!(

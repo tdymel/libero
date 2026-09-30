@@ -291,6 +291,68 @@ fn a_file_field_opens_its_picker_once_per_press() {
     });
 }
 
+/// The harness's `pointer::click_at` presses with no move first (todo 1632): the press
+/// alone carries the pointer from elsewhere onto its target, boundary events first.
+#[test]
+fn a_press_without_a_move_enters_its_target() {
+    block_on(async {
+        let fixture = Fixture::open("/field-frame", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let input = "[data-case=text] input";
+        pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 })
+            .await
+            .unwrap();
+        page.evaluate(format!(
+            "(() => {{ window.__seen = []; const el = document.querySelector({input:?}); \
+             for (const kind of ['pointerover', 'pointerenter', 'mouseover', 'mouseenter', \
+                 'pointerdown', 'mousedown', 'click']) \
+                 el.addEventListener(kind, () => window.__seen.push(kind)); }})()"
+        ))
+        .await
+        .unwrap();
+        press(page, &centre(input)).await.unwrap();
+        truthy(
+            page,
+            "window.__seen.includes('click')",
+            "the click on the input",
+        )
+        .await
+        .unwrap();
+        let seen: Vec<String> = page
+            .evaluate("window.__seen")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            seen,
+            [
+                "pointerover",
+                "pointerenter",
+                "mouseover",
+                "mouseenter",
+                "pointerdown",
+                "mousedown",
+                "click"
+            ],
+            "the events a press with no move sent"
+        );
+        assert!(
+            page.evaluate(format!(
+                "document.querySelector({input:?}).matches(':hover')"
+            ))
+            .await
+            .unwrap()
+            .into_value::<bool>()
+            .unwrap(),
+            "the pressed input is not :hover"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 532: with no value and no placeholder a trigger shrank to its content,
 /// a 0px `MultiSelect` trigger; it fills the frame and takes a press at its centre.
 #[test]
@@ -373,8 +435,7 @@ fn centre(selector: &str) -> String {
 /// A real pointer press and release at the point `at` evaluates to.
 async fn press(page: &Page, at: &str) -> Result<()> {
     let (x, y): (f64, f64) = page.evaluate(at).await?.into_value()?;
-    let at = pointer::Point { x, y };
-    pointer::drag(page, at, at, 1).await
+    pointer::click_at(page, pointer::Point { x, y }).await
 }
 
 /// Drags across the input's text, from its left edge rightwards.
@@ -391,7 +452,8 @@ async fn drag_across(page: &Page, input: &str) -> Result<()> {
         x: x + width - 2.0,
         y,
     };
-    pointer::drag(page, from, to, 5).await
+    // One step: each move waits for a frame (todo 1632).
+    pointer::drag(page, from, to, 1).await
 }
 
 async fn blur(page: &Page) -> Result<()> {

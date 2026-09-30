@@ -226,18 +226,18 @@ pub async fn click(page: &Page, selector: &str) -> Result<()> {
     click_at(page, centre_of(page, selector).await?).await
 }
 
-/// A primary click at a viewport point.
+/// A primary click at a viewport point, with no move first: a background page holds a
+/// move for its next frame, up to 1 s (todo 1632). The press still sends the pointer's
+/// boundary events (`field_frame::a_press_without_a_move_enters_its_target`).
 pub async fn click_at(page: &Page, at: Point) -> Result<()> {
-    mouse(page, DispatchMouseEventType::MouseMoved, at, 0).await?;
     mouse(page, DispatchMouseEventType::MousePressed, at, 1).await?;
-    mouse(page, DispatchMouseEventType::MouseReleased, at, 0).await?;
-    Ok(())
+    mouse(page, DispatchMouseEventType::MouseReleased, at, 0).await
 }
 
-/// Double-click an element at its centre: two clicks, then the `dblclick`.
+/// Double-click an element at its centre: two clicks, then the `dblclick`. No move first,
+/// as [`click_at`].
 pub async fn double_click(page: &Page, selector: &str) -> Result<()> {
     let at = centre_of(page, selector).await?;
-    mouse(page, DispatchMouseEventType::MouseMoved, at, 0).await?;
     for clicks in 1..=2 {
         mouse_n(page, DispatchMouseEventType::MousePressed, at, 1, clicks).await?;
         mouse_n(page, DispatchMouseEventType::MouseReleased, at, 0, clicks).await?;
