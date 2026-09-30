@@ -59,6 +59,7 @@ fn main() -> Result<()> {
     let base_url = format!("http://127.0.0.1:{port}");
 
     let dx = dx(&root)?;
+    eprintln!("e2e: dx is {}", dx.display());
 
     // Nested builds go where the runner was built: they don't see the outer `--target-dir` (todo 328).
     let target_dir = own_target_dir()?;
