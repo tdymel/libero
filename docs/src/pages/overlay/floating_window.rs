@@ -270,7 +270,7 @@ pub fn FloatingWindowPage() -> Element {
                     prop("resizable", "bool").default("false").doc("Draws the corner resize handle."),
                     prop("pinned", "bool").default("false").doc("Keeps it at `placement`, with no drag, keyboard move or Move menu item."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Overrides the stacking. Unset, windows sit below overlays and modals."),
-                    prop("sx", "Input<Sx>").doc("Styles the window. `min_width`, `max_width`, `min_height` and `max_height` here limit a resize. The window never grows past the viewport."),
+                    prop("sx", "Input<Sx>").doc("Styles the window. `min_width`, `max_width`, `min_height` and `max_height` here limit a resize. Unset, the minimum is 12rem by 6rem, room for the title bar and Close. The window never grows past the viewport."),
                     prop("onmove", "Option<Callback<WindowRect>>").doc("Called after a drag, a keyboard or button move, or a Reset, in viewport pixels."),
                     prop("onresize", "Option<Callback<WindowRect>>").doc("Called after a resize by pointer, keyboard or button, or a Reset."),
                     prop("parts", "Input<Parts<FloatingWindowPart>>").doc("Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(FloatingWindowPart::Body, sx().padding(\"lg\"))`."),

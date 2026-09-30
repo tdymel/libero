@@ -166,7 +166,9 @@ pub fn LightboxPage() -> Element {
             accessibility: a11y()
                 .key(["z"], "On the picture: steps through 2x, 4x and 8x and back to fitted.")
                 .key(["+", "-"], "On the picture: zooms in finer steps.")
-                .key(["Left", "Right", "Up", "Down"], "On the picture: pans. At the edge of a pan, moves to the next picture.")
+                .key(["Left", "Right"], "On a fitted picture: moves to the previous or next picture.")
+                .key(["Home", "End"], "On the picture: moves to the first or last picture.")
+                .key(["Left", "Right", "Up", "Down"], "On a zoomed picture: pans. At the edge of a pan, moves to the next picture.")
                 .key(["Left", "Right", "Home", "End"], "In the thumbnail strip: moves along the strip and changes the picture with it.")
                 .key(["Escape"], "Closes the viewer.")
                 .handles([

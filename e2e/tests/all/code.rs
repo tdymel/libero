@@ -321,6 +321,24 @@ fn a_highlighted_line_keeps_its_bar_in_forced_colours() {
     });
 }
 
+/// Todo 1538. A highlighted multi-line source keeps its line break, as the
+/// plain one does, so `1;let` is not read as one word.
+#[test]
+fn a_highlighted_multi_line_code_keeps_its_line_break() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "(() => { const c = document.querySelector('#multi-line-code'); \
+             return c?.children.length > 0 && c.textContent === 'let a = 1;\\nlet b = 2;'; })()",
+            "the highlighted spans with the line break between them",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 732. A short span stays whole even where `overflow-wrap: anywhere`
 /// lowered its min-content; a long one still wraps inside 320px (1.4.10).
 #[test]

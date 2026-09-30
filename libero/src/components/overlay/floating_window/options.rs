@@ -33,6 +33,7 @@ pub struct FloatingWindowOptions {
     pub pinned: bool,
     pub z_index: Input<ThemeAwareValue>,
     /// On the window itself; its `min_*`/`max_*` clamp a resize, within the viewport.
+    /// Unset, the minimum is 12rem by 6rem.
     pub sx: Input<Sx>,
     /// Styles for the inner parts, under `sx`.
     pub parts: Input<Parts<FloatingWindowPart>>,

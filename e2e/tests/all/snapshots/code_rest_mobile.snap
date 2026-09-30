@@ -26,6 +26,16 @@ code
   StaticText "é"
   StaticText "/* a /* b */ c */"
   StaticText "x"
+code
+  StaticText "let"
+  StaticText "a ="
+  StaticText "1"
+  StaticText ";"
+  StaticText
+  StaticText "let"
+  StaticText "b ="
+  StaticText "2"
+  StaticText ";"
 group "Rust code"
   StaticText "Rust"
   button "Copy code"

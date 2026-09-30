@@ -160,7 +160,12 @@ static CODE_LINE_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .white_space("pre")
         .padding_right("16px")
         .when("no-gutter", sx().padding_left("12px"))
+        .when("copy-space", sx().padding_right(COPY_SPACE))
 });
+
+// The floating copy button's 8px inset and ~26px width, plus a gap: the
+// first line scrolls out from under it.
+const COPY_SPACE: &str = "40px";
 
 static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
@@ -170,6 +175,7 @@ static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
         .font_size(Size::Sm)
         // As `CODE_LINES_SX`, so `max_lines` holds while highlighting runs.
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
+        .when("copy-space", sx().padding_right(COPY_SPACE))
 });
 
 parts_enum! {
@@ -295,6 +301,7 @@ fn code_line_row(
     line_numbers: bool,
     diff: DiffCell,
     row_state: Option<&'static str>,
+    copy_space: bool,
     labels: &CodeBlockLabels,
 ) -> Element {
     let states = row_state
@@ -335,7 +342,9 @@ fn code_line_row(
             Box {
                 component: "span",
                 framework_sx: &CODE_LINE_CONTENT_SX,
-                states: States::new().with("no-gutter", !line_numbers && diff.is_none()),
+                states: States::new()
+                    .with("no-gutter", !line_numbers && diff.is_none())
+                    .with("copy-space", copy_space),
                 for (text, class) in line.iter() {
                     span { class: *class, {text.as_str()} }
                 }
@@ -353,6 +362,7 @@ fn code_lines(
     line_numbers: bool,
     highlighted_lines: &HashSet<usize>,
     diff_statuses: Option<&[Option<DiffStatus>]>,
+    floating_copy: bool,
     labels: &CodeBlockLabels,
 ) -> Element {
     let gutter_width = format!("{}ch", lines.len().to_string().len());
@@ -374,7 +384,8 @@ fn code_lines(
                             None if highlighted_lines.contains(&(index + 1)) => Some("highlighted"),
                             None => None,
                         };
-                        code_line_row(index, line, line_numbers, diff, row_state, labels)
+                        let copy_space = floating_copy && index == 0;
+                        code_line_row(index, line, line_numbers, diff, row_state, copy_space, labels)
                     }
                 }
             }
@@ -455,6 +466,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     // No language, no label: the empty span keeps the copy button at the end.
     let label = language.map(|language| language.name(&labels));
     let copy_source = copyable.then(|| display_source.clone());
+    let floating_copy = copyable && !header;
     let (highlighted_lines, overrun) = props
         .highlight_lines
         .as_deref()
@@ -517,12 +529,14 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
             line_numbers,
             &highlighted_lines,
             props.diff.then_some(&diff_statuses[..]),
+            floating_copy,
             &labels,
         ),
         None => rsx! {
             Box {
                 component: "pre",
                 framework_sx: &CODE_PLAIN_PRE_SX,
+                states: States::new().with("copy-space", floating_copy),
                 Box {
                     component: "code",
                     {display_source.as_str()}

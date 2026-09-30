@@ -107,7 +107,11 @@ pub fn Code(props: CodeProps) -> Element {
         props.attributes,
         rsx! {
             if let Some(lines) = highlighted.read().clone().flatten() {
-                for line in lines.iter() {
+                for (i, line) in lines.iter().enumerate() {
+                    // The break the line split dropped, as the plain path keeps it.
+                    if i > 0 {
+                        "\n"
+                    }
                     for (text, class) in spaces_outside_spans(line) {
                         if class.is_some() {
                             span { class, {text} }

@@ -17,6 +17,8 @@ fn CodePage() -> Element {
             CodeBlock { id: "numbered-block", language: "rust", line_numbers: true, source: "let a = 1;\nlet b = 2;" }
             // Todo 434: the leading `é` puts the scan's byte offsets apart from `RegExp`'s UTF-16 ones.
             Code { id: "nested-comment-code", language: "rust", source: "é /* a /* b */ c */ x" }
+            // Todo 1538: the highlighter splits lines; the break must survive.
+            Code { id: "multi-line-code", language: "rust", source: "let a = 1;\nlet b = 2;" }
             CodeBlock { id: "diff-block", language: "rust", header: true, copyable: true, diff: true,
                 source: "fn greet() {{\n-    old();\n+    new();\n}}"
             }

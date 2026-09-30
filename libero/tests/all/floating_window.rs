@@ -230,3 +230,13 @@ fn the_separator_reads_its_size_in_the_localized_words() {
         "{separator:?}"
     );
 }
+
+/// Todos 1535 and 1536. Unset, a resize stops at room for the title bar and
+/// Close, and the body ends above the grip so its scrollbar keeps its corner.
+#[test]
+fn a_resizable_window_has_a_minimum_and_keeps_the_grip_off_the_body() {
+    let html = render(resizable_app);
+    assert!(html.contains("min-width:12rem;"), "{html}");
+    assert!(html.contains("min-height:6rem;"), "{html}");
+    assert!(html.contains("{margin-bottom:14px;"), "{html}");
+}

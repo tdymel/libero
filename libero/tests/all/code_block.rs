@@ -146,3 +146,28 @@ fn highlight_lines_without_a_known_language_still_marks_the_row() {
     let html = body(&render(app));
     assert!(html.contains("highlighted"), "{html}");
 }
+
+/// Todo 1541. With no header the copy button floats over the first row, so only
+/// that row reserves its width; a header holds the button and reserves nothing.
+#[test]
+fn a_floating_copy_button_reserves_space_on_the_first_row_only() {
+    fn floating() -> Element {
+        rsx! {
+            LiberoProvider {
+                CodeBlock { header: false, highlight_lines: "2", source: "first\nsecond" }
+            }
+        }
+    }
+    fn headed() -> Element {
+        rsx! {
+            LiberoProvider {
+                CodeBlock { header: true, highlight_lines: "2", source: "first\nsecond" }
+            }
+        }
+    }
+
+    let html = body(&render(floating));
+    assert_eq!(html.matches("copy-space").count(), 1, "{html}");
+    assert!(html.find("copy-space") < html.find(">first<"), "{html}");
+    assert!(!body(&render(headed)).contains("copy-space"));
+}

@@ -19,6 +19,9 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
         // A caller's max replaces these; the `Float` wrapper caps it again.
         .max_width("100dvw")
         .max_height("100dvh")
+        // A resize never shrinks it past the title bar and Close (todo 1535).
+        .min_width("12rem")
+        .min_height("6rem")
         .overflow("hidden")
         .selector("&:focus-visible", focus_ring_sx())
         .selector(
@@ -65,6 +68,15 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
                 .min_height("0")
                 .overflow("auto")
                 .padding("sm"),
+        )
+        // The grip's corner stays off a classic scrollbar, so a press there scrolls.
+        .selector(
+            format!(
+                "&:has(> [data-slot='{}']) > [data-slot='{}']",
+                FloatingWindowPart::Resize.slot(),
+                FloatingWindowPart::Body.slot()
+            ),
+            sx().margin_bottom("14px"),
         )
         .selector(
             FloatingWindowPart::Resize.selector(),

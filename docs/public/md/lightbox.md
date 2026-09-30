@@ -137,7 +137,9 @@ explains how parts work.
 |---|---|
 | `z` | On the picture: steps through 2x, 4x and 8x and back to fitted. |
 | `+` or `-` | On the picture: zooms in finer steps. |
-| `Left`, `Right`, `Up` or `Down` | On the picture: pans. At the edge of a pan, moves to the next picture. |
+| `Left` or `Right` | On a fitted picture: moves to the previous or next picture. |
+| `Home` or `End` | On the picture: moves to the first or last picture. |
+| `Left`, `Right`, `Up` or `Down` | On a zoomed picture: pans. At the edge of a pan, moves to the next picture. |
 | `Left`, `Right`, `Home` or `End` | In the thumbnail strip: moves along the strip and changes the picture with it. |
 | `Escape` | Closes the viewer. |
 
