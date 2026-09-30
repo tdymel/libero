@@ -26,7 +26,7 @@ use crate::{
     components::{
         accessibility::use_announcer,
         buttons::{ActionIcon, Button, Toolbar, ToolbarGroup, ToolbarSeparator},
-        common::{Glyph, HtmlTag, Input, attr},
+        common::{Glyph, HtmlTag, Input, attr, names_itself, use_name_warning},
         form::{field_props, use_bound, use_field, use_field_frame},
         layout::use_box,
         overlay::{Menu, MenuEntry, MenuItem, Shortcut, ShortcutHelp, use_menu},
@@ -655,25 +655,19 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     };
     // The same menu on the block's opening fence, also without a toolbar.
     let fence = source_code.filter(|_| editable).map(|_| {
-        let mut attributes = fence_menu.a11y_attributes();
-        attributes.extend([
-            attr("tabindex", "-1"),
-            attr(
-                "aria-label",
-                format!(
-                    "{}: {}",
-                    words.code_language,
-                    language_label.clone().unwrap_or_default()
-                ),
-            ),
-            listener("onmousedown", |event: MouseEvent| event.prevent_default()),
-            // The button's keys are the menu's, not the text's.
-            listener("onkeydown", move |_: KeyboardEvent| fence_key.set(true)),
-        ]);
         let shown = match code_language.as_deref() {
             Some("") | None => words.plain_text.to_string(),
             Some(name) => name.to_string(),
         };
+        let mut attributes = fence_menu.a11y_attributes();
+        attributes.extend([
+            attr("tabindex", "-1"),
+            // The name starts with the visible fence text, so voice control finds it.
+            attr("aria-label", format!("{shown}, {}", words.code_language)),
+            listener("onmousedown", |event: MouseEvent| event.prevent_default()),
+            // The button's keys are the menu's, not the text's.
+            listener("onkeydown", move |_: KeyboardEvent| fence_key.set(true)),
+        ]);
         rsx! {
             Menu { state: fence_menu, items: language_items.clone(),
                 Button { attributes, variant: "outlined", color: "ink", size: "xs", "{shown}" }
@@ -693,7 +687,9 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         )
     };
 
+    // `for` names only a labelable element, and the surface is a `div`.
     let field = use_field()
+        .labelled_by()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
@@ -710,6 +706,10 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
+    use_name_warning(
+        field.label_id().is_some() || names_itself(&props.attributes),
+        "RichTextEditor: no `label`, `aria-label` or `aria-labelledby`, so it is announced as just \"edit text\".",
+    );
     let frame = use_field_frame()
         .states(field.states())
         .multiline()
@@ -776,6 +776,13 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 event.prevent_default();
                 edit(&|live| live.run(&commands.peek(), builtin), false);
             }
+            Intent::Delete(delete) => {
+                event.prevent_default();
+                edit(
+                    &|live| live.apply(Record::Step, |state| delete.run(state)),
+                    false,
+                );
+            }
         }
     };
 
@@ -840,7 +847,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .element(&element)
         .attr(ROOT_ATTR, token.clone())
         .attr("role", "textbox")
+        .attr("aria-labelledby", field.label_id())
         .attr("aria-multiline", "true")
+        // A read-only surface is not `contenteditable` but stays a tab stop for reading.
+        .attr("tabindex", (!disabled).then_some("0"))
+        .attr("aria-disabled", disabled.then_some("true"))
         // Combobox-like while the overlay is open; `aria-expanded` is not allowed on a textbox.
         .attr("aria-autocomplete", open.then_some("list"))
         .attr("aria-controls", open.then(|| overlay_id.cloned()))
@@ -894,7 +905,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
 
     let run = move |builtin: Builtin| {
         move |_: MouseEvent| {
-            run_command(builtin.into(), true, false);
+            run_command(builtin.into(), true, true);
         }
     };
     // Pressing a button must not take focus or the selection from the text.
@@ -936,7 +947,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 MenuItem::new(label)
                     .radio(on)
                     .onselect(move |_| {
-                        run_command(builtin.into(), true, false);
+                        run_command(builtin.into(), true, true);
                     })
                     .into()
             })
@@ -1013,7 +1024,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 .leading(rsx! { Glyph { slot: tool.slot, icon: tool.icon } })
                 .disabled(tool.disabled)
                 .onselect(move |_| {
-                    run_command(builtin.into(), true, false);
+                    run_command(builtin.into(), true, true);
                 });
             match tool.selected {
                 Some(on) => item.checkbox(on),

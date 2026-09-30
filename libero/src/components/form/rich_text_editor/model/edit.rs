@@ -289,6 +289,66 @@ impl EditorState {
         }
     }
 
+    /// Ctrl/Alt+Backspace: back to the previous word start, or one step at a block start.
+    pub(crate) fn delete_word_backward(&mut self) -> bool {
+        self.delete_back_to(word_back)
+    }
+
+    /// Ctrl/Alt+Delete: on to the next word end, or one step at a block end.
+    pub(crate) fn delete_word_forward(&mut self) -> bool {
+        self.delete_on_to(word_forward)
+    }
+
+    /// Cmd+Backspace: back to the line start (a hard break or the block start).
+    pub(crate) fn delete_line_backward(&mut self) -> bool {
+        self.delete_back_to(|chars: &[char], offset| {
+            chars[..offset]
+                .iter()
+                .rposition(|&c| c == '\n')
+                .map_or(0, |at| at + 1)
+        })
+    }
+
+    /// Cmd+Delete: on to the line end (a hard break or the block end).
+    pub(crate) fn delete_line_forward(&mut self) -> bool {
+        self.delete_on_to(|chars: &[char], offset| {
+            chars[offset..]
+                .iter()
+                .position(|&c| c == '\n')
+                .map_or(chars.len(), |at| offset + at)
+        })
+    }
+
+    /// Deletes from `start(chars, caret)` to the caret; at a block start or on an atom, Backspace.
+    fn delete_back_to(&mut self, start: impl Fn(&[char], usize) -> usize) -> bool {
+        if self.delete_selection() {
+            return true;
+        }
+        let at = self.caret();
+        let block = self.block(at.block);
+        if at.offset == 0 || block.kind.content() == ContentKind::Atom {
+            return self.delete_backward();
+        }
+        let chars: Vec<char> = block.text().chars().collect();
+        let from = start(&chars, at.offset).min(at.offset - 1);
+        self.delete_range(Position::new(at.block, from), at)
+    }
+
+    /// Deletes from the caret to `end(chars, caret)`; at a block end or on an atom, Delete.
+    fn delete_on_to(&mut self, end: impl Fn(&[char], usize) -> usize) -> bool {
+        if self.delete_selection() {
+            return true;
+        }
+        let at = self.caret();
+        let block = self.block(at.block);
+        if at.offset >= block.len() || block.kind.content() == ContentKind::Atom {
+            return self.delete_forward();
+        }
+        let chars: Vec<char> = block.text().chars().collect();
+        let to = end(&chars, at.offset).max(at.offset + 1);
+        self.delete_range(at, Position::new(at.block, to))
+    }
+
     /// Adds `mark` to the selection, or removes its kind when all of it has one.
     /// At a collapsed caret it toggles the marks the next typed text takes.
     pub fn toggle_mark(&mut self, mark: Mark) -> bool {
@@ -682,4 +742,53 @@ pub(super) fn grapheme_forward(text: &str, offset: usize) -> usize {
         end += 1;
     }
     end - offset
+}
+
+/// Letters, digits and `_` form words; any other non-space run (`...`, an emoji) is one too.
+fn word_class(c: char) -> u8 {
+    match c {
+        _ if c.is_whitespace() => 0,
+        _ if c.is_alphanumeric() || c == '_' => 1,
+        _ => 2,
+    }
+}
+
+/// The start of the word before `offset`, skipping the spaces in between.
+fn word_back(chars: &[char], offset: usize) -> usize {
+    let mut start = offset;
+    while start > 0 && word_class(chars[start - 1]) == 0 && chars[start - 1] != '\n' {
+        start -= 1;
+    }
+    // Joiners and combining marks go with their base, whichever class it is.
+    let class = chars[..start]
+        .iter()
+        .rev()
+        .find(|&&c| !extends(c))
+        .map_or(0, |&c| word_class(c));
+    while start > 0
+        && class != 0
+        && (extends(chars[start - 1]) || word_class(chars[start - 1]) == class)
+    {
+        start -= 1;
+    }
+    start
+}
+
+/// The end of the word after `offset`, skipping the spaces in between.
+fn word_forward(chars: &[char], offset: usize) -> usize {
+    let mut end = offset;
+    while end < chars.len() && word_class(chars[end]) == 0 && chars[end] != '\n' {
+        end += 1;
+    }
+    let class = chars[end..]
+        .iter()
+        .find(|&&c| !extends(c))
+        .map_or(0, |&c| word_class(c));
+    while end < chars.len()
+        && class != 0
+        && (extends(chars[end]) || word_class(chars[end]) == class)
+    {
+        end += 1;
+    }
+    end
 }

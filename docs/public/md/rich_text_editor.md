@@ -260,6 +260,8 @@ shows Ctrl.
 | `Enter` | Twice at the end of a code block: the second drops the empty line and leaves the block, also on a touch keyboard. |
 | `Tab` or `Shift+Tab` | In a list item: nests it under the item before, or moves it out. Elsewhere Tab moves focus on as usual. |
 | `Shift+Enter` | Line break inside the block. |
+| `Ctrl+Backspace` or `Ctrl+Delete` | Deletes the word before or after the caret (`Alt` on a Mac). |
+| `Cmd+Backspace` or `Cmd+Delete` | On a Mac: deletes to the start or end of the line, which ends at a line break or the block's edge. |
 | `Ctrl+Z` | Undo. |
 | `Ctrl+Shift+Z` or `Ctrl+Y` | Redo. |
 | `Ctrl+K` | Opens the link dialog: links the selection, or edits or removes the link at the caret. |
@@ -269,8 +271,12 @@ shows Ctrl.
 
 ### Libero handles
 
-- The text is a `role="textbox"` with `aria-multiline`, named by `label` and
-  described by `description` and `helper`.
+- The text is a `role="textbox"` with `aria-multiline`, named by `label`
+  through `aria-labelledby` and described by `description` and `helper`.
+  Clicking the label focuses the text. A debug build warns when nothing names
+  it.
+- The text stays a tab stop while `readonly`; while `disabled` it carries
+  `aria-disabled` and is skipped.
 - The toolbar is one tab stop with arrow-key movement, named by the
   localization's `rich_text_editor` words. Each mark and block button reports
   `aria-pressed`.
@@ -280,14 +286,16 @@ shows Ctrl.
 - In a narrow column the toolbar stays one row: the less used buttons move
   into a "More formatting" menu as `menuitemcheckbox` items, so the arrow keys
   only reach what is shown. Bold, italic and the text type menu always stay.
-- A shortcut that toggles a mark, list, quote or block type is announced
-  through a polite live region ("Bold on", "Heading 2").
+- A shortcut, toolbar button or menu item that toggles a mark, list, quote or
+  block type is announced through a polite live region ("Bold on",
+  "Heading 2").
 - The link dialog focuses its labelled URL field; a refused scheme shows as
   that field's error. Closing it puts the caret back in the text.
 - The text type menu is a menu button whose name includes the current type,
   with `menuitemradio` items. So is the language menu of a code block, in
-  the toolbar and on its opening fence ("Code language: Rust"); the fence
-  button is not a tab stop, `Ctrl+Shift+L` reaches it.
+  the toolbar and on its opening fence, whose name starts with the fence text
+  it shows ("rust, Code language"); the fence button is not a tab stop,
+  `Ctrl+Shift+L` reaches it.
 - Every edit goes through the document model, so undo, the `onchange` value
   and the screen stay in step. Input methods (IME) compose natively and are
   taken in when the composition ends.
@@ -298,7 +306,7 @@ shows Ctrl.
 ### You must
 
 - Leave `label` unset only when something else names the editor, such as an
-  `aria_label`.
+  `aria-label` or `aria-labelledby` attribute.
 - Document custom chords you bind in `keymap` for your users.
 - Bind chords the browser leaves to the page. `Ctrl+N`, `Ctrl+T`, `Ctrl+W`,
   `Ctrl+Tab` and their Shift forms never reach it (on a Mac also `Cmd+Q`,
@@ -322,8 +330,8 @@ shows Ctrl.
 - Copy and cut write the selection as plain text and as `text/markdown`;
   custom nodes write through their `NodeSpec::markdown` (pass `registry`).
   Cut is one undo step.
-- Drag and drop of text and spellcheck replacements are ignored, so
-  `spellcheck` is off.
+- Drag and drop of text and replacements (spellcheck, autocorrect, macOS text
+  substitutions) are ignored, so `spellcheck` is off.
 
 ## Props
 

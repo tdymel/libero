@@ -141,6 +141,46 @@ fn backspace_deletes_a_whole_emoji() {
 }
 
 #[test]
+fn word_deletes_take_the_word_and_the_spaces_before_it() {
+    check("one two|", EditorState::delete_word_backward, "one |");
+    check("one two  |", EditorState::delete_word_backward, "one |");
+    check("one tw|o", EditorState::delete_word_backward, "one |o");
+    check("a... b|", EditorState::delete_word_backward, "a... |");
+    check("a...|", EditorState::delete_word_backward, "a|");
+    check("|one two", EditorState::delete_word_forward, "| two");
+    check("one|  two", EditorState::delete_word_forward, "one|");
+    check("x👨\u{200D}👩|", EditorState::delete_word_backward, "x|");
+}
+
+#[test]
+fn word_deletes_at_a_block_edge_join_like_backspace_and_delete() {
+    check("ab\n\n|cd", EditorState::delete_word_backward, "ab|cd");
+    check("ab|\n\ncd", EditorState::delete_word_forward, "ab|cd");
+    check("a|b|c", EditorState::delete_word_backward, "a|c");
+}
+
+#[test]
+fn line_deletes_stop_at_a_newline_and_take_it_when_next_to_it() {
+    check("one two|", EditorState::delete_line_backward, "|");
+    check("one |two", EditorState::delete_line_forward, "one |");
+    check(
+        "```\nab\ncd|e\n```",
+        EditorState::delete_line_backward,
+        "```\nab\n|e\n```",
+    );
+    check(
+        "```\nab\n|cd\n```",
+        EditorState::delete_line_backward,
+        "```\nab|cd\n```",
+    );
+    check(
+        "```\na|b\ncd\n```",
+        EditorState::delete_line_forward,
+        "```\na|\ncd\n```",
+    );
+}
+
+#[test]
 fn backspace_at_a_block_start_joins_it_to_the_one_before() {
     check("ab\n\n|cd", EditorState::delete_backward, "ab|cd");
     check("# ab\n\n|cd", EditorState::delete_backward, "# ab|cd");

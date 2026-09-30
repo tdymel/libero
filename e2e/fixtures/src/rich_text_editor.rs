@@ -21,7 +21,18 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/trailing", || rsx! { TrailingPage {} }),
     ("/rich-text-editor/mentions", || rsx! { MentionsPage {} }),
     ("/rich-text-editor/narrow", || rsx! { NarrowPage {} }),
+    ("/rich-text-editor/states", || rsx! { StatesPage {} }),
 ];
+
+/// A read-only and a disabled editor, for their tab stop and state.
+#[component]
+fn StatesPage() -> Element {
+    let doc = Doc::from_markdown("Fixed text\n");
+    rsx! {
+        div { id: "readonly", RichTextEditor { label: "Read only", value: doc.clone(), readonly: true } }
+        div { id: "disabled", RichTextEditor { label: "Disabled", value: doc, disabled: true } }
+    }
+}
 
 /// Todo 1466: a long code line in a 20rem centring row, as the docs preview.
 #[component]

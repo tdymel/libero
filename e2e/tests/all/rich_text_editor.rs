@@ -810,7 +810,10 @@ fn the_fence_button_and_mod_shift_l_change_the_language_and_return_to_the_caret(
             &format!("[{FENCE}.getAttribute('aria-label'), {FENCE}.getAttribute('tabindex')]"),
         )
         .await;
-        assert_eq!(name, "Code language: Rust");
+        assert_eq!(
+            name, "rust, Code language",
+            "the name starts with the visible text"
+        );
         assert_eq!(tabindex, "-1");
         page.evaluate(format!("{FENCE}.click()")).await.unwrap();
         wait::for_js_true(page, &format!("!!{PLAIN}"), "the fence's language menu")
@@ -1118,5 +1121,171 @@ fn a_mention_list_near_the_viewport_bottom_flips_above_the_caret() {
         )
         .await;
         assert_eq!(below, "ok");
+    });
+}
+
+#[test]
+fn the_text_is_named_by_its_label_and_a_label_click_focuses_it() {
+    block_on(async {
+        let fixture = Fixture::open(TRAILING, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, &format!("!!{EDITOR}"), "the editor")
+            .await
+            .unwrap();
+        let tree = e2e::ax::snapshot(page, "[role=textbox]").await.unwrap();
+        let first = tree.lines().next().unwrap_or_default();
+        assert!(first.contains("textbox \"Snippet\""), "{first}");
+
+        pointer::click(page, "label").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === {EDITOR}"),
+            "the label click to focus the text",
+        )
+        .await
+        .unwrap();
+    });
+}
+
+#[test]
+fn a_readonly_editor_is_a_tab_stop_and_a_disabled_one_says_so() {
+    const READONLY: &str = "document.querySelector('#readonly [role=textbox]')";
+    const DISABLED: &str = "document.querySelector('#disabled [role=textbox]')";
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, &format!("!!{DISABLED}"), "both editors")
+            .await
+            .unwrap();
+        // [read-only tabindex, disabled tabindex, disabled aria-disabled]
+        let (readonly, disabled, state): (String, Option<String>, String) = eval(
+            page,
+            &format!(
+                "[{READONLY}.getAttribute('tabindex'), {DISABLED}.getAttribute('tabindex'), {DISABLED}.getAttribute('aria-disabled')]"
+            ),
+        )
+        .await;
+        assert_eq!(readonly, "0");
+        assert_eq!(disabled, None);
+        assert_eq!(state, "true");
+
+        // The label reaches the read-only text, as Tab does.
+        pointer::click(page, "#readonly label").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === {READONLY}"),
+            "the read-only text to take focus",
+        )
+        .await
+        .unwrap();
+    });
+}
+
+#[test]
+fn toolbar_and_menu_actions_are_announced() {
+    const STATUS: &str = "document.querySelector('[role=status]')?.textContent";
+    const HEADING: &str = "[...document.querySelectorAll('[role=menuitemradio]')].find(i => i.textContent.includes('Heading 3'))";
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        keyboard::type_text(page, "ab").await.unwrap();
+        wait::for_js_true(page, &out_is("ab\n"), "the typed text")
+            .await
+            .unwrap();
+
+        page.evaluate(
+            "document.querySelector('[role=toolbar] button[aria-label=\"Bulleted list\"]').click()",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{STATUS} === 'Bulleted list on'"),
+            "the toolbar toggle announced",
+        )
+        .await
+        .unwrap();
+
+        page.evaluate("document.querySelector('[role=toolbar] button[aria-haspopup]').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("!!{HEADING}"), "the block menu")
+            .await
+            .unwrap();
+        page.evaluate(format!("{HEADING}.click()")).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{STATUS} === 'Heading 3'"),
+            "the block type announced",
+        )
+        .await
+        .unwrap();
+    });
+}
+
+/// A condition on `#out`, for `wait::for_js_true`.
+fn out_is(want: &str) -> String {
+    format!("document.getElementById('out').textContent === {want:?}")
+}
+
+const DELETE: Key = Key {
+    key: "Delete",
+    code: "Delete",
+    vk: 46,
+    text: None,
+};
+
+#[test]
+fn ctrl_backspace_and_ctrl_delete_take_a_word_and_replacements_are_ignored() {
+    block_on(async {
+        const CODE: &str = "\n\n```rust\nlet x = 1;\n```\n";
+        let fixture = Fixture::open(TRAILING, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, &format!("!!{EDITOR}"), "the editor")
+            .await
+            .unwrap();
+        // The caret starts before "intro"; moving it from script would race the model.
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        keyboard::type_text(page, "^").await.unwrap();
+        wait::for_js_true(page, &out_is(&format!("^intro{CODE}")), "the typed key")
+            .await
+            .unwrap();
+        keyboard::press_with(page, DELETE, CTRL).await.unwrap();
+        wait::for_js_true(
+            page,
+            &out_is(&format!("^{CODE}")),
+            "Ctrl+Delete to take a word",
+        )
+        .await
+        .unwrap();
+
+        keyboard::type_text(page, " one two").await.unwrap();
+        keyboard::press_with(page, BACKSPACE, CTRL).await.unwrap();
+        wait::for_js_true(
+            page,
+            &out_is(&format!("^ one {CODE}")),
+            "Ctrl+Backspace to take a word",
+        )
+        .await
+        .unwrap();
+
+        // A substitution's target range is unknown: nothing is typed at the caret.
+        let cancelled: bool = eval(
+            page,
+            &format!(
+                "(() => {{ const e = new InputEvent('beforeinput', {{ inputType: 'insertReplacementText', data: 'X', bubbles: true, cancelable: true }}); return !{EDITOR}.dispatchEvent(e); }})()"
+            ),
+        )
+        .await;
+        assert!(cancelled, "the browser would apply the replacement itself");
+        keyboard::type_text(page, "z").await.unwrap();
+        let typed = until(page, &out_is(&format!("^ one z{CODE}"))).await;
+        let now: String = eval(page, "document.getElementById('out').textContent").await;
+        assert!(typed, "{now:?}");
     });
 }

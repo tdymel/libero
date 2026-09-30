@@ -1,7 +1,7 @@
 //! What a `beforeinput` asks for, by its `inputType`. Everything the model does not
 //! handle is cancelled; only composition reaches the DOM (it cannot be cancelled).
 
-use super::model::{Builtin, KeyPress};
+use super::model::{Builtin, EditorState, KeyPress};
 
 /// What a [`RichTextEditor`](super::RichTextEditor)'s `intercept` sees before the editor acts.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -29,31 +29,51 @@ impl EditorInput {
 pub(crate) enum Intent {
     Type(String),
     Run(Builtin),
+    Delete(Delete),
     /// Leave it to the browser: composition, reconciled at `compositionend`.
     Pass,
     Cancel,
 }
 
+/// The word and line deletes, which have no [`Builtin`] of their own.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Delete {
+    WordBackward,
+    WordForward,
+    LineBackward,
+    LineForward,
+}
+
+impl Delete {
+    pub(crate) fn run(self, state: &mut EditorState) -> bool {
+        match self {
+            Self::WordBackward => state.delete_word_backward(),
+            Self::WordForward => state.delete_word_forward(),
+            Self::LineBackward => state.delete_line_backward(),
+            Self::LineForward => state.delete_line_forward(),
+        }
+    }
+}
+
 pub(crate) fn intent(input_type: &str, data: Option<String>) -> Intent {
     use Builtin as B;
     match input_type {
-        "insertText" | "insertReplacementText" => match data {
+        "insertText" => match data {
             Some(text) if !text.is_empty() => Intent::Type(text),
             _ => Intent::Cancel,
         },
+        // A substitution's target is a range the event's `data` does not carry.
+        "insertReplacementText" => Intent::Cancel,
         "insertCompositionText" => Intent::Pass,
         "insertParagraph" => Intent::Run(B::SplitBlock),
         "insertLineBreak" => Intent::Run(B::HardBreak),
-        "deleteContentBackward"
-        | "deleteWordBackward"
-        | "deleteSoftLineBackward"
-        | "deleteHardLineBackward"
-        | "deleteByCut"
-        | "deleteContent" => Intent::Run(B::DeleteBackward),
-        "deleteContentForward"
-        | "deleteWordForward"
-        | "deleteSoftLineForward"
-        | "deleteHardLineForward" => Intent::Run(B::DeleteForward),
+        "deleteContentBackward" | "deleteByCut" | "deleteContent" => Intent::Run(B::DeleteBackward),
+        "deleteContentForward" => Intent::Run(B::DeleteForward),
+        "deleteWordBackward" => Intent::Delete(Delete::WordBackward),
+        "deleteWordForward" => Intent::Delete(Delete::WordForward),
+        // The model has no layout: a soft line ends at a hard break or the block's edge.
+        "deleteSoftLineBackward" | "deleteHardLineBackward" => Intent::Delete(Delete::LineBackward),
+        "deleteSoftLineForward" | "deleteHardLineForward" => Intent::Delete(Delete::LineForward),
         "formatBold" => Intent::Run(B::Bold),
         "formatItalic" => Intent::Run(B::Italic),
         "formatUnderline" => Intent::Run(B::Underline),
@@ -124,8 +144,20 @@ mod tests {
         );
         assert_eq!(
             intent("deleteWordBackward", None),
-            Intent::Run(Builtin::DeleteBackward)
+            Intent::Delete(Delete::WordBackward)
+        );
+        assert_eq!(
+            intent("deleteSoftLineBackward", None),
+            Intent::Delete(Delete::LineBackward)
         );
         assert_eq!(intent("historyRedo", None), Intent::Run(Builtin::Redo));
+    }
+
+    #[test]
+    fn a_replacement_is_ignored_rather_than_typed_at_the_caret() {
+        assert_eq!(
+            intent("insertReplacementText", Some("the".into())),
+            Intent::Cancel
+        );
     }
 }
