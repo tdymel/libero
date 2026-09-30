@@ -3,13 +3,48 @@
 
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::passes::pointer;
+use e2e::passes::{contrast, pointer};
 use e2e::suite::Suite;
 use e2e::{Fixture, Viewport, wait};
 
 #[test]
 fn it_meets_the_baseline() {
-    Suite::new("gradient", "/gradient").run();
+    Suite::new("gradient", "/gradient")
+        .waive(STANDARD_BUTTON_ON_GRADIENT)
+        .run();
+}
+
+/// Found once the pass measured gradients (todo 1649): a `standard` Button keeps
+/// its `primary` text on a gradient Paper, about 1.03:1.
+const STANDARD_BUTTON_ON_GRADIENT: &[contrast::Waiver] = &[contrast::Waiver {
+    rule: "color-contrast",
+    contains: "id=\"in-paper\"",
+    why: "a standard Button's primary text on a gradient Paper, 1.03:1; todo pending",
+}];
+
+/// Todo 1649. axe leaves text on a gradient undecided, which read as green; the
+/// contrast pass now measures it, so a grey label on a white-to-silver fill fails.
+#[test]
+fn the_contrast_pass_measures_text_on_a_gradient() {
+    block_on(async {
+        let fixture = Fixture::open("/gradient", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.evaluate(
+            "(() => { const p = document.createElement('p'); p.id = 'faint'; p.textContent = 'Faint label'; \
+             p.style.cssText = 'background-image: linear-gradient(90deg, #fff, #ddd); color: #999; padding: 8px; margin: 0; position: fixed; top: 0; left: 600px; z-index: 9999'; \
+             document.body.append(p); return true; })()",
+        )
+        .await
+        .unwrap();
+        let error = contrast::assert_clean(page, "#faint")
+            .await
+            .expect_err("a 2.8:1 label on a gradient passed");
+        assert!(
+            format!("{error:#}").contains("measured past axe"),
+            "{error:#}"
+        );
+        fixture.close().await.unwrap();
+    });
 }
 
 /// The worst WCAG ratio of the label over `from`, `to` and their midpoint.

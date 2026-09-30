@@ -48,7 +48,7 @@ fn HeaderPage() -> Element {
                 Header { id: "colored", position: "static", color: "primary",
                     Anchor { to: "#colored", "On the fill" }
                 }
-                Header { id: "gradient", position: "static", color: "primary", gradient: ("violet", 90),
+                Header { id: "gradient", position: "static", color: "primary", gradient: ("secondary", 90),
                     Anchor { to: "#gradient", "On the gradient" }
                 }
             }

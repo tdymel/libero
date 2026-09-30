@@ -331,13 +331,13 @@ pub struct Checked {
 
 /// The sweep's own text reading, for a node axe left undecided.
 #[derive(Debug, serde::Deserialize)]
-struct TextReading {
-    ratio: f64,
-    need: f64,
-    fg: String,
-    bg: String,
-    size: f64,
-    weight: String,
+pub(crate) struct TextReading {
+    pub(crate) ratio: f64,
+    pub(crate) need: f64,
+    pub(crate) fg: String,
+    pub(crate) bg: String,
+    pub(crate) size: f64,
+    pub(crate) weight: String,
 }
 
 /// Colour helpers shared by the sweep's own contrast readings.
@@ -436,8 +436,12 @@ const tileOf = (e, s) => {
 };"#;
 
 /// Text contrast axe could not decide, against the stacked backgrounds at three points
-/// of the first line. `None` over an image or when covered.
-async fn text_contrast(page: &Page, nodes: &[&contrast::Node]) -> Result<Vec<Option<TextReading>>> {
+/// of the first line. `None` over an image or when covered. The suite's contrast pass
+/// reads gradient fills through it too (todo 1649).
+pub(crate) async fn text_contrast(
+    page: &Page,
+    nodes: &[&contrast::Node],
+) -> Result<Vec<Option<TextReading>>> {
     if nodes.is_empty() {
         return Ok(Vec::new());
     }
@@ -487,6 +491,8 @@ async fn text_contrast(page: &Page, nodes: &[&contrast::Node]) -> Result<Vec<Opt
                     for (const e of stack) {{
                         if (['IMG', 'VIDEO', 'CANVAS', 'PICTURE', 'IFRAME'].includes(e.tagName)) return null;
                         const s = getComputedStyle(e);
+                        // Clipped to the glyphs: it paints the text, not behind it.
+                        if (s.backgroundClip === 'text' || s.webkitBackgroundClip === 'text') continue;
                         if (s.backgroundImage !== 'none') {{
                             const tile = tileOf(e, s);
                             if (!tile) return null;
@@ -504,7 +510,27 @@ async fn text_contrast(page: &Page, nodes: &[&contrast::Node]) -> Result<Vec<Opt
                     }}
                     return layers.reverse().reduce((base, layer) => over(layer, base), WHITE);
                 }};
+                // Inactive text is exempt (1.4.3), as axe and the coverage count it: passes at any ratio.
+                const disabled = e => {{
+                    for (let at = e; at; at = at.parentElement) {{
+                        if (['FIELDSET', 'BUTTON', 'SELECT', 'INPUT', 'TEXTAREA'].includes(at.nodeName)
+                            && at.hasAttribute('disabled')) return true;
+                        const aria = at.getAttribute('aria-disabled');
+                        if (aria) return aria.toLowerCase() === 'true';
+                    }}
+                    return false;
+                }};
+                const label = el.closest('label');
+                // A disabled control's label or description is inactive with it.
+                const names = [...document.querySelectorAll('[aria-describedby], [aria-labelledby]')]
+                    .filter(c => el.id && [c.getAttribute('aria-describedby'), c.getAttribute('aria-labelledby')]
+                        .some(ids => (ids || '').split(/\s+/).includes(el.id)));
+                if (disabled(el) || (label && label.control && disabled(label.control))
+                    || (names.length && names.every(disabled)))
+                    return {{ ratio: 0, need: 0, fg: '', bg: '', size: 0, weight: 'inactive' }};
                 const s = getComputedStyle(el);
+                // Gradient text: the fill is the glyphs' colour, which `color` does not give.
+                if (s.backgroundClip === 'text' || s.webkitBackgroundClip === 'text') return null;
                 const text = parse(s.color);
                 if (!text) return null;
                 for (let at = el; at; at = at.parentElement) text.a *= +getComputedStyle(at).opacity;

@@ -20,7 +20,7 @@ pub fn RepositoryPage() -> Element {
                     .doc("Visual style, as on `ActionIcon`."),
                 prop("color", "ThemeAwareValue")
                     .default("muted")
-                    .doc("Accent color. A theme color name or any CSS color."),
+                    .doc("Accent color. A theme color name or any CSS color. Unset, a `gradient` takes the theme's gradient, as no label reads on a muted one."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
                     .doc("Button size. The icon takes half of it."),

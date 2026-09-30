@@ -183,3 +183,21 @@ fn scroll_padding_keeps_focus_clear_of_a_sticky_header() {
         assert!(padded > 0.0, "focus still under the header: {padded}");
     });
 }
+
+/// Todo 1647. On a coloured or gradient fill a link is the text colour, so it
+/// keeps its underline at rest.
+#[test]
+fn a_link_on_a_fill_is_underlined_at_rest() {
+    block_on(async {
+        let fixture = Fixture::open("/header", Viewport::Desktop).await.unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "['#colored a', '#gradient a'].every(s => { const a = document.querySelector(s); \
+             return a && getComputedStyle(a).textDecorationLine === 'underline'; })",
+            "links on the coloured and gradient headers underlined",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

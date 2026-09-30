@@ -47,6 +47,8 @@ Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
   color, so it stays readable.
 - A link inside is underlined in the text's color, and its focus ring clears
   3:1 against the tint.
+- In forced colors the tint gives way to the system highlight colors, `Mark`
+  and `MarkText`.
 
 ### You must
 

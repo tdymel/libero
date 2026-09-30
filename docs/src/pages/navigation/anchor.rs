@@ -43,6 +43,7 @@ pub fn AnchorPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "A `target: \"_blank\"` link draws a small external icon and reads a hidden \"(opens in a new tab)\". `new_tab_hint: false` drops both, for a link whose text already says it.",
+                    "In a filled, tonal or gradient `Alert`, a colored `Header` and a `Mark`, a link takes the text color, so `underline: \"hover\"` draws its underline at rest there too.",
                 ])
                 .must([
                     "Make the link text say where the link goes: it is the accessible name.",

@@ -2,7 +2,7 @@
 //! `regex` (279): the same five spans libero's native test asserts, here in the browser.
 
 use e2e::browser::block_on;
-use e2e::passes::keyboard;
+use e2e::passes::{contrast, keyboard};
 use e2e::wait;
 use e2e::{Fixture, Suite, Viewport, ax};
 
@@ -13,6 +13,7 @@ const WIDE_SCROLL: &str = "#wide-block [role=region]";
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("code", "/code")
+        .waive(contrast::LINE_NUMBERS)
         .focusable(COPY)
         .focusable(FLOATING_COPY)
         .focusable(WIDE_SCROLL)

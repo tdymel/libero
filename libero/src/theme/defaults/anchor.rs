@@ -39,6 +39,18 @@ impl AnchorDefaults {
             .color(ANCHOR_COLOR.value())
             .selector("& code", sx().color(ANCHOR_CODE_COLOR.value()))
     }
+
+    /// For a fill whose links take its text colour: an `underline: hover` link is
+    /// underlined at rest, or only its position tells it from text (1.4.1, todo 1647).
+    pub(crate) fn underline_at_rest() -> Sx {
+        sx().selector(
+            format!(
+                "& a[data-state~=\"{}\"]",
+                AnchorUnderline::Hover.state_name()
+            ),
+            sx().text_decoration("underline"),
+        )
+    }
 }
 
 impl ToCssDeclarations for AnchorDefaults {

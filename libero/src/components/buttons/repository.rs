@@ -144,6 +144,7 @@ base_props! {
         host: RepoHost,
         #[props(default, into)]
         variant: Input<Variant>,
+        /// Unset, the theme's `muted`; a gradient then takes the theme's gradient.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -216,15 +217,17 @@ pub fn Repository(props: RepositoryProps) -> Element {
     let variant = props
         .variant
         .copied_or(group.variant.unwrap_or(theme.repository.variant));
+    // An unset gradient takes the theme's: no label reads on `muted` into its second stop
+    // at 4.5:1 (todo 1650).
     let color = props
         .color
         .into_option()
         .or(group.color)
-        .unwrap_or_else(|| theme.repository.color.into());
+        .or_else(|| (variant != Variant::Gradient).then(|| theme.repository.color.into()));
     // An unfilled label may miss 4.5:1 (`warning` is 3.27:1); a gradient's label is contrast-picked.
     let ink = match variant {
         Variant::Filled | Variant::Gradient => false,
-        Variant::Tonal => color == ThemeAwareValue::from(Color::Muted),
+        Variant::Tonal => color == Some(ThemeAwareValue::from(Color::Muted)),
         _ => true,
     };
     let glyph = use_box()
@@ -269,7 +272,7 @@ pub fn Repository(props: RepositoryProps) -> Element {
                 to: host.page_url(&props.repo),
                 target: "_blank",
                 variant: Input::Value(variant),
-                color,
+                color: color.map_or(Input::None, Input::Value),
                 size: props.size.clone(),
                 radius: props.radius.clone(),
                 class: props.class.clone(),

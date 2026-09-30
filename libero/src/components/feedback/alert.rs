@@ -15,8 +15,8 @@ use crate::{
     hooks::{use_localization, use_root_id, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, ANCHOR_COLOR, AlertDefaults, Color, CssVar,
-        FOCUS_RING_HALO, NamedColorCss, Size, SizeCss,
+        ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, ANCHOR_COLOR, AlertDefaults, AnchorDefaults,
+        Color, CssVar, FOCUS_RING_HALO, NamedColorCss, Size, SizeCss,
     },
 };
 
@@ -81,12 +81,12 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
     Variant::ALL.iter().fold(base, |base, &variant| {
         let chrome = variant_chrome_sx(variant, &ALERT_VARS);
         // On a tint or fill the page's link colour falls to about 1.5:1: links take
-        // the text colour, as on `Mark` (todo 1576).
+        // the text colour, as on `Mark` (todo 1576), underlined at rest (todo 1647).
         let links = sx().var(ANCHOR_COLOR, "currentColor");
         // `Filled`: children's focus ring takes the text colour, haloed by the fill
         // (todo 630). `currentColor` fallback, as an unset var erases the ring.
         let chrome = match variant {
-            Variant::Filled => chrome.selector(
+            Variant::Filled => chrome.and(AnchorDefaults::underline_at_rest()).selector(
                 "& > *",
                 links
                     .var(
@@ -98,7 +98,9 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
                         ALERT_FILL_VAR.value_or(ALERT_COLOR_VAR.value()),
                     ),
             ),
-            Variant::Tonal | Variant::Gradient => chrome.selector("& > *", links),
+            Variant::Tonal | Variant::Gradient => chrome
+                .and(AnchorDefaults::underline_at_rest())
+                .selector("& > *", links),
             _ => chrome,
         };
         base.when(variant.state_name(), chrome)

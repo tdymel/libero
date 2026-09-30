@@ -62,8 +62,8 @@ fn StubbedPage() -> Element {
                 Repository { id: "github", repo: "example/repo" }
                 Repository { id: "tonal", repo: "example/repo", variant: "tonal" }
                 Repository { id: "filled", repo: "example/repo", variant: "filled" }
-                // `primary`: the default `muted` stops miss 4.5:1 for every label.
-                Repository { id: "gradient", repo: "example/repo", variant: "gradient", color: "primary" }
+                // Unset: the theme's gradient, as `muted`'s stops miss 4.5:1 for every label (todo 1650).
+                Repository { id: "gradient", repo: "example/repo", variant: "gradient" }
             }
             // Todo 852: a light custom colour, palette and literal, on every variant.
             for color in ["warning", "#ffe066"] {

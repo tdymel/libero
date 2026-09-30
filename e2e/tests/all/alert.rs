@@ -95,6 +95,25 @@ fn parts_style_the_inner_parts() {
     });
 }
 
+/// Todo 1647. On a fill or tint a link is the text colour, so it keeps its
+/// underline at rest; on the page's surface it keeps the hover-only default.
+#[test]
+fn a_link_on_a_fill_or_tint_is_underlined_at_rest() {
+    block_on(async {
+        let fixture = Fixture::open("/alert", Viewport::Desktop).await.unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "(() => { const links = [...document.querySelectorAll('[id$=-filled] a, [id$=-tonal] a, [id$=-outlined] a')]; \
+             return links.length === 12 && links.every(a => \
+                 (getComputedStyle(a).textDecorationLine === 'underline') === !a.closest('[id$=-outlined]')); })()",
+            "filled and tonal links underlined, outlined ones not",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Enter on the close button calls `onclose`. Where focus goes next is the
 /// caller's: the alert is gone, so it falls to `<body>`.
 #[test]

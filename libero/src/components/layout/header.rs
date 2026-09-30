@@ -20,7 +20,7 @@ use crate::{
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ANCHOR_COLOR, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GLASS_SHEEN,
+        ANCHOR_COLOR, AnchorDefaults, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GLASS_SHEEN,
         GRADIENT_CONTRAST, GlassTint, Gradient, HEADER_HEIGHT, HEADER_HEIGHT_VAR, NamedColorCss,
         PAPER_BACKGROUND, PaperDefaults, Size, Z_INDEX_HEADER, gradient_surface_sx,
     },
@@ -146,9 +146,13 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .top("0")
         .when("static", sx().position("static"))
         .when("fixed", sx().position("fixed").top("0"))
+        // Links take the fill's text colour there (todo 1576), so the underline marks them.
+        .when("colored", AnchorDefaults::underline_at_rest())
         .when(
             "gradient",
-            gradient_surface_sx().var(ANCHOR_COLOR, GRADIENT_CONTRAST.value()),
+            gradient_surface_sx()
+                .var(ANCHOR_COLOR, GRADIENT_CONTRAST.value())
+                .and(AnchorDefaults::underline_at_rest()),
         )
         // After `gradient`, which its shorthand would otherwise reset.
         .when(

@@ -276,7 +276,8 @@ pub async fn assert_clean_and_covered(
     covers: &[&str],
 ) -> Result<Vec<usize>> {
     let audit = run_axe(page, root, RULES, covers).await?;
-    check_violations(audit.violations, root, waivers)?;
+    let violations = with_measured(page, audit.violations, &audit.incomplete).await?;
+    check_violations(violations, root, waivers)?;
     covers
         .iter()
         .zip(audit.coverage)
@@ -324,6 +325,13 @@ pub const TODO_297: &[Waiver] = &[
     },
 ];
 
+/// Todo 899: a CodeBlock line number's approved floor is 4.27:1, under the 4.5:1 this pass wants.
+pub const LINE_NUMBERS: &[Waiver] = &[Waiver {
+    rule: "color-contrast",
+    contains: "data-slot=\"line-number\"",
+    why: "todo 899 - a line number's approved floor is 4.27:1",
+}];
+
 /// Fail on any violation, printing what axe said rather than a bare count.
 pub async fn assert_clean(page: &Page, selector: &str) -> Result<()> {
     assert_clean_except(page, selector, &[]).await
@@ -331,7 +339,48 @@ pub async fn assert_clean(page: &Page, selector: &str) -> Result<()> {
 
 /// As `assert_clean`, but tolerating the named waivers.
 pub async fn assert_clean_except(page: &Page, selector: &str, waivers: &[Waiver]) -> Result<()> {
-    check_violations(run(page, selector).await?, selector, waivers)
+    let run = run_full(page, selector).await?;
+    let violations = with_measured(page, run.violations, &run.incomplete).await?;
+    check_violations(violations, selector, waivers)
+}
+
+/// axe leaves text over a gradient or a sibling layer undecided, which read as green
+/// (todo 1649). The sweep's reading measures it, and a shortfall joins `violations`.
+async fn with_measured(
+    page: &Page,
+    mut violations: Vec<Violation>,
+    incomplete: &[Violation],
+) -> Result<Vec<Violation>> {
+    let undecided: Vec<&Node> = incomplete
+        .iter()
+        .filter(|v| v.id == "color-contrast")
+        .flat_map(|v| &v.nodes)
+        .collect();
+    let readings = crate::sweep::text_contrast(page, &undecided).await?;
+    let nodes: Vec<Node> = undecided
+        .into_iter()
+        .zip(readings)
+        .filter_map(|(node, reading)| {
+            let r = reading.filter(|r| r.ratio < r.need)?;
+            Some(Node {
+                html: node.html.clone(),
+                failure_summary: Some(format!(
+                    "measured past axe: {:.2}:1 ({} on {}, {}px {}), wants {}:1",
+                    r.ratio, r.fg, r.bg, r.size, r.weight, r.need
+                )),
+                target: node.target.clone(),
+            })
+        })
+        .collect();
+    if !nodes.is_empty() {
+        violations.push(Violation {
+            id: "color-contrast".to_string(),
+            help: "Text axe left undecided (a gradient or a layer under it) misses its ratio"
+                .to_string(),
+            nodes,
+        });
+    }
+    Ok(violations)
 }
 
 fn check_violations(all: Vec<Violation>, selector: &str, waivers: &[Waiver]) -> Result<()> {

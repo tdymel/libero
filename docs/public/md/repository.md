@@ -42,7 +42,7 @@ fn Demo() -> Element {
 | `repo` | `String` | - | Required. `owner/repo`, as in the repository's URL. GitLab takes nested groups too. |
 | `host` | `RepoHost` | `GitHub` | Where the repository lives: `RepoHost::GitHub` or `RepoHost::GitLab`. |
 | `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
-| `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
+| `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. Unset, a `gradient` takes the theme's gradient, as no label reads on a muted one. |
 | `size` | `ThemeAwareValue` | `md` | Button size. The icon takes half of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | - | Replaces the whole built name: host, repository, star count and new-tab cue. Unset, the built name. |

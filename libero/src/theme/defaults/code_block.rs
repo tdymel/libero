@@ -8,6 +8,8 @@ pub const CODE_BLOCK_LINE_NUMBER: CssVar = CssVar::new("--lsx-code-block-line-nu
 pub const CODE_BLOCK_COPY_HOVER_BACKGROUND: CssVar =
     CssVar::new("--lsx-code-block-copy-hover-background");
 pub const CODE_BLOCK_COPY_HOVER_TEXT: CssVar = CssVar::new("--lsx-code-block-copy-hover-text");
+/// The accent's share in a highlighted or diff row's wash, which the contrast test mixes too.
+pub(crate) const MARKED_ROW_WASH_PERCENT: u32 = 4;
 
 /// Theme defaults for `CodeBlock`, set on [`Theme`](crate::theme::Theme).
 ///
@@ -64,8 +66,8 @@ mod tests {
     use crate::theme::{
         ANCHOR_CODE_COLOR, CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT, CODE_TOK_CONSTANT,
         CODE_TOK_FUNCTION, CODE_TOK_HEADING, CODE_TOK_KEYWORD, CODE_TOK_NUMBER, CODE_TOK_STRING,
-        CODE_TOK_TAG, CODE_TOK_TYPE, KBD_BACKGROUND, KBD_COLOR, TOOLTIP_BACKGROUND, TOOLTIP_COLOR,
-        Theme, ThemeSet,
+        CODE_TOK_TAG, CODE_TOK_TYPE, ColorCss, ColorShade, KBD_BACKGROUND, KBD_COLOR,
+        NamedColorCss, TOOLTIP_BACKGROUND, TOOLTIP_COLOR, Theme, ThemeSet,
     };
     use crate::tokens::HexColor;
 
@@ -87,7 +89,7 @@ mod tests {
         HexColor::parse(&value).unwrap_or_else(|| panic!("{value} is a hex"))
     }
 
-    /// Every text on the block, inline `Code`, `Kbd` and `Tooltip`, as `:root` ships it.
+    /// Every text on the block and its marked rows, inline `Code`, `Kbd` and `Tooltip`, as `:root` ships it.
     fn shortfalls(theme: &Theme) -> Vec<String> {
         let css = Stylesheet::from(theme).as_str().to_string();
         let on = |surface: &CssVar, what: &str, text: &CssVar, floor: f32| {
@@ -97,6 +99,35 @@ mod tests {
         };
         let inline = CssVar::new("--lsx-muted-fill-2");
         let mut short = Vec::new();
+        // The marked rows' wash of the accent's `.5`, as `marked_row_sx` mixes it (todo 1543).
+        let block = resolved(&css, &CODE_BLOCK_BACKGROUND.value());
+        let share = MARKED_ROW_WASH_PERCENT;
+        let washes = [
+            ("highlighted", ColorCss::PRIMARY),
+            ("diff-add", ColorCss::SUCCESS),
+            ("diff-remove", ColorCss::ERROR),
+        ]
+        .map(|(row, accent)| {
+            let accent = resolved(&css, &accent.value(ColorShade::S5));
+            let channel =
+                |a: u8, b: u8| (u32::from(a) * share + u32::from(b) * (100 - share) + 50) / 100;
+            let wash = HexColor::new(
+                (channel(accent.r(), block.r()) << 16)
+                    | (channel(accent.g(), block.g()) << 8)
+                    | channel(accent.b(), block.b()),
+            );
+            (row, wash)
+        });
+        let on_rows = |what: &str, text: &str, floor: f32| {
+            let text = resolved(&css, text);
+            washes
+                .iter()
+                .filter_map(|(row, wash)| {
+                    let ratio = text.contrast_ratio(*wash);
+                    (ratio < floor).then(|| format!("{what} on the {row} row {ratio:.2}"))
+                })
+                .collect::<Vec<_>>()
+        };
         for (what, token) in [
             ("keyword", CODE_TOK_KEYWORD),
             ("string", CODE_TOK_STRING),
@@ -111,6 +142,7 @@ mod tests {
         ] {
             short.extend(on(&CODE_BLOCK_BACKGROUND, what, &token, 4.5));
             short.extend(on(&inline, what, &token, 4.5));
+            short.extend(on_rows(what, &token.value(), 4.5));
         }
         short.extend(on(
             &CODE_BLOCK_BACKGROUND,
@@ -118,6 +150,8 @@ mod tests {
             &CODE_BLOCK_MUTED_TEXT,
             4.5,
         ));
+        // A marked row's line number and diff marker.
+        short.extend(on_rows("ink", &NamedColorCss::INK.value(), 4.5));
         short.extend(on(&inline, "link in code", &ANCHOR_CODE_COLOR, 4.5));
         short.extend(on(
             &CODE_BLOCK_BACKGROUND,

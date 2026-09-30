@@ -6,7 +6,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{ColorRole, StaticSx, ThemeAwareValue, sx},
+    sx::{ColorRole, FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{ANCHOR_COLOR, Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, NamedColorCss},
 };
 
@@ -33,6 +33,8 @@ fn mark_background_color(value: Option<&ThemeAwareValue>, default_color: Color) 
 static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().color(format!("var({}, inherit)", MARK_COLOR_VAR.name()))
         .background(MARK_BACKGROUND_VAR.value())
+        // Forced colours drop the tint; the system highlight pair keeps it visible.
+        .media(FORCED_COLORS, sx().color("MarkText").background("Mark"))
         // A link in the text's colour needs its underline (1.4.1); outranks `Anchor`'s state.
         .selector("& a:any-link", sx().text_decoration("underline"))
 });

@@ -22,7 +22,8 @@ use crate::{
     theme::{
         CODE_BLOCK_BACKGROUND, CODE_BLOCK_BORDER, CODE_BLOCK_COPY_HOVER_BACKGROUND,
         CODE_BLOCK_COPY_HOVER_TEXT, CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT,
-        CODE_FONT_FAMILY, ColorCss, ColorShade, CssVar, Size,
+        CODE_FONT_FAMILY, ColorCss, ColorShade, CssVar, MARKED_ROW_WASH_PERCENT, NamedColorCss,
+        Size,
     },
     utils::warn,
 };
@@ -114,14 +115,19 @@ static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| {
         .when("diff-remove", marked_row_sx(ColorCss::ERROR))
 });
 
-// A faint wash: the `.1` tint took the token colours under 4.5:1.
+// A faint wash: the `.1` tint took the token colours under 4.5:1, 6% some (todo 1543).
 fn marked_row_sx(color: ColorCss) -> Sx {
     let accent = color.value(ColorShade::S5);
     sx().background(format!(
-        "color-mix(in srgb, {accent} 6%, {})",
+        "color-mix(in srgb, {accent} {MARKED_ROW_WASH_PERCENT}%, {})",
         CODE_BLOCK_BACKGROUND.value()
     ))
     .box_shadow(format!("inset 3px 0 0 {accent}"))
+    // The dimmed gutter and marker fell under 4.27:1 on the wash; ink marks the row too.
+    .selector(
+        "& > [data-slot='line-number'], & > [data-slot='marker']",
+        sx().color(NamedColorCss::INK.value()),
+    )
     // Forced colours drop both, so the bar becomes a border there (todo 594).
     .media(
         "(forced-colors: active)",
@@ -215,7 +221,8 @@ base_props! {
         /// 1-indexed lines to emphasize, e.g. `"1,5-7,10"`.
         #[props(default, into)]
         highlight_lines: Option<String>,
-        /// Reads `source` as a unified diff; wins over `highlight_lines`.
+        /// A leading `+`/`-` marks an added/removed line and is dropped; other lines take no
+        /// prefix, so not a unified diff. Wins over `highlight_lines`.
         #[props(default)]
         diff: bool,
         /// Names the block and its copy button, e.g. "The booking card, Rust code".
@@ -324,6 +331,7 @@ fn code_line_row(
                     framework_sx: &CODE_BLOCK_LINE_NUMBER_SX,
                     // Read aloud, the numbers interleave with the code.
                     aria_hidden: "true",
+                    "data-slot": "line-number",
                     {(index + 1).to_string()}
                 }
             }
@@ -333,6 +341,7 @@ fn code_line_row(
                     framework_sx: &CODE_DIFF_MARKER_SX,
                     states: States::new().with("no-gutter", !line_numbers),
                     aria_hidden: "true",
+                    "data-slot": "marker",
                     {marker}
                 }
             }

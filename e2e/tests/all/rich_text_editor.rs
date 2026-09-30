@@ -963,7 +963,9 @@ fn the_editor_overlays_keep_their_contrast_in_both_schemes() {
                 .screenshot(&format!("rte-code-view-{}", scheme.name()))
                 .await
                 .unwrap();
-            contrast::assert_clean(page, "body").await.unwrap();
+            contrast::assert_clean_except(page, "body", contrast::LINE_NUMBERS)
+                .await
+                .unwrap();
             enter_code(page).await;
             // The pressed toggle, hovered: its state colours under the tooltip.
             pointer::hover(
@@ -979,7 +981,9 @@ fn the_editor_overlays_keep_their_contrast_in_both_schemes() {
                 .screenshot(&format!("rte-code-source-{}", scheme.name()))
                 .await
                 .unwrap();
-            contrast::assert_clean(page, "body").await.unwrap();
+            contrast::assert_clean_except(page, "body", contrast::LINE_NUMBERS)
+                .await
+                .unwrap();
             // The text type button names the block's mode; hovered, it keeps its contrast.
             pointer::hover(page, "[role=toolbar] button[aria-label^=\"Text type:\"]")
                 .await
@@ -1001,7 +1005,9 @@ fn the_editor_overlays_keep_their_contrast_in_both_schemes() {
                 "hovered text type button {ratio:.2}:1 in {}",
                 scheme.name()
             );
-            contrast::assert_clean(page, "body").await.unwrap();
+            contrast::assert_clean_except(page, "body", contrast::LINE_NUMBERS)
+                .await
+                .unwrap();
         }
     });
 }
