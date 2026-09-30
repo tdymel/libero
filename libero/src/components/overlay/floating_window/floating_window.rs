@@ -230,6 +230,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                 .active(defaults.radius.radius_state_name())
                 .active(defaults.shadow.shadow_state_name())
                 .with("bordered", true)
+                .with("resizable", resizable)
                 .into(),
         )
         .prepare()

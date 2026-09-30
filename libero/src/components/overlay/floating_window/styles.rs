@@ -70,13 +70,12 @@ pub(super) static WINDOW_SX: StaticSx = StaticSx::new(|| {
                 .padding("sm"),
         )
         // The grip's corner stays off a classic scrollbar, so a press there scrolls.
-        .selector(
-            format!(
-                "&:has(> [data-slot='{}']) > [data-slot='{}']",
-                FloatingWindowPart::Resize.slot(),
-                FloatingWindowPart::Body.slot()
+        .when(
+            "resizable",
+            sx().selector(
+                FloatingWindowPart::Body.selector(),
+                sx().margin_bottom("14px"),
             ),
-            sx().margin_bottom("14px"),
         )
         .selector(
             FloatingWindowPart::Resize.selector(),
