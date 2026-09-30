@@ -186,9 +186,11 @@ pub fn AutocompletePage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Down"], "Opens the list. Typing opens it too.")
-                .key(["Up", "Down", "Home", "End"], "Move the highlight.")
+                .key(["Alt+Down"], "Opens the list without moving the highlight.")
+                .key(["Up", "Down"], "Move the highlight.")
+                .key(["Home", "End"], "Once a row is highlighted: move the highlight to the first or last row. Before that, they move the text caret.")
                 .key(["Enter"], "Picks the highlighted row.")
-                .key(["Escape", "Tab"], "Close the list.")
+                .key(["Escape", "Tab", "Alt+Up"], "Close the list.")
                 .handles([
                     "Nothing is highlighted until you arrow onto a row, so Enter on text that matches nothing still submits the form.",
                     "Android's Back button closes the list as Escape does, rather than the app.",

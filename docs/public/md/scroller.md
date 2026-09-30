@@ -51,7 +51,7 @@ fn Demo() -> Element {
             Text { size: "sm",
                 match edges() {
                     Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
-                    Some(ScrollerEdges { at_end: false, .. }) => "More to the right",
+                    Some(ScrollerEdges { at_end: false, .. }) => "More after this",
                     Some(_) => "End of the list",
                     None => "",
                 }

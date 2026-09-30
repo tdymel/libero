@@ -158,6 +158,10 @@ pub fn TimelinePage() -> Element {
                 ])
                 .must([
                     "Never put anything focusable in a `.bullet(..)`. It would stay a tab stop with no name. Interactive content belongs in `.content(..)`.",
+                    "Say an error or other status in the title or content. The `.color(..)` accent alone does not carry it.",
+                ])
+                .limits([
+                    "A screen reader hears only which event is current, as `aria-current=\"step\"`. Done and pending are visual; put them in the title or content where they matter. With `active` past the end, the last event still reads as current.",
                 ]),
             lead: rsx! {
                 Text {

@@ -149,6 +149,17 @@ explains how parts work.
 | `Down` or `Right` | Moves to the next option and selects it, wrapping at the end. |
 | `Up` or `Left` | Moves to the previous option and selects it, wrapping at the start. |
 
+### Libero handles
+
+- The group is a `radiogroup` named by its `label`, so the question is read on
+  entering it.
+- `required`, an error and read-only are set on the group, and its description,
+  helper and status are its description.
+- Each option's description is read with its radio.
+- The whole group is one tab stop, and the arrows select as they move. Disabled
+  options are skipped.
+- A group with no name logs a warning.
+
 ### You must
 
 - Without a visible `label`, spread `"aria-label"`, since the option labels do

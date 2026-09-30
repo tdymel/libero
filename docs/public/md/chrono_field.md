@@ -207,7 +207,9 @@ The dropdown is portaled out of the field, so its parts take the
 | Key | Action |
 |---|---|
 | `Down` | Moves focus into the picker, onto the picked day or the clock, where the [ChronoPicker](chrono_picker.md#accessibility) keys apply. |
-| `Escape` | Moves focus back to the text. |
+| `Enter` | In the text: reads and commits it. Text it cannot read is refused, with the reason announced. |
+| `Escape` | Closes the dropdown. From inside it, moves focus back to the text. |
+| `Tab` or `Shift+Tab` | Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text. |
 
 ### Libero handles
 

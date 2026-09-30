@@ -85,8 +85,9 @@ pub fn ColorFieldPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Down"], "Moves focus into the picker, onto the saturation area or the first swatch, where the `ColorPicker` keys apply.")
-                .key(["Escape"], "Moves focus back to the text.")
-                .key(["Tab", "Shift+Tab"], "Past either end of the dropdown: leaves the field.")
+                .key(["Enter"], "On text that does not parse: announces the refusal and keeps the text. Text that parses is sent as you type.")
+                .key(["Escape"], "Closes the dropdown. From inside it, moves focus back to the text.")
+                .key(["Tab", "Shift+Tab"], "Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text.")
                 .handles([
                     "Focus opens the dropdown and stays in the text, so typing works at once.",
                     "A swatch that closes the dropdown moves focus back to the text.",

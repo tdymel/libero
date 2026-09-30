@@ -163,9 +163,11 @@ The dropdown is portaled out of the field, so its parts take the
 | Key | Action |
 |---|---|
 | `Down` | Opens the list. Typing opens it too. |
-| `Up`, `Down`, `Home` or `End` | Move the highlight. |
+| `Alt+Down` | Opens the list without moving the highlight. |
+| `Up` or `Down` | Move the highlight. |
+| `Home` or `End` | Once a row is highlighted: move the highlight to the first or last row. Before that, they move the text caret. |
 | `Enter` | Picks the highlighted row. |
-| `Escape` or `Tab` | Close the list. |
+| `Escape`, `Tab` or `Alt+Up` | Close the list. |
 
 ### Libero handles
 

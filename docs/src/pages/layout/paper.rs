@@ -84,7 +84,7 @@ pub fn PaperPage() -> Element {
                         .doc("Fills the surface with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text colour is picked to read on both stops. With `glass`, the stops turn translucent, their share raised until the text reads 4.5:1; a literal stop's text is yours to check. Its stops carry down to any gradient inside it."),
                     prop("component", "HtmlTag")
                         .default("div")
-                        .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. A `section` or `aside` is a landmark and needs your `aria-label`."),
+                        .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. An `aside` is a landmark and needs your `aria-label`; a `section` becomes one once you give it an `aria-label`."),
                     prop("variables", "Variables")
                         .doc("Custom properties set on the element's `style`, for a component built on `Paper`."),
                     prop("framework_sx", "&'static StaticSx")
@@ -93,7 +93,7 @@ pub fn PaperPage() -> Element {
                 ]),
             ],
             accessibility: a11y().must([
-                "Give a `Paper` rendered as a `section` or `aside` an `aria-label`: it is a landmark.",
+                "Give a `Paper` rendered as an `aside` an `aria-label`: it is a landmark. A `section` becomes a landmark once you give it an `aria-label`, so name the ones a reader should find.",
                 "Put nothing interactive inside a `Paper` rendered as an `a`: the whole surface is one link, named by its contents.",
             ]),
             lead: rsx! {

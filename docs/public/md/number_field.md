@@ -49,27 +49,34 @@ struct Cents(i64);
 impl std::ops::Add for Cents {
     type Output = Self;
     fn add(self, other: Self) -> Self {
-        Cents(self.0 + other.0)
+        Cents(self.0.saturating_add(other.0))
     }
 }
 
 impl std::ops::Sub for Cents {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
-        Cents(self.0 - other.0)
+        Cents(self.0.saturating_sub(other.0))
     }
 }
 
 impl std::str::FromStr for Cents {
-    type Err = std::num::ParseFloatError;
+    type Err = &'static str;
     fn from_str(text: &str) -> Result<Self, Self::Err> {
-        Ok(Cents((text.parse::<f64>()? * 100.0).round() as i64))
+        let number = text.parse::<f64>().map_err(|_| "not a number")?;
+        // `f64` parses "nan" and "inf" too.
+        if !number.is_finite() {
+            return Err("not a finite number");
+        }
+        Ok(Cents((number * 100.0).round() as i64))
     }
 }
 
 impl fmt::Display for Cents {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{:02}", self.0 / 100, self.0 % 100)
+        let sign = if self.0 < 0 { "-" } else { "" };
+        let cents = self.0.unsigned_abs();
+        write!(f, "{sign}{}.{:02}", cents / 100, cents % 100)
     }
 }
 
@@ -130,7 +137,7 @@ HTML attributes.
 | Method | Type | Default | Description |
 |---|---|---|---|
 | `default_step` | `fn() -> Self` | required | What one step moves by when `step` is unset. |
-| `parse` | `fn(&str) -> Option<Self>` | `FromStr` | `None` while the text is not a number yet. |
+| `parse` | `fn(&str) -> Option<Self>` | `FromStr` | `None` while the text is not a number yet. `f64`'s `FromStr` also reads `nan` and `inf`, so a type built on it should refuse them. |
 | `format` | `fn(&self) -> String` | `Display` | The text the field shows for a value. |
 | `zero` | `fn() -> Option<Self>` | `parse("0")` | Where a step starts in an empty field. `None` makes the step do nothing. |
 | `step_up` | `fn(self, Self) -> Self` | `Add` | One step up. Override it for a wrapping angle or a logarithmic step. |

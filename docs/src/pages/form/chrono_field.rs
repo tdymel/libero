@@ -120,7 +120,9 @@ pub fn ChronoFieldPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Down"], "Moves focus into the picker, onto the picked day or the clock, where the `ChronoPicker` keys apply.")
-                .key(["Escape"], "Moves focus back to the text.")
+                .key(["Enter"], "In the text: reads and commits it. Text it cannot read is refused, with the reason announced.")
+                .key(["Escape"], "Closes the dropdown. From inside it, moves focus back to the text.")
+                .key(["Tab", "Shift+Tab"], "Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text.")
                 .handles([
                     "Focus opens the dropdown and stays in the text, so you can type at once.",
                     "A pick that closes the dropdown moves focus back to the text.",

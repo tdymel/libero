@@ -11,12 +11,14 @@ const CENTS_IMPL: &str = r#"// Money is not an f64. `Cents` stores whole cents a
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 struct Cents(i64);
 
-impl Add for Cents { /* self.0 + other.0 */ }
-impl Sub for Cents { /* self.0 - other.0 */ }
-impl FromStr for Cents { /* (text.parse::<f64>()? * 100.0).round() as i64 */ }
+impl Add for Cents { /* self.0.saturating_add(other.0) */ }
+impl Sub for Cents { /* self.0.saturating_sub(other.0) */ }
+impl FromStr for Cents { /* an f64 that is_finite(), times 100, rounded */ }
 impl Display for Cents {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{:02}", self.0 / 100, self.0 % 100)
+        let sign = if self.0 < 0 { "-" } else { "" };
+        let cents = self.0.unsigned_abs();
+        write!(f, "{sign}{}.{:02}", cents / 100, cents % 100)
     }
 }
 
@@ -34,27 +36,34 @@ struct Cents(i64);
 impl std::ops::Add for Cents {
     type Output = Self;
     fn add(self, other: Self) -> Self {
-        Cents(self.0 + other.0)
+        Cents(self.0.saturating_add(other.0))
     }
 }
 
 impl std::ops::Sub for Cents {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
-        Cents(self.0 - other.0)
+        Cents(self.0.saturating_sub(other.0))
     }
 }
 
 impl std::str::FromStr for Cents {
-    type Err = std::num::ParseFloatError;
+    type Err = &'static str;
     fn from_str(text: &str) -> Result<Self, Self::Err> {
-        Ok(Cents((text.parse::<f64>()? * 100.0).round() as i64))
+        let number = text.parse::<f64>().map_err(|_| "not a number")?;
+        // `f64` parses "nan" and "inf" too.
+        if !number.is_finite() {
+            return Err("not a finite number");
+        }
+        Ok(Cents((number * 100.0).round() as i64))
     }
 }
 
 impl std::fmt::Display for Cents {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "{}.{:02}", self.0 / 100, self.0 % 100)
+        let sign = if self.0 < 0 { "-" } else { "" };
+        let cents = self.0.unsigned_abs();
+        write!(formatter, "{sign}{}.{:02}", cents / 100, cents % 100)
     }
 }
 
@@ -142,7 +151,7 @@ pub fn NumberFieldPage() -> Element {
                         .doc("What one step moves by when `step` is unset."),
                     prop("parse", "fn(&str) -> Option<Self>")
                         .default("FromStr")
-                        .doc("`None` while the text is not a number yet."),
+                        .doc("`None` while the text is not a number yet. `f64`'s `FromStr` also reads `nan` and `inf`, so a type built on it should refuse them."),
                     prop("format", "fn(&self) -> String")
                         .default("Display")
                         .doc("The text the field shows for a value."),

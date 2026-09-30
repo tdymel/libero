@@ -63,7 +63,7 @@ fn wrap_edges(values: &DemoValues, source: &str) -> String {
          {}{buttons}        Text {{ size: \"sm\",\n            \
          match edges() {{\n                \
          Some(ScrollerEdges {{ at_start: true, at_end: true }}) => \"Everything fits\",\n                \
-         Some(ScrollerEdges {{ at_end: false, .. }}) => \"More to the right\",\n                \
+         Some(ScrollerEdges {{ at_end: false, .. }}) => \"More after this\",\n                \
          Some(_) => \"End of the list\",\n                \
          None => \"\",\n            \
          }}\n        \
@@ -129,7 +129,7 @@ fn ScrollerDemo(values: DemoValues) -> Element {
             Text { size: "sm",
                 match edges() {
                     Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
-                    Some(ScrollerEdges { at_end: false, .. }) => "More to the right",
+                    Some(ScrollerEdges { at_end: false, .. }) => "More after this",
                     Some(_) => "End of the list",
                     None => "",
                 }

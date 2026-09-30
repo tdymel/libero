@@ -113,8 +113,9 @@ The dropdown is portaled out of the field, so its parts take the
 | Key | Action |
 |---|---|
 | `Down` | Moves focus into the picker, onto the saturation area or the first swatch, where the [ColorPicker](color_picker.md#accessibility) keys apply. |
-| `Escape` | Moves focus back to the text. |
-| `Tab` or `Shift+Tab` | Past either end of the dropdown: leaves the field. |
+| `Enter` | On text that does not parse: announces the refusal and keeps the text. Text that parses is sent as you type. |
+| `Escape` | Closes the dropdown. From inside it, moves focus back to the text. |
+| `Tab` or `Shift+Tab` | Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text. |
 
 ### Libero handles
 

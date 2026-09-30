@@ -162,6 +162,13 @@ pub fn RadioGroupPage() -> Element {
                 .key(["Tab"], "Enters the group at the selected option, or the first one that is not disabled. Pressed again, leaves the group.")
                 .key(["Down", "Right"], "Moves to the next option and selects it, wrapping at the end.")
                 .key(["Up", "Left"], "Moves to the previous option and selects it, wrapping at the start.")
+                .handles([
+                    "The group is a `radiogroup` named by its `label`, so the question is read on entering it.",
+                    "`required`, an error and read-only are set on the group, and its description, helper and status are its description.",
+                    "Each option's description is read with its radio.",
+                    "The whole group is one tab stop, and the arrows select as they move. Disabled options are skipped.",
+                    "A group with no name logs a warning.",
+                ])
                 .must(["Without a visible `label`, spread `\"aria-label\"`, since the option labels do not say what the question is."]),
             lead: rsx! {
                 Text {
