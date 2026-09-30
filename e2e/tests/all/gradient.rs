@@ -19,7 +19,7 @@ fn it_meets_the_baseline() {
 const STANDARD_BUTTON_ON_GRADIENT: &[contrast::Waiver] = &[contrast::Waiver {
     rule: "color-contrast",
     contains: "id=\"in-paper\"",
-    why: "a standard Button's primary text on a gradient Paper, 1.03:1; todo pending",
+    why: "a standard Button's primary text on a gradient Paper, 1.03:1; todo 1663",
 }];
 
 /// Todo 1649. axe leaves text on a gradient undecided, which read as green; the
