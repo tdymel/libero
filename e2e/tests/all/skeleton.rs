@@ -5,6 +5,8 @@ use e2e::passes::{keyboard, motion, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
+use crate::settle;
+
 const RELOAD: &str = "#reload";
 const PROFILE: &str = "#profile";
 
@@ -28,9 +30,11 @@ fn it_meets_the_baseline() {
 const WATCH_GREY: &str = "(() => {
     const start = performance.now();
     window.__grey = null;
+    window.__loading = false;
     const check = () => {
         const card = document.querySelector('#card[data-state~=visible]');
         const region = document.querySelector('#region');
+        if (card) window.__loading = true;
         if (card && region && getComputedStyle(region).opacity !== '0' && window.__grey === null)
             window.__grey = performance.now() - start;
     };
@@ -67,13 +71,14 @@ fn the_grace_recipe_keeps_a_fast_fetch_from_flashing() {
             } else {
                 wait::for_js_true(
                     page,
-                    "!document.querySelector('#card[data-state~=visible]')",
+                    "window.__loading && !document.querySelector('#card[data-state~=visible]')",
                     "the fast fetch to answer",
                 )
                 .await
                 .unwrap();
-                // Past the grace, so a late grey would have been sampled too.
-                tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+                // The watch counts a grey only while the card is visible, so once it is
+                // not, only mutations still queued can add one.
+                settle::painted(page).await.unwrap();
                 // `-1` for never: a `null` result reads back as no value at all.
                 let at: f64 = page
                     .evaluate("window.__grey === null ? -1 : window.__grey")

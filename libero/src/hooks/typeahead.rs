@@ -152,10 +152,10 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     mod reset {
         use std::cell::RefCell;
-        use std::thread;
-        use std::time::{Duration, Instant};
+        use std::time::Duration;
 
         use super::super::*;
+        use crate::hooks::polling_tests::{pump, pump_until};
 
         thread_local! {
             static HANDLE: RefCell<Option<Typeahead>> = const { RefCell::new(None) };
@@ -173,14 +173,6 @@ mod tests {
                 .expect("the app rendered")
         }
 
-        fn drive(dom: &mut VirtualDom, limit: Duration) {
-            let start = Instant::now();
-            while start.elapsed() < limit {
-                dom.process_events();
-                thread::sleep(Duration::from_millis(1));
-            }
-        }
-
         #[test]
         fn the_query_builds_up_and_is_forgotten_after_a_pause() {
             let mut dom = VirtualDom::new(app);
@@ -193,8 +185,9 @@ mod tests {
             });
             assert!(typeahead.is_typing());
 
-            drive(&mut dom, Duration::from_millis(500));
-            assert!(!typeahead.is_typing(), "the pause did not forget the query");
+            pump_until(&mut dom, "the pause forgetting the query", |_| {
+                !typeahead.is_typing()
+            });
             dom.in_runtime(|| assert_eq!(typeahead.push('d'), "d"));
         }
 
@@ -210,7 +203,7 @@ mod tests {
                 dom.in_runtime(|| {
                     typeahead.push(ch);
                 });
-                drive(&mut dom, Duration::from_millis(20));
+                pump(&mut dom, 20);
             }
             dom.in_runtime(|| assert_eq!(typeahead.push('!'), "hello!"));
         }

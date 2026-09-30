@@ -6,7 +6,7 @@ use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, linger};
+use e2e::driver::{Driver, eventually};
 use e2e::suite::Step;
 use e2e::{
     Fixture, Suite, Viewport, passes::focus, passes::keyboard, passes::motion, passes::pointer,
@@ -895,9 +895,21 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     .await?;
     wait_showing(page, 2).await?;
     wait_picture_focused(page, 2).await?;
-    // Past any smooth scroll (about 300ms from 5 to 2) and the fetches it
-    // would start.
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    // Past any smooth scroll (about 300ms from 5 to 2): the track holds still
+    // between two polls, and every eager picture of the new gallery has loaded.
+    wait::for_js_true(
+        page,
+        "(() => { const track = [...document.querySelectorAll('[role=dialog] *')] \
+            .filter(el => el.querySelector(':scope [data-lightbox-frame]') && el.scrollWidth > el.clientWidth) \
+            .pop(); \
+          const still = !!track && window.__swapLeft === track.scrollLeft; \
+          window.__swapLeft = track?.scrollLeft; \
+          return still && [...document.querySelectorAll('[role=dialog] img')] \
+            .filter(img => img.src.endsWith('?second') && img.loading !== 'lazy') \
+            .every(img => img.complete); })()",
+        "the swapped track to settle and its eager pictures to load",
+    )
+    .await?;
 
     // None at all when the picture's focus scroll got the track there first.
     let scrolls = motion::scrolls(page).await?;
@@ -943,9 +955,17 @@ async fn open<D: Driver>(d: &mut D) -> Result<()> {
         d.exists(PICTURE).await
     })
     .await?;
-    // The stage's first scroll settles before a gesture lands on it.
-    linger(d, 10).await;
-    Ok(())
+    // The stage's first scroll settles before a gesture lands on it: the
+    // picture is centred and holds still from one idle to the next.
+    let (width, _) = d.viewport().await?;
+    eventually(d, "the stage's first scroll to settle", async |d| {
+        let before = d.rect(PICTURE).await?;
+        d.idle().await;
+        let after = d.rect(PICTURE).await?;
+        let centre = after.x + after.width / 2.0;
+        Ok(after.x == before.x && (centre - width / 2.0).abs() < 1.0)
+    })
+    .await
 }
 
 /// Todo 1068: a tap on "Zoom in" zooms (a WebView answered the frame query

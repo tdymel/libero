@@ -78,6 +78,19 @@ pub async fn start(page: &Page) -> Result<()> {
     Ok(())
 }
 
+/// Waits until the recorder holds `count` frames past the warm-up.
+pub async fn until_recorded(page: &Page, count: usize) -> Result<()> {
+    crate::wait::for_js_true(
+        page,
+        &format!(
+            "window.__frames.deltas.length >= {}",
+            WARM_UP_FRAMES + count
+        ),
+        &format!("{count} recorded frames"),
+    )
+    .await
+}
+
 /// Stops the recorder and returns what it saw.
 pub async fn stop(page: &Page) -> Result<FrameStats> {
     let json: String = page

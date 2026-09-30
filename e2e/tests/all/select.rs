@@ -639,8 +639,8 @@ fn a_refused_pick_keeps_the_old_selection() {
             .unwrap();
             pointer::click(page, "[data-e2e=pick]").await.unwrap();
             wait::for_hidden(page, LISTBOX).await.unwrap();
-            // Longer than any follow-up pass: a late reset would land by now.
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            // Past the render and effects after the pick: a late reset would land by now.
+            crate::settle::painted(page).await.unwrap();
         };
         let reopened_selection = async || {
             pointer::click(page, TRIGGER).await.unwrap();

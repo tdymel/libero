@@ -28,7 +28,7 @@ fn the_recorder_sees_a_page_that_burns_fifty_milliseconds_per_frame() {
         .await
         .unwrap();
         frames::start(page).await.unwrap();
-        tokio::time::sleep(Duration::from_millis(2500)).await;
+        frames::until_recorded(page, 5).await.unwrap();
         let stats = frames::stop(page).await.unwrap();
         assert!(stats.count > 0, "no frames recorded: {stats:?}");
         assert!(

@@ -1,11 +1,10 @@
 //! `use_history` against the real non-wasm timer and a polled `VirtualDom`.
 
 use std::cell::RefCell;
-use std::thread;
-use std::time::{Duration, Instant};
 
 use dioxus::prelude::*;
 
+use crate::hooks::polling_tests::{flush, settle};
 use crate::hooks::{HistoryHandle, UndoHistory, use_history};
 
 thread_local! {
@@ -13,17 +12,11 @@ thread_local! {
     static RENDERS: RefCell<u32> = const { RefCell::new(0) };
 }
 
-fn pump(dom: &mut VirtualDom, span: Duration) {
-    let start = Instant::now();
-    while start.elapsed() < span {
-        dom.process_events();
-        dom.render_immediate(&mut dioxus::core::NoOpMutations);
-        thread::sleep(Duration::from_millis(2));
-    }
-}
+/// The pause that closes a group.
+const PAUSE_MS: u64 = 80;
 
 fn app() -> Element {
-    let text = use_history(|| UndoHistory::new(String::new()), 80);
+    let text = use_history(|| UndoHistory::new(String::new()), PAUSE_MS);
     let _ = text.value();
     RENDERS.with(|renders| *renders.borrow_mut() += 1);
     HANDLE.with(|handle| *handle.borrow_mut() = Some(text));
@@ -39,10 +32,7 @@ fn renders() -> u32 {
 }
 
 fn started() -> VirtualDom {
-    let mut dom = VirtualDom::new(app);
-    dom.rebuild_in_place();
-    pump(&mut dom, Duration::from_millis(10));
-    dom
+    crate::hooks::polling_tests::started(app)
 }
 
 fn shown(dom: &VirtualDom) -> String {
@@ -51,7 +41,7 @@ fn shown(dom: &VirtualDom) -> String {
 
 fn type_into(dom: &mut VirtualDom, text: &str) {
     dom.in_runtime(|| handle().merge(text.to_string()));
-    pump(dom, Duration::from_millis(10));
+    flush(dom);
 }
 
 #[test]
@@ -72,7 +62,7 @@ fn a_pause_closes_the_group() {
     let mut dom = started();
     type_into(&mut dom, "a");
     type_into(&mut dom, "ab");
-    pump(&mut dom, Duration::from_millis(300));
+    settle(&mut dom, PAUSE_MS);
     type_into(&mut dom, "abc");
 
     dom.in_runtime(|| handle().undo());
@@ -101,7 +91,7 @@ fn a_change_renders_the_reader_and_a_pause_does_not() {
     let after_change = renders();
     assert!(after_change > before, "the change did not render");
 
-    pump(&mut dom, Duration::from_millis(300));
+    settle(&mut dom, PAUSE_MS);
     assert_eq!(renders(), after_change, "closing the group rendered");
 }
 

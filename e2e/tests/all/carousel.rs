@@ -11,7 +11,7 @@ use e2e::passes::motion;
 use e2e::passes::pointer;
 use e2e::passes::target_size::MINIMUM;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, clock, wait};
 
 /// The slide pads by exactly the ring's reach, so a fractional slide width can
 /// round the clip a layout unit (1/64px) inside it.
@@ -114,7 +114,7 @@ async fn an_arrow_on_the_track_moves<D: Driver>(d: &mut D, _route: &str) -> Resu
 async fn an_arrow_in_a_field_stays<D: Driver>(d: &mut D, field: &str) -> Result<()> {
     d.focus(field).await?;
     d.press(keyboard::ARROW_RIGHT).await?;
-    linger(d, 10).await;
+    d.settle().await?;
     ensure!(
         d.exists(FIRST_CURRENT).await?,
         "{:?}: the carousel took the arrow pressed in {field}",
@@ -130,6 +130,7 @@ async fn an_arrow_at_the_fields_end_stays<D: Driver>(d: &mut D, _route: &str) ->
     d.press(keyboard::END).await?;
     let before = d.rect(FIRST_SLIDE).await?.x;
     d.press(keyboard::ARROW_RIGHT).await?;
+    // A native scroll moves on a later frame and sends nothing to await before it.
     linger(d, 10).await;
     let after = d.rect(FIRST_SLIDE).await?.x;
     ensure!(
@@ -528,15 +529,12 @@ fn autoplay_stops_once_focus_enters_until_play() {
             .await
             .unwrap();
         let page = &fixture.page;
+        hold_rotation(page).await;
         instant_scroll(page).await;
         let live = "document.querySelector('[aria-roledescription=carousel] [role=status]')\
                     .getAttribute('aria-live')";
         let start = index(page).await.unwrap();
-        wait::until("autoplay to advance", || async move {
-            Ok(index(page).await? != start)
-        })
-        .await
-        .unwrap();
+        rotates(page, start, "autoplay to advance").await;
         let polite: String = page.evaluate(live).await.unwrap().into_value().unwrap();
         assert_eq!(polite, "off", "the status while rotating");
 
@@ -553,12 +551,7 @@ fn autoplay_stops_once_focus_enters_until_play() {
 
         reach(page, "#before").await.unwrap();
         let held = index(page).await.unwrap();
-        sleep(1200).await;
-        assert_eq!(
-            index(page).await.unwrap(),
-            held,
-            "rotation resumed once focus left"
-        );
+        assert_stopped(page, held, "rotation resumed once focus left").await;
 
         keyboard::press(page, keyboard::TAB).await.unwrap();
         let first: bool = page
@@ -570,11 +563,7 @@ fn autoplay_stops_once_focus_enters_until_play() {
         assert!(first, "the toggle is not the carousel's first tab stop");
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         assert_pressed(page, "false", "Play").await;
-        wait::until("autoplay to advance once Play is pressed", || async move {
-            Ok(index(page).await? != held)
-        })
-        .await
-        .unwrap();
+        rotates(page, held, "autoplay to advance once Play is pressed").await;
 
         fixture.console.assert_clean("autoplay").unwrap();
         fixture.close().await.unwrap();
@@ -612,7 +601,8 @@ fn a_pointer_press_on_pause_pauses() {
         )
         .await
         .unwrap();
-        sleep(300).await;
+        // The release's click and its render are in; a focus entry undone by it would read false.
+        clock::settle(page).await.unwrap();
         assert_pressed(page, "true", "a pointer press on Pause").await;
         fixture
             .console
@@ -671,18 +661,12 @@ fn autoplay_waits_for_its_control_under_reduced_motion() {
             .unwrap();
         let page = &fixture.page;
         motion::set_reduced_motion(page, true).await.unwrap();
-        // The pause state is read once, at mount.
-        page.reload().await.unwrap();
+        // The pause state is read once, at mount: the hold reloads.
+        hold_rotation(page).await;
         motion::assert_reduced_motion_matches(page).await.unwrap();
         let pause = "[aria-roledescription=carousel] button[aria-pressed]";
-        wait::for_visible(page, pause).await.unwrap();
         let start = index(page).await.unwrap();
-        sleep(1200).await;
-        assert_eq!(
-            index(page).await.unwrap(),
-            start,
-            "rotated under reduced motion"
-        );
+        assert_stopped(page, start, "rotated under reduced motion").await;
         let pressed: String = page
             .evaluate(format!(
                 "document.querySelector({pause:?}).getAttribute('aria-pressed')"
@@ -696,11 +680,7 @@ fn autoplay_waits_for_its_control_under_reduced_motion() {
         page.evaluate(format!("document.querySelector({pause:?}).click()"))
             .await
             .unwrap();
-        wait::until("autoplay to advance once started", || async move {
-            Ok(index(page).await? != start)
-        })
-        .await
-        .unwrap();
+        rotates(page, start, "autoplay to advance once started").await;
         fixture
             .console
             .assert_clean("autoplay under reduced motion")
@@ -718,17 +698,17 @@ fn autoplay_pauses_when_reduced_motion_turns_on() {
             .await
             .unwrap();
         let page = &fixture.page;
+        hold_rotation(page).await;
         instant_scroll(page).await;
         let pause = "[aria-roledescription=carousel] button[aria-pressed]";
         let start = index(page).await.unwrap();
-        wait::until("autoplay to advance", || async move {
-            Ok(index(page).await? != start)
-        })
-        .await
-        .unwrap();
+        rotates(page, start, "autoplay to advance").await;
 
         motion::set_reduced_motion(page, true).await.unwrap();
         motion::assert_reduced_motion_matches(page).await.unwrap();
+        // The next tick reads the preference and pauses instead of moving.
+        let held = index(page).await.unwrap();
+        clock::fire_all(page, AUTOPLAY_MS).await.unwrap();
         wait::for_js_true(
             page,
             &format!("document.querySelector({pause:?}).getAttribute('aria-pressed') === 'true'"),
@@ -736,23 +716,13 @@ fn autoplay_pauses_when_reduced_motion_turns_on() {
         )
         .await
         .unwrap();
-        let held = index(page).await.unwrap();
-        sleep(1200).await;
-        assert_eq!(
-            index(page).await.unwrap(),
-            held,
-            "rotated after reduced motion turned on"
-        );
+        assert_stopped(page, held, "rotated after reduced motion turned on").await;
 
         // Play pressed under reduced motion is the reader's choice, and holds.
         page.evaluate(format!("document.querySelector({pause:?}).click()"))
             .await
             .unwrap();
-        wait::until("autoplay to advance once started again", || async move {
-            Ok(index(page).await? != held)
-        })
-        .await
-        .unwrap();
+        rotates(page, held, "autoplay to advance once started again").await;
         fixture
             .console
             .assert_clean("autoplay after reduced motion turned on")
@@ -850,8 +820,39 @@ async fn instant_scroll(page: &Page) {
     .unwrap();
 }
 
-async fn sleep(ms: u64) {
-    tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
+/// The fixture's `autoplay_delay`.
+const AUTOPLAY_MS: u32 = 400;
+
+/// Holds the rotation timer from mount on, so the strip moves only when the test fires it.
+async fn hold_rotation(page: &Page) {
+    clock::hold_from_load(page, &[AUTOPLAY_MS]).await.unwrap();
+    wait::for_visible(page, PAUSE).await.unwrap();
+}
+
+/// Fires the held rotation until the strip leaves `from`. Held, not the real clock's.
+async fn rotates(page: &Page, from: i64, what: &str) {
+    clock::until_armed(page, AUTOPLAY_MS, 1, what)
+        .await
+        .unwrap();
+    wait::until(what, || async move {
+        clock::fire_all(page, AUTOPLAY_MS).await?;
+        Ok(index(page).await? != from)
+    })
+    .await
+    .unwrap();
+}
+
+/// Stopped for good: no rotation timer is armed, and firing every held one moves nothing.
+async fn assert_stopped(page: &Page, at: i64, why: &str) {
+    clock::settle(page).await.unwrap();
+    let armed = clock::armed(page, AUTOPLAY_MS).await.unwrap();
+    clock::fire_all(page, AUTOPLAY_MS).await.unwrap();
+    clock::settle(page).await.unwrap();
+    assert_eq!(
+        (armed, index(page).await.unwrap()),
+        (0, at),
+        "{why}: (rotation timers armed, index)"
+    );
 }
 
 /// Forced colours paint every dot `Canvas`: the strip vanished, and with it

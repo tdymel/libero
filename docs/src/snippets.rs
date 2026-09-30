@@ -15,6 +15,8 @@ use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::OnceLock;
+use std::thread;
 
 use dioxus::history::{History, MemoryHistory, provide_history_context};
 use dioxus::prelude::*;
@@ -364,20 +366,50 @@ fn Page(route: Route) -> Element {
     }
 }
 
-/// Every `Demo` the route renders, in render order.
-fn demos_of(route: Route) -> Vec<DemoCode> {
-    DEMOS.with(|demos| demos.borrow_mut().clear());
-    let mut dom = VirtualDom::new_with_props(Page, PageProps { route });
-    dom.rebuild_in_place();
-    DEMOS.with(|demos| std::mem::take(&mut *demos.borrow_mut()))
+/// One static route, rendered once.
+struct Rendered {
+    route: Route,
+    /// Every `Demo`, in render order.
+    demos: Vec<DemoCode>,
+    /// The markdown mirror and the property groups of every `DocPage`.
+    pages: Vec<(Option<String>, Vec<PropGroup>)>,
 }
 
-/// The markdown mirror and the property groups of every `DocPage` the route renders.
-fn pages_of(route: Route) -> Vec<(Option<String>, Vec<PropGroup>)> {
+fn render(route: &Route) -> Rendered {
+    DEMOS.with(|demos| demos.borrow_mut().clear());
     PAGES.with(|pages| pages.borrow_mut().clear());
-    let mut dom = VirtualDom::new_with_props(Page, PageProps { route });
+    let mut dom = VirtualDom::new_with_props(
+        Page,
+        PageProps {
+            route: route.clone(),
+        },
+    );
     dom.rebuild_in_place();
-    PAGES.with(|pages| std::mem::take(&mut *pages.borrow_mut()))
+    Rendered {
+        route: route.clone(),
+        demos: DEMOS.with(|demos| std::mem::take(&mut *demos.borrow_mut())),
+        pages: PAGES.with(|pages| std::mem::take(&mut *pages.borrow_mut())),
+    }
+}
+
+/// Every static route rendered once for all the tests here, split over threads: the renders
+/// were most of their time, four times over.
+fn rendered() -> &'static [Rendered] {
+    static RENDERED: OnceLock<Vec<Rendered>> = OnceLock::new();
+    RENDERED.get_or_init(|| {
+        let routes = Route::static_routes();
+        let threads = thread::available_parallelism().map_or(4, |n| n.get().min(8));
+        thread::scope(|scope| {
+            let handles: Vec<_> = routes
+                .chunks(routes.len().div_ceil(threads).max(1))
+                .map(|chunk| scope.spawn(|| chunk.iter().map(render).collect::<Vec<_>>()))
+                .collect();
+            handles
+                .into_iter()
+                .flat_map(|handle| handle.join().unwrap())
+                .collect()
+        })
+    })
 }
 
 /// A method's name without its parameters: `show(args)` is `show`.
@@ -407,8 +439,8 @@ fn md_parts(md: &str) -> BTreeSet<(String, String)> {
 fn md_mirrors_list_the_parts_of_their_page() {
     let public = Path::new(env!("CARGO_MANIFEST_DIR")).join("public");
     let mut problems = Vec::new();
-    for route in Route::static_routes() {
-        for (markdown, groups) in pages_of(route.clone()) {
+    for Rendered { route, pages, .. } in rendered() {
+        for (markdown, groups) in pages {
             let Some(markdown) = markdown else { continue };
             let Ok(md) = std::fs::read_to_string(public.join(markdown.trim_start_matches('/')))
             else {
@@ -486,9 +518,9 @@ fn md_props(md: &str) -> Vec<(String, BTreeSet<String>)> {
 fn md_mirrors_list_the_props_of_their_page() {
     let public = Path::new(env!("CARGO_MANIFEST_DIR")).join("public");
     let mut problems = Vec::new();
-    for route in Route::static_routes() {
-        for (markdown, groups) in pages_of(route.clone()) {
-            let Some(markdown) = markdown.filter(|_| !groups.is_empty()) else {
+    for Rendered { route, pages, .. } in rendered() {
+        for (markdown, groups) in pages {
+            let Some(markdown) = markdown.as_ref().filter(|_| !groups.is_empty()) else {
                 continue;
             };
             let Ok(md) = std::fs::read_to_string(public.join(markdown.trim_start_matches('/')))
@@ -497,7 +529,7 @@ fn md_mirrors_list_the_props_of_their_page() {
                 continue;
             };
             let mirrored = md_props(&md);
-            for group in &groups {
+            for group in groups {
                 // A group the mirror files under another heading, such as an options
                 // struct, is not compared; a page's only group may sit under none.
                 let named = |heading: &str| {
@@ -671,11 +703,8 @@ fn demo_markers(source: &str) -> Vec<(usize, Vec<String>)> {
 #[test]
 fn demo_code_labels_are_distinct_per_page() {
     let mut problems = Vec::new();
-    for route in Route::static_routes() {
-        let labels: Vec<String> = demos_of(route.clone())
-            .into_iter()
-            .map(|code| code.label)
-            .collect();
+    for Rendered { route, demos, .. } in rendered() {
+        let labels: Vec<&String> = demos.iter().map(|code| &code.label).collect();
         for label in &labels {
             if labels.iter().filter(|other| *other == label).count() > 1 {
                 problems.push(format!(
@@ -749,8 +778,7 @@ fn page_snippets_are_current() {
 
     // Each page's `Demo`s, matched to its `Demo {` lines by order.
     let mut demo_count = 0;
-    for route in Route::static_routes() {
-        let demos = demos_of(route.clone());
+    for Rendered { route, demos, .. } in rendered() {
         demo_count += demos.len();
         let name = format!("{route:?}");
         let name = name.trim_end_matches(" {}").trim_end_matches(" { }");

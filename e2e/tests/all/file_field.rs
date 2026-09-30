@@ -324,7 +324,7 @@ fn read_only_and_disabled_refuse_the_picker_and_the_remove() {
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         pointer::click(page, "#modes").await.unwrap();
         // Nothing to wait for: give a refused edit a frame to show.
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        crate::settle::painted(page).await.unwrap();
         assert_eq!(openings(page).await, 2, "read-only opened the picker");
         assert!(
             page.evaluate("!!document.querySelector('#modes-file-1')")
@@ -347,7 +347,7 @@ fn read_only_and_disabled_refuse_the_picker_and_the_remove() {
         pointer::click(page, "[role=group][aria-labelledby=modes-label]")
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        crate::settle::painted(page).await.unwrap();
         assert_eq!(openings(page).await, 2, "disabled opened the picker");
         assert_ne!(active_id(page).await, "modes");
 

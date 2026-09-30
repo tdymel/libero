@@ -4,13 +4,15 @@
 use anyhow::Result;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, eventually_text, linger};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::suite::Step;
 use e2e::{
     Fixture, Suite, Viewport,
     passes::{keyboard, pointer},
     wait,
 };
+
+use crate::settle::painted;
 
 /// `a11y_attributes()` gives the trigger a generated id, so it is found by
 /// the attribute that makes it a menu button instead.
@@ -169,8 +171,8 @@ async fn a_press_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()
     d.click(TRIGGER).await?;
     placed(d, MENU).await?;
     d.click(MENU).await?;
-    linger(d, 8).await;
     expanded(d, true).await?;
+    // Behind the menu's press: had that closed the menu, this one reopens it.
     d.click(TRIGGER).await?;
     expanded(d, false).await?;
 
@@ -442,7 +444,8 @@ fn chords_on_the_trigger_and_in_a_submenu_go_to_the_browser() {
             keyboard::tab_to(page, TRIGGER, 10).await?;
             keyboard::press_with(page, keyboard::ARROW_DOWN, keyboard::ALT).await?;
             // Opening would have focused an item by now.
-            std::thread::sleep(std::time::Duration::from_millis(300));
+            wait::for_js_true(page, "window.__prevented.length === 1", "the chord").await?;
+            painted(page).await?;
             wait::for_js_true(page, &focus_on("Actions"), "the menu left closed").await?;
 
             keyboard::press(page, keyboard::ARROW_UP).await?;
@@ -450,7 +453,8 @@ fn chords_on_the_trigger_and_in_a_submenu_go_to_the_browser() {
             keyboard::press(page, keyboard::ARROW_RIGHT).await?;
             wait::for_js_true(page, &focus_on("Email"), "focus in the submenu").await?;
             keyboard::press_with(page, keyboard::ARROW_LEFT, keyboard::ALT).await?;
-            std::thread::sleep(std::time::Duration::from_millis(300));
+            wait::for_js_true(page, "window.__prevented.length === 2", "the chord").await?;
+            painted(page).await?;
             wait::for_js_true(page, &focus_on("Email"), "the submenu left open").await?;
             wait::for_js_true(
                 page,

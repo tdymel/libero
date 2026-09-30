@@ -6,7 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually};
 use e2e::passes::keyboard::{self, Key};
 use e2e::passes::pointer;
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, clock, wait};
 
 const PLAY: &str = "#player [data-slot=controls] button";
 const FULLSCREEN: &str = "#player button[aria-label=Fullscreen]";
@@ -553,6 +553,39 @@ async fn within<D: Driver>(
     Ok(())
 }
 
+/// The controls' idle timer (libero's CONTROLS_IDLE_MS).
+const IDLE_MS: u32 = 3000;
+
+/// Waits for the controls to fade: on a held clock fires the idle timer once it is armed,
+/// elsewhere waits out the real 3 s.
+async fn until_faded<D: Driver>(d: &mut D, held: bool, what: &str) -> Result<()> {
+    if held {
+        eventually(d, "the idle timer to arm", async |d| {
+            Ok(d.armed(IDLE_MS).await? > 0)
+        })
+        .await?;
+        d.fire_timers(IDLE_MS).await?;
+    }
+    within(d, 8, what, faded).await
+}
+
+/// The controls stay shown: on a held clock past every pending idle timer and the frame
+/// after it, elsewhere for 4 s of real time.
+async fn stay_shown<D: Driver>(d: &mut D, held: bool, why: &str) -> Result<()> {
+    if held {
+        d.fire_timers(IDLE_MS).await?;
+        d.settle().await?;
+        anyhow::ensure!(controls_shown(d).await?, "the controls faded {why}");
+        return Ok(());
+    }
+    let started = std::time::Instant::now();
+    while started.elapsed().as_secs() < 4 {
+        anyhow::ensure!(controls_shown(d).await?, "the controls faded {why}");
+        d.idle().await;
+    }
+    Ok(())
+}
+
 async fn faded<D: Driver>(d: &mut D) -> Result<bool> {
     Ok(d.attr("#player [role=group]", "data-controls")
         .await?
@@ -574,6 +607,7 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
     if d.platform() == Platform::Native {
         return Ok(());
     }
+    let held = d.hold_timers(&[IDLE_MS]).await?;
     eventually(d, "the duration", async |d| {
         Ok(d.text("#player [data-slot=time]").await? == "0:00 / 0:15")
     })
@@ -591,7 +625,7 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
         "the controls are {position}, not overlaid"
     );
     d.click(PLAY).await?;
-    within(d, 8, "the controls to fade while playing", faded).await?;
+    until_faded(d, held, "the controls to fade while playing").await?;
 
     d.click("#player video").await?;
     within(d, 3, "a press on the picture to show them", controls_shown).await?;
@@ -601,18 +635,11 @@ async fn fullscreen_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<
         d.click(PLAY).await?;
     }
     reads(d, "playing", PLAY, "aria-label", "Pause").await?;
-    within(d, 8, "the controls to fade again", faded).await?;
+    until_faded(d, held, "the controls to fade again").await?;
 
     d.press(keyboard::TAB).await?;
     within(d, 3, "keyboard focus to show them", controls_shown).await?;
-    let started = std::time::Instant::now();
-    while started.elapsed().as_secs() < 4 {
-        anyhow::ensure!(
-            controls_shown(d).await?,
-            "the controls faded under keyboard focus"
-        );
-        d.idle().await;
-    }
+    stay_shown(d, held, "under keyboard focus").await?;
     d.press(keyboard::ESCAPE).await
 }
 
@@ -622,12 +649,13 @@ async fn inline_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     if d.platform() == Platform::Native {
         return Ok(());
     }
+    let held = d.hold_timers(&[IDLE_MS]).await?;
     eventually(d, "the duration", async |d| {
         Ok(d.text("#player [data-slot=time]").await? == "0:00 / 0:15")
     })
     .await?;
     d.click(PLAY).await?;
-    within(d, 8, "the controls to fade while playing", faded).await?;
+    until_faded(d, held, "the controls to fade while playing").await?;
     d.click("#player video").await?;
     within(d, 3, "a press on the picture to show them", controls_shown).await?;
     // A click pauses as well; a tap on faded controls only shows them (todo 1362).
@@ -635,12 +663,7 @@ async fn inline_controls_fade<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
         d.click(PLAY).await?;
     }
     reads(d, "playing to pause", PLAY, "aria-label", "Play").await?;
-    let started = std::time::Instant::now();
-    while started.elapsed().as_secs() < 4 {
-        anyhow::ensure!(controls_shown(d).await?, "the controls faded while paused");
-        d.idle().await;
-    }
-    Ok(())
+    stay_shown(d, held, "while paused").await
 }
 
 e2e::scenario!(
@@ -1047,6 +1070,15 @@ async fn until(page: &chromiumoxide::Page, js: &str, secs: u64, what: &str) {
     }
 }
 
+/// Fires the held idle timer once armed and waits for the fade.
+async fn fade(page: &chromiumoxide::Page) {
+    clock::until_armed(page, IDLE_MS, 1, "the idle timer")
+        .await
+        .unwrap();
+    clock::fire(page, IDLE_MS).await.unwrap();
+    until(page, FADED, 3, "the controls to fade").await;
+}
+
 const FADED: &str = "document.querySelector('#player [role=group]').dataset.controls === 'hidden'
     && getComputedStyle(document.querySelector('#player [data-slot=controls]')).opacity === '0'";
 const PLAYING: &str = "!document.querySelector('#player video').paused";
@@ -1104,16 +1136,19 @@ fn a_control_tooltip_waits_two_seconds_on_hover() {
         )
         .await
         .unwrap();
-        let start = std::time::Instant::now();
+        clock::hold(page, &[2000]).await.unwrap();
         pointer::hover(page, PLAY).await.unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(1000));
+        // The tooltip waits on one 2 s timer, and not before it fires.
+        clock::until_armed(page, 2000, 1, "the 2 s open timer")
+            .await
+            .unwrap();
+        clock::settle(page).await.unwrap();
         let early: bool = page.evaluate(TIP).await.unwrap().into_value().unwrap();
-        assert!(!early, "the tooltip opened within a second");
+        assert!(!early, "the tooltip opened before its 2 s timer");
+        clock::fire(page, 2000).await.unwrap();
         wait::for_js_true(page, TIP, "the tooltip after the delay")
             .await
             .unwrap();
-        let waited = start.elapsed().as_millis();
-        assert!(waited >= 1900, "opened after {waited}ms");
         fixture.close().await.unwrap();
     });
 }
@@ -1127,6 +1162,7 @@ fn a_click_on_the_picture_plays_or_pauses() {
             .await
             .unwrap();
         let page = &fixture.page;
+        clock::hold(page, &[IDLE_MS]).await.unwrap();
         wait::for_js_true(page, LONG_DURATION, "the duration")
             .await
             .unwrap();
@@ -1140,7 +1176,12 @@ fn a_click_on_the_picture_plays_or_pauses() {
             .unwrap();
 
         pointer::click(page, "#player video").await.unwrap();
-        until(page, FADED, 8, "the controls to fade").await;
+        // The idle timer armed while paused is replaced once playing: fire the new one.
+        wait::for_js_true(page, PLAYING, "a click to play again")
+            .await
+            .unwrap();
+        clock::settle(page).await.unwrap();
+        fade(page).await;
         let at = pointer::centre_of(page, "#player video").await.unwrap();
         pointer::touch_drag(page, at, at, 0).await.unwrap();
         until(
@@ -1166,11 +1207,12 @@ fn focus_from_code_shows_the_faded_controls() {
             .await
             .unwrap();
         let page = &fixture.page;
+        clock::hold(page, &[IDLE_MS]).await.unwrap();
         wait::for_js_true(page, LONG_DURATION, "the duration")
             .await
             .unwrap();
         pointer::click(page, PLAY).await.unwrap();
-        until(page, FADED, 8, "the controls to fade").await;
+        fade(page).await;
         page.evaluate(format!("document.querySelector('{FULLSCREEN}').focus()"))
             .await
             .unwrap();
@@ -1182,9 +1224,11 @@ fn focus_from_code_shows_the_faded_controls() {
             "focus from code to show the row",
         )
         .await;
-        // As after a key, they stay while focus is in them.
-        tokio::time::sleep(std::time::Duration::from_secs(4)).await;
-        until(page, &format!("!({FADED})"), 1, "the row to stay").await;
+        // As after a key, they stay while focus is in them: past the idle timer.
+        clock::fire_all(page, IDLE_MS).await.unwrap();
+        clock::settle(page).await.unwrap();
+        let faded: bool = page.evaluate(FADED).await.unwrap().into_value().unwrap();
+        assert!(!faded, "the row faded with focus in it");
         fixture.close().await.unwrap();
     });
 }
@@ -1197,6 +1241,7 @@ fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {
             .await
             .unwrap();
         let page = &fixture.page;
+        clock::hold(page, &[IDLE_MS]).await.unwrap();
         wait::for_js_true(page, LONG_DURATION, "the duration")
             .await
             .unwrap();
@@ -1209,7 +1254,7 @@ fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {
         )
         .await
         .unwrap();
-        until(page, FADED, 8, "the controls to fade").await;
+        fade(page).await;
         page.evaluate(format!("document.querySelector('{FULLSCREEN}').focus()"))
             .await
             .unwrap();
@@ -1283,7 +1328,7 @@ fn shift_question_lists_the_keys_inside_the_player() {
         keyboard::press_with(page, QUESTION, keyboard::SHIFT)
             .await
             .unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        clock::settle(page).await.unwrap();
         let stray: bool = page
             .evaluate(format!("document.querySelector('{DIALOG}') !== null"))
             .await

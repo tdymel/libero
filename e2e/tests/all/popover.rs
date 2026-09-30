@@ -152,7 +152,7 @@ fn a_press_outside_closes_it() {
         open(page).await;
         pointer::click(page, BOX_TEXT).await.unwrap();
         pointer::click(page, IN_BOX).await.unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        crate::settle::painted(page).await.unwrap();
         assert!(
             wait::is_visible(page, BOX).await.unwrap(),
             "a press inside the box closed it"

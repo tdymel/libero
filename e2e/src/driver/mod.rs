@@ -134,6 +134,30 @@ pub trait Driver {
     async fn soft_keyboard_shown(&mut self) -> Result<bool> {
         Ok(false)
     }
+    /// Holds the page's timers of `delays` ([`crate::clock`]); `false` where the app's timers
+    /// do not run in the page (Blitz, the WebViews), so the caller waits them out instead.
+    async fn hold_timers(&mut self, delays: &[u32]) -> Result<bool> {
+        let _ = delays;
+        Ok(false)
+    }
+    /// Pending held timers of `ms`.
+    async fn armed(&mut self, ms: u32) -> Result<usize> {
+        let _ = ms;
+        bail!("{:?}: no held clock", self.platform())
+    }
+    /// Fires every pending held timer of `ms`; returns how many ran.
+    async fn fire_timers(&mut self, ms: u32) -> Result<usize> {
+        let _ = ms;
+        bail!("{:?}: no held clock", self.platform())
+    }
+    /// Returns once the page has handled what the last action queued: on the web two
+    /// macrotask turns, past dioxus's microtask-driven render; elsewhere a few idle rounds.
+    async fn settle(&mut self) -> Result<()> {
+        for _ in 0..4 {
+            self.idle().await;
+        }
+        Ok(())
+    }
     /// Lets time pass: timers fire and the page settles.
     async fn idle(&mut self);
     /// How long [`eventually`] polls.

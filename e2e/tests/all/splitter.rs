@@ -117,7 +117,9 @@ async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     }
 
     // Past `DoublePress`'s 500ms, or Blitz takes the second press as a double.
-    std::thread::sleep(std::time::Duration::from_millis(550));
+    if d.platform() == Platform::Native {
+        std::thread::sleep(std::time::Duration::from_millis(550));
+    }
     d.drag(ROW, 40.0, 0.0).await?;
     // `aria-valuenow` (the first divider's) truncates, `#row-end` rounds.
     eventually(d, "a sideways drag to move it and end", async |d| {

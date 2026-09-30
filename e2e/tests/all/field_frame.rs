@@ -3,7 +3,6 @@
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Duration;
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -261,10 +260,16 @@ fn a_file_field_opens_its_picker_once_per_press() {
                 count.fetch_add(1, Ordering::SeqCst);
             }
         });
+        // Up to `want`, then a paint for a second one the same press might open.
         let settle = |want: usize| {
             let opened = opened.clone();
             async move {
-                tokio::time::sleep(Duration::from_millis(400)).await;
+                wait::until(&format!("file chooser {want}"), || async {
+                    Ok(opened.load(Ordering::SeqCst) >= want)
+                })
+                .await
+                .unwrap();
+                crate::settle::painted(page).await.unwrap();
                 assert_eq!(opened.load(Ordering::SeqCst), want, "file choosers opened");
             }
         };

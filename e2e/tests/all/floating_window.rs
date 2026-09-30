@@ -526,7 +526,7 @@ fn each_window_closes_alone_and_a_close_from_the_page_keeps_focus() {
             "the first window to close",
         )
         .await;
-        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        crate::settle::painted(page).await.unwrap();
         let active: String = page
             .evaluate("document.activeElement?.id ?? ''")
             .await

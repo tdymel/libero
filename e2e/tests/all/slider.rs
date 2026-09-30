@@ -7,6 +7,8 @@ use e2e::passes::target_size::MINIMUM;
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
+use crate::settle;
+
 const VALUE_NOW: &str = "document.querySelector('[role=slider]').getAttribute('aria-valuenow')";
 
 const THUMB: &str = "[role=slider]";
@@ -420,7 +422,7 @@ fn a_touch_drags_only_from_the_thumb() {
         };
 
         pointer::touch_drag(page, track, aside, 6).await.unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        settle::painted(page).await.unwrap();
         let (now, ended): (String, String) = page
             .evaluate(format!(
                 "[{value}, document.querySelector('#slider-end').textContent]"

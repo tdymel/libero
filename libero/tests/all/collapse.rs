@@ -5,6 +5,7 @@
 use crate::common::{attributes_of, body, render};
 
 use std::cell::Cell;
+use std::rc::Rc;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -340,7 +341,9 @@ fn drive_until(dom: &mut VirtualDom, limit: Duration, done: impl Fn(&str) -> boo
 fn a_close_with_no_transitionend_unmounts_after_the_duration() {
     let mut dom = VirtualDom::new(toggled_30ms);
     dom.rebuild_in_place();
-    let html = drive_until(&mut dom, Duration::from_millis(50), |_| false);
+    let html = drive_until(&mut dom, Duration::from_secs(2), |html| {
+        html.contains("panel body")
+    });
     assert!(html.contains("panel body"), "{html}");
 
     set_open(&mut dom, false);
@@ -384,12 +387,24 @@ fn reopening_before_the_fallback_keeps_the_content() {
     let mut dom = VirtualDom::new(toggled_30ms);
     dom.rebuild_in_place();
     set_open(&mut dom, false);
-    // Long enough for the close effect to arm the 180ms fallback.
-    drive_until(&mut dom, Duration::from_millis(60), |_| false);
+    // The close rendered, so its effect armed the 180ms fallback.
+    drive_until(&mut dom, Duration::from_secs(2), |html| {
+        attributes_of(html, "div")["data-state"] != "open"
+    });
+    drive_until(&mut dom, Duration::ZERO, |_| true);
     set_open(&mut dom, true);
 
-    // Well past the 180ms the dropped timer was due at.
-    let html = drive_until(&mut dom, Duration::from_millis(400), |_| false);
+    // Past the 180ms the dropped timer was due at: a timer started after it has fired.
+    let fired = Rc::new(Cell::new(false));
+    let _later = dom.in_scope(ScopeId::APP, || {
+        let fired = fired.clone();
+        libero::platform::timer().expect("a timer").after(
+            Duration::from_millis(200),
+            Box::new(move || fired.set(true)),
+        )
+    });
+    let html = drive_until(&mut dom, Duration::from_secs(2), |_| fired.get());
+    assert!(fired.get(), "the later timer never fired");
     assert!(html.contains("panel body"), "{html}");
     assert_eq!(MOUNTS.with(Cell::get), 1, "the content was remounted");
     assert_eq!(attributes_of(&html, "div")["data-state"], "open", "{html}");

@@ -26,6 +26,8 @@ mod long_press;
 mod long_press_tests;
 mod media;
 mod media_query;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod polling_tests;
 mod popover;
 mod portal;
 #[cfg(test)]

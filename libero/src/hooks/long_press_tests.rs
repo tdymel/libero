@@ -3,8 +3,6 @@
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use std::thread;
-use std::time::{Duration, Instant};
 
 use dioxus::html::geometry::{ClientPoint, ElementPoint, PagePoint, ScreenPoint};
 use dioxus::html::input_data::{MouseButton, MouseButtonSet};
@@ -14,6 +12,7 @@ use dioxus::html::point_interaction::{
 use dioxus::html::{HasPointerData, PointerData};
 use dioxus::prelude::*;
 
+use super::polling_tests::{self, pump, pump_until};
 use crate::hooks::{LongPress, LongPressOptions, use_long_press};
 
 thread_local! {
@@ -33,21 +32,18 @@ fn app() -> Element {
     rsx! {}
 }
 
-fn pump(dom: &mut VirtualDom, span: Duration) {
-    let start = Instant::now();
-    while start.elapsed() < span {
-        dom.process_events();
-        dom.render_immediate(&mut dioxus::core::NoOpMutations);
-        thread::sleep(Duration::from_millis(2));
-    }
-}
-
 fn started() -> VirtualDom {
     FIRED.with(|fired| fired.set(0));
-    let mut dom = VirtualDom::new(app);
-    dom.rebuild_in_place();
-    pump(&mut dom, Duration::from_millis(10));
-    dom
+    polling_tests::started(app)
+}
+
+/// Waits until the press would have fired, had it not been cancelled.
+fn settle(dom: &mut VirtualDom) {
+    polling_tests::settle(dom, 60);
+}
+
+fn fires(dom: &mut VirtualDom) {
+    pump_until(dom, "the long press", |_| fired() == 1);
 }
 
 fn handlers() -> LongPress {
@@ -95,13 +91,12 @@ fn up(dom: &VirtualDom, fake: Fake) {
 fn a_held_press_fires_once() {
     let mut dom = started();
     down(&dom, at(5.0, 5.0));
-    pump(&mut dom, Duration::from_millis(40));
+    pump(&mut dom, 40);
     assert_eq!(fired(), 0, "fired before its time");
 
-    pump(&mut dom, Duration::from_millis(250));
-    assert_eq!(fired(), 1);
+    fires(&mut dom);
     up(&dom, at(5.0, 5.0));
-    pump(&mut dom, Duration::from_millis(100));
+    settle(&mut dom);
     assert_eq!(fired(), 1, "fired again");
 }
 
@@ -114,26 +109,26 @@ fn pressing_is_true_only_while_the_press_is_held() {
     let mut dom = started();
     assert!(!pressing(&dom));
     down(&dom, at(5.0, 5.0));
-    pump(&mut dom, Duration::from_millis(20));
-    assert!(pressing(&dom), "not pressing while held");
-    pump(&mut dom, Duration::from_millis(250));
-    assert_eq!(fired(), 1);
+    pump_until(&mut dom, "pressing while held", pressing);
+    assert_eq!(fired(), 0, "fired before it was held");
+    fires(&mut dom);
     assert!(!pressing(&dom), "still pressing after firing");
 
     down(&dom, at(5.0, 5.0));
-    pump(&mut dom, Duration::from_millis(10));
+    pump_until(&mut dom, "pressing again", pressing);
     up(&dom, at(5.0, 5.0));
-    pump(&mut dom, Duration::from_millis(10));
-    assert!(!pressing(&dom), "still pressing after a release");
+    pump_until(&mut dom, "not pressing after a release", |dom| {
+        !pressing(dom)
+    });
 }
 
 #[test]
 fn a_tap_does_not_fire() {
     let mut dom = started();
     down(&dom, at(5.0, 5.0));
-    pump(&mut dom, Duration::from_millis(20));
+    pump(&mut dom, 20);
     up(&dom, at(5.0, 5.0));
-    pump(&mut dom, Duration::from_millis(250));
+    settle(&mut dom);
     assert_eq!(fired(), 0);
 }
 
@@ -142,7 +137,7 @@ fn a_pointer_that_leaves_does_not_fire() {
     let mut dom = started();
     down(&dom, at(5.0, 5.0));
     dom.in_runtime(|| handlers().onpointerleave.call(event(at(5.0, 5.0))));
-    pump(&mut dom, Duration::from_millis(250));
+    settle(&mut dom);
     assert_eq!(fired(), 0);
 }
 
@@ -151,7 +146,7 @@ fn a_cancelled_touch_does_not_fire() {
     let mut dom = started();
     down(&dom, at(5.0, 5.0));
     dom.in_runtime(|| handlers().onpointercancel.call(event(at(5.0, 5.0))));
-    pump(&mut dom, Duration::from_millis(250));
+    settle(&mut dom);
     assert_eq!(fired(), 0);
 }
 
@@ -160,7 +155,7 @@ fn a_move_beyond_the_tolerance_does_not_fire() {
     let mut dom = started();
     down(&dom, at(5.0, 5.0));
     go(&dom, at(5.0, 30.0));
-    pump(&mut dom, Duration::from_millis(250));
+    settle(&mut dom);
     assert_eq!(fired(), 0);
 }
 
@@ -169,8 +164,7 @@ fn a_move_within_the_tolerance_still_fires() {
     let mut dom = started();
     down(&dom, at(5.0, 5.0));
     go(&dom, at(8.0, 9.0));
-    pump(&mut dom, Duration::from_millis(250));
-    assert_eq!(fired(), 1);
+    fires(&mut dom);
 }
 
 #[test]
@@ -185,7 +179,7 @@ fn a_second_finger_does_not_fire() {
             ..at(50.0, 50.0)
         },
     );
-    pump(&mut dom, Duration::from_millis(250));
+    settle(&mut dom);
     assert_eq!(fired(), 0);
 }
 
@@ -195,7 +189,9 @@ fn a_press_after_a_cancelled_one_fires() {
     down(&dom, at(5.0, 5.0));
     up(&dom, at(5.0, 5.0));
     down(&dom, at(5.0, 5.0));
-    pump(&mut dom, Duration::from_millis(250));
+    fires(&mut dom);
+    // Once: the cancelled press does not fire as well.
+    settle(&mut dom);
     assert_eq!(fired(), 1);
 }
 

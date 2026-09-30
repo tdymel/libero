@@ -2,11 +2,11 @@
 //! `VirtualDom` polled the way a renderer would.
 
 use std::cell::RefCell;
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use dioxus::prelude::*;
 
+use super::polling_tests::{pump, pump_until, settle, started};
 use crate::hooks::{
     IntervalHandle, TimeoutHandle, use_debounced_callback, use_debounced_value, use_interval,
     use_throttled_callback, use_throttled_value, use_timeout,
@@ -19,22 +19,6 @@ thread_local! {
     static CALLBACK: RefCell<Option<Callback<String>>> = const { RefCell::new(None) };
     static TIMEOUT: RefCell<Option<TimeoutHandle>> = const { RefCell::new(None) };
     static INTERVAL: RefCell<Option<IntervalHandle>> = const { RefCell::new(None) };
-}
-
-fn pump(dom: &mut VirtualDom, span: Duration) {
-    let start = Instant::now();
-    while start.elapsed() < span {
-        dom.process_events();
-        dom.render_immediate(&mut dioxus::core::NoOpMutations);
-        thread::sleep(Duration::from_millis(2));
-    }
-}
-
-fn started(app: fn() -> Element) -> VirtualDom {
-    let mut dom = VirtualDom::new(app);
-    dom.rebuild_in_place();
-    pump(&mut dom, Duration::from_millis(10));
-    dom
 }
 
 fn log(dom: &VirtualDom) -> Vec<String> {
@@ -74,22 +58,21 @@ fn a_debounced_value_follows_after_the_typing_stops() {
 
     for text in ["a", "ab", "abc"] {
         type_into(&dom, text);
-        pump(&mut dom, Duration::from_millis(20));
+        pump(&mut dom, 20);
     }
     assert_eq!(shown(), "first", "followed before the pause");
 
-    pump(&mut dom, Duration::from_millis(300));
-    assert_eq!(shown(), "abc");
+    pump_until(&mut dom, "the settled value", |_| shown() == "abc");
 }
 
 #[test]
 fn a_debounced_value_ignores_a_change_that_is_undone() {
     let mut dom = started(debounced_value_app);
     type_into(&dom, "other");
-    pump(&mut dom, Duration::from_millis(20));
+    pump(&mut dom, 20);
     type_into(&dom, "first");
 
-    pump(&mut dom, Duration::from_millis(300));
+    settle(&mut dom, 80);
     assert_eq!(shown(), "first");
 }
 
@@ -105,11 +88,13 @@ fn a_debounced_callback_runs_once_with_the_last_argument() {
     let mut dom = started(debounced_callback_app);
     for text in ["a", "b", "c"] {
         call(&dom, text);
-        pump(&mut dom, Duration::from_millis(20));
+        pump(&mut dom, 20);
     }
     assert!(log(&dom).is_empty(), "ran before the pause");
 
-    pump(&mut dom, Duration::from_millis(300));
+    pump_until(&mut dom, "the debounced call", |dom| !log(dom).is_empty());
+    // Once: no second call follows the first.
+    settle(&mut dom, 80);
     assert_eq!(log(&dom), ["c"]);
 }
 
@@ -128,13 +113,14 @@ fn a_throttled_callback_runs_at_once_then_once_per_window() {
 
     call(&dom, "b");
     call(&dom, "c");
-    pump(&mut dom, Duration::from_millis(30));
+    pump(&mut dom, 30);
     assert_eq!(log(&dom), ["a"], "ran again inside the window");
 
-    pump(&mut dom, Duration::from_millis(300));
+    pump_until(&mut dom, "the trailing call", |dom| log(dom).len() == 2);
     assert_eq!(log(&dom), ["a", "c"]);
 
     // The quiet window closed, so the next call is a leading one again.
+    settle(&mut dom, 100);
     call(&dom, "d");
     assert_eq!(log(&dom), ["a", "c", "d"]);
 }
@@ -150,17 +136,19 @@ fn throttled_value_app() -> Element {
 fn a_throttled_value_shows_the_first_change_and_the_last_of_a_burst() {
     let mut dom = started(throttled_value_app);
     type_into(&dom, "a");
-    pump(&mut dom, Duration::from_millis(10));
-    assert_eq!(shown(), "a", "the leading change waited");
+    let waited = pump_until(&mut dom, "the leading change", |_| shown() == "a");
+    assert!(
+        waited < Duration::from_millis(100),
+        "the leading change waited {waited:?}"
+    );
 
     type_into(&dom, "b");
-    pump(&mut dom, Duration::from_millis(10));
+    pump(&mut dom, 10);
     type_into(&dom, "c");
-    pump(&mut dom, Duration::from_millis(10));
+    pump(&mut dom, 10);
     assert_eq!(shown(), "a", "changed inside the window");
 
-    pump(&mut dom, Duration::from_millis(300));
-    assert_eq!(shown(), "c");
+    pump_until(&mut dom, "the last change", |_| shown() == "c");
 }
 
 fn timeout_app() -> Element {
@@ -180,7 +168,8 @@ fn a_timeout_fires_once_after_start() {
     dom.in_runtime(|| timeout().start());
     assert!(dom.in_runtime(|| timeout().pending()));
 
-    pump(&mut dom, Duration::from_millis(300));
+    pump_until(&mut dom, "the timeout", |dom| !log(dom).is_empty());
+    settle(&mut dom, 60);
     assert_eq!(log(&dom), ["fired"]);
     assert!(!dom.in_runtime(|| timeout().pending()));
 }
@@ -191,7 +180,7 @@ fn a_stopped_timeout_never_fires() {
     dom.in_runtime(|| timeout().start());
     dom.in_runtime(|| timeout().stop());
 
-    pump(&mut dom, Duration::from_millis(200));
+    settle(&mut dom, 60);
     assert!(log(&dom).is_empty());
 }
 
@@ -209,17 +198,16 @@ fn interval() -> IntervalHandle {
 #[test]
 fn an_interval_ticks_between_start_and_stop() {
     let mut dom = started(interval_app);
-    pump(&mut dom, Duration::from_millis(100));
+    settle(&mut dom, 60);
     assert!(log(&dom).is_empty(), "ticked before start");
 
     dom.in_runtime(|| interval().toggle());
     assert!(dom.in_runtime(|| interval().active()));
-    pump(&mut dom, Duration::from_millis(400));
+    pump_until(&mut dom, "three ticks", |dom| log(dom).len() >= 3);
     let ticks = log(&dom).len();
-    assert!(ticks >= 3, "only {ticks} ticks");
 
     dom.in_runtime(|| interval().toggle());
     assert!(!dom.in_runtime(|| interval().active()));
-    pump(&mut dom, Duration::from_millis(200));
+    settle(&mut dom, 60);
     assert!(log(&dom).len() <= ticks + 1, "kept ticking after stop");
 }

@@ -2,6 +2,7 @@
 //! Read `.agents/brain/codebase/architecture.md` for the why; this file is the what.
 
 use std::collections::BTreeSet;
+use std::sync::OnceLock;
 
 use archunit::{
     Graph, SourceOptions, assert_passes, extract_graph, locate_project, pattern, project_layers,
@@ -72,11 +73,16 @@ const DOCS_CRATES: [(&str, &str); 9] = [
 
 const CATEGORY: &str = r"^libero/src/components/([a-z_]+)/";
 
-fn graph() -> Graph {
-    let project = locate_project().unwrap();
-    extract_graph(&project, SourceOptions::new())
-        .unwrap()
-        .into_graph()
+/// Extracted once: archunit caches it too, but tests starting together each missed that cache
+/// and extracted their own.
+fn graph() -> &'static Graph {
+    static GRAPH: OnceLock<Graph> = OnceLock::new();
+    GRAPH.get_or_init(|| {
+        let project = locate_project().unwrap();
+        extract_graph(&project, SourceOptions::new())
+            .unwrap()
+            .into_graph()
+    })
 }
 
 /// A test module split into its own `tests.rs` may render anything: it is not a layer's code.
@@ -87,6 +93,8 @@ fn is_test_file(path: &str) -> bool {
 
 #[test]
 fn no_layer_uses_one_above_it() {
+    // Fills archunit's cache with the same extraction the rule below asks for.
+    graph();
     let mut rule = project_layers();
     for (name, path) in LAYERS {
         rule = rule

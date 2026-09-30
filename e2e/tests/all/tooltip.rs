@@ -119,8 +119,13 @@ async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expressi
         .unwrap_or_else(|e| panic!("read {expression}: {e}"))
 }
 
-/// Long enough for a wrong reopen, a render or two, to have landed.
-async fn settle() {
+/// Past the renders and effects a wrong reopen would take.
+async fn settle(page: &chromiumoxide::Page) {
+    crate::settle::painted(page).await.unwrap();
+}
+
+/// A wrong close still shows through its 150 ms fade, so only time tells it.
+async fn past_the_fade() {
     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
 }
 
@@ -208,11 +213,11 @@ fn hover_shows_the_bubble_and_the_pointer_can_cross_the_gap() {
         pointer::move_to(page, pointer::Point { x: gap.x, y: gap.y })
             .await
             .unwrap();
-        settle().await;
+        past_the_fade().await;
         assert!(wait::is_visible(page, BUBBLE).await.unwrap(), "in the gap");
 
         pointer::hover(page, BUBBLE).await.unwrap();
-        settle().await;
+        past_the_fade().await;
         assert!(
             wait::is_visible(page, BUBBLE).await.unwrap(),
             "on the bubble"
@@ -238,7 +243,7 @@ fn escape_closes_it_under_the_pointer_and_on_focus() {
         wait::for_visible(page, BUBBLE).await.unwrap();
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_hidden(page, BUBBLE).await.unwrap();
-        settle().await;
+        settle(page).await;
         assert!(
             !wait::is_visible(page, BUBBLE).await.unwrap(),
             "the resting pointer opened it again"
@@ -253,7 +258,7 @@ fn escape_closes_it_under_the_pointer_and_on_focus() {
         wait::for_visible(page, BUBBLE).await.unwrap();
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_hidden(page, BUBBLE).await.unwrap();
-        settle().await;
+        settle(page).await;
         assert!(!wait::is_visible(page, BUBBLE).await.unwrap(), "reopened");
         let focused: bool = js(
             page,

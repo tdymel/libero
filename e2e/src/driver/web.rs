@@ -178,6 +178,23 @@ impl Driver for Web {
         ))
     }
 
+    async fn hold_timers(&mut self, delays: &[u32]) -> Result<bool> {
+        crate::clock::hold(&self.fixture.page, delays).await?;
+        Ok(true)
+    }
+
+    async fn armed(&mut self, ms: u32) -> Result<usize> {
+        crate::clock::armed(&self.fixture.page, ms).await
+    }
+
+    async fn fire_timers(&mut self, ms: u32) -> Result<usize> {
+        crate::clock::fire_all(&self.fixture.page, ms).await
+    }
+
+    async fn settle(&mut self) -> Result<()> {
+        crate::clock::settle(&self.fixture.page).await
+    }
+
     async fn idle(&mut self) {
         tokio::time::sleep(Duration::from_millis(25)).await;
     }

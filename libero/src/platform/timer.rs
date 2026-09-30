@@ -50,6 +50,7 @@ mod tests {
 
     thread_local! {
         static FIRED: Cell<usize> = const { Cell::new(0) };
+        static SETTLED: Cell<bool> = const { Cell::new(false) };
         /// The subscription the test drops to cancel, so it owns that moment.
         static SUBSCRIPTION: RefCell<Option<Box<dyn TimerSubscription>>> =
             const { RefCell::new(None) };
@@ -99,6 +100,19 @@ mod tests {
         }
     }
 
+    /// Drives the dom until a timer of `ms` started now has fired: one started after it has.
+    fn settle(dom: &mut VirtualDom, ms: u64) {
+        SETTLED.with(|settled| settled.set(false));
+        let _sentinel = dom.in_scope(ScopeId::APP, || {
+            timer().expect("a timer").after(
+                Duration::from_millis(ms + 20),
+                Box::new(|| SETTLED.with(|settled| settled.set(true))),
+            )
+        });
+        drive(dom, Duration::from_secs(2), || SETTLED.with(Cell::get));
+        assert!(SETTLED.with(Cell::get), "the sentinel timer never fired");
+    }
+
     #[test]
     fn a_timer_fires_once_after_its_delay() {
         let mut dom = VirtualDom::new(delayed);
@@ -108,7 +122,7 @@ mod tests {
         assert_eq!(fires(), 1, "the callback never arrived");
 
         // And exactly once, not once per poll.
-        drive(&mut dom, Duration::from_millis(100), || false);
+        settle(&mut dom, 20);
         assert_eq!(fires(), 1);
 
         drop_subscription();
@@ -121,8 +135,8 @@ mod tests {
 
         drop_subscription();
 
-        // Well past the 20ms it was scheduled for.
-        drive(&mut dom, Duration::from_millis(300), || false);
+        // Past the 20ms it was scheduled for.
+        settle(&mut dom, 20);
         assert_eq!(fires(), 0, "a cancelled timer fired anyway");
     }
 
@@ -136,7 +150,7 @@ mod tests {
         assert!(ticks >= 3, "the interval stopped after {ticks}");
 
         drop_subscription();
-        drive(&mut dom, Duration::from_millis(200), || false);
+        settle(&mut dom, 10);
         assert_eq!(fires(), ticks, "a cancelled interval kept ticking");
     }
 }

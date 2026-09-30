@@ -7,7 +7,7 @@ use chromiumoxide::cdp::browser_protocol::browser::{
     PermissionDescriptor, PermissionSetting, SetPermissionParams,
 };
 use e2e::browser::{PERMISSIONS, block_on};
-use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
+use e2e::driver::{Driver, Platform, eventually, eventually_text};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Viewport, wait};
 
@@ -15,7 +15,7 @@ use e2e::{Fixture, Viewport, wait};
 async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let supported = (d.platform() != Platform::Native).to_string();
     eventually_text(d, "#supported", &supported, "mount").await?;
-    linger(d, 3).await;
+    d.settle().await?;
     for (selector, expected) in [
         ("#live", "false"),
         ("#pending", "false"),
@@ -161,6 +161,26 @@ async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {
     read.map_err(|error| error.context(format!("the fixture reads {state}")))
 }
 
+/// Counts the recorder's non-empty chunks in `window.__chunks`, from the next recording on.
+const COUNT_CHUNKS: &str = "(() => {
+    window.__chunks = 0;
+    const add = MediaRecorder.prototype.addEventListener;
+    MediaRecorder.prototype.addEventListener = function (type, listener, ...rest) {
+        if (type !== 'dataavailable') return add.call(this, type, listener, ...rest);
+        return add.call(this, type, (event) => {
+            if (event.data.size) window.__chunks += 1;
+            return listener(event);
+        }, ...rest);
+    };
+    return true;
+})()";
+
+/// Waits for a chunk while recording: a clip that crossed in pieces, not only at the finish.
+async fn until_a_chunk(page: &Page) -> Result<()> {
+    page.evaluate("window.__chunks = 0").await?;
+    wait::for_js_true(page, "window.__chunks > 0", "a recorded chunk").await
+}
+
 async fn click(page: &Page, selector: &str) -> Result<()> {
     page.find_element(selector).await?.click().await?;
     Ok(())
@@ -174,6 +194,7 @@ fn the_web_shows_snapshots_records_and_stops_the_camera() {
             .await
             .unwrap();
         let page = &fixture.page;
+        page.evaluate(COUNT_CHUNKS).await.unwrap();
         set_permission(page, PermissionSetting::Granted)
             .await
             .unwrap();
@@ -195,7 +216,7 @@ fn the_web_shows_snapshots_records_and_stops_the_camera() {
 
         click(page, "#record").await.unwrap();
         reads(page, "#recording", "true").await.unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+        until_a_chunk(page).await.unwrap();
         click(page, "#finish").await.unwrap();
         reads(page, "#recording", "false").await.unwrap();
         reads(page, "#recorded", "recording.webm true")
@@ -238,7 +259,7 @@ fn the_web_shows_snapshots_records_and_stops_the_camera() {
         reads(page, "#live", "true").await.unwrap();
         click(page, "#record").await.unwrap();
         reads(page, "#recording", "true").await.unwrap();
-        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+        until_a_chunk(page).await.unwrap();
         click(page, "#finish").await.unwrap();
         reads(page, "#recording", "false").await.unwrap();
         wait::for_js_true(

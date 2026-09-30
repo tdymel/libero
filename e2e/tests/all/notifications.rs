@@ -724,7 +724,7 @@ fn f8_focuses_the_newest_notification_across_hosts() {
             .await
             .unwrap();
             // Settled: a second host acting would have moved focus again by now.
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            crate::settle::painted(page).await.unwrap();
             let (moves, still): (u32, bool) = js(
                 page,
                 format!(
