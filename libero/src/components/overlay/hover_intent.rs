@@ -27,6 +27,8 @@ pub(super) struct HoverIntent {
     hovered: Signal<bool>,
     /// The state the pending timer moves to.
     target: CopyValue<bool>,
+    /// A close is counting down.
+    closing: Signal<bool>,
     scheduled: Scheduled,
 }
 
@@ -35,9 +37,14 @@ impl HoverIntent {
         (self.hovered)()
     }
 
+    /// Whether a close delay is armed: neither cancelled nor fired yet.
+    pub(super) fn closing(&self) -> bool {
+        (self.closing)()
+    }
+
     /// Moves towards `target` after `delay` ms, cancelling any move under way.
     pub(super) fn hover(&self, target: bool, delay: u32) {
-        self.scheduled.cancel();
+        self.cancel();
         if *self.hovered.peek() == target {
             return;
         }
@@ -47,6 +54,10 @@ impl HoverIntent {
             Some(_) => {
                 let mut pending = self.target;
                 pending.set(target);
+                if !target {
+                    let mut closing = self.closing;
+                    closing.set(true);
+                }
                 self.scheduled.after(delay.into());
             }
             None => {
@@ -59,19 +70,34 @@ impl HoverIntent {
     /// Sets it now, cancelling any move under way: a dismissal must not be
     /// undone by an open delay that was already counting.
     pub(super) fn set(&self, value: bool) {
-        self.scheduled.cancel();
+        self.cancel();
         let mut hovered = self.hovered;
         hovered.set(value);
+    }
+
+    fn cancel(&self) {
+        self.scheduled.cancel();
+        if *self.closing.peek() {
+            let mut closing = self.closing;
+            closing.set(false);
+        }
     }
 }
 
 pub(super) fn use_hover_intent() -> HoverIntent {
     let mut hovered = use_signal(|| false);
     let target = use_hook(|| CopyValue::new(false));
-    let scheduled = use_scheduled(move |_| hovered.set(*target.peek()));
+    let mut closing = use_signal(|| false);
+    let scheduled = use_scheduled(move |_| {
+        hovered.set(*target.peek());
+        if *closing.peek() {
+            closing.set(false);
+        }
+    });
     HoverIntent {
         hovered,
         target,
+        closing,
         scheduled,
     }
 }

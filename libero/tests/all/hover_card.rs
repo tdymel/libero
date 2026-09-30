@@ -76,6 +76,8 @@ fn open_renders_a_named_dialog_on_a_paper_surface() {
     assert!(states.contains("radius-sm"), "{states}");
     assert!(states.contains("shadow-md"), "{states}");
     assert!(markup.contains("Profile"), "{markup}");
+    // No close counts down on a card nobody left.
+    assert!(!attributes.contains_key("data-closing"), "{card}");
 
     // The surface is Paper's: its background token and the focus-ring
     // contrast that has to travel with it.

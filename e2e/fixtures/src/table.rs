@@ -556,7 +556,7 @@ fn WindowedTablePage(pinned: bool) -> Element {
 }
 
 /// Fifty windowed rows a batch, the next one 300 ms after the bottom is reached,
-/// three batches in all. `#asks` counts the calls.
+/// three batches in all. `#asks` counts the calls, its `data-loading` shows a batch on its way.
 #[component]
 fn InfiniteTablePage() -> Element {
     let batch = |from: u32| -> Vec<Fruit> {
@@ -602,7 +602,7 @@ fn InfiniteTablePage() -> Element {
             ],
             row_key: |fruit: &Fruit| fruit.stock.to_string(),
         }
-        p { id: "asks", "{asks}" }
+        p { id: "asks", "data-loading": "{loading}", "{asks}" }
     }
 }
 

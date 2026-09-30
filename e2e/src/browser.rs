@@ -122,8 +122,8 @@ struct Harness {
     browser: Browser,
     /// A second browser with classic scrollbars, launched on first use.
     classic: tokio::sync::OnceCell<Browser>,
-    /// Caps concurrent navigations: the first runs alone to fill the cold HTTP cache,
-    /// then [`NAVIGATIONS`] at once (todo 823).
+    /// Caps concurrent navigations until `goto` returns: the first runs alone up to its
+    /// ready marker to fill the cold HTTP cache, then [`NAVIGATIONS`] at once (todo 823).
     navigations: tokio::sync::Semaphore,
     primed: std::sync::Once,
 }
@@ -152,6 +152,50 @@ static HARNESS: OnceLock<Harness> = OnceLock::new();
 /// Held by a test that sets CDP permissions, from the first set until its page
 /// closed: closing a page that set one resets every override, another test's too.
 pub static PERMISSIONS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// Fixture pages open at once across all tests, `E2E_PAGES` to override: `Suite` opens
+/// its four at once, so 32 test threads could otherwise hold 128 tabs (todo 364's freeze).
+const PAGES: usize = 24;
+
+static OPEN_PAGES: OnceLock<std::sync::Arc<tokio::sync::Semaphore>> = OnceLock::new();
+
+thread_local! {
+    /// Page permits this test thread holds: a test with one never waits for another,
+    /// so no test blocks on the cap while holding part of it.
+    static HELD_PAGES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// A share of the [`PAGES`] cap, given back on drop.
+pub struct PagePermit(Option<tokio::sync::OwnedSemaphorePermit>);
+
+impl Drop for PagePermit {
+    fn drop(&mut self) {
+        if self.0.take().is_some() {
+            HELD_PAGES.with(|held| held.set(held.get().saturating_sub(1)));
+        }
+    }
+}
+
+/// Room for `pages` pages, taken at once; free when this thread already holds some.
+pub async fn page_permit(pages: usize) -> PagePermit {
+    if HELD_PAGES.with(|held| held.get()) > 0 {
+        return PagePermit(None);
+    }
+    let cap = std::env::var("E2E_PAGES")
+        .ok()
+        .and_then(|n| n.parse().ok())
+        .unwrap_or(PAGES)
+        .max(1);
+    let semaphore =
+        OPEN_PAGES.get_or_init(|| std::sync::Arc::new(tokio::sync::Semaphore::new(cap)));
+    let permit = semaphore
+        .clone()
+        .acquire_many_owned(pages.clamp(1, cap) as u32)
+        .await
+        .expect("page semaphore");
+    HELD_PAGES.with(|held| held.set(held.get() + 1));
+    PagePermit(Some(permit))
+}
 
 /// Launches Chromium. `classic_scrollbars` drops `--hide-scrollbars`, which headless
 /// mode adds and no page can undo (todo 1317; CDP's `setScrollbarsHidden` broke permissions).
@@ -213,6 +257,8 @@ pub struct Fixture {
     /// Attached before navigation, to catch errors thrown once during the first mount.
     pub console: crate::passes::console::Recorder,
     closes_on_drop: ClosesOnDrop,
+    /// This page's share of [`PAGES`].
+    _room: PagePermit,
 }
 
 /// Closes a page that was never closed by hand: a failed `open` or a test that
@@ -276,7 +322,8 @@ impl Fixture {
         // First: panicking before Chrome launches keeps a bare `cargo test` from leaking a browser.
         let url = format!("{}{}", crate::base_url(), route);
 
-        let _permit = harness()
+        let room = page_permit(1).await;
+        let permit = harness()
             .navigations
             .acquire()
             .await
@@ -366,6 +413,11 @@ impl Fixture {
         )
         .await
         .context("drop the about:blank history entry")?;
+        // The cap is on navigations, not the wasm start after them (0.36 s of a 0.5 s
+        // open): only the first page holds it to its ready marker, to fill the cache.
+        if harness().primed.is_completed() {
+            drop(permit);
+        }
 
         let fixture = Fixture {
             page,
@@ -373,6 +425,7 @@ impl Fixture {
             scheme,
             console,
             closes_on_drop,
+            _room: room,
         };
         if let Err(error) =
             crate::wait::for_selector_kind("fixture-ready", &fixture.page, ready).await

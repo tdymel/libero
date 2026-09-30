@@ -214,20 +214,35 @@ impl Suite {
         self
     }
 
-    /// Run the battery at every viewport, light then dark (todo 314); a failure names a screenshot.
+    /// Run the battery at every viewport, light and dark (todo 314); a failure names a screenshot.
     /// The dark run skips target sizes and compares against the light AX baseline.
+    /// The pages run at once: each spends most of its time waiting on the browser.
     pub fn run(self) {
         browser::block_on(async move {
-            for scheme in [Scheme::Light, Scheme::Dark] {
-                for viewport in self.viewports.iter().copied() {
-                    if let Err(error) = self.run_at(viewport, scheme).await {
-                        panic!(
-                            "{} at {} ({}): {error:?}",
-                            self.name,
-                            viewport.name(),
-                            scheme.name()
-                        );
-                    }
+            let runs: Vec<(Viewport, Scheme)> = [Scheme::Light, Scheme::Dark]
+                .into_iter()
+                .flat_map(|scheme| {
+                    self.viewports
+                        .iter()
+                        .map(move |&viewport| (viewport, scheme))
+                })
+                .collect();
+            // Room for all of them at once, so the run never waits on the cap half-open.
+            let _pages = browser::page_permit(runs.len()).await;
+            let outcomes = futures::future::join_all(
+                runs.iter()
+                    .map(|&(viewport, scheme)| self.run_at(viewport, scheme)),
+            )
+            .await;
+            // The first failure in the old order, light desktop first.
+            for (&(viewport, scheme), outcome) in runs.iter().zip(outcomes) {
+                if let Err(error) = outcome {
+                    panic!(
+                        "{} at {} ({}): {error:?}",
+                        self.name,
+                        viewport.name(),
+                        scheme.name()
+                    );
                 }
             }
         });

@@ -1,8 +1,6 @@
 //! `HoverCard`: a non-modal dialog on hover delays or at once on focus. The card is
 //! portaled, so Tab is carried into it and back out past the trigger (406).
 
-use std::time::{Duration, Instant};
-
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::clock::HELD_CLOCK;
@@ -129,16 +127,21 @@ async fn pointer_crosses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.hover(TRIGGER).await?;
     shown(d, CARD, true, "hovering the trigger").await?;
     d.hover(CARD_FIRST).await?;
-    // Past the close delay, which a card the pointer left would have used up.
-    let started = Instant::now();
-    while started.elapsed() < Duration::from_millis(u64::from(CLOSE_MS) + 300) {
-        d.idle().await;
-    }
+    // The trigger's leave armed the close, the card's enter must have cancelled it.
+    eventually(d, "the pending close to clear", async |d| {
+        Ok(d.attr(CARD, "data-closing").await?.is_none())
+    })
+    .await?;
     ensure!(
         d.exists(CARD).await?,
         "the card closed with the pointer on it"
     );
     d.hover(BEFORE).await?;
+    // The mark the wait above relies on, seen while the close counts down.
+    eventually(d, "the pointer leaving to arm the close", async |d| {
+        Ok(d.attr(CARD, "data-closing").await?.as_deref() == Some("true"))
+    })
+    .await?;
     shown(d, CARD, false, "the pointer leaving").await
 }
 

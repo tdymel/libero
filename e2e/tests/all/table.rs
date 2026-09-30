@@ -311,8 +311,10 @@ async fn end_loads_the_next_rows<D: Driver>(d: &mut D, _route: &str) -> Result<(
     }
     d.press(keyboard::END).await?;
     eventually_text(d, "#asks", "3", "End past the last batch").await?;
-    // Three times the fixture's 300 ms batch delay, not 10 s.
-    linger(d, 40).await;
+    // Rendered with the third ask: no batch on its way, so no row can arrive (was a 1 s wait).
+    if d.attr("#asks", "data-loading").await?.as_deref() != Some("false") {
+        bail!("End past the last batch started loading another batch");
+    }
     row_count_is(d, "151").await
 }
 

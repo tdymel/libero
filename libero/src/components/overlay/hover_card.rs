@@ -60,6 +60,9 @@ base_props! {
 
 /// A preview card, a named `dialog`, that opens while its trigger is hovered or focused.
 ///
+/// The card carries `data-closing` while the pointer has left and `close_delay` counts down;
+/// the pointer coming back or the close firing removes it.
+///
 /// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Anchor, HoverCard};
@@ -226,6 +229,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         attributes.extend(owner_link(&anchor));
         card.element(&floating)
             .attr("role", "dialog")
+            .attr("data-closing", hovered.closing())
             .event("onmouseenter", move |_: MouseEvent| hovered.hover(true, 0))
             .event("onmouseleave", move |_: MouseEvent| {
                 hovered.hover(false, close_delay)

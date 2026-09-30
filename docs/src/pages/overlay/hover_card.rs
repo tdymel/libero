@@ -99,7 +99,7 @@ pub fn HoverCardPage() -> Element {
                     .doc("Milliseconds the pointer must rest on the trigger before the card opens."),
                 prop("close_delay", "u32")
                     .default(theme.hover_card.close_delay.to_string())
-                    .doc("Milliseconds the card waits after the pointer leaves. The pointer needs this time to reach the card, so `0` makes it unreachable."),
+                    .doc("Milliseconds the card waits after the pointer leaves. The pointer needs this time to reach the card, so `0` makes it unreachable. While it counts down, the card carries `data-closing`."),
                 prop("open", "bool")
                     .default("unset")
                     .doc("Forces the card open or closed. Unset, hover and focus decide. A card forced open cannot be dismissed."),
