@@ -1,10 +1,13 @@
 use dioxus::prelude::*;
 
 use super::activation::Activation;
-use crate::components::{
-    common::{HtmlTag, Input, Part, States},
-    form::FieldPart,
-    layout::BoxStyle,
+use crate::{
+    components::{
+        common::{HtmlTag, Input, Part, States},
+        form::FieldPart,
+        layout::BoxStyle,
+    },
+    hooks::ElementHandle,
 };
 
 /// The resolved chrome. Pure - no hooks - so a field may render it on one path
@@ -20,6 +23,7 @@ pub(crate) struct PreparedField {
     pub(super) labelled_by: bool,
     pub(super) activation: Option<Activation>,
     pub(super) wrapper: BoxStyle,
+    pub(super) root: Option<ElementHandle>,
     /// `None` rather than an empty `rsx! {}`: a slot nothing filled costs no
     /// node at all, which is most slots on most fields.
     pub(super) label: Option<Element>,
@@ -65,6 +69,11 @@ impl PreparedField {
     /// `aria-invalid`.
     pub fn invalid(&self) -> bool {
         self.invalid
+    }
+
+    /// The wrapper's element, held for a `labelled_by` field or a Blitz focus watch.
+    pub fn root(&self) -> Option<ElementHandle> {
+        self.root
     }
 
     /// The a11y wiring and the `control` slot, onto the control's already-prepared styling - and,

@@ -187,6 +187,7 @@ impl FieldBuilder<'_> {
             activation,
             states,
             wrapper,
+            root,
         }
     }
 }

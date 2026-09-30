@@ -198,7 +198,8 @@ fn a_phone_drills_into_one_level_at_a_time() {
     });
 }
 
-/// Todo 1546 (WCAG 2.4.11): opening scrolls a low trigger above the sheet.
+/// Todos 1546 and 1658 (WCAG 2.4.11): opening scrolls a low field, helper and error
+/// included, above the sheet.
 #[test]
 fn a_phone_scrolls_a_low_trigger_above_the_sheet() {
     use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
@@ -216,10 +217,10 @@ fn a_phone_scrolls_a_low_trigger_above_the_sheet() {
         let clear = format!(
             "(() => {{ const sheet = document.querySelector({SHEET:?}); \
              if (!sheet || getComputedStyle(sheet).visibility !== 'visible') return false; \
-             return document.querySelector({TRIGGER:?}).getBoundingClientRect().bottom \
+             return document.querySelector('#low-field').getBoundingClientRect().bottom \
              <= sheet.getBoundingClientRect().top; }})()"
         );
-        wait::for_js_true(page, &clear, "the trigger to clear the sheet")
+        wait::for_js_true(page, &clear, "the field to clear the sheet")
             .await
             .unwrap();
         fixture.console.assert_clean("a low cascader").unwrap();

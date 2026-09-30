@@ -16,7 +16,7 @@ use crate::{
     },
     css::Stylesheet,
     hooks::{use_css, use_glass_gradient_style, use_glass_tint, use_id},
-    platform::{document, draws_backdrop_filter, when_laid_out},
+    platform::{SCROLL_PADDING_VARS, document, draws_backdrop_filter, when_laid_out},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -116,12 +116,13 @@ fn publish(published: &Rc<Published>, retry: bool) {
 }
 
 /// This Header's height and the scroll padding on `:root`, live while the root
-/// names it. Focus moved under a stuck banner is then scrolled clear (2.4.11).
+/// names it. Focus moved under a stuck banner is then scrolled clear (2.4.11), natively too.
 fn publish_css(id: &str, height: &str) -> String {
+    let padding = HEADER_HEIGHT_VAR.value();
     format!(
-        ":root[{PUBLISHER_ATTRIBUTE}=\"{id}\"]{{{}:{height};scroll-padding-top:{};}}",
+        ":root[{PUBLISHER_ATTRIBUTE}=\"{id}\"]{{{}:{height};scroll-padding-top:{padding};{}:{padding};}}",
         HEADER_HEIGHT_VAR.name(),
-        HEADER_HEIGHT_VAR.value()
+        SCROLL_PADDING_VARS[0],
     )
 }
 
@@ -366,7 +367,8 @@ mod tests {
         assert_eq!(
             publish_css("lsx-7", "var(--lsx-header-height-lg)"),
             ":root[data-lsx-header=\"lsx-7\"]{--lsx-header-height:var(--lsx-header-height-lg);\
-             scroll-padding-top:var(--lsx-header-height);}"
+             scroll-padding-top:var(--lsx-header-height);\
+             --lsx-scroll-padding-top:var(--lsx-header-height);}"
         );
     }
 

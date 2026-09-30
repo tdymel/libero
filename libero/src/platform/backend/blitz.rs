@@ -2224,7 +2224,9 @@ fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(Option<NodeId>, f64
     let scroller = loop {
         let Some(id) = ancestor else {
             let (window, scale) = (doc.viewport().window_size, doc.viewport().scale_f64());
-            let delta = super::nearest_scroll(y, y + height, 0.0, f64::from(window.1) / scale)?;
+            let [top, _, bottom, _] = viewport_padding(doc);
+            let view_bottom = f64::from(window.1) / scale - bottom;
+            let delta = super::nearest_scroll(y, y + height, top, view_bottom)?;
             return Some((None, delta));
         };
         let node = doc.get_node(id)?;
@@ -2295,7 +2297,7 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
         let (border, bar) = (layout.border, layout.scrollbar_size);
         let view_width = f64::from(layout.size.width - border.left - border.right - bar.width);
         let view_height = f64::from(layout.size.height - border.top - border.bottom - bar.height);
-        let [top, right, bottom, left] = SCROLL_PADDING_VARS.map(|var| px_var(doc, id, var));
+        let [top, right, bottom, left] = scroll_padding(doc, id);
         let dx = match x {
             true => nearest(
                 target.0,
@@ -2321,8 +2323,9 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
     }
     if let Some((x, y, width, height)) = client_rect(doc, node_id) {
         let (window, scale) = (doc.viewport().window_size, doc.viewport().scale_f64());
-        let dx = nearest(x, width, 0.0, f64::from(window.0) / scale);
-        let dy = nearest(y, height, 0.0, f64::from(window.1) / scale);
+        let [top, right, bottom, left] = viewport_padding(doc);
+        let dx = nearest(x, width, left, f64::from(window.0) / scale - left - right);
+        let dy = nearest(y, height, top, f64::from(window.1) / scale - top - bottom);
         if dx != 0.0 || dy != 0.0 {
             doc.scroll_viewport_by(-dx, -dy);
             moved = true;
@@ -2331,6 +2334,29 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
     if moved {
         notify_scroll();
     }
+}
+
+/// A scroller's own [`SCROLL_PADDING_VARS`] in px. Custom properties inherit, `scroll-padding`
+/// does not: a value equal to the parent's is inherited, so a scroller repeating it loses it.
+fn scroll_padding(doc: &BaseDocument, node_id: NodeId) -> [f64; 4] {
+    let parent = doc
+        .get_node(node_id)
+        .and_then(|node| node.parent)
+        .filter(|&id| doc.get_node(id).is_some_and(|node| node.is_element()));
+    SCROLL_PADDING_VARS.map(|var| match parent {
+        Some(parent)
+            if resolved_style_value(doc, parent, var)
+                == resolved_style_value(doc, node_id, var) =>
+        {
+            0.0
+        }
+        _ => px_var(doc, node_id, var),
+    })
+}
+
+/// The viewport's [`SCROLL_PADDING_VARS`] in px: the root's, as a published Header sets them.
+fn viewport_padding(doc: &BaseDocument) -> [f64; 4] {
+    SCROLL_PADDING_VARS.map(|var| px_var(doc, doc.root_element().id, var))
 }
 
 /// [`SCROLL_MARGIN_VAR`] in px.

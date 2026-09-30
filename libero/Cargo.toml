@@ -109,9 +109,10 @@ dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus", default-feature
 dbus = { version = "0.9", optional = true }
 
 # Android system notifications (todo 1348): JNI on the main thread through wry's
-# `dispatch`, and tao's `Opened` for a tap. Already in every dioxus mobile app's tree.
+# `dispatch`, and tao's `Opened` for a tap. Already in every dioxus mobile app's tree;
+# the two features as the desktop entry above, or a lone Android check fails (todo 1489).
 [target.'cfg(target_os = "android")'.dependencies]
-dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus", default-features = false }
+dioxus-desktop = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["tokio_runtime", "devtools"] }
 futures-channel = "0.3"
 
 # Render-to-string, for the component tests in `tests/` - the same dioxus rev

@@ -14,7 +14,7 @@ pub const ROUTES: Routes = &[
 ];
 
 /// The trigger near the window's foot of a page that scrolls on: a phone's sheet
-/// would cover it (todo 1546).
+/// would cover it (todo 1546), and the helper and error under it (todo 1658).
 #[component]
 fn CascaderLowPage() -> Element {
     let mut place = use_signal(|| None::<String>);
@@ -22,11 +22,15 @@ fn CascaderLowPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             div { height: "85vh" }
-            Cascader {
-                label: "Place",
-                data: places(),
-                value: place(),
-                onchange: move |next: Option<String>| place.set(next),
+            div { id: "low-field",
+                Cascader {
+                    label: "Place",
+                    helper: "Cities only.",
+                    status: FieldStatus::Error("Pick a place.".into()),
+                    data: places(),
+                    value: place(),
+                    onchange: move |next: Option<String>| place.set(next),
+                }
             }
             div { height: "100vh" }
         }

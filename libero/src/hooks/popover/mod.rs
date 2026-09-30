@@ -67,6 +67,11 @@ impl PopoverHandle {
         self.placed.read().is_some()
     }
 
+    /// The top it was placed at, which a stylesheet's `!important` may have overridden.
+    pub(crate) fn placed_top(&self) -> Option<f64> {
+        self.placed.peek().as_ref().map(|placed| placed.y)
+    }
+
     /// Where the box landed. The preferred side and align until it has been
     /// measured, so a skin drawing an arrow never sees a placement of `None`.
     pub fn placement(&self) -> Placement {

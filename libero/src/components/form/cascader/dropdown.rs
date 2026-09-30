@@ -63,16 +63,18 @@ pub(super) fn dropdown_box(
         .render(HtmlTag::Div, Vec::new(), content)
 }
 
-/// The bottom sheet may cover the trigger (WCAG 2.4.11): once placed over it, the
-/// trigger's `scroll-margin-bottom` clears the sheet and the page scrolls it above.
+/// The bottom sheet may cover the field (WCAG 2.4.11): once placed over it, the trigger's
+/// `scroll-margin-bottom` clears the sheet plus the helper and error under the trigger.
 fn use_sheet_clearance(
     anchor: ElementHandle,
-    sheet: ElementHandle,
+    field: Option<ElementHandle>,
+    popover: PopoverHandle,
     opened: bool,
-    placed: bool,
     gap: f64,
 ) -> f64 {
     let mut clearance = use_signal(|| 0.0);
+    let placed = popover.placed();
+    let sheet = *popover.floating();
     use_effect(use_reactive!(|(opened, placed)| {
         if !(opened && placed) {
             if *clearance.peek() != 0.0 {
@@ -89,9 +91,24 @@ fn use_sheet_clearance(
             ) else {
                 return;
             };
-            // A placed popover never overlaps its trigger; only the sheet does.
-            if sheet_top < top + size.height && sheet_top + sheet_size.height > top {
-                clearance.set(sheet_size.height + gap);
+            // A placed popover keeps its placed top and covers what a dropdown covers; only
+            // the sheet, moved by its `!important`, covers the field.
+            if popover
+                .placed_top()
+                .is_none_or(|placed_top| (placed_top - sheet_top).abs() < 1.0)
+            {
+                return;
+            }
+            let trigger_bottom = top + size.height;
+            let mut bottom = trigger_bottom;
+            if let Some(field) = field
+                && let (Ok((_, field_top)), Ok(field_size)) =
+                    (field.client_offset().await, field.dimensions().await)
+            {
+                bottom = bottom.max(field_top + field_size.height);
+            }
+            if sheet_top < bottom && sheet_top + sheet_size.height > top {
+                clearance.set(sheet_size.height + gap + bottom - trigger_bottom);
             }
         });
     }));
@@ -105,6 +122,8 @@ fn use_sheet_clearance(
 
 pub(super) struct DropdownSetup<'a> {
     pub(super) state: ComboboxState,
+    /// The field's root, so the sheet clears its helper and error too.
+    pub(super) field: Option<ElementHandle>,
     pub(super) opened: bool,
     pub(super) searchable: bool,
     pub(super) search: ElementHandle,
@@ -128,6 +147,7 @@ pub(super) struct Dropdown {
 pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     let DropdownSetup {
         state,
+        field,
         opened,
         searchable,
         search,
@@ -153,8 +173,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
             .remeasure(remeasure),
     );
 
-    let sheet_clearance =
-        use_sheet_clearance(anchor, *popover.floating(), opened, popover.placed(), gap);
+    let sheet_clearance = use_sheet_clearance(anchor, field, popover, opened, gap);
 
     let search_box = use_box().framework_sx(&CASCADER_SEARCH_SX).prepare();
     let wrapper = use_box()

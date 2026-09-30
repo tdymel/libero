@@ -99,6 +99,59 @@ fn scroll_into_view_scrolls_the_window_without_a_scroller() {
     assert!(page.viewport_scroll().1 > 0.0, "the window did not scroll");
 }
 
+/// A scroller padded as a capped `Table` pads its scroll area, with a nested scroller in it.
+fn padded() -> Element {
+    rsx! {
+        div {
+            id: "outer",
+            style: "height: 300px; overflow-y: auto; scroll-padding-top: 50px; --lsx-scroll-padding-top: 50px;",
+            div { id: "inner", style: "height: 120px; overflow-y: auto;",
+                for index in 0..10 {
+                    a { key: "{index}", id: "inner-{index}", href: "#", style: "display: block; height: 40px;", "Inner {index}" }
+                }
+            }
+            for index in 0..20 {
+                a { key: "{index}", id: "row-{index}", href: "#", style: "display: block; height: 40px;", "Row {index}" }
+            }
+        }
+    }
+}
+
+/// Todo 1521: a scroller's own padding var holds a focus scroll below it; a nested
+/// scroller inherits the var but not the padding.
+#[test]
+fn a_scrollers_padding_var_is_its_own_not_its_nested_scrollers() {
+    let mut page = mount(padded);
+    page.hover("#outer");
+    page.wheel("#outer", 400.0);
+    page.wait_for(|page| page.scroll_top("#outer") == 400.0);
+    // Row 7 sits at 120 + 280 = 400: at the outer box's top edge, inside its padding.
+    page.focus("#row-8");
+    page.shift_tab();
+    page.settle();
+    assert!(page.is_focused("#row-7"), "{}", page.focus_owner());
+    assert_eq!(
+        page.scroll_top("#outer"),
+        350.0,
+        "the outer box ignored its padding"
+    );
+
+    page.wheel("#outer", -400.0);
+    page.wait_for(|page| page.scroll_top("#outer") == 0.0);
+    page.hover("#inner");
+    page.wheel("#inner", 80.0);
+    page.wait_for(|page| page.scroll_top("#inner") == 80.0);
+    page.focus("#inner-3");
+    page.shift_tab();
+    page.settle();
+    assert!(page.is_focused("#inner-2"), "{}", page.focus_owner());
+    assert_eq!(
+        page.scroll_top("#inner"),
+        80.0,
+        "the inner box took the outer's padding"
+    );
+}
+
 #[test]
 fn a_wheel_tells_scroll_subscribers() {
     let mut page = mount(listening);
