@@ -89,7 +89,7 @@ FileField {
 | `placeholder` | `String` | - | Shown while nothing is picked. It is the dropzone's prompt when `children` is empty. With neither, the localization's `file_field.drop_file` or `drop_files`. |
 | `clearable` | `bool` | `true` | Shows an x that empties the field. |
 | `loading` | `bool` | `false` | Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that. |
-| `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. Under Blitz an AVIF stays whole. Ignored on a `multiple` field. |
+| `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. Under Blitz an AVIF stays whole, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. |
 | `oncrop` | `EventHandler<CropRect>` | - | The box picked in the crop dialog, before the cut file reaches `onchange`. |
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | `Chip`, or the file name | Draws one picked file, remove control included. `args.remove` removes it. |
 | `name` | `FieldName<Files>` | - | What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`. |

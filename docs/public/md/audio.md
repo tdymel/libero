@@ -116,7 +116,8 @@ explains how parts work.
   and focuses it; moving the volume up unmutes.
 - The seek track is a row of bars, the played ones filled, under a slider that
   keeps the keys, the press and the drag. The bars follow the sound's
-  loudness, decoded from the file, and are hidden from screen readers.
+  loudness, decoded from the file, and are hidden from screen readers. A file
+  over 10 minutes or 20 MB is not decoded: its bars stay drawn from the URL.
 - The row never wraps: the seek track shrinks first, then the time goes, then
   the buttons shrink, to 24px at the least (WCAG 2.5.8): every control stays at
   320px and 200% zoom (WCAG 1.4.10).

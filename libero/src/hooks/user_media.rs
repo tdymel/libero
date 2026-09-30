@@ -7,7 +7,7 @@ use dioxus::prelude::*;
 use crate::platform::{
     CAPTURE_ATTR, CaptureEvent, CaptureSession, CaptureSubscription, DeviceList, MediaDevice,
     PermissionKind, PermissionState, PermissionSubscription, UserMediaError, capture, constraints,
-    file_from_bytes, next_observe_tag, permission,
+    file_from_blob, file_from_bytes, next_observe_tag, permission,
 };
 
 /// What [`use_user_media`] opens on [`start`](UserMedia::start).
@@ -250,15 +250,19 @@ impl UserMedia {
                 self.recorded.set(None);
             }
             CaptureEvent::Chunk(bytes) => self.chunks.write().extend(bytes),
-            CaptureEvent::Recorded(kind) => {
+            CaptureEvent::Recorded(kind, blob) => {
                 self.recording.set(false);
-                let bytes = std::mem::take(&mut *self.chunks.write());
+                let mut bytes = std::mem::take(&mut *self.chunks.write());
                 let kind = kind.split(';').next().unwrap_or_default().to_string();
-                self.recorded.set(file_from_bytes(
-                    &file_name("recording", &kind),
-                    &kind,
-                    bytes,
-                ));
+                let name = file_name("recording", &kind);
+                self.recorded.set(match blob {
+                    Some(blob) => file_from_blob(&name, &kind, blob),
+                    None => {
+                        // The growth's slack, up to the recording's size again, would stay with the file.
+                        bytes.shrink_to_fit();
+                        file_from_bytes(&name, &kind, bytes)
+                    }
+                });
             }
             CaptureEvent::RecordFailed(error) => {
                 self.recording.set(false);

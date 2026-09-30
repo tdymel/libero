@@ -116,6 +116,103 @@ pub(super) mod web {
         }))
     }
 
+    /// `blob` as a `FileData` whose bytes stay in the page until read.
+    pub(crate) fn blob_file(
+        name: &str,
+        content_type: &str,
+        blob: &web_sys::Blob,
+    ) -> Option<FileData> {
+        let options = web_sys::FilePropertyBag::new();
+        options.set_type(content_type);
+        let parts: Array = [JsValue::from(blob.clone())].into_iter().collect();
+        let file =
+            web_sys::File::new_with_blob_sequence_and_options(&parts, name, &options).ok()?;
+        Some(FileData::new(PageFile(file)))
+    }
+
+    /// A browser `File` read on demand; a long recording never sits in wasm memory.
+    struct PageFile(web_sys::File);
+
+    unsafe impl Send for PageFile {}
+    unsafe impl Sync for PageFile {}
+
+    impl PageFile {
+        fn read(&self) -> Pin<Box<dyn Future<Output = Chunk>>> {
+            let promise = self.0.array_buffer();
+            Box::pin(async move {
+                let buffer = JsFuture::from(promise)
+                    .await
+                    .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
+                Ok(Uint8Array::new(&buffer).to_vec().into())
+            })
+        }
+    }
+
+    /// One chunk, the whole file, once read.
+    struct Later(Option<Pin<Box<dyn Future<Output = Chunk>>>>);
+
+    // Wasm runs one thread.
+    unsafe impl Send for Later {}
+
+    impl futures_core::Stream for Later {
+        type Item = Chunk;
+
+        fn poll_next(
+            mut self: Pin<&mut Self>,
+            context: &mut std::task::Context<'_>,
+        ) -> std::task::Poll<Option<Chunk>> {
+            let Some(read) = self.0.as_mut() else {
+                return std::task::Poll::Ready(None);
+            };
+            let chunk = std::task::ready!(read.as_mut().poll(context));
+            self.0 = None;
+            std::task::Poll::Ready(Some(chunk))
+        }
+    }
+
+    impl NativeFileData for PageFile {
+        fn name(&self) -> String {
+            self.0.name()
+        }
+
+        fn size(&self) -> u64 {
+            self.0.size() as u64
+        }
+
+        fn last_modified(&self) -> u64 {
+            self.0.last_modified() as u64
+        }
+
+        fn path(&self) -> std::path::PathBuf {
+            self.0.name().into()
+        }
+
+        fn content_type(&self) -> Option<String> {
+            Some(self.0.type_()).filter(|kind| !kind.is_empty())
+        }
+
+        fn read_bytes(&self) -> Pin<Box<dyn Future<Output = Chunk>>> {
+            self.read()
+        }
+
+        fn byte_stream(&self) -> Pin<Box<dyn futures_core::Stream<Item = Chunk> + Send>> {
+            Box::pin(Later(Some(self.read())))
+        }
+
+        fn read_string(
+            &self,
+        ) -> Pin<Box<dyn Future<Output = Result<String, dioxus::CapturedError>>>> {
+            let read = self.read();
+            Box::pin(async move {
+                String::from_utf8(read.await?.to_vec()).map_err(dioxus::CapturedError::from)
+            })
+        }
+
+        fn inner(&self) -> &dyn std::any::Any {
+            &self.0
+        }
+    }
+
     /// A crop's bytes, and the browser `File` a form posts them as.
     struct CroppedFile {
         bytes: Bytes,

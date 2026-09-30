@@ -18,7 +18,8 @@ on another camera, `camera_id()` names the live one, and the `facing` option
 picks a phone's front or back. `libero::utils::data_url(&file)` turns a photo
 or clip into a `src`. Switch the camera off for an audio-only recording. A
 recording crosses a WebView's IPC in 1 s chunks and is dropped past
-`max_bytes` (50 MB by default) with `TooLarge`.
+`max_bytes` (50 MB by default) with `TooLarge`; in a browser it stays in the
+page until you read it.
 
 Web: a secure context (HTTPS or localhost). Android: declare
 `[permissions] camera` and `microphone` in Dioxus.toml, plus

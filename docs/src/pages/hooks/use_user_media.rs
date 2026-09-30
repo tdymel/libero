@@ -297,7 +297,7 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "max_bytes" }
                     " (50 MB by default) with "
                     Code { source: "TooLarge" }
-                    "."
+                    "; in a browser it stays in the page until you read it."
                 }
                 Text {
                     "Web: a secure context (HTTPS or localhost). Android: declare "

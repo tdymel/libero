@@ -45,6 +45,8 @@ const SPEEDS: [f64; 3] = [1.0, 1.5, 2.0];
 /// The seek track's bars: few enough to stay apart at the track's `2rem` minimum.
 const BARS: usize = 28;
 const BARS_SLOT: &str = "bars";
+/// Longer files keep the drawn bars.
+const DECODE_MAX_SECONDS: f64 = 10.0 * 60.0;
 const AUDIO_CONTAINER: &str = "libero-audio";
 const NARROW: &str = "(max-width: 15rem)";
 const NARROWEST: &str = "(max-width: 13rem)";
@@ -326,7 +328,7 @@ pub fn Audio(props: AudioProps) -> Element {
     // `preload: None` promises no fetch before a press, so it keeps the drawn bars.
     let decoded = use_waveform(
         &props.src,
-        props.preload != MediaPreload::None && !unsupported,
+        props.preload != MediaPreload::None && !unsupported && decodable(media.duration()),
     );
     let heights = decoded.unwrap_or_else(|| bar_heights(&props.src));
     let (src, sources) = media_sources(&props.src, &props.sources);
@@ -442,6 +444,12 @@ fn use_waveform(src: &str, decode: bool) -> Option<[f64; BARS]> {
         .as_ref()
         .filter(|(of, _)| *of == src)
         .map(|(_, heights)| *heights)
+}
+
+/// Decodes once the metadata gives a duration of at most [`DECODE_MAX_SECONDS`]:
+/// a long podcast would be fetched and decoded whole for 28 bars.
+fn decodable(duration: Option<f64>) -> bool {
+    duration.is_some_and(|total| total.is_finite() && total <= DECODE_MAX_SECONDS)
 }
 
 /// Loudness per bar as heights from 0.2 to 1, the loudest full; silence stays at 0.2.
@@ -579,6 +587,16 @@ mod tests {
         assert_eq!(scaled_heights(&[0.0; BARS]), Some([0.2; BARS]));
         assert_eq!(scaled_heights(&[0.5; 3]), None);
         assert_eq!(scaled_heights(&[f64::NAN; BARS]), None);
+    }
+
+    #[test]
+    fn only_a_short_file_with_a_known_duration_decodes() {
+        assert!(!decodable(None));
+        assert!(decodable(Some(42.0)));
+        assert!(decodable(Some(DECODE_MAX_SECONDS)));
+        assert!(!decodable(Some(DECODE_MAX_SECONDS + 1.0)));
+        assert!(!decodable(Some(f64::INFINITY)));
+        assert!(!decodable(Some(f64::NAN)));
     }
 
     #[test]

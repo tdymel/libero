@@ -114,6 +114,7 @@ pub fn ImageCropperPage() -> Element {
                     "The edge handles are pointer-only: the corners reach every size.",
                     "A screen reader hears where the box is, not what it shows.",
                     "Under Blitz a `FileField` with `crop` keeps an AVIF whole: the rect still reaches `oncrop`.",
+                    "Under Blitz a cut WebP is lossless, so it can be larger than the browser's lossy one.",
                 ]),
             lead: rsx! {
                 Text {

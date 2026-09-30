@@ -78,6 +78,12 @@ impl DeviceList {
     }
 }
 
+/// A recording the page holds; none off the web.
+#[cfg(target_arch = "wasm32")]
+pub(crate) type PageBlob = web_sys::Blob;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) type PageBlob = std::convert::Infallible;
+
 /// What a capture script reports.
 #[cfg_attr(feature = "native", allow(dead_code))]
 #[derive(Debug, Clone, PartialEq)]
@@ -91,8 +97,8 @@ pub(crate) enum CaptureEvent {
     Photo(Option<(String, Vec<u8>)>),
     Recording,
     Chunk(Vec<u8>),
-    /// The recording's type, after its last chunk.
-    Recorded(String),
+    /// The recording's type, after its last chunk; in a browser its whole `Blob`.
+    Recorded(String, Option<PageBlob>),
     RecordFailed(UserMediaError),
 }
 
@@ -119,7 +125,7 @@ impl CaptureEvent {
         } else if message.get("chunk").is_some() {
             Self::Chunk(bytes?)
         } else if let Some(kind) = text("recorded") {
-            Self::Recorded(kind.to_string())
+            Self::Recorded(kind.to_string(), None)
         } else {
             Self::RecordFailed(UserMediaError::from_name(text("recordError")?))
         })
@@ -186,9 +192,11 @@ pub(crate) trait CaptureApi {
 }
 
 /// The session script, run by a browser and a WebView alike: `data` is
-/// `[attr, tag]`, `send` posts a message, `encode` readies bytes for it.
+/// `[attr, tag, whole]`, `send` posts a message, `encode` readies bytes for it.
+/// With `whole` (a browser) a recording stays a page `Blob`, sent once at the
+/// end, not copied chunk by chunk into wasm memory, which never shrinks.
 #[cfg(not(feature = "native"))]
-pub(crate) const CAPTURE_SCRIPT: &str = "const [attr, tag] = data;
+pub(crate) const CAPTURE_SCRIPT: &str = "const [attr, tag, whole] = data;
     const GRANTED = 'lsx-capture-granted';
     const TYPES = ['video/webm;codecs=vp9,opus', 'video/webm', 'video/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
     let stream = null, ticket = 0, recorder = null, dropped = false, queue = Promise.resolve();
@@ -266,23 +274,28 @@ pub(crate) const CAPTURE_SCRIPT: &str = "const [attr, tag] = data;
         recorder = current;
         dropped = false;
         let size = 0;
+        const parts = [];
         // Chained: each chunk's bytes are read async, and must leave in order.
         current.addEventListener('dataavailable', (event) => {
             if (dropped || !event.data.size) return;
             size += event.data.size;
             if (max !== null && size > max) {
                 dropped = true;
+                parts.length = 0;
                 current.stop();
                 queue = queue.then(() => send({ recordError: 'TooLarge' }));
                 return;
             }
+            if (whole) return parts.push(event.data);
             const data = event.data;
             queue = queue.then(async () => send({ chunk: true, bytes: encode(new Uint8Array(await data.arrayBuffer())) }));
         });
         current.addEventListener('stop', () => {
             queue = queue.then(() => {
                 if (recorder === current) recorder = null;
-                if (!dropped) send({ recorded: current.mimeType || type || media + '/webm' });
+                if (dropped) return;
+                const kind = current.mimeType || type || media + '/webm';
+                send(whole ? { recorded: kind, blob: new Blob(parts, { type: kind }) } : { recorded: kind });
             });
         });
         current.start(1000);
@@ -328,6 +341,17 @@ pub(crate) fn file_from_bytes(name: &str, content_type: &str, bytes: Vec<u8>) ->
     {
         let _ = (name, content_type, bytes);
         None
+    }
+}
+
+/// `blob` as a file, read only when asked: the bytes stay in the page.
+pub(crate) fn file_from_blob(name: &str, content_type: &str, blob: PageBlob) -> Option<FileData> {
+    #[cfg(target_arch = "wasm32")]
+    return super::image_crop::web::blob_file(name, content_type, &blob);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = (name, content_type);
+        match blob {}
     }
 }
 
@@ -411,12 +435,23 @@ mod web {
             callback: Box<dyn Fn(CaptureEvent)>,
         ) -> Box<dyn CaptureSession> {
             let send = Closure::<dyn Fn(JsValue)>::new(move |message: JsValue| {
+                let blob = Reflect::get(&message, &"blob".into())
+                    .ok()
+                    .and_then(|blob| blob.dyn_into::<web_sys::Blob>().ok());
                 let (message, bytes) = read(&message);
-                if let Some(event) = CaptureEvent::from_message(&message, bytes) {
-                    callback(event);
+                match CaptureEvent::from_message(&message, bytes) {
+                    Some(CaptureEvent::Recorded(kind, _)) => {
+                        callback(CaptureEvent::Recorded(kind, blob));
+                    }
+                    Some(event) => callback(event),
+                    None => {}
                 }
             });
-            let data = js_sys::Array::of2(&CAPTURE_ATTR.into(), &tag.to_string().into());
+            let data = js_sys::Array::of3(
+                &CAPTURE_ATTR.into(),
+                &tag.to_string().into(),
+                &JsValue::TRUE,
+            );
             let session = run(CAPTURE_SCRIPT, "session", data.into(), &send);
             Box::new(WebSession {
                 session,

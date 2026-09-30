@@ -54,7 +54,7 @@ pub(crate) use a11y_media::{
 pub(crate) use backend::{Listener, Outlet, PortalEntry, PortalRoot, SheetWatch, element};
 pub(crate) use capture::{
     CAPTURE_ATTR, CaptureEvent, CaptureSession, CaptureSubscription, DeviceList, capture,
-    constraints, file_from_bytes,
+    constraints, file_from_blob, file_from_bytes,
 };
 pub use capture::{MediaDevice, UserMediaError};
 pub(crate) use click::{
