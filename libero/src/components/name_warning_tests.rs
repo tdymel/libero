@@ -8,8 +8,8 @@ use crate::{
     LiberoProvider,
     components::{
         ActionIcon, Anchor, Checkbox, ColorCode, ColorSwatch, Dialog, Drawer, ProgressBar, Radio,
-        RadioGroup, Rating, ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions,
-        Switch, Toolbar, use_spotlight,
+        RadioGroup, RangeSlider, Rating, ScrollArea, SegmentedControl, Slider, Splitter,
+        SpotlightOptions, Switch, Toolbar, use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     utils::take_warnings,
@@ -161,6 +161,36 @@ fn an_unnamed_slider_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { Slider::<f64> { value: 5.0, aria_label: "Volume" } } },
         "Slider: no `"
+    ));
+}
+
+/// The localization's "Minimum"/"Maximum" stand in, but name no range (1556).
+#[test]
+fn an_unnamed_range_slider_warns() {
+    let prefix = "RangeSlider: no `";
+    assert!(warns(
+        || rsx! { LiberoProvider { RangeSlider::<f64> { value: (5.0, 50.0) } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { RangeSlider::<f64> { value: (5.0, 50.0), label: "Price" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { RangeSlider::<f64> { value: (5.0, 50.0), aria_label: "Price" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! {
+            LiberoProvider {
+                RangeSlider::<f64> {
+                    value: (5.0, 50.0),
+                    aria_label_from: "Lowest price",
+                    aria_label_to: "Highest price",
+                }
+            }
+        },
+        prefix
     ));
 }
 

@@ -67,11 +67,13 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
 fn mode_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     match discrete(values) {
         true => vec![
+            r#"aria_label: "Price""#.to_string(),
             "value: quality()".to_string(),
             "oninput: move |event: SliderChangeEvent<(Quality, Quality)>| { quality.set(event.value()); last_quality.set(event) }"
                 .to_string(),
         ],
         false => vec![
+            r#"aria_label: "Price""#.to_string(),
             "value: price()".to_string(),
             "oninput: move |event: SliderChangeEvent<(f64, f64)>| { price.set(event.value()); last.set(event) }"
                 .to_string(),
@@ -270,7 +272,7 @@ pub fn RangeSliderPage() -> Element {
                         .doc("Lower bound of the track, in the value's own type."),
                     prop("max", "V")
                         .default("last option, or 100.0")
-                        .doc("Upper bound of the track, in the value's own type."),
+                        .doc("Upper bound of the track, in the value's own type. Off the `step` grid, the track ends at the last step below it, as on a native range input: 0 to 100 by 30 ends at 90."),
                     prop("step", "V::Step")
                         .doc("How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps."),
                     prop("min_range", "V::Step")
@@ -281,7 +283,9 @@ pub fn RangeSliderPage() -> Element {
                         .doc("Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes."),
                     prop("marks", "Vec<SliderMark<V>>")
                         .default("one per option, discretely")
-                        .doc("Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself."),
+                        .doc("Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options."),
+                    prop("aria_label", "String")
+                        .doc("Names the pair when the field has no `label`: the group, and each thumb before its own word. Put in `attributes`, it would land on the wrapper instead."),
                     prop("aria_label_from", "String")
                         .default("slider.minimum")
                         .doc("Names the lower thumb. Unset, the localization's `slider.minimum`, \"Minimum\" in English."),
@@ -336,11 +340,12 @@ pub fn RangeSliderPage() -> Element {
                 .key(["Home", "End"], "Move the focused thumb to the end, stopping at the other thumb.")
                 .handles([
                     "The two thumbs sit in a `role=\"group\"` named by the label, and each is its own `role=\"slider\"`, as in the ARIA multi-thumb slider pattern. A single `Slider` is one slider and needs no group.",
-                    "Each thumb is named by the label plus its own word, such as \"Price Minimum\" and \"Price Maximum\", from the localization's `slider.minimum` and `slider.maximum`.",
+                    "Each thumb is named by the label plus its own word, such as \"Price Minimum\" and \"Price Maximum\", from the localization's `slider.minimum` and `slider.maximum`. Without a `label`, `aria_label` names the group and the thumbs the same way.",
                     "On a discrete range the mark captions are hidden from screen readers, since the thumbs already name each value.",
                     "A `role=\"slider\"` takes no `aria-required`, so a `required` range says the localization's `slider.required` word in each thumb's name instead, such as \"Price required Minimum\". The asterisk stays hidden from screen readers.",
                 ])
                 .must([
+                    "Without a `label`, set the `aria_label` prop, or the thumbs say only \"Minimum\" and \"Maximum\". Put in `attributes`, it would name a wrapper with no role.",
                     "Set `aria_label_from` and `aria_label_to` when those words do not fit.",
                     "Set `format` when a bare number does not say the unit. To translate a discrete range, pass `format`, as on a `Slider`.",
                 ]),
@@ -442,6 +447,7 @@ pub fn RangeSliderPage() -> Element {
                             sx: sx().width("100%"),
                             if discrete(&values) {
                                 RangeSlider {
+                                    aria_label: "Price",
                                     value: quality(),
                                     size: values.str("size"),
                                     color: values.str("color"),
@@ -474,6 +480,7 @@ pub fn RangeSliderPage() -> Element {
                                 }
                             } else {
                                 RangeSlider {
+                                    aria_label: "Price",
                                     value: price(),
                                     size: values.str("size"),
                                     color: values.str("color"),

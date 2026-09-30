@@ -274,7 +274,7 @@ pub fn SliderPage() -> Element {
                         .doc("Lower bound, in the value's own type."),
                     prop("max", "V")
                         .default("last option, or 100.0")
-                        .doc("Upper bound, in the value's own type."),
+                        .doc("Upper bound, in the value's own type. Off the `step` grid, the track ends at the last step below it, as on a native range input: 0 to 100 by 30 ends at 90."),
                     prop("step", "V::Step")
                         .doc("How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps."),
                     prop("format", "Callback<V, String>")
@@ -282,7 +282,7 @@ pub fn SliderPage() -> Element {
                         .doc("Text of the bubble and the thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes."),
                     prop("marks", "Vec<SliderMark<V>>")
                         .default("one per option, discretely")
-                        .doc("Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself."),
+                        .doc("Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options."),
                     prop("aria_label", "String")
                         .doc("Names the thumb when the field has no `label`. Put in `attributes`, it would land on the wrapper instead."),
                     prop("name", "FieldName<V>")

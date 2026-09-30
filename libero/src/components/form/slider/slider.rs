@@ -23,7 +23,8 @@ field_props! {
         /// Defaults to the first option, or `0.0` on a continuous scale.
         #[props(default, into)]
         min: Option<V>,
-        /// Defaults to the last option, or `100.0` on a continuous scale.
+        /// Defaults to the last option, or `100.0` on a continuous scale. Off the
+        /// `step` grid, the track ends at the last step below it.
         #[props(default, into)]
         max: Option<V>,
         /// One step from `min`: options discretely, a value continuously. Sets

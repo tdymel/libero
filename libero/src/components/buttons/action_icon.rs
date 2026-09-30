@@ -369,7 +369,8 @@ fn action_icon(mut props: ActionIconProps) -> Element {
             item.take_stop();
         }
         // Else a busy `type="submit"` still submits, as on `Button`.
-        if loading || soft_disabled {
+        // Android's WebView sends a tap on a disabled button's child a click (990).
+        if loading || disabled {
             event.prevent_default();
             return;
         }

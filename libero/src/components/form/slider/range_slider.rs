@@ -24,7 +24,8 @@ field_props! {
         /// Defaults to the first option, or `0.0` on a continuous scale.
         #[props(default, into)]
         min: Option<V>,
-        /// Defaults to the last option, or `100.0` on a continuous scale.
+        /// Defaults to the last option, or `100.0` on a continuous scale. Off the
+        /// `step` grid, the track ends at the last step below it.
         #[props(default, into)]
         max: Option<V>,
         /// One step from `min`: options discretely, a value continuously. Sets
@@ -43,6 +44,10 @@ field_props! {
         /// Ticks on the track, a labeled one captioned. Replaces derived marks.
         #[props(default)]
         marks: Vec<SliderMark<V>>,
+        /// Names the pair without a `label`, as a group and before each thumb's
+        /// name; one in `attributes` lands on the wrapper.
+        #[props(default)]
+        aria_label: Option<String>,
         /// Names the lower thumb; defaults to the localization's `slider.minimum`.
         #[props(default)]
         aria_label_from: Option<String>,
@@ -158,6 +163,13 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
+    crate::components::common::use_name_warning(
+        field.label_id().is_some()
+            || props.aria_label.is_some()
+            || props.aria_label_from.is_some()
+            || props.aria_label_to.is_some(),
+        "RangeSlider: no `label` or `aria_label`, so the thumbs are announced as just \"Minimum\" and \"Maximum\".",
+    );
 
     let above = !props.label.is_none() || !props.description.is_none();
     let below = !props.helper.is_none()
@@ -168,11 +180,19 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             .is_some();
     let control_sx = control_spacing(above, below);
 
-    // Unlabelled, each thumb's own name says required instead of the label.
-    let spoken = required && field.label_id().is_none();
-    let thumb_name = |name: String| match spoken {
-        true => format!("{name} {}", labels.required),
-        false => name,
+    // Unlabelled, each thumb's own name carries the group's and says required,
+    // as the label's id would.
+    let unlabelled = field.label_id().is_none();
+    let group_label = props.aria_label.filter(|_| unlabelled);
+    let thumb_name = |name: String| {
+        let name = match &group_label {
+            Some(group) => format!("{group} {name}"),
+            None => name,
+        };
+        match required && unlabelled {
+            true => format!("{name} {}", labels.required),
+            false => name,
+        }
     };
 
     let (from, to) = &value;
@@ -196,6 +216,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             aria_label: thumb_name(props.aria_label_from.unwrap_or_else(|| labels.minimum.to_string())),
             aria_label_to: thumb_name(props.aria_label_to.unwrap_or_else(|| labels.maximum.to_string())),
             labelledby: field.label_id(),
+            group_label: group_label.clone(),
             describedby: field.describedby(),
             invalid: field.invalid(),
             name: bound.name().map(str::to_string),

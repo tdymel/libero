@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use super::slider_value::{SliderChangeEvent, SliderMark};
-use super::value::{SliderCoreValue, fraction, sane_bounds};
+use super::value::{SliderCoreValue, fraction, grid_bounds};
 use crate::{
     CssLayer,
     components::{
@@ -312,6 +312,9 @@ pub(in crate::components::form) struct SliderCoreProps {
     aria_label_to: Option<String>,
     /// The field's label id, when a `<label for>` cannot name the thumb.
     labelledby: Option<String>,
+    /// Names a range's group when no `labelledby` does.
+    #[props(default)]
+    group_label: Option<String>,
     /// The field's filled caption slots, joined.
     describedby: Option<String>,
     /// The field's status is an error.
@@ -348,7 +351,7 @@ struct Live {
 #[component]
 pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element {
     // `f64::clamp` panics on a broken range; `step.max(0.0)` maps NaN to 0.
-    let (min, max) = sane_bounds(props.min, props.max);
+    let (min, max) = grid_bounds(props.min, props.max, props.step);
     let live_now = Live {
         value: props.value.snapped(min, max, props.step.max(0.0)),
         thumb_fill: props.thumb_fill.clone(),
@@ -420,7 +423,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let bubble_id = use_id();
     let press_focus = use_context_provider(PressFocus::default);
 
-    let (min, max) = sane_bounds(props.min, props.max);
+    let (min, max) = grid_bounds(props.min, props.max, props.step);
     let step = props.step.max(0.0);
     let min_range = props.min_range.max(0.0);
     let size = props.size.copied_or(theme.slider.size);
@@ -736,9 +739,12 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
 
     // Two thumbs are one control: a labelled group names them together. A
     // single thumb already carries the label itself.
-    let grouped = matches!(props.value, SliderCoreValue::Range { .. })
-        .then(|| props.labelledby.clone())
+    let range = matches!(props.value, SliderCoreValue::Range { .. });
+    let grouped = range.then(|| props.labelledby.clone()).flatten();
+    let group_label = (range && grouped.is_none())
+        .then(|| props.group_label.clone())
         .flatten();
+    let role = (grouped.is_some() || group_label.is_some()).then_some("group");
 
     use_box()
         .framework_sx(&SLIDER_ROOT_SX)
@@ -748,8 +754,9 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .variables(&root_variables)
         .prepare()
         .attr("data-slot", props.slot)
-        .attr("role", grouped.as_ref().map(|_| "group"))
+        .attr("role", role)
         .attr("aria-labelledby", grouped)
+        .attr("aria-label", group_label)
         .element(&root_element)
         .event("onpointerdown", onpointerdown)
         .event("onpointermove", drag.onpointermove)

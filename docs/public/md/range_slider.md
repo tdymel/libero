@@ -29,6 +29,7 @@ fn Demo() -> Element {
     rsx! {
         Flex { direction: "column", gap: "sm", sx: sx().width("100%"),
             RangeSlider {
+                aria_label: "Price",
                 label: "Price",
                 value: price(),
                 oninput: move |event: SliderChangeEvent<(f64, f64)>| {
@@ -134,11 +135,12 @@ form.getAll("price") // ["20", "80"]
 | `value` | `Option<(V, V)>` | - | The two ends, in track order. Pair it with `oninput`, or bind it with a path `name` inside a `Form`. |
 | `oninput` | `EventHandler<SliderChangeEvent<(V, V)>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new pair. A key press sends `Change`, then `End`. |
 | `min` | `V` | `first option, or 0.0` | Lower bound of the track, in the value's own type. |
-| `max` | `V` | `last option, or 100.0` | Upper bound of the track, in the value's own type. |
+| `max` | `V` | `last option, or 100.0` | Upper bound of the track, in the value's own type. Off the `step` grid, the track ends at the last step below it, as on a native range input: 0 to 100 by 30 ends at 90. |
 | `step` | `V::Step` | - | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps. |
 | `min_range` | `V::Step` | `0` | The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross. |
 | `format` | `Callback<V, String>` | `bare value, or SliderValue::label` | Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes. |
-| `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. |
+| `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. Past about six options the derived captions touch on a phone, so pass your own `marks`, or a `step` that skips options. |
+| `aria_label` | `String` | - | Names the pair when the field has no `label`: the group, and each thumb before its own word. Put in `attributes`, it would land on the wrapper instead. |
 | `aria_label_from` | `String` | `slider.minimum` | Names the lower thumb. Unset, the localization's `slider.minimum`, "Minimum" in English. |
 | `aria_label_to` | `String` | `slider.maximum` | Names the upper thumb. Unset, the localization's `slider.maximum`, "Maximum" in English. |
 | `name` | `FieldName<(V, V)>` | - | Posts the pair as two hidden inputs of that name, in track order. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`. |
@@ -199,7 +201,8 @@ explains how parts work.
   is one slider and needs no group.
 - Each thumb is named by the label plus its own word, such as "Price Minimum"
   and "Price Maximum", from the localization's `slider.minimum` and
-  `slider.maximum`.
+  `slider.maximum`. Without a `label`, `aria_label` names the group and the
+  thumbs the same way.
 - On a discrete range the mark captions are hidden from screen readers, since
   the thumbs already name each value.
 - A `role="slider"` takes no `aria-required`, so a `required` range says the
@@ -208,6 +211,9 @@ explains how parts work.
 
 ### You must
 
+- Without a `label`, set the `aria_label` prop, or the thumbs say only
+  "Minimum" and "Maximum". Put in `attributes`, it would name a wrapper with no
+  role.
 - Set `aria_label_from` and `aria_label_to` when those words do not fit.
 - Set `format` when a bare number does not say the unit. To translate a
   discrete range, pass `format`, as on a `Slider`.

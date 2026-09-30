@@ -49,7 +49,14 @@ fn ActionIconPage() -> Element {
                 onclick: move |_| clicks += 1,
                 {glyph()}
             }
-            ActionIcon { id: "disabled", aria_label: "Delete", variant: "filled", disabled: true, {glyph()} }
+            ActionIcon {
+                id: "disabled",
+                aria_label: "Delete",
+                variant: "filled",
+                disabled: true,
+                onclick: move |_| clicks += 1,
+                {glyph()}
+            }
             ActionIcon { id: "sm", aria_label: "Small", size: "sm", {glyph()} }
             ActionIcon { id: "xs", aria_label: "Extra small", size: "xs", {glyph()} }
             ActionIcon { id: "data", aria_label: "Square", icon: SQUARE }

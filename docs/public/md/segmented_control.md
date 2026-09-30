@@ -161,7 +161,7 @@ fn Demo() -> Element {
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the strip. A runtime set of `String`s goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single segments. Named groups are drawn flat, without headings. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context. |
 | `orientation` | `Orientation` | `horizontal` | A row or a column. |
-| `variant` | `Variant` | `filled` | The unselected look, shared by every segment. |
+| `variant` | `Variant` | `filled` | The unselected look, shared by every segment: `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
 | `size` | `Size` | `md` | Size of the segments and the captions. |
 | `radius` | `Size` | `md` | Radius of the control's outer corners. Inner corners are square. |
@@ -254,7 +254,7 @@ space separated:
 | Token | Condition |
 |---|---|
 | `horizontal` / `vertical` | The `orientation` in effect. |
-| `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect. |
+| `filled` / `tonal` / `elevated` / `outlined` / `standard` / `gradient` | The `variant` in effect. |
 | `full-width` | `full_width` is set. |
 | `collapsed` | No `gap`. The segments share borders and square off their inner corners. |
 | `size-<size>` | The `gap` step in effect, when `gap` is set. |

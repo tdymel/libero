@@ -128,7 +128,7 @@ pub fn SegmentedControlPage() -> Element {
                         .doc("A row or a column."),
                     prop("variant", "Variant")
                         .default("filled")
-                        .doc("The unselected look, shared by every segment."),
+                        .doc("The unselected look, shared by every segment: `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("Accent color. A theme color name or any CSS color."),
@@ -226,9 +226,9 @@ pub fn SegmentedControlPage() -> Element {
                         }),
                     Control::toggle(
                         "variant",
-                        ["filled", "tonal", "elevated", "outlined", "text"],
+                        ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
                     )
-                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Text"]),
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
                     Control::color("color"),

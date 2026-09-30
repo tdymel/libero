@@ -20,6 +20,13 @@ pub(super) fn sane_bounds(min: f64, max: f64) -> (f64, f64) {
     (min, max)
 }
 
+/// [`sane_bounds`] with `max` pulled down to the last `step` grid value, as a
+/// native range input does: else the thumb stops short of the track's end (1558).
+pub(super) fn grid_bounds(min: f64, max: f64, step: f64) -> (f64, f64) {
+    let (min, max) = sane_bounds(min, max);
+    (min, snap_towards(max, min, step.max(0.0), true))
+}
+
 /// `raw` snapped to the `step` grid from `min`, clamped and rounded; `step: 0`
 /// is continuous. Bounds come from [`sane_bounds`]; `NaN` reads as `min`.
 pub(super) fn snap(raw: f64, min: f64, max: f64, step: f64) -> f64 {
@@ -234,6 +241,17 @@ mod tests {
         assert_eq!(snap(7.0, min, max, 1.0), 0.0);
         let (min, max) = sane_bounds(f64::NAN, f64::NAN);
         assert_eq!(snap(7.0, min, max, 0.0), 0.0);
+    }
+
+    /// 0..100 by 30 ends at 90: `snap(100)` lands there, so the track must too (1558).
+    #[test]
+    fn max_off_the_grid_ends_at_the_last_grid_value() {
+        assert_eq!(grid_bounds(0.0, 100.0, 30.0), (0.0, 90.0));
+        assert_eq!(grid_bounds(10.0, 110.0, 30.0), (10.0, 100.0));
+        assert_eq!(grid_bounds(0.0, 1.0, 0.1), (0.0, 1.0));
+        assert_eq!(grid_bounds(0.0, 100.0, 0.0), (0.0, 100.0));
+        let (min, max) = grid_bounds(0.0, 100.0, 30.0);
+        assert_eq!(fraction(snap(100.0, min, max, 30.0), min, max), 1.0);
     }
 
     /// A `NaN` value would otherwise reach the CSS as `NaN%`.

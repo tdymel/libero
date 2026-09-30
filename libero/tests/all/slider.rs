@@ -48,6 +48,45 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     assert!(body(&html).contains(">25%<"));
 }
 
+/// Todo 1558: 0..100 by 30 snaps 100 to 90, so the track and `aria-valuemax`
+/// end there too, and the thumb sits at the end rather than at 90%.
+#[test]
+fn a_max_off_the_step_grid_ends_the_track_at_the_last_step() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider { value: 100.0, max: 100.0, step: 30.0, aria_label: "Volume", oninput: move |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains("aria-valuenow=90"), "{html}");
+    assert!(html.contains("aria-valuemax=90"), "{html}");
+    assert!(html.contains("--lsx-slider-filled:1;"), "{html}");
+}
+
+/// Todo 1556: without a `label`, `aria_label` names the group and leads each
+/// thumb's name, as the label's id does.
+#[test]
+fn a_range_slider_aria_label_names_the_group_and_its_thumbs() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                RangeSlider::<f64> { value: (20.0, 80.0), aria_label: "Price", oninput: move |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(
+        html.contains(r#"role="group""#) && html.contains(r#"aria-label="Price""#),
+        "{html}"
+    );
+    assert!(html.contains(r#"aria-label="Price Minimum""#), "{html}");
+    assert!(html.contains(r#"aria-label="Price Maximum""#), "{html}");
+}
+
 /// Filled is a state, not a var set only on filled marks: a raw `style` that
 /// drops a declaration between renders keeps its last value in the browser.
 #[test]

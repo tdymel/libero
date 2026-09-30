@@ -75,6 +75,39 @@ fn a_loading_icon_stays_focusable_and_swallows_presses() {
     });
 }
 
+/// Todo 1559: Android's WebView sends a tap on a disabled button's svg a click
+/// (990); a click dispatched there stands in for it.
+#[test]
+fn a_click_on_a_disabled_icons_glyph_runs_nothing() {
+    block_on(async {
+        let fixture = Fixture::open("/action-icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#disabled").await.unwrap();
+
+        page.evaluate(
+            "document.querySelector('#disabled > svg').dispatchEvent(\
+             new MouseEvent('click', { bubbles: true }))",
+        )
+        .await
+        .unwrap();
+        // Events run in order, so once the toggle shows its press, the glyph's click is handled.
+        pointer::click(page, "#toggle").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.getElementById('toggle').getAttribute('aria-pressed') === 'true'",
+            "the toggle's press",
+        )
+        .await
+        .unwrap();
+        let clicks: String = page.evaluate(CLICKS).await.unwrap().into_value().unwrap();
+        assert_eq!(clicks, "0", "the disabled icon ran its handler");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `aria-pressed` follows the toggle.
 #[test]
 fn a_toggle_reports_its_pressed_state() {
