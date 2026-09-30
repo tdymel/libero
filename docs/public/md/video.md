@@ -174,6 +174,9 @@ screen, from [use_fullscreen](use_fullscreen.md).
   transcript for what only the picture shows (WCAG 1.2.3, 1.2.5): libero cannot
   write them.
 - Do not let a clip flash more than three times a second (WCAG 2.3.1).
+- In a parent that shrink-wraps its content, such as a flex column, give the
+  parent `max-width: 100%` or `min-width: 0`: an unsized player asks for 40rem
+  and would push it past a narrow screen (WCAG 1.4.10).
 
 ### Limits
 

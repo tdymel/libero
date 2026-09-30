@@ -117,7 +117,7 @@ fn Preview(file: FileData) -> Element {
     let Some(Some(src)) = src() else { return rsx! {} };
     rsx! {
         if kind.starts_with("image/") {
-            Image { src, alt: "Your photo", width: "160" }
+            Image { src, alt: "Your photo", sx: sx().width("160px").height("auto") }
         } else if kind.starts_with("audio/") {
             Audio { src, label: "Your recording" }
         } else {

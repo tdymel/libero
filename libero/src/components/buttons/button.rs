@@ -37,7 +37,8 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = ripple_sx(ButtonDefaults::theme_vars())
         .display("inline-flex")
         .align_items("center")
-        .justify_content("center")
+        // `safe`: an overlong label is cut at its end, not at both (todo 1493).
+        .justify_content("safe center")
         .border_style("solid")
         .border_width("1px")
         .font_weight("600")

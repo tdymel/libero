@@ -100,7 +100,7 @@ fn Preview(file: dioxus::html::FileData) -> Element {{
     let Some(Some(src)) = src() else {{ return rsx! {{}} }};
     rsx! {{
         if kind.starts_with("image/") {{
-            Image {{ src, alt: "Your photo", width: "160" }}
+            Image {{ src, alt: "Your photo", sx: sx().width("160px").height("auto") }}
         }} else if kind.starts_with("audio/") {{
             Audio {{ src, label: "Your recording" }}
         }} else {{
@@ -142,7 +142,8 @@ fn Preview(file: FileData) -> Element {
     };
     rsx! {
         if kind.starts_with("image/") {
-            Image { src, alt: "Your photo", width: "160" }
+            // `Image` fills its box: a `width` attribute loses to that.
+            Image { src, alt: "Your photo", sx: sx().width("160px").height("auto") }
         } else if kind.starts_with("audio/") {
             Audio { src, label: "Your recording" }
         } else {

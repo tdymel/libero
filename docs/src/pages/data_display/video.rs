@@ -100,6 +100,7 @@ pub fn VideoPage() -> Element {
                     "Give each player a `label` that says what plays.",
                     "Add a captions track for speech (WCAG 1.2.2), and a described version or a transcript for what only the picture shows (WCAG 1.2.3, 1.2.5): libero cannot write them.",
                     "Do not let a clip flash more than three times a second (WCAG 2.3.1).",
+                    "In a parent that shrink-wraps its content, such as a flex column, give the parent `max-width: 100%` or `min-width: 0`: an unsized player asks for 40rem and would push it past a narrow screen (WCAG 1.4.10).",
                 ])
                 .limits([
                     "Blitz plays no media: the controls give way to `children`, by default a link to the file.",
