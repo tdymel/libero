@@ -93,7 +93,8 @@ parts work.
 
 - Name the bar with `aria-label`, or `aria-labelledby` on a visible heading.
   Without either it warns in debug builds.
-- Name each `ToolbarGroup` with `aria-label`.
+- Name each `ToolbarGroup` with `aria-label`. Without it the group warns in
+  debug builds too.
 
 ### Limits
 
@@ -101,8 +102,6 @@ parts work.
   `SegmentedControl`, `TextField` and `NumberField` (and what is built on them)
   join the arrow order. Another focusable element inside stays its own tab
   stop.
-- In a WebView (Android, desktop) the arrow keys and Alt+F10 do nothing yet,
-  and a text field keeps its arrows.
 
 ## Props
 

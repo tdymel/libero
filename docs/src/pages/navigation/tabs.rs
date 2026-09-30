@@ -124,7 +124,7 @@ pub fn TabsPage() -> Element {
                     "`aria_label` and `aria_labelledby` land on the tablist, not the root.",
                 ])
                 .must([
-                    "Name the strip with `aria_label` or `aria_labelledby`.",
+                    "Name the strip with `aria_label` or `aria_labelledby`. Without either it warns in debug builds.",
                     "If you remove the focused tab from `options`, move the focus back to the strip yourself.",
                 ]),
             lead: rsx! {
@@ -152,6 +152,7 @@ pub fn TabsPage() -> Element {
                 // code block is a lie without it.
                 wrap: Wrap(|_: &DemoValues, source: &str| format!("{SECTION_ENUM}{source}")),
                 fixed: vec![
+                    "aria_label: \"Settings\"".to_string(),
                     "value: section()".to_string(),
                     "onchange: move |next| section.set(next)".to_string(),
                     "panel: |section: Section| match section {\n    Section::Account => rsx! { \"Account settings\" },\n    Section::Admin => rsx! { \"Admin area\" },\n    Section::Billing => rsx! { \"Billing details\" },\n}".to_string(),
@@ -182,6 +183,7 @@ pub fn TabsPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     Tabs {
+                        aria_label: "Settings",
                         options: {
                             let off = values.str("disabled_option") == "true";
                             OptionList::from_options()

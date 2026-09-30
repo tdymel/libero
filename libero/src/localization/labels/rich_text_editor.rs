@@ -17,6 +17,8 @@ pub struct RichTextEditorLabels {
     pub marks: &'static str,
     pub blocks: &'static str,
     pub history: &'static str,
+    /// The group of the caller's own toolbar buttons.
+    pub custom_tools: &'static str,
     /// The trigger of the menu holding the buttons a narrow toolbar has no room for.
     pub more: &'static str,
     pub bold: &'static str,
@@ -65,6 +67,7 @@ impl RichTextEditorLabels {
         marks: "Text style",
         blocks: "Blocks",
         history: "History",
+        custom_tools: "More tools",
         more: "More formatting",
         bold: "Bold",
         italic: "Italic",
@@ -104,6 +107,7 @@ impl RichTextEditorLabels {
         marks: "Textstil",
         blocks: "Blöcke",
         history: "Verlauf",
+        custom_tools: "Weitere Werkzeuge",
         more: "Weitere Formatierung",
         bold: "Fett",
         italic: "Kursiv",

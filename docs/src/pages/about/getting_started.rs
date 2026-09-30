@@ -136,6 +136,7 @@ pub fn GettingStarted() -> Element {
             DocSection {
                 title: "Build and run",
                 Tabs {
+                    aria_label: "Platform",
                     value: environment(),
                     onchange: move |next| environment.set(next),
                     panel: |environment: Environment| match environment {

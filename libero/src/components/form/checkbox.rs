@@ -7,8 +7,8 @@ use crate::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
             Glyph, HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color,
-            contrast_color, fill_color, focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx,
-            use_name_warning, use_toolbar_item, variables,
+            contrast_color, disabled_look_sx, fill_color, focus_ring_sx, names_itself,
+            ring_overlay, ring_overlay_sx, use_name_warning, use_toolbar_item, variables,
         },
         form::{Activation, field_parts_enum, field_props, use_bound, use_field},
         layout::{BoxStyle, use_box},
@@ -46,7 +46,7 @@ static CHECKBOX_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // A card rings itself: the control stops being the overlay's
         // containing block, so the same overlay covers the card.
         .when("card", sx().position("static"))
-        .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
+        .when("disabled", disabled_look_sx("not-allowed"))
 });
 
 static CHECKBOX_BOX_SX: StaticSx = StaticSx::new(|| {

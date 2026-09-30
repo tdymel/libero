@@ -6,8 +6,8 @@ use crate::{
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
             HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color, contrast_color,
-            fill_color, focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx,
-            use_name_warning, use_toolbar_item, variables,
+            disabled_look_sx, fill_color, focus_ring_sx, names_itself, ring_overlay,
+            ring_overlay_sx, use_name_warning, use_toolbar_item, variables,
         },
         form::{field_parts_enum, field_props, use_bound, use_field, use_form_context},
         layout::use_box,
@@ -47,7 +47,7 @@ static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // A card rings itself: the control stops being the overlay's
         // containing block, so the same overlay covers the card.
         .when("card", sx().position("static"))
-        .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
+        .when("disabled", disabled_look_sx("not-allowed"))
 });
 
 static SWITCH_TRACK_SX: StaticSx = StaticSx::new(|| {
@@ -325,4 +325,20 @@ pub fn Switch(props: SwitchProps) -> Element {
                 vec![input, track, ring_overlay()],
             ),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    /// Todo 1601: forced colours drop the fade's contrast cue, so disabled turns `GrayText`.
+    #[test]
+    fn a_disabled_switch_turns_gray_text_in_forced_colours() {
+        let css = Stylesheet::from(&SWITCH_CONTROL_SX).as_str().to_string();
+        assert!(
+            css.contains("@media (forced-colors: active)") && css.contains("color:GrayText"),
+            "{css}"
+        );
+    }
 }

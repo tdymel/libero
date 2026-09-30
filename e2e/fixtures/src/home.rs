@@ -152,6 +152,7 @@ pub fn BookingCard() -> Element {
             sx: sx().padding("lg").width("100%").max_width("440px"),
             Title { size: "md", component: "h3", id: "booking-title", "Book a table" }
             Tabs {
+                aria_labelledby: "booking-title",
                 value: tab(),
                 onchange: move |next| tab.set(next),
                 // Blitz sizes a tab to its min-content and breaks "Your bookings".

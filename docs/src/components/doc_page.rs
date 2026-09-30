@@ -177,6 +177,7 @@ pub fn DocPage(
                 {children}
             } else {
                 Tabs {
+                    aria_label: "Documentation sections",
                     options: tabs,
                     value: tab(),
                     onchange: move |next| tab.set(next),

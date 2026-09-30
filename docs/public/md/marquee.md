@@ -78,7 +78,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `parts` | `Parts<MarqueePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
-| `children` | `Element` | required | What scrolls, rendered once per copy. Interactive children work only in the first copy. |
+| `children` | `Element` | required | What scrolls, rendered once per copy. Interactive children work only in the first copy, and an `id` repeats in every copy. |
 | `orientation` | `Orientation` | `horizontal` | The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies. |
 | `reverse` | `bool` | `false` | Scrolls towards the end instead of the start. |
 | `duration` | `u32` | `40000` | Milliseconds per full cycle. The same number moves a longer strip faster. |
@@ -127,6 +127,8 @@ parts work.
 
 - Put interactive children in the content knowing they work only in the first
   copy.
+- Give the children no `id`: they render once per copy, so an `id` would repeat
+  and `label for`, `aria-labelledby` or `#id` links would find only the first.
 - Don't rely on `pause_on_hover` alone: a keyboard or a touch screen cannot
   hover.
 - Turn the toggle off only when the page offers its own control through

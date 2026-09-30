@@ -215,6 +215,7 @@ base_props! {
         #[props(default)]
         fade_edges: Option<bool>,
         /// What scrolls. Only the first copy is interactive; the others are `inert`.
+        /// Rendered once per copy, so give it no `id`: it would repeat.
         children: Element,
     }
 }

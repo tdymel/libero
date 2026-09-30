@@ -4,7 +4,7 @@ use super::crop::{CropRect, CropShape, Grip};
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, States, Variables, base_props, focus_ring_sx,
+            HtmlTag, Input, Part, States, Variables, base_props, disabled_look_sx, focus_ring_sx,
             has_shortcut_modifier, parts_enum, variables,
         },
         form::{Slider, SliderChangeEvent},
@@ -282,7 +282,7 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "disabled",
-            sx().opacity("0.5").cursor("not-allowed").selector(
+            disabled_look_sx("not-allowed").selector(
                 "& > [data-slot='frame'], & > [data-slot='frame'] > [data-slot='handle']",
                 sx().cursor("not-allowed"),
             ),

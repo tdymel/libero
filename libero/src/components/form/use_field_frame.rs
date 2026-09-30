@@ -4,7 +4,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, States, focus_ring_sx, ring_overlay, ring_overlay_sx},
+        common::{
+            HtmlTag, Input, Part, States, disabled_look_sx, focus_ring_sx, ring_overlay,
+            ring_overlay_sx,
+        },
         form::FieldPart,
         layout::{BoxStyle, use_box},
     },
@@ -51,9 +54,7 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         .when("warning", sx().border_color("warning.9"))
         .when(
             "disabled",
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .background("muted.1"),
+            disabled_look_sx("not-allowed").background("muted.1"),
         )
         // `:where`: the specificity of a bare `[data-slot]`.
         .selector(

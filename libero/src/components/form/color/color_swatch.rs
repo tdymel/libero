@@ -4,8 +4,8 @@ use super::{ColorCode, color_slider::CHECKERBOARD};
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, States, Variables, base_props, names_itself, shadow_sx,
-            use_name_warning, variables,
+            HtmlTag, Input, States, Variables, base_props, disabled_look_sx, names_itself,
+            shadow_sx, use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -45,7 +45,7 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
         .when("on-light", sx().color("#000"))
         .when("clickable", sx().cursor("pointer"))
         // A disabled `Fieldset` disables a clickable swatch's `<button>` (todo 514).
-        .selector("&:disabled", sx().opacity("0.5").cursor("not-allowed"))
+        .selector("&:disabled", disabled_look_sx("not-allowed"))
 });
 
 base_props! {

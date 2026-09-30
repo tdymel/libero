@@ -55,7 +55,9 @@ static BURGER_GLYPH_SX: StaticSx = StaticSx::new(|| {
         .selector("&::after", outer.top(down.clone()))
         .when(
             "open",
+            // The outline too, or forced colours still draw the middle bar.
             sx().background_color("transparent")
+                .outline("none")
                 .selector(
                     "&::before",
                     sx().transform(format!("translateY({down}) rotate(45deg)")),
@@ -257,7 +259,8 @@ mod tests {
         let css = Stylesheet::from(&BURGER_GLYPH_SX).as_str().to_string();
 
         for rule in [
-            "[data-state~=\"open\"]{background-color:transparent;}",
+            // The outline too: forced colours paint it where they drop the fill (todo 1591).
+            "[data-state~=\"open\"]{background-color:transparent;outline:none;}",
             "[data-state~=\"open\"]::before{transform:translateY(",
             "[data-state~=\"open\"]::after{transform:translateY(",
         ] {

@@ -55,6 +55,42 @@ fn a_focused_link_cell_keeps_its_ring() {
     });
 }
 
+/// What a pointer at the centre of `selector` hits: the link's `href`, or the
+/// hit element's id when it is not in a link.
+fn hit_at(selector: &str) -> String {
+    format!(
+        "(() => {{ const r = document.querySelector('{selector}').getBoundingClientRect(); \
+         const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); \
+         const link = hit.closest('a'); \
+         return link ? link.getAttribute('href') : hit.id; }})()"
+    )
+}
+
+/// Todo 1588: the caption's text passes a click to the cell's link, its
+/// button keeps its own.
+#[test]
+fn a_linked_cell_bar_passes_clicks_to_the_link_but_not_from_its_controls() {
+    block_on(async {
+        let fixture = Fixture::open("/image-list-links", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        for (selector, expected) in [
+            ("#bar-caption", "/image-list-responsive"),
+            ("#bar-action", "bar-action"),
+        ] {
+            let hit: String = page
+                .evaluate(hit_at(selector))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(hit, expected, "a pointer on {selector}");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The gaps as laid out - the tall cell 0 sits beside ordinary cells 1 and 2 -
 /// and every `<li>`'s box, in fixture order.
 const MEASURE: &str = "(() => {

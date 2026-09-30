@@ -9,7 +9,7 @@ use crate::{
     components::{
         ActionIcon, Anchor, Checkbox, ColorCode, ColorSwatch, Dialog, Drawer, ProgressBar, Radio,
         RadioGroup, RangeSlider, Rating, ScrollArea, SegmentedControl, Slider, Splitter,
-        SpotlightOptions, Switch, Toolbar, use_spotlight,
+        SpotlightOptions, Switch, Tabs, Toolbar, ToolbarGroup, use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     utils::take_warnings,
@@ -117,6 +117,43 @@ fn an_unnamed_toolbar_warns() {
         || rsx! { LiberoProvider { Toolbar { "aria-labelledby": "heading", ActionIcon { aria_label: "Bold", "B" } } } },
         "Toolbar:"
     ));
+}
+
+/// Todo 1593: a group inside a toolbar is announced as just "group" without a name.
+#[test]
+fn an_unnamed_toolbar_group_warns() {
+    let prefix = "ToolbarGroup: no `";
+    assert!(warns(
+        || rsx! { LiberoProvider { Toolbar { "aria-label": "Format", ToolbarGroup { ActionIcon { aria_label: "Bold", "B" } } } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Toolbar { "aria-label": "Format", ToolbarGroup { "aria-label": "Style", ActionIcon { aria_label: "Bold", "B" } } } } },
+        prefix
+    ));
+}
+
+/// Todo 1593: APG names the tablist; the name lands there, so the warning reads it.
+#[test]
+fn an_unnamed_tabs_warns() {
+    let prefix = "Tabs: no `";
+    fn tabs(name: Option<&'static str>, by: Option<&'static str>) -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs::<String> {
+                    aria_label: name,
+                    aria_labelledby: by,
+                    value: "a".to_string(),
+                    options: vec!["a".to_string()],
+                    onchange: |_| {},
+                    panel: |_| rsx! {},
+                }
+            }
+        }
+    }
+    assert!(warns(|| tabs(None, None), prefix));
+    assert!(!warns(|| tabs(Some("Settings"), None), prefix));
+    assert!(!warns(|| tabs(None, Some("heading")), prefix));
 }
 
 #[test]

@@ -96,6 +96,7 @@ pub fn BookingCard() -> Element {
             radius: "lg",
             sx: sx().padding("lg").width("100%"),
             Tabs {
+                aria_label: "Table booking",
                 value: tab(),
                 onchange: move |next| tab.set(next),
                 option_label: |tab: CardTab| {

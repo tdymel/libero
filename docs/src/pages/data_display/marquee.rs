@@ -46,7 +46,7 @@ pub fn MarqueePage() -> Element {
             properties: vec![props("Marquee", vec![
                 prop("children", "Element")
                     .default("required")
-                    .doc("What scrolls, rendered once per copy. Interactive children work only in the first copy."),
+                    .doc("What scrolls, rendered once per copy. Interactive children work only in the first copy, and an `id` repeats in every copy."),
                 prop("orientation", "Orientation")
                     .default("horizontal")
                     .doc("The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies."),
@@ -94,6 +94,7 @@ pub fn MarqueePage() -> Element {
                 ])
                 .must([
                     "Put interactive children in the content knowing they work only in the first copy.",
+                    "Give the children no `id`: they render once per copy, so an `id` would repeat and `label for`, `aria-labelledby` or `#id` links would find only the first.",
                     "Don't rely on `pause_on_hover` alone: a keyboard or a touch screen cannot hover.",
                     "Turn the toggle off only when the page offers its own control through `paused` and `onpausechange`. `paused` is controlled when set: the toggle then only reports through `onpausechange`, and without the handler it does nothing.",
                 ]),

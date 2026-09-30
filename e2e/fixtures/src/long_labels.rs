@@ -53,6 +53,7 @@ fn LongLabelsPage() -> Element {
             // Todo 543.
             Tabs {
                 id: "tabs",
+                aria_label: "Picks",
                 value: Pick::Short,
                 onchange: move |_| {},
                 option_label: move |pick: Pick| OptionLabel::from(pick.name()),

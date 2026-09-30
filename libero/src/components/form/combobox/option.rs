@@ -5,7 +5,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, States, base_props, forced_on_sx, inset_focus_ring_sx, option_id,
+            HtmlTag, Input, Part, States, base_props, disabled_look_sx, forced_on_sx,
+            inset_focus_ring_sx, option_id,
         },
         layout::use_box,
     },
@@ -80,9 +81,7 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         // Last, so it beats the tints by source order. The hover is undone by hand.
         .when(
             "disabled",
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .hover(sx().background("transparent")),
+            disabled_look_sx("not-allowed").hover(sx().background("transparent")),
         )
 });
 

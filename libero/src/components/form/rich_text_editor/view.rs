@@ -1151,7 +1151,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     }
                     if !custom_tools.is_empty() {
                         ToolbarSeparator {}
-                        ToolbarGroup {
+                        ToolbarGroup { "aria-label": words.custom_tools,
                             for (tool, selected) in custom_tools {
                                 {custom_button(tool, selected)}
                             }

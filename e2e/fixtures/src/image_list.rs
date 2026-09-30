@@ -53,7 +53,7 @@ fn ImageListLinksPage() -> Element {
                     ImageItem::new(cell())
                         .to("/image-list-responsive")
                         .bar(ImageBar::new(rsx! {
-                            span { "Caption" }
+                            span { id: "bar-caption", "Caption" }
                             button { id: "bar-action", "Act" }
                         })),
                 ],

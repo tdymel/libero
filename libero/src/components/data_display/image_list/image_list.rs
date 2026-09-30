@@ -259,7 +259,21 @@ static IMAGE_LIST_BAR_SX: StaticSx = StaticSx::new(|| {
             sx().background(IMAGE_LIST_BAR_BACKGROUND_TOP.value())
                 .color(IMAGE_LIST_BAR_COLOR.value()),
         )
+        // On a linked cell the caption's text passes the click to the link below;
+        // its controls keep theirs (todo 1588).
+        .when(
+            LINKED_BAR_STATE,
+            sx().pointer_events("none")
+                .selector(BAR_CONTROLS_SELECTOR, sx().pointer_events("auto")),
+        )
 });
+
+/// A bar over an `ImageItem::to` link.
+const LINKED_BAR_STATE: &str = "linked";
+
+/// What in a linked cell's bar keeps its own clicks.
+const BAR_CONTROLS_SELECTOR: &str =
+    "& :is(a, button, input, select, textarea, label, summary, [tabindex], [role='button'])";
 
 parts_enum! {
     /// [`ImageList`]'s inner parts, per [`ImageItem`].
@@ -412,6 +426,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
                     States::default()
                         .with(position.state_name(), true)
                         .with(scrim, bar.scrim && !scrim.is_empty())
+                        .with(LINKED_BAR_STATE, item.to.is_some())
                         .data_state(),
                 )
                 .attr("data-slot", ImageListPart::Bar.slot())

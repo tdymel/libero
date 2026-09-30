@@ -25,6 +25,7 @@ fn TabsManualPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "420px",
             Tabs {
+                aria_label: "Settings",
                 activation: TabsActivation::Manual,
                 value: section(),
                 onchange: move |next| section.set(next),
@@ -77,6 +78,7 @@ fn TabsPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "420px",
             Tabs {
+                aria_label: "Settings",
                 value: section(),
                 onchange: move |next| section.set(next),
                 panel: |s: Section| rsx! {
@@ -96,6 +98,7 @@ fn TabsDisabledSelectedPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "420px",
             Tabs {
+                aria_label: "Settings",
                 value: section(),
                 onchange: move |next| section.set(next),
                 options: OptionList::from_options().disabling(|s| *s == Section::Billing),
@@ -115,6 +118,7 @@ fn TabsDisabledPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "420px",
             Tabs {
+                aria_label: "Settings",
                 value: section(),
                 onchange: move |next| section.set(next),
                 options: OptionList::from_options().disabling(|s| *s == Section::Billing),
@@ -143,6 +147,7 @@ fn TabsCrowdedPage() -> Element {
 
     rsx! {
         Tabs {
+            aria_label: "Settings",
             value: tab(),
             onchange: move |next| tab.set(next),
             panel: |t: Crowded| rsx! {

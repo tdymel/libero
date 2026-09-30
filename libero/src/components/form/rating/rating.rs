@@ -5,8 +5,8 @@ use super::value::{fill, number_text, sane, stepped, value_at, zone_value};
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, States, Variables, base_color, draw_svg, has_shortcut_modifier,
-            names_itself, use_name_warning, variables,
+            HtmlTag, Input, Part, States, Variables, base_color, disabled_look_sx, draw_svg,
+            has_shortcut_modifier, names_itself, use_name_warning, variables,
         },
         form::{field_parts_enum, field_props, use_bound, use_field},
         layout::use_box,
@@ -77,7 +77,7 @@ static RATING_SX: StaticSx = StaticSx::new(|| {
         )
         .selector("& [data-slot='zone']", sx().flex("1 1 0"))
         .when("editable", sx().cursor("pointer"))
-        .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
+        .when("disabled", disabled_look_sx("not-allowed"))
 });
 
 field_parts_enum! {

@@ -156,8 +156,9 @@ explains how parts work.
 - Each picture's name is its own `alt`.
 - A cell with a bar is a `figure`, and the bar is its caption.
 - `ImageItem::to` makes the picture the link and stretches it over the tile, so
-  the link's name is the image's `alt`. The bar sits above the link, so a
-  control in it still works.
+  the link's name is the image's `alt`. The bar sits above the link: a click on
+  its text opens the link, and a control in it (a link, button, field, label or
+  `tabindex` element) keeps its own click.
 - The scrim never drops below 60% black, so the bar's white text holds at least
   5.7:1 even over a white picture. A `below` bar has no scrim and always reads.
 

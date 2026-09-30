@@ -27,6 +27,7 @@ pub fn BookingCard() -> Element {
     rsx! {
         Paper { shadow: "lg", radius: "lg", sx: sx().padding("lg"),
             Tabs {
+                aria_label: "Table booking",
                 value: tab(),
                 onchange: move |next| tab.set(next),
                 panel: move |tab| match tab {

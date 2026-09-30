@@ -5,7 +5,8 @@ use crate::{
     components::{
         common::{
             ClassList, HtmlTag, Input, Part, States, Variables, focus_ring_sx,
-            has_shortcut_modifier, inset_focus_ring_sx, neighbour, text_color, variables,
+            has_shortcut_modifier, inset_focus_ring_sx, names_itself, neighbour, text_color,
+            use_name_warning, variables,
         },
         layout::use_box,
     },
@@ -208,6 +209,10 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) = attributes
         .into_iter()
         .partition(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    use_name_warning(
+        names_itself(&naming),
+        "Tabs: no `aria-label` or `aria-labelledby`, so the tab list is announced without a name.",
+    );
     let list_id = format!("{root}-tablist");
     let panel_id = selected.map(|selected| format!("{root}-panel-{selected}"));
     let panel_labelled_by = selected.map(|selected| format!("{root}-tab-{selected}"));

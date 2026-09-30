@@ -362,6 +362,10 @@ base_props! {
 /// Docs: <https://libero-ui.dev/buttons/toolbar>
 #[component]
 pub fn ToolbarGroup(props: ToolbarGroupProps) -> Element {
+    use_name_warning(
+        names_itself(&props.attributes),
+        "ToolbarGroup: no `aria-label` or `aria-labelledby`, so it is announced as just \"group\".",
+    );
     use_box()
         .class(&props.class)
         .sx(&props.sx)

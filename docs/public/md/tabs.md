@@ -36,6 +36,7 @@ fn Demo() -> Element {
 
     rsx! {
         Tabs {
+            aria_label: "Settings",
             value: section(),
             onchange: move |next| section.set(next),
             panel: |section: Section| match section {
@@ -71,6 +72,7 @@ fn Demo() -> Element {
 
     rsx! {
         Tabs {
+            aria_label: "Settings",
             value: section(),
             onchange: move |next| section.set(next),
             option_label: |section: Section| -> OptionLabel {
@@ -109,6 +111,7 @@ fn Demo() -> Element {
 
     rsx! {
         Tabs {
+            aria_label: "Settings",
             value: section(),
             onchange: move |next| section.set(next),
             option_label: |section: Section| OptionLabel::rich(
@@ -188,7 +191,8 @@ explains how parts work.
 
 ### You must
 
-- Name the strip with `aria_label` or `aria_labelledby`.
+- Name the strip with `aria_label` or `aria_labelledby`. Without either it
+  warns in debug builds.
 - If you remove the focused tab from `options`, move the focus back to the
   strip yourself.
 

@@ -89,6 +89,7 @@ pub struct TabsProps<T: Options> {
 /// let mut tab = use_signal(|| Tab::Overview);
 /// rsx! {
 ///     Tabs {
+///         aria_label: "Project",
 ///         value: tab(),
 ///         onchange: move |t| tab.set(t),
 ///         panel: |t: Tab| match t {

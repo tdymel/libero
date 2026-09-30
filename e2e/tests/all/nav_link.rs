@@ -205,6 +205,56 @@ fn the_burger_toggles_its_panel_from_the_keyboard() {
     });
 }
 
+/// Todo 1591: forced colours paint the bars' outline, not their fill, so the open
+/// X must drop the middle bar's outline too, or it draws an asterisk.
+#[test]
+fn the_open_burger_drops_its_middle_bar_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        // Each bar's outline: the middle one, then the two that cross.
+        let outlines = format!(
+            "(() => {{ const glyph = {}; return [null, '::before', '::after'] \
+             .map(p => getComputedStyle(glyph, p).outlineStyle).join(' '); }})()",
+            burger("querySelector('[data-slot=glyph]')")
+        );
+        wait::for_js_true(
+            page,
+            &format!(
+                "matchMedia('(forced-colors: active)').matches && {outlines} === 'solid solid solid'"
+            ),
+            "three bars when closed",
+        )
+        .await
+        .unwrap();
+
+        page.find_element("#burger")
+            .await
+            .unwrap()
+            .click()
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{outlines} === 'none solid solid'"),
+            "only the two crossed bars when open",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `ActionIcon` writes its own `aria-label`; a caller's spread one must still
 /// name the burger.
 #[test]

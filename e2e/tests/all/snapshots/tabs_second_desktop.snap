@@ -3,7 +3,7 @@ source: e2e/src/suite.rs
 description: tabs at desktop (second)
 expression: tree
 ---
-tablist
+tablist "Settings"
   tab "Account" [selected=false]
     StaticText "Account"
   tab "Billing" [selected]
