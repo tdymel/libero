@@ -223,6 +223,8 @@ pub fn TreePage() -> Element {
                 .key(["Up", "Down"], "Moves between visible rows.")
                 .key(["Left", "Right"], "Collapses and expands, or jumps to the parent and first child.")
                 .key(["Home", "End"], "Jumps to the first or last row.")
+                .key(["Enter", "Space"], "Opens or closes a branch, or clicks a leaf's link or button.")
+                .key(["*"], "Opens every closed sibling of the row.")
                 .handles([
                     "Typing jumps to the next row whose `tree_label` matches.",
                     "A disabled node is still reachable, but nothing activates, expands or collapses it.",

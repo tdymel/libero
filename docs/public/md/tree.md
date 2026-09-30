@@ -211,6 +211,8 @@ parts work.
 | `Up` or `Down` | Moves between visible rows. |
 | `Left` or `Right` | Collapses and expands, or jumps to the parent and first child. |
 | `Home` or `End` | Jumps to the first or last row. |
+| `Enter` or `Space` | Opens or closes a branch, or clicks a leaf's link or button. |
+| `*` | Opens every closed sibling of the row. |
 
 ### Libero handles
 

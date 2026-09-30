@@ -1,7 +1,7 @@
 //! `Alert`: every severity in every variant, a dismissible one, a long title and styled parts.
 
 use dioxus::prelude::*;
-use libero::components::{Alert, AlertPart, Button, Flex, Part, Parts};
+use libero::components::{Alert, AlertPart, Anchor, Button, Flex, Part, Parts};
 use libero::sx::sx;
 
 use crate::Routes;
@@ -49,7 +49,10 @@ fn AlertPage() -> Element {
                 for variant in VARIANTS {
                     Alert { key: "{color}-{variant}", id: "{color}-{variant}", color, variant,
                         title: "{color} {variant}",
-                        "The message."
+                        "The message, with "
+                        // The page's link colour is unreadable on a fill (todo 1576).
+                        Anchor { to: "#{color}-{variant}", "a link" }
+                        "."
                     }
                 }
             }

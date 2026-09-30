@@ -242,6 +242,9 @@ pub async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
                 // plus each level's following `[data-ring]` siblings.
                 for (let i = 0; el && i < 5; i++, el = el.parentElement) {{
                     out.push(describe(el, false));
+                    // A ring drawn on a marked child line (Tree's row, whose `<li>` holds the subtree).
+                    if (i === 0)
+                        for (const child of el.querySelectorAll(':scope > [data-ring]')) out.push(describe(child, false));
                     for (let sib = el.nextElementSibling; sib; sib = sib.nextElementSibling)
                         if (sib.hasAttribute('data-ring')) out.push(describe(sib, true));
                 }}

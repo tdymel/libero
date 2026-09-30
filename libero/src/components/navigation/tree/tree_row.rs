@@ -35,7 +35,16 @@ pub(super) struct TreeRowState {
 // No hover here: the `<li>` holds its descendants, so it would paint the chain.
 // Only the subtree drops the pointer, so the `<li>` shows `not-allowed` (todo 596).
 static TREE_ROW_SX: StaticSx = StaticSx::new(|| {
-    sx().focus_visible(focus_ring_sx())
+    // The ring goes on the row's line: on the `<li>` it would wrap the open subtree.
+    // `box-shadow` too: the stylesheet's plain focus rule rings every focusable.
+    sx().selector("&:focus-visible", sx().outline("none").box_shadow("none"))
+        .selector(
+            format!(
+                "&:focus-visible > [data-slot='{}']",
+                TreePart::Content.slot()
+            ),
+            focus_ring_sx(),
+        )
         .when(
             "disabled",
             sx().opacity("0.5")
@@ -209,6 +218,8 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .states(&content_states)
         .prepare()
         .attr("data-slot", TreePart::Content.slot())
+        // Marks the row's ring for the e2e focus pass, as the `<li>` holds the focus.
+        .attr("data-ring", "true")
         .event("onclick", onclick)
         .render(HtmlTag::Div, Vec::new(), content);
 
@@ -267,5 +278,30 @@ pub(super) fn child_active(active: Option<&[usize]>, index: usize) -> Option<Vec
     match active? {
         [head, rest @ ..] if *head == index => Some(rest.to_vec()),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TREE_ROW_SX;
+    use crate::css::Stylesheet;
+
+    /// An open branch's `<li>` holds its subtree, so the ring goes on the row's line (todo 1570).
+    #[test]
+    fn the_focus_ring_draws_on_the_row_line_not_the_subtree() {
+        let css = Stylesheet::from(&*TREE_ROW_SX);
+        let css = css.as_str();
+
+        assert!(
+            css.contains(":focus-visible{outline:none;box-shadow:none;}"),
+            "{css}"
+        );
+        let line = css
+            .find(":focus-visible > [data-slot='content']{")
+            .expect("the ring on the row's line");
+        assert!(
+            css[line..].contains("outline:var(--lsx-focus-ring-width) solid"),
+            "{css}"
+        );
     }
 }

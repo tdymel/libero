@@ -53,12 +53,19 @@ pub fn LayeredText() -> Element {
     }
 }
 
-/// WCAG 2.4.7 Focus Visible: a control that removes its own indicator.
+/// WCAG 2.4.7 Focus Visible: a control that removes its own indicator, and one whose
+/// ring is on a child not marked `data-ring`, which the pass must not credit.
 #[component]
 pub fn NoFocusRing() -> Element {
     rsx! {
-        document::Style { "#no-ring:focus, #no-ring:focus-visible {{ outline: none; box-shadow: none; }}" }
+        document::Style {
+            "#no-ring:focus, #no-ring:focus-visible, #unmarked-ring:focus-visible {{ outline: none; box-shadow: none; }} \
+             #unmarked-ring:focus-visible > div {{ outline: 2px solid #000; }}"
+        }
         button { id: "no-ring", style: "padding: 8px 16px; border: 1px solid #888;", "No ring" }
+        div { id: "unmarked-ring", tabindex: "0", role: "button",
+            div { "Unmarked ring" }
+        }
     }
 }
 

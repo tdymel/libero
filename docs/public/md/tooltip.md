@@ -81,6 +81,8 @@ Like every component, `Tooltip` also takes the shared props `sx`, `class`,
 ### Libero handles
 
 - Keyboard focus anywhere inside `Tooltip` shows the bubble, a click does not.
+- On touch, a tap shows nothing: a 500 ms hold shows the bubble, and it stays
+  1.5 s after the release.
 
 ### You must
 

@@ -20,9 +20,9 @@ use crate::{
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GLASS_SHEEN, GlassTint, Gradient,
-        HEADER_HEIGHT, HEADER_HEIGHT_VAR, NamedColorCss, PAPER_BACKGROUND, PaperDefaults, Size,
-        Z_INDEX_HEADER, gradient_surface_sx,
+        ANCHOR_COLOR, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GLASS_SHEEN,
+        GRADIENT_CONTRAST, GlassTint, Gradient, HEADER_HEIGHT, HEADER_HEIGHT_VAR, NamedColorCss,
+        PAPER_BACKGROUND, PaperDefaults, Size, Z_INDEX_HEADER, gradient_surface_sx,
     },
 };
 
@@ -146,7 +146,10 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .top("0")
         .when("static", sx().position("static"))
         .when("fixed", sx().position("fixed").top("0"))
-        .when("gradient", gradient_surface_sx())
+        .when(
+            "gradient",
+            gradient_surface_sx().var(ANCHOR_COLOR, GRADIENT_CONTRAST.value()),
+        )
         // After `gradient`, which its shorthand would otherwise reset.
         .when(
             "glass",
@@ -196,6 +199,8 @@ fn header_variables(props: &HeaderProps, tint: Option<GlassTint>) -> Variables {
         // A var background, so `sx` can't publish the focus contrast; only with a
         // `color`, so an uncoloured header inherits the page's.
         .with(FOCUS_RING_HALO, contrast.as_ref().and(fill))
+        // The page's link colour reads on no fill: about 1.1:1 on `primary` (todo 1576).
+        .with(ANCHOR_COLOR, contrast.clone())
         .with(
             CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
             contrast,
@@ -344,6 +349,12 @@ mod tests {
             FOCUS_RING_HALO.name(),
             ColorValue::Fill(Color::Primary, HEADER_DEFAULT_SHADE).value()
         )));
+        // A link takes the label too: the page's link colour is about 1.1:1 on the fill.
+        assert!(variables.contains(&format!(
+            "{}:{};",
+            ANCHOR_COLOR.name(),
+            ColorValue::Contrast(Color::Primary, HEADER_DEFAULT_SHADE).value()
+        )));
     }
 
     #[test]
@@ -441,6 +452,10 @@ mod tests {
             "{css}"
         );
         assert!(
+            css.contains("--lsx-anchor-color:var(--lsx-gradient-contrast);"),
+            "{css}"
+        );
+        assert!(
             css.contains("color-mix(in srgb, var(--lsx-gradient-from)"),
             "{css}"
         );
@@ -455,5 +470,6 @@ mod tests {
         assert!(!variables.contains(HEADER_COLOR_VAR.name()));
         assert!(!variables.contains(NamedColorCss::FOCUS_CONTRAST.name()));
         assert!(!variables.contains(FOCUS_RING_HALO.name()));
+        assert!(!variables.contains(ANCHOR_COLOR.name()));
     }
 }

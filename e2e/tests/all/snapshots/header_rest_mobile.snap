@@ -7,6 +7,12 @@ banner
   navigation "Main"
     button "Home"
       StaticText "Home"
+sectionheader
+  link "On the fill"
+    StaticText "On the fill"
+sectionheader
+  link "On the gradient"
+    StaticText "On the gradient"
 button "Item 0"
   StaticText "Item 0"
 paragraph

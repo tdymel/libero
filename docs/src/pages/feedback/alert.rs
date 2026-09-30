@@ -67,6 +67,7 @@ pub fn AlertPage() -> Element {
                     "Say the severity in the title or the message too, as the icon is not read.",
                     "Prefer `tonal` or `filled` for an error: `outlined` has no tint.",
                     "Move the focus somewhere sensible in `onclose`: closing removes the focused close button.",
+                    "Mount the Alert after the page loads to have it announced: one present at first paint is read only when the reader reaches it.",
                 ]),
             lead: rsx! {
                 Text {

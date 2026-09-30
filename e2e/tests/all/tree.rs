@@ -197,6 +197,47 @@ fn star_expands_the_sibling_branches() {
     });
 }
 
+/// Todo 1570: on the `<li>` the ring wrapped an open branch's whole subtree; it is
+/// drawn on the row's own line.
+#[test]
+fn an_open_branch_rings_its_row_line_not_its_subtree() {
+    block_on(async {
+        let fixture = Fixture::open("/tree", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, ROW, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.getAttribute('aria-expanded') === 'true'",
+            "ArrowRight to open src",
+        )
+        .await
+        .unwrap();
+        let rings: String = page
+            .evaluate(
+                "(() => { const li = document.activeElement; \
+                 const line = li.querySelector(':scope > [data-slot=content]'); \
+                 return [li, line].map(el => { const s = getComputedStyle(el); \
+                 return `${s.outlineStyle} ${s.boxShadow}`; }).join(' / '); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let (row, line) = rings.split_once(" / ").unwrap();
+        assert_eq!(row, "none none", "the open branch's li is ringed: {rings}");
+        assert!(
+            line.starts_with("solid ") && !line.ends_with(" none"),
+            "the row's line is not ringed: {rings}"
+        );
+        fixture
+            .console
+            .assert_clean("ringing an open branch")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 516: a focused row removed from `data` used to drop focus to
 /// `<body>`. The row that took its place takes focus.
 #[test]

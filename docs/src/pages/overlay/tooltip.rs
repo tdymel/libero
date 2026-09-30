@@ -79,7 +79,10 @@ pub fn TooltipPage() -> Element {
             ])],
             accessibility: a11y()
                 .key(["Escape"], "Hides the bubble until the pointer or focus comes back.")
-                .handles(["Keyboard focus anywhere inside `Tooltip` shows the bubble, a click does not."])
+                .handles([
+                    "Keyboard focus anywhere inside `Tooltip` shows the bubble, a click does not.",
+                    "On touch, a tap shows nothing: a 500 ms hold shows the bubble, and it stays 1.5 s after the release.",
+                ])
                 .must([
                     "Give the bubble an id with `label_id` and point your trigger's `aria-describedby` at it, so a screen reader reads the label. The demo's Save button does.",
                 ]),

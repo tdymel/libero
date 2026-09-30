@@ -58,6 +58,26 @@ fn the_focus_ring_pass_catches_a_missing_ring() {
     });
 }
 
+/// Only a child marked `data-ring` carries the ring (Tree's row line): any child would
+/// credit a nested control's own ring.
+#[test]
+fn the_focus_ring_pass_ignores_a_ring_on_an_unmarked_child() {
+    block_on(async {
+        must_fail(
+            "/broken/focus-ring",
+            "assert_focus_ring",
+            "produced no visible ring anywhere on it",
+            |fixture| async move {
+                let result = focus::assert_focus_ring(&fixture.page, "#unmarked-ring", 5)
+                    .await
+                    .map(|_| ());
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
 /// WCAG 1.4.11 on a field: the ring is the `[data-ring]` overlay, so a faint one fails even
 /// though the border changes strongly.
 #[test]

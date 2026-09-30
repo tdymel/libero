@@ -1,7 +1,7 @@
 //! `Header`: a sticky banner with a nav, above a page that scrolls under it.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Header, Paper, Text};
+use libero::components::{Anchor, Button, Flex, Header, Paper, Text};
 
 use crate::Routes;
 
@@ -42,6 +42,16 @@ fn HeaderPage() -> Element {
             }
         }
         Flex { direction: "column", gap: "xl", max_width: "320px",
+            // The page's link colour is unreadable on a fill (todo 1576). In a
+            // `section`, so neither is a second banner.
+            section {
+                Header { id: "colored", position: "static", color: "primary",
+                    Anchor { to: "#colored", "On the fill" }
+                }
+                Header { id: "gradient", position: "static", color: "primary", gradient: ("violet", 90),
+                    Anchor { to: "#gradient", "On the gradient" }
+                }
+            }
             for index in 0..24 {
                 Flex { key: "{index}", direction: "column", gap: "xl",
                     Button { id: "item-{index}", variant: "outlined", "Item {index}" }
