@@ -290,7 +290,7 @@ fn a_disabled_chip_shows_not_allowed_and_ignores_a_click() {
 }
 
 /// Todo 674: 636's text span wrapped every child, so an icon among them lost
-/// the chip's gap and centring. Both icon shapes keep them now.
+/// the chip's gap and centring. Both icon shapes keep them now, at xs too (1494).
 #[test]
 fn an_icon_keeps_the_gap_and_the_text_centre() {
     block_on(async {
@@ -300,7 +300,7 @@ fn an_icon_keeps_the_gap_and_the_text_centre() {
         let failures: Vec<serde_json::Value> = fixture
             .page
             .evaluate(
-                "['in-children', 'in-prop'].flatMap(id => { \
+                "['in-children', 'in-prop', 'in-prop-xs'].flatMap(id => { \
                  const chip = document.getElementById(id); \
                  const icon = chip.querySelector('svg').getBoundingClientRect(); \
                  const range = document.createRange(); \

@@ -119,6 +119,11 @@ fn ChipIconsPage() -> Element {
                 icon: rsx! { Icon { variant: "standard", size: "sm", color: "inherit", Glyph {} } },
                 "Source"
             }
+            // Todo 1494: xs grew to 24px, its content still centred.
+            Chip { id: "in-prop-xs", size: "xs", variant: "outlined",
+                icon: rsx! { Icon { variant: "standard", size: "xs", color: "inherit", Glyph {} } },
+                "Source"
+            }
         }
     }
 }
