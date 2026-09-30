@@ -10,7 +10,9 @@ use crate::{
     theme::Size,
 };
 
-use super::{DateLevel, FALLBACK_MONTH, Focus, Selection, add_days, add_months, first_of_month};
+use super::{
+    DateLevel, FALLBACK_MONTH, Focus, Selection, add_days, add_months, first_of_month, format_date,
+};
 
 /// Where focus goes after the next render. Only moves focus already in the calendar,
 /// so a click in a field's dropdown leaves it on the input.
@@ -278,6 +280,20 @@ impl Strip {
             end,
             days,
             stop,
+        }
+    }
+
+    /// The grid's name: its month, or both months when the row crosses one.
+    pub(super) fn name(self, formats: &Formats, names: &DateLocale) -> String {
+        let month = |day| format_date(day, formats.month_heading, names);
+        match first_of_month(self.start) == first_of_month(self.end) {
+            true => month(self.start),
+            false => format!(
+                "{}{}{}",
+                month(self.start),
+                formats.range_separator,
+                month(self.end)
+            ),
         }
     }
 

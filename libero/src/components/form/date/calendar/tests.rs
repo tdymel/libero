@@ -42,6 +42,27 @@ fn a_clipped_selection_marks_its_days_as_the_whole_one_does() {
 }
 
 #[test]
+fn a_strip_across_months_names_both() {
+    use crate::localization::{DateLocale, Formats};
+    let strip = |start, end| view::Strip {
+        start,
+        end,
+        days: 7,
+        stop: start,
+    };
+    let (formats, names) = (&Formats::AMERICAN, &DateLocale::ENGLISH);
+    let october = NaiveDate::from_ymd_opt(2026, 10, 4).expect("a real day");
+    assert_eq!(
+        strip(day(28), october).name(formats, names),
+        "September 2026 – October 2026"
+    );
+    assert_eq!(
+        strip(day(7), day(13)).name(formats, names),
+        "September 2026"
+    );
+}
+
+#[test]
 fn a_complete_range_ignores_the_mouse() {
     let complete = Selection::Range(Some(DateRange::new(day(10), Some(day(12)))));
     assert_eq!(complete.marks(day(11), Some(day(20))), (false, true));

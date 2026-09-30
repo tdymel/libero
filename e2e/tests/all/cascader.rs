@@ -198,6 +198,35 @@ fn a_phone_drills_into_one_level_at_a_time() {
     });
 }
 
+/// Todo 1546 (WCAG 2.4.11): opening scrolls a low trigger above the sheet.
+#[test]
+fn a_phone_scrolls_a_low_trigger_above_the_sheet() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    const SHEET: &str = "[data-state~=bordered]:has([role=listbox])";
+    block_on(async {
+        let fixture = Fixture::open("/cascader/low", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 568, 1.0, true))
+            .await
+            .unwrap();
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        let clear = format!(
+            "(() => {{ const sheet = document.querySelector({SHEET:?}); \
+             if (!sheet || getComputedStyle(sheet).visibility !== 'visible') return false; \
+             return document.querySelector({TRIGGER:?}).getBoundingClientRect().bottom \
+             <= sheet.getBoundingClientRect().top; }})()"
+        );
+        wait::for_js_true(page, &clear, "the trigger to clear the sheet")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a low cascader").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1111: below `sm` the dropdown is a sheet on the screen's foot, edge to edge.
 #[test]
 fn a_phone_shows_the_dropdown_as_a_bottom_sheet() {

@@ -10,7 +10,28 @@ pub const ROUTES: Routes = &[
     ("/cascader/search", || rsx! { CascaderSearchPage {} }),
     ("/cascader/paths", || rsx! { CascaderPathsPage {} }),
     ("/cascader/any-level", || rsx! { CascaderAnyLevelPage {} }),
+    ("/cascader/low", || rsx! { CascaderLowPage {} }),
 ];
+
+/// The trigger near the window's foot of a page that scrolls on: a phone's sheet
+/// would cover it (todo 1546).
+#[component]
+fn CascaderLowPage() -> Element {
+    let mut place = use_signal(|| None::<String>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            div { height: "85vh" }
+            Cascader {
+                label: "Place",
+                data: places(),
+                value: place(),
+                onchange: move |next: Option<String>| place.set(next),
+            }
+            div { height: "100vh" }
+        }
+    }
+}
 
 /// `any_level`: a branch is a pick of its own. `#picked` shows the committed value.
 #[component]

@@ -36,6 +36,17 @@ fn a_digital_column_turns_by_keys_presses_wheel_and_drag() {
                 .into_value()
                 .unwrap();
             assert_eq!(roles, "Hours,9,0,23;Minutes,30,0,55", "at {at}");
+            // The press is the drag's single-pointer alternative: a 24px target (todo 1554).
+            let lowest: f64 = page
+                .evaluate(
+                    "Math.min(...[...document.querySelectorAll('#digital [data-slot=neighbour]')] \
+                     .map(n => n.getBoundingClientRect().height))",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(lowest >= 24.0, "at {at}: a neighbour is {lowest}px tall");
 
             page.evaluate(format!("document.querySelector({MINUTES:?}).focus()"))
                 .await

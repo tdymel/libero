@@ -166,10 +166,12 @@ The dropdown is portaled out of the field, so its parts take the
   level. A header names its parent, and its back button ("Back to Europe",
   `Localization::cascader.back`) goes up one level, as `Left` does. It never
   takes focus, so focus stays on the trigger. With `any_level`, a first row
-  "Select Europe" picks the parent and closes.
+  "Select Europe" picks the parent and closes. The keyboard cursor does not
+  reach that row: `Left`, then `Enter` on the parent, picks it.
 - Below the `sm` breakpoint the dropdown is a full-width sheet at the foot of
   the screen. It is not modal: no backdrop, no focus trap, and Escape or a
-  press outside closes it.
+  press outside closes it. Opening it scrolls the page, as far as it can, so
+  the trigger stays above the sheet.
 - Android's Back button closes the dropdown as Escape does, rather than the
   app.
 

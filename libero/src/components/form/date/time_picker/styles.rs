@@ -64,7 +64,12 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             ChronoPickerPart::Neighbour.selector(),
-            sx().min_height("1.25em").color("text-dimmed").cursor("pointer"),
+            // The press is the single-pointer alternative to the drag: 24px target (WCAG 2.5.8).
+            sx().display("flex")
+                .align_items("center")
+                .min_height("max(1.25em, 24px)")
+                .color("text-dimmed")
+                .cursor("pointer"),
         )
         .selector("& [data-slot='spin']:focus-visible", focus_ring_sx())
         .selector(

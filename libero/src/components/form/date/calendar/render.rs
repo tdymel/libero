@@ -100,7 +100,7 @@ impl View {
                 div { "data-slot": ChronoPickerPart::Months.slot(),
                     div {
                         role: "grid",
-                        "aria-label": format_date(start, formats.month_heading, names),
+                        "aria-label": strip.name(formats, names),
                         onkeydown: move |event| strip.keydown(self, event),
                         div { role: "row",
                             for offset in 0..days {
@@ -302,6 +302,8 @@ pub(super) struct WeekProps {
     blanks: bool,
     /// Clipped to the week.
     selection: Selection,
+    /// `selection` without the preview: what `aria-selected` says.
+    value: Selection,
     today: Option<NaiveDate>,
     tab_stop: Option<NaiveDate>,
     min: Option<NaiveDate>,
@@ -323,6 +325,7 @@ pub(super) fn Week(props: WeekProps) -> Element {
         month,
         blanks,
         selection,
+        value,
         today,
         tab_stop,
         min,
@@ -357,7 +360,10 @@ pub(super) fn Week(props: WeekProps) -> Element {
     let cell = move |offset: i64| {
         let day = day(offset);
         let (picked, in_range) = selection.marks(day, None);
-        (offset, day, outside(day), picked, in_range)
+        // Every day of a picked range is selected (APG grid); a preview is not.
+        let (end, inside) = value.marks(day, None);
+        let selected = end || inside;
+        (offset, day, outside(day), picked, in_range, selected)
     };
 
     // Inline, not a helper returning `rsx!`: a nested element costs ~1 µs per item.
@@ -367,11 +373,11 @@ pub(super) fn Week(props: WeekProps) -> Element {
             for offset in 0..lead {
                 div { key: "{offset}", role: "gridcell", "data-slot": ChronoPickerPart::Blank.slot() }
             }
-            for (offset, day, outside, picked, in_range) in (lead..7 - trail).map(cell) {
+            for (offset, day, outside, picked, in_range, selected) in (lead..7 - trail).map(cell) {
                 div {
                     key: "{offset}",
                     role: "gridcell",
-                    "aria-selected": if picked { "true" } else { "false" },
+                    "aria-selected": if selected { "true" } else { "false" },
                     button {
                         r#type: "button",
                         "data-slot": ChronoPickerPart::Day.slot(),
@@ -386,6 +392,12 @@ pub(super) fn Week(props: WeekProps) -> Element {
                         disabled: (!allowed(day)).then_some(true),
                         tabindex: if focusable && !outside && tab_stop == Some(day) { "0" } else { "-1" },
                         onmouseenter: move |_| {
+                            if awaits_end {
+                                hover.set(Some(day));
+                            }
+                        },
+                        // The keyboard previews the range too.
+                        onfocus: move |_| {
                             if awaits_end {
                                 hover.set(Some(day));
                             }

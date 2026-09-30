@@ -260,6 +260,73 @@ fn a_range_keeps_its_marks_across_pages() {
     });
 }
 
+/// Todo 1553: the keyboard previews a waiting range as the mouse does, and every
+/// day of a picked range is `aria-selected`, a preview's none past the start.
+#[test]
+fn the_keyboard_previews_a_range_and_its_days_are_selected() {
+    block_on(async {
+        let fixture = Fixture::open("/calendar/range", Viewport::ALL[0])
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let day = |date: &str| {
+            format!("[role=grid][aria-label='March 2026'] [data-date='{date}']:not([data-outside])")
+        };
+        let selected = |date: &str| {
+            format!(
+                "document.querySelector({:?}).parentElement.getAttribute('aria-selected')",
+                day(date)
+            )
+        };
+
+        pointer::click(page, &day("2026-03-10")).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector({:?}).hasAttribute('data-in-range')",
+                day("2026-03-11")
+            ),
+            "the focused day to preview the range",
+        )
+        .await
+        .unwrap();
+        let preview: [String; 3] = page
+            .evaluate(format!(
+                "[{}, {}, {}]",
+                selected("2026-03-10"),
+                selected("2026-03-11"),
+                selected("2026-03-12")
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            preview,
+            ["true", "false", "false"],
+            "a preview is not selected"
+        );
+
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "[{}, {}, {}].every(s => s === 'true')",
+                selected("2026-03-10"),
+                selected("2026-03-11"),
+                selected("2026-03-12")
+            ),
+            "every day of the picked range to be selected",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the keyboard range").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Climbing by the titles keeps focus in the calendar, and a year paged by
 /// key climbs back down to the month it came from, not January (todo 26).
 #[test]

@@ -96,7 +96,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | `primary` | Colours the active link's tint and start bar. Only the color family counts: the tint is its lightest shade. |
 | `active` | `bool` | follows the route | Unset, it compares `to` with the current route, which needs an internal target and a router. Set it for a section's parent item, or where there is no route to compare. |
 | `disabled` | `bool` | `false` | Dims the link and stops navigation. |
-| `scroll_into_view` | `bool` | `false` | Scrolls the link into view when it becomes active. It scrolls the nearest scrollable ancestor, so use it in a sidebar. |
+| `scroll_into_view` | `bool` | `false` | Scrolls the link into view when it becomes active. It scrolls the nearest scrollable ancestor, else the page, so use it in a sidebar. |
 | `description` | `String` | - | A dimmed line under the label, read as the link's description. |
 | `nested` | `Element` | - | Child `NavLink`s, shown under this one by a toggle button beside it. The link itself still goes to `to`. |
 | `opened` | `bool` | - | Whether `nested` shows. Setting it makes it controlled, so pair it with `onchange`. |

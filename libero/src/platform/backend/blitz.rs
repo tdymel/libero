@@ -2141,7 +2141,14 @@ fn show(anchor: NodeHandle, node_id: NodeId, tries: u8) {
                 drop(state.show_retry.replace(retry));
             }
         } else if let Some((scroller, delta)) = into_view(doc, node_id) {
-            doc.scroll_node_by(scroller, 0.0, -delta, |_| {});
+            match scroller {
+                Some(scroller) => {
+                    doc.scroll_node_by(scroller, 0.0, -delta, |_| {});
+                }
+                None => {
+                    doc.scroll_viewport_by(0.0, -delta);
+                }
+            }
             notify_scroll();
         }
     });
@@ -2204,8 +2211,9 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
 }
 
 /// `WebElement::scroll_into_view`'s walk: the nearest `overflow-y` scroller and
-/// how far it scrolls, [`SCROLL_MARGIN_VAR`] for `scroll-margin`.
-fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(NodeId, f64)> {
+/// how far it scrolls, [`SCROLL_MARGIN_VAR`] for `scroll-margin`. `None` for the
+/// viewport, when no element scrolls.
+fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(Option<NodeId>, f64)> {
     let (_, y, width, height) = client_rect(doc, node_id)?;
     if width == 0.0 && height == 0.0 {
         return None;
@@ -2214,7 +2222,12 @@ fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(NodeId, f64)> {
     let (y, height) = (y - margin, height + 2.0 * margin);
     let mut ancestor = doc.get_node(node_id)?.parent;
     let scroller = loop {
-        let node = doc.get_node(ancestor?)?;
+        let Some(id) = ancestor else {
+            let (window, scale) = (doc.viewport().window_size, doc.viewport().scale_f64());
+            let delta = super::nearest_scroll(y, y + height, 0.0, f64::from(window.1) / scale)?;
+            return Some((None, delta));
+        };
+        let node = doc.get_node(id)?;
         if node.is_element()
             && node.final_layout().scroll_height() > 0.0
             && matches!(
@@ -2234,7 +2247,7 @@ fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(NodeId, f64)> {
         - layout.scrollbar_size.height;
     let delta =
         super::nearest_scroll(y, y + height, view_top, view_top + f64::from(client_height))?;
-    Some((scroller.id, delta))
+    Some((Some(scroller.id), delta))
 }
 
 /// The web's focus scroll, which Blitz lacks: every scroller round `node_id`,

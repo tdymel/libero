@@ -990,10 +990,17 @@ impl ElementApi for WebElement {
         if rect.width() == 0.0 && rect.height() == 0.0 {
             return Ok(());
         }
+        let page = window
+            .document()
+            .and_then(|document| document.scrolling_element());
         let mut ancestor = self.element.parent_element();
         let scroller = loop {
+            // No inner scroller: the page itself, as the browser's `scrollIntoView` does.
             let Some(element) = ancestor else {
-                return Ok(());
+                match page.clone() {
+                    Some(page) => break page,
+                    None => return Ok(()),
+                }
             };
             if element.scroll_height() > element.client_height()
                 && matches!(style(&element, "overflow-y").as_str(), "auto" | "scroll")
@@ -1010,7 +1017,11 @@ impl ElementApi for WebElement {
         };
         let top = rect.top() - margin("top");
         let bottom = rect.bottom() + margin("bottom");
-        let view_top = scroller.get_bounding_client_rect().top() + scroller.client_top() as f64;
+        // The page's own rect scrolls with it; its view is the viewport.
+        let view_top = match page.as_ref() == Some(&scroller) {
+            true => 0.0,
+            false => scroller.get_bounding_client_rect().top() + scroller.client_top() as f64,
+        };
         let view_bottom = view_top + scroller.client_height() as f64;
         let Some(delta) = super::nearest_scroll(top, bottom, view_top, view_bottom) else {
             return Ok(());

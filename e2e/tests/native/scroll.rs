@@ -74,6 +74,31 @@ fn listening() -> Element {
     }
 }
 
+/// No scroller round the target: the window scrolls (todo 1546).
+fn plain_page() -> Element {
+    let target = use_element();
+    rsx! {
+        button {
+            id: "show",
+            onclick: move |_| {
+                let _ = target.scroll_into_view(false);
+            },
+            "Show"
+        }
+        div { style: "height: 2000px;" }
+        div { id: "target", style: "height: 20px;", onmounted: target.mount(), "Target" }
+        div { style: "height: 400px;" }
+    }
+}
+
+#[test]
+fn scroll_into_view_scrolls_the_window_without_a_scroller() {
+    let mut page = mount(plain_page);
+    assert_eq!(page.viewport_scroll().1, 0.0);
+    page.click("#show");
+    assert!(page.viewport_scroll().1 > 0.0, "the window did not scroll");
+}
+
 #[test]
 fn a_wheel_tells_scroll_subscribers() {
     let mut page = mount(listening);

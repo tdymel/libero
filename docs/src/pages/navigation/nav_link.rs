@@ -57,7 +57,7 @@ pub fn NavLinkPage() -> Element {
                 prop("disabled", "bool").default("false").doc("Dims the link and stops navigation."),
                 prop("scroll_into_view", "bool")
                     .default("false")
-                    .doc("Scrolls the link into view when it becomes active. It scrolls the nearest scrollable ancestor, so use it in a sidebar."),
+                    .doc("Scrolls the link into view when it becomes active. It scrolls the nearest scrollable ancestor, else the page, so use it in a sidebar."),
                 prop("description", "String").doc("A dimmed line under the label, read as the link's description."),
                 prop("nested", "Element").doc("Child `NavLink`s, shown under this one by a toggle button beside it. The link itself still goes to `to`."),
                 prop("opened", "bool").doc("Whether `nested` shows. Setting it makes it controlled, so pair it with `onchange`."),

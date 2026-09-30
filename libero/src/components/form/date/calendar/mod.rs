@@ -380,6 +380,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                                     month,
                                     blanks: columns > 1,
                                     selection: selection.clip(hovered, first, add_days(first, 6)),
+                                    value: selection.clip(None, first, add_days(first, 6)),
                                     today: in_week(today, first),
                                     tab_stop: in_week(Some(tab_stop), first),
                                     min,

@@ -12,6 +12,7 @@ use crate::{
         ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, use_element,
         use_field_list_layer, use_popover_on,
     },
+    platform::ElementApi,
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -60,6 +61,46 @@ pub(super) fn dropdown_box(
         .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
         .attr("data-slot", DropdownPart::Panel.slot())
         .render(HtmlTag::Div, Vec::new(), content)
+}
+
+/// The bottom sheet may cover the trigger (WCAG 2.4.11): once placed over it, the
+/// trigger's `scroll-margin-bottom` clears the sheet and the page scrolls it above.
+fn use_sheet_clearance(
+    anchor: ElementHandle,
+    sheet: ElementHandle,
+    opened: bool,
+    placed: bool,
+    gap: f64,
+) -> f64 {
+    let mut clearance = use_signal(|| 0.0);
+    use_effect(use_reactive!(|(opened, placed)| {
+        if !(opened && placed) {
+            if *clearance.peek() != 0.0 {
+                clearance.set(0.0);
+            }
+            return;
+        }
+        spawn(async move {
+            let (Ok((_, top)), Ok(size), Ok((_, sheet_top)), Ok(sheet_size)) = (
+                anchor.client_offset().await,
+                anchor.dimensions().await,
+                sheet.client_offset().await,
+                sheet.dimensions().await,
+            ) else {
+                return;
+            };
+            // A placed popover never overlaps its trigger; only the sheet does.
+            if sheet_top < top + size.height && sheet_top + sheet_size.height > top {
+                clearance.set(sheet_size.height + gap);
+            }
+        });
+    }));
+    use_effect(move || {
+        if clearance() > 0.0 {
+            let _ = anchor.scroll_into_view(false);
+        }
+    });
+    clearance()
 }
 
 pub(super) struct DropdownSetup<'a> {
@@ -112,8 +153,14 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
             .remeasure(remeasure),
     );
 
+    let sheet_clearance =
+        use_sheet_clearance(anchor, *popover.floating(), opened, popover.placed(), gap);
+
     let search_box = use_box().framework_sx(&CASCADER_SEARCH_SX).prepare();
-    let wrapper = use_box().prepare();
+    let wrapper = use_box()
+        // Always printed: a renderer never removes a declaration that stops being printed.
+        .style(Some(format!("scroll-margin-bottom:{sheet_clearance}px;")))
+        .prepare();
     let dropdown_states: Input<States> = States::new()
         .with(size.state_name(), true)
         .with(radius.radius_state_name(), true)
