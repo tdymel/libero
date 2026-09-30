@@ -22,8 +22,9 @@ pub use crate::theme::PinKind;
 
 input_from_str!(PinKind);
 
-/// A cell is a square of `FIELD_HEIGHT`, as tall as a `TextField`. `& > div`
-/// outranks the frame's `padding_x`, which would make it a rectangle.
+/// A cell is a square of `FIELD_HEIGHT`, as tall as a `TextField`, and narrows
+/// on a small screen rather than overflow it (todo 1597). `& > div` outranks
+/// the frame's `padding_x`, which would make it a rectangle.
 static PIN_FIELD_ROW_SX: StaticSx = StaticSx::new(|| {
     PinFieldDefaults::theme_vars()
         .display("flex")
@@ -31,13 +32,17 @@ static PIN_FIELD_ROW_SX: StaticSx = StaticSx::new(|| {
         .per_size(|size| {
             sx().selector(
                 "& > div",
-                sx().width(FIELD_HEIGHT.value(size))
-                    .flex("0 0 auto")
+                // A basis, not a `width`: a centred field's fit-content width
+                // would otherwise never drop below the cells' sum.
+                sx().width("auto")
+                    .flex(format!("0 1 {}", FIELD_HEIGHT.value(size)))
+                    .min_width("0")
                     .padding_left("0")
                     .padding_right("0"),
             )
         })
-        .selector("& input", sx().text_align("center"))
+        // A percentage drops the input's own ~150px from the cell's minimum.
+        .selector("& input", sx().text_align("center").width("100%"))
 });
 
 field_props! {
@@ -66,7 +71,7 @@ field_props! {
         /// `autocomplete="one-time-code"` on the first cell. On by default.
         #[props(default)]
         one_time_code: Option<bool>,
-        /// Rendered between the cells.
+        /// Rendered between the cells, hidden from screen readers.
         #[props(default, into)]
         separator: Option<Element>,
         /// Posts the pin through a hidden input. A path also binds it to the
@@ -571,7 +576,10 @@ fn pin_cells(parts: Cells, separator: Option<&Element>) -> Vec<Element> {
         if index > 0
             && let Some(separator) = separator
         {
-            children.push(separator.clone());
+            // Decoration: a reader would say "dash" between every two cells.
+            children.push(rsx! {
+                span { aria_hidden: "true", {separator.clone()} }
+            });
         }
 
         children.push(rsx! {
@@ -635,6 +643,10 @@ fn PinCell(
         .attr("type", input_type)
         .attr("inputmode", (kind == PinKind::Numeric).then_some("numeric"))
         .attr("autocomplete", autocomplete)
+        // A code is not a word: no capital first letter, no correction.
+        .attr("autocapitalize", "off")
+        .attr("autocorrect", "off")
+        .attr("spellcheck", "false")
         .attr("value", cell.map(String::from).unwrap_or_default())
         .attr("data-controlled", true)
         .attr("data-pin-index", index.to_string())

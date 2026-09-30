@@ -17,7 +17,34 @@ pub const ROUTES: Routes = &[
         || rsx! { PaginationPage { delay_ms: 150 } },
     ),
     ("/pagination/states", || rsx! { PaginationStatesPage {} }),
+    (
+        "/pagination/rejecting",
+        || rsx! { PaginationRejectingPage {} },
+    ),
 ];
+
+/// `onchange` ignores the pagination; only `#jump` moves the page (todo 1589).
+#[component]
+fn PaginationRejectingPage() -> Element {
+    let mut page = use_signal(|| 2u32);
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            Pagination { total: 10, page: page(), aria_label: "Results pages",
+                with_edges: true, onchange: move |_| {},
+            }
+            input {
+                id: "jump",
+                "aria-label": "Jump to page",
+                oninput: move |event: FormEvent| {
+                    if let Ok(next) = event.value().parse() {
+                        page.set(next);
+                    }
+                },
+            }
+            span { id: "page", "data-page": "{page}" }
+        }
+    }
+}
 
 /// Disabled by its prop and by a `Fieldset`, one page, and the smallest size.
 #[component]

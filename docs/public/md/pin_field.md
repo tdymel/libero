@@ -93,11 +93,18 @@ explains how parts work.
 |---|---|
 | `Left` or `Right` | Moves to the previous or next cell. |
 | `Home` or `End` | Moves to the first or last cell. |
+| `Backspace` | Clears the cell and moves back, except from the last cell; on an empty cell, only moves back. |
+| `Delete` | Clears the cell and stays. |
+| `Space` | Moves to the next cell without typing. |
 | `Tab` | Moves to the next cell, and past the last one leaves the field, as in any group of inputs. |
 
 ### Libero handles
 
 - Each cell is a tab stop.
+- The pin has no holes: clearing a middle cell moves the characters after it
+  one cell left, and a character typed past the pin lands in the first empty
+  cell.
+- A separator is decoration, hidden from screen readers.
 - Each cell is named for its place, such as "Character 1 of 6", from the
   localization's `PinFieldLabels`, and reads the helper and the error too.
 

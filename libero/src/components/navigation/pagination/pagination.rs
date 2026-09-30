@@ -6,7 +6,7 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, base_color, base_props, contrast_color,
-            fill_color, focus_ring_sx, on_state_sx, parts_enum, variables,
+            fill_color, focus_ring_sx, literal_contrast, on_state_sx, parts_enum, variables,
         },
         layout::{BoxStyle, use_box},
     },
@@ -191,14 +191,15 @@ pub fn Pagination(props: PaginationProps) -> Element {
         .cloned()
         .unwrap_or(ThemeAwareValue::Color(defaults.color));
     let active = base_color(Some(&picked));
-    let on_active = contrast_color(&active);
+    // A literal fill has no ramp, so it gets black or white (todo 1587).
+    let on_active = contrast_color(&active)
+        .and_then(|on_active| on_active.resolve(None))
+        .or_else(|| literal_contrast(&active));
 
-    let mut variables: Variables = variables()
+    let variables: Variables = variables()
         .with(PAGINATION_ACTIVE_BACKGROUND, fill_color(&active))
-        .with(PAGINATION_RADIUS, SizeCss::RADIUS.value(radius));
-    if let Some(on_active) = on_active {
-        variables = variables.with(PAGINATION_ACTIVE_COLOR, on_active.resolve(None));
-    }
+        .with(PAGINATION_RADIUS, SizeCss::RADIUS.value(radius))
+        .with(PAGINATION_ACTIVE_COLOR, on_active);
 
     let total = props.total;
     let page = props.page.clamp(1, total.max(1));
@@ -242,7 +243,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let go = move |target: u32, will_disable: bool| {
         if will_disable && onchange.is_some() {
             let mut owed_focus = owed_focus;
-            owed_focus.set(true);
+            owed_focus.set(Some(page));
         }
         if let Some(onchange) = onchange {
             onchange.call(target);
@@ -316,6 +317,14 @@ pub fn Pagination(props: PaginationProps) -> Element {
         .attr("data-slot", PaginationPart::List.slot())
         // Safari with VoiceOver drops list semantics from a `list-style: none` list.
         .attr("role", "list")
+        // Leaving before the page moved (a rejected or slow `onchange`) forgives
+        // the debt; the blur of the control the move disabled comes after (todo 1589).
+        .event("onfocusout", move |_: Event<FocusData>| {
+            let mut owed_focus = owed_focus;
+            if *owed_focus.peek() == Some(page) {
+                owed_focus.set(None);
+            }
+        })
         .render(
             HtmlTag::Ul,
             vec![],
@@ -413,18 +422,18 @@ fn PaginationArrow(
 }
 
 /// Moves focus to the current page when the clicked control disables itself.
-/// The signal is set by that click and spent once `page` changes.
-fn use_pagination_focus_repair(list: ElementHandle, page: u32) -> Signal<bool> {
-    let mut owed_focus = use_signal(|| false);
+/// The signal holds the page that click left, and is spent once `page` changes.
+fn use_pagination_focus_repair(list: ElementHandle, page: u32) -> Signal<Option<u32>> {
+    let mut owed_focus = use_signal(|| None);
 
     use_effect(use_reactive!(|(page,)| {
         // Runs on the render where `page` changed, not the click's.
         let _ = page;
         // `peek`: subscribing would spend the debt before an async `onchange` disables the control.
-        if !*owed_focus.peek() {
+        if owed_focus.peek().is_none() {
             return;
         }
-        owed_focus.set(false);
+        owed_focus.set(None);
         // Chromium keeps a just-disabled button as `activeElement` until its
         // next focus fixup, so it still matches `:focus` here.
         if list.query_selector(":focus:not(:disabled)").is_ok() {

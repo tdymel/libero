@@ -298,6 +298,52 @@ fn text_without_a_key_leaves_no_drifted_cell() {
     });
 }
 
+/// Todos 1597, 1598, 1600: eight cells and seven dashes fit 288px, a reader
+/// skips the dashes, and a phone neither capitalises nor corrects a letter.
+#[test]
+fn eight_letter_cells_fit_a_phone_and_read_as_cells_only() {
+    block_on(async {
+        let fixture = Fixture::open("/pin-field/wide", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[role=group] input').length === 8",
+            "eight cells",
+        )
+        .await
+        .unwrap();
+        let checks: Vec<bool> = page
+            .evaluate(
+                "(() => { const group = document.querySelector('[role=group]'); \
+                 const box = document.getElementById('box').getBoundingClientRect(); \
+                 const cells = [...group.querySelectorAll('input')]; \
+                 const dashes = [...group.children].filter(c => c.tagName === 'SPAN'); \
+                 return [ \
+                   group.scrollWidth <= group.clientWidth, \
+                   [...group.children].every(c => c.getBoundingClientRect().right <= box.right + 0.5), \
+                   dashes.length === 7 && dashes.every(d => d.getAttribute('aria-hidden') === 'true'), \
+                   cells.every(c => c.getAttribute('autocapitalize') === 'off' \
+                     && c.getAttribute('autocorrect') === 'off' && c.spellcheck === false), \
+                 ]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            checks, [true; 4],
+            "[no scroll, inside 288px, dashes hidden, no autocapitalize/correct/spellcheck]"
+        );
+        let tree = ax::snapshot(page, "[role=group]").await.unwrap();
+        assert!(!tree.contains("\"-\""), "a dash is read:\n{tree}");
+
+        fixture.console.assert_clean("pin field wide").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `aria-required` is not allowed on a group (axe `aria-allowed-attr`), so
 /// the cells carry it, and each cell reports the error too.
 #[test]

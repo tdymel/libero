@@ -298,3 +298,21 @@ fn a_total_of_u32_max_renders_on_its_last_page() {
         "the last page is drawn: {html}"
     );
 }
+
+/// Todo 1587: a literal fill has no ramp, so the theme's white stayed on yellow.
+#[test]
+fn a_literal_color_gets_readable_current_page_text() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Pagination { total: 10, page: 4, aria_label: "Pages", color: "#FFD43B", onchange: |_| {} }
+            }
+        }
+    }
+
+    let html = markup(app);
+    assert!(
+        html.contains("--lsx-pagination-active-color:#000000"),
+        "black text on the yellow fill: {html}"
+    );
+}

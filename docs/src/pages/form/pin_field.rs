@@ -55,9 +55,14 @@ pub fn PinFieldPage() -> Element {
             accessibility: a11y()
                 .key(["Left", "Right"], "Moves to the previous or next cell.")
                 .key(["Home", "End"], "Moves to the first or last cell.")
+                .key(["Backspace"], "Clears the cell and moves back, except from the last cell; on an empty cell, only moves back.")
+                .key(["Delete"], "Clears the cell and stays.")
+                .key(["Space"], "Moves to the next cell without typing.")
                 .key(["Tab"], "Moves to the next cell, and past the last one leaves the field, as in any group of inputs.")
                 .handles([
                     "Each cell is a tab stop.",
+                    "The pin has no holes: clearing a middle cell moves the characters after it one cell left, and a character typed past the pin lands in the first empty cell.",
+                    "A separator is decoration, hidden from screen readers.",
                     "Each cell is named for its place, such as \"Character 1 of 6\", from the localization's `PinFieldLabels`, and reads the helper and the error too.",
                 ])
                 .must(["Give the field a `label`, which names the whole group."]),

@@ -413,6 +413,23 @@ fn a_colour_override_sets_the_accent_and_its_contrast() {
     );
 }
 
+/// Todo 1587: a literal accent kept the theme's white contrast, 1.43:1 on yellow.
+#[test]
+fn a_literal_colour_gets_a_readable_contrast() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Stepper::<Stage> { value: Some(Stage::Account), color: "#FFD43B" }
+            }
+        }
+    }
+    let root = attributes_of(&body(&render(app)), "div");
+    assert!(
+        root["style"].contains("--lsx-stepper-color-contrast:#000000"),
+        "{root:?}"
+    );
+}
+
 /// Focus return finds a step by `{id}-step-{n}` and its content by
 /// `{id}-content-{n}`, and a caller's id need not be a CSS identifier. The
 /// lookup selects by attribute (todo 248), which only works while the step

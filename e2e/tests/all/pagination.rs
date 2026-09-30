@@ -129,6 +129,39 @@ fn clicking_the_current_page_emits_no_change() {
     });
 }
 
+/// Todo 1589: a press the caller rejects left its focus debt, so a later page
+/// change pulled focus out of the field the user had moved to. Had it, the
+/// second digit would land on the current page and page 6 never come.
+#[test]
+fn a_rejected_press_owes_no_focus_once_focus_leaves() {
+    block_on(async {
+        let fixture = Fixture::open("/pagination/rejecting", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        const ROUTE: &str = "/pagination/rejecting";
+        pointer::click(page, LAST).await.unwrap();
+        pointer::click(page, "#jump").await.unwrap();
+        keyboard::type_text(page, "5").await.unwrap();
+        wait_for_page(page, 5, ROUTE).await;
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        keyboard::type_text(page, "6").await.unwrap();
+        wait_for_page(page, 6, ROUTE).await;
+        wait::for_js_true(
+            page,
+            "document.activeElement.id === 'jump'",
+            "focus kept in #jump",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("pagination rejecting")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `[id, :disabled, opacity, cursor]` of every button in the nav `id`.
 async fn looks(page: &Page, id: &str) -> Vec<String> {
     page.evaluate(format!(

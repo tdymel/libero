@@ -4,7 +4,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, States, Variables, base_color, base_props, contrast_color, fill_color,
-            variables,
+            literal_contrast, variables,
         },
         layout::use_box,
     },
@@ -141,7 +141,9 @@ pub fn Indicator(props: IndicatorProps) -> Element {
         .with(INDICATOR_COLOR_VAR, fill_color(&color))
         .with(
             INDICATOR_CONTRAST_VAR,
-            contrast.and_then(|c| c.resolve(None)),
+            contrast
+                .and_then(|c| c.resolve(None))
+                .or_else(|| literal_contrast(&color)),
         )
         .with(
             INDICATOR_RADIUS.override_var(),

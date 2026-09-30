@@ -9,7 +9,28 @@ pub const ROUTES: Routes = &[
     ("/pin-field", || rsx! { PinFieldPage {} }),
     ("/pin-field/error", || rsx! { PinFieldErrorPage {} }),
     ("/pin-field/echo", || rsx! { PinFieldEchoPage {} }),
+    ("/pin-field/wide", || rsx! { PinFieldWidePage {} }),
 ];
+
+/// Eight letter cells with a separator, centred as the docs demo is, in a
+/// 320px screen less its margins (todos 1597, 1598, 1600).
+#[component]
+fn PinFieldWidePage() -> Element {
+    let mut pin = use_signal(String::new);
+
+    rsx! {
+        Flex { id: "box", direction: "column", align: "center", max_width: "288px",
+            PinField {
+                label: "Code",
+                length: 8usize,
+                kind: "alphanumeric",
+                separator: rsx! { "-" },
+                value: pin(),
+                oninput: move |next: String| pin.set(next),
+            }
+        }
+    }
+}
 
 /// The typed code echoed in `#echo`, for the shared web/native scenarios.
 #[component]

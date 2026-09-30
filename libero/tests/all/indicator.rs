@@ -182,6 +182,22 @@ fn the_default_fill_is_the_theme_colour() {
     );
 }
 
+/// Todo 1587: a literal fill had no contrast, so its label took the page's ink.
+#[test]
+fn a_literal_fill_gets_a_readable_contrast() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Indicator { color: "#123456", label: 4 } }
+        }
+    }
+
+    let style = attributes_of(&body(&render(app)), "span")["style"].clone();
+    assert!(
+        style.contains("--lsx-indicator-contrast:#FFFFFF;"),
+        "{style}"
+    );
+}
+
 /// The indicator has its own radius scale, whose `xxl` is the round dot the
 /// theme defaults to; a step resolves through it, not the global scale.
 #[test]
