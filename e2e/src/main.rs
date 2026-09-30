@@ -9,6 +9,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::{Context, Result, bail};
 
 mod android_runner;
+mod bindgen;
 mod desktop_runner;
 mod dx;
 mod http;
@@ -31,6 +32,9 @@ const DOCS_TITLE: &str = "libero";
 fn main() -> Result<()> {
     if std::env::var_os(GUARD_ENV).is_some() {
         return guard();
+    }
+    if bindgen::is_wrapper() {
+        return bindgen::run();
     }
     // `sweep` (todo 760) serves the docs site instead of the fixtures and runs
     // `tests/sweep.rs` alone: a report over every page, too slow for the suite.
@@ -121,6 +125,21 @@ fn main() -> Result<()> {
     if std::env::var_os("E2E_RELEASE").is_some() {
         server.arg("--release");
     }
+    let bindgen_report = bindgen::wrap(&mut server, &root, &target_dir)?;
+    // A unit filter builds only that unit's fixture modules: 2 s instead of 25 (1618).
+    let fixtures = match sweep {
+        true => None,
+        false => units::fixtures(&passthrough, &fixture_modules(&root)),
+    };
+    match &fixtures {
+        Some(modules) => {
+            eprintln!("e2e: building only the fixtures {}", modules.join(", "));
+            server.env("E2E_FIXTURES", modules.join(","));
+        }
+        None => {
+            server.env_remove("E2E_FIXTURES");
+        }
+    }
     let mut server = server
         // The env var, since `dx` takes no `--target-dir`.
         .env("CARGO_TARGET_DIR", &target_dir)
@@ -195,8 +214,9 @@ fn main() -> Result<()> {
     guard.tell(&format!("profile {}", profile.display()));
 
     eprintln!(
-        "e2e: server is up after {} s, running the suite",
-        started.elapsed().unwrap_or_default().as_secs()
+        "e2e: server is up after {} s (wasm-bindgen {}), running the suite",
+        started.elapsed().unwrap_or_default().as_secs(),
+        bindgen::outcome(bindgen_report.as_deref())
     );
     // The runner's arguments go to libtest after `--`, so filters and `--nocapture` both work.
     let status = Command::new(env!("CARGO"))
@@ -370,6 +390,18 @@ fn has_sccache() -> bool {
         .arg("--version")
         .output()
         .is_ok_and(|output| output.status.success())
+}
+
+/// The fixture crate's module names, one per `src/*.rs`.
+fn fixture_modules(root: &Path) -> Vec<String> {
+    std::fs::read_dir(root.join("e2e/fixtures/src"))
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.ok()?.file_name().into_string().ok()?;
+            Some(name.strip_suffix(".rs")?.to_string())
+        })
+        .collect()
 }
 
 /// The test names of the `test` binary, from libtest's `--list`.

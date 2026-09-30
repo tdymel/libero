@@ -71,6 +71,74 @@ pub(crate) fn exact(listed: &[String], args: &[String]) -> Vec<String> {
     rest
 }
 
+/// Units whose tests open other modules' fixtures too, from the route literals in their sources.
+const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
+    ("color_picker", &["color_field"]),
+    (
+        "combobox",
+        &[
+            "autocomplete",
+            "cascader",
+            "multi_select",
+            "select",
+            "tags_field",
+        ],
+    ),
+    ("image_cropper", &["file_field"]),
+    ("negative", &["modal", "tabs"]),
+    (
+        "planted",
+        &[
+            "button",
+            "carousel",
+            "collapse",
+            "drawer",
+            "floating_window",
+            "menu",
+            "menubar",
+            "multi_select",
+            "radio_group",
+            "select",
+            "spotlight",
+            "tabs",
+            "tags_field",
+            "tree",
+        ],
+    ),
+    ("slider", &["range_slider"]),
+    ("tree", &["chip"]),
+    ("video", &["audio"]),
+];
+
+/// The fixture modules the filters need (todo 1618), for `E2E_FIXTURES`: each filter's unit
+/// and its extras. None, so all build, when a filter is no `unit::...` or its unit has no
+/// module of its own among `modules`.
+pub(crate) fn fixtures(args: &[String], modules: &[String]) -> Option<Vec<String>> {
+    if args.iter().any(|arg| arg == "--list") {
+        return None;
+    }
+    let (filters, ..) = split(args);
+    if filters.is_empty() {
+        return None;
+    }
+    let mut wanted = Vec::new();
+    for filter in filters {
+        let (unit, _) = filter.split_once("::")?;
+        if !modules.iter().any(|module| module == unit) {
+            return None;
+        }
+        let extras = EXTRA_FIXTURES
+            .iter()
+            .find(|(name, _)| *name == unit)
+            .map_or(&[][..], |(_, extras)| *extras);
+        wanted.push(unit.to_string());
+        wanted.extend(extras.iter().map(|extra| extra.to_string()));
+    }
+    wanted.sort();
+    wanted.dedup();
+    Some(wanted)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,6 +198,20 @@ mod tests {
         assert!(!wanted(&strings(&["table::", "--exact"])));
         assert!(!wanted(&strings(&["table::", "--list"])));
         assert!(!wanted(&strings(&["table", "--test-threads", "2"])));
+    }
+
+    #[test]
+    fn a_unit_filter_builds_its_fixtures_and_extras_only() {
+        let modules = strings(&["divider", "slider", "range_slider", "table"]);
+        let fixtures = |args: &[&str]| fixtures(&strings(args), &modules);
+        assert_eq!(
+            fixtures(&["slider::", "divider::it_draws", "--nocapture"]),
+            Some(strings(&["divider", "range_slider", "slider"]))
+        );
+        assert_eq!(fixtures(&["sticky"]), None);
+        assert_eq!(fixtures(&["rtl_keys::"]), None);
+        assert_eq!(fixtures(&["--nocapture"]), None);
+        assert_eq!(fixtures(&["table::", "--list"]), None);
     }
 
     #[test]

@@ -1,145 +1,21 @@
 //! Fixture app for the E2E suite: one route per fixture, the smallest consumer of one component.
 //! Not the docs pages, whose controls and prose caused false failures (see `codebase/testing`).
 //!
-//! One module per `e2e/tests/all/<unit>.rs` with a `pub const ROUTES`, plus its line in [`FIXTURES`].
+//! One module per `e2e/tests/all/<unit>.rs` with a `pub const ROUTES`; `build.rs` declares it.
 //! Size fixtures to the content, never the viewport (todo 296).
 //!
 //! A lib plus a bin (todo 822): `main.rs` serves the web, the native backend mounts [`route`] in Blitz.
 
-mod accordion;
-mod action_icon;
-mod alert;
-mod audio;
-mod autocomplete;
-mod avatar;
-mod badge;
-mod bottom_navigation;
-mod button;
-mod button_group;
-mod calendar;
-mod carousel;
-mod cascader;
-mod checkbox;
-mod chip;
-mod chrono_field;
-mod code;
-mod collapse;
-mod color_field;
-mod color_picker;
-mod combobox;
+// The shared helpers of the modules left out are unused then.
+#![cfg_attr(fixtures_only, allow(dead_code, unused_imports))]
+
 mod common;
-mod copy;
-mod data_list;
-mod dialog;
-mod direction_toggle;
-mod divider;
 pub mod docs_shell;
-mod drawer;
-mod dropdown_parts;
-mod editor_ime_probe;
-mod editor_probe;
-mod elevation;
-mod field_frame;
-mod field_parts;
-mod field_props;
-mod field_value;
-mod file_field;
-mod floating_window;
-mod flows;
-mod focus_contrast;
-mod focus_return;
-mod focus_start;
-mod focus_trap;
-mod form;
-mod gradient;
-mod grid_zone;
-mod header;
-mod hit_area;
 pub mod home;
-mod hover_card;
-mod icon;
-mod icon_provider;
-mod image;
-mod image_cropper;
-mod image_list;
-mod kanban;
-mod layout;
-mod lightbox;
-mod loader;
-mod long_labels;
-mod mark;
-mod marquee;
-mod menu;
-mod menubar;
-mod modal;
-mod multi_select;
-mod native_select;
-mod nav_link;
-mod negative;
-mod nested_provider;
-mod notifications;
-mod number_field;
-mod pagination;
 pub mod perf;
-mod phone_field;
-mod picker_dialog;
-mod picker_parts;
-mod pictogram;
-mod pin_field;
-mod planted;
-mod popover;
-mod progress_bar;
-mod qr_code;
-mod radio_group;
-mod range_slider;
-mod rating;
-mod refused;
-mod repository;
-mod rich_text_editor;
-mod scroll_area;
-mod scroller;
-mod segmented_control;
-mod select;
-mod shortcut_help;
-mod skeleton;
-mod slider;
-mod sortable;
-mod splitter;
-mod spotlight;
-mod stepper;
-mod switch;
-mod table;
-mod table_detail;
-mod table_groups;
-mod table_overlay;
-mod table_reorder;
-mod table_resize;
-mod table_toolbar;
-mod tabs;
-mod tags_field;
-mod text_field;
-mod textarea;
-mod theme_switcher;
-mod time_picker;
-mod timeline;
-mod tldr;
-mod toolbar;
-mod tooltip;
-mod trailing_button;
-mod transition;
-mod tree;
-mod typography;
-mod use_accessibility;
-mod use_geolocation;
-mod use_hotkeys;
-mod use_intersection;
-mod use_long_press;
-mod use_media_query;
-mod use_system_notification;
-mod use_timers;
-mod use_user_media;
-mod video;
-mod visually_hidden;
+
+// Every other `src/*.rs`, or only the `E2E_FIXTURES` ones (todo 1618).
+include!(concat!(env!("OUT_DIR"), "/fixtures.rs"));
 
 use dioxus::prelude::*;
 use libero::LiberoProvider;
@@ -147,147 +23,14 @@ use libero::LiberoProvider;
 /// A module's fixtures: each path, and the page rendered at it.
 type Routes = &'static [(&'static str, fn() -> Element)];
 
-/// Every module's `ROUTES`. Paths must be unique across them.
-const FIXTURES: &[Routes] = &[
-    accordion::ROUTES,
-    action_icon::ROUTES,
-    alert::ROUTES,
-    audio::ROUTES,
-    autocomplete::ROUTES,
-    avatar::ROUTES,
-    badge::ROUTES,
-    bottom_navigation::ROUTES,
-    button::ROUTES,
-    button_group::ROUTES,
-    calendar::ROUTES,
-    carousel::ROUTES,
-    cascader::ROUTES,
-    checkbox::ROUTES,
-    chip::ROUTES,
-    code::ROUTES,
-    collapse::ROUTES,
-    color_field::ROUTES,
-    color_picker::ROUTES,
-    combobox::ROUTES,
-    copy::ROUTES,
-    data_list::ROUTES,
-    chrono_field::ROUTES,
-    dialog::ROUTES,
-    direction_toggle::ROUTES,
-    divider::ROUTES,
-    docs_shell::ROUTES,
-    drawer::ROUTES,
-    dropdown_parts::ROUTES,
-    editor_ime_probe::ROUTES,
-    editor_probe::ROUTES,
-    elevation::ROUTES,
-    gradient::ROUTES,
-    field_frame::ROUTES,
-    field_parts::ROUTES,
-    field_props::ROUTES,
-    field_value::ROUTES,
-    file_field::ROUTES,
-    image_cropper::ROUTES,
-    floating_window::ROUTES,
-    flows::ROUTES,
-    focus_contrast::ROUTES,
-    focus_return::ROUTES,
-    focus_start::ROUTES,
-    focus_trap::ROUTES,
-    form::ROUTES,
-    grid_zone::ROUTES,
-    header::ROUTES,
-    hit_area::ROUTES,
-    home::ROUTES,
-    hover_card::ROUTES,
-    icon::ROUTES,
-    icon_provider::ROUTES,
-    image::ROUTES,
-    image_list::ROUTES,
-    kanban::ROUTES,
-    layout::ROUTES,
-    lightbox::ROUTES,
-    loader::ROUTES,
-    long_labels::ROUTES,
-    mark::ROUTES,
-    marquee::ROUTES,
-    menu::ROUTES,
-    menubar::ROUTES,
-    modal::ROUTES,
-    multi_select::ROUTES,
-    native_select::ROUTES,
-    nav_link::ROUTES,
-    negative::ROUTES,
-    nested_provider::ROUTES,
-    notifications::ROUTES,
-    number_field::ROUTES,
-    pagination::ROUTES,
-    perf::ROUTES,
-    phone_field::ROUTES,
-    picker_dialog::ROUTES,
-    picker_parts::ROUTES,
-    pictogram::ROUTES,
-    pin_field::ROUTES,
-    planted::ROUTES,
-    popover::ROUTES,
-    progress_bar::ROUTES,
-    qr_code::ROUTES,
-    radio_group::ROUTES,
-    range_slider::ROUTES,
-    rating::ROUTES,
-    refused::ROUTES,
-    repository::ROUTES,
-    rich_text_editor::ROUTES,
-    scroll_area::ROUTES,
-    scroller::ROUTES,
-    segmented_control::ROUTES,
-    select::ROUTES,
-    shortcut_help::ROUTES,
-    skeleton::ROUTES,
-    slider::ROUTES,
-    sortable::ROUTES,
-    spotlight::ROUTES,
-    splitter::ROUTES,
-    stepper::ROUTES,
-    switch::ROUTES,
-    table::ROUTES,
-    table_detail::ROUTES,
-    table_toolbar::ROUTES,
-    table_groups::ROUTES,
-    table_overlay::ROUTES,
-    table_reorder::ROUTES,
-    table_resize::ROUTES,
-    tabs::ROUTES,
-    tags_field::ROUTES,
-    text_field::ROUTES,
-    textarea::ROUTES,
-    theme_switcher::ROUTES,
-    time_picker::ROUTES,
-    timeline::ROUTES,
-    tldr::ROUTES,
-    toolbar::ROUTES,
-    tooltip::ROUTES,
-    trailing_button::ROUTES,
-    transition::ROUTES,
-    tree::ROUTES,
-    typography::ROUTES,
-    use_accessibility::ROUTES,
-    use_geolocation::ROUTES,
-    use_hotkeys::ROUTES,
-    use_intersection::ROUTES,
-    use_long_press::ROUTES,
-    use_media_query::ROUTES,
-    use_system_notification::ROUTES,
-    use_timers::ROUTES,
-    use_user_media::ROUTES,
-    video::ROUTES,
-    visually_hidden::ROUTES,
-];
+/// The hand-declared modules' `ROUTES`; [`GENERATED`] has the rest. Paths must be unique.
+const FIXTURES: &[Routes] = &[docs_shell::ROUTES, home::ROUTES, perf::ROUTES];
 
 /// The page registered at `path`, without the [`Fixture`] wrapper.
 pub fn route(path: &str) -> Option<fn() -> Element> {
     let mut hits = FIXTURES
         .iter()
+        .chain(GENERATED)
         .flat_map(|routes| routes.iter())
         .filter(|(p, _)| *p == path);
     let page = hits.next().map(|(_, page)| *page);
@@ -423,7 +166,14 @@ fn Index() -> Element {
 fn Page(segments: Vec<String>) -> Element {
     let path = format!("/{}", segments.join("/"));
     let Some(page) = route(&path) else {
-        return rsx! { "No fixture at {path}" };
+        let left_out = LEFT_OUT.iter().find(|(p, _)| *p == path);
+        return match (ONLY, left_out) {
+            (Some(only), Some((_, module))) => rsx! {
+                "No fixture at {path}: its module `{module}` is not in E2E_FIXTURES={only}. "
+                "Add it to the unit's EXTRA_FIXTURES in e2e/src/units.rs."
+            },
+            _ => rsx! { "No fixture at {path}" },
+        };
     };
 
     rsx! {

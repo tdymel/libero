@@ -374,14 +374,24 @@ impl Fixture {
             console,
             closes_on_drop,
         };
-        crate::wait::for_selector_kind("fixture-ready", &fixture.page, ready)
-            .await
-            .with_context(|| {
-                format!(
-                    "the fixture at {url} never rendered. If the page is dx's \
-                     \"not serving a web app\" placeholder, the build was still running."
-                )
-            })?;
+        if let Err(error) =
+            crate::wait::for_selector_kind("fixture-ready", &fixture.page, ready).await
+        {
+            // A unit-only build names the module it left out on the page (1618).
+            let body: String = match fixture.page.evaluate("document.body.innerText").await {
+                Ok(result) => result.into_value().unwrap_or_default(),
+                Err(_) => String::new(),
+            };
+            let said = match body.find("No fixture at") {
+                Some(at) => body[at..].trim().to_string(),
+                None => format!(
+                    "If the page is dx's \"not serving a web app\" placeholder, the build \
+                     was still running. The page says: {:.200}",
+                    body.trim()
+                ),
+            };
+            return Err(error.context(format!("the fixture at {url} never rendered. {said}")));
+        }
         if scheme == Scheme::Dark {
             fixture.assert_scheme().await?;
         }

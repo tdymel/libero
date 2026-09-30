@@ -9,17 +9,7 @@ use anyhow::{Context, Result, bail};
 /// older CLI speaks another protocol to the app it builds.
 pub(crate) fn dx(root: &Path) -> Result<std::ffi::OsString> {
     let dx = std::env::var_os("DX").unwrap_or_else(|| "dx".into());
-    let lock = std::fs::read_to_string(root.join("Cargo.lock")).context("read Cargo.lock")?;
-    let wanted = lock
-        .split("\n\n")
-        .find(|entry| entry.contains("\nname = \"dioxus\"\n"))
-        .and_then(|entry| {
-            entry
-                .lines()
-                .find_map(|line| line.strip_prefix("version = "))
-        })
-        .map(|version| version.trim_matches('"').to_string())
-        .context("no dioxus in Cargo.lock")?;
+    let wanted = locked_version(root, "dioxus")?;
     let output = Command::new(&dx)
         .arg("--version")
         .output()
@@ -38,6 +28,20 @@ pub(crate) fn dx(root: &Path) -> Result<std::ffi::OsString> {
         );
     }
     Ok(dx)
+}
+
+/// The version of the package `name` in the workspace's `Cargo.lock`.
+pub(crate) fn locked_version(root: &Path, name: &str) -> Result<String> {
+    let lock = std::fs::read_to_string(root.join("Cargo.lock")).context("read Cargo.lock")?;
+    lock.split("\n\n")
+        .find(|entry| entry.contains(&format!("\nname = \"{name}\"\n")))
+        .and_then(|entry| {
+            entry
+                .lines()
+                .find_map(|line| line.strip_prefix("version = "))
+        })
+        .map(|version| version.trim_matches('"').to_string())
+        .with_context(|| format!("no {name} in Cargo.lock"))
 }
 
 pub(crate) fn workspace_root() -> Result<std::path::PathBuf> {
