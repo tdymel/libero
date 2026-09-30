@@ -58,7 +58,7 @@ pub fn CarouselPage() -> Element {
     rsx! {
         DocPage {
             title: "Carousel",
-            source: "libero/src/components/data_display/carousel.rs",
+            source: "libero/src/components/data_display/carousel",
             markdown: "/md/carousel.md",
             properties: vec![
                 props("Carousel", vec![
@@ -118,7 +118,7 @@ pub fn CarouselPage() -> Element {
                 ]),
             ],
             accessibility: a11y()
-                .key(["Tab"], "Enters the track, then the indicators: each is one tab stop. With `autoplay`, the pause button comes first.")
+                .key(["Tab"], "Enters the track, then Previous and Next, then the indicators as one tab stop. With `autoplay`, the pause button comes first.")
                 .key(["Left", "Right"], "Moves to the previous or next slide, on the track or the indicators.")
                 .key(["Up", "Down"], "The same, when vertical.")
                 .key(["Home", "End"], "Goes to the first or last slide.")

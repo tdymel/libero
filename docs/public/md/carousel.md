@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Carousel;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/carousel.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/carousel>
 Index: [index.md](index.md) lists every other page
 Description: A strip of slides that snaps as it scrolls and knows which one it is on, with controls, indicators and optional autoplay.
 
@@ -152,7 +152,7 @@ explains how parts work.
 
 | Key | Action |
 |---|---|
-| `Tab` | Enters the track, then the indicators: each is one tab stop. With `autoplay`, the pause button comes first. |
+| `Tab` | Enters the track, then Previous and Next, then the indicators as one tab stop. With `autoplay`, the pause button comes first. |
 | `Left` or `Right` | Moves to the previous or next slide, on the track or the indicators. |
 | `Up` or `Down` | The same, when vertical. |
 | `Home` or `End` | Goes to the first or last slide. |

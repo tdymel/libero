@@ -21,12 +21,30 @@ static CAROUSEL_INDICATORS_SX: StaticSx = StaticSx::new(|| {
         .justify_content("center")
         .align_items("center")
         .gap(CAROUSEL_INDICATORS_GAP.value())
+        // Ten dots outgrow 320px; they wrap rather than overflow or shrink
+        // into overlapping hit boxes (1.4.10, 2.5.8, todo 1566).
+        .flex_wrap("wrap")
+        .when("horizontal", sx().row_gap(cross_gap()))
+        .when(
+            "vertical",
+            sx().flex_direction("column").column_gap(cross_gap()),
+        )
         .margin_top("sm")
-        .when("vertical", sx().flex_direction("column"))
 });
 
+/// Wrapped lines sit 24px apart centre to centre, so their hit boxes touch
+/// without overlapping.
+fn cross_gap() -> String {
+    format!(
+        "max({}, calc(24px - {}))",
+        CAROUSEL_INDICATORS_GAP.value(),
+        CAROUSEL_INDICATOR_THICKNESS.value()
+    )
+}
+
 pub(super) static CAROUSEL_INDICATOR_SX: StaticSx = StaticSx::new(|| {
-    sx().padding("0")
+    sx().flex_shrink("0")
+        .padding("0")
         .border_width("0")
         .border_radius("999px")
         // A var, not a literal, so the ring contrasts with the page, not the dot.

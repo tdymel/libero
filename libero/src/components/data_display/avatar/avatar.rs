@@ -5,8 +5,9 @@ use crate::{
     components::{
         common::{
             Glyph, HtmlTag, Input, Part, SVG_FIT, States, Variables, Variant, VariantVars,
-            base_color, base_props, contrast_color, fill_color, parts_enum, svg_fit, svg_fit_sx,
-            svg_fit_variables, text_color, variables, variant_chrome_sx, variant_colors,
+            base_color, base_props, contrast_color, fill_color, names_itself, parts_enum, svg_fit,
+            svg_fit_sx, svg_fit_variables, text_color, use_name_warning, variables,
+            variant_chrome_sx, variant_colors,
         },
         layout::{Box, use_box},
     },
@@ -171,6 +172,10 @@ base_props! {
 pub fn Avatar(props: AvatarProps) -> Element {
     let theme = use_theme();
     let mut errored_src = use_signal(|| None::<String>);
+    use_name_warning(
+        !props.name.trim().is_empty() || props.alt.is_some() || names_itself(&props.attributes),
+        "Avatar: an empty `name` and no `alt`, so it is announced as an unnamed image. Set `alt: \"\"` if it is decorative.",
+    );
 
     let size = props.size.copied_or(theme.avatar.size);
     let variant = props.variant.copied_or(theme.avatar.variant);

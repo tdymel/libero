@@ -292,7 +292,7 @@ pub(crate) const SHARING: &[&str] = &[
 ];
 
 /// Only the ASCII digits, which is every path's first step: a pasted
-/// `+1 (213) 373-4253` and a typed `2133734253` have to reach the same value.
+/// `(213) 373-4253` and a typed `2133734253` have to reach the same value.
 pub(crate) fn digits_of(text: &str) -> String {
     text.chars().filter(char::is_ascii_digit).collect()
 }
@@ -304,6 +304,25 @@ pub(crate) fn to_e164(country: &Country, national: &str) -> String {
     match national.is_empty() {
         true => String::new(),
         false => format!("+{}{national}", country.dial),
+    }
+}
+
+/// The digits after a leading `+` or `00`, or `None` for a national number:
+/// `+49 171 ...` pasted from a contact card carries its own dial code.
+pub(crate) fn international(text: &str) -> Option<String> {
+    let text = text.trim_start();
+    text.strip_prefix('+')
+        .or_else(|| text.strip_prefix("00"))
+        .map(digits_of)
+}
+
+/// The E.164 a typed text stands for: its own dial code when it has one, else
+/// `country`'s.
+pub(crate) fn value_of(country: &Country, text: &str) -> String {
+    match international(text) {
+        Some(digits) if digits.is_empty() => String::new(),
+        Some(digits) => format!("+{digits}"),
+        None => to_e164(country, text),
     }
 }
 

@@ -515,7 +515,7 @@ pub fn NotificationsPage() -> Element {
     rsx! {
         DocPage {
             title: "Notifications",
-            source: "libero/src/components/feedback/notifications.rs",
+            source: "libero/src/components/feedback/notifications/notifications.rs",
             markdown: "/md/notifications.md",
             properties: vec![
                 props("Notifications", vec![

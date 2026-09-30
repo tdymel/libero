@@ -127,7 +127,7 @@ pub fn LightboxPage() -> Element {
     rsx! {
         DocPage {
             title: "Lightbox",
-            source: "libero/src/components/overlay/use_lightbox.rs",
+            source: "libero/src/components/overlay/lightbox/use_lightbox.rs",
             markdown: "/md/lightbox.md",
             properties: vec![
                 props("LightboxOptions", vec![

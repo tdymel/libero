@@ -21,7 +21,7 @@ use crate::{
     },
     localization::fill,
     platform::ElementApi,
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
     theme::{FOCUS_RING_WIDTH, Size},
 };
 
@@ -55,14 +55,20 @@ static PICKER_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             format!("& > [data-slot='{}']", PhoneFieldPart::Dial.slot()),
-            sx().color("text-dimmed"),
+            ltr_isolate().color("text-dimmed"),
         )
         .when("disabled", sx().cursor("not-allowed"))
 });
 
 /// The static prefix `country_select: false` draws instead of the picker -
 /// the same `+49`, with no tab stop and nothing to open.
-static PREFIX_SX: StaticSx = StaticSx::new(|| sx().white_space("nowrap"));
+static PREFIX_SX: StaticSx = StaticSx::new(|| ltr_isolate().white_space("nowrap"));
+
+/// A dial code reads left to right in every script: unisolated, `dir=rtl`
+/// draws `+49` as `49+` (todo 1565).
+fn ltr_isolate() -> Sx {
+    sx().direction("ltr").unicode_bidi("isolate")
+}
 
 /// The search box above the rows, copied from `SelectCore`'s. It sits outside
 /// the field frame, so it carries its own chrome.
@@ -104,7 +110,7 @@ static ROW_SX: StaticSx = StaticSx::new(|| {
                 .overflow("hidden")
                 .text_overflow("ellipsis"),
         )
-        .selector("& > [data-slot='dial']", sx().color("text-dimmed"))
+        .selector("& > [data-slot='dial']", ltr_isolate().color("text-dimmed"))
         // Dimmed text misses 4.5:1 on the selected tint; the row's own colour reads.
         .selector(
             ":where([aria-selected='true']) & > [data-slot='dial']",
@@ -215,7 +221,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let text = use_signal(String::new);
     let display = match &current {
         None => text(),
-        Some(value) if countries::to_e164(country, &text()) == *value => text(),
+        Some(value) if countries::value_of(country, &text()) == *value => text(),
         Some(value) => countries::national_of(value, country)
             .map(|national| countries::group(country, &national).unwrap_or(national))
             .unwrap_or_default(),
@@ -224,7 +230,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let typed = countries::digits_of(&display);
     // The pick closure below outlives `display`, which the input takes.
     let shown = display.clone();
-    let e164 = countries::to_e164(country, &typed);
+    let e164 = countries::value_of(country, &display);
 
     let state = use_combobox();
     let picker_element = use_element();
@@ -425,6 +431,8 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             display,
             text,
             country,
+            picked,
+            oncountrychange,
             placeholder: props.placeholder,
             disabled,
             readonly,
@@ -462,6 +470,16 @@ pub(crate) fn country_for(value: Option<&str>, picked: &'static Country) -> &'st
         return picked;
     }
     countries::by_dial(&digits).unwrap_or(picked)
+}
+
+/// A typed `+49 ...` or `0049 ...` whose dial code names a country: that
+/// country and the national rest. The pick wins a shared code, as above.
+pub(crate) fn dialled(text: &str, picked: &'static Country) -> Option<(&'static Country, String)> {
+    let digits = countries::international(text)?;
+    let country = country_for(Some(&digits), picked);
+    digits
+        .strip_prefix(country.dial)
+        .map(|national| (country, national.to_string()))
 }
 
 /// What the country list is drawn from.
@@ -741,6 +759,9 @@ struct Entry {
     display: String,
     text: Signal<String>,
     country: &'static Country,
+    /// Moved by a typed dial code, as by a pick.
+    picked: Signal<&'static Country>,
+    oncountrychange: Option<EventHandler<String>>,
     placeholder: Option<String>,
     disabled: bool,
     readonly: bool,
@@ -759,6 +780,8 @@ fn phone_input<F: Fn(String) + Clone + 'static>(
         display,
         mut text,
         country,
+        mut picked,
+        oncountrychange,
         placeholder,
         disabled,
         readonly,
@@ -773,6 +796,8 @@ fn phone_input<F: Fn(String) + Clone + 'static>(
         // The dial code is the picker's, so the browser should offer the
         // national part alone.
         .attr_default("autocomplete", "tel-national")
+        // The number and its grouping read left to right under `dir=rtl` too.
+        .attr_default("dir", "ltr")
         // The hidden input below is what posts - this one holds the text.
         .attr("value", display)
         .attr("data-controlled", true)
@@ -782,10 +807,25 @@ fn phone_input<F: Fn(String) + Clone + 'static>(
         .attr("required", required)
         .event("oninput", move |event: FormEvent| {
             let raw = event.value();
-            if let Some(emit) = &input_emit {
-                emit(countries::to_e164(country, &raw));
+            // A number with its own dial code moves the picker and keeps only
+            // the national part, or the code would post twice (todo 1562).
+            let Some((next, national)) = dialled(&raw, country) else {
+                if let Some(emit) = &input_emit {
+                    emit(countries::value_of(country, &raw));
+                }
+                text.set(raw);
+                return;
+            };
+            if next.iso != country.iso {
+                picked.set(next);
+                if let Some(oncountrychange) = &oncountrychange {
+                    oncountrychange.call(next.iso.to_string());
+                }
             }
-            text.set(raw);
+            if let Some(emit) = &input_emit {
+                emit(countries::to_e164(next, &national));
+            }
+            text.set(countries::group(next, &national).unwrap_or(national));
         })
         // Grouped on blur: regrouping per keystroke moves the caret, and
         // `ElementApi` cannot put it back.
@@ -911,6 +951,24 @@ mod tests {
                 .count();
             assert_eq!(main, 1, "+{} has {main} main countries", entry.dial);
         }
+    }
+
+    /// A pasted `+49 ...` or `0049 ...` moves the field to that country and
+    /// keeps the national part, so the dial code posts once (todo 1562).
+    #[test]
+    fn a_number_with_its_own_dial_code_moves_the_country() {
+        let (to, national) = dialled("+49 171 1234567", country("DE")).expect("a dial code");
+        assert_eq!((to.iso, national.as_str()), ("DE", "1711234567"));
+        let (to, national) = dialled("0049 171 1234567", country("US")).expect("a dial code");
+        assert_eq!((to.iso, national.as_str()), ("DE", "1711234567"));
+        // A shared code keeps a pick that fits it.
+        let (to, _) = dialled("+1 (242) 555-0123", country("US")).expect("a dial code");
+        assert_eq!(to.iso, "US");
+        // Half a code names nothing yet; the value is what was typed so far.
+        assert_eq!(dialled("+4", country("DE")), None);
+        assert_eq!(countries::value_of(country("DE"), "+4"), "+4");
+        assert_eq!(countries::value_of(country("DE"), "+"), "");
+        assert_eq!(dialled("171 1234567", country("DE")), None);
     }
 
     /// An empty value never drags the field off the country it is on.
