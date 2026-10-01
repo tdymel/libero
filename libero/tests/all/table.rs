@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -135,9 +135,7 @@ struct Item {
 
 /// The attributes of the table's `ScrollArea` root.
 fn region(html: &str) -> BTreeMap<String, String> {
-    let at = html.find("data-table-scroll").expect("no scroll area");
-    let start = html[..at].rfind("<div").unwrap();
-    attributes_of(&html[start..], "div")
+    tag_with(html, "data-table-scroll")
 }
 
 #[test]
@@ -1222,11 +1220,13 @@ fn a_windowed_table_renders_a_window_and_counts_every_row() {
 
     assert_eq!(attributes_of(&html, "table")["aria-rowcount"], "1001");
     // The server has no viewport: a 1080px window, never all 1000 rows.
-    let rows = body.matches("<tr").count();
-    assert!((2..100).contains(&rows), "{rows} rows rendered");
-    assert!(body.contains("aria-rowindex=\"1\""));
-    assert!(body.contains("aria-rowindex=\"2\""));
-    assert!(!body.contains("aria-rowindex=\"1001\""));
+    let rows: Vec<String> = tags_with(&body, "<tr")
+        .iter()
+        .map(|row| row["aria-rowindex"].clone())
+        .collect();
+    // The header and the 32 rows of the server's window, never all 1000.
+    let expected: Vec<String> = (1..=33).map(|index: u32| index.to_string()).collect();
+    assert_eq!(rows, expected, "the header, then one window from the top");
 }
 
 /// 1156-5d: the live region that says appended rows is there before the first batch.
@@ -1322,4 +1322,94 @@ fn an_empty_windowed_table_counts_its_empty_row() {
 
     assert_eq!(attributes_of(&html, "table")["aria-rowcount"], "2");
     assert!(body(&html).contains("aria-rowindex=\"2\""), "{html}");
+}
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::body;
+    use crate::dispatch::*;
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Table, column},
+    };
+
+    /// Todo 428: the sort stays on its column when the columns move.
+    #[test]
+    fn a_table_sort_follows_its_column_through_a_reorder() {
+        #[derive(Clone, PartialEq)]
+        struct Person {
+            name: &'static str,
+            age: u32,
+        }
+
+        fn app() -> Element {
+            let layout = use_context_provider(|| Signal::new(vec!["Name", "Age"]));
+            let columns = layout()
+                .into_iter()
+                .map(|header| match header {
+                    "Name" => column("Name")
+                        .value(|p: &Person| p.name.to_string())
+                        .sortable(),
+                    _ => column("Age").value(|p: &Person| p.age).sortable(),
+                })
+                .collect::<Vec<_>>();
+
+            rsx! {
+                LiberoProvider {
+                    Table {
+                        data: vec![
+                            Person { name: "Grace", age: 45 },
+                            Person { name: "Linus", age: 28 },
+                            Person { name: "Ada", age: 36 },
+                        ],
+                        columns,
+                    }
+                }
+            }
+        }
+
+        fn row_order(html: &str) -> Vec<&'static str> {
+            let mut names = ["Grace", "Linus", "Ada"];
+            names.sort_by_key(|name| html.find(&format!(">{name}<")).expect("a missing row"));
+            names.to_vec()
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let age = find.element("click", "text", "Age");
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), age);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        assert_eq!(
+            row_order(&dioxus_ssr::render(&dom)),
+            ["Linus", "Ada", "Grace"]
+        );
+
+        let mut layout = dom.in_scope(ScopeId::APP, consume_context::<Signal<Vec<&str>>>);
+        dom.in_runtime(|| layout.set(vec!["Age", "Name"]));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(row_order(&html), ["Linus", "Ada", "Grace"]);
+        assert!(
+            html.contains(
+                r#"aria-sort="ascending"><button type="button" data-sort-button=true>Age"#
+            ),
+            "{html}"
+        );
+
+        // Without its column the sort is gone, not moved onto "Name".
+        dom.in_runtime(|| layout.set(vec!["Name"]));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(row_order(&html), ["Grace", "Linus", "Ada"]);
+        assert!(
+            html.contains(r#"<button type="button" data-sort-button=true>Name"#),
+            "{html}"
+        );
+        assert!(!body(&html).contains("aria-sort"), "{html}");
+    }
 }

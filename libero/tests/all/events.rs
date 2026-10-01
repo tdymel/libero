@@ -3,14 +3,9 @@
 //! that conversion type-checks and passes an SSR test, but panics on the first
 //! real click - see `BoxBuilder::event`.
 
-use crate::common::body;
-use crate::dispatch::*;
 use dioxus::core::{AttributeValue, ElementId, WriteMutations};
 use dioxus::prelude::*;
-use libero::{
-    LiberoProvider,
-    components::{Box, Table, column},
-};
+use libero::{LiberoProvider, components::Box};
 
 /// Every listener name registered during a rebuild, in order.
 #[derive(Default)]
@@ -62,81 +57,4 @@ fn global_attributes_carry_event_listeners_through_the_spread() {
             listeners.0
         );
     }
-}
-
-/// Todo 428: the sort stays on its column when the columns move.
-#[test]
-fn a_table_sort_follows_its_column_through_a_reorder() {
-    #[derive(Clone, PartialEq)]
-    struct Person {
-        name: &'static str,
-        age: u32,
-    }
-
-    fn app() -> Element {
-        let layout = use_context_provider(|| Signal::new(vec!["Name", "Age"]));
-        let columns = layout()
-            .into_iter()
-            .map(|header| match header {
-                "Name" => column("Name")
-                    .value(|p: &Person| p.name.to_string())
-                    .sortable(),
-                _ => column("Age").value(|p: &Person| p.age).sortable(),
-            })
-            .collect::<Vec<_>>();
-
-        rsx! {
-            LiberoProvider {
-                Table {
-                    data: vec![
-                        Person { name: "Grace", age: 45 },
-                        Person { name: "Linus", age: 28 },
-                        Person { name: "Ada", age: 36 },
-                    ],
-                    columns,
-                }
-            }
-        }
-    }
-
-    fn row_order(html: &str) -> Vec<&'static str> {
-        let mut names = ["Grace", "Linus", "Ada"];
-        names.sort_by_key(|name| html.find(&format!(">{name}<")).expect("a missing row"));
-        names.to_vec()
-    }
-
-    dioxus::html::set_event_converter(Box::new(TestConverter));
-    let mut dom = VirtualDom::new(app);
-    let mut find = FindClickListener::default();
-    dom.rebuild(&mut find);
-    let age = find.element("click", "text", "Age");
-
-    dom.runtime()
-        .handle_event("click", Event::new(click_event(), true), age);
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    assert_eq!(
-        row_order(&dioxus_ssr::render(&dom)),
-        ["Linus", "Ada", "Grace"]
-    );
-
-    let mut layout = dom.in_scope(ScopeId::APP, consume_context::<Signal<Vec<&str>>>);
-    dom.in_runtime(|| layout.set(vec!["Age", "Name"]));
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    let html = dioxus_ssr::render(&dom);
-    assert_eq!(row_order(&html), ["Linus", "Ada", "Grace"]);
-    assert!(
-        html.contains(r#"aria-sort="ascending"><button type="button" data-sort-button=true>Age"#),
-        "{html}"
-    );
-
-    // Without its column the sort is gone, not moved onto "Name".
-    dom.in_runtime(|| layout.set(vec!["Name"]));
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    let html = dioxus_ssr::render(&dom);
-    assert_eq!(row_order(&html), ["Grace", "Linus", "Ada"]);
-    assert!(
-        html.contains(r#"<button type="button" data-sort-button=true>Name"#),
-        "{html}"
-    );
-    assert!(!body(&html).contains("aria-sort"), "{html}");
 }

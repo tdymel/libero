@@ -1,4 +1,6 @@
-use crate::common::{body, render};
+use std::collections::BTreeMap;
+
+use crate::common::{body, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -98,14 +100,27 @@ fn row_reorder_adds_a_handle_column_with_move_buttons() {
     assert!(body.contains("Move Ada up"), "{body}");
     assert!(!body.contains("transform"), "{body}");
     // The first row has nothing above. "Down" waits for the rows to mount and count.
-    assert!(
-        body.contains("aria-label=\"Move Ada up\" disabled"),
-        "{body}"
-    );
-    assert!(
-        !body.contains("aria-label=\"Move Grace up\" disabled"),
-        "{body}"
-    );
+    assert!(tag_with(&body, r#"aria-label="Move Ada up""#).contains_key("disabled"));
+    assert!(!tag_with(&body, r#"aria-label="Move Grace up""#).contains_key("disabled"));
+}
+
+/// Every reorder control: each row's handle and its up and down moves.
+fn reorder_controls(body: &str) -> Vec<BTreeMap<String, String>> {
+    tags_with(body, "data-reorder-")
+        .into_iter()
+        .filter(|tag| {
+            tag.contains_key("data-reorder-handle") || tag.contains_key("data-reorder-move")
+        })
+        .collect()
+}
+
+/// Whether each reorder control is disabled, in document order.
+fn disabled_controls(body: &str) -> Vec<bool> {
+    let controls = reorder_controls(body);
+    controls
+        .iter()
+        .map(|control| control.contains_key("disabled"))
+        .collect()
 }
 
 /// The shown order is a view over `data` while sorted: nothing moves (4b).
@@ -129,7 +144,7 @@ fn row_reorder_is_off_while_sorted() {
     let html = render(app);
     let body = body(&html);
 
-    assert_eq!(body.matches(" disabled").count(), 9, "{body}");
+    assert_eq!(disabled_controls(&body), [true; 9], "{body}");
 }
 
 /// A column filter hides rows from the slots: nothing moves (1396).
@@ -155,7 +170,7 @@ fn row_reorder_is_off_under_a_column_filter() {
 
     // Two rows left, three controls each.
     assert!(!body.contains(">Linus<"), "{body}");
-    assert_eq!(body.matches(" disabled").count(), 6, "{body}");
+    assert_eq!(disabled_controls(&body), [true; 6], "{body}");
 }
 
 /// 1395: a column menu brings a pointer-only drag grip to each unpinned header.
