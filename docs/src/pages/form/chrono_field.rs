@@ -63,6 +63,8 @@ fn moment(day: u32, hour: u32) -> Option<NaiveDateTime> {
 
 #[component]
 pub fn ChronoFieldPage() -> Element {
+    let theme = libero::use_theme();
+
     rsx! {
         DocPage {
             title: "ChronoField",
@@ -70,8 +72,8 @@ pub fn ChronoFieldPage() -> Element {
             markdown: "/md/chrono_field.md",
             properties: vec![
                 props("ChronoField<V: DateValue>", vec![
-                    prop("size", "Size").default("md").doc("Control height, font size and the dropdown's picker."),
-                    prop("radius", "Size").default("sm").doc("Corner radius of the frame."),
+                    prop("size", "Size").default(theme.chrono_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
+                    prop("radius", "Size").default(theme.chrono_field.radius.as_str()).doc("Corner radius of the frame."),
                     prop("value", "Option<V>").doc("The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`."),
                     prop("onchange", "EventHandler<Option<V>>")
                         .doc("Called on every pick, and when typed text is committed on blur or Enter. Emptied text commits `None`."),
@@ -84,14 +86,14 @@ pub fn ChronoFieldPage() -> Element {
                     prop("max", "V::Bound").doc("The latest value accepted. For a range, the latest end. A duration's is 99 h 59 min 59 s when unset."),
                     prop("exclude_date", "Callback<NaiveDate, bool>").doc("Days that are not accepted, on top of `min` and `max`. Ignored for a time, a month and a year."),
                     prop("today", "NaiveDate").doc("The day marked as today, and the year used when typed text has none. Unset, the platform clock answers after mount."),
-                    prop("variant", "TimePickerVariant").default("analog").doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
+                    prop("variant", "TimePickerVariant").default(theme.time_picker.variant.as_str()).doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("Seconds in the text and on the clock, or a duration's seconds column."),
-                    prop("step", "u8").default("5").doc("Minutes between the offered minutes, on a clock or a duration's minutes column."),
+                    prop("step", "u8").default(theme.time_picker.step.to_string()).doc("Minutes between the offered minutes, on a clock or a duration's minutes column."),
                     prop("twelve_hour", "bool").doc("A 12-hour clock with AM and PM. Defaults to whether the time format is one."),
-                    prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
-                    prop("days", "usize").default("7").doc("Days in the mini calendar's row."),
+                    prop("calendar", "CalendarVariant").default(theme.chrono_picker.calendar.as_str()).doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
+                    prop("days", "usize").default(theme.chrono_picker.days.to_string()).doc("Days in the mini calendar's row."),
                     prop("columns", "usize").default("1, or 2 for a range").doc("Months side by side."),
-                    prop("close_on_change", "bool").default("true").doc("Picking a day, or a range's second end, closes the dropdown."),
+                    prop("close_on_change", "bool").default(theme.chrono_field.close_on_change.to_string()).doc("Picking a day, or a range's second end, closes the dropdown."),
                     prop("name", "FieldName<Option<V>>").doc("What the field posts as, the value in ISO 8601 whatever the text shows. A path also binds it to the surrounding `Form`'s value when it has no `onchange`."),
                     prop("validate", "Validators<Option<V>>").doc("Rules over the value, shown once the field loses focus or its form is submitted."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),

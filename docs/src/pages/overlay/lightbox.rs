@@ -4,6 +4,7 @@ use libero::{
     components::{Box, Code, Image, Kbd, LightboxPart, Text},
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     sx::{StaticSx, sx},
+    use_theme,
 };
 
 /// The `ImageList` page's six pictures, in different sizes, so the stage
@@ -124,6 +125,8 @@ fn LightboxDemo(
 
 #[component]
 pub fn LightboxPage() -> Element {
+    let theme = use_theme();
+
     rsx! {
         DocPage {
             title: "Lightbox",
@@ -132,7 +135,7 @@ pub fn LightboxPage() -> Element {
             properties: vec![
                 props("LightboxOptions", vec![
                     prop("zoom", "bool").default("true").doc("Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. On desktop and mobile a drag stops once the pointer leaves the picture."),
-                    prop("max_zoom", "Option<f64>").default("8.0").doc("Upper scale bound. Unset, the theme's."),
+                    prop("max_zoom", "Option<f64>").default(format!("{:.1}", theme.lightbox.max_zoom)).doc("Upper scale bound. Unset, the theme's."),
                     prop("thumbnails", "bool").default("true").doc("The strip under the stage. Never shown for one picture."),
                     prop("captions", "bool").default("true").doc("Shows each item's caption."),
                     prop("controls", "bool").default("true").doc("The previous and next arrows."),

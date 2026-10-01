@@ -48,7 +48,7 @@ let menus = vec![
 
 fn wrap(_: &DemoValues, source: &str) -> String {
     format!(
-        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"md\",\n{}        Text {{ size: \"sm\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
+        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"md\",\n{}        Text {{ size: \"sm\", role: \"status\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
         indent(&indent(source))
     )
 }
@@ -146,7 +146,7 @@ fn MenubarDemo(
                 radius,
                 loop_focus,
             }
-            Text { size: "sm", "Last chosen: {last()}" }
+            Text { size: "sm", role: "status", "Last chosen: {last()}" }
         }
     }
 }

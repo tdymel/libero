@@ -7,6 +7,8 @@ use libero::{
         ActionIcon, Chip, FieldStatus, MultiSelect, OptionItem, OptionList, Options,
         SelectFilterArgs, SelectOptionArgs, SelectionArgs, Text,
     },
+    hooks::use_localization,
+    localization::{Localization, fill},
     sx::sx,
 };
 
@@ -66,16 +68,20 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! 
 // snippet: after TOPPING_ENUM
 // snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
 // snippet: let mut value = use_signal(Vec::<Topping>::new);
+// snippet: let words = use_localization();
 // snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
 const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rsx! {
-    Chip { size: "xs", variant: "outlined",
+    // Unclipped, so the x's 24px hit area reaches past the pill.
+    Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
         // The chip is the caller's, remove control included. The keys stay
         // the control's either way.
         trailing: rsx! {
+            // Keeps focus in the field, and the click off the field.
             span { onmousedown: move |event| event.prevent_default(),
                 onclick: move |event| event.stop_propagation(),
                 ActionIcon {
-                    aria_label: "Remove {s.value.label()}",
+                    // `words` is `use_localization()`, read in the component.
+                    aria_label: fill(words.common.remove, &[("label", &s.value.label())]),
                     size: "16px",
                     // A `<button>` inherits no colour of its own.
                     sx: sx().color("inherit"),
@@ -224,16 +230,17 @@ fn topping_row(o: SelectOptionArgs<Topping>) -> Element {
 
 /// The chip's inside is the caller's, the remove control with it - `remove` on
 /// the args is the wiring. The keyboard stays `MultiSelect`'s either way.
-fn topping_selection(s: SelectionArgs<Topping>) -> Element {
+fn topping_selection(words: &'static Localization, s: SelectionArgs<Topping>) -> Element {
     let label = s.value.label();
+    let remove_label = fill(words.common.remove, &[("label", &label)]);
     rsx! {
-        Chip { size: "xs", variant: "outlined",
+        Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
             trailing: rsx! {
                 span {
                     onmousedown: move |event: MouseEvent| event.prevent_default(),
                     onclick: move |event: MouseEvent| event.stop_propagation(),
                     ActionIcon {
-                        aria_label: "Remove {label}",
+                        aria_label: remove_label,
                         size: "16px",
                         sx: sx().color("inherit"),
                         tabindex: "-1",
@@ -250,6 +257,7 @@ fn topping_selection(s: SelectionArgs<Topping>) -> Element {
 #[component]
 pub fn MultiSelectPage() -> Element {
     let mut value = use_signal(|| vec![Topping::Cheese, Topping::Olives]);
+    let words = use_localization();
 
     rsx! {
         DocPage {
@@ -339,6 +347,7 @@ pub fn MultiSelectPage() -> Element {
                 }
             },
             // snippet: let mut value = use_signal(Vec::<Topping>::new);
+            // snippet: let words = use_localization();
             Demo {
                 component: "MultiSelect",
                 children_text: "",
@@ -444,7 +453,7 @@ pub fn MultiSelectPage() -> Element {
                         },
                         options: topping_options(&values),
                         option: custom(&values).then(|| Callback::new(topping_row)),
-                        selection: custom(&values).then(|| Callback::new(topping_selection)),
+                        selection: custom(&values).then(|| Callback::new(move |s| topping_selection(words, s))),
                         searchable: (values.str("searchable") == "true").then_some(true),
                         search_placeholder: "Search toppings",
                         filter: filtering(&values).then(|| Callback::new(topping_filter)),

@@ -86,6 +86,7 @@ pub fn PasswordFieldPage() -> Element {
                 component: "PasswordField",
                 children_text: "",
                 fixed: vec![
+                    "autocomplete: \"current-password\"".to_string(),
                     "value: value()".to_string(),
                     "oninput: move |next| value.set(next)".to_string(),
                 ],
@@ -154,6 +155,7 @@ pub fn PasswordFieldPage() -> Element {
                         reveal_button: values.str("reveal_button") == "true",
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
+                        autocomplete: "current-password",
                         value: value(),
                         oninput: move |next| value.set(next),
                     }

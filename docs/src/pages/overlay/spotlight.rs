@@ -219,7 +219,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
          rsx! {{\n    \
              Button {{ variant: \"outlined\", onclick: move |_| {handle}.open(), \"Show\" }}\n\
          {hint}    \
-             Text {{ size: \"sm\", \"Last run: {{last()}}\" }}\n\
+             Text {{ size: \"sm\", role: \"status\", \"Last run: {{last()}}\" }}\n\
          }}",
         indent(&options.join("\n")),
     )
@@ -333,7 +333,7 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
                     " toggles it"
                 }
             }
-            Text { size: "sm", "Last run: {last()}" }
+            Text { size: "sm", role: "status", "Last run: {last()}" }
         }
     }
 }

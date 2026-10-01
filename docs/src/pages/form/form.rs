@@ -55,8 +55,9 @@ fn SignupForm() -> Element {
                 validate: not_empty.error("Accept the terms to continue."),
             }
 __BUTTONS__
-            if sent() {
-                Text { "Account created." }
+            // Mounted before the submit, so a screen reader hears the text it gains.
+            Text { role: "status",
+                if sent() { "Account created." }
             }
         }
     }
@@ -77,7 +78,7 @@ const COMPANY_FIELDS: &str = r#"
 const SUBMIT_BUTTON: &str = r#"            Button { r#type: "submit", "Create account" }"#;
 
 // snippet: ignore - spliced into `FORM_CODE`
-const HANDLE_BUTTONS: &str = r#"            Text { if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
+const HANDLE_BUTTONS: &str = r#"            Text { role: "status", if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
             Flex { gap: "sm",
                 Button { r#type: "submit", "Create account" }
                 CheckButton {}
@@ -293,7 +294,7 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
                 validate: not_empty.error("Accept the terms to continue."),
             }
             if handle {
-                Text { if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
+                Text { role: "status", if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
                 Flex { gap: "sm",
                     Button { r#type: "submit", "Create account" }
                     CheckButton {}
@@ -302,8 +303,8 @@ fn SignupForm(summary_title: bool, handle: bool, company: bool) -> Element {
             } else {
                 Button { r#type: "submit", "Create account" }
             }
-            if sent() {
-                Text { "Account created." }
+            Text { role: "status",
+                if sent() { "Account created." }
             }
         }
     }
@@ -340,7 +341,7 @@ fn EmailField(
         ))
         .collect();
     rsx! {
-        TextField { r#type: "email", label, name, validate: rules, placeholder: "you@example.com" }
+        TextField { r#type: "email", autocomplete: "email", label, name, validate: rules, placeholder: "you@example.com" }
     }
 }
 
@@ -349,17 +350,22 @@ fn EmailField(
 fn NewPasswordFieldset(#[props(into)] path: FieldName<NewPassword>) -> Element {
     rsx! {
         Fieldset {
-            label: "Password",
+            label: "Choose a password",
             path,
             validate: (|p: &NewPassword| p.value == p.repeat)
                 .error("The passwords differ.")
                 .on([NewPassword::FIELDS.repeat()]),
             PasswordField {
-                label: "Password",
+                label: "New password",
+                autocomplete: "new-password",
                 name: NewPassword::FIELDS.value(),
                 validate: min_length(8).error("Use at least 8 characters."),
             }
-            PasswordField { label: "Repeat password", name: NewPassword::FIELDS.repeat() }
+            PasswordField {
+                label: "Repeat password",
+                autocomplete: "new-password",
+                name: NewPassword::FIELDS.repeat(),
+            }
         }
     }
 }

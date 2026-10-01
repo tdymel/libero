@@ -188,12 +188,12 @@ fn PinFieldDemo(values: DemoValues) -> Element {
                 },
                 oncomplete: move |_| verified.set(true),
             }
-            Text {
-                size: "sm",
-                match verified() {
-                    true => "Complete, oncomplete fired once.".to_string(),
-                    false => format!("{} of {length} entered.", value().chars().count()),
-                }
+            // The count stays silent per key; only the completion is announced.
+            if !verified() {
+                Text { size: "sm", "{value().chars().count()} of {length} entered." }
+            }
+            Text { size: "sm", role: "status",
+                if verified() { "Complete, oncomplete fired once." }
             }
         }
     }

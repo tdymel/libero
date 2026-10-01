@@ -83,6 +83,7 @@ pub fn CheckboxPage() -> Element {
                     " binds it."
                 }
             },
+            // snippet: let mut ticked = use_signal(|| true);
             Demo {
                 component: "Checkbox",
                 children_text: "",
@@ -109,16 +110,13 @@ pub fn CheckboxPage() -> Element {
                             "error" => vec!["status: \"Accept the terms to continue.\"".to_string()],
                             _ => vec![],
                         }),
-                    // Controlled state is `checked` + `onchange`; the
-                    // library warns about one without the other.
-                    Control::switch("checked").default("true").code(|_, values| {
-                        match values.str("checked").as_str() {
-                            "true" => vec![
-                                "checked: true".to_string(),
-                                "onchange: move |_| {}".to_string(),
-                            ],
-                            _ => vec!["onchange: move |_| {}".to_string()],
-                        }
+                    // `checked` + `onchange` as a pair (the library warns on one alone); the
+                    // preview writes `onchange` back into this control.
+                    Control::switch("checked").default("true").code(|_, _| {
+                        vec![
+                            "checked: ticked()".to_string(),
+                            "onchange: move |next| ticked.set(next)".to_string(),
+                        ]
                     }),
                     Control::switch("indeterminate"),
                     Control::switch("label").default("true").code(|_, values| {

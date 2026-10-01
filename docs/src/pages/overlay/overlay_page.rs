@@ -6,7 +6,7 @@ use libero::{
 };
 
 /// On its own surface, so it reads at every dim.
-const LOADING: &str = r#"Paper { sx: sx().padding("8px 16px"), "Loading..." }"#;
+const LOADING: &str = r#"Paper { role: "status", sx: sx().padding("8px 16px"), "Loading..." }"#;
 
 #[component]
 pub fn OverlayPage() -> Element {
@@ -71,7 +71,7 @@ pub fn OverlayPage() -> Element {
                                 blur => Input::from(blur),
                             },
                             sx: sx().position("absolute"),
-                            Paper { sx: sx().padding("8px 16px"), "Loading..." }
+                            Paper { role: "status", sx: sx().padding("8px 16px"), "Loading..." }
                         }
                     }
                 },

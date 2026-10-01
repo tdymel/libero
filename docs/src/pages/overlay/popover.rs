@@ -103,7 +103,7 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
     options.push_str("\n    .dismiss(true)");
 
     format!(
-        "let anchor = use_element();\nlet popover = use_popover(anchor, opened(), {options});\n\
+        "let anchor = use_element();\nlet box_id = use_id();\nlet popover = use_popover(anchor, opened(), {options});\n\
          popover.on_dismiss(move || opened.set(false));\n\n\
          popover.show(opened().then(|| rsx! {{\n\
          {}\
@@ -112,10 +112,10 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
          {}\
          }}",
         indent(
-            "Box {\n    tabindex: \"-1\",\n    attributes: popover.floating_events(),\n    style: popover.style(),\n    onmounted: popover.floating().mount(),\n    \"Popover content\"\n}"
+            "Box {\n    id: \"{box_id}\",\n    role: \"dialog\",\n    aria_label: \"Example popover\",\n    tabindex: \"-1\",\n    attributes: popover.floating_events(),\n    style: popover.style(),\n    onmounted: popover.floating().mount(),\n    \"Popover content\"\n}"
         ),
         indent(
-            "Button {\n    onmounted: anchor.mount(),\n    onclick: move |_| opened.toggle(),\n    attributes: popover.anchor_events(),\n    \"Popover\"\n}"
+            "Button {\n    onmounted: anchor.mount(),\n    onclick: move |_| opened.toggle(),\n    attributes: popover.anchor_events(),\n    aria_haspopup: \"dialog\",\n    aria_expanded: \"{opened()}\",\n    aria_controls: \"{box_id}\",\n    \"Popover\"\n}"
         )
     )
 }

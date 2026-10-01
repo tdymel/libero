@@ -61,7 +61,7 @@ fn Demo() -> Element {
                 items,
                 Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
             }
-            Text { size: "sm", "Last chosen: {last()}" }
+            Text { size: "sm", role: "status", "Last chosen: {last()}" }
         }
     }
 }

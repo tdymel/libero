@@ -30,6 +30,8 @@ fn moment(day: u32, hour: u32) -> Option<NaiveDateTime> {
 
 #[component]
 pub fn ChronoPickerPage() -> Element {
+    let theme = libero::use_theme();
+
     rsx! {
         DocPage {
             title: "ChronoPicker",
@@ -46,14 +48,14 @@ pub fn ChronoPickerPage() -> Element {
                         .doc("Days that cannot be picked, on top of `min` and `max`."),
                     prop("allow_deselect", "bool").default("false").doc("Clicking the picked day again clears it. Only for a day."),
                     prop("columns", "usize").default("1, or 2 for a range").doc("Months side by side, for a day or a range of days."),
-                    prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
-                    prop("days", "usize").default("7").doc("Days in the mini calendar's row."),
-                    prop("variant", "TimePickerVariant").default("analog").doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
+                    prop("calendar", "CalendarVariant").default(theme.chrono_picker.calendar.as_str()).doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
+                    prop("days", "usize").default(theme.chrono_picker.days.to_string()).doc("Days in the mini calendar's row."),
+                    prop("variant", "TimePickerVariant").default(theme.time_picker.variant.as_str()).doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("A seconds column. Digital only."),
-                    prop("step", "u8").default("5").doc("Minutes between the offered minutes."),
+                    prop("step", "u8").default(theme.time_picker.step.to_string()).doc("Minutes between the offered minutes."),
                     prop("twelve_hour", "bool").default("formats").doc("A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one."),
                     prop("today", "NaiveDate").doc("The day marked as today. Unset, the platform clock answers after mount on the web. Elsewhere no day is marked."),
-                    prop("size", "Size").default("md").doc("Cell, option and font size."),
+                    prop("size", "Size").default(theme.chrono_picker.size.as_str()).doc("Cell, option and font size."),
                     prop("name", "String").doc("Posts the value as ISO 8601 in a hidden input of that name."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the picker out of the tab order, for a picker inside a dropdown whose input keeps focus."),
                 ])

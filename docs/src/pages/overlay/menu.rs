@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Flex, Kbd, Menu, MenuEntry, MenuItem, MenuPart, Text, use_menu},
     hooks::{Align, Side},
+    use_theme,
 };
 
 /// Everything above the `rsx!`, the state, the pick handler and the items.
@@ -79,9 +80,17 @@ const TRIGGER: &str = r#"Button {
     "Actions"
 }"#;
 
+/// A disabled menu disables its trigger too, so the trigger looks it.
+fn trigger_code(values: &DemoValues) -> String {
+    match values.str("disabled").as_str() {
+        "true" => TRIGGER.replace("    attributes:", "    disabled: true,\n    attributes:"),
+        _ => TRIGGER.to_string(),
+    }
+}
+
 fn wrap(_: &DemoValues, source: &str) -> String {
     format!(
-        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"row\",\n        align: \"center\",\n        gap: \"md\",\n{}        Text {{ size: \"sm\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
+        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"row\",\n        align: \"center\",\n        gap: \"md\",\n{}        Text {{ size: \"sm\", role: \"status\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
         indent(&indent(source))
     )
 }
@@ -209,17 +218,20 @@ fn MenuDemo(
                 disabled,
                 Button {
                     variant: "outlined",
+                    disabled: disabled.then_some(true),
                     attributes: menu.a11y_attributes(),
                     "Actions"
                 }
             }
-            Text { size: "sm", "Last chosen: {last()}" }
+            Text { size: "sm", role: "status", "Last chosen: {last()}" }
         }
     }
 }
 
 #[component]
 pub fn MenuPage() -> Element {
+    let theme = use_theme();
+
     rsx! {
         DocPage {
             title: "Menu",
@@ -243,16 +255,16 @@ pub fn MenuPage() -> Element {
                         .default("Start")
                         .doc("Where the menu lines up along that side."),
                     prop("close_on_select", "bool")
-                        .default("true")
+                        .default(theme.menu.close_on_select.to_string())
                         .doc("Whether choosing an item closes the menu."),
                     prop("loop_focus", "bool")
-                        .default("true")
+                        .default(theme.menu.loop_focus.to_string())
                         .doc("Whether the arrow keys wrap from the last item to the first."),
                     prop("size", "Size")
-                        .default("md")
+                        .default(theme.menu.size.as_str())
                         .doc("Item height and font size."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.menu.radius.as_str())
                         .doc("The menu's corner radius. The items' corners follow it."),
                     prop("disabled", "bool")
                         .default("false")
@@ -354,7 +366,7 @@ pub fn MenuPage() -> Element {
                 component: "Menu",
                 children_text: "",
                 fixed: vec!["state: menu".to_string(), "items".to_string()],
-                code_child: Child(|_| TRIGGER.to_string()),
+                code_child: Child(trigger_code),
                 wrap: Wrap(wrap),
                 controls: vec![
                     Control::toggle("side", ["top", "end", "bottom", "start"])

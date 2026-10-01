@@ -42,14 +42,17 @@ fn AddressFieldset() -> Element {
             ],
             TextField {
                 label: "Street",
+                autocomplete: "street-address",
                 name: Address::FIELDS.street(),
             }
             TextField {
                 label: "Zip code",
+                autocomplete: "postal-code",
                 name: Address::FIELDS.zip(),
             }
             TextField {
                 label: "City",
+                autocomplete: "address-level2",
                 name: Address::FIELDS.city(),
             }
         }

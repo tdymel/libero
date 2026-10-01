@@ -46,7 +46,7 @@ fn Demo() -> Element {
     rsx! {
         Flex { direction: "row", gap: "md",
             Button { variant: "outlined", onclick: move |_| spotlight.open(), "Open the palette" }
-            Text { size: "sm", "Last run: {last()}" }
+            Text { size: "sm", role: "status", "Last run: {last()}" }
         }
     }
 }

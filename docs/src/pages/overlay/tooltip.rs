@@ -50,20 +50,20 @@ pub fn TooltipPage() -> Element {
             properties: vec![props("Tooltip", vec![
                 prop("label", "Element").default("required").doc("The bubble's content."),
                 prop("side", "Side")
-                    .default("top")
+                    .default(theme.tooltip.side.as_str())
                     .doc("The preferred side of the trigger. The bubble flips when that side has no room."),
                 prop("gap", "Size")
-                    .default("xs")
+                    .default(theme.tooltip.gap.as_str())
                     .doc("Distance to the trigger. The pointer can cross it without closing the bubble."),
-                prop("size", "Size").default("sm").doc("Font size of the bubble."),
+                prop("size", "Size").default(theme.tooltip.size.as_str()).doc("Font size of the bubble."),
                 prop("z_index", "ThemeAwareValue")
                     .default("the popover layer")
                     .doc("Overrides the stacking level, for a bubble hidden by another overlay."),
                 prop("open_delay", "u32")
-                    .default("0")
+                    .default(theme.tooltip.open_delay.to_string())
                     .doc("Milliseconds the pointer must rest before the bubble appears."),
                 prop("close_delay", "u32")
-                    .default("0")
+                    .default(theme.tooltip.close_delay.to_string())
                     .doc("Milliseconds the bubble stays after the pointer leaves. While it counts down, the bubble carries `data-closing`."),
                 prop("open", "bool")
                     .default("unset")

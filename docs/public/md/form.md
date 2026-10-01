@@ -52,8 +52,9 @@ fn SignupForm() -> Element {
                 validate: not_empty.error("Accept the terms to continue."),
             }
             Button { r#type: "submit", "Create account" }
-            if sent() {
-                Text { "Account created." }
+            // Mounted before the submit, so a screen reader hears the text it gains.
+            Text { role: "status",
+                if sent() { "Account created." }
             }
         }
     }
@@ -75,7 +76,7 @@ fn TermsForm() -> Element {
             value: terms,
             EmailField { label: "Email", name: Terms::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             Checkbox { label: "I accept the terms", name: Terms::FIELDS.accepted(), validate: not_empty.error("Accept the terms to continue.") }
-            Text { if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
+            Text { role: "status", if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
             Flex { gap: "sm",
                 Button { r#type: "submit", "Send" }
                 CheckButton {}

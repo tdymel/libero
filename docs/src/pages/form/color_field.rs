@@ -116,9 +116,15 @@ pub fn ColorFieldPage() -> Element {
                 }
             },
             // snippet: item const SWATCHES: [&str; 7] = [""; 7];
+            // snippet: let mut color = use_signal(|| ColorCode::hex(0x228be6));
             Demo {
                 component: "ColorField",
                 children_text: "",
+                fixed: vec![
+                    "value: color()".to_string(),
+                    "oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value())"
+                        .to_string(),
+                ],
                 controls: vec![
                     Control::slider("size", SIZES).default("md"),
                     Control::slider("radius", SIZES).default("sm"),

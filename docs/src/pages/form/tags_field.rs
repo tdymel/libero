@@ -4,18 +4,26 @@ use dioxus::prelude::*;
 use libero::components::TagsFieldPart;
 use libero::{
     components::{ActionIcon, Chip, Code, FieldStatus, SelectionArgs, TagsField, Text},
+    hooks::use_localization,
+    localization::{Localization, fill},
     sx::sx,
 };
 
 /// A custom tag draws the whole chip, so it owns its x and that x's tab order.
 // snippet: let mut topics = use_signal(Vec::<String>::new);
+// snippet: let words = use_localization();
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
 const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
-    Chip { size: "xs", variant: "outlined",
+    // Unclipped, so the x's 24px hit area reaches past the pill.
+    Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
         trailing: rsx! {
             span { "data-slot": "remove",
+                // Keeps focus in the field, and the click off the field.
+                onmousedown: move |event| event.prevent_default(),
+                onclick: move |event| event.stop_propagation(),
                 ActionIcon {
-                    aria_label: "Remove {t.value}",
+                    // `words` is `use_localization()`, read in the component.
+                    aria_label: fill(words.common.remove, &[("label", &t.value)]),
                     size: "16px",
                     // A `<button>` inherits no colour of its own.
                     sx: sx().color("inherit"),
@@ -82,14 +90,17 @@ fn base_status(values: &DemoValues) -> &'static str {
     }
 }
 
-fn topic_tag(t: SelectionArgs<String>) -> Element {
+fn topic_tag(words: &'static Localization, t: SelectionArgs<String>) -> Element {
     let label = t.value.clone();
+    let remove_label = fill(words.common.remove, &[("label", &label)]);
     rsx! {
-        Chip { size: "xs", variant: "outlined",
+        Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
             trailing: rsx! {
                 span { "data-slot": "remove",
+                    onmousedown: move |event: MouseEvent| event.prevent_default(),
+                    onclick: move |event: MouseEvent| event.stop_propagation(),
                     ActionIcon {
-                        aria_label: "Remove {label}",
+                        aria_label: remove_label,
                         size: "16px",
                         sx: sx().color("inherit"),
                         tabindex: "-1",
@@ -111,6 +122,7 @@ fn max_tags(values: &DemoValues) -> Option<usize> {
 pub fn TagsFieldPage() -> Element {
     let mut value = use_signal(Vec::<String>::new);
     let mut refused = use_signal(|| None::<String>);
+    let words = use_localization();
 
     rsx! {
         DocPage {
@@ -208,6 +220,7 @@ pub fn TagsFieldPage() -> Element {
             },
             // snippet: let mut topics = use_signal(Vec::<String>::new);
             // snippet: let mut refused = use_signal(|| None::<String>);
+            // snippet: let words = use_localization();
             Demo {
                 component: "TagsField",
                 children_text: "",
@@ -330,7 +343,7 @@ pub fn TagsFieldPage() -> Element {
                                     refused.set(Some(why(&value(), &tag, max)));
                                 }
                             },
-                            tag: (values.str("tag") == "true").then(|| Callback::new(topic_tag)),
+                            tag: (values.str("tag") == "true").then(|| Callback::new(move |t| topic_tag(words, t))),
                             max_tags: max_tags(&values),
                             allow_duplicates: (values.str("allow_duplicates") == "true").then_some(true),
                             clearable: (values.str("clearable") == "true").then_some(true),

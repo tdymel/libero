@@ -30,7 +30,7 @@ fn EmailField(
         .chain(std::iter::once(is_email.error("That is not an email address.")))
         .collect();
     rsx! {
-        TextField { r#type: "email", label, name, validate: rules, placeholder: "you@example.com" }
+        TextField { r#type: "email", autocomplete: "email", label, name, validate: rules, placeholder: "you@example.com" }
     }
 }"#;
 
@@ -54,9 +54,9 @@ fn AddressFieldset(#[props(into)] label: String, #[props(into)] path: FieldName<
                 .error("A city needs its zip code.")
                 .on([Address::FIELDS.zip()]),
             // Paths relative to the group work wherever the group sits.
-            TextField { label: "Street", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
-            TextField { label: "Zip code", name: Address::FIELDS.zip() }
-            TextField { label: "City", name: Address::FIELDS.city() }
+            TextField { label: "Street", autocomplete: "street-address", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
+            TextField { label: "Zip code", autocomplete: "postal-code", name: Address::FIELDS.zip() }
+            TextField { label: "City", autocomplete: "address-level2", name: Address::FIELDS.city() }
         }
     }
 }"#;
@@ -94,8 +94,9 @@ fn OrderForm() -> Element {
                 AddressFieldset { label: "Billing address", path: Order::FIELDS.billing() }
             }
             Button { r#type: "submit", "Place order" }
-            if placed() {
-                Text { "Order placed for {order().email}." }
+            // Mounted before the submit, so a screen reader hears the text it gains.
+            Text { role: "status",
+                if placed() { "Order placed for {order().email}." }
             }
         }
     }
@@ -430,7 +431,7 @@ fn EmailField(
         ))
         .collect();
     rsx! {
-        TextField { r#type: "email", label, name, validate: rules, placeholder: "you@example.com" }
+        TextField { r#type: "email", autocomplete: "email", label, name, validate: rules, placeholder: "you@example.com" }
     }
 }
 
@@ -446,9 +447,9 @@ fn AddressFieldset(
             validate: (|a: &Address| a.city.is_empty() || !a.zip.is_empty())
                 .error("A city needs its zip code.")
                 .on([Address::FIELDS.zip()]),
-            TextField { label: "Street", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
-            TextField { label: "Zip code", name: Address::FIELDS.zip() }
-            TextField { label: "City", name: Address::FIELDS.city() }
+            TextField { label: "Street", autocomplete: "street-address", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
+            TextField { label: "Zip code", autocomplete: "postal-code", name: Address::FIELDS.zip() }
+            TextField { label: "City", autocomplete: "address-level2", name: Address::FIELDS.city() }
         }
     }
 }
@@ -475,8 +476,9 @@ fn OrderForm() -> Element {
                 AddressFieldset { label: "Billing address", path: Order::FIELDS.billing() }
             }
             Button { r#type: "submit", "Place order" }
-            if placed() {
-                Text { "Order placed for {order().email}." }
+            // Mounted before the submit, so a screen reader hears the text it gains.
+            Text { role: "status",
+                if placed() { "Order placed for {order().email}." }
             }
         }
     }

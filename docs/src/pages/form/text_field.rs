@@ -3,6 +3,10 @@ use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, FieldStatus, Text, TextField};
 
+fn no_trailing(values: &DemoValues) -> bool {
+    values.str("trailing") != "true"
+}
+
 #[component]
 pub fn TextFieldPage() -> Element {
     let mut value = use_signal(String::new);
@@ -152,14 +156,15 @@ pub fn TextFieldPage() -> Element {
                     }),
                     Control::switch("trailing").code(|_, values| {
                         match values.str("trailing").as_str() {
-                            "true" => {
-                                vec!["trailing: rsx! { \"{value().len()}/20\" }".to_string()]
-                            }
+                            "true" => vec![
+                                "trailing: rsx! { \"{value().chars().count()}/20\" }".to_string(),
+                                "maxlength: 20".to_string(),
+                            ],
                             _ => vec![],
                         }
                     }),
                     // The counter is text a screen reader should hear with the input.
-                    Control::switch("describe_trailing"),
+                    Control::switch("describe_trailing").hidden_when(no_trailing),
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ],
@@ -185,8 +190,10 @@ pub fn TextFieldPage() -> Element {
                         // Plain text: `Icon` colours and sizes an svg, not a prefix.
                         leading: (values.str("leading") == "true").then(|| rsx! { "@" }),
                         trailing: (values.str("trailing") == "true")
-                            .then(|| rsx! { "{value().len()}/20" }),
-                        describe_trailing: values.str("describe_trailing") == "true",
+                            .then(|| rsx! { "{value().chars().count()}/20" }),
+                        maxlength: (values.str("trailing") == "true").then_some(20),
+                        describe_trailing: !no_trailing(&values)
+                            && values.str("describe_trailing") == "true",
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
                         value: value(),

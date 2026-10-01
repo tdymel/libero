@@ -81,7 +81,7 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
                  align: \"center\",\n        \
                  gap: \"md\",\n\
          {}        \
-                 Text {{ \"Last answer: {{answer}}\" }}\n    \
+                 Text {{ role: \"status\", \"Last answer: {{answer}}\" }}\n    \
              }}\n\
          }}",
         values.str("size"),
@@ -168,7 +168,7 @@ fn ModalDemo(size: String, awaited: bool) -> Element {
                     "Close editor"
                 }
             }
-            Text { "Last answer: {answer}" }
+            Text { role: "status", "Last answer: {answer}" }
         }
     }
 }

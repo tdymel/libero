@@ -56,13 +56,15 @@ MultiSelect {
         }
     },
     selection: move |s: SelectionArgs<Topping>| rsx! {
-        Chip { size: "xs", variant: "outlined",
+        // Unclipped, so the x's 24px hit area reaches past the pill.
+        Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
             // After the label, so a long label never clips the x.
             trailing: rsx! {
                 span { onmousedown: move |event| event.prevent_default(),
                     onclick: move |event| event.stop_propagation(),
                     ActionIcon {
-                        aria_label: "Remove {s.value.label()}",
+                        // `words` is `use_localization()`, read in the component.
+                        aria_label: fill(words.common.remove, &[("label", &s.value.label())]),
                         size: "xs",
                         // A `<button>` takes the UA's `buttontext`, not the chip's
                         // colour, so the cross needs this or it stays black.

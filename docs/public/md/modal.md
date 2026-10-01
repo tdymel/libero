@@ -81,7 +81,7 @@ fn Demo() -> Element {
             },
             "Close editor"
         }
-        Text { "Last answer: {answer}" }
+        Text { role: "status", "Last answer: {answer}" }
     }
 }
 ```

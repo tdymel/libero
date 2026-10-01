@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::FileFieldPart;
 use libero::components::{Code, CropOptions, FieldStatus, FileField, Files, Flex, Text};
@@ -13,14 +13,23 @@ fn dropzone(values: &DemoValues) -> bool {
     values.str("variant") == "dropzone"
 }
 
-/// The prompt is `children`, so it prints inside the braces. Only the
-/// `Dropzone` variant has one.
-fn children_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+fn variant_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     match dropzone(values) {
         true => vec![r#"variant: "dropzone""#.to_string()],
         false => vec![],
     }
 }
+
+/// The prompt is `children`, so it prints inside the braces. Only the
+/// `Dropzone` variant has one.
+fn prompt(values: &DemoValues) -> String {
+    match dropzone(values) {
+        true => PROMPT.to_string(),
+        false => String::new(),
+    }
+}
+
+const PROMPT: &str = "Drop files here, or click to pick";
 
 #[component]
 pub fn FileFieldPage() -> Element {
@@ -134,14 +143,21 @@ pub fn FileFieldPage() -> Element {
                     "system file dialog."
                 }
             },
+            // snippet: let mut files = use_signal(Files::default);
             Demo {
                 component: "FileField",
                 children_text: "",
+                child: Child(prompt),
+                fixed: vec![
+                    r#"placeholder: "No file picked""#.to_string(),
+                    "value: files()".to_string(),
+                    "onchange: move |picked| files.set(picked)".to_string(),
+                ],
                 controls: vec![
                     Control::toggle("variant", ["input", "dropzone"])
                         .labels(["Input", "Dropzone"])
                         .default("input")
-                        .code(children_code),
+                        .code(variant_code),
                     Control::slider("size", SIZES).default("md"),
                     Control::slider("radius", SIZES).default("sm"),
                     Control::toggle("accept", ["any", "image/*", ".pdf"])
@@ -244,7 +260,7 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 disabled: is_on(&values, "disabled").then_some(true),
                 loading: is_on(&values, "loading").then_some(true),
                 onchange: move |picked: Files| files.set(picked),
-                "Drop files here, or click to pick"
+                {prompt(&values)}
             }
             Text { size: "sm", "value: {names:?}" }
         }
