@@ -25,6 +25,11 @@ use libero::{
 fn OwnPlayer() -> Element {
     let media = use_media();
     let time = media.current_time() as u64;
+    let status = match (media.error(), media.buffering()) {
+        (Some(_), _) => "The audio could not be played.",
+        (None, true) => "Loading",
+        (None, false) => "",
+    };
 
     rsx! {
         audio { src: "/podcast.mp3", onmounted: media.mount(), ..media.attributes() }
@@ -35,6 +40,7 @@ fn OwnPlayer() -> Element {
             }
             Button { variant: "outlined", onclick: move |_| media.seek(0.0), "Restart" }
             Text { "{time / 60}:{time % 60:02}" }
+            div { role: "status", "{status}" }
         }
     }
 }
@@ -83,7 +89,7 @@ pub enum MediaError { Aborted, Network, Decode, SourceNotSupported }
 
 - Give every control a name that says what it does now, such as Play or Pause.
 - Announce buffering and errors yourself, from `buffering()` and `error()`, as
-  `Audio` and `Video` do.
+  the demo's status line and `Audio` and `Video` do.
 - Never autoplay sound (WCAG 1.4.2); offer captions and a transcript as for any
   media.
 

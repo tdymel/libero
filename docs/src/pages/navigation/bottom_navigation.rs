@@ -132,7 +132,8 @@ pub fn BottomNavigationPage() -> Element {
                     Code { source: "selected" }
                     " compares "
                     Code { source: "to" }
-                    " with the current route; here the items select on click."
+                    " with the current route, as in the code below; the preview has no "
+                    "routes, so its items select on click instead."
                 }
             },
             Demo {

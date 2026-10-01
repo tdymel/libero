@@ -17,6 +17,13 @@ let status = match (location.error(), location.position()) {
     (None, None) if location.is_pending() => "Locating",
     (None, None) => "",
 };
+let permission = match location.permission() {
+    PermissionState::Granted => "granted",
+    PermissionState::Denied => "denied",
+    PermissionState::Prompt => "not asked yet",
+    PermissionState::Unknown => "unknown",
+    PermissionState::Unsupported => "unsupported here",
+};
 
 rsx! {
     Flex { direction: "column", align: "flex-start", gap: "sm",
@@ -32,6 +39,7 @@ rsx! {
         if let Some(fix) = location.position() {
             Text { "{fix.latitude:.2}, {fix.longitude:.2}, within {fix.accuracy:.0} m" }
         }
+        Text { size: "sm", "Permission: {permission}" }
     }
 }"#
     .to_string()

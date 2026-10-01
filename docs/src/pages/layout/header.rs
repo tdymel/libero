@@ -3,7 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Header, Input, Text},
+    components::{Box, Code, Header, Input, ScrollArea, Text},
     sx::sx,
 };
 
@@ -11,8 +11,8 @@ use libero::{
 /// A stacking context, so a native window clips the z-indexed header to it too (881).
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
-        "Box {{\n    sx: sx().height(\"200px\").width(\"100%\").overflow_y(\"auto\")\n        .position(\"relative\").z_index(\"0\")\n        .border(\"1px solid var(--lsx-muted-3)\"),\n{}    Box {{\n        sx: sx().padding(\"md\"),\n        for i in 0..12 {{\n            Text {{ key: \"{{i}}\", \"Scroll me, line {{i}}\" }}\n        }}\n    }}\n}}",
-        indent(code)
+        "Box {{\n    sx: sx().height(\"200px\").width(\"100%\")\n        .position(\"relative\").z_index(\"0\")\n        .border(\"1px solid var(--lsx-muted-3)\"),\n    ScrollArea {{\n        aria_label: \"Header demo\",\n{}        Box {{\n            sx: sx().padding(\"md\"),\n            for i in 0..12 {{\n                Text {{ key: \"{{i}}\", \"Scroll me, line {{i}}\" }}\n            }}\n        }}\n    }}\n}}",
+        indent(&indent(code))
     )
 }
 
@@ -90,24 +90,26 @@ pub fn HeaderPage() -> Element {
                         sx: sx()
                             .height("200px")
                             .width("100%")
-                            .overflow_y("auto")
                             .position("relative")
                             .z_index("0")
                             .border("1px solid var(--lsx-muted-3)"),
-                        Header {
-                            position: values.str("position"),
-                            size: or_unset(values.str("size")),
-                            color: match values.str("color").as_str() {
-                                UNSET => Input::None,
-                                color => Input::from(color),
-                            },
-                            glass: values.str("glass") == "true",
-                            "Libero"
-                        }
-                        Box {
-                            sx: sx().padding("md"),
-                            for i in 0..12 {
-                                Text { key: "{i}", "Scroll me, line {i}" }
+                        ScrollArea {
+                            aria_label: "Header demo",
+                            Header {
+                                position: values.str("position"),
+                                size: or_unset(values.str("size")),
+                                color: match values.str("color").as_str() {
+                                    UNSET => Input::None,
+                                    color => Input::from(color),
+                                },
+                                glass: values.str("glass") == "true",
+                                "Libero"
+                            }
+                            Box {
+                                sx: sx().padding("md"),
+                                for i in 0..12 {
+                                    Text { key: "{i}", "Scroll me, line {i}" }
+                                }
                             }
                         }
                     }

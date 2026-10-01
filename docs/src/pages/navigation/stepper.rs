@@ -154,7 +154,11 @@ pub fn StepperPage() -> Element {
                 // Three `md` steps with side labels overflowed the side-by-side preview.
                 wide_preview: true,
                 wrap: Wrap(|_: &DemoValues, source: &str| format!("{STAGE_ENUM}{source}")),
-                fixed: vec!["value: stage()".to_string(), CONTENT.to_string()],
+                fixed: vec![
+                    "value: stage()".to_string(),
+                    "aria_label: \"Order steps\"".to_string(),
+                    CONTENT.to_string(),
+                ],
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
@@ -228,6 +232,7 @@ pub fn StepperPage() -> Element {
                         div { style: "display: flex; flex-direction: column; align-items: flex-start; gap: 16px; width: 100%;",
                             Stepper {
                                 value: stage(),
+                                aria_label: "Order steps",
                                 orientation: values.str("orientation"),
                                 label_position: values.str("label_position"),
                                 size: values.str("size"),

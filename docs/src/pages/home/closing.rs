@@ -43,7 +43,6 @@ pub fn Closing() -> Element {
                                 header: false,
                                 line_numbers: false,
                                 // copy: end
-                                sx: sx().text_align("start"),
                             }
                         }
                     }

@@ -23,6 +23,9 @@ const PYTHON_EXAMPLE: &str = "def shout(word):\n    # Python\n    return word.up
 const PYTHON_DIFF: &str =
     "def shout(word):\n    # Python\n-    return word.upper()\n+    return word.upper() + \"!\"";
 
+/// What the `label` switch names the block.
+const LABEL: &str = "The shout function";
+
 /// The source for `language` and `diff`, with the const's name the code block prints.
 /// Each `*_DIFF`'s `+` lines are exactly its plain twin.
 fn example(values: &DemoValues) -> (&'static str, &'static str) {
@@ -121,9 +124,18 @@ pub fn CodeBlockPage() -> Element {
                         Control::switch("header").default("true"),
                         Control::switch("copyable").default("true"),
                         Control::switch("line_numbers").default("true"),
-                        Control::switch("highlight_lines").code(|_, values| {
-                            match values.str("highlight_lines") == "true" {
-                                true => vec!["highlight_lines: \"2,3\"".to_string()],
+                        // `diff` wins over it, so it is gone while `diff` is on.
+                        Control::switch("highlight_lines")
+                            .code(|_, values| {
+                                match values.str("highlight_lines") == "true" {
+                                    true => vec!["highlight_lines: \"2,3\"".to_string()],
+                                    false => vec![],
+                                }
+                            })
+                            .hidden_when(|values| values.str("diff") == "true"),
+                        Control::switch("label").code(|_, values| {
+                            match values.str("label") == "true" {
+                                true => vec![format!("label: {LABEL:?}")],
                                 false => vec![],
                             }
                         }),
@@ -143,10 +155,10 @@ pub fn CodeBlockPage() -> Element {
                                 header: values.str("header") == "true",
                                 copyable: values.str("copyable") == "true",
                                 line_numbers: values.str("line_numbers") == "true",
-                                highlight_lines: match values.str("highlight_lines").as_str() {
-                                    "true" => Some("2,3".to_string()),
-                                    _ => None,
-                                },
+                                highlight_lines: (values.str("highlight_lines") == "true"
+                                    && values.str("diff") != "true")
+                                    .then(|| "2,3".to_string()),
+                                label: (values.str("label") == "true").then(|| LABEL.to_string()),
                                 max_lines: values.str("max_lines").parse::<u32>().ok(),
                             }
                         }

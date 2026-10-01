@@ -8,7 +8,7 @@ use libero::{
 /// Name, what it is used for, licence, and its source.
 type Row = (&'static str, &'static str, &'static str, &'static str);
 
-const CREDITS: [Row; 5] = [
+const CREDITS: [Row; 9] = [
     (
         "Lucide",
         "Icons on these pages and the default icons of libero's components.",
@@ -32,6 +32,30 @@ const CREDITS: [Row; 5] = [
         "The GitHub and GitLab marks in Repository, and the GitHub and Markdown marks on these pages.",
         "CC0 1.0",
         "https://simpleicons.org",
+    ),
+    (
+        "Bootstrap Icons",
+        "The Bootstrap set on the IconProvider page, behind libero's icons-bootstrap feature.",
+        "MIT",
+        "https://github.com/twbs/icons",
+    ),
+    (
+        "Material Design Icons",
+        "The Material set on the IconProvider page, behind libero's icons-material feature.",
+        "Apache-2.0",
+        "https://github.com/google/material-design-icons",
+    ),
+    (
+        "Phosphor",
+        "The Phosphor set on the IconProvider page, behind libero's icons-phosphor feature.",
+        "MIT",
+        "https://github.com/phosphor-icons/core",
+    ),
+    (
+        "Tabler Icons",
+        "The Tabler set on the IconProvider page, behind libero's icons-tabler feature.",
+        "MIT",
+        "https://github.com/tabler/tabler-icons",
     ),
     (
         "Big Buck Bunny",

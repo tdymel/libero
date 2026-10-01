@@ -13,15 +13,60 @@ const TRAPPED: &str = r#"Flex {
     Button { variant: "outlined", "Third" }
 }"#;
 
+/// The trap as `Preview` wires it: Release and Escape switch it off and hand focus back, and the
+/// button that switches it on remembers the focus first (the page's own switch does that live).
+const RELEASABLE: &str = r#"let mut trapped = use_signal(|| true);
+let back = use_focus_return();
+let mut release = move || {
+    trapped.set(false);
+    back.restore();
+};
+
+rsx! {
+    Flex {
+        direction: "column",
+        gap: "sm",
+        align: "flex-start",
+        Button { variant: "text", "Before" }
+        if trapped() {
+            FocusTrap {
+                Flex {
+                    direction: "row",
+                    gap: "sm",
+                    onkeydown: move |event: KeyboardEvent| {
+                        if event.key() == Key::Escape {
+                            release();
+                        }
+                    },
+                    Button { variant: "outlined", "First" }
+                    Button { variant: "outlined", "Second" }
+                    Button { variant: "outlined", "Third" }
+                    Button { variant: "filled", onclick: move |_| release(), "Release" }
+                }
+            }
+        } else {
+            Button {
+                variant: "outlined",
+                onclick: move |_| {
+                    back.remember_active();
+                    trapped.set(true);
+                },
+                "Trap focus"
+            }
+        }
+        Button { variant: "text", "After" }
+    }
+}"#;
+
 /// The switch is whether the `FocusTrap` exists at all. The two outside buttons always print:
 /// "focus cannot leave" is measured against them.
-fn wrap_page(values: &DemoValues, code: &str) -> String {
-    let inner = match values.str("activate_focus_trap") == "true" {
-        true => indent(code),
-        false => indent(TRAPPED),
-    };
+fn wrap_page(values: &DemoValues, _code: &str) -> String {
+    if values.str("activate_focus_trap") == "true" {
+        return RELEASABLE.to_string();
+    }
     format!(
-        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    align: \"flex-start\",\n    Button {{ variant: \"text\", \"Before\" }}\n{inner}    Button {{ variant: \"text\", \"After\" }}\n}}"
+        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    align: \"flex-start\",\n    Button {{ variant: \"text\", \"Before\" }}\n{}    Button {{ variant: \"text\", \"After\" }}\n}}",
+        indent(TRAPPED),
     )
 }
 

@@ -178,6 +178,10 @@ Every feature is additive.
 | `full-polymorphism` | [Box](box.md) renders the rarer HTML elements too (metadata, media, web components). Without it they fall back to a `div`. |
 | `native` | Element access through Blitz, for apps on `dioxus-native`. |
 | `desktop` | System notifications over D-Bus in a desktop WebView on Linux, where WebKitGTK denies them. |
+| `icons-bootstrap` | The Bootstrap Icons set for [IconProvider](icon_provider.md), as `IconSet::bootstrap()`. Without it libero's glyphs are Lucide. |
+| `icons-material` | The Material Design Icons set for [IconProvider](icon_provider.md), as `IconSet::material()`. Without it libero's glyphs are Lucide. |
+| `icons-phosphor` | The Phosphor set for [IconProvider](icon_provider.md), as `IconSet::phosphor()`. Without it libero's glyphs are Lucide. |
+| `icons-tabler` | The Tabler Icons set for [IconProvider](icon_provider.md), as `IconSet::tabler()`. Without it libero's glyphs are Lucide. |
 
 ```toml
 libero = { version = "0.1", default-features = false, features = [

@@ -10,9 +10,9 @@ follows it.
 
 | Part | Fields | What it changes |
 |---|---|---|
-| Colors | `primary`, `secondary`, `success`, `error`, `warning`, `info` | One hex per role, with nine shades and a text color derived from it. |
+| Colors | `primary`, `secondary`, `success`, `error`, `warning`, `info`, `neutral`, `muted` | One hex per role, with nine shades and a text color derived from it. |
 | Page | `surface`, `ink` | The page and the text on it. A dark surface makes a dark theme. |
-| Scales | `spacing`, `radius`, `elevation` | Every size word, gap, corner and shadow. |
+| Scales | `spacing`, `radius`, `elevation`, `font_size` | Every size word, gap, corner, shadow and font size. |
 | Components | `button`, `dialog`, ... | Every prop a caller leaves unset. |
 
 ## A custom theme
@@ -69,6 +69,9 @@ static THEME: Theme = Theme {
     ..Theme::DEFAULT
 };
 ```
+
+Two structs serve every component: `focus_ring` is the one focus indicator,
+and `z_index` orders the headers, windows, modals, popovers and toasts.
 
 The theme sets props, not a component's inner parts. To restyle a part, pass
 `parts`, see [Style API in Styling](styling.md#style-api).

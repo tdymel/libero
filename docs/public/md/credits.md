@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Index: [index.md](index.md) lists every other page
-Description: The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons), their licences and notices.
+Description: The projects whose icons and logos libero and these docs use (Lucide, pictogram, Lobe Icons, Simple Icons, and the Bootstrap, Material, Phosphor and Tabler sets), their licences and notices.
 
 The icons and logos on these pages and inside libero's components, and the
 Video demo's film, come from other projects. Their licences ask that the
@@ -16,6 +16,10 @@ notices below stay with any copy.
 | pictogram | Carries the Lucide icons and the Lobe and Simple Icons marks as Rust data. | MIT OR Apache-2.0 | https://github.com/tdymel/pictogram |
 | Lobe Icons | The ChatGPT, Google, Claude and Perplexity marks in Tldr. | MIT | https://github.com/lobehub/lobe-icons |
 | Simple Icons | The GitHub and GitLab marks in Repository, and the GitHub and Markdown marks on these pages. | CC0 1.0 | https://simpleicons.org |
+| Bootstrap Icons | The Bootstrap set on the IconProvider page, behind libero's `icons-bootstrap` feature. | MIT | https://github.com/twbs/icons |
+| Material Design Icons | The Material set on the IconProvider page, behind libero's `icons-material` feature. | Apache-2.0 | https://github.com/google/material-design-icons |
+| Phosphor | The Phosphor set on the IconProvider page, behind libero's `icons-phosphor` feature. | MIT | https://github.com/phosphor-icons/core |
+| Tabler Icons | The Tabler set on the IconProvider page, behind libero's `icons-tabler` feature. | MIT | https://github.com/tabler/tabler-icons |
 | Big Buck Bunny | The film in the Video demo, streamed from Wikimedia Commons. (c) 2008 Blender Foundation. | CC BY 3.0 | https://peach.blender.org |
 
 The Claude, Google, Perplexity, ChatGPT, GitLab and GitHub marks are

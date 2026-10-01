@@ -118,18 +118,28 @@ impl ThemeAwareValue {
     }
 }
 
-/// Warns once per spelling on CSS keywords that silently miss the theme: `gray`/`grey`
-/// (the palette's old name, now `muted`), `white`/`black` (use `surface`/`ink`).
+/// Warns once per spelling on words that silently miss the theme: `gray`/`grey` and their
+/// shades (the palette's old name, now `muted`), `white`/`black` (use `surface`/`ink`).
 fn warn_misspelled_palette(value: &str) {
     thread_local! {
         static WARNED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
     }
-    let advice = if value.eq_ignore_ascii_case("gray") || value.eq_ignore_ascii_case("grey") {
-        "the palette name is `muted`"
+    let is_gray =
+        |word: &str| word.eq_ignore_ascii_case("gray") || word.eq_ignore_ascii_case("grey");
+    let message = if is_gray(value) {
+        format!("`{value}` is a CSS keyword, not a palette colour; the palette name is `muted`.")
+    } else if let Some((name, shade)) = value.split_once('.')
+        && is_gray(name)
+    {
+        format!("`{value}` is not a colour; the palette name is `muted`, as in `muted.{shade}`.")
     } else if value.eq_ignore_ascii_case("white") {
-        "it stays white under a dark theme; `surface` follows the scheme"
+        format!(
+            "`{value}` is a CSS keyword, not a palette colour; it stays white under a dark theme; `surface` follows the scheme."
+        )
     } else if value.eq_ignore_ascii_case("black") {
-        "it stays black under a dark theme; `ink` follows the scheme"
+        format!(
+            "`{value}` is a CSS keyword, not a palette colour; it stays black under a dark theme; `ink` follows the scheme."
+        )
     } else {
         return;
     };
@@ -140,9 +150,7 @@ fn warn_misspelled_palette(value: &str) {
         }
         first
     }) {
-        warn(&format!(
-            "`{value}` is a CSS keyword, not a palette colour; {advice}."
-        ));
+        warn(&message);
     }
 }
 
@@ -271,6 +279,25 @@ mod tests {
         let warnings = crate::utils::take_warnings();
         assert_eq!(warnings.len(), 2, "{warnings:?}");
         assert!(warnings.iter().all(|warning| warning.contains("`muted`")));
+    }
+
+    #[test]
+    fn a_gray_shade_points_at_the_muted_shade_once() {
+        crate::utils::take_warnings();
+        for _ in 0..2 {
+            assert_eq!(
+                ThemeAwareValue::from("gray.7"),
+                ThemeAwareValue::String("gray.7".to_string())
+            );
+        }
+        let _ = ThemeAwareValue::from("Grey.3".to_string());
+        let _ = ThemeAwareValue::from("muted.7");
+        let warnings = crate::utils::take_warnings();
+        assert_eq!(warnings.len(), 2, "{warnings:?}");
+        assert!(
+            warnings[0].contains("`gray.7` is not a colour") && warnings[0].contains("`muted.7`")
+        );
+        assert!(warnings[1].contains("`muted.3`"));
     }
 
     #[test]

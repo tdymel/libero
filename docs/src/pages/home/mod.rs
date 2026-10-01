@@ -52,6 +52,7 @@ pub(super) fn cta_row_sx() -> Sx {
 }
 
 /// The buttons over the `cargo add` block, which takes their row's width (1340).
+/// Starts the text, so the block reads from the right in RTL.
 #[component]
 pub(super) fn CtaStack(children: Element) -> Element {
     rsx! {
@@ -59,7 +60,7 @@ pub(super) fn CtaStack(children: Element) -> Element {
             direction: "column",
             align: "stretch",
             gap: "lg",
-            sx: sx().width("fit-content").max_width("100%"),
+            sx: sx().width("fit-content").max_width("100%").text_align("start"),
             {children}
         }
     }

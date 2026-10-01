@@ -19,6 +19,8 @@ guide page they belong to.
 | `use_element` | A handle to one of your component's elements, to focus, scroll or measure it. | [Element handle](use_element.md) |
 | `use_focus_return` | Puts focus back on the trigger when a panel closes. | [Focus return](use_focus_return.md) |
 | `use_drag` | Pointer capture and deltas for a drag. | [Drag](use_drag.md) |
+| `use_sortable` | A list whose items reorder by dragging their handle. | [Sortable](sortable.md) |
+| `use_sortable_item` | One item of a use_sortable list: its handle and offset. | [Sortable](sortable.md) |
 | `use_intersection` | How much of an element is visible inside a root. | [Intersection](use_intersection.md) |
 | `use_in_viewport` | Whether an element is in the viewport. | [Intersection](use_intersection.md) |
 | `use_long_press` | Handlers that call back once a pointer stays down. | [Long press](use_long_press.md) |
@@ -41,17 +43,22 @@ guide page they belong to.
 | `use_push_subscription` | A web push subscription for the app's server to push to. | [System notifications](use_system_notification.md) |
 | `use_theme` | The active theme, for values CSS cannot carry. | [Theming](theming.md) |
 | `use_theme_set` | Reads and swaps the active theme set. | [Theme set](use_theme_set.md) |
+| `use_color_scheme` | Reads and sets the light or dark colour scheme. | [ThemeSwitcher](theme_switcher.md) |
+| `use_direction` | Reads and sets the text direction, left to right or right to left. | [DirectionToggle](direction_toggle.md) |
 | `use_localization` | The words libero's components say, in the active language. | [Localization](localization.md) |
 | `use_localization_handle` | Switches the language at runtime. | [Localization](localization.md) |
 | `use_formats` | The active date, time and number formats. | [Localization](localization.md) |
 | `use_formats_handle` | Switches the formats at runtime. | [Localization](localization.md) |
 | `use_stylesheet` | Registers a stylesheet of your own, above every libero layer. | [Stylesheet](use_stylesheet.md) |
 | `use_accessibility` | The reader's motion, contrast and transparency settings; forces reduced motion. | [Accessibility settings](use_accessibility.md) |
+| `use_clipboard` | Copies text and tells whether the last copy landed. | [Copy](copy.md) |
+| `use_icon` | The glyph an IconProvider sets for a slot, else your default. | [IconProvider](icon_provider.md) |
 | `use_scroll_area` | Scrolls a ScrollArea from code. | [ScrollArea](scroll_area.md) |
 | `use_scroller` | Steps a Scroller from controls of your own. | [Scroller](scroller.md) |
 | `use_form` | Controls a Form: validity, check, submit and reset. | [Form](form.md) |
 | `use_form_context` | The handle of the Form it is called inside. | [Form](form.md) |
 | `use_combobox` | Keeps a Combobox's open state in your scope. | [Combobox](combobox.md) |
+| `use_rich_text_editor` | Drives a RichTextEditor from toolbar controls of your own. | [RichTextEditor](rich_text_editor.md) |
 | `use_modal` | Registers a modal and returns the handle that opens it. | [Modal](modal.md) |
 | `use_modal_close` | Closes the modal it is rendered in. | [Modal](modal.md) |
 | `use_drawer` | Registers a drawer and returns the handle that opens it. | [Drawer](drawer.md) |

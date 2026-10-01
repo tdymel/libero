@@ -34,6 +34,8 @@ rsx! {
                 "Tap, or hold"
             }
         }
+        // The same action without holding (WCAG 2.5.1, 2.1.1).
+        Button { variant: "outlined", onclick: move |_| holds += 1, "Count a hold" }
         div { role: "status", "{taps} taps, {holds} holds" }
     }
 }"#
@@ -69,6 +71,8 @@ fn HoldToCount() -> Element {
                     "Tap, or hold"
                 }
             }
+            // The same action without holding (WCAG 2.5.1, 2.1.1).
+            Button { variant: "outlined", onclick: move |_| holds += 1, "Count a hold" }
             div { role: "status", "{taps} taps, {holds} holds" }
         }
     }
@@ -88,7 +92,7 @@ pub fn UseLongPressPage() -> Element {
                     "The browser's own long-press menu is suppressed only after the press fired, and the click that follows the release is reported so you can skip it.",
                 ])
                 .must([
-                    "Offer the same action without holding: a long press is a gesture with no keyboard or switch equivalent (WCAG 2.5.1, 2.1.1). Put it on a context menu, a key such as Shift+F10, or a visible button.",
+                    "Offer the same action without holding: a long press is a gesture with no keyboard or switch equivalent (WCAG 2.5.1, 2.1.1). Put it on a context menu, a key such as Shift+F10, or a visible button, as the demo's \"Count a hold\" does.",
                     "Announce what the press did with a live region, as the demo does.",
                 ])
                 .limits([

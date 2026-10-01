@@ -45,6 +45,21 @@ fn ThemePicker() -> Element {
 A swap rebuilds the stylesheet, because the sheet carries the set's pair. The
 colour scheme setting survives it, so a reader who pinned dark stays in dark.
 
+## Accessibility
+
+### Libero handles
+
+- A swap keeps the reader's colour scheme setting, so a reader who pinned dark
+  stays in dark.
+
+### You must
+
+- Mark the active set on its control, as the demo's buttons do with
+  `aria_pressed`.
+- Check the sets you offer against your own colours: in Kanagawa, Kanagawa
+  Dragon and Vague light `muted.6` falls just under 3:1, the minimum for borders
+  and icons (WCAG 1.4.11).
+
 ## API
 
 ```rust,ignore

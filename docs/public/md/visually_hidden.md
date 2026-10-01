@@ -60,11 +60,14 @@ Like every component, `VisuallyHidden` also takes the shared props `sx`, `class`
   Further down, put it in a positioned parent and set `position: absolute`
   through `sx`, or Tab never scrolls it into view.
 
+The link needs a target with that id; `tabindex: "-1"` lets it take the focus:
+
 ```rust,ignore
 VisuallyHidden {
     focusable: true,
     Anchor { to: "#main", "Skip to content" }
 }
+main { id: "main", tabindex: "-1", /* the page */ }
 ```
 
 ## Theme defaults

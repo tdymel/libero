@@ -134,7 +134,7 @@ impl<P: Part, const N: usize> From<[(P, Sx); N]> for Parts<P> {
 /// # use libero::components::{Alert, AlertPart, Parts, StaticParts};
 /// # use libero::sx::sx;
 /// static QUIET: StaticParts<AlertPart> =
-///     StaticParts::new(|| Parts::new().part(AlertPart::Message, sx().color("gray.7")));
+///     StaticParts::new(|| Parts::new().part(AlertPart::Message, sx().color("muted.7")));
 /// # fn app() -> Element { rsx! {
 /// Alert { title: "Saved", parts: &QUIET }
 /// # } }

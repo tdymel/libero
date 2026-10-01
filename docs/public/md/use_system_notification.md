@@ -40,9 +40,10 @@ use dioxus::prelude::*;
 use libero::{
     components::{Button, Flex, Text},
     hooks::{
-        PushOptions, SystemNotification, SystemNotificationError, use_push_subscription,
-        use_system_notification,
+        PermissionState, PushError, PushOptions, SystemNotification, SystemNotificationError,
+        use_push_subscription, use_system_notification,
     },
+    sx::sx,
 };
 
 #[component]
@@ -61,6 +62,20 @@ fn Notify() -> Element {
         Some(SystemNotificationError::Failed) => "The notification did not show".to_string(),
         None if clicks() > 0 => format!("Notification clicked {} times", clicks()),
         None => String::new(),
+    };
+    let permission = match notifier.permission() {
+        PermissionState::Granted => "granted",
+        PermissionState::Denied => "denied",
+        PermissionState::Prompt => "not asked yet",
+        PermissionState::Unknown => "unknown",
+        PermissionState::Unsupported => "unsupported here",
+    };
+    let push_status = match (push.is_supported(), push.error()) {
+        (false, _) | (true, Some(PushError::Unsupported)) => "unsupported here",
+        (true, Some(PushError::Denied)) => "refused, notifications are not allowed",
+        (true, Some(PushError::Failed)) => "the subscription failed",
+        (true, None) if push.subscription().is_some() => "subscribed",
+        (true, None) => "not subscribed",
     };
 
     rsx! {
@@ -86,8 +101,13 @@ fn Notify() -> Element {
             div { role: "status", "{status}" }
             if let Some(subscription) = push.subscription() {
                 // POST it to the app's server, which pushes with its VAPID private key.
-                Text { size: "sm", "Push endpoint: {subscription.endpoint}" }
+                Text {
+                    size: "sm",
+                    sx: sx().with("overflow-wrap", "anywhere"),
+                    "Push endpoint: {subscription.endpoint}"
+                }
             }
+            Text { size: "sm", "Permission: {permission}. Push: {push_status}." }
         }
     }
 }

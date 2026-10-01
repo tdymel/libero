@@ -295,7 +295,7 @@ use libero::sx::sx;
 
 // Built once, shared by every alert that passes it.
 static QUIET: StaticParts<AlertPart> =
-    StaticParts::new(|| Parts::new().part(AlertPart::Message, sx().color("gray.7")));
+    StaticParts::new(|| Parts::new().part(AlertPart::Message, sx().color("muted.7")));
 
 #[component]
 fn Demo() -> Element {

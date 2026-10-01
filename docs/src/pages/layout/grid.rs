@@ -151,7 +151,14 @@ fn controls() -> Vec<Control> {
         Control::toggle("layout", ["wall", "page", "responsive"])
             .labels(["Masonry wall", "Named areas", "Responsive spans"])
             .code(|_, _| vec![]),
-        Control::switch("masonry").hidden_when(wall),
+        // On at first, as the layout is labelled a masonry wall; the prop's own default is off.
+        Control::switch("masonry")
+            .default("true")
+            .code(|_, values| match values.str("masonry").as_str() {
+                "true" => vec!["masonry: true".to_string()],
+                _ => vec![],
+            })
+            .hidden_when(wall),
         Control::switch("dense").hidden_when(wall),
         Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"])
             .default("md")

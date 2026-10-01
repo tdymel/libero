@@ -8,9 +8,11 @@ use libero::{
 /// The two hooks in one component, as `Stopwatch` renders them.
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let mut seconds = use_signal(|| 0);
+let mut laps = use_signal(Vec::new);
 let mut saved = use_signal(|| false);
 let interval = use_interval(move || seconds += 1, 1000);
 let flash = use_timeout(move || saved.set(false), 2000);
+let list = laps.read().iter().map(|lap| format!("{lap} s")).collect::<Vec<_>>().join(", ");
 
 rsx! {
     Flex { direction: "column", align: "flex-start", gap: "sm",
@@ -23,6 +25,7 @@ rsx! {
             Button {
                 variant: "outlined",
                 onclick: move |_| {
+                    laps.push(seconds());
                     saved.set(true);
                     flash.start();
                 },
@@ -34,6 +37,9 @@ rsx! {
                 "Lap saved"
             }
         }
+        if !list.is_empty() {
+            Text { "Laps: {list}" }
+        }
     }
 }"#
     .to_string()
@@ -42,9 +48,16 @@ rsx! {
 #[component]
 fn Stopwatch() -> Element {
     let mut seconds = use_signal(|| 0);
+    let mut laps = use_signal(Vec::new);
     let mut saved = use_signal(|| false);
     let interval = use_interval(move || seconds += 1, 1000);
     let flash = use_timeout(move || saved.set(false), 2000);
+    let list = laps
+        .read()
+        .iter()
+        .map(|lap| format!("{lap} s"))
+        .collect::<Vec<_>>()
+        .join(", ");
 
     rsx! {
         Flex { direction: "column", align: "flex-start", gap: "sm",
@@ -61,6 +74,7 @@ fn Stopwatch() -> Element {
                 Button {
                     variant: "outlined",
                     onclick: move |_| {
+                        laps.push(seconds());
                         saved.set(true);
                         flash.start();
                     },
@@ -71,6 +85,9 @@ fn Stopwatch() -> Element {
                 if saved() {
                     "Lap saved"
                 }
+            }
+            if !list.is_empty() {
+                Text { "Laps: {list}" }
             }
         }
     }

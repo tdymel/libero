@@ -1,32 +1,31 @@
 use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Text},
-    hooks::{IntersectionOptions, use_element, use_intersection},
+    components::{Box, Code, ScrollArea, Text},
+    hooks::{IntersectionOptions, use_intersection},
+    sx::sx,
 };
 
 /// The hook in one component, as `Reveal` renders it.
 fn code(_: &DemoValues, _: &str) -> String {
-    r#"let scroller = use_element();
-let seen = use_intersection(IntersectionOptions {
-    root: Some(scroller),
+    r#"let seen = use_intersection(IntersectionOptions {
     thresholds: vec![0.0, 0.5, 1.0],
     ..Default::default()
 });
 let percent = seen.entry.read().map_or(0, |entry| (entry.ratio * 100.0).round() as u32);
 
+// No `root`: the viewport's observer also clips by the scrolling area around the element.
 rsx! {
-    div {
-        onmounted: scroller.mount(),
-        style: "height: 8rem; overflow: auto;",
-        ..scroller.attributes(),
-        div { style: "height: 12rem;", "Scroll down" }
-        div {
-            onmounted: move |event| seen.on_mounted.call(event),
-            ..seen.attributes,
-            "{percent}% visible"
+    Box { sx: sx().width("16rem").height("8rem").border("1px solid currentColor"),
+        ScrollArea { aria_label: "Scrolling box",
+            div { style: "height: 12rem;", "Scroll down" }
+            div {
+                onmounted: move |event| seen.on_mounted.call(event),
+                ..seen.attributes,
+                "{percent}% visible"
+            }
+            div { style: "height: 12rem;" }
         }
-        div { style: "height: 12rem;" }
     }
 }"#
     .to_string()
@@ -34,9 +33,7 @@ rsx! {
 
 #[component]
 fn Reveal() -> Element {
-    let scroller = use_element();
     let seen = use_intersection(IntersectionOptions {
-        root: Some(scroller),
         thresholds: vec![0.0, 0.5, 1.0],
         ..Default::default()
     });
@@ -45,19 +42,18 @@ fn Reveal() -> Element {
         .read()
         .map_or(0, |entry| (entry.ratio * 100.0).round() as u32);
 
+    // No `root`: the viewport's observer also clips by the scrolling area around the element.
     rsx! {
-        div {
-            onmounted: scroller.mount(),
-            tabindex: "0",
-            style: "height: 8rem; overflow: auto; border: 1px solid currentColor;",
-            ..scroller.attributes(),
-            div { style: "height: 12rem;", "Scroll down" }
-            div {
-                onmounted: move |event| seen.on_mounted.call(event),
-                ..seen.attributes,
-                "{percent}% visible"
+        Box { sx: sx().width("16rem").height("8rem").border("1px solid currentColor"),
+            ScrollArea { aria_label: "Scrolling box",
+                div { style: "height: 12rem;", "Scroll down" }
+                div {
+                    onmounted: move |event| seen.on_mounted.call(event),
+                    ..seen.attributes,
+                    "{percent}% visible"
+                }
+                div { style: "height: 12rem;" }
             }
-            div { style: "height: 12rem;" }
         }
     }
 }

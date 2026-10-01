@@ -1,6 +1,6 @@
 use super::KeepSite;
 use crate::Route;
-use crate::components::{Demo, DemoValues, DocPage, Wrap};
+use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Button, Code, Flex, Text},
@@ -58,6 +58,14 @@ pub fn UseThemeSetPage() -> Element {
             title: "Theme set",
             source: "libero/src/hooks/theme.rs",
             markdown: "/md/use_theme_set.md",
+            accessibility: a11y()
+                .handles([
+                    "A swap keeps the reader's colour scheme setting, so a reader who pinned dark stays in dark.",
+                ])
+                .must([
+                    "Mark the active set on its control, as the demo's buttons do with `aria_pressed`.",
+                    "Check the sets you offer against your own colours: in Kanagawa, Kanagawa Dragon and Vague light `muted.6` falls just under 3:1, the minimum for borders and icons (WCAG 1.4.11).",
+                ]),
             lead: rsx! {
                 Text {
                     Code { source: "use_theme_set() -> ThemeSetHandle" }

@@ -32,7 +32,7 @@ pub fn Stats() -> Element {
                 Stat { value: "100+", title: "Components and Hooks" }
                 Stat { value: "20+", title: "ThemeSets" }
                 Stat { value: "4", title: "Platform Targets" }
-                Stat { value: "AA", title: "WCAG 2.2" }
+                Stat { value: "AA", title: "WCAG 2.2, targeted" }
             }
         }
     }

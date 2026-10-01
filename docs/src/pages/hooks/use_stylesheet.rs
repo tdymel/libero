@@ -1,5 +1,5 @@
 use crate::Route;
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Box, Code, Text},
@@ -49,6 +49,14 @@ pub fn UseStylesheetPage() -> Element {
             title: "Stylesheet",
             source: "libero/src/hooks/stylesheet.rs",
             markdown: "/md/use_stylesheet.md",
+            accessibility: a11y()
+                .handles([
+                    "Nothing on screen: it registers CSS and returns a class.",
+                ])
+                .must([
+                    "Keep a visible focus indicator: a rule here outranks libero's own focus ring, so `outline: none` on a control removes it (WCAG 2.4.7).",
+                    "Check the contrast of a literal colour you set: 4.5:1 for text, 3:1 for borders and icons (WCAG 1.4.3, 1.4.11). A theme colour such as `primary.1` follows the theme set.",
+                ]),
             lead: rsx! {
                 Text {
                     Code { source: "use_stylesheet(sheet) -> Option<String>" }

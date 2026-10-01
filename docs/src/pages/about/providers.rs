@@ -10,9 +10,11 @@ use pictogram_icons_lucide as lucide;
 
 // snippet: let day = libero::chrono::NaiveDate::from_ymd_opt(2026, 3, 14);
 const NESTED: &str = r#"rsx! {
+    // English words and German formats, as on this site.
     LiberoProvider {
+        formats: &Formats::GERMAN,
         DatePicker { value: day, onchange: |_| {} }
-        // English words, American formats, like the outer one.
+        // German words as well, only in here.
         LiberoProvider {
             localization: &Localization::GERMAN,
             formats: &Formats::GERMAN,

@@ -10,7 +10,7 @@ use libero::{
     sx::sx,
 };
 
-const FEATURES: [(&str, &str); 4] = [
+const FEATURES: [(&str, &str); 8] = [
     (
         "code-lang-<name>",
         "One grammar for Code and CodeBlock, 30 in all. Rust, Bash, Markdown, HTML and CSS are the default.",
@@ -26,6 +26,22 @@ const FEATURES: [(&str, &str); 4] = [
     (
         "desktop",
         "System notifications over D-Bus in a desktop WebView on Linux, where WebKitGTK denies them.",
+    ),
+    (
+        "icons-bootstrap",
+        "The Bootstrap Icons set for IconProvider, as IconSet::bootstrap(). Without it libero's glyphs are Lucide.",
+    ),
+    (
+        "icons-material",
+        "The Material Design Icons set for IconProvider, as IconSet::material(). Without it libero's glyphs are Lucide.",
+    ),
+    (
+        "icons-phosphor",
+        "The Phosphor set for IconProvider, as IconSet::phosphor(). Without it libero's glyphs are Lucide.",
+    ),
+    (
+        "icons-tabler",
+        "The Tabler Icons set for IconProvider, as IconSet::tabler(). Without it libero's glyphs are Lucide.",
     ),
 ];
 

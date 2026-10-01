@@ -163,6 +163,16 @@ fn hooks() -> Vec<HookRow> {
             Route::UseThemeSetPage {},
         ),
         row(
+            "use_color_scheme",
+            "Reads and sets the light or dark colour scheme.",
+            Route::ThemeSwitcherPage {},
+        ),
+        row(
+            "use_direction",
+            "Reads and sets the text direction, left to right or right to left.",
+            Route::DirectionTogglePage {},
+        ),
+        row(
             "use_localization",
             "The words libero's components say, in the active language.",
             Route::LocalizationPage {},
@@ -193,6 +203,16 @@ fn hooks() -> Vec<HookRow> {
             Route::UseAccessibilityPage {},
         ),
         row(
+            "use_clipboard",
+            "Copies text and tells whether the last copy landed.",
+            Route::CopyPage {},
+        ),
+        row(
+            "use_icon",
+            "The glyph an IconProvider sets for a slot, else your default.",
+            Route::IconProviderPage {},
+        ),
+        row(
             "use_scroll_area",
             "Scrolls a ScrollArea from code.",
             Route::ScrollAreaPage {},
@@ -216,6 +236,11 @@ fn hooks() -> Vec<HookRow> {
             "use_combobox",
             "Keeps a Combobox's open state in your scope.",
             Route::ComboboxPage {},
+        ),
+        row(
+            "use_rich_text_editor",
+            "Drives a RichTextEditor from toolbar controls of your own.",
+            Route::RichTextEditorPage {},
         ),
         row(
             "use_modal",
@@ -311,5 +336,63 @@ pub fn HooksPage() -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::BTreeSet, fs, path::Path};
+
+    /// Every `use_*` a `pub use` in libero's source names; `pub(crate) use` stays out.
+    fn exported(dir: &Path, hooks: &mut BTreeSet<String>) {
+        for entry in fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                exported(&path, hooks);
+                continue;
+            }
+            if path.extension().is_none_or(|ext| ext != "rs") {
+                continue;
+            }
+            let source = fs::read_to_string(&path).unwrap();
+            // Indented too: `rich_text` re-exports its hook from an inline `pub mod`.
+            for (at, _) in source.match_indices("pub use ") {
+                let line_start = source[..at].rfind('\n').map_or(0, |at| at + 1);
+                if !source[line_start..at].trim().is_empty() {
+                    continue;
+                }
+                let rest = &source[at..];
+                let statement = &rest[..rest.find(';').unwrap()];
+                let ident = |c: char| c.is_alphanumeric() || c == '_';
+                for (start, _) in statement.match_indices("use_") {
+                    if statement[..start].ends_with(ident) {
+                        continue;
+                    }
+                    let word: String = statement[start..]
+                        .chars()
+                        .take_while(|c| ident(*c))
+                        .collect();
+                    // A `use_modal::{..}` path segment is a module, not the hook.
+                    if !statement[start + word.len()..].starts_with("::") {
+                        hooks.insert(word);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn every_public_hook_has_a_row() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../libero/src");
+        let mut public = BTreeSet::new();
+        exported(&root, &mut public);
+        let listed: BTreeSet<String> = super::hooks()
+            .iter()
+            .map(|row| row.hook.to_string())
+            .collect();
+        assert_eq!(
+            public, listed,
+            "libero's pub use hooks against the Hooks page's rows"
+        );
     }
 }

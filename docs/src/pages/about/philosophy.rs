@@ -74,7 +74,7 @@ pub fn PhilosophyPage() -> Element {
                     why: "Starting an app should not mean hunting for a date picker. Your time goes \
                           into your app, not into stitching libraries together.",
                     ListItem {"Cover the everyday needs, forms and overlays included: {components} components." }
-                    ListItem {"Work the same on the web and natively." }
+                    ListItem {"Work the same on the web and natively, and say where a platform falls short." }
                     ListItem {"Be honest where a platform falls short: a missing feature is absent, not broken." }
                 }
                 Principle {
@@ -146,7 +146,8 @@ fn Principle(
 #[component]
 fn Label(children: Element) -> Element {
     rsx! {
-        Text { size: "sm", sx: sx().font_weight("600"), {children} }
+        // A heading under the card's h2, styled as the small bold line it was.
+        Title { component: "h3", size: "sm", sx: sx().font_weight("600").margin("0"), {children} }
     }
 }
 

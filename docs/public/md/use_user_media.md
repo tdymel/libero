@@ -64,9 +64,10 @@ fn CaptureBooth() -> Element {
                 aria_label: "Camera preview",
                 autoplay: true, muted: true, playsinline: true,
                 width: "320", height: "240",
+                style: "background: #000; max-width: 100%;",
                 ..media.attributes(),
             }
-            Flex { direction: "row", gap: "sm", align: "center",
+            Flex { direction: "row", gap: "sm", align: "center", wrap: "wrap",
                 Button {
                     onclick: move |_| if media.is_live() { media.stop() } else { media.start() },
                     if media.is_live() { "Turn camera off" } else { "Turn camera on" }

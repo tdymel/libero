@@ -6,7 +6,7 @@ use libero::components::{Anchor, Code, Text, VisuallyHidden};
 /// `focusable` prints a skip link instead.
 fn wrap_link(values: &DemoValues, code: &str) -> String {
     if values.str("focusable") == "true" {
-        return "VisuallyHidden {\n    focusable: true,\n    Anchor { to: \"#main\", \"Skip to content\" }\n}"
+        return "VisuallyHidden {\n    focusable: true,\n    Anchor { to: \"#skip-demo-content\", \"Skip to content\" }\n}\nText { id: \"skip-demo-content\", tabindex: \"-1\", \"The content the link skips to.\" }"
             .to_string();
     }
     format!(
@@ -54,8 +54,10 @@ pub fn VisuallyHiddenPage() -> Element {
                 render: move |values: DemoValues| if values.str("focusable") == "true" {
                     rsx! {
                         VisuallyHidden { focusable: true,
-                            Anchor { to: "#main", "Skip to content" }
+                            Anchor { to: "#skip-demo-content", "Skip to content" }
                         }
+                        // The docs' own `main` is taken: a target of the demo's own.
+                        Text { id: "skip-demo-content", tabindex: "-1", "The content the link skips to." }
                     }
                 } else { rsx! {
                     Text {

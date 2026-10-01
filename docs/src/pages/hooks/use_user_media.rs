@@ -22,7 +22,8 @@ fn code(values: &DemoValues, _: &str) -> String {
     ..Default::default()
 }});
 let devices = use_user_media_devices();
-let device = if {camera} {{ "camera" }} else {{ "microphone" }};
+let device = if {camera} {{ "Camera" }} else {{ "Microphone" }};
+let noun = device.to_lowercase();
 // Announced once per change, never per frame.
 let status = match (media.error(), media.is_recording(), media.is_live()) {{
     (Some(UserMediaError::Denied), _, _) => format!("{{device}} refused"),
@@ -44,13 +45,14 @@ rsx! {{
                 aria_label: "Camera preview",
                 autoplay: true, muted: true, playsinline: true,
                 width: "320", height: "240",
+                style: "background: #000; max-width: 100%;",
                 ..media.attributes(),
             }}
         }}
-        Flex {{ direction: "row", gap: "sm", align: "center",
+        Flex {{ direction: "row", gap: "sm", align: "center", wrap: "wrap",
             Button {{
                 onclick: move |_| if media.is_live() {{ media.stop() }} else {{ media.start() }},
-                if media.is_live() {{ "Turn {{device}} off" }} else {{ "Turn {{device}} on" }}
+                if media.is_live() {{ "Turn {{noun}} off" }} else {{ "Turn {{noun}} on" }}
             }}
             if {camera} {{
                 Button {{ variant: "outlined", disabled: !media.is_live(), onclick: move |_| media.snapshot(), "Take photo" }}
@@ -323,7 +325,10 @@ pub fn UseUserMediaPage() -> Element {
                 // Options, not props: `code` prints them into the hook call.
                 controls: vec![
                     Control::switch("camera").default("true").code(|_, _| vec![]),
-                    Control::switch("microphone").code(|_, _| vec![]),
+                    // Camera off records audio, so the microphone is on whatever the switch says.
+                    Control::switch("microphone")
+                        .code(|_, _| vec![])
+                        .hidden_when(|values| values.str("camera") != "true"),
                 ],
                 render: move |values: DemoValues| {
                     let camera = values.str("camera") == "true";

@@ -9,6 +9,11 @@ use libero::{
 fn code(_: &DemoValues, _: &str) -> String {
     r#"let media = use_media();
 let time = media.current_time() as u64;
+let status = match (media.error(), media.buffering()) {
+    (Some(_), _) => "The audio could not be played.",
+    (None, true) => "Loading",
+    (None, false) => "",
+};
 
 rsx! {
     audio { src: "/podcast.mp3", onmounted: media.mount(), ..media.attributes() }
@@ -19,6 +24,7 @@ rsx! {
         }
         Button { variant: "outlined", onclick: move |_| media.seek(0.0), "Restart" }
         Text { "{time / 60}:{time % 60:02}" }
+        div { role: "status", "{status}" }
     }
 }"#
     .to_string()
@@ -28,6 +34,11 @@ rsx! {
 fn OwnPlayer() -> Element {
     let media = use_media();
     let time = media.current_time() as u64;
+    let status = match (media.error(), media.buffering()) {
+        (Some(_), _) => "The audio could not be played.",
+        (None, true) => "Loading",
+        (None, false) => "",
+    };
     rsx! {
         audio { src: crate::site::SAMPLE_AUDIO, onmounted: media.mount(), ..media.attributes() }
         Flex { gap: "sm", align: "center",
@@ -37,6 +48,7 @@ fn OwnPlayer() -> Element {
             }
             Button { variant: "outlined", onclick: move |_| media.seek(0.0), "Restart" }
             Text { "{time / 60}:{time % 60:02}" }
+            div { role: "status", "{status}" }
         }
     }
 }
@@ -55,7 +67,7 @@ pub fn UseMediaPage() -> Element {
                 ])
                 .must([
                     "Give every control a name that says what it does now, such as Play or Pause.",
-                    "Announce buffering and errors yourself, from `buffering()` and `error()`, as `Audio` and `Video` do.",
+                    "Announce buffering and errors yourself, from `buffering()` and `error()`, as the demo's status line and `Audio` and `Video` do.",
                     "Never autoplay sound (WCAG 1.4.2); offer captions and a transcript as for any media.",
                 ])
                 .limits([

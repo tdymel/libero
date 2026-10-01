@@ -26,7 +26,7 @@ Geolocation API: `is_supported()` stays false and a request fails with
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Flex, Text},
-    hooks::{GeolocationError, GeolocationOptions, use_geolocation},
+    hooks::{GeolocationError, GeolocationOptions, PermissionState, use_geolocation},
 };
 
 #[component]
@@ -40,6 +40,13 @@ fn ShareLocation() -> Element {
         (None, Some(_)) => "Location found",
         (None, None) if location.is_pending() => "Locating",
         (None, None) => "",
+    };
+    let permission = match location.permission() {
+        PermissionState::Granted => "granted",
+        PermissionState::Denied => "denied",
+        PermissionState::Prompt => "not asked yet",
+        PermissionState::Unknown => "unknown",
+        PermissionState::Unsupported => "unsupported here",
     };
 
     rsx! {
@@ -56,6 +63,7 @@ fn ShareLocation() -> Element {
             if let Some(fix) = location.position() {
                 Text { "{fix.latitude:.2}, {fix.longitude:.2}, within {fix.accuracy:.0} m" }
             }
+            Text { size: "sm", "Permission: {permission}" }
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::Route;
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Box, Button, Code, Flex, Text},
@@ -79,6 +79,16 @@ pub fn UseElementPage() -> Element {
             title: "Element handle",
             source: "libero/src/hooks/element.rs",
             markdown: "/md/use_element.md",
+            accessibility: a11y()
+                .handles([
+                    "It adds nothing to the element: no role, name, tab stop or focus style.",
+                ])
+                .must([
+                    "Move focus only in answer to the reader's action, such as a click or a closing panel, never on a timer or a re-render (WCAG 3.2.1).",
+                    "Focus only an element that takes focus, a control or one with `tabindex: \"-1\"`, and that shows a visible focus ring.",
+                    "Scroll the page only when the reader asked for it.",
+                    "Announce a result the reader asked for, such as a measurement, in a status region, as the demo does.",
+                ]),
             lead: rsx! {
                 Text {
                     Code { source: "use_element() -> ElementHandle" }

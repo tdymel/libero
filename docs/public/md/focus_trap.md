@@ -11,28 +11,54 @@ It focuses its first focusable child on mount and adds no box of its own.
 
 ## Usage
 
-Tab inside the trap cycles First, Second and Third without reaching Before or
-After.
+Tab inside the trap cycles First, Second, Third and Release without reaching
+Before or After. Release or Escape switches the trap off and puts focus back
+where it was before the trap took it.
 
 ```rust
 use dioxus::prelude::*;
 use libero::components::{Button, Flex, FocusTrap};
+use libero::hooks::use_focus_return;
 
 #[component]
 fn Demo() -> Element {
+    let mut trapped = use_signal(|| true);
+    let back = use_focus_return();
+    let mut release = move || {
+        trapped.set(false);
+        back.restore();
+    };
+
     rsx! {
         Flex {
             direction: "column",
             gap: "sm",
             align: "flex-start",
             Button { variant: "text", "Before" }
-            FocusTrap {
-                Flex {
-                    direction: "row",
-                    gap: "sm",
-                    Button { variant: "outlined", "First" }
-                    Button { variant: "outlined", "Second" }
-                    Button { variant: "outlined", "Third" }
+            if trapped() {
+                FocusTrap {
+                    Flex {
+                        direction: "row",
+                        gap: "sm",
+                        onkeydown: move |event: KeyboardEvent| {
+                            if event.key() == Key::Escape {
+                                release();
+                            }
+                        },
+                        Button { variant: "outlined", "First" }
+                        Button { variant: "outlined", "Second" }
+                        Button { variant: "outlined", "Third" }
+                        Button { variant: "filled", onclick: move |_| release(), "Release" }
+                    }
+                }
+            } else {
+                Button {
+                    variant: "outlined",
+                    onclick: move |_| {
+                        back.remember_active();
+                        trapped.set(true);
+                    },
+                    "Trap focus"
                 }
             }
             Button { variant: "text", "After" }

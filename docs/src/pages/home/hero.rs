@@ -71,7 +71,7 @@ pub fn Hero() -> Element {
                             .color("primary.7"),
                         "Build once, run everywhere"
                     }
-                    Text { "One Dioxus codebase for the web, the desktop, Android and iOS." }
+                    Text { "One Dioxus codebase for the web, the desktop and Android; iOS builds but is untested." }
                     Flex { direction: "row", gap: "sm", wrap: "wrap", justify: "center",
                         for platform in PLATFORMS {
                             Badge { key: "{platform}", variant: "outlined", color: "primary.8", "{platform}" }
@@ -100,7 +100,6 @@ pub fn Hero() -> Element {
                         header: false,
                         line_numbers: false,
                         // copy: end
-                        sx: sx().text_align("left"),
                     }
                 }
             }

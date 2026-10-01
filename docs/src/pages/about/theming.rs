@@ -9,7 +9,7 @@ type Part = (&'static str, &'static str, &'static str);
 const PARTS: [Part; 4] = [
     (
         "Colors",
-        "primary, secondary, success, error, warning, info",
+        "primary, secondary, success, error, warning, info, neutral, muted",
         "One hex per role, with nine shades and a text color derived from it.",
     ),
     (
@@ -178,6 +178,13 @@ pub fn ThemingPage() -> Element {
                     "the theme. Pill-shaped buttons everywhere is one change here."
                 }
                 CodeBlock { source: COMPONENT_DEFAULTS, language: "rust" }
+                Text {
+                    "Two structs serve every component: "
+                    Code { source: "focus_ring" }
+                    " is the one focus indicator, and "
+                    Code { source: "z_index" }
+                    " orders the headers, windows, modals, popovers and toasts."
+                }
                 Text {
                     "The theme sets props, not a component's inner parts. To restyle a part, pass "
                     Code { source: "parts" }

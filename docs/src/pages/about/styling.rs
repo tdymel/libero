@@ -136,7 +136,7 @@ rsx! {
 }"#;
 
 const PARTS: &str = r#"static QUIET: StaticParts<AlertPart> =
-    StaticParts::new(|| Parts::new().part(AlertPart::Message, sx().color("gray.7")));
+    StaticParts::new(|| Parts::new().part(AlertPart::Message, sx().color("muted.7")));
 
 rsx! {
     Alert {

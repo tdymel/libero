@@ -3,9 +3,10 @@ use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Flex, Text},
     hooks::{
-        PermissionState, PushOptions, SystemNotification, SystemNotificationError, SystemNotifier,
-        use_push_subscription, use_system_notification,
+        PermissionState, PushError, PushOptions, SystemNotification, SystemNotificationError,
+        SystemNotifier, use_push_subscription, use_system_notification,
     },
+    sx::sx,
 };
 
 /// A throwaway public key: its private half was never kept, so nothing can push to the demo.
@@ -28,6 +29,20 @@ let status = match notifier.error() {
     Some(SystemNotificationError::Failed) => "The notification did not show".to_string(),
     None if clicks() > 0 => format!("Notification clicked {} times", clicks()),
     None => String::new(),
+};
+let permission = match notifier.permission() {
+    PermissionState::Granted => "granted",
+    PermissionState::Denied => "denied",
+    PermissionState::Prompt => "not asked yet",
+    PermissionState::Unknown => "unknown",
+    PermissionState::Unsupported => "unsupported here",
+};
+let push_status = match (push.is_supported(), push.error()) {
+    (false, _) | (true, Some(PushError::Unsupported)) => "unsupported here",
+    (true, Some(PushError::Denied)) => "refused, notifications are not allowed",
+    (true, Some(PushError::Failed)) => "the subscription failed",
+    (true, None) if push.subscription().is_some() => "subscribed",
+    (true, None) => "not subscribed",
 };
 
 rsx! {
@@ -53,8 +68,13 @@ rsx! {
         div { role: "status", "{status}" }
         if let Some(subscription) = push.subscription() {
             // POST it to the app's server, which pushes with its VAPID private key.
-            Text { size: "sm", "Push endpoint: {subscription.endpoint}" }
+            Text {
+                size: "sm",
+                sx: sx().with("overflow-wrap", "anywhere"),
+                "Push endpoint: {subscription.endpoint}"
+            }
         }
+        Text { size: "sm", "Permission: {permission}. Push: {push_status}." }
     }
 }"#
     .to_string()
@@ -92,10 +112,11 @@ fn Notify() -> Element {
     let status = status(&notifier, clicks());
     let permission = permission_text(notifier.permission());
     let push_status = match (push.is_supported(), push.error()) {
-        (false, _) => "unsupported here".to_string(),
-        (true, Some(error)) => format!("{error:?}"),
-        (true, None) if push.subscription().is_some() => "subscribed".to_string(),
-        (true, None) => "not subscribed".to_string(),
+        (false, _) | (true, Some(PushError::Unsupported)) => "unsupported here",
+        (true, Some(PushError::Denied)) => "refused, notifications are not allowed",
+        (true, Some(PushError::Failed)) => "the subscription failed",
+        (true, None) if push.subscription().is_some() => "subscribed",
+        (true, None) => "not subscribed",
     };
 
     rsx! {
@@ -120,7 +141,12 @@ fn Notify() -> Element {
             }
             div { role: "status", "{status}" }
             if let Some(subscription) = push.subscription() {
-                Text { size: "sm", "Push endpoint: {subscription.endpoint}" }
+                // An endpoint is one unbroken 100-200 character word (1.4.10).
+                Text {
+                    size: "sm",
+                    sx: sx().with("overflow-wrap", "anywhere"),
+                    "Push endpoint: {subscription.endpoint}"
+                }
             }
             Text { size: "sm", "Permission: {permission}. Push: {push_status}." }
         }

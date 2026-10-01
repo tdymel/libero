@@ -12,8 +12,8 @@ let mut helps = use_signal(|| 0);
 let mut bolds = use_signal(|| 0);
 let editor = use_element();
 use_hotkeys([
-    Hotkey::new("mod+k", move || searches += 1),
-    Hotkey::new("alt+h", move || helps += 1).include_editable(true),
+    Hotkey::new("f2", move || searches += 1),
+    Hotkey::new("f8", move || helps += 1).include_editable(true),
     Hotkey::new("mod+b", move || bolds += 1)
         .include_editable(true)
         .within(editor),
@@ -23,7 +23,7 @@ rsx! {
     Flex { direction: "column", gap: "sm",
         Text { "Search opened {searches} times" }
         Text { "Help opened {helps} times" }
-        TextField { label: "Press Alt+H while typing" }
+        TextField { label: "Press F8 while typing" }
         div { onmounted: editor.mount(), ..editor.attributes(),
             TextField { label: "Press Ctrl+B (Cmd+B on a Mac) in here" }
         }
@@ -40,8 +40,8 @@ fn Shortcuts() -> Element {
     let mut bolds = use_signal(|| 0);
     let editor = use_element();
     use_hotkeys([
-        Hotkey::new("mod+k", move || searches += 1),
-        Hotkey::new("alt+h", move || helps += 1).include_editable(true),
+        Hotkey::new("f2", move || searches += 1),
+        Hotkey::new("f8", move || helps += 1).include_editable(true),
         Hotkey::new("mod+b", move || bolds += 1)
             .include_editable(true)
             .within(editor),
@@ -51,7 +51,7 @@ fn Shortcuts() -> Element {
         Flex { direction: "column", gap: "sm",
             Text { "Search opened {searches} times" }
             Text { "Help opened {helps} times" }
-            TextField { label: "Press Alt+H while typing" }
+            TextField { label: "Press F8 while typing" }
             div { onmounted: editor.mount(), ..editor.attributes(),
                 TextField { label: "Press Ctrl+B (Cmd+B on a Mac) in here" }
             }
@@ -68,8 +68,8 @@ pub fn UseHotkeysPage() -> Element {
             source: "libero/src/hooks/hotkeys.rs",
             markdown: "/md/use_hotkeys.md",
             accessibility: a11y()
-                .key(["Cmd+K", "Ctrl+K"], "Runs the first demo shortcut: Cmd on macOS, Ctrl elsewhere.")
-                .key(["Alt+H"], "Runs the second one, also while typing in the field.")
+                .key(["F2"], "Runs the first demo shortcut. Not Ctrl+K: the docs search has it.")
+                .key(["F8"], "Runs the second one, also while typing in the field.")
                 .key(["Cmd+B", "Ctrl+B"], "Runs the third one, only with focus in the second field.")
                 .handles([
                     "A shortcut is not taken from a text field, a `textarea`, a `select` or editable content unless you ask with `include_editable`.",

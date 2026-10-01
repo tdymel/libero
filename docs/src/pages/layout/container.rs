@@ -39,7 +39,11 @@ pub fn ContainerPage() -> Element {
                     "content in it, not the whole page shell. The cap shows only once the "
                     "space around it is wider than "
                     Code { source: "size" }
-                    "."
+                    ". The preview leaves out "
+                    Code { source: "component: \"main\"" }
+                    ": it would put a second "
+                    Code { source: "main" }
+                    " inside this page's own, and a page has one."
                 }
             },
             Demo {
@@ -50,8 +54,9 @@ pub fn ContainerPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("lg"),
                     Control::slider("gutters", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
-                    Control::toggle("component", ["div", "main", "section"])
-                        .labels(["Div", "Main", "Section"]),
+                    // No `main`: the docs page is one already, and a page has one main.
+                    Control::toggle("component", ["div", "section"])
+                        .labels(["Div", "Section"]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Container {

@@ -67,6 +67,22 @@ data in a webview. A webview still measures, scrolls and focuses, but
 `query_selector` answers `Unsupported` there, and `is_focused()` always answers
 `false`.
 
+## Accessibility
+
+### Libero handles
+
+- It adds nothing to the element: no role, name, tab stop or focus style.
+
+### You must
+
+- Move focus only in answer to the reader's action, such as a click or a closing
+  panel, never on a timer or a re-render (WCAG 3.2.1).
+- Focus only an element that takes focus, a control or one with `tabindex:
+  "-1"`, and that shows a visible focus ring.
+- Scroll the page only when the reader asked for it.
+- Announce a result the reader asked for, such as a measurement, in a status
+  region, as the demo does.
+
 ## API
 
 ```rust,ignore

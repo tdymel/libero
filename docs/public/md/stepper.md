@@ -36,6 +36,7 @@ fn Demo() -> Element {
     rsx! {
         Stepper {
             value: stage(),
+            aria_label: "Order steps",
             onstepclick: move |s| stage.set(Some(s)),
             state: |s: Stage| (s == Stage::Shipping && !address_valid())
                 .then_some(StepState::Error),

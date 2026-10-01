@@ -49,7 +49,7 @@ What a typical app needs, in one place.
 What we do:
 
 - Cover the everyday needs, forms and overlays included.
-- Work the same on the web and natively.
+- Work the same on the web and natively, and say where a platform falls short.
 - Be honest where a platform falls short: a missing feature is absent, not
   broken.
 
