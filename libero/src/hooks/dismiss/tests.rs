@@ -1,9 +1,10 @@
 use std::rc::Rc;
 
 use dioxus::core::{AttributeValue, ElementId, WriteMutations};
-use dioxus::html::{HasKeyboardData, PlatformEventData};
+use dioxus::html::PlatformEventData;
 
 use super::*;
+use crate::test_converter::{FakeEscape, FakeFocus, TestConverter};
 use crate::{
     LiberoProvider,
     components::{HtmlTag, Modal, use_box},
@@ -73,130 +74,6 @@ impl WriteMutations for FindKeydownListeners {
     fn set_text(&mut self, _value: &str) {}
     fn remove_event_listener(&mut self, _name: &str) {}
     fn remove(&mut self) {}
-}
-
-/// The renderer's key event: Escape, plain, held or composing; or ArrowDown,
-/// which opens a real `Select`'s list.
-#[derive(Clone, Copy, Default)]
-struct FakeEscape {
-    repeat: bool,
-    composing: bool,
-    arrow_down: bool,
-}
-
-impl HasKeyboardData for FakeEscape {
-    fn key(&self) -> Key {
-        match self.arrow_down {
-            true => Key::ArrowDown,
-            false => Key::Escape,
-        }
-    }
-    fn code(&self) -> Code {
-        match self.arrow_down {
-            true => Code::ArrowDown,
-            false => Code::Escape,
-        }
-    }
-    fn location(&self) -> dioxus::html::input_data::keyboard_types::Location {
-        dioxus::html::input_data::keyboard_types::Location::Standard
-    }
-    fn is_auto_repeating(&self) -> bool {
-        self.repeat
-    }
-    fn is_composing(&self) -> bool {
-        self.composing
-    }
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-impl dioxus::html::point_interaction::ModifiersInteraction for FakeEscape {
-    fn modifiers(&self) -> dioxus::html::keyboard_types::Modifiers {
-        Default::default()
-    }
-}
-
-struct EscapeConverter;
-
-impl dioxus::html::HtmlEventConverter for EscapeConverter {
-    fn convert_keyboard_data(&self, event: &PlatformEventData) -> dioxus::html::KeyboardData {
-        let press = event.downcast::<FakeEscape>().copied().unwrap_or_default();
-        dioxus::html::KeyboardData::new(press)
-    }
-    fn convert_animation_data(&self, _e: &PlatformEventData) -> dioxus::html::AnimationData {
-        unimplemented!()
-    }
-    fn convert_before_input_data(&self, _e: &PlatformEventData) -> dioxus::html::BeforeInputData {
-        unimplemented!()
-    }
-    fn convert_cancel_data(&self, _e: &PlatformEventData) -> dioxus::html::CancelData {
-        unimplemented!()
-    }
-    fn convert_clipboard_data(&self, _e: &PlatformEventData) -> dioxus::html::ClipboardData {
-        unimplemented!()
-    }
-    fn convert_composition_data(&self, _e: &PlatformEventData) -> dioxus::html::CompositionData {
-        unimplemented!()
-    }
-    fn convert_drag_data(&self, _e: &PlatformEventData) -> dioxus::html::DragData {
-        unimplemented!()
-    }
-    fn convert_focus_data(&self, _e: &PlatformEventData) -> dioxus::html::FocusData {
-        dioxus::html::FocusData::new(FakeFocus)
-    }
-    fn convert_form_data(&self, _e: &PlatformEventData) -> dioxus::html::FormData {
-        unimplemented!()
-    }
-    fn convert_image_data(&self, _e: &PlatformEventData) -> dioxus::html::ImageData {
-        unimplemented!()
-    }
-    fn convert_media_data(&self, _e: &PlatformEventData) -> dioxus::html::MediaData {
-        unimplemented!()
-    }
-    /// The mounted floor: every focus-containment question answers `Unsupported`.
-    fn convert_mounted_data(&self, _e: &PlatformEventData) -> dioxus::html::MountedData {
-        dioxus::html::MountedData::new(())
-    }
-    fn convert_mouse_data(&self, _e: &PlatformEventData) -> dioxus::html::MouseData {
-        unimplemented!()
-    }
-    fn convert_pointer_data(&self, _e: &PlatformEventData) -> dioxus::html::PointerData {
-        unimplemented!()
-    }
-    fn convert_resize_data(&self, _e: &PlatformEventData) -> dioxus::html::ResizeData {
-        unimplemented!()
-    }
-    fn convert_scroll_data(&self, _e: &PlatformEventData) -> dioxus::html::ScrollData {
-        unimplemented!()
-    }
-    fn convert_selection_data(&self, _e: &PlatformEventData) -> dioxus::html::SelectionData {
-        unimplemented!()
-    }
-    fn convert_toggle_data(&self, _e: &PlatformEventData) -> dioxus::html::ToggleData {
-        unimplemented!()
-    }
-    fn convert_touch_data(&self, _e: &PlatformEventData) -> dioxus::html::TouchData {
-        unimplemented!()
-    }
-    fn convert_transition_data(&self, _e: &PlatformEventData) -> dioxus::html::TransitionData {
-        unimplemented!()
-    }
-    fn convert_visible_data(&self, _e: &PlatformEventData) -> dioxus::html::VisibleData {
-        unimplemented!()
-    }
-    fn convert_wheel_data(&self, _e: &PlatformEventData) -> dioxus::html::WheelData {
-        unimplemented!()
-    }
-}
-
-/// The focus payload carries nothing the hook reads.
-struct FakeFocus;
-
-impl dioxus::html::HasFocusData for FakeFocus {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
 }
 
 fn escape() -> Rc<dyn std::any::Any> {
@@ -301,7 +178,7 @@ fn two_modals() -> Element {
     ignore = "counts the listeners of a platform without a keyboard"
 )]
 fn escape_acts_on_the_newest_modal_and_no_other() {
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(two_modals);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -371,7 +248,7 @@ fn dropping_an_older_layer_leaves_the_newer_one_on_top() {
         }
     }
 
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -457,7 +334,7 @@ fn region_in_modal() -> Element {
 /// Before the bubble-phase `stop_propagation`, both closed.
 #[test]
 fn a_layers_own_handler_consumes_the_press_before_the_modal_hears_it() {
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(region_in_modal);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -512,7 +389,7 @@ fn dropdown_in_modal() -> Element {
 /// The second press, with the list shut, is the control.
 #[test]
 fn a_field_dropdown_taking_escape_leaves_the_modal_open() {
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(dropdown_in_modal);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -555,7 +432,7 @@ fn a_field_dropdown_taking_escape_leaves_the_window_open() {
         rsx! { LiberoProvider { DropdownInWindow {} } }
     }
 
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -621,7 +498,7 @@ fn a_field_dropdown_taking_escape_leaves_the_dismiss_box_open() {
         rsx! { LiberoProvider { DropdownInRegion {} } }
     }
 
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -701,7 +578,7 @@ fn a_real_select_in_a_modal_takes_the_first_escape() {
         }
     }
 
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -728,7 +605,7 @@ fn a_real_select_in_a_window_takes_the_first_escape() {
         rsx! { LiberoProvider { SelectInWindow {} } }
     }
 
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -743,7 +620,7 @@ fn a_real_select_in_a_window_takes_the_first_escape() {
 /// and a composing one closes nothing. The last, plain press is the control.
 #[test]
 fn a_held_or_composing_escape_does_not_close_the_modal() {
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(dropdown_in_modal);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -772,7 +649,7 @@ fn a_held_or_composing_escape_does_not_close_the_window() {
         rsx! { LiberoProvider { DropdownInWindow {} } }
     }
 
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -805,7 +682,7 @@ fn a_held_or_composing_escape_does_not_close_the_window() {
     ignore = "counts the listeners of a platform without a keyboard"
 )]
 fn a_layer_that_cannot_hear_escape_never_wedges_the_modal() {
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(region_in_modal);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -839,7 +716,7 @@ fn escape_on_the_trigger_closes_the_box_where_there_is_no_document_listener() {
         }
     }
 
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -895,7 +772,7 @@ fn a_closed_box_does_not_swallow_escape_from_the_modal_around_it() {
         }
     }
 
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -953,7 +830,7 @@ fn a_hover_card_forced_open_lets_escape_through_to_the_modal() {
         }
     }
 
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -982,7 +859,7 @@ fn a_layer_with_only_its_own_handler_still_closes_on_escape() {
         }
     }
 
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
@@ -1152,7 +1029,7 @@ fn close_watched(with_focus_moved: bool, name: &str) -> String {
 /// With `floor`, the box's handle is mounted on the mounted floor first,
 /// which cannot answer where focus is. Otherwise it stays unmounted.
 fn send_watched(with_focus_moved: bool, floor: bool, name: &str) -> String {
-    dioxus::html::set_event_converter(Box::new(EscapeConverter));
+    dioxus::html::set_event_converter(Box::new(TestConverter));
     WITH_FOCUS_MOVED.set(with_focus_moved);
     let mut dom = VirtualDom::new(watched);
     let mut find = FindKeydownListeners::default();
