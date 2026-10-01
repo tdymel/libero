@@ -128,8 +128,10 @@ fn warn_misspelled_palette(value: &str) {
         |word: &str| word.eq_ignore_ascii_case("gray") || word.eq_ignore_ascii_case("grey");
     let message = if is_gray(value) {
         format!("`{value}` is a CSS keyword, not a palette colour; the palette name is `muted`.")
-    } else if let Some((name, shade)) = value.split_once('.')
+    } else if let Some((name, shade)) = value.split_once(['.', '-'])
         && is_gray(name)
+        && !shade.is_empty()
+        && shade.bytes().all(|byte| byte.is_ascii_digit())
     {
         format!("`{value}` is not a colour; the palette name is `muted`, as in `muted.{shade}`.")
     } else if value.eq_ignore_ascii_case("white") {
@@ -291,13 +293,15 @@ mod tests {
             );
         }
         let _ = ThemeAwareValue::from("Grey.3".to_string());
+        let _ = ThemeAwareValue::from("grey-5");
         let _ = ThemeAwareValue::from("muted.7");
         let warnings = crate::utils::take_warnings();
-        assert_eq!(warnings.len(), 2, "{warnings:?}");
+        assert_eq!(warnings.len(), 3, "{warnings:?}");
         assert!(
             warnings[0].contains("`gray.7` is not a colour") && warnings[0].contains("`muted.7`")
         );
         assert!(warnings[1].contains("`muted.3`"));
+        assert!(warnings[2].contains("`grey-5`") && warnings[2].contains("`muted.5`"));
     }
 
     #[test]
