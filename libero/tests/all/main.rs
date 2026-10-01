@@ -80,6 +80,7 @@ mod md_examples;
 mod menu;
 mod menubar;
 mod modal;
+mod native_select;
 mod nav_link;
 mod nested_providers;
 mod no_has_selector;

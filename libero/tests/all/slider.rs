@@ -1,4 +1,6 @@
-use crate::common::{attributes_of, body, nth_attributes, render, tag_with, tags_with};
+use crate::common::{attributes_of, body, element_at, nth_attributes, render, tag_with, tags_with};
+
+use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
 use libero::{
@@ -382,11 +384,27 @@ fn a_discrete_slider_derives_its_scale_from_the_value_type() {
     assert!(html.contains("aria-valuemax=3"));
     assert!(html.contains(r#"aria-valuetext="Pro""#));
     assert!(root["data-state"].contains("marks-labeled"));
-    for tier in ["Free", "Pro", "Team", "Enterprise"] {
-        assert!(body(&html).contains(&format!(">{tier}<")));
-    }
     // Todo 513: `aria-valuetext` names the value, so the captions stay silent.
-    assert_eq!(html.matches(r#"aria-hidden="true""#).count(), 4, "{html}");
+    for tier in ["Free", "Pro", "Team", "Enterprise"] {
+        assert_eq!(
+            caption_tag(&body(&html), tier)["aria-hidden"],
+            "true",
+            "{tier}"
+        );
+    }
+}
+
+/// The attributes of the element whose text is `caption`.
+fn caption_tag(body: &str, caption: &str) -> BTreeMap<String, String> {
+    let at = body
+        .find(&format!(">{caption}<"))
+        .unwrap_or_else(|| panic!("no {caption} caption: {body}"));
+    let element = element_at(body, at);
+    let name = element[1..]
+        .split(|c: char| c.is_whitespace() || matches!(c, '>' | '/'))
+        .next()
+        .unwrap();
+    attributes_of(element, name)
 }
 
 /// A continuous slider's caption can say more than the number, so it stays exposed.
@@ -405,7 +423,8 @@ fn a_continuous_slider_keeps_its_mark_captions_exposed() {
         }
     }
 
-    assert!(!render(app).contains("aria-hidden"));
+    let caption = caption_tag(&body(&render(app)), "half");
+    assert!(!caption.contains_key("aria-hidden"), "{caption:?}");
 }
 
 /// `min`/`max` are written in the value's own type, and `step` is a stride

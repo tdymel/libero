@@ -736,10 +736,16 @@ mod tests {
     fn highlight_rust_string_quotes_share_the_string_class() {
         let spans = flat("\"hi\"\n", lang("rust"));
 
+        // Every byte is drawn, so an empty result cannot pass the `all` below.
+        assert_eq!(
+            spans.iter().map(|(text, _)| &**text).collect::<String>(),
+            "\"hi\""
+        );
         assert!(
             spans
                 .iter()
-                .all(|(text, class)| text.trim().is_empty() || *class == Some("lsx-tok-string"))
+                .all(|(text, class)| text.trim().is_empty() || *class == Some("lsx-tok-string")),
+            "{spans:?}"
         );
     }
 
@@ -828,7 +834,14 @@ mod tests {
     #[cfg(feature = "code-lang-rust")]
     fn highlight_never_includes_trailing_newline_in_span_text() {
         let spans = flat("let x = 1;\n", lang("rust"));
-        assert!(spans.iter().all(|(text, _)| !text.contains('\n')));
+        assert_eq!(
+            spans.iter().map(|(text, _)| &**text).collect::<String>(),
+            "let x = 1;"
+        );
+        assert!(
+            spans.iter().all(|(text, _)| !text.contains('\n')),
+            "{spans:?}"
+        );
     }
 
     #[test]

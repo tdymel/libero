@@ -9,6 +9,6 @@ pub use data_url::data_url;
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use data_url::encode_base64;
 
-#[cfg(test)]
-pub(crate) use warn::take_warnings;
 pub(crate) use warn::warn;
+#[cfg(test)]
+pub(crate) use warn::{take_warnings, warnings_of};

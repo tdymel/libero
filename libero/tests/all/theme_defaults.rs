@@ -187,3 +187,68 @@ fn a_var_is_not_a_colour_but_a_hex_in_a_shorthand_is() {
         ["rgba(31, 35, 40, 0.08)"]
     );
 }
+
+/// The rendered side: a `*Defaults` variant reaches every component that
+/// leaves its own unset.
+mod variant {
+    use crate::common::{body, render};
+
+    use dioxus::prelude::*;
+    use libero::{LiberoProvider, theme::Color};
+
+    static OUTLINED: libero::theme::Theme = libero::theme::Theme {
+        button: libero::theme::ButtonDefaults {
+            variant: libero::theme::Variant::Outlined,
+            ..libero::theme::Theme::DEFAULT.button
+        },
+        action_icon: libero::theme::ActionIconDefaults {
+            variant: libero::theme::Variant::Outlined,
+            ..libero::theme::Theme::DEFAULT.action_icon
+        },
+        chip: libero::theme::ChipDefaults {
+            variant: libero::theme::Variant::Outlined,
+            ..libero::theme::Theme::DEFAULT.chip
+        },
+        badge: libero::theme::BadgeDefaults {
+            variant: libero::theme::Variant::Outlined,
+            ..libero::theme::Theme::DEFAULT.badge
+        },
+        icon: libero::theme::IconDefaults {
+            variant: libero::theme::Variant::Outlined,
+            ..libero::theme::Theme::DEFAULT.icon
+        },
+        ..libero::theme::Theme::DEFAULT
+    };
+
+    /// A project sets the variant once in the theme, and every chrome component
+    /// with no `variant` of its own takes it. An `ActionIcon` draws chrome only
+    /// once it has a `color` or a `variant`, so it gets a `color`.
+    #[test]
+    fn an_unset_variant_follows_the_theme() {
+        use libero::components::{ActionIcon, Badge, Button, Chip, Icon};
+
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider { themes: &OUTLINED,
+                    Button { "Save" }
+                    ActionIcon { aria_label: "Close", color: Color::Primary, "x" }
+                    Chip { "Tag" }
+                    Badge { "New" }
+                    Icon { "i" }
+                }
+            }
+        }
+
+        let html = body(&render(app));
+        let outlined = html
+            .split("data-state=\"")
+            .skip(1)
+            .filter(|rest| {
+                rest.split('"')
+                    .next()
+                    .is_some_and(|state| state.split(' ').any(|token| token == "outlined"))
+            })
+            .count();
+        assert_eq!(outlined, 5, "{html}");
+    }
+}

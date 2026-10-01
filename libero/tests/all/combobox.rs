@@ -5,7 +5,7 @@
 //! loads comes from the localization, and it is said by a status region that is always
 //! mounted and sits outside the `aria-busy` dropdown.
 
-use crate::common::body;
+use crate::common::{body, element_at};
 
 use dioxus::prelude::*;
 use libero::{
@@ -309,7 +309,7 @@ fn the_status_region_sits_outside_the_busy_dropdown() {
     );
 
     let busy = html.find(r#"aria-busy="true""#).expect("a busy dropdown");
-    let dropdown = &html[busy..];
+    let dropdown = element_at(&html, busy);
     assert!(!dropdown.contains(r#"role="status""#), "{html}");
     assert!(
         dropdown.contains(r#"aria-hidden="true""#),

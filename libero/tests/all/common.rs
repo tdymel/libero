@@ -96,6 +96,46 @@ pub fn tag_with(html: &str, marker: &str) -> BTreeMap<String, String> {
         .unwrap_or_else(|| panic!("no tag with {marker} in the rendered output:\n{html}"))
 }
 
+/// The whole element whose opening tag holds byte `at`, up to its matching
+/// close tag, so an assert reads that element's subtree and nothing after it.
+pub fn element_at(html: &str, at: usize) -> &str {
+    let start = html[..=at].rfind('<').expect("a tag around the offset");
+    let name_end = start
+        + html[start..]
+            .find(|c: char| c.is_whitespace() || matches!(c, '>' | '/'))
+            .expect("a tag name");
+    let (open, close) = (
+        &html[start..name_end],
+        format!("</{}>", &html[start + 1..name_end]),
+    );
+    let first_end = start + html[start..].find('>').expect("a closed tag") + 1;
+    if html[..first_end].ends_with("/>") {
+        return &html[start..first_end];
+    }
+
+    let mut depth = 1;
+    let mut cursor = first_end;
+    while depth > 0 {
+        let next_open = html[cursor..]
+            .match_indices(open)
+            .map(|(i, _)| cursor + i)
+            .find(|i| ends_name(&html[i + open.len()..]));
+        let next_close = cursor + html[cursor..].find(&close).expect("a matching close tag");
+        match next_open {
+            Some(i) if i < next_close => {
+                let end = i + html[i..].find('>').unwrap() + 1;
+                depth += usize::from(!html[..end].ends_with("/>"));
+                cursor = end;
+            }
+            _ => {
+                depth -= 1;
+                cursor = next_close + close.len();
+            }
+        }
+    }
+    &html[start..cursor]
+}
+
 /// Whether a tag name ends where `rest` starts: `<li` before `<link` does not.
 fn ends_name(rest: &str) -> bool {
     rest.starts_with(|c: char| c.is_whitespace() || matches!(c, '>' | '/'))
@@ -304,6 +344,20 @@ fn the_pickers_count_whole_tags_and_skip_text() {
     assert_eq!(sliders[0]["id"], "b");
     assert!(!sliders[1].contains_key("id"), "{sliders:?}");
     assert_eq!(tags_with(html, "<li").len(), 2);
+}
+
+#[test]
+fn element_at_stops_at_the_matching_close_tag() {
+    let html = r#"<div id="a"><div><br/></div><span x="1"/></div><i aria-hidden="true"></i>"#;
+
+    assert_eq!(
+        element_at(html, html.find("id=").unwrap()),
+        r#"<div id="a"><div><br/></div><span x="1"/></div>"#
+    );
+    assert_eq!(
+        element_at(html, html.find("x=").unwrap()),
+        r#"<span x="1"/>"#
+    );
 }
 
 #[test]

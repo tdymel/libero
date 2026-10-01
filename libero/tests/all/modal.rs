@@ -1,5 +1,3 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
-
 use crate::common::{body, render};
 
 use dioxus::{core::NoOpMutations, prelude::*};
@@ -166,8 +164,8 @@ fn a_dialog_in_a_non_modal_surface_inside_a_modal_is_not_modal() {
 thread_local! {
     static CALLER: std::cell::Cell<Option<(ModalHandle<()>, Signal<u32>)>> =
         const { std::cell::Cell::new(None) };
+    static CALLER_RENDERS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
-static CALLER_RENDERS: AtomicUsize = AtomicUsize::new(0);
 
 /// Opening draws the modal in its own scope: the caller is not redrawn, and a
 /// caller redraw while open still reaches what `render` captured.
@@ -181,7 +179,7 @@ fn opening_leaves_the_caller_alone_and_its_redraw_reaches_the_content() {
 
     #[component]
     fn Caller() -> Element {
-        CALLER_RENDERS.fetch_add(1, Ordering::Relaxed);
+        CALLER_RENDERS.set(CALLER_RENDERS.get() + 1);
         let count = use_signal(|| 0_u32);
         let shown = count();
         let modal = use_modal(move |_: ModalScope<()>| rsx! { Dialog { "count {shown}" } });
@@ -192,17 +190,13 @@ fn opening_leaves_the_caller_alone_and_its_redraw_reaches_the_content() {
     let mut dom = VirtualDom::new(app);
     dom.rebuild_in_place();
     let (modal, mut count) = CALLER.get().expect("the caller rendered");
-    let before = CALLER_RENDERS.load(Ordering::Relaxed);
+    let before = CALLER_RENDERS.get();
 
     dom.in_runtime(|| {
         let _ = modal.open();
     });
     dom.render_immediate(&mut NoOpMutations);
-    assert_eq!(
-        CALLER_RENDERS.load(Ordering::Relaxed),
-        before,
-        "opening redrew the caller"
-    );
+    assert_eq!(CALLER_RENDERS.get(), before, "opening redrew the caller");
     assert!(dioxus_ssr::render(&dom).contains("count 0"));
 
     dom.in_runtime(|| count.set(7));

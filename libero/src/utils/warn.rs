@@ -18,5 +18,16 @@ pub(crate) fn take_warnings() -> Vec<String> {
     WARNINGS.take()
 }
 
+/// What `warn()` saw while `app` built and applied the pass its effects queued,
+/// so a warning from a second render is not missed.
+#[cfg(test)]
+pub(crate) fn warnings_of(app: fn() -> dioxus::prelude::Element) -> Vec<String> {
+    take_warnings();
+    let mut dom = dioxus::prelude::VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    take_warnings()
+}
+
 #[cfg(not(debug_assertions))]
 pub(crate) fn warn(_message: &str) {}

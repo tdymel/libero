@@ -388,13 +388,7 @@ mod tests {
         assert_eq!(image_variables(None).to_string(), "");
     }
 
-    fn warnings_of(app: fn() -> Element) -> Vec<String> {
-        crate::utils::take_warnings();
-        let mut dom = VirtualDom::new(app);
-        dom.rebuild_in_place();
-        dom.render_immediate(&mut dioxus::core::NoOpMutations);
-        crate::utils::take_warnings()
-    }
+    use crate::utils::warnings_of;
 
     #[test]
     fn a_zoomable_image_in_a_link_warns() {

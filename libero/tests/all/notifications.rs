@@ -133,15 +133,6 @@ fn a_notification_takes_focus_but_no_tab_stop() {
     assert!(open_tag.contains(r#"tabindex="-1""#), "{open_tag}");
 }
 
-/// Todo 576: long enough to read a short message.
-#[test]
-fn the_default_auto_close_is_six_seconds() {
-    assert_eq!(
-        NotificationsDefaults::DEFAULT.auto_close,
-        AutoClose::After(6000)
-    );
-}
-
 #[test]
 fn a_shown_message_renders_as_an_alert_in_the_default_corner() {
     fn app() -> Element {

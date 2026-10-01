@@ -13,7 +13,7 @@ use libero::{
     chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Weekday},
     components::{
         ChronoField, ChronoPicker, DateField, DateLevel, DatePicker, DateRange, DateRangePicker,
-        MonthPicker, SegmentedControl, TimePicker, YearPicker,
+        MonthPicker, TimePicker, YearPicker,
     },
     localization::Formats,
     theme::CalendarVariant,
@@ -198,26 +198,6 @@ fn a_day_button_is_named_by_its_full_date() {
 }
 
 #[test]
-fn a_non_focusable_segmented_control_leaves_the_tab_order() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                SegmentedControl::<String> {
-                    value: "a".to_string(),
-                    options: vec!["a".to_string(), "b".to_string()],
-                    onchange: move |_| {},
-                    focusable: false,
-                }
-            }
-        }
-    }
-    let html = body(&render(app));
-
-    assert_eq!(html.matches("type=\"radio\"").count(), 2);
-    assert_eq!(html.matches("tabindex=\"-1\"").count(), 2);
-}
-
-#[test]
 fn a_picker_draws_six_weeks_from_the_first_weekday() {
     fn app() -> Element {
         rsx! {
@@ -239,8 +219,8 @@ fn a_picker_draws_six_weeks_from_the_first_weekday() {
 
     assert_eq!(html.matches("data-selected=\"true\"").count(), 1);
     assert_eq!(html.matches("aria-selected=\"true\"").count(), 1);
-    // The picked day is the grid's one tab stop, beside the heading and the two page buttons.
-    assert_eq!(html.matches("tabindex=\"0\"").count(), 4);
+    // The picked day is the grid's one tab stop.
+    assert_eq!(tab_stop(&html, "day"), "2026-09-14");
     assert!(html.contains("name=\"day\""));
     assert!(html.contains("value=\"2026-09-14\""));
 }
@@ -568,13 +548,14 @@ fn one_picker_draws_what_the_value_type_calls_for() {
         rsx! {
             LiberoProvider {
                 ChronoPicker::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, name: "day", class: "day-picker" }
-                ChronoPicker::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, level: DateLevel::Month, name: "month" }
+                ChronoPicker::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, level: DateLevel::Month, name: "month", class: "month-picker" }
                 ChronoPicker::<NaiveTime> { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, name: "time", id: "clock" }
                 ChronoPicker::<NaiveDateTime> { value: moment(14, 9), onchange: move |_| {}, name: "moment", class: "flow" }
                 ChronoPicker::<DateRange<NaiveDate>> {
                     value: NaiveDate::from_ymd_opt(2026, 9, 14).map(|start| DateRange::new(start, NaiveDate::from_ymd_opt(2026, 9, 18))),
                     onchange: move |_| {},
                     name: "stay",
+                    class: "range-picker",
                 }
             }
         }
@@ -590,10 +571,17 @@ fn one_picker_draws_what_the_value_type_calls_for() {
     assert!(html.contains("name=\"time\" value=\"09:30:00\""));
     assert!(html.contains("name=\"moment\" value=\"2026-09-14T09:00:00\""));
     assert!(html.contains("name=\"stay\" value=\"2026-09-14/2026-09-18\""));
-    // The caller's attributes reach every kind of root.
-    assert!(html.contains("day-picker"));
-    assert!(html.contains("id=\"clock\""));
-    assert!(html.contains("flow"));
+    // The caller's attributes reach every kind of root, as a class token of a tag.
+    let classed = |class: &str| {
+        tags_with(&html, "class=\"")
+            .iter()
+            .filter(|tag| tag["class"].split_whitespace().any(|token| token == class))
+            .count()
+    };
+    for class in ["day-picker", "month-picker", "flow", "range-picker"] {
+        assert_eq!(classed(class), 1, "{class}: {html}");
+    }
+    assert_eq!(tags_with(&html, "id=\"clock\"").len(), 1, "{html}");
 }
 
 #[test]

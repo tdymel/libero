@@ -237,7 +237,7 @@ mod tests {
     use crate::{
         LiberoProvider,
         components::form::{Fieldset, Rule},
-        utils::take_warnings,
+        utils::warnings_of,
     };
 
     thread_local! {
@@ -247,11 +247,7 @@ mod tests {
 
     fn judged_and_warnings(app: fn() -> Element) -> (Option<u32>, Vec<String>) {
         JUDGED.set(None);
-        take_warnings();
-        let mut dom = VirtualDom::new(app);
-        dom.rebuild_in_place();
-        dom.render_immediate(&mut dioxus::core::NoOpMutations);
-        let warnings = take_warnings()
+        let warnings = warnings_of(app)
             .into_iter()
             .filter(|warning| warning.starts_with("Fieldset:"))
             .collect();

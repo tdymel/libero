@@ -279,20 +279,20 @@ mod tests {
         );
     }
 
-    /// Natively there is no `glass` token at all, so the surface stays opaque.
+    /// Where the renderer blurs, glass is a token; native has none and stays
+    /// opaque, which `e2e/tests/native/paper.rs` covers.
+    #[cfg(not(feature = "native"))]
     #[test]
-    fn glass_is_a_token_only_where_the_renderer_blurs() {
+    fn glass_is_a_token_where_the_renderer_blurs() {
         let states = paper_states(&PaperProps {
             glass: true,
             ..props()
         });
-        let state = states.as_ref().and_then(States::data_state);
 
-        if draws_backdrop_filter() {
-            assert_eq!(state.as_deref(), Some("glass"));
-        } else {
-            assert_eq!(state, None);
-        }
+        assert_eq!(
+            states.as_ref().and_then(States::data_state).as_deref(),
+            Some("glass")
+        );
     }
 
     /// A palette colour paints its fill shade under the computed label.
@@ -363,10 +363,8 @@ mod tests {
         assert!(style.contains("--lsx-glass-sheen:12%;"), "{style}");
         assert!(style.contains("--lsx-focus-contrast:#000000;"), "{style}");
         let color = props.color.as_ref();
-        assert_eq!(
-            glass_tint_color(color, true, false).is_some(),
-            draws_backdrop_filter()
-        );
+        #[cfg(not(feature = "native"))]
+        assert!(glass_tint_color(color, true, false).is_some());
         assert_eq!(glass_tint_color(color, false, false), None);
         assert_eq!(glass_tint_color(color, true, true), None);
     }
@@ -456,8 +454,17 @@ mod tests {
 
     #[test]
     fn the_surface_reads_the_themed_background_rather_than_a_literal() {
-        let css = Stylesheet::from(&paper_sx());
-        let css = css.as_str();
+        let sheet = Stylesheet::from(&paper_sx());
+        // The base rule alone: the reduced-transparency block repeats the background.
+        let css = sheet
+            .as_str()
+            .split('}')
+            .find(|rule| {
+                rule.split('{')
+                    .next()
+                    .is_some_and(|selector| !selector.contains(['[', '@', ':', ' ']))
+            })
+            .unwrap_or_else(|| panic!("no base rule: {}", sheet.as_str()));
 
         assert!(
             css.contains("background:var(--lsx-paper-background);"),
@@ -468,9 +475,13 @@ mod tests {
             "{css}"
         );
         assert!(css.contains("box-shadow:var(--lsx-paper-shadow);"), "{css}");
+        // The border is a state of its own, outside the base rule.
         assert!(
-            css.contains("border:1px solid var(--lsx-paper-border-color);"),
-            "{css}"
+            sheet
+                .as_str()
+                .contains("border:1px solid var(--lsx-paper-border-color);"),
+            "{}",
+            sheet.as_str()
         );
         // `background()` can't read a `var()`, so the surface publishes it by hand.
         assert!(

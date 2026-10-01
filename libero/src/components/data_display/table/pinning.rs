@@ -328,7 +328,8 @@ mod tests {
 
         let runs: Vec<&[usize]> = pin_runs(&specs, &order).collect();
         assert_eq!(runs, vec![&[0, 1][..], &[2], &[3, 4]]);
-        assert!(pin_edge_at(&specs, &order, 2) && !pin_edge_at(&specs, &order, 1));
+        assert!(pin_edge_at(&specs, &order, 2));
+        assert!(!pin_edge_at(&specs, &order, 1));
 
         let start = span_pin(&specs, &[0, 1]).unwrap();
         assert_eq!((start.inset.as_str(), start.edge), ("0", true));

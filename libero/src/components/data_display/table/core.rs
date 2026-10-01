@@ -877,33 +877,43 @@ mod tests {
         use std::cell::Cell;
 
         let calls = Rc::new(Cell::new(0));
-        let counted = calls.clone();
-        let columns = vec![column("N").value(move |n: &u32| {
-            counted.set(counted.get() + 1);
-            *n
-        })];
+        let counted = |name| {
+            let calls = calls.clone();
+            vec![column(name).value(move |n: &u32| {
+                calls.set(calls.get() + 1);
+                *n
+            })]
+        };
+        let columns = counted("N");
         let mut sorted = SortedRows::default();
         let data = Rc::new(vec![3, 1, 2]);
         let up = vec![(0, Ascending)];
 
+        // One key per row.
         assert_eq!(sorted.order(&data, &columns, &up), vec![1, 2, 0]);
-        let first = calls.get();
-        // An equal copy of the rows, as each render's props are.
+        assert_eq!(calls.get(), 3);
+        // An equal copy of the rows, as each render's props are, and of the columns.
         assert_eq!(
-            sorted.order(&Rc::new(vec![3, 1, 2]), &columns, &up),
+            sorted.order(&Rc::new(vec![3, 1, 2]), &columns.clone(), &up),
             vec![1, 2, 0]
         );
-        assert_eq!(calls.get(), first);
+        assert_eq!(calls.get(), 3);
 
+        assert_eq!(sorted.order(&data, &counted("M"), &up), vec![1, 2, 0]);
+        assert_eq!(calls.get(), 6, "a changed column reuses the old keys");
+        let columns = counted("N");
+        sorted.order(&data, &columns, &up);
+        calls.set(0);
         assert_eq!(
             sorted.order(&data, &columns, &vec![(0, Descending)]),
             vec![0, 2, 1]
         );
+        assert_eq!(calls.get(), 3, "a changed sort reuses the old keys");
         assert_eq!(
             sorted.order(&Rc::new(vec![0, 1, 2]), &columns, &up),
             vec![0, 1, 2]
         );
-        assert_eq!(calls.get(), first * 3);
+        assert_eq!(calls.get(), 6, "changed rows reuse the old keys");
     }
 
     fn headers(names: &[&str]) -> Vec<HeaderSpec> {

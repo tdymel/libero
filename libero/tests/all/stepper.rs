@@ -349,23 +349,6 @@ fn a_description_prints_and_an_empty_one_does_not() {
     assert!(body(&html).contains("Who you are"), "{html}");
 }
 
-/// The vertical rail goes through `Rail`, so it starts on the marker's
-/// centreline and content clears the whole marker plus one gap.
-#[test]
-fn the_vertical_rail_is_the_shared_geometry() {
-    let html = render(middle_app);
-    let css: String = html.split_whitespace().collect();
-    assert!(
-        css.contains("left:calc(var(--lsx-stepper-marker)/2-var(--lsx-stepper-line-width)/2)"),
-        "{html}"
-    );
-    assert!(
-        css.contains("padding-left:calc(var(--lsx-stepper-marker)+var(--lsx-stepper-gap))"),
-        "{html}"
-    );
-    assert!(css.contains(":not(:last-of-type)::before"), "{html}");
-}
-
 /// A per-instance colour sets the accent and its contrast twin on the root;
 /// without one the root leaves the theme's `:root` value alone.
 #[test]

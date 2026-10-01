@@ -378,14 +378,25 @@ mod tests {
                 .passes("", &key)
         };
         let on = |operator| ColumnFilter::new("A", operator, "2024-03-10");
-        assert!(passes(on(Equals), Some(10)) && !passes(on(Equals), Some(11)));
-        assert!(passes(on(NotEquals), None) && !passes(on(NotEquals), Some(10)));
-        assert!(passes(on(Before), Some(9)) && !passes(on(Before), Some(10)));
-        assert!(passes(on(After), Some(11)) && !passes(on(After), Some(10)));
-        assert!(passes(on(OnOrBefore), Some(10)) && passes(on(OnOrAfter), Some(10)));
-        let range = ColumnFilter::between("A", "2024-03-05", "2024-03-10");
-        assert!(passes(range.clone(), Some(5)) && passes(range.clone(), Some(10)));
-        assert!(!passes(range.clone(), Some(11)) && !passes(range, None));
+        let range = || ColumnFilter::between("A", "2024-03-05", "2024-03-10");
+        for (case, filter, d, expected) in [
+            ("equals the day", on(Equals), Some(10), true),
+            ("equals the next day", on(Equals), Some(11), false),
+            ("not equals an empty cell", on(NotEquals), None, true),
+            ("not equals the day", on(NotEquals), Some(10), false),
+            ("before the day before", on(Before), Some(9), true),
+            ("before the day", on(Before), Some(10), false),
+            ("after the day after", on(After), Some(11), true),
+            ("after the day", on(After), Some(10), false),
+            ("on or before the day", on(OnOrBefore), Some(10), true),
+            ("on or after the day", on(OnOrAfter), Some(10), true),
+            ("between, the start", range(), Some(5), true),
+            ("between, the end", range(), Some(10), true),
+            ("between, past the end", range(), Some(11), false),
+            ("between, an empty cell", range(), None, false),
+        ] {
+            assert_eq!(passes(filter, d), expected, "{case}");
+        }
         // An empty end is open.
         assert!(passes(
             ColumnFilter::between("A", "", "2024-03-10"),
@@ -456,8 +467,10 @@ mod tests {
             ],
         );
         let pass = |row: &str, logic| passes_all(&row.to_string(), &columns, &tests, logic);
-        assert!(pass("Bob", FilterLogic::Or) && pass("Ada", FilterLogic::Or));
-        assert!(!pass("Cy", FilterLogic::Or) && !pass("Bob", FilterLogic::And));
+        assert!(pass("Bob", FilterLogic::Or));
+        assert!(pass("Ada", FilterLogic::Or));
+        assert!(!pass("Cy", FilterLogic::Or));
+        assert!(!pass("Bob", FilterLogic::And));
         assert!(passes_all(
             &"Cy".to_string(),
             &columns,

@@ -348,7 +348,11 @@ fn the_frame_draws_the_focus_ring_and_the_control_does_not() {
     }
 
     let html = render(app);
-    let frame_class = attributes_of(&body(&html), "div")["class"].clone();
+    // The frame is the `<div>` after the label; the first one is the field root.
+    let frame_class = {
+        let body = body(&html);
+        attributes_of(&body[body.find("</label>").expect("a label")..], "div")["class"].clone()
+    };
     let control_class = attributes_of(&body(&html), "input")["class"].clone();
 
     // The ring is the frame's, drawn by an overlay after the control and
@@ -787,7 +791,13 @@ fn the_checkbox_box_is_hidden_from_assistive_tech() {
 
     assert!(!body.contains("<label"), "{body}");
     assert_eq!(attributes_of(&body, "input")["aria-label"], "Accept");
-    assert!(body.contains(r#"<span aria-hidden="true""#) || body.contains(r#"aria-hidden="true""#));
+    let boxes = tags_with(&body, r#"data-slot="box""#);
+    assert_eq!(boxes.len(), 1, "{body}");
+    assert_eq!(
+        boxes[0].get("aria-hidden").map(String::as_str),
+        Some("true"),
+        "{body}"
+    );
 }
 
 /// The switch is a checkbox with `role="switch"`, and since the port it wears
@@ -1195,17 +1205,27 @@ fn a_pin_field_is_one_group_of_cells_that_share_the_frame() {
     assert!(body.contains(r#"name="otp""#));
 
     // One prepared frame rendered six times: the same class, six times over,
-    // and no id on any of them.
-    let frame_class = body
-        .split(r#"<div class=""#)
-        .nth(2)
-        .and_then(|rest| rest.split('"').next())
-        .expect("a cell frame");
-    assert_eq!(body.matches(frame_class).count(), 6);
+    // and no id on any of them. A cell's frame is the tag right before it.
+    let frames: Vec<_> = body
+        .match_indices("data-pin-index=")
+        .map(|(at, _)| {
+            let cell = body[..at].rfind('<').unwrap();
+            let frame = body[..cell].rfind("<div").expect("a cell frame");
+            attributes_of(&body[frame..], "div")
+        })
+        .collect();
+    assert_eq!(frames.len(), 6);
+    for frame in &frames {
+        assert_eq!(frame.get("class"), frames[0].get("class"), "{frames:?}");
+        assert!(!frame.contains_key("id"), "{frame:?}");
+    }
 
     // The value fills the cells left to right and leaves the rest empty.
-    assert_eq!(body.matches(r#"value="1""#).count(), 1);
-    assert_eq!(body.matches(r#"value="2""#).count(), 1);
+    let values: Vec<_> = tags_with(&body, "data-pin-index=")
+        .into_iter()
+        .map(|cell| cell.get("value").cloned().unwrap_or_default())
+        .collect();
+    assert_eq!(values, ["1", "2", "", "", "", ""]);
 
     // The group is named by the label, not by `for` - a `div` is not labelable.
     assert!(body.contains(r#"role="group""#));
@@ -1502,11 +1522,17 @@ fn the_reveal_button_follows_the_field_size_from_the_theme() {
         }
     }
 
+    /// The control: the default theme's `md` field.
+    fn unthemed() -> Element {
+        rsx! { LiberoProvider { PasswordField { label: "Password" } } }
+    }
+
     // The size is an inline override of the icon's own size.
     let style = |html: String| attributes_of(&body(&html), "button").get("style").cloned();
     let explicit = style(render(explicit));
     assert!(explicit.is_some());
     assert_eq!(style(render(themed)), explicit);
+    assert_ne!(style(render(unthemed)), explicit);
 }
 
 /// A disabled `Fieldset` disables the reveal button along with the input.
@@ -1549,7 +1575,7 @@ mod value_moves {
     }
 
     #[test]
-    fn a_new_value_reaches_every_control_while_the_shell_skips() {
+    fn a_new_value_reaches_a_text_number_and_select_control_while_the_shell_skips() {
         fn app() -> Element {
             let step = use_signal(|| 1);
             use_hook(|| STEP.set(Some(step)));

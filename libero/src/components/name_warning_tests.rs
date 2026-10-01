@@ -7,21 +7,14 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, Button, ButtonGroup, Checkbox, ColorCode, ColorSwatch, Dialog, Drawer,
-        ProgressBar, Radio, RadioGroup, RangeSlider, Rating, ScrollArea, SegmentedControl, Slider,
-        Splitter, SpotlightOptions, Switch, Tabs, Toolbar, ToolbarGroup, use_spotlight,
+        ActionIcon, Anchor, Audio, Avatar, Button, ButtonGroup, Carousel, Checkbox, ColorCode,
+        ColorSwatch, Dialog, Drawer, ProgressBar, Radio, RadioGroup, RangeSlider, Rating,
+        ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, Tabs, Toolbar,
+        ToolbarGroup, Video, use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
-    utils::take_warnings,
+    utils::{take_warnings, warnings_of},
 };
-
-fn warnings_of(app: fn() -> Element) -> Vec<String> {
-    take_warnings();
-    let mut dom = VirtualDom::new(app);
-    dom.rebuild_in_place();
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    take_warnings()
-}
 
 fn warns(app: fn() -> Element, component: &str) -> bool {
     warnings_of(app)
@@ -439,7 +432,7 @@ fn an_unnamed_radio_warns() {
 
 /// A group's options carry their labels, so none of them warns.
 #[test]
-fn a_named_radio_group_warns_about_no_radio() {
+fn a_radio_group_option_does_not_warn() {
     assert!(!warns(
         || rsx! { LiberoProvider { RadioGroup::<String> { label: "Plan", options: vec!["a".to_string()] } } },
         "Radio: no `"
@@ -477,5 +470,54 @@ fn an_unnamed_segmented_control_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { SegmentedControl::<String> { "aria-label": "Align", options: vec!["a".to_string()] } } },
         prefix
+    ));
+}
+
+#[test]
+fn an_unnamed_carousel_warns() {
+    let prefix = "Carousel: no `";
+    assert!(warns(
+        || rsx! { LiberoProvider { Carousel { slides: vec![] } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Carousel { aria_label: "Offers", slides: vec![] } } },
+        prefix
+    ));
+}
+
+#[test]
+fn an_unlabelled_audio_or_video_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { Audio { src: "/a.mp3", label: "" } } },
+        "Audio:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Audio { src: "/a.mp3", label: "Episode 1" } } },
+        "Audio:"
+    ));
+    assert!(warns(
+        || rsx! { LiberoProvider { Video { src: "/a.mp4", label: "" } } },
+        "Video:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Video { src: "/a.mp4", label: "Trailer" } } },
+        "Video:"
+    ));
+}
+
+#[test]
+fn an_unnamed_avatar_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { Avatar { name: "" } } },
+        "Avatar:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Avatar { name: "Ada" } } },
+        "Avatar:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Avatar { name: "", alt: "" } } },
+        "Avatar:"
     ));
 }

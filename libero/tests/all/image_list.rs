@@ -1,7 +1,7 @@
 //! `ImageList`'s rendered contract: the list semantics, the spans `cols`
 //! derives, and that the two variants agree on every one of them.
 
-use crate::common::{attributes_of, body, render, rules_for, tag_with};
+use crate::common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
 use libero::{
@@ -207,21 +207,8 @@ fn a_quilted_cell_spans_rows_and_adds_up_its_gaps() {
             .collect::<Vec<_>>()
             .join("}\n")
     );
-    // Each shape rides a recycled class, so it is in the sheet rather than in
-    // `style`: two rows plus one gap for the 2x2, one row for the 2x1, and
-    // both take one column gap off their width.
-    assert!(
-        css.contains("padding-top:var(--lsx-image-list-quilt-height)"),
-        "a strut's padding, a share of the cell's width, sets its height"
-    );
-    assert!(
-        css.contains("--lsx-image-list-quilt-height:calc(2*(100%-1*"),
-        "a 2x2 cell is two rows and a gap"
-    );
-    assert!(
-        css.contains("--lsx-image-list-quilt-height:calc(1*(100%-1*"),
-        "a 2x1 cell is one row"
-    );
+    // The heights each shape adds up are e2e's
+    // `quilted_cells_add_up_their_gaps_at_every_width` and the in-file math test.
 }
 
 /// The list-level ratio is suppressed under `quilted`: a variable on the media
@@ -295,65 +282,6 @@ fn a_linked_cell_keeps_the_bar_outside_the_anchor() {
         action > close,
         "a control in the bar must not be inside the anchor:\n{cell}"
     );
-}
-
-/// And it is clickable because the bar is raised above the stretched `::after` -
-/// by a `z-index` alone, because positioning it would steal the anchor's
-/// containing block. See `nothing_inside_a_cell_is_positioned`.
-#[test]
-fn the_bar_is_raised_above_the_stretched_link() {
-    let html = render(linked_app);
-    let bar = bar_class(&body(&html));
-    let css = html.replace(char::is_whitespace, "");
-
-    assert!(
-        css.split('}')
-            .filter(|rule| rule.contains(&format!(".{bar}")))
-            .any(|rule| rule.contains("z-index:1")),
-        "the bar must sit above the hit area, or a control in it is dead"
-    );
-}
-
-/// The defect the browser pass found and SSR could not: an overlay bar that
-/// is `position: absolute` becomes the containing block for the anchor's
-/// stretched `::after`, so the hit area stops at the caption. The bar is a
-/// second item in the cell's own grid instead, and the `<li>` is the only
-/// positioned box in a cell.
-///
-/// SSR cannot hit-test, but it can pin the two declarations the fix rests on:
-/// no rule in the emitted sheet may make the bar positioned.
-#[test]
-fn nothing_inside_a_cell_is_positioned() {
-    let html = render(linked_app);
-    let css = html.replace(char::is_whitespace, "");
-    let bar = bar_class(&body(&html));
-
-    for rule in css
-        .split('}')
-        .filter(|rule| rule.contains(&format!(".{bar}")))
-    {
-        assert!(
-            !rule.contains("position:absolute"),
-            "a positioned bar steals the stretched link's containing block, so \
-             the hit area stops at the caption - see IMAGE_LIST_CELL_SX:\n{rule}"
-        );
-    }
-    let body = body(&html);
-    let (cell, link) = (attributes_of(&body, "li"), attributes_of(&body, "a"));
-    assert!(
-        rules_for(&html, &cell).contains("position:relative")
-            && rules_for(&html, &link).contains("inset:0"),
-        "the cell must stay a containing block and the hit area must stretch"
-    );
-}
-
-/// The class on the element carrying a `bar-*` state token.
-fn bar_class(html: &str) -> String {
-    tag_with(html, "bar-bottom")["class"]
-        .split_whitespace()
-        .next_back()
-        .expect("a class name")
-        .to_string()
 }
 
 /// `InternalAnchor` renders the router's `Link` when one is mounted and a
@@ -470,12 +398,11 @@ fn responsive_app() -> Element {
     }
 }
 
-/// Mobile-first: the base count rides the cell's `data-state`, and each
-/// breakpoint re-spans the cell under its own `min-width` query.
+/// Mobile-first: the base count rides the cell's `data-state`; each
+/// breakpoint re-spans it, which e2e's `responsive_cols_follow_the_viewport` measures.
 #[test]
-fn responsive_cols_span_the_cell_per_breakpoint() {
+fn responsive_cols_start_from_the_base_count() {
     let html = render(responsive_app);
-    let css = html.replace(char::is_whitespace, "");
 
     assert!(
         attributes_of(&body(&html), "li")
@@ -483,46 +410,31 @@ fn responsive_cols_span_the_cell_per_breakpoint() {
             .is_some_and(|state| state.contains("span-full")),
         "one column below every breakpoint"
     );
-    assert!(media_block(&css, "48rem").contains("grid-column:span6"));
-    assert!(media_block(&css, "75rem").contains("grid-column:span3"));
 }
 
 /// A cell with its own `span` keeps it at every width, so it does not share
 /// the class carrying the breakpoint rules.
 #[test]
 fn an_items_own_span_ignores_the_breakpoints() {
-    let body = body(&render(responsive_app));
-    let class = |cell: &str| attributes_of(cell, "li").get("class").cloned();
-    let ordinary = class(&body[body.find("<li").expect("a cell")..]);
-    let own = class(&body[body.rfind("<li").expect("the spanning cell")..]);
+    let html = render(responsive_app);
+    let body = body(&html);
+    let css = html.replace(char::is_whitespace, "");
+    // Whether any of the cell's classes is re-spanned at a breakpoint.
+    let respans = |cell: &str| {
+        let classes = attributes_of(cell, "li")
+            .get("class")
+            .cloned()
+            .unwrap_or_default();
+        classes.split_whitespace().any(|class| {
+            ["48rem", "75rem"]
+                .iter()
+                .any(|width| media_block(&css, width).contains(&format!(".{class}")))
+        })
+    };
 
-    assert_ne!(ordinary, own);
-}
-
-/// Under `quilted`, a spanning cell's size relative to an ordinary one moves
-/// with `cols`: a `Half` cell is half of one column, one of two, two of four,
-/// so its `quilt_height` divides its own width by 0.5, 1 and 2.
-#[test]
-fn a_quilted_cell_rescales_its_height_per_breakpoint() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                ImageList {
-                    variant: "quilted",
-                    cols: responsive(1).sm(2).lg(4),
-                    items: vec![
-                        ImageItem::new(rsx! { Image { src: "/a.svg", alt: "A" } })
-                            .span(GridSpan::Half),
-                    ],
-                }
-            }
-        }
-    }
-    let css = render(app).replace(char::is_whitespace, "");
-
-    let height = |widths: &str| format!("--lsx-image-list-quilt-height:calc(1*(100%-{widths}*");
-
-    assert!(css.contains(&height("-0.5")), "{css}");
-    assert!(media_block(&css, "48rem").contains(&height("0")));
-    assert!(media_block(&css, "75rem").contains(&height("1")));
+    assert!(respans(&body[body.find("<li").expect("a cell")..]), "{css}");
+    assert!(
+        !respans(&body[body.rfind("<li").expect("the spanning cell")..]),
+        "{css}"
+    );
 }

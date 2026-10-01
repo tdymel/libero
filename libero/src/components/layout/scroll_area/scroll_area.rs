@@ -869,9 +869,11 @@ mod tests {
     fn edges_count_from_the_inline_start() {
         let at = |x| EdgeState::at(x, 0.0, 200.0, 0.0);
 
-        assert!(at(0.0).start && !at(0.0).end);
+        assert!(at(0.0).start);
+        assert!(!at(0.0).end);
         assert!(at(199.5).end);
-        assert!(!at(100.0).start && !at(100.0).end);
+        assert!(!at(100.0).start);
+        assert!(!at(100.0).end);
     }
 
     /// Rows appended at the bottom: End to the new bottom reports it once more.

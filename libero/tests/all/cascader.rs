@@ -2,10 +2,9 @@
 //! with a listbox's wiring, the value it shows is the joined path to its
 //! value, and what it *posts* is that one value.
 //!
-//! The open list cannot be reached from here. It is portaled by `use_popover`
-//! and only exists after a click, and the columns are placed by measurements
-//! the SSR harness answers `Unsupported` for - so everything below the trigger
-//! is browser work by construction ([[codebase/testing]]).
+//! These are closed-state renders. Clicks and keys on the open list are
+//! dispatched tests in `combobox.rs`; the column placement needs measurements
+//! and is e2e's.
 
 use std::collections::BTreeMap;
 

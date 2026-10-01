@@ -3,6 +3,8 @@
 
 use crate::common::{attributes_of, body, classes_of, has_rule_for, render, rules_for};
 
+use std::collections::BTreeSet;
+
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::Button, theme::Color};
 
@@ -148,7 +150,10 @@ fn a_tonal_button_labels_its_container_with_that_shade_s_contrast() {
     let html = render(app);
     let attributes = attributes_of(&html, "button");
 
-    assert_eq!(attributes["data-state"], "tonal size-md radius-md");
+    assert_eq!(
+        tokens(&attributes["data-state"]),
+        tokens("tonal size-md radius-md")
+    );
     assert!(attributes["style"].contains("--lsx-button-container:var(--lsx-warning-fill-1);"));
     assert!(
         attributes["style"].contains("--lsx-button-on-container:var(--lsx-warning-contrast-1);")
@@ -170,7 +175,10 @@ fn an_elevated_button_keeps_the_surface_and_reads_the_elevation_scale() {
     let html = render(app);
     let attributes = attributes_of(&html, "button");
 
-    assert_eq!(attributes["data-state"], "elevated size-md radius-md");
+    assert_eq!(
+        tokens(&attributes["data-state"]),
+        tokens("elevated size-md radius-md")
+    );
     assert!(!attributes["style"].contains("--lsx-button-container:"));
     let rules = rules_for(&html, &attributes);
     assert!(rules.contains("box-shadow:var(--lsx-shadow-xs)"), "{rules}");
@@ -191,7 +199,10 @@ fn button_renders_its_class_state_and_variables() {
     let attributes = attributes_of(&html, "button");
 
     assert_eq!(attributes["type"], "button");
-    assert_eq!(attributes["data-state"], "filled size-md radius-md");
+    assert_eq!(
+        tokens(&attributes["data-state"]),
+        tokens("filled size-md radius-md")
+    );
     assert!(attributes["style"].contains("--lsx-button-color:var(--lsx-error-text-6);"));
     assert!(body(&html).contains(">Save<"));
 
@@ -258,6 +269,11 @@ fn the_elevated_variant_reads_the_surface_and_publishes_its_focus_contrast() {
     );
 }
 
+/// A `data-state` as a set: the order the tokens are assembled in is not the contract.
+fn tokens(state: &str) -> BTreeSet<&str> {
+    state.split_whitespace().collect()
+}
+
 #[derive(Clone, PartialEq, Routable)]
 enum Route {
     #[route("/settings")]
@@ -301,62 +317,6 @@ fn a_button_still_takes_a_navigation_target_or_a_path() {
     for app in [target, path] {
         assert_eq!(attributes_of(&body(&render(app)), "a")["href"], "/settings");
     }
-}
-
-static OUTLINED: libero::theme::Theme = libero::theme::Theme {
-    button: libero::theme::ButtonDefaults {
-        variant: libero::theme::Variant::Outlined,
-        ..libero::theme::Theme::DEFAULT.button
-    },
-    action_icon: libero::theme::ActionIconDefaults {
-        variant: libero::theme::Variant::Outlined,
-        ..libero::theme::Theme::DEFAULT.action_icon
-    },
-    chip: libero::theme::ChipDefaults {
-        variant: libero::theme::Variant::Outlined,
-        ..libero::theme::Theme::DEFAULT.chip
-    },
-    badge: libero::theme::BadgeDefaults {
-        variant: libero::theme::Variant::Outlined,
-        ..libero::theme::Theme::DEFAULT.badge
-    },
-    icon: libero::theme::IconDefaults {
-        variant: libero::theme::Variant::Outlined,
-        ..libero::theme::Theme::DEFAULT.icon
-    },
-    ..libero::theme::Theme::DEFAULT
-};
-
-/// A project sets the variant once in the theme, and every chrome component
-/// with no `variant` of its own takes it. An `ActionIcon` draws chrome only
-/// once it has a `color` or a `variant`, so it gets a `color`.
-#[test]
-fn an_unset_variant_follows_the_theme() {
-    use libero::components::{ActionIcon, Badge, Chip, Icon};
-
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider { themes: &OUTLINED,
-                Button { "Save" }
-                ActionIcon { aria_label: "Close", color: Color::Primary, "x" }
-                Chip { "Tag" }
-                Badge { "New" }
-                Icon { "i" }
-            }
-        }
-    }
-
-    let html = body(&render(app));
-    let outlined = html
-        .split("data-state=\"")
-        .skip(1)
-        .filter(|rest| {
-            rest.split('"')
-                .next()
-                .is_some_and(|state| state.split(' ').any(|token| token == "outlined"))
-        })
-        .count();
-    assert_eq!(outlined, 5, "{html}");
 }
 
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].

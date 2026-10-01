@@ -1,89 +1,13 @@
-use crate::common::{body, render};
+use crate::common::{body, element_at, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{MultiSelect, NativeSelect, Options, Select, SelectionArgs},
+    components::{MultiSelect, Options, Select, SelectionArgs},
 };
 
-#[derive(Clone, PartialEq, Options)]
-enum Pick {
-    First,
-    Second,
-}
-
-#[test]
-fn select_renders_its_options_and_marks_the_current_one() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                NativeSelect { value: Pick::Second, onchange: move |_| {} }
-            }
-        }
-    }
-
-    let html = render(app);
-    let body = body(&html);
-
-    assert!(body.contains("<select"));
-    assert_eq!(body.matches("<option").count(), 2);
-    // The selection is on the `<option>`, not a `value` on the `<select>`:
-    // that is what SSR can express, and it needs no second render to appear.
-    // Each option posts `Options::value` - the variant's name - not its index.
-    assert!(body.contains("<option value=\"First\">"));
-    assert!(body.contains("<option value=\"Second\" selected"));
-    assert!(!body.contains("<select value="));
-}
-
-/// `value: None` is a real state - the field has not been filled in yet - so
-/// it selects an entry no one can pick rather than silently taking the first.
-#[test]
-fn a_select_without_a_value_shows_its_placeholder() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                NativeSelect {
-                    value: None::<Pick>,
-                    placeholder: "Choose one",
-                    // Annotated: with `value: None` there is nothing else for
-                    // `T` to be inferred from.
-                    onchange: move |_: Pick| {},
-                }
-            }
-        }
-    }
-
-    let body = body(&render(app));
-
-    assert!(body.contains("Choose one"));
-    assert_eq!(body.matches("<option").count(), 3);
-    // Disabled and hidden, so it cannot be picked back once a value is set.
-    assert!(body.contains("hidden"));
-    assert!(!body.contains("<option value=\"First\" selected"));
-}
-
-#[test]
-fn a_disabled_select_renders_the_attribute() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                NativeSelect {
-                    value: Pick::First,
-                    disabled: true,
-                    onchange: move |_| {},
-                }
-            }
-        }
-    }
-
-    let html = render(app);
-
-    assert!(body(&html).contains("disabled"));
-}
-
-/// `Select` and `MultiSelect` as SSR sees them: closed, since the open state
-/// lives in the component and no test can click. The open list is the
-/// Combobox's, and `combobox_highlight` covers it.
+/// `Select` and `MultiSelect` closed. Clicks and keys are the `dispatched`
+/// module's `select_keyboard` and `select_memo`; the open list is the Combobox's.
 mod select_listbox {
     use super::*;
 
@@ -257,20 +181,21 @@ mod select_listbox {
         }
         let html = body(&render(app));
 
-        assert!(
-            html.contains(r#"aria-label="Remove Cherry""#)
-                && html.contains(r#"aria-label="Remove Apple""#),
-            "a chip lost its remove button:\n{html}"
-        );
-        assert!(
-            html.matches(r#"tabindex="-1""#).count() == 2,
-            "the remove buttons are tab stops, or are missing:\n{html}"
-        );
+        // Labelled, and not tab stops: the cursor reaches them through the trigger.
+        for name in ["Remove Cherry", "Remove Apple"] {
+            let remove = tag_with(&html, &format!(r#"aria-label="{name}""#));
+            assert_eq!(
+                remove.get("tabindex").map(String::as_str),
+                Some("-1"),
+                "{remove:?}"
+            );
+        }
         // The ids `aria-activedescendant` points at once the cursor moves.
-        assert!(
-            html.matches(r#"data-slot="chip""#).count() == 2,
-            "a chip lost its wrapper:\n{html}"
-        );
+        let chips = tags_with(&html, r#"data-slot="chip""#);
+        assert_eq!(chips.len(), 2, "a chip lost its wrapper:\n{html}");
+        let ids: Vec<_> = chips.iter().filter_map(|chip| chip.get("id")).collect();
+        assert_eq!(ids.len(), 2, "a chip has no id:\n{html}");
+        assert_ne!(ids[0], ids[1]);
         assert!(
             !html.contains("aria-activedescendant"),
             "a closed select with no cursor still names a descendant:\n{html}"
@@ -322,9 +247,14 @@ mod select_listbox {
         }
         let html = body(&render(app));
 
+        // The size rides the chip inside the wrapper.
+        let wrapper = element_at(&html, html.find(r#"data-slot="chip""#).expect("a chip"));
+        let chip = tag_with(wrapper, "data-state=");
         assert!(
-            html.contains("size-md"),
-            "an `lg` field did not draw an `md` chip:\n{html}"
+            chip["data-state"]
+                .split_whitespace()
+                .any(|token| token == "size-md"),
+            "an `lg` field did not draw an `md` chip: {chip:?}"
         );
     }
 

@@ -207,13 +207,12 @@ fn an_index_outside_the_reachable_window_is_pulled_into_it() {
         "no tab stop in the strip: {dot:?}"
     );
     // Slide 1 is the one actually centred at rest, so it is the current one.
-    let slide_one = html.find("slide 1").expect("slide 1");
-    let current = html
+    assert_eq!(html.matches(r#"data-current="true""#).count(), 1, "{html}");
+    let current = &html[html
         .find(r#"data-current="true""#)
-        .expect("a current slide");
-    let slide_two = html.find("slide 2").expect("slide 2");
+        .expect("a current slide")..];
     assert!(
-        current < slide_one && slide_one < slide_two,
+        current[current.find('>').unwrap() + 1..].starts_with("<div>slide 1</div>"),
         "the current slide should be slide 1: {html}"
     );
 }

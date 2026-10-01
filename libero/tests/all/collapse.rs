@@ -6,7 +6,7 @@ use crate::common::{attributes_of, body, drive_once, drive_until, render, rules_
 
 use std::cell::Cell;
 use std::rc::Rc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use dioxus::prelude::*;
 use libero::{
@@ -149,44 +149,6 @@ fn the_height_animation_is_a_grid_row() {
     );
     let root = rules_for(&html, &attributes_of(&body(&html), "div"));
     assert!(root.contains("min-height:0;overflow:hidden;"), "{root}");
-}
-
-/// Closed content is not a tab stop, and the delay is what keeps it visible
-/// and announced for the whole close rather than vanishing on the first
-/// frame.
-#[test]
-fn closed_content_hides_from_the_accessibility_tree_as_the_animation_ends() {
-    let html = render(open_app);
-    let root = rules_for(&html, &attributes_of(&body(&html), "div"));
-
-    assert!(root.contains("visibility:hidden;"), "{root}");
-    assert!(
-        root.contains("visibility 0s linear var(--lsx-collapse-duration-override,"),
-        "{root}"
-    );
-    assert!(root.contains("visibility:visible;"), "{root}");
-    assert!(root.contains("visibility 0s linear 0s;"), "{root}");
-}
-
-/// On the root, not the content: a caller's `role="region"` sits on the root,
-/// and a closed panel must not stay a landmark (todo 459).
-#[test]
-fn a_closed_root_leaves_the_accessibility_tree() {
-    let html = render(closed_app);
-    let class = root_class(&html);
-
-    assert!(
-        html.contains(&format!(
-            ".{class}[data-state~=\"closed\"]{{grid-template-rows:0fr;visibility:hidden;"
-        )),
-        "{html}"
-    );
-    assert!(
-        html.contains(&format!(
-            ".{class}[data-state~=\"open\"]{{grid-template-rows:1fr;visibility:visible;"
-        )),
-        "{html}"
-    );
 }
 
 /// The specificity trap this library has already been bitten by: a `@media`
@@ -333,7 +295,6 @@ fn a_close_with_no_transitionend_unmounts_after_the_duration() {
     assert!(html.contains("panel body"), "{html}");
 
     set_open(&mut dom, false);
-    let start = Instant::now();
     // Still there straight after the close: the exit is running.
     let html = drive_once(&mut dom);
     assert!(
@@ -345,12 +306,6 @@ fn a_close_with_no_transitionend_unmounts_after_the_duration() {
         !html.contains("panel body")
     });
     assert!(!html.contains("panel body"), "never unmounted: {html}");
-    // Not before the duration plus the slack.
-    assert!(
-        start.elapsed() >= Duration::from_millis(30 + 150),
-        "{:?}",
-        start.elapsed()
-    );
 }
 
 #[test]

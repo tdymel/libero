@@ -1,4 +1,4 @@
-use crate::common::{attributes_of, body, classes_of, has_rule_for, render};
+use crate::common::{attributes_of, body, classes_of, has_rule_for, render, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -432,4 +432,37 @@ mod dispatched {
         // The disabled radio takes no focus in a browser, and answers no key here.
         assert!(segment_press_around_a_disabled_pick(1, Key::ArrowRight).is_empty());
     }
+}
+
+/// The date-time flow drops its segments from the tab order: no radio is a
+/// tab stop, where the default keeps the checked one.
+#[test]
+fn a_non_focusable_segmented_control_leaves_the_tab_order() {
+    #[component]
+    fn Segments(focusable: bool) -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl::<String> {
+                    value: "a".to_string(),
+                    options: vec!["a".to_string(), "b".to_string()],
+                    onchange: move |_| {},
+                    focusable,
+                }
+            }
+        }
+    }
+    let stops = |focusable| {
+        let mut dom = VirtualDom::new_with_props(Segments, SegmentsProps { focusable });
+        dom.rebuild_in_place();
+        let html = body(&dioxus_ssr::render(&dom));
+        let radios = tags_with(&html, r#"type="radio""#);
+        assert_eq!(radios.len(), 2, "{html}");
+        radios
+            .iter()
+            .filter(|radio| radio.get("tabindex").is_none_or(|index| index != "-1"))
+            .count()
+    };
+
+    assert_eq!(stops(false), 0);
+    assert_eq!(stops(true), 1);
 }

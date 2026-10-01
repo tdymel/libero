@@ -179,15 +179,8 @@ mod tests {
         LiberoProvider,
         components::layout::{GridItem, GridSpan, GridZone},
         theme::responsive,
-        utils::take_warnings,
+        utils::warnings_of,
     };
-
-    fn warnings_of(app: fn() -> Element) -> Vec<String> {
-        take_warnings();
-        let mut dom = VirtualDom::new(app);
-        dom.rebuild_in_place();
-        take_warnings()
-    }
 
     #[test]
     fn breakpoints_in_a_zone_without_an_area_warn() {

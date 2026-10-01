@@ -243,15 +243,8 @@ mod tests {
         },
         localization::DateLocale,
         theme::CalendarVariant,
-        utils::take_warnings,
+        utils::warnings_of,
     };
-
-    fn warnings_of(app: fn() -> Element) -> Vec<String> {
-        take_warnings();
-        let mut dom = VirtualDom::new(app);
-        dom.rebuild_in_place();
-        take_warnings()
-    }
 
     #[test]
     fn a_time_field_warns_about_exclude_date() {
@@ -287,7 +280,7 @@ mod tests {
     }
 
     #[test]
-    fn a_month_field_shows_its_month_and_warns_about_columns() {
+    fn a_month_field_warns_about_columns() {
         let warnings = warnings_of(|| {
             rsx! {
                 LiberoProvider {
@@ -301,7 +294,20 @@ mod tests {
         });
         assert_eq!(warnings.len(), 1, "{warnings:?}");
         assert!(warnings[0].contains("`columns`"), "{warnings:?}");
+    }
 
+    #[test]
+    fn a_month_field_shows_its_month() {
+        let html = dioxus_ssr::render_element(rsx! {
+            LiberoProvider {
+                ChronoField::<NaiveDate> { level: DateLevel::Month, value: NaiveDate::from_ymd_opt(2026, 9, 1) }
+            }
+        });
+        assert!(html.contains(r#"value="September 2026""#), "{html}");
+    }
+
+    #[test]
+    fn a_year_field_shows_its_year() {
         let html = dioxus_ssr::render_element(rsx! {
             LiberoProvider {
                 ChronoField::<NaiveDate> { level: DateLevel::Year, value: NaiveDate::from_ymd_opt(2026, 1, 1) }

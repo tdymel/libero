@@ -26,11 +26,23 @@ fn a_tree_item_takes_its_tabindex_from_the_row() {
         }
     }
 
-    let html = render(app);
-    let body = body(&html);
+    /// The control: outside a tree it is an ordinary button and a tab stop.
+    fn loose() -> Element {
+        rsx! { LiberoProvider { TreeItem { "Alpha" } } }
+    }
 
-    assert!(body.contains("<button"));
-    assert!(body.contains(r#"tabindex="-1""#));
+    let in_row = attributes_of(&body(&render(app)), "button");
+    assert_eq!(
+        in_row.get("tabindex").map(String::as_str),
+        Some("-1"),
+        "{in_row:?}"
+    );
+    let alone = attributes_of(&body(&render(loose)), "button");
+    assert_eq!(
+        alone.get("tabindex").map(String::as_str),
+        Some("0"),
+        "{alone:?}"
+    );
 }
 
 #[test]
