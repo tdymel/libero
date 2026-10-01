@@ -73,7 +73,7 @@ pub use document::{DocumentApi, document};
 pub(crate) use element::{
     ContentSubscription, FocusStep, SCROLL_MARGIN_VAR, SCROLL_PADDING_VARS, focus_among,
     focus_first_of, focus_kept, focus_selector, focused_attribute, is_rtl, keep_focused,
-    on_content_change, on_form_reset, set_value_by_id,
+    on_content_change, on_form_reset, scroll_padding_properties, set_value_by_id,
 };
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;

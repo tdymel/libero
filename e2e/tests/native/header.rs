@@ -3,7 +3,10 @@
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::{components::Header, sx::sx};
+use libero::{
+    components::{Header, ScrollArea, Select, Table, column},
+    sx::sx,
+};
 
 fn page_banner() -> Element {
     rsx! {
@@ -122,6 +125,113 @@ fn a_nested_scroller_keeps_none_of_the_banners_padding() {
         page.scroll_top("#box"),
         200.0,
         "the box took the banner's padding"
+    );
+}
+
+#[derive(Clone, PartialEq)]
+struct Note {
+    id: usize,
+}
+
+fn published_scrollers() -> Element {
+    scrollers(true)
+}
+
+fn quiet_scrollers() -> Element {
+    scrollers(false)
+}
+
+/// libero's own scrollers under a banner: a ScrollArea, a Select's list, and a capped
+/// Table with a scroller in a cell.
+fn scrollers(publish_height: bool) -> Element {
+    let mut value = use_signal(|| None::<String>);
+    let options = use_hook(|| (0..40).map(|n| format!("Item {n}")).collect::<Vec<_>>());
+    rsx! {
+        Header { id: "banner", publish_height, "Libero" }
+        div { height: "120px",
+            ScrollArea { id: "area", "aria-label": "Notes",
+                for index in 0..10 {
+                    a { key: "{index}", id: "line-{index}", href: "#", display: "block", height: "20px", "Line {index}" }
+                }
+            }
+        }
+        Select {
+            label: "Page",
+            options,
+            value: value(),
+            onchange: move |next| value.set(next),
+        }
+        Table {
+            max_height: "200px",
+            data: (0..3).map(|id| Note { id }).collect::<Vec<_>>(),
+            columns: vec![
+                column("Notes").value(|note: &Note| note.id).render(|note: &Note| {
+                    let id = note.id;
+                    rsx! {
+                        div { id: "notes-{id}", height: "40px", overflow_y: "auto",
+                            for index in 0..5 {
+                                a { key: "{index}", id: "note-{id}-{index}", href: "#", display: "block", height: "20px", "Note {index}" }
+                            }
+                        }
+                    }
+                }),
+            ],
+        }
+        div { height: "2000px" }
+    }
+}
+
+const PADDING: &str = "--lsx-scroll-padding-top";
+
+/// A ScrollArea's focus scroll, from a line at its top edge: Shift+Tab onto it.
+fn area_scroll_after_shift_tab(app: fn() -> Element) -> f64 {
+    let mut page = mount(app);
+    assert_eq!(page.computed("#area", PADDING), "0px");
+    page.hover("#area");
+    page.wheel("#area", 100.0);
+    page.wait_for(|page| page.scroll_top("#area") == 100.0);
+    page.focus("#line-6");
+    page.shift_tab();
+    page.settle();
+    assert!(page.is_focused("#line-5"), "{}", page.focus_owner());
+    page.scroll_top("#area")
+}
+
+/// Todo 1521: a ScrollArea under a published banner scrolls as under a quiet one.
+#[test]
+fn a_scroll_area_keeps_none_of_the_banners_padding() {
+    assert_eq!(
+        area_scroll_after_shift_tab(published_scrollers),
+        area_scroll_after_shift_tab(quiet_scrollers),
+        "the area took the banner's padding"
+    );
+}
+
+/// Todo 1521: an open Select's list under a published banner keeps none of its padding.
+#[test]
+fn a_select_list_keeps_none_of_the_banners_padding() {
+    let mut page = mount(published_scrollers);
+    page.click("[role=combobox]");
+    assert!(page.exists("[role=listbox]"), "{}", page.tree());
+    assert_eq!(page.computed("[role=listbox]", PADDING), "0px");
+}
+
+/// Todo 1521: a capped Table pads its own scroller, not a scroller in one of its cells.
+#[test]
+fn a_tables_padding_stays_out_of_a_cells_scroller() {
+    let mut page = mount(published_scrollers);
+    assert_eq!(page.computed("#notes-0", PADDING), "0px");
+    page.hover("#notes-0");
+    page.wheel("#notes-0", 40.0);
+    page.wait_for(|page| page.scroll_top("#notes-0") == 40.0);
+    page.focus("#note-0-3");
+    page.shift_tab();
+    page.settle();
+    assert!(page.is_focused("#note-0-2"), "{}", page.focus_owner());
+    assert_eq!(
+        page.scroll_top("#notes-0"),
+        40.0,
+        "the cell took the table's padding"
     );
 }
 

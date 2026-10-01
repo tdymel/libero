@@ -343,6 +343,9 @@ fn StyleOutlet() -> Element {
     let answers = context.a11y_answers();
 
     rsx! {
+        if let Some(properties) = platform::scroll_padding_properties() {
+            style { dangerous_inner_html: properties }
+        }
         for (node_key, stylesheet) in context.stylesheet_registry.stylesheets() {
             style {
                 key: "{node_key}",

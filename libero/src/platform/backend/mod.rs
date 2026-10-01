@@ -474,6 +474,14 @@ pub(crate) fn focus_selectors(css: &str) -> std::borrow::Cow<'_, str> {
     return std::borrow::Cow::Borrowed(css);
 }
 
+/// Only Blitz reads them - see [`scroll_padding_properties`](crate::platform::scroll_padding_properties).
+pub(crate) fn scroll_padding_properties() -> Option<&'static str> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return Some(blitz::scroll_padding_properties());
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return None;
+}
+
 /// The web reads the `web_sys` event, a WebView its IPC payload; Blitz and a
 /// server answer `None`. See [`transition_property`](crate::platform::transition_property).
 pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<String> {

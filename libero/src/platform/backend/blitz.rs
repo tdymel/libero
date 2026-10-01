@@ -2336,27 +2336,27 @@ pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
     }
 }
 
-/// A scroller's own [`SCROLL_PADDING_VARS`] in px. Custom properties inherit, `scroll-padding`
-/// does not: a value equal to the parent's is inherited, so a scroller repeating it loses it.
+/// [`SCROLL_PADDING_VARS`] as `@property` rules that do not inherit, so a nested scroller
+/// gets none of its ancestor's padding.
+pub(super) fn scroll_padding_properties() -> &'static str {
+    static CSS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        SCROLL_PADDING_VARS
+            .map(|var| {
+                format!("@property {var}{{syntax:'<length>';inherits:false;initial-value:0px;}}")
+            })
+            .concat()
+    });
+    &CSS
+}
+
+/// A scroller's own [`SCROLL_PADDING_VARS`] in px.
 fn scroll_padding(doc: &BaseDocument, node_id: NodeId) -> [f64; 4] {
-    let parent = doc
-        .get_node(node_id)
-        .and_then(|node| node.parent)
-        .filter(|&id| doc.get_node(id).is_some_and(|node| node.is_element()));
-    SCROLL_PADDING_VARS.map(|var| match parent {
-        Some(parent)
-            if resolved_style_value(doc, parent, var)
-                == resolved_style_value(doc, node_id, var) =>
-        {
-            0.0
-        }
-        _ => px_var(doc, node_id, var),
-    })
+    SCROLL_PADDING_VARS.map(|var| px_var(doc, node_id, var))
 }
 
 /// The viewport's [`SCROLL_PADDING_VARS`] in px: the root's, as a published Header sets them.
 fn viewport_padding(doc: &BaseDocument) -> [f64; 4] {
-    SCROLL_PADDING_VARS.map(|var| px_var(doc, doc.root_element().id, var))
+    scroll_padding(doc, doc.root_element().id)
 }
 
 /// [`SCROLL_MARGIN_VAR`] in px.

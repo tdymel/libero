@@ -102,6 +102,12 @@ pub(crate) const SCROLL_PADDING_VARS: [&str; 4] = [
     "--lsx-scroll-padding-left",
 ];
 
+/// [`SCROLL_PADDING_VARS`] registered with `inherits: false`, as `scroll-padding` does not
+/// inherit; Blitz's stylo honours `@property`. `None` off Blitz, where nothing reads them.
+pub(crate) fn scroll_padding_properties() -> Option<&'static str> {
+    backend::scroll_padding_properties()
+}
+
 /// An element's rendered pixel size.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Dimensions {
