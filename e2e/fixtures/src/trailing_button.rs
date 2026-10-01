@@ -26,17 +26,60 @@ pub const ROUTES: Routes = &[
     ),
 ];
 
-/// Named by `aria-label` alone: no label for the x to borrow (1498).
+/// The five, each named by `aria-label` alone: no label for the x to borrow (1498).
 #[component]
 fn UnlabelledPage() -> Element {
-    let mut value = use_signal(|| Some(Fruit::Banana));
+    let mut fruit = use_signal(|| Some(Fruit::Banana));
+    let mut fruits = use_signal(|| vec![Fruit::Cherry]);
+    let mut city = use_signal(|| "B".to_string());
+    let mut place = use_signal(|| Some("paris".to_string()));
+    let mut topics = use_signal(|| vec!["rust".to_string()]);
     rsx! {
         Around {
-            Select {
-                "aria-label": "Fruit",
-                clearable: true,
-                value: value(),
-                onchange: move |next| value.set(next),
+            div { id: "u-select",
+                Select {
+                    "aria-label": "Fruit",
+                    clearable: true,
+                    value: fruit(),
+                    onchange: move |next| fruit.set(next),
+                }
+            }
+            div { id: "u-multi-select",
+                MultiSelect {
+                    "aria-label": "Fruits",
+                    clearable: true,
+                    value: fruits(),
+                    onchange: move |next| fruits.set(next),
+                }
+            }
+            div { id: "u-autocomplete",
+                Autocomplete {
+                    "aria-label": "City",
+                    clearable: true,
+                    options: ["Berlin", "Bern", "Bonn"].map(String::from).to_vec(),
+                    value: city(),
+                    oninput: move |next| city.set(next),
+                }
+            }
+            div { id: "u-cascader",
+                Cascader {
+                    "aria-label": "Place",
+                    clearable: true,
+                    data: vec![
+                        CascaderOption::new("france", "France")
+                            .children(vec![CascaderOption::new("paris", "Paris")]),
+                    ],
+                    value: place(),
+                    onchange: move |next: Option<String>| place.set(next),
+                }
+            }
+            div { id: "u-tags-field",
+                TagsField {
+                    "aria-label": "Topics",
+                    clearable: true,
+                    value: topics(),
+                    onchange: move |next| topics.set(next),
+                }
             }
         }
     }

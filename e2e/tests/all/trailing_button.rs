@@ -118,7 +118,6 @@ fn the_x_is_named_with_its_fields_label() {
             ("/trailing-button/autocomplete", "Clear City"),
             ("/trailing-button/cascader", "Clear Place"),
             ("/trailing-button/tags-field", "Clear Topics"),
-            ("/trailing-button/unlabelled", "Clear"),
         ] {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
@@ -129,6 +128,24 @@ fn the_x_is_named_with_its_fields_label() {
             fixture.console.assert_clean(route).unwrap();
             fixture.close().await.unwrap();
         }
+        let route = "/trailing-button/unlabelled";
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        for field in [
+            "select",
+            "multi-select",
+            "autocomplete",
+            "cascader",
+            "tags-field",
+        ] {
+            let x = format!("#u-{field} {CLEAR}");
+            wait::for_visible(page, &x).await.unwrap();
+            let tree = ax::snapshot(page, &x).await.unwrap();
+            let first = tree.lines().next().unwrap_or_default();
+            assert_eq!(first, "button \"Clear\"", "unlabelled {field}: {tree}");
+        }
+        fixture.console.assert_clean(route).unwrap();
+        fixture.close().await.unwrap();
     });
 }
 
