@@ -83,7 +83,8 @@ pub fn LoaderPage() -> Element {
                     Control::color("color"),
                     // Neither is a prop: they place the loader beside its
                     // own text, or alone in a busy region.
-                    Control::switch("beside_text").code(|_, _| vec![]),
+                    // On by default, so the first code block is the safe setup.
+                    Control::switch("beside_text").default("true").code(|_, _| vec![]),
                     Control::switch("sole_content")
                         .code(|_, _| vec![])
                         .hidden_when(beside_text),

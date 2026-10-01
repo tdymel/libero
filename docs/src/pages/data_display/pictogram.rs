@@ -1,12 +1,20 @@
-use super::icon_catalogue::IconCatalogue;
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, ExtraTab, PictogramNote, a11y, prop, props,
+    Control, Demo, DemoValues, DocPage, ExtraTab, IconCatalogue, PictogramNote, a11y, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{Code, Pictogram, SvgData, Text};
 use pictogram_icons_lucide as lucide;
 
 const ICONS: [&str; 5] = ["house", "heart", "star", "bell", "search"];
+
+/// The `aria_label` switch's name for a glyph, such as "House".
+fn icon_name(name: &str) -> String {
+    let mut chars = name.chars();
+    chars
+        .next()
+        .map(|first| first.to_uppercase().chain(chars).collect())
+        .unwrap_or_default()
+}
 
 fn icon(name: &str) -> SvgData {
     match name {
@@ -38,7 +46,8 @@ pub fn PictogramPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "A pictogram is hidden from screen readers (`aria-hidden=\"true\"`).",
-                    "`aria_label`, or `\"aria-labelledby\"` by its name in quotes, makes it `role=\"img\"` instead.",                ])
+                    "`aria_label`, or an `aria-labelledby` attribute, makes it `role=\"img\"` instead.",
+                ])
                 .must([
                     "Name a pictogram that means something on its own with `aria_label`. One next to a text label stays hidden.",
                     "For a clickable glyph, use `ActionIcon { icon }`.",
@@ -101,6 +110,11 @@ pub fn PictogramPage() -> Element {
                                 vec![format!("stroke_width: {stroke:?}")]
                             }
                         }),
+                    // Off, the glyph stays hidden, as one beside a text label should.
+                    Control::switch("aria_label").code(|_, values| match values.str("aria_label").as_str() {
+                        "true" => vec![format!("aria_label: {:?}", icon_name(&values.str("icon")))],
+                        _ => vec![],
+                    }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Pictogram {
@@ -108,6 +122,7 @@ pub fn PictogramPage() -> Element {
                         width: values.str("size"),
                         height: values.str("size"),
                         stroke_width: values.str("stroke"),
+                        aria_label: (values.str("aria_label") == "true").then(|| icon_name(&values.str("icon"))),
                     }
                 },
             }

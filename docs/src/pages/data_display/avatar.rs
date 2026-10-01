@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Avatar, AvatarGroup, AvatarPart, AvatarSpec, Code, Input, Text};
+use libero::components::{Avatar, AvatarGroup, AvatarPart, AvatarSpec, Code, Flex, Input, Text};
 
 static AVATAR_IMAGE: Asset = asset!("/assets/avatar.svg");
 
@@ -59,6 +59,12 @@ fn people() -> Vec<AvatarSpec> {
 /// In group mode, renames the block to `AvatarGroup` and splices in `people`, which
 /// `generate_code` never prints.
 fn wrap_group(values: &DemoValues, source: &str) -> String {
+    if beside_name(values) {
+        return format!(
+            "Flex {{ direction: \"row\", align: \"center\", gap: \"sm\",\n{}    Text {{ \"Ada Lovelace\" }}\n}}",
+            indent(source)
+        );
+    }
     if !grouped(values) {
         return source.to_string();
     }
@@ -72,6 +78,11 @@ fn wrap_group(values: &DemoValues, source: &str) -> String {
 
 fn grouped(values: &DemoValues) -> bool {
     values.str("component") == "group"
+}
+
+/// The name shows beside the avatar, so the avatar is decorative: `alt: ""`.
+fn beside_name(values: &DemoValues) -> bool {
+    values.str("beside_name") == "true" && !grouped(values)
 }
 
 /// One control over the fallback chain; a broken source shows the fallback happening.
@@ -232,6 +243,13 @@ pub fn AvatarPage() -> Element {
                     .default("tonal"),
                     // Unset `color` resolves to primary, so the default swatch is primary.
                     Control::color("color"),
+                    // Not a prop: the name beside the avatar, which `alt: ""` then hides.
+                    Control::switch("beside_name")
+                        .hidden_when(grouped)
+                        .code(|_, values| match beside_name(values) {
+                            true => vec![r#"alt: """#.to_string()],
+                            false => vec![],
+                        }),
                 ],
                 render: move |values: DemoValues| {
                     let content = values.str("content");
@@ -249,9 +267,10 @@ pub fn AvatarPage() -> Element {
                             }
                         };
                     }
-                    rsx! {
+                    let avatar = rsx! {
                         Avatar {
                             name: "Ada Lovelace",
+                            alt: beside_name(&values).then(String::new),
                             src: match content.as_str() {
                                 "picture" => Some(AVATAR_IMAGE.to_string()),
                                 "broken" => Some(MISSING_SRC.to_string()),
@@ -264,6 +283,15 @@ pub fn AvatarPage() -> Element {
                             variant: values.str("variant"),
                             color: Input::from(values.str("color")),
                         }
+                    };
+                    match beside_name(&values) {
+                        true => rsx! {
+                            Flex { direction: "row", align: "center", gap: "sm",
+                                {avatar}
+                                Text { "Ada Lovelace" }
+                            }
+                        },
+                        false => avatar,
                     }
                 },
             }

@@ -8,7 +8,7 @@ use libero::{
 /// Name, what it is used for, licence, and its source.
 type Row = (&'static str, &'static str, &'static str, &'static str);
 
-const CREDITS: [Row; 4] = [
+const CREDITS: [Row; 5] = [
     (
         "Lucide",
         "Icons on these pages and the default icons of libero's components.",
@@ -33,6 +33,12 @@ const CREDITS: [Row; 4] = [
         "CC0 1.0",
         "https://simpleicons.org",
     ),
+    (
+        "Big Buck Bunny",
+        "The film in the Video demo, streamed from Wikimedia Commons. (c) 2008 Blender Foundation.",
+        "CC BY 3.0",
+        "https://peach.blender.org",
+    ),
 ];
 
 #[component]
@@ -43,13 +49,14 @@ pub fn CreditsPage() -> Element {
             markdown: "/md/credits.md",
             lead: rsx! {
                 Text {
-                    "The icons and logos on these pages and inside libero's components come from "
-                    "other projects. Their licences ask that the notices below stay with any copy."
+                    "The icons and logos on these pages and inside libero's components, and the "
+                    "Video demo's film, come from other projects. Their licences ask that the "
+                    "notices below stay with any copy."
                 }
             },
 
             DocSection {
-                title: "Icons and logos",
+                title: "Icons, logos and media",
                 Table {
                     aria_label: "Credits",
                     data: CREDITS.to_vec(),

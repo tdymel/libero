@@ -1,7 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Chip, Code, Marquee, MarqueePart, Text},
+    components::{Button, Chip, Code, Flex, Marquee, MarqueePart, Text},
     sx::sx,
     use_theme,
 };
@@ -31,6 +31,56 @@ fn integer(control: &Control, values: &DemoValues) -> Vec<String> {
 
 fn vertical(values: &DemoValues) -> bool {
     values.str("orientation") == "vertical"
+}
+
+/// The page's own pause button, which `pause_control: false` asks for (WCAG 2.2.2).
+// snippet: let mut paused = use_signal(|| false);
+const OWN_PAUSE: &str =
+    r#"Button { selected: paused(), onclick: move |_| paused.toggle(), "Pause the ticker" }"#;
+
+/// Without the built-in toggle, prints the `paused` signal and the page's own button too.
+fn wrap(values: &DemoValues, source: &str) -> String {
+    if values.str("pause_control") == "true" {
+        return source.to_string();
+    }
+    let mut code = String::from("let mut paused = use_signal(|| false);\n\nrsx! {\n");
+    code.push_str(&indent(OWN_PAUSE));
+    code.push_str(&indent(source));
+    code.push('}');
+    code
+}
+
+/// Owns `paused`, so the page's own button outlives a control change.
+#[component]
+fn MarqueePreview(values: DemoValues) -> Element {
+    let mut paused = use_signal(|| false);
+    let own_control = values.str("pause_control") != "true";
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            if own_control {
+                Button {
+                    selected: paused(),
+                    onclick: move |_| paused.toggle(),
+                    "Pause the ticker"
+                }
+            }
+            Marquee {
+                orientation: values.str("orientation"),
+                sx: vertical(&values).then(|| sx().height(VERTICAL_HEIGHT)),
+                duration: values.str("duration").parse::<u32>().ok(),
+                gap: values.str("gap"),
+                repeat: values.str("repeat").parse::<u8>().ok(),
+                reverse: values.str("reverse") == "true",
+                pause_on_hover: values.str("pause_on_hover") == "true",
+                pause_control: !own_control,
+                paused: own_control.then(|| paused()),
+                fade_edges: values.str("fade_edges") == "true",
+                for chip in CHIPS {
+                    Chip { "{chip}" }
+                }
+            }
+        }
+    }
 }
 
 #[component]
@@ -105,7 +155,11 @@ pub fn MarqueePage() -> Element {
                     Code { source: "repeat" }
                     " times in a row. "
                     Code { source: "duration" }
-                    " is one full cycle, so adding an item makes the strip move faster."
+                    " is one full cycle, so adding an item makes the strip move faster. With "
+                    Code { source: "pause_control" }
+                    " off, the demo puts the page's own pause button above it, through "
+                    Code { source: "paused" }
+                    "."
                 }
                 Text {
                     "Under "
@@ -139,24 +193,17 @@ pub fn MarqueePage() -> Element {
                         .code(integer),
                     Control::switch("reverse"),
                     Control::switch("pause_on_hover"),
-                    Control::switch("pause_control").default("true"),
+                    Control::switch("pause_control").default("true").code(|_, values| {
+                        match values.str("pause_control").as_str() {
+                            "true" => vec![],
+                            _ => vec!["pause_control: false".to_string(), "paused: paused()".to_string()],
+                        }
+                    }),
                     Control::switch("fade_edges"),
                 ],
+                wrap: Wrap(wrap),
                 render: move |values: DemoValues| rsx! {
-                    Marquee {
-                        orientation: values.str("orientation"),
-                        sx: vertical(&values).then(|| sx().height(VERTICAL_HEIGHT)),
-                        duration: values.str("duration").parse::<u32>().ok(),
-                        gap: values.str("gap"),
-                        repeat: values.str("repeat").parse::<u8>().ok(),
-                        reverse: values.str("reverse") == "true",
-                        pause_on_hover: values.str("pause_on_hover") == "true",
-                        pause_control: values.str("pause_control") == "true",
-                        fade_edges: values.str("fade_edges") == "true",
-                        for chip in CHIPS {
-                            Chip { "{chip}" }
-                        }
-                    }
+                    MarqueePreview { values }
                 },
             }
         }

@@ -42,13 +42,14 @@ static GALLERY: [Asset; 6] = [
 ];
 
 const TITLES: [&str; 6] = ["Breakfast", "Burger", "Camera", "Coffee", "Hats", "Honey"];
+/// Made up, as the pictures are placeholders: no real person's handle.
 const AUTHORS: [&str; 6] = [
-    "@rgbagirl",
-    "@amirali",
-    "@bkristastucchio",
-    "@nolanissac",
-    "@hjrc33",
-    "@arwinneil",
+    "@demo_cook",
+    "@demo_grill",
+    "@demo_lens",
+    "@demo_brew",
+    "@demo_hats",
+    "@demo_bees",
 ];
 
 /// Real pages, so a linked cell navigates rather than 404s.

@@ -96,7 +96,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `items` | `Vec<TimelineEvent>` | `vec![]` | The events, in render order. |
-| `active` | `usize` | `None` | The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event, so "step 7 of 4" means finished. |
+| `active` | `Option<usize>` | `None` | The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event, so "step 7 of 4" means finished. |
 | `align` | `TimelineAlign` | `start` | `start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. |
 | `color` | `ThemeAwareValue` | `primary` | The active accent. An event's own `.color(..)` overrides it. |
 | `bullet_size` | `Size` | `md` | Bullet diameter. |

@@ -10,6 +10,28 @@ An `<audio>` in one compact row, as a chat app's voice message: play, a track
 of bars to seek, the time, mute with a volume menu and a speed button, in the
 theme's look on every platform that plays media.
 
+A browser plays the first `sources` entry whose type it supports, then `src`.
+An Ogg first and an MP3 as `src` reach every browser, Safari included.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Audio, MediaSource};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Audio {
+            src: "/message.mp3",
+            sources: vec![MediaSource::new("/message.ogg", "audio/ogg")],
+            label: "Voice message",
+        }
+    }
+}
+```
+
+The demo plays "Wikipedia guitar solo" (CC0), streamed from Wikimedia Commons,
+so it plays only online.
+
 ## Usage
 
 ```rust

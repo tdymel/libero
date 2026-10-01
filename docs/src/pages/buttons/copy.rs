@@ -2,6 +2,9 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Copy, Input, Text};
 
+/// The `label` switch's description, read after the name.
+const LABEL: &str = "Add libero to your project";
+
 #[component]
 pub fn CopyPage() -> Element {
     rsx! {
@@ -89,6 +92,10 @@ pub fn CopyPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
+                    Control::switch("label").code(|_, values| match values.str("label").as_str() {
+                        "true" => vec![format!("label: {LABEL:?}")],
+                        _ => vec![],
+                    }),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -102,6 +109,7 @@ pub fn CopyPage() -> Element {
                         },
                         size: values.str("size"),
                         radius: values.str("radius"),
+                        label: (values.str("label") == "true").then(|| LABEL.to_string()),
                         disabled: values.str("disabled") == "true",
                     }
                 },

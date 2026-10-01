@@ -2,8 +2,24 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Input, Text, ThemeSwitcher, ThemeSwitcherPart},
-    theme::ThemeSet,
+    theme::{ColorSchemeSetting, ThemeSet},
 };
+
+/// The `label` switch's names, printed as `LABEL` shows them.
+fn scheme_label(to: ColorSchemeSetting) -> String {
+    match to {
+        ColorSchemeSetting::Light => "Use light colours".to_string(),
+        ColorSchemeSetting::Dark => "Use dark colours".to_string(),
+        ColorSchemeSetting::System => "Follow the system's colours".to_string(),
+    }
+}
+
+// snippet: in ThemeSwitcher { .. }
+const LABEL: &str = r#"label: |to: ColorSchemeSetting| match to {
+    ColorSchemeSetting::Light => "Use light colours".to_string(),
+    ColorSchemeSetting::Dark => "Use dark colours".to_string(),
+    ColorSchemeSetting::System => "Follow the system's colours".to_string(),
+}"#;
 
 #[component]
 pub fn ThemeSwitcherPage() -> Element {
@@ -111,6 +127,10 @@ pub fn ThemeSwitcherPage() -> Element {
                         "true" => vec!["with_system: true".to_string()],
                         _ => vec![],
                     }),
+                    Control::switch("label").code(|_, values| match values.str("label").as_str() {
+                        "true" => vec![LABEL.to_string()],
+                        _ => vec![],
+                    }),
                     Control::switch("themes").code(|_, values| match values.str("themes").as_str() {
                         "true" => vec!["themes: ThemeSet::CATALOGUE".to_string()],
                         _ => vec![],
@@ -127,6 +147,7 @@ pub fn ThemeSwitcherPage() -> Element {
                         radius: values.str("radius"),
                         disabled: values.str("disabled") == "true",
                         with_system: values.str("with_system") == "true",
+                        label: (values.str("label") == "true").then(|| Callback::new(scheme_label)),
                         themes: (values.str("themes") == "true").then_some(ThemeSet::CATALOGUE),
                     }
                 },

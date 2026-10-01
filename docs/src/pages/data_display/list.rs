@@ -17,7 +17,7 @@ ListItem {
     }
 }"#;
 
-// snippet: ignore - CheckmarkIcon is the docs site's own svg, as on the Alert page
+// snippet: in List { .. }
 const ICON_CODE: &str = r#"icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } } }"#;
 
 #[component]

@@ -29,10 +29,13 @@ use libero::components::{Button, Flex, Skeleton, Text};
 #[component]
 fn Profile(name: Option<String>) -> Element {
     rsx! {
-        Skeleton { visible: name.is_none(),
-            Flex { direction: "row", gap: "sm", align: "center",
-                Text { {name.clone().unwrap_or_default()} }
-                Button { size: "xs", "Follow" }
+        // The region you fill is busy while it waits.
+        div { "aria-busy": name.is_none(),
+            Skeleton { visible: name.is_none(),
+                Flex { direction: "row", gap: "sm", align: "center",
+                    Text { {name.clone().unwrap_or_default()} }
+                    Button { size: "xs", "Follow" }
+                }
             }
         }
     }

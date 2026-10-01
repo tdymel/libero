@@ -66,8 +66,8 @@ pub fn CarouselPage() -> Element {
                     prop("slide_label", "Callback<usize, String>")
                         .default("{n} of {m}")
                         .doc("Each slide's accessible name."),
-                    prop("index", "usize")
-                        .default("uncontrolled")
+                    prop("index", "Option<usize>")
+                        .default("None, uncontrolled")
                         .doc("The current slide. Set it and the carousel follows."),
                     prop("onindexchange", "EventHandler<usize>")
                         .doc("Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here."),

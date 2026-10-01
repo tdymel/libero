@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use libero::chrono::{NaiveDate, TimeDelta};
 use libero::components::{
-    Button, Chip, Code, Column, ColumnWidths, PinnedColumns, RowFn, Table, TableFilterButton, Text,
-    column,
+    Button, Chip, Code, Column, ColumnWidths, PinnedColumns, RowFn, Table, TableColumnsButton,
+    TableDensityButton, TableExportButton, TableFilterButton, Text, column,
 };
 use libero::hooks::SortableMove;
 use libero::platform::{TimerSubscription, timer};
@@ -253,6 +253,11 @@ fn wrap_data(values: &DemoValues, code: &str) -> String {
     if resizes(values) {
         people.push_str("\nlet mut widths = use_signal(ColumnWidths::new);");
     }
+    if values.str("toolbar") == "true" {
+        people.push_str(
+            "\n// The export's CSV, yours to save.\nlet mut csv = use_signal(String::new);",
+        );
+    }
     let uses = match windowed(values) {
         true => "use libero::chrono::{NaiveDate, TimeDelta};",
         false => "use libero::chrono::NaiveDate;",
@@ -284,13 +289,22 @@ fn day(year: i32, month: u32, day: u32) -> NaiveDate {{
 const DETAIL: &str = r#"row_detail: |p: &Person| Some(rsx! { "{p.name} joined as {p.role}." })"#;
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
+// snippet: let mut csv = use_signal(String::new);
 // snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], .. }
-const TOOLBAR: &str =
-    r#"toolbar: rsx! { Button { variant: "outlined", size: "sm", "Add member" } }"#;
+const TOOLBAR: &str = r#"toolbar: rsx! {
+    TableColumnsButton {}
+    TableDensityButton {}
+    TableExportButton { onexport: move |text: String| csv.set(text) }
+    Button { variant: "outlined", size: "sm", "Add member" }
+}"#;
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
+// snippet: let mut csv = use_signal(String::new);
 // snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], filter_panel: true, .. }
 const TOOLBAR_FILTERS: &str = r#"toolbar: rsx! {
+    TableColumnsButton {}
+    TableDensityButton {}
+    TableExportButton { onexport: move |text: String| csv.set(text) }
     TableFilterButton {}
     Button { variant: "outlined", size: "sm", "Add member" }
 }"#;
@@ -350,6 +364,7 @@ fn TeamTable(values: DemoValues) -> Element {
     // Built on the first flip only, then kept: a flip re-renders the table, not the data.
     let many = use_hook(|| Rc::new(OnceCell::<Vec<Person>>::new()));
     let mut widths = use_signal(ColumnWidths::new);
+    let mut csv = use_signal(String::new);
     let mut loaded = use_signal(|| fetch(0));
     let mut fetching = use_signal(|| false);
     let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
@@ -408,6 +423,9 @@ fn TeamTable(values: DemoValues) -> Element {
             }),
             show_quick_filter: on("show_quick_filter"),
             toolbar: on("toolbar").then(|| rsx! {
+                TableColumnsButton {}
+                TableDensityButton {}
+                TableExportButton { onexport: move |text: String| csv.set(text) }
                 if on("filter_panel") {
                     TableFilterButton {}
                 }
@@ -430,6 +448,9 @@ fn TeamTable(values: DemoValues) -> Element {
                 (false, false) => rows(),
             },
             columns: team_columns(on("column_groups")),
+        }
+        if on("toolbar") && !csv.read().is_empty() {
+            Text { size: "sm", "Exported {csv.read().lines().count()} lines of CSV." }
         }
     }
 }
@@ -540,6 +561,9 @@ pub fn TablePage() -> Element {
                 props("table_csv()", vec![
                     prop("table_csv", "fn(&[Column<T>], &[T]) -> String").default("none").doc("The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; saving the file is yours."),
                     prop("table_text", "fn(&[Column<T>], &[T]) -> Vec<Vec<String>>").default("none").doc("The same cells unjoined, the header row first, for your own writer."),
+                ]).without_base_props(),
+                props("TableExportButton", vec![
+                    prop("onexport", "EventHandler<String>").default("required").doc("Called with the table as CSV, as `table_csv` writes it: the filtered, sorted rows of every page, in the shown columns. Saving it is yours. `TableColumnsButton`, `TableDensityButton` and `TableFilterButton` take no props, and none of the four takes `class`, `sx` or `attributes`."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()
@@ -741,7 +765,17 @@ pub fn TablePage() -> Element {
                     Code { source: "filter_panel" }
                     "'s dialog from where you put it; with a "
                     Code { source: "toolbar" }
-                    ", the table leaves the Filters button to it."
+                    ", the table leaves the Filters button to it. Only "
+                    Code { source: "TableExportButton" }
+                    " takes a prop, "
+                    Code { source: "onexport" }
+                    "; the demo's "
+                    Code { source: "toolbar" }
+                    " switch shows them, "
+                    Code { source: "TableFilterButton" }
+                    " with "
+                    Code { source: "filter_panel" }
+                    " on."
                 }
                 Text {
                     Code { source: "column_menu" }

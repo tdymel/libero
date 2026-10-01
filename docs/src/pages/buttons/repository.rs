@@ -58,6 +58,14 @@ pub fn RepositoryPage() -> Element {
                     Code { source: "Repository {{ repo: \"tdymel/libero\" }}" }
                     "."
                 }
+                Text {
+                    "Native builds fetch through dioxus-native's network provider, which needs its "
+                    Code { source: "net" }
+                    " feature. "
+                    Code { source: "net" }
+                    " is on by default, so only an app that turns dioxus-native's default "
+                    "features off has to add it back; without it the icon stands alone."
+                }
             },
             Demo {
                 component: "Repository",

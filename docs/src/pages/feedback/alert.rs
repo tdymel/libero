@@ -39,7 +39,7 @@ pub fn AlertPage() -> Element {
                     .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`."),
                 prop("radius", "Size")
                     .default("md")
-                    .doc("Corner radius. A size step or any CSS length."),
+                    .doc("Corner radius, a size step from `xs` to `xxl`."),
                 prop("onclose", "EventHandler<()>")
                     .doc("Shows the close button and fires when it is pressed. Unmount the alert to close it."),
                 prop("close_label", "String")

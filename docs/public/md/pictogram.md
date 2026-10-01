@@ -86,8 +86,8 @@ colour variants are left out: they hard-code their fills.
 ### Libero handles
 
 - A pictogram is hidden from screen readers (`aria-hidden="true"`).
-- `aria_label`, or `"aria-labelledby"` by its name in quotes, makes it
-  `role="img"` instead.
+- `aria_label`, or an `aria-labelledby` attribute, makes it `role="img"`
+  instead.
 
 ### You must
 

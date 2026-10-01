@@ -14,12 +14,16 @@ With reduced motion it stops moving but stays visible.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::Loader;
+use libero::components::{Flex, Loader, Text};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Loader { variant: "bars", size: "lg", color: "secondary" }
+        // Beside its own text, the text says the wait.
+        Flex { direction: "row", align: "center", gap: "sm",
+            Loader { variant: "bars", size: "lg", color: "secondary" }
+            Text { "Uploading…" }
+        }
     }
 }
 ```

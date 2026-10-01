@@ -52,7 +52,7 @@ fn busy_region(values: &DemoValues) -> bool {
 fn wrap_region(values: &DemoValues, code: &str) -> String {
     match busy_region(values) {
         true => format!(
-            "Box {{ \"aria-busy\": \"{}\",\n{}}}",
+            "Box {{ \"aria-busy\": \"{}\", sx: sx().width(\"100%\"),\n{}}}",
             values.str("visible"),
             indent(code)
         ),
@@ -168,8 +168,9 @@ pub fn SkeletonPage() -> Element {
                     Control::switch("visible").default("true"),
                     Control::switch("animate").default("true"),
                     Control::switch("circle"),
-                    // Not a prop: the caller's region around the skeleton.
-                    Control::switch("busy_region").code(|_, _| vec![]),
+                    // Not a prop: the caller's region around the skeleton. On by default, so
+                    // the first code block is the safe setup.
+                    Control::switch("busy_region").default("true").code(|_, _| vec![]),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm")
                         .hidden_when(|values| values.str("circle") == "true"),

@@ -54,7 +54,7 @@ fn card_notification(s: NotificationScope<Message>) -> Element {
                     }
                     Flex { direction: "row", gap: "sm",
                         Button { variant: "outlined", size: "xs", onclick: move |_| s.close(), "Reply" }
-                        Button { variant: "text", size: "xs", onclick: move |_| s.close(), "Mute" }
+                        Button { variant: "standard", size: "xs", onclick: move |_| s.close(), "Mute" }
                     }
                 }
             }
@@ -123,7 +123,7 @@ fn card_notification(s: NotificationScope<Message>) -> Element {
                             "Reply"
                         }
                         Button {
-                            variant: "text",
+                            variant: "standard",
                             size: "xs",
                             onclick: move |_| s.close(),
                             "Mute"
@@ -208,6 +208,21 @@ fn upload_notification(s: NotificationScope<Upload>) -> Element {
 /// The host's `auto_close` for a control value: milliseconds, or `never`.
 fn auto_close_of(value: &str) -> AutoClose {
     value.parse().map_or(AutoClose::Never, AutoClose::After)
+}
+
+/// Whether `closable: false` still leaves a way to close it: the card's actions close it, an
+/// alert that never closes on its own has nothing else. The upload draws its own Dismiss.
+fn closable_shown(values: &DemoValues) -> bool {
+    match values.str("template").as_str() {
+        "card" => true,
+        "alert" => values.str("auto_close") != "never",
+        _ => false,
+    }
+}
+
+/// `closable` as the demo uses it: on wherever its switch is hidden.
+fn closable(values: &DemoValues) -> bool {
+    values.str("closable") == "true" || !closable_shown(values)
 }
 
 /// `AutoClose` as the caller would type it.
@@ -315,13 +330,16 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
     if upload {
         options.push("// A progress notification waits for its own end.".to_string());
         options.push("auto_close: Some(AutoClose::Never)".to_string());
+    } else if template == "card" {
+        options.push("// Reply and Mute are actions: it waits for the reader.".to_string());
+        options.push("auto_close: Some(AutoClose::Never)".to_string());
     } else if !contained && auto_close != "6000" {
         options.push(format!(
             "auto_close: Some({})",
             auto_close_code(&auto_close)
         ));
     }
-    if values.str("closable") == "false" {
+    if !closable(values) {
         options.push("closable: false".to_string());
     }
     if values.str("live") == "assertive" {
@@ -461,7 +479,8 @@ fn Examples(
                     title: title.then(|| "Saved".into()),
                     text,
                 },
-                options(false),
+                // Its Reply and Mute are actions, so it waits for the reader (WCAG 2.2.1).
+                options(true),
             );
             return;
         }
@@ -491,7 +510,7 @@ fn Examples(
             }),
             Flex { direction: "row", justify: "center", gap: "sm", wrap: "wrap",
                 Button { variant: "outlined", onclick: show, "Show one" }
-                Button { variant: "text", onclick: move |_| {
+                Button { variant: "standard", onclick: move |_| {
                         notify.clear();
                         cards.clear();
                     },
@@ -540,7 +559,7 @@ pub fn NotificationsPage() -> Element {
                 props("NotificationOptions", vec![
                     prop("placement", "Option<Placement>").doc("The stack it joins. `None` is the host's."),
                     prop("auto_close", "Option<AutoClose>").doc("When it closes. `None` is the host's."),
-                    prop("closable", "bool").default("true").doc("Whether the template draws a close button."),
+                    prop("closable", "bool").default("true").doc("Whether the template draws a close button. Off, keep a timer or an action that closes it: Escape does not, and `F8` only focuses it."),
                     prop("live", "NotificationLive").default("Polite").doc("`Polite` or `Assertive`, how it is announced."),
                 ]),
                 props("NotificationHandle", vec![
@@ -562,6 +581,7 @@ pub fn NotificationsPage() -> Element {
                 .must([
                     "Give one with an action, such as Undo, `AutoClose::Never`: it is safer.",
                     "In your own template, draw the close button yourself: read `s.closable()` and give the button an `aria_label`, as the Card option does.",
+                    "Leave `closable` on for one that never closes on its own, unless it has an action that closes it. Neither Escape nor `F8` closes a notification, so the demo hides the switch for such an alert.",
                 ]),
             lead: rsx! {
                 Text {
@@ -628,7 +648,7 @@ pub fn NotificationsPage() -> Element {
                     Control::toggle("auto_close", ["2000", "6000", "never"])
                         .labels(["2s", "6s", "Never"])
                         .default("6000")
-                        .hidden_when(|values| values.str("template") == "upload"),
+                        .hidden_when(|values| values.str("template") != "alert"),
                     // The default template is an `Alert`; your own draws none,
                     // so both of its controls go with it.
                     Control::toggle("template", ["alert", "card", "upload"])
@@ -648,10 +668,10 @@ pub fn NotificationsPage() -> Element {
                         .labels(["Polite", "Assertive"])
                         .default("polite"),
                     Control::switch("title").hidden_when(|values| values.str("template") == "upload"),
-                    // The upload template draws Dismiss once done, whatever this says.
+                    // Off with `Never`, an alert could not be closed at all.
                     Control::switch("closable")
                         .default("true")
-                        .hidden_when(|values| values.str("template") == "upload"),
+                        .hidden_when(|values| !closable_shown(values)),
                     Control::switch("contained"),
                 ],
                 render: move |values: DemoValues| {
@@ -661,7 +681,7 @@ pub fn NotificationsPage() -> Element {
                             color: values.str("color"),
                             variant: values.str("variant"),
                             title: values.str("title") == "true",
-                            closable: values.str("closable") == "true",
+                            closable: closable(&values),
                             live: values.str("live"),
                             template: values.str("template"),
                             position: values.str("placement"),

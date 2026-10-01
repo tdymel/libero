@@ -8,6 +8,9 @@ use libero::components::{Code, Icon, Input, Text};
 /// The glyph the box draws; no control varies it.
 const GLYPH: &str = "svg: pictogram_icons_lucide::check::outlined";
 
+/// The `aria_label` switch's name for the glyph.
+const NAME: &str = "Done";
+
 #[component]
 pub fn IconPage() -> Element {
     let [gradient_to, gradient_deg] = gradient_controls(not_gradient_variant);
@@ -86,6 +89,11 @@ pub fn IconPage() -> Element {
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm")
                         .hidden_when(|values| values.str("variant") == "standard"),
+                    // Off, the icon stays hidden, as one beside a text label should.
+                    Control::switch("aria_label").code(|_, values| match values.str("aria_label").as_str() {
+                        "true" => vec![format!("aria_label: {NAME:?}")],
+                        _ => vec![],
+                    }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Icon {
@@ -98,6 +106,7 @@ pub fn IconPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         svg: pictogram_icons_lucide::check::outlined,
+                        aria_label: (values.str("aria_label") == "true").then_some(NAME),
                     }
                 },
             }

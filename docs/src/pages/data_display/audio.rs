@@ -1,9 +1,15 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Audio, AudioPart, Code, Input, Text},
+    components::{Audio, AudioPart, Code, CodeBlock, Input, Text},
     theme::Size,
 };
+
+const FORMATS: &str = r#"Audio {
+    src: "/message.mp3",
+    sources: vec![MediaSource::new("/message.ogg", "audio/ogg")],
+    label: "Voice message",
+}"#;
 
 #[component]
 pub fn AudioPage() -> Element {
@@ -97,6 +103,20 @@ pub fn AudioPage() -> Element {
                     ", "
                     Code { source: "current_time()" }
                     " and friends."
+                }
+                Text {
+                    "A browser plays the first "
+                    Code { source: "sources" }
+                    " entry whose type it supports, then "
+                    Code { source: "src" }
+                    ". An Ogg first and an MP3 as "
+                    Code { source: "src" }
+                    " reach every browser, Safari included."
+                }
+                CodeBlock { source: FORMATS, language: "rust" }
+                Text {
+                    "The demo plays \"Wikipedia guitar solo\" (CC0), streamed from Wikimedia "
+                    "Commons, so it plays only online."
                 }
             },
             Demo {

@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, CodeBlock, Input, MediaTrack, Text, TrackKind, Video, VideoPart},
+    components::{Anchor, Code, CodeBlock, Input, MediaTrack, Text, TrackKind, Video, VideoPart},
     theme::Size,
 };
 
@@ -117,6 +117,12 @@ pub fn VideoPage() -> Element {
                     " with libero's own controls: play, seek, time, mute, volume, speed, captions and fullscreen, in a bar over the picture as YouTube's, in the theme's look on every platform that plays media. "
                     Code { source: "use_media()" }
                     " drives the same engine for a layout of your own."
+                }
+                Text {
+                    "The demo plays \"Big Buck Bunny\", (c) 2008 Blender Foundation, "
+                    Anchor { to: "https://peach.blender.org", target: "_blank", "peach.blender.org" }
+                    ", under CC BY 3.0, streamed from Wikimedia Commons, so it plays only online. "
+                    "Its English track is one placeholder caption, not the film's sound."
                 }
             },
             Demo {

@@ -167,7 +167,7 @@ pub fn use_notifications_with<T: 'static>(
 |---|---|---|---|
 | `placement` | `Option<Placement>` | `None` | The stack it joins. `None` is the host's. |
 | `auto_close` | `Option<AutoClose>` | `None` | When it closes. `None` is the host's. |
-| `closable` | `bool` | `true` | Whether the template draws a close button. |
+| `closable` | `bool` | `true` | Whether the template draws a close button. Off, keep a timer or an action that closes it: Escape does not, and `F8` only focuses it. |
 | `live` | `NotificationLive` | `Polite` | `Polite` or `Assertive`, how it is announced. |
 
 ## Props
@@ -208,6 +208,9 @@ The host.
 - Give one with an action, such as Undo, `AutoClose::Never`: it is safer.
 - In your own template, draw the close button yourself: read `s.closable()`
   and give the button an `aria_label`, as the Card option does.
+- Leave `closable` on for one that never closes on its own, unless it has an
+  action that closes it. Neither Escape nor `F8` closes a notification, so the
+  demo hides the switch for such an alert.
 
 ## Theme defaults
 

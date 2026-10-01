@@ -173,7 +173,7 @@ base_props! {
         /// Surface style, without a hover response.
         #[props(default, into)]
         variant: Input<Variant>,
-        /// A size step or any CSS length.
+        /// A size step from `xs` to `xxl`.
         #[props(default, into)]
         radius: Input<Size>,
         /// Set, shows the close button. The caller unmounts the alert and moves focus.

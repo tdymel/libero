@@ -446,7 +446,8 @@ the pick wins over `size`, and `density` with `ondensitychange` holds it.
 `TableExportButton` hands `onexport` the filtered, sorted rows of every page as
 CSV, in the shown columns; you save it. `TableFilterButton` opens
 `filter_panel`'s dialog from where you put it; with a `toolbar`, the table
-leaves the Filters button to it.
+leaves the Filters button to it. Only `TableExportButton` takes a prop,
+`onexport`.
 
 ```rust
 use dioxus::prelude::*;
@@ -903,6 +904,12 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 |---|---|---|---|
 | `table_csv` | `fn(&[Column<T>], &[T]) -> String` | none | The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; saving the file is yours. |
 | `table_text` | `fn(&[Column<T>], &[T]) -> Vec<Vec<String>>` | none | The same cells unjoined, the header row first, for your own writer. |
+
+### TableExportButton
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `onexport` | `EventHandler<String>` | required | Called with the table as CSV, as `table_csv` writes it: the filtered, sorted rows of every page, in the shown columns. Saving it is yours. `TableColumnsButton`, `TableDensityButton` and `TableFilterButton` take no props, and none of the four takes `class`, `sx` or `attributes`. |
 
 ## Accessibility
 

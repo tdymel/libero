@@ -110,7 +110,7 @@ Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: s
 |---|---|---|---|
 | `slides` | `Vec<Element>` | `[]` | The slides, in order. |
 | `slide_label` | `Callback<usize, String>` | `{n} of {m}` | Each slide's accessible name. |
-| `index` | `usize` | uncontrolled | The current slide. Set it and the carousel follows. |
+| `index` | `Option<usize>` | `None`, uncontrolled | The current slide. Set it and the carousel follows. |
 | `onindexchange` | `EventHandler<usize>` | - | Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here. |
 | `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. |
 | `gap` | `Size` | `md` | Between slides. |

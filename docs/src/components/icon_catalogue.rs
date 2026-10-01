@@ -165,6 +165,11 @@ pub fn IconCatalogue() -> Element {
     };
     let count = icons.len();
     let shown = page_slice(&icons, page());
+    let pattern = format!(
+        "pictogram_icons_{}::<module>::{}",
+        set.name.replace('-', "_"),
+        set.variant(&variant())
+    );
 
     rsx! {
         Flex { direction: "column", gap: "sm",
@@ -204,6 +209,17 @@ pub fn IconCatalogue() -> Element {
                     value: query(),
                     oninput: move |text| query.set(text),
                 }
+            }
+            // The path as text too: a cell's `title` reaches neither a keyboard nor a touch.
+            Text { size: "sm",
+                "Each icon is a const, "
+                Code { source: pattern }
+                if let Some(icon) = shown.first() {
+                    ", such as "
+                    Code { source: set.rust_path(icon) }
+                    " for {icon.name}"
+                }
+                "."
             }
             Text { size: "sm", role: "status", "{status}" }
             Box { framework_sx: &GRID_SX,
@@ -323,5 +339,6 @@ mod tests {
         let html = dioxus_ssr::render(&dom);
         assert!(html.contains("ISC"), "{html}");
         assert!(html.contains("Loading icons"), "{html}");
+        assert!(html.contains("pictogram_icons_lucide::"), "{html}");
     }
 }

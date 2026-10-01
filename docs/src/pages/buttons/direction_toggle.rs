@@ -1,6 +1,21 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, DirectionToggle, Input, Text};
+use libero::theme::Direction;
+
+/// The `label` switch's names, printed as `LABEL` shows them.
+fn direction_label(to: Direction) -> String {
+    match to {
+        Direction::Rtl => "Read right to left".to_string(),
+        Direction::Ltr => "Read left to right".to_string(),
+    }
+}
+
+// snippet: in DirectionToggle { .. }
+const LABEL: &str = r#"label: |to: Direction| match to {
+    Direction::Rtl => "Read right to left".to_string(),
+    Direction::Ltr => "Read left to right".to_string(),
+}"#;
 
 #[component]
 pub fn DirectionTogglePage() -> Element {
@@ -65,6 +80,10 @@ pub fn DirectionTogglePage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
+                    Control::switch("label").code(|_, values| match values.str("label").as_str() {
+                        "true" => vec![LABEL.to_string()],
+                        _ => vec![],
+                    }),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -76,6 +95,7 @@ pub fn DirectionTogglePage() -> Element {
                         },
                         size: values.str("size"),
                         radius: values.str("radius"),
+                        label: (values.str("label") == "true").then(|| Callback::new(direction_label)),
                         disabled: values.str("disabled") == "true",
                     }
                 },

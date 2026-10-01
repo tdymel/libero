@@ -109,7 +109,7 @@ pub fn TimelinePage() -> Element {
                     prop("items", "Vec<TimelineEvent>")
                         .default("vec![]")
                         .doc("The events, in render order."),
-                    prop("active", "usize")
+                    prop("active", "Option<usize>")
                         .default("None")
                         .doc("The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event, so \"step 7 of 4\" means finished."),
                     prop("align", "TimelineAlign")

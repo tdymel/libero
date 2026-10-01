@@ -11,15 +11,11 @@ fn code(values: &DemoValues, _: &str) -> String {
         "horizontal" => "\n        orientation: \"horizontal\",",
         _ => "",
     };
-    let buttons = match values.str("move_buttons").as_str() {
-        "false" => "\n        move_buttons: false,",
-        _ => "",
-    };
     format!(
         r#"let mut fruit = use_signal(|| vec!["Apple", "Pear", "Plum", "Cherry"]);
 
 rsx! {{
-    Sortable {{{orientation}{buttons}
+    Sortable {{{orientation}
         onreorder: move |step: SortableMove| step.apply(&mut fruit.write()),
         for (index, name) in fruit().into_iter().enumerate() {{
             SortableItem {{ key: "{{name}}", index, label: name, "{{name}}" }}
@@ -30,12 +26,11 @@ rsx! {{
 }
 
 #[component]
-fn Fruit(orientation: Orientation, move_buttons: bool) -> Element {
+fn Fruit(orientation: Orientation) -> Element {
     let mut fruit = use_signal(|| vec!["Apple", "Pear", "Plum", "Cherry"]);
     rsx! {
         Sortable {
             orientation,
-            move_buttons,
             onreorder: move |step: SortableMove| step.apply(&mut fruit.write()),
             for (index, name) in fruit().into_iter().enumerate() {
                 SortableItem { key: "{name}", index, label: name, "{name}" }
@@ -131,12 +126,12 @@ pub fn SortablePage() -> Element {
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
                         .default("vertical"),
-                    Control::switch("move_buttons").default("true"),
+                    // No `move_buttons` switch: off, the page would need another way to
+                    // reorder without a drag (WCAG 2.5.7).
                 ],
                 render: move |values: DemoValues| rsx! {
                     Fruit {
                         orientation: Orientation::from(values.str("orientation").as_str()),
-                        move_buttons: values.str("move_buttons") != "false",
                     }
                 },
                 wrap: Wrap(code),

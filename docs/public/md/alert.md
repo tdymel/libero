@@ -62,7 +62,7 @@ fn Demo() -> Element {
 | `icon` | `Option<Element>` | - | A leading icon of your own, hidden from screen readers. |
 | `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
 | `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. |
-| `radius` | `Size` | `md` | Corner radius. A size step or any CSS length. |
+| `radius` | `Size` | `md` | Corner radius, a size step from `xs` to `xxl`. |
 | `onclose` | `EventHandler<()>` | - | Shows the close button and fires when it is pressed. Unmount the alert to close it. |
 | `close_label` | `String` | `common.close` | The close button's accessible name. Unset, the localization's `common.close`, "Close" in English. |
 | `parts` | `Parts<AlertPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(AlertPart::Title, sx().font_weight("700"))`. |

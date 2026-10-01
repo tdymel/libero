@@ -11,6 +11,11 @@ speed, captions and fullscreen, in a bar over the picture as YouTube's, in the
 theme's look on every platform that plays media. `use_media()` drives the same engine for a
 layout of your own: see [use_media](use_media.md).
 
+The demo plays "Big Buck Bunny", (c) 2008 Blender Foundation,
+<https://peach.blender.org>, under CC BY 3.0, streamed from Wikimedia Commons,
+so it plays only online. Its English track is one placeholder caption, not the
+film's sound.
+
 ## Usage
 
 ```rust

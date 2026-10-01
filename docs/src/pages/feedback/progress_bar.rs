@@ -40,6 +40,7 @@ pub fn ProgressBarPage() -> Element {
                 .handles([
                     "A screen reader reads the rounded percentage, or `aria_valuetext` when you set it.",
                     "The bar takes no focus.",
+                    "With reduced motion an indeterminate bar stops sweeping and shows as a dimmed full bar, so it does not read as part done.",
                 ])
                 .must([
                     "Name it with `aria_label`, or `aria_labelledby` pointing at a visible caption.",

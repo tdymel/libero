@@ -1,8 +1,10 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
-    ActionIcon, Code, Pictogram, Text, Toolbar, ToolbarGroup, ToolbarPart, ToolbarSeparator,
+    ActionIcon, Code, Pictogram, Text, Textarea, Toolbar, ToolbarGroup, ToolbarPart,
+    ToolbarSeparator,
 };
+use libero::hooks::use_element;
 use pictogram_icons_lucide as lucide;
 
 /// The controls inside - a subtree, so the code block prints it verbatim.
@@ -16,6 +18,58 @@ ToolbarGroup { "aria-label": "History",
     ActionIcon { aria_label: "Undo", Pictogram { icon: lucide::undo_2::outlined } }
     ActionIcon { aria_label: "Redo", disabled: true, Pictogram { icon: lucide::redo_2::outlined } }
 }"#;
+
+/// The element `focus_from` names: Alt+F10 in it reaches the bar, Escape there comes back.
+// snippet: let editor = use_element();
+const EDITOR: &str = r#"div { onmounted: editor.mount(), ..editor.attributes(),
+    Textarea { label: "Text" }
+}"#;
+
+fn focus_from(values: &DemoValues) -> bool {
+    values.str("focus_from") == "true"
+}
+
+/// With `focus_from`, prints the handle and the editor it names.
+fn wrap(values: &DemoValues, source: &str) -> String {
+    if !focus_from(values) {
+        return source.to_string();
+    }
+    let mut code = String::from("let editor = use_element();\n\nrsx! {\n");
+    code.push_str(&indent(source));
+    code.push_str(&indent(EDITOR));
+    code.push('}');
+    code
+}
+
+/// Owns the editor's handle, which `render` cannot hold.
+#[component]
+fn ToolbarPreview(values: DemoValues) -> Element {
+    let editor = use_element();
+    let from = focus_from(&values);
+    rsx! {
+        Toolbar {
+            "aria-label": "Formatting",
+            orientation: values.str("orientation"),
+            loop_focus: values.str("loop_focus") == "true",
+            focus_from: from.then_some(editor),
+            ToolbarGroup { "aria-label": "Style",
+                ActionIcon { aria_label: "Bold", Pictogram { icon: lucide::bold::outlined } }
+                ActionIcon { aria_label: "Italic", Pictogram { icon: lucide::italic::outlined } }
+                ActionIcon { aria_label: "Underline", Pictogram { icon: lucide::underline::outlined } }
+            }
+            ToolbarSeparator {}
+            ToolbarGroup { "aria-label": "History",
+                ActionIcon { aria_label: "Undo", Pictogram { icon: lucide::undo_2::outlined } }
+                ActionIcon { aria_label: "Redo", disabled: true, Pictogram { icon: lucide::redo_2::outlined } }
+            }
+        }
+        if from {
+            div { onmounted: editor.mount(), ..editor.attributes(),
+                Textarea { label: "Text" }
+            }
+        }
+    }
+}
 
 #[component]
 pub fn ToolbarPage() -> Element {
@@ -107,23 +161,14 @@ pub fn ToolbarPage() -> Element {
                         .labels(["Horizontal", "Vertical"])
                         .default("horizontal"),
                     Control::switch("loop_focus").default("true"),
+                    Control::switch("focus_from").code(|_, values| match focus_from(values) {
+                        true => vec!["focus_from: editor".to_string()],
+                        false => vec![],
+                    }),
                 ],
+                wrap: Wrap(wrap),
                 render: move |values: DemoValues| rsx! {
-                    Toolbar {
-                        "aria-label": "Formatting",
-                        orientation: values.str("orientation"),
-                        loop_focus: values.str("loop_focus") == "true",
-                        ToolbarGroup { "aria-label": "Style",
-                            ActionIcon { aria_label: "Bold", Pictogram { icon: lucide::bold::outlined } }
-                            ActionIcon { aria_label: "Italic", Pictogram { icon: lucide::italic::outlined } }
-                            ActionIcon { aria_label: "Underline", Pictogram { icon: lucide::underline::outlined } }
-                        }
-                        ToolbarSeparator {}
-                        ToolbarGroup { "aria-label": "History",
-                            ActionIcon { aria_label: "Undo", Pictogram { icon: lucide::undo_2::outlined } }
-                            ActionIcon { aria_label: "Redo", disabled: true, Pictogram { icon: lucide::redo_2::outlined } }
-                        }
-                    }
+                    ToolbarPreview { values }
                 },
             }
         }

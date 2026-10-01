@@ -5,6 +5,9 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Text};
 
+/// The `shortcut` switch's chord, shown in the tooltip and as `aria-keyshortcuts`.
+const SHORTCUT: &str = "mod+enter";
+
 fn is_link(values: &DemoValues) -> bool {
     values.str("link") == "true"
 }
@@ -132,6 +135,11 @@ pub fn ActionIconPage() -> Element {
                             "unset" => vec![],
                             value => vec![format!("selected: {value}")],
                         }),
+                    Control::switch("tooltip"),
+                    Control::switch("shortcut").code(|_, values| match values.str("shortcut").as_str() {
+                        "true" => vec![format!("shortcut: {SHORTCUT:?}")],
+                        _ => vec![],
+                    }),
                     Control::switch("disabled"),
                     Control::switch("focusable_when_disabled")
                         .hidden_when(|values| values.str("disabled") != "true"),
@@ -163,6 +171,8 @@ pub fn ActionIconPage() -> Element {
                             "false" => Some(false),
                             _ => None,
                         },
+                        tooltip: values.str("tooltip") == "true",
+                        shortcut: (values.str("shortcut") == "true").then(|| SHORTCUT.to_string()),
                         disabled: values.str("disabled") == "true",
                         focusable_when_disabled: values.str("focusable_when_disabled") == "true",
                         loading: values.str("loading") == "true" && !is_link(&values),

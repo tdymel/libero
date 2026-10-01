@@ -7,12 +7,11 @@ use libero::{
     use_theme,
 };
 
-/// `alt` is required, and the box has to be sized before `fit` means
-/// anything. Neither is a control, so both print as `fixed`.
-const FIXED: [&str; 2] = [
-    r#"alt: "A stylised landscape""#,
-    r#"sx: sx().width("160px").height("160px").background("muted.1")"#,
-];
+/// The box has to be sized before `fit` means anything. No control varies it, so it
+/// prints as `fixed`.
+const FIXED: [&str; 1] = [r#"sx: sx().width("160px").height("160px").background("muted.1")"#];
+
+const ALT: &str = "A stylised landscape";
 
 const MISSING_SRC: &str = "/does-not-exist.png";
 
@@ -100,6 +99,11 @@ pub fn ImagePage() -> Element {
                             radius => vec![format!("radius: {radius:?}")],
                         }),
                     Control::switch("zoomable"),
+                    // `alt` unless decorative: `decorative` wins over it, with a warning.
+                    Control::switch("decorative").code(|_, values| match values.str("decorative").as_str() {
+                        "true" => vec!["decorative: true".to_string()],
+                        _ => vec![format!("alt: {ALT:?}")],
+                    }),
                     // Drives `src` too: a fallback only shows once the
                     // real source fails, so the switch has to break it.
                     Control::switch("broken_src").code(|_, values| {
@@ -120,7 +124,8 @@ pub fn ImagePage() -> Element {
                             _ => crate::site::SAMPLE_IMAGE.to_string(),
                         },
                         fallback_src: crate::site::FALLBACK_IMAGE.to_string(),
-                        alt: "A stylised landscape",
+                        alt: (values.str("decorative") != "true").then(|| ALT.to_string()),
+                        decorative: values.str("decorative") == "true",
                         fit: values.str("fit"),
                         radius: match values.str("radius").as_str() {
                             "none" => Input::None,
