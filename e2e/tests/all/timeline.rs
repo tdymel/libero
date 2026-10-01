@@ -1,15 +1,12 @@
 //! `Timeline`: list semantics, and a done event that differs by more than colour.
 
 use e2e::browser::block_on;
-use e2e::passes::contrast;
 use e2e::suite::Suite;
 use e2e::{Fixture, Viewport, wait};
 
 #[test]
 fn it_meets_the_baseline() {
-    Suite::new("timeline", "/timeline")
-        .waive(contrast::TODO_297)
-        .run();
+    Suite::new("timeline", "/timeline").run();
 }
 
 /// Each dot bullet's fill and ring: `[background, border]` per event.

@@ -156,7 +156,10 @@ fn a_broken_image_in_the_crop_dialog_says_so() {
         )
         .await
         .unwrap();
-        fixture.close().await.unwrap();
+        fixture
+            .close_allowing("1265: the broken src warns that it failed to load")
+            .await
+            .unwrap();
     });
     let _ = std::fs::remove_file(path);
 }

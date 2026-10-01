@@ -5,7 +5,7 @@ use anyhow::{Result, ensure};
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
-use e2e::passes::{contrast, dismissal, keyboard, live_region};
+use e2e::passes::{dismissal, keyboard, live_region};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -19,7 +19,6 @@ const OPTION_COUNT: usize = 6;
 fn it_meets_the_baseline() {
     Suite::new("autocomplete", "/autocomplete")
         .focusable(TRIGGER)
-        .waive(contrast::TODO_297)
         // The open state is the interesting one: a tree that is right closed
         // and wrong open is the normal shape of these bugs.
         .state(

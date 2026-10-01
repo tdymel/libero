@@ -5,7 +5,7 @@ use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
 use crate::passes::keyboard::{self, Key};
-use crate::wait;
+use crate::{clock, wait};
 
 /// Distinct tab stops inside the closest ancestor holding every item, counted by tabbing:
 /// a `tabindex` count misses stops nested in items (review 7, E3).
@@ -151,7 +151,14 @@ impl RovingTabindex<'_> {
             );
         }
 
-        // Home and End, which APG requires for every orientation.
+        // Home and End, which APG requires for every orientation. Home from a later
+        // item, or a Home that does nothing passes after a wrap to the first.
+        if after_end == Some(0) {
+            keyboard::press(page, self.orientation.next()).await?;
+            if self.settle_on(page, 1).await? != Some(1) {
+                bail!("the forward arrow did not move within {}", self.items);
+            }
+        }
         keyboard::press(page, keyboard::HOME).await?;
         if self.settle_on(page, 0).await? != Some(0) {
             bail!("Home did not move to the first item of {}", self.items);
@@ -208,9 +215,11 @@ impl RovingTabindex<'_> {
             .into_value()?)
     }
 
-    /// Polls for focus on the expected item, then reports where it is: focus moves
-    /// from a dioxus handler, possibly after the keypress returns.
+    /// Lets the key's handler run, polls for focus on the expected item, then reports where
+    /// it is: focus moves from a dioxus handler, possibly after the keypress returns, and
+    /// an expected item that already had focus would pass at the first poll.
     async fn settle_on(&self, page: &Page, expected: usize) -> Result<Option<usize>> {
+        clock::settle(page).await?;
         let check = format!(
             "[...document.querySelectorAll({})].indexOf(document.activeElement) === {expected}",
             serde_json::to_string(self.items)?

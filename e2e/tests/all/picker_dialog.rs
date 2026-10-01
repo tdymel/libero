@@ -50,9 +50,6 @@ e2e::scenario!(
 
 /// Android's Back closes the dropdown, keeps the value, and the app stays (1300).
 async fn back_closes<D: Driver>(d: &mut D, route: &str) -> Result<()> {
-    if d.platform() != Platform::Android {
-        return Ok(());
-    }
     let field = FIELDS
         .iter()
         .find(|(path, _)| *path == route)
@@ -93,15 +90,13 @@ e2e::scenario!(
     android_back_closes_a_color_field,
     "/color-field",
     back_closes,
-    native: skip("1275: no Back key off Android"),
-    desktop: skip("1275: no Back key off Android")
+    android_only("1275: no Back key off Android")
 );
 e2e::scenario!(
     android_back_closes_a_date_field,
     "/chrono-field",
     back_closes,
-    native: skip("1275: no Back key off Android"),
-    desktop: skip("1275: no Back key off Android")
+    android_only("1275: no Back key off Android")
 );
 
 #[test]

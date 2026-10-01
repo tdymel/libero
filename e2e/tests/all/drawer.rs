@@ -2,9 +2,9 @@
 //! alone; `contrast_covers` makes that an assertion.
 
 use anyhow::Result;
-use e2e::archetypes::Overlay;
+use e2e::archetypes::{self, Overlay};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused};
+use e2e::driver::{Driver, eventually, eventually_focused};
 
 use crate::modal;
 use e2e::suite::Step;
@@ -82,29 +82,14 @@ e2e::scenario!(
 
 /// Android's Back closes the drawer, and the app stays (1289).
 async fn back_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    if d.platform() != Platform::Android {
-        return Ok(());
-    }
-    d.click(TRIGGER).await?;
-    eventually(d, "the drawer to open", async |d| d.exists(DIALOG).await).await?;
-    d.press_back().await?;
-    eventually(d, "Back to close the drawer", async |d| {
-        Ok(!d.exists(DIALOG).await?)
-    })
-    .await?;
-    d.click(TRIGGER).await?;
-    eventually(d, "the app to stay and open it again", async |d| {
-        d.exists(DIALOG).await
-    })
-    .await
+    archetypes::back_closes(d, TRIGGER, async |d| d.exists(DIALOG).await).await
 }
 
 e2e::scenario!(
     android_back_closes_a_drawer,
     "/drawer",
     back_closes,
-    native: skip("1275: no Back key off Android"),
-    desktop: skip("1275: no Back key off Android")
+    android_only("1275: no Back key off Android")
 );
 
 /// An end drawer docks to the left under `dir="rtl"`.

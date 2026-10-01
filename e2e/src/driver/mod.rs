@@ -239,25 +239,32 @@ pub async fn eventually_text<D: Driver>(
 ///
 /// A backend gap is a named skip, listed by `--ignored`, never silent:
 /// `scenario!(name, "/route", body, native: skip("Blitz has no <summary> stop"));`
-/// `android: skip("958 ...")` and `desktop: skip("1126 ...")` do the same for
-/// Android and the desktop WebView; the skips may follow each other in any order.
+/// `android: skip("958 ...")`, `desktop: skip("1126 ...")` and `web: skip(..)` do the same
+/// for Android, the desktop WebView and Chromium; the skips may follow each other in any
+/// order. `android_only("1275 ...")` skips every arm but Android's.
 #[macro_export]
 macro_rules! scenario {
-    (@skip $name:ident, $route:expr, $body:ident, $n:tt $a:tt $d:tt; native: skip($reason:literal) $(, $($rest:tt)*)?) => {
-        $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] $a $d; $($($rest)*)?);
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt; web: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] $n $a $d; $($($rest)*)?);
     };
-    (@skip $name:ident, $route:expr, $body:ident, $n:tt $a:tt $d:tt; android: skip($reason:literal) $(, $($rest:tt)*)?) => {
-        $crate::scenario!(@skip $name, $route, $body, $n [#[test] #[ignore = $reason]] $d; $($($rest)*)?);
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt; native: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w [#[test] #[ignore = $reason]] $a $d; $($($rest)*)?);
     };
-    (@skip $name:ident, $route:expr, $body:ident, $n:tt $a:tt $d:tt; desktop: skip($reason:literal) $(, $($rest:tt)*)?) => {
-        $crate::scenario!(@skip $name, $route, $body, $n $a [#[test] #[ignore = $reason]]; $($($rest)*)?);
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt; android: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w $n [#[test] #[ignore = $reason]] $d; $($($rest)*)?);
     };
-    (@skip $name:ident, $route:expr, $body:ident, $n:tt $a:tt $d:tt;) => {
-        $crate::scenario!(@all $name, $route, $body, $n, $a, $d);
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt; desktop: skip($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, $w $n $a [#[test] #[ignore = $reason]]; $($($rest)*)?);
     };
-    (@all $name:ident, $route:expr, $body:ident, [$(#[$native:meta])*], [$(#[$android:meta])*], [$(#[$desktop:meta])*]) => {
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt; android_only($reason:literal) $(, $($rest:tt)*)?) => {
+        $crate::scenario!(@skip $name, $route, $body, [#[test] #[ignore = $reason]] [#[test] #[ignore = $reason]] $a [#[test] #[ignore = $reason]]; $($($rest)*)?);
+    };
+    (@skip $name:ident, $route:expr, $body:ident, $w:tt $n:tt $a:tt $d:tt;) => {
+        $crate::scenario!(@all $name, $route, $body, $w, $n, $a, $d);
+    };
+    (@all $name:ident, $route:expr, $body:ident, [$(#[$web:meta])*], [$(#[$native:meta])*], [$(#[$android:meta])*], [$(#[$desktop:meta])*]) => {
         mod $name {
-            #[test]
+            $(#[$web])*
             fn web() {
                 $crate::browser::block_on(async {
                     let mut driver = $crate::driver::Web::open($route).await.unwrap();
@@ -293,7 +300,7 @@ macro_rules! scenario {
         }
     };
     ($name:ident, $route:expr, $body:ident $(, $($skips:tt)*)?) => {
-        $crate::scenario!(@skip $name, $route, $body, [#[test]] [#[test]] [#[test]]; $($($skips)*)?);
+        $crate::scenario!(@skip $name, $route, $body, [#[test]] [#[test]] [#[test]] [#[test]]; $($($skips)*)?);
     };
 }
 

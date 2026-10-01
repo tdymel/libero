@@ -98,39 +98,48 @@ fn a_strip_whose_thumbnails_all_fit_is_quiet() {
 /// must still set it apart from the others (1.4.1).
 #[test]
 fn the_current_thumbnail_shows_in_forced_colours() {
-    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     block_on(async {
         let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
-        let page = &fixture.page;
-        page.execute(
-            SetEmulatedMediaParams::builder()
-                .features(vec![MediaFeature::new("forced-colors", "active")])
-                .build(),
-        )
-        .await
-        .unwrap();
-        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
-        keyboard::press(page, keyboard::ENTER).await.unwrap();
-        wait::for_visible(page, DIALOG).await.unwrap();
-        // The others are transparent over the dialog's `Canvas`.
-        let [current, canvas]: [String; 2] = page
-            .evaluate(
-                "(() => { const probe = document.createElement('div'); \
-                 probe.style.background = 'Canvas'; document.body.append(probe); \
-                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
-                 const current = document.querySelector('[role=dialog] button[aria-current]:has(img)'); \
-                 return [getComputedStyle(current).backgroundColor, canvas]; })()",
-            )
+        the_current_thumbnail_stands_out(&fixture.page)
             .await
-            .unwrap()
-            .into_value()
             .unwrap();
-        assert_ne!(
-            current, canvas,
-            "the current thumbnail's frame is the page's own colour"
-        );
         fixture.close().await.unwrap();
     });
+}
+
+/// Opens the viewer in forced colours; the current thumbnail's fill is neither `Canvas`
+/// nor the other thumbnails' (an unstyled one is transparent, not `Canvas`).
+pub async fn the_current_thumbnail_stands_out(page: &Page) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    page.execute(
+        SetEmulatedMediaParams::builder()
+            .features(vec![MediaFeature::new("forced-colors", "active")])
+            .build(),
+    )
+    .await?;
+    keyboard::tab_to(page, TRIGGER, 5).await?;
+    keyboard::press(page, keyboard::ENTER).await?;
+    wait::for_visible(page, DIALOG).await?;
+    let [current, other, canvas]: [String; 3] = page
+        .evaluate(
+            "(() => { const probe = document.createElement('div'); \
+             probe.style.background = 'Canvas'; document.body.append(probe); \
+             const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+             const thumbs = [...document.querySelectorAll('[role=dialog] button:has(img)')]; \
+             const current = thumbs.find((t) => t.hasAttribute('aria-current')); \
+             const other = thumbs.find((t) => !t.hasAttribute('aria-current')); \
+             return [getComputedStyle(current).backgroundColor, \
+             getComputedStyle(other).backgroundColor, canvas]; })()",
+        )
+        .await?
+        .into_value()?;
+    if current == canvas {
+        bail!("the current thumbnail's frame is the page's own colour, {canvas}");
+    }
+    if current == other {
+        bail!("the current thumbnail looks like the others, {other}");
+    }
+    Ok(())
 }
 
 /// The arrows move picture and focus; Tab never reaches an `inert` slide; Escape after

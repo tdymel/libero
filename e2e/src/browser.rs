@@ -524,8 +524,27 @@ impl Fixture {
         Ok(path)
     }
 
-    /// Closes the page and waits. Fails on a logged `dioxus_signals` warning (todo 719).
-    pub async fn close(mut self) -> Result<()> {
+    /// Closes the page and waits. Fails on a logged `dioxus_signals` warning (todo 719) and,
+    /// as `console.assert_clean`, on any error or warning not drained before (todo 1711).
+    pub async fn close(self) -> Result<()> {
+        let console = self.console.clone();
+        self.close_page().await?;
+        console.assert_clean("the test, checked at close")
+    }
+
+    /// [`Fixture::close`] for a test that makes the page complain on purpose: the console
+    /// is printed with `why`, not checked. The `dioxus_signals` check still holds.
+    pub async fn close_allowing(self, why: &str) -> Result<()> {
+        assert!(!why.trim().is_empty(), "close_allowing needs a reason");
+        let console = self.console.clone();
+        self.close_page().await?;
+        for message in console.drain() {
+            eprintln!("console: allowed at close ({why}): {message}");
+        }
+        Ok(())
+    }
+
+    async fn close_page(mut self) -> Result<()> {
         self.closes_on_drop.0 = None;
         self.page.close().await.context("close the page")?;
         let messages = self.console.peek();

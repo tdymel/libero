@@ -5,7 +5,7 @@ use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
 use crate::passes::keyboard;
-use crate::wait;
+use crate::{clock, wait};
 
 use super::roving::{count_tab_stops, reset_tab_position};
 
@@ -143,6 +143,8 @@ impl TreeWalk<'_> {
 
     /// Down and Up walk the visible rows, Home and End reach the ends. Recounted on every press.
     async fn assert_vertical_walk(&self, page: &Page, count: usize) -> Result<()> {
+        // To the first row whatever the entry: the walk counts from it. Home is checked
+        // below, from the last row, where a Home that does nothing shows.
         keyboard::press(page, keyboard::HOME).await?;
         if self.settle_on(page, 0).await? != Some(0) {
             bail!("Home did not move to the first row of {}", self.rows);
@@ -150,6 +152,7 @@ impl TreeWalk<'_> {
 
         for step in 1..count {
             keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            let at = self.settle_on(page, step).await?;
             let now = self.visible_count(page).await?;
             if now != count {
                 bail!(
@@ -158,7 +161,6 @@ impl TreeWalk<'_> {
                     self.rows
                 );
             }
-            let at = self.settle_on(page, step).await?;
             if at != Some(step) {
                 bail!(
                     "after {step} Down press(es) in {}, focus is on row {at:?}, expected {step}",
@@ -174,6 +176,13 @@ impl TreeWalk<'_> {
         keyboard::press(page, keyboard::END).await?;
         if self.settle_on(page, count - 1).await? != Some(count - 1) {
             bail!("End did not move to the last row of {}", self.rows);
+        }
+        keyboard::press(page, keyboard::HOME).await?;
+        if self.settle_on(page, 0).await? != Some(0) {
+            bail!(
+                "Home did not move from the last row to the first of {}",
+                self.rows
+            );
         }
         Ok(())
     }
@@ -280,6 +289,7 @@ impl TreeWalk<'_> {
         let before = self.visible_count(page).await?;
 
         keyboard::press(page, keyboard::ARROW_RIGHT).await?;
+        clock::settle(page).await?;
         let after = self.visible_count(page).await?;
         if after != before || !self.focus_is_marked(page).await? {
             bail!(
@@ -375,7 +385,10 @@ impl TreeWalk<'_> {
         ))
     }
 
+    /// Lets the key's handler run first: an expected row that already had focus would
+    /// pass at the first poll.
     async fn settle_on(&self, page: &Page, expected: usize) -> Result<Option<usize>> {
+        clock::settle(page).await?;
         let check = format!("{} === {expected}", self.index_js()?);
         let _ = wait::for_js_true(page, &check, &format!("focus on row {expected}")).await;
         self.focused_index(page).await

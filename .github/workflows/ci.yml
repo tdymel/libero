@@ -80,6 +80,8 @@ jobs:
           cache-key: test
       - run: cargo test -p libero --lib --tests
       - run: cargo test -p libero --lib --features "$CODE_LANGS" highlight
+      # The harness's own unit tests (exact filters, console classifier, focus-ring maths): no browser.
+      - run: cargo test -p e2e --lib --bins
 
   doc-tests:
     runs-on: ubuntu-latest

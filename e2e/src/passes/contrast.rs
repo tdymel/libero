@@ -268,16 +268,17 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
 }
 
 /// The violations under `root` past the waivers, then each of `covers` as [`assert_covers`],
-/// from one axe run. Returns the text count each cover held.
+/// from one axe run. Returns the text count each cover held; `fired` as [`check_violations`].
 pub async fn assert_clean_and_covered(
     page: &Page,
     root: &str,
     waivers: &[Waiver],
+    fired: &mut [bool],
     covers: &[&str],
 ) -> Result<Vec<usize>> {
     let audit = run_axe(page, root, RULES, covers).await?;
     let violations = with_measured(page, audit.violations, &audit.incomplete).await?;
-    check_violations(violations, root, waivers)?;
+    check_violations(violations, root, waivers, fired)?;
     covers
         .iter()
         .zip(audit.coverage)
@@ -303,32 +304,59 @@ fn check_coverage(selector: &str, coverage: Coverage) -> Result<usize> {
 }
 
 /// A known violation not fixed yet. It names the owning todo and is still printed.
+/// `Suite::run` fails on a waiver that matched nothing, so a fixed one gets removed.
 pub struct Waiver {
     /// The axe rule id, e.g. `color-contrast`.
     pub rule: &'static str,
     /// Matched against the offending element's html, so a waiver is narrow.
     pub contains: &'static str,
+    /// `color-contrast` only: the lowest ratio waived, so a further drop still fails.
+    /// Other rules ignore it.
+    pub floor: f64,
     pub why: &'static str,
 }
 
-/// Todo 297: `success` (4.05:1) and `warning` (3.27:1) fail as text; a pending brand decision.
-pub const TODO_297: &[Waiver] = &[
-    Waiver {
-        rule: "color-contrast",
-        contains: "success",
-        why: "todo 297 - `success` is 4.05:1 as text; brand decision pending",
-    },
-    Waiver {
-        rule: "color-contrast",
-        contains: "warning",
-        why: "todo 297 - `warning` is 3.27:1 as text; brand decision pending",
-    },
-];
+impl Waiver {
+    /// Whether this waives `node`, reported under axe rule `rule`.
+    pub fn covers(&self, rule: &str, node: &Node) -> bool {
+        self.rule == rule
+            && node.html.contains(self.contains)
+            && (rule != "color-contrast" || ratio_of(node).is_some_and(|r| r >= self.floor))
+    }
+}
+
+/// The ratio axe (`contrast of 4.05 (`) or [`with_measured`] (`axe: 1.03:1`) reported.
+fn ratio_of(node: &Node) -> Option<f64> {
+    let summary = node.failure_summary.as_deref()?;
+    let (_, rest) = summary
+        .split_once("contrast of ")
+        .or_else(|| summary.split_once("measured past axe: "))?;
+    let end = rest
+        .find(|c: char| !c.is_ascii_digit() && c != '.')
+        .unwrap_or(rest.len());
+    rest[..end].parse().ok()
+}
+
+/// Todo 297: `success` (4.04:1) and `warning` (3.27:1) fail as text; a decision to keep them.
+pub const TODO_297_SUCCESS: Waiver = Waiver {
+    rule: "color-contrast",
+    contains: "success",
+    floor: 4.04,
+    why: "todo 297 - `success` is 4.04:1 as text, kept",
+};
+pub const TODO_297_WARNING: Waiver = Waiver {
+    rule: "color-contrast",
+    contains: "warning",
+    floor: 3.27,
+    why: "todo 297 - `warning` is 3.27:1 as text, kept",
+};
+pub const TODO_297: &[Waiver] = &[TODO_297_SUCCESS, TODO_297_WARNING];
 
 /// Todo 899: a CodeBlock line number's approved floor is 4.27:1, under the 4.5:1 this pass wants.
 pub const LINE_NUMBERS: &[Waiver] = &[Waiver {
     rule: "color-contrast",
     contains: "data-slot=\"line-number\"",
+    floor: 4.27,
     why: "todo 899 - a line number's approved floor is 4.27:1",
 }];
 
@@ -341,7 +369,12 @@ pub async fn assert_clean(page: &Page, selector: &str) -> Result<()> {
 pub async fn assert_clean_except(page: &Page, selector: &str, waivers: &[Waiver]) -> Result<()> {
     let run = run_full(page, selector).await?;
     let violations = with_measured(page, run.violations, &run.incomplete).await?;
-    check_violations(violations, selector, waivers)
+    check_violations(
+        violations,
+        selector,
+        waivers,
+        &mut vec![false; waivers.len()],
+    )
 }
 
 /// axe leaves text over a gradient or a sibling layer undecided, which read as green
@@ -383,27 +416,29 @@ async fn with_measured(
     Ok(violations)
 }
 
-fn check_violations(all: Vec<Violation>, selector: &str, waivers: &[Waiver]) -> Result<()> {
+/// `fired[i]` turns true once `waivers[i]` covered a node.
+fn check_violations(
+    all: Vec<Violation>,
+    selector: &str,
+    waivers: &[Waiver],
+    fired: &mut [bool],
+) -> Result<()> {
     let mut violations = Vec::new();
     let mut waived = Vec::new();
 
     for violation in all {
-        let covered = |node: &Node| {
-            waivers
-                .iter()
-                .find(|w| w.rule == violation.id && node.html.contains(w.contains))
-        };
-        let (ok, bad): (Vec<_>, Vec<_>) = violation
-            .nodes
-            .into_iter()
-            .partition(|n| covered(n).is_some());
-        for node in ok {
-            let why = waivers
-                .iter()
-                .find(|w| w.rule == violation.id && node.html.contains(w.contains))
-                .map(|w| w.why)
-                .unwrap_or("");
-            waived.push(format!("{} - {why}\n      {}", violation.id, node.html));
+        let mut bad = Vec::new();
+        for node in violation.nodes {
+            let Some(at) = waivers.iter().position(|w| w.covers(&violation.id, &node)) else {
+                bad.push(node);
+                continue;
+            };
+            fired[at] = true;
+            let ratio = ratio_of(&node).map_or(String::new(), |r| format!(" ({r}:1)"));
+            waived.push(format!(
+                "{}{ratio} - {}\n      {}",
+                violation.id, waivers[at].why, node.html
+            ));
         }
         if !bad.is_empty() {
             violations.push(Violation {
@@ -440,4 +475,58 @@ fn check_violations(all: Vec<Violation>, selector: &str, waivers: &[Waiver]) -> 
         "axe reported {} violation(s) under {selector}:{report}",
         violations.len()
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn contrast(html: &str, summary: &str) -> Violation {
+        Violation {
+            id: "color-contrast".into(),
+            help: String::new(),
+            nodes: vec![Node {
+                html: html.into(),
+                failure_summary: Some(summary.into()),
+                target: String::new(),
+            }],
+        }
+    }
+
+    const AXE: &str = "Fix any of the following:\n  Element has insufficient color contrast of \
+                       4.05 (foreground color: #2e7d32, background color: #ffffff, font size: \
+                       10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1";
+
+    #[test]
+    fn a_ratio_is_read_from_axe_and_from_the_measured_summary() {
+        let axe = contrast("<b class=\"success\">", AXE);
+        assert_eq!(ratio_of(&axe.nodes[0]), Some(4.05));
+        let measured = contrast("<b>", "measured past axe: 1.03:1 (rgb(0, 0, 0) on ...)");
+        assert_eq!(ratio_of(&measured.nodes[0]), Some(1.03));
+    }
+
+    #[test]
+    fn a_waiver_holds_down_to_its_floor_and_no_further() {
+        let mut fired = [false; 2];
+        check_violations(
+            vec![contrast("<b class=\"success\">", AXE)],
+            "#root",
+            TODO_297,
+            &mut fired,
+        )
+        .unwrap();
+        assert_eq!(fired, [true, false]);
+
+        let lower = AXE.replace("of 4.05", "of 2.10");
+        let mut fired = [false; 2];
+        let error = check_violations(
+            vec![contrast("<b class=\"success\">", &lower)],
+            "#root",
+            TODO_297,
+            &mut fired,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("1 violation"), "{error}");
+        assert_eq!(fired, [false, false]);
+    }
 }

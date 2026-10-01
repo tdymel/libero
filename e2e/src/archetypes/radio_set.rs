@@ -5,7 +5,7 @@ use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
 use crate::passes::keyboard::{self, Key};
-use crate::wait;
+use crate::{clock, wait};
 
 pub struct RadioSet<'a> {
     /// Every radio in the group, e.g. `[role=radiogroup] input[type=radio]`.
@@ -104,14 +104,10 @@ impl RadioSet<'_> {
         )
         .await?;
 
-        // Selection follows focus, so Space can only show it keeps the focused radio checked.
+        // Selection follows focus, so Space can only show it keeps the focused radio checked:
+        // read once its handler ran, a poll for the state it started in passes at once.
         keyboard::press(page, keyboard::SPACE).await?;
-        let _ = wait::for_js_true(
-            page,
-            &format!("{} === {at}", self.checked_js()?),
-            "Space to leave the focused radio checked",
-        )
-        .await;
+        clock::settle(page).await?;
         let (focused, checked) = (
             self.focused_index(page).await?,
             self.checked_index(page).await?,

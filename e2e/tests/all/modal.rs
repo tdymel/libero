@@ -4,7 +4,7 @@
 use anyhow::{Result, ensure};
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually, eventually_focused};
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::suite::Step;
 use e2e::wait;
 use e2e::{
@@ -244,9 +244,6 @@ const MENU_ITEM: &str = "[role=menuitem]";
 /// Android's Back closes the top layer, a menu before its dialog, and the app
 /// stays (1275). Only Android has the key.
 async fn back_closes_the_top_layer<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    if d.platform() != Platform::Android {
-        return Ok(());
-    }
     open(d, TRIGGER).await?;
     d.press_back().await?;
     eventually(d, "Back to close the dialog", async |d| {
@@ -281,8 +278,7 @@ e2e::scenario!(
     android_back_closes_the_top_layer,
     "/modal/menu",
     back_closes_the_top_layer,
-    native: skip("1275: no Back key off Android"),
-    desktop: skip("1275: no Back key off Android")
+    android_only("1275: no Back key off Android")
 );
 
 async fn eval_bool(page: &chromiumoxide::Page, js: &str) -> bool {

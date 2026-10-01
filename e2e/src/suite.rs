@@ -235,27 +235,40 @@ impl Suite {
             )
             .await;
             // The first failure in the old order, light desktop first.
+            let mut fired = vec![false; self.waivers.len()];
             for (&(viewport, scheme), outcome) in runs.iter().zip(outcomes) {
-                if let Err(error) = outcome {
-                    panic!(
+                match outcome {
+                    Ok(run) => fired.iter_mut().zip(run).for_each(|(all, one)| *all |= one),
+                    Err(error) => panic!(
                         "{} at {} ({}): {error:?}",
                         self.name,
                         viewport.name(),
                         scheme.name()
-                    );
+                    ),
                 }
+            }
+            // A waiver that covered nothing in any run is stale: its defect is fixed or moved.
+            for (waiver, fired) in self.waivers.iter().zip(fired) {
+                assert!(
+                    fired,
+                    "{}: the {} waiver on `{}` ({}) matched nothing in any viewport, scheme \
+                     or state; remove it",
+                    self.name, waiver.rule, waiver.contains, waiver.why
+                );
             }
         });
     }
 
-    async fn run_at(&self, viewport: Viewport, scheme: Scheme) -> anyhow::Result<()> {
+    /// The waivers that covered a violation, as [`Suite::run`] tallies them.
+    async fn run_at(&self, viewport: Viewport, scheme: Scheme) -> anyhow::Result<Vec<bool>> {
         let fixture = Fixture::open_in(self.route, viewport, scheme).await?;
         if self.reduced_motion {
             browser::emulate_media(&fixture.page, scheme, Some(true)).await?;
             motion::assert_reduced_motion_matches(&fixture.page).await?;
         }
 
-        let outcome = self.battery(&fixture).await;
+        let mut fired = vec![false; self.waivers.len()];
+        let outcome = self.battery(&fixture, &mut fired).await;
 
         if let Err(error) = outcome {
             let shot = fixture
@@ -271,10 +284,10 @@ impl Suite {
         }
 
         fixture.close().await?;
-        Ok(())
+        Ok(fired)
     }
 
-    async fn battery(&self, fixture: &Fixture) -> anyhow::Result<()> {
+    async fn battery(&self, fixture: &Fixture, fired: &mut [bool]) -> anyhow::Result<()> {
         let page = &fixture.page;
         if let Some(ready) = self.ready {
             crate::wait::for_visible(page, ready)
@@ -285,7 +298,7 @@ impl Suite {
         // Contrast and the ARIA-validity rules, at rest.
         let covers = self.coverage_selectors();
         let mut covered: Vec<usize> = vec![0; covers.len()];
-        self.assert_clean_and_covered(page, &covers, &mut covered)
+        self.assert_clean_and_covered(page, &covers, &mut covered, fired)
             .await?;
 
         // A ring on every control that can be tabbed to, and enough contrast on
@@ -299,7 +312,7 @@ impl Suite {
         let light = fixture.scheme == Scheme::Light;
         let mut seen: Vec<bool> = vec![false; self.targets.len()];
         if light {
-            self.measure_targets(page, &mut seen).await?;
+            self.measure_targets(page, &mut seen, fired).await?;
         }
 
         if self.snapshot {
@@ -309,10 +322,10 @@ impl Suite {
         // Then every declared state, snapshotted and axe-checked in place.
         for state in &self.states {
             self.reach(page, state).await?;
-            self.assert_clean_and_covered(page, &covers, &mut covered)
+            self.assert_clean_and_covered(page, &covers, &mut covered, fired)
                 .await?;
             if light {
-                self.measure_targets(page, &mut seen).await?;
+                self.measure_targets(page, &mut seen, fired).await?;
             }
             if self.snapshot {
                 self.take_snapshot(fixture, state.name).await?;
@@ -356,9 +369,11 @@ impl Suite {
         page: &chromiumoxide::Page,
         covers: &[&'static str],
         covered: &mut [usize],
+        fired: &mut [bool],
     ) -> anyhow::Result<()> {
         let wanted =
-            contrast::assert_clean_and_covered(page, self.root, self.waivers, covers).await?;
+            contrast::assert_clean_and_covered(page, self.root, self.waivers, fired, covers)
+                .await?;
         for (most, wanted) in covered.iter_mut().zip(wanted) {
             *most = (*most).max(wanted);
         }
@@ -369,6 +384,7 @@ impl Suite {
         &self,
         page: &chromiumoxide::Page,
         seen: &mut [bool],
+        fired: &mut [bool],
     ) -> anyhow::Result<()> {
         for (index, target) in self.targets.iter().enumerate() {
             let selector = target.selector;
@@ -391,9 +407,15 @@ impl Suite {
             let waiver = self
                 .waivers
                 .iter()
-                .find(|w| w.rule == "target-size" && selector.contains(w.contains));
+                .position(|w| w.rule == "target-size" && selector.contains(w.contains));
             match waiver {
-                Some(w) => eprintln!("waived: target-size - {}\n      {error:#}", w.why),
+                Some(at) => {
+                    fired[at] = true;
+                    eprintln!(
+                        "waived: target-size - {}\n      {error:#}",
+                        self.waivers[at].why
+                    );
+                }
                 None => return Err(error),
             }
         }

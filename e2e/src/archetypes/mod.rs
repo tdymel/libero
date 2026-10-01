@@ -1,12 +1,14 @@
 //! Interaction archetypes: one parameterised keyboard and focus contract per APG pattern.
 //! Assert only what the pattern guarantees; component specifics belong in that component's test.
 
+mod back;
 mod combobox;
 mod overlay;
 mod radio_set;
 mod roving;
 mod tree_walk;
 
+pub use back::back_closes;
 pub use combobox::Combobox;
 pub use overlay::Overlay;
 pub use radio_set::RadioSet;

@@ -1,9 +1,9 @@
 //! `Select`: the combobox archetype.
 
 use anyhow::Result;
-use e2e::archetypes::Combobox;
+use e2e::archetypes::{self, Combobox};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, eventually};
+use e2e::driver::{Driver, eventually};
 use e2e::suite::Step;
 use e2e::{
     Fixture, Suite, Viewport, ax,
@@ -54,28 +54,15 @@ e2e::scenario!(
 
 /// Android's Back closes the listbox, keeps the value, and the app stays (1289).
 async fn back_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    if d.platform() != Platform::Android {
-        return Ok(());
-    }
-    d.click(TRIGGER).await?;
-    eventually(d, "the listbox", async |d| d.exists(LISTBOX).await).await?;
-    d.press_back().await?;
-    eventually(d, "Back to close the listbox", async |d| {
-        Ok(!d.exists(LISTBOX).await?)
-    })
-    .await?;
-    picked(d, "Some(Apple)", "Back").await?;
-    // The app stayed and still opens the listbox.
-    d.click(TRIGGER).await?;
-    eventually(d, "the listbox again", async |d| d.exists(LISTBOX).await).await
+    archetypes::back_closes(d, TRIGGER, async |d| d.exists(LISTBOX).await).await?;
+    picked(d, "Some(Apple)", "Back").await
 }
 
 e2e::scenario!(
     android_back_closes_a_select,
     "/select/echo",
     back_closes,
-    native: skip("1275: no Back key off Android"),
-    desktop: skip("1275: no Back key off Android")
+    android_only("1275: no Back key off Android")
 );
 
 #[test]

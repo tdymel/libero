@@ -178,6 +178,53 @@ fn tabs_with_a_tab_stop_inside_a_tab_fail_the_roving_contract() {
     });
 }
 
+/// `Tabs` whose Home does nothing (1709): a wrapping group sits on the first tab after the
+/// wrap, so Home has to be pressed from another one to be seen.
+#[test]
+fn tabs_with_a_dead_home_fail_the_roving_contract() {
+    block_on(async {
+        must_fail(
+            "/tabs",
+            Some(
+                "window.addEventListener('keydown', e => { if (e.key === 'Home') { \
+                 e.stopImmediatePropagation(); e.preventDefault(); } }, true)",
+            ),
+            "Home did not move to the first item",
+            |fixture| async move {
+                let result = RovingTabindex {
+                    items: crate::tabs::TAB,
+                    orientation: Orientation::Horizontal,
+                    wraps: true,
+                }
+                .assert_contract(&fixture.page)
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// `Lightbox` whose current thumbnail lost its frame (1742): transparent like the others,
+/// which is not `Canvas` either.
+#[test]
+fn a_lightbox_thumbnail_without_its_frame_fails_the_forced_colours_check() {
+    block_on(async {
+        must_fail(
+            "/lightbox",
+            Some(&stylesheet(
+                "[role=dialog] button[aria-current]:has(img) { background: transparent !important; }",
+            )),
+            "looks like the others",
+            |fixture| async move {
+                let result = crate::lightbox::the_current_thumbnail_stands_out(&fixture.page).await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
 /// `Tree` with every row at `tabindex="-1"`: the count must say `0`, not default to one.
 /// Evidence for the day someone changes the counter and turns zero green (366).
 #[test]

@@ -5,7 +5,7 @@ use anyhow::{Result, bail};
 use chromiumoxide::Page;
 
 use crate::passes::{focus, keyboard};
-use crate::wait;
+use crate::{clock, wait};
 
 /// A combobox in the APG sense: a text input that owns a popup listbox and
 /// keeps DOM focus while an `aria-activedescendant` highlight moves.
@@ -105,9 +105,10 @@ impl Combobox<'_> {
         )
         .await?;
 
+        // Keeps the state it found, so read it once the handler ran, not after a sleep.
         keyboard::press_with(page, keyboard::ARROW_DOWN, keyboard::ALT).await?;
-        page.evaluate("new Promise(r => setTimeout(() => r(1), 60))")
-            .await?;
+        clock::settle(page).await?;
+        self.assert_expanded(page, true).await?;
         self.expect_active(
             page,
             listbox,

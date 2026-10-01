@@ -2,8 +2,9 @@
 //! and a press outside close the box; Escape hands focus to the trigger.
 
 use anyhow::{Result, bail};
+use e2e::archetypes;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Platform, Rect, eventually, eventually_focused};
+use e2e::driver::{Driver, Rect, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -251,23 +252,18 @@ e2e::scenario!(
 
 /// Android's Back closes the box, and the app stays (1289).
 async fn back_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    if d.platform() != Platform::Android {
-        return Ok(());
-    }
-    d.click(TRIGGER).await?;
-    shown(d, true, "the box to open").await?;
-    d.press_back().await?;
-    shown(d, false, "Back to close it").await?;
-    d.click(TRIGGER).await?;
-    shown(d, true, "the app to stay and open it again").await
+    archetypes::back_closes(d, TRIGGER, async |d| {
+        Ok(d.exists(BOX).await?
+            && d.style(BOX, "visibility").await.unwrap_or_default() == "visible")
+    })
+    .await
 }
 
 e2e::scenario!(
     android_back_closes_a_popover,
     "/popover",
     back_closes,
-    native: skip("1275: no Back key off Android"),
-    desktop: skip("1275: no Back key off Android")
+    android_only("1275: no Back key off Android")
 );
 
 /// Escape closes it with focus on the trigger or inside the box, and focus
