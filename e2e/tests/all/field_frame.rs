@@ -11,7 +11,7 @@ use chromiumoxide::cdp::browser_protocol::page::{
 };
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_text};
-use e2e::passes::{keyboard, pointer};
+use e2e::passes::{focus, keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 use futures::StreamExt;
 
@@ -26,12 +26,16 @@ fn a_press_on_the_padding_is_a_press_on_the_control() {
         // The frame's left padding, then its slot text, focus the input.
         let input = "[data-case=text] input";
         press(page, &left_padding("text")).await.unwrap();
-        focused(page, input).await.unwrap();
+        focus::wait_for_focus(page, input, "a press on the frame")
+            .await
+            .unwrap();
         blur(page).await.unwrap();
         press(page, &centre("[data-case=text] [data-slot=leading]"))
             .await
             .unwrap();
-        focused(page, input).await.unwrap();
+        focus::wait_for_focus(page, input, "a press on the frame")
+            .await
+            .unwrap();
 
         // A press on the padding leaves a selection alone; a drag in the input
         // still selects.
@@ -79,7 +83,9 @@ fn a_press_on_the_padding_is_a_press_on_the_control() {
         .await
         .unwrap();
         press(page, &bottom_padding("number")).await.unwrap();
-        focused(page, "[data-case=number] input").await.unwrap();
+        focus::wait_for_focus(page, "[data-case=number] input", "a press on the frame")
+            .await
+            .unwrap();
         truthy(
             page,
             "document.querySelector('[data-case=number] input').value === '4'",
@@ -91,7 +97,9 @@ fn a_press_on_the_padding_is_a_press_on_the_control() {
         // The padding opens a select, as a press on its trigger does.
         let trigger = "[data-case=select] [role=combobox]";
         press(page, &bottom_padding("select")).await.unwrap();
-        focused(page, trigger).await.unwrap();
+        focus::wait_for_focus(page, trigger, "a press on the frame")
+            .await
+            .unwrap();
         expanded(page, trigger, true).await.unwrap();
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         expanded(page, trigger, false).await.unwrap();
@@ -110,7 +118,9 @@ fn a_press_on_the_padding_is_a_press_on_the_control() {
         expanded(page, multi, false).await.unwrap();
         blur(page).await.unwrap();
         press(page, &left_padding("multi")).await.unwrap();
-        focused(page, multi).await.unwrap();
+        focus::wait_for_focus(page, multi, "a press on the frame")
+            .await
+            .unwrap();
         expanded(page, multi, true).await.unwrap();
 
         fixture
@@ -523,15 +533,6 @@ fn a_warning_frame_border_at_3_to_1() {
              ['warning border on its surface', RATIO(border, CSS(frame, 'backgroundColor'))],
          ];",
     );
-}
-
-async fn focused(page: &Page, selector: &str) -> Result<()> {
-    truthy(
-        page,
-        &format!("document.activeElement === document.querySelector({selector:?})"),
-        &format!("{selector} to be focused"),
-    )
-    .await
 }
 
 async fn expanded(page: &Page, selector: &str, open: bool) -> Result<()> {

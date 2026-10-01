@@ -6,15 +6,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
-use e2e::{Fixture, Suite, Viewport, wait};
-
-async fn js(page: &chromiumoxide::Page, expression: &str) -> serde_json::Value {
-    page.evaluate(expression)
-        .await
-        .unwrap()
-        .into_value()
-        .unwrap()
-}
+use e2e::{Fixture, Suite, Viewport, js, wait};
 
 #[test]
 fn it_meets_the_baseline() {
@@ -82,7 +74,7 @@ fn five_items_fit_320px_with_48px_targets() {
         let page = &fixture.page;
         wait::for_visible(page, "#home").await.unwrap();
 
-        let report = js(
+        let report = js::<serde_json::Value>(
             page,
             "(() => { \
                 const bar = document.querySelector('#bar'); \
@@ -119,7 +111,7 @@ fn the_selected_pill_shows_in_forced_colours() {
         wait::for_visible(page, "#home").await.unwrap();
         crate::calendar::force_colours(page).await;
 
-        let differs = js(
+        let differs = js::<serde_json::Value>(
             page,
             "(() => { \
                 const fill = id => getComputedStyle(document.querySelector(id + ' > [data-slot=icon]')).backgroundColor; \
@@ -145,7 +137,7 @@ fn rtl_puts_the_first_item_at_the_right() {
         let page = &fixture.page;
         wait::for_visible(page, "#rtl-home").await.unwrap();
 
-        let ordered = js(
+        let ordered = js::<serde_json::Value>(
             page,
             "(() => { \
                 const x = id => document.querySelector(id).getBoundingClientRect().left; \
@@ -197,7 +189,7 @@ fn disabled_items_are_skipped_and_dimmed() {
         let page = &fixture.page;
         wait::for_visible(page, "#disabled-button").await.unwrap();
 
-        let report = js(
+        let report = js::<serde_json::Value>(
             page,
             "(() => { \
                 const link = document.querySelector('#disabled'); \
@@ -220,7 +212,7 @@ fn disabled_items_are_skipped_and_dimmed() {
         // Tab from the enabled link leaves the bar.
         keyboard::tab_to(page, "#link", 30).await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
-        let left = js(
+        let left = js::<serde_json::Value>(
             page,
             "!['disabled', 'disabled-button'].includes(document.activeElement.id)",
         )
@@ -230,7 +222,7 @@ fn disabled_items_are_skipped_and_dimmed() {
         e2e::passes::pointer::click(page, "#disabled-button")
             .await
             .unwrap();
-        let clicked = js(page, "!!document.querySelector('#clicked')").await;
+        let clicked = js::<serde_json::Value>(page, "!!document.querySelector('#clicked')").await;
         assert_eq!(clicked, false);
 
         let links = e2e::ax::snapshot(page, "#disabled").await.unwrap();
@@ -250,7 +242,7 @@ fn the_badge_sits_on_the_icons_top_end_corner() {
         let page = &fixture.page;
         wait::for_visible(page, "#inbox").await.unwrap();
 
-        let report = js(
+        let report = js::<serde_json::Value>(
             page,
             "(() => { \
                 const place = id => { \
@@ -302,7 +294,7 @@ fn a_fixed_bar_docks_and_publishes_its_height() {
         .await
         .unwrap();
 
-        let report = js(
+        let report = js::<serde_json::Value>(
             page,
             "(() => { \
                 const bar = document.querySelector('#fixed').getBoundingClientRect(); \

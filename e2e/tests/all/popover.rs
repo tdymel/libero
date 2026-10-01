@@ -277,24 +277,18 @@ fn escape_closes_it_and_returns_focus_to_the_trigger() {
         open(page).await;
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_hidden(page, BOX).await.unwrap();
-        focus::assert_focused(page, TRIGGER, "Escape on the trigger")
+        focus::wait_for_focus(page, TRIGGER, "Escape on the trigger")
             .await
             .unwrap();
 
         open(page).await;
         pointer::click(page, IN_BOX).await.unwrap();
-        focus::assert_focused(page, IN_BOX, "a click on the box's control")
+        focus::wait_for_focus(page, IN_BOX, "a click on the box's control")
             .await
             .unwrap();
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_hidden(page, BOX).await.unwrap();
-        let _ = wait::for_js_true(
-            page,
-            "document.activeElement === document.querySelector('#trigger')",
-            "focus back on the trigger",
-        )
-        .await;
-        focus::assert_focused(page, TRIGGER, "Escape inside the box")
+        focus::wait_for_focus(page, TRIGGER, "Escape inside the box")
             .await
             .unwrap();
 

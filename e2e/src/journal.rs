@@ -224,7 +224,8 @@ impl std::ops::AddAssign for Tally {
 }
 
 /// Units in `tests/all` that drive no browser. Counted, they turned a 364 all-fail into PARTIAL.
-pub const NON_BROWSER: &[&str] = &["journal::"];
+/// `every_test_file_is_registered` sits at the crate root, outside any unit (todo 1718).
+pub const NON_BROWSER: &[&str] = &["journal::", "every_test_file_is_registered"];
 
 /// Whether a test opens a fixture page, and so whether its result says
 /// anything about the browser.

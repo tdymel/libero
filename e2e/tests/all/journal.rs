@@ -159,6 +159,8 @@ fn a_unit_that_drives_no_browser_is_not_a_sibling_that_stayed_up() {
     assert!(!journal::drives_a_browser(
         "journal::the_verdict_names_the_wait"
     ));
+    // The registration check lives at the crate root, outside any unit (todo 1718).
+    assert!(!journal::drives_a_browser("every_test_file_is_registered"));
 
     // libtest's per-test lines, plus the summary and a slow run's progress line, which
     // must not be read as one.

@@ -963,3 +963,194 @@ fn a_floating_window_with_faint_text_fails_the_contrast_pass_in_the_open_state()
         .await;
     });
 }
+
+/// A capturing listener that swallows `key` alone (no Ctrl/Alt/Meta) when `when` holds,
+/// as a component that never handles it would.
+fn swallow(key: &str, when: &str) -> String {
+    format!(
+        "window.addEventListener('keydown', e => {{ if (e.key === '{key}' && !e.ctrlKey \
+         && !e.altKey && !e.metaKey && ({when})) {{ e.stopImmediatePropagation(); \
+         e.preventDefault(); }} }}, true)"
+    )
+}
+
+/// `RovingTabindex` over `/tabs`, the group every roving plant below breaks.
+async fn tabs_contract(fixture: Fixture) -> (Fixture, anyhow::Result<()>) {
+    let result = RovingTabindex {
+        items: crate::tabs::TAB,
+        orientation: Orientation::Horizontal,
+        wraps: true,
+    }
+    .assert_contract(&fixture.page)
+    .await;
+    (fixture, result)
+}
+
+/// The last tab, in a plant's condition.
+const ON_LAST_TAB: &str =
+    "document.activeElement === [...document.querySelectorAll('[role=tab]')].at(-1)";
+
+/// `Tabs` whose forward arrow does nothing (1717).
+#[test]
+fn tabs_with_a_dead_forward_arrow_fail_the_roving_contract() {
+    block_on(must_fail(
+        "/tabs",
+        Some(&swallow("ArrowRight", "true")),
+        "after 1 forward arrow(s)",
+        tabs_contract,
+    ));
+}
+
+/// `Tabs` that stop at the last tab although the declaration says they wrap (1717).
+#[test]
+fn tabs_that_stop_at_the_end_fail_a_wrapping_roving_contract() {
+    block_on(must_fail(
+        "/tabs",
+        Some(&swallow("ArrowRight", ON_LAST_TAB)),
+        "arrowing past the last item",
+        tabs_contract,
+    ));
+}
+
+/// `Tabs` whose End does nothing (1717).
+#[test]
+fn tabs_with_a_dead_end_fail_the_roving_contract() {
+    block_on(must_fail(
+        "/tabs",
+        Some(&swallow("End", "true")),
+        "End did not move to the last item",
+        tabs_contract,
+    ));
+}
+
+/// `Tabs` whose backward arrow does nothing (1717).
+#[test]
+fn tabs_with_a_dead_backward_arrow_fail_the_roving_contract() {
+    block_on(must_fail(
+        "/tabs",
+        Some(&swallow("ArrowLeft", "true")),
+        "the backward arrow did not move",
+        tabs_contract,
+    ));
+}
+
+/// `Tabs` that take Ctrl+ArrowRight as their own arrow: `assert_chords_ignored` sees the move.
+#[test]
+fn tabs_moving_on_a_ctrl_chord_fail_the_chord_check() {
+    block_on(must_fail(
+        "/tabs",
+        Some(
+            "window.addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'ArrowRight') { \
+             const tabs = [...document.querySelectorAll('[role=tab]')]; \
+             tabs[(tabs.indexOf(document.activeElement) + 1) % tabs.length].focus(); } }, true)",
+        ),
+        "Ctrl+ArrowRight changed",
+        tabs_contract,
+    ));
+}
+
+/// `Tabs` that cancel Meta+End: nothing moves, but the browser loses its chord.
+#[test]
+fn tabs_cancelling_a_meta_chord_fail_the_chord_check() {
+    block_on(must_fail(
+        "/tabs",
+        Some(
+            "window.addEventListener('keydown', e => { if (e.metaKey && e.key === 'End') \
+             e.preventDefault(); })",
+        ),
+        "Meta+End was cancelled",
+        tabs_contract,
+    ));
+}
+
+async fn tree_contract(fixture: Fixture) -> (Fixture, anyhow::Result<()>) {
+    let result = crate::tree::WALK.assert_contract(&fixture.page).await;
+    (fixture, result)
+}
+
+/// `Tree` whose Right does not open a closed branch (1717).
+#[test]
+fn tree_with_a_dead_right_fails_the_expansion_check() {
+    block_on(must_fail(
+        "/tree",
+        Some(&swallow("ArrowRight", "true")),
+        "Right on the closed branch (row 0)",
+        tree_contract,
+    ));
+}
+
+/// `Tree` whose Right on a leaf jumps to the first row (1717), a task after the key, as a
+/// dioxus render does: a read straight after the press misses it (1710).
+#[test]
+fn tree_moving_off_a_leaf_on_right_fails_the_leaf_check() {
+    block_on(must_fail(
+        "/tree",
+        Some(
+            "window.addEventListener('keydown', e => { const row = document.activeElement; \
+             if (e.key === 'ArrowRight' && !e.ctrlKey && !e.altKey && !e.metaKey \
+             && row.matches('[role=treeitem]') && !row.hasAttribute('aria-expanded')) { \
+             e.stopImmediatePropagation(); e.preventDefault(); \
+             setTimeout(() => document.querySelector('[role=treeitem]').focus(), 0); } }, true)",
+        ),
+        "Right on the leaf (row 2)",
+        tree_contract,
+    ));
+}
+
+async fn select_contract(fixture: Fixture) -> (Fixture, anyhow::Result<()>) {
+    let result = Combobox {
+        trigger: crate::select::TRIGGER,
+        option_count: 5,
+        tab_budget: 10,
+    }
+    .assert_contract(&fixture.page)
+    .await;
+    (fixture, result)
+}
+
+/// `Select` whose End does nothing (1717).
+#[test]
+fn select_with_a_dead_end_fails_the_combobox_contract() {
+    block_on(must_fail(
+        "/select",
+        Some(&swallow("End", "true")),
+        "while pressing End, aria-activedescendant stayed on",
+        select_contract,
+    ));
+}
+
+/// `Select` whose Home does nothing (1717).
+#[test]
+fn select_with_a_dead_home_fails_the_combobox_contract() {
+    block_on(must_fail(
+        "/select",
+        Some(&swallow("Home", "true")),
+        "while pressing Home, aria-activedescendant stayed on",
+        select_contract,
+    ));
+}
+
+/// `Select` that cancels Ctrl+ArrowDown (1717).
+#[test]
+fn select_cancelling_a_ctrl_chord_fails_the_combobox_contract() {
+    block_on(must_fail(
+        "/select",
+        Some(
+            "window.addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'ArrowDown') \
+             e.preventDefault(); })",
+        ),
+        "Ctrl+ArrowDown was cancelled",
+        select_contract,
+    ));
+}
+
+/// `Select` whose Escape does not close the list (1717).
+#[test]
+fn select_ignoring_escape_fails_the_combobox_contract() {
+    block_on(must_fail(
+        "/select",
+        Some(&swallow("Escape", "true")),
+        "to be hidden",
+        select_contract,
+    ));
+}

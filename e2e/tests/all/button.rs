@@ -4,6 +4,7 @@
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::Driver;
+use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -173,22 +174,32 @@ e2e::scenario!(
 
 /// The label against the background as painted, `null` while either is
 /// translucent (the resting unfilled variants, or a transition under way).
-const PAIR: &str = "(selector => {
-    const style = getComputedStyle(document.querySelector(selector));
-    const rgb = value => {
-        const [r, g, b, a = 1] = value.match(/[\\d.]+/g).map(Number);
-        return a < 1 ? null : [r, g, b];
-    };
-    const luminance = c => {
-        const [r, g, b] = c.map(v => v / 255).map(v =>
-            v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    };
-    const [fg, bg] = [rgb(style.color), rgb(style.backgroundColor)];
-    if (!fg || !bg) return null;
-    const [a, b] = [luminance(fg), luminance(bg)];
-    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-})";
+fn pair(selector: &str) -> String {
+    format!(
+        "(() => {{ {COLOUR_JS} \
+         const style = getComputedStyle(document.querySelector('{selector}')); \
+         const [fg, bg] = [RGBA(style.color), RGBA(style.backgroundColor)]; \
+         return fg[3] < 1 || bg[3] < 1 ? null : CONTRAST(fg, bg); }})()"
+    )
+}
+
+/// Todo 1715: `COLOUR_JS` reads a mixed colour's `color(srgb ..)` as painted, not as its digits.
+#[test]
+fn the_shared_colour_reader_takes_color_srgb() {
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let ratio: f64 = e2e::js(
+            &fixture.page,
+            format!("(() => {{ {COLOUR_JS} return CONTRAST(RGBA('color(srgb 1 1 1)'), RGBA('rgb(0, 0, 0)')); }})()"),
+        )
+        .await;
+        assert!(
+            (ratio - 21.0).abs() < 0.01,
+            "white on black read {ratio:.2}:1"
+        );
+        fixture.close().await.unwrap();
+    });
+}
 
 /// Todo 452: an outlined `primary` label read 3.52:1 on its hover tint. Resting unfilled
 /// buttons paint no background, so any ratio means the hover rule applied.
@@ -201,19 +212,15 @@ fn a_hovered_button_s_label_reads_on_its_hover_fill() {
         for selector in ["#outlined", "#standard-error", "#elevated", "#filled-muted"] {
             pointer::hover(page, selector).await.unwrap();
             let settled = format!(
-                "(() => {{ const r = {PAIR}('{selector}'); \
+                "(() => {{ const r = {}; \
                  if (r === null || r !== window.__last) {{ window.__last = r; return false; }} \
-                 return true; }})()"
+                 return true; }})()",
+                pair(selector)
             );
             wait::for_js_true(page, &settled, "a settled hover pair")
                 .await
                 .unwrap();
-            let ratio: f64 = page
-                .evaluate(format!("{PAIR}('{selector}')"))
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
+            let ratio: f64 = e2e::js(page, pair(selector)).await;
             eprintln!("{selector} hovered: {ratio:.2}:1");
             assert!(ratio >= 4.5, "{selector} hovered reads {ratio:.2}:1");
         }
@@ -231,14 +238,11 @@ const RING: &str = "const ring = s => ['1px', '2px'].some(d => \
 
 /// JS `bar(style)`: whether the style carries the house start bar, a 2px gradient at 3:1 on
 /// the row's tint (646). Not the label colour: the bar is the one indicator (764).
+/// Needs [`COLOUR_JS`] in scope.
 pub const BAR: &str = "const bar = s => { \
      const m = s.backgroundImage.match(/^linear-gradient\\((rgb\\([^)]*\\)), (rgb\\([^)]*\\))\\)$/); \
      if (!m || m[1] !== m[2] || m[1] === s.color || !s.backgroundSize.startsWith('2px')) return false; \
-     const lum = c => c.match(/[\\d.]+/g).slice(0, 3).map(v => v / 255).map(v => \
-         v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4) \
-         .reduce((l, v, i) => l + v * [0.2126, 0.7152, 0.0722][i], 0); \
-     const [a, b] = [lum(m[1]), lum(s.backgroundColor)]; \
-     return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) >= 3; };";
+     return CONTRAST(RGBA(m[1]), RGBA(s.backgroundColor)) >= 3; };";
 
 /// Todo 491: the on state must not rest on a fill change alone (1.4.1).
 pub async fn assert_on_marker(page: &chromiumoxide::Page, on: &str, off: &str) {
@@ -253,7 +257,7 @@ pub async fn assert_on_bar(page: &chromiumoxide::Page, on: &str, off: &str) {
 /// Whether `on` passes the JS predicate `mark` (`ring` or `bar`) and `off` does not.
 async fn assert_marked(page: &chromiumoxide::Page, on: &str, off: &str, mark: &str) {
     let marked = format!(
-        "(() => {{ {RING} {BAR} const s = q => getComputedStyle(document.querySelector(q)); \
+        "(() => {{ {COLOUR_JS} {RING} {BAR} const s = q => getComputedStyle(document.querySelector(q)); \
          return {mark}(s('{on}')) && !{mark}(s('{off}')); }})()"
     );
     if let Err(e) = wait::for_js_true(page, &marked, "the on-state marker").await {
@@ -301,7 +305,7 @@ async fn assert_forced_colours(page: &chromiumoxide::Page, on: &str, off: &str, 
     // turns `HighlightText` too (764): its author colour vanishes on `Highlight`.
     let [adjust, stray, line, label]: [String; 4] = page
         .evaluate(format!(
-            "(() => {{ {RING} {BAR} const probe = document.createElement('div'); \
+            "(() => {{ {COLOUR_JS} {RING} {BAR} const probe = document.createElement('div'); \
              probe.style.color = 'HighlightText'; document.body.append(probe); \
              const text = getComputedStyle(probe).color; probe.remove(); \
              const el = document.querySelector('{on}'); const s = getComputedStyle(el); \

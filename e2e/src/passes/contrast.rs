@@ -17,6 +17,29 @@ fn axe_source() -> Result<&'static str> {
     Ok(SOURCE.get_or_init(|| source))
 }
 
+/// JS in scope of a test's own contrast reading: `RGBA(css)` is `[r, g, b, a]` (a 0..1) read
+/// through a canvas, so `color(srgb ..)` and `oklch()` read as painted, not as digits;
+/// `OVER(top, under)` composites; `CONTRAST(a, b)` is WCAG 2's ratio of two such colours.
+pub const COLOUR_JS: &str = "
+    const COLOUR_CANVAS = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    const RGBA = css => {
+        COLOUR_CANVAS.clearRect(0, 0, 1, 1);
+        COLOUR_CANVAS.fillStyle = '#000';
+        COLOUR_CANVAS.fillStyle = css;
+        COLOUR_CANVAS.fillRect(0, 0, 1, 1);
+        const d = COLOUR_CANVAS.getImageData(0, 0, 1, 1).data;
+        return [d[0], d[1], d[2], d[3] / 255];
+    };
+    const OVER = (top, under) => [0, 1, 2].map(i => top[i] * top[3] + under[i] * (1 - top[3])).concat([1]);
+    const LUMINANCE = c => c.slice(0, 3).map(v => v / 255)
+        .map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+        .reduce((l, v, i) => l + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const CONTRAST = (a, b) => {
+        const [x, y] = [LUMINANCE(a), LUMINANCE(b)];
+        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+    };
+";
+
 /// The rules this suite runs; the full set adds page-level findings about the fixture.
 const RULES: &[&str] = &[
     "color-contrast",

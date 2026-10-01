@@ -966,8 +966,9 @@ fn at_xs_the_speaker_and_the_chevron_each_own_a_24px_target() {
     });
 }
 
-/// The cue box Chromium draws in the `<video>`'s own shadow tree, by its bottom edge.
-async fn cue_bottom(page: &chromiumoxide::Page) -> Option<f64> {
+/// The cue box Chromium draws in the `<video>`'s own shadow tree, by its bottom edge;
+/// `None` until it is drawn.
+async fn cue_bottom(page: &chromiumoxide::Page) -> anyhow::Result<Option<f64>> {
     use chromiumoxide::cdp::browser_protocol::dom::{GetBoxModelParams, GetDocumentParams, Node};
     fn find(node: &Node) -> Option<&Node> {
         let attrs = node.attributes.as_deref().unwrap_or_default();
@@ -985,15 +986,15 @@ async fn cue_bottom(page: &chromiumoxide::Page) -> Option<f64> {
     }
     let document = page
         .execute(GetDocumentParams::builder().depth(-1).pierce(true).build())
-        .await
-        .ok()?;
-    let cue = find(&document.result.root)?.backend_node_id;
+        .await?;
+    let Some(cue) = find(&document.result.root).map(|node| node.backend_node_id) else {
+        return Ok(None);
+    };
     let model = page
         .execute(GetBoxModelParams::builder().backend_node_id(cue).build())
-        .await
-        .ok()?;
+        .await?;
     // Corners clockwise from the top left: the bottom edge's y is the sixth number.
-    model.result.model.border.inner().get(5).copied()
+    Ok(model.result.model.border.inner().get(5).copied())
 }
 
 /// Todos 1371 and 1389: the shown captions sit above the bar, not under it, at xl too.
@@ -1023,18 +1024,17 @@ async fn captions_clear_the_bar(route: &str) {
         .unwrap()
         .into_value()
         .unwrap();
-    let started = std::time::Instant::now();
-    loop {
-        let bottom = cue_bottom(page).await;
-        if bottom.is_some_and(|bottom| bottom <= seek_top) {
-            break;
-        }
-        assert!(
-            started.elapsed().as_secs() < 5,
-            "{route}: the cue ends at {bottom:?}, below the seek row's top {seek_top}"
-        );
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
+    let last = &std::cell::Cell::new(None);
+    wait::until(
+        &format!("{route}: the cue to end above the seek row's top {seek_top}"),
+        move || async move {
+            let bottom = cue_bottom(page).await?;
+            last.set(bottom);
+            Ok(bottom.is_some_and(|bottom| bottom <= seek_top))
+        },
+    )
+    .await
+    .unwrap_or_else(|e| panic!("{e}; the cue ends at {:?}", last.get()));
     fixture.close().await.unwrap();
 }
 
@@ -1072,19 +1072,15 @@ fn a_press_on_the_seek_track_seeks() {
     });
 }
 
-/// Polls `js` on `page` until it holds. Every caller holds the idle timer, so nothing fades
-/// the controls meanwhile; a background tab runs their transition at about a frame a second.
-async fn until(page: &chromiumoxide::Page, js: &str, what: &str) {
-    wait::for_js_true(page, js, what).await.unwrap();
-}
-
 /// Fires the held idle timer once armed and waits for the fade.
 async fn fade(page: &chromiumoxide::Page) {
     clock::until_armed(page, IDLE_MS, 1, "the idle timer")
         .await
         .unwrap();
     clock::fire(page, IDLE_MS).await.unwrap();
-    until(page, FADED, "the controls to fade").await;
+    wait::for_js_true(page, FADED, "the controls to fade")
+        .await
+        .unwrap();
 }
 
 const FADED: &str = "document.querySelector('#player [role=group]').dataset.controls === 'hidden'
@@ -1197,12 +1193,13 @@ fn a_click_on_the_picture_plays_or_pauses() {
         fade(page).await;
         let at = pointer::centre_of(page, "#player video").await.unwrap();
         pointer::touch_drag(page, at, at, 0).await.unwrap();
-        until(
+        wait::for_js_true(
             page,
             &format!("!({FADED}) && {PLAYING}"),
             "a tap to show the controls and keep playing",
         )
-        .await;
+        .await
+        .unwrap();
         pointer::touch_drag(page, at, at, 0).await.unwrap();
         wait::for_js_true(page, PAUSED, "a tap on shown controls to pause")
             .await
@@ -1229,13 +1226,14 @@ fn focus_from_code_shows_the_faded_controls() {
         page.evaluate(format!("document.querySelector('{FULLSCREEN}').focus()"))
             .await
             .unwrap();
-        until(
+        wait::for_js_true(
             page,
             "document.querySelector('#player [role=group]').dataset.controls === undefined
              && getComputedStyle(document.querySelector('#player [data-slot=controls]')).opacity === '1'",
             "focus from code to show the row",
         )
-        .await;
+        .await
+        .unwrap();
         // As after a key, they stay while focus is in them: past the idle timer.
         clock::fire_all(page, IDLE_MS).await.unwrap();
         clock::settle(page).await.unwrap();
@@ -1271,12 +1269,13 @@ fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {
         page.evaluate(format!("document.querySelector('{FULLSCREEN}').focus()"))
             .await
             .unwrap();
-        until(
+        wait::for_js_true(
             page,
             &format!("!({FADED})"),
             "focus from code to show the row",
         )
-        .await;
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }

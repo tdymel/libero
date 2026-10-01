@@ -5,7 +5,7 @@ use e2e::browser::block_on;
 use e2e::clock::HELD_CLOCK;
 use e2e::passes::{keyboard, pointer, target_size};
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, js, wait};
 
 const TRIGGER: &str = "#notify";
 const MESSAGE: &str = "Saved to your library";
@@ -74,14 +74,6 @@ const LONG_REAL_TIMERS: &str = r#"(() => {
     return true;
 })()"#;
 
-async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expression: String) -> T {
-    page.evaluate(expression.as_str())
-        .await
-        .unwrap_or_else(|e| panic!("evaluate {expression}: {e}"))
-        .into_value()
-        .unwrap_or_else(|e| panic!("read {expression}: {e}"))
-}
-
 /// The timeline (315 (a), (c)): appears, is announced once without taking focus, closes
 /// when the test fires the held clock. No step waits on a duration.
 #[test]
@@ -97,7 +89,7 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
                 serde_json::to_string(TIMED_MESSAGE).unwrap()
             );
 
-            let _: bool = js(page, LONG_REAL_TIMERS.into()).await;
+            let _: bool = js(page, LONG_REAL_TIMERS).await;
             let _: bool = js(
                 page,
                 format!("(({HELD_CLOCK})([{AUTO_CLOSE_MS}, {EXIT_MS}]), true)"),
@@ -119,8 +111,7 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
             let seen: usize = js(
                 page,
                 "(window.__longReal = [], clearTimeout(setTimeout(() => {}, 1001)), \
-                 window.__longReal.splice(0).length)"
-                    .into(),
+                 window.__longReal.splice(0).length)",
             )
             .await;
             assert_eq!(
@@ -162,7 +153,7 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
 
             // Control on the held clock: no long real timer was armed since the press, so
             // none can close it behind the held one (todo 1638, was a 4.8 s real wait).
-            let long_real: Vec<String> = js(page, "window.__longReal".into()).await;
+            let long_real: Vec<String> = js(page, "window.__longReal").await;
             assert!(
                 long_real.is_empty(),
                 "at {at}: real timers of 1 s or more armed past the held clock, so it does \
@@ -173,7 +164,7 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
             e2e::passes::focus::assert_focused(page, TIMED_TRIGGER, "showing a notification")
                 .await
                 .unwrap_or_else(|e| panic!("at {at}: {e}"));
-            let announced: usize = js(page, "window.__announced".into()).await;
+            let announced: usize = js(page, "window.__announced").await;
             assert_eq!(
                 announced, 1,
                 "at {at}: the live regions said the text {announced} times"
@@ -204,20 +195,19 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
             let spoken: bool = js(
                 page,
                 "[...document.querySelectorAll('[aria-live]')]\
-                 .some(el => el.textContent.trim().length > 0)"
-                    .into(),
+                 .some(el => el.textContent.trim().length > 0)",
             )
             .await;
             assert!(
                 !spoken,
                 "at {at}: a live region still speaks after the removal"
             );
-            let empty: usize = js(page, EMPTY_LISTS.into()).await;
+            let empty: usize = js(page, EMPTY_LISTS).await;
             assert_eq!(
                 empty, 0,
                 "at {at}: {empty} empty list(s) left after the removal"
             );
-            let announced: usize = js(page, "window.__announced".into()).await;
+            let announced: usize = js(page, "window.__announced").await;
             assert_eq!(announced, 1, "at {at}: closing announced the text again");
             e2e::passes::focus::assert_focused(page, TIMED_TRIGGER, "a notification closing")
                 .await
@@ -524,7 +514,7 @@ fn a_contained_host_unmounting_hands_focus_back_out() {
             .await;
             if let Err(e) = landed {
                 let active: String =
-                    js(page, "document.activeElement.outerHTML.slice(0, 80)".into()).await;
+                    js(page, "document.activeElement.outerHTML.slice(0, 80)").await;
                 panic!("at {at}: {e}; focus is on {active}");
             }
 
@@ -569,7 +559,7 @@ fn a_contained_host_unmounting_with_its_opener_focuses_the_control_before_it() {
             .await;
             if let Err(e) = landed {
                 let active: String =
-                    js(page, "document.activeElement.outerHTML.slice(0, 80)".into()).await;
+                    js(page, "document.activeElement.outerHTML.slice(0, 80)").await;
                 panic!("at {at}: {e}; focus is on {active}");
             }
 
@@ -711,8 +701,7 @@ fn f8_focuses_the_newest_notification_across_hosts() {
             page,
             "(document.addEventListener('focusin', e => { \
                if (e.target.closest('li')) window.__moves = (window.__moves ?? 0) + 1; \
-             }, true), true)"
-                .into(),
+             }, true), true)",
         )
         .await;
 
@@ -732,7 +721,7 @@ fn f8_focuses_the_newest_notification_across_hosts() {
             )
             .await
             .unwrap();
-            let _: bool = js(page, "(window.__moves = 0, true)".into()).await;
+            let _: bool = js(page, "(window.__moves = 0, true)").await;
 
             keyboard::press(page, F8).await.unwrap();
             wait::for_js_true(

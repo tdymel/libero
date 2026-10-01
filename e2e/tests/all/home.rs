@@ -5,7 +5,7 @@ use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_focused};
-use e2e::passes::keyboard;
+use e2e::passes::{focus, keyboard};
 use e2e::{Fixture, Viewport, ax, wait};
 
 /// Arrow Down enters the picker on the typed day, not on the grid cell the
@@ -97,15 +97,14 @@ fn the_booking_card_submits_from_the_keyboard() {
 
         // Back to the tab strip, over to the bookings.
         for _ in 0..8 {
-            if focused(page, TAB_BOOK).await.unwrap() {
+            if focus::is_focused(page, TAB_BOOK).await.unwrap() {
                 break;
             }
             keyboard::press_shift(page, keyboard::TAB).await.unwrap();
         }
-        assert!(
-            focused(page, TAB_BOOK).await.unwrap(),
-            "the tab strip is reachable"
-        );
+        focus::assert_focused(page, TAB_BOOK, "Shift+Tab back to the tab strip")
+            .await
+            .unwrap();
         keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
         expect(
             page,
@@ -192,13 +191,4 @@ fn the_landing_code_blocks_say_what_they_copy() {
 
 async fn expect(page: &Page, js: &str, what: &str) -> Result<()> {
     wait::for_js_true(page, js, what).await
-}
-
-async fn focused(page: &Page, selector: &str) -> Result<bool> {
-    Ok(page
-        .evaluate(format!(
-            "document.activeElement === document.querySelector({selector:?})"
-        ))
-        .await?
-        .into_value()?)
 }

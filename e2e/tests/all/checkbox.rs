@@ -4,7 +4,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard::{self, ENTER, SPACE};
-use e2e::passes::pointer;
+use e2e::passes::{focus, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport};
 
@@ -42,16 +42,6 @@ async fn settle(fixture: &Fixture) {
         .evaluate("new Promise(r => setTimeout(() => r(1), 100))")
         .await
         .unwrap();
-}
-
-async fn focused(fixture: &Fixture) -> String {
-    fixture
-        .page
-        .evaluate("document.activeElement.id")
-        .await
-        .unwrap()
-        .into_value()
-        .unwrap()
 }
 
 #[test]
@@ -152,7 +142,13 @@ fn a_click_on_the_box_focuses_the_input() {
             pointer::click(&fixture.page, target).await.unwrap();
             settle(&fixture).await;
             assert_eq!(emitted(&fixture).await, expected, "click on {target}");
-            assert_eq!(focused(&fixture).await, input, "focus after {target}");
+            focus::wait_for_focus(
+                &fixture.page,
+                &format!("#{input}"),
+                &format!("a click on {target}"),
+            )
+            .await
+            .unwrap();
         }
 
         fixture.console.assert_clean("checkbox clicks").unwrap();

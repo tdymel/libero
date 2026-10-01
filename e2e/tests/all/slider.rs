@@ -60,18 +60,23 @@ const BUBBLE: &str = "[role=tooltip]:not([hidden])";
 /// Todo 1058: a touch held on the thumb opens no lingering long-press bubble;
 /// its tap's bubble is gone right after the release.
 async fn held_thumb<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // Held, a Tooltip's touch linger never runs out: a bubble on it stays up.
+    let held = d.hold_timers(&[TOUCH_LINGER_MS]).await?;
     d.long_press(THUMB, 800).await?;
     let released = std::time::Instant::now();
-    loop {
-        if !d.exists(BUBBLE).await? {
-            return Ok(());
-        }
-        ensure!(
-            released.elapsed().as_millis() < 700,
-            "the bubble still shows 700 ms after the release"
-        );
-    }
+    eventually(d, "the bubble to go with the release", async |d| {
+        Ok(!d.exists(BUBBLE).await?)
+    })
+    .await?;
+    ensure!(
+        held || released.elapsed() < std::time::Duration::from_millis(u64::from(TOUCH_LINGER_MS)),
+        "the bubble lingered after the release"
+    );
+    Ok(())
 }
+
+/// A Tooltip's stay after a touch release.
+const TOUCH_LINGER_MS: u32 = 1500;
 
 e2e::scenario!(
     a_touch_held_on_the_thumb_leaves_no_bubble_after_the_release,

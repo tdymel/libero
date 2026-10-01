@@ -131,8 +131,7 @@ where
     A: FnOnce() -> Fut,
     Fut: std::future::Future<Output = Result<()>>,
 {
-    let previous: Option<String> = page.evaluate(expression).await?.into_value()?;
-    let Some(previous) = previous else {
+    let Some(previous) = read_string(page, expression).await? else {
         bail!(
             "waiting for {what}: `{expression}` reads nothing before it, so no change can be seen"
         );
@@ -141,11 +140,21 @@ where
     until(what, || {
         let previous = previous.clone();
         async move {
-            let value: Option<String> = page.evaluate(expression).await?.into_value()?;
+            let value = read_string(page, expression).await?;
             Ok(value.is_some_and(|v| v != previous))
         }
     })
     .await
+}
+
+/// `expression` as a string; `None` for `null`/`undefined`, which CDP sends as no value at
+/// all, so `into_value::<Option<_>>` fails with "No value found" instead (1717).
+async fn read_string(page: &Page, expression: &str) -> Result<Option<String>> {
+    let result = page.evaluate(expression).await?;
+    match result.value() {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(_) => Ok(Some(result.into_value()?)),
+    }
 }
 
 /// Wait for an element to exist in the DOM.

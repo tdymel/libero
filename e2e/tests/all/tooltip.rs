@@ -6,7 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, linger};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, js, wait};
 
 const TRIGGER: &str = "#save";
 const BUBBLE: &str = "#save-tip";
@@ -141,14 +141,6 @@ fn it_meets_the_baseline() {
     Suite::new("tooltip", "/tooltip")
         .state("focused", &[Step::TabTo(TRIGGER)], BUBBLE)
         .run();
-}
-
-async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expression: &str) -> T {
-    page.evaluate(expression)
-        .await
-        .unwrap_or_else(|e| panic!("evaluate {expression}: {e}"))
-        .into_value()
-        .unwrap_or_else(|e| panic!("read {expression}: {e}"))
 }
 
 /// Past the renders and effects a wrong reopen would take.

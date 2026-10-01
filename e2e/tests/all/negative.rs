@@ -508,3 +508,200 @@ fn the_sweep_reports_each_family() {
         sweep_must_report("/broken/target-spacing", "target-size", "#cramped-a", "").await;
     });
 }
+
+/// `wait::until` gives up inside `expecting_failure`'s share of the budget, naming what it
+/// waited for; an error from the check ends it at once (1717).
+#[test]
+fn a_wait_gives_up_at_its_share_and_stops_on_an_error() {
+    block_on(async {
+        let started = std::time::Instant::now();
+        let error = wait::expecting_failure_in(wait::QUICK_FAILURE_SHARE, async {
+            wait::until("a condition that never holds", || async { Ok(false) }).await
+        })
+        .await
+        .expect_err("a false condition passed");
+        let took = started.elapsed();
+        assert!(
+            format!("{error}").contains("waiting for a condition that never holds"),
+            "{error}"
+        );
+        // The full budget is the defect the share exists against.
+        assert!(took * 2 < wait_budget(), "the share took {took:?}");
+
+        let started = std::time::Instant::now();
+        let error = wait::until("a check that errs", || async {
+            anyhow::bail!("the page went away")
+        })
+        .await
+        .expect_err("an erring check passed");
+        assert!(format!("{error}").contains("the page went away"), "{error}");
+        assert!(
+            started.elapsed() * 2 < wait_budget(),
+            "an error waited out the budget"
+        );
+    });
+}
+
+/// `E2E_TIMEOUT_MS`, as `wait` reads it.
+fn wait_budget() -> std::time::Duration {
+    std::env::var("E2E_TIMEOUT_MS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .map(std::time::Duration::from_millis)
+        .unwrap_or(std::time::Duration::from_secs(15))
+}
+
+/// `for_js_change` refuses an expression that reads nothing before the action (todo 383),
+/// and gives up on one that never changes (1717).
+#[test]
+fn for_js_change_refuses_a_null_before_and_waits_for_a_real_change() {
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let error = wait::for_js_change(page, "null", "a null to change", || async { Ok(()) })
+            .await
+            .expect_err("a null before-value passed");
+        assert!(
+            format!("{error}").contains("reads nothing before it"),
+            "{error}"
+        );
+
+        let error = wait::expecting_failure(wait::for_js_change(
+            page,
+            "'still'",
+            "a constant to change",
+            || async { Ok(()) },
+        ))
+        .await
+        .expect_err("an unchanged value passed");
+        assert!(
+            format!("{error}").contains("a constant to change"),
+            "{error}"
+        );
+
+        wait::for_js_change(
+            page,
+            "String(window.__e2eStep ?? 0)",
+            "a real change",
+            || async {
+                page.evaluate("window.__e2eStep = 1").await?;
+                Ok(())
+            },
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The held clock holds only the delays named, and `fire` refuses anything but exactly one
+/// pending timer of the delay (1717).
+#[test]
+fn the_held_clock_holds_its_delays_and_fires_one_at_a_time() {
+    use e2e::clock;
+    const HELD: u32 = 4321;
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        clock::hold(page, &[HELD]).await.unwrap();
+        let error = clock::fire(page, HELD)
+            .await
+            .expect_err("fired with none pending");
+        assert!(
+            format!("{error}").contains("0 held timers of 4321 ms"),
+            "{error}"
+        );
+
+        let _: bool = e2e::js(
+            page,
+            format!(
+                "(window.__held = 0, window.__real = 0, \
+                 setTimeout(() => window.__held++, {HELD}), setTimeout(() => window.__held++, {HELD}), \
+                 setTimeout(() => window.__real++, 0), true)"
+            ),
+        )
+        .await;
+        wait::for_js_true(page, "window.__real === 1", "the unheld delay to run")
+            .await
+            .unwrap();
+        assert_eq!(clock::armed(page, HELD).await.unwrap(), 2);
+        let error = clock::fire(page, HELD).await.expect_err("fired one of two");
+        assert!(
+            format!("{error}").contains("2 held timers of 4321 ms"),
+            "{error}"
+        );
+        let held: u32 = e2e::js(page, "window.__held").await;
+        assert_eq!(held, 0, "a held timer ran on its own");
+
+        assert_eq!(clock::fire_all(page, HELD).await.unwrap(), 2);
+        let held: u32 = e2e::js(page, "window.__held").await;
+        assert_eq!(held, 2);
+        fixture.close().await.unwrap();
+    });
+}
+
+/// `live_region` tells a missing region from a wrong politeness, and reads `role=status` as
+/// polite (1717).
+#[test]
+fn the_live_region_pass_catches_a_missing_or_assertive_region() {
+    use e2e::passes::live_region;
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let _: bool = e2e::js(
+            page,
+            "(document.body.insertAdjacentHTML('beforeend', \
+             '<div id=e2e-loud aria-live=assertive>Saved</div><div id=e2e-status role=status></div>'), true)",
+        )
+        .await;
+
+        let error = live_region::assert_politeness(page, "#e2e-loud", "polite")
+            .await
+            .expect_err("an assertive region passed as polite");
+        assert!(
+            format!("{error}").contains("is \"assertive\", expected \"polite\""),
+            "{error}"
+        );
+        live_region::assert_politeness(page, "#e2e-status", "polite")
+            .await
+            .unwrap();
+        let error = live_region::assert_politeness(page, "#e2e-none", "polite")
+            .await
+            .expect_err("a missing region passed");
+        assert!(
+            format!("{error}").contains("no live region at #e2e-none"),
+            "{error}"
+        );
+
+        assert_eq!(
+            live_region::text_of(page, "#e2e-loud").await.unwrap(),
+            "Saved"
+        );
+        assert_eq!(live_region::text_of(page, "#e2e-status").await.unwrap(), "");
+        let error = live_region::text_of(page, "#e2e-none")
+            .await
+            .expect_err("a missing region read as text");
+        assert!(
+            format!("{error}").contains("no live region at #e2e-none"),
+            "{error}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The pointer pass refuses to aim at nothing, rather than click the page's corner (1717).
+#[test]
+fn the_pointer_pass_refuses_a_missing_target() {
+    use e2e::passes::pointer;
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let error = pointer::click(&fixture.page, "#e2e-nothing")
+            .await
+            .expect_err("a click on nothing passed");
+        assert!(
+            format!("{error}").contains("no element at #e2e-nothing to point at"),
+            "{error}"
+        );
+        fixture.close().await.unwrap();
+    });
+}

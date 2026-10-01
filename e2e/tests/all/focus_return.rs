@@ -3,6 +3,7 @@
 use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::passes::focus;
 use e2e::passes::keyboard::{self, ENTER, ESCAPE, TAB};
 use e2e::{Fixture, Viewport, wait};
 
@@ -53,14 +54,6 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView")
 );
 
-async fn focused(page: &chromiumoxide::Page) -> String {
-    page.evaluate("document.activeElement?.id ?? ''")
-        .await
-        .unwrap()
-        .into_value()
-        .unwrap()
-}
-
 /// Closing from inside, by Apply and then by Escape, lands on the trigger each
 /// time: the second open re-arms what the first `restore()` consumed.
 #[test]
@@ -79,7 +72,9 @@ fn closing_the_panel_returns_focus_to_its_trigger() {
         wait::for_visible(page, "#apply").await.unwrap();
         keyboard::press(page, TAB).await.unwrap();
         keyboard::press(page, TAB).await.unwrap();
-        assert_eq!(focused(page).await, "apply", "Tab reaches Apply");
+        focus::wait_for_focus(page, "#apply", "Tab to Apply")
+            .await
+            .unwrap();
         keyboard::press(page, ENTER).await.unwrap();
         wait::for_js_true(
             page,
@@ -127,7 +122,9 @@ fn a_trigger_remembered_on_mount_takes_focus_on_every_close() {
             keyboard::press(page, ENTER).await.unwrap();
             wait::for_visible(page, "#close").await.unwrap();
             keyboard::press(page, TAB).await.unwrap();
-            assert_eq!(focused(page).await, "close", "Tab reaches Close ({round})");
+            focus::wait_for_focus(page, "#close", &format!("Tab to Close ({round})"))
+                .await
+                .unwrap();
             keyboard::press(page, ENTER).await.unwrap();
             wait::for_js_true(
                 page,

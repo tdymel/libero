@@ -4,15 +4,7 @@
 use anyhow::{Result, bail};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
-use e2e::{Fixture, Viewport, wait};
-
-async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expression: &str) -> T {
-    page.evaluate(expression)
-        .await
-        .unwrap_or_else(|e| panic!("evaluate {expression}: {e}"))
-        .into_value()
-        .unwrap_or_else(|e| panic!("read {expression}: {e}"))
-}
+use e2e::{Fixture, Viewport, js, wait};
 
 async fn state_reads(page: &chromiumoxide::Page, expected: &str) {
     wait::for_js_true(

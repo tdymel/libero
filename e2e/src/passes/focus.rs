@@ -34,16 +34,21 @@ pub async fn active_element(page: &Page) -> Result<Focused> {
     Ok(value)
 }
 
-/// Assert focus is on the element matching `selector`.
-pub async fn assert_focused(page: &Page, selector: &str, during: &str) -> Result<()> {
-    let matches: bool = page
+/// Whether focus is on the element matching `selector` right now; one read, no wait.
+pub async fn is_focused(page: &Page, selector: &str) -> Result<bool> {
+    Ok(page
         .evaluate(format!(
             "document.activeElement === document.querySelector({})",
             serde_json::to_string(selector)?
         ))
         .await?
-        .into_value()?;
-    if !matches {
+        .into_value()?)
+}
+
+/// Assert focus is on the element matching `selector`. One read: after an action, use
+/// [`wait_for_focus`].
+pub async fn assert_focused(page: &Page, selector: &str, during: &str) -> Result<()> {
+    if !is_focused(page, selector).await? {
         let actual = active_element(page).await?;
         bail!("after {during}, expected focus on {selector} but the document holds {actual:?}");
     }
@@ -53,8 +58,8 @@ pub async fn assert_focused(page: &Page, selector: &str, during: &str) -> Result
 /// Wait for focus to land on `selector`, for a repair made in an effect after
 /// the render. On timeout it fails as `assert_focused` does, naming the holder.
 pub async fn wait_for_focus(page: &Page, selector: &str, during: &str) -> Result<()> {
-    let settled = crate::wait::until(&format!("focus on {selector} after {during}"), || async {
-        Ok(assert_focused(page, selector, during).await.is_ok())
+    let settled = crate::wait::until(&format!("focus on {selector} after {during}"), || {
+        is_focused(page, selector)
     })
     .await;
     match settled {

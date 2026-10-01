@@ -4,6 +4,7 @@
 use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -414,17 +415,16 @@ fn a_query_on_the_address_keeps_the_route_link_current() {
 }
 
 /// The description's contrast against the surface under it, as a string `"4.52"`.
-const DESCRIPTION_RATIO: &str = r#"(id => {
-  const ctx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-  const rgba = c => { ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = '#000'; ctx.fillStyle = c; ctx.fillRect(0, 0, 1, 1); const d = ctx.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2], d[3] / 255]; };
-  const over = (f, b) => [0, 1, 2].map(i => f[i] * f[3] + b[i] * (1 - f[3])).concat([1]);
-  const bg = el => { const chain = []; for (let e = el; e; e = e.parentElement) chain.push(rgba(getComputedStyle(e).backgroundColor)); let out = [255, 255, 255, 1]; for (const c of chain.reverse()) out = over(c, out); return out; };
-  const lum = c => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
-  const el = document.querySelector(id + ' [data-slot=description]');
-  const back = bg(el), front = over(rgba(getComputedStyle(el).color), back);
-  const [x, y] = [lum(front), lum(back)];
-  return ((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)).toFixed(2);
-})"#;
+fn description_ratio(id: &str) -> String {
+    format!(
+        r#"(() => {{ {COLOUR_JS}
+  const bg = el => {{ const chain = []; for (let e = el; e; e = e.parentElement) chain.push(RGBA(getComputedStyle(e).backgroundColor)); let out = [255, 255, 255, 1]; for (const c of chain.reverse()) out = OVER(c, out); return out; }};
+  const el = document.querySelector('{id} [data-slot=description]');
+  const back = bg(el), front = OVER(RGBA(getComputedStyle(el).color), back);
+  return CONTRAST(front, back).toFixed(2);
+}})()"#
+    )
+}
 
 /// 1.4.3: the description is 12px text, so 4.5:1 on the active tint and on the
 /// hover grey too, in both schemes.
@@ -438,7 +438,7 @@ fn the_description_reads_on_the_active_tint_and_on_hover() {
                 .unwrap();
             let page = &fixture.page;
             let ratio = |id: &'static str| {
-                let expression = format!("({DESCRIPTION_RATIO})('{id}')");
+                let expression = description_ratio(id);
                 async move {
                     let text: String = page
                         .evaluate(expression)

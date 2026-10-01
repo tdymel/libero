@@ -856,21 +856,19 @@ fn a_gallery_swap_jumps_and_fetches_only_around_the_new_index() {
     });
 }
 
-/// Waits for the stage's track to scroll smoothly again, for 2s at most.
+/// Waits for the stage's track to scroll smoothly again.
 async fn wait_stage_smooth(page: &Page) -> Result<()> {
     // The open's jump keeps `seam` up until its scroll settles: 0-470ms after
     // the picture takes focus (measured).
     const SMOOTH: &str = "(() => { const track = [...document.querySelectorAll('[role=dialog] *')] \
         .filter(el => el.querySelector(':scope [data-lightbox-frame]') && el.scrollWidth > el.clientWidth) \
         .pop(); return !!track && getComputedStyle(track).scrollBehavior === 'smooth'; })()";
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
-    while !page.evaluate(SMOOTH).await?.into_value::<bool>()? {
-        if std::time::Instant::now() > deadline {
-            bail!("the stage's track still jumps 2s after the open: `seam` never came down");
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
-    }
-    Ok(())
+    wait::for_js_true(
+        page,
+        SMOOTH,
+        "the stage's track to scroll smoothly after the open (`seam` to come down)",
+    )
+    .await
 }
 
 async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {

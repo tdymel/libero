@@ -23,6 +23,19 @@ pub use browser::{Fixture, Scheme, Viewport};
 pub use futures;
 pub use suite::Suite;
 
+/// Evaluates `expression` on `page` and reads its value; panics naming the expression.
+pub async fn js<T: serde::de::DeserializeOwned>(
+    page: &chromiumoxide::Page,
+    expression: impl AsRef<str>,
+) -> T {
+    let expression = expression.as_ref();
+    page.evaluate(expression)
+        .await
+        .unwrap_or_else(|e| panic!("evaluate {expression}: {e}"))
+        .into_value()
+        .unwrap_or_else(|e| panic!("read {expression}: {e}"))
+}
+
 /// Where the fixture server is listening. Set by the runner.
 pub fn base_url() -> String {
     std::env::var("E2E_BASE_URL").unwrap_or_else(|_| {

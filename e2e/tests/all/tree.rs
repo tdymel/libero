@@ -77,7 +77,7 @@ const DELETE: keyboard::Key = keyboard::Key {
 
 /// `/tree`: roots `src`, `docs` (collapsed) and leaf `README.md`. Declared here so a
 /// fixture change fails rather than weakens `TreeWalk`.
-const WALK: TreeWalk = TreeWalk {
+pub(crate) const WALK: TreeWalk = TreeWalk {
     rows: ROW,
     collapsed_parent: 0,
     leaf: 2,

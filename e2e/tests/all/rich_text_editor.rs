@@ -6,7 +6,7 @@ use chromiumoxide::cdp::browser_protocol::input::ImeSetCompositionParams;
 use e2e::browser::{Scheme, block_on};
 use e2e::passes::keyboard::{self, BACKSPACE, CTRL, ENTER, Key};
 use e2e::passes::{contrast, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Viewport, js, wait};
 
 const KEY_B: Key = Key {
     key: "b",
@@ -24,14 +24,10 @@ const KEY_Z: Key = Key {
 
 const EDITOR: &str = "document.querySelector('[role=textbox]')";
 
-async fn eval<T: serde::de::DeserializeOwned>(page: &Page, script: &str) -> T {
-    page.evaluate(script).await.unwrap().into_value().unwrap()
-}
-
 const OUT: &str = "document.getElementById('out').textContent";
 
 async fn out(page: &Page) -> String {
-    eval(page, OUT).await
+    js(page, OUT).await
 }
 
 /// Waits for `#out` to pass `check`; fails with what it read last.
@@ -73,7 +69,7 @@ async fn holds(page: &Page, check: &str, what: &str) {
         .await
         .is_err()
     {
-        panic!("{what}: {}", eval::<String>(page, check).await);
+        panic!("{what}: {}", js::<String>(page, check).await);
     }
 }
 
@@ -90,7 +86,7 @@ fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
         let page = &fixture.page;
         page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
 
-        let placeholder: String = eval(
+        let placeholder: String = js(
             page,
             &format!("getComputedStyle({EDITOR}, '::before').content"),
         )
@@ -100,7 +96,7 @@ fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
         // Char by char: the caret must follow every model change, echoes included.
         keyboard::type_text(page, "hello").await.unwrap();
         out_eq(page, "hello\n").await;
-        let changes: String = eval(page, "document.getElementById('changes').textContent").await;
+        let changes: String = js(page, "document.getElementById('changes').textContent").await;
         assert_eq!(changes, "5");
 
         keyboard::press(page, ENTER).await.unwrap();
@@ -125,7 +121,7 @@ fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
         keyboard::press(page, ENTER).await.unwrap();
         keyboard::type_text(page, "# Title").await.unwrap();
         out_where(page, "a heading", |now| now.ends_with("# Title\n")).await;
-        let heading: bool = eval(page, &format!("!!{EDITOR}.querySelector('h1')")).await;
+        let heading: bool = js(page, &format!("!!{EDITOR}.querySelector('h1')")).await;
         assert!(heading);
 
         // Ctrl+B on a selection: the keymap, not the browser, marks it.
@@ -145,7 +141,7 @@ fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
             .await
             .unwrap();
         out_eq(page, "").await;
-        let paragraphs: u32 = eval(
+        let paragraphs: u32 = js(
             page,
             &format!("{EDITOR}.querySelectorAll('[data-key]').length"),
         )
@@ -162,7 +158,7 @@ fn a_caller_toolbar_runs_commands_and_reads_state_through_the_handle() {
             .unwrap();
         let page = &fixture.page;
         let undo_disabled = "document.getElementById('ext-undo').disabled";
-        assert!(eval::<bool>(page, undo_disabled).await);
+        assert!(js::<bool>(page, undo_disabled).await);
 
         page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
         keyboard::type_text(page, "ab").await.unwrap();
@@ -323,7 +319,7 @@ fn node_views_draw_caller_nodes_and_keep_their_content_editable() {
         let page = &fixture.page;
         let mention = "[role=textbox] [data-atom][contenteditable=false] .mention";
         wait::for_selector(page, mention).await.unwrap();
-        let atom: String = eval(
+        let atom: String = js(
             page,
             &format!("document.querySelector('{mention}').textContent"),
         )
@@ -343,7 +339,7 @@ fn node_views_draw_caller_nodes_and_keep_their_content_editable() {
             now.ends_with("careful!")
         })
         .await;
-        let note: u32 = eval(
+        let note: u32 = js(
             page,
             &format!("{EDITOR}.querySelectorAll('aside.callout > span').length"),
         )
@@ -401,7 +397,7 @@ fn arrow_up_enters_a_rendered_code_block_and_shift_slash_opens_help() {
 
 /// Polls `condition` (a JS expression) until it holds; a background page delays `ResizeObserver`.
 async fn until(page: &Page, condition: &str) -> bool {
-    eval(
+    js(
         page,
         &format!(
             "new Promise(r => {{ const end = Date.now() + 5000; const tick = () => {{ if ({condition}) r(true); else if (Date.now() > end) r(false); else setTimeout(tick, 50); }}; tick(); }})"
@@ -421,7 +417,7 @@ fn a_narrow_toolbar_keeps_one_row_and_moves_the_rest_into_more() {
         let page = &fixture.page;
         assert!(until(page, MORE).await, "no More trigger");
         // [no horizontal overflow, distinct item rows]
-        let (overflow, rows): (bool, u32) = eval(
+        let (overflow, rows): (bool, u32) = js(
             page,
             "(() => { const t = document.querySelector('[role=toolbar]'); \
                const tops = new Set([...t.querySelectorAll('button')].map(b => Math.round(b.getBoundingClientRect().top))); \
@@ -466,7 +462,7 @@ fn a_toolbar_with_larger_icons_still_keeps_one_row() {
             .unwrap();
         let page = &fixture.page;
         assert!(until(page, MORE).await, "no More trigger");
-        let (_, _, before): (bool, u32, u32) = eval(page, TOOLBAR_ROWS).await;
+        let (_, _, before): (bool, u32, u32) = js(page, TOOLBAR_ROWS).await;
         page.evaluate(
             "(() => { const s = document.createElement('style'); \
                s.textContent = '[role=toolbar] button:not([aria-haspopup]) { min-width: 56px; }'; \
@@ -476,7 +472,7 @@ fn a_toolbar_with_larger_icons_still_keeps_one_row() {
         .unwrap();
         let fewer = format!("{TOOLBAR_ROWS}[2] < {before}");
         assert!(until(page, &fewer).await, "nothing moved into More");
-        let (overflow, rows, _): (bool, u32, u32) = eval(page, TOOLBAR_ROWS).await;
+        let (overflow, rows, _): (bool, u32, u32) = js(page, TOOLBAR_ROWS).await;
         assert!(!overflow, "the toolbar runs out of its column");
         assert_eq!(rows, 1, "the toolbar wraps");
     });
@@ -484,7 +480,7 @@ fn a_toolbar_with_larger_icons_still_keeps_one_row() {
 
 /// Dispatches `kind` (`copy` or `cut`) on the editor; `[text/plain, text/markdown, cancelled]`.
 async fn clipboard(page: &Page, kind: &str) -> (String, String, bool) {
-    eval(
+    js(
         page,
         &format!(
             "(() => {{ const d = new DataTransfer(); const e = new ClipboardEvent('{kind}', {{ clipboardData: d, bubbles: true, cancelable: true }}); \
@@ -538,7 +534,7 @@ fn node_views_draw_built_in_blocks_and_keep_them_editable() {
             .await
             .unwrap();
         // [heading level, h2 inside the view, quote view, rule view as an island]
-        let (level, inner, quote, rule): (String, bool, bool, bool) = eval(
+        let (level, inner, quote, rule): (String, bool, bool, bool) = js(
             page,
             &format!(
                 "(() => {{ const e = {EDITOR}; const h = e.querySelector('header.fancy-heading'); \
@@ -601,12 +597,12 @@ fn android() {
             })
             .await;
             let events: Vec<String> =
-                eval(page, &format!("[...window.__events, {EDITOR}.innerHTML]")).await;
+                js(page, &format!("[...window.__events, {EDITOR}.innerHTML]")).await;
             assert!(
                 held.is_ok(),
                 "#out {last:?}, want {want:?}; events {events:#?}"
             );
-            eval::<bool>(page, "(window.__events = [], true)").await;
+            js::<bool>(page, "(window.__events = [], true)").await;
         }
 
         d.type_text("hello world").await.unwrap();
@@ -716,7 +712,7 @@ async fn enter_code(page: &Page) {
     wait::for_selector(page, "[role=textbox] [data-code]")
         .await
         .unwrap();
-    let rendered: bool = eval(page, &format!("!!document.querySelector('{VIEW}')")).await;
+    let rendered: bool = js(page, &format!("!!document.querySelector('{VIEW}')")).await;
     if rendered {
         pointer::click(page, VIEW).await.unwrap();
     }
@@ -765,7 +761,7 @@ fn a_trailing_code_block_is_left_by_arrow_down_mod_enter_and_a_click_below() {
         keyboard::press_with(page, ENTER, CTRL).await.unwrap();
         // The editor handles a key within it; past its caret sync it has done all it would.
         page.evaluate(SYNCED).await.unwrap();
-        let free: u32 = eval(page, "window.__free").await;
+        let free: u32 = js(page, "window.__free").await;
         assert_eq!(free, 1);
         assert_eq!(out(page).await, both);
 
@@ -775,7 +771,7 @@ fn a_trailing_code_block_is_left_by_arrow_down_mod_enter_and_a_click_below() {
         wait::for_selector(page, "[role=textbox] [data-code=view]")
             .await
             .unwrap();
-        let (x, y): (f64, f64) = eval(
+        let (x, y): (f64, f64) = js(
             page,
             &format!(
                 "(() => {{ const r = {EDITOR}.getBoundingClientRect(); return [r.left + r.width / 2, r.bottom - 3]; }})()"
@@ -825,7 +821,7 @@ fn a_typed_fence_sets_the_language_and_the_toolbar_menu_changes_it() {
             .await
             .unwrap();
 
-        let shown: bool = eval(page, &format!("!!{LANGUAGE}")).await;
+        let shown: bool = js(page, &format!("!!{LANGUAGE}")).await;
         assert!(!shown, "the language menu shows outside a code block");
         enter_code(page).await;
         page.evaluate(format!("{LANGUAGE}.click()")).await.unwrap();
@@ -862,7 +858,7 @@ fn the_fence_button_and_mod_shift_l_change_the_language_and_return_to_the_caret(
         let page = &fixture.page;
 
         enter_code(page).await;
-        let (name, tabindex): (String, String) = eval(
+        let (name, tabindex): (String, String) = js(
             page,
             &format!("[{FENCE}.getAttribute('aria-label'), {FENCE}.getAttribute('tabindex')]"),
         )
@@ -910,7 +906,7 @@ fn toolbar_buttons_show_their_name_and_chord_in_a_tooltip() {
         let fixture = Fixture::open(TRAILING, Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_selector(page, BOLD).await.unwrap();
-        let shortcut: String = eval(
+        let shortcut: String = js(
             page,
             &format!("document.querySelector('{BOLD}').getAttribute('aria-keyshortcuts')"),
         )
@@ -924,7 +920,7 @@ fn toolbar_buttons_show_their_name_and_chord_in_a_tooltip() {
         )
         .await
         .unwrap();
-        let text: String = eval(
+        let text: String = js(
             page,
             "document.querySelector('[role=tooltip]').textContent.replace(/\\s+/g, ' ').trim()",
         )
@@ -995,7 +991,7 @@ fn the_editor_overlays_keep_their_contrast_in_both_schemes() {
                 .await
                 .unwrap();
             // axe skips hover states: the label over its hover fill, measured here.
-            let ratio: f64 = eval(
+            let ratio: f64 = js(
                 page,
                 &hovered_contrast("[role=toolbar] button[aria-label^=\"Text type:\"]"),
             )
@@ -1038,7 +1034,7 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
             "the list under the line",
         )
         .await;
-        let wired: bool = eval(
+        let wired: bool = js(
             page,
             &format!(
                 "{EDITOR}.getAttribute('aria-controls') === {overlay}.id && {EDITOR}.getAttribute('aria-autocomplete') === 'list'"
@@ -1046,7 +1042,7 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
         )
         .await;
         assert!(wired);
-        assert_eq!(eval::<String>(page, &active).await, "mention-ada");
+        assert_eq!(js::<String>(page, &active).await, "mention-ada");
         // The combobox-like attributes are all allowed on a textbox.
         let axe = contrast::run_full(page, "body").await.unwrap();
         let aria: Vec<&str> = axe
@@ -1067,7 +1063,7 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
         .unwrap();
         keyboard::press(page, ENTER).await.unwrap();
         out_eq(page, "hi \u{fffc} ").await;
-        let mention: String = eval(
+        let mention: String = js(
             page,
             &format!("{EDITOR}.querySelector('.mention').textContent"),
         )
@@ -1126,7 +1122,7 @@ fn a_long_code_line_does_not_widen_the_editor() {
         )
         .await
         .unwrap();
-        assert_eq!(eval::<String>(page, fits).await, "ok");
+        assert_eq!(js::<String>(page, fits).await, "ok");
 
         // Todo 1475: so does its source while the caret is in it. The toolbar first measures
         // itself into one row: the block moves up, and a click aimed before that missed it (1626).
@@ -1228,7 +1224,7 @@ fn a_readonly_editor_is_a_tab_stop_and_a_disabled_one_says_so() {
             .await
             .unwrap();
         // [read-only tabindex, disabled tabindex, disabled aria-disabled]
-        let (readonly, disabled, state): (String, Option<String>, String) = eval(
+        let (readonly, disabled, state): (String, Option<String>, String) = js(
             page,
             &format!(
                 "[{READONLY}.getAttribute('tabindex'), {DISABLED}.getAttribute('tabindex'), {DISABLED}.getAttribute('aria-disabled')]"
@@ -1343,7 +1339,7 @@ fn ctrl_backspace_and_ctrl_delete_take_a_word_and_replacements_are_ignored() {
         .unwrap();
 
         // A substitution's target range is unknown: nothing is typed at the caret.
-        let cancelled: bool = eval(
+        let cancelled: bool = js(
             page,
             &format!(
                 "(() => {{ const e = new InputEvent('beforeinput', {{ inputType: 'insertReplacementText', data: 'X', bubbles: true, cancelable: true }}); return !{EDITOR}.dispatchEvent(e); }})()"
@@ -1353,7 +1349,7 @@ fn ctrl_backspace_and_ctrl_delete_take_a_word_and_replacements_are_ignored() {
         assert!(cancelled, "the browser would apply the replacement itself");
         keyboard::type_text(page, "z").await.unwrap();
         let typed = until(page, &out_is(&format!("^ one z{CODE}"))).await;
-        let now: String = eval(page, "document.getElementById('out').textContent").await;
+        let now: String = js(page, "document.getElementById('out').textContent").await;
         assert!(typed, "{now:?}");
     });
 }

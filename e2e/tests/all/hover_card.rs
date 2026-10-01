@@ -3,7 +3,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
-use e2e::clock::HELD_CLOCK;
+use e2e::clock;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
@@ -205,43 +205,6 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expression: &str) -> T {
-    page.evaluate(expression)
-        .await
-        .unwrap_or_else(|e| panic!("evaluate {expression}: {e}"))
-        .into_value()
-        .unwrap_or_else(|e| panic!("read {expression}: {e}"))
-}
-
-async fn armed(page: &chromiumoxide::Page, ms: u32, count: usize, what: &str) {
-    wait::for_js_true(
-        page,
-        &format!("window.__heldClock.armed({ms}) === {count}"),
-        what,
-    )
-    .await
-    .unwrap();
-}
-
-async fn fire(page: &chromiumoxide::Page, ms: u32) {
-    let fired: usize = js(page, &format!("window.__heldClock.fire({ms})")).await;
-    assert_eq!(fired, 1, "fired {fired} timers of {ms}ms");
-}
-
-/// Waits for focus to land, then names where it is if it did not.
-async fn assert_focused(page: &chromiumoxide::Page, selector: &str, during: &str) {
-    let _ = wait::for_js_true(
-        page,
-        &format!(
-            "document.activeElement === document.querySelector({})",
-            serde_json::to_string(selector).unwrap()
-        ),
-        during,
-    )
-    .await;
-    focus::assert_focused(page, selector, during).await.unwrap();
-}
-
 /// Hover waits `open_delay` and leaving waits `close_delay`, each on a timer
 /// the test holds, and crossing into the card cancels the pending close.
 #[test]
@@ -251,37 +214,39 @@ fn the_pointer_opens_and_closes_it_on_its_delays() {
             .await
             .unwrap();
         let page = &fixture.page;
-        let _: bool = js(
-            page,
-            &format!("(({HELD_CLOCK})([{OPEN_MS}, {CLOSE_MS}]), true)"),
-        )
-        .await;
+        clock::hold(page, &[OPEN_MS, CLOSE_MS]).await.unwrap();
         pointer::move_to(page, AWAY).await.unwrap();
 
         pointer::hover(page, TRIGGER).await.unwrap();
-        armed(page, OPEN_MS, 1, "hovering to arm the open delay").await;
+        clock::until_armed(page, OPEN_MS, 1, "hovering to arm the open delay")
+            .await
+            .unwrap();
         // The open waits on the held timer, not on the hover's own render (1634).
         e2e::clock::settle(page).await.unwrap();
         assert!(
             !wait::is_visible(page, CARD).await.unwrap(),
             "the card opened before its held open delay fired"
         );
-        fire(page, OPEN_MS).await;
+        clock::fire(page, OPEN_MS).await.unwrap();
         wait::for_visible(page, CARD).await.unwrap();
 
         // Into the card: the trigger's leave arms the close, the card's enter
         // drops it.
         pointer::hover(page, CARD).await.unwrap();
-        armed(page, CLOSE_MS, 0, "entering the card to cancel the close").await;
+        clock::until_armed(page, CLOSE_MS, 0, "entering the card to cancel the close")
+            .await
+            .unwrap();
         assert!(wait::is_visible(page, CARD).await.unwrap());
 
         pointer::move_to(page, AWAY).await.unwrap();
-        armed(page, CLOSE_MS, 1, "leaving the card to arm the close delay").await;
+        clock::until_armed(page, CLOSE_MS, 1, "leaving the card to arm the close delay")
+            .await
+            .unwrap();
         assert!(
             wait::is_visible(page, CARD).await.unwrap(),
             "the card closed before its close delay fired"
         );
-        fire(page, CLOSE_MS).await;
+        clock::fire(page, CLOSE_MS).await.unwrap();
         wait::for_hidden(page, CARD).await.unwrap();
 
         fixture
@@ -308,31 +273,44 @@ fn tab_crosses_into_the_portaled_card_and_back() {
                 .unwrap_or_else(|e| panic!("at {at}, focus to open the card: {e}"));
 
             keyboard::press(page, keyboard::TAB).await.unwrap();
-            assert_focused(page, CARD_FIRST, "Tab from the trigger into the card").await;
+            focus::wait_for_focus(page, CARD_FIRST, "Tab from the trigger into the card")
+                .await
+                .unwrap();
             keyboard::press(page, keyboard::TAB).await.unwrap();
-            assert_focused(page, CARD_LAST, "Tab within the card").await;
+            focus::wait_for_focus(page, CARD_LAST, "Tab within the card")
+                .await
+                .unwrap();
             keyboard::press(page, keyboard::TAB).await.unwrap();
-            assert_focused(
+            focus::wait_for_focus(
                 page,
                 AFTER,
                 "Tab out of the card to what follows the trigger",
             )
-            .await;
+            .await
+            .unwrap();
             wait::for_hidden(page, CARD).await.unwrap();
 
             // Backwards: the browser's own Shift+Tab reaches the trigger,
             // which opens the card again; Tab in, then Shift+Tab back out.
             keyboard::press_shift(page, keyboard::TAB).await.unwrap();
-            assert_focused(page, TRIGGER, "Shift+Tab back to the trigger").await;
+            focus::wait_for_focus(page, TRIGGER, "Shift+Tab back to the trigger")
+                .await
+                .unwrap();
             wait::for_visible(page, CARD).await.unwrap();
             keyboard::press(page, keyboard::TAB).await.unwrap();
-            assert_focused(page, CARD_FIRST, "Tab into the card again").await;
+            focus::wait_for_focus(page, CARD_FIRST, "Tab into the card again")
+                .await
+                .unwrap();
             keyboard::press_shift(page, keyboard::TAB).await.unwrap();
-            assert_focused(page, TRIGGER, "Shift+Tab from the card's first control").await;
+            focus::wait_for_focus(page, TRIGGER, "Shift+Tab from the card's first control")
+                .await
+                .unwrap();
             assert!(wait::is_visible(page, CARD).await.unwrap(), "at {at}");
 
             keyboard::press_shift(page, keyboard::TAB).await.unwrap();
-            assert_focused(page, BEFORE, "Shift+Tab past the trigger").await;
+            focus::wait_for_focus(page, BEFORE, "Shift+Tab past the trigger")
+                .await
+                .unwrap();
             wait::for_hidden(page, CARD).await.unwrap();
 
             fixture
@@ -356,11 +334,15 @@ fn escape_closes_it_and_returns_focus_to_the_trigger() {
         keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
         wait::for_visible(page, CARD).await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
-        assert_focused(page, CARD_FIRST, "Tab into the card").await;
+        focus::wait_for_focus(page, CARD_FIRST, "Tab into the card")
+            .await
+            .unwrap();
 
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_hidden(page, CARD).await.unwrap();
-        assert_focused(page, TRIGGER, "Escape inside the hover card").await;
+        focus::wait_for_focus(page, TRIGGER, "Escape inside the hover card")
+            .await
+            .unwrap();
         // A reopen would come from the trigger's `focusin` a render later.
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
         assert!(
@@ -371,13 +353,19 @@ fn escape_closes_it_and_returns_focus_to_the_trigger() {
         // Focus leaves and comes back: the card opens again on the trigger,
         // and Escape there closes it with focus left in place.
         keyboard::press(page, keyboard::TAB).await.unwrap();
-        assert_focused(page, AFTER, "Tab past the closed card").await;
+        focus::wait_for_focus(page, AFTER, "Tab past the closed card")
+            .await
+            .unwrap();
         keyboard::press_shift(page, keyboard::TAB).await.unwrap();
-        assert_focused(page, TRIGGER, "Shift+Tab back to the trigger").await;
+        focus::wait_for_focus(page, TRIGGER, "Shift+Tab back to the trigger")
+            .await
+            .unwrap();
         wait::for_visible(page, CARD).await.unwrap();
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_hidden(page, CARD).await.unwrap();
-        assert_focused(page, TRIGGER, "Escape on the trigger").await;
+        focus::wait_for_focus(page, TRIGGER, "Escape on the trigger")
+            .await
+            .unwrap();
 
         fixture
             .console
@@ -427,9 +415,13 @@ fn a_second_click_does_not_swallow_the_next_keyboard_focus() {
         wait::for_hidden(page, CARD).await.unwrap();
 
         keyboard::press(page, keyboard::TAB).await.unwrap();
-        assert_focused(page, AFTER, "Tab past the closed card").await;
+        focus::wait_for_focus(page, AFTER, "Tab past the closed card")
+            .await
+            .unwrap();
         keyboard::press_shift(page, keyboard::TAB).await.unwrap();
-        assert_focused(page, TRIGGER, "Shift+Tab back to the trigger").await;
+        focus::wait_for_focus(page, TRIGGER, "Shift+Tab back to the trigger")
+            .await
+            .unwrap();
         wait::for_visible(page, CARD)
             .await
             .unwrap_or_else(|e| panic!("keyboard focus did not open the card: {e}"));

@@ -7,7 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard::Key};
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
+use e2e::{Fixture, Suite, Viewport, js, passes::keyboard, wait};
 
 pub const TRIGGER: &str = "#open-spotlight";
 const DIALOG: &str = "[role=dialog]";
@@ -94,28 +94,6 @@ fn it_honours_the_overlay_contract() {
     });
 }
 
-async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expression: &str) -> T {
-    page.evaluate(expression)
-        .await
-        .unwrap_or_else(|e| panic!("evaluate {expression}: {e}"))
-        .into_value()
-        .unwrap_or_else(|e| panic!("read {expression}: {e}"))
-}
-
-/// Waits for focus to land, then names where it is if it did not.
-async fn assert_focused(page: &chromiumoxide::Page, selector: &str, during: &str) {
-    let _ = wait::for_js_true(
-        page,
-        &format!(
-            "document.activeElement === document.querySelector({})",
-            serde_json::to_string(selector).unwrap()
-        ),
-        during,
-    )
-    .await;
-    focus::assert_focused(page, selector, during).await.unwrap();
-}
-
 /// `None` read as `""`: a JS `null` does not deserialise into an `Option`.
 async fn highlight(page: &chromiumoxide::Page) -> String {
     js(
@@ -146,7 +124,9 @@ async fn open_by_keyboard(page: &chromiumoxide::Page) {
     keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
     keyboard::press(page, keyboard::ENTER).await.unwrap();
     wait::for_visible(page, DIALOG).await.unwrap();
-    assert_focused(page, SEARCH, "opening the palette").await;
+    focus::wait_for_focus(page, SEARCH, "opening the palette")
+        .await
+        .unwrap();
 }
 
 async fn ran(page: &chromiumoxide::Page, label: &str, what: &str) {
@@ -192,7 +172,9 @@ fn the_arrows_move_the_highlight_and_enter_runs_it() {
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         ran(page, "Changelog", "Enter to run the highlighted row").await;
         wait::for_hidden(page, DIALOG).await.unwrap();
-        assert_focused(page, TRIGGER, "running an action").await;
+        focus::wait_for_focus(page, TRIGGER, "running an action")
+            .await
+            .unwrap();
 
         // A typed query highlights its first hit, so Enter runs it at once.
         open_by_keyboard(page).await;
@@ -316,7 +298,9 @@ fn ctrl_or_cmd_k_toggles_the_palette() {
             wait::for_visible(page, DIALOG)
                 .await
                 .unwrap_or_else(|e| panic!("{name}+K to open the palette: {e}"));
-            assert_focused(page, SEARCH, &format!("{name}+K opening the palette")).await;
+            focus::wait_for_focus(page, SEARCH, &format!("{name}+K opening the palette"))
+                .await
+                .unwrap();
 
             keyboard::press_with(page, K, modifier).await.unwrap();
             wait::for_hidden(page, DIALOG)
