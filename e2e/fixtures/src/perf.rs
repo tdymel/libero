@@ -2,9 +2,14 @@
 //! `window.__lsxRenders()` / `window.__lsxRendersReset()`. Other pages keep the default logger.
 
 use dioxus::prelude::*;
+use libero::chrono::NaiveDate;
 use libero::components::{
-    Badge, Flex, MultiSelect, Options, Pagination, ScrollArea, Select, TextField, Virtualize,
+    Autocomplete, Badge, Button, Carousel, ChronoPicker, Dialog, Flex, FloatingWindowOptions, Menu,
+    MenuEntry, MenuItem, MultiSelect, Options, Pagination, ScrollArea, Select, Slider,
+    SliderChangeEvent, Splitter, SpotlightAction, SpotlightOptions, Table, Text, TextField, Tree,
+    TreeNode, Virtualize, column, spotlight_filter, use_menu, use_spotlight,
 };
+use libero::hooks::{ModalScope, use_floating_window, use_modal};
 
 use crate::Routes;
 
@@ -15,6 +20,36 @@ pub const ROUTES: Routes = &[
     ("/perf/multi-select", || rsx! { MultiSelectPage {} }),
     ("/perf/pagination", || rsx! { PaginationPage {} }),
     ("/perf/scroll", || rsx! { ScrollPage {} }),
+    ("/perf/autocomplete", || rsx! { TimedAutocompletePage {} }),
+    // Interaction timing (perf::timing): no render counter, so the timings are an app's.
+    (
+        "/timing/table",
+        || rsx! { TimedTablePage { rows: 10_000, windowed: true } },
+    ),
+    (
+        "/timing/table-plain",
+        || rsx! { TimedTablePage { rows: 300, windowed: false } },
+    ),
+    ("/timing/virtualize", || rsx! { TimedVirtualizePage {} }),
+    ("/timing/scroll-area", || rsx! { TimedScrollAreaPage {} }),
+    (
+        "/timing/native-scroll",
+        || rsx! { TimedNativeScrollPage {} },
+    ),
+    ("/timing/carousel", || rsx! { TimedCarouselPage {} }),
+    ("/timing/tree", || rsx! { TimedTreePage {} }),
+    ("/timing/modal", || rsx! { TimedModalPage {} }),
+    ("/timing/menu", || rsx! { TimedMenuPage {} }),
+    ("/timing/spotlight", || rsx! { TimedSpotlightPage {} }),
+    ("/timing/calendar", || rsx! { TimedCalendarPage {} }),
+    ("/timing/text-field", || rsx! { TimedTextFieldPage {} }),
+    ("/timing/autocomplete", || rsx! { TimedAutocompletePage {} }),
+    ("/timing/slider", || rsx! { TimedSliderPage {} }),
+    ("/timing/splitter", || rsx! { TimedSplitterPage {} }),
+    (
+        "/timing/floating-window",
+        || rsx! { TimedFloatingWindowPage {} },
+    ),
 ];
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -219,5 +254,290 @@ fn ScrollPage() -> Element {
                 Virtualize { count: 1000, item_size: Some(20.0), item }
             }
         }
+    }
+}
+
+#[derive(Clone, PartialEq)]
+struct Stock {
+    name: &'static str,
+    count: u32,
+}
+
+/// A selectable, sortable table under a 300px cap; `windowed` draws only the rows in view.
+#[component]
+fn TimedTablePage(rows: u32, windowed: bool) -> Element {
+    let mut selection = use_signal(Vec::<String>::new);
+    let data: Vec<Stock> = (1..=rows)
+        .map(|count| Stock {
+            name: ["Apple", "Banana", "Cherry", "Date"][count as usize % 4],
+            count,
+        })
+        .collect();
+    rsx! {
+        div { id: "pane", style: "width: 480px",
+            Table {
+                caption: "Stock",
+                max_height: "300px",
+                virtual_row_height: windowed.then_some(40.0),
+                selectable: true,
+                selection: selection(),
+                onselectionchange: move |next| selection.set(next),
+                data,
+                columns: vec![
+                    column("Name").value(|stock: &Stock| stock.name.to_string()).sortable(),
+                    column("Count").value(|stock: &Stock| stock.count).sortable().row_header(),
+                ],
+                row_key: |stock: &Stock| stock.count.to_string(),
+            }
+        }
+    }
+}
+
+#[component]
+fn TimedVirtualizePage() -> Element {
+    let item = use_callback(|i: usize| {
+        rsx! {
+            div { "data-row": i, style: "height: 24px", "Row {i}" }
+        }
+    });
+    rsx! {
+        div { id: "pane", style: "height: 400px; width: 320px",
+            ScrollArea { "aria-label": "Rows",
+                Virtualize { count: 10_000, item_size: Some(24.0), item }
+            }
+        }
+    }
+}
+
+/// Plain content, nothing windowed.
+#[component]
+fn TimedScrollAreaPage() -> Element {
+    rsx! {
+        div { id: "pane", style: "height: 400px; width: 320px",
+            ScrollArea { "aria-label": "Lines",
+                for i in 0..300 {
+                    p { key: "{i}", style: "margin: 0; height: 24px", "Line {i}" }
+                }
+            }
+        }
+    }
+}
+
+/// The same lines in a plain scrolling `div`: the floor under the scroll rows.
+#[component]
+fn TimedNativeScrollPage() -> Element {
+    rsx! {
+        div { id: "pane", style: "height: 400px; width: 320px",
+            div { style: "height: 100%; overflow: auto",
+                for i in 0..300 {
+                    p { key: "{i}", style: "margin: 0; height: 24px", "Line {i}" }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn TimedCarouselPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Carousel {
+                aria_label: "Slides",
+                indicators: true,
+                slides: (1..=5)
+                    .map(|n| rsx! {
+                        Text { "Slide {n}" }
+                    })
+                    .collect(),
+            }
+        }
+    }
+}
+
+/// Four branches of 30 leaves, the default row render (chevron, icon).
+#[component]
+fn TimedTreePage() -> Element {
+    let data = (0..4)
+        .map(|b| {
+            TreeNode::new(format!("b{b}"), format!("Folder {b}")).children(
+                (0..30)
+                    .map(|l| TreeNode::new(format!("b{b}/{l}"), format!("File {l}.rs")))
+                    .collect(),
+            )
+        })
+        .collect::<Vec<_>>();
+    rsx! {
+        Flex { direction: "column", max_width: "320px",
+            Tree { aria_label: "Files", data }
+        }
+    }
+}
+
+#[component]
+fn TimedModalPage() -> Element {
+    let prompt = use_modal(|s: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Unsaved changes", size: "sm",
+                Text { "notes.md has changes you have not saved." }
+                Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
+                Button { variant: "filled", onclick: move |_| s.close(), "Discard" }
+            }
+        }
+    });
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button {
+                id: "open",
+                onclick: move |_| {
+                    prompt.open();
+                },
+                "Close editor"
+            }
+            for i in 0..20 {
+                Text { key: "{i}", "Paragraph {i} of the page behind the dialog." }
+            }
+        }
+    }
+}
+
+#[component]
+fn TimedMenuPage() -> Element {
+    let menu = use_menu();
+    let items: Vec<MenuEntry> = [
+        "New",
+        "Open",
+        "Save",
+        "Save as",
+        "Rename",
+        "Duplicate",
+        "Share",
+        "Delete",
+    ]
+    .into_iter()
+    .map(|label| MenuItem::new(label).onselect(|_| {}).into())
+    .collect();
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Menu {
+                state: menu,
+                items,
+                Button { id: "open", variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
+        }
+    }
+}
+
+/// Sixty actions in ten groups.
+#[component]
+fn TimedSpotlightPage() -> Element {
+    let all = use_hook(|| {
+        (0..60)
+            .map(|i| {
+                SpotlightAction::new(format!("Action {i}"))
+                    .group(format!("Group {}", i / 6))
+                    .description("What the action does")
+            })
+            .collect::<Vec<_>>()
+    });
+    let spotlight = use_spotlight(SpotlightOptions {
+        actions: Some(Callback::new(move |query: String| {
+            spotlight_filter(&query, &all)
+        })),
+        aria_label: Some("Command palette".into()),
+        limit: Some(60),
+        ..Default::default()
+    });
+    rsx! {
+        Button { id: "open", onclick: move |_| spotlight.open(), "Open the palette" }
+    }
+}
+
+#[component]
+fn TimedCalendarPage() -> Element {
+    let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 3, 18));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            ChronoPicker {
+                value: day(),
+                today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                onchange: move |next: Option<NaiveDate>| day.set(next),
+            }
+        }
+    }
+}
+
+#[component]
+fn TimedTextFieldPage() -> Element {
+    let mut value = use_signal(String::new);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TextField { label: "Note", value: value(), oninput: move |next| value.set(next) }
+        }
+    }
+}
+
+/// A hundred options, filtered as the field is typed in.
+#[component]
+fn TimedAutocompletePage() -> Element {
+    let mut value = use_signal(String::new);
+    let options = use_hook(|| (0..100).map(|i| format!("City {i}")).collect::<Vec<_>>());
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Autocomplete {
+                label: "City",
+                options: options.clone(),
+                value: value(),
+                oninput: move |next| value.set(next),
+            }
+        }
+    }
+}
+
+#[component]
+fn TimedSliderPage() -> Element {
+    let mut value = use_signal(|| 50.0f64);
+    rsx! {
+        div { style: "width: 400px; padding: 40px 16px",
+            Slider {
+                aria_label: "Volume",
+                value: Some(value()),
+                oninput: move |e: SliderChangeEvent<f64>| value.set(e.value()),
+            }
+        }
+    }
+}
+
+#[component]
+fn TimedSplitterPage() -> Element {
+    rsx! {
+        div { style: "height: 240px; width: 480px",
+            Splitter {
+                initial_size: 50.0,
+                aria_label: "Resize panes",
+                panel_a: rsx! { Text { "Pane A" } },
+                panel_b: rsx! { Text { "Pane B" } },
+            }
+        }
+    }
+}
+
+#[component]
+fn TimedFloatingWindowPage() -> Element {
+    let window = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Inspector".into()),
+            resizable: true,
+            ..Default::default()
+        },
+        |_| {
+            rsx! {
+                div { style: "width: 320px",
+                    Text { "Drag the title bar, or focus it and use the arrow keys." }
+                }
+            }
+        },
+    );
+    rsx! {
+        Button { id: "open", variant: "outlined", onclick: move |_| window.open(), "Inspector" }
     }
 }

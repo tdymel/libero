@@ -174,35 +174,32 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let oninput = bound.emit(props.oninput);
     let onpick = props.onpick;
 
-    // Drawn eagerly and handed down as values: a `Callback` would let the rows
-    // memoize and a narrowed list would leave stale ones on screen.
+    let pick_input = oninput.clone();
+    let pick = use_callback(move |value: T| {
+        if let Some(oninput) = &pick_input {
+            oninput(value.label());
+        }
+        if let Some(onpick) = &onpick {
+            onpick.call(value);
+        }
+        state.close();
+    });
+    // A caller's `option` content is drawn eagerly and handed down as a value, so a narrowed
+    // list never leaves a stale row on screen.
     let option = props.option;
     let rows: Vec<Element> = matches
         .iter()
         .cloned()
         .enumerate()
         .map(|(index, value)| {
-            let oninput = oninput.clone();
-            let content = match &option {
-                Some(option) => option.call(AutocompleteOptionArgs {
+            let content = option.as_ref().map(|option| {
+                option.call(AutocompleteOptionArgs {
                     value: value.clone(),
                     index,
-                }),
-                None => row_label(value.label()),
-            };
+                })
+            });
             rsx! {
-                ComboboxOption {
-                    onpick: move |_| {
-                        if let Some(oninput) = &oninput {
-                            oninput(value.label());
-                        }
-                        if let Some(onpick) = &onpick {
-                            onpick.call(value.clone());
-                        }
-                        state.close();
-                    },
-                    {content}
-                }
+                AutocompleteRow::<T> { value, pick, content }
             }
         })
         .collect();
@@ -308,4 +305,14 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     };
 
     field.render(listbox)
+}
+
+/// A default row skips a keystroke that keeps its value: every row redrew per key. A caller's
+/// `content` never compares equal, so such a row still redraws.
+#[component]
+fn AutocompleteRow<T: Options>(value: T, pick: Callback<T>, content: Option<Element>) -> Element {
+    let label = content.unwrap_or_else(|| row_label(value.label()));
+    rsx! {
+        ComboboxOption { onpick: move |_| pick.call(value.clone()), {label} }
+    }
 }

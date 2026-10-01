@@ -333,3 +333,694 @@ fn scrolling_a_virtual_list_stays_in_budget() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Typing into an Autocomplete of a hundred options: the first key opens the list, the
+/// next one and a Backspace keep every row, which must not redraw.
+#[test]
+fn typing_into_an_autocomplete_stays_in_budget() {
+    block_on(async {
+        let fixture = open("/perf/autocomplete").await;
+        let page = &fixture.page;
+        pointer::click(page, "input").await.unwrap();
+        settled(page, "focusing the field").await;
+        // The scopes a keystroke redraws; `ComboboxRow` passes its row through.
+        let keystroke = [
+            ("TimedAutocompletePage", 1),
+            ("Flex", 1),
+            ("Autocomplete", 1),
+            ("ComboboxCore", 1),
+            ("ComboboxPopup", 1),
+            ("ComboboxDropdown", 1),
+            ("ComboboxRow", 100),
+            ("ScrollArea", 1),
+            ("ScrollAreaContent", 1),
+            ("ScrollAreaBars", 1),
+            ("Fragment", 1),
+            ("PortalOutlet", 1),
+        ];
+        // Opening: two passes of the list, each row drawn once (it was twice, 2026-10-05).
+        let opening = [
+            ("TimedAutocompletePage", 1),
+            ("Flex", 1),
+            ("Autocomplete", 2),
+            ("ComboboxCore", 2),
+            ("ComboboxPopup", 4),
+            ("ComboboxDropdown", 2),
+            ("ComboboxRow", 200),
+            ("AutocompleteRow", 100),
+            ("ComboboxOption", 100),
+            ("ScrollArea", 2),
+            ("ScrollAreaContent", 2),
+            ("ScrollAreaBars", 3),
+            ("Fragment", 4),
+            ("PortalOutlet", 4),
+            ("StyleOutlet", 1),
+        ];
+        for (key, typed) in [("c", "c"), ("i", "ci"), ("", "c")] {
+            reset(page).await;
+            match key {
+                "" => keyboard::press(page, keyboard::BACKSPACE).await.unwrap(),
+                key => keyboard::type_text(page, key).await.unwrap(),
+            }
+            wait::for_js_true(
+                page,
+                &format!("document.querySelector('input').value === '{typed}'"),
+                "the keystroke",
+            )
+            .await
+            .unwrap();
+            let renders = settled(page, "typing").await;
+            let budget: &[(&str, u32)] = if key == "c" { &opening } else { &keystroke };
+            assert_within(&renders, budget, &format!("typing to {typed:?}"));
+        }
+        fixture.console.assert_clean("typing").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Main-thread time per interaction in a real browser, each repeated: one report row per
+/// interaction, its median task time held to a budget of about 5x the release medians of
+/// 2026-10-05, so only a real regression trips it. Opt-in, a shared CPU makes milliseconds
+/// noise in the gate; run it on the release build:
+/// `E2E_RELEASE=1 cargo run -p e2e -- perf::timing:: --ignored --nocapture`.
+mod timing {
+    use std::collections::BTreeMap;
+    use std::path::PathBuf;
+    use std::time::{Duration, Instant};
+
+    use anyhow::{Result, bail};
+    use chromiumoxide::Page;
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchMouseEventParams, DispatchMouseEventType,
+    };
+    use chromiumoxide::cdp::browser_protocol::performance::{EnableParams, GetMetricsParams};
+    use e2e::browser::block_on;
+    use e2e::passes::keyboard::{self, BACKSPACE, ESCAPE};
+    use e2e::passes::pointer::{self, Point};
+    use e2e::{Fixture, Viewport, frames, wait};
+    use serde::{Deserialize, Serialize};
+
+    /// Unmeasured passes first: the first run of a path pays for its wasm and style warm-up.
+    pub(super) const WARM_UP: usize = 2;
+
+    pub(super) const RECORDER: &str = r#"(() => {
+        const t = { frames: [], loaf: [], events: [], last: null };
+        const tick = (now) => {
+            if (t.last !== null) t.frames.push(now - t.last);
+            t.last = now;
+            requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        try {
+            new PerformanceObserver((l) => t.loaf.push(...l.getEntries().map((e) => e.duration)))
+                .observe({ type: 'long-animation-frame' });
+        } catch (_) {}
+        try {
+            new PerformanceObserver((l) => t.events.push(...l.getEntries().map((e) => e.duration)))
+                .observe({ type: 'event', durationThreshold: 16 });
+        } catch (_) {}
+        t.reset = () => { t.frames = []; t.loaf = []; t.events = []; };
+        t.read = () => JSON.stringify({
+            frame: Math.max(0, ...t.frames),
+            loaf: t.loaf.length,
+            event: Math.max(0, ...t.events),
+        });
+        window.__timing = t;
+    })()"#;
+
+    /// One interaction, milliseconds.
+    #[derive(Debug, Clone, Copy, Default, Serialize)]
+    struct Rep {
+        /// Every main-thread task: script, style, layout, paint.
+        task: f64,
+        script: f64,
+        /// Style recalculation and layout.
+        layout: f64,
+        /// The longest frame while it ran: over 16.7 is a dropped frame.
+        frame: f64,
+        /// Long animation frames (50 ms and over).
+        long: usize,
+        /// The slowest event's input-to-paint time; 0 under the API's 16 ms floor.
+        event: f64,
+    }
+
+    #[derive(Deserialize)]
+    struct Seen {
+        frame: f64,
+        loaf: usize,
+        event: f64,
+    }
+
+    /// `name -> seconds` for the counters a rep reads.
+    async fn metrics(page: &Page) -> Result<BTreeMap<String, f64>> {
+        let reply = page.execute(GetMetricsParams::default()).await?;
+        Ok(reply
+            .result
+            .metrics
+            .iter()
+            .map(|metric| (metric.name.clone(), metric.value))
+            .collect())
+    }
+
+    fn delta_ms(after: &BTreeMap<String, f64>, before: &BTreeMap<String, f64>, key: &str) -> f64 {
+        (after.get(key).copied().unwrap_or(0.0) - before.get(key).copied().unwrap_or(0.0)) * 1e3
+    }
+
+    /// Until 60 ms pass with under 2 ms of main-thread work: effects, placement passes and
+    /// exit animations belong to the interaction that started them.
+    pub(super) async fn quiet(page: &Page) -> Result<()> {
+        let started = Instant::now();
+        let mut last = metrics(page).await?;
+        loop {
+            tokio::time::sleep(Duration::from_millis(60)).await;
+            let now = metrics(page).await?;
+            if delta_ms(&now, &last, "TaskDuration") < 2.0 {
+                return Ok(());
+            }
+            if started.elapsed() > Duration::from_secs(5) {
+                bail!("the page never went quiet");
+            }
+            last = now;
+        }
+    }
+
+    pub(super) struct Rows(BTreeMap<&'static str, Vec<Rep>>);
+
+    /// Runs `act` `WARM_UP + reps` times; each run names the row it belongs to.
+    pub(super) async fn measure(
+        page: &Page,
+        reps: usize,
+        mut act: impl AsyncFnMut(usize) -> Result<&'static str>,
+    ) -> Result<Rows> {
+        let mut rows = Rows(BTreeMap::new());
+        for i in 0..WARM_UP + reps {
+            quiet(page).await?;
+            page.evaluate("window.__timing.reset()").await?;
+            let before = metrics(page).await?;
+            let row = act(i).await?;
+            quiet(page).await?;
+            let after = metrics(page).await?;
+            let seen: Seen = serde_json::from_str(
+                &page
+                    .evaluate("window.__timing.read()")
+                    .await?
+                    .into_value::<String>()?,
+            )?;
+            if i < WARM_UP {
+                continue;
+            }
+            rows.0.entry(row).or_default().push(Rep {
+                task: delta_ms(&after, &before, "TaskDuration"),
+                script: delta_ms(&after, &before, "ScriptDuration"),
+                layout: delta_ms(&after, &before, "LayoutDuration")
+                    + delta_ms(&after, &before, "RecalcStyleDuration"),
+                frame: seen.frame,
+                long: seen.loaf,
+                event: seen.event,
+            });
+        }
+        Ok(rows)
+    }
+
+    #[derive(Debug, Clone, Copy, Serialize)]
+    struct Summary {
+        reps: usize,
+        median: Rep,
+        worst: Rep,
+    }
+
+    fn median(mut values: Vec<f64>) -> f64 {
+        values.sort_by(f64::total_cmp);
+        values[values.len() / 2]
+    }
+
+    fn summarise(reps: &[Rep]) -> Summary {
+        let pick = |f: fn(&Rep) -> f64| reps.iter().map(f).collect::<Vec<_>>();
+        let worst = |f: fn(&Rep) -> f64| pick(f).into_iter().fold(0.0, f64::max);
+        Summary {
+            reps: reps.len(),
+            median: Rep {
+                task: median(pick(|r| r.task)),
+                script: median(pick(|r| r.script)),
+                layout: median(pick(|r| r.layout)),
+                frame: median(pick(|r| r.frame)),
+                long: reps.iter().map(|r| r.long).sum(),
+                event: median(pick(|r| r.event)),
+            },
+            worst: Rep {
+                task: worst(|r| r.task),
+                script: worst(|r| r.script),
+                layout: worst(|r| r.layout),
+                frame: worst(|r| r.frame),
+                long: reps.iter().map(|r| r.long).max().unwrap_or(0),
+                event: worst(|r| r.event),
+            },
+        }
+    }
+
+    /// Prints the rows, merges them into `interaction-time.json` in the target dir, then
+    /// holds each row's median task time to its budget.
+    pub(super) fn report(component: &str, rows: &Rows, budgets: &[(&str, f64)]) {
+        let mut all: BTreeMap<String, Summary> = std::fs::read_to_string(json_path())
+            .ok()
+            .and_then(|text| {
+                serde_json::from_str::<BTreeMap<String, serde_json::Value>>(&text).ok()
+            })
+            .map(|old| {
+                old.into_iter()
+                    .filter_map(|(k, v)| Some((k, summary_from(&v)?)))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let mut over = Vec::new();
+        for (row, reps) in &rows.0 {
+            let name = format!("{component} {row}");
+            let s = summarise(reps);
+            println!(
+                "timing | {name:<28} | n {:>2} | task {:>6.1} / {:>6.1} | script {:>6.1} / {:>6.1} | \
+                 layout {:>5.1} / {:>5.1} | frame {:>5.1} / {:>5.1} | long {:>2} | event {:>5.1} / {:>5.1}",
+                s.reps,
+                s.median.task,
+                s.worst.task,
+                s.median.script,
+                s.worst.script,
+                s.median.layout,
+                s.worst.layout,
+                s.median.frame,
+                s.worst.frame,
+                s.median.long,
+                s.median.event,
+                s.worst.event,
+            );
+            let budget = budgets
+                .iter()
+                .find(|(listed, _)| listed == row)
+                .map(|(_, budget)| *budget)
+                .unwrap_or_else(|| panic!("{name}: no budget"));
+            if s.median.task > budget {
+                over.push(format!(
+                    "{name}: median task {:.1} ms (budget {budget} ms)",
+                    s.median.task
+                ));
+            }
+            all.insert(name, s);
+        }
+        let _ = std::fs::write(json_path(), serde_json::to_string_pretty(&all).unwrap());
+        assert!(over.is_empty(), "over budget: {over:?}");
+    }
+
+    fn summary_from(value: &serde_json::Value) -> Option<Summary> {
+        let rep = |v: &serde_json::Value| -> Option<Rep> {
+            Some(Rep {
+                task: v["task"].as_f64()?,
+                script: v["script"].as_f64()?,
+                layout: v["layout"].as_f64()?,
+                frame: v["frame"].as_f64()?,
+                long: v["long"].as_u64()? as usize,
+                event: v["event"].as_f64()?,
+            })
+        };
+        Some(Summary {
+            reps: value["reps"].as_u64()? as usize,
+            median: rep(&value["median"])?,
+            worst: rep(&value["worst"])?,
+        })
+    }
+
+    fn json_path() -> PathBuf {
+        let exe = std::env::current_exe().unwrap();
+        // <target>/<profile>/deps/<binary>
+        exe.ancestors()
+            .nth(3)
+            .unwrap()
+            .join("interaction-time.json")
+    }
+
+    /// The page in front, the recorder and the CDP counters on; `run` gets the page.
+    pub(super) async fn timed(route: &str, run: impl AsyncFnOnce(&Page) -> Result<()>) {
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let front = frames::bring_to_front(page).await.unwrap();
+        let outcome = async {
+            page.execute(EnableParams::default()).await?;
+            page.evaluate(RECORDER).await?;
+            run(page).await
+        }
+        .await;
+        front.release().await.unwrap();
+        outcome.unwrap();
+        fixture.console.assert_clean(route).unwrap();
+        fixture.close().await.unwrap();
+    }
+
+    pub(super) async fn js<T: serde::de::DeserializeOwned>(
+        page: &Page,
+        expression: &str,
+    ) -> Result<T> {
+        Ok(page.evaluate(expression).await?.into_value()?)
+    }
+
+    /// The first element under `#pane` that scrolls.
+    pub(super) const SCROLLER: &str = "[...document.querySelectorAll('#pane *')].find((el) => el.scrollHeight > el.clientHeight + 1)";
+
+    /// One wheel notch of 120 px per rep, half the reps down, then back up.
+    pub(super) async fn wheel_reps(page: &Page, reps: usize) -> Result<Rows> {
+        let at: Point = js(
+            page,
+            &format!("(() => {{ const r = {SCROLLER}.getBoundingClientRect(); return {{ x: r.x + r.width / 2, y: r.y + r.height / 2 }}; }})()"),
+        )
+        .await?;
+        let total = WARM_UP + reps;
+        measure(page, reps, async |i| {
+            let down = i < total / 2;
+            let before: f64 = js(page, &format!("{SCROLLER}.scrollTop")).await?;
+            page.execute(
+                DispatchMouseEventParams::builder()
+                    .r#type(DispatchMouseEventType::MouseWheel)
+                    .x(at.x)
+                    .y(at.y)
+                    .delta_x(0.0)
+                    .delta_y(if down { 120.0 } else { -120.0 })
+                    .build()
+                    .map_err(anyhow::Error::msg)?,
+            )
+            .await?;
+            wait::for_js_true(
+                page,
+                &format!("{SCROLLER}.scrollTop !== {before}"),
+                "the wheel to scroll",
+            )
+            .await?;
+            Ok("wheel")
+        })
+        .await
+    }
+
+    /// A press, `moves` pointer moves `by` along x (or y), a release, on `selector`'s
+    /// centre; every other rep goes back.
+    pub(super) async fn drag_reps(
+        page: &Page,
+        selector: &str,
+        by: (f64, f64),
+        moves: usize,
+        changed: &str,
+        reps: usize,
+    ) -> Result<Rows> {
+        measure(page, reps, async |i| {
+            let sign = if i % 2 == 0 { 1.0 } else { -1.0 };
+            let from = pointer::centre_of(page, selector).await?;
+            let to = Point {
+                x: from.x + by.0 * sign,
+                y: from.y + by.1 * sign,
+            };
+            let before: String = js(page, changed).await?;
+            pointer::drag(page, from, to, moves).await?;
+            wait::for_js_true(
+                page,
+                &format!("{changed} !== {}", serde_json::to_string(&before)?),
+                "the drag to move it",
+            )
+            .await?;
+            Ok("drag")
+        })
+        .await
+    }
+
+    #[test]
+    #[ignore = "interaction timing report, run on request"]
+    fn scrolling() {
+        block_on(async {
+            for (route, component, budget) in [
+                ("/timing/table", "Table windowed", 40.0),
+                ("/timing/table-plain", "Table plain", 40.0),
+                ("/timing/virtualize", "Virtualize", 40.0),
+                ("/timing/scroll-area", "ScrollArea", 40.0),
+                ("/timing/native-scroll", "plain div (control)", 40.0),
+            ] {
+                timed(route, async |page| {
+                    let rows = wheel_reps(page, 12).await?;
+                    report(component, &rows, &[("wheel", budget)]);
+                    Ok(())
+                })
+                .await;
+            }
+        });
+    }
+
+    #[test]
+    #[ignore = "interaction timing report, run on request"]
+    fn carousel_controls() {
+        const INDEX: &str = "[...document.querySelectorAll('[aria-roledescription=slide]')]\
+                             .findIndex(el => el.hasAttribute('data-current'))";
+        block_on(timed("/timing/carousel", async |page| {
+            let rows = measure(page, 12, async |i| {
+                let forward = (i / 4) % 2 == 0;
+                let now: i64 = js(page, INDEX).await?;
+                let (label, next) = match forward {
+                    true => ("Next slide", now + 1),
+                    false => ("Previous slide", now - 1),
+                };
+                pointer::click(
+                    page,
+                    &format!("[aria-roledescription=carousel] button[aria-label='{label}']"),
+                )
+                .await?;
+                wait::for_js_true(page, &format!("{INDEX} === {next}"), "the slide to move")
+                    .await?;
+                Ok("control click")
+            })
+            .await?;
+            report("Carousel", &rows, &[("control click", 60.0)]);
+            Ok(())
+        }));
+    }
+
+    #[test]
+    #[ignore = "interaction timing report, run on request"]
+    fn tree_branch() {
+        const BRANCH: &str = "[role=treeitem][data-tree-id='b0']";
+        block_on(timed("/timing/tree", async |page| {
+            let rows = measure(page, 24, async |i| {
+                let expand = i % 2 == 0;
+                pointer::click(page, &format!("{BRANCH} [data-tree-chevron]")).await?;
+                wait::for_js_true(
+                    page,
+                    &format!(
+                        "document.querySelector(\"{BRANCH}\").getAttribute('aria-expanded') === '{expand}'"
+                    ),
+                    "the branch to toggle",
+                )
+                .await?;
+                Ok(if expand { "expand" } else { "collapse" })
+            })
+            .await?;
+            report("Tree", &rows, &[("expand", 80.0), ("collapse", 80.0)]);
+            Ok(())
+        }));
+    }
+
+    /// Open on a click on `trigger`, close on Escape; `shown` is the overlay's selector.
+    async fn open_close(page: &Page, trigger: &str, shown: &str) -> Result<Rows> {
+        measure(page, 24, async |i| {
+            if i % 2 == 0 {
+                pointer::click(page, trigger).await?;
+                wait::for_visible(page, shown).await?;
+                Ok("open")
+            } else {
+                keyboard::press(page, ESCAPE).await?;
+                wait::for_hidden(page, shown).await?;
+                Ok("close")
+            }
+        })
+        .await
+    }
+
+    #[test]
+    #[ignore = "interaction timing report, run on request"]
+    fn overlays() {
+        block_on(async {
+            for (route, component, trigger, shown, budget) in [
+                ("/timing/modal", "Modal", "#open", "[role=dialog]", 80.0),
+                (
+                    "/timing/menu",
+                    "Menu",
+                    "button[aria-haspopup]",
+                    "[role=menu]",
+                    80.0,
+                ),
+                (
+                    "/timing/spotlight",
+                    "Spotlight",
+                    "#open",
+                    "[role=dialog]",
+                    120.0,
+                ),
+            ] {
+                timed(route, async |page| {
+                    let rows = open_close(page, trigger, shown).await?;
+                    report(component, &rows, &[("open", budget), ("close", budget)]);
+                    Ok(())
+                })
+                .await;
+            }
+        });
+    }
+
+    #[test]
+    #[ignore = "interaction timing report, run on request"]
+    fn day_picker() {
+        const GRID: &str = "document.querySelector('[role=grid]').getAttribute('aria-label')";
+        block_on(timed("/timing/calendar", async |page| {
+            let rows = measure(page, 24, async |i| match i % 4 {
+                0 | 1 => {
+                    let (button, month) = match i % 4 {
+                        0 => ("Next month", "April 2026"),
+                        _ => ("Previous month", "March 2026"),
+                    };
+                    pointer::click(page, &format!("[aria-label='{button}']")).await?;
+                    wait::for_js_true(page, &format!("{GRID} === '{month}'"), "the page").await?;
+                    Ok("page")
+                }
+                _ => {
+                    let day = if i % 4 == 2 {
+                        "2026-03-10"
+                    } else {
+                        "2026-03-12"
+                    };
+                    let cell = format!("[role=grid] [data-date='{day}']");
+                    pointer::click(page, &cell).await?;
+                    wait::for_js_true(
+                        page,
+                        &format!(
+                            "document.querySelector(\"{cell}\").hasAttribute('data-selected')"
+                        ),
+                        "the pick",
+                    )
+                    .await?;
+                    Ok("pick")
+                }
+            })
+            .await?;
+            report("DayPicker", &rows, &[("page", 80.0), ("pick", 80.0)]);
+            Ok(())
+        }));
+    }
+
+    /// One key per rep: `text` typed, then deleted again, `cycles` times. `reopen` closes the
+    /// list with an Escape after each cycle, so every first key opens it.
+    async fn typing(page: &Page, text: &str, cycles: usize, reopen: bool) -> Result<Rows> {
+        pointer::click(page, "input").await?;
+        let chars: Vec<char> = text.chars().collect();
+        let cycle = 2 * chars.len() + usize::from(reopen);
+        measure(page, cycle * cycles - WARM_UP, async |i| {
+            let step = i % cycle;
+            if step == 2 * chars.len() {
+                keyboard::press(page, ESCAPE).await?;
+                wait::for_hidden(page, "[role=listbox]").await?;
+                return Ok("escape");
+            }
+            let expected: String = match step < chars.len() {
+                true => {
+                    keyboard::type_text(page, &chars[step].to_string()).await?;
+                    chars[..=step].iter().collect()
+                }
+                false => {
+                    keyboard::press(page, BACKSPACE).await?;
+                    chars[..2 * chars.len() - step - 1].iter().collect()
+                }
+            };
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.querySelector('input').value === {}",
+                    serde_json::to_string(&expected)?
+                ),
+                "the keystroke",
+            )
+            .await?;
+            Ok(if step == 0 { "first key" } else { "keystroke" })
+        })
+        .await
+    }
+
+    #[test]
+    #[ignore = "interaction timing report, run on request"]
+    fn typing_in_fields() {
+        block_on(async {
+            for (route, component, text, cycles, reopen, budget) in [
+                (
+                    "/timing/text-field",
+                    "TextField",
+                    "hello world",
+                    2,
+                    false,
+                    40.0,
+                ),
+                (
+                    "/timing/autocomplete",
+                    "Autocomplete",
+                    "city 12",
+                    12,
+                    true,
+                    80.0,
+                ),
+            ] {
+                timed(route, async |page| {
+                    let rows = typing(page, text, cycles, reopen).await?;
+                    let budgets = [
+                        ("first key", budget),
+                        ("keystroke", budget),
+                        ("escape", budget),
+                    ];
+                    report(component, &rows, &budgets);
+                    Ok(())
+                })
+                .await;
+            }
+        });
+    }
+
+    #[test]
+    #[ignore = "interaction timing report, run on request"]
+    fn drags() {
+        block_on(async {
+            timed("/timing/slider", async |page| {
+                let value = "document.querySelector('[role=slider]').getAttribute('aria-valuenow')";
+                let rows = drag_reps(page, "[role=slider]", (100.0, 0.0), 10, value, 12).await?;
+                report("Slider", &rows, &[("drag", 120.0)]);
+                Ok(())
+            })
+            .await;
+            timed("/timing/splitter", async |page| {
+                let value =
+                    "document.querySelector('[role=separator]').getAttribute('aria-valuenow')";
+                let rows = drag_reps(page, "[role=separator]", (80.0, 0.0), 10, value, 12).await?;
+                report("Splitter", &rows, &[("drag", 120.0)]);
+                Ok(())
+            })
+            .await;
+            timed("/timing/floating-window", async |page| {
+                pointer::click(page, "#open").await?;
+                wait::for_visible(page, "[role=dialog]").await?;
+                let x = "String(Math.round(document.querySelector('[role=dialog]').getBoundingClientRect().x))";
+                let rows =
+                    drag_reps(page, "[role=dialog] [data-slot=handle]", (80.0, 40.0), 10, x, 12)
+                        .await?;
+                report("FloatingWindow", &rows, &[("drag", 120.0)]);
+                Ok(())
+            })
+            .await;
+        });
+    }
+
+    /// Nothing done: what a rep costs the page at rest, the floor under every row.
+    #[test]
+    #[ignore = "interaction timing report, run on request"]
+    fn control() {
+        block_on(timed("/timing/text-field", async |page| {
+            let rows = measure(page, 12, async |_| Ok("idle")).await?;
+            report("Control", &rows, &[("idle", 10.0)]);
+            Ok(())
+        }));
+    }
+}
