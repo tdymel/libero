@@ -13,6 +13,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/table-reorder", || rsx! { ReorderTablePage {} }),
     ("/table-reorder-detail", || rsx! { ReorderDetailPage {} }),
+    ("/table-reorder-windowed", || rsx! { ReorderWindowedPage {} }),
     ("/table-column-drag", || rsx! { ColumnDragPage {} }),
     ("/table-column-scroll", || rsx! { ColumnScrollPage {} }),
 ];
@@ -64,6 +65,34 @@ fn ReorderTablePage() -> Element {
         p { id: "order", {order.join(" ")} }
         p { id: "moves", "{moves}" }
         p { id: "columns", {columns.read().join(" ")} }
+    }
+}
+
+/// Todo 1408: 200 windowed rows, `Row 1` to `Row 200`; `#moves` lists each reorder,
+/// `#ends` the first and last rows.
+#[component]
+fn ReorderWindowedPage() -> Element {
+    let mut rows = use_signal(|| (1..=200).map(|n| format!("Row {n}")).collect::<Vec<_>>());
+    let mut moves = use_signal(String::new);
+    let ends = {
+        let rows = rows.read();
+        format!("{} {}", rows[0], rows[rows.len() - 1])
+    };
+    rsx! {
+        Table {
+            aria_label: "Rows",
+            max_height: "240px",
+            virtual_row_height: 40.0,
+            data: rows(),
+            columns: vec![column("Name").value(|row: &String| row.clone()).row_header()],
+            row_key: |row: &String| row.clone(),
+            onrowreorder: move |step: SortableMove| {
+                moves.write().push_str(&format!("{}>{} ", step.from, step.to));
+                step.apply(&mut rows.write());
+            },
+        }
+        p { id: "moves", "{moves}" }
+        p { id: "ends", "{ends}" }
     }
 }
 

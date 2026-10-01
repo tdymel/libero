@@ -254,7 +254,13 @@ pub(super) fn ColumnMenu(
                     // The last shown column stays.
                     .disabled(!off && shown <= 1)
                     .keep_open()
-                    .onselect(move |_| hidden.set(toggle_column(&hidden.read(), &header, off)))
+                    .onselect(move |_| {
+                        hidden.set(toggle_column(&hidden.read(), &header, off));
+                        // Hiding its own column unmounts this menu, as Hide does (todo 1490).
+                        if let (true, false, Some(neighbour)) = (column == index, off, neighbour) {
+                            focus.owe(neighbour);
+                        }
+                    })
                     .into()
             })
             .collect();

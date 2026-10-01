@@ -78,7 +78,13 @@ impl SortableItemHandle {
     /// The item's inline `style`: a `transform` moving it by [`offset`](Self::offset),
     /// and just after a drop the slide from where it was let go into its slot.
     pub fn style(&self) -> String {
-        let offset = self.offset();
+        self.style_by(0.0)
+    }
+
+    /// [`style`](Self::style) with `extra` px more along the flow: a windowed row
+    /// laid off its slot (todo 1408).
+    pub(crate) fn style_by(&self, extra: f64) -> String {
+        let offset = self.offset() + extra;
         let translate = |px: f64| match (self.horizontal)() {
             true => format!("translate({px}px, 0px)"),
             false => format!("translate(0px, {px}px)"),
@@ -164,9 +170,19 @@ struct Moved {
     step: SortableMove,
 }
 
+/// A windowed list's slots, all one pitch, most of them unmounted (Table, todo 1408).
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) struct FixedSlots {
+    pub count: usize,
+    pub pitch: f64,
+    /// A keyboard lift's `(from, to)`, for the list to scroll its target into view.
+    pub lift: Signal<Option<(usize, usize)>>,
+}
+
 /// What [`use_sortable_item`] reads from its list.
 #[derive(Clone, Copy)]
 struct SortableContext {
+    fixed: CopyValue<Option<FixedSlots>>,
     registry: CopyValue<Vec<Option<Registered>>>,
     next_id: CopyValue<usize>,
     refocus: CopyValue<Option<Moved>>,
@@ -260,6 +276,22 @@ async fn spans(reads: Reads, vertical: bool, flipped: bool) -> Option<Vec<Span>>
     Some(spans)
 }
 
+/// Where a drag's spans come from.
+enum Measure {
+    Read(Reads),
+    Fixed(FixedSlots),
+}
+
+/// `count` slots of `pitch` px, end to end.
+fn fixed_spans(count: usize, pitch: f64) -> Vec<Span> {
+    (0..count)
+        .map(|slot| Span {
+            start: slot as f64 * pitch,
+            size: pitch,
+        })
+        .collect()
+}
+
 const ZERO_WIDTH: char = '\u{200B}';
 
 /// `template` with the item's `label` and position `index` of `count`.
@@ -333,10 +365,21 @@ fn lifts(key: &Key) -> bool {
 ///
 /// Docs: <https://libero-ui.dev/data-display/sortable>
 pub fn use_sortable(options: SortableOptions) -> SortableHandle {
+    use_fixed_sortable(options, None)
+}
+
+/// [`use_sortable`] over `fixed` slots, when set: the spans come from the pitch,
+/// not from measuring every item, which a window leaves unmounted.
+pub(crate) fn use_fixed_sortable(
+    options: SortableOptions,
+    fixed: Option<FixedSlots>,
+) -> SortableHandle {
     let SortableOptions {
         orientation,
         onreorder,
     } = options;
+    let mut fixed_slots = use_hook(|| CopyValue::new(fixed));
+    fixed_slots.set(fixed);
     let element = use_element();
     let horizontal = orientation == Orientation::Horizontal;
     let horizontal = use_memo(use_reactive!(|horizontal| horizontal));
@@ -398,19 +441,34 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
 
     // Measures the list, then calls `started` with the session; `None` when it can't.
     let mut begin = move |from: usize, keyed: bool, started: Callback<Option<Session>>| {
-        let items = mounted(&registry.peek());
-        let Some(items) = items.filter(|items| from < items.len()) else {
-            started.call(None);
-            return;
-        };
         let flipped = *horizontal.peek() && element.is_rtl();
         let vertical = !*horizontal.peek();
-        let reads = start_reads(&items);
-        let handle = items[from].1.clone();
+        let (reads, handle) = match *fixed_slots.peek() {
+            Some(slots) if from < slots.count => {
+                let handle = registry.peek().get(from).cloned().flatten();
+                (Measure::Fixed(slots), handle.and_then(|item| item.handle))
+            }
+            Some(_) => {
+                started.call(None);
+                return;
+            }
+            None => {
+                let items = mounted(&registry.peek());
+                let Some(items) = items.filter(|items| from < items.len()) else {
+                    started.call(None);
+                    return;
+                };
+                (Measure::Read(start_reads(&items)), items[from].1.clone())
+            }
+        };
         let label = label_of(from).1;
         settle.set(None);
         spawn(async move {
-            let Some(spans) = spans(reads, vertical, flipped).await else {
+            let spans = match reads {
+                Measure::Read(reads) => spans(reads, vertical, flipped).await,
+                Measure::Fixed(slots) => Some(fixed_spans(slots.count, slots.pitch)),
+            };
+            let Some(spans) = spans else {
                 started.call(None);
                 return;
             };
@@ -623,7 +681,30 @@ pub fn use_sortable(options: SortableOptions) -> SortableHandle {
         onreorder.call(step);
     });
 
+    // Fixed slots count every row, mounted or not; a keyboard lift is told up.
+    let slot_count = fixed.map(|slots| slots.count);
+    use_effect(use_reactive!(|slot_count| {
+        let mut count = count;
+        if let Some(slots) = slot_count
+            && *count.peek() != slots
+        {
+            count.set(slots);
+        }
+    }));
+    use_effect(move || {
+        let keyed = session
+            .read()
+            .as_ref()
+            .and_then(|lifted| Some((lifted.from, lifted.keyed?)));
+        if let Some(mut lift) = fixed_slots.peek().as_ref().map(|slots| slots.lift)
+            && *lift.peek() != keyed
+        {
+            lift.set(keyed);
+        }
+    });
+
     use_context_provider(|| SortableContext {
+        fixed: fixed_slots,
         registry,
         next_id,
         refocus,
@@ -728,7 +809,10 @@ pub(crate) fn use_spanning_sortable_item(
             label: label.clone(),
         });
         trim(&mut items);
-        let len = items.len();
+        let len = context
+            .fixed
+            .peek()
+            .map_or(items.len(), |slots| slots.count);
         drop(items);
         if *count.peek() != len {
             count.set(len);
@@ -755,7 +839,10 @@ pub(crate) fn use_spanning_sortable_item(
         {
             items[index] = None;
             trim(&mut items);
-            let len = items.len();
+            let len = match context.fixed.try_peek().ok().and_then(|fixed| *fixed) {
+                Some(slots) => slots.count,
+                None => items.len(),
+            };
             drop(items);
             // The list may be going too.
             if let Ok(mut count) = count.try_write() {
@@ -824,5 +911,24 @@ pub(crate) fn use_spanning_sortable_item(
         offset,
         settle,
         horizontal: context.horizontal,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fixed_slots_lie_end_to_end_at_their_pitch() {
+        let spans = fixed_spans(3, 40.0);
+
+        assert_eq!(
+            spans[2],
+            Span {
+                start: 80.0,
+                size: 40.0
+            }
+        );
+        assert_eq!(slot_offset(&spans, 0, 2), 80.0);
     }
 }

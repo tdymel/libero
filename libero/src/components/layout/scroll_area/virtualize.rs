@@ -19,6 +19,16 @@ const UNMEASURED: ScrollGeometry = ScrollGeometry {
     viewport: 1080.0,
 };
 
+/// The row a `Virtualize` keeps out of its window and the slot its box sits at,
+/// beside the window: for a row that translates itself to a slot (todo 1408).
+#[derive(Clone, Copy)]
+pub(crate) struct KeptSlot(pub Signal<Option<(usize, usize)>>);
+
+/// The nearest `Virtualize`'s kept row, read inside one of its rows.
+pub(crate) fn use_kept_slot() -> Option<Signal<Option<(usize, usize)>>> {
+    try_use_context::<KeptSlot>().map(|kept| kept.0)
+}
+
 /// How the row pitch is being arrived at.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Probe {
@@ -193,6 +203,17 @@ pub fn Virtualize(
             warn("Virtualize: no ScrollArea above it, so every row renders.");
         }
     });
+
+    let laid = kept.map(|(index, before)| match before {
+        true => (index, visible.range.start.saturating_sub(1)),
+        false => (index, visible.range.end),
+    });
+    let mut kept_slot = use_context_provider(|| KeptSlot(Signal::new(None))).0;
+    use_effect(use_reactive!(|laid| {
+        if *kept_slot.peek() != laid {
+            kept_slot.set(laid);
+        }
+    }));
 
     let (before, after) = match kept {
         Some((index, true)) => (Some(index), None),

@@ -211,21 +211,20 @@ async fn pick_by_keys<D: Driver>(d: &mut D, header: &str, entry: &str) -> Result
     d.focus(&button).await?;
     eventually_focused(d, &button, "the menu button").await?;
     d.press(keyboard::ENTER).await?;
-    eventually(d, "the column menu to open", async |d| {
-        d.exists("[role=menuitem]").await
+    // Todo 1502: the entry itself, not only the menu's first.
+    let mut item = None;
+    eventually(d, &format!("{entry:?} in {header}'s menu"), async |d| {
+        for index in 0..12 {
+            let at = format!("[role=menuitem][data-menu-index=\"{index}\"]");
+            if d.exists(&at).await? && d.text(&at).await? == entry {
+                item = Some(at);
+                return Ok(true);
+            }
+        }
+        Ok(false)
     })
     .await?;
-    let mut item = None;
-    for index in 0..12 {
-        let at = format!("[role=menuitem][data-menu-index=\"{index}\"]");
-        if d.exists(&at).await? && d.text(&at).await? == entry {
-            item = Some(at);
-            break;
-        }
-    }
-    let Some(item) = item else {
-        bail!("no {entry:?} in {header}'s menu");
-    };
+    let item = item.expect("the wait held");
     for _ in 0..12 {
         if d.is_focused(&item).await? {
             d.press(keyboard::ENTER).await?;
@@ -257,6 +256,111 @@ e2e::scenario!(
     a_pin_or_hide_from_the_menu_keeps_focus_on_a_menu_button,
     "/table-reorder",
     menu_picks_keep_focus,
+    android: skip("958: element identity on the WebView")
+);
+
+/// Todo 1490: a column hidden from its own menu's Columns submenu sends focus
+/// to the neighbour's menu button, as Hide column does.
+async fn hiding_its_own_column_keeps_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    pick_by_keys(d, "Origin", "Columns").await?;
+    let mut toggle = None;
+    eventually(d, "Origin in the Columns submenu", async |d| {
+        for index in 0..12 {
+            let at = format!("[role=menuitemcheckbox][data-menu-index=\"{index}\"]");
+            if d.exists(&at).await? && d.text(&at).await?.trim() == "Origin" {
+                toggle = Some(at);
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    })
+    .await?;
+    let toggle = toggle.expect("the wait held");
+    for _ in 0..12 {
+        if d.is_focused(&toggle).await? {
+            break;
+        }
+        d.press(keyboard::ARROW_DOWN).await?;
+    }
+    eventually_focused(d, &toggle, "the arrows in Columns").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Origin to hide", async |d| {
+        Ok(!d.exists("th[aria-label=Origin]").await?)
+    })
+    .await?;
+    eventually_focused(d, &menu_button("Stock"), "Origin unticked in Columns").await
+}
+
+/// The lifted row shows whole in the scroll area, below its sticky header.
+async fn shown_below_the_header<D: Driver>(d: &mut D, row: &str, during: &str) -> Result<()> {
+    eventually(d, &format!("{row} in view after {during}"), async |d| {
+        let (area, header) = (
+            d.rect("[data-table-scroll]").await?,
+            d.rect("thead th").await?,
+        );
+        let row = d.rect(row).await?;
+        Ok(row.y >= header.y + header.height - 1.0
+            && row.y + row.height <= area.y + area.height + 1.0)
+    })
+    .await
+}
+
+/// Todo 1408: a windowed table reorders. A move button steps; a keyboard lift
+/// carries the view past the window's edge, End to the last slot, Home back.
+async fn a_windowed_table_reorders<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const LIVE: &str = "table + [role=status]";
+    const HANDLE: &str = "[aria-label=\"Reorder Row 1\"]";
+    d.click("[aria-label=\"Move Row 1 down\"]").await?;
+    eventually_text(d, "#moves", "0>1 ", "Move down").await?;
+    d.click("[aria-label=\"Move Row 1 up\"]").await?;
+    eventually_text(d, "#moves", "0>1 1>0 ", "Move up").await?;
+
+    d.focus(HANDLE).await?;
+    eventually_focused(d, HANDLE, "the handle").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, LIVE, "Lifted Row 1, position 1 of 200.", "Space").await?;
+    d.press(keyboard::END).await?;
+    eventually_text(d, LIVE, "Row 1 moved to position 200 of 200.", "End").await?;
+    // The window follows the view: Row 200 steps up out of the last slot, Row 1 into it.
+    eventually(d, "Row 200 just above the lifted Row 1", async |d| {
+        let last = "[aria-label=\"Reorder Row 200\"]";
+        Ok(d.exists(last).await?
+            && (d.rect(HANDLE).await?.y - d.rect(last).await?.y - 40.0).abs() <= 1.0)
+    })
+    .await?;
+    shown_below_the_header(d, HANDLE, "End").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, "#moves", "0>1 1>0 0>199 ", "the drop").await?;
+    eventually_text(d, "#ends", "Row 2 Row 1", "the drop").await?;
+    eventually_focused(d, HANDLE, "the drop").await?;
+
+    d.press(keyboard::SPACE).await?;
+    eventually_text(
+        d,
+        LIVE,
+        "Lifted Row 1, position 200 of 200.",
+        "a second Space",
+    )
+    .await?;
+    d.press(keyboard::HOME).await?;
+    eventually_text(d, LIVE, "Row 1 moved to position 1 of 200.", "Home").await?;
+    shown_below_the_header(d, HANDLE, "Home").await?;
+    d.press(keyboard::SPACE).await?;
+    eventually_text(d, "#ends", "Row 1 Row 200", "the second drop").await?;
+    eventually_focused(d, HANDLE, "the second drop").await
+}
+
+e2e::scenario!(
+    a_windowed_table_reorders_past_its_window,
+    "/table-reorder-windowed",
+    a_windowed_table_reorders,
+    android: skip("958: element identity on the WebView")
+);
+
+e2e::scenario!(
+    hiding_a_column_from_its_own_columns_submenu_keeps_focus,
+    "/table-reorder",
+    hiding_its_own_column_keeps_focus,
     android: skip("958: element identity on the WebView")
 );
 

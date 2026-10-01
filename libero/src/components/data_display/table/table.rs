@@ -5,7 +5,7 @@ use std::{
 
 use dioxus::prelude::*;
 
-use super::super::sortable::SortableMove;
+use super::super::sortable::{FixedSlots, SortableMove};
 use crate::{
     components::{
         accessibility::use_announcer,
@@ -22,8 +22,8 @@ use crate::{
         use_resize_fallback, use_theme,
     },
     platform::{
-        SCROLL_PADDING_VARS, drags_table_columns, lays_out_captions, sticks_table_heads,
-        widens_sized_tables,
+        ElementApi, SCROLL_PADDING_VARS, drags_table_columns, lays_out_captions,
+        sticks_table_heads, widens_sized_tables,
     },
     sx::{StaticSx, Sx, sx},
     theme::{CHECKBOX_BOX_SIZE, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TableDefaults},
@@ -56,7 +56,8 @@ use super::{
     toolbar::{TableToolbar, TableTools, ToolView},
     use_table::{TableConfig, use_table},
     window::{
-        BodyRows, RowWindow, TABLE_ROW_HEIGHT_VAR, use_row_focus, window_attributes, windowed_sx,
+        BodyRows, RowWindow, TABLE_ROW_HEIGHT_VAR, reveal_slot, use_row_focus, window_attributes,
+        windowed_sx,
     },
 };
 
@@ -603,7 +604,8 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default, into)]
     max_height: Option<String>,
     /// With `max_height`, renders only the rows in view, each clipped to this
-    /// height in px with one line per cell. Off with `row_detail` or `onrowreorder`.
+    /// height in px with one line per cell. Off with `row_detail`; a dragged row
+    /// does not autoscroll.
     #[props(default)]
     virtual_row_height: Option<f64>,
     /// With `max_height`, called when the rows scroll to their bottom, to append
@@ -934,12 +936,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 "Table: `onbottomreached` without `max_height` never fires: the page scrolls, not the table.",
             );
         }
-        if props.virtual_row_height.is_some()
-            && (props.row_detail.is_set() || props.onrowreorder.is_some())
-        {
+        if props.virtual_row_height.is_some() && props.row_detail.is_set() {
             warn(
-                "Table: `virtual_row_height` with `row_detail` or `onrowreorder` renders every \
-                 row: a detail row breaks the one row height, and a drag needs every slot.",
+                "Table: `virtual_row_height` with `row_detail` renders every row: a detail \
+                 row breaks the one row height.",
             );
         }
         if props.onrowreorder.is_some() && !props.row_key.is_set() {
@@ -1010,11 +1010,27 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     };
     let bounded = props.max_height.is_some();
     let mut head = use_signal(|| 0.0);
+    let lift = use_signal(|| None::<(usize, usize)>);
     let head_element = use_element();
     use_resize_fallback(head_element, move |event| {
         if let (true, Ok(size)) = (bounded, event.get_border_box_size()) {
             head.set(size.height);
         }
+    });
+    // The first resize report can come a second late, and a Tab before it
+    // scrolls a row under the header (todo 1523): measure at mount too.
+    use_effect(move || {
+        if !bounded || !head_element.is_mounted() {
+            return;
+        }
+        let measured = head_element.dimensions();
+        spawn(async move {
+            if let Ok(size) = measured.await
+                && *head.peek() == 0.0
+            {
+                head.set(size.height);
+            }
+        });
     });
     let scrolls = props.scroll || bounded;
     let size_states: Input<States> = States::new().with(size.state_name(), true).into();
@@ -1450,10 +1466,30 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             key,
         }
     };
-    // Detail rows have their own heights, and a drag moves between every slot.
-    let row_height = props
-        .virtual_row_height
-        .filter(|_| bounded && !has_detail && !has_reorder);
+    // Detail rows have their own heights.
+    let row_height = props.virtual_row_height.filter(|_| bounded && !has_detail);
+    let fixed_slots = row_height.filter(|_| has_reorder).map(|pitch| FixedSlots {
+        count: order.len(),
+        pitch,
+        lift,
+    });
+    // A keyboard lift carries the view by slot: its target row may not be rendered (todo 1408).
+    let region = column_drag.region;
+    use_effect(use_reactive!(|row_height| {
+        let (Some((_, to)), Some(pitch)) = (lift(), row_height) else {
+            return;
+        };
+        let head = *head.peek();
+        let (offset, view) = (region.scroll_offset(), region.dimensions());
+        spawn(async move {
+            let (Ok((x, top)), Ok(view)) = (offset.await, view.await) else {
+                return;
+            };
+            if let Some(top) = reveal_slot(to, pitch, head, top, view.height) {
+                let _ = region.scroll_to(x, top);
+            }
+        });
+    }));
     let mut attributes = props.attributes;
     // Only while no row shows: some readers hold back a busy subtree's rows.
     if skeleton.is_some() {
@@ -1560,6 +1596,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         announcer,
         labels,
         instructions: instructions_id(),
+        fixed: fixed_slots,
     });
     // Rows the filter took away, not missing data: the caller's `empty` does not apply.
     let filtered_out = !(words.is_empty() && tests.is_empty()) && (props.manual_filter || has_data);

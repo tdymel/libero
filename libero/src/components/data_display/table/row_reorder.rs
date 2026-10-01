@@ -2,14 +2,15 @@ use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use super::super::sortable::{
-    SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, SortableMove, SortableOptions, use_sortable,
-    use_spanning_sortable_item,
+    FixedSlots, SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, SortableMove, SortableOptions,
+    use_fixed_sortable, use_spanning_sortable_item,
 };
 use crate::{
     CssLayer,
     components::{
         accessibility::{Announcer, VisuallyHidden},
         common::{Glyph, Orientation},
+        layout::use_kept_slot,
     },
     context::IconSlot,
     hooks::{current_localization, use_css, use_element, use_media_query},
@@ -28,6 +29,8 @@ pub(super) struct RowReorder {
     pub labels: TableLabels,
     /// The handles' description, a hidden node beside the table.
     pub instructions: String,
+    /// Windowed: every shown row's slot, at the row height.
+    pub fixed: Option<FixedSlots>,
 }
 
 /// One row's place among the shown rows, and its name in the controls.
@@ -52,7 +55,12 @@ impl RowReorder {
     /// The `tbody`, the list the rows drag in.
     pub fn body(&self, rows: Element) -> Element {
         rsx! {
-            ReorderBody { onreorder: self.onreorder, announcer: self.announcer, {rows} }
+            ReorderBody {
+                onreorder: self.onreorder,
+                announcer: self.announcer,
+                fixed: self.fixed,
+                {rows}
+            }
         }
     }
 
@@ -82,12 +90,16 @@ fn ReorderInstructions(id: String) -> Element {
 fn ReorderBody(
     onreorder: Callback<SortableMove>,
     announcer: Announcer,
+    fixed: Option<FixedSlots>,
     children: Element,
 ) -> Element {
-    let list = use_sortable(SortableOptions {
-        orientation: Orientation::Vertical,
-        onreorder,
-    });
+    let list = use_fixed_sortable(
+        SortableOptions {
+            orientation: Orientation::Vertical,
+            onreorder,
+        },
+        fixed,
+    );
     // Said by the table's live region: none is valid inside a table.
     use_effect(move || {
         let said = list.announcement.read().clone();
@@ -121,8 +133,11 @@ pub(super) fn ReorderRow(
     /// While open: the detail row's id and body, and the table's column count.
     detail: Option<(String, Element)>,
     columns: usize,
+    /// Windowed: the row height, every slot's.
+    pitch: Option<f64>,
     children: Element,
 ) -> Element {
+    let kept = use_kept_slot().filter(|_| pitch.is_some());
     // The open detail row moves with its row, one span with it.
     let extent = use_element();
     let item = use_spanning_sortable_item(
@@ -139,8 +154,13 @@ pub(super) fn ReorderRow(
     let (onpointerdown, onkeydown, onblur) = (item.onpointerdown, item.onkeydown, item.onblur);
     let (onearlier, onlater) = (item.onearlier, item.onlater);
     // At rest no transform: it would make each row a stacking context under the sticky cells.
-    let style = item.style();
-    let moving = item.offset() != 0.0 || style.contains("animation");
+    // A lifted row the window keeps beside it sits off its slot: measured from there (todo 1408).
+    let laid_off = match (kept.and_then(|kept| kept()), pitch, (item.dragging)()) {
+        (Some((at, laid)), Some(pitch), true) if at == slot => (slot as f64 - laid as f64) * pitch,
+        _ => 0.0,
+    };
+    let style = item.style_by(laid_off);
+    let moving = item.offset() + laid_off != 0.0 || style.contains("animation");
     let style = (moves_table_rows() && moving).then_some(style);
     let detail = detail.map(|(id, body)| {
         rsx! {

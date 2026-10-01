@@ -5,15 +5,21 @@ use anyhow::{Result, bail};
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 
-/// Clicks the open menu's entry reading `label`.
+/// Clicks the open menu's entry reading `label`, once it shows (todo 1502).
 async fn pick<D: Driver>(d: &mut D, label: &str) -> Result<()> {
-    for index in 0..12 {
-        let item = format!("[role^=menuitem][data-menu-index=\"{index}\"]");
-        if d.exists(&item).await? && d.text(&item).await?.trim() == label {
-            return d.click(&item).await;
+    let mut found = None;
+    eventually(d, &format!("the {label} entry"), async |d| {
+        for index in 0..12 {
+            let item = format!("[role^=menuitem][data-menu-index=\"{index}\"]");
+            if d.exists(&item).await? && d.text(&item).await?.trim() == label {
+                found = Some(item);
+                return Ok(true);
+            }
         }
-    }
-    bail!("no {label} entry")
+        Ok(false)
+    })
+    .await?;
+    d.click(&found.expect("the wait held")).await
 }
 
 async fn open<D: Driver>(d: &mut D, tool: &str) -> Result<()> {

@@ -616,7 +616,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                     BodyRows::All(rows) => rsx! {
                         {rows.into_iter().flat_map(|row| body_rows(row, &headers, columns, reorder.as_ref()))}
                     },
-                    BodyRows::Window(window) => render_window(window, headers, head_levels),
+                    BodyRows::Window(window) => render_window(window, headers, head_levels, reorder.clone()),
                 }
             };
             match &reorder {
@@ -696,6 +696,7 @@ pub(super) fn body_rows(
                     attributes,
                     detail,
                     columns,
+                    pitch: reorder.fixed.map(|slots| slots.pitch),
                     {content}
                 }
             },

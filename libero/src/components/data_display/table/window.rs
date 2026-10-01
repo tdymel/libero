@@ -2,7 +2,10 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use super::core::{HeaderSpec, RowSpec, body_rows};
+use super::{
+    core::{HeaderSpec, RowSpec, body_rows},
+    row_reorder::RowReorder,
+};
 use crate::{
     components::{common::attr, layout::Virtualize},
     hooks::{ElementHandle, listener, use_silent_focus_within},
@@ -120,11 +123,25 @@ pub(super) fn windowed_sx() -> Sx {
     )
 }
 
+/// The scroll top that shows slot `to` whole below a `head` px sticky header,
+/// in a view `view` px tall scrolled to `top`; `None` when it shows already.
+pub(super) fn reveal_slot(to: usize, pitch: f64, head: f64, top: f64, view: f64) -> Option<f64> {
+    let (start, end) = (to as f64 * pitch, (to + 1) as f64 * pitch);
+    if start < top {
+        Some(start)
+    } else if head + end > top + view {
+        Some(head + end - view)
+    } else {
+        None
+    }
+}
+
 /// The rows in view, `aria-rowindex`ed after the `head_rows` header rows.
 pub(super) fn render_window(
     window: RowWindow,
     headers: Rc<Vec<HeaderSpec>>,
     head_rows: usize,
+    reorder: Option<RowReorder>,
 ) -> Element {
     let RowWindow {
         order,
@@ -164,10 +181,24 @@ pub(super) fn render_window(
                     });
                 }));
                 spec.attributes.push(attr("aria-rowindex", (head_rows + position + 1).to_string()));
-                body_rows(spec, &headers, 0, None)
+                body_rows(spec, &headers, 0, reorder.as_ref())
                     .next()
                     .unwrap_or_else(VNode::empty)
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 40px slots under a 42px header in a 200px view.
+    #[test]
+    fn a_slot_is_revealed_below_the_header_or_left_alone() {
+        assert_eq!(reveal_slot(3, 40.0, 42.0, 0.0, 200.0), Some(2.0));
+        assert_eq!(reveal_slot(2, 40.0, 42.0, 0.0, 200.0), None);
+        assert_eq!(reveal_slot(5, 40.0, 42.0, 400.0, 200.0), Some(200.0));
+        assert_eq!(reveal_slot(199, 40.0, 42.0, 0.0, 200.0), Some(7842.0));
     }
 }

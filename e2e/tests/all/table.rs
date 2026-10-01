@@ -1591,22 +1591,8 @@ fn a_windowed_table_keeps_its_header_and_pins_while_scrolled() {
 async fn a_menu_pin_moves_the_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("button[aria-label=\"Origin column options\"]")
         .await?;
-    eventually(d, "the column menu to open", async |d| {
-        d.exists("[role=menuitem]").await
-    })
-    .await?;
     // After Filter and the moves.
-    let mut pin = None;
-    for index in 0..8 {
-        let item = format!("[role=menuitem][data-menu-index=\"{index}\"]");
-        if d.exists(&item).await? && d.text(&item).await? == "Pin to start" {
-            pin = Some(item);
-            break;
-        }
-    }
-    let Some(pin) = pin else {
-        bail!("no Pin to start entry");
-    };
+    let pin = menu_entry(d, "Pin to start").await?;
     d.click(&pin).await?;
     eventually_text(d, "#pinned", "Name,Origin|Supplier", "Pin to start").await?;
     eventually(d, "Origin to pin past Name", async |d| {
@@ -1628,6 +1614,8 @@ e2e::scenario!(
 /// WCAG 2.4.11: Shift+Tab up a capped table's rows never leaves the focused
 /// checkbox under the sticky header.
 async fn a_focused_row_stays_below_the_header<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // No wait for the header: its height is read at mount, not only by its late
+    // first resize report (todo 1523).
     d.focus("tbody tr:nth-child(1) input").await?;
     for _ in 0..30 {
         d.press(keyboard::TAB).await?;
@@ -1734,17 +1722,8 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
     // What the close queued runs first: a press in the same task lost its menu (todo 1632).
     d.settle().await?;
     d.click("[aria-label=\"Stock column options\"]").await?;
-    // Todo 1502: the menu's entries, not only its first, before reading them; kept from the
-    // read that found it, not read again (1675).
-    let mut item = None;
-    eventually(d, "the column menu's Filter entry", async |d| {
-        item = filter_entry(d).await?;
-        Ok(item.is_some())
-    })
-    .await?;
-    let Some(item) = item else {
-        bail!("no Filter entry");
-    };
+    // Kept from the read that found it, not read again (1675).
+    let item = menu_entry(d, "Filter").await?;
     d.click(&item).await?;
     eventually(d, "the panel from the menu", async |d| {
         d.exists(PANEL).await
@@ -1753,15 +1732,21 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
     eventually_focused(d, &format!("{LINE_1} {PICKER}"), "the menu's Filter").await
 }
 
-/// The open column menu's Filter entry.
-async fn filter_entry<D: Driver>(d: &mut D) -> Result<Option<String>> {
-    for index in 0..12 {
-        let item = format!("[role=menuitem][data-menu-index=\"{index}\"]");
-        if d.exists(&item).await? && d.text(&item).await?.trim() == "Filter" {
-            return Ok(Some(item));
+/// Waits for the open menu's entry reading `label`; todo 1502: the entries, not only its first.
+async fn menu_entry<D: Driver>(d: &mut D, label: &str) -> Result<String> {
+    let mut found = None;
+    eventually(d, &format!("the menu's {label} entry"), async |d| {
+        for index in 0..12 {
+            let item = format!("[role=menuitem][data-menu-index=\"{index}\"]");
+            if d.exists(&item).await? && d.text(&item).await?.trim() == label {
+                found = Some(item);
+                return Ok(true);
+            }
         }
-    }
-    Ok(None)
+        Ok(false)
+    })
+    .await?;
+    Ok(found.expect("the wait held"))
 }
 
 e2e::scenario!(
