@@ -6,7 +6,7 @@ use stylesheet_registry::StylesheetRegistry;
 
 pub(crate) use stylesheet_registry::{SheetRank, StylesheetKey};
 
-use super::{ModalHost, PortalHost, PortalOutlet, WindowHost};
+use super::{ModalHost, PortalHost, PortalOutlet, WindowHost, window::ZLayers};
 use crate::{
     css::Stylesheet,
     localization::{Formats, Localization},
@@ -35,6 +35,7 @@ pub(crate) use css_layer::CssLayer;
 /// let context = use_context::<LiberoContext>();
 ///
 /// rsx! {
+///     // A pair name pins the colour scheme, as `use_color_scheme().set(ColorScheme::Dark)` does.
 ///     button { onclick: move |_| context.set_active_theme("dark"), "Dark" }
 /// }
 /// # }
@@ -115,8 +116,8 @@ impl LiberoContext {
 
     /// Switches to the theme `name` selects. An unknown name warns and changes nothing.
     ///
-    /// Within the light/dark pair only the root attribute changes; anything else,
-    /// or a platform with no reachable root, rebuilds the sheet.
+    /// A name of the light/dark pair pins that colour scheme, as
+    /// `use_color_scheme().set` does, kept across a reload; anything else rebuilds the sheet.
     pub fn set_active_theme(&self, name: &'static str) {
         let Some(theme) = self.themes.peek().get(name) else {
             warn(&format!(
@@ -125,18 +126,20 @@ impl LiberoContext {
             return;
         };
 
+        if self.themes.peek().is_in_pair(name) {
+            let scheme = match name == ColorScheme::Dark.as_str() {
+                true => ColorScheme::Dark,
+                false => ColorScheme::Light,
+            };
+            self.set_color_scheme(scheme.into());
+            return;
+        }
+
         let (mut active, mut current, mut css) = (self.active, self.theme, self.theme_css);
         if *active.peek() == name {
             return;
         }
-
-        let by_attribute = self.themes.peek().is_in_pair(name)
-            && document()
-                .is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, Some(name)));
-        if !by_attribute {
-            css.set(Rc::from(Stylesheet::from(theme).as_str()));
-        }
-
+        css.set(Rc::from(Stylesheet::from(theme).as_str()));
         active.set(name);
         current.set(theme);
     }
@@ -531,26 +534,28 @@ pub fn LiberoProvider(
     let portal_entries = use_signal(Vec::new);
     use_context_provider(|| PortalHost::new(portal_entries));
 
-    let theme = *theme_signal.peek();
+    // From the active theme, so a switch to other `z_index` values moves the stacks too.
+    let modal_layers = use_memo(move || {
+        let z = theme_signal().z_index;
+        ZLayers {
+            base: z.modal,
+            step: z.modal_step,
+            ceiling: z.popover,
+        }
+    });
     let modal_stack = use_signal(Vec::new);
-    use_context_provider(|| {
-        ModalHost::new(
-            modal_stack,
-            theme.z_index.modal,
-            theme.z_index.modal_step,
-            theme.z_index.popover,
-        )
-    });
+    use_context_provider(|| ModalHost::new(modal_stack, modal_layers.into()));
 
-    let window_stack = use_signal(Vec::new);
-    use_context_provider(|| {
-        WindowHost::new(
-            window_stack,
-            theme.z_index.window,
-            theme.z_index.window_step,
-            theme.z_index.overlay,
-        )
+    let window_layers = use_memo(move || {
+        let z = theme_signal().z_index;
+        ZLayers {
+            base: z.window,
+            step: z.window_step,
+            ceiling: z.overlay,
+        }
     });
+    let window_stack = use_signal(Vec::new);
+    use_context_provider(|| WindowHost::new(window_stack, window_layers.into()));
 
     rsx! {
         style {

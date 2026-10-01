@@ -54,13 +54,17 @@ fn bump(fired: Signal<u32>) {
 pub(crate) fn use_scheduled(mut on_fire: impl FnMut(Scheduled) + 'static) -> Scheduled {
     let fired = use_hook(|| Signal::new_in_scope(0, ScopeId::ROOT));
     let pending = use_hook(|| CopyValue::new(None::<Box<dyn TimerSubscription>>));
+    let mut seen = use_hook(|| CopyValue::new(0u32));
     let scheduled = Scheduled { fired, pending };
     use_drop(move || {
         scheduled.cancel();
         fired.manually_drop();
     });
+    // `on_fire` reads subscribe this effect too: a re-run without a new firing is not one.
     use_effect(move || {
-        if fired() > 0 {
+        let count = fired();
+        if count != *seen.peek() {
+            seen.set(count);
             on_fire(scheduled);
         }
     });

@@ -25,7 +25,9 @@ use crate::{
     platform::{ElementApi, ScrollSubscription, document, scroll, when_laid_out},
 };
 
-pub(crate) use owners::{focus_in_popup_of, owner_link};
+#[cfg(test)]
+pub(crate) use owners::open_popups;
+pub(crate) use owners::{OpenPopups, focus_in_popup_of, owner_link, use_open_popups};
 pub(crate) use place::place;
 
 /// A popover's own state: where its box goes, and the portal slot it goes in.

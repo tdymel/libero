@@ -2,7 +2,10 @@ use std::{cell::RefCell, rc::Rc, str::FromStr};
 
 use dioxus::prelude::*;
 
-use crate::hooks::{ElementHandle, popover::focus_in_popup_of};
+use crate::hooks::{
+    ElementHandle,
+    popover::{OpenPopups, focus_in_popup_of, use_open_popups},
+};
 use crate::localization::ShortcutHelpLabels;
 use crate::platform::{KeyChord, KeySubscription, keyboard, mod_is_meta, warn_reserved_chord};
 
@@ -151,7 +154,9 @@ fn parse_key(text: &str) -> Option<Key> {
         return Some(Key::Character(lower));
     }
     let mut capitalised = lower.clone();
-    capitalised[..1].make_ascii_uppercase();
+    if let Some(first) = capitalised.get_mut(..1) {
+        first.make_ascii_uppercase();
+    }
     [text.to_owned(), capitalised, text.to_ascii_uppercase()]
         .iter()
         .find_map(|name| Key::from_str(name).ok())
@@ -168,11 +173,11 @@ struct Entry {
 
 impl Entry {
     /// No scope, or focus in one of its mounted elements or a popup opened from one.
-    fn in_scope(&self, pressed: &KeyChord) -> bool {
+    fn in_scope(&self, pressed: &KeyChord, popups: OpenPopups) -> bool {
         self.within.is_empty()
             || self.within.iter().any(|element| {
                 element.try_mounted().is_some_and(|mounted| {
-                    pressed.within(&mounted, element.tag()) || focus_in_popup_of(&mounted)
+                    pressed.within(&mounted, element.tag()) || focus_in_popup_of(popups, &mounted)
                 })
             })
     }
@@ -240,6 +245,7 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
         }
     }));
 
+    let popups = use_open_popups();
     let subscriptions = listening.clone();
     let owned = shared.clone();
     let queue = pending.clone();
@@ -259,7 +265,7 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
                         .chord
                         .as_ref()
                         .is_some_and(|chord| chord.matches(&pressed))
-                    && entry.in_scope(&pressed)
+                    && entry.in_scope(&pressed, popups)
                     && entry.guard.as_ref().is_none_or(|guard| guard())
             });
             let Some(index) = hit else {
@@ -420,6 +426,15 @@ mod tests {
     }
 
     #[test]
+    fn a_multi_char_key_starting_non_ascii_does_not_parse() {
+        for text in ["éa", "ß+ab", "ctrl+ñx"] {
+            assert_eq!(Chord::parse(text, false), None, "{text:?}");
+            assert_eq!(aria_keyshortcuts(text, false), None, "{text:?}");
+        }
+        assert_eq!(Chord::parse("é", false).unwrap().key, character("é"));
+    }
+
+    #[test]
     fn a_chord_matches_its_key_with_exactly_its_modifiers() {
         let chord = Chord::parse("mod+k", false).unwrap();
         assert!(chord.matches(&pressed(character("k"), Modifiers::CONTROL)));
@@ -463,10 +478,11 @@ mod tests {
         // `ElementHandle::new` needs a scope.
         dom.in_scope(ScopeId::ROOT, || {
             let press = pressed(character("b"), Modifiers::CONTROL);
-            assert!(entry(Vec::new()).in_scope(&press));
+            let popups = crate::hooks::popover::open_popups();
+            assert!(entry(Vec::new()).in_scope(&press, popups));
             let unmounted = ElementHandle::new();
-            assert!(!entry(vec![unmounted]).in_scope(&press));
-            assert!(!entry(vec![unmounted, ElementHandle::new()]).in_scope(&press));
+            assert!(!entry(vec![unmounted]).in_scope(&press, popups));
+            assert!(!entry(vec![unmounted, ElementHandle::new()]).in_scope(&press, popups));
         });
     }
 

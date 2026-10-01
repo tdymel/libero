@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 
-use super::polling_tests::{pump, pump_until, settle, started};
+use super::polling_tests::{flush, pump, pump_until, settle, started};
 use crate::hooks::{
     IntervalHandle, TimeoutHandle, use_debounced_callback, use_debounced_value, use_interval,
     use_throttled_callback, use_throttled_value, use_timeout,
@@ -125,6 +125,32 @@ fn a_throttled_callback_runs_at_once_then_once_per_window() {
     assert_eq!(log(&dom), ["a", "c", "d"]);
 }
 
+fn reading_throttled_callback_app() -> Element {
+    let log = use_context_provider(|| Signal::new(Vec::<String>::new()));
+    let prefix = use_context_provider(|| Signal::new("x".to_string()));
+    let callback = use_throttled_callback(
+        move |text: String| push(log, format!("{prefix}{text}")),
+        100,
+    );
+    CALLBACK.with(|slot| *slot.borrow_mut() = Some(callback));
+    rsx! {}
+}
+
+#[test]
+fn a_throttled_callback_that_reads_a_signal_keeps_its_window() {
+    let mut dom = started(reading_throttled_callback_app);
+    call(&dom, "a");
+    call(&dom, "b");
+    pump_until(&mut dom, "the trailing call", |dom| log(dom).len() == 2);
+
+    // The trailing call read `prefix`; changing it is no firing and keeps the window open.
+    let mut prefix = dom.in_scope(ScopeId::APP, consume_context::<Signal<String>>);
+    dom.in_runtime(|| prefix.set("y".to_string()));
+    flush(&mut dom);
+    call(&dom, "c");
+    assert_eq!(log(&dom), ["xa", "xb"], "ran inside the window");
+}
+
 fn throttled_value_app() -> Element {
     let input = use_context_provider(|| Signal::new("first".to_string()));
     let shown = use_throttled_value(input.into(), 100);
@@ -182,6 +208,28 @@ fn a_stopped_timeout_never_fires() {
 
     settle(&mut dom, 60);
     assert!(log(&dom).is_empty());
+}
+
+fn reading_timeout_app() -> Element {
+    let log = use_context_provider(|| Signal::new(Vec::<String>::new()));
+    let label = use_context_provider(|| Signal::new("fired".to_string()));
+    let timeout = use_timeout(move || push(log, label()), 10);
+    TIMEOUT.with(|slot| *slot.borrow_mut() = Some(timeout));
+    rsx! {}
+}
+
+/// `count.set(count() + 1)` is the same trap, looping with no timer at all.
+#[test]
+fn a_timeout_that_reads_a_signal_fires_once() {
+    let mut dom = started(reading_timeout_app);
+    dom.in_runtime(|| timeout().start());
+    pump_until(&mut dom, "the timeout", |dom| !log(dom).is_empty());
+
+    // A change of what the callback read is no firing.
+    let mut label = dom.in_scope(ScopeId::APP, consume_context::<Signal<String>>);
+    dom.in_runtime(|| label.set("again".to_string()));
+    flush(&mut dom);
+    assert_eq!(log(&dom), ["fired"]);
 }
 
 fn interval_app() -> Element {

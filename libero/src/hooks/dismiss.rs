@@ -14,8 +14,10 @@ use dioxus::prelude::*;
 
 use crate::{
     hooks::{
-        ElementHandle, FocusChange, FocusReturn, FocusWithin, focus_return::use_focus_return,
-        popover::focus_in_popup_of, use_focus_within,
+        ElementHandle, FocusChange, FocusReturn, FocusWithin,
+        focus_return::use_focus_return,
+        popover::{OpenPopups, focus_in_popup_of, use_open_popups},
+        use_focus_within,
     },
     platform::{
         ElementApi, KeySubscription, PRESS_MARKER_ATTR, PlatformError, PressSubscription,
@@ -291,6 +293,7 @@ pub(crate) struct DismissHandle {
     /// Bumped when a silent focus move, or a press, left the box.
     left_tick: Signal<u64>,
     marker: PressMarker,
+    popups: OpenPopups,
 }
 
 impl DismissHandle {
@@ -445,7 +448,7 @@ impl DismissHandle {
     fn focus_in_owned_popup(&self) -> bool {
         self.floating
             .mounted()
-            .is_some_and(|floating| focus_in_popup_of(&floating))
+            .is_some_and(|floating| focus_in_popup_of(self.popups, &floating))
     }
 
     /// Asks the consumer to close a task later (a synchronous close panics), then
@@ -500,6 +503,7 @@ pub(crate) fn use_dismiss(
     let focus = use_focus_within(Vec::new, |_| {});
     let left_tick = use_signal(|| 0u64);
     let own_marker = use_press_marker();
+    let popups = use_open_popups();
 
     let handle = DismissHandle {
         anchor,
@@ -517,6 +521,7 @@ pub(crate) fn use_dismiss(
         focus,
         left_tick,
         marker: options.marker.unwrap_or(own_marker),
+        popups,
     };
 
     use_document_escape(open && options.escape, global, move || {

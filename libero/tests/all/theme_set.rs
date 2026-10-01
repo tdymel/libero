@@ -132,6 +132,41 @@ fn a_switch_re_renders_the_readers_without_re_mounting_them() {
     assert!(html.contains("mounts=1"), "the reader re-mounted: {html}");
 }
 
+/// A pair name is the colour-scheme setting too, or `use_color_scheme` would
+/// still answer the platform's scheme and its first toggle would do nothing.
+#[test]
+fn a_pair_name_pins_the_colour_scheme_setting() {
+    #[component]
+    fn Reader() -> Element {
+        let scheme = libero::use_color_scheme();
+        rsx! { Text { "setting={scheme.setting():?} resolved={scheme.resolved():?}" } }
+    }
+
+    #[component]
+    fn Switcher() -> Element {
+        let context = use_context::<LiberoContext>();
+        use_effect(move || context.set_active_theme(ThemeSet::DARK));
+        rsx! {}
+    }
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                themes: set(),
+                Reader {}
+                Switcher {}
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert!(
+        html.contains("setting=Dark resolved=Dark"),
+        "the setting stayed behind: {html}"
+    );
+}
+
 /// A name the set does not have changes nothing, rather than blanking every
 /// colour the app draws with.
 ///

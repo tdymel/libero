@@ -267,6 +267,17 @@ mod tests {
     }
 
     #[test]
+    fn a_nested_breakpoint_value_is_dropped_with_a_warning() {
+        crate::utils::take_warnings();
+        let stylesheet = Stylesheet::from(&sx().padding(bp().xs("sm").md(bp().lg("xl"))));
+
+        // Only the `xs` entry is left.
+        assert_eq!(stylesheet.as_str().matches("min-width").count(), 1);
+        #[cfg(debug_assertions)]
+        assert_eq!(crate::utils::take_warnings().len(), 1);
+    }
+
+    #[test]
     fn identical_css_gets_one_class_name_however_it_was_built() {
         let direct = Stylesheet::from(&sx().padding("lg").color("red"));
         let composed = Stylesheet::from(&sx().padding("lg").and(sx().color("red")));

@@ -7,19 +7,27 @@ use dioxus::prelude::*;
 #[derive(Clone, Copy)]
 pub(crate) struct WindowHost {
     stack: Signal<Vec<u64>>,
-    base: i32,
-    step: i32,
-    ceiling: i32,
+    layers: ReadSignal<ZLayers>,
+}
+
+/// A stack's z-index run, read off the active theme: `base`, then `step` per
+/// place, below `ceiling`.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) struct ZLayers {
+    pub(crate) base: i32,
+    pub(crate) step: i32,
+    pub(crate) ceiling: i32,
+}
+
+impl ZLayers {
+    pub(crate) fn at(self, position: usize) -> i32 {
+        z_index_at(self.base, self.step, self.ceiling, position)
+    }
 }
 
 impl WindowHost {
-    pub(crate) fn new(stack: Signal<Vec<u64>>, base: i32, step: i32, ceiling: i32) -> Self {
-        Self {
-            stack,
-            base,
-            step,
-            ceiling,
-        }
+    pub(crate) fn new(stack: Signal<Vec<u64>>, layers: ReadSignal<ZLayers>) -> Self {
+        Self { stack, layers }
     }
 
     /// Puts `id` on top, adding it if it is new. A no-op when it already is.
@@ -52,7 +60,7 @@ impl WindowHost {
             .iter()
             .position(|other| *other == id)
             .unwrap_or(0);
-        z_index_at(self.base, self.step, self.ceiling, position)
+        self.layers.read().at(position)
     }
 }
 

@@ -21,8 +21,16 @@ impl BreakpointValue {
     }
 
     pub fn with(mut self, size: Size, value: impl Into<ThemeAwareValue>) -> Self {
+        let value = value.into();
+        // Expansion is one level deep, so a nested one could only render as a panic.
+        if matches!(value, ThemeAwareValue::BreakpointValue(_)) {
+            crate::utils::warn(
+                "bp(): a breakpoint value inside another is ignored; set each size on one bp().",
+            );
+            return self;
+        }
         self.values.retain(|(existing, _)| existing != &size);
-        self.values.push((size, value.into()));
+        self.values.push((size, value));
         self
     }
 

@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use dioxus::prelude::*;
 
-use super::window::z_index_at;
+use super::window::ZLayers;
 
 static NEXT_MODAL_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -14,19 +14,12 @@ static NEXT_MODAL_ID: AtomicU64 = AtomicU64::new(0);
 #[derive(Clone, Copy)]
 pub(crate) struct ModalHost {
     stack: Signal<Vec<u64>>,
-    base: i32,
-    step: i32,
-    ceiling: i32,
+    layers: ReadSignal<ZLayers>,
 }
 
 impl ModalHost {
-    pub(crate) fn new(stack: Signal<Vec<u64>>, base: i32, step: i32, ceiling: i32) -> Self {
-        Self {
-            stack,
-            base,
-            step,
-            ceiling,
-        }
+    pub(crate) fn new(stack: Signal<Vec<u64>>, layers: ReadSignal<ZLayers>) -> Self {
+        Self { stack, layers }
     }
 
     /// Puts a new modal on top and returns its id.
@@ -51,7 +44,7 @@ impl ModalHost {
             .iter()
             .position(|other| *other == id)
             .unwrap_or(0);
-        z_index_at(self.base, self.step, self.ceiling, position)
+        self.layers.read().at(position)
     }
 }
 
@@ -101,19 +94,71 @@ mod tests {
     use dioxus::dioxus_core::VirtualDom;
     use dioxus::prelude::*;
 
+    use std::cell::Cell;
+
     use super::ModalHost;
+    use crate::context::window::ZLayers;
+    use crate::theme::{Theme, ThemeSet, ZIndexDefaults};
+    use crate::{LiberoContext, LiberoProvider};
 
     /// Runs `check` against a fresh host inside a scope, which `Signal` needs.
     fn with_host(check: fn(ModalHost)) {
         let mut dom = VirtualDom::new_with_props(
             |check: fn(ModalHost)| {
                 let stack = use_signal(Vec::new);
-                use_hook(|| check(ModalHost::new(stack, 1000, 10, 2000)));
+                let layers = use_signal(|| ZLayers {
+                    base: 1000,
+                    step: 10,
+                    ceiling: 2000,
+                });
+                use_hook(|| check(ModalHost::new(stack, layers.into())));
                 rsx! {}
             },
             check,
         );
         dom.rebuild_in_place();
+    }
+
+    thread_local! {
+        static SHOWN: Cell<i32> = const { Cell::new(0) };
+    }
+
+    #[test]
+    fn the_base_follows_a_theme_switch() {
+        static RAISED: Theme = Theme {
+            z_index: ZIndexDefaults {
+                modal: 5000,
+                popover: 6000,
+                ..ZIndexDefaults::DEFAULT
+            },
+            ..Theme::DEFAULT
+        };
+
+        #[component]
+        fn Probe() -> Element {
+            let host = use_context::<ModalHost>();
+            let context = use_context::<LiberoContext>();
+            use_effect(move || context.set_active_theme("raised"));
+            SHOWN.with(|shown| shown.set(host.z_index(u64::MAX)));
+            rsx! {}
+        }
+
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    themes: ThemeSet::new().light(&Theme::DEFAULT).named("raised", &RAISED),
+                    Probe {}
+                }
+            }
+        }
+
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        for _ in 0..3 {
+            dom.process_events();
+            dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
+        }
+        assert_eq!(SHOWN.with(Cell::get), 5000);
     }
 
     #[test]

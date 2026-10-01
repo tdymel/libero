@@ -2,12 +2,11 @@
 //! opened inside an element count as inside it (`Hotkey::within`).
 
 use std::{
-    cell::RefCell,
     rc::Rc,
     sync::atomic::{AtomicU64, Ordering},
 };
 
-use dioxus::core::{AttributeValue, Runtime};
+use dioxus::core::{AttributeValue, Runtime, provide_root_context};
 use dioxus::prelude::*;
 
 use crate::{
@@ -38,30 +37,46 @@ impl Popup {
     }
 }
 
-thread_local! {
-    static OPEN: RefCell<Vec<Popup>> = const { RefCell::new(Vec::new()) };
+/// Every open popup in this document. Root context, not a `thread_local!`:
+/// `VirtualDom`s share a thread. Copied into handles a key callback reads without a runtime.
+#[derive(Clone, Copy)]
+pub(crate) struct OpenPopups(CopyValue<Vec<Popup>>);
+
+pub(crate) fn use_open_popups() -> OpenPopups {
+    use_hook(open_popups)
+}
+
+pub(crate) fn open_popups() -> OpenPopups {
+    try_consume_context::<OpenPopups>().unwrap_or_else(|| {
+        provide_root_context(OpenPopups(CopyValue::new_in_scope(
+            Vec::new(),
+            ScopeId::ROOT,
+        )))
+    })
 }
 
 /// Lists the popup `floating`, anchored on `anchor`, while `open`.
 pub(crate) fn use_popup_owner(anchor: ElementHandle, floating: ElementHandle, open: bool) {
     let id = use_hook(|| NEXT_POPUP.fetch_add(1, Ordering::Relaxed));
     let scope = Runtime::try_current().and_then(|runtime| runtime.try_current_scope_id());
+    let OpenPopups(mut popups) = use_open_popups();
     use_effect(use_reactive!(|open| {
-        OPEN.with_borrow_mut(|popups| {
-            popups.retain(|popup| popup.id != id);
-            if open {
-                popups.push(Popup {
-                    id,
-                    scope,
-                    anchor,
-                    floating,
-                });
-            }
-        });
+        let mut popups = popups.write();
+        popups.retain(|popup| popup.id != id);
+        if open {
+            popups.push(Popup {
+                id,
+                scope,
+                anchor,
+                floating,
+            });
+        }
     }));
     use_drop(move || {
-        // A thread-local torn down at exit is gone already.
-        let _ = OPEN.try_with(|popups| popups.borrow_mut().retain(|popup| popup.id != id));
+        // The root's registry is gone already when the whole dom drops.
+        if let Ok(mut popups) = popups.try_write() {
+            popups.retain(|popup| popup.id != id);
+        }
     });
 }
 
@@ -84,9 +99,11 @@ pub(crate) fn owner_link(anchor: &ElementHandle) -> Vec<Attribute> {
 
 /// Whether focus is in an open popup whose anchor lies in `scope`, directly or
 /// through the popups it was opened from.
-pub(crate) fn focus_in_popup_of(scope: &Rc<MountedData>) -> bool {
-    let popups: Vec<(Rc<MountedData>, Rc<MountedData>)> =
-        OPEN.with_borrow(|popups| popups.iter().filter_map(Popup::mounted).collect());
+pub(crate) fn focus_in_popup_of(open: OpenPopups, scope: &Rc<MountedData>) -> bool {
+    let popups: Vec<(Rc<MountedData>, Rc<MountedData>)> = match open.0.try_read() {
+        Ok(popups) => popups.iter().filter_map(Popup::mounted).collect(),
+        Err(_) => return false,
+    };
     if popups.is_empty() {
         return false;
     }
@@ -129,7 +146,43 @@ fn owned_by<E>(
 
 #[cfg(test)]
 mod tests {
-    use super::owned_by;
+    use std::cell::Cell;
+
+    use dioxus::prelude::*;
+
+    use super::{owned_by, use_open_popups, use_popup_owner};
+    use crate::hooks::use_element;
+
+    thread_local! {
+        static SEEN: Cell<usize> = const { Cell::new(usize::MAX) };
+    }
+
+    fn rendered(app: fn() -> Element) -> VirtualDom {
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dom.process_events();
+        dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
+        dom
+    }
+
+    #[test]
+    fn a_second_dom_on_the_thread_sees_none_of_the_first_s_popups() {
+        fn opener() -> Element {
+            use_popup_owner(use_element(), use_element(), true);
+            let open = use_open_popups();
+            use_effect(move || SEEN.set(open.0.peek().len()));
+            rsx! {}
+        }
+        fn other() -> Element {
+            SEEN.set(use_open_popups().0.peek().len());
+            rsx! {}
+        }
+
+        let _first = rendered(opener);
+        assert_eq!(SEEN.get(), 1, "the opener's own popup is listed");
+        let _second = rendered(other);
+        assert_eq!(SEEN.get(), 0);
+    }
 
     /// Elements are paths: `a` contains `b` when `b` starts with `a`.
     fn check(popups: &[(&str, &str)], at: usize, scope: &str) -> bool {
