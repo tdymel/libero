@@ -439,7 +439,7 @@ impl Driver for Desktop {
 
     /// The bridge answers synchronously: a flag the frame sets, polled; then `settle`'s idle
     /// rounds, as the app runs outside the WebView.
-    async fn frame(&mut self) -> Result<bool> {
+    async fn frame(&mut self) -> Result<()> {
         self.run(
             "window.__e2eFrame = false; requestAnimationFrame(() => { window.__e2eFrame = true; })",
         )?;
@@ -450,8 +450,7 @@ impl Driver for Desktop {
             }
             self.idle().await;
         }
-        self.settle().await?;
-        Ok(true)
+        self.settle().await
     }
 
     async fn idle(&mut self) {

@@ -1734,12 +1734,15 @@ async fn the_filter_panel_edits_every_filter<D: Driver>(d: &mut D, _route: &str)
     // What the close queued runs first: a press in the same task lost its menu (todo 1632).
     d.settle().await?;
     d.click("[aria-label=\"Stock column options\"]").await?;
-    // Todo 1502: the menu's entries, not only its first, before reading them.
+    // Todo 1502: the menu's entries, not only its first, before reading them; kept from the
+    // read that found it, not read again (1675).
+    let mut item = None;
     eventually(d, "the column menu's Filter entry", async |d| {
-        Ok(filter_entry(d).await?.is_some())
+        item = filter_entry(d).await?;
+        Ok(item.is_some())
     })
     .await?;
-    let Some(item) = filter_entry(d).await? else {
+    let Some(item) = item else {
         bail!("no Filter entry");
     };
     d.click(&item).await?;

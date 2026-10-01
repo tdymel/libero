@@ -5,7 +5,7 @@ use anyhow::{Result, bail, ensure};
 use chromiumoxide::Page;
 use e2e::archetypes::reset_tab_position;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, linger};
+use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard;
 use e2e::passes::motion;
 use e2e::passes::pointer;
@@ -131,9 +131,7 @@ async fn an_arrow_at_the_fields_end_stays<D: Driver>(d: &mut D, _route: &str) ->
     let before = d.rect(FIRST_SLIDE).await?.x;
     d.press(keyboard::ARROW_RIGHT).await?;
     // A native scroll moves on a later frame and sends nothing to await before it.
-    if !d.frame().await? {
-        linger(d, 10).await;
-    }
+    d.frame().await?;
     let after = d.rect(FIRST_SLIDE).await?.x;
     ensure!(
         (after - before).abs() < 1.0 && d.is_focused(TEXT).await?,

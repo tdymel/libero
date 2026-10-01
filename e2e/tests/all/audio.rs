@@ -196,8 +196,14 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
         )
         .await
         .unwrap();
+        page.evaluate(
+            "window.__presses = []; document.addEventListener('click', (e) => \
+             window.__presses.push(e.target.closest('button')?.getAttribute('aria-label')), true)",
+        )
+        .await
+        .unwrap();
         pointer::click(page, SPEAKER).await.unwrap();
-        wait::for_js_true(
+        let unmuted = wait::for_js_true(
             page,
             &format!(
                 "{} && {}",
@@ -206,8 +212,22 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
             ),
             "the speaker to unmute",
         )
-        .await
-        .unwrap();
+        .await;
+        if let Err(error) = unmuted {
+            // Todo 1673 flaked here: whether the press was lost or undone.
+            let state: String = page
+                .evaluate(audio(
+                    "muted",
+                    &format!(
+                        "`muted ${{a.muted}} volume ${{a.volume}} label ${{document.querySelector('{SPEAKER}').getAttribute('aria-label')}} focus ${{document.activeElement?.getAttribute('aria-label')}} clicks ${{window.__presses}}`"
+                    ),
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            panic!("{error}; the player reads {state}");
+        }
         pointer::click(page, SPEAKER).await.unwrap();
         wait::for_js_true(page, &audio("muted", "a.muted"), "the speaker to mute")
             .await

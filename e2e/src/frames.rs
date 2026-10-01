@@ -102,6 +102,15 @@ pub async fn bring_to_front(page: &Page) -> Result<Front> {
     Ok(Front { _alone: alone })
 }
 
+/// Runs `work` with `page` in front: a tab behind it draws about a frame a second, and each
+/// pointer move, wheel or touch event waits for one. Pages open behind the home tab.
+pub async fn in_front<T>(page: &Page, work: impl Future<Output = Result<T>>) -> Result<T> {
+    let front = bring_to_front(page).await?;
+    let done = work.await;
+    front.release().await?;
+    done
+}
+
 /// Starts recording; a recorder already on the page is stopped and replaced. The tab is
 /// brought to front first: in a background tab every input event waits out a 500 ms frame.
 pub async fn start(page: &Page) -> Result<Front> {

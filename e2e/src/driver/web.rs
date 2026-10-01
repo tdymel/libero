@@ -3,6 +3,7 @@ use std::time::Duration;
 use anyhow::Result;
 
 use super::{Driver, Platform, Rect};
+use crate::frames::in_front;
 use crate::passes::{focus, keyboard, pointer};
 use crate::{Fixture, Viewport};
 
@@ -39,18 +40,6 @@ pub(super) async fn json<T: serde::de::DeserializeOwned>(
         .await?
         .into_value()?;
     Ok(serde_json::from_str(&json)?)
-}
-
-/// Runs `gesture` with the page in front: a tab behind it draws about a frame a second, and
-/// each pointer move or touch event waits for one. Gestures take turns, as `frames::start`.
-async fn in_front(
-    page: &chromiumoxide::Page,
-    gesture: impl Future<Output = Result<()>>,
-) -> Result<()> {
-    let front = crate::frames::bring_to_front(page).await?;
-    let done = gesture.await;
-    front.release().await?;
-    done
 }
 
 pub(super) fn element(selector: &str) -> String {
@@ -209,9 +198,8 @@ impl Driver for Web {
         crate::clock::settle(&self.fixture.page).await
     }
 
-    async fn frame(&mut self) -> Result<bool> {
-        crate::clock::frame(&self.fixture.page).await?;
-        Ok(true)
+    async fn frame(&mut self) -> Result<()> {
+        crate::clock::frame(&self.fixture.page).await
     }
 
     async fn idle(&mut self) {

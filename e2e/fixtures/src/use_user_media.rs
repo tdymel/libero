@@ -9,6 +9,21 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[("/use-user-media", || rsx! { Captured {} })];
 
+/// Counts the recorder's non-empty chunks into `body[data-chunks]`, from 0 at each record:
+/// a test waits for one instead of sleeping out a chunk.
+const COUNT_CHUNKS: &str = "document.body.dataset.chunks = 0;
+    if (!window.__countsChunks) {
+        window.__countsChunks = true;
+        const add = MediaRecorder.prototype.addEventListener;
+        MediaRecorder.prototype.addEventListener = function (type, listener, ...rest) {
+            if (type !== 'dataavailable') return add.call(this, type, listener, ...rest);
+            return add.call(this, type, (event) => {
+                if (event.data.size) document.body.dataset.chunks = Number(document.body.dataset.chunks) + 1;
+                return listener(event);
+            }, ...rest);
+        };
+    }";
+
 #[component]
 fn Captured() -> Element {
     let mut audio = use_signal(|| false);
@@ -47,7 +62,14 @@ fn Captured() -> Element {
         button { id: "audio", onclick: move |_| audio.toggle(), "Audio" }
         button { id: "camera-toggle", onclick: move |_| camera.toggle(), "Camera" }
         button { id: "snapshot", onclick: move |_| media.snapshot(), "Snapshot" }
-        button { id: "record", onclick: move |_| media.record(), "Record" }
+        button {
+            id: "record",
+            onclick: move |_| async move {
+                let _ = document::eval(COUNT_CHUNKS).await;
+                media.record();
+            },
+            "Record"
+        }
         button { id: "finish", onclick: move |_| media.finish(), "Finish" }
         button { id: "refresh", onclick: move |_| devices.refresh(), "Refresh" }
         // The camera after the live one, as a phone's switch button picks it (1347).

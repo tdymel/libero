@@ -3,7 +3,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, frames, wait};
 
 const MINUTES: &str = "#digital [data-column='Minutes']";
 const HOURS: &str = "#digital [data-column='Hours']";
@@ -65,21 +65,27 @@ fn a_digital_column_turns_by_keys_presses_wheel_and_drag() {
                 .unwrap();
             value("10:55:00", "a press on the hour below").await;
 
-            // One notch is one step, however far it reports (todo 914).
-            wheel(page, MINUTES, 100.0).await;
-            value("10:00:00", "a wheel notch down to turn one step").await;
-            for _ in 0..3 {
-                wheel(page, MINUTES, 15.0).await;
-            }
-            value("10:05:00", "small trackpad deltas to add up to one step").await;
+            // In front: behind, each wheel and pointer event waits about a second for a frame.
+            frames::in_front(page, async {
+                // One notch is one step, however far it reports (todo 914).
+                wheel(page, MINUTES, 100.0).await;
+                value("10:00:00", "a wheel notch down to turn one step").await;
+                for _ in 0..3 {
+                    wheel(page, MINUTES, 15.0).await;
+                }
+                value("10:05:00", "small trackpad deltas to add up to one step").await;
 
-            let from = pointer::centre_of(page, MINUTES).await.unwrap();
-            let to = pointer::Point {
-                x: from.x,
-                y: from.y - 50.0,
-            };
-            pointer::drag(page, from, to, 8).await.unwrap();
-            value("10:15:00", "a drag up to turn two steps").await;
+                let from = pointer::centre_of(page, MINUTES).await?;
+                let to = pointer::Point {
+                    x: from.x,
+                    y: from.y - 50.0,
+                };
+                pointer::drag(page, from, to, 8).await?;
+                value("10:15:00", "a drag up to turn two steps").await;
+                Ok(())
+            })
+            .await
+            .unwrap();
 
             fixture
                 .console

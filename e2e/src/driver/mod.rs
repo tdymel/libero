@@ -159,10 +159,8 @@ pub trait Driver {
         Ok(())
     }
     /// Waits until the page drew a frame and settled: what a frame delivers (an observer's
-    /// report, a scroll event) has landed. `false` where no frame can be awaited.
-    async fn frame(&mut self) -> Result<bool> {
-        Ok(false)
-    }
+    /// report, a scroll event) has landed.
+    async fn frame(&mut self) -> Result<()>;
     /// Lets time pass: timers fire and the page settles.
     async fn idle(&mut self);
     /// How long [`eventually`] polls.

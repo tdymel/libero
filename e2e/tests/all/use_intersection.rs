@@ -72,9 +72,7 @@ e2e::scenario!(
 
 async fn a_clipped_target_stays_out<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "#state", "shown in, hidden out", "the first measure").await?;
-    if !d.frame().await? {
-        linger(d, 20).await;
-    }
+    d.frame().await?;
     eventually_text(d, "#state", "shown in, hidden out", "a clipped target").await
 }
 
@@ -98,9 +96,7 @@ async fn keeps_the_first_sighting<D: Driver>(d: &mut D, _route: &str) -> Result<
     // The control is the viewport scenario: there the same scroll flips it back.
     let (_, height) = d.viewport().await?;
     d.scroll_by(-height * 2.0).await?;
-    if !d.frame().await? {
-        linger(d, 20).await;
-    }
+    d.frame().await?;
     eventually_text(d, "#state", "seen", "scrolling away").await
 }
 

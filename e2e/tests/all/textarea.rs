@@ -4,7 +4,7 @@
 use anyhow::Result;
 use anyhow::ensure;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually_text, linger};
+use e2e::driver::{Driver, eventually_text};
 use e2e::passes::keyboard::{self, ARROW_DOWN, ARROW_UP, BACKSPACE, END, ENTER, HOME};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -27,14 +27,10 @@ async fn an_arrow_at_an_edge_line_stays<D: Driver>(d: &mut D, _route: &str) -> R
     d.focus(area).await?;
     for (to, arrow) in [(HOME, ARROW_UP), (END, ARROW_DOWN)] {
         d.press_ctrl(to).await?;
-        if !d.frame().await? {
-            linger(d, 5).await;
-        }
+        d.frame().await?;
         let before = d.rect(area).await?.y;
         d.press(arrow).await?;
-        if !d.frame().await? {
-            linger(d, 10).await;
-        }
+        d.frame().await?;
         let after = d.rect(area).await?.y;
         ensure!(
             (after - before).abs() < 1.0 && d.is_focused(area).await?,

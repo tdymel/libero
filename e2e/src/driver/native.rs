@@ -145,6 +145,13 @@ impl Driver for Native {
         Ok(self.page.focus_owner())
     }
 
+    /// No paint to await: the harness resolves on demand, so a frame is one 16 ms step of the
+    /// animation clock, as Blitz's own frame timer heals and redraws (todo 1667).
+    async fn frame(&mut self) -> Result<()> {
+        self.page.advance(0.016);
+        Ok(())
+    }
+
     /// Real time for libero's timers, the same span on the animation clock.
     async fn idle(&mut self) {
         self.page.wait(Duration::from_millis(20));

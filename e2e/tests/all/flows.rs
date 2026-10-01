@@ -4,16 +4,9 @@
 use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::passes::keyboard::{self, Key};
+use e2e::passes::keyboard;
 use e2e::passes::{focus, pointer};
 use e2e::{Fixture, Viewport, wait};
-
-const BACKSPACE: Key = Key {
-    key: "Backspace",
-    code: "Backspace",
-    vk: 8,
-    text: None,
-};
 
 /// Marks the first `css` element whose trimmed text is `text` and returns a
 /// selector for it.
@@ -47,17 +40,13 @@ async fn click_text(page: &Page, css: &str, text: &str) -> Result<()> {
     click(page, &selector).await
 }
 
-/// Clicks into `selector`, empties it and types `text`.
+/// Clicks into `selector`, empties it with one Backspace over what it holds selected, and
+/// types `text`.
 async fn fill(page: &Page, selector: &str, text: &str) -> Result<()> {
     click(page, selector).await?;
-    let length: usize = page
-        .evaluate(format!("document.querySelector({selector:?}).value.length"))
-        .await?
-        .into_value()?;
-    keyboard::press(page, keyboard::END).await?;
-    for _ in 0..length {
-        keyboard::press(page, BACKSPACE).await?;
-    }
+    page.evaluate(format!("document.querySelector({selector:?}).select()"))
+        .await?;
+    keyboard::press(page, keyboard::BACKSPACE).await?;
     keyboard::type_text(page, text).await
 }
 
@@ -312,7 +301,7 @@ fn an_orders_table_is_filtered_paged_and_sorted() {
 
         keyboard::type_text(page, "n").await.unwrap();
         wait_customers(page, &["No orders match"], "no match").await;
-        keyboard::press(page, BACKSPACE).await.unwrap();
+        keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
         wait_customers(
             page,
             &["Alan", "Dana", "Frances", "Ivan", "Joan"],

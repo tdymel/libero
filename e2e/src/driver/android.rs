@@ -353,10 +353,9 @@ impl Driver for Android {
     }
 
     /// The app runs outside the WebView: the idle rounds of `settle` carry the frame's report.
-    async fn frame(&mut self) -> Result<bool> {
+    async fn frame(&mut self) -> Result<()> {
         crate::clock::next_frame(&self.page).await?;
-        self.settle().await?;
-        Ok(true)
+        self.settle().await
     }
 
     async fn idle(&mut self) {

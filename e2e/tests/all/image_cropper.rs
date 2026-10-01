@@ -6,7 +6,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, frames, wait};
 
 const BOX: &str = "[data-slot=box]";
 const SOUTH_EAST: &str = "[aria-label='Bottom right corner']";
@@ -276,40 +276,31 @@ fn a_touch_drags_the_box_and_two_pinch_it() {
             x: centre.x - width / 10.0,
             y: centre.y - height / 10.0,
         };
-        pointer::touch_drag(page, centre, to, 8).await.unwrap();
-        wait::for_js_true(page, &format!("{crop} === '15,15,50,50'"), "a touch drag")
-            .await
-            .unwrap();
-        let after: f64 = page
-            .evaluate("scrollY")
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert_eq!(after, scroll, "the touch drag scrolled the page");
+        // In front: behind, each touch event waits about a second for a frame.
+        let (after, shrunk) = frames::in_front(page, async {
+            pointer::touch_drag(page, centre, to, 8).await?;
+            wait::for_js_true(page, &format!("{crop} === '15,15,50,50'"), "a touch drag").await?;
+            let after: f64 = page.evaluate("scrollY").await?.into_value()?;
 
-        // Spread three times as far: the box grows to the whole image and no further.
-        let middle = Point {
-            x: left + width * 0.4,
-            y: top + height * 0.4,
-        };
-        pointer::pinch(page, middle, width * 0.2, width * 0.6, 8)
-            .await
-            .unwrap();
-        wait::for_js_true(page, &format!("{crop} === '0,0,100,100'"), "a pinch out")
-            .await
-            .unwrap();
-        // Back to a fifth of the spread: about a fifth of the size, centred.
+            // Spread three times as far: the box grows to the whole image and no further.
+            let middle = Point {
+                x: left + width * 0.4,
+                y: top + height * 0.4,
+            };
+            pointer::pinch(page, middle, width * 0.2, width * 0.6, 8).await?;
+            wait::for_js_true(page, &format!("{crop} === '0,0,100,100'"), "a pinch out").await?;
+            // Back to a fifth of the spread: about a fifth of the size, centred.
+            pointer::pinch(page, centre, width * 0.5, width * 0.1, 8).await?;
+            wait::for_js_true(page, &format!("{crop} !== '0,0,100,100'"), "a pinch in").await?;
+            let shrunk: String = page.evaluate(crop).await?.into_value()?;
+            Ok((after, shrunk))
+        })
+        .await
+        .unwrap();
+        assert_eq!(after, scroll, "the touch drag scrolled the page");
         let centre_box = |text: String| -> Vec<f64> {
             text.split(',').map(|part| part.parse().unwrap()).collect()
         };
-        pointer::pinch(page, centre, width * 0.5, width * 0.1, 8)
-            .await
-            .unwrap();
-        wait::for_js_true(page, &format!("{crop} !== '0,0,100,100'"), "a pinch in")
-            .await
-            .unwrap();
-        let shrunk: String = page.evaluate(crop).await.unwrap().into_value().unwrap();
         let [x, y, w, h] = centre_box(shrunk.clone())[..] else {
             panic!("{shrunk}");
         };
@@ -596,18 +587,17 @@ fn a_touch_pans_and_pinch_zooms_the_image_under_the_box() {
             x: centre.x + width / 10.0,
             y: centre.y - height / 10.0,
         };
-        pointer::touch_drag(page, centre, to, 8).await.unwrap();
-        wait::for_js_true(page, &format!("{crop} === '20,20,40,80'"), "a touch pan")
-            .await
-            .unwrap();
+        // In front: behind, each touch event waits about a second for a frame.
+        frames::in_front(page, async {
+            pointer::touch_drag(page, centre, to, 8).await?;
+            wait::for_js_true(page, &format!("{crop} === '20,20,40,80'"), "a touch pan").await?;
 
-        // Twice the spread around the centre: half the crop around the point there.
-        pointer::pinch(page, centre, width * 0.2, width * 0.4, 8)
-            .await
-            .unwrap();
-        wait::for_js_true(page, &format!("{crop} === '30,40,20,40'"), "a pinch out")
-            .await
-            .unwrap();
+            // Twice the spread around the centre: half the crop around the point there.
+            pointer::pinch(page, centre, width * 0.2, width * 0.4, 8).await?;
+            wait::for_js_true(page, &format!("{crop} === '30,40,20,40'"), "a pinch out").await
+        })
+        .await
+        .unwrap();
         let after: Vec<f64> = page.evaluate(rects).await.unwrap().into_value().unwrap();
         assert!(
             (after[6] / width - 2.0).abs() < 0.02,

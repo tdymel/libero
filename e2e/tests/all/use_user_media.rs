@@ -50,8 +50,8 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             eventually_text(d, "#photo", "photo.png true", "a snapshot").await?;
             d.click("#record").await?;
             eventually_text(d, "#recording", "true", "a recording").await?;
-            // At least one 1 s chunk crosses the IPC before the end.
-            std::thread::sleep(std::time::Duration::from_millis(1500));
+            // At least one chunk crosses the IPC before the end.
+            eventually_a_chunk(d).await?;
             d.click("#finish").await?;
             eventually_text(d, "#recorded", "recording.webm true", "a finish").await?;
             switch_cameras(d).await?;
@@ -86,7 +86,7 @@ async fn switch_cameras<D: Driver>(d: &mut D) -> Result<()> {
     // A running recording finishes into a clip before the switch.
     d.click("#record").await?;
     eventually_text(d, "#recorded", "none", "a recording start").await?;
-    std::thread::sleep(std::time::Duration::from_millis(1500));
+    eventually_a_chunk(d).await?;
     d.click("#switch").await?;
     eventually(d, "the other camera", async |d| {
         let id = d.text("#camera-id").await?;
@@ -99,6 +99,16 @@ async fn switch_cameras<D: Driver>(d: &mut D) -> Result<()> {
     eventually_text(d, "#camera-id", &first, "a switch back").await
 }
 
+/// A non-empty chunk since the last record press, counted by the fixture.
+async fn eventually_a_chunk<D: Driver>(d: &mut D) -> Result<()> {
+    eventually(d, "a recorded chunk", async |d| {
+        Ok(d.attr("body", "data-chunks")
+            .await?
+            .is_some_and(|chunks| chunks != "0"))
+    })
+    .await
+}
+
 /// The microphone alone records an audio clip (1321); the camera comes back on after.
 async fn record_audio_only<D: Driver>(d: &mut D) -> Result<()> {
     d.click("#camera-toggle").await?;
@@ -106,7 +116,7 @@ async fn record_audio_only<D: Driver>(d: &mut D) -> Result<()> {
     eventually_text(d, "#live", "true", "an audio-only start").await?;
     d.click("#record").await?;
     eventually_text(d, "#recording", "true", "an audio recording").await?;
-    std::thread::sleep(std::time::Duration::from_millis(1500));
+    eventually_a_chunk(d).await?;
     d.click("#finish").await?;
     eventually_text(d, "#recording", "false", "an audio finish").await?;
     eventually(d, "an audio clip", async |d| {
@@ -161,24 +171,14 @@ async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {
     read.map_err(|error| error.context(format!("the fixture reads {state}")))
 }
 
-/// Counts the recorder's non-empty chunks in `window.__chunks`, from the next recording on.
-const COUNT_CHUNKS: &str = "(() => {
-    window.__chunks = 0;
-    const add = MediaRecorder.prototype.addEventListener;
-    MediaRecorder.prototype.addEventListener = function (type, listener, ...rest) {
-        if (type !== 'dataavailable') return add.call(this, type, listener, ...rest);
-        return add.call(this, type, (event) => {
-            if (event.data.size) window.__chunks += 1;
-            return listener(event);
-        }, ...rest);
-    };
-    return true;
-})()";
-
 /// Waits for a chunk while recording: a clip that crossed in pieces, not only at the finish.
 async fn until_a_chunk(page: &Page) -> Result<()> {
-    page.evaluate("window.__chunks = 0").await?;
-    wait::for_js_true(page, "window.__chunks > 0", "a recorded chunk").await
+    wait::for_js_true(
+        page,
+        "Number(document.body.dataset.chunks) > 0",
+        "a recorded chunk",
+    )
+    .await
 }
 
 /// Not `Element::click`: its IntersectionObserver waits a frame, a second in a background tab.
@@ -194,7 +194,6 @@ fn the_web_shows_snapshots_records_and_stops_the_camera() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(COUNT_CHUNKS).await.unwrap();
         set_permission(page, PermissionSetting::Granted)
             .await
             .unwrap();
