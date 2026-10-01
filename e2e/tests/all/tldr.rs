@@ -10,6 +10,8 @@ use e2e::{Fixture, Suite, Viewport, wait};
 /// `a11y_attributes()` gives the trigger a generated id, so the attribute finds it.
 const TRIGGER: &str = "[aria-haspopup=menu]";
 const ITEMS: &str = "[role=menu] a[role=menuitem]";
+/// A link's visible name, without the new-tab hint its label ends in (1495).
+const NAME_OF: &str = "(a => a.querySelector('[data-slot=label]').firstChild.textContent)";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -68,7 +70,7 @@ async fn every_provider_links_to_its_chat<D: Driver>(d: &mut D, _route: &str) ->
                 .contains(PAGE),
             "{prefix} does not name the page"
         );
-        let mark = d.rect(&format!("{item} svg")).await?;
+        let mark = d.rect(&format!("{item} [data-slot=leading] svg")).await?;
         ensure!(
             mark.width > 4.0 && mark.width < 40.0 && mark.height > 4.0,
             "{prefix}'s mark is {mark:?}"
@@ -132,12 +134,16 @@ async fn custom_providers_and_prompt<D: Driver>(d: &mut D, _route: &str) -> Resu
         "the added provider's prompt"
     );
     ensure!(
-        !d.exists(&format!("{example} svg")).await?,
+        !d.exists(&format!("{example} [data-slot=leading] svg"))
+            .await?,
         "a mark with none given"
     );
     ensure!(
-        d.exists(&format!("{} svg", link("https://claude.ai")))
-            .await?,
+        d.exists(&format!(
+            "{} [data-slot=leading] svg",
+            link("https://claude.ai")
+        ))
+        .await?,
         "Claude lost its mark"
     );
     Ok(())
@@ -238,7 +244,7 @@ fn space_and_enter_follow_the_link_and_return_focus() {
         wait::for_js_true(
             page,
             &format!(
-                "[...document.querySelectorAll('{ITEMS}')].map((a) => a.textContent).join() \
+                "[...document.querySelectorAll('{ITEMS}')].map({NAME_OF}).join() \
                  === 'ChatGPT,Google AI,Claude,Perplexity' \
                  && [...document.querySelectorAll('{ITEMS}')].every((a) => a.rel === 'noopener noreferrer')"
             ),
@@ -249,7 +255,7 @@ fn space_and_enter_follow_the_link_and_return_focus() {
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         wait::for_js_true(
             page,
-            "document.activeElement.textContent === 'Google AI'",
+            &format!("{NAME_OF}(document.activeElement) === 'Google AI'"),
             "ArrowDown moving on",
         )
         .await
@@ -277,7 +283,7 @@ fn space_and_enter_follow_the_link_and_return_focus() {
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait::for_js_true(
             page,
-            "document.activeElement.textContent === 'ChatGPT'",
+            &format!("{NAME_OF}(document.activeElement) === 'ChatGPT'"),
             "the menu reopened",
         )
         .await

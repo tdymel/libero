@@ -216,6 +216,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         props.clearable.unwrap_or(false) && !text.is_empty() && !disabled && !readonly,
         size,
         input_element,
+        Some(&field),
         move |_| {
             if let Some(oninput) = &clear_input {
                 oninput(String::new());

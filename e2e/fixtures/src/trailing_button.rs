@@ -20,7 +20,27 @@ pub const ROUTES: Routes = &[
     ),
     ("/trailing-button/cascader", || rsx! { CascaderPage {} }),
     ("/trailing-button/tags-field", || rsx! { TagsFieldPage {} }),
+    (
+        "/trailing-button/unlabelled",
+        || rsx! { UnlabelledPage {} },
+    ),
 ];
+
+/// Named by `aria-label` alone: no label for the x to borrow (1498).
+#[component]
+fn UnlabelledPage() -> Element {
+    let mut value = use_signal(|| Some(Fruit::Banana));
+    rsx! {
+        Around {
+            Select {
+                "aria-label": "Fruit",
+                clearable: true,
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+        }
+    }
+}
 
 #[component]
 fn Around(children: Element) -> Element {

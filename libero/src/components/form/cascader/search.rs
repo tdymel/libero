@@ -43,6 +43,7 @@ pub(super) struct CascaderSearch {
     pub(super) query: Signal<String>,
     pub(super) cursor: Signal<Vec<usize>>,
     pub(super) state: ComboboxState,
+    pub(super) blurred: Signal<bool>,
 }
 
 /// The search box at the top of an open, `searchable` list.
@@ -61,6 +62,7 @@ pub(super) fn search_header(
         mut query,
         mut cursor,
         state,
+        mut blurred,
     } = search;
     style
         .element(&element)
@@ -89,6 +91,7 @@ pub(super) fn search_header(
         // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.
         .event("onblur", move |event: FocusEvent| {
             if blur_counts(&event) {
+                blurred.set(true);
                 state.close();
             }
         })

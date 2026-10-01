@@ -304,7 +304,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         readonly,
     };
 
-    use_refocus_on_close(opened, searchable, trigger_element, query);
+    let blurred = use_refocus_on_close(opened, searchable, trigger_element, query);
 
     let field = use_field()
         .labelled_by()
@@ -330,6 +330,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         props.clearable && has_selection && !disabled && !readonly,
         size,
         trigger_element,
+        Some(&field),
         move |_| onclear.call(()),
     );
 
@@ -412,9 +413,12 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             SEARCH_INSET,
             select_search_box(
                 search_box.attr("placeholder", search_placeholder.clone()),
-                search,
+                SelectSearch {
+                    element: search,
+                    query,
+                    blurred,
+                },
                 state,
-                query,
                 naming,
                 &field,
                 required,
@@ -966,17 +970,29 @@ fn select_rows(
     (rows, groups, row_disabled)
 }
 
+#[derive(Clone, Copy)]
+struct SelectSearch {
+    element: ElementHandle,
+    query: Signal<String>,
+    /// [`use_refocus_on_close`]'s blur mark.
+    blurred: Signal<bool>,
+}
+
 /// The open search box owns the combobox role and the trigger's a11y wiring, field label included.
 /// `naming` is the caller's `aria-label`/`aria-labelledby`, moved off the trigger.
 fn select_search_box(
     search_box: BoxStyle,
-    search: ElementHandle,
+    search: SelectSearch,
     state: ComboboxState,
-    mut query: Signal<String>,
     naming: Vec<Attribute>,
     field: &PreparedField,
     required: bool,
 ) -> Element {
+    let SelectSearch {
+        element: search,
+        mut query,
+        mut blurred,
+    } = search;
     let mut attributes = state.a11y_attributes();
     attributes.extend(naming);
     search_box
@@ -1000,6 +1016,7 @@ fn select_search_box(
         // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.
         .event("onblur", move |event: FocusEvent| {
             if blur_counts(&event) {
+                blurred.set(true);
                 state.close();
             }
         })

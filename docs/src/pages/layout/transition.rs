@@ -77,6 +77,7 @@ fn wrap_page(_values: &DemoValues, source: &str) -> String {
          align: \"flex-start\",\n        \
          gap: \"sm\",\n        \
          Button {{\n            \
+         aria_expanded: show(),\n            \
          onclick: move |_| show.toggle(),\n            \
          \"Toggle\"\n        \
          }}\n\
@@ -95,7 +96,7 @@ fn TransitionDemo(kind: TransitionKind, duration: Option<u32>, filter: Option<St
             direction: "column",
             align: "flex-start",
             gap: "sm",
-            Button { onclick: move |_| show.toggle(), "Toggle" }
+            Button { aria_expanded: show(), onclick: move |_| show.toggle(), "Toggle" }
             Transition { kind, duration, open: show(), from: filter.map(|filter| sx().filter(filter)),
                 Paper { Text { "Hello" } }
             }
@@ -131,6 +132,7 @@ pub fn TransitionPage() -> Element {
                     "With `open` omitted, the server markup is already visible: the entrance is a CSS animation that needs no JavaScript.",
                 ])
                 .must([
+                    "Give the button that shows and hides the content `aria_expanded`, so a screen reader hears whether it is open.",
                     "Move focus yourself when focused content exits: use `use_focus_return`.",
                 ]),
             lead: rsx! {

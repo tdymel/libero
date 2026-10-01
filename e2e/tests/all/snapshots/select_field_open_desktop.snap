@@ -8,7 +8,7 @@ LabelText
 StaticText "Delivered with your next box."
 generic [haspopup=listbox]
   StaticText "Banana"
-button "Clear"
+button "Clear Fruit"
 status [atomic] [live=polite]
 StaticText "You can swap it until Friday."
 StaticText "Pick a fruit."

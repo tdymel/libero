@@ -12,6 +12,7 @@ use super::{
 use crate::{
     components::{
         common::{Glyph, Part, has_shortcut_modifier, is_javascript_url},
+        navigation::NewTabHint,
         typography::Kbd,
     },
     context::IconSlot,
@@ -73,6 +74,7 @@ pub(super) fn menu_item(
         ));
     }
     let is_link = href.is_some();
+    let hint = is_link && item.new_tab_hint;
     let onkeydown = {
         let (typeahead, labels) = (typeahead.clone(), labels.clone());
         move |event: KeyboardEvent| {
@@ -108,7 +110,12 @@ pub(super) fn menu_item(
         if let Some(leading) = item.leading.clone() {
             span { "data-slot": MenuPart::Leading.slot(), {leading} }
         }
-        span { "data-slot": MenuPart::Label.slot(), "{item.label}" }
+        span { "data-slot": MenuPart::Label.slot(),
+            "{item.label}"
+            if hint {
+                NewTabHint { in_text: true }
+            }
+        }
         if let Some(trailing) = item.trailing.clone() {
             span { "data-slot": MenuPart::Trailing.slot(), {trailing} }
         }

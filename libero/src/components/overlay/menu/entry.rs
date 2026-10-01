@@ -59,6 +59,7 @@ pub struct MenuItem {
     pub(super) shortcut: Option<String>,
     pub(super) disabled: bool,
     pub(super) close_on_select: Option<bool>,
+    pub(super) new_tab_hint: bool,
 }
 
 /// A checkable item's kind and state: one choice of several, or a toggle.
@@ -101,6 +102,7 @@ impl MenuItem {
             shortcut: None,
             disabled: false,
             close_on_select: None,
+            new_tab_hint: true,
         }
     }
 
@@ -117,7 +119,8 @@ impl MenuItem {
     }
 
     /// Opens `url` in a new tab: the item is an `<a>` with `role="menuitem"`, so
-    /// middle-click and the context menu work. Replaces an
+    /// middle-click and the context menu work. As on `Anchor`, the label ends in a
+    /// new-tab icon and a hidden "(opens in a new tab)". Replaces an
     /// [`onselect`](Self::onselect) or [`submenu`](Self::submenu). A disabled link has no `href`.
     ///
     /// ```no_run
@@ -128,6 +131,12 @@ impl MenuItem {
     /// ```
     pub fn href(mut self, url: impl Into<String>) -> Self {
         self.action = Action::Href(url.into());
+        self
+    }
+
+    /// With [`href`](Self::href): `false` drops the new-tab icon and hidden hint.
+    pub fn new_tab_hint(mut self, hint: bool) -> Self {
+        self.new_tab_hint = hint;
         self
     }
 

@@ -8,7 +8,7 @@ LabelText
 StaticText "Delivered with your next box."
 combobox "Fruit" = Banana [expanded=false] [haspopup=listbox] [invalid] [required]
   StaticText "Banana"
-button "Clear"
+button "Clear Fruit"
 status [atomic] [live=polite]
 StaticText "You can swap it until Friday."
 StaticText "Pick a fruit."

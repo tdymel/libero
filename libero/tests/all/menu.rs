@@ -338,7 +338,7 @@ fn a_shortcut_is_announced_by_attribute_not_by_name() {
     assert!(!delete[0].contains("aria-keyshortcuts"), "{}", delete[0]);
 }
 
-/// A link item is an `<a role="menuitem">` for a new tab; disabled, it keeps no `href`.
+/// A link item is an `<a role="menuitem">` for a new tab, with its cue; disabled, it keeps no `href`.
 #[test]
 fn a_link_item_is_an_anchor_that_opens_a_new_tab() {
     fn app() -> Element {
@@ -353,6 +353,7 @@ fn a_link_item_is_an_anchor_that_opens_a_new_tab() {
                         MenuItem::new("Docs").href("https://libero-ui.dev").into(),
                         MenuItem::new("Blog").href("https://example.com").disabled(true).into(),
                         MenuItem::new("Copy").onselect(|_| {}).into(),
+                        MenuItem::new("News").href("https://example.com").new_tab_hint(false).into(),
                     ],
                     Button { attributes: menu.a11y_attributes(), "Links" }
                 }
@@ -379,4 +380,8 @@ fn a_link_item_is_an_anchor_that_opens_a_new_tab() {
 
     let copy = tags_with(&html, r#"data-menu-index="2""#);
     assert!(copy[0].starts_with("<button "), "{}", copy[0]);
+
+    // Todo 1495: the links but News, which opts out, end in Anchor's new-tab hint.
+    assert_eq!(html.matches(r#"data-slot="new-tab""#).count(), 2, "{html}");
+    assert_eq!(html.matches("(opens in a new tab)").count(), 2, "{html}");
 }

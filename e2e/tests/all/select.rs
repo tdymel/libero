@@ -128,6 +128,45 @@ e2e::scenario!(
     the_search_box_shows_focus
 );
 
+/// Todo 1497: a click outside closes the search box's list and the focus stays
+/// where the click put it; only Escape, a pick or Clear refocus the trigger.
+pub async fn an_outside_click_keeps_its_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const OUTSIDE: &str = "#outside";
+    d.click(TRIGGER).await?;
+    eventually(d, "the search box to take focus", async |d| {
+        d.is_focused(SEARCH).await
+    })
+    .await?;
+    d.click(OUTSIDE).await?;
+    let closed = eventually(d, "the list to close on the clicked field", async |d| {
+        Ok(
+            d.attr(TRIGGER, "aria-expanded").await?.as_deref() == Some("false")
+                && d.is_focused(OUTSIDE).await?,
+        )
+    })
+    .await;
+    if let Err(error) = closed {
+        let owner = d.focus_owner().await?;
+        let search = d.exists(SEARCH).await?;
+        let expanded = d.attr(TRIGGER, "aria-expanded").await?;
+        anyhow::bail!("{error}; focus on {owner}, search box {search}, expanded {expanded:?}");
+    }
+    // A round trip later: a late refocus would have taken it by now.
+    d.type_text("x").await?;
+    let owner = d.focus_owner().await?;
+    anyhow::ensure!(
+        d.is_focused(OUTSIDE).await?,
+        "the trigger took the focus back: it is on {owner}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    an_outside_click_leaves_a_searchable_select,
+    "/select/outside",
+    an_outside_click_keeps_its_focus
+);
+
 /// `[active row is the selected one, the selected row's image, an unselected idle row's
 /// image]`.
 fn rows_js() -> String {

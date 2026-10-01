@@ -11,7 +11,27 @@ pub const ROUTES: Routes = &[
     ("/cascader/paths", || rsx! { CascaderPathsPage {} }),
     ("/cascader/any-level", || rsx! { CascaderAnyLevelPage {} }),
     ("/cascader/low", || rsx! { CascaderLowPage {} }),
+    ("/cascader/outside", || rsx! { CascaderOutsidePage {} }),
 ];
+
+/// Searchable, with a field above it to click while the list is open below (1497).
+#[component]
+fn CascaderOutsidePage() -> Element {
+    let mut place = use_signal(|| None::<String>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            input { id: "outside", "aria-label": "Note" }
+            Cascader {
+                label: "Place",
+                searchable: true,
+                data: places(),
+                value: place(),
+                onchange: move |next: Option<String>| place.set(next),
+            }
+        }
+    }
+}
 
 /// The trigger near the window's foot of a page that scrolls on: a phone's sheet
 /// would cover it (todo 1546), and the helper and error under it (todo 1658).

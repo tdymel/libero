@@ -17,7 +17,26 @@ pub const ROUTES: Routes = &[
     ("/select/unlabelled", || rsx! { SelectUnlabelledPage {} }),
     ("/select/refused", || rsx! { SelectRefusedPage {} }),
     ("/select/echo", || rsx! { SelectEchoPage {} }),
+    ("/select/outside", || rsx! { SelectOutsidePage {} }),
 ];
+
+/// Searchable, with a field above it to click while the list is open below (1497).
+#[component]
+fn SelectOutsidePage() -> Element {
+    let mut value = use_signal(|| Some(Fruit::Banana));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            input { id: "outside", "aria-label": "Note" }
+            Select {
+                label: "Fruit",
+                searchable: true,
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+        }
+    }
+}
 
 /// Apple picked, the value echoed in `#picked`, for the shared web/native scenarios.
 #[component]

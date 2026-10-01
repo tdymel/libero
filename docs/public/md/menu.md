@@ -95,7 +95,8 @@ also on every submenu.
 | `new(label)` | `String` | required | The visible text, the accessible name, and what typeahead matches. |
 | `onselect` | `FnMut(())` | - | Runs when the item is chosen by a click, Enter or Space. |
 | `submenu` | `Vec<MenuEntry>` | - | Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins. |
-| `href` | `String` | - | Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`. |
+| `href` | `String` | - | Makes the item a link: an `<a>` that opens the URL in a new tab, so middle-click and the context menu work. Replaces `onselect` and `submenu`. A disabled link has no `href`. The label ends in a new-tab icon and a hidden "(opens in a new tab)", as on `Anchor`. |
+| `new_tab_hint` | `bool` | `true` | With `href`: `false` drops the new-tab icon and the hidden hint. |
 | `keep_open` | `()` | - | Choosing the item leaves the menu open, and focus stays on it, whatever the menu's `close_on_select` says. `close_on_select(bool)` overrides it either way. |
 | `leading` | `Element` | - | Before the label, such as an icon. Nothing interactive, since it sits inside the item's button. |
 | `trailing` | `Element` | - | At the far end, such as a badge. It joins the accessible name. Nothing interactive. |

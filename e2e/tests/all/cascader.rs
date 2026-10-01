@@ -39,6 +39,14 @@ e2e::scenario!(
     a_tap_focuses_the_search
 );
 
+use crate::select::an_outside_click_keeps_its_focus;
+
+e2e::scenario!(
+    an_outside_click_leaves_a_searchable_cascader,
+    "/cascader/outside",
+    an_outside_click_keeps_its_focus
+);
+
 const ROOTS: &str = "[data-slot=column]";
 const LAST: &str = "[data-slot=column]:last-child";
 const BACK: &str = "[data-slot=drill-back]";

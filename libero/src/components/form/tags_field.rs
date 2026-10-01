@@ -236,6 +236,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         clearable && !(held.is_empty() && text().is_empty()) && !disabled && !readonly,
         size,
         input_element,
+        Some(&field),
         move |_| {
             text.set(String::new());
             state.set_active(None);

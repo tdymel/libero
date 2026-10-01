@@ -5,7 +5,7 @@ use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Viewport, ax, wait};
 
 const CONTROL: &str = "[role=combobox]";
 const CLEAR: &str = "[aria-label=Clear]";
@@ -105,6 +105,30 @@ fn tab_out_past_the_clear_button_closes_the_list() {
             fixture.close().await.unwrap();
         }))
         .await;
+    });
+}
+
+/// Todo 1498: the x borrows the field's label, "Clear Fruit"; with no label it stays "Clear".
+#[test]
+fn the_x_is_named_with_its_fields_label() {
+    block_on(async {
+        for (route, name) in [
+            ("/trailing-button/select", "Clear Fruit"),
+            ("/trailing-button/multi-select", "Clear Fruit"),
+            ("/trailing-button/autocomplete", "Clear City"),
+            ("/trailing-button/cascader", "Clear Place"),
+            ("/trailing-button/tags-field", "Clear Topics"),
+            ("/trailing-button/unlabelled", "Clear"),
+        ] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            wait::for_visible(page, CLEAR).await.unwrap();
+            let tree = ax::snapshot(page, CLEAR).await.unwrap();
+            let first = tree.lines().next().unwrap_or_default();
+            assert_eq!(first, format!("button {name:?}"), "{route}: {tree}");
+            fixture.console.assert_clean(route).unwrap();
+            fixture.close().await.unwrap();
+        }
     });
 }
 

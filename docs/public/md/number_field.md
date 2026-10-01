@@ -178,6 +178,9 @@ explains how parts work.
 ### You must
 
 - Leave `label` unset only when something else names the field.
+- With `steppers` on several fields of one form, name the buttons by their
+  field with `increment_label` and `decrement_label`, such as "Add a guest".
+  Unset, every field's are "Increase" and "Decrease".
 
 ## Theme defaults
 

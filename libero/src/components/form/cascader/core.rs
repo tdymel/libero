@@ -197,7 +197,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let onpick = props.onpick;
     let commit = commit_handler(state, onpick, committed.clone(), props.allow_deselect);
 
-    use_refocus_on_close(opened, searchable, trigger_element, query);
+    let blurred = use_refocus_on_close(opened, searchable, trigger_element, query);
 
     let field = use_field()
         .labelled_by()
@@ -222,6 +222,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         props.clearable && committed.is_some() && !disabled && !readonly,
         size,
         trigger_element,
+        Some(&field),
         move |_| {
             onpick.call(None);
             state.close();
@@ -327,6 +328,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
                     query,
                     cursor,
                     state,
+                    blurred,
                 },
                 controlled_id.clone(),
                 descendant.clone(),

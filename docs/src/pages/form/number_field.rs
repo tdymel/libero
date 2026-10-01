@@ -173,7 +173,10 @@ pub fn NumberFieldPage() -> Element {
                 .key(["Up", "Down"], "Step the value, with or without `steppers`.")
                 .key(["PageUp", "PageDown"], "Step the value ten steps.")
                 .handles(["The stepper buttons are not tab stops, since the arrow keys do the same from the field."])
-                .must(["Leave `label` unset only when something else names the field."]),
+                .must([
+                    "Leave `label` unset only when something else names the field.",
+                    "With `steppers` on several fields of one form, name the buttons by their field with `increment_label` and `decrement_label`, such as \"Add a guest\". Unset, every field's are \"Increase\" and \"Decrease\".",
+                ]),
             lead: rsx! {
                 Text {
                     "A numeric field over your own number type, with optional steppers. Every "

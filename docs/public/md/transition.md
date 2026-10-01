@@ -26,6 +26,7 @@ fn Demo() -> Element {
             align: "flex-start",
             gap: "sm",
             Button {
+                aria_expanded: show(),
                 onclick: move |_| show.toggle(),
                 "Toggle"
             }
@@ -64,6 +65,8 @@ Like every component, `Transition` also takes the shared props `sx`, `class`,
 
 ### You must
 
+- Give the button that shows and hides the content `aria_expanded`, so a screen
+  reader hears whether it is open.
 - Move focus yourself when focused content exits: use
   [`use_focus_return`](use_focus_return.md).
 

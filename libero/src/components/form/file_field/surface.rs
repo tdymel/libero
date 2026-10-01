@@ -363,12 +363,19 @@ pub(super) fn trailing_slot(
     emit: Callback<Files>,
 ) -> Option<Element> {
     let spinner = loader.map(|size| rsx! { Loader { size } });
-    let clear = clear_button(clearable, size, browse_element, move |event: MouseEvent| {
-        // Clearing is not a click on the control, which would open the picker
-        // straight after emptying the field.
-        event.stop_propagation();
-        emit.call(Files::default());
-    })
+    // In the field's labelled group already, so "Clear" alone.
+    let clear = clear_button(
+        clearable,
+        size,
+        browse_element,
+        None,
+        move |event: MouseEvent| {
+            // Clearing is not a click on the control, which would open the picker
+            // straight after emptying the field.
+            event.stop_propagation();
+            emit.call(Files::default());
+        },
+    )
     .map(|button| {
         rsx! {
             {spinner.clone()}

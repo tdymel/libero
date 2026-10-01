@@ -236,7 +236,7 @@ base_props! {
 /// # fn app() -> Element {
 /// let mut show = use_signal(|| false);
 /// rsx! {
-///     Button { onclick: move |_| show.toggle(), "Toggle" }
+///     Button { aria_expanded: show(), onclick: move |_| show.toggle(), "Toggle" }
 ///     Transition { kind: TransitionKind::FadeUp, open: show(),
 ///         Paper { Text { "Hello" } }
 ///     }

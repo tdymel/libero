@@ -1,8 +1,10 @@
 //! `DirectionToggle`: every press turns the document's `dir`, and the name
 //! always says where the next press goes.
 
+use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -194,3 +196,42 @@ fn clearing_drops_the_choice_and_the_roots_dir() {
         fixture.close().await.unwrap();
     });
 }
+
+const RTL_NEXT: &str = "Switch to right-to-left text";
+const LTR_NEXT: &str = "Switch to left-to-right text";
+
+/// Waits for the root's `dir` and the button's name.
+async fn turned<D: Driver>(d: &mut D, dir: Option<&str>, name: &str, after: &str) -> Result<()> {
+    eventually(
+        d,
+        &format!("{after}: the root {dir:?}, the button {name:?}"),
+        async |d| {
+            Ok(d.attr("html", "dir").await?.as_deref() == dir
+                && d.attr(BUTTON, "aria-label").await?.as_deref() == Some(name))
+        },
+    )
+    .await
+}
+
+/// Todo 1496: a click and Enter turn the root, focus stays, Clear drops the `dir`.
+async fn a_press_turns_the_root<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually(d, "the storage shield", async |d| {
+        d.exists("#shielded").await
+    })
+    .await?;
+    turned(d, None, RTL_NEXT, "at rest").await?;
+    d.click(BUTTON).await?;
+    turned(d, Some("rtl"), LTR_NEXT, "a click").await?;
+    d.focus(BUTTON).await?;
+    d.press(keyboard::ENTER).await?;
+    turned(d, Some("ltr"), RTL_NEXT, "Enter").await?;
+    eventually_focused(d, BUTTON, "Enter").await?;
+    d.click("#clear").await?;
+    turned(d, None, RTL_NEXT, "Clear").await
+}
+
+e2e::scenario!(
+    a_press_turns_the_root_on_every_backend,
+    "/direction-toggle/shielded",
+    a_press_turns_the_root
+);
