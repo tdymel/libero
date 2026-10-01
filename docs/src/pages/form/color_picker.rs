@@ -46,8 +46,8 @@ AlphaSlider {
 }
 Text { size: "sm", "{alpha()}" }"#;
 
-const COLOR_SWATCH: &str = r#"ColorSwatch { color: ColorCode::hex(0x228be6) }
-ColorSwatch { color: "rgba(250, 82, 82, 0.4)".parse().unwrap() }
+const COLOR_SWATCH: &str = r#"ColorSwatch { color: ColorCode::hex(0x228be6), role: "img", aria_label: "Blue" }
+ColorSwatch { color: "rgba(250, 82, 82, 0.4)".parse().unwrap(), role: "img", aria_label: "Translucent red" }
 ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, aria_label: "Green", "✓" }"#;
 
 /// The preview prints the value in three formats under the picker, which is
@@ -127,7 +127,7 @@ pub fn ColorPickerPage() -> Element {
                     prop("size", "Size").default("md").doc("Track height and thumb."),
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the thumb out of the tab order."),
-                    prop("aria_label", "String").doc("Names the thumb."),
+                    prop("aria_label", "String").doc("Names the thumb. Unset, the thumb has no name: unlike `ColorPicker`, the standalone slider falls back to no localization."),
                 ])
                 .parts("ColorSliderPart", vec![
                     (ColorSliderPart::Track, "The gradient track."),
@@ -140,7 +140,7 @@ pub fn ColorPickerPage() -> Element {
                     prop("size", "Size").default("md").doc("Track height and thumb."),
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the thumb out of the tab order."),
-                    prop("aria_label", "String").doc("Names the thumb."),
+                    prop("aria_label", "String").doc("Names the thumb. Unset, the thumb has no name: unlike `ColorPicker`, the standalone slider falls back to no localization."),
                 ])
                 .parts("ColorSliderPart", vec![
                     (ColorSliderPart::Track, "The gradient track over a checkerboard."),
@@ -163,6 +163,7 @@ pub fn ColorPickerPage() -> Element {
                 ])
                 .must([
                     "Name swatches with `Swatches::labelled`. By default they are named by their hex, which a screen reader spells out.",
+                    "Give a standalone `HueSlider` or `AlphaSlider` an `aria_label`. Otherwise screen readers announce an unnamed slider.",
                     "Give a `ColorSwatch` with `onclick` an `aria-label`; without one it is just \"button\", and it warns.",
                     "Name the color in text beside a plain `ColorSwatch`, or give it `role: \"img\"` and an `aria-label`: on its own it says nothing.",
                 ])
@@ -236,8 +237,8 @@ pub fn ColorPickerPage() -> Element {
                     "alpha" => rsx! { AlphaSliderPreview {} },
                     "swatch" => rsx! {
                         Flex { direction: "row", gap: "sm", align: "center",
-                            ColorSwatch { color: ColorCode::hex(0x228be6) }
-                            ColorSwatch { color: ColorCode::rgba(250, 82, 82, 0.4) }
+                            ColorSwatch { color: ColorCode::hex(0x228be6), role: "img", aria_label: "Blue" }
+                            ColorSwatch { color: ColorCode::rgba(250, 82, 82, 0.4), role: "img", aria_label: "Translucent red" }
                             ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, aria_label: "Green", "✓" }
                         }
                     },

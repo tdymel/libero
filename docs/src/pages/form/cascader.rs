@@ -151,6 +151,20 @@ pub fn CascaderPage() -> Element {
                     (CascaderPart::Status, "The validation message."),
                 ])
                 .dropdown_parts("DropdownPart", list_dropdown_parts(CASCADER_DROPDOWN)),
+                props("CascaderNodeArgs", vec![
+                    prop("value", "T").doc("The option this row draws."),
+                    prop("label", "String").doc("The option's label."),
+                    prop("level", "usize").doc("The option's column: 0 for a root."),
+                    prop("expanded", "bool").doc("The column to the right holds this option's children."),
+                    prop("selected", "bool").doc("This option holds the committed value."),
+                ])
+                .without_base_props(),
+                props("CascaderFilterArgs", vec![
+                    prop("query", "String").doc("What is typed in the search box."),
+                    prop("label", "String").doc("The path's labels joined by `separator`, what the default filter matches."),
+                    prop("path", "Vec<T>").doc("The values from the root to the option. The last one is what this path commits."),
+                ])
+                .without_base_props(),
             ],
             accessibility: a11y()
                 .key(["Down", "Up", "Right", "Enter", "Space"], "Closed: opens on the committed path, or with the cursor on the first enabled root (`Up`: the last).")

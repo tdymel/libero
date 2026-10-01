@@ -249,7 +249,7 @@ pub fn SegmentedControlPage() -> Element {
                                 r#"status: FieldStatus::Warning("Justified text is harder to read.".into())"#
                                     .to_string(),
                             ],
-                            "error" => vec![r#"status: "Pick an alignment.""#.to_string()],
+                            "error" => vec![r#"status: "This layout only takes centered text.""#.to_string()],
                             _ => vec![],
                         }),
                     Control::switch("label").default("true").code(|_, values| {
@@ -303,7 +303,7 @@ pub fn SegmentedControlPage() -> Element {
                             .then(|| "Applies to the whole document.".to_string()),
                         status: match values.str("status").as_str() {
                             "warning" => FieldStatus::Warning("Justified text is harder to read.".to_string()),
-                            "error" => FieldStatus::Error("Pick an alignment.".to_string()),
+                            "error" => FieldStatus::Error("This layout only takes centered text.".to_string()),
                             _ => FieldStatus::Valid,
                         },
                         required: is_on(&values, "required").then_some(true),

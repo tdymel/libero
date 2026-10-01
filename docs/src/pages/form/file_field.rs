@@ -50,14 +50,14 @@ pub fn FileFieldPage() -> Element {
                         .default("input")
                         .doc("`input` is one line in the field frame. `dropzone` is a tall surface to drop onto or click, with the files as cards below it. A single-file dropzone hides its surface while it holds a file."),
                     prop("accept", "String")
-                        .doc("The file types to take, such as `.pdf`, `image/png`, `image/*` or a comma-separated list. It applies to the picker and to a drop."),
+                        .doc("The file types to take, such as `.pdf`, `image/png`, `image/*` or a comma-separated list. It applies to the picker and to a drop. A dropzone also shows them as a hint under its prompt."),
                     prop("capture", "String")
                         .doc("Asks a phone for a fresh capture, `user` or `environment`."),
                     prop("placeholder", "String")
-                        .doc("Shown while nothing is picked. It is the dropzone's prompt when `children` is empty. With neither, the localization's `file_field.drop_file` or `drop_files`."),
+                        .doc("Shown while nothing is picked. It is the dropzone's prompt when `children` is empty. A dropzone with neither says the localization's `file_field.drop_file` or `drop_files`; the `input` variant shows nothing."),
                     prop("clearable", "bool")
                         .default("true")
-                        .doc("Shows an x that empties the field."),
+                        .doc("Shows an x that empties the field. `input` variant only: a dropzone's cards each have their own x."),
                     prop("loading", "bool")
                         .default("false")
                         .doc("Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that."),
@@ -66,8 +66,8 @@ pub fn FileFieldPage() -> Element {
                     prop("oncrop", "EventHandler<CropRect>")
                         .doc("The box picked in the crop dialog, before the cut file reaches `onchange`."),
                     prop("selection","Callback<SelectionArgs<FileData>, Element>")
-                        .default("Chip, or the file name")
-                        .doc("Draws one picked file, remove control included. `args.remove` removes it."),
+                        .default("Chip, file name or card")
+                        .doc("Draws one picked file, remove control included. `args.remove` removes it. Unset, a multiple `input` field draws a chip, a single one the file name, and a dropzone a card under its surface."),
                     prop("name", "FieldName<Files>")
                         .doc("What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`."),
                     prop("onchange", "EventHandler<Files>")
@@ -188,12 +188,16 @@ pub fn FileFieldPage() -> Element {
                         ],
                         false => vec![],
                     }),
-                    Control::switch("clearable").default("true").code(|_, values| {
-                        match is_on(values, "clearable") {
-                            true => vec![],
-                            false => vec!["clearable: false".to_string()],
-                        }
-                    }),
+                    // A dropzone has no clear button, so the switch goes with it.
+                    Control::switch("clearable")
+                        .default("true")
+                        .hidden_when(|values| values.str("variant") != "input")
+                        .code(|_, values| {
+                            match is_on(values, "clearable") || values.str("variant") != "input" {
+                                true => vec![],
+                                false => vec!["clearable: false".to_string()],
+                            }
+                        }),
                     Control::switch("label").default("true").code(|_, values| {
                         match is_on(values, "label") {
                             true => vec![r#"label: "Attachment""#.to_string()],

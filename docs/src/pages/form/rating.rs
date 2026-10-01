@@ -64,7 +64,7 @@ pub fn RatingPage() -> Element {
                     .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
                 prop("required", "bool")
                     .default("false")
-                    .doc("Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider."),
+                    .doc("Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider, so the name says the localization's `rating.required` word instead."),
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Dims the stars and drops them from the tab order."),
@@ -96,13 +96,14 @@ pub fn RatingPage() -> Element {
                     "A sideways touch drag scrubs; a vertical swipe scrolls the page.",
                     "Display-only (`focusable: false`) is an image named by the label and the value.",
                     "A debug build warns when the rating has neither a visible label nor `aria_label`.",
+                    "A `role=\"slider\"` takes no `aria-required`, so a `required` rating says the localization's `rating.required` word in its name instead, such as \"Your rating required\". The asterisk stays hidden from screen readers.",
                 ])
                 .must([
                     "Without a visible label, set `aria_label`.",
-                    "Translate the spoken value with the localization or `format`.",
+                    "Translate the spoken value with the localization or `format`, and the `rating.required` word with the localization.",
                 ])
                 .limits([
-                    "At the default `md` size a whole star is a 28px target, a half star 14px wide: the row is one slider target, and a drag reaches any half. `size: \"xl\"` makes each half 24px wide.",
+                    "At the default `md` size a whole star is a 28px target, a half star 14px wide: the row is one slider target, and a drag reaches any half. `size: \"xxl\"` makes each half 24px wide.",
                     "A solid custom icon shows the value by colour alone.",
                 ]),
             lead: rsx! {

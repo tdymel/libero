@@ -95,6 +95,18 @@ const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rs
     }
 }"#;
 
+/// The args carry no `disabled`, so a disabled field's chip drops the x itself.
+// snippet: after TOPPING_ENUM
+// snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
+// snippet: let mut value = use_signal(Vec::<Topping>::new);
+// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
+const CUSTOM_SELECTION_DISABLED: &str = r#"selection: move |s: SelectionArgs<Topping>| rsx! {
+    // The field is disabled, so the chip has no remove control.
+    Chip { size: "xs", variant: "outlined",
+        "{s.value.emoji()} {s.value.label()}"
+    }
+}"#;
+
 /// A filter can test anything the caller knows: this one searches the note too.
 // snippet: after TOPPING_ENUM
 // snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
@@ -230,9 +242,18 @@ fn topping_row(o: SelectOptionArgs<Topping>) -> Element {
 
 /// The chip's inside is the caller's, the remove control with it - `remove` on
 /// the args is the wiring. The keyboard stays `MultiSelect`'s either way.
-fn topping_selection(words: &'static Localization, s: SelectionArgs<Topping>) -> Element {
+fn topping_selection(
+    words: &'static Localization,
+    s: SelectionArgs<Topping>,
+    disabled: bool,
+) -> Element {
     let label = s.value.label();
     let remove_label = fill(words.common.remove, &[("label", &label)]);
+    if disabled {
+        return rsx! {
+            Chip { size: "xs", variant: "outlined", "{s.value.emoji()} {label}" }
+        };
+    }
     rsx! {
         Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
             trailing: rsx! {
@@ -286,7 +307,7 @@ pub fn MultiSelectPage() -> Element {
                         .doc("Draws one row's content. `selected` on the args is there for a checkmark."),
                     prop("selection", "Callback<SelectionArgs<T>, Element>")
                         .default("Chip with an x")
-                        .doc("Draws one selected value in the trigger, remove control included. `remove` on the args drops that value."),
+                        .doc("Draws one selected value in the trigger, remove control included. `remove` on the args drops that value. The args carry no `disabled` or `readonly`, so leave the remove control out when you set either."),
                     prop("placeholder", "String").doc("Shown while `value` is empty."),
                     prop("clearable", "bool")
                         .default("false")
@@ -324,6 +345,23 @@ pub fn MultiSelectPage() -> Element {
                     (SelectPart::Status, "The validation message."),
                 ])
                 .dropdown_parts("DropdownPart", list_dropdown_parts(SELECT_DROPDOWN)),
+                props("SelectOptionArgs", vec![
+                    prop("value", "T").doc("The option this row draws."),
+                    prop("index", "usize").doc("The row's position among the rows drawn."),
+                    prop("selected", "bool").doc("Part of the selection, for a checkmark."),
+                    prop("disabled", "bool").doc("The list refuses this row. The greying and `aria-disabled` are drawn anyway."),
+                ])
+                .without_base_props(),
+                props("SelectFilterArgs", vec![
+                    prop("value", "T").doc("The option under test."),
+                    prop("query", "String").doc("What is typed in the search box."),
+                ])
+                .without_base_props(),
+                props("SelectionArgs", vec![
+                    prop("value", "T").doc("The value this chip draws."),
+                    prop("remove", "Callback<()>").doc("Drops this value, the same edit as picking its row again."),
+                ])
+                .without_base_props(),
             ],
             accessibility: a11y()
                 .key(["Down", "Up", "Enter", "Space"], "Closed: opens the list.")
@@ -338,7 +376,8 @@ pub fn MultiSelectPage() -> Element {
                     "Disabled options are read out but skipped.",
                     "With `searchable` the search box takes over typing and holds the focus while the list is open.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
-                ]),
+                ])
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
             lead: rsx! {
                 Text {
                     "A listbox over an enum that holds any number of its options, drawn as chips "
@@ -374,7 +413,7 @@ pub fn MultiSelectPage() -> Element {
                             "warning" => vec![
                                 "status: FieldStatus::Warning(\"Pineapple divides the table.\".into())".to_string(),
                             ],
-                            "error" => vec!["status: \"Pick at least one.\"".to_string()],
+                            "error" => vec!["status: \"Pick no more than one topping.\"".to_string()],
                             _ => vec![],
                         }),
                     Control::switch("label").default("true").code(|_, values| {
@@ -385,7 +424,7 @@ pub fn MultiSelectPage() -> Element {
                     }),
                     Control::switch("description").code(|_, values| {
                         match values.str("description").as_str() {
-                            "true" => vec!["description: \"Up to five, at no extra cost.\"".to_string()],
+                            "true" => vec!["description: \"Each one is at no extra cost.\"".to_string()],
                             _ => vec![],
                         }
                     }),
@@ -398,7 +437,14 @@ pub fn MultiSelectPage() -> Element {
                     // Draws the rows and the chips through `option` and
                     // `selection`.
                     Control::switch("custom").code(|_, values| match custom(values) {
-                        true => vec![CUSTOM_OPTION.to_string(), CUSTOM_SELECTION.to_string()],
+                        true => vec![
+                            CUSTOM_OPTION.to_string(),
+                            match values.str("disabled") == "true" {
+                                true => CUSTOM_SELECTION_DISABLED,
+                                false => CUSTOM_SELECTION,
+                            }
+                            .to_string(),
+                        ],
                         false => vec![],
                     }),
                     // The query survives a pick here, so several matches of one
@@ -443,17 +489,20 @@ pub fn MultiSelectPage() -> Element {
                         label: (values.str("label") == "true").then(|| "Toppings".to_string()),
                         aria_label: (values.str("label") != "true").then_some("Toppings"),
                         description: (values.str("description") == "true")
-                            .then(|| "Up to five, at no extra cost.".to_string()),
+                            .then(|| "Each one is at no extra cost.".to_string()),
                         helper: (values.str("helper") == "true")
                             .then(|| "Picked in the order they go on.".to_string()),
                         status: match values.str("status").as_str() {
                             "warning" => FieldStatus::Warning("Pineapple divides the table.".to_string()),
-                            "error" => FieldStatus::Error("Pick at least one.".to_string()),
+                            "error" => FieldStatus::Error("Pick no more than one topping.".to_string()),
                             _ => FieldStatus::Valid,
                         },
                         options: topping_options(&values),
                         option: custom(&values).then(|| Callback::new(topping_row)),
-                        selection: custom(&values).then(|| Callback::new(move |s| topping_selection(words, s))),
+                        selection: custom(&values).then(|| {
+                            let disabled = values.str("disabled") == "true";
+                            Callback::new(move |s| topping_selection(words, s, disabled))
+                        }),
                         searchable: (values.str("searchable") == "true").then_some(true),
                         search_placeholder: "Search toppings",
                         filter: filtering(&values).then(|| Callback::new(topping_filter)),

@@ -51,7 +51,7 @@ pub fn ColorFieldPage() -> Element {
                         .doc("Makes the text read-only, so a color comes from the dropdown alone."),
                     prop("fix_on_blur", "bool")
                         .default("true")
-                        .doc("Text that does not parse goes back to the last valid color on blur. Off, it stays and shows `color.invalid` as an error."),
+                        .doc("Text that does not parse goes back to the last valid color on blur. Off, it stays and shows `color.invalid` as an error. Either way the blur announces `color.invalid`."),
                     prop("close_on_swatch_click", "bool").default("false").doc("Picking a swatch closes the dropdown."),
                     prop("name", "FieldName<ColorCode>")
                         .doc("What the field posts as, the text in `format`. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`."),
@@ -85,16 +85,18 @@ pub fn ColorFieldPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Down"], "Moves focus into the picker, onto the saturation area or the first swatch, where the `ColorPicker` keys apply.")
-                .key(["Enter"], "On text that does not parse: announces the refusal and keeps the text. Text that parses is sent as you type.")
+                .key(["Enter"], "On text that does not parse: announces the refusal and keeps the text. Text that parses is sent as you type. A revert on blur is announced too.")
                 .key(["Escape"], "Closes the dropdown. From inside it, moves focus back to the text.")
                 .key(["Tab", "Shift+Tab"], "Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text.")
                 .handles([
                     "Focus opens the dropdown and stays in the text, so typing works at once.",
                     "A swatch that closes the dropdown moves focus back to the text.",
                     "Focus leaving both the text and the dropdown closes it.",
+                    "Leaving text that does not parse announces the localization's `color.invalid`, whether `fix_on_blur` reverts it or keeps it. It is said once, so a blur after Enter does not repeat it.",
                     "A mouse click in the dropdown leaves focus in the text.",
                     "Android's Back button closes the dropdown rather than the app. Focus in the dropdown goes back to the text.",
-                ]),
+                ])
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
             lead: rsx! {
                 Text {
                     "A text field holding a "

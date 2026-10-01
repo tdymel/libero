@@ -565,7 +565,7 @@ pub fn RichTextEditorPage() -> Element {
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
                             "warning" => vec![
-                                "status: FieldStatus::Warning(\"Consider a shorter title.\".into())".to_string(),
+                                "status: FieldStatus::Warning(\"Long notes get cut short in the feed.\".into())".to_string(),
                             ],
                             "error" => vec!["status: \"Write a few words.\"".to_string()],
                             _ => vec![],
@@ -646,7 +646,7 @@ pub fn RichTextEditorPage() -> Element {
                                 helper: (values.str("helper") == "true")
                                     .then(|| "Markdown shortcuts work as you type.".to_string()),
                                 status: match values.str("status").as_str() {
-                                    "warning" => FieldStatus::Warning("Consider a shorter title.".to_string()),
+                                    "warning" => FieldStatus::Warning("Long notes get cut short in the feed.".to_string()),
                                     "error" => FieldStatus::Error("Write a few words.".to_string()),
                                     _ => FieldStatus::Valid,
                                 },

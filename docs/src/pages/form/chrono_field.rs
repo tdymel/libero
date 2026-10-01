@@ -131,7 +131,8 @@ pub fn ChronoFieldPage() -> Element {
                     "Focus leaving both the text and the dropdown closes it.",
                     "A mouse click in the dropdown leaves focus in the text.",
                     "Android's Back button closes the dropdown rather than the app. Focus in the dropdown goes back to the text.",
-                ]),
+                ])
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
             lead: rsx! {
                 Text {
                     "A text field for every date and time value, with a "

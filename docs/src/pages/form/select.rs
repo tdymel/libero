@@ -279,6 +279,18 @@ pub fn SelectPage() -> Element {
                     (SelectPart::Status, "The validation message."),
                 ])
                 .dropdown_parts("DropdownPart", list_dropdown_parts(SELECT_DROPDOWN)),
+                props("SelectOptionArgs", vec![
+                    prop("value", "T").doc("The option this row draws."),
+                    prop("index", "usize").doc("The row's position among the rows drawn."),
+                    prop("selected", "bool").doc("Part of the selection, for a checkmark."),
+                    prop("disabled", "bool").doc("The list refuses this row. The greying and `aria-disabled` are drawn anyway."),
+                ])
+                .without_base_props(),
+                props("SelectFilterArgs", vec![
+                    prop("value", "T").doc("The option under test."),
+                    prop("query", "String").doc("What is typed in the search box."),
+                ])
+                .without_base_props(),
             ],
             accessibility: a11y()
                 .key(["Down", "Up", "Enter", "Space"], "Closed: opens the list.")
@@ -292,7 +304,8 @@ pub fn SelectPage() -> Element {
                     "Disabled options are read out but skipped.",
                     "With `searchable` the search box takes over typing and holds the focus while the list is open.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
-                ]),
+                ])
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
             lead: rsx! {
                 Text {
                     "A listbox over an enum, in the same frame as every other field. Unlike "

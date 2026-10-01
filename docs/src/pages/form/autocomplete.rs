@@ -184,6 +184,16 @@ pub fn AutocompletePage() -> Element {
                     (FieldPart::Status, "The validation message."),
                 ])
                 .dropdown_parts("DropdownPart", list_dropdown_parts(SUGGESTION_DROPDOWN)),
+                props("AutocompleteOptionArgs", vec![
+                    prop("value", "T").doc("The suggestion this row draws."),
+                    prop("index", "usize").doc("The row's position in the narrowed list."),
+                ])
+                .without_base_props(),
+                props("AutocompleteFilterArgs", vec![
+                    prop("value", "T").doc("The suggestion under test."),
+                    prop("query", "String").doc("The text in the field."),
+                ])
+                .without_base_props(),
             ],
             accessibility: a11y()
                 .key(["Down"], "Opens the list. Typing opens it too.")
@@ -195,7 +205,8 @@ pub fn AutocompletePage() -> Element {
                 .handles([
                     "Nothing is highlighted until you arrow onto a row, so Enter on text that matches nothing still submits the form.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
-                ]),
+                ])
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
             lead: rsx! {
                 Text {
                     "A "

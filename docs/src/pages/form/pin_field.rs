@@ -14,12 +14,12 @@ pub fn PinFieldPage() -> Element {
                 props("PinField", vec![
                     prop("size", "Size").default("md").doc("The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size."),
                     prop("radius", "Size").default("sm").doc("Corner radius of each cell, independent of `size`."),
-                    prop("length", "usize").default("4").doc("How many cells."),
-                    prop("kind", "PinKind").default("numeric").doc("`numeric` or `alphanumeric`. Any other character is ignored as it is typed."),
+                    prop("length", "usize").default("4").doc("How many cells, clamped to 1 through 32."),
+                    prop("kind", "PinKind").default("numeric").doc("`numeric` takes the digits 0-9, `alphanumeric` the ASCII letters and digits. Any other character, an accented letter too, is ignored as it is typed."),
                     prop("value", "Option<String>")
                         .doc("The pin so far, one character per filled cell. Leave it out and the field keeps its own pin."),
                     prop("oninput", "EventHandler<String>")
-                        .doc("Fires for every accepted character with the pin the field should hold next."),
+                        .doc("Fires for every change of the pin, a typed character, a clear or a paste, with the pin the field should hold next."),
                     prop("validate", "Validators<String>")
                         .doc("Rules over the pin, shown once the field loses focus or its form is submitted."),
                     prop("oncomplete", "EventHandler<String>")
@@ -53,11 +53,12 @@ pub fn PinFieldPage() -> Element {
                 ]),
             ],
             accessibility: a11y()
-                .key(["Left", "Right"], "Moves to the previous or next cell.")
+                .key(["Left", "Right"], "Moves to the cell on the left or right. The cells run left to right in a right-to-left locale too, so Left is always the previous cell.")
                 .key(["Home", "End"], "Moves to the first or last cell.")
                 .key(["Backspace"], "Clears the cell and moves back, except from the last cell; on an empty cell, only moves back.")
                 .key(["Delete"], "Clears the cell and stays.")
                 .key(["Space"], "Moves to the next cell without typing.")
+                .key(["Letter"], "Typing the character a cell already holds moves to the next cell without a change.")
                 .key(["Tab"], "Moves to the next cell, and past the last one leaves the field, as in any group of inputs.")
                 .handles([
                     "Each cell is a tab stop.",

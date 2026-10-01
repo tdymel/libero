@@ -45,7 +45,7 @@ pub fn ImageCropperPage() -> Element {
                         .doc("The image: any URL, a `data:` URL included."),
                     prop("alt", "String").doc("Describes the image."),
                     prop("value", "Option<CropRect>")
-                        .doc("The box, in fractions of the image. Pair it with `onchange`. Unset starts centred at 80% of the largest box `aspect` allows, so it can move at once, and reports it once the image has loaded. A new `src` or `aspect` starts it over."),
+                        .doc("The box, in fractions of the image. Pair it with `onchange`. Unset starts centred at 80% of the largest box `aspect` allows, so it can move at once, and reports it once the image has loaded. A new `src` or `aspect` starts an unset box over. A set `value` stays as it is, so reset it yourself."),
                     prop("onchange", "EventHandler<CropRect>")
                         .doc("Fires on every move of the box, by a drag or a key. Without it the cropper only shows."),
                     prop("aspect", "f64")

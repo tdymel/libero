@@ -223,13 +223,19 @@ fn option_code(_: &Control, values: &DemoValues) -> Vec<String> {
     )]
 }
 
+/// The trigger, disabled along with the combobox as the `disabled` row asks.
 fn trigger_code(values: &DemoValues) -> String {
-    if fetching(values) {
-        return FETCHING_TRIGGER.to_string();
-    }
-    match suggesting(values) {
-        true => SUGGESTIONS_TRIGGER.to_string(),
-        false => SELECT_TRIGGER.to_string(),
+    let trigger = if fetching(values) {
+        FETCHING_TRIGGER
+    } else if suggesting(values) {
+        SUGGESTIONS_TRIGGER
+    } else {
+        SELECT_TRIGGER
+    };
+    let width = "    sx: sx().width(\"280px\"),\n";
+    match values.str("disabled") == "true" {
+        true => trigger.replacen(width, &format!("{width}    disabled: true,\n"), 1),
+        false => trigger.to_string(),
     }
 }
 
@@ -538,6 +544,13 @@ pub fn ComboboxPage() -> Element {
                     prop("children", "Element")
                         .doc("The row's content. Put a long label in `span { \"data-slot\": \"label\" }` to end it in an ellipsis."),
                 ]),
+                props("ComboboxOptionArgs", vec![
+                    prop("value", "T").doc("The option this row draws."),
+                    prop("index", "usize").doc("The row's position in `options`."),
+                    prop("active", "bool").doc("The arrow keys are on this row. For a row drawn without `ComboboxOption`."),
+                    prop("disabled", "bool").doc("The list refuses this row. A row drawn without `ComboboxOption` owes the greying and `aria-disabled`."),
+                ])
+                .without_base_props(),
             ],
             accessibility: a11y()
                 .key(["Down"], "Opens the list, and moves the highlight down.")
