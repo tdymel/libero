@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Chip, Flex, Icon, OptionLabel, Options, Pictogram, Tabs, Title, Tldr},
     sx::{Sx, sx},
-    theme::PAPER_BORDER_COLOR,
+    theme::{HEADER_HEIGHT_VAR, PAPER_BORDER_COLOR},
 };
 use pictogram_icons_lucide as lucide;
 
@@ -82,6 +82,22 @@ pub fn DocPage(
         {
             tab.set(DocTab::Extra);
         }
+    });
+    // No route change lands it either: once its panel is in the page, land here and clear it.
+    // Not on the first run, where a navigation's own landing still needs the id.
+    let shell = try_use_context::<heading_focus::SectionLanding>();
+    let mut first = use_hook(|| CopyValue::new(true));
+    let mut extra_mounted = use_signal(|| false);
+    use_effect(move || {
+        let (Some(mut pending), Some(shell)) = (pending, shell) else {
+            return;
+        };
+        let (ready, id) = (extra_mounted(), pending());
+        if first.replace(false) || !ready || !landing(id.clone()) {
+            return;
+        }
+        pending.set(None);
+        shell.land(id.as_deref().unwrap_or_default());
     });
     let tabs: Vec<DocTab> = DocTab::options()
         .iter()
@@ -180,7 +196,12 @@ pub fn DocPage(
                     aria_label: "Documentation sections",
                     options: tabs,
                     value: tab(),
-                    onchange: move |next| tab.set(next),
+                    onchange: move |next| {
+                        if next != DocTab::Extra {
+                            extra_mounted.set(false);
+                        }
+                        tab.set(next);
+                    },
                     size: "lg",
                     full_width: true,
                     sx: tabs_sx,
@@ -214,7 +235,20 @@ pub fn DocPage(
                         // No heading: the tab already names it (1358).
                         DocTab::Extra => match extra_tab.clone() {
                             Some(extra) => rsx! {
-                                Flex { id: extra.id, direction: "column", gap: "sm", {extra.content} }
+                                Flex {
+                                    id: extra.id,
+                                    direction: "column",
+                                    gap: "sm",
+                                    // The landing target, by script only, with no ring round the panel.
+                                    tabindex: "-1",
+                                    // Room to scroll its top up even before late content (the
+                                    // catalogue's fetch) fills it.
+                                    sx: sx()
+                                        .min_height(format!("calc(100vh - {})", HEADER_HEIGHT_VAR.value()))
+                                        .selector("&:focus", sx().outline("none").box_shadow("none")),
+                                    onmounted: move |_| extra_mounted.set(true),
+                                    {extra.content}
+                                }
                             },
                             None => rsx! {},
                         },

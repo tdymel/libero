@@ -8,6 +8,7 @@ mod home;
 mod hooks;
 mod layout;
 mod navigation;
+mod not_found;
 mod overlay;
 mod typography;
 
@@ -22,5 +23,6 @@ pub use home::Home;
 pub use hooks::*;
 pub use layout::*;
 pub use navigation::*;
+pub use not_found::NotFound;
 pub use overlay::*;
 pub use typography::*;

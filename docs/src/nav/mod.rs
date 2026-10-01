@@ -96,6 +96,8 @@ pub fn DocsNav(
             id: "docs-nav",
             side: "start",
             component: "nav",
+            // Names the landmark and, when it overflows, its scroll area's tab stop.
+            aria_label: "Documentation",
             sx: nav_responsive_sx(open(), drawer),
             Flex {
                 direction: "column",

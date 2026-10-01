@@ -5,10 +5,13 @@ use libero::{
         Header, Icon, Kbd, Pictogram, Repository, ScrollArea, SpotlightOptions, ThemeSwitcher,
         Title, spotlight_filter, use_scroll_area, use_spotlight,
     },
-    hooks::{use_element, use_is_mobile},
+    hooks::{use_element, use_media_query},
     platform::ElementApi,
-    sx::sx,
-    theme::{BUTTON_HEIGHT, HEADER_HEIGHT_VAR, PAPER_BACKGROUND, Size, ThemeSet, Z_INDEX_HEADER},
+    sx::{Sx, sx},
+    theme::{
+        ACTION_ICON_RADIUS, BUTTON_HEIGHT, HEADER_HEIGHT_VAR, PAPER_BACKGROUND, Size, ThemeSet,
+        Z_INDEX_HEADER,
+    },
 };
 use pictogram_icons_lucide as lucide;
 
@@ -17,6 +20,13 @@ use crate::{
     nav::{self, DocsNav},
     site::{LOGO_INLINE, REPO},
 };
+
+/// A `ButtonGroup` item's start as when it is the first: round corners, no seam overlap.
+fn first_item_sx() -> Sx {
+    sx().border_start_start_radius(ACTION_ICON_RADIUS.overridable())
+        .border_end_start_radius(ACTION_ICON_RADIUS.overridable())
+        .margin_inline_start("0")
+}
 
 #[component]
 pub(crate) fn AppShell() -> Element {
@@ -37,15 +47,35 @@ pub(crate) fn AppShell() -> Element {
         })),
         ..Default::default()
     });
-    let mobile = use_is_mobile();
+    // The hint names Cmd on Apple platforms; the shortcut answers Ctrl or Cmd everywhere.
+    let apple = use_resource(|| async {
+        document::eval("return /^(Mac|iPhone|iPad|iPod)/.test(navigator.platform);")
+            .join::<bool>()
+            .await
+            .unwrap_or(cfg!(any(target_os = "macos", target_os = "ios")))
+    });
+    let modifier = if apple().unwrap_or(false) {
+        "Cmd"
+    } else {
+        "Ctrl"
+    };
     let area = use_scroll_area();
     heading_focus::use_scroll_reset(route.clone(), area, content, section);
     heading_focus::use_heading_focus(route.clone(), content, section);
     heading_focus::use_fragment_landing(area, content);
+    use_context_provider(|| heading_focus::SectionLanding { area, content });
     // Any route change closes the drawer (search, pager, TLDR, body link, back); focus stays put.
     use_effect(use_reactive!(|route| {
         let _ = route;
         if *open.peek() {
+            open.set(false);
+        }
+    }));
+    // From `Sm` up the sidebar shows and the burger hides (not on Home): an open drawer
+    // would leave `main` inert with no way to close it.
+    let wide = use_media_query(&format!("(min-width: {})", Size::Sm.breakpoint_value()));
+    use_effect(use_reactive!(|home| {
+        if wide() && !home && *open.peek() {
             open.set(false);
         }
     }));
@@ -182,32 +212,39 @@ pub(crate) fn AppShell() -> Element {
                     "Search"
                     Kbd {
                         sx: sx().margin_left("auto"),
-                        "Ctrl K"
+                        "{modifier} K"
                     }
                 }
-                // One joined control. The phone search is rendered, not hidden: a hidden first
-                // child would still square off the next one's corners.
+                // One joined control.
                 ButtonGroup {
-                    "aria-label": "Site",
+                    "aria-label": "Site tools",
                     size: "sm",
                     // Logical, so the controls stay at the end under RTL. From `Sm` up the
                     // search field takes the free space instead.
                     sx: sx()
                         .margin_inline_start("auto")
-                        .breakpoint(Size::Sm, sx().margin_inline_start("0")),
-                    if mobile() {
-                        ActionIcon {
-                            aria_label: "Search",
-                            "aria-keyshortcuts": "Control+K Meta+K",
-                            onclick: move |_| search.open(),
-                            variant: "outlined",
-                            color: "muted",
-                            span {
-                                display: "inline-flex",
-                                width: "18px",
-                                height: "18px",
-                                Pictogram { icon: lucide::search::outlined }
-                            }
+                        .breakpoint(
+                            Size::Sm,
+                            sx().margin_inline_start("0")
+                                // The hidden phone search still counts as the first child, so
+                                // the next item gets back its outer corners and loses the seam.
+                                .selector("& > :nth-child(2) :is(button, a)", first_item_sx())
+                                .selector("& > :nth-child(2):is(button, a)", first_item_sx()),
+                        ),
+                    // Below `Sm`, the field's own breakpoint: one of the two always shows, also
+                    // with a raised default font size (a `px` query and a `rem` one drift apart).
+                    ActionIcon {
+                        aria_label: "Search",
+                        "aria-keyshortcuts": "Control+K Meta+K",
+                        onclick: move |_| search.open(),
+                        variant: "outlined",
+                        color: "muted",
+                        sx: sx().breakpoint(Size::Sm, sx().display("none")),
+                        span {
+                            display: "inline-flex",
+                            width: "18px",
+                            height: "18px",
+                            Pictogram { icon: lucide::search::outlined }
                         }
                     }
                     Repository { repo: REPO }
@@ -227,10 +264,15 @@ pub(crate) fn AppShell() -> Element {
                 // The drawer's containing block.
                 sx: sx()
                     .position("relative")
-                    .height(format!("calc(100vh - {})", HEADER_HEIGHT_VAR.value())),
+                    .height(format!("calc(100vh - {})", HEADER_HEIGHT_VAR.value()))
+                    // The visible viewport: under a phone's toolbar `100vh` hid the page's end.
+                    // An engine without `dvh` drops this and keeps the `100vh` height.
+                    .max_height(format!("calc(100dvh - {})", HEADER_HEIGHT_VAR.value())),
                 DocsNav { open, burger, drawer: home }
                 ScrollArea {
                     handle: area,
+                    // The overflowing page is a region tab stop: it needs a name.
+                    aria_label: "Page",
                     sx: sx()
                         .flex("1")
                         .min_height("0")

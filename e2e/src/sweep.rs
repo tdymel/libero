@@ -221,7 +221,8 @@ async fn discover() -> Result<Vec<String>> {
         .into_value()?;
     let _ = fixture.close().await;
 
-    let mut pages = vec!["/".to_string()];
+    // The not-found page has no nav entry.
+    let mut pages = vec!["/".to_string(), "/no-such-page".to_string()];
     for link in links {
         if !pages.contains(&link) {
             pages.push(link);

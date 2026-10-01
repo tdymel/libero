@@ -67,13 +67,35 @@ pub fn use_fragment_landing(area: ScrollAreaHandle, content: ElementHandle) {
         let Some(id) = id.as_deref() else {
             return;
         };
-        scroll_to_section(area, content, id);
-        let _ = content
-            .query_selector(&format!("#{id} > :first-child"))
-            .and_then(|heading| heading.focus());
+        SectionLanding { area, content }.land(id);
         #[cfg(target_arch = "wasm32")]
         restore_fragment(id);
     });
+}
+
+/// The shell's page area, so a page can land on its own section when no route change
+/// does: a search action for the page already open (todo 1697).
+#[derive(Clone, Copy)]
+pub struct SectionLanding {
+    pub area: ScrollAreaHandle,
+    pub content: ElementHandle,
+}
+
+impl SectionLanding {
+    /// Scrolls to the section and focuses its heading.
+    pub fn land(self, id: &str) {
+        scroll_to_section(self.area, self.content, id);
+        let _ = self
+            .content
+            .query_selector(&focus_target(id))
+            .and_then(|heading| heading.focus());
+    }
+}
+
+/// A `DocSection`'s title is its first child; an `ExtraTab` has no heading, so its panel
+/// takes focus itself (`tabindex`, first in document order).
+fn focus_target(id: &str) -> String {
+    format!("#{id}[tabindex], #{id} > :first-child")
 }
 
 /// Puts the fragment the router dropped back into the URL, so a reload lands here too (todo 1184).
@@ -117,12 +139,10 @@ pub fn use_heading_focus<T: Clone + PartialEq + 'static>(
     use_effect(use_reactive!(|location| {
         if *last.peek() != location {
             last.set(location);
-            // A `DocSection`'s title is its first child.
-            let heading = section.write().take().and_then(|id| {
-                content
-                    .query_selector(&format!("#{id} > :first-child"))
-                    .ok()
-            });
+            let heading = section
+                .write()
+                .take()
+                .and_then(|id| content.query_selector(&focus_target(&id)).ok());
             let _ = heading
                 .map_or_else(|| content.query_selector("main h1"), Ok)
                 .and_then(|h| h.focus());

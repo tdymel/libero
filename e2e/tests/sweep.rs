@@ -90,6 +90,41 @@ fn a_route_change_closes_the_drawer() {
     });
 }
 
+/// Todo 1692: an unknown URL lands on a page inside the shell, not a router parse error.
+#[test]
+fn an_unknown_url_shows_the_not_found_page() {
+    block_on(async {
+        let fixture = Fixture::open_until(
+            "/no-such-page",
+            Viewport::Desktop,
+            Scheme::Light,
+            "#docs-main h1",
+        )
+        .await
+        .unwrap();
+        let page = &fixture.page;
+        wait_for(
+            page,
+            "the not-found heading",
+            "document.querySelector('#docs-main h1').textContent === 'Page not found'",
+        )
+        .await;
+        wait_for(
+            page,
+            "the not-found tab title",
+            "document.title === 'Page not found - Libero'",
+        )
+        .await;
+        wait_for(
+            page,
+            "a link home",
+            "!!document.querySelector('#docs-main a[href=\"/\"]')",
+        )
+        .await;
+        close(fixture).await;
+    });
+}
+
 /// Each label and border of the landing page's gradient cards against the gradient's two
 /// stops and their midpoint (the lowest ratio), then axe over the page. The stops are
 /// translucent tints, so each is read over the first opaque background behind the card.

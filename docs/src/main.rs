@@ -329,6 +329,10 @@ pub(crate) enum Route {
     TextPage {},
     #[route("/typography/title")]
     TitlePage {},
+
+    // Without it an unknown URL is a router parse error with no shell around it.
+    #[route("/:..segments")]
+    NotFound { segments: Vec<String> },
 }
 
 #[component]

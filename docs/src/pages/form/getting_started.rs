@@ -195,7 +195,8 @@ pub struct Order {
 pub fn FormGettingStartedPage() -> Element {
     rsx! {
         DocPage {
-            title: "Getting started",
+            // Not "Getting started": the About page has that title; the nav label stays.
+            title: "Form getting started",
             markdown: "/md/form_getting_started.md",
             lead: rsx! {
                 Text {
