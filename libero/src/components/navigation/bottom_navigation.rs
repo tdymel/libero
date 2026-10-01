@@ -89,6 +89,9 @@ static BOTTOM_NAVIGATION_SX: StaticSx = StaticSx::new(|| {
         .border_top_color("muted.4")
         .z_index(Z_INDEX_HEADER.overridable())
         .with("padding-block-end", safe_area_padding("0px", "bottom"))
+        // Physical, as `env()` is: clear of a landscape phone's notch in either direction.
+        .with("padding-left", safe_area_padding("0px", "left"))
+        .with("padding-right", safe_area_padding("0px", "right"))
         .when(
             BottomNavigationPosition::Sticky.state_name(),
             sx().position("sticky").with("inset-block-end", "0"),
@@ -241,7 +244,8 @@ base_props! {
 }
 
 /// A phone's bar of three to five top-level destinations, a `<nav>` landmark.
-/// Each item is its own Tab stop. Name it with an `aria-label`.
+/// Each item is its own Tab stop. Name it with an `aria-label`. It pads the
+/// bottom, left and right safe-area insets, for a `viewport-fit=cover` page.
 ///
 /// ```
 /// # use dioxus::prelude::*;
@@ -481,6 +485,21 @@ mod tests {
             ":root{--lsx-bottom-navigation-height:79.5px;\
              scroll-padding-bottom:var(--lsx-bottom-navigation-height);}"
         );
+    }
+
+    /// Todo 1942: the browser harness cannot emulate a notch, so the rule itself.
+    #[test]
+    fn the_bar_pads_the_side_safe_areas() {
+        let css = Stylesheet::from(&BOTTOM_NAVIGATION_SX);
+        for side in ["left", "right"] {
+            assert!(
+                css.as_str().contains(&format!(
+                    "padding-{side}:calc(0px + env(safe-area-inset-{side}, 0px))"
+                )),
+                "{}",
+                css.as_str()
+            );
+        }
     }
 
     #[test]

@@ -246,7 +246,8 @@ pub(super) fn MediaControls(
                 disabled: captions.track.is_none(),
                 focusable_when_disabled: true,
                 tooltip: true,
-                shortcut: "c",
+                // The `c` hotkey is off without a track (`Video`'s `use_media_keys`).
+                shortcut: captions.track.is_some().then(|| "c".to_string()),
                 size: icon_size.clone(),
                 onclick: move |_| captions.toggle(media),
                 Glyph { slot: IconSlot::Captions, icon: lucide::captions::outlined }

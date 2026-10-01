@@ -1533,6 +1533,74 @@ fn pinned_columns_hold_at_their_edges_in_both_directions() {
     });
 }
 
+/// Todo 1791, WCAG 2.4.11: scrolled to the middle, Tab across the header's
+/// buttons never leaves one under the pinned Name or Supplier column.
+#[test]
+fn a_focused_header_button_stays_clear_of_the_pinned_columns() {
+    block_on(async {
+        for (route, rtl) in [("/table/pinned", false), ("/table/pinned-rtl", true)] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            let sign = if rtl { -1 } else { 1 };
+            wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{ const r = document.querySelector({AREA:?}); \
+                     if (!r || r.scrollWidth - r.clientWidth < 300) return false; \
+                     r.scrollLeft = {sign} * (r.scrollWidth - r.clientWidth) / 2; \
+                     const first = document.querySelector('thead th[data-select] input'); \
+                     first.focus({{preventScroll: true}}); \
+                     return document.activeElement === first; }})()"
+                ),
+                &format!("{route} to scroll to the middle"),
+            )
+            .await
+            .unwrap();
+            // Done once focus leaves the header; else clear of both pinned columns.
+            let check = format!(
+                "(() => {{ const f = document.activeElement, th = f && f.closest('thead th'); \
+                 if (!th) return 'out'; if (th.dataset.pin) return 'pinned'; \
+                 const e = s => document.querySelector(s).getBoundingClientRect(); \
+                 const b = f.getBoundingClientRect(), name = e('th[aria-label=Name]'), \
+                   supplier = e('th[aria-label=Supplier]'); \
+                 const [lo, hi] = {rtl} ? [supplier.right, name.left] : [name.right, supplier.left]; \
+                 return b.left >= lo - 1 && b.right <= hi + 1 ? 'clear' \
+                   : 'under ' + JSON.stringify([th.getAttribute('aria-label'), b.left, b.right, lo, hi, \
+                     getComputedStyle(document.querySelector({AREA:?})).scrollPaddingInlineStart]); }})()"
+            );
+            let mut clear = 0;
+            for step in 0..20 {
+                keyboard::press(page, keyboard::TAB).await.unwrap();
+                // The focus scroll may land a frame after the focus; a timeout reads 'under' below.
+                let _ = wait::for_js_true(
+                    page,
+                    &format!("!{check}.startsWith('under')"),
+                    "the focus scroll",
+                )
+                .await;
+                let state: String = page
+                    .evaluate(check.clone())
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                match state.as_str() {
+                    "out" => break,
+                    "clear" => clear += 1,
+                    "pinned" => {}
+                    under => panic!("{route}, Tab {step}: a header button {under}"),
+                }
+            }
+            assert!(
+                clear >= 6,
+                "{route}: only {clear} scrolled header buttons reached"
+            );
+            fixture.console.assert_clean("pinned focus scroll").unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// 1156-5a: windowed and scrolled both ways, the header sticks and the pinned
 /// columns hold at their edges, body cells in line with their headers.
 #[test]

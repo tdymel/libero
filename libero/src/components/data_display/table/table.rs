@@ -26,7 +26,10 @@ use crate::{
         sticks_table_heads, widens_sized_tables,
     },
     sx::{StaticSx, Sx, sx},
-    theme::{CHECKBOX_BOX_SIZE, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TableDefaults},
+    theme::{
+        CHECKBOX_BOX_SIZE, NamedColorCss, ScrollAxis, Size, TABLE_PAD_X, TABLE_PADDING_X,
+        TableDefaults,
+    },
     utils::warn,
 };
 
@@ -49,7 +52,7 @@ use super::{
     header_filters::HeaderFilter,
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
-    pinning::{PinSide, PinnedColumns, pin_columns, pin_runs, span_pin},
+    pinning::{PinSide, PinnedColumns, pin_columns, pin_runs, pinned_extent, span_pin},
     resize::{ColumnResize, ColumnWidths, MenuWidth},
     row_reorder::{ReorderSlot, RowReorder},
     selection::Selection,
@@ -1097,6 +1100,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     });
     let pins_select = props.selectable && pins_start;
     let pins = headers.iter().any(|spec| spec.pin.is_some());
+    let pinned_pads = [PinSide::Start, PinSide::End].map(|side| pinned_extent(&headers, side));
     let mut warned = use_hook(|| CopyValue::new(Vec::<String>::new()));
     if !unknown.is_empty() && *warned.peek() != unknown {
         warn(&format!(
@@ -1708,15 +1712,29 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 ScrollArea {
                     scrollbars: if bounded { ScrollAxis::Both } else { ScrollAxis::Horizontal },
                     framework_sx: ScrollAreaBase(&TABLE_SCROLL_SX),
-                    sx: max_height
-                        .map(|height| {
-                            // The sticky header covers the top; a focus scroll stops below it.
-                            let pad = format!("{}px", head());
-                            sx().max_height(height)
-                                .with("scroll-padding-top", pad.clone())
-                                .with(SCROLL_PADDING_VARS[0], pad)
-                        })
-                        .unwrap_or_default(),
+                    sx: {
+                        // Pinned columns cover the inline edges; a focus scroll stops inside them (todo 1791).
+                        // The lead widths read the cell padding, resolved on the table below: again here.
+                        let mut pads = sx().var(TABLE_PAD_X, TABLE_PADDING_X.value(size));
+                        for (property, pad) in ["scroll-padding-inline-start", "scroll-padding-inline-end"]
+                            .into_iter()
+                            .zip(pinned_pads)
+                        {
+                            if let Some(pad) = pad {
+                                pads = pads.with(property, pad);
+                            }
+                        }
+                        match max_height {
+                            Some(height) => {
+                                // The sticky header covers the top; a focus scroll stops below it.
+                                let pad = format!("{}px", head());
+                                pads.max_height(height)
+                                    .with("scroll-padding-top", pad.clone())
+                                    .with(SCROLL_PADDING_VARS[0], pad)
+                            }
+                            None => pads,
+                        }
+                    },
                     onbottomreached: onbottomreached.map(|_| bottom_reached),
                     // The scrollbar runs beside the rows only, not the sticky header (todo 1454).
                     bar_inset_top: bounded.then(|| *head.read()),

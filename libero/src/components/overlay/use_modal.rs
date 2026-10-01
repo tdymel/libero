@@ -118,6 +118,13 @@ impl<S: 'static, R: 'static> Copy for ModalScope<S, R> {}
 
 impl<S: Clone + 'static, R: 'static> ModalScope<S, R> {
     /// The arguments this opening was given.
+    ///
+    /// # Panics
+    ///
+    /// Once the modal has closed: Escape, the backdrop, [`close`](Self::close) and
+    /// [`resolve`](Self::resolve) clear them at once, so read them before, not in a
+    /// task that outlives the opening. A scope kept past a reopening reads the new
+    /// opening's arguments.
     pub fn args(&self) -> S {
         self.args
             .read()

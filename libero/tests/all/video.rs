@@ -53,6 +53,9 @@ fn the_player_is_a_named_group_round_a_bare_video_element() {
     assert!(track.contains_key("default"), "{html}");
     // A default track starts shown, so the toggle starts pressed.
     assert!(html.contains(r#"aria-pressed="true""#), "{html}");
+    let named = html.find(r#"aria-label="Captions""#).expect(&html);
+    let captions = attributes_of(&html[html[..named].rfind("<button").unwrap()..], "button");
+    assert_eq!(captions["aria-keyshortcuts"], "C", "{html}");
 }
 
 /// Todo 1247. With `sources`, `<source>` children in order, `src` last and
@@ -114,6 +117,8 @@ fn the_controls_add_fullscreen_and_a_disabled_captions_button_without_a_track() 
     assert_eq!(captions["aria-disabled"], "true", "{html}");
     assert_eq!(captions["aria-pressed"], "false", "{html}");
     assert!(!captions.contains_key("disabled"), "a Tab stop: {html}");
+    // Todo 1943: the `c` hotkey is off without a track, so no chord is advertised.
+    assert!(!captions.contains_key("aria-keyshortcuts"), "{html}");
     let reason = &captions["aria-describedby"];
     assert!(
         html.contains(&format!(r#"id="{reason}""#))

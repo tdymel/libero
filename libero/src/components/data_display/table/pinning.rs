@@ -187,6 +187,22 @@ pub(super) fn pin_columns(
     (order, unknown)
 }
 
+/// How far `side`'s pinned columns reach in, lead columns included: a focus scroll
+/// stops past them. `None` without a pin there or when the innermost has no `width`.
+pub(super) fn pinned_extent(headers: &[HeaderSpec], side: PinSide) -> Option<String> {
+    headers.iter().find_map(|spec| {
+        let pin = spec
+            .pin
+            .as_ref()
+            .filter(|pin| pin.side == side && pin.edge)?;
+        let width = spec.width.clone()?;
+        Some(match pin.inset.as_str() {
+            "0" => width,
+            inset => format!("calc({inset} + {width})"),
+        })
+    })
+}
+
 fn sum(widths: &[String]) -> String {
     match widths {
         [] => "0".to_string(),
@@ -270,6 +286,30 @@ mod tests {
             Some("40px"),
         );
         assert_eq!(specs[0].pin.as_ref().unwrap().inset, "0");
+    }
+
+    /// Todo 1791: the scroll padding that keeps focus clear of each pinned side.
+    #[test]
+    fn each_side_reaches_past_its_innermost_pinned_column() {
+        let mut specs = headers(&[
+            ("A", Some("4rem")),
+            ("B", Some("6rem")),
+            ("C", None),
+            ("D", Some("3rem")),
+        ]);
+        let pinned = PinnedColumns::default().start(["A", "B"]).end(["D"]);
+        pin_columns(&mut specs, &pinned, Some("40px"));
+
+        assert_eq!(
+            pinned_extent(&specs, PinSide::Start).as_deref(),
+            Some("calc(calc(40px + 4rem) + 6rem)")
+        );
+        assert_eq!(pinned_extent(&specs, PinSide::End).as_deref(), Some("3rem"));
+
+        let mut specs = headers(&[("A", None), ("B", Some("6rem"))]);
+        pin_columns(&mut specs, &PinnedColumns::default().start(["A"]), None);
+        assert_eq!(pinned_extent(&specs, PinSide::Start), None);
+        assert_eq!(pinned_extent(&specs, PinSide::End), None);
     }
 
     #[test]
