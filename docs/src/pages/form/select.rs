@@ -54,7 +54,7 @@ const FRUIT_IMPL: &str = r#"impl Fruit {
 // snippet: let mut value = use_signal(|| None::<Fruit>);
 // snippet: in Select { value: value(), onchange: move |next| value.set(next), .. }
 const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Fruit>| rsx! {
-    Text { component: "span", size: "xl", "{o.value.emoji()}" }
+    Text { component: "span", size: "xl", "aria-hidden": "true", "{o.value.emoji()}" }
     Flex {
         direction: "column",
         align: "flex-start",
@@ -68,8 +68,7 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Fruit>| rsx! {
 // snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
 // snippet: let mut value = use_signal(|| None::<Fruit>);
 // snippet: in Select { value: value(), onchange: move |next| value.set(next), .. }
-const CUSTOM_SELECTION: &str =
-    r#"selection: move |fruit: Fruit| rsx! { "{fruit.emoji()} {fruit.label()}" }"#;
+const CUSTOM_SELECTION: &str = r#"selection: move |fruit: Fruit| rsx! { span { "aria-hidden": "true", "{fruit.emoji()} " } "{fruit.label()}" }"#;
 
 /// A filter can test anything the caller knows: this one searches the note too.
 // snippet: after FRUIT_ENUM
@@ -188,7 +187,7 @@ fn fruit_options(values: &DemoValues) -> OptionList<Fruit> {
 
 fn fruit_row(o: SelectOptionArgs<Fruit>) -> Element {
     rsx! {
-        Text { component: "span", size: "xl", "{o.value.emoji()}" }
+        Text { component: "span", size: "xl", "aria-hidden": "true", "{o.value.emoji()}" }
         Flex {
             direction: "column",
             align: "flex-start",
@@ -205,7 +204,10 @@ fn fruit_row(o: SelectOptionArgs<Fruit>) -> Element {
 }
 
 fn fruit_selection(fruit: Fruit) -> Element {
-    rsx! { "{fruit.emoji()} {fruit.label()}" }
+    rsx! {
+        span { "aria-hidden": "true", "{fruit.emoji()} " }
+        "{fruit.label()}"
+    }
 }
 
 #[component]
@@ -236,7 +238,7 @@ pub fn SelectPage() -> Element {
                         .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field."),
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
-                        .doc("Draws one row's content. The highlight, selection and click stay the component's."),
+                        .doc("Draws one row's content. The highlight, selection and click stay the component's. Hide a decorative glyph such as an emoji with `aria-hidden`, or a screen reader reads it before the label."),
                     prop("selection", "Callback<T, Element>")
                         .default("T::label()")
                         .doc("Draws the selected value inside the trigger."),

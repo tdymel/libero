@@ -190,8 +190,8 @@ explains how parts work.
 
 | Key | Action |
 |---|---|
-| `Left`, `Right`, `Up` or `Down` | Move the focused thumb one step. |
-| `Shift+Arrow`, `PageUp` or `PageDown` | Move the focused thumb `big_step` steps. |
+| `Left`, `Right`, `Up` or `Down` | Move the focused thumb `theme.slider.step` steps, one by default. Right to left, ArrowLeft raises the value instead. |
+| `Shift+Arrow`, `PageUp` or `PageDown` | Move the focused thumb `theme.slider.big_step` steps, ten by default. |
 | `Home` or `End` | Move the focused thumb to the end, stopping at the other thumb. |
 
 ### Libero handles

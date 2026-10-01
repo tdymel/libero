@@ -11,7 +11,7 @@ use libero::components::FieldPart;
 use libero::components::{
     ChronoField, Code, DateLevel, DateRange, Flex, Rule, Text, Validators, not_empty,
 };
-use libero::{use_formats_handle, use_localization_handle};
+use libero::{LiberoProvider, use_formats_handle, use_localization_handle};
 
 use super::date_locales::{FORMATS, LANGUAGES, options, picked};
 
@@ -354,19 +354,13 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
 
     let size = values.str("size");
     let radius = values.str("radius");
-    let (_, language) = picked(&LANGUAGES, &values.str("language"));
+    let (language_name, language) = picked(&LANGUAGES, &values.str("language"));
     let (_, conventions) = picked(&FORMATS, &values.str("formats"));
-    let localization = use_localization_handle();
-    let formats = use_formats_handle();
-    let site = use_hook(|| (localization.get(), formats.get()));
-    use_effect(use_reactive!(|language, conventions| {
-        localization.set(language);
-        formats.set(conventions);
-    }));
-    use_drop(move || {
-        localization.set(site.0);
-        formats.set(site.1);
-    });
+    let lang = if language_name == LANGUAGES[1].1 {
+        "de"
+    } else {
+        "en"
+    };
     let format = Some(values.str("format")).filter(|format| format != "default");
     let variant = values.str("variant");
     let exclude_date = is_on(&values, "exclude_weekends").then(|| Callback::new(is_weekend));
@@ -486,10 +480,30 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
             shown(date()),
         ),
     };
+    // A provider of its own, so the switches reach the demo and not the page around it.
     rsx! {
-        Flex { direction: "column", gap: "sm", sx: libero::sx::sx().width("100%").max_width("440px"),
-            {field}
-            Text { size: "sm", {readout} }
+        div { lang, style: "display: contents",
+            LiberoProvider { localization: language, formats: conventions,
+                DemoLocale { language: values.str("language"), formats: values.str("formats"),
+                    Flex { direction: "column", gap: "sm", sx: libero::sx::sx().width("100%").max_width("440px"),
+                        {field}
+                        Text { size: "sm", {readout} }
+                    }
+                }
+            }
         }
     }
+}
+
+/// The provider reads its props at mount only, so a later pick goes through the
+/// handles of the nearest one, the demo's own.
+#[component]
+fn DemoLocale(language: String, formats: String, children: Element) -> Element {
+    let localization = use_localization_handle();
+    let conventions = use_formats_handle();
+    use_effect(use_reactive!(|language, formats| {
+        localization.set(picked(&LANGUAGES, &language).1);
+        conventions.set(picked(&FORMATS, &formats).1);
+    }));
+    children
 }

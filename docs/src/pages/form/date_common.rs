@@ -150,10 +150,13 @@ pub fn shared_controls() -> Vec<Control> {
         }),
         Control::switch("with_seconds").hidden_when(|values| !has_clock(values)),
         Control::switch("twelve_hour").hidden_when(|values| !has_time(values)),
-        Control::switch("today").code(|_, values| match is_on(values, "today") {
-            true => vec!["today: NaiveDate::from_ymd_opt(2026, 9, 20)".to_string()],
-            false => vec![],
-        }),
+        // A time or a duration has no day to mark.
+        Control::switch("today")
+            .hidden_when(|values| matches!(values.str("value").as_str(), "time" | "duration"))
+            .code(|_, values| match is_on(values, "today") {
+                true => vec!["today: NaiveDate::from_ymd_opt(2026, 9, 20)".to_string()],
+                false => vec![],
+            }),
     ]
 }
 

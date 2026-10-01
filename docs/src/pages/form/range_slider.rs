@@ -335,8 +335,8 @@ pub fn RangeSliderPage() -> Element {
                 .without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Left", "Right", "Up", "Down"], "Move the focused thumb one step.")
-                .key(["Shift+Arrow", "PageUp", "PageDown"], "Move the focused thumb `big_step` steps.")
+                .key(["Left", "Right", "Up", "Down"], "Move the focused thumb `theme.slider.step` steps, one by default. Right to left, ArrowLeft raises the value instead.")
+                .key(["Shift+Arrow", "PageUp", "PageDown"], "Move the focused thumb `theme.slider.big_step` steps, ten by default.")
                 .key(["Home", "End"], "Move the focused thumb to the end, stopping at the other thumb.")
                 .handles([
                     "The two thumbs sit in a `role=\"group\"` named by the label, and each is its own `role=\"slider\"`, as in the ARIA multi-thumb slider pattern. A single `Slider` is one slider and needs no group.",

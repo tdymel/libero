@@ -178,8 +178,8 @@ explains how parts work.
 
 | Key | Action |
 |---|---|
-| `Left`, `Right`, `Up` or `Down` | Move one step. With `step: 0.0` a step is 1% of the range. |
-| `Shift+Arrow`, `PageUp` or `PageDown` | Move `big_step` steps. |
+| `Left`, `Right`, `Up` or `Down` | Move `theme.slider.step` steps, one by default. With `step: 0.0` a step is 1% of the range. Right to left, ArrowLeft raises the value instead. |
+| `Shift+Arrow`, `PageUp` or `PageDown` | Move `theme.slider.big_step` steps, ten by default. |
 | `Home` or `End` | Jump to the ends. |
 
 ### Libero handles

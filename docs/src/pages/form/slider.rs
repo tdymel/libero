@@ -328,8 +328,8 @@ pub fn SliderPage() -> Element {
                 .without_base_props(),
             ],
             accessibility: a11y()
-                .key(["Left", "Right", "Up", "Down"], "Move one step. With `step: 0.0` a step is 1% of the range.")
-                .key(["Shift+Arrow", "PageUp", "PageDown"], "Move `big_step` steps.")
+                .key(["Left", "Right", "Up", "Down"], "Move `theme.slider.step` steps, one by default. With `step: 0.0` a step is 1% of the range. Right to left, ArrowLeft raises the value instead.")
+                .key(["Shift+Arrow", "PageUp", "PageDown"], "Move `theme.slider.big_step` steps, ten by default.")
                 .key(["Home", "End"], "Jump to the ends.")
                 .handles([
                     "`format` replaces `SliderValue::label` in the bubble, the captions and `aria-valuetext`, and runs during render, so it can read the locale from context.",

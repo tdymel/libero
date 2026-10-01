@@ -1,5 +1,5 @@
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::TagsFieldPart;
 use libero::{
@@ -35,14 +35,52 @@ const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
 const SUGGESTIONS: &str =
     r#"suggestions: vec!["rust".into(), "dioxus".into(), "wasm".into(), "css".into()]"#;
 
-/// One tag at a time, before it joins the list. The field only announces a
-/// refusal, so the helper is how the caller shows why.
+/// One tag at a time, before it joins the list.
 // snippet: let mut topics = use_signal(Vec::<String>::new);
-// snippet: let mut refused = use_signal(|| None::<String>);
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
-const TAG_RULES: &str = r#"tag_rules: |tag: String| tag.chars().count() >= 3,
-onrefuse: move |tag: String| refused.set(Some(tag)),
-helper: refused().map(|tag| format!("\"{tag}\" was refused."))"#;
+const TAG_RULES: &str = r#"tag_rules: |tag: String| tag.chars().count() >= 3"#;
+
+/// Printed above the snippet while `onrefuse` is on. The field announces a
+/// refusal to screen readers only, so the caller shows the reason on screen.
+const WHY: &str = r#"/// Why the field refused `tag`, in the order it checks.
+fn why(held: &[String], tag: &str, max_tags: Option<usize>) -> String {
+    if held.iter().any(|held| held.trim().to_lowercase() == tag.to_lowercase()) {
+        format!("\"{tag}\" is already a topic.")
+    } else if let Some(max) = max_tags.filter(|max| held.len() >= *max) {
+        format!("\"{tag}\" was not added: {max} topics at most.")
+    } else {
+        format!("\"{tag}\" is too short: 3 characters at least.")
+    }
+}
+
+"#;
+
+/// The demo's copy of `WHY`.
+fn why(held: &[String], tag: &str, max_tags: Option<usize>) -> String {
+    if held
+        .iter()
+        .any(|held| held.trim().to_lowercase() == tag.to_lowercase())
+    {
+        format!("\"{tag}\" is already a topic.")
+    } else if let Some(max) = max_tags.filter(|max| held.len() >= *max) {
+        format!("\"{tag}\" was not added: {max} topics at most.")
+    } else {
+        format!("\"{tag}\" is too short: 3 characters at least.")
+    }
+}
+
+fn refusing(values: &DemoValues) -> bool {
+    values.str("onrefuse") == "true"
+}
+
+/// The status the switch picks, as code.
+fn base_status(values: &DemoValues) -> &'static str {
+    match values.str("status").as_str() {
+        "warning" => "FieldStatus::Warning(\"Two of these are rarely read.\".into())",
+        "error" => "FieldStatus::Error(\"Add at least one topic.\".into())",
+        _ => "FieldStatus::Valid",
+    }
+}
 
 fn topic_tag(t: SelectionArgs<String>) -> Element {
     let label = t.value.clone();
@@ -101,9 +139,9 @@ pub fn TagsFieldPage() -> Element {
                     prop("max_tags", "usize")
                         .doc("The most tags the field accepts. A paste fills the room that is left and refuses the rest."),
                     prop("tag_rules", "Callback<String, bool>")
-                        .doc("Accepts or refuses one tag before it is added. A refused tag stays in the input, and no message shows."),
+                        .doc("Accepts or refuses one tag before it is added. A refused tag stays in the input, and the field tells screen readers why."),
                     prop("onrefuse", "EventHandler<String>")
-                        .doc("A tag was refused, as a duplicate, past `max_tags`, or by `tag_rules`. Use it to say why, such as through `helper`."),
+                        .doc("A tag was refused, as a duplicate, past `max_tags`, or by `tag_rules`. The field shows no message, so say why on screen, such as through `status`, and clear it on the next change."),
                     prop("validate", "Validators<Vec<String>>")
                         .doc("Rules over the whole list, shown once the field loses focus or its form is submitted."),
                     prop("name", "FieldName<Vec<String>>")
@@ -173,22 +211,42 @@ pub fn TagsFieldPage() -> Element {
             Demo {
                 component: "TagsField",
                 children_text: "",
+                wrap: Wrap(|values: &DemoValues, source: &str| match refusing(values) {
+                    true => format!("{WHY}{source}"),
+                    false => source.to_string(),
+                }),
                 fixed: vec![
                     "sx: sx().width(\"100%\").max_width(\"320px\")".to_string(),
                     "value: topics()".to_string(),
-                    "onchange: move |next| topics.set(next)".to_string(),
                 ],
                 controls: vec![
+                    // The reason shows in `status` until the next change to the list.
+                    Control::switch("onrefuse").default("true").code(|_, values| {
+                        match refusing(values) {
+                            true => vec![
+                                "onchange: move |next| { refused.set(None); topics.set(next) }".to_string(),
+                                format!(
+                                    "onrefuse: move |tag: String| refused.set(Some(why(&topics(), &tag, {:?})))",
+                                    max_tags(values)
+                                ),
+                            ],
+                            false => vec!["onchange: move |next| topics.set(next)".to_string()],
+                        }
+                    }),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
                     Control::toggle("status", ["valid", "warning", "error"])
                         .labels(["Valid", "Warning", "Error"])
                         .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
+                        .code(|_, values| match (refusing(values), values.str("status").as_str()) {
+                            (true, _) => vec![format!(
+                                "status: refused().map(FieldStatus::Error).unwrap_or({})",
+                                base_status(values)
+                            )],
+                            (false, "warning") => vec![
                                 "status: FieldStatus::Warning(\"Two of these are rarely read.\".into())".to_string(),
                             ],
-                            "error" => vec!["status: \"Add at least one topic.\"".to_string()],
+                            (false, "error") => vec!["status: \"Add at least one topic.\"".to_string()],
                             _ => vec![],
                         }),
                     // Its own `code`, so the snippet prints `max_tags: 5` and
@@ -224,8 +282,7 @@ pub fn TagsFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    // Rules over one tag, not the list; the switch stands for
-                    // the rule, its refusal handler and the helper that shows it.
+                    // Rules over one tag, not the list.
                     Control::switch("tag_rules").code(|_, values| {
                         match values.str("tag_rules").as_str() {
                             "true" => vec![TAG_RULES.to_string()],
@@ -244,6 +301,13 @@ pub fn TagsFieldPage() -> Element {
                 ],
                 render: move |values: DemoValues| {
                     let ruled = values.str("tag_rules") == "true";
+                    let refuses = refusing(&values);
+                    let max = max_tags(&values);
+                    let status = match values.str("status").as_str() {
+                        "warning" => FieldStatus::Warning("Two of these are rarely read.".to_string()),
+                        "error" => FieldStatus::Error("Add at least one topic.".to_string()),
+                        _ => FieldStatus::Valid,
+                    };
                     rsx! {
                         TagsField {
                             sx: sx().width("100%").max_width("320px"),
@@ -255,26 +319,17 @@ pub fn TagsFieldPage() -> Element {
                                 .then(|| "Comma or Enter adds one.".to_string()),
                             placeholder: (values.str("placeholder") == "true")
                                 .then(|| "Add a topic".to_string()),
-                            status: match values.str("status").as_str() {
-                                "warning" => FieldStatus::Warning("Two of these are rarely read.".to_string()),
-                                "error" => FieldStatus::Error("Add at least one topic.".to_string()),
-                                _ => FieldStatus::Valid,
-                            },
+                            status: refused().filter(|_| refuses).map(FieldStatus::Error).unwrap_or(status),
                             suggestions: (values.str("suggestions") == "true").then(|| {
                                 ["rust", "dioxus", "wasm", "css"].map(String::from).to_vec()
                             }),
                             tag_rules: ruled
                                 .then(|| Callback::new(|tag: String| tag.chars().count() >= 3)),
-                            // Only the rule's refusals: with the switch off, a
-                            // duplicate is refused too and nothing prints it.
                             onrefuse: move |tag: String| {
-                                if ruled {
-                                    refused.set(Some(tag));
+                                if refuses {
+                                    refused.set(Some(why(&value(), &tag, max)));
                                 }
                             },
-                            helper: refused()
-                                .filter(|_| ruled)
-                                .map(|tag| format!("\"{tag}\" was refused.")),
                             tag: (values.str("tag") == "true").then(|| Callback::new(topic_tag)),
                             max_tags: max_tags(&values),
                             allow_duplicates: (values.str("allow_duplicates") == "true").then_some(true),
@@ -282,7 +337,10 @@ pub fn TagsFieldPage() -> Element {
                             required: (values.str("required") == "true").then_some(true),
                             disabled: (values.str("disabled") == "true").then_some(true),
                             value: value(),
-                            onchange: move |next| value.set(next),
+                            onchange: move |next| {
+                                refused.set(None);
+                                value.set(next);
+                            },
                         }
                     }
                 },

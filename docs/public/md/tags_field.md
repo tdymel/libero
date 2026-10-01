@@ -16,7 +16,18 @@ own type.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::TagsField;
+use libero::components::{FieldStatus, TagsField};
+
+/// Why the field refused `tag`, in the order it checks.
+fn why(held: &[String], tag: &str, max_tags: Option<usize>) -> String {
+    if held.iter().any(|held| held.trim().to_lowercase() == tag.to_lowercase()) {
+        format!("\"{tag}\" is already a topic.")
+    } else if let Some(max) = max_tags.filter(|max| held.len() >= *max) {
+        format!("\"{tag}\" was not added: {max} topics at most.")
+    } else {
+        format!("\"{tag}\" is too short: 3 characters at least.")
+    }
+}
 
 #[component]
 fn Demo() -> Element {
@@ -31,14 +42,20 @@ fn Demo() -> Element {
             max_tags: 5,
             suggestions: vec!["rust".into(), "dioxus".into(), "wasm".into(), "css".into()],
             tag_rules: |tag: String| tag.chars().count() >= 3,
-            onrefuse: move |tag: String| refused.set(Some(tag)),
-            helper: refused().map(|tag| format!("\"{tag}\" was refused.")),
+            onrefuse: move |tag: String| refused.set(Some(why(&topics(), &tag, Some(5)))),
+            status: refused().map(FieldStatus::Error).unwrap_or(FieldStatus::Valid),
             value: topics(),
-            onchange: move |next| topics.set(next),
+            onchange: move |next| {
+                refused.set(None);
+                topics.set(next)
+            },
         }
     }
 }
 ```
+
+The field tells screen readers why it refused a tag, but shows nothing. The
+`status` above shows the reason on screen until the list next changes.
 
 ## Props
 
@@ -54,8 +71,8 @@ fn Demo() -> Element {
 | `split_chars` | `Vec<String>` | `[","]` | Each one commits the text before it, typed or pasted. |
 | `allow_duplicates` | `bool` | `false` | Lets the same tag be added twice. Off, tags are compared trimmed and case-insensitive. |
 | `max_tags` | `usize` | - | The most tags the field accepts. A paste fills the room that is left and refuses the rest. |
-| `tag_rules` | `Callback<String, bool>` | - | Accepts or refuses one tag before it is added. A refused tag stays in the input, and no message shows. |
-| `onrefuse` | `EventHandler<String>` | - | A tag was refused, as a duplicate, past `max_tags`, or by `tag_rules`. Use it to say why, such as through `helper`. |
+| `tag_rules` | `Callback<String, bool>` | - | Accepts or refuses one tag before it is added. A refused tag stays in the input, and the field tells screen readers why. |
+| `onrefuse` | `EventHandler<String>` | - | A tag was refused, as a duplicate, past `max_tags`, or by `tag_rules`. The field shows no message, so say why on screen, such as through `status`, and clear it on the next change. |
 | `validate` | `Validators<Vec<String>>` | - | Rules over the whole list, shown once the field loses focus or its form is submitted. |
 | `name` | `FieldName<Vec<String>>` | - | Posts each tag under this name. A path such as `Article::FIELDS.topics()` also binds the list to the surrounding `Form`'s value when the field has no `onchange`. |
 | `placeholder` | `String` | - | Shown while there are no tags. |

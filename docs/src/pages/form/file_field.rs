@@ -62,7 +62,7 @@ pub fn FileFieldPage() -> Element {
                     prop("name", "FieldName<Files>")
                         .doc("What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`."),
                     prop("onchange", "EventHandler<Files>")
-                        .doc("Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick carries only the new files, so a `multiple` field that collects files merges them in its handler."),
+                        .doc("Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick or a drop hands over only the files it brought, so on a `multiple` field it replaces the earlier ones, as a native file input does. A removal or a clear hands over what is left."),
                     prop("validate", "Validators<Files>")
                         .doc("Rules over the files, shown once the field loses focus or its form is submitted."),
                     prop("children", "Element")

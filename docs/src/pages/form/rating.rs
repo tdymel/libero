@@ -174,8 +174,9 @@ pub fn RatingPage() -> Element {
                             _ => vec!["aria_label: \"Your rating\"".to_string()],
                         }
                     }),
-                    Control::switch("clearable"),
-                    Control::switch("readonly"),
+                    // A display-only rating takes no input, so neither applies.
+                    Control::switch("clearable").hidden_when(|values| values.str("focusable") != "true"),
+                    Control::switch("readonly").hidden_when(|values| values.str("focusable") != "true"),
                     Control::switch("disabled"),
                     Control::switch("focusable").default("true").code(|_, values| {
                         match values.str("focusable").as_str() {

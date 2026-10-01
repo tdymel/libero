@@ -34,8 +34,9 @@ fn Demo() -> Element {
 }
 ```
 
-A pick carries only the new files, so a `multiple` field that collects files
-merges them in its handler:
+A `multiple` field takes several files per pick or drop. A new pick replaces the
+earlier files, as on a native file input, and a removal hands over the rest, so
+the handler stores what it gets:
 
 ```rust
 use dioxus::prelude::*;
@@ -51,11 +52,7 @@ fn Demo() -> Element {
             variant: "dropzone",
             multiple: true,
             value: files(),
-            onchange: move |picked: Files| {
-                let mut all = files().into_vec();
-                all.extend(picked.into_vec());
-                files.set(all.into());
-            },
+            onchange: move |picked: Files| files.set(picked),
             "Drop files here, or click to pick"
         }
     }
@@ -93,7 +90,7 @@ FileField {
 | `oncrop` | `EventHandler<CropRect>` | - | The box picked in the crop dialog, before the cut file reaches `onchange`. |
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | `Chip`, or the file name | Draws one picked file, remove control included. `args.remove` removes it. |
 | `name` | `FieldName<Files>` | - | What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`. |
-| `onchange` | `EventHandler<Files>` | - | Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick carries only the new files, so a `multiple` field that collects files merges them in its handler. |
+| `onchange` | `EventHandler<Files>` | - | Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick or a drop hands over only the files it brought, so on a `multiple` field it replaces the earlier ones, as a native file input does. A removal or a clear hands over what is left. |
 | `validate` | `Validators<Files>` | - | Rules over the files, shown once the field loses focus or its form is submitted. |
 | `children` | `Element` | - | The dropzone's prompt. The `input` variant shows `placeholder` instead. |
 | `size` | `Size` | `md` | Control height, font size and the chips' size. |

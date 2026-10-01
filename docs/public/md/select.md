@@ -45,16 +45,18 @@ button. `value: None` leaves nothing to infer `T` from, so write `None::<Fruit>`
 and annotate the handler.
 
 `option` draws a row's content. The highlight, selection and click stay the
-component's. `selection` draws the value in the trigger and takes the bare `T`:
+component's. `selection` draws the value in the trigger and takes the bare `T`.
+The emoji is decoration, hidden from screen readers so the row reads as its
+label alone:
 
 ```rust,ignore
 Select {
     value: value(),
     onchange: move |next| value.set(next),
     option: move |o: SelectOptionArgs<Fruit>| rsx! {
-        Text { "{o.value.emoji()} {o.value.label()}" }
+        Text { span { "aria-hidden": "true", "{o.value.emoji()} " } "{o.value.label()}" }
     },
-    selection: move |fruit: Fruit| rsx! { "{fruit.emoji()} {fruit.label()}" },
+    selection: move |fruit: Fruit| rsx! { span { "aria-hidden": "true", "{fruit.emoji()} " } "{fruit.label()}" },
 }
 ```
 
@@ -112,7 +114,7 @@ option is read out, and the arrows, typeahead and clicks skip it.
 | `name` | `FieldName<Option<T>>` | - | Posts the selected option's `Options::value()` under this name. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. |
-| `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight, selection and click stay the component's. |
+| `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight, selection and click stay the component's. Hide a decorative glyph such as an emoji with `aria-hidden`, or a screen reader reads it before the label. |
 | `selection` | `Callback<T, Element>` | `T::label()` | Draws the selected value inside the trigger. |
 | `placeholder` | `String` | - | Shown while `value` is `None`. |
 | `clearable` | `bool` | `false` | Shows an x in place of the chevron while something is selected. The only way `onchange` gets `None`. |

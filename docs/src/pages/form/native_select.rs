@@ -30,7 +30,9 @@ enum FontSize {
 
 #[component]
 pub fn NativeSelectPage() -> Element {
-    let mut value = use_signal(|| Some(FontSize::Small));
+    let value = use_signal(|| Some(FontSize::Small));
+    // The placeholder shows only while nothing is picked, so its case starts at `None`.
+    let unpicked = use_signal(|| None::<FontSize>);
 
     rsx! {
         DocPage {
@@ -137,6 +139,12 @@ pub fn NativeSelectPage() -> Element {
                             _ => vec!["aria_label: \"Size\"".to_string()],
                         }
                     }),
+                    Control::switch("placeholder").code(|_, values| {
+                        match values.str("placeholder").as_str() {
+                            "true" => vec!["placeholder: \"Pick a size\"".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("description").code(|_, values| {
                         match values.str("description").as_str() {
                             "true" => vec!["description: \"Applies to body text.\"".to_string()],
@@ -160,31 +168,36 @@ pub fn NativeSelectPage() -> Element {
                         }
                     }),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    NativeSelect {
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        label: (values.str("label") == "true").then(|| "Size".to_string()),
-                        aria_label: (values.str("label") != "true").then_some("Size"),
-                        description: (values.str("description") == "true")
-                            .then(|| "Applies to body text.".to_string()),
-                        helper: (values.str("helper") == "true")
-                            .then(|| "You can change this later.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => {
-                                FieldStatus::Warning("Large sizes reflow the page.".to_string())
-                            }
-                            "error" => FieldStatus::Error("Pick a size.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
-                        required: (values.str("required") == "true").then_some(true),
-                        disabled: (values.str("disabled") == "true").then_some(true),
-                        options: match values.str("disabled_option").as_str() {
-                            "true" => OptionList::from_options().disabling(|size| *size == FontSize::Xl),
-                            _ => OptionList::from_options(),
-                        },
-                        value: value(),
-                        onchange: move |next| value.set(Some(next)),
+                render: move |values: DemoValues| {
+                    let placeholder = values.str("placeholder") == "true";
+                    let mut current = if placeholder { unpicked } else { value };
+                    rsx! {
+                        NativeSelect {
+                            placeholder: placeholder.then(|| "Pick a size".to_string()),
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            label: (values.str("label") == "true").then(|| "Size".to_string()),
+                            aria_label: (values.str("label") != "true").then_some("Size"),
+                            description: (values.str("description") == "true")
+                                .then(|| "Applies to body text.".to_string()),
+                            helper: (values.str("helper") == "true")
+                                .then(|| "You can change this later.".to_string()),
+                            status: match values.str("status").as_str() {
+                                "warning" => {
+                                    FieldStatus::Warning("Large sizes reflow the page.".to_string())
+                                }
+                                "error" => FieldStatus::Error("Pick a size.".to_string()),
+                                _ => FieldStatus::Valid,
+                            },
+                            required: (values.str("required") == "true").then_some(true),
+                            disabled: (values.str("disabled") == "true").then_some(true),
+                            options: match values.str("disabled_option").as_str() {
+                                "true" => OptionList::from_options().disabling(|size| *size == FontSize::Xl),
+                                _ => OptionList::from_options(),
+                            },
+                            value: current(),
+                            onchange: move |next| current.set(Some(next)),
+                        }
                     }
                 },
             }

@@ -252,7 +252,23 @@ pub fn NumberFieldPage() -> Element {
                         }),
                     // Bounds are typed as `T`, so what the switch prints
                     // follows the value type the same way the props do.
-                    Control::switch("steppers").default("true"),
+                    // On in the preview, but the prop defaults to false, so the
+                    // snippet prints it whenever it is on.
+                    Control::switch("steppers").default("true").code(|_, values| {
+                        match values.str("steppers").as_str() {
+                            "true" => vec!["steppers: true".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("increment_label")
+                        .hidden_when(|values| values.str("steppers") != "true")
+                        .code(|_, values| match values.str("increment_label").as_str() {
+                            "true" => vec![
+                                "increment_label: \"Add one\"".to_string(),
+                                "decrement_label: \"Remove one\"".to_string(),
+                            ],
+                            _ => vec![],
+                        }),
                     Control::switch("range").code(|_, values| {
                         match (values.str("range").as_str(), values.str("type").as_str()) {
                             ("true", "f64") => {
@@ -305,12 +321,15 @@ pub fn NumberFieldPage() -> Element {
                     let disabled = (values.str("disabled") == "true").then_some(true);
                     let ranged = values.str("range") == "true";
                     let steppers = values.str("steppers") == "true";
+                    let named = values.str("increment_label") == "true";
+                    let increment_label = named.then(|| "Add one".to_string());
+                    let decrement_label = named.then(|| "Remove one".to_string());
 
                     match values.str("type").as_str() {
                         "f64" => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers,
+                                required, disabled, steppers, increment_label, decrement_label,
                                 step: 0.5f64,
                                 min: ranged.then_some(0.0f64),
                                 max: ranged.then_some(10.0f64),
@@ -321,7 +340,7 @@ pub fn NumberFieldPage() -> Element {
                         "cents" => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers,
+                                required, disabled, steppers, increment_label, decrement_label,
                                 min: ranged.then_some(Cents(0)),
                                 max: ranged.then_some(Cents(10_000)),
                                 value: price(),
@@ -331,7 +350,7 @@ pub fn NumberFieldPage() -> Element {
                         _ => rsx! {
                             NumberField {
                                 size, radius, label, aria_label, description, helper, status,
-                                required, disabled, steppers,
+                                required, disabled, steppers, increment_label, decrement_label,
                                 min: ranged.then_some(1i32),
                                 max: ranged.then_some(99i32),
                                 value: quantity(),
