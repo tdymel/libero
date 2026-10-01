@@ -20,6 +20,7 @@ fn it_meets_the_baseline() {
 
 const LINKS: &[&str] = &[
     "#mark-default",
+    "#mark-never",
     "#mark-primary",
     "#mark-secondary",
     "#mark-error",
@@ -73,6 +74,28 @@ fn a_mark_keeps_its_highlight_in_forced_colours() {
         wait::for_js_true(page, MARK, "every mark in Mark on MarkText")
             .await
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1666: a default Anchor is underlined at rest in a Mark; `underline: never` stays bare.
+#[test]
+fn a_mark_underlines_only_the_anchors_that_underline_on_hover() {
+    block_on(async {
+        let fixture = Fixture::open("/mark", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#mark-never").await.unwrap();
+        let line = |id: &'static str| async move {
+            page.evaluate(format!(
+                "getComputedStyle(document.querySelector('{id}')).textDecorationLine"
+            ))
+            .await
+            .unwrap()
+            .into_value::<String>()
+            .unwrap()
+        };
+        assert_eq!(line("#mark-default").await, "underline");
+        assert_eq!(line("#mark-never").await, "none");
         fixture.close().await.unwrap();
     });
 }

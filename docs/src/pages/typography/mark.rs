@@ -24,7 +24,7 @@ pub fn MarkPage() -> Element {
                 .handles([
                     "Each highlight is a real `<mark>`.",
                     "For a theme color, a shade or a hex, the text takes the tint's contrast color, so it stays readable.",
-                    "A link inside is underlined in the text's color, and its focus ring clears 3:1 against the tint.",
+                    "A link inside is underlined in the text's color, unless its `underline` is `never`, and its focus ring clears 3:1 against the tint.",
                     "In forced colors the tint gives way to the system highlight colors, `Mark` and `MarkText`.",
                 ])
                 .must([

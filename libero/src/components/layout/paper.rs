@@ -13,7 +13,7 @@ use crate::{
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, FOCUS_RING_HALO, GLASS_SHEEN, GlassTint, Gradient, NamedColorCss,
-        PAPER_BORDER_COLOR, PaperDefaults, Size, gradient_surface_sx,
+        PAPER_BORDER_COLOR, PaperDefaults, SURFACE_LABEL, Size, gradient_surface_sx,
     },
 };
 
@@ -29,6 +29,8 @@ pub fn paper_sx() -> Sx {
         // No underline, so `component: "a"` reads as a card, not as a link.
         .display("block")
         .text_decoration("none")
+        // A plain surface inside a gradient one: its buttons keep their own colour.
+        .var(SURFACE_LABEL, "initial")
         .when(
             "bordered",
             sx().border(format!("1px solid {}", PAPER_BORDER_COLOR.value())),

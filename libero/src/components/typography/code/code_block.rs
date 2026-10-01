@@ -67,11 +67,17 @@ static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+// Measured on the scroll box; 0 under overlay scrollbars.
+const CODE_SCROLLBAR_WIDTH_VAR: CssVar = CssVar::new("--lsx-code-block-scrollbar-width");
+
 // Centred on the first code line: 12px padding + 10px half line, minus half the 24px button.
 static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .top("9px")
-        .right("8px")
+        .right(format!(
+            "calc(8px + {})",
+            CODE_SCROLLBAR_WIDTH_VAR.value_or("0px")
+        ))
         .background(CODE_BLOCK_BACKGROUND.value())
         .border("1px solid")
         .border_color(CODE_BLOCK_BORDER.value())
@@ -443,6 +449,9 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         None => labels.code.to_string(),
     };
     let group_label = props.label.clone().unwrap_or_else(|| scroll_label.clone());
+    // A classic vertical scrollbar's width, which the floating copy button moves clear of.
+    let mut scrollbar = use_signal(|| 0u32);
+    let width = scrollbar();
     // A group, so the copy button is read as this block's (todo 1025).
     let boxed = use_box()
         .framework_sx(&CODE_BLOCK_CONTAINER_SX)
@@ -450,6 +459,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
+        .style((width > 0).then(|| format!("{}:{width}px;", CODE_SCROLLBAR_WIDTH_VAR.name())))
         .prepare()
         .attr("role", Some("group"))
         .attr(
@@ -504,12 +514,26 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
             return;
         }
         let (content, size) = (scroll_element.scroll_size(), scroll_element.dimensions());
+        // The `pre` is a block: as wide as the box less its scrollbar.
+        let pre = scroll_element
+            .query_selector("pre")
+            .ok()
+            .map(|pre| pre.dimensions());
         spawn(async move {
             if let (Ok(content), Ok(size)) = (content.await, size.await) {
                 // `scrollWidth` is rounded, the rect is not.
                 let next = content.width > size.width + 1.0 || content.height > size.height + 1.0;
                 if next != *overflows.peek() {
                     overflows.set(next);
+                }
+                if let Some(Ok(pre)) = match pre {
+                    Some(pre) => Some(pre.await),
+                    None => None,
+                } {
+                    let width = (size.width - pre.width).round().max(0.0) as u32;
+                    if width != *scrollbar.peek() {
+                        scrollbar.set(width);
+                    }
                 }
             }
         });

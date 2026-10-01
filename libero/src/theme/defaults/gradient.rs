@@ -15,6 +15,9 @@ pub const GRADIENT_ANGLE: CssVar = CssVar::new("--lsx-gradient-angle");
 pub const GRADIENT_CONTRAST: CssVar = CssVar::new("--lsx-gradient-contrast");
 /// The other end: the hover and selected state layers are tinted with it.
 pub const GRADIENT_LAYER: CssVar = CssVar::new("--lsx-gradient-layer");
+/// A fill's label for an uncoloured `standard` Button on it, set where `ANCHOR_COLOR`
+/// follows the fill (todo 1663); `initial` on a plain surface, so the button keeps its own.
+pub(crate) const SURFACE_LABEL: CssVar = CssVar::new("--lsx-surface-label");
 
 // A literal gradient does not flip with the scheme, so its label may not either.
 const BLACK: HexColor = HexColor::new(0x00_00_00);
@@ -48,7 +51,7 @@ impl GradientDefaults {
 ///
 /// A stop is a palette colour (`"primary"`, `"info.7"`) or a literal CSS one.
 /// The label is picked to read on palette and hex stops; any other literal
-/// (`"rebeccapurple"`, a `var()`) is the caller's to check.
+/// (`"rebeccapurple"`, a `var()`) is the caller's to check, and debug builds warn.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -186,6 +189,7 @@ pub(crate) fn gradient_surface_sx() -> Sx {
             GRADIENT_CONTRAST.value(),
         )
         .var(FOCUS_RING_HALO, GRADIENT_FROM.value())
+        .var(SURFACE_LABEL, GRADIENT_CONTRAST.value())
 }
 
 fn state_layer(percent: u8) -> String {
@@ -256,6 +260,22 @@ fn midpoint(a: HexColor, b: HexColor) -> HexColor {
     HexColor::new((mid(a.r(), b.r()) << 16) | (mid(a.g(), b.g()) << 8) | mid(a.b(), b.b()))
 }
 
+/// Both stops and the midpoint in `theme`; only the measurable stop where the other has no hex.
+fn gradient_points(
+    stops: &[ThemeAwareValue; 2],
+    theme: &Theme,
+    text: bool,
+) -> Option<Vec<HexColor>> {
+    match (
+        stop_hex(&stops[0], theme, text),
+        stop_hex(&stops[1], theme, text),
+    ) {
+        (Some(from), Some(to)) => Some(vec![from, to, midpoint(from, to)]),
+        (Some(only), None) | (None, Some(only)) => Some(vec![only]),
+        (None, None) => None,
+    }
+}
+
 /// The label, its opposite end and the worst ratio, best over every point of every theme.
 /// Theme ends first; literals only where they fail. `None`: nothing measurable.
 fn best_label(
@@ -296,13 +316,21 @@ fn best_label(
 }
 
 /// The label and layer tint with the best worst-case contrast on both stops and the
-/// midpoint (luminance sags there).
+/// midpoint (luminance sags there). A stop with no hex (`"violet"`, a var) drops out
+/// with the midpoint, and says so.
 fn pick_label(stops: &[ThemeAwareValue; 2], themes: &[&Theme], text: bool) -> (String, String) {
-    let best = best_label(themes, |theme| {
-        let from = stop_hex(&stops[0], theme, text)?;
-        let to = stop_hex(&stops[1], theme, text)?;
-        Some(vec![from, to, midpoint(from, to)])
-    });
+    let best = best_label(themes, |theme| gradient_points(stops, theme, text));
+    if !text {
+        let theme = themes[0];
+        if let Some(stop) = stops
+            .iter()
+            .find(|stop| stop_hex(stop, theme, false).is_none())
+        {
+            warn_once(format!(
+                "gradient: the label is not measured on {stop:?}; give the stop as a palette colour or hex."
+            ));
+        }
+    }
     // Nothing measurable: Mantine's white, on the caller.
     let (score, label, layer) = best.unwrap_or((f32::MAX, WHITE.to_string(), BLACK.to_string()));
     if score < TEXT_CONTRAST && !text {
@@ -341,9 +369,7 @@ pub(crate) fn glass_gradient_tint(
 ) -> Option<GlassTint> {
     let stops = gradient.stops(from, &themes[0].gradient);
     glass_share(&stops, themes, |theme| {
-        let from = stop_hex(&stops[0], theme, false)?;
-        let to = stop_hex(&stops[1], theme, false)?;
-        Some(vec![from, to, midpoint(from, to)])
+        gradient_points(&stops, theme, false)
     })
 }
 
@@ -688,8 +714,29 @@ mod tests {
 
     #[test]
     fn an_unmeasurable_stop_falls_back_to_white() {
-        let stops = stops(Some("rebeccapurple"), Gradient::default());
+        let stops = stops(
+            Some("rebeccapurple"),
+            Gradient::default().to("var(--brand)"),
+        );
         assert_eq!(pick_label(&stops, &[&Theme::DEFAULT], false).0, "#FFFFFF");
+    }
+
+    /// Todo 1664: a named stop drops out of the pick, which still fits the other stop and warns.
+    #[test]
+    fn a_named_stop_is_measured_without_and_warns() {
+        crate::utils::take_warnings();
+        let themes = [&Theme::DEFAULT, &Theme::DARK];
+        let stops = stops(Some("#ffe066"), ("violet", 90).into());
+        let (label, _) = pick_label(&stops, &themes, false);
+        // The pale literal alone wants black, not the white an unmeasured pair falls back to.
+        assert_eq!(label, "#000000");
+        let warnings = crate::utils::take_warnings();
+        assert!(
+            warnings
+                .iter()
+                .any(|w| w.contains("not measured") && w.contains("violet")),
+            "{warnings:?}"
+        );
     }
 
     #[test]

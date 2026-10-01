@@ -9,6 +9,8 @@ use e2e::{Fixture, Suite, Viewport, ax};
 const COPY: &str = "#diff-block button";
 const FLOATING_COPY: &str = "#wide-block button";
 const WIDE_SCROLL: &str = "#wide-block [role=region]";
+const TALL_COPY: &str = "#tall-block button";
+const TALL_SCROLL: &str = "#tall-block [role=region]";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -17,11 +19,42 @@ fn it_meets_the_baseline() {
         .focusable(COPY)
         .focusable(FLOATING_COPY)
         .focusable(WIDE_SCROLL)
+        .focusable(TALL_COPY)
+        .focusable(TALL_SCROLL)
         .targets(COPY)
         .targets(FLOATING_COPY)
+        .targets(TALL_COPY)
         .contrast_covers("#diff-block")
         .contrast_covers("#wide-block")
         .run();
+}
+
+/// Todo 1652: a classic vertical scrollbar takes width off the scroll box; the floating
+/// copy button sits left of it, not over it. Headless Chrome scrollbars, so a 16px right padding stands in for the gutter: it narrows the
+/// `pre` as a scrollbar does, which is what the block measures.
+#[test]
+fn the_floating_copy_button_clears_the_vertical_scrollbar() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, TALL_COPY).await.unwrap();
+        page.evaluate(format!(
+            "document.querySelector('{TALL_SCROLL}').style.paddingRight = '16px'"
+        ))
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const box = document.querySelector('{TALL_SCROLL}').getBoundingClientRect(); \
+                 return document.querySelector('{TALL_COPY}').getBoundingClientRect().right <= box.right - 16 - 8 + 0.5; }})()"
+            ),
+            "the copy button 8px left of the gutter",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
 }
 
 /// `[the code's direction, whether its first token starts at the scroller's

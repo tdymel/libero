@@ -9,18 +9,47 @@ use e2e::{Fixture, Viewport, wait};
 
 #[test]
 fn it_meets_the_baseline() {
-    Suite::new("gradient", "/gradient")
-        .waive(STANDARD_BUTTON_ON_GRADIENT)
-        .run();
+    Suite::new("gradient", "/gradient").run();
 }
 
-/// Found once the pass measured gradients (todo 1649): a `standard` Button keeps
-/// its `primary` text on a gradient Paper, about 1.03:1.
-const STANDARD_BUTTON_ON_GRADIENT: &[contrast::Waiver] = &[contrast::Waiver {
-    rule: "color-contrast",
-    contains: "id=\"in-paper\"",
-    why: "a standard Button's primary text on a gradient Paper, 1.03:1; todo 1663",
-}];
+/// Todo 1663: an uncoloured `standard` Button on a gradient Paper or Header takes its label
+/// (1.03:1 in `primary` before), at rest and on hover; a plain Paper inside gives the
+/// button its own colour back.
+#[test]
+fn a_standard_button_takes_the_gradient_label() {
+    block_on(async {
+        let fixture = Fixture::open("/gradient", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#in-paper").await.unwrap();
+        for name in ["light", "dark"] {
+            scheme(page, name).await;
+            for (button, surface) in [("#in-paper", "#paper"), ("#in-header", "#header")] {
+                assert_eq!(
+                    style(page, button, "color").await,
+                    style(page, surface, "color").await,
+                    "{button} in {name}"
+                );
+            }
+            assert_eq!(
+                style(page, "#in-nested", "color").await,
+                style(page, "#plain-standard", "color").await,
+                "in {name}"
+            );
+        }
+        scheme(page, "light").await;
+        pointer::hover(page, "#in-paper").await.unwrap();
+        wait::for_js_true(
+            page,
+            "getComputedStyle(document.querySelector('#in-paper')).backgroundColor !== 'rgba(0, 0, 0, 0)'",
+            "the hover fill",
+        )
+        .await
+        .unwrap();
+        let hovered = ratio(page, FILL_RATIO, "#in-paper").await;
+        assert!(hovered >= 4.5, "#in-paper hovered: {hovered:.2}:1");
+        fixture.close().await.unwrap();
+    });
+}
 
 /// Todo 1649. axe leaves text on a gradient undecided, which read as green; the
 /// contrast pass now measures it, so a grey label on a white-to-silver fill fails.
@@ -144,6 +173,7 @@ fn every_label_reads_on_its_whole_gradient_in_both_schemes() {
                 "#header",
                 "#color-only",
                 "#paper-gradient",
+                "#in-paper",
             ] {
                 let ratio = ratio(page, WORST_RATIO, selector).await;
                 assert!(ratio >= 4.5, "{selector} in {name}: {ratio:.2}:1");

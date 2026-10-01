@@ -23,13 +23,19 @@ fn GradientPage() -> Element {
                 Button { id: "color-only", variant: "gradient", color: "error", "Color" }
                 Button { id: "selected", variant: "gradient", selected: true, "Selected" }
                 Button { id: "ignored", gradient: Gradient::default().to("info"), "Filled" }
+                Button { id: "plain-standard", variant: "standard", "Plain" }
                 ActionIcon { id: "action-icon", variant: "gradient", aria_label: "Star", "★" }
                 Badge { id: "badge", variant: "gradient", "New" }
                 Icon { id: "icon", variant: "gradient", aria_label: "Verified", "✓" }
             }
             Paper { id: "paper", gradient: Gradient::default(), sx: libero::sx::sx().padding("md"),
                 Text { "On the theme's gradient." }
+                // 1663: an uncoloured standard Button takes the gradient's label; a plain
+                // Paper inside gives its own back.
                 Button { id: "in-paper", variant: "standard", "More" }
+                Paper { id: "nested-plain", sx: libero::sx::sx().padding("xs"),
+                    Button { id: "in-nested", variant: "standard", "Nested" }
+                }
             }
             Paper { id: "glass", glass: true, gradient: Gradient::default().to("error"),
                 sx: libero::sx::sx().padding("md"),

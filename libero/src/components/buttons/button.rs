@@ -15,7 +15,7 @@ use crate::{
     },
     hooks::{ripple_sx, use_cache, use_gradient_style, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{BUTTON_HEIGHT, ButtonDefaults, Gradient, LOADER_SIZE, Size, SizeCss},
+    theme::{BUTTON_HEIGHT, ButtonDefaults, Gradient, LOADER_SIZE, SURFACE_LABEL, Size, SizeCss},
     utils::warn,
 };
 
@@ -129,18 +129,24 @@ fn loading_sx() -> Sx {
 }
 
 /// The colour half of the `style` attribute. Depends on its arguments alone, so `Button` caches it.
+/// `uncolored`: no caller `color`, so a `standard` label takes a fill's around it (todo 1663).
 pub(crate) fn button_variables(
     variant: Variant,
     base: &ThemeAwareValue,
     selectable: bool,
+    uncolored: bool,
 ) -> String {
     let contrast = contrast_color(base);
     let colors = variant_colors(variant, base);
     // Only a toggle button reads it; the rest skip the declaration.
     let selected = selectable.then_some(colors.selected).flatten();
+    let label = text_color(base).map(|label| match variant {
+        Variant::Standard if uncolored => format!("var({}, {label})", SURFACE_LABEL.name()),
+        _ => label,
+    });
 
     variables()
-        .with(BUTTON_COLOR_VAR, text_color(base))
+        .with(BUTTON_COLOR_VAR, label)
         .with(BUTTON_FILL_VAR, fill_color(base))
         .with(
             BUTTON_CONTRAST_VAR,
@@ -263,9 +269,12 @@ pub fn Button(props: ButtonProps) -> Element {
 
     let showing = ripple.showing();
     // ~790 ns uncached, and the key rarely changes between renders.
+    let uncolored = color_prop.is_none();
     let style = use_cache(
-        (variant, color, selectable),
-        |(variant, color, selectable)| button_variables(*variant, color, *selectable),
+        (variant, color, selectable, uncolored),
+        |(variant, color, selectable, uncolored)| {
+            button_variables(*variant, color, *selectable, *uncolored)
+        },
     );
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
@@ -423,8 +432,8 @@ mod tests {
     #[test]
     fn a_filled_button_darkens_on_hover_where_an_outlined_one_tints() {
         let base = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
-        let filled = button_variables(Variant::Filled, &base, false);
-        let outlined = button_variables(Variant::Outlined, &base, false);
+        let filled = button_variables(Variant::Filled, &base, false, false);
+        let outlined = button_variables(Variant::Outlined, &base, false, false);
 
         assert!(filled.contains(&format!(
             "{}:{};",
@@ -443,7 +452,7 @@ mod tests {
     #[test]
     fn the_color_variables_are_the_base_color_in_its_two_roles() {
         let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, ColorShade::S7));
-        let variables = button_variables(Variant::Filled, &base, false);
+        let variables = button_variables(Variant::Filled, &base, false, false);
 
         assert!(variables.starts_with(&format!(
             "{}:{};",
@@ -457,12 +466,33 @@ mod tests {
         )));
     }
 
+    /// Todo 1663: only an uncoloured `standard` label falls back through a fill's label.
+    #[test]
+    fn an_uncolored_standard_label_takes_the_surface_label() {
+        let base = base_color(None);
+        let label = |variant, uncolored| {
+            let variables = button_variables(variant, &base, false, uncolored);
+            variables
+                .split(';')
+                .find_map(|declaration| {
+                    declaration.strip_prefix(&format!("{}:", BUTTON_COLOR_VAR.name()))
+                })
+                .unwrap()
+                .to_string()
+        };
+        let surface = format!("var({}, ", SURFACE_LABEL.name());
+        assert!(label(Variant::Standard, true).starts_with(&surface));
+        assert!(!label(Variant::Standard, false).starts_with(&surface));
+        assert!(!label(Variant::Outlined, true).starts_with(&surface));
+    }
+
     /// A literal fill publishes black or white, not the page's text colour; an
     /// unparseable one leaves the pick to the browser.
     #[test]
     fn a_literal_color_publishes_a_readable_contrast() {
         for (color, contrast) in [("#ffeb3b", "#000000"), ("gold", "contrast-color(gold)")] {
-            let variables = button_variables(Variant::Filled, &ThemeAwareValue::from(color), false);
+            let variables =
+                button_variables(Variant::Filled, &ThemeAwareValue::from(color), false, false);
             assert!(
                 variables.contains(&format!("{}:{contrast};", BUTTON_CONTRAST_VAR.name())),
                 "{color}: {variables}"
@@ -497,12 +527,12 @@ mod tests {
     fn only_the_tonal_variant_emits_a_container() {
         let base = base_color(None);
 
-        let tonal = button_variables(Variant::Tonal, &base, false);
+        let tonal = button_variables(Variant::Tonal, &base, false, false);
         assert!(tonal.contains(BUTTON_CONTAINER_VAR.name()));
         assert!(tonal.contains(BUTTON_ON_CONTAINER_VAR.name()));
 
         for variant in [Variant::Elevated, Variant::Outlined] {
-            let variables = button_variables(variant, &base, false);
+            let variables = button_variables(variant, &base, false, false);
             assert!(
                 !variables.contains(BUTTON_CONTAINER_VAR.name()),
                 "{variant:?}"
@@ -515,7 +545,7 @@ mod tests {
     #[test]
     fn a_literal_color_gets_no_container() {
         let base = ThemeAwareValue::String("gold".to_string());
-        let variables = button_variables(Variant::Tonal, &base, false);
+        let variables = button_variables(Variant::Tonal, &base, false, false);
 
         assert!(!variables.contains(BUTTON_CONTAINER_VAR.name()));
         assert!(!variables.contains(BUTTON_ON_CONTAINER_VAR.name()));

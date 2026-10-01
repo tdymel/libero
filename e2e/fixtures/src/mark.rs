@@ -18,6 +18,12 @@ fn MarkPage() -> Element {
                     Anchor { id: "mark-default", to: "#", "a link inside a mark" }
                 }
             }
+            // Todo 1666: the at-rest underline leaves an `underline: never` Anchor alone.
+            Text {
+                Mark {
+                    Anchor { id: "mark-never", to: "#", underline: "never", "a bare link" }
+                }
+            }
             for (id, color) in MARK_COLORS {
                 Text {
                     Mark { color: *color,

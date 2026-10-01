@@ -32,6 +32,10 @@ fn CodePage() -> Element {
                 // One token that starts in view: axe skips a token scrolled out whole.
                 source: "fn main() {{\n    let s = \"a string long enough to scroll the block sideways\";\n}}"
             }
+            // Todo 1652: the floating copy button clears a classic vertical scrollbar.
+            CodeBlock { id: "tall-block", language: "rust", header: false, copyable: true, max_lines: 2,
+                source: "let a = 1;\nlet b = 2;\nlet c = 3;\nlet d = 4;"
+            }
             // Todo 771: no gutter digit holds the blank line's height.
             CodeBlock { id: "blank-line-block", language: "rust", line_numbers: false, copyable: false,
                 source: "let a = 1;\n\nlet b = 2;"

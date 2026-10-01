@@ -13,6 +13,8 @@ button "Selected" [pressed]
   StaticText "Selected"
 button "Filled"
   StaticText "Filled"
+button "Plain"
+  StaticText "Plain"
 button "Star"
   StaticText "★"
 StaticText "NEW"
@@ -22,6 +24,8 @@ paragraph
   StaticText "On the theme's gradient."
 button "More"
   StaticText "More"
+button "Nested"
+  StaticText "Nested"
 paragraph
   StaticText "Glass over a gradient."
 paragraph

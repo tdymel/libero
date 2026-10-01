@@ -9,6 +9,10 @@ paragraph
       StaticText "a link inside a mark"
 paragraph
   mark
+    link "a bare link"
+      StaticText "a bare link"
+paragraph
+  mark
     link "a link inside a mark"
       StaticText "a link inside a mark"
 paragraph

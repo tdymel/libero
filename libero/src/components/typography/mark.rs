@@ -7,7 +7,10 @@ use crate::{
     },
     hooks::use_theme,
     sx::{ColorRole, FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
-    theme::{ANCHOR_COLOR, Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, NamedColorCss},
+    theme::{
+        ANCHOR_COLOR, AnchorDefaults, Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO,
+        NamedColorCss, SURFACE_LABEL,
+    },
 };
 
 // Light enough to stay a tint, so text reads over it. The colour is `Theme::mark`.
@@ -35,8 +38,8 @@ static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
         .background(MARK_BACKGROUND_VAR.value())
         // Forced colours drop the tint; the system highlight pair keeps it visible.
         .media(FORCED_COLORS, sx().color("MarkText").background("Mark"))
-        // A link in the text's colour needs its underline (1.4.1); outranks `Anchor`'s state.
-        .selector("& a:any-link", sx().text_decoration("underline"))
+        // A link in the text's colour needs its underline (1.4.1), as in `Alert` and `Header`.
+        .and(AnchorDefaults::underline_at_rest())
 });
 
 /// Publishes `--lsx-focus-contrast`: `sx` infers it only from a literal, and the tint is a `var()`.
@@ -56,7 +59,8 @@ fn mark_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Vari
         .with(FOCUS_RING_HALO, text.as_ref().and(fill))
         .with(MARK_COLOR_VAR, text.clone())
         // No one link colour reads on every tint (1.01:1 on `info.6`, todo 762).
-        .with(ANCHOR_COLOR, text)
+        .with(ANCHOR_COLOR, text.clone())
+        .with(SURFACE_LABEL, text)
 }
 
 base_props! {
@@ -106,12 +110,13 @@ mod tests {
         let twin = ColorValue::Contrast(color, shade).value();
         let fill = ColorValue::Fill(color, shade).value();
         format!(
-            "{}:{fill};{}:{twin};{}:{fill};{}:{twin};{}:{twin};",
+            "{}:{fill};{}:{twin};{}:{fill};{}:{twin};{}:{twin};{}:{twin};",
             MARK_BACKGROUND_VAR.name(),
             NamedColorCss::FOCUS_CONTRAST.name(),
             FOCUS_RING_HALO.name(),
             MARK_COLOR_VAR.name(),
             ANCHOR_COLOR.name(),
+            SURFACE_LABEL.name(),
         )
     }
 
@@ -161,12 +166,13 @@ mod tests {
         assert_eq!(
             variables,
             format!(
-                "{}:#1e3a8a;{}:#FFFFFF;{}:#1e3a8a;{}:#FFFFFF;{}:#FFFFFF;",
+                "{}:#1e3a8a;{}:#FFFFFF;{}:#1e3a8a;{}:#FFFFFF;{}:#FFFFFF;{}:#FFFFFF;",
                 MARK_BACKGROUND_VAR.name(),
                 NamedColorCss::FOCUS_CONTRAST.name(),
                 FOCUS_RING_HALO.name(),
                 MARK_COLOR_VAR.name(),
-                ANCHOR_COLOR.name()
+                ANCHOR_COLOR.name(),
+                SURFACE_LABEL.name()
             )
         );
     }

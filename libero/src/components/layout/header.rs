@@ -22,7 +22,7 @@ use crate::{
     theme::{
         ANCHOR_COLOR, AnchorDefaults, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GLASS_SHEEN,
         GRADIENT_CONTRAST, GlassTint, Gradient, HEADER_HEIGHT, HEADER_HEIGHT_VAR, NamedColorCss,
-        PAPER_BACKGROUND, PaperDefaults, Size, Z_INDEX_HEADER, gradient_surface_sx,
+        PAPER_BACKGROUND, PaperDefaults, SURFACE_LABEL, Size, Z_INDEX_HEADER, gradient_surface_sx,
     },
 };
 
@@ -140,6 +140,8 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .padding_right("md")
         .background(HEADER_BACKGROUND_VAR.value_or(PAPER_BACKGROUND.value()))
         .color(HEADER_COLOR_VAR.value_or("inherit"))
+        // Uncoloured, the surface: its buttons keep their own colour (todo 1663).
+        .var(SURFACE_LABEL, "initial")
         .border_bottom("1px solid")
         .border_bottom_color("muted.4")
         .z_index(Z_INDEX_HEADER.overridable())
@@ -206,6 +208,7 @@ fn header_variables(props: &HeaderProps, tint: Option<GlassTint>) -> Variables {
         .with(FOCUS_RING_HALO, contrast.as_ref().and(fill))
         // The page's link colour reads on no fill: about 1.1:1 on `primary` (todo 1576).
         .with(ANCHOR_COLOR, contrast.clone())
+        .with(SURFACE_LABEL, contrast.clone())
         .with(
             CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
             contrast,
@@ -360,6 +363,12 @@ mod tests {
             ANCHOR_COLOR.name(),
             ColorValue::Contrast(Color::Primary, HEADER_DEFAULT_SHADE).value()
         )));
+        // So does an uncoloured standard Button (todo 1663).
+        assert!(variables.contains(&format!(
+            "{}:{};",
+            SURFACE_LABEL.name(),
+            ColorValue::Contrast(Color::Primary, HEADER_DEFAULT_SHADE).value()
+        )));
     }
 
     #[test]
@@ -477,5 +486,6 @@ mod tests {
         assert!(!variables.contains(NamedColorCss::FOCUS_CONTRAST.name()));
         assert!(!variables.contains(FOCUS_RING_HALO.name()));
         assert!(!variables.contains(ANCHOR_COLOR.name()));
+        assert!(!variables.contains(SURFACE_LABEL.name()));
     }
 }
