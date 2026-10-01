@@ -5,19 +5,23 @@ use super::options::{Align, Placement, PopoverOptions, Side};
 /// A box in viewport coordinates, which is what `client_offset()` and
 /// `dimensions()` answer together.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Rect {
-    pub x: f64,
-    pub y: f64,
-    pub width: f64,
-    pub height: f64,
+pub(crate) struct Rect {
+    pub(crate) x: f64,
+    pub(crate) y: f64,
+    pub(crate) width: f64,
+    pub(crate) height: f64,
 }
 
 /// Where the floating box goes, in viewport coordinates, and how it got there.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Placed {
-    pub x: f64,
-    pub y: f64,
-    pub placement: Placement,
+pub(crate) struct Placed {
+    pub(crate) x: f64,
+    pub(crate) y: f64,
+    pub(crate) placement: Placement,
+    /// The height the box may take on its side before it runs past the padding.
+    pub(crate) available_height: f64,
+    /// Kept hidden: the box takes its capped height first, to be measured again.
+    pub(crate) provisional: bool,
 }
 
 /// A physical edge of the anchor: `Side::Start`/`End` resolved against the
@@ -70,7 +74,7 @@ fn shift_into(start: f64, size: f64, viewport_size: f64, padding: f64) -> f64 {
 
 /// Places a floating box against its anchor; `rtl` maps logical sides and
 /// aligns to physical edges. Pure, so it is testable without a renderer.
-pub fn place(
+pub(crate) fn place(
     anchor: Rect,
     floating: Dimensions,
     viewport: Dimensions,
@@ -134,10 +138,19 @@ pub fn place(
         }
     }
 
+    let available_height = match Edge::of(side, rtl) {
+        edge @ (Edge::Top | Edge::Bottom) => {
+            room(edge, anchor, viewport, options.padding) - options.gap
+        }
+        Edge::Left | Edge::Right => viewport.height - 2.0 * options.padding,
+    };
+
     Placed {
         x,
         y,
         placement: Placement { side, align },
+        available_height: available_height.max(0.0),
+        provisional: false,
     }
 }
 
@@ -173,6 +186,40 @@ mod tests {
 
     fn options() -> PopoverOptions {
         PopoverOptions::new(4.0, 8.0)
+    }
+
+    #[test]
+    fn the_available_height_is_the_room_on_the_landed_side() {
+        // Under: 800 - (100 + 40) - 8 padding - 4 gap.
+        let under = place(
+            anchor_at(100.0, 100.0),
+            dropdown(),
+            viewport(),
+            &options(),
+            false,
+        );
+        assert_eq!(under.available_height, 648.0);
+        // Flipped above: 600 - 8 padding - 4 gap.
+        let above = place(
+            anchor_at(100.0, 600.0),
+            dropdown(),
+            viewport(),
+            &options(),
+            false,
+        );
+        assert_eq!(above.placement.side, Side::Top);
+        assert_eq!(above.available_height, 588.0);
+        let beside = place(
+            anchor_at(100.0, 600.0),
+            dropdown(),
+            viewport(),
+            &options().side(Side::End),
+            false,
+        );
+        assert_eq!(
+            beside.available_height, 784.0,
+            "the viewport less both paddings"
+        );
     }
 
     #[test]

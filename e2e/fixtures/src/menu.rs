@@ -5,6 +5,7 @@ use libero::components::{
     Button, Flex, Menu, MenuEntry, MenuItem, MenuPart, Parts, Text, use_menu,
 };
 use libero::sx::sx;
+use libero::theme::MENU_MAX_HEIGHT;
 
 use crate::Routes;
 
@@ -16,7 +17,33 @@ pub const ROUTES: Routes = &[
     ("/menu-row", || rsx! { MenuRowPage {} }),
     ("/menu-keep-open", || rsx! { MenuKeepOpenPage {} }),
     ("/menu-parts", || rsx! { MenuPartsPage {} }),
+    ("/menu-tall/below", || rsx! { MenuTallPage { top: "100px" } }),
+    (
+        "/menu-tall/above",
+        || rsx! { MenuTallPage { top: "calc(100vh - 100px)" } },
+    ),
 ];
+
+/// Forty items and no theme cap, the trigger at `top`: only the room on the
+/// side it lands on holds the box (1739).
+#[component]
+fn MenuTallPage(top: &'static str) -> Element {
+    let menu = use_menu();
+    let items = (1..=40)
+        .map(|n| MenuItem::new(format!("Item {n}")).onselect(|_| {}).into())
+        .collect::<Vec<_>>();
+
+    rsx! {
+        div { position: "absolute", left: "16px", top,
+            Menu {
+                state: menu,
+                items,
+                sx: sx().var(MENU_MAX_HEIGHT, "100vh"),
+                Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
+        }
+    }
+}
 
 /// `parts` styles the labels on every level, `sx` every level's box.
 #[component]

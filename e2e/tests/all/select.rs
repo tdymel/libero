@@ -712,3 +712,37 @@ fn a_refused_pick_keeps_the_old_selection() {
 fn the_trigger_skips_a_refused_first_row() {
     crate::combobox::the_trigger_names_the_lit_row("/select/refused-first", "Banana");
 }
+
+/// 1739: a dropdown taller than the room scrolls inside the viewport, on either side.
+async fn a_tall_dropdown_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const DROPDOWN: &str = "[data-slot=dropdown]";
+    d.click(TRIGGER).await?;
+    let (_, height) = d.viewport().await?;
+    eventually(d, "the open dropdown inside the viewport", async |d| {
+        if !d.exists(DROPDOWN).await? {
+            return Ok(false);
+        }
+        let dropdown = d.rect(DROPDOWN).await?;
+        Ok(dropdown.height > 100.0
+            && dropdown.y >= -1.0
+            && dropdown.y + dropdown.height <= height + 1.0)
+    })
+    .await?;
+    d.press(keyboard::END).await?;
+    eventually(d, "the last row scrolled into view", async |d| {
+        let row = d.rect("[role=option]:last-child").await?;
+        Ok(row.y >= 0.0 && row.y + row.height <= height)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_tall_select_below_fits_the_room,
+    "/select/tall/below",
+    a_tall_dropdown_fits_the_room
+);
+e2e::scenario!(
+    a_tall_select_above_fits_the_room,
+    "/select/tall/above",
+    a_tall_dropdown_fits_the_room
+);

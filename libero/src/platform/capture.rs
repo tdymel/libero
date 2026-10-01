@@ -43,7 +43,8 @@ impl UserMediaError {
     }
 }
 
-/// One camera or microphone. `label` stays empty until the user granted one.
+/// One camera or microphone. A browser leaves `label`, and may leave `id`, empty
+/// until the user granted one; an empty `id` opens whichever device the platform picks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MediaDevice {
     pub id: String,
@@ -133,13 +134,17 @@ impl CaptureEvent {
 }
 
 /// `getUserMedia` constraints for the chosen devices; `None` to open neither.
-/// `facing` (`user`, `environment`) applies to a camera chosen by no id.
+/// `facing` (`user`, `environment`) applies to a camera chosen by no id. An
+/// empty id (a device listed before any grant) picks no device.
 pub(crate) fn constraints(
     camera: Option<Option<&str>>,
     microphone: Option<Option<&str>>,
     facing: Option<&str>,
 ) -> Option<Value> {
-    let track = |wanted: Option<Option<&str>>, facing: Option<&str>| match (wanted, facing) {
+    let track = |wanted: Option<Option<&str>>, facing: Option<&str>| match (
+        wanted.map(|id| id.filter(|id| !id.is_empty())),
+        facing,
+    ) {
         (None, _) => Value::Bool(false),
         (Some(None), None) => Value::Bool(true),
         (Some(None), Some(facing)) => serde_json::json!({ "facingMode": { "ideal": facing } }),
@@ -616,6 +621,14 @@ mod tests {
         assert_eq!(
             constraints(Some(None), None, Some("environment")),
             Some(json!({ "video": { "facingMode": { "ideal": "environment" } }, "audio": false }))
+        );
+    }
+
+    #[test]
+    fn an_empty_id_picks_any_device() {
+        assert_eq!(
+            constraints(Some(Some("")), Some(Some("")), Some("user")),
+            Some(json!({ "video": { "facingMode": { "ideal": "user" } }, "audio": true }))
         );
     }
 }

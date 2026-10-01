@@ -9,8 +9,8 @@ use crate::{
         layout::{paper_sx, use_box},
     },
     hooks::{
-        Align, DismissOptions, ElementHandle, PopoverOptions, Side, owner_link, use_dismiss,
-        use_element, use_focus_within, use_popover_on, use_theme,
+        Align, DismissOptions, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side,
+        owner_link, use_dismiss, use_element, use_focus_within, use_popover_on, use_theme,
     },
     platform::{ElementApi, next_task},
     sx::StaticSx,
@@ -22,6 +22,9 @@ static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
         .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Md))
+        // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
+        .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
+        .overflow_y("auto")
 });
 
 /// Holds the Tab bridges: dioxus calls one listener per event name per element,

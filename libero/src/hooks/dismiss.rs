@@ -760,4 +760,6 @@ mod back;
 /// The Escape arbitration and layer lifetime, against a real `VirtualDom`. The
 /// web arm is untestable here: `keyboard()` is `None` off wasm.
 #[cfg(test)]
+mod test_support;
+#[cfg(test)]
 mod tests;

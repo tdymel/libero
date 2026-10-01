@@ -8,7 +8,7 @@ mod place;
 use dioxus::prelude::*;
 
 pub use options::{Align, Placement, PopoverOptions, PopoverWidth, Side};
-pub use place::{Placed, Rect};
+pub(crate) use place::{Placed, Rect};
 
 use std::{
     cell::{Cell, RefCell},
@@ -23,12 +23,17 @@ use crate::{
         portal::{PortalSlot, use_portal_slot},
     },
     platform::{ElementApi, ScrollSubscription, document, scroll, when_laid_out},
+    theme::CssVar,
 };
 
 #[cfg(test)]
 pub(crate) use owners::open_popups;
 pub(crate) use owners::{OpenPopups, focus_in_popup_of, owner_link, use_open_popups};
 pub(crate) use place::place;
+
+/// The room on the box's side, set by [`PopoverHandle::style`]: a box that can
+/// grow tall takes `max-height: min(<own>, var(.., <own>))` and scrolls (WCAG 1.4.10).
+pub(crate) const AVAILABLE_HEIGHT: CssVar = CssVar::new("--lsx-popover-available-height");
 
 /// A popover's own state: where its box goes, and the portal slot it goes in.
 /// Built by [`use_popover`]; `Copy`, so it travels into handlers.
@@ -66,7 +71,7 @@ impl PopoverHandle {
     /// Whether the box has been measured and placed. `false` on the pass that
     /// opens it, because measuring needs it rendered first.
     pub fn placed(&self) -> bool {
-        self.placed.read().is_some()
+        self.placed.read().is_some_and(|placed| !placed.provisional)
     }
 
     /// The top it was placed at, which a stylesheet's `!important` may have overridden.
@@ -86,13 +91,23 @@ impl PopoverHandle {
 
     /// The box's `style`: `position: fixed` in viewport coordinates, and
     /// `visibility: hidden` (measurable, unlike `display: none`) until placed.
+    /// Sets [`AVAILABLE_HEIGHT`], `100vh` until placed, which a box that can grow tall caps itself with.
     ///
     /// Every declaration is emitted on every render: a renderer never removes
     /// one that stops being printed. The CSS width cap keeps it on a phone (todo 357).
     pub fn style(&self) -> Option<String> {
-        let (x, y, visibility) = match *self.placed.read() {
-            Some(placed) => (placed.x, placed.y, "visible"),
-            None => (0.0, 0.0, "hidden"),
+        let (x, y, visibility, available) = match *self.placed.read() {
+            Some(placed) => (
+                placed.x,
+                placed.y,
+                if placed.provisional {
+                    "hidden"
+                } else {
+                    "visible"
+                },
+                format!("{}px", placed.available_height),
+            ),
+            None => (0.0, 0.0, "hidden", String::from("100vh")),
         };
         // `auto` until the anchor is measured: a `width: 0` box would measure
         // the height of its text wrapped into nothing.
@@ -105,7 +120,8 @@ impl PopoverHandle {
         let edges = 2.0 * self.padding;
 
         Some(format!(
-            "position:fixed;left:{x}px;top:{y}px;width:{width};min-width:{min_width};max-width:calc(100vw - {edges}px);visibility:{visibility};"
+            "position:fixed;left:{x}px;top:{y}px;width:{width};min-width:{min_width};max-width:calc(100vw - {edges}px);visibility:{visibility};{}:{available};",
+            AVAILABLE_HEIGHT.name()
         ))
     }
 
@@ -246,6 +262,8 @@ pub(crate) fn use_popover_on(
         use_hook(|| Rc::new(RefCell::new(None)));
     // How often this open waited for the box's first layout.
     let waited: Rc<Cell<u8>> = use_hook(|| Rc::new(Cell::new(0)));
+    // Whether this open measured the box again at its capped height.
+    let capped: Rc<Cell<bool>> = use_hook(|| Rc::new(Cell::new(false)));
 
     use_drop({
         let subscription = subscription.clone();
@@ -263,6 +281,7 @@ pub(crate) fn use_popover_on(
         if !open || !mounted {
             listening.borrow_mut().take();
             waited.set(0);
+            capped.set(false);
             // A `set` redraws even when unchanged: every opening ran this before
             // its box mounted and redrew the whole consumer for nothing.
             if placed.peek().is_some() {
@@ -295,6 +314,7 @@ pub(crate) fn use_popover_on(
         let viewport = document.viewport();
         let rtl = anchor.is_rtl();
         let waited = waited.clone();
+        let capped = capped.clone();
 
         spawn(async move {
             let (Ok(anchor_size), Ok((x, y)), Ok(floating_size), Ok(viewport)) = (
@@ -335,7 +355,21 @@ pub(crate) fn use_popover_on(
                     return;
                 }
             }
-            placed.set(Some(place(rect, floating_size, viewport, &options, rtl)));
+            // A scroll that moved nothing (a listbox's own) must not redraw the consumer.
+            let mut next = place(rect, floating_size, viewport, &options, rtl);
+            // Taller than the room: a box capping itself at it shrinks, and above
+            // its anchor its top follows the new height. Once per open.
+            if floating_size.height > next.available_height + 0.5 && !capped.get() {
+                capped.set(true);
+                next.provisional = true;
+                let mut tick = scroll_tick;
+                let again = tick.peek().wrapping_add(1);
+                tick.set(again);
+            }
+            let next = Some(next);
+            if *placed.peek() != next {
+                placed.set(next);
+            }
         });
     }));
 

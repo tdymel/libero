@@ -1,11 +1,11 @@
-use std::{cell::RefCell, rc::Rc};
-
 use dioxus::prelude::*;
 
 use crate::platform::{
-    NotificationEvent, PermissionKind, PermissionState, PermissionSubscription, ShownNotification,
-    SystemNotification, SystemNotificationError, permission, raise_window, system_notification,
+    NotificationEvent, PermissionKind, PermissionState, ShownNotification, SystemNotification,
+    SystemNotificationError, raise_window, system_notification,
 };
+
+use super::permission::{FollowedPermission, use_permission};
 
 /// A notification still on screen, by the id this hook gave it.
 struct Entry {
@@ -43,7 +43,7 @@ struct Entry {
 #[derive(Clone, Copy)]
 pub struct SystemNotifier {
     supported: Signal<bool>,
-    permission: Signal<PermissionState>,
+    permission: FollowedPermission,
     pending: Signal<bool>,
     error: Signal<Option<SystemNotificationError>>,
     shown: Signal<Vec<Entry>>,
@@ -71,12 +71,12 @@ impl SystemNotifier {
             match state {
                 PermissionState::Unsupported => this.fail(SystemNotificationError::Unsupported),
                 PermissionState::Denied => {
-                    this.set_permission(PermissionState::Denied);
+                    this.permission.set(PermissionState::Denied);
                     this.fail(SystemNotificationError::Denied);
                 }
                 state => {
                     this.error.set(None);
-                    this.set_permission(state);
+                    this.permission.set(state);
                 }
             }
         });
@@ -166,16 +166,10 @@ impl SystemNotifier {
         match error {
             SystemNotificationError::Unsupported => {
                 self.supported.set(false);
-                self.set_permission(PermissionState::Unsupported);
+                self.permission.set(PermissionState::Unsupported);
             }
             // A show before any request is refused too, yet a request may still prompt.
             SystemNotificationError::Denied | SystemNotificationError::Failed => {}
-        }
-    }
-
-    fn set_permission(&mut self, state: PermissionState) {
-        if *self.permission.peek() != state {
-            self.permission.set(state);
         }
     }
 
@@ -186,7 +180,7 @@ impl SystemNotifier {
 
     /// The notification permission, kept current where the platform reports changes. Reactive.
     pub fn permission(&self) -> PermissionState {
-        (self.permission)()
+        self.permission.get()
     }
 
     /// Whether a [`request`](Self::request) waits for its answer. Reactive.
@@ -206,7 +200,7 @@ impl SystemNotifier {
 pub fn use_system_notification() -> SystemNotifier {
     let mut notifier = SystemNotifier {
         supported: use_signal(|| false),
-        permission: use_signal(PermissionState::default),
+        permission: use_permission(PermissionKind::Notifications),
         pending: use_signal(|| false),
         error: use_signal(|| None),
         shown: use_signal(Vec::new),
@@ -218,44 +212,22 @@ pub fn use_system_notification() -> SystemNotifier {
             notifier.handle_events();
         }
     });
-    let listener: Rc<RefCell<Option<Box<dyn PermissionSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let listener = listener.clone();
-        move || {
-            listener.borrow_mut().take();
-            notifier.shown.write_unchecked().clear();
-        }
-    });
+    use_drop(move || notifier.shown.write_unchecked().clear());
     // A server cannot know either answer, so both are read after mount (hydration).
     use_effect(move || {
         let Some(api) = system_notification() else {
-            notifier.set_permission(PermissionState::Unsupported);
+            notifier.permission.set(PermissionState::Unsupported);
             return;
         };
         let probe = api.probe();
-        let listener = listener.clone();
         spawn(async move {
             let Some(state) = probe.await else {
-                notifier.set_permission(PermissionState::Unsupported);
+                notifier.permission.set(PermissionState::Unsupported);
                 return;
             };
             notifier.supported.set(true);
-            notifier.set_permission(state);
-            let Some(api) = permission() else {
-                return;
-            };
-            let changes = api.on_change(
-                PermissionKind::Notifications,
-                // The Permissions API may not know the name: `Unknown` keeps the probe's answer.
-                Box::new(move |state| {
-                    let mut notifier = notifier;
-                    if state != PermissionState::Unknown {
-                        notifier.set_permission(state);
-                    }
-                }),
-            );
-            *listener.borrow_mut() = Some(changes);
+            notifier.permission.set(state);
+            notifier.permission.follow();
         });
     });
     notifier

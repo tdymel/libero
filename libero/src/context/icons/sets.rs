@@ -13,7 +13,7 @@ use pictogram_icons_phosphor as phosphor;
 use pictogram_icons_tabler as tabler;
 
 /// `IconSet::<name>()` per style, every slot from `set::<glyph>::<style>`. A slot the set
-/// has no glyph for is left out of the table and keeps lucide.
+/// has no glyph for is left out of the table, so it falls to an outer provider's, then lucide.
 macro_rules! icon_set {
     ($set:ident: [$($style:ident => $name:ident),+ $(,)?] $table:tt) => {
         impl IconSet {
@@ -21,7 +21,9 @@ macro_rules! icon_set {
         }
     };
     (@one $set:ident $style:ident $name:ident { $($slot:ident => $glyph:ident),* $(,)? }) => {
-        #[doc = concat!("Every slot drawn from `pictogram-icons-", stringify!($set), "`, style `", stringify!($style), "`.")]
+        #[doc = concat!("The slots `pictogram-icons-", stringify!($set), "` draws, style `", stringify!($style), "`.")]
+        #[doc = ""]
+        #[doc = "A slot it has no glyph for stays empty: an outer provider's glyph or lucide's draws it."]
         #[doc = ""]
         #[doc = "```rust"]
         #[doc = concat!("const ICONS: libero::IconSet = libero::IconSet::", stringify!($name), "();")]
@@ -320,11 +322,14 @@ icon_set!(phosphor: [
 
 #[cfg(test)]
 mod tests {
-    use super::super::SLOTS;
     use super::*;
 
-    fn empty(set: IconSet) -> Vec<usize> {
-        (0..SLOTS).filter(|&slot| set.0[slot].is_none()).collect()
+    fn empty(set: IconSet) -> Vec<IconSlot> {
+        IconSlot::ALL
+            .iter()
+            .copied()
+            .filter(|&slot| set.get(slot).is_none())
+            .collect()
     }
 
     #[test]
@@ -355,20 +360,14 @@ mod tests {
     #[cfg(feature = "icons-bootstrap")]
     #[test]
     fn bootstrap_leaves_only_the_text_direction_to_lucide() {
-        let direction = [
-            IconSlot::TextDirectionLtr as usize,
-            IconSlot::TextDirectionRtl as usize,
-        ];
+        let direction = [IconSlot::TextDirectionLtr, IconSlot::TextDirectionRtl];
         assert_eq!(empty(IconSet::bootstrap_outlined()), direction);
     }
 
     #[cfg(feature = "icons-phosphor")]
     #[test]
     fn phosphor_leaves_only_the_text_direction_to_lucide() {
-        let direction = [
-            IconSlot::TextDirectionLtr as usize,
-            IconSlot::TextDirectionRtl as usize,
-        ];
+        let direction = [IconSlot::TextDirectionLtr, IconSlot::TextDirectionRtl];
         for set in [
             IconSet::phosphor_regular(),
             IconSet::phosphor_bold(),

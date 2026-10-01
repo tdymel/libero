@@ -26,6 +26,7 @@ mod long_press;
 mod long_press_tests;
 mod media;
 mod media_query;
+mod permission;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod polling_tests;
 mod popover;
@@ -92,10 +93,12 @@ pub use localization::{LocalizationHandle, use_localization, use_localization_ha
 pub use long_press::{LongPress, LongPressOptions, use_long_press};
 pub use media::{MediaError, MediaHandle, use_media};
 pub use media_query::{use_is_mobile, use_media_query};
-pub use popover::{
-    Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,
+pub(crate) use popover::{
+    AVAILABLE_HEIGHT as POPOVER_AVAILABLE_HEIGHT, Rect, owner_link, place, use_popover_on,
 };
-pub(crate) use popover::{owner_link, place, use_popover_on};
+pub use popover::{
+    Align, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Side, use_popover,
+};
 pub(crate) use portal::{use_portal, use_portal_slot};
 pub(crate) use presence::use_presence;
 pub use push_subscription::{PushSubscription, use_push_subscription};

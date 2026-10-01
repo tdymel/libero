@@ -6,14 +6,18 @@ use dioxus::prelude::*;
 
 use crate::platform::{
     CAPTURE_ATTR, CaptureEvent, CaptureSession, CaptureSubscription, DeviceList, MediaDevice,
-    PermissionKind, PermissionState, PermissionSubscription, UserMediaError, capture, constraints,
-    file_from_blob, file_from_bytes, next_observe_tag, permission,
+    PermissionKind, PermissionState, UserMediaError, capture, constraints, file_from_blob,
+    file_from_bytes, next_observe_tag,
 };
+
+use super::permission::{FollowedPermission, use_permission};
 
 /// What [`use_user_media`] opens on [`start`](UserMedia::start).
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserMediaOptions {
+    /// Opens a camera.
     pub camera: bool,
+    /// Opens a microphone.
     pub microphone: bool,
     /// A [`MediaDevice::id`] from [`use_user_media_devices`]; `None` lets the platform pick.
     pub camera_id: Option<String>,
@@ -21,6 +25,7 @@ pub struct UserMediaOptions {
     /// [`switch_camera`](UserMedia::switch_camera)) names one. A hint: a laptop's
     /// single camera opens anyway.
     pub facing: Option<CameraFacing>,
+    /// A [`MediaDevice::id`] from [`use_user_media_devices`]; `None` lets the platform pick.
     pub microphone_id: Option<String>,
     /// A longer recording is dropped with [`UserMediaError::TooLarge`]; `None` sets no cap.
     pub max_bytes: Option<u64>,
@@ -87,8 +92,8 @@ pub struct UserMedia {
     camera: Signal<Option<String>>,
     tag: u64,
     supported: Signal<bool>,
-    camera_permission: Signal<PermissionState>,
-    microphone_permission: Signal<PermissionState>,
+    camera_permission: FollowedPermission,
+    microphone_permission: FollowedPermission,
     live: Signal<bool>,
     pending: Signal<bool>,
     recording: Signal<bool>,
@@ -123,11 +128,12 @@ impl UserMedia {
             self.settle(CaptureEvent::Failed(UserMediaError::Unsupported));
             return;
         }
+        // Before `open`: a failure it reports at once settles after these.
+        self.pending.set(true);
+        self.error.set(None);
         if let Some(session) = &*self.session.peek() {
             session.open(constraints);
         }
-        self.pending.set(true);
-        self.error.set(None);
     }
 
     /// Stops every track, so the device's light goes off. A running recording
@@ -143,7 +149,7 @@ impl UserMedia {
 
     /// Opens the camera `id` (a [`MediaDevice::id`]) in place of the live one,
     /// which stops first: a phone opens one camera at a time. A running
-    /// recording finishes into [`recording`](Self::recording) first. Not live,
+    /// recording finishes into [`recorded`](Self::recorded) first. Not live,
     /// the next [`start`](Self::start) opens it. Kept until `options.camera_id` changes.
     ///
     /// ```rust
@@ -175,7 +181,7 @@ impl UserMedia {
     }
 
     /// Starts recording the stream; [`finish`](Self::finish) ends it into
-    /// [`recording`](Self::recording). Does nothing unless live.
+    /// [`recorded`](Self::recorded). Does nothing unless live.
     pub fn record(&mut self) {
         if !*self.live.peek() || *self.recording.peek() {
             return;
@@ -186,6 +192,8 @@ impl UserMedia {
         }
     }
 
+    /// Ends the recording [`record`](Self::record) started; the file arrives in
+    /// [`recorded`](Self::recorded). Does nothing when not recording.
     pub fn finish(&mut self) {
         if let Some(session) = &*self.session.peek() {
             session.finish();
@@ -279,7 +287,7 @@ impl UserMedia {
             (options.camera, self.camera_permission),
             (options.microphone, self.microphone_permission),
         ] {
-            if asked && *permission.peek() != state {
+            if asked {
                 permission.set(state);
             }
         }
@@ -304,12 +312,12 @@ impl UserMedia {
 
     /// Kept current where the platform reports changes. Reactive.
     pub fn camera_permission(&self) -> PermissionState {
-        (self.camera_permission)()
+        self.camera_permission.get()
     }
 
     /// Kept current where the platform reports changes. Reactive.
     pub fn microphone_permission(&self) -> PermissionState {
-        (self.microphone_permission)()
+        self.microphone_permission.get()
     }
 
     /// Whether a stream is open: the device's light is on. Reactive.
@@ -328,6 +336,7 @@ impl UserMedia {
         (self.pending)()
     }
 
+    /// Whether a [`record`](Self::record) runs. Reactive.
     pub fn is_recording(&self) -> bool {
         (self.recording)()
     }
@@ -343,7 +352,7 @@ impl UserMedia {
     }
 
     /// The last finished recording: WebM, or MP4 where only that records. Reactive.
-    pub fn recording(&self) -> Option<FileData> {
+    pub fn recorded(&self) -> Option<FileData> {
         (self.recorded)()
     }
 }
@@ -376,8 +385,8 @@ pub fn use_user_media(options: UserMediaOptions) -> UserMedia {
         camera: use_signal(|| None),
         tag: use_hook(next_observe_tag),
         supported: use_signal(|| false),
-        camera_permission: use_signal(PermissionState::default),
-        microphone_permission: use_signal(PermissionState::default),
+        camera_permission: use_permission(PermissionKind::Camera),
+        microphone_permission: use_permission(PermissionKind::Microphone),
         live: use_signal(|| false),
         pending: use_signal(|| false),
         recording: use_signal(|| false),
@@ -387,15 +396,7 @@ pub fn use_user_media(options: UserMediaOptions) -> UserMedia {
         chunks: use_signal(Vec::new),
         session: use_signal(|| None),
     };
-    let listeners: Rc<RefCell<Vec<Box<dyn PermissionSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(Vec::new())));
-    use_drop({
-        let listeners = listeners.clone();
-        move || {
-            listeners.borrow_mut().clear();
-            media.session.write_unchecked().take();
-        }
-    });
+    use_drop(move || drop(media.session.write_unchecked().take()));
     // A server cannot know either answer, so both are read after mount (hydration).
     use_effect(move || {
         let supported = capture().is_some();
@@ -407,24 +408,8 @@ pub fn use_user_media(options: UserMediaOptions) -> UserMedia {
                 .set(PermissionState::Unsupported);
             return;
         }
-        let Some(api) = permission() else {
-            return;
-        };
-        let follow = |kind, permission: Signal<PermissionState>| {
-            api.on_change(
-                kind,
-                Box::new(move |state| {
-                    let mut permission = permission;
-                    if *permission.peek() != state {
-                        permission.set(state);
-                    }
-                }),
-            )
-        };
-        *listeners.borrow_mut() = vec![
-            follow(PermissionKind::Camera, media.camera_permission),
-            follow(PermissionKind::Microphone, media.microphone_permission),
-        ];
+        media.camera_permission.follow();
+        media.microphone_permission.follow();
     });
     media
 }
@@ -491,12 +476,48 @@ pub fn use_user_media_devices() -> UserMediaDevices {
 
 #[cfg(test)]
 mod tests {
-    use super::file_name;
+    use std::cell::Cell;
+
+    use serde_json::Value;
+
+    use super::*;
+
+    thread_local! {
+        static HANDLE: Cell<Option<UserMedia>> = const { Cell::new(None) };
+    }
+
+    /// Refuses `open` at once, inside the call, as a script that throws would.
+    struct Refusing;
+
+    impl CaptureSession for Refusing {
+        fn call(&self, command: &str, _: Value) {
+            if command == "open" {
+                let mut media = HANDLE.get().expect("rendered");
+                media.settle(CaptureEvent::Failed(UserMediaError::Denied));
+            }
+        }
+    }
 
     #[test]
     fn file_names_follow_the_type() {
         assert_eq!(file_name("photo", "image/png"), "photo.png");
         assert_eq!(file_name("recording", "video/webm"), "recording.webm");
         assert_eq!(file_name("recording", ""), "recording.bin");
+    }
+
+    #[test]
+    fn a_failure_inside_open_is_kept() {
+        let mut dom = VirtualDom::new(|| {
+            HANDLE.set(Some(use_user_media(UserMediaOptions::default())));
+            rsx! {}
+        });
+        dom.rebuild_in_place();
+        let mut media = HANDLE.get().expect("rendered");
+        dom.in_runtime(|| {
+            media.session.set(Some(Box::new(Refusing)));
+            media.start();
+            assert_eq!(media.error(), Some(UserMediaError::Denied));
+            assert!(!media.is_pending());
+        });
     }
 }

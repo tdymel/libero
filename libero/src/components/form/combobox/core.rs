@@ -13,8 +13,8 @@ use crate::{
         layout::{paper_sx, use_box},
     },
     hooks::{
-        ElementHandle, PopoverOptions, PopoverWidth, use_element, use_field_list_layer,
-        use_popover_on, use_theme,
+        ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PopoverWidth, use_element,
+        use_field_list_layer, use_popover_on, use_theme,
     },
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
@@ -34,6 +34,8 @@ pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         .padding(COMBOBOX_PADDING)
         // Rows don't nest inside an `xxl` radius, so the dropdown clips.
         .overflow("hidden")
+        // Never past the room on its side: the listbox, a scroll container, shrinks.
+        .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
         .box_shadow(SizeCss::SHADOW.value(Size::Lg))
         // By selector: headings are drawn in a loop, where `use_box` can't be called. As `Spotlight`.
         .selector(

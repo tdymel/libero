@@ -2,7 +2,10 @@
 //! box, another pattern. `/select/field` is the searchable one.
 
 use dioxus::prelude::*;
-use libero::components::{FieldStatus, Flex, OptionItem, OptionList, Select, Text};
+use libero::components::{
+    DropdownPart, FieldStatus, Flex, OptionItem, OptionList, Options, Parts, Select, Text,
+};
+use libero::sx::sx;
 
 use crate::{Routes, common::Fruit};
 
@@ -18,7 +21,38 @@ pub const ROUTES: Routes = &[
     ("/select/refused", || rsx! { SelectRefusedPage {} }),
     ("/select/echo", || rsx! { SelectEchoPage {} }),
     ("/select/outside", || rsx! { SelectOutsidePage {} }),
+    ("/select/tall/below", || rsx! { SelectTallPage { top: "100px" } }),
+    (
+        "/select/tall/above",
+        || rsx! { SelectTallPage { top: "calc(100vh - 100px)" } },
+    ),
 ];
+
+#[derive(Clone, Copy, PartialEq, Debug, Options)]
+enum Row {
+    R01, R02, R03, R04, R05, R06, R07, R08, R09, R10,
+    R11, R12, R13, R14, R15, R16, R17, R18, R19, R20,
+    R21, R22, R23, R24, R25, R26, R27, R28, R29, R30,
+    R31, R32, R33, R34, R35, R36, R37, R38, R39, R40,
+}
+
+/// Forty rows and no list cap, the trigger at `top`: only the room on the
+/// side it lands on holds the dropdown (1739).
+#[component]
+fn SelectTallPage(top: &'static str) -> Element {
+    let mut value = use_signal(|| None::<Row>);
+
+    rsx! {
+        div { position: "absolute", left: "16px", top, width: "240px",
+            Select {
+                label: "Row",
+                value: value(),
+                onchange: move |next| value.set(next),
+                dropdown_parts: Parts::new().part(DropdownPart::Listbox, sx().max_height("none")),
+            }
+        }
+    }
+}
 
 /// Searchable, with a field above it to click while the list is open below (1497).
 #[component]

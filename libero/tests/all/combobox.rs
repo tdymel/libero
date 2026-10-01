@@ -529,7 +529,7 @@ mod combobox_highlight {
 
         assert!(
             html.contains(
-                r#"style="position:fixed;left:0px;top:0px;width:auto;min-width:auto;max-width:calc(100vw - 16px);visibility:hidden;""#
+                r#"style="position:fixed;left:0px;top:0px;width:auto;min-width:auto;max-width:calc(100vw - 16px);visibility:hidden;--lsx-popover-available-height:100vh;""#
             ),
             "the dropdown is not laid out fixed and hidden before its first \
              measurement, which under SSR never lands:\n{html}"

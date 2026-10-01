@@ -3,11 +3,13 @@ use crate::tokens::{Size, SizeCss};
 use super::{Sx, ThemeAwareValue};
 
 /// Every CSS property `Sx` knows: variant, CSS name, builder method, and the
-/// [`SizeCss`] scale a bare `Size` resolves through.
+/// [`SizeCss`] scale a bare `Size` resolves through. `#[color]` marks a value that is one colour.
 macro_rules! properties {
     (@scale) => { None };
     (@scale $scale:expr) => { Some($scale) };
-    ($($variant:ident => $css_name:literal, $method:ident $(, $scale:expr)?;)*) => {
+    (@color) => { false };
+    (@color color) => { true };
+    ($($(#[$kind:ident])? $variant:ident => $css_name:literal, $method:ident $(, $scale:expr)?;)*) => {
         /// A CSS property `Sx` has a builder method for.
         #[repr(u16)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -16,6 +18,8 @@ macro_rules! properties {
         }
 
         impl Property {
+            /// The property named `property` in CSS (`"max-height"`); `None` for one
+            /// this enum does not list, custom properties included.
             pub fn parse(property: &str) -> Option<Self> {
                 match property {
                     $($css_name => Some(Self::$variant),)*
@@ -29,6 +33,13 @@ macro_rules! properties {
                 }
             }
 
+            /// Whether the value is one colour, which a misspelled theme colour name breaks.
+            pub(crate) const fn takes_color(self) -> bool {
+                match self {
+                    $(Self::$variant => properties!(@color $($kind)?),)*
+                }
+            }
+
             /// `None` keeps the size's own name (`"md"`).
             pub(crate) const fn size_scale(self) -> Option<SizeCss> {
                 match self {
@@ -38,6 +49,11 @@ macro_rules! properties {
 
             #[cfg(test)]
             const ALL: &'static [Self] = &[$(Self::$variant,)*];
+
+            /// Each property's builder method, beside the property it should set.
+            #[cfg(test)]
+            const BUILDERS: &'static [(Self, fn(Sx, ThemeAwareValue) -> Sx)] =
+                &[$((Self::$variant, |sx, value| sx.$method(value)),)*];
         }
 
         impl Sx {
@@ -51,10 +67,10 @@ macro_rules! properties {
 }
 
 properties! {
-    Background => "background", background;
-    BackgroundColor => "background-color", background_color;
-    Width => "width", width;
-    Height => "height", height;
+    #[color] Background => "background", background;
+    #[color] BackgroundColor => "background-color", background_color;
+    Width => "width", width, SizeCss::BREAKPOINT;
+    Height => "height", height, SizeCss::BREAKPOINT;
     Padding => "padding", padding, SizeCss::SPACING;
     PaddingTop => "padding-top", padding_top, SizeCss::SPACING;
     PaddingLeft => "padding-left", padding_left, SizeCss::SPACING;
@@ -83,7 +99,7 @@ properties! {
     RowGap => "row-gap", row_gap, SizeCss::SPACING;
     ColumnGap => "column-gap", column_gap, SizeCss::SPACING;
     MaxWidth => "max-width", max_width, SizeCss::BREAKPOINT;
-    MaxHeight => "max-height", max_height;
+    MaxHeight => "max-height", max_height, SizeCss::BREAKPOINT;
     Font => "font", font;
     FontFamily => "font-family", font_family;
     FontSize => "font-size", font_size, SizeCss::FONT_SIZE;
@@ -96,15 +112,15 @@ properties! {
     BorderRight => "border-right", border_right;
     BorderBottom => "border-bottom", border_bottom;
     BorderLeft => "border-left", border_left;
-    Color => "color", color;
+    #[color] Color => "color", color;
     Flex => "flex", flex;
     FlexGrow => "flex-grow", flex_grow;
     Content => "content", content;
     BorderWidth => "border-width", border_width;
     BorderStyle => "border-style", border_style;
-    BorderColor => "border-color", border_color;
-    BorderRightColor => "border-right-color", border_right_color;
-    BorderBottomColor => "border-bottom-color", border_bottom_color;
+    #[color] BorderColor => "border-color", border_color;
+    #[color] BorderRightColor => "border-right-color", border_right_color;
+    #[color] BorderBottomColor => "border-bottom-color", border_bottom_color;
     FlexShrink => "flex-shrink", flex_shrink;
     AlignSelf => "align-self", align_self;
     WhiteSpace => "white-space", white_space;
@@ -122,7 +138,7 @@ properties! {
     ContainerType => "container-type", container_type;
     ContainerName => "container-name", container_name;
     ScrollbarWidth => "scrollbar-width", scrollbar_width;
-    ScrollbarColor => "scrollbar-color", scrollbar_color;
+    #[color] ScrollbarColor => "scrollbar-color", scrollbar_color;
     Clip => "clip", clip;
     ClipPath => "clip-path", clip_path;
     ObjectFit => "object-fit", object_fit;
@@ -136,7 +152,7 @@ properties! {
     PointerEvents => "pointer-events", pointer_events;
     ListStyle => "list-style", list_style;
     MinWidth => "min-width", min_width, SizeCss::BREAKPOINT;
-    MinHeight => "min-height", min_height;
+    MinHeight => "min-height", min_height, SizeCss::BREAKPOINT;
     Resize => "resize", resize;
     AspectRatio => "aspect-ratio", aspect_ratio;
     Outline => "outline", outline;
@@ -173,12 +189,12 @@ properties! {
     ContentVisibility => "content-visibility", content_visibility;
     WillChange => "will-change", will_change;
     All => "all", all;
-    InlineSize => "inline-size", inline_size;
-    BlockSize => "block-size", block_size;
+    InlineSize => "inline-size", inline_size, SizeCss::BREAKPOINT;
+    BlockSize => "block-size", block_size, SizeCss::BREAKPOINT;
     MinInlineSize => "min-inline-size", min_inline_size, SizeCss::BREAKPOINT;
     MaxInlineSize => "max-inline-size", max_inline_size, SizeCss::BREAKPOINT;
-    MinBlockSize => "min-block-size", min_block_size;
-    MaxBlockSize => "max-block-size", max_block_size;
+    MinBlockSize => "min-block-size", min_block_size, SizeCss::BREAKPOINT;
+    MaxBlockSize => "max-block-size", max_block_size, SizeCss::BREAKPOINT;
     MarginInline => "margin-inline", margin_inline, SizeCss::SPACING;
     MarginInlineStart => "margin-inline-start", margin_inline_start, SizeCss::SPACING;
     MarginInlineEnd => "margin-inline-end", margin_inline_end, SizeCss::SPACING;
@@ -231,7 +247,7 @@ properties! {
     TextShadow => "text-shadow", text_shadow;
     TextWrap => "text-wrap", text_wrap;
     TextDecorationLine => "text-decoration-line", text_decoration_line;
-    TextDecorationColor => "text-decoration-color", text_decoration_color;
+    #[color] TextDecorationColor => "text-decoration-color", text_decoration_color;
     TextDecorationStyle => "text-decoration-style", text_decoration_style;
     TextDecorationThickness => "text-decoration-thickness", text_decoration_thickness;
     TextUnderlineOffset => "text-underline-offset", text_underline_offset;
@@ -258,8 +274,8 @@ properties! {
     ObjectPosition => "object-position", object_position;
     ImageRendering => "image-rendering", image_rendering;
 
-    BorderTopColor => "border-top-color", border_top_color;
-    BorderLeftColor => "border-left-color", border_left_color;
+    #[color] BorderTopColor => "border-top-color", border_top_color;
+    #[color] BorderLeftColor => "border-left-color", border_left_color;
     BorderTopWidth => "border-top-width", border_top_width;
     BorderRightWidth => "border-right-width", border_right_width;
     BorderBottomWidth => "border-bottom-width", border_bottom_width;
@@ -278,7 +294,7 @@ properties! {
     TableLayout => "table-layout", table_layout;
     OutlineWidth => "outline-width", outline_width;
     OutlineStyle => "outline-style", outline_style;
-    OutlineColor => "outline-color", outline_color;
+    #[color] OutlineColor => "outline-color", outline_color;
 
     Filter => "filter", filter;
     MixBlendMode => "mix-blend-mode", mix_blend_mode;
@@ -301,8 +317,8 @@ properties! {
     AnimationIterationCount => "animation-iteration-count", animation_iteration_count;
     AnimationFillMode => "animation-fill-mode", animation_fill_mode;
 
-    CaretColor => "caret-color", caret_color;
-    AccentColor => "accent-color", accent_color;
+    #[color] CaretColor => "caret-color", caret_color;
+    #[color] AccentColor => "accent-color", accent_color;
     ColorScheme => "color-scheme", color_scheme;
     ForcedColorAdjust => "forced-color-adjust", forced_color_adjust;
     ScrollPadding => "scroll-padding", scroll_padding;
@@ -313,8 +329,8 @@ properties! {
     ScrollbarGutter => "scrollbar-gutter", scrollbar_gutter;
     OverscrollBehavior => "overscroll-behavior", overscroll_behavior;
 
-    Fill => "fill", fill;
-    Stroke => "stroke", stroke;
+    #[color] Fill => "fill", fill;
+    #[color] Stroke => "stroke", stroke;
     StrokeWidth => "stroke-width", stroke_width;
     StrokeLinecap => "stroke-linecap", stroke_linecap;
     StrokeLinejoin => "stroke-linejoin", stroke_linejoin;
@@ -343,11 +359,14 @@ impl Property {
 /// A declaration's property: a known [`Property`] or any other name, custom properties included.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SxPropertyKey {
+    /// A property [`Property`] lists.
     Known(Property),
+    /// Any other name, written as is.
     Raw(String),
 }
 
 impl SxPropertyKey {
+    /// [`Known`](Self::Known) when [`Property::parse`] knows the name, else [`Raw`](Self::Raw).
     pub fn parse(property: impl Into<String>) -> Self {
         let property = property.into();
         match Property::parse(&property) {
@@ -356,6 +375,7 @@ impl SxPropertyKey {
         }
     }
 
+    /// The CSS name.
     pub fn as_str(&self) -> &str {
         match self {
             Self::Known(property) => property.as_str(),
@@ -367,11 +387,17 @@ impl SxPropertyKey {
 /// What a nested `Sx` block applies under: a selector, a `data-state` condition, or an at-rule.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SxModifierKey {
+    /// A selector for the element: `&` stands for it, else the pattern is appended (`":hover"`).
     Selector(String),
+    /// `data-state` words the element must carry, each becoming `[data-state~="word"]`.
     Condition(String),
+    /// A `@media (min-width: ..)` rule: breakpoint `size` and wider.
     Breakpoint(Size),
+    /// A `@media` rule with this query.
     Media(String),
+    /// A `@supports` rule with this condition.
     Supports(String),
+    /// A `@container` rule for container `name` (empty for the nearest) and `condition`.
     Container { name: String, condition: String },
 }
 
@@ -386,121 +412,64 @@ mod tests {
         }
     }
 
+    /// The one declaration `builder` emits for `value`, as `name:value`.
+    fn declaration(builder: fn(Sx, ThemeAwareValue) -> Sx, value: ThemeAwareValue) -> String {
+        let sheet = crate::css::Stylesheet::from(&builder(crate::sx::sx(), value));
+        let css = sheet.as_str();
+        let body = css[css.find('{').expect("a rule") + 1..css.rfind('}').expect("a rule")].trim();
+        body.strip_suffix(';').unwrap_or(body).to_string()
+    }
+
+    #[test]
+    fn every_builder_method_emits_its_own_declaration() {
+        for (property, builder) in Property::BUILDERS {
+            assert_eq!(
+                declaration(*builder, "inherit".into()),
+                format!("{}:inherit", property.as_str())
+            );
+        }
+    }
+
     /// The scaled builders resolve a bare `Size` through their theme scale.
     #[test]
-    fn every_builder_method_emits_its_declaration() {
-        macro_rules! assert_emits {
-            ($value:expr => $expected:literal: $($method:ident => $css:literal,)*) => {
-                let css = crate::css::Stylesheet::from(&crate::sx::sx()$(.$method($value))*)
-                    .as_str()
-                    .to_string();
-                $(assert!(
-                    css.contains(concat!($css, ":", $expected, ";")),
-                    "{} missing from {css}",
-                    $css
-                );)*
-            };
+    fn every_scaled_builder_resolves_a_size() {
+        for (property, builder) in Property::BUILDERS {
+            if let Some(scale) = property.size_scale() {
+                assert_eq!(
+                    declaration(*builder, Size::Md.into()),
+                    format!("{}:{}", property.as_str(), scale.value(Size::Md))
+                );
+            }
         }
+    }
 
-        assert_emits!("inherit" => "inherit":
-            box_sizing => "box-sizing", float => "float", clear => "clear",
-            isolation => "isolation", contain => "contain",
-            content_visibility => "content-visibility", will_change => "will-change",
-            all => "all", inline_size => "inline-size", block_size => "block-size",
-            min_block_size => "min-block-size", max_block_size => "max-block-size",
-            flex_basis => "flex-basis", flex_flow => "flex-flow", order => "order",
-            justify_items => "justify-items", justify_self => "justify-self",
-            place_items => "place-items", place_content => "place-content",
-            place_self => "place-self", grid => "grid", grid_template => "grid-template",
-            grid_auto_columns => "grid-auto-columns",
-            grid_column_start => "grid-column-start", grid_column_end => "grid-column-end",
-            grid_row_start => "grid-row-start", grid_row_end => "grid-row-end",
-            columns => "columns", column_count => "column-count",
-            column_width => "column-width", break_inside => "break-inside",
-            break_before => "break-before", break_after => "break-after",
-            font_style => "font-style", font_variant => "font-variant",
-            font_variant_numeric => "font-variant-numeric",
-            font_feature_settings => "font-feature-settings",
-            font_variation_settings => "font-variation-settings",
-            font_stretch => "font-stretch", text_rendering => "text-rendering",
-            text_indent => "text-indent", text_shadow => "text-shadow",
-            text_wrap => "text-wrap", text_decoration_line => "text-decoration-line",
-            text_decoration_color => "text-decoration-color",
-            text_decoration_style => "text-decoration-style",
-            text_decoration_thickness => "text-decoration-thickness",
-            text_underline_offset => "text-underline-offset",
-            word_spacing => "word-spacing", word_break => "word-break",
-            overflow_wrap => "overflow-wrap", hyphens => "hyphens", tab_size => "tab-size",
-            direction => "direction", unicode_bidi => "unicode-bidi",
-            writing_mode => "writing-mode", list_style_type => "list-style-type",
-            list_style_position => "list-style-position",
-            counter_reset => "counter-reset", counter_increment => "counter-increment",
-            background_image => "background-image",
-            background_position => "background-position",
-            background_size => "background-size", background_repeat => "background-repeat",
-            background_clip => "background-clip", background_origin => "background-origin",
-            background_attachment => "background-attachment",
-            object_position => "object-position", image_rendering => "image-rendering",
-            border_top_color => "border-top-color", border_left_color => "border-left-color",
-            border_top_width => "border-top-width",
-            border_right_width => "border-right-width",
-            border_bottom_width => "border-bottom-width",
-            border_left_width => "border-left-width", border_inline => "border-inline",
-            border_inline_start => "border-inline-start",
-            border_inline_end => "border-inline-end", border_block => "border-block",
-            border_block_start => "border-block-start",
-            border_block_end => "border-block-end", border_spacing => "border-spacing",
-            table_layout => "table-layout", outline_width => "outline-width",
-            outline_style => "outline-style", outline_color => "outline-color",
-            filter => "filter", mix_blend_mode => "mix-blend-mode", mask => "mask",
-            mask_image => "mask-image", transform_origin => "transform-origin",
-            translate => "translate", rotate => "rotate", scale => "scale",
-            perspective => "perspective", backface_visibility => "backface-visibility",
-            transition_property => "transition-property",
-            transition_duration => "transition-duration",
-            transition_timing_function => "transition-timing-function",
-            transition_delay => "transition-delay", animation_name => "animation-name",
-            animation_duration => "animation-duration",
-            animation_timing_function => "animation-timing-function",
-            animation_delay => "animation-delay",
-            animation_iteration_count => "animation-iteration-count",
-            animation_fill_mode => "animation-fill-mode", caret_color => "caret-color",
-            accent_color => "accent-color", color_scheme => "color-scheme",
-            forced_color_adjust => "forced-color-adjust", scroll_padding => "scroll-padding",
-            scroll_padding_block => "scroll-padding-block",
-            scroll_padding_top => "scroll-padding-top",
-            scroll_margin_top => "scroll-margin-top",
-            scroll_margin_block => "scroll-margin-block",
-            scrollbar_gutter => "scrollbar-gutter",
-            overscroll_behavior => "overscroll-behavior", fill => "fill", stroke => "stroke",
-            stroke_width => "stroke-width", stroke_linecap => "stroke-linecap",
-            stroke_linejoin => "stroke-linejoin", stroke_dasharray => "stroke-dasharray",
-            stroke_dashoffset => "stroke-dashoffset",
-        );
-        assert_emits!(Size::Md => "var(--lsx-spacing-md)":
-            margin_inline => "margin-inline", margin_inline_start => "margin-inline-start",
-            margin_inline_end => "margin-inline-end", margin_block => "margin-block",
-            margin_block_start => "margin-block-start", margin_block_end => "margin-block-end",
-            padding_inline => "padding-inline",
-            padding_inline_start => "padding-inline-start",
-            padding_inline_end => "padding-inline-end", padding_block => "padding-block",
-            padding_block_start => "padding-block-start",
-            padding_block_end => "padding-block-end", inset_inline => "inset-inline",
-            inset_inline_start => "inset-inline-start",
-            inset_inline_end => "inset-inline-end", inset_block => "inset-block",
-            inset_block_start => "inset-block-start", inset_block_end => "inset-block-end",
-            top => "top", right => "right", bottom => "bottom", left => "left",
-            inset => "inset",
-        );
-        assert_emits!(Size::Md => "var(--lsx-shadow-md)": box_shadow => "box-shadow",);
-        assert_emits!(Size::Md => "var(--lsx-breakpoint-md)":
-            min_inline_size => "min-inline-size", max_inline_size => "max-inline-size",
-        );
-        assert_emits!(Size::Md => "var(--lsx-radius-md)":
-            border_start_start_radius => "border-start-start-radius",
-            border_start_end_radius => "border-start-end-radius",
-            border_end_start_radius => "border-end-start-radius",
-            border_end_end_radius => "border-end-end-radius",
+    /// One scale for every size key (1732): `max_height(Size::Md)` once emitted `max-height:md`.
+    #[test]
+    fn every_size_key_uses_the_breakpoint_scale() {
+        use Property::*;
+        for property in [
+            Width,
+            Height,
+            MinWidth,
+            MaxWidth,
+            MinHeight,
+            MaxHeight,
+            InlineSize,
+            BlockSize,
+            MinInlineSize,
+            MaxInlineSize,
+            MinBlockSize,
+            MaxBlockSize,
+        ] {
+            assert_eq!(
+                property.size_scale(),
+                Some(SizeCss::BREAKPOINT),
+                "{property:?}"
+            );
+        }
+        assert_eq!(
+            declaration(|sx, value| sx.max_height(value), Size::Md.into()),
+            "max-height:var(--lsx-breakpoint-md)"
         );
     }
 

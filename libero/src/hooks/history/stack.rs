@@ -102,10 +102,12 @@ impl<T> UndoHistory<T> {
         &self.present
     }
 
+    /// Whether [`undo`](Self::undo) has a step to go back to.
     pub fn can_undo(&self) -> bool {
         !self.past.is_empty()
     }
 
+    /// Whether [`redo`](Self::redo) has an undone step to reapply.
     pub fn can_redo(&self) -> bool {
         !self.future.is_empty()
     }

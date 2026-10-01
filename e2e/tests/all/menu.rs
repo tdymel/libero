@@ -698,3 +698,51 @@ fn a_keep_open_item_leaves_the_menu_open() {
         outcome.unwrap();
     });
 }
+
+/// 1739: a menu taller than the room scrolls inside the viewport, on either side.
+async fn a_tall_menu_fits_the_room<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    let (_, height) = d.viewport().await?;
+    eventually(d, "the open menu inside the viewport", async |d| {
+        if !d.exists(MENU).await? {
+            return Ok(false);
+        }
+        let menu = d.rect(MENU).await?;
+        Ok(menu.height > 100.0 && menu.y >= -1.0 && menu.y + menu.height <= height + 1.0)
+    })
+    .await?;
+    d.press(keyboard::END).await?;
+    eventually(d, "the last item scrolled into view", async |d| {
+        if d.text(":focus").await? != "Item 40" {
+            return Ok(false);
+        }
+        let item = d.rect(":focus").await?;
+        Ok(item.y >= 0.0 && item.y + item.height <= height)
+    })
+    .await
+}
+
+/// 1739: the room caps a menu, it never stretches a short one.
+async fn a_short_menu_keeps_its_height<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually(d, "a one-item menu its own height", async |d| {
+        Ok(d.exists(MENU).await? && d.rect(MENU).await?.height < 80.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_tall_menu_below_fits_the_room,
+    "/menu-tall/below",
+    a_tall_menu_fits_the_room
+);
+e2e::scenario!(
+    a_tall_menu_above_fits_the_room,
+    "/menu-tall/above",
+    a_tall_menu_fits_the_room
+);
+e2e::scenario!(
+    a_short_menu_keeps_its_height,
+    "/menu-row",
+    a_short_menu_keeps_its_height
+);

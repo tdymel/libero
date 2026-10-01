@@ -19,6 +19,24 @@ struct BackStack {
     armed: bool,
 }
 
+impl BackStack {
+    /// One entry while any layer is open: the change to make, if any.
+    fn sync(&mut self) -> Option<bool> {
+        let want = !self.layers.is_empty();
+        (self.listening == Some(true) && self.armed != want).then(|| {
+            self.armed = want;
+            want
+        })
+    }
+
+    /// Back popped the entry. The top layer stays until its guard drops: an
+    /// `onback` that keeps it open gets the entry back.
+    fn pressed(&mut self) -> Option<Callback<()>> {
+        self.armed = false;
+        self.layers.last().map(|(_, onback)| *onback)
+    }
+}
+
 /// Root context, as the Escape stack.
 #[derive(Clone, Copy)]
 struct Back(CopyValue<BackStack>);
@@ -33,15 +51,11 @@ impl Back {
         })
     }
 
-    /// One entry while any layer is open: pushed for the first, taken back unheard after the last.
+    /// Pushed for the first layer, taken back unheard after the last.
     fn sync(self) {
         let mut stack = self.0;
-        let Ok(mut stack) = stack.try_write() else {
-            return;
-        };
-        let want = !stack.layers.is_empty();
-        if stack.listening == Some(true) && stack.armed != want {
-            stack.armed = want;
+        let change = stack.try_write().ok().and_then(|mut stack| stack.sync());
+        if let Some(want) = change {
             platform::back_entry(want);
         }
     }
@@ -49,10 +63,7 @@ impl Back {
     /// Back popped the entry: the top layer closes, and the entry returns while layers are left.
     fn pressed(self) {
         let mut stack = self.0;
-        let top = stack.try_write().ok().and_then(|mut stack| {
-            stack.armed = false;
-            stack.layers.pop().map(|(_, onback)| onback)
-        });
+        let top = stack.try_write().ok().and_then(|mut stack| stack.pressed());
         if let Some(onback) = top {
             onback.call(());
         }
@@ -110,4 +121,34 @@ pub(super) fn use_back(open: bool, onback: Callback<()>) {
     use_drop(move || {
         guard.borrow_mut().take();
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_layer_back_leaves_open_keeps_the_entry() {
+        let mut dom = VirtualDom::new(|| rsx! {});
+        dom.rebuild_in_place();
+        dom.in_scope(ScopeId::APP, || {
+            let (lower, upper) = (Callback::new(|()| {}), Callback::new(|()| {}));
+            let mut stack = BackStack {
+                layers: vec![(1, lower), (2, upper)],
+                next: 2,
+                listening: Some(true),
+                armed: true,
+            };
+            assert_eq!(stack.pressed(), Some(upper));
+            assert_eq!(
+                stack.sync(),
+                Some(true),
+                "the entry returns while upper is open"
+            );
+            stack.layers.retain(|(id, _)| *id != 2);
+            assert_eq!(stack.sync(), None, "lower still holds the entry");
+            stack.layers.clear();
+            assert_eq!(stack.sync(), Some(false));
+        });
+    }
 }

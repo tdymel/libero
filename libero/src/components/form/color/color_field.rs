@@ -18,8 +18,8 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        PopoverOptions, use_element, use_field_list_layer, use_focus_within, use_localization,
-        use_popover_on, use_theme,
+        POPOVER_AVAILABLE_HEIGHT, PopoverOptions, use_element, use_field_list_layer,
+        use_focus_within, use_localization, use_popover_on, use_theme,
     },
     platform::{ElementApi, eye_dropper, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
@@ -34,6 +34,9 @@ static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         // The field's corner, and a shadow: the dropdown floats over the page.
         .border_radius(SizeCss::RADIUS.value(Size::Sm))
         .box_shadow(SizeCss::SHADOW.value(Size::Lg))
+        // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
+        .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
+        .overflow_y("auto")
 });
 
 /// Where Arrow Down in the text input puts focus: the saturation area, or the

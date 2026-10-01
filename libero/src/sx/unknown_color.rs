@@ -184,21 +184,32 @@ const CSS_COLOR_KEYWORDS: &[&str] = &[
     "revert-layer",
 ];
 
-/// The properties whose whole value is one colour. `background` also takes `none`.
-fn takes_one_color(property: Property) -> bool {
-    matches!(
-        property,
-        Property::Color
-            | Property::Background
-            | Property::BackgroundColor
-            | Property::BorderColor
-            | Property::BorderTopColor
-            | Property::BorderRightColor
-            | Property::BorderBottomColor
-            | Property::BorderLeftColor
-            | Property::TextDecorationColor
-    )
-}
+/// Keywords a colour property takes besides a colour: `fill: none`, `caret-color: auto`.
+const OTHER_COLOR_KEYWORDS: &[&str] = &["none", "auto", "context-fill", "context-stroke", "invert"];
+
+/// The single keywords `background`'s shorthand takes besides a colour.
+const BACKGROUND_KEYWORDS: &[&str] = &[
+    "repeat",
+    "repeat-x",
+    "repeat-y",
+    "no-repeat",
+    "space",
+    "round",
+    "fixed",
+    "scroll",
+    "local",
+    "center",
+    "top",
+    "bottom",
+    "left",
+    "right",
+    "border-box",
+    "padding-box",
+    "content-box",
+    "text",
+    "cover",
+    "contain",
+];
 
 /// `[a-z][a-z0-9-]*`, ignoring case: CSS keywords are case-insensitive.
 fn is_identifier(value: &str) -> bool {
@@ -209,25 +220,28 @@ fn is_identifier(value: &str) -> bool {
         && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
 }
 
-/// Warns once per string about a raw value on a colour property that looks
-/// like a name but is neither a theme colour nor a CSS colour keyword.
+/// Warns once per property and string about a raw value on a colour property
+/// that looks like a name but is neither a theme colour nor a CSS keyword it takes.
 pub(crate) fn warn_unknown_color_name(property: Property, value: &str) {
     thread_local! {
-        static WARNED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+        static WARNED: std::cell::RefCell<Vec<(Property, String)>> = const { std::cell::RefCell::new(Vec::new()) };
     }
-    if !takes_one_color(property) || !is_identifier(value) {
+    if !property.takes_color() || !is_identifier(value) {
         return;
     }
     let lower = value.to_ascii_lowercase();
     let known = CSS_COLOR_KEYWORDS.contains(&lower.as_str())
-        || (lower == "none" && matches!(property, Property::Background));
+        || OTHER_COLOR_KEYWORDS.contains(&lower.as_str())
+        || (property == Property::Background && BACKGROUND_KEYWORDS.contains(&lower.as_str()));
     if known {
         return;
     }
     let first = WARNED.with_borrow_mut(|warned| {
-        let first = !warned.iter().any(|seen| seen == value);
+        let first = !warned
+            .iter()
+            .any(|(seen, seen_value)| *seen == property && seen_value == value);
         if first {
-            warned.push(value.to_string());
+            warned.push((property, value.to_string()));
         }
         first
     });
@@ -256,7 +270,33 @@ mod tests {
         assert_eq!(warnings.len(), 1, "{warnings:?}");
         assert!(warnings[0].contains("`primry`"));
         assert!(warnings_of(sx().color("primry")).is_empty());
-        assert_eq!(warnings_of(sx().background("primry")).len(), 0);
+        assert_eq!(
+            warnings_of(sx().background("primry")).len(),
+            1,
+            "once per property"
+        );
+    }
+
+    #[test]
+    fn every_colour_property_is_checked() {
+        let warnings = warnings_of(
+            sx().fill("primry")
+                .stroke("primry")
+                .outline_color("primry")
+                .caret_color("primry")
+                .accent_color("primry")
+                .scrollbar_color("primry"),
+        );
+        assert_eq!(warnings.len(), 6, "{warnings:?}");
+    }
+
+    #[test]
+    fn background_shorthand_keywords_stay_silent() {
+        for value in ["no-repeat", "fixed", "center", "cover", "none"] {
+            let warnings = warnings_of(sx().background(value));
+            assert!(warnings.is_empty(), "{value}: {warnings:?}");
+        }
+        assert!(warnings_of(sx().fill("none").caret_color("auto")).is_empty());
     }
 
     #[test]

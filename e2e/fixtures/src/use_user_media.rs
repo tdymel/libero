@@ -91,8 +91,8 @@ fn Captured() -> Element {
         p { id: "recording", "{media.is_recording()}" }
         p { id: "error", "{media.error():?}" }
         p { id: "photo", "{size(media.photo())}" }
-        p { id: "recorded", "{size(media.recording())}" }
-        p { id: "recorded-type", {media.recording().and_then(|file| file.content_type()).unwrap_or_default()} }
+        p { id: "recorded", "{size(media.recorded())}" }
+        p { id: "recorded-type", {media.recorded().and_then(|file| file.content_type()).unwrap_or_default()} }
         p { id: "cameras", "{devices.cameras().len()}" }
         p { id: "labelled", "{devices.cameras().iter().filter(|camera| !camera.label.is_empty()).count()}" }
         p { id: "devices-supported", "{devices.is_supported()}" }

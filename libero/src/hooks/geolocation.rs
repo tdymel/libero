@@ -1,11 +1,11 @@
-use std::{cell::RefCell, rc::Rc};
-
 use dioxus::prelude::*;
 
 use crate::platform::{
     Fix, GeolocationError, GeolocationOptions, GeolocationSubscription, PermissionKind,
-    PermissionState, PermissionSubscription, Position, geolocation, permission,
+    PermissionState, Position, geolocation,
 };
+
+use super::permission::{FollowedPermission, use_permission};
 
 /// The device's position, asked for only on [`request`](Self::request) or
 /// [`watch`](Self::watch): mounting never prompts.
@@ -31,7 +31,7 @@ use crate::platform::{
 pub struct Geolocation {
     options: GeolocationOptions,
     supported: Signal<bool>,
-    permission: Signal<PermissionState>,
+    permission: FollowedPermission,
     position: Signal<Option<Position>>,
     error: Signal<Option<GeolocationError>>,
     pending: Signal<bool>,
@@ -89,12 +89,11 @@ impl Geolocation {
     }
 
     pub(crate) fn settle(&mut self, fix: Fix) {
-        let permission = *self.permission.peek();
         let known = match fix {
             Ok(position) => {
                 self.position.set(Some(position));
                 self.error.set(None);
-                PermissionState::Granted
+                Some(PermissionState::Granted)
             }
             Err(error) => {
                 self.error.set(Some(error));
@@ -102,18 +101,18 @@ impl Geolocation {
                     // The watch may be the caller; the effect drops it after this returns.
                     GeolocationError::Denied => {
                         self.watching.set(false);
-                        PermissionState::Denied
+                        Some(PermissionState::Denied)
                     }
                     GeolocationError::Unsupported => {
                         self.supported.set(false);
                         self.watching.set(false);
-                        PermissionState::Unsupported
+                        Some(PermissionState::Unsupported)
                     }
-                    _ => permission,
+                    _ => None,
                 }
             }
         };
-        if known != permission {
+        if let Some(known) = known {
             self.permission.set(known);
         }
     }
@@ -125,7 +124,7 @@ impl Geolocation {
 
     /// The location permission, kept current where the platform reports changes. Reactive.
     pub fn permission(&self) -> PermissionState {
-        (self.permission)()
+        self.permission.get()
     }
 
     /// The last fix. Reactive.
@@ -156,22 +155,14 @@ pub fn use_geolocation(options: GeolocationOptions) -> Geolocation {
     let mut location = Geolocation {
         options,
         supported: use_signal(|| false),
-        permission: use_signal(PermissionState::default),
+        permission: use_permission(PermissionKind::Geolocation),
         position: use_signal(|| None),
         error: use_signal(|| None),
         pending: use_signal(|| false),
         watching: use_signal(|| false),
         watch: use_signal(|| None),
     };
-    let listener: Rc<RefCell<Option<Box<dyn PermissionSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let listener = listener.clone();
-        move || {
-            listener.borrow_mut().take();
-            location.watch.write_unchecked().take();
-        }
-    });
+    use_drop(move || drop(location.watch.write_unchecked().take()));
     // A server cannot know either answer, so both are read after mount (hydration).
     use_effect(move || {
         let supported = geolocation().is_some();
@@ -180,19 +171,7 @@ pub fn use_geolocation(options: GeolocationOptions) -> Geolocation {
             location.permission.set(PermissionState::Unsupported);
             return;
         }
-        let Some(api) = permission() else {
-            return;
-        };
-        let changes = api.on_change(
-            PermissionKind::Geolocation,
-            Box::new(move |state| {
-                let mut permission = location.permission;
-                if *permission.peek() != state {
-                    permission.set(state);
-                }
-            }),
-        );
-        *listener.borrow_mut() = Some(changes);
+        location.permission.follow();
     });
     use_effect(move || {
         if !(location.watching)() && location.watch.peek().is_some() {

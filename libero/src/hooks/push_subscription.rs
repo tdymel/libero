@@ -1,11 +1,10 @@
-use std::{cell::RefCell, rc::Rc};
-
 use dioxus::prelude::*;
 
 use crate::platform::{
-    PermissionKind, PermissionState, PermissionSubscription, PushApi, PushEndpoint, PushError,
-    PushOptions, permission, push,
+    PermissionKind, PermissionState, PushApi, PushEndpoint, PushError, PushOptions, push,
 };
+
+use super::permission::{FollowedPermission, use_permission};
 
 /// This browser's web push subscription. The app's service worker shows what
 /// arrives; the app's server sends it. Subscribes only on
@@ -33,7 +32,7 @@ use crate::platform::{
 pub struct PushSubscription {
     options: CopyValue<PushOptions>,
     supported: Signal<bool>,
-    permission: Signal<PermissionState>,
+    permission: FollowedPermission,
     subscription: Signal<Option<PushEndpoint>>,
     pending: Signal<bool>,
     error: Signal<Option<PushError>>,
@@ -86,7 +85,7 @@ impl PushSubscription {
         match answer {
             Ok(endpoint) => {
                 if endpoint.is_some() {
-                    self.set_permission(PermissionState::Granted);
+                    self.permission.set(PermissionState::Granted);
                 }
                 self.subscription.set(endpoint);
                 self.error.set(None);
@@ -96,18 +95,12 @@ impl PushSubscription {
                 match error {
                     PushError::Unsupported => {
                         self.supported.set(false);
-                        self.set_permission(PermissionState::Unsupported);
+                        self.permission.set(PermissionState::Unsupported);
                     }
-                    PushError::Denied => self.set_permission(PermissionState::Denied),
+                    PushError::Denied => self.permission.set(PermissionState::Denied),
                     PushError::Failed => {}
                 }
             }
-        }
-    }
-
-    fn set_permission(&mut self, state: PermissionState) {
-        if *self.permission.peek() != state {
-            self.permission.set(state);
         }
     }
 
@@ -118,7 +111,7 @@ impl PushSubscription {
 
     /// The notification permission push needs, kept current where the platform reports changes. Reactive.
     pub fn permission(&self) -> PermissionState {
-        (self.permission)()
+        self.permission.get()
     }
 
     /// The current subscription, read after mount. Reactive.
@@ -149,23 +142,15 @@ pub fn use_push_subscription(options: PushOptions) -> PushSubscription {
     let mut subscription = PushSubscription {
         options: push_options,
         supported: use_signal(|| false),
-        permission: use_signal(PermissionState::default),
+        permission: use_permission(PermissionKind::Notifications),
         subscription: use_signal(|| None),
         pending: use_signal(|| false),
         error: use_signal(|| None),
     };
-    let listener: Rc<RefCell<Option<Box<dyn PermissionSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let listener = listener.clone();
-        move || {
-            listener.borrow_mut().take();
-        }
-    });
     // A server cannot know either answer, so both are read after mount (hydration).
     use_effect(move || {
         let Some(api) = push() else {
-            subscription.set_permission(PermissionState::Unsupported);
+            subscription.permission.set(PermissionState::Unsupported);
             return;
         };
         subscription.supported.set(true);
@@ -175,17 +160,7 @@ pub fn use_push_subscription(options: PushOptions) -> PushSubscription {
                 subscription.subscription.set(Some(endpoint));
             }
         });
-        let Some(api) = permission() else {
-            return;
-        };
-        let changes = api.on_change(
-            PermissionKind::Notifications,
-            Box::new(move |state| {
-                let mut subscription = subscription;
-                subscription.set_permission(state);
-            }),
-        );
-        *listener.borrow_mut() = Some(changes);
+        subscription.permission.follow();
     });
     subscription
 }

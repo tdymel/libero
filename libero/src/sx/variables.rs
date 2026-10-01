@@ -8,11 +8,13 @@ use crate::tokens::CssVar;
 pub struct Variables(Vec<(CssVar, String)>);
 
 impl Variables {
+    /// No variables.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Skips `None`/empty, so an optional override chains directly.
+    /// Sets `name`, replacing an earlier value. `None` or empty clears it instead,
+    /// so an optional override chains directly.
     pub fn with(mut self, name: CssVar, value: impl Into<Option<String>>) -> Self {
         self.0.retain(|(existing, _)| existing != &name);
         if let Some(value) = value.into().filter(|value| !value.is_empty()) {
@@ -51,13 +53,11 @@ impl Variables {
 
 impl Display for Variables {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (name, value) in &self.0 {
-            write!(f, "{}:{value};", name.name())?;
-        }
-        Ok(())
+        f.write_str(&self.render())
     }
 }
 
+/// Shorthand for [`Variables::new`].
 pub fn variables() -> Variables {
     Variables::new()
 }
@@ -68,7 +68,7 @@ mod tests {
 
     const COLOR: CssVar = CssVar::new("--lsx-test-color");
 
-    /// `render` (hot path) and `Display` must not drift.
+    /// `Display` writes `render`'s output.
     #[test]
     fn render_matches_the_display_impl() {
         let variables = variables()

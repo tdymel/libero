@@ -78,7 +78,7 @@ rsx! {{
         if let Some(photo) = media.photo() {{
             Preview {{ file: photo }}
         }}
-        if let Some(clip) = media.recording() {{
+        if let Some(clip) = media.recorded() {{
             Preview {{ file: clip }}
         }}
     }}
@@ -219,7 +219,7 @@ fn CaptureBooth(camera: bool, microphone: bool) -> Element {
             if let Some(photo) = media.photo() {
                 Preview { file: photo }
             }
-            if let Some(clip) = media.recording() {
+            if let Some(clip) = media.recorded() {
                 Preview { file: clip }
             }
         }
@@ -271,7 +271,7 @@ pub fn UseUserMediaPage() -> Element {
                     " and "
                     Code { source: "finish()" }
                     " fill "
-                    Code { source: "recording()" }
+                    Code { source: "recorded()" }
                     ", both a "
                     Code { source: "FileData" }
                     " like a picked file. Options apply on the next "

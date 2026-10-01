@@ -3,13 +3,32 @@ use pictogram_core::Svg as SvgData;
 
 mod sets;
 
+/// Declares [`IconSlot`] and its `ALL` list from one variant list, so `SLOTS` cannot fall behind.
+macro_rules! icon_slots {
+    ($(#[$attr:meta])* pub enum IconSlot { $($(#[$doc:meta])* $slot:ident,)* }) => {
+        $(#[$attr])*
+        pub enum IconSlot {
+            $($(#[$doc])* $slot,)*
+        }
+
+        impl IconSlot {
+            /// Every slot, in declaration order.
+            pub(crate) const ALL: &'static [Self] = &[$(Self::$slot,)*];
+        }
+    };
+}
+
+icon_slots! {
 /// A glyph libero draws itself, by what it means. An [`IconProvider`] can swap
 /// each one. Brand marks (GitHub, Google, ...) are not slots: they name a service.
 ///
 /// ```rust
-/// # use libero::IconSlot;
-/// let slot = IconSlot::Close;
-/// # let _ = slot;
+/// # use libero::{IconSet, IconSlot};
+/// // Only the close button changes; every other slot keeps its glyph.
+/// const ICONS: IconSet =
+///     IconSet::new().with(IconSlot::Close, pictogram_icons_lucide::circle_x::outlined);
+/// assert!(ICONS.get(IconSlot::Close).is_some());
+/// assert!(ICONS.get(IconSlot::Check).is_none());
 /// ```
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -118,10 +137,11 @@ pub enum IconSlot {
     /// A filter: a table column's filter button.
     Filter,
 }
+}
 
-const SLOTS: usize = IconSlot::Filter as usize + 1;
+const SLOTS: usize = IconSlot::ALL.len();
 
-/// Glyphs by [`IconSlot`]; an empty slot keeps libero's default (lucide).
+/// Glyphs by [`IconSlot`]; an empty slot falls to an outer [`IconProvider`]'s, then libero's default (lucide).
 /// A whole set starts from its constructor, one `icons-<set>` feature each:
 /// `IconSet::material_rounded()`, `tabler_outlined()`, `bootstrap_outlined()`, `phosphor_regular()`, ...
 ///
@@ -223,5 +243,12 @@ mod tests {
         assert_eq!(merged.get(IconSlot::Close), Some(B));
         assert_eq!(merged.get(IconSlot::Check), Some(A));
         assert_eq!(merged.get(IconSlot::Plus), None);
+    }
+
+    #[test]
+    fn every_slot_indexes_its_own_place() {
+        for (at, slot) in IconSlot::ALL.iter().enumerate() {
+            assert_eq!(*slot as usize, at);
+        }
     }
 }

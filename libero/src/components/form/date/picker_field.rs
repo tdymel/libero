@@ -27,8 +27,8 @@ use crate::{
         layout::{paper_sx, use_box},
     },
     hooks::{
-        PopoverOptions, use_element, use_field_list_layer, use_focus_within, use_localization,
-        use_popover_on, use_theme,
+        POPOVER_AVAILABLE_HEIGHT, PopoverOptions, use_element, use_field_list_layer,
+        use_focus_within, use_localization, use_popover_on, use_theme,
     },
     localization::DateLocale,
     platform::{ElementApi, next_task, soft_keyboard_app},
@@ -44,6 +44,9 @@ static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         // The field's corner, and a floating shadow over the surface's resting one.
         .border_radius(SizeCss::RADIUS.value(Size::Sm))
         .box_shadow(SizeCss::SHADOW.value(Size::Lg))
+        // Never past the room on its side: it scrolls instead (WCAG 1.4.10).
+        .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
+        .overflow_y("auto")
 });
 
 /// Where Arrow Down in the input puts focus: the picker's tab stop, not the navigation above it.

@@ -19,7 +19,9 @@ pub enum PopoverWidth {
 /// flipping moved it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct Placement {
+    /// The side it landed on.
     pub side: Side,
+    /// The align it landed on.
     pub align: Align,
 }
 
@@ -29,14 +31,18 @@ pub struct Placement {
 pub struct PopoverOptions {
     /// The preferred side. Flipping may override it.
     pub side: Side,
+    /// How the box lines up along the anchor's edge.
     pub align: Align,
     /// Pixels between the anchor's edge and the box.
     pub gap: f64,
     /// How close to a viewport edge the box may come before flipping or
     /// shifting; its width is capped at the viewport less this at both edges.
     pub padding: f64,
+    /// Moves to the opposite side when the preferred one has no room.
     pub flip: bool,
+    /// Slides along the anchor's edge to stay inside the viewport.
     pub shift: bool,
+    /// What the box's width follows.
     pub width: PopoverWidth,
     /// Re-measures whenever it changes, for an anchor that resizes while open
     /// (a multi-select growing chips). Nothing else re-measures.
@@ -63,46 +69,55 @@ impl PopoverOptions {
         }
     }
 
+    /// Sets [`side`](Self::side).
     pub fn side(mut self, side: Side) -> Self {
         self.side = side;
         self
     }
 
+    /// Sets [`align`](Self::align).
     pub fn align(mut self, align: Align) -> Self {
         self.align = align;
         self
     }
 
+    /// Sets [`gap`](Self::gap).
     pub fn gap(mut self, gap: f64) -> Self {
         self.gap = gap;
         self
     }
 
+    /// Sets [`padding`](Self::padding).
     pub fn padding(mut self, padding: f64) -> Self {
         self.padding = padding;
         self
     }
 
+    /// Sets [`flip`](Self::flip).
     pub fn flip(mut self, flip: bool) -> Self {
         self.flip = flip;
         self
     }
 
+    /// Sets [`shift`](Self::shift).
     pub fn shift(mut self, shift: bool) -> Self {
         self.shift = shift;
         self
     }
 
+    /// Sets [`width`](Self::width).
     pub fn width(mut self, width: PopoverWidth) -> Self {
         self.width = width;
         self
     }
 
+    /// Sets [`remeasure`](Self::remeasure).
     pub fn remeasure(mut self, key: u64) -> Self {
         self.remeasure = key;
         self
     }
 
+    /// Sets [`dismiss`](Self::dismiss).
     pub fn dismiss(mut self, dismiss: bool) -> Self {
         self.dismiss = dismiss;
         self

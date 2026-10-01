@@ -4,6 +4,7 @@ use crate::{
         common::{LogicalTextAlign, Part, disabled_look_sx, inset_focus_ring_sx},
         layout::paper_sx,
     },
+    hooks::POPOVER_AVAILABLE_HEIGHT,
     sx::{StaticSx, sx},
     theme::{
         MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X, MENU_ITEM_RADIUS, MENU_LABEL_FONT,
@@ -22,7 +23,12 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .flex_direction("column")
         .padding(MENU_PADDING)
-        .max_height(MENU_MAX_HEIGHT.value())
+        // Never past the room on its side, so every item scrolls into view.
+        .max_height(format!(
+            "min({}, {})",
+            MENU_MAX_HEIGHT.value(),
+            POPOVER_AVAILABLE_HEIGHT.value_or(MENU_MAX_HEIGHT.value())
+        ))
         .overflow_y("auto")
         .box_shadow(SizeCss::SHADOW.value(Size::Lg))
         .selector(

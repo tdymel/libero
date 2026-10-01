@@ -139,12 +139,13 @@ mod web {
             let listener = Rc::new(StatusListener::default());
             let held = listener.clone();
             wasm_bindgen_futures::spawn_local(async move {
-                let Some(listened) = status(kind).await else {
-                    return callback(PermissionState::Unknown);
-                };
+                let listened = status(kind).await;
                 if held.stopped.get() {
                     return;
                 }
+                let Some(listened) = listened else {
+                    return callback(PermissionState::Unknown);
+                };
                 let last = Rc::new(Cell::new(state_of(&listened)));
                 callback(last.get());
                 let report = Rc::new(move |state: PermissionState| {

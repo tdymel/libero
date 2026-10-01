@@ -4,7 +4,7 @@ use dioxus::core::Attribute;
 use dioxus::prelude::*;
 
 use crate::hooks::{ElementHandle, use_element};
-use crate::platform::{self, MediaApi, MediaState, MediaSubscription};
+use crate::platform::{self, MediaApi, MediaState, MediaSubscription, PlatformError};
 
 /// Plays and reads one `<audio>` or `<video>`: commands go to the element, and
 /// each read is its own signal, so a time tick re-renders only what shows time.
@@ -71,39 +71,49 @@ impl MediaHandle {
     }
 
     /// Jumps to `seconds` from the start, clamped to the duration once known.
+    /// A non-finite `seconds` is ignored.
     pub fn seek(&self, seconds: f64) {
+        let Some(seconds) = finite(seconds) else {
+            return;
+        };
         let end = self.duration.peek().unwrap_or(f64::INFINITY);
-        let seconds = seconds.clamp(0.0, end);
-        if let Some(api) = self.api() {
-            let _ = api.seek(seconds);
-            // Shown at once: the element's answer crosses the IPC on a WebView.
-            let mut current_time = self.current_time;
-            current_time.set(seconds);
-        }
+        // Shown at once: the element's answer crosses the IPC on a WebView.
+        self.command(
+            self.current_time,
+            seconds.clamp(0.0, end),
+            |api, seconds| api.seek(seconds),
+        );
     }
 
-    /// `0.0` (silent) to `1.0` (full).
+    /// `0.0` (silent) to `1.0` (full). NaN is ignored.
     pub fn set_volume(&self, volume: f64) {
-        let volume = volume.clamp(0.0, 1.0);
-        if let Some(api) = self.api() {
-            let _ = api.set_volume(volume);
-            let mut signal = self.volume;
-            signal.set(volume);
+        if !volume.is_nan() {
+            self.command(self.volume, volume.clamp(0.0, 1.0), |api, volume| {
+                api.set_volume(volume)
+            });
         }
     }
 
+    /// Mutes or unmutes, keeping the volume.
     pub fn set_muted(&self, muted: bool) {
-        if let Some(api) = self.api() {
-            let _ = api.set_muted(muted);
-            let mut signal = self.muted;
-            signal.set(muted);
+        self.command(self.muted, muted, |api, muted| api.set_muted(muted));
+    }
+
+    /// Playback speed: `1.0` is normal. Zero, negative or non-finite is ignored.
+    pub fn set_rate(&self, rate: f64) {
+        if let Some(rate) = finite(rate).filter(|rate| *rate > 0.0) {
+            self.command(self.rate, rate, |api, rate| api.set_rate(rate));
         }
     }
 
-    /// Playback speed: `1.0` is normal.
-    pub fn set_rate(&self, rate: f64) {
+    fn command<T: Copy + 'static>(
+        &self,
+        signal: Signal<T>,
+        value: T,
+        send: impl FnOnce(&dyn MediaApi, T) -> Result<(), PlatformError>,
+    ) {
         if let Some(api) = self.api() {
-            let _ = api.set_rate(rate);
+            command(&*api, signal, value, send);
         }
     }
 
@@ -132,10 +142,12 @@ impl MediaHandle {
         (self.supported)()
     }
 
+    /// Not playing: before the first play, after a pause, and once ended.
     pub fn paused(&self) -> bool {
         (self.paused)()
     }
 
+    /// Played through to the end.
     pub fn ended(&self) -> bool {
         (self.ended)()
     }
@@ -150,14 +162,17 @@ impl MediaHandle {
         (self.duration)()
     }
 
+    /// `0.0` (silent) to `1.0` (full), muting aside.
     pub fn volume(&self) -> f64 {
         (self.volume)()
     }
 
+    /// Muted, whatever the volume.
     pub fn muted(&self) -> bool {
         (self.muted)()
     }
 
+    /// Playback speed: `1.0` is normal.
     pub fn rate(&self) -> f64 {
         (self.rate)()
     }
@@ -189,6 +204,22 @@ impl MediaHandle {
         put(&mut self.buffering, state.buffering);
         put(&mut self.error, state.error);
     }
+}
+
+/// Runs `send` and shows `value` in `signal` once the element took it.
+fn command<T: Copy + 'static>(
+    api: &dyn MediaApi,
+    mut signal: Signal<T>,
+    value: T,
+    send: impl FnOnce(&dyn MediaApi, T) -> Result<(), PlatformError>,
+) {
+    if send(api, value).is_ok() {
+        signal.set(value);
+    }
+}
+
+fn finite(value: f64) -> Option<f64> {
+    value.is_finite().then_some(value)
 }
 
 /// Why media failed, from the element's `MediaError.code`.
@@ -268,4 +299,61 @@ pub fn use_media() -> MediaHandle {
         *slot.borrow_mut() = api.map(|api| api.watch(Box::new(move |state| handle.apply(state))));
     });
     handle
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Refusing;
+
+    impl MediaApi for Refusing {
+        fn play(&self) -> Result<(), PlatformError> {
+            Err(PlatformError::Unsupported)
+        }
+        fn pause(&self) -> Result<(), PlatformError> {
+            Err(PlatformError::Unsupported)
+        }
+        fn seek(&self, _: f64) -> Result<(), PlatformError> {
+            Err(PlatformError::Unsupported)
+        }
+        fn set_volume(&self, _: f64) -> Result<(), PlatformError> {
+            Ok(())
+        }
+        fn set_muted(&self, _: bool) -> Result<(), PlatformError> {
+            Err(PlatformError::Unsupported)
+        }
+        fn set_rate(&self, _: f64) -> Result<(), PlatformError> {
+            Ok(())
+        }
+        fn show_captions(&self, _: Option<usize>) -> Result<(), PlatformError> {
+            Err(PlatformError::Unsupported)
+        }
+        fn load(&self) -> Result<(), PlatformError> {
+            Err(PlatformError::Unsupported)
+        }
+        fn watch(&self, _: Box<dyn Fn(MediaState)>) -> Box<dyn MediaSubscription> {
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn a_command_shows_its_value_only_once_the_element_took_it() {
+        let dom = VirtualDom::new(|| rsx! {});
+        dom.in_runtime(|| {
+            let time = Signal::new_in_scope(0.0, ScopeId::ROOT);
+            let rate = Signal::new_in_scope(1.0, ScopeId::ROOT);
+            command(&Refusing, time, 12.0, |api, seconds| api.seek(seconds));
+            command(&Refusing, rate, 2.0, |api, rate| api.set_rate(rate));
+            assert_eq!(*time.peek(), 0.0);
+            assert_eq!(*rate.peek(), 2.0);
+        });
+    }
+
+    #[test]
+    fn non_finite_input_is_dropped() {
+        assert_eq!(finite(f64::NAN), None);
+        assert_eq!(finite(f64::INFINITY), None);
+        assert_eq!(finite(3.5), Some(3.5));
+    }
 }

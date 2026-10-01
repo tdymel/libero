@@ -9,7 +9,7 @@ Description: The camera and microphone with a preview, a PNG snapshot, a chunked
 `use_user_media(options) -> UserMedia` opens the camera and microphone.
 `start()` asks and opens them, `stop()` closes them. Spread `attributes()` on
 your own `video` to show the stream. `snapshot()` takes a PNG into `photo()`;
-`record()` and `finish()` fill `recording()`, both a `FileData` like a picked
+`record()` and `finish()` fill `recorded()`, both a `FileData` like a picked
 file. Options apply on the next `start()`.
 
 `use_user_media_devices()` lists `cameras()` and `microphones()`; labels and
@@ -94,7 +94,7 @@ fn CaptureBooth() -> Element {
             if let Some(photo) = media.photo() {
                 Preview { file: photo }
             }
-            if let Some(clip) = media.recording() {
+            if let Some(clip) = media.recorded() {
                 Preview { file: clip }
             }
         }
@@ -171,8 +171,8 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
 | `stop()` | Stops every track, so the light goes off; a running recording finishes first. Unmount does the same. |
 | `attributes()` | Spread on the preview `video`; the stream shows in the element carrying them. |
 | `snapshot()` / `photo()` | A PNG of the preview's current frame. Needs a live camera shown in the `video`. |
-| `record()` / `finish()` / `recording()` | Records the stream into WebM, or MP4 where only that records; audio only without a camera. |
-| `switch_camera(id)` | Live, stops the camera and reopens on `id` (a phone opens one at a time); a running recording finishes into `recording()` first. Not live, the next `start()` opens it. Kept until `camera_id` changes. |
+| `record()` / `finish()` / `recorded()` | Records the stream into WebM, or MP4 where only that records; audio only without a camera. |
+| `switch_camera(id)` | Live, stops the camera and reopens on `id` (a phone opens one at a time); a running recording finishes into `recorded()` first. Not live, the next `start()` opens it. Kept until `camera_id` changes. |
 | `camera_id()` | The live camera's `MediaDevice::id`; `None` when off or audio only. |
 | `is_live()`, `is_pending()`, `is_recording()` | A stream is open; a start awaits its answer; a recording runs. |
 | `error()` | Why the last step failed; the next success clears it. `Denied` also covers an insecure context. |
