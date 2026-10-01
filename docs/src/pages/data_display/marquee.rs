@@ -73,7 +73,7 @@ fn MarqueePreview(values: DemoValues) -> Element {
                 reverse: values.str("reverse") == "true",
                 pause_on_hover: values.str("pause_on_hover") == "true",
                 pause_control: !own_control,
-                paused: own_control.then(|| paused()),
+                paused: own_control.then(&*paused),
                 fade_edges: values.str("fade_edges") == "true",
                 for chip in CHIPS {
                     Chip { "{chip}" }
