@@ -1,22 +1,7 @@
-use std::collections::BTreeMap;
-
-use crate::common::{attributes_of, body, classes_of, fake_files, has_rule_for, render};
+use crate::common::{attributes_of, body, fake_files, has_rule_for, render, tag_with};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::FileField};
-
-/// Every attribute of the first element whose tag holds `needle`.
-fn attributes_with(body: &str, needle: &str) -> BTreeMap<String, String> {
-    let at = body
-        .find(needle)
-        .unwrap_or_else(|| panic!("no {needle}:\n{body}"));
-    let start = body[..at].rfind('<').expect("its tag");
-    let tag = body[start + 1..]
-        .split(|c: char| c.is_whitespace() || c == '>')
-        .next()
-        .unwrap();
-    attributes_of(&body[start..], tag)
-}
 
 #[test]
 fn a_file_field_draws_a_hidden_input_and_names_its_control() {
@@ -42,7 +27,7 @@ fn a_file_field_draws_a_hidden_input_and_names_its_control() {
     let label = attributes_of(&body, "label");
     assert!(!label.contains_key("for"), "{label:?}");
     let id = label["id"].trim_end_matches("-label").to_string();
-    let group = attributes_with(&body, r#"role="group""#);
+    let group = tag_with(&body, r#"role="group""#);
     assert_eq!(group["aria-labelledby"], format!("{id}-label"), "{body}");
     let button = attributes_of(&body, "button");
     assert_eq!(button["type"], "button", "{button:?}");
@@ -88,7 +73,7 @@ fn a_dropzone_file_field_renders_its_prompt_instead_of_a_frame() {
     assert!(body.contains("Drop files here"), "{body}");
     // The surface is the group; the prompt is the Browse button's text.
     assert!(body.contains(r#"role="group""#), "{body}");
-    let button = attributes_with(&body, r#"data-slot="browse""#);
+    let button = tag_with(&body, r#"data-slot="browse""#);
     assert_eq!(button["type"], "button", "{button:?}");
     // A `false` bool is never pushed, so the attribute's presence is the test.
     assert!(body.contains("multiple=true"), "{body}");
@@ -130,9 +115,11 @@ fn switching_variant_at_runtime_swaps_the_control_and_its_styles() {
 
     // The control's classes: the one element with `role="group"`.
     fn control_classes(body: &str) -> Vec<String> {
-        let at = body.find(r#"role="group""#).expect("a control");
-        let start = body[..at].rfind('<').expect("its tag");
-        classes_of(&body[start..], "div")
+        let control = tag_with(body, r#"role="group""#);
+        control["class"]
+            .split_whitespace()
+            .map(str::to_string)
+            .collect()
     }
 
     let mut dom = VirtualDom::new(app);
@@ -285,13 +272,13 @@ fn a_required_field_says_so_without_aria_required() {
         attributes_of(&body, "input").contains_key("required"),
         "{body}"
     );
-    let button = attributes_with(&body, r#"data-slot="browse""#);
+    let button = tag_with(&body, r#"data-slot="browse""#);
     assert_eq!(
         button["aria-describedby"], "contract-required contract-status",
         "{button:?}"
     );
     assert_eq!(button["aria-invalid"], "true", "{button:?}");
-    let required = attributes_with(&body, r#"id="contract-required""#);
+    let required = tag_with(&body, r#"id="contract-required""#);
     assert!(required.contains_key("hidden"), "{required:?}");
     assert!(body.contains(">Required</span>"), "{body}");
 }
@@ -316,8 +303,8 @@ fn the_chips_are_a_list_with_one_tab_stop() {
 
     let body = body(&render(app));
     assert_eq!(attributes_of(&body, "ul")["role"], "list", "{body}");
-    let first = attributes_with(&body, r#"id="files-file-0""#);
-    let second = attributes_with(&body, r#"id="files-file-1""#);
+    let first = tag_with(&body, r#"id="files-file-0""#);
+    let second = tag_with(&body, r#"id="files-file-1""#);
     assert_eq!(first["tabindex"], "0", "{first:?}");
     assert_eq!(second["tabindex"], "-1", "{second:?}");
     assert_eq!(body.matches("<li").count(), 2, "{body}");
@@ -351,19 +338,163 @@ fn read_only_refuses_in_the_order_and_disabled_leaves_it() {
     }
 
     let body = body(&render(app));
-    let held = attributes_with(&body, r#"id="held""#);
+    let held = tag_with(&body, r#"id="held""#);
     assert_eq!(held["aria-disabled"], "true", "{held:?}");
     assert!(!held.contains_key("disabled"), "{held:?}");
-    assert_eq!(
-        attributes_with(&body, r#"id="held-file-0""#)["tabindex"],
-        "0"
-    );
+    assert_eq!(tag_with(&body, r#"id="held-file-0""#)["tabindex"], "0");
 
-    let off = attributes_with(&body, r#"id="off""#);
+    let off = tag_with(&body, r#"id="off""#);
     assert!(off.contains_key("disabled"), "{off:?}");
     assert!(!off.contains_key("aria-disabled"), "{off:?}");
     assert!(
-        !attributes_with(&body, r#"id="off-file-0""#).contains_key("tabindex"),
+        !tag_with(&body, r#"id="off-file-0""#).contains_key("tabindex"),
         "{body}"
     );
+}
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::{body, tags_with};
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{FileField, SelectionArgs},
+    };
+
+    /// Todo 250: `FileField`'s chips are the shared removable chip, guard
+    /// included. Its own copy had none, so a press focused the x, and removing
+    /// one of several chips dropped the focus to the body.
+    #[test]
+    fn pressing_a_file_chip_x_keeps_the_focus_on_the_control() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    FileField {
+                        label: "Attachments",
+                        multiple: true,
+                        value: crate::common::fake_files(&["a.txt", "b.txt"]),
+                        onchange: move |_| {},
+                    }
+                }
+            }
+        }
+
+        // The default chip's guard, and its wrapper's.
+        assert_every_press_keeps_the_focus(app, 4);
+    }
+
+    /// A caller's own `selection` draws its x without any guard, and the chip's
+    /// wrapper supplies it - two chips, two guards, both cancelling.
+    #[test]
+    fn a_custom_file_chip_gets_the_guard_it_did_not_draw() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    FileField {
+                        label: "Attachments",
+                        multiple: true,
+                        value: crate::common::fake_files(&["a.txt", "b.txt"]),
+                        onchange: move |_| {},
+                        selection: move |args: SelectionArgs<dioxus::html::FileData>| rsx! {
+                            span { "{args.value.name()}"
+                                button { tabindex: "-1", onclick: move |_| args.remove.call(()), "x" }
+                            }
+                        },
+                    }
+                }
+            }
+        }
+
+        assert_every_press_keeps_the_focus(app, 2);
+    }
+
+    #[test]
+    fn clear_empties_a_file_field_once() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    FileField {
+                        label: "Attachments",
+                        multiple: true,
+                        clearable: true,
+                        value: crate::common::fake_files(&["a.txt", "b.txt"]),
+                        onchange: move |files: libero::components::Files| {
+                            CLEARED.with_borrow_mut(|seen| seen.push(files.len()));
+                        },
+                    }
+                }
+            }
+        }
+
+        assert_eq!(click_clear(app), Some(vec![0]));
+    }
+
+    fn readonly_files() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    label: "Attachments",
+                    multiple: true,
+                    clearable: true,
+                    value: crate::common::fake_files(&["a.txt", "b.txt"]),
+                    readonly: READ_ONLY.get(),
+                    onchange: move |files: libero::components::Files| heard(files.len()),
+                }
+            }
+        }
+    }
+
+    fn readonly_files_clear() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    label: "Attachments",
+                    multiple: true,
+                    clearable: true,
+                    value: crate::common::fake_files(&["a.txt", "b.txt"]),
+                    readonly: true,
+                    onchange: move |files: libero::components::Files| {
+                        CLEARED.with_borrow_mut(|seen| seen.push(files.len()));
+                    },
+                }
+            }
+        }
+    }
+
+    /// Todo 305: a read-only file field keeps its tab stop and its post - the
+    /// input is not `disabled` - while the keys that remove a chip or open the
+    /// picker, and the clear button, stand down.
+    #[test]
+    fn a_read_only_file_field_removes_nothing() {
+        let backspace = || key_event(Key::Backspace);
+        let (removed, _) = send(readonly_files, false, "keydown", first_keydown, backspace);
+        assert_eq!(removed, ["1"], "Backspace is the control");
+        let (heard, html) = send(readonly_files, true, "keydown", first_keydown, backspace);
+        assert_eq!(heard, Vec::<String>::new());
+
+        let html = body(&html);
+        // Todo 529: the Browse button stays a tab stop that says it refuses.
+        let browse = tags_with(&html, r#"data-slot="browse""#);
+        assert_eq!(browse.len(), 1, "{browse:?}");
+        assert_eq!(browse[0]["tabindex"], "0", "{browse:?}");
+        assert_eq!(browse[0]["aria-disabled"], "true", "{browse:?}");
+        assert!(!browse[0].contains_key("disabled"), "{browse:?}");
+        let file = tags_with(&html, r#"type="file""#);
+        assert_eq!(file.len(), 1, "{file:?}");
+        assert!(
+            !file[0].contains_key("disabled"),
+            "a read-only field still posts: {file:?}"
+        );
+        // Both chips' x stand down with the field.
+        let removes = tags_with(&html, r#"aria-label="Remove"#);
+        assert_eq!(removes.len(), 2, "{removes:?}");
+        assert!(
+            removes.iter().all(|x| x.contains_key("disabled")),
+            "{removes:?}"
+        );
+
+        assert_eq!(click_clear(readonly_files_clear), None);
+    }
 }

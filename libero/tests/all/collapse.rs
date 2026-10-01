@@ -2,11 +2,10 @@
 //! tokens carry the animation, and that the reduced-motion guard is emitted
 //! at a specificity that can actually win.
 
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, drive_once, drive_until, render, rules_for};
 
 use std::cell::Cell;
 use std::rc::Rc;
-use std::thread;
 use std::time::{Duration, Instant};
 
 use dioxus::prelude::*;
@@ -148,7 +147,8 @@ fn the_height_animation_is_a_grid_row() {
         )),
         "{html}"
     );
-    assert!(html.contains("min-height:0;overflow:hidden;"));
+    let root = rules_for(&html, &attributes_of(&body(&html), "div"));
+    assert!(root.contains("min-height:0;overflow:hidden;"), "{root}");
 }
 
 /// Closed content is not a tab stop, and the delay is what keeps it visible
@@ -157,14 +157,15 @@ fn the_height_animation_is_a_grid_row() {
 #[test]
 fn closed_content_hides_from_the_accessibility_tree_as_the_animation_ends() {
     let html = render(open_app);
+    let root = rules_for(&html, &attributes_of(&body(&html), "div"));
 
-    assert!(html.contains("visibility:hidden;"), "{html}");
+    assert!(root.contains("visibility:hidden;"), "{root}");
     assert!(
-        html.contains("visibility 0s linear var(--lsx-collapse-duration-override,"),
-        "{html}"
+        root.contains("visibility 0s linear var(--lsx-collapse-duration-override,"),
+        "{root}"
     );
-    assert!(html.contains("visibility:visible;"), "{html}");
-    assert!(html.contains("visibility 0s linear 0s;"), "{html}");
+    assert!(root.contains("visibility:visible;"), "{root}");
+    assert!(root.contains("visibility 0s linear 0s;"), "{root}");
 }
 
 /// On the root, not the content: a caller's `role="region"` sits on the root,
@@ -319,21 +320,6 @@ fn set_open(dom: &mut VirtualDom, value: bool) {
     dom.in_runtime(|| open.set(value));
 }
 
-/// Polls `dom` until `done` holds for its markup or `limit` runs out.
-/// `process_events` drains the task the timer delivers through.
-fn drive_until(dom: &mut VirtualDom, limit: Duration, done: impl Fn(&str) -> bool) -> String {
-    let start = Instant::now();
-    loop {
-        dom.process_events();
-        dom.render_immediate(&mut dioxus::core::NoOpMutations);
-        let html = body(&dioxus_ssr::render(dom));
-        if done(&html) || start.elapsed() > limit {
-            return html;
-        }
-        thread::sleep(Duration::from_millis(2));
-    }
-}
-
 /// No renderer here fires `transitionend`, which is exactly the position of a
 /// suppressed exit: before the fallback timer the content stayed mounted for
 /// good (todo 36b).
@@ -349,7 +335,7 @@ fn a_close_with_no_transitionend_unmounts_after_the_duration() {
     set_open(&mut dom, false);
     let start = Instant::now();
     // Still there straight after the close: the exit is running.
-    let html = drive_until(&mut dom, Duration::ZERO, |_| true);
+    let html = drive_once(&mut dom);
     assert!(
         html.contains("panel body"),
         "unmounted before the exit: {html}"
@@ -391,7 +377,7 @@ fn reopening_before_the_fallback_keeps_the_content() {
     drive_until(&mut dom, Duration::from_secs(2), |html| {
         attributes_of(html, "div")["data-state"] != "open"
     });
-    drive_until(&mut dom, Duration::ZERO, |_| true);
+    drive_once(&mut dom);
     set_open(&mut dom, true);
 
     // Past the 180ms the dropped timer was due at: a timer started after it has fired.
@@ -408,4 +394,77 @@ fn reopening_before_the_fallback_keeps_the_content() {
     assert!(html.contains("panel body"), "{html}");
     assert_eq!(MOUNTS.with(Cell::get), 1, "the content was remounted");
     assert_eq!(attributes_of(&html, "div")["data-state"], "open", "{html}");
+}
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::body;
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{LiberoProvider, components::Collapse};
+
+    /// Two `keep_mounted: false` collapses, one inside the other, both closing.
+    /// The inner one is the faster, so its `transitionend` arrives first, and it
+    /// bubbles. Before todo 36d it reached the outer root too and unmounted the
+    /// outer content mid-close.
+    fn nested_collapse_app() -> Element {
+        let open = use_context_provider(|| Signal::new(true));
+        rsx! {
+            LiberoProvider {
+                Collapse { open: open(), keep_mounted: false, duration: 5000,
+                    "outer body"
+                    Collapse { open: open(), keep_mounted: false, duration: 5000, "inner body" }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn an_inner_collapse_ending_its_exit_does_not_end_the_outer_one() {
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(nested_collapse_app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        // Registered parent first: the outer root is created before its children.
+        let [_outer, inner] = find.transitionend[..] else {
+            panic!(
+                "expected two transitionend listeners, got {:?}",
+                find.transitionend
+            );
+        };
+
+        let mut open = dom.in_scope(ScopeId::APP, consume_context::<Signal<bool>>);
+        dom.in_runtime(|| open.set(false));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        let end = |dom: &mut VirtualDom, property| {
+            dom.runtime().handle_event(
+                "transitionend",
+                Event::new(transition_end_event(property), true),
+                inner,
+            );
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        };
+
+        // The content's own opacity is not the exit, for either collapse.
+        end(&mut dom, "opacity");
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(
+            html.contains("inner body"),
+            "an opacity end unmounted: {html}"
+        );
+
+        end(&mut dom, "grid-template-rows");
+
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(
+            !html.contains("inner body"),
+            "the inner exit did not end: {html}"
+        );
+        assert!(
+            html.contains("outer body"),
+            "the inner exit ended the outer one: {html}"
+        );
+    }
 }

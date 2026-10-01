@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -30,14 +30,7 @@ fn content(stage: Stage) -> Element {
 
 /// Every `<tag …>` open tag in the markup, in order.
 fn all(html: &str, tag: &str) -> Vec<BTreeMap<String, String>> {
-    let body = body(html);
-    body.match_indices(&format!("<{tag}"))
-        .filter(|(at, _)| {
-            // `<li` must not match `<link`, nor `<span` a `<spanner`.
-            matches!(body.as_bytes()[at + tag.len() + 1], b' ' | b'>')
-        })
-        .map(|(at, _)| attributes_of(&body[at..], tag))
-        .collect()
+    tags_with(&body(html), &format!("<{tag}"))
 }
 
 fn states(html: &str) -> Vec<String> {
@@ -48,16 +41,7 @@ fn states(html: &str) -> Vec<String> {
 }
 
 fn headers(html: &str) -> Vec<BTreeMap<String, String>> {
-    let body = body(html);
-    body.match_indices("data-slot=\"header\"")
-        .map(|(at, _)| {
-            let open = body[..at].rfind('<').unwrap();
-            let tag = &body[open + 1..][..body[open + 1..].find(' ').unwrap()];
-            let mut attributes = attributes_of(&body[open..], tag);
-            attributes.insert("tag".to_string(), tag.to_string());
-            attributes
-        })
-        .collect()
+    tags_with(&body(html), r#"data-slot="header""#)
 }
 
 fn middle_app() -> Element {
@@ -150,9 +134,14 @@ fn only_reached_steps_are_buttons_by_default() {
         }
     }
     let html = render(app);
+    let (buttons, spans) = (all(&html, "button"), all(&html, "span"));
     let tags: Vec<_> = headers(&html)
-        .into_iter()
-        .map(|h| h["tag"].clone())
+        .iter()
+        .map(|h| match (buttons.contains(h), spans.contains(h)) {
+            (true, false) => "button",
+            (false, true) => "span",
+            _ => "?",
+        })
         .collect();
     assert_eq!(tags, ["button", "button", "span"], "{html}");
     for button in all(&html, "button") {
@@ -230,9 +219,7 @@ fn horizontal_content_is_one_region_for_the_current_step() {
     assert!(!body.contains("account body"), "{html}");
     assert!(!body.contains("review body"), "{html}");
 
-    let at = body.find("role=\"region\"").expect("a region");
-    let open = body[..at].rfind('<').unwrap();
-    let region = attributes_of(&body[open..], "div");
+    let region = tag_with(&body, r#"role="region""#);
     assert_eq!(region["id"], "checkout-content-1");
     assert_eq!(region["aria-labelledby"], "checkout-step-1");
 }
@@ -255,11 +242,7 @@ fn vertical_content_collapses_under_each_step() {
     let html = render(app);
     let body = body(&html);
     for index in 0..3 {
-        let at = body
-            .find(&format!("id=\"checkout-content-{index}\""))
-            .unwrap_or_else(|| panic!("region {index} missing:\n{html}"));
-        let open = body[..at].rfind('<').unwrap();
-        let region = attributes_of(&body[open..], "div");
+        let region = tag_with(&body, &format!(r#"id="checkout-content-{index}""#));
         assert_eq!(region["role"], "region");
         assert_eq!(region["aria-labelledby"], format!("checkout-step-{index}"));
     }

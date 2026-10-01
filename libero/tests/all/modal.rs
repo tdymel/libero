@@ -321,3 +321,124 @@ fn a_replaced_opening_ends_its_awaiting_task_with_no_result() {
 
     assert_eq!(dom.in_runtime(|| outcome.peek().clone()), ["first awaited"]);
 }
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Button, Dialog},
+        hooks::{ModalScope, use_modal},
+    };
+
+    #[test]
+    fn resolving_from_inside_a_modal_settles_its_opening() {
+        #[component]
+        fn Opener(outcome: Signal<Option<Option<bool>>>) -> Element {
+            let modal = use_modal(|s: ModalScope<(), bool>| {
+                rsx! {
+                    Dialog { title: "Delete?",
+                        Button { onclick: move |_| s.resolve(true), "Yes" }
+                    }
+                }
+            });
+            use_hook(move || {
+                let mut outcome = outcome;
+                modal
+                    .open()
+                    .onresult(move |result| outcome.set(Some(result)));
+            });
+
+            rsx! {}
+        }
+
+        fn app() -> Element {
+            let outcome = use_signal(|| None);
+
+            rsx! {
+                LiberoProvider { Opener { outcome } }
+                "{outcome:?}"
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        // `use_hook` opens after `use_modal` has already read the empty slot, so
+        // the dialog only exists from the second render on.
+        dom.render_immediate(&mut find);
+        // The last click listener in the dialog, i.e. the confirm button - the
+        // close button in the header registered before it.
+        let confirm = find.click.expect("registered no click listener");
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), confirm);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("Some(Some(true))"), "got {html}");
+        assert!(
+            !html.contains("Delete?"),
+            "the modal should be gone: {html}"
+        );
+    }
+
+    /// The `.await` path of the same opening: the task parks on its waker before
+    /// the click, and only the resolve wakes it.
+    #[test]
+    fn awaiting_an_opening_yields_what_the_modal_resolved() {
+        #[component]
+        fn Opener(outcome: Signal<Option<Option<bool>>>) -> Element {
+            let modal = use_modal(|s: ModalScope<(), bool>| {
+                rsx! {
+                    Dialog { title: "Delete?",
+                        Button { onclick: move |_| s.resolve(true), "Yes" }
+                    }
+                }
+            });
+            use_hook(move || {
+                let mut outcome = outcome;
+                let opening = modal.open();
+                spawn(async move { outcome.set(Some(opening.await)) });
+            });
+
+            rsx! {}
+        }
+
+        fn app() -> Element {
+            let outcome = use_signal(|| None);
+
+            rsx! {
+                LiberoProvider { Opener { outcome } }
+                "{outcome:?}"
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+        dom.process_events();
+        let confirm = find.click.expect("registered no click listener");
+
+        let html = dioxus_ssr::render(&dom);
+        assert!(!html.contains("Some("), "settled before the click: {html}");
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), confirm);
+        dom.process_events();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("Some(Some(true))"), "got {html}");
+        assert!(
+            !html.contains("Delete?"),
+            "the modal should be gone: {html}"
+        );
+    }
+}

@@ -369,3 +369,54 @@ fn a_standard_item_draws_its_icons_around_the_label() {
         "{beta}"
     );
 }
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::body;
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Tree, TreeNode},
+    };
+
+    /// A toggle keeps a branch row's content element, so the listener the first
+    /// render registered still toggles it. It used to swap templates, and the
+    /// second click landed on whatever took over the freed id.
+    #[test]
+    fn a_tree_branch_row_toggles_on_every_click() {
+        fn app() -> Element {
+            let node = |id: &str| TreeNode::new(id, id.to_string());
+            rsx! {
+                LiberoProvider {
+                    for _ in 0..3 {
+                        Tree { aria_label: "t", data: vec![node("a").children(vec![node("a1"), node("a2")])] }
+                    }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        // A tree root's click listener only moves focus, so clicking it is a no-op.
+        assert_eq!(find.clicks.len(), 6, "one per branch row and tree root");
+
+        for expanded in ["true", "false", "true"] {
+            for &row in &find.clicks {
+                dom.runtime()
+                    .handle_event("click", Event::new(click_event(), true), row);
+            }
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            let html = body(&dioxus_ssr::render(&dom));
+            assert_eq!(
+                html.matches(&format!(r#"aria-expanded="{expanded}""#))
+                    .count(),
+                3,
+                "{html}"
+            );
+        }
+    }
+}

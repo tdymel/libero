@@ -1,7 +1,7 @@
 //! `Button`'s `loading` state: the label stays, the loader is silent, and the
 //! button stays focusable.
 
-use crate::common::{attributes_of, body, classes_of, has_rule_for, render};
+use crate::common::{attributes_of, body, classes_of, has_rule_for, render, rules_for};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::Button, theme::Color};
@@ -90,7 +90,8 @@ fn the_children_stay_the_buttons_flex_items() {
         "{html}"
     );
     assert!(!html.contains("text-overflow"), "{html}");
-    assert!(html.contains("max-width:100%;min-width:0;"), "{html}");
+    let rules = rules_for(&html, &attributes_of(&body(&html), "button"));
+    assert!(rules.contains("max-width:100%;min-width:0;"), "{rules}");
 }
 
 /// Todo 662: `icon` gets a slot of its own before the children, kept whole and
@@ -171,7 +172,8 @@ fn an_elevated_button_keeps_the_surface_and_reads_the_elevation_scale() {
 
     assert_eq!(attributes["data-state"], "elevated size-md radius-md");
     assert!(!attributes["style"].contains("--lsx-button-container:"));
-    assert!(html.contains("box-shadow:var(--lsx-shadow-xs)"));
+    let rules = rules_for(&html, &attributes);
+    assert!(rules.contains("box-shadow:var(--lsx-shadow-xs)"), "{rules}");
     assert!(html.contains("--lsx-shadow-xs:"));
 }
 
@@ -355,4 +357,22 @@ fn an_unset_variant_follows_the_theme() {
         })
         .count();
     assert_eq!(outlined, 5, "{html}");
+}
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{LiberoProvider, components::Button};
+
+    fn button_app() -> Element {
+        rsx! { LiberoProvider { Button { "Click" } } }
+    }
+
+    #[test]
+    fn clicking_a_button_runs_its_ripple() {
+        assert_ripple_alternates(button_app);
+    }
 }

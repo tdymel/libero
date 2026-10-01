@@ -165,3 +165,93 @@ fn the_tags_held_at_mount_are_not_announced() {
         "the live region is missing, or spoke at mount:\n{html}"
     );
 }
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{SelectionArgs, TagsField},
+    };
+
+    #[test]
+    fn pressing_a_tag_x_keeps_the_focus_on_the_input() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    TagsField {
+                        label: "Topics",
+                        value: vec!["rust".to_string(), "dioxus".to_string()],
+                        onchange: move |_: Vec<String>| {},
+                    }
+                }
+            }
+        }
+
+        // The default chip's guard, and its wrapper's.
+        assert_every_press_keeps_the_focus(app, 4);
+    }
+
+    /// Todo 70 (c): a caller's own `tag` draws its x without any guard, and the
+    /// field's wrapper supplies it - two chips, two guards, both cancelling.
+    #[test]
+    fn a_custom_tag_gets_the_guard_it_did_not_draw() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    TagsField {
+                        label: "Topics",
+                        value: vec!["rust".to_string(), "dioxus".to_string()],
+                        onchange: move |_: Vec<String>| {},
+                        tag: move |args: SelectionArgs<String>| rsx! {
+                            span { "{args.value}"
+                                button { tabindex: "-1", onclick: move |_| args.remove.call(()), "x" }
+                            }
+                        },
+                    }
+                }
+            }
+        }
+
+        assert_every_press_keeps_the_focus(app, 2);
+    }
+
+    #[test]
+    fn clear_empties_a_tags_field_once() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    TagsField {
+                        label: "Topics",
+                        clearable: true,
+                        value: vec!["rust".to_string(), "dioxus".to_string()],
+                        onchange: move |tags: Vec<String>| CLEARED.with_borrow_mut(|seen| seen.push(tags.len())),
+                    }
+                }
+            }
+        }
+
+        assert_eq!(click_clear(app), Some(vec![0]));
+    }
+
+    #[test]
+    fn an_empty_field_draws_no_clear_button() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    TagsField {
+                        label: "Topics",
+                        clearable: true,
+                        value: Vec::<String>::new(),
+                        onchange: move |_: Vec<String>| {},
+                    }
+                }
+            }
+        }
+
+        assert_eq!(click_clear(app), None);
+    }
+}

@@ -2,6 +2,8 @@
 //! one element's attributes instead of matching against the whole document.
 
 use std::collections::BTreeMap;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use dioxus::prelude::*;
 
@@ -54,10 +56,58 @@ fn strip(html: &str, tag: &str) -> String {
 /// quoted form made every `!contains_key("disabled")` pass unconditionally
 /// (review 7, S1). A valueless attribute is recorded with an empty value.
 pub fn attributes_of(html: &str, tag: &str) -> BTreeMap<String, String> {
+    nth_attributes(html, tag, 0)
+}
+
+/// Every attribute of the `n`th `<tag>` in `html`, counted from 0. `<li`
+/// does not count a `<link>`.
+pub fn nth_attributes(html: &str, tag: &str, n: usize) -> BTreeMap<String, String> {
+    let open = format!("<{tag}");
     let start = html
-        .find(&format!("<{tag}"))
-        .unwrap_or_else(|| panic!("no <{tag}> in the rendered output:\n{html}"));
-    let mut rest = &html[start + format!("<{tag}").len()..];
+        .match_indices(&open)
+        .map(|(at, _)| at)
+        .filter(|at| ends_name(&html[at + open.len()..]))
+        .nth(n)
+        .unwrap_or_else(|| panic!("no <{tag}> number {n} in the rendered output:\n{html}"));
+    parse_tag(&html[start..])
+}
+
+/// The attributes of every tag that carries `marker` - an attribute as SSR
+/// writes it, such as `role="slider"`, or a tag opening, `<input` - in
+/// document order. A marker in text is not a tag and is passed over.
+pub fn tags_with(html: &str, marker: &str) -> Vec<BTreeMap<String, String>> {
+    html.match_indices(marker)
+        .filter_map(|(at, _)| {
+            let start = match marker.starts_with('<') {
+                true if !ends_name(&html[at + marker.len()..]) => return None,
+                true => at,
+                false => html[..at].rfind('<')?,
+            };
+            (!html[start..at].contains('>')).then(|| parse_tag(&html[start..]))
+        })
+        .collect()
+}
+
+/// The attributes of the first tag carrying `marker`, as [`tags_with`] reads it.
+pub fn tag_with(html: &str, marker: &str) -> BTreeMap<String, String> {
+    tags_with(html, marker)
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| panic!("no tag with {marker} in the rendered output:\n{html}"))
+}
+
+/// Whether a tag name ends where `rest` starts: `<li` before `<link` does not.
+fn ends_name(rest: &str) -> bool {
+    rest.starts_with(|c: char| c.is_whitespace() || matches!(c, '>' | '/'))
+}
+
+/// The attributes of the tag `html` starts with.
+fn parse_tag(html: &str) -> BTreeMap<String, String> {
+    let name_end = html
+        .find(|c: char| c.is_whitespace() || matches!(c, '>' | '/'))
+        .unwrap_or(html.len());
+    let tag = &html[1..name_end];
+    let mut rest = &html[name_end..];
     let mut attributes = BTreeMap::new();
 
     loop {
@@ -113,6 +163,52 @@ pub fn classes_of(html: &str, tag: &str) -> Vec<String> {
 /// stylesheet registry and the element disagree.
 pub fn has_rule_for(html: &str, class: &str) -> bool {
     html.contains(&format!(".{class}"))
+}
+
+/// Every CSS rule whose selector names one of `element`'s classes, written
+/// `selector{declarations}`, so a declaration is asserted on that element only.
+pub fn rules_for(html: &str, element: &BTreeMap<String, String>) -> String {
+    let classes = element.get("class").map_or("", String::as_str);
+    let mut rules = String::new();
+    for class in classes.split_whitespace() {
+        let name = format!(".{class}");
+        for (at, _) in html.match_indices(&name) {
+            let after = &html[at + name.len()..];
+            // `.lsx-a` is not `.lsx-ab`, and a selector runs to its `{`.
+            let longer = after.starts_with(|c: char| c.is_alphanumeric() || matches!(c, '-' | '_'));
+            let Some(open) = after.find('{') else {
+                continue;
+            };
+            if longer || after[..open].contains(['}', ';', '<']) {
+                continue;
+            }
+            let start = html[..at].rfind(['{', '}', '>']).map_or(0, |i| i + 1);
+            let end = at + name.len() + open + after[open..].find('}').unwrap() + 1;
+            rules.push_str(&html[start..end]);
+        }
+    }
+    rules
+}
+
+/// Polls `dom` until `done` holds for its markup or `limit` runs out, for a
+/// test on a real timer. `process_events` drains the task a timer delivers
+/// through, and `render_immediate` applies what it wrote.
+pub fn drive_until(dom: &mut VirtualDom, limit: Duration, done: impl Fn(&str) -> bool) -> String {
+    let start = Instant::now();
+    loop {
+        dom.process_events();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = body(&dioxus_ssr::render(dom));
+        if done(&html) || start.elapsed() > limit {
+            return html;
+        }
+        thread::sleep(Duration::from_millis(2));
+    }
+}
+
+/// One pass of [`drive_until`]: what is pending now is applied, and nothing waits.
+pub fn drive_once(dom: &mut VirtualDom) -> String {
+    drive_until(dom, Duration::ZERO, |_| true)
 }
 
 /// A picked file with a name and nothing to read, for drawing a `FileField`'s
@@ -194,4 +290,26 @@ fn attributes_of_reads_a_bare_boolean() {
         "{html}"
     );
     assert_eq!(attributes["aria-disabled"], "true", "{html}");
+}
+
+#[test]
+fn the_pickers_count_whole_tags_and_skip_text() {
+    let html =
+        r#"<link rel="x"><li id="a">role="slider"</li><li id="b" role="slider"><p role="slider"/>"#;
+
+    assert_eq!(nth_attributes(html, "li", 0)["id"], "a");
+    assert_eq!(nth_attributes(html, "li", 1)["id"], "b");
+    let sliders = tags_with(html, r#"role="slider""#);
+    assert_eq!(sliders.len(), 2, "{sliders:?}");
+    assert_eq!(sliders[0]["id"], "b");
+    assert!(!sliders[1].contains_key("id"), "{sliders:?}");
+    assert_eq!(tags_with(html, "<li").len(), 2);
+}
+
+#[test]
+fn rules_for_reads_only_the_rules_naming_the_elements_class() {
+    let html = r#"<style>.a{color:red;}.ab{width:0;}@media (x){.a[data-state~="on"]{gap:0;}}.b{top:0;}</style><p class="a">"#;
+
+    let rules = rules_for(html, &attributes_of(html, "p"));
+    assert_eq!(rules, r#".a{color:red;}.a[data-state~="on"]{gap:0;}"#);
 }

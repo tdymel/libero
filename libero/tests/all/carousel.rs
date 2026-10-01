@@ -1,6 +1,6 @@
 //! `Carousel`'s rendered contract.
 
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, render, tag_with};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::Carousel};
@@ -29,24 +29,13 @@ fn the_autoplay_toggle_has_a_fixed_name() {
     assert!(!html.contains("Play slideshow"), "{html}");
 }
 
-/// The opening tag of the element whose markup contains `needle`, so an
-/// attribute can be asserted on *that* element rather than anywhere in the page.
-fn open_tag<'a>(html: &'a str, needle: &str) -> &'a str {
-    let at = html
-        .find(needle)
-        .unwrap_or_else(|| panic!("no {needle} in {html}"));
-    let start = html[..at].rfind('<').expect("an opening tag");
-    let end = at + html[at..].find('>').expect("an unterminated tag");
-    &html[start..=end]
-}
-
 /// The track's id. The track is the one element described by the status, so
 /// its tag is the one carrying `aria-describedby`.
 fn track_id_of(html: &str) -> String {
-    open_tag(html, "aria-describedby")
-        .split_once(r#" id=""#)
-        .map(|(_, rest)| rest.split('"').next().unwrap_or_default().to_string())
+    tag_with(html, "aria-describedby")
+        .get("id")
         .expect("the track carries an id")
+        .clone()
 }
 
 fn six() -> Vec<Element> {
@@ -134,12 +123,12 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
         "{html}"
     );
     assert!(
-        !open_tag(&html, r#"aria-label="3 of 6""#).contains("inert"),
+        !tag_with(&html, r#"aria-label="3 of 6""#).contains_key("inert"),
         "{html}"
     );
     for n in 4..=6 {
-        let slide = open_tag(&html, &format!(r#"aria-label="{n} of 6""#));
-        assert!(slide.contains("inert"), "{slide}");
+        let slide = tag_with(&html, &format!(r#"aria-label="{n} of 6""#));
+        assert!(slide.contains_key("inert"), "{slide:?}");
     }
 
     // The controls name the element they scroll, and the track is the tab stop.
@@ -153,16 +142,16 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
     );
     // On the track's own tag: the current dot is a tab stop too, so a
     // page-wide `tabindex="0"` stayed green with the track taken out.
-    let track = open_tag(&html, &format!(r#"id="{track_id}""#));
-    assert!(track.contains(r#"tabindex="0""#), "{track}");
+    let track = tag_with(&html, &format!(r#"id="{track_id}""#));
+    assert_eq!(track["tabindex"], "0", "{track:?}");
     // A tab stop with a role and a name, described by where it is.
-    let track = attributes_of(track, "div");
     assert_eq!(track["role"], "group");
     assert_eq!(track["aria-label"], "Photos");
-    let status = open_tag(&html, r#"role="status""#);
-    assert!(
-        status.contains(&format!(r#"id="{}""#, track["aria-describedby"])),
-        "{status}"
+    let status = tag_with(&html, r#"role="status""#);
+    assert_eq!(
+        status.get("id"),
+        Some(&track["aria-describedby"]),
+        "{status:?}"
     );
     // The track and the current dot, and nothing else.
     assert_eq!(html.matches(r#"tabindex="0""#).count(), 2, "{html}");
@@ -170,7 +159,7 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
     // Six slides three-up stop at index 3, so four dots, not six, in a named
     // group (todo 549).
     assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 4);
-    let dots = attributes_of(open_tag(&html, r#"aria-label="Choose slide""#), "div");
+    let dots = tag_with(&html, r#"aria-label="Choose slide""#);
     assert_eq!(dots["role"], "group");
     // At the first slide the previous control is disabled but keeps its place
     // in the tab order.
@@ -209,12 +198,13 @@ fn an_index_outside_the_reachable_window_is_pulled_into_it() {
     // The track is the tab stop, and so is the current dot - on each one's
     // own tag. The track's alone kept a page-wide `tabindex="0"` green with
     // no tab stop among the dots, the very defect this test is named for.
-    let track = open_tag(&html, &format!(r#"id="{}""#, track_id_of(&html)));
-    assert!(track.contains(r#"tabindex="0""#), "{track}");
-    let dot = open_tag(&html, r#"aria-current="true""#);
-    assert!(
-        dot.contains(r#"tabindex="0""#),
-        "no tab stop in the strip: {dot}"
+    let track = tag_with(&html, &format!(r#"id="{}""#, track_id_of(&html)));
+    assert_eq!(track["tabindex"], "0", "{track:?}");
+    let dot = tag_with(&html, r#"aria-current="true""#);
+    assert_eq!(
+        dot.get("tabindex").map(String::as_str),
+        Some("0"),
+        "no tab stop in the strip: {dot:?}"
     );
     // Slide 1 is the one actually centred at rest, so it is the current one.
     let slide_one = html.find("slide 1").expect("slide 1");
@@ -367,7 +357,7 @@ fn a_looping_carousel_clones_its_ends_and_hides_the_copies() {
     // up, every position but that one is offscreen.
     assert_eq!(html.matches("inert").count(), 5, "{html}");
     assert!(
-        !open_tag(&html, r#"aria-label="1 of 4""#).contains("inert"),
+        !tag_with(&html, r#"aria-label="1 of 4""#).contains_key("inert"),
         "{html}"
     );
     assert_eq!(html.matches(r#"aria-label="1 of 4""#).count(), 1);
@@ -412,10 +402,10 @@ fn a_showing_clone_is_live_and_its_twin_hidden() {
         6 + html.matches("<svg").count()
     );
     // The live "5 of 5" is the leading clone, drawn left of slide 1.
-    let live = open_tag(&html, r#"aria-label="5 of 5""#);
+    let live = tag_with(&html, r#"aria-label="5 of 5""#);
     assert!(
-        !live.contains("inert") && !live.contains("aria-hidden"),
-        "{live}"
+        !live.contains_key("inert") && !live.contains_key("aria-hidden"),
+        "{live:?}"
     );
     assert!(
         html.find(r#"aria-label="5 of 5""#) < html.find(r#"aria-label="1 of 5""#),
@@ -511,7 +501,58 @@ fn a_carousel_centres_its_slides_by_default() {
 
     let html = body(&render(app));
 
-    let current = open_tag(&html, r#"data-current="true""#);
-    let after = &html[html.find(current).unwrap() + current.len()..];
+    let current = html
+        .find(r#"data-current="true""#)
+        .expect("a current slide");
+    let after = &html[current + html[current..].find('>').unwrap() + 1..];
     assert!(after.starts_with("<div>slide 1</div>"), "{html}");
+}
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::tags_with;
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{LiberoProvider, components::Carousel};
+
+    /// A control click reaches every scope that reads the index: the status, both
+    /// controls, and `data-current`/`inert` on the two slides that swap.
+    #[test]
+    fn a_carousel_control_click_redraws_every_reader_of_the_index() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Carousel {
+                        aria_label: "c",
+                        controls: true,
+                        indicators: false,
+                        slides: (0..3).map(|i| rsx! { div { "slide {i}" } }).collect(),
+                    }
+                }
+            }
+        }
+
+        // The last click listener is the next control.
+        let (before, after) = click_the_last_listener(app);
+        let slide = |html: &str, n: usize| {
+            let slides = tags_with(html, &format!(r#"aria-label="{n} of 3""#));
+            assert_eq!(slides.len(), 1, "{html}");
+            slides[0].clone()
+        };
+        for (html, current, gone) in [(&before, 1, 2), (&after, 2, 1)] {
+            assert!(html.contains(&format!("Slide {current} of 3")), "{html}");
+            let (current, gone) = (slide(html, current), slide(html, gone));
+            assert_eq!(
+                current.get("data-current").map(String::as_str),
+                Some("true"),
+                "{html}"
+            );
+            assert!(!current.contains_key("inert"), "{html}");
+            assert!(!gone.contains_key("data-current"), "{html}");
+            assert!(gone.contains_key("inert"), "{html}");
+        }
+        assert_eq!(before.matches(r#"aria-disabled="true""#).count(), 1);
+        assert_eq!(after.matches(r#"aria-disabled="true""#).count(), 0);
+    }
 }

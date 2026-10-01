@@ -1,4 +1,4 @@
-use crate::common::{attributes_of, body, has_rule_for, render};
+use crate::common::{attributes_of, body, nth_attributes, render, rules_for};
 
 use dioxus::prelude::*;
 use libero::{
@@ -6,17 +6,6 @@ use libero::{
     components::{Grid, GridArea, GridItem, GridSpan, GridTemplate, GridZone},
     theme::{Size, responsive},
 };
-
-/// `attributes_of` reads the first matching tag, and a grid nests three deep.
-fn nth_div(html: &str, skip: usize) -> String {
-    let body = body(html);
-    let mut rest = body.as_str();
-    for _ in 0..skip {
-        let start = rest.find("<div").expect("another nested div") + 4;
-        rest = &rest[start..];
-    }
-    rest[rest.find("<div").expect("a div")..].to_string()
-}
 
 #[derive(Clone, Copy, PartialEq)]
 enum TestArea {
@@ -76,7 +65,7 @@ fn a_zone_carries_its_area_name_and_its_packing_states() {
     }
 
     let html = render(app);
-    let zone = attributes_of(&nth_div(&html, 1), "div");
+    let zone = nth_attributes(&body(&html), "div", 1);
 
     assert!(
         zone.get("style")
@@ -99,7 +88,7 @@ fn a_zone_works_without_a_grid_and_then_names_no_area() {
     }
 
     let html = render(app);
-    let zone = attributes_of(&nth_div(&html, 0), "div");
+    let zone = nth_attributes(&body(&html), "div", 0);
 
     // Every zone publishes its resolved gap, but only one naming an area
     // declares the area var.
@@ -120,7 +109,7 @@ fn an_item_writes_the_grid_item_token_the_zone_selects_on() {
     }
 
     let html = render(app);
-    let item = attributes_of(&nth_div(&html, 1), "div");
+    let item = nth_attributes(&body(&html), "div", 1);
     let state = item.get("data-state").expect("the item states");
 
     assert!(state.contains("grid-item"));
@@ -144,7 +133,7 @@ fn a_responsive_span_queries_its_zone_not_the_viewport() {
     }
 
     let html = render(app);
-    let zone = attributes_of(&nth_div(&html, 1), "div");
+    let zone = nth_attributes(&body(&html), "div", 1);
 
     // The zone names itself so an item has something to query.
     assert!(
@@ -155,7 +144,7 @@ fn a_responsive_span_queries_its_zone_not_the_viewport() {
 
     // The base span still rides the recycled framework class; only the
     // breakpoint needs a rule of its own, and it is a container query.
-    let item = attributes_of(&nth_div(&html, 2), "div");
+    let item = nth_attributes(&body(&html), "div", 2);
     assert!(
         item.get("data-state")
             .expect("the item states")
@@ -194,20 +183,24 @@ fn only_a_zone_filling_an_area_is_a_query_container() {
 
     let loose = render(standalone);
     assert!(
-        !attributes_of(&nth_div(&loose, 0), "div")
+        !nth_attributes(&body(&loose), "div", 0)
             .get("data-state")
             .is_some_and(|state| state.contains("container"))
     );
 
     let html = render(placed);
     assert!(
-        attributes_of(&nth_div(&html, 1), "div")
+        nth_attributes(&body(&html), "div", 1)
             .get("data-state")
             .expect("the zone states")
             .contains("container")
     );
-    assert!(has_rule_for(&html, "lsx-",));
-    assert!(html.contains("[data-state~=\"container\"]{container-type:inline-size;}"));
+    let zone = nth_attributes(&body(&html), "div", 1);
+    assert!(
+        rules_for(&html, &zone)
+            .contains("[data-state~=\"container\"]{container-type:inline-size;}"),
+        "{zone:?}"
+    );
 }
 
 #[test]
@@ -268,7 +261,7 @@ fn an_item_can_span_rows_of_its_own() {
     }
 
     let html = render(app);
-    let item = attributes_of(&nth_div(&html, 1), "div");
+    let item = nth_attributes(&body(&html), "div", 1);
 
     assert!(
         item.get("data-state")
@@ -297,7 +290,7 @@ fn a_masonry_zone_drops_an_items_own_row_span() {
     }
 
     let html = render(app);
-    let item = attributes_of(&nth_div(&html, 1), "div");
+    let item = nth_attributes(&body(&html), "div", 1);
 
     assert!(
         !item
@@ -328,7 +321,7 @@ fn a_zones_gap_reaches_the_vertical_spacing_masonry_actually_uses() {
     }
 
     let html = render(app);
-    let zone = attributes_of(&nth_div(&html, 0), "div");
+    let zone = nth_attributes(&body(&html), "div", 0);
 
     assert!(
         zone.get("style")
@@ -351,8 +344,12 @@ fn a_zone_can_shrink_below_the_width_its_twelve_tracks_would_demand() {
     }
 
     let html = render(app);
+    let zone = rules_for(&html, &nth_attributes(&body(&html), "div", 0));
 
-    assert!(html.contains("min-width:0"));
-    assert!(html.contains("column-gap:min(var(--lsx-grid-zone-gap), 4%)"));
-    assert!(html.contains("row-gap:var(--lsx-grid-zone-gap)"));
+    assert!(zone.contains("min-width:0"), "{zone}");
+    assert!(
+        zone.contains("column-gap:min(var(--lsx-grid-zone-gap), 4%)"),
+        "{zone}"
+    );
+    assert!(zone.contains("row-gap:var(--lsx-grid-zone-gap)"), "{zone}");
 }

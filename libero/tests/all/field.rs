@@ -2,7 +2,7 @@
 //! wiring that ties them to it. `TextField` carries most of the cases;
 //! `NativeSelect` covers what changed when it was ported off its wrapping `<label>`.
 
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, nth_attributes, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -51,8 +51,10 @@ fn every_slot_renders_and_the_control_names_all_three_descriptions() {
     assert!(order(r#"data-slot="helper""#) < order(r#"data-slot="status""#));
 
     // `aria-required` carries it to AT, so the asterisk is hidden from it.
-    assert!(body.contains(r#"data-slot="required""#));
-    assert!(body.contains(r#"aria-hidden="true""#));
+    assert_eq!(
+        tag_with(&body, r#"data-slot="required""#)["aria-hidden"],
+        "true"
+    );
 }
 
 /// A caption or frame slot was drawn. The label, frame and control always carry one.
@@ -897,7 +899,7 @@ fn a_radio_group_shares_one_name_and_one_tab_stop() {
     let id = label["id"].trim_end_matches("-label").to_string();
 
     // The wrapper is the first div; the group itself is the second.
-    let group_attributes = attributes_of(&body[body.find("<div").unwrap() + 4..], "div");
+    let group_attributes = nth_attributes(&body, "div", 1);
     assert_eq!(group_attributes["role"], "radiogroup");
     assert_eq!(group_attributes["aria-labelledby"], format!("{id}-label"));
     assert_eq!(group_attributes["aria-describedby"], format!("{id}-helper"));
@@ -919,9 +921,9 @@ fn a_radio_group_shares_one_name_and_one_tab_stop() {
     assert!(body.contains(r#"data-radio-index="1""#), "{body}");
 
     // Todo 20: each radio posts `Options::value`, not the browser's `on`.
-    let values: Vec<String> = body
-        .match_indices("<input")
-        .map(|(at, _)| attributes_of(&body[at..], "input")["value"].clone())
+    let values: Vec<String> = tags_with(&body, "<input")
+        .into_iter()
+        .map(|input| input["value"].clone())
         .collect();
     assert_eq!(values, ["Free", "Pro", "Team"]);
 }
@@ -957,17 +959,20 @@ fn a_radio_group_disables_the_option_its_item_flagged() {
 
     // Unset lists the enum's own three options, none of them off.
     let unset = body(&render(unset));
-    assert_eq!(unset.matches("<input").count(), 3);
-    assert_eq!(unset.matches("disabled").count(), 0, "{unset}");
+    let inputs = tags_with(&unset, "<input");
+    assert_eq!(inputs.len(), 3, "{unset}");
+    assert!(
+        inputs.iter().all(|input| !input.contains_key("disabled")),
+        "{inputs:?}"
+    );
 
     // Only the flagged option is refused, and the selected one keeps the one
     // tab stop the group has.
     let flagged = body(&render(flagged));
     assert_eq!(flagged.matches("<input").count(), 3);
-    let team = &flagged[flagged
-        .find(r#"data-radio-index="2""#)
-        .expect("the third radio")..];
-    assert!(team[..team.find('>').expect("an unterminated tag")].contains("disabled"));
+    let team = tags_with(&flagged, r#"data-radio-index="2""#);
+    assert_eq!(team.len(), 1, "{flagged}");
+    assert!(team[0].contains_key("disabled"), "{team:?}");
     assert_eq!(flagged.matches(r#"tabindex="0""#).count(), 1, "{flagged}");
 }
 
@@ -1020,7 +1025,7 @@ fn a_segmented_control_wears_the_field_around_its_radiogroup() {
     let id = label["id"].trim_end_matches("-label").to_string();
 
     // The wrapper is the first div; the group itself is the second.
-    let group = attributes_of(&body[body.find("<div").unwrap() + 4..], "div");
+    let group = nth_attributes(&body, "div", 1);
     assert_eq!(group["role"], "radiogroup");
     assert_eq!(group["aria-labelledby"], format!("{id}-label"));
     assert!(
@@ -1034,13 +1039,10 @@ fn a_segmented_control_wears_the_field_around_its_radiogroup() {
     assert_eq!(group["aria-invalid"], "true");
     assert_eq!(group["aria-required"], "true");
 
-    let radios: Vec<&str> = body
-        .match_indices("<input")
-        .map(|(at, _)| &body[at..at + body[at..].find('>').unwrap()])
-        .collect();
+    let radios = tags_with(&body, "<input");
     assert_eq!(radios.len(), 3, "{body}");
     assert!(
-        radios.iter().all(|radio| radio.contains("disabled")),
+        radios.iter().all(|radio| radio.contains_key("disabled")),
         "{radios:?}"
     );
 }
@@ -1084,7 +1086,7 @@ fn a_segmented_control_contains_its_hidden_radios() {
 
     let html = render(app);
     let body = body(&html);
-    let group = attributes_of(&body[body.find("<div").unwrap() + 4..], "div");
+    let group = nth_attributes(&body, "div", 1);
     assert_eq!(group["role"], "radiogroup");
 
     let class = group["class"]
@@ -1594,5 +1596,529 @@ mod value_moves {
             "stale selection:\n{html}"
         );
         assert!(!html.contains(r#"value="Small" selected"#), "{html}");
+    }
+}
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::{attributes_of, body};
+    use crate::dispatch::*;
+    use dioxus::core::ElementId;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{
+            Button, ColorCode, ColorField, Form, NumberField, PasswordField, PinField, Rule,
+            SliderChangeEvent, TextField, not_empty, use_form,
+        },
+    };
+
+    use std::rc::Rc;
+
+    /// The reveal button flips the input's `type` and its `aria-pressed`, both ways,
+    /// under one static name.
+    #[test]
+    fn clicking_the_reveal_button_toggles_the_password() {
+        fn app() -> Element {
+            rsx! { LiberoProvider { PasswordField { label: "Password" } } }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let reveal = find.click.expect("registered no click listener");
+        let state = |dom: &VirtualDom| {
+            let html = dioxus_ssr::render(dom);
+            let button = attributes_of(&html, "button");
+            (
+                attributes_of(&html, "input")["type"].clone(),
+                button["aria-label"].clone(),
+                button["aria-pressed"].clone(),
+            )
+        };
+        let expect =
+            |kind: &str, pressed: &str| (kind.into(), "Show password".into(), pressed.into());
+
+        assert_eq!(state(&dom), expect("password", "false"));
+        for (kind, pressed) in [("text", "true"), ("password", "false")] {
+            dom.runtime()
+                .handle_event("click", Event::new(click_event(), true), reveal);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            assert_eq!(state(&dom), expect(kind, pressed));
+        }
+    }
+
+    /// Every submit and every reset of the form hides a revealed secret again.
+    #[test]
+    fn a_submit_or_a_reset_hides_the_revealed_password() {
+        fn app() -> Element {
+            rsx! { LiberoProvider { Form::<()> { PasswordField { label: "Password" } } } }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let reveal = find.click.expect("registered no click listener");
+        let submit = find.submit.expect("registered no submit listener");
+        let reset = find.reset.expect("registered no reset listener");
+        let kind =
+            |dom: &VirtualDom| attributes_of(&dioxus_ssr::render(dom), "input")["type"].clone();
+
+        // Twice through: the second submit hides it as the first did.
+        for (name, target) in [("submit", submit), ("submit", submit), ("reset", reset)] {
+            dom.runtime()
+                .handle_event("click", Event::new(click_event(), true), reveal);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            assert_eq!(kind(&dom), "text", "revealed before the {name}");
+            dom.runtime()
+                .handle_event(name, Event::new(input_event(""), true), target);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            assert_eq!(kind(&dom), "password", "hidden by the {name}");
+        }
+    }
+
+    /// The same defect on the field the todo names first: a `TextField` with rules,
+    /// no `value` and no binding. The browser keeps its text, so only the rules
+    /// need what was typed - the `value` attribute stays off it.
+    #[test]
+    fn typing_into_an_uncontrolled_text_field_satisfies_its_own_rules() {
+        fn app() -> Element {
+            let handle = use_form();
+            let valid = use_signal(|| true);
+
+            rsx! {
+                LiberoProvider {
+                    Button {
+                        id: "submit",
+                        onclick: move |_| {
+                            let mut valid = valid;
+                            valid.set(handle.validate());
+                        },
+                        "Submit"
+                    }
+                    Form::<()> { form: handle,
+                        TextField {
+                            label: "Email",
+                            validate: (|text: &String| not_empty(text)).error("Enter your email"),
+                        }
+                    }
+                    "valid: {valid}"
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let submit = find.element("click", "id", "submit");
+        let field = find.input.expect("registered no input listener");
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), submit);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        assert!(
+            dioxus_ssr::render(&dom).contains("valid: false"),
+            "an empty required field must block the submit"
+        );
+
+        dom.runtime().handle_event(
+            "input",
+            Event::new(input_event("tom@libero.dev"), true),
+            field,
+        );
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        let html = dioxus_ssr::render(&dom);
+        assert!(
+            !attributes_of(&body(&html), "input").contains_key("value"),
+            "the field is still uncontrolled - the browser owns the text"
+        );
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), submit);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        assert!(
+            dioxus_ssr::render(&dom).contains("valid: true"),
+            "the rules must judge what was typed, not the default"
+        );
+    }
+
+    thread_local! {
+        static PIN_EDITS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    /// The native `readonly` stops typing into a cell, but Backspace and Delete
+    /// are answered by the field itself and used to clear one anyway - so a pin
+    /// that "can be read and copied, but not changed" could be erased (todo 209).
+    #[test]
+    fn a_read_only_pin_field_answers_no_key_that_edits() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    PinField {
+                        label: "Code",
+                        length: 4,
+                        value: "1234",
+                        readonly: true,
+                        oninput: move |next: String| {
+                            PIN_EDITS.with_borrow_mut(|edits| edits.push(next));
+                        },
+                    }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        PIN_EDITS.with_borrow_mut(Vec::clear);
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let second = find.element("keydown", "aria-label", "Character 2 of 4");
+
+        for key in [Key::Backspace, Key::Delete] {
+            dom.runtime()
+                .handle_event("keydown", Event::new(key_event(key), true), second);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+
+        assert_eq!(PIN_EDITS.with_borrow(Clone::clone), Vec::<String>::new());
+    }
+
+    /// A cell whose character did not change skips its redraw, so its handlers
+    /// must still edit the pin as it is now, not as it was when the cell drew.
+    #[test]
+    fn a_skipped_pin_cell_edits_the_current_pin() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    PinField {
+                        length: 4,
+                        oninput: move |next: String| {
+                            PIN_EDITS.with_borrow_mut(|edits| edits.push(next));
+                        },
+                    }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        PIN_EDITS.with_borrow_mut(Vec::clear);
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let last = find.input.expect("registered no input listener");
+
+        // The last cell stays empty: a pin has no holes, so each digit lands first.
+        for digit in ["1", "2"] {
+            dom.runtime()
+                .handle_event("input", Event::new(input_event(digit), true), last);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+
+        assert_eq!(PIN_EDITS.with_borrow(Clone::clone), ["1", "12"]);
+    }
+
+    /// `Form` took its `value` store once, so a parent that handed over a
+    /// different one - another record in an edit view - kept fields reading and
+    /// writing the old store while the form's own rules read the new one (todo
+    /// 190). `Store`'s equality is its identity, so the swap is recognisable.
+    #[test]
+    fn swapping_the_forms_value_swaps_what_its_fields_read() {
+        fn app() -> Element {
+            let first = use_store(|| crate::validation::Order {
+                name: "Tom".into(),
+                ..Default::default()
+            });
+            let second = use_store(|| crate::validation::Order {
+                name: "Ada".into(),
+                ..Default::default()
+            });
+            let mut second_record = use_signal(|| false);
+
+            rsx! {
+                LiberoProvider {
+                    Button { id: "next", onclick: move |_| second_record.toggle(), "Next record" }
+                    Form {
+                        value: if second_record() { second } else { first },
+                        TextField { name: crate::validation::Order::FIELDS.name() }
+                    }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let next = find.element("click", "id", "next");
+
+        let value = |dom: &VirtualDom| {
+            attributes_of(&body(&dioxus_ssr::render(dom)), "input")
+                .get("value")
+                .cloned()
+        };
+
+        assert_eq!(value(&dom).as_deref(), Some("Tom"));
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), next);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        assert_eq!(value(&dom).as_deref(), Some("Ada"));
+    }
+
+    fn readonly_number() -> Element {
+        rsx! {
+            LiberoProvider {
+                NumberField {
+                    label: "Quantity",
+                    value: 3,
+                    steppers: true,
+                    readonly: READ_ONLY.get(),
+                    onchange: move |next: Option<i32>| heard(next.unwrap()),
+                }
+            }
+        }
+    }
+
+    /// Todo 306 (review 3 C2): the native `readonly` stops typing, but the arrows
+    /// and the steppers are the field's own, so they are refused in Rust.
+    #[test]
+    fn a_read_only_number_field_does_not_step() {
+        let arrow = || key_event(Key::ArrowUp);
+        let (stepped, _) = send(readonly_number, false, "keydown", last_keydown, arrow);
+        assert_eq!(stepped, ["4"], "the arrow is the control");
+        let (heard, html) = send(readonly_number, true, "keydown", last_keydown, arrow);
+        assert_eq!(heard, Vec::<String>::new());
+
+        let input = attributes_of(&body(&html), "input");
+        assert_eq!(
+            input.get("readonly").map(String::as_str),
+            Some("true"),
+            "{input:?}"
+        );
+        assert!(!input.contains_key("disabled"), "{input:?}");
+
+        let (stepped, _) = send(readonly_number, false, "click", last_click, click_event);
+        assert_eq!(stepped, ["4"], "the stepper is the control");
+        let (heard, _) = send(readonly_number, true, "click", last_click, click_event);
+        assert_eq!(heard, Vec::<String>::new());
+    }
+
+    /// Todo 29: the steppers skip the render a press causes, so their handler must
+    /// still step from the value the field holds now, not the one they drew with.
+    #[test]
+    fn a_stepper_steps_from_the_value_after_the_last_press() {
+        fn app() -> Element {
+            let mut value = use_signal(|| 3);
+            rsx! {
+                LiberoProvider {
+                    NumberField {
+                        value: value(),
+                        steppers: true,
+                        onchange: move |next: Option<i32>| {
+                            heard(next.unwrap());
+                            value.set(next.unwrap());
+                        },
+                    }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        HEARD.with_borrow_mut(Vec::clear);
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let mut send = |name: &str, target: ElementId, data: Rc<dyn std::any::Any>| {
+            dom.runtime()
+                .handle_event(name, Event::new(data, true), target);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        };
+
+        let (minus, plus) = (find.first_click.unwrap(), last_click(&find));
+        send("click", plus, click_event());
+        send("click", plus, click_event());
+        send("keydown", last_keydown(&find), key_event(Key::ArrowUp));
+        send("click", minus, click_event());
+
+        assert_eq!(HEARD.with_borrow(Clone::clone), ["4", "5", "6", "5"]);
+        assert_eq!(
+            attributes_of(&body(&dioxus_ssr::render(&dom)), "input")["value"],
+            "5"
+        );
+    }
+
+    /// A float field reads the formats' separator and `.` alike; under English
+    /// `1,5` is not a number.
+    #[test]
+    fn a_float_field_parses_the_formats_decimal_separator() {
+        use libero::localization::Formats;
+        thread_local! {
+            static FORMATS: std::cell::Cell<&'static Formats> = const { std::cell::Cell::new(&Formats::AMERICAN) };
+        }
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider { formats: FORMATS.get(),
+                    NumberField {
+                        value: None::<f64>,
+                        onchange: move |next: Option<f64>| heard(next),
+                    }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        for (formats, typed, expected) in [
+            (
+                &Formats::GERMAN,
+                ["1,5", "2.5"],
+                vec!["Some(1.5)", "Some(2.5)"],
+            ),
+            (&Formats::AMERICAN, ["1,5", "2.5"], vec!["Some(2.5)"]),
+        ] {
+            FORMATS.set(formats);
+            HEARD.with_borrow_mut(Vec::clear);
+            let mut dom = VirtualDom::new(app);
+            let mut find = FindClickListener::default();
+            dom.rebuild(&mut find);
+            let field = find.input.expect("registered no input listener");
+            for text in typed {
+                dom.runtime()
+                    .handle_event("input", Event::new(input_event(text), true), field);
+                dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            }
+            assert_eq!(HEARD.with_borrow(Clone::clone), expected);
+        }
+    }
+
+    fn readonly_color() -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorField {
+                    label: "Accent",
+                    value: "#ff0000".parse::<ColorCode>().unwrap(),
+                    readonly: READ_ONLY.get(),
+                    oninput: move |event: SliderChangeEvent<ColorCode>| {
+                        heard(match event {
+                            SliderChangeEvent::Start(_) => "Start",
+                            SliderChangeEvent::Change(_) => "Change",
+                            SliderChangeEvent::End(_) => "End",
+                        })
+                    },
+                }
+            }
+        }
+    }
+
+    /// Todo 306: the text takes the native `readonly`, and the dropdown - the
+    /// other editor - refuses to open, as every dropdown field's does.
+    #[test]
+    fn a_read_only_color_field_opens_no_dropdown() {
+        let expanded = |html: &str| {
+            attributes_of(&body(html), "input")
+                .get("aria-expanded")
+                .cloned()
+        };
+        let (_, html) = send(readonly_color, false, "click", last_click, click_event);
+        assert_eq!(
+            expanded(&html).as_deref(),
+            Some("true"),
+            "the click is the control"
+        );
+        let (_, html) = send(readonly_color, true, "click", last_click, click_event);
+        assert_eq!(expanded(&html).as_deref(), Some("false"));
+        let input = attributes_of(&body(&html), "input");
+        assert_eq!(
+            input.get("readonly").map(String::as_str),
+            Some("true"),
+            "{html}"
+        );
+    }
+
+    /// Todo 291: typed text that parses is settled the moment it lands, so it
+    /// emits `Change` then `End`, like a key press or a swatch in the dropdown - a
+    /// caller committing on `End` used to miss every typed color.
+    #[test]
+    fn typing_a_color_emits_change_then_end() {
+        let (heard, _) = send(readonly_color, false, "input", input_listener, || {
+            input_event("#00ff00")
+        });
+        assert_eq!(heard, ["\"Change\"", "\"End\""]);
+    }
+
+    thread_local! {
+        static PIN_COMPLETIONS: std::cell::RefCell<u32> = const { std::cell::RefCell::new(0) };
+    }
+
+    /// A parent resetting the controlled `value` between attempts - "wrong code,
+    /// try again" - re-arms `oncomplete`, so a pasted retry completes (todo 413).
+    #[test]
+    fn oncomplete_fires_again_after_a_parent_resets_the_controlled_value() {
+        fn app() -> Element {
+            let mut pin = use_signal(String::new);
+
+            rsx! {
+                LiberoProvider {
+                    Button { id: "reset", onclick: move |_| pin.set(String::new()), "Reset" }
+                    PinField {
+                        label: "Code",
+                        length: 4,
+                        value: pin(),
+                        oninput: move |next: String| pin.set(next),
+                        oncomplete: move |_: String| {
+                            PIN_COMPLETIONS.with_borrow_mut(|count| *count += 1);
+                        },
+                    }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        PIN_COMPLETIONS.with_borrow_mut(|count| *count = 0);
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let cells = find.keydown.clone();
+        assert_eq!(cells.len(), 4, "expected one cell per pin position");
+        let reset = find.element("click", "id", "reset");
+
+        let type_pin = |dom: &mut VirtualDom, digits: &str| {
+            for (cell, digit) in cells.iter().zip(digits.chars()) {
+                dom.runtime().handle_event(
+                    "input",
+                    Event::new(input_event(&digit.to_string()), true),
+                    *cell,
+                );
+                dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            }
+        };
+
+        type_pin(&mut dom, "1234");
+        assert_eq!(
+            PIN_COMPLETIONS.with_borrow(|count| *count),
+            1,
+            "the first full pin must complete"
+        );
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), reset);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        // An OTP autofill (or a paste) lands the whole code in one `input` event
+        // on the first cell, rather than one keystroke per cell.
+        dom.runtime()
+            .handle_event("input", Event::new(input_event("5678"), true), cells[0]);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        assert_eq!(
+            PIN_COMPLETIONS.with_borrow(|count| *count),
+            2,
+            "a pin pasted after the parent reset it must complete again"
+        );
     }
 }

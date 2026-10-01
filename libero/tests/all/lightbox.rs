@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -13,14 +13,6 @@ use libero::{
     components::Image,
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
 };
-
-/// Every `<tag>`'s attributes, in document order.
-fn all_attributes_of(html: &str, tag: &str) -> Vec<BTreeMap<String, String>> {
-    let opener = format!("<{tag} ");
-    html.match_indices(&opener)
-        .map(|(start, _)| attributes_of(&html[start..], tag))
-        .collect()
-}
 
 fn gallery() -> Vec<LightboxItem> {
     vec![
@@ -64,14 +56,14 @@ fn open_items(options: LightboxOptions, items: Vec<LightboxItem>, index: usize) 
 
 /// The pictures on the stage - the thumbnails' `alt` is empty.
 fn stage_images(html: &str) -> Vec<BTreeMap<String, String>> {
-    all_attributes_of(html, "img")
+    tags_with(html, "<img")
         .into_iter()
         .filter(|img| img.get("alt").is_some_and(|alt| !alt.is_empty()))
         .collect()
 }
 
 fn thumbnails(html: &str) -> Vec<BTreeMap<String, String>> {
-    all_attributes_of(html, "button")
+    tags_with(html, "<button")
         .into_iter()
         .filter(|button| {
             button
@@ -84,12 +76,7 @@ fn thumbnails(html: &str) -> Vec<BTreeMap<String, String>> {
 #[test]
 fn a_gallery_is_a_named_modal_dialog() {
     let html = open(LightboxOptions::default(), 0);
-    let dialog = attributes_of(
-        &html[html
-            .find("role=\"dialog\"")
-            .map_or(0, |at| html[..at].rfind('<').expect("the dialog's tag"))..],
-        "div",
-    );
+    let dialog = tag_with(&html, r#"role="dialog""#);
 
     assert_eq!(dialog["role"], "dialog");
     assert_eq!(dialog["aria-modal"], "true");
@@ -114,7 +101,7 @@ fn button_named<'a>(
 #[test]
 fn the_toolbar_zooms_and_opens_fitted() {
     let html = open(LightboxOptions::default(), 0);
-    let buttons = all_attributes_of(&html, "button");
+    let buttons = tags_with(&html, "<button");
     let names: Vec<&str> = buttons
         .iter()
         .filter_map(|button| button.get("aria-label").map(String::as_str))
@@ -152,7 +139,7 @@ fn the_toolbar_has_no_zoom_buttons_without_zoom() {
         },
     ] {
         let html = open(options, 0);
-        let buttons = all_attributes_of(&html, "button");
+        let buttons = tags_with(&html, "<button");
         assert!(button_named(&buttons, "Zoom in").is_none(), "{html}");
         assert!(button_named(&buttons, "Close").is_some());
     }
@@ -219,7 +206,7 @@ fn the_preload_window_is_eager_and_the_rest_lazy() {
 fn the_caption_describes_the_picture_showing() {
     let html = open(LightboxOptions::default(), 3);
     // `<p ` with the space: an icon's `<path` comes first.
-    let caption = attributes_of(&html[html.find("<p ").expect("a caption")..], "p");
+    let caption = attributes_of(&html, "p");
     let images = stage_images(&html);
 
     assert!(
@@ -307,7 +294,7 @@ fn the_thumbnail_strip_roves() {
 #[test]
 fn a_thumbnail_prefers_its_own_source() {
     let html = open(LightboxOptions::default(), 0);
-    let sources: Vec<String> = all_attributes_of(&html, "img")
+    let sources: Vec<String> = tags_with(&html, "<img")
         .into_iter()
         .filter(|img| img.get("alt").is_some_and(String::is_empty))
         .map(|img| img["src"].clone())
@@ -353,7 +340,7 @@ fn a_zoomed_image_is_a_single_picture_viewer() {
     assert_eq!(trigger["aria-label"], "Zoom in: A lake");
     assert_eq!(trigger["aria-haspopup"], "dialog");
     // Closed: nothing but the trigger's own picture.
-    assert_eq!(all_attributes_of(&html, "img").len(), 1);
+    assert_eq!(tags_with(&html, "<img").len(), 1);
     assert!(!html.contains("role=\"dialog\""));
 }
 

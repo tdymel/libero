@@ -1,7 +1,7 @@
 //! `ImageList`'s rendered contract: the list semantics, the spans `cols`
 //! derives, and that the two variants agree on every one of them.
 
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, render, rules_for, tag_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -338,20 +338,18 @@ fn nothing_inside_a_cell_is_positioned() {
              the hit area stops at the caption - see IMAGE_LIST_CELL_SX:\n{rule}"
         );
     }
+    let body = body(&html);
+    let (cell, link) = (attributes_of(&body, "li"), attributes_of(&body, "a"));
     assert!(
-        css.contains("position:relative") && css.contains("inset:0"),
+        rules_for(&html, &cell).contains("position:relative")
+            && rules_for(&html, &link).contains("inset:0"),
         "the cell must stay a containing block and the hit area must stretch"
     );
 }
 
 /// The class on the element carrying a `bar-*` state token.
 fn bar_class(html: &str) -> String {
-    let at = html.find("bar-bottom").expect("a bar");
-    let open = html[..at].rfind('<').expect("an open tag");
-    let tag = &html[open..at];
-    let class_at = tag.find("class=\"").expect("a class") + "class=\"".len();
-    let class = &tag[class_at..];
-    class[..class.find('"').expect("a closed class")]
+    tag_with(html, "bar-bottom")["class"]
         .split_whitespace()
         .next_back()
         .expect("a class name")

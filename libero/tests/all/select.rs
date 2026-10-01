@@ -383,3 +383,345 @@ mod select_listbox {
         assert!(html.contains(r#"role="combobox""#), "{html}");
     }
 }
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::{attributes_of, body};
+    use crate::dispatch::*;
+    use dioxus::core::ElementId;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Form, NativeSelect, Options},
+    };
+
+    /// A label that is not the variant's name, so a test can tell which of the
+    /// two a control posted.
+    #[derive(Clone, Copy, PartialEq, Debug, Options)]
+    pub enum Plan {
+        #[option(label = "Free plan")]
+        Free,
+        #[option(label = "Pro plan")]
+        Pro,
+    }
+
+    #[derive(Clone, PartialEq, Default, libero::components::Fields)]
+    pub struct Signup {
+        pub plan: Option<Plan>,
+    }
+
+    /// Mounts `app`, sends `change` carrying `posted` to the select, and returns
+    /// what the handler heard and the markup afterwards.
+    fn change_select(app: fn() -> Element, posted: &str) -> (Vec<String>, String) {
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        HEARD.with_borrow_mut(Vec::clear);
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let select = find.change.expect("registered no change listener");
+        dom.runtime()
+            .handle_event("change", Event::new(input_event(posted), true), select);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        (HEARD.with_borrow(Clone::clone), dioxus_ssr::render(&dom))
+    }
+
+    /// Todo 20: the `<select>` reports the chosen option's `value`, which is
+    /// `Options::value` now - so that is what `onchange` looks up. An index or
+    /// the visible label is no option's value any more, and picks nothing.
+    #[test]
+    fn a_native_select_reads_the_option_value_back() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    NativeSelect {
+                        value: Plan::Free,
+                        onchange: move |next: Plan| heard(next),
+                    }
+                }
+            }
+        }
+
+        assert_eq!(change_select(app, "Pro").0, ["Pro"]);
+        assert_eq!(change_select(app, "1").0, Vec::<String>::new());
+        assert_eq!(change_select(app, "Pro plan").0, Vec::<String>::new());
+    }
+
+    /// The same round trip without `onchange`: the path `name` writes the
+    /// `Form`'s value, and the select renders it back as selected.
+    #[test]
+    fn a_native_select_with_a_path_name_writes_its_forms_value() {
+        fn app() -> Element {
+            let signup = use_store(Signup::default);
+            rsx! {
+                LiberoProvider {
+                    Form { value: signup,
+                        NativeSelect { name: Signup::FIELDS.plan(), placeholder: "Pick" }
+                    }
+                    "plan: {signup.read().plan:?}"
+                }
+            }
+        }
+
+        let (_, html) = change_select(app, "Pro");
+        assert!(html.contains("plan: Some(Pro)"), "{html}");
+        assert!(html.contains("<option value=\"Pro\" selected"), "{html}");
+        let select = attributes_of(&body(&html), "select");
+        assert_eq!(select.get("name").map(String::as_str), Some("plan"));
+    }
+
+    /// `Select`'s typeahead, and the arrows passing over a disabled row. Both are
+    /// keyboard-only, so they need real dispatched events rather than SSR.
+    mod select_keyboard {
+        use super::*;
+        use libero::components::{OptionItem, OptionList, Select};
+
+        thread_local! {
+            static PICKED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+        }
+
+        fn cities() -> OptionList<String> {
+            OptionList::new([
+                "Berlin".to_string().into(),
+                "Bonn".to_string().into(),
+                // Skipped by the arrows and by typeahead alike, which is why it
+                // sits between two rows that a "B" would otherwise walk through.
+                OptionItem::new("Bochum".to_string()).disabled(true),
+                "Cologne".to_string().into(),
+            ])
+        }
+
+        /// Really controlled: `Select` renders `value` and asks for a new one, so
+        /// a test that never moves it would have typeahead searching from the same
+        /// place every time - and would never see the cycle at all.
+        fn app() -> Element {
+            let mut city = use_signal(|| None::<String>);
+            rsx! {
+                LiberoProvider {
+                    Select::<String> {
+                        label: "City",
+                        options: cities(),
+                        value: city(),
+                        onchange: move |next: Option<String>| {
+                            PICKED.with_borrow_mut(|picked| picked.push(next.clone().unwrap_or_default()));
+                            city.set(next);
+                        },
+                    }
+                }
+            }
+        }
+
+        /// A dom with the event converter installed and the picks reset, plus the
+        /// trigger's element id - the innermost element carrying a `keydown`,
+        /// since `ComboboxCore`'s wrapper registers one first.
+        fn mount() -> (VirtualDom, ElementId) {
+            dioxus::html::set_event_converter(Box::new(TestConverter));
+            PICKED.with_borrow_mut(Vec::clear);
+            let mut dom = VirtualDom::new(app);
+            let mut find = FindClickListener::default();
+            dom.rebuild(&mut find);
+            let trigger = *find.keydown.last().expect("the trigger listens for keys");
+            (dom, trigger)
+        }
+
+        fn type_keys(dom: &mut VirtualDom, trigger: ElementId, keys: &str) {
+            for ch in keys.chars() {
+                press(dom, trigger, Key::Character(ch.to_string()));
+            }
+        }
+
+        /// Two passes: the list reports its row count while it renders, after the
+        /// trigger has been drawn, so the trigger catches up one pass later.
+        fn press(dom: &mut VirtualDom, trigger: ElementId, key: Key) {
+            dom.runtime()
+                .handle_event("keydown", Event::new(key_event(key), true), trigger);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+
+        fn picked() -> Vec<String> {
+            PICKED.with_borrow(Clone::clone)
+        }
+
+        /// The buffer: three characters inside the window narrow to one row, and
+        /// a closed trigger changes the value in place the way a native `<select>`
+        /// does - no list is opened at all.
+        #[test]
+        fn a_buffered_query_picks_in_place_on_a_closed_trigger() {
+            let (mut dom, trigger) = mount();
+            type_keys(&mut dom, trigger, "ber");
+
+            // "b" lands on Berlin, and "be" then "ber" stay on it while it still
+            // matches - the narrowing half of the buffer.
+            assert_eq!(picked(), ["Berlin", "Berlin", "Berlin"]);
+            let html = body(&dioxus_ssr::render(&dom));
+            assert!(
+                !html.contains(r#"role="listbox""#),
+                "typing opened the list:\n{html}"
+            );
+        }
+
+        /// One character, pressed again, cycles - `typeahead_match` treats a
+        /// repeat as a single-character search that starts *after* the current
+        /// row. Bochum is disabled, so "B" walks Berlin, Bonn and back.
+        #[test]
+        fn a_repeated_character_cycles_and_skips_a_disabled_row() {
+            let (mut dom, trigger) = mount();
+            type_keys(&mut dom, trigger, "b");
+            assert_eq!(picked(), ["Berlin"]);
+
+            // Each press searches from the row the last one selected, so the
+            // repeat walks on rather than landing on Berlin again.
+            type_keys(&mut dom, trigger, "b");
+            assert_eq!(picked(), ["Berlin", "Bonn"]);
+            type_keys(&mut dom, trigger, "b");
+            assert_eq!(
+                picked(),
+                ["Berlin", "Bonn", "Berlin"],
+                "Bochum is disabled, so the cycle wraps past it"
+            );
+        }
+
+        /// Space still opens the list, as it always has - typeahead takes a space
+        /// only mid-query, where it is part of "new york".
+        #[test]
+        fn space_opens_the_list_rather_than_typing() {
+            let (mut dom, trigger) = mount();
+            press(&mut dom, trigger, Key::Character(" ".into()));
+
+            assert_eq!(picked(), Vec::<String>::new());
+            let html = body(&dioxus_ssr::render(&dom));
+            assert!(html.contains(r#"role="listbox""#), "{html}");
+        }
+
+        /// An open list moves its highlight instead of picking, and the arrows
+        /// pass over the disabled row: Berlin, Bonn, then Cologne.
+        #[test]
+        fn the_arrows_skip_a_disabled_row() {
+            let (mut dom, trigger) = mount();
+            press(&mut dom, trigger, Key::Character(" ".into()));
+
+            let rows = |dom: &VirtualDom| {
+                let html = body(&dioxus_ssr::render(dom));
+                let at = html
+                    .find(r#"aria-activedescendant=""#)
+                    .map(|at| at + r#"aria-activedescendant=""#.len());
+                at.map(|at| html[at..].split('"').next().unwrap().to_string())
+            };
+
+            // Opening already arms the first row, as a native `<select>` does.
+            assert!(rows(&dom).is_some_and(|id| id.ends_with("-option-0")));
+            press(&mut dom, trigger, Key::ArrowDown);
+            assert!(rows(&dom).is_some_and(|id| id.ends_with("-option-1")));
+            // Row 2 is Bochum, which is disabled.
+            press(&mut dom, trigger, Key::ArrowDown);
+            let id = rows(&dom).expect("a row to point at");
+            assert!(
+                id.ends_with("-option-3"),
+                "the arrows stopped on Bochum: {id}"
+            );
+            // And back up over it.
+            press(&mut dom, trigger, Key::ArrowUp);
+            let id = rows(&dom).expect("a row to point at");
+            assert!(id.ends_with("-option-1"), "{id}");
+
+            assert_eq!(picked(), Vec::<String>::new(), "an arrow picked something");
+        }
+    }
+
+    /// A closed `Select`'s `SelectCore` skips a parent re-render (todo 29). What it
+    /// drew on an older render must still run the newest handler and show the newest
+    /// caller-drawn selection.
+    mod select_memo {
+        use super::*;
+        use libero::components::Select;
+
+        thread_local! {
+            static GENERATION: std::cell::Cell<u32> = const { std::cell::Cell::new(1) };
+            static PICKS: std::cell::RefCell<Vec<(u32, String)>> = const { std::cell::RefCell::new(Vec::new()) };
+        }
+
+        fn city(value: &'static str, own_selection: bool) -> Element {
+            let generation = GENERATION.get();
+            let selection = own_selection
+                .then(|| Callback::new(move |city: String| rsx! { "{city} #{generation}" }));
+            rsx! {
+                LiberoProvider {
+                    Select::<String> {
+                        options: vec!["Berlin".to_string(), "Bonn".to_string(), "Hamburg".to_string()],
+                        value: value.to_string(),
+                        selection,
+                        onchange: move |city: Option<String>| {
+                            PICKS.with_borrow_mut(|picks| picks.push((generation, city.unwrap_or_default())))
+                        },
+                    }
+                }
+            }
+        }
+
+        fn mount(app: fn() -> Element) -> (VirtualDom, ElementId) {
+            dioxus::html::set_event_converter(Box::new(TestConverter));
+            GENERATION.set(1);
+            PICKS.with_borrow_mut(Vec::clear);
+            let mut dom = VirtualDom::new(app);
+            let mut find = FindClickListener::default();
+            dom.rebuild(&mut find);
+            dom.render_immediate(&mut find);
+            let trigger = *find.keydown.last().expect("the trigger takes keys");
+            (dom, trigger)
+        }
+
+        fn rerender(dom: &mut VirtualDom, generation: u32) {
+            GENERATION.set(generation);
+            dom.mark_dirty(dioxus::core::ScopeId::APP);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+
+        fn press(dom: &mut VirtualDom, trigger: ElementId, key: Key) {
+            dom.runtime()
+                .handle_event("keydown", Event::new(key_event(key), true), trigger);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+
+        #[test]
+        fn a_closed_select_picks_through_the_newest_onchange() {
+            let (mut dom, trigger) = mount(|| city("Berlin", false));
+            rerender(&mut dom, 2);
+            rerender(&mut dom, 3);
+            // Typeahead on a closed select picks in place: "b" from Berlin is Bonn.
+            press(&mut dom, trigger, Key::Character("b".into()));
+            assert_eq!(PICKS.with_borrow(Clone::clone), [(3, "Bonn".to_string())]);
+        }
+
+        #[test]
+        fn a_callers_selection_redraws_on_its_own_state() {
+            let (mut dom, _) = mount(|| city("Berlin", true));
+            assert!(body(&dioxus_ssr::render(&dom)).contains("Berlin #1"));
+            rerender(&mut dom, 2);
+            let html = body(&dioxus_ssr::render(&dom));
+            assert!(
+                html.contains("Berlin #2"),
+                "a stale caller selection:\n{html}"
+            );
+        }
+
+        /// No rows are drawn while closed, so the highlight a list opens on is
+        /// counted over the options, not over the rows.
+        #[test]
+        fn opening_after_skipped_renders_highlights_the_selected_row() {
+            let (mut dom, trigger) = mount(|| city("Hamburg", false));
+            rerender(&mut dom, 2);
+            press(&mut dom, trigger, Key::ArrowDown);
+            let html = body(&dioxus_ssr::render(&dom));
+            let label = html
+                .find(r#"data-slot="label">Hamburg"#)
+                .unwrap_or_else(|| panic!("no Hamburg row:\n{html}"));
+            let row = &html[html[..label].rfind("<div").expect("the row")..label];
+            assert!(
+                row.contains("active"),
+                "Hamburg is not the highlight:\n{html}"
+            );
+        }
+    }
+}

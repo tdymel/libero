@@ -7,7 +7,9 @@
 //! the SSR harness answers `Unsupported` for - so everything below the trigger
 //! is browser work by construction ([[codebase/testing]]).
 
-use crate::common::{body, render};
+use std::collections::BTreeMap;
+
+use crate::common::{body, render, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -175,14 +177,11 @@ fn clearable_empty() -> Element {
     }
 }
 
-/// The open tag of the element carrying the combobox role.
-fn trigger_of(html: &str) -> String {
-    let at = html
-        .find("role=\"combobox\"")
-        .unwrap_or_else(|| panic!("no combobox in the rendered output:\n{html}"));
-    let start = html[..at].rfind('<').expect("an unterminated tag");
-    let end = at + html[at..].find('>').expect("an unterminated tag");
-    html[start..=end].to_string()
+/// The attributes of the one element carrying the combobox role.
+fn trigger_of(html: &str) -> BTreeMap<String, String> {
+    let triggers = tags_with(html, r#"role="combobox""#);
+    assert_eq!(triggers.len(), 1, "{html}");
+    triggers[0].clone()
 }
 
 /// The trigger is a `div`, which `<label for>` cannot name - so this field
@@ -193,16 +192,14 @@ fn the_trigger_is_a_named_focusable_combobox() {
     let html = body(&render(chosen));
     let trigger = trigger_of(&html);
 
-    assert!(trigger.starts_with("<div"), "{trigger}");
-    assert!(trigger.contains("tabindex=\"0\""), "{trigger}");
-    assert!(trigger.contains("aria-haspopup=\"listbox\""), "{trigger}");
-    assert!(trigger.contains("aria-expanded=\"false\""), "{trigger}");
+    assert!(tags_with(&html, "<div").contains(&trigger), "{trigger:?}");
+    assert_eq!(trigger["tabindex"], "0", "{trigger:?}");
+    assert_eq!(trigger["aria-haspopup"], "listbox", "{trigger:?}");
+    assert_eq!(trigger["aria-expanded"], "false", "{trigger:?}");
 
-    let at = trigger
-        .find("aria-labelledby=\"")
-        .unwrap_or_else(|| panic!("the trigger is not named:\n{trigger}"));
-    let rest = &trigger[at + "aria-labelledby=\"".len()..];
-    let label_id = &rest[..rest.find('"').expect("an unterminated value")];
+    let label_id = trigger
+        .get("aria-labelledby")
+        .unwrap_or_else(|| panic!("the trigger is not named:\n{trigger:?}"));
     assert!(
         html.contains(&format!("id=\"{label_id}\"")),
         "aria-labelledby names an element that is not there:\n{html}"
@@ -214,10 +211,13 @@ fn the_trigger_is_a_named_focusable_combobox() {
 #[test]
 fn a_closed_trigger_points_at_no_list() {
     let trigger = trigger_of(&body(&render(chosen)));
-    assert!(!trigger.contains("aria-controls"), "{trigger}");
+    assert!(!trigger.contains_key("aria-controls"), "{trigger:?}");
     // Nothing is highlighted while the list is closed, so there is no row for
     // `aria-activedescendant` to point at.
-    assert!(!trigger.contains("aria-activedescendant"), "{trigger}");
+    assert!(
+        !trigger.contains_key("aria-activedescendant"),
+        "{trigger:?}"
+    );
 }
 
 /// The value is one leaf's, but the value slot shows the whole path to it,
@@ -293,8 +293,8 @@ fn a_disabled_cascader_neither_focuses_nor_posts() {
     let html = body(&render(off));
     let trigger = trigger_of(&html);
 
-    assert!(!trigger.contains("tabindex"), "{trigger}");
-    assert!(trigger.contains("aria-disabled=\"true\""), "{trigger}");
+    assert!(!trigger.contains_key("tabindex"), "{trigger:?}");
+    assert_eq!(trigger["aria-disabled"], "true", "{trigger:?}");
     assert_eq!(
         html.matches("type=\"hidden\"").count(),
         1,

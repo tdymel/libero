@@ -3,10 +3,9 @@
 //! options, and the timers that close a notification on their own.
 
 use std::cell::RefCell;
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use crate::common::{body, render};
+use crate::common::{body, drive_until, render, tags_with};
 
 use dioxus::dioxus_core::{NoOpMutations, ScopeId};
 use dioxus::prelude::*;
@@ -411,22 +410,6 @@ static FAST: Theme = Theme {
     ..Theme::DEFAULT
 };
 
-/// Polls `dom` until `done` holds for its rendered markup, or `limit` runs
-/// out. `process_events` drains the task a timer delivers through, and
-/// `render_immediate` applies what it wrote.
-fn drive_until(dom: &mut VirtualDom, limit: Duration, done: impl Fn(&str) -> bool) -> String {
-    let start = Instant::now();
-    loop {
-        dom.process_events();
-        dom.render_immediate(&mut dioxus::core::NoOpMutations);
-        let html = body(&dioxus_ssr::render(dom));
-        if done(&html) || start.elapsed() > limit {
-            return html;
-        }
-        thread::sleep(Duration::from_millis(2));
-    }
-}
-
 #[test]
 fn a_notification_leaves_after_its_time_and_is_then_removed() {
     fn app() -> Element {
@@ -597,9 +580,23 @@ fn a_contained_host_draws_what_is_raised_below_it_in_its_own_box() {
         region.find("The region&#39;s own content.").unwrap() < region.find("aria-live").unwrap(),
         "{region}"
     );
-    assert_eq!(region.matches("aria-live").count(), 18, "{region}");
-    assert!(!region.contains("\"fixed "), "{region}");
-    assert_eq!(html.matches("\"fixed ").count(), 9, "{html}");
+    // One assertive and one polite region per placement.
+    for live in ["assertive", "polite"] {
+        let regions = tags_with(region, &format!(r#"aria-live="{live}""#));
+        assert_eq!(regions.len(), 9, "{region}");
+    }
+    let fixed = |html: &str| {
+        tags_with(html, "data-state=")
+            .iter()
+            .filter(|tag| {
+                tag["data-state"]
+                    .split_whitespace()
+                    .any(|state| state == "fixed")
+            })
+            .count()
+    };
+    assert_eq!(fixed(region), 0, "{region}");
+    assert_eq!(fixed(&html), 9, "{html}");
     // Each notification in exactly one host.
     assert_eq!(html.matches("Inside.").count(), 1, "{html}");
     assert!(

@@ -1,4 +1,4 @@
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, nth_attributes, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -26,12 +26,11 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
 
     let html = render(app);
     // The first div is the field wrapper; the slider's own root is the second.
-    let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
+    let root = nth_attributes(&html, "div", 1);
 
     assert_eq!(root["data-state"], "size-md marks-labeled");
     // On the bar, which redraws without the root.
-    let filled = html.find("--lsx-slider-filled:").unwrap();
-    let bar = attributes_of(&html[html[..filled].rfind("<div").unwrap()..], "div");
+    let bar = tag_with(&body(&html), "--lsx-slider-filled:");
     assert!(
         bar["style"].contains("--lsx-slider-filled:0.25;"),
         "{bar:?}"
@@ -139,10 +138,7 @@ fn a_range_slider_renders_two_thumbs_and_posts_both_values() {
     assert!(html.contains(r#"aria-label="Maximum""#));
     // `aria-labelledby` beats `aria-label`, so each thumb lists itself after
     // the caption: "Price Minimum", "Price Maximum".
-    let thumbs: Vec<_> = html
-        .match_indices(r#"role="slider""#)
-        .map(|(at, _)| attributes_of(&html[html[..at].rfind('<').unwrap()..], "span"))
-        .collect();
+    let thumbs = tags_with(&html, r#"role="slider""#);
     for thumb in &thumbs {
         let label = thumb["aria-labelledby"].split(' ').collect::<Vec<_>>();
         assert_eq!(label.len(), 2, "{thumb:?}");
@@ -263,9 +259,9 @@ fn each_thumb_is_described_by_its_own_value_bubble() {
     }
 
     fn bubbles(html: &str) -> Vec<Vec<String>> {
-        html.match_indices(r#"role="slider""#)
-            .map(|(at, _)| {
-                let thumb = attributes_of(&html[html[..at].rfind('<').unwrap()..], "span");
+        tags_with(html, r#"role="slider""#)
+            .into_iter()
+            .map(|thumb| {
                 thumb["aria-describedby"]
                     .split(' ')
                     .map(str::to_owned)
@@ -286,8 +282,7 @@ fn each_thumb_is_described_by_its_own_value_bubble() {
     assert_eq!(described[0].len(), 2, "{described:?}");
     assert_eq!(text_of(&html, &described[0][0]), "Loud is 80.");
     assert_eq!(text_of(&html, &described[0][1]), "40");
-    let at = html.find(&format!(r#"id="{}""#, described[0][1])).unwrap();
-    let bubble = attributes_of(&html[html[..at].rfind('<').unwrap()..], "span");
+    let bubble = tag_with(&html, &format!(r#"id="{}""#, described[0][1]));
     assert_eq!(bubble["role"], "tooltip", "{bubble:?}");
 
     let html = render(range);
@@ -334,8 +329,7 @@ fn a_labelled_single_slider_is_named_by_its_label_alone() {
     }
 
     let html = render(app);
-    let at = html.find(r#"role="slider""#).unwrap();
-    let thumb = attributes_of(&html[html[..at].rfind('<').unwrap()..], "span");
+    let thumb = tag_with(&html, r#"role="slider""#);
     assert!(thumb["aria-labelledby"].ends_with("-label"), "{thumb:?}");
     assert!(!thumb["aria-labelledby"].contains(' '), "{thumb:?}");
     assert!(!thumb.contains_key("id"), "{thumb:?}");
@@ -380,7 +374,7 @@ fn a_discrete_slider_derives_its_scale_from_the_value_type() {
     }
 
     let html = render(app);
-    let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
+    let root = nth_attributes(&html, "div", 1);
 
     // `Pro` is the second of four options, so the scale is 0..=3.
     assert!(html.contains("--lsx-slider-filled:0.3333333333333333;"));
@@ -608,8 +602,90 @@ fn both_halves_of_a_slider_take_the_themes_default_size() {
 
     for html in [render(single), render(range)] {
         let wrapper = attributes_of(&html, "div");
-        let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
+        let root = nth_attributes(&html, "div", 1);
         assert!(wrapper["data-state"].contains("size-sm"), "{wrapper:?}");
         assert!(root["data-state"].contains("size-sm"), "{root:?}");
+    }
+}
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::{body, tags_with};
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{RangeSlider, Slider, SliderChangeEvent},
+    };
+
+    fn readonly_slider() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    aria_label: "Volume",
+                    value: 40.0,
+                    readonly: READ_ONLY.get(),
+                    oninput: move |event: SliderChangeEvent<f64>| heard(event),
+                }
+            }
+        }
+    }
+
+    fn readonly_range_slider() -> Element {
+        rsx! {
+            LiberoProvider {
+                RangeSlider {
+                    aria_label_from: "Minimum",
+                    aria_label_to: "Maximum",
+                    value: (20.0, 80.0),
+                    readonly: READ_ONLY.get(),
+                    oninput: move |event: SliderChangeEvent<(f64, f64)>| heard(event),
+                }
+            }
+        }
+    }
+
+    /// Todo 306: a read-only thumb keeps its tab stop and says it is read-only,
+    /// and no key moves it. Each key is checked against the same slider editable,
+    /// where it must move.
+    #[test]
+    fn a_read_only_slider_answers_no_key() {
+        let cases: [(fn() -> Element, &[&str]); 2] = [
+            (readonly_slider, &["Volume"]),
+            (readonly_range_slider, &["Minimum", "Maximum"]),
+        ];
+        for (app, thumbs) in cases {
+            let mut html = String::new();
+            for thumb in thumbs {
+                let pick = |find: &FindClickListener| find.element("keydown", "aria-label", thumb);
+                for key in [
+                    Key::ArrowRight,
+                    Key::ArrowLeft,
+                    Key::Home,
+                    Key::End,
+                    Key::PageUp,
+                    Key::PageDown,
+                ] {
+                    let data = || key_event(key.clone());
+                    let (moved, _) = send(app, false, "keydown", pick, &data);
+                    assert!(
+                        !moved.is_empty(),
+                        "{thumb}: {key:?} moved nothing on an editable slider"
+                    );
+                    let heard;
+                    (heard, html) = send(app, true, "keydown", pick, &data);
+                    assert_eq!(heard, Vec::<String>::new(), "{thumb}: {key:?}");
+                }
+            }
+
+            let tags = tags_with(&body(&html), r#"role="slider""#);
+            assert_eq!(tags.len(), thumbs.len(), "{html}");
+            for tag in tags {
+                assert_eq!(tag["tabindex"], "0", "{tag:?}");
+                assert_eq!(tag["aria-readonly"], "true", "{tag:?}");
+                assert!(!tag.contains_key("aria-disabled"), "{tag:?}");
+            }
+        }
     }
 }

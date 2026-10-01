@@ -1,9 +1,10 @@
 //! The date and time pickers and fields as a server renders them: the grid,
 //! the marked days, and what posts with a form.
 
-use crate::common::{body, render};
+use crate::common::{body, render, tags_with};
 
 use std::cell::Cell;
+use std::collections::BTreeMap;
 
 use dioxus::dioxus_core::{NoOpMutations, ScopeId, VirtualDom};
 use dioxus::prelude::*;
@@ -261,10 +262,10 @@ fn a_monday_first_locale_starts_the_grid_and_the_headers_on_monday() {
     }
     let html = body(&render(app));
 
-    let headers = tags_with(&html, &["role=\"columnheader\""]);
+    let headers = tags_with(&html, r#"role="columnheader""#);
     assert_eq!(headers.len(), 7);
-    assert!(headers[0].contains("aria-label=\"Monday\""), "{headers:?}");
-    assert!(headers[6].contains("aria-label=\"Sunday\""), "{headers:?}");
+    assert_eq!(headers[0]["aria-label"], "Monday", "{headers:?}");
+    assert_eq!(headers[6]["aria-label"], "Sunday", "{headers:?}");
     // September 2026 starts on a Tuesday: the grid opens on Monday, August 31.
     let first = html.find("data-slot=\"day\"").expect("a day");
     assert_eq!(
@@ -289,24 +290,25 @@ fn days_outside_min_and_max_are_disabled() {
     }
     let html = body(&render(app));
 
-    let cell = |date: &str| {
-        let at = html
-            .find(&format!("data-date=\"{date}\""))
-            .expect("a day cell");
-        let end = at + html[at..].find('>').expect("the tag ends");
-        html[at..end].to_string()
+    let disabled = |date: &str| {
+        let cells = tags_with(&html, &format!(r#"data-date="{date}""#));
+        assert_eq!(cells.len(), 1, "{date}: {cells:?}");
+        cells[0].contains_key("disabled")
     };
-    assert!(cell("2026-09-09").contains("disabled"));
-    assert!(!cell("2026-09-10").contains("disabled"));
-    assert!(!cell("2026-09-20").contains("disabled"));
-    assert!(cell("2026-09-21").contains("disabled"));
+    assert!(disabled("2026-09-09"));
+    assert!(!disabled("2026-09-10"));
+    assert!(!disabled("2026-09-20"));
+    assert!(disabled("2026-09-21"));
 }
 
-/// The one `tabindex="0"` day in `html`.
-fn day_stop(html: &str) -> &str {
-    let stops = tags_with(html, &["data-slot=\"day\"", "tabindex=\"0\""]);
+/// The `data-date` of the one `tabindex="0"` cell of `slot` in `html`.
+fn tab_stop(html: &str, slot: &str) -> String {
+    let stops: Vec<_> = tags_with(html, &format!(r#"data-slot="{slot}""#))
+        .into_iter()
+        .filter(|cell| cell.get("tabindex").is_some_and(|index| index == "0"))
+        .collect();
     assert_eq!(stops.len(), 1, "{stops:?}");
-    stops[0]
+    stops[0]["data-date"].clone()
 }
 
 /// A disabled day cannot take focus, so it never holds the grid's tab stop.
@@ -364,14 +366,14 @@ fn the_tab_stop_skips_disabled_days() {
     }
 
     let html = body(&render(min_after_the_first));
-    assert!(day_stop(&html).contains("data-date=\"2026-09-10\""));
+    assert_eq!(tab_stop(&html, "day"), "2026-09-10");
     let html = body(&render(weekend_today));
-    assert!(day_stop(&html).contains("data-date=\"2026-09-21\""));
+    assert_eq!(tab_stop(&html, "day"), "2026-09-21");
     // Not onto a day of the next month: back to the Friday.
     let html = body(&render(weekend_at_the_month_end));
-    assert!(day_stop(&html).contains("data-date=\"2026-05-29\""));
+    assert_eq!(tab_stop(&html, "day"), "2026-05-29");
     let html = body(&render(mini_weekend));
-    assert!(day_stop(&html).contains("data-date=\"2026-09-21\""));
+    assert_eq!(tab_stop(&html, "day"), "2026-09-21");
 }
 
 /// The month and year views disable only the cells past `min` and `max`.
@@ -391,9 +393,7 @@ fn a_month_picker_keeps_its_tab_stop_inside_its_limits() {
     }
     let html = body(&render(app));
 
-    let stops = tags_with(&html, &["data-slot=\"cell\"", "tabindex=\"0\""]);
-    assert_eq!(stops.len(), 1);
-    assert!(stops[0].contains("data-date=\"2026-04-01\""));
+    assert_eq!(tab_stop(&html, "cell"), "2026-04-01");
 }
 
 /// Todo 534: today is exposed, not only drawn - on the day, the month and the year.
@@ -439,14 +439,10 @@ fn today_is_the_one_cell_with_aria_current_date() {
         (year, "2026-01-01"),
     ] {
         let html = body(&render(app));
-        let current = tags_with(&html, &["aria-current=\"date\""]);
+        let current = tags_with(&html, r#"aria-current="date""#);
         assert_eq!(current.len(), 1, "{html}");
-        assert!(
-            current[0].contains(&format!("data-date=\"{date}\"")),
-            "{}",
-            current[0]
-        );
-        assert!(current[0].contains("data-today=\"true\""));
+        assert_eq!(current[0]["data-date"], date, "{current:?}");
+        assert_eq!(current[0]["data-today"], "true", "{current:?}");
     }
 }
 
@@ -485,21 +481,13 @@ fn a_closed_field_is_a_combobox_over_a_dialog() {
         }
     }
     let html = body(&render(app));
-    let input = tags_with(&html, &["id=\"due\""]);
+    let input = tags_with(&html, r#"id="due""#);
 
     assert_eq!(input.len(), 1, "{html}");
-    assert!(input[0].contains("role=\"combobox\""), "{html}");
-    assert!(input[0].contains("aria-haspopup=\"dialog\""), "{html}");
-    assert!(input[0].contains("aria-expanded=\"false\""), "{html}");
-    assert!(!input[0].contains("aria-controls"), "{html}");
-}
-
-/// The opening tags in `html` that carry every one of `attributes`.
-fn tags_with<'a>(html: &'a str, attributes: &[&str]) -> Vec<&'a str> {
-    html.split('<')
-        .map(|tag| tag.split('>').next().unwrap_or_default())
-        .filter(|tag| attributes.iter().all(|attribute| tag.contains(attribute)))
-        .collect()
+    assert_eq!(input[0]["role"], "combobox", "{html}");
+    assert_eq!(input[0]["aria-haspopup"], "dialog", "{html}");
+    assert_eq!(input[0]["aria-expanded"], "false", "{html}");
+    assert!(!input[0].contains_key("aria-controls"), "{html}");
 }
 
 #[test]
@@ -514,9 +502,7 @@ fn a_month_picker_is_one_tab_stop_on_the_picked_month() {
     let html = body(&render(app));
 
     assert_eq!(html.matches("data-slot=\"cell\"").count(), 12);
-    let stops = tags_with(&html, &["data-slot=\"cell\"", "tabindex=\"0\""]);
-    assert_eq!(stops.len(), 1);
-    assert!(stops[0].contains("data-date=\"2026-09-01\""));
+    assert_eq!(tab_stop(&html, "cell"), "2026-09-01");
     assert!(html.contains("name=\"month\" value=\"2026-09-01\""));
 }
 
@@ -534,9 +520,7 @@ fn a_year_picker_is_one_tab_stop_on_the_picked_year() {
     // 2019 and 2030 border the decade.
     assert_eq!(html.matches("data-slot=\"cell\"").count(), 12);
     assert_eq!(html.matches("data-outside=\"true\"").count(), 2);
-    let stops = tags_with(&html, &["data-slot=\"cell\"", "tabindex=\"0\""]);
-    assert_eq!(stops.len(), 1);
-    assert!(stops[0].contains("data-date=\"2026-01-01\""));
+    assert_eq!(tab_stop(&html, "cell"), "2026-01-01");
     // Any day of the year reads as the year.
     assert!(html.contains("name=\"year\" value=\"2026-01-01\""));
 }
@@ -737,11 +721,24 @@ fn a_mini_calendar_cannot_page_past_its_limits() {
             }
         }
     }
-    let disabled = |app: fn() -> Element| body(&render(app)).matches("disabled=true").count();
+    let disabled = |app: fn() -> Element| -> Vec<String> {
+        disabled_tags(&body(&render(app)))
+            .iter()
+            .map(|tag| tag.get("aria-label").cloned().unwrap_or_default())
+            .collect()
+    };
 
-    assert_eq!(disabled(open), 0);
+    assert_eq!(disabled(open), Vec::<String>::new());
     // Both buttons, and no day: the seven days are exactly the limits.
-    assert_eq!(disabled(limited), 2);
+    assert_eq!(disabled(limited), ["Previous days", "Next days"]);
+}
+
+/// Every tag carrying the `disabled` attribute, not `aria-disabled`.
+fn disabled_tags(html: &str) -> Vec<BTreeMap<String, String>> {
+    tags_with(html, " disabled")
+        .into_iter()
+        .filter(|tag| tag.contains_key("disabled"))
+        .collect()
 }
 
 thread_local! {
@@ -785,7 +782,7 @@ thread_local! {
 /// Re-renders `app` in one scope while the rule flips between nothing and the
 /// weekends, and counts the disabled days after each pass.
 fn disabled_per_flip(app: fn() -> Element) -> Vec<usize> {
-    let disabled = |dom: &VirtualDom| body(&dioxus_ssr::render(dom)).matches("disabled").count();
+    let disabled = |dom: &VirtualDom| disabled_tags(&body(&dioxus_ssr::render(dom))).len();
     FIRST_EXCLUDED_WEEKDAY.with(|first| first.set(7));
     let mut dom = VirtualDom::new(app);
     dom.rebuild_in_place();
@@ -817,4 +814,163 @@ fn a_picker_follows_a_new_exclude_date_rule_in_the_same_scope() {
         }
     }
     assert_eq!(disabled_per_flip(app), [0, 12, 0, 12, 0, 12, 0, 12, 0]);
+}
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::body;
+    use crate::dispatch::*;
+    use dioxus::core::{AttributeValue, ElementId, WriteMutations};
+
+    use dioxus::prelude::*;
+    use libero::{LiberoProvider, chrono::NaiveTime, components::TimePicker};
+
+    /// AM from a 14:15 with `min` 02:30 lands on 02:30, not on 02:15 below the
+    /// limit (todo 445).
+    #[test]
+    fn a_time_pickers_am_button_clamps_to_min() {
+        fn app() -> Element {
+            let mut value = use_signal(|| NaiveTime::from_hms_opt(14, 15, 0));
+            rsx! {
+                LiberoProvider {
+                    TimePicker {
+                        value: value(),
+                        min: NaiveTime::from_hms_opt(2, 30, 0),
+                        onchange: move |next| value.set(next),
+                        variant: "analog",
+                        twelve_hour: true,
+                        name: "at",
+                    }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let am = find.element("click", "text", "AM");
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), am);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(html.contains("name=\"at\" value=\"02:30:00\""), "{html}");
+    }
+
+    /// Todo 26 item 5: a range of days closes its dropdown on the second pick,
+    /// not the first, and `close_on_change: false` keeps it open.
+    mod range_close_on_change {
+        use super::*;
+        use chrono::NaiveDate;
+        use libero::components::{ChronoField, DateRange};
+        use std::collections::HashMap;
+
+        thread_local! {
+            static CLOSE: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
+        }
+
+        /// The input's click listener comes first, after the frame's; every day
+        /// button carries its date in `data-date`.
+        #[derive(Default)]
+        struct FindDays {
+            last: Option<ElementId>,
+            first_click: Option<ElementId>,
+            days: HashMap<String, ElementId>,
+            frame: Option<ElementId>,
+        }
+
+        impl WriteMutations for FindDays {
+            fn push_id(&mut self, id: ElementId) {
+                self.last = Some(id);
+            }
+            fn set_id(&mut self, id: ElementId) {
+                self.last = Some(id);
+            }
+            fn add_event_listener(&mut self, name: &str) {
+                if name == "click" && self.last != self.frame {
+                    self.first_click = self.first_click.or(self.last);
+                }
+            }
+            fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
+                if name == "data-frame" {
+                    self.frame = self.last;
+                }
+                if name == "data-date"
+                    && let (AttributeValue::Text(day), Some(id)) = (value, self.last)
+                {
+                    self.days.insert(day.clone(), id);
+                }
+            }
+            fn child(&mut self, _index: usize) {}
+            fn pop(&mut self) {}
+            fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
+            fn create_text(&mut self, _value: &str) {}
+            fn clone(&mut self) {}
+            fn append_children(&mut self, _m: usize) {}
+            fn replace_with(&mut self, _m: usize) {}
+            fn insert_after(&mut self, _m: usize) {}
+            fn insert_before(&mut self, _m: usize) {}
+            fn set_text(&mut self, _value: &str) {}
+            fn remove_event_listener(&mut self, _name: &str) {}
+            fn remove(&mut self) {}
+        }
+
+        fn trip() -> Element {
+            let mut value = use_signal(|| None::<DateRange<NaiveDate>>);
+            rsx! {
+                LiberoProvider {
+                    ChronoField::<DateRange<NaiveDate>> {
+                        label: "Trip",
+                        today: NaiveDate::from_ymd_opt(2026, 9, 1).unwrap(),
+                        close_on_change: CLOSE.with(|cell| cell.get()),
+                        value: value(),
+                        onchange: move |next| value.set(next),
+                    }
+                }
+            }
+        }
+
+        fn open(dom: &VirtualDom) -> bool {
+            body(&dioxus_ssr::render(dom)).contains(r#"role="dialog""#)
+        }
+
+        fn click(dom: &mut VirtualDom, find: &mut FindDays, id: ElementId) {
+            dom.runtime()
+                .handle_event("click", Event::new(click_event(), true), id);
+            dom.render_immediate(find);
+            dom.render_immediate(find);
+        }
+
+        fn after_two_picks(close: bool) -> (bool, bool) {
+            dioxus::html::set_event_converter(Box::new(TestConverter));
+            CLOSE.with(|cell| cell.set(close));
+            let mut dom = VirtualDom::new(trip);
+            let mut find = FindDays::default();
+            dom.rebuild(&mut find);
+            dom.render_immediate(&mut find);
+            let input = find.first_click.expect("the input takes clicks");
+            click(&mut dom, &mut find, input);
+            assert!(open(&dom), "a click opens the dropdown");
+
+            let day = |find: &FindDays, day: &str| *find.days.get(day).expect(day);
+            let first = day(&find, "2026-09-10");
+            click(&mut dom, &mut find, first);
+            let after_first = open(&dom);
+            let second = day(&find, "2026-09-14");
+            click(&mut dom, &mut find, second);
+            (after_first, open(&dom))
+        }
+
+        #[test]
+        fn a_range_of_days_closes_on_its_second_pick() {
+            assert_eq!(after_two_picks(true), (true, false));
+        }
+
+        #[test]
+        fn close_on_change_false_keeps_a_range_open() {
+            assert_eq!(after_two_picks(false), (true, true));
+        }
+    }
 }

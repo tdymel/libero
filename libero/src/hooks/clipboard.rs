@@ -79,3 +79,6 @@ pub fn use_clipboard() -> Clipboard {
         failed: use_signal(|| false),
     }
 }
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests;

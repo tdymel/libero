@@ -5,7 +5,7 @@
 
 use std::cell::{Cell, RefCell};
 
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, render, tags_with};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
@@ -71,14 +71,6 @@ fn id() -> String {
     ID.with(|id| id.borrow().clone())
 }
 
-/// Every opening tag carrying `needle`, in document order.
-fn tags_with<'a>(html: &'a str, needle: &str) -> Vec<&'a str> {
-    html.match_indices('<')
-        .map(|(at, _)| &html[at..at + html[at..].find('>').unwrap()])
-        .filter(|tag| tag.contains(needle))
-        .collect()
-}
-
 #[test]
 fn a_closed_menu_wires_its_trigger_and_draws_no_menu() {
     let html = rendered(false, false);
@@ -103,9 +95,9 @@ fn an_open_menu_is_labelled_by_its_trigger_and_controlled_by_it() {
 
     let menu = tags_with(&html, r#"role="menu""#);
     assert_eq!(menu.len(), 1, "one menu box, and no submenu yet");
-    assert!(menu[0].contains(&format!(r#"id="{id}-menu""#)));
-    assert!(menu[0].contains(&format!(r#"aria-labelledby="{id}-trigger""#)));
-    assert!(menu[0].contains(r#"tabindex="-1""#));
+    assert_eq!(menu[0]["id"], format!("{id}-menu"));
+    assert_eq!(menu[0]["aria-labelledby"], format!("{id}-trigger"));
+    assert_eq!(menu[0]["tabindex"], "-1");
 }
 
 #[test]
@@ -115,15 +107,9 @@ fn exactly_one_item_is_tabbable_and_indices_run_through_groups() {
     assert_eq!(items.len(), 4, "the submenu's own item is not drawn");
 
     for (index, item) in items.iter().enumerate() {
-        assert!(
-            item.contains(&format!(r#"data-menu-index="{index}""#)),
-            "{item}"
-        );
+        assert_eq!(item["data-menu-index"], index.to_string(), "{item:?}");
         let tabindex = if index == 0 { "0" } else { "-1" };
-        assert!(
-            item.contains(&format!(r#"tabindex="{tabindex}""#)),
-            "{item}"
-        );
+        assert_eq!(item["tabindex"], tabindex, "{item:?}");
     }
 }
 
@@ -134,7 +120,7 @@ fn a_group_is_named_by_its_label() {
     let group = tags_with(&html, r#"role="group""#);
     assert_eq!(group.len(), 1);
     let label_id = format!("{id}-menu-group-0");
-    assert!(group[0].contains(&format!(r#"aria-labelledby="{label_id}""#)));
+    assert_eq!(group[0]["aria-labelledby"], label_id);
     assert!(html.contains(&format!(r#"id="{label_id}""#)));
     assert!(html.contains(">Edit<"));
 }
@@ -145,22 +131,22 @@ fn a_separator_and_a_disabled_item_say_so() {
     assert_eq!(tags_with(&html, r#"role="separator""#).len(), 1);
 
     let paste = tags_with(&html, r#"data-menu-index="1""#);
-    assert!(paste[0].contains(r#"aria-disabled="true""#));
+    assert_eq!(paste[0]["aria-disabled"], "true");
     // Not the `disabled` attribute: that would take it out of the arrow order.
-    assert!(!paste[0].contains(" disabled"));
+    assert!(!paste[0].contains_key("disabled"));
 }
 
 #[test]
 fn a_submenu_item_announces_a_closed_menu() {
     let html = rendered(true, false);
     let export = tags_with(&html, r#"data-menu-index="2""#);
-    assert!(export[0].contains(r#"aria-haspopup="menu""#));
-    assert!(export[0].contains(r#"aria-expanded="false""#));
-    assert!(!export[0].contains("aria-controls"));
+    assert_eq!(export[0]["aria-haspopup"], "menu");
+    assert_eq!(export[0]["aria-expanded"], "false");
+    assert!(!export[0].contains_key("aria-controls"));
 
     let delete = tags_with(&html, r#"data-menu-index="3""#);
-    assert!(!delete[0].contains("aria-haspopup"));
-    assert!(!delete[0].contains("aria-expanded"));
+    assert!(!delete[0].contains_key("aria-haspopup"));
+    assert!(!delete[0].contains_key("aria-expanded"));
 }
 
 #[test]
@@ -208,19 +194,11 @@ fn a_checked_item_is_a_radio_that_says_so() {
     let radios = tags_with(&html, r#"role="menuitemradio""#);
 
     assert_eq!(radios.len(), 2, "{html}");
-    assert!(
-        radios[0].contains(r#"aria-checked="false""#),
-        "{}",
-        radios[0]
-    );
-    assert!(
-        radios[1].contains(r#"aria-checked="true""#),
-        "{}",
-        radios[1]
-    );
+    assert_eq!(radios[0]["aria-checked"], "false", "{radios:?}");
+    assert_eq!(radios[1]["aria-checked"], "true", "{radios:?}");
     // The checked item, not the first, is where the menu is entered.
-    assert!(radios[0].contains(r#"tabindex="-1""#), "{}", radios[0]);
-    assert!(radios[1].contains(r#"tabindex="0""#), "{}", radios[1]);
+    assert_eq!(radios[0]["tabindex"], "-1", "{radios:?}");
+    assert_eq!(radios[1]["tabindex"], "0", "{radios:?}");
     // Settings keeps an empty slot too, so its label lines up (todo 641).
     assert_eq!(html.matches(r#"data-slot="check""#).count(), 3, "{html}");
     assert_eq!(
@@ -230,8 +208,8 @@ fn a_checked_item_is_a_radio_that_says_so() {
     );
 
     let settings = tags_with(&html, r#"data-menu-index="2""#);
-    assert!(settings[0].contains(r#"role="menuitem""#));
-    assert!(!settings[0].contains("aria-checked"));
+    assert_eq!(settings[0]["role"], "menuitem");
+    assert!(!settings[0].contains_key("aria-checked"));
 }
 
 /// A `checkbox` item is a `menuitemcheckbox` in the same check slot. An on/off
@@ -261,13 +239,13 @@ fn a_checkbox_item_is_a_checkbox_that_says_so() {
     let boxes = tags_with(&html, r#"role="menuitemcheckbox""#);
 
     assert_eq!(boxes.len(), 2, "{html}");
-    assert!(boxes[0].contains(r#"aria-checked="true""#), "{}", boxes[0]);
-    assert!(boxes[1].contains(r#"aria-checked="false""#), "{}", boxes[1]);
+    assert_eq!(boxes[0]["aria-checked"], "true", "{boxes:?}");
+    assert_eq!(boxes[1]["aria-checked"], "false", "{boxes:?}");
     assert!(!html.contains("menuitemradio"));
     assert_eq!(html.matches("<svg").count(), 1, "one check, on Show ruler");
 
     let undo = tags_with(&html, r#"data-menu-index="0""#);
-    assert!(undo[0].contains(r#"tabindex="0""#), "{}", undo[0]);
+    assert_eq!(undo[0]["tabindex"], "0", "{undo:?}");
 }
 
 /// The later of `radio` and `checkbox` wins: an item is one or the other.
@@ -294,10 +272,10 @@ fn radio_and_checkbox_replace_each_other() {
     let html = body(&render(app));
     let a = tags_with(&html, r#"data-menu-index="0""#);
     let b = tags_with(&html, r#"data-menu-index="1""#);
-    assert!(a[0].contains(r#"role="menuitemcheckbox""#), "{}", a[0]);
-    assert!(a[0].contains(r#"aria-checked="false""#), "{}", a[0]);
-    assert!(b[0].contains(r#"role="menuitemradio""#), "{}", b[0]);
-    assert!(b[0].contains(r#"aria-checked="false""#), "{}", b[0]);
+    assert_eq!(a[0]["role"], "menuitemcheckbox", "{a:?}");
+    assert_eq!(a[0]["aria-checked"], "false", "{a:?}");
+    assert_eq!(b[0]["role"], "menuitemradio", "{b:?}");
+    assert_eq!(b[0]["aria-checked"], "false", "{b:?}");
 }
 
 /// A `shortcut` lands on the item as `aria-keyshortcuts` and is drawn as a
@@ -324,18 +302,14 @@ fn a_shortcut_is_announced_by_attribute_not_by_name() {
 
     let html = body(&render(app));
     let cut = tags_with(&html, r#"data-menu-index="0""#);
-    assert!(
-        cut[0].contains(r#"aria-keyshortcuts="Control+X""#),
-        "{}",
-        cut[0]
-    );
+    assert_eq!(cut[0]["aria-keyshortcuts"], "Control+X", "{cut:?}");
     let hint = tags_with(&html, r#"data-slot="shortcut""#);
     assert_eq!(hint.len(), 1, "{html}");
-    assert!(hint[0].contains(r#"aria-hidden="true""#), "{}", hint[0]);
+    assert_eq!(hint[0]["aria-hidden"], "true", "{hint:?}");
     assert!(html.contains(">Ctrl+X<"), "{html}");
 
     let delete = tags_with(&html, r#"data-menu-index="1""#);
-    assert!(!delete[0].contains("aria-keyshortcuts"), "{}", delete[0]);
+    assert!(!delete[0].contains_key("aria-keyshortcuts"), "{delete:?}");
 }
 
 /// A link item is an `<a role="menuitem">` for a new tab, with its cue; disabled, it keeps no `href`.
@@ -362,26 +336,132 @@ fn a_link_item_is_an_anchor_that_opens_a_new_tab() {
     }
 
     let html = body(&render(app));
+    let (anchors, buttons) = (tags_with(&html, "<a"), tags_with(&html, "<button"));
     let docs = tags_with(&html, r#"data-menu-index="0""#);
-    assert!(docs[0].starts_with("<a "), "{}", docs[0]);
-    for expected in [
-        r#"role="menuitem""#,
-        r#"href="https://libero-ui.dev""#,
-        r#"target="_blank""#,
-        r#"rel="noopener noreferrer""#,
+    assert!(anchors.contains(&docs[0]), "{docs:?}");
+    for (name, expected) in [
+        ("role", "menuitem"),
+        ("href", "https://libero-ui.dev"),
+        ("target", "_blank"),
+        ("rel", "noopener noreferrer"),
     ] {
-        assert!(docs[0].contains(expected), "{expected} in {}", docs[0]);
+        assert_eq!(docs[0][name], expected, "{docs:?}");
     }
 
     let blog = tags_with(&html, r#"data-menu-index="1""#);
-    assert!(blog[0].starts_with("<a "), "{}", blog[0]);
-    assert!(!blog[0].contains("href"), "{}", blog[0]);
-    assert!(blog[0].contains(r#"aria-disabled="true""#), "{}", blog[0]);
+    assert!(anchors.contains(&blog[0]), "{blog:?}");
+    assert!(!blog[0].contains_key("href"), "{blog:?}");
+    assert_eq!(blog[0]["aria-disabled"], "true", "{blog:?}");
 
     let copy = tags_with(&html, r#"data-menu-index="2""#);
-    assert!(copy[0].starts_with("<button "), "{}", copy[0]);
+    assert!(buttons.contains(&copy[0]), "{copy:?}");
 
     // Todo 1495: the links but News, which opts out, end in Anchor's new-tab hint.
-    assert_eq!(html.matches(r#"data-slot="new-tab""#).count(), 2, "{html}");
+    assert_eq!(
+        tags_with(&html, r#"data-slot="new-tab""#).len(),
+        2,
+        "{html}"
+    );
     assert_eq!(html.matches("(opens in a new tab)").count(), 2, "{html}");
+}
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+
+    use crate::dispatch::*;
+    use dioxus::html::PlatformEventData;
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Button, Menu, MenuItem, use_menu},
+    };
+
+    use std::rc::Rc;
+
+    fn submenu_app() -> Element {
+        let menu = use_menu();
+        use_hook(|| menu.open());
+        rsx! {
+            LiberoProvider {
+                Menu {
+                    state: menu,
+                    items: vec![
+                        MenuItem::new("Recent")
+                            .submenu(vec![MenuItem::new("notes.md").onselect(|_| {}).into()])
+                            .into(),
+                    ],
+                    Button { attributes: menu.a11y_attributes(), "File" }
+                }
+                "menus:{menu.is_open()}"
+            }
+        }
+    }
+
+    fn open_menus(html: &str) -> usize {
+        html.matches("role=\"menu\"").count()
+    }
+
+    /// The root menu open with its submenu open on top, what addresses them, and
+    /// the submenu's id.
+    fn open_submenu() -> (VirtualDom, FindClickListener, String) {
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(submenu_app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        settle_menu(&mut dom, &mut find);
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(open_menus(&html), 1, "the root menu opens");
+
+        let recent = find.element("keydown", "aria-haspopup", "menu");
+        dom.runtime().handle_event(
+            "keydown",
+            Event::new(key_event(Key::ArrowRight), true),
+            recent,
+        );
+        settle_menu(&mut dom, &mut find);
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(open_menus(&html), 2, "ArrowRight opens the submenu");
+        let submenu = find.attributes[&recent]["aria-controls"].clone();
+        (dom, find, submenu)
+    }
+
+    fn settle_menu(dom: &mut VirtualDom, find: &mut FindClickListener) {
+        for _ in 0..4 {
+            dom.process_events();
+            dom.render_immediate(find);
+        }
+    }
+
+    /// Focus leaving a submenu for somewhere outside the menu closes the whole
+    /// menu, not only the submenu (todo 322). Off the web no element ever counts
+    /// as focused, so every focusout here is focus leaving the whole tree - the
+    /// case that left the root open. Focus moving between levels, which must
+    /// close nothing, needs a real browser.
+    #[test]
+    fn focus_leaving_a_submenu_closes_the_whole_menu() {
+        let (mut dom, mut find, submenu) = open_submenu();
+        let submenu = find.element("focusout", "id", &submenu);
+        dom.runtime().handle_event(
+            "focusout",
+            Event::new(Rc::new(PlatformEventData::new(Box::new(FakeFocus))), true),
+            submenu,
+        );
+        settle_menu(&mut dom, &mut find);
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(open_menus(&html), 0, "no level stays open");
+        assert!(html.contains("menus:false"), "the root's state closed too");
+    }
+
+    /// Escape is not focus leaving: it closes the submenu alone, as before.
+    #[test]
+    fn escape_in_a_submenu_closes_only_the_submenu() {
+        let (mut dom, mut find, submenu) = open_submenu();
+        let item = find.element("keydown", "id", &format!("{submenu}-item-0"));
+        dom.runtime()
+            .handle_event("keydown", Event::new(key_event(Key::Escape), true), item);
+        settle_menu(&mut dom, &mut find);
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(open_menus(&html), 1, "the root menu stays");
+        assert!(html.contains("menus:true"));
+    }
 }

@@ -221,3 +221,62 @@ fn tabs_left_without_options_still_list_the_enums_own() {
     assert_eq!(body.matches("role=\"tab\"").count(), 3);
     assert_eq!(body.matches("aria-disabled=\"true\"").count(), 0);
 }
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::body;
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Options, Tabs},
+    };
+
+    #[derive(Clone, PartialEq, Options)]
+    enum Pane {
+        First,
+        Second,
+    }
+
+    #[test]
+    fn clicking_a_tab_selects_it_and_swaps_the_panel() {
+        fn app() -> Element {
+            let mut pane = use_signal(|| Pane::First);
+
+            rsx! {
+                LiberoProvider {
+                    Tabs {
+                        value: pane(),
+                        onchange: move |next| pane.set(next),
+                        panel: |pane: Pane| match pane {
+                            Pane::First => rsx! { "first body" },
+                            Pane::Second => rsx! { "second body" },
+                        },
+                    }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let second = find.element("click", "aria-label", "Second");
+
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("first body"));
+        assert!(!html.contains("second body"));
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), second);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        // Only the newly selected panel is in the tree - the other is not hidden,
+        // it is gone.
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("second body"));
+        assert!(!html.contains("first body"));
+        assert_eq!(body(&html).matches("aria-selected=\"true\"").count(), 1);
+    }
+}

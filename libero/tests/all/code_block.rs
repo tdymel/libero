@@ -171,3 +171,30 @@ fn a_floating_copy_button_reserves_space_on_the_first_row_only() {
     assert!(html.find("copy-space") < html.find(">first<"), "{html}");
     assert!(!body(&render(headed)).contains("copy-space"));
 }
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{LiberoProvider, components::CodeBlock};
+
+    /// No clipboard without `native`, so the copy fails and the status says so.
+    /// `native` has arboard, which may write; the in-crate tests fake both answers.
+    #[cfg(not(feature = "native"))]
+    #[test]
+    fn a_copy_without_a_clipboard_is_announced_as_failed() {
+        fn app() -> Element {
+            rsx! { LiberoProvider { CodeBlock { source: "let x = 1;" } } }
+        }
+
+        let (before, after) = click_the_last_listener(app);
+        let status = |html: &str| {
+            let status = &html[html.find(r#"role="status""#).expect("a status region")..];
+            status[..status.find("</span>").unwrap()].to_string()
+        };
+        assert!(!status(&before).contains("Copy failed"), "{before}");
+        assert!(status(&after).contains("Copy failed"), "{after}");
+    }
+}

@@ -729,3 +729,622 @@ mod option_list {
         assert!(!empty.contains(r#"aria-busy="true""#), "{empty}");
     }
 }
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::body;
+    use crate::dispatch::*;
+    use dioxus::core::{AttributeValue, ElementId, WriteMutations};
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Button, ColorField, MultiSelect, PhoneField, SelectionArgs, TagsField},
+    };
+
+    /// The pointer and the ARIA go through the same `disabled`/`readonly` gate the
+    /// keys do (todos 401, 411, 414): a refused list is not drawn, so no row takes
+    /// a click, and the trigger claims no listbox that is not in the DOM.
+    mod combobox_refusal {
+        use super::*;
+        use libero::components::{
+            Autocomplete, Cascader, CascaderOption, Combobox, ComboboxOption, ComboboxOptionArgs,
+            DateField, Select, use_combobox,
+        };
+
+        thread_local! {
+            static LOCKED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+            static PICKED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+            static TAGS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+        }
+
+        fn locked() -> bool {
+            LOCKED.with(|cell| cell.get())
+        }
+
+        /// A row's click listener registers before its `role="option"`, so the
+        /// two are recorded by element id and matched afterwards.
+        #[derive(Default)]
+        struct FindOption {
+            last: Option<ElementId>,
+            clicked: std::collections::HashSet<ElementId>,
+            is_option: std::collections::HashSet<ElementId>,
+        }
+
+        impl FindOption {
+            fn option_click(&self) -> Option<ElementId> {
+                self.clicked.intersection(&self.is_option).next().copied()
+            }
+        }
+
+        impl WriteMutations for FindOption {
+            fn push_id(&mut self, id: ElementId) {
+                self.last = Some(id);
+            }
+            fn set_id(&mut self, id: ElementId) {
+                self.last = Some(id);
+            }
+            fn add_event_listener(&mut self, name: &str) {
+                if name == "click"
+                    && let Some(id) = self.last
+                {
+                    self.clicked.insert(id);
+                }
+            }
+            fn child(&mut self, _index: usize) {}
+            fn pop(&mut self) {}
+            fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
+            fn create_text(&mut self, _value: &str) {}
+            fn clone(&mut self) {}
+            fn append_children(&mut self, _m: usize) {}
+            fn replace_with(&mut self, _m: usize) {}
+            fn insert_after(&mut self, _m: usize) {}
+            fn insert_before(&mut self, _m: usize) {}
+            fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
+                if name == "role"
+                    && matches!(value, AttributeValue::Text(text) if text == "option")
+                    && let Some(id) = self.last
+                {
+                    self.is_option.insert(id);
+                }
+            }
+            fn set_text(&mut self, _value: &str) {}
+            fn remove_event_listener(&mut self, _name: &str) {}
+            fn remove(&mut self) {}
+        }
+
+        fn mount(app: fn() -> Element) -> (VirtualDom, FindClickListener) {
+            dioxus::html::set_event_converter(Box::new(TestConverter));
+            LOCKED.with(|cell| cell.set(false));
+            PICKED.with(|cell| cell.set(false));
+            TAGS.with(|cell| cell.borrow_mut().clear());
+            let mut dom = VirtualDom::new(app);
+            let mut find = FindClickListener::default();
+            dom.rebuild(&mut find);
+            dom.render_immediate(&mut find);
+            (dom, find)
+        }
+
+        /// Two passes: the list writes into the caller's state while it renders,
+        /// so the trigger catches up one pass later.
+        fn settle(dom: &mut VirtualDom, to: &mut impl WriteMutations) {
+            dom.render_immediate(to);
+            dom.render_immediate(to);
+        }
+
+        /// Flips the lock with the list already open, the way a caller reacting
+        /// to something else would.
+        fn lock(dom: &mut VirtualDom, to: &mut impl WriteMutations) {
+            LOCKED.with(|cell| cell.set(true));
+            dom.mark_dirty(dioxus::core::ScopeId::APP);
+            settle(dom, to);
+        }
+
+        fn assert_no_listbox_claimed(dom: &VirtualDom, what: &str) {
+            let html = body(&dioxus_ssr::render(dom));
+            assert!(
+                !html.contains(r#"role="listbox""#),
+                "{what}: the list is drawn:\n{html}"
+            );
+            assert!(
+                !html.contains(r#"aria-expanded="true""#),
+                "{what}: aria-expanded:\n{html}"
+            );
+            assert!(
+                !html.contains("aria-controls"),
+                "{what}: aria-controls:\n{html}"
+            );
+            assert!(
+                !html.contains("aria-activedescendant"),
+                "{what}: aria-activedescendant:\n{html}"
+            );
+        }
+
+        fn assert_listbox(dom: &VirtualDom, what: &str) {
+            let html = body(&dioxus_ssr::render(dom));
+            assert!(
+                html.contains(r#"role="listbox""#),
+                "{what}: the list never opened:\n{html}"
+            );
+        }
+
+        fn fruit() -> Element {
+            let fruit = use_combobox();
+            use_hook(|| fruit.open());
+            rsx! {
+                LiberoProvider {
+                    Combobox {
+                        state: fruit,
+                        disabled: locked(),
+                        options: vec!["apple"],
+                        option: move |o: ComboboxOptionArgs<&'static str>| rsx! {
+                            ComboboxOption {
+                                onpick: move |_| PICKED.with(|p| p.set(true)),
+                                "{o.value}"
+                            }
+                        },
+                        Button { attributes: fruit.a11y_attributes(), "pick" }
+                    }
+                }
+            }
+        }
+
+        /// Todo 411: `disabled` gated only the keys, so an open row still took a
+        /// mouse pick.
+        #[test]
+        fn a_combobox_disabled_while_open_takes_no_mouse_pick() {
+            dioxus::html::set_event_converter(Box::new(TestConverter));
+            LOCKED.with(|cell| cell.set(false));
+            PICKED.with(|cell| cell.set(false));
+            let mut dom = VirtualDom::new(fruit);
+            let mut find = FindOption::default();
+            dom.rebuild(&mut find);
+            settle(&mut dom, &mut find);
+            assert_listbox(&dom, "enabled");
+            let row = find
+                .option_click()
+                .expect("the row registered no click listener");
+
+            lock(&mut dom, &mut find);
+            assert_no_listbox_claimed(&dom, "disabled");
+            dom.runtime()
+                .handle_event("click", Event::new(click_event(), true), row);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            assert!(
+                !PICKED.with(|p| p.get()),
+                "disabled: true still let a mouse click pick a row"
+            );
+        }
+
+        /// Mounted disabled with the state already open: nothing is drawn at all.
+        #[test]
+        fn a_combobox_mounted_disabled_and_open_draws_no_row() {
+            LOCKED.with(|cell| cell.set(true));
+            let mut dom = VirtualDom::new(fruit);
+            let mut find = FindOption::default();
+            dom.rebuild(&mut find);
+            settle(&mut dom, &mut find);
+            assert_eq!(
+                find.option_click(),
+                None,
+                "a disabled combobox drew a clickable row"
+            );
+            assert_no_listbox_claimed(&dom, "disabled from the start");
+        }
+
+        fn topics() -> Element {
+            rsx! {
+                LiberoProvider {
+                    TagsField {
+                        label: "Topics",
+                        suggestions: vec!["rust".to_string()],
+                        readonly: locked(),
+                        onchange: move |next: Vec<String>| TAGS.with(|cell| *cell.borrow_mut() = next),
+                    }
+                }
+            }
+        }
+
+        /// Todo 414: the list opened on `!disabled` alone and `onpick` had no
+        /// guard, so a read-only field still committed a mouse-picked tag.
+        #[test]
+        fn a_tags_field_made_readonly_while_open_takes_no_mouse_pick() {
+            let (mut dom, find) = mount(topics);
+            let mut rows = FindOption::default();
+            dom.runtime().handle_event(
+                "input",
+                Event::new(input_event("rust"), true),
+                input_listener(&find),
+            );
+            settle(&mut dom, &mut rows);
+            assert_listbox(&dom, "editable");
+            let row = rows
+                .option_click()
+                .expect("the row registered no click listener");
+
+            lock(&mut dom, &mut rows);
+            assert_no_listbox_claimed(&dom, "readonly");
+            dom.runtime()
+                .handle_event("click", Event::new(click_event(), true), row);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            assert_eq!(
+                TAGS.with(|cell| cell.borrow().clone()),
+                Vec::<String>::new(),
+                "a readonly TagsField committed a tag through a mouse pick"
+            );
+        }
+
+        fn city(readonly: bool) -> Element {
+            rsx! {
+                LiberoProvider {
+                    Select::<String> {
+                        label: "City",
+                        options: vec!["Berlin".to_string(), "Bonn".to_string()],
+                        readonly,
+                        disabled: locked(),
+                    }
+                }
+            }
+        }
+
+        fn press(dom: &mut VirtualDom, target: ElementId, key: Key) {
+            dom.runtime()
+                .handle_event("keydown", Event::new(key_event(key), true), target);
+            settle(dom, &mut dioxus::core::NoOpMutations);
+        }
+
+        /// Todo 401: one ArrowDown on a read-only `Select` opened the state, and
+        /// the trigger read the raw state into `aria-expanded` and `aria-controls`.
+        #[test]
+        fn arrow_down_on_a_readonly_select_claims_no_listbox() {
+            let (mut dom, find) = mount(|| city(true));
+            press(&mut dom, last_keydown(&find), Key::ArrowDown);
+            assert_no_listbox_claimed(&dom, "readonly after ArrowDown");
+        }
+
+        /// Todo 401: disabling an open `Select` hid the list, while nothing closed
+        /// the state the trigger's ARIA read.
+        #[test]
+        fn a_select_disabled_while_open_claims_no_listbox() {
+            let (mut dom, find) = mount(|| city(false));
+            press(&mut dom, last_keydown(&find), Key::ArrowDown);
+            assert_listbox(&dom, "enabled after ArrowDown");
+
+            lock(&mut dom, &mut dioxus::core::NoOpMutations);
+            assert_no_listbox_claimed(&dom, "disabled while open");
+        }
+
+        fn fruit_field() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Autocomplete {
+                        label: "Fruit",
+                        options: vec!["apple".to_string()],
+                        readonly: locked(),
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn an_autocomplete_made_readonly_while_open_claims_no_listbox() {
+            let (mut dom, find) = mount(fruit_field);
+            dom.runtime().handle_event(
+                "input",
+                Event::new(input_event("a"), true),
+                input_listener(&find),
+            );
+            settle(&mut dom, &mut dioxus::core::NoOpMutations);
+            assert_listbox(&dom, "editable");
+
+            lock(&mut dom, &mut dioxus::core::NoOpMutations);
+            assert_no_listbox_claimed(&dom, "readonly while open");
+        }
+
+        fn phone(readonly: bool) -> Element {
+            rsx! {
+                LiberoProvider {
+                    PhoneField { label: "Phone", readonly, disabled: locked() }
+                }
+            }
+        }
+
+        /// The country button reads `aria-expanded` itself, so it needs its own
+        /// gate: a disabled field hides the list without closing the state.
+        #[test]
+        fn a_phone_field_disabled_while_open_claims_no_listbox() {
+            let (mut dom, find) = mount(|| phone(false));
+            let button = find.first_click.expect("the country button takes clicks");
+            dom.runtime()
+                .handle_event("click", Event::new(click_event(), true), button);
+            settle(&mut dom, &mut dioxus::core::NoOpMutations);
+            assert_listbox(&dom, "enabled after a click");
+
+            lock(&mut dom, &mut dioxus::core::NoOpMutations);
+            assert_no_listbox_claimed(&dom, "disabled while open");
+        }
+
+        #[test]
+        fn arrow_down_on_a_readonly_phone_field_opens_no_list() {
+            let (mut dom, find) = mount(|| phone(true));
+            let button = find.first_click.expect("the country button takes clicks");
+            press(&mut dom, button, Key::ArrowDown);
+            assert_no_listbox_claimed(&dom, "readonly after ArrowDown");
+        }
+
+        /// A name for the failure message, and the app that locks that way.
+        type Case = (&'static str, fn() -> Element);
+
+        fn category(readonly: bool) -> Element {
+            rsx! {
+                LiberoProvider {
+                    Cascader {
+                        label: "Category",
+                        data: vec![CascaderOption::new("tea", "Tea")],
+                        readonly: readonly && locked(),
+                        disabled: !readonly && locked(),
+                        onchange: move |_: Option<String>| {},
+                    }
+                }
+            }
+        }
+
+        /// Todo 439 (b): `Cascader` reads its own state, so it needs the gate too.
+        #[test]
+        fn a_cascader_locked_while_open_claims_no_listbox() {
+            let cases: [Case; 2] = [
+                ("disabled", || category(false)),
+                ("readonly", || category(true)),
+            ];
+            for (how, app) in cases {
+                let (mut dom, find) = mount(app);
+                press(&mut dom, last_keydown(&find), Key::ArrowDown);
+                assert_listbox(&dom, "enabled after ArrowDown");
+
+                lock(&mut dom, &mut dioxus::core::NoOpMutations);
+                assert_no_listbox_claimed(&dom, &format!("{how} while open"));
+            }
+        }
+
+        fn due(readonly: bool) -> Element {
+            rsx! {
+                LiberoProvider {
+                    DateField {
+                        label: "Due",
+                        readonly: readonly && locked(),
+                        disabled: !readonly && locked(),
+                        onchange: move |_| {},
+                    }
+                }
+            }
+        }
+
+        fn accent(readonly: bool) -> Element {
+            rsx! {
+                LiberoProvider {
+                    ColorField {
+                        label: "Accent",
+                        readonly: readonly && locked(),
+                        disabled: !readonly && locked(),
+                        oninput: move |_| {},
+                    }
+                }
+            }
+        }
+
+        /// The picker fields open a dialog, not a listbox, and claim it the same
+        /// way: `aria-expanded` and `aria-controls` on the text input.
+        fn assert_dialog(dom: &VirtualDom, open: bool, what: &str) {
+            let html = body(&dioxus_ssr::render(dom));
+            assert_eq!(html.contains(r#"role="dialog""#), open, "{what}:\n{html}");
+            assert_eq!(
+                html.contains(r#"aria-expanded="true""#),
+                open,
+                "{what}: aria-expanded:\n{html}"
+            );
+            assert_eq!(
+                html.contains("aria-controls"),
+                open,
+                "{what}: aria-controls:\n{html}"
+            );
+        }
+
+        /// Todo 439 (b): the date and colour fields gate their dialog on
+        /// `disabled` and `readonly`, and the input's ARIA reads that same gate.
+        #[test]
+        fn a_picker_field_locked_while_open_claims_no_dialog() {
+            let cases: [Case; 4] = [
+                ("DateField disabled", || due(false)),
+                ("DateField readonly", || due(true)),
+                ("ColorField disabled", || accent(false)),
+                ("ColorField readonly", || accent(true)),
+            ];
+            for (how, app) in cases {
+                let (mut dom, find) = mount(app);
+                dom.runtime().handle_event(
+                    "click",
+                    Event::new(click_event(), true),
+                    last_click(&find),
+                );
+                settle(&mut dom, &mut dioxus::core::NoOpMutations);
+                assert_dialog(&dom, true, &format!("{how}: after a click"));
+
+                lock(&mut dom, &mut dioxus::core::NoOpMutations);
+                assert_dialog(&dom, false, &format!("{how}: while open"));
+            }
+        }
+    }
+
+    /// Todo 439 (a): the pointer refuses what the keys refuse. Each case runs once
+    /// editable, so the refusal is believed next to the same click being answered.
+    mod pointer_guards {
+        use super::*;
+        use libero::components::Autocomplete;
+
+        /// The click listener on the element whose `aria-label` is `label`; the
+        /// two register apart, so both are recorded by element id.
+        struct FindLabelled {
+            label: &'static str,
+            last: Option<ElementId>,
+            clicked: std::collections::HashSet<ElementId>,
+            labelled: std::collections::HashSet<ElementId>,
+        }
+
+        impl FindLabelled {
+            fn new(label: &'static str) -> Self {
+                Self {
+                    label,
+                    last: None,
+                    clicked: Default::default(),
+                    labelled: Default::default(),
+                }
+            }
+
+            fn target(&self) -> Option<ElementId> {
+                self.clicked.intersection(&self.labelled).next().copied()
+            }
+        }
+
+        impl WriteMutations for FindLabelled {
+            fn push_id(&mut self, id: ElementId) {
+                self.last = Some(id);
+            }
+            fn set_id(&mut self, id: ElementId) {
+                self.last = Some(id);
+            }
+            fn add_event_listener(&mut self, name: &str) {
+                if name == "click"
+                    && let Some(id) = self.last
+                {
+                    self.clicked.insert(id);
+                }
+            }
+            fn child(&mut self, _index: usize) {}
+            fn pop(&mut self) {}
+            fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
+            fn create_text(&mut self, _value: &str) {}
+            fn clone(&mut self) {}
+            fn append_children(&mut self, _m: usize) {}
+            fn replace_with(&mut self, _m: usize) {}
+            fn insert_after(&mut self, _m: usize) {}
+            fn insert_before(&mut self, _m: usize) {}
+            fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
+                if name == "aria-label"
+                    && matches!(value, AttributeValue::Text(text) if text == self.label)
+                    && let Some(id) = self.last
+                {
+                    self.labelled.insert(id);
+                }
+            }
+            fn set_text(&mut self, _value: &str) {}
+            fn remove_event_listener(&mut self, _name: &str) {}
+            fn remove(&mut self) {}
+        }
+
+        /// Mounts `app` read-only or not and clicks the element labelled `label`,
+        /// if it was drawn at all. Returns what the handler heard.
+        fn click_labelled(
+            app: fn() -> Element,
+            readonly: bool,
+            label: &'static str,
+        ) -> Vec<String> {
+            dioxus::html::set_event_converter(Box::new(TestConverter));
+            READ_ONLY.set(readonly);
+            HEARD.with_borrow_mut(Vec::clear);
+            let mut dom = VirtualDom::new(app);
+            let mut find = FindLabelled::new(label);
+            dom.rebuild(&mut find);
+            dom.render_immediate(&mut find);
+            if let Some(target) = find.target() {
+                dom.runtime()
+                    .handle_event("click", Event::new(click_event(), true), target);
+                dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            }
+            HEARD.with_borrow(Clone::clone)
+        }
+
+        fn own_tags() -> Element {
+            rsx! {
+                LiberoProvider {
+                    TagsField {
+                        label: "Topics",
+                        value: vec!["rust".to_string()],
+                        readonly: READ_ONLY.get(),
+                        onchange: move |next: Vec<String>| heard(next),
+                        tag: move |args: SelectionArgs<String>| {
+                            let label = format!("Drop {}", args.value);
+                            rsx! {
+                                button { "aria-label": label, onclick: move |_| args.remove.call(()), "x" }
+                            }
+                        },
+                    }
+                }
+            }
+        }
+
+        /// A caller's `tag` got an unguarded `remove`, while Backspace refuses a
+        /// read-only field.
+        #[test]
+        fn a_readonly_tags_field_refuses_a_custom_tags_remove() {
+            let heard = click_labelled(own_tags, false, "Drop rust");
+            assert_eq!(heard, ["[]"], "the custom x is the control");
+            let heard = click_labelled(own_tags, true, "Drop rust");
+            assert_eq!(heard, Vec::<String>::new());
+        }
+
+        fn own_chips() -> Element {
+            rsx! {
+                LiberoProvider {
+                    MultiSelect::<String> {
+                        label: "Cities",
+                        options: vec!["Berlin".to_string(), "Bonn".to_string()],
+                        value: vec!["Berlin".to_string()],
+                        readonly: READ_ONLY.get(),
+                        onchange: move |next: Vec<String>| heard(next),
+                        selection: move |args: SelectionArgs<String>| {
+                            let label = format!("Drop {}", args.value);
+                            rsx! {
+                                button { "aria-label": label, onclick: move |_| args.remove.call(()), "x" }
+                            }
+                        },
+                    }
+                }
+            }
+        }
+
+        /// The same for `MultiSelect`'s `selection`: the trigger's Backspace
+        /// refuses a read-only select.
+        #[test]
+        fn a_readonly_multi_select_refuses_a_custom_chips_remove() {
+            let heard = click_labelled(own_chips, false, "Drop Berlin");
+            assert_eq!(heard, ["[]"], "the custom x is the control");
+            let heard = click_labelled(own_chips, true, "Drop Berlin");
+            assert_eq!(heard, Vec::<String>::new());
+        }
+
+        fn clearable_fruit() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Autocomplete {
+                        label: "Fruit",
+                        options: vec!["apple".to_string()],
+                        value: "apple".to_string(),
+                        clearable: true,
+                        readonly: READ_ONLY.get(),
+                        oninput: move |next: String| heard(next),
+                    }
+                }
+            }
+        }
+
+        /// Every other clearable field hides its x while read-only; `Autocomplete`
+        /// drew it, and a click emptied the text the native `readonly` protects.
+        #[test]
+        fn a_readonly_autocomplete_has_no_clear_to_click() {
+            let heard = click_labelled(clearable_fruit, false, "Clear");
+            assert_eq!(heard, ["\"\""], "the x is the control");
+            let heard = click_labelled(clearable_fruit, true, "Clear");
+            assert_eq!(heard, Vec::<String>::new());
+        }
+    }
+}

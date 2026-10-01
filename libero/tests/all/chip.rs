@@ -245,3 +245,97 @@ fn a_readonly_chip_says_so_and_stays_enabled() {
         "{html}"
     );
 }
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::{attributes_of, body};
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Chip, Form, MultiSelect},
+    };
+
+    #[test]
+    fn pressing_a_chip_x_keeps_the_focus_on_the_trigger() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    MultiSelect::<Emphasis> {
+                        label: "Emphasis",
+                        value: vec![Emphasis::Bold, Emphasis::Italic],
+                        onchange: move |_: Vec<Emphasis>| {},
+                    }
+                }
+            }
+        }
+
+        // One per chip, the value slot's and the chevron's.
+        assert_every_press_keeps_the_focus(app, 4);
+    }
+
+    /// Todo 222: a `name` makes a `Chip` a checkbox that posts, and one with no
+    /// handler keeps its own state - the way an unbound `Checkbox` does.
+    #[test]
+    fn a_named_chip_posts_and_toggles_on_its_own() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Chip { name: "open", "Open" }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+
+        let html = dioxus_ssr::render(&dom);
+        let input = attributes_of(&body(&html), "input");
+        assert_eq!(input.get("type").map(String::as_str), Some("checkbox"));
+        assert_eq!(input.get("name").map(String::as_str), Some("open"));
+        assert_eq!(checked_states(&html), [false]);
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), last_click(&find));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [true]);
+    }
+
+    #[derive(Clone, PartialEq, Default, libero::components::Fields)]
+    pub struct Filters {
+        pub open: bool,
+    }
+
+    /// Todo 222: a path `name` binds a `Chip` to the `Form` around it, as on
+    /// `Checkbox` - the click writes the form's value, and the chip renders it.
+    #[test]
+    fn a_chip_with_a_path_name_writes_its_forms_value() {
+        fn app() -> Element {
+            let filters = use_store(Filters::default);
+            rsx! {
+                LiberoProvider {
+                    Form { value: filters,
+                        Chip { name: Filters::FIELDS.open(), "Open" }
+                    }
+                }
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [false]);
+
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), last_click(&find));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(checked_states(&html), [true]);
+        let input = attributes_of(&body(&html), "input");
+        assert_eq!(input.get("name").map(String::as_str), Some("open"));
+    }
+}

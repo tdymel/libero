@@ -102,3 +102,63 @@ fn a_focusable_disabled_action_icon_stays_in_the_tab_order() {
         "{html}"
     );
 }
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::{attributes_of, body};
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{LiberoProvider, components::ActionIcon};
+
+    fn action_icon_app() -> Element {
+        rsx! { LiberoProvider { ActionIcon { aria_label: "Click", "x" } } }
+    }
+
+    #[test]
+    fn clicking_an_action_icon_runs_its_ripple() {
+        assert_ripple_alternates(action_icon_app);
+    }
+
+    fn busy_action_icon() -> Element {
+        rsx! {
+            LiberoProvider {
+                ActionIcon {
+                    aria_label: "Save",
+                    // The flag reads as `loading` here.
+                    loading: READ_ONLY.get(),
+                    onclick: move |_| heard("click"),
+                    "S"
+                }
+            }
+        }
+    }
+
+    /// Todo 222: `ActionIcon` takes `Button`'s `loading` - the click is swallowed,
+    /// but the button keeps its tab stop (no native `disabled`) and says it is
+    /// busy. The same click on the idle icon is the control.
+    #[test]
+    fn a_loading_action_icon_swallows_the_click_and_stays_focusable() {
+        let (clicked, _) = send(busy_action_icon, false, "click", last_click, click_event);
+        assert_eq!(clicked, ["\"click\""], "the click is the control");
+        let (heard, html) = send(busy_action_icon, true, "click", last_click, click_event);
+        assert_eq!(heard, Vec::<String>::new());
+
+        let button = attributes_of(&body(&html), "button");
+        assert_eq!(
+            button.get("aria-busy").map(String::as_str),
+            Some("true"),
+            "{button:?}"
+        );
+        assert_eq!(
+            button.get("aria-disabled").map(String::as_str),
+            Some("true")
+        );
+        assert!(
+            button["data-state"]
+                .split(' ')
+                .any(|token| token == "loading")
+        );
+        assert!(!button.contains_key("disabled"), "{button:?}");
+    }
+}

@@ -293,3 +293,112 @@ fn the_country_name_follows_the_localization() {
         "Land: [DE], DE +49"
     );
 }
+
+/// Events dispatched the way a renderer does, through [`crate::dispatch`].
+mod dispatched {
+    use crate::common::{attributes_of, body};
+    use crate::dispatch::*;
+
+    use dioxus::prelude::*;
+    use libero::{LiberoProvider, components::PhoneField};
+
+    thread_local! {
+        /// The country the phone field below is mounted on, and a prop that
+        /// changes under it - the demo's controls in one flag.
+        static PHONE_COUNTRY: std::cell::Cell<&'static str> = const { std::cell::Cell::new("DE") };
+        static PHONE_TOGGLE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+
+    fn phone_app() -> Element {
+        let mut value = use_signal(String::new);
+        rsx! {
+            LiberoProvider {
+                PhoneField {
+                    label: "Mobile",
+                    name: "phone",
+                    country: PHONE_COUNTRY.get(),
+                    description: PHONE_TOGGLE.get().then(|| "Deliveries only".to_string()),
+                    value: value(),
+                    oninput: move |next: String| value.set(next),
+                }
+            }
+        }
+    }
+
+    /// The text the `tel` input is showing, which is not what it posts.
+    fn phone_text(html: &str) -> String {
+        attributes_of(&body(html), "input")
+            .get("value")
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    /// Todo 87b: typing `30 123456` into a German field and then leaving it - or
+    /// re-rendering it, which is what toggling a demo control does - used to bring
+    /// the number back as `30123456`. Germany has no one fixed grouping, so there
+    /// is nothing to regroup into and the text the user typed stays. The US, which
+    /// has one, still regroups on the way out.
+    #[test]
+    fn a_plan_without_a_fixed_shape_keeps_the_text_the_user_typed() {
+        for (country, typed, after_blur) in [
+            ("DE", "30 123456", "30 123456"),
+            ("US", "2133734253", "213 373 4253"),
+        ] {
+            dioxus::html::set_event_converter(Box::new(TestConverter));
+            PHONE_COUNTRY.set(country);
+            PHONE_TOGGLE.set(false);
+            let mut dom = VirtualDom::new(phone_app);
+            let mut find = FindClickListener::default();
+            dom.rebuild(&mut find);
+            // Every render is written back into `find`: the second pass, which is
+            // what picks up the component CSS, replaces the nodes, and an id read
+            // before it addresses an element that is gone.
+            dom.render_immediate(&mut find);
+
+            let input = input_listener(&find);
+            // The `tel` input is the element that listens for both, and a blur
+            // sent anywhere else would prove nothing.
+            assert!(
+                find.blur.contains(&input),
+                "the tel input has no blur listener: {:?}",
+                find.blur
+            );
+            dom.runtime()
+                .handle_event("input", Event::new(input_event(typed), true), input);
+            dom.render_immediate(&mut find);
+            assert_eq!(
+                phone_text(&dioxus_ssr::render(&dom)),
+                typed,
+                "{country}: the keystroke"
+            );
+
+            // A re-render with nothing else touched - what a demo control does.
+            PHONE_TOGGLE.set(true);
+            dom.mark_dirty(dioxus::core::ScopeId::APP);
+            dom.render_immediate(&mut find);
+            let html = dioxus_ssr::render(&dom);
+            assert!(
+                html.contains("Deliveries only"),
+                "the re-render did nothing"
+            );
+            assert_eq!(phone_text(&html), typed, "{country}: the re-render");
+
+            let input = input_listener(&find);
+            dom.runtime()
+                .handle_event("blur", Event::new(focus_event(), false), input);
+            dom.render_immediate(&mut find);
+            let html = dioxus_ssr::render(&dom);
+            assert_eq!(phone_text(&html), after_blur, "{country}: the blur");
+            // Whatever the text is doing, the hidden input posts E.164.
+            let digits: String = typed.chars().filter(char::is_ascii_digit).collect();
+            let dial = match country {
+                "DE" => "49",
+                _ => "1",
+            };
+            assert!(
+                html.contains(&format!("value=\"+{dial}{digits}\"")),
+                "the E.164 moved: {html}"
+            );
+        }
+    }
+}

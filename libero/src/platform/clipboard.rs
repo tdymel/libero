@@ -70,8 +70,35 @@ mod native {
     pub(super) static CLIPBOARD: NativeClipboard = NativeClipboard;
 }
 
+#[cfg(test)]
+thread_local! {
+    static FAKE: std::cell::Cell<Option<&'static dyn ClipboardApi>> = const { std::cell::Cell::new(None) };
+}
+
+/// Puts back the platform's clipboard when dropped.
+#[cfg(test)]
+pub(crate) struct FakeClipboardGuard;
+
+#[cfg(test)]
+impl Drop for FakeClipboardGuard {
+    fn drop(&mut self) {
+        FAKE.with(|fake| fake.set(None));
+    }
+}
+
+/// Answers `clipboard()` with `fake` on this thread until the guard drops.
+#[cfg(test)]
+pub(crate) fn fake_clipboard(fake: &'static dyn ClipboardApi) -> FakeClipboardGuard {
+    FAKE.with(|slot| slot.set(Some(fake)));
+    FakeClipboardGuard
+}
+
 /// `None` where the platform has no clipboard: never a stub answering `Unsupported`.
 pub(crate) fn clipboard() -> Option<&'static dyn ClipboardApi> {
+    #[cfg(test)]
+    if let Some(fake) = FAKE.with(std::cell::Cell::get) {
+        return Some(fake);
+    }
     #[cfg(target_arch = "wasm32")]
     return Some(&web::CLIPBOARD);
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
