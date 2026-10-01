@@ -43,12 +43,19 @@ thread_local! {
 }
 
 thread_local! {
-    static PAGES: RefCell<Vec<(Option<String>, Vec<PropGroup>)>> = const { RefCell::new(Vec::new()) };
+    static PAGES: RefCell<Vec<RecordedPage>> = const { RefCell::new(Vec::new()) };
+}
+
+/// A mounted `DocPage`'s title, markdown mirror and property groups.
+pub struct RecordedPage {
+    pub title: String,
+    pub markdown: Option<String>,
+    pub properties: Vec<PropGroup>,
 }
 
 /// Called by every `DocPage` as it mounts.
-pub fn record_page(markdown: Option<String>, properties: Vec<PropGroup>) {
-    PAGES.with(|pages| pages.borrow_mut().push((markdown, properties)));
+pub fn record_page(page: RecordedPage) {
+    PAGES.with(|pages| pages.borrow_mut().push(page));
 }
 
 /// Called by every `Demo` as it mounts.
@@ -371,8 +378,8 @@ struct Rendered {
     route: Route,
     /// Every `Demo`, in render order.
     demos: Vec<DemoCode>,
-    /// The markdown mirror and the property groups of every `DocPage`.
-    pages: Vec<(Option<String>, Vec<PropGroup>)>,
+    /// Every `DocPage`, in render order.
+    pages: Vec<RecordedPage>,
 }
 
 fn render(route: &Route) -> Rendered {
@@ -440,7 +447,12 @@ fn md_mirrors_list_the_parts_of_their_page() {
     let public = Path::new(env!("CARGO_MANIFEST_DIR")).join("public");
     let mut problems = Vec::new();
     for Rendered { route, pages, .. } in rendered() {
-        for (markdown, groups) in pages {
+        for RecordedPage {
+            markdown,
+            properties: groups,
+            ..
+        } in pages
+        {
             let Some(markdown) = markdown else { continue };
             let Ok(md) = std::fs::read_to_string(public.join(markdown.trim_start_matches('/')))
             else {
@@ -464,6 +476,31 @@ fn md_mirrors_list_the_parts_of_their_page() {
     }
     problems.sort();
     problems.dedup();
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// Todo 1700: every route but the home page has a sidebar entry (so a search hit and a pager
+/// link), and its one `DocPage` is titled with that entry's label (an "Overview" its section's).
+#[test]
+fn every_page_is_in_the_nav_under_its_title() {
+    let mut problems = Vec::new();
+    for Rendered { route, pages, .. } in rendered() {
+        if *route == (Route::Home {}) {
+            continue;
+        }
+        let Some(title) = crate::nav::page_title(route) else {
+            problems.push(format!("{route}: not in the nav"));
+            continue;
+        };
+        match &pages[..] {
+            [page] if page.title == title => {}
+            [page] => problems.push(format!(
+                "{route}: titled {:?}, the nav says {title:?}",
+                page.title
+            )),
+            _ => problems.push(format!("{route}: {} `DocPage`s", pages.len())),
+        }
+    }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
@@ -519,7 +556,12 @@ fn md_mirrors_list_the_props_of_their_page() {
     let public = Path::new(env!("CARGO_MANIFEST_DIR")).join("public");
     let mut problems = Vec::new();
     for Rendered { route, pages, .. } in rendered() {
-        for (markdown, groups) in pages {
+        for RecordedPage {
+            markdown,
+            properties: groups,
+            ..
+        } in pages
+        {
             let Some(markdown) = markdown.as_ref().filter(|_| !groups.is_empty()) else {
                 continue;
             };

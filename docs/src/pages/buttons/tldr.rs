@@ -1,4 +1,5 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, SITE, TLDR_PROMPT, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::site::{SITE, TLDR_PROMPT};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Input, Text, Tldr},

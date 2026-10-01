@@ -12,7 +12,7 @@ pub use demo::{
     Child, Control, Demo, DemoValues, UNSET, Wrap, gradient_controls, gradient_value, indent,
     not_gradient_variant, or_unset,
 };
-pub use doc_page::{DocPage, ExtraTab, SITE, TLDR_PROMPT};
+pub use doc_page::{DocPage, ExtraTab};
 pub use doc_section::{DocSection, SectionLink};
 pub use pictogram_note::PictogramNote;
 pub use prop_doc::{PartsPanel, PropGroup, PropertyTable, prop, props};

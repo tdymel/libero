@@ -13,6 +13,8 @@ use crate::Route;
 
 mod data;
 
+#[cfg(test)]
+pub use data::page_title;
 use data::{NavEntry, nav_tree};
 pub use data::{neighbours, page_actions, page_label};
 

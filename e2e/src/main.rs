@@ -27,7 +27,7 @@ use process::{
 const FIXTURE_TITLE: &str = "libero e2e fixtures";
 
 /// The docs site's `<title>`, from `docs/Dioxus.toml`, for `sweep`.
-const DOCS_TITLE: &str = "libero";
+const DOCS_TITLE: &str = "Libero";
 
 fn main() -> Result<()> {
     if std::env::var_os(GUARD_ENV).is_some() {

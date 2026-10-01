@@ -347,6 +347,22 @@ fn label_aliases(label: &str) -> &'static [&'static str] {
     }
 }
 
+/// The title of `route`'s `DocPage`: its sidebar label; an "Overview" its section's name; a
+/// label an earlier page already has, its section's name before it ("Form getting started").
+#[cfg(test)]
+pub fn page_title(route: &Route) -> Option<String> {
+    let path = route.to_string();
+    let pages = pages();
+    let at = pages.iter().position(|(id, ..)| *id == path)?;
+    let (label, group) = (pages[at].1, pages[at].2);
+    let repeated = pages[..at].iter().any(|(_, earlier, _)| *earlier == label);
+    Some(match group {
+        Some(group) if label == "Overview" => group.to_string(),
+        Some(group) if repeated => format!("{group} {}", label.to_lowercase()),
+        _ => label.to_string(),
+    })
+}
+
 // Every page as (path, label, group label), in sidebar order.
 fn pages() -> Vec<(String, &'static str, Option<&'static str>)> {
     fn walk(

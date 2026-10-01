@@ -3,7 +3,9 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        <!-- dx appends `[web.app] title` from `Dioxus.toml` here. -->
         <title></title>
+        <meta name="description" content="Libero, a Dioxus component library for Rust: typed style props, a theme of design tokens, and accessible components for the web, Blitz, desktop and Android.">
         <!-- dx preloads the entry JS but not the wasm it fetches, so the wasm
              request only starts once that module has downloaded and parsed.
              `preload_wasm.sh` (run by `just build`/`just build_release`) rewrites
@@ -21,5 +23,10 @@
     </head>
     <body>
         <div id="main"></div>
+        <!-- The site is a wasm app; without it, the same pages as markdown. -->
+        <noscript>
+            <p>These docs need JavaScript and WebAssembly. Every page is also plain
+               markdown: start at the <a href="/md/index.md">markdown index</a>.</p>
+        </noscript>
     </body>
 </html>

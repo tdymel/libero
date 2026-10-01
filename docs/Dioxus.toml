@@ -18,7 +18,7 @@ pre_compress = true
 [web.app]
 # dx concatenates its title into an existing <title>, so setting it here is
 # what stops index.html rendering as "liberodioxus | ⛺".
-title = "libero"
+title = "Libero"
 
 [android]
 # `dx` otherwise makes one up (`com.example.docs`), and it ends up baked into

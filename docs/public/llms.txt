@@ -1,7 +1,8 @@
 # libero
 
 > A Dioxus component library: typed style props (`Sx`), a theme of design
-> tokens, and accessible components. Written in Rust, rendered to the web.
+> tokens, and accessible components. Written in Rust, rendered on the web,
+> natively (Blitz), and in a WebView on desktop or Android.
 
 The docs site is a Dioxus app, so its HTML carries no content until the wasm
 runs. Every docs page therefore also exists as plain markdown under `/md/`.
