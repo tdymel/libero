@@ -649,9 +649,12 @@ mod dispatched {
     /// Todo 306: a read-only thumb keeps its tab stop and says it is read-only,
     /// and no key moves it. Each key is checked against the same slider editable,
     /// where it must move.
+    /// An app and the aria-labels of its thumbs.
+    type ReadOnlyCase = (fn() -> Element, &'static [&'static str]);
+
     #[test]
     fn a_read_only_slider_answers_no_key() {
-        let cases: [(fn() -> Element, &[&str]); 2] = [
+        let cases: [ReadOnlyCase; 2] = [
             (readonly_slider, &["Volume"]),
             (readonly_range_slider, &["Minimum", "Maximum"]),
         ];
@@ -668,13 +671,13 @@ mod dispatched {
                     Key::PageDown,
                 ] {
                     let data = || key_event(key.clone());
-                    let (moved, _) = send(app, false, "keydown", pick, &data);
+                    let (moved, _) = send(app, false, "keydown", pick, data);
                     assert!(
                         !moved.is_empty(),
                         "{thumb}: {key:?} moved nothing on an editable slider"
                     );
                     let heard;
-                    (heard, html) = send(app, true, "keydown", pick, &data);
+                    (heard, html) = send(app, true, "keydown", pick, data);
                     assert_eq!(heard, Vec::<String>::new(), "{thumb}: {key:?}");
                 }
             }
