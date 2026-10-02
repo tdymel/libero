@@ -129,3 +129,29 @@ e2e::scenario!(
     the_menu_resizes,
     native: skip("1156-4d: no Reset width entry found after Widen and two Narrows")
 );
+
+/// Todo 2017: in an overflowing table, Widen shows on the column, not only in the state.
+async fn an_overflowing_column_widens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let before = d.rect(NAME).await?.width;
+    d.click("button[aria-label=\"Name column options\"]")
+        .await?;
+    pick(d, "Widen column").await?;
+    eventually(d, "a set width", async |d| {
+        Ok(d.text(WIDTHS).await?.starts_with("Name="))
+    })
+    .await?;
+    let want = before + 50.0;
+    eventually(
+        d,
+        &format!("Name at about {want}px, from {before}"),
+        async |d| Ok((d.rect(NAME).await?.width - want).abs() <= 2.0),
+    )
+    .await
+}
+
+e2e::scenario!(
+    an_overflowing_tables_column_widens_from_its_menu,
+    "/table-resize/wide",
+    an_overflowing_column_widens,
+    native: skip("1156-4d: no Reset width entry found after Widen and two Narrows")
+);

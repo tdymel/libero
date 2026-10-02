@@ -1588,6 +1588,46 @@ fn a_focused_header_button_stays_clear_of_the_pinned_columns() {
     });
 }
 
+/// Todo 2014: on a phone a windowed table of unsized columns scrolls sideways, its
+/// columns kept readable, as an unwindowed one does.
+#[test]
+fn a_narrow_windowed_table_scrolls_instead_of_squeezing() {
+    block_on(async {
+        let fixture = Fixture::open("/table/windowed-wide", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('tbody tr[aria-rowindex=\"2\"]')",
+            "the first windowed row",
+        )
+        .await
+        .unwrap();
+        let state: String = page
+            .evaluate(format!(
+                "(() => {{ const area = document.querySelector({AREA:?}); \
+                 const cells = [...document.querySelectorAll('thead th')].map(th => th.getBoundingClientRect().width); \
+                 const row = document.querySelector('tbody tr[aria-rowindex=\"2\"] td').getBoundingClientRect().width; \
+                 return [area.scrollWidth > area.clientWidth + 100, Math.min(...cells) >= 120, row >= 120].join('|') \
+                   + ' ' + JSON.stringify([area.scrollWidth, area.clientWidth, cells, row]); }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            state.starts_with("true|true|true "),
+            "the area scrolls sideways, every column at least 120px: {state}"
+        );
+        fixture
+            .console
+            .assert_clean("a narrow windowed table")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 1156-5a: windowed and scrolled both ways, the header sticks and the pinned
 /// columns hold at their edges, body cells in line with their headers.
 #[test]

@@ -37,6 +37,7 @@ let items = vec![
             MenuItem::new("Paste")
                 .shortcut("Control+V")
                 .disabled(true)
+                .description("The clipboard is empty")
                 .onselect(pick("Paste"))
                 .into(),
         ],
@@ -165,6 +166,7 @@ fn MenuDemo(
                 MenuItem::new("Paste")
                     .shortcut("Control+V")
                     .disabled(true)
+                    .description("The clipboard is empty")
                     .onselect(pick("Paste"))
                     .into(),
             ],
@@ -311,6 +313,8 @@ pub fn MenuPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Stays in the arrow-key order but cannot be chosen, and typeahead skips it."),
+                    prop("description", "String")
+                        .doc("Read after the label through `aria-describedby`, never shown. Say why a `disabled` item cannot be chosen."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()

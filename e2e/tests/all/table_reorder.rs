@@ -138,16 +138,36 @@ e2e::scenario!(
 async fn sorted_is_off<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("th [data-sort-button]").await?;
     eventually_text(d, "tbody tr:first-child th", "Apple", "the sort").await?;
+    // Todo 1430: off, yet a Tab stop that says why.
     for selector in [
         handle("Banana"),
         "button[aria-label=\"Move Banana up\"]".into(),
     ] {
-        if d.attr(&selector, "disabled").await?.is_none() {
-            bail!("{selector} is enabled while sorted");
+        eventually(d, &format!("{selector} to be off"), async |d| {
+            Ok(d.attr(&selector, "aria-disabled").await?.as_deref() == Some("true"))
+        })
+        .await?;
+        if d.attr(&selector, "disabled").await?.is_some() {
+            bail!("{selector} left the Tab order while sorted");
+        }
+        let reason = d
+            .attr(&selector, "aria-describedby")
+            .await?
+            .unwrap_or_default();
+        if d.text(&format!("[id=\"{reason}\"]")).await?
+            != "Clear the sort and filters to reorder rows"
+        {
+            bail!("{selector} is described by {reason:?}, not the reason");
         }
     }
-    if d.text(ORDER).await? != "Cherry Apple Banana Damson" {
-        bail!("the sort changed the data");
+    // Neither a click, a drag nor Space moves an off row.
+    d.click("button[aria-label=\"Move Banana up\"]").await?;
+    let pitch = d.rect("tbody tr:nth-child(2)").await?.y - d.rect("tbody tr:nth-child(1)").await?.y;
+    d.drag(&handle("Banana"), 0.0, pitch * 2.0).await?;
+    d.focus(&handle("Banana")).await?;
+    d.press(keyboard::SPACE).await?;
+    if d.text(ORDER).await? != "Cherry Apple Banana Damson" || !d.text("#moves").await?.is_empty() {
+        bail!("an off control or the sort moved a row");
     }
     Ok(())
 }
@@ -177,6 +197,14 @@ async fn a_menu_moves_a_column<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     }
     d.click(right).await?;
     eventually_text(d, "#columns", "Stock Name Origin", "Move right").await?;
+    // Todo 1428: the closed menu hides the move, so it is said.
+    eventually_text(
+        d,
+        "[role=status]",
+        "Name moved to column 2 of 3",
+        "the move announcement",
+    )
+    .await?;
     eventually(d, "Name to sit right of Stock, still sorted", async |d| {
         Ok(
             d.rect("th[aria-label=Name]").await?.x > d.rect("th[aria-label=Stock]").await?.x
@@ -244,12 +272,21 @@ async fn menu_picks_keep_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     })
     .await?;
     eventually_focused(d, &menu_button("Name"), "Pin to end").await?;
+    // Todo 1428: pins and hides are said.
+    eventually_text(
+        d,
+        "[role=status]",
+        "Name pinned to end",
+        "the pin announcement",
+    )
+    .await?;
     pick_by_keys(d, "Stock", "Hide column").await?;
     eventually(d, "Stock to hide", async |d| {
         Ok(!d.exists("th[aria-label=Stock]").await?)
     })
     .await?;
-    eventually_focused(d, &menu_button("Origin"), "Hide column").await
+    eventually_focused(d, &menu_button("Origin"), "Hide column").await?;
+    eventually_text(d, "[role=status]", "Stock hidden", "the hide announcement").await
 }
 
 e2e::scenario!(

@@ -16,8 +16,8 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        Align, ElementHandle, PopoverOptions, Side, use_debounced_callback, use_id, use_popover,
-        use_theme,
+        Align, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side,
+        use_debounced_callback, use_id, use_popover, use_theme,
     },
     localization::TableLabels,
     platform::{ElementApi, reads_dom_synchronously, when_laid_out},
@@ -33,6 +33,9 @@ pub(super) static FILTER_POPOVER_SX: StaticSx = StaticSx::new(|| {
         .flex_direction("column")
         .gap(SizeCss::SPACING.value(Size::Sm))
         .min_width("14rem")
+        // Never past the room on its side: it scrolls instead (WCAG 1.4.10, todo 1964).
+        .max_height(POPOVER_AVAILABLE_HEIGHT.value_or("none"))
+        .overflow_y("auto")
 });
 
 /// A pick in a filter's `NativeSelect`: its value, its label and a unique key.

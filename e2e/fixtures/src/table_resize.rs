@@ -5,7 +5,42 @@ use libero::components::{ColumnWidths, Table, column};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/table-resize", || rsx! { ResizeTablePage {} })];
+pub const ROUTES: Routes = &[
+    ("/table-resize", || rsx! { ResizeTablePage {} }),
+    ("/table-resize/wide", || rsx! { WideResizePage {} }),
+];
+
+/// Eight unsized columns of long unbreakable words, wider than any viewport: the
+/// table overflows (2017).
+#[component]
+fn WideResizePage() -> Element {
+    let mut widths = use_signal(ColumnWidths::new);
+    let shown: Vec<String> = widths
+        .read()
+        .iter()
+        .map(|(header, width)| format!("{header}={width}"))
+        .collect();
+    let columns = ["Name", "Origin", "Season", "Colour", "Taste", "Storage", "Supplier", "Notes"]
+        .map(|header| {
+            column(header).value(move |row: &usize| {
+                format!("{header}-{row}-from-the-far-north-of-the-steppe")
+            })
+        })
+        .to_vec();
+    rsx! {
+        Table {
+            aria_label: "Fruit",
+            scroll: true,
+            data: vec![1usize, 2],
+            columns,
+            resizable_columns: true,
+            column_menu: true,
+            column_widths: widths(),
+            oncolumnwidthschange: move |next| widths.set(next),
+        }
+        p { id: "widths", {shown.join(" ")} }
+    }
+}
 
 #[derive(Clone, PartialEq)]
 struct Fruit {

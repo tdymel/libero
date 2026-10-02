@@ -64,12 +64,20 @@ impl RowReorder {
         }
     }
 
-    /// The handles' description: hidden, read only through `aria-describedby`.
+    /// The handles' description, and while off why: hidden, read only through `aria-describedby`.
     pub fn instructions(&self) -> Element {
         rsx! {
             ReorderInstructions { id: self.instructions.clone() }
+            if self.disabled {
+                div { id: reason_id(&self.instructions), hidden: true, {self.labels.reorder_unavailable} }
+            }
         }
     }
+}
+
+/// The id of the hidden reason the controls are off, beside the instructions.
+fn reason_id(instructions: &str) -> String {
+    format!("{instructions}-off")
 }
 
 #[component]
@@ -162,6 +170,13 @@ pub(super) fn ReorderRow(
     let style = item.style_by(laid_off);
     let moving = item.offset() + laid_off != 0.0 || style.contains("animation");
     let style = (moves_table_rows() && moving).then_some(style);
+    // Off while sorted or filtered: still Tab stops, so the reason is heard (todo 1430).
+    let off = disabled.then_some("true");
+    let described = match disabled {
+        true => reason_id(&instructions),
+        false => instructions,
+    };
+    let reason = disabled.then(|| described.clone());
     let detail = detail.map(|(id, body)| {
         rsx! {
             tr {
@@ -193,15 +208,19 @@ pub(super) fn ReorderRow(
                         r#type: "button",
                         "data-reorder-handle": true,
                         aria_label: named(words.handle),
-                        aria_describedby: instructions,
-                        disabled,
+                        aria_describedby: described,
+                        "aria-disabled": off,
                         onmounted: item.handle.mount(),
                         onpointerdown: move |event| {
                             if drags {
                                 onpointerdown.call(event);
                             }
                         },
-                        onkeydown: move |event| onkeydown.call(event),
+                        onkeydown: move |event| {
+                            if !disabled {
+                                onkeydown.call(event);
+                            }
+                        },
                         onblur: move |event| onblur.call(event),
                         Glyph { slot: IconSlot::Grip, icon: lucide::grip_vertical::outlined }
                     }
@@ -210,9 +229,15 @@ pub(super) fn ReorderRow(
                         r#type: "button",
                         "data-reorder-move": "up",
                         aria_label: named(words.move_up),
-                        disabled: disabled || (item.first)(),
+                        aria_describedby: reason.clone(),
+                        "aria-disabled": off,
+                        disabled: !disabled && (item.first)(),
                         onmounted: item.earlier.mount(),
-                        onclick: move |event| onearlier.call(event),
+                        onclick: move |event| {
+                            if !disabled {
+                                onearlier.call(event);
+                            }
+                        },
                         Glyph { slot: IconSlot::ChevronUp, icon: lucide::chevron_up::outlined }
                     }
                     button {
@@ -220,9 +245,15 @@ pub(super) fn ReorderRow(
                         r#type: "button",
                         "data-reorder-move": "down",
                         aria_label: named(words.move_down),
-                        disabled: disabled || (item.last)(),
+                        aria_describedby: reason,
+                        "aria-disabled": off,
+                        disabled: !disabled && (item.last)(),
                         onmounted: item.later.mount(),
-                        onclick: move |event| onlater.call(event),
+                        onclick: move |event| {
+                            if !disabled {
+                                onlater.call(event);
+                            }
+                        },
                         Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
                     }
                 }

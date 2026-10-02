@@ -18,6 +18,7 @@ use super::{
 };
 use crate::{
     components::{
+        accessibility::Announcer,
         common::{Glyph, Input, Parts},
         overlay::{Menu, MenuEntry, MenuItem, MenuPart, use_menu},
     },
@@ -80,6 +81,9 @@ impl MenuFocus {
     }
 }
 
+/// The column order after one move, and the column's new place.
+pub(super) type ColumnMove = Option<(Vec<String>, usize)>;
+
 /// A header's menu: sort, filter, move, width, pin, hide, and the columns to show.
 #[component]
 pub(super) fn ColumnMenu(
@@ -90,9 +94,9 @@ pub(super) fn ColumnMenu(
     multi_sort: bool,
     hidden: StateSlice<Vec<String>>,
     pinned: StateSlice<PinnedColumns>,
-    /// The column order after a move towards the start and towards the end;
-    /// `None` at that edge.
-    moves: (Option<Vec<String>>, Option<Vec<String>>),
+    /// The column order after a move towards the start and towards the end, with the
+    /// column's place among the shown ones from 1; `None` at that edge.
+    moves: (ColumnMove, ColumnMove),
     order: StateSlice<Vec<String>>,
     /// With `resizable_columns`, unless the column opted out.
     width: Option<MenuWidth>,
@@ -107,6 +111,8 @@ pub(super) fn ColumnMenu(
     focus: MenuFocus,
     /// The shown column whose menu button takes focus after Hide.
     neighbour: Option<usize>,
+    /// Says a move, pin or hide: the menu closes on a layout the reader cannot see (todo 1428).
+    announcer: Announcer,
 ) -> Element {
     let menu = use_menu();
     let trigger = focus.trigger(index);
@@ -187,12 +193,14 @@ pub(super) fn ColumnMenu(
             (labels.move_column_left, left),
             (labels.move_column_right, right),
         ] {
+            let header = column.header.clone();
             items.push(
                 MenuItem::new(label)
                     .disabled(next.is_none())
                     .onselect(move |_| {
-                        if let Some(next) = next.clone() {
+                        if let Some((next, place)) = next.clone() {
                             order.set(next);
+                            announcer.say((labels.column_moved)(&header, place, shown));
                         }
                     })
                     .into(),
@@ -203,10 +211,14 @@ pub(super) fn ColumnMenu(
         items.extend(width.items(&column.header, labels));
     }
     // The side it is on is left out.
-    for (label, to) in [
-        (labels.pin_start, Some(PinSide::Start)),
-        (labels.pin_end, Some(PinSide::End)),
-        (labels.unpin, None),
+    for (label, to, said) in [
+        (
+            labels.pin_start,
+            Some(PinSide::Start),
+            labels.column_pinned_start,
+        ),
+        (labels.pin_end, Some(PinSide::End), labels.column_pinned_end),
+        (labels.unpin, None, labels.column_unpinned),
     ] {
         if to != side {
             let header = column.header.clone();
@@ -215,6 +227,7 @@ pub(super) fn ColumnMenu(
                     .onselect(move |_| {
                         pinned.set(pinned.read().with(&header, to));
                         focus.owe(index);
+                        announcer.say(said(&header));
                     })
                     .into(),
             );
@@ -228,14 +241,19 @@ pub(super) fn ColumnMenu(
     }
     if column.hideable {
         let header = column.header.clone();
+        let item = MenuItem::new(labels.hide_column);
+        let item = match shown <= 1 {
+            true => item.description(labels.last_column),
+            false => item,
+        };
         items.push(
-            MenuItem::new(labels.hide_column)
-                .disabled(shown <= 1)
+            item.disabled(shown <= 1)
                 .onselect(move |_| {
                     hidden.set(toggle_column(&hidden.read(), &header, false));
                     if let Some(neighbour) = neighbour {
                         focus.owe(neighbour);
                     }
+                    announcer.say((labels.column_hidden)(&header));
                 })
                 .into(),
         );
@@ -249,16 +267,25 @@ pub(super) fn ColumnMenu(
                     hidden: off,
                     ..
                 } = columns[column].clone();
-                MenuItem::new(header.clone())
-                    .checkbox(!off)
-                    // The last shown column stays.
-                    .disabled(!off && shown <= 1)
+                // The last shown column stays, and says so.
+                let last = !off && shown <= 1;
+                let item = MenuItem::new(header.clone());
+                let item = match last {
+                    true => item.description(labels.last_column),
+                    false => item,
+                };
+                item.checkbox(!off)
+                    .disabled(last)
                     .keep_open()
                     .onselect(move |_| {
                         hidden.set(toggle_column(&hidden.read(), &header, off));
-                        // Hiding its own column unmounts this menu, as Hide does (todo 1490).
-                        if let (true, false, Some(neighbour)) = (column == index, off, neighbour) {
-                            focus.owe(neighbour);
+                        // Hiding its own column unmounts this menu, as Hide does (todo 1490):
+                        // the checkbox is gone before its state is read.
+                        if column == index && !off {
+                            if let Some(neighbour) = neighbour {
+                                focus.owe(neighbour);
+                            }
+                            announcer.say((labels.column_hidden)(&header));
                         }
                     })
                     .into()

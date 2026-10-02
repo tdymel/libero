@@ -85,7 +85,10 @@ pub(crate) static SORTABLE_CONTENT_SX: StaticSx =
 pub(crate) static SORTABLE_MOVE_SX: StaticSx = StaticSx::new(|| {
     control_sx()
         .cursor("pointer")
-        .selector("&:disabled", sx().opacity("0.4").cursor("default"))
+        .selector(
+            "&:disabled, &[aria-disabled=\"true\"]",
+            sx().opacity("0.4").cursor("default"),
+        )
         .rtl(sx().selector("& svg", sx().transform("scaleX(-1)")))
 });
 

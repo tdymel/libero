@@ -58,6 +58,7 @@ pub struct MenuItem {
     pub(super) check: Option<Check>,
     pub(super) shortcut: Option<String>,
     pub(super) disabled: bool,
+    pub(super) description: Option<String>,
     pub(super) close_on_select: Option<bool>,
     pub(super) new_tab_hint: bool,
 }
@@ -101,6 +102,7 @@ impl MenuItem {
             check: None,
             shortcut: None,
             disabled: false,
+            description: None,
             close_on_select: None,
             new_tab_hint: true,
         }
@@ -196,6 +198,20 @@ impl MenuItem {
     /// Stays in the arrow-key order but cannot be chosen; typeahead skips it.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Read after the label, never shown: e.g. why a [`disabled`](Self::disabled)
+    /// item cannot be chosen.
+    ///
+    /// ```no_run
+    /// # use libero::components::MenuItem;
+    /// # let _ =
+    /// MenuItem::new("Paste").disabled(true).description("The clipboard is empty")
+    /// # ;
+    /// ```
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
         self
     }
 

@@ -60,6 +60,7 @@ pub(super) fn menu_item(
     let close_on_select = item.close_on_select;
     let item_id = format!("{level_id}-item-{index}");
     let child_id = format!("{level_id}-{index}");
+    let description_id = format!("{item_id}-description");
     let is_expanded = has_submenu && *expanded == Some(index);
     let opens = (has_submenu && !disabled).then_some(index);
 
@@ -128,7 +129,12 @@ pub(super) fn menu_item(
         if has_submenu {
             span { "data-slot": MenuPart::Chevron.slot(), Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined } }
         }
+        // Hidden, so out of the name; `aria-describedby` still reads it.
+        if let Some(description) = item.description.as_deref() {
+            span { id: "{description_id}", hidden: true, "{description}" }
+        }
     };
+    let described_by = item.description.as_ref().map(|_| description_id.clone());
     let onmounted = move |event| {
         if let Some(anchor) = anchor {
             anchor.mount()(event);
@@ -152,6 +158,7 @@ pub(super) fn menu_item(
                 "data-slot": MenuPart::Item.slot(),
                 "data-menu-index": "{index}",
                 "aria-disabled": disabled.then_some("true"),
+                "aria-describedby": described_by,
                 onmounted,
                 onclick,
                 onkeydown,
@@ -176,6 +183,7 @@ pub(super) fn menu_item(
             "aria-haspopup": has_submenu.then_some("menu"),
             "aria-expanded": has_submenu.then(|| is_expanded.to_string()),
             "aria-controls": is_expanded.then_some(child_id),
+            "aria-describedby": described_by,
             onmounted,
             onclick,
             onkeydown,

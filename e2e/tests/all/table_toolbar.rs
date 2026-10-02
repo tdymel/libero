@@ -39,6 +39,14 @@ async fn the_pieces_work<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         "an export over both pages",
     )
     .await?;
+    // Todo 1460: the export changes nothing on screen, so it is said.
+    eventually_text(
+        d,
+        "[role=status]",
+        "Exported 3 rows",
+        "the export announcement",
+    )
+    .await?;
 
     open(d, "columns").await?;
     pick(d, "Stock").await?;
@@ -46,6 +54,16 @@ async fn the_pieces_work<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         Ok(d.text("thead").await?.contains("Name") && !d.text("thead").await?.contains("Stock"))
     })
     .await?;
+    // Todo 1460: the last shown column's checkbox is off and says why.
+    const NAME: &str = "[role=menuitemcheckbox][aria-disabled=true]";
+    eventually(d, "Name's checkbox to turn off", async |d| {
+        d.exists(NAME).await
+    })
+    .await?;
+    let reason = d.attr(NAME, "aria-describedby").await?.unwrap_or_default();
+    if d.text(&format!("[id=\"{reason}\"]")).await? != "One column stays shown" {
+        bail!("the last column's checkbox is described by {reason:?}, not the reason");
+    }
     d.press(keyboard::ESCAPE).await?;
     eventually(d, "the menu to close", async |d| {
         Ok(!d.exists("[role^=menuitem]").await?)

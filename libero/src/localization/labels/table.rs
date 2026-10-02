@@ -101,6 +101,8 @@ pub struct TableLabels {
     pub hide_column: &'static str,
     /// The submenu that shows and hides columns.
     pub columns: &'static str,
+    /// Describes the disabled Hide column and checkbox of the last shown column.
+    pub last_column: &'static str,
     /// The quick-filter field's label.
     pub search: &'static str,
     /// The full-width row when the quick filter leaves no rows.
@@ -138,6 +140,35 @@ pub struct TableLabels {
     pub column_width: fn(&str, f64) -> String,
     /// Announced after a menu Reset width, from the header text.
     pub column_width_reset: fn(&str) -> String,
+    /// Announced after a menu Move left or right: the header, its place among the
+    /// shown columns from 1, and their count.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.column_moved)("Name", 2, 5), "Name moved to column 2 of 5");
+    /// assert_eq!((TableLabels::GERMAN.column_moved)("Name", 2, 5), "Name an Spalte 2 von 5 verschoben");
+    /// ```
+    pub column_moved: fn(&str, usize, usize) -> String,
+    /// Announced after a menu pin or unpin, from the header text.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.column_pinned_start)("Name"), "Name pinned to start");
+    /// assert_eq!((TableLabels::GERMAN.column_unpinned)("Name"), "Fixierung von Name gelöst");
+    /// ```
+    pub column_pinned_start: fn(&str) -> String,
+    pub column_pinned_end: fn(&str) -> String,
+    pub column_unpinned: fn(&str) -> String,
+    /// Announced after the column menu hides its own column, from the header text.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.column_hidden)("Name"), "Name hidden");
+    /// ```
+    pub column_hidden: fn(&str) -> String,
     /// A header's resize grip, a separator the arrow keys move, from the header text.
     ///
     /// ```
@@ -149,6 +180,8 @@ pub struct TableLabels {
     pub resize_column: fn(&str) -> String,
     /// The header of the column of row reorder handles, read out only.
     pub reorder: &'static str,
+    /// Describes the row reorder controls while a sort or filter turns them off.
+    pub reorder_unavailable: &'static str,
     /// The header of the column of detail toggles, read out only.
     pub details: &'static str,
     /// A row's detail toggle, from the row header's text, else the first cell's.
@@ -204,6 +237,15 @@ pub struct TableLabels {
     pub density_name: fn(Size) -> &'static str,
     /// The toolbar's `TableExportButton`.
     pub export: &'static str,
+    /// Announced after an export, from the rows it holds. A fn, for plural forms.
+    ///
+    /// ```
+    /// use libero::localization::TableLabels;
+    ///
+    /// assert_eq!((TableLabels::ENGLISH.exported)(12), "Exported 12 rows");
+    /// assert_eq!((TableLabels::GERMAN.exported)(1), "1 Zeile exportiert");
+    /// ```
+    pub exported: fn(usize) -> String,
     /// The `filter_panel` button's text and the panel's name.
     pub filters: &'static str,
     /// The `filter_panel` button's name, from the active filters' count.
@@ -373,6 +415,46 @@ fn german_column_width_reset(column: &str) -> String {
     format!("{column}: Breite zurückgesetzt")
 }
 
+fn english_column_moved(column: &str, place: usize, count: usize) -> String {
+    format!("{column} moved to column {place} of {count}")
+}
+
+fn german_column_moved(column: &str, place: usize, count: usize) -> String {
+    format!("{column} an Spalte {place} von {count} verschoben")
+}
+
+fn english_pinned_start(column: &str) -> String {
+    format!("{column} pinned to start")
+}
+
+fn german_pinned_start(column: &str) -> String {
+    format!("{column} am Anfang fixiert")
+}
+
+fn english_pinned_end(column: &str) -> String {
+    format!("{column} pinned to end")
+}
+
+fn german_pinned_end(column: &str) -> String {
+    format!("{column} am Ende fixiert")
+}
+
+fn english_unpinned(column: &str) -> String {
+    format!("{column} unpinned")
+}
+
+fn german_unpinned(column: &str) -> String {
+    format!("Fixierung von {column} gelöst")
+}
+
+fn english_column_hidden(column: &str) -> String {
+    format!("{column} hidden")
+}
+
+fn german_column_hidden(column: &str) -> String {
+    format!("{column} ausgeblendet")
+}
+
 fn english_resize_column(column: &str) -> String {
     format!("Resize {column}")
 }
@@ -394,6 +476,20 @@ fn german_density_name(size: Size) -> &'static str {
         Size::Xs | Size::Sm => "Kompakt",
         Size::Md => "Standard",
         _ => "Komfortabel",
+    }
+}
+
+fn english_exported(count: usize) -> String {
+    match count {
+        1 => "Exported 1 row".to_string(),
+        _ => format!("Exported {count} rows"),
+    }
+}
+
+fn german_exported(count: usize) -> String {
+    match count {
+        1 => "1 Zeile exportiert".to_string(),
+        _ => format!("{count} Zeilen exportiert"),
     }
 }
 
@@ -483,6 +579,7 @@ impl TableLabels {
         add_to_sort: "Add to sort",
         hide_column: "Hide column",
         columns: "Columns",
+        last_column: "One column stays shown",
         search: "Search",
         no_results: "No matching rows",
         results: english_results,
@@ -497,8 +594,14 @@ impl TableLabels {
         reset_column_width: "Reset width",
         column_width,
         column_width_reset: english_column_width_reset,
+        column_moved: english_column_moved,
+        column_pinned_start: english_pinned_start,
+        column_pinned_end: english_pinned_end,
+        column_unpinned: english_unpinned,
+        column_hidden: english_column_hidden,
         resize_column: english_resize_column,
         reorder: "Reorder",
+        reorder_unavailable: "Clear the sort and filters to reorder rows",
         details: "Details",
         row_details: english_row_details,
         filter: "Filter",
@@ -516,6 +619,7 @@ impl TableLabels {
         density: "Density",
         density_name: english_density_name,
         export: "Export",
+        exported: english_exported,
         filters: "Filters",
         active_filters: english_active_filters,
         add_filter: "Add filter",
@@ -544,6 +648,7 @@ impl TableLabels {
         add_to_sort: "Zur Sortierung hinzufügen",
         hide_column: "Spalte ausblenden",
         columns: "Spalten",
+        last_column: "Eine Spalte bleibt sichtbar",
         search: "Suchen",
         no_results: "Keine passenden Zeilen",
         results: german_results,
@@ -558,8 +663,14 @@ impl TableLabels {
         reset_column_width: "Breite zurücksetzen",
         column_width,
         column_width_reset: german_column_width_reset,
+        column_moved: german_column_moved,
+        column_pinned_start: german_pinned_start,
+        column_pinned_end: german_pinned_end,
+        column_unpinned: german_unpinned,
+        column_hidden: german_column_hidden,
         resize_column: german_resize_column,
         reorder: "Neu anordnen",
+        reorder_unavailable: "Sortierung und Filter aufheben, um Zeilen neu anzuordnen",
         details: "Details",
         row_details: german_row_details,
         filter: "Filtern",
@@ -577,6 +688,7 @@ impl TableLabels {
         density: "Zeilenhöhe",
         density_name: german_density_name,
         export: "Exportieren",
+        exported: german_exported,
         filters: "Filter",
         active_filters: german_active_filters,
         add_filter: "Filter hinzufügen",
@@ -608,6 +720,26 @@ mod tests {
             assert!((labels.active_filters)(3).contains('3'));
             assert!((labels.active_filters)(3).starts_with(labels.filters));
             assert_eq!((labels.active_filters)(0), labels.filters);
+        }
+    }
+
+    /// 1428: each column menu announcement names its column, a move its place too.
+    #[test]
+    fn the_column_menu_announcements_name_their_column() {
+        for labels in [TableLabels::ENGLISH, TableLabels::GERMAN] {
+            for said in [
+                labels.column_pinned_start,
+                labels.column_pinned_end,
+                labels.column_unpinned,
+                labels.column_hidden,
+            ] {
+                assert!(said("Stock").contains("Stock"), "{}", said("Stock"));
+            }
+            let moved = (labels.column_moved)("Stock", 3, 7);
+            assert!(
+                moved.contains("Stock") && moved.contains('3') && moved.contains('7'),
+                "{moved}"
+            );
         }
     }
 }

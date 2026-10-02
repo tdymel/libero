@@ -188,14 +188,22 @@ pub(super) fn pin_columns(
 }
 
 /// How far `side`'s pinned columns reach in, lead columns included: a focus scroll
-/// stops past them. `None` without a pin there or when the innermost has no `width`.
-pub(super) fn pinned_extent(headers: &[HeaderSpec], side: PinSide) -> Option<String> {
+/// stops past them. The innermost one without a `width` counts as `measured`, its
+/// rendered width (todo 1973); `None` without a pin there or before that is known.
+pub(super) fn pinned_extent(
+    headers: &[HeaderSpec],
+    side: PinSide,
+    measured: Option<f64>,
+) -> Option<String> {
     headers.iter().find_map(|spec| {
         let pin = spec
             .pin
             .as_ref()
             .filter(|pin| pin.side == side && pin.edge)?;
-        let width = spec.width.clone()?;
+        let width = spec
+            .width
+            .clone()
+            .or_else(|| measured.map(|width| format!("{width}px")))?;
         Some(match pin.inset.as_str() {
             "0" => width,
             inset => format!("calc({inset} + {width})"),
@@ -301,15 +309,35 @@ mod tests {
         pin_columns(&mut specs, &pinned, Some("40px"));
 
         assert_eq!(
-            pinned_extent(&specs, PinSide::Start).as_deref(),
+            pinned_extent(&specs, PinSide::Start, Some(99.0)).as_deref(),
             Some("calc(calc(40px + 4rem) + 6rem)")
         );
-        assert_eq!(pinned_extent(&specs, PinSide::End).as_deref(), Some("3rem"));
+        assert_eq!(
+            pinned_extent(&specs, PinSide::End, None).as_deref(),
+            Some("3rem")
+        );
 
         let mut specs = headers(&[("A", None), ("B", Some("6rem"))]);
         pin_columns(&mut specs, &PinnedColumns::default().start(["A"]), None);
-        assert_eq!(pinned_extent(&specs, PinSide::Start), None);
-        assert_eq!(pinned_extent(&specs, PinSide::End), None);
+        assert_eq!(pinned_extent(&specs, PinSide::Start, None), None);
+        assert_eq!(pinned_extent(&specs, PinSide::End, Some(80.0)), None);
+    }
+
+    /// 1973: an innermost pinned column without `width` reaches as far as it renders.
+    #[test]
+    fn an_unsized_innermost_pin_reaches_its_measured_width() {
+        let mut specs = headers(&[("A", Some("4rem")), ("B", None), ("C", None)]);
+        let pinned = PinnedColumns::default().start(["A", "B"]).end(["C"]);
+        pin_columns(&mut specs, &pinned, None);
+
+        assert_eq!(
+            pinned_extent(&specs, PinSide::Start, Some(120.0)).as_deref(),
+            Some("calc(4rem + 120px)")
+        );
+        assert_eq!(
+            pinned_extent(&specs, PinSide::End, Some(80.0)).as_deref(),
+            Some("80px")
+        );
     }
 
     #[test]

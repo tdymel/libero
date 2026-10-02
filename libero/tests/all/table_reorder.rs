@@ -97,12 +97,21 @@ fn reorder_controls(body: &str) -> Vec<BTreeMap<String, String>> {
         .collect()
 }
 
-/// Whether each reorder control is disabled, in document order.
+/// Whether each reorder control is off, in document order. Off is `aria-disabled`
+/// described by the reason, still a Tab stop (1430).
 fn disabled_controls(body: &str) -> Vec<bool> {
     let controls = reorder_controls(body);
     controls
         .iter()
-        .map(|control| control.contains_key("disabled"))
+        .map(|control| {
+            let off = control.get("aria-disabled").map(String::as_str) == Some("true");
+            if off {
+                assert!(!control.contains_key("disabled"), "{control:?}");
+                let reason = tag_with(body, &format!(r#"id="{}""#, control["aria-describedby"]));
+                assert!(reason.contains_key("hidden"), "{reason:?}");
+            }
+            off
+        })
         .collect()
 }
 
@@ -128,6 +137,10 @@ fn row_reorder_is_off_while_sorted() {
     let body = body(&html);
 
     assert_eq!(disabled_controls(&body), [true; 9], "{body}");
+    assert!(
+        html.contains(">Clear the sort and filters to reorder rows<"),
+        "{html}"
+    );
 }
 
 /// A column filter hides rows from the slots: nothing moves (1396).

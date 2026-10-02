@@ -53,7 +53,25 @@ pub const ROUTES: Routes = &[
         || rsx! { WindowedTablePage { pinned: true } },
     ),
     ("/table/infinite", || rsx! { InfiniteTablePage {} }),
+    ("/table/windowed-wide", || rsx! { WindowedWideTablePage {} }),
 ];
+
+/// A windowed table of six unsized columns: wider than a phone, so it scrolls (2014).
+#[component]
+fn WindowedWideTablePage() -> Element {
+    let columns = ["Name", "Origin", "Season", "Colour", "Taste", "Supplier"]
+        .map(|header| column(header).value(move |row: &u32| format!("{header} {row}")))
+        .to_vec();
+    rsx! {
+        Table {
+            caption: "Fruit stock",
+            max_height: "300px",
+            virtual_row_height: 40.0,
+            data: (1..=200).collect::<Vec<u32>>(),
+            columns,
+        }
+    }
+}
 
 /// The seven paged fruits with a quick-filter field; `#query` and `#page` echo
 /// their change handlers.

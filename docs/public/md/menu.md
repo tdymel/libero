@@ -36,7 +36,11 @@ fn Demo() -> Element {
                     .shortcut("Control+X")
                     .onselect(pick("Cut"))
                     .into(),
-                MenuItem::new("Paste").disabled(true).onselect(pick("Paste")).into(),
+                MenuItem::new("Paste")
+                    .disabled(true)
+                    .description("The clipboard is empty")
+                    .onselect(pick("Paste"))
+                    .into(),
             ],
         },
         MenuEntry::Separator,
@@ -104,6 +108,7 @@ also on every submenu.
 | `radio` | `bool` | - | Makes the item one choice of several, with a check while `true`. Put the choices in one `Group` and keep one checked. A menu opens on its checked item. |
 | `checkbox` | `bool` | - | Makes the item an on/off setting, with a check while `true`. Flip it in `onselect`. An item is `radio` or `checkbox`, and the later call wins. |
 | `disabled` | `bool` | `false` | Stays in the arrow-key order but cannot be chosen, and typeahead skips it. |
+| `description` | `String` | - | Read after the label through `aria-describedby`, never shown. Say why a `disabled` item cannot be chosen. |
 
 ## Style API
 

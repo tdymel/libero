@@ -963,7 +963,8 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   left, "2 rows".
 - With `column_menu`, each menu button is named after its column, "Age column
   options", and the header keeps its text as its name. The Columns submenu lists
-  checkbox items, and the last shown column cannot be hidden. After a pin moves
+  checkbox items, and the last shown column cannot be hidden: its checkbox and
+  Hide column are described by why, "One column stays shown". After a pin moves
   the column, focus stays on its menu button; after Hide column it moves to the
   next shown column's, else the previous one's.
 - The filter popover is a `role="dialog"` named "Filter" plus the column, with
@@ -987,12 +988,16 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   row's name, described by the keyboard steps, and Move up and Move down
   buttons, so a single pointer reorders without a drag (WCAG 2.5.7). A touch
   drags only from the handle; elsewhere it scrolls. Each lift, move and drop is
-  said in a polite live region. While sorted or filtered the controls are
-  disabled.
+  said in a polite live region. While sorted or filtered the controls are off,
+  `aria-disabled`, yet stay tab stops described by why: "Clear the sort and
+  filters to reorder rows".
 - `onrowreorder` without `row_key` warns in a debug build.
 - The column menu's Move left and Move right name the screen sides in either
   text direction. A moved column moves in the DOM too, so Tab and a screen
   reader follow it, and a column moved out of its group splits the group.
+- Each move, pin, unpin and Hide column in the column menu is said in a polite
+  live region, "Name moved to column 2 of 5", "Name pinned to start", "Name
+  hidden": the menu closes over the change.
 - The header drag grip is pointer only and hidden from screen readers, with no
   tab stop: the column menu's moves are its keyboard and drag-free way (WCAG
   2.5.7). Escape, or a drop outside the table, cancels the drag. Blitz has no
@@ -1008,7 +1013,9 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
   named "Loading rows" and leaves the table unbusy, as some screen readers hold
   back a busy table's rows.
 - The `toolbar` is a plain row, not a `role="toolbar"`: Tab moves through its
-  controls as anywhere else.
+  controls as anywhere else. `TableExportButton` says the rows it handed over,
+  "Exported 12 rows", in the polite live region; `TableColumnsButton` describes
+  the last shown column's checkbox as the column menu does.
 - With `virtual_row_height`, the table carries `aria-rowcount`, every row it
   holds, and each rendered row its `aria-rowindex`, so a screen reader says
   "row 5 001 of 10 001" though only a screenful is in the DOM. The

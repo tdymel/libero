@@ -3,7 +3,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use super::{
-    core::{RowSpec, body_rows},
+    core::{HeaderSpec, RowSpec, body_rows},
     row_reorder::RowReorder,
 };
 use crate::{
@@ -109,18 +109,44 @@ pub(super) fn window_attributes(head_rows: usize, rows: usize) -> Vec<Attribute>
     vec![attr("aria-rowcount", (head_rows + rows.max(1)).to_string())]
 }
 
+/// A windowed table's least width: its sized columns, and a floor for each other one.
+pub(super) const TABLE_MIN_WIDTH_VAR: CssVar = CssVar::new("--lsx-table-min-width");
+
+/// The floor of a windowed column with no `width`.
+const UNSIZED_FLOOR: &str = "8rem";
+
+/// The least width of a windowed table: fixed layout splits the room among the unsized
+/// columns, which would shrink to nothing on a narrow screen rather than scroll (todo 2014).
+pub(super) fn windowed_min_width(
+    lead: Option<&str>,
+    headers: &[HeaderSpec],
+    shown: &[usize],
+) -> String {
+    let parts: Vec<&str> = lead
+        .into_iter()
+        .chain(
+            shown
+                .iter()
+                .map(|&index| headers[index].width.as_deref().unwrap_or(UNSIZED_FLOOR)),
+        )
+        .collect();
+    format!("max(100%, calc({}))", parts.join(" + "))
+}
+
 /// Fixed layout, so a column keeps its width as rows come and go; one line
 /// per cell and no block padding, so every row is the pitch the window assumes.
 pub(super) fn windowed_sx() -> Sx {
-    sx().table_layout("fixed").selector(
-        "& tbody > tr > *",
-        sx().box_sizing("border-box")
-            .height(TABLE_ROW_HEIGHT_VAR.value())
-            .padding_block("0")
-            .white_space("nowrap")
-            .overflow("hidden")
-            .text_overflow("ellipsis"),
-    )
+    sx().table_layout("fixed")
+        .min_width(TABLE_MIN_WIDTH_VAR.value())
+        .selector(
+            "& tbody > tr > *",
+            sx().box_sizing("border-box")
+                .height(TABLE_ROW_HEIGHT_VAR.value())
+                .padding_block("0")
+                .white_space("nowrap")
+                .overflow("hidden")
+                .text_overflow("ellipsis"),
+        )
 }
 
 /// The scroll top that shows slot `to` whole below a `head` px sticky header,

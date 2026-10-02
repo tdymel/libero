@@ -9,6 +9,7 @@ use super::{
 };
 use crate::{
     components::{
+        accessibility::Announcer,
         buttons::Button,
         common::{HtmlTag, attr},
         layout::use_box,
@@ -53,6 +54,9 @@ pub(super) fn TableToolbar(
     )
 }
 
+/// Builds the export's CSV and counts its rows.
+pub(super) type Export = dyn Fn() -> (String, usize);
+
 /// What a `Table` hands the pieces in its `toolbar`.
 #[derive(Clone, Copy)]
 pub(super) struct TableTools {
@@ -60,9 +64,11 @@ pub(super) struct TableTools {
     pub hidden: StateSlice<Vec<String>>,
     /// Overrides the table's `size` once picked.
     pub density: StateSlice<Option<Size>>,
-    /// The CSV of the filtered, sorted rows over every page, shown columns only.
-    pub export: CopyValue<Option<Rc<dyn Fn() -> String>>>,
+    /// The CSV of the filtered, sorted rows over every page, shown columns only, and their count.
+    pub export: CopyValue<Option<Rc<Export>>>,
     pub panel: PanelControl,
+    /// The table's live region: an export changes nothing on screen.
+    pub announcer: Announcer,
 }
 
 #[derive(Clone, PartialEq)]
@@ -78,6 +84,7 @@ impl TableTools {
         hidden: StateSlice<Vec<String>>,
         density: StateSlice<Option<Size>>,
         panel: PanelControl,
+        announcer: Announcer,
     ) -> Self {
         Self {
             view: Signal::new(ToolView {
@@ -89,6 +96,7 @@ impl TableTools {
             density,
             export: CopyValue::new(None),
             panel,
+            announcer,
         }
     }
 
@@ -146,9 +154,14 @@ pub fn TableColumnsButton() -> Element {
         .filter(|column| column.hideable)
         .map(|column| {
             let (header, off) = (column.header.clone(), column.hidden);
-            MenuItem::new(header.clone())
-                .checkbox(!off)
-                .disabled(!off && shown <= 1)
+            let last = !off && shown <= 1;
+            let item = MenuItem::new(header.clone());
+            let item = match last {
+                true => item.description(labels.last_column),
+                false => item,
+            };
+            item.checkbox(!off)
+                .disabled(last)
                 .keep_open()
                 .onselect(move |_| hidden.set(toggle_column(&hidden.read(), &header, off)))
                 .into()
@@ -231,7 +244,9 @@ pub fn TableExportButton(onexport: EventHandler<String>) -> Element {
             "data-table-tool": "export",
             onclick: move |_| {
                 if let Some(csv) = tools.export.peek().clone() {
-                    onexport.call(csv());
+                    let (csv, rows) = csv();
+                    onexport.call(csv);
+                    tools.announcer.say((labels.exported)(rows));
                 }
             },
             "{labels.export}"

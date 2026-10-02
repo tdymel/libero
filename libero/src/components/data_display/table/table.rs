@@ -59,8 +59,8 @@ use super::{
     toolbar::{TableToolbar, TableTools, ToolView},
     use_table::{TableConfig, use_table},
     window::{
-        BodyRows, RowWindow, TABLE_ROW_HEIGHT_VAR, reveal_slot, use_row_focus, window_attributes,
-        windowed_sx,
+        BodyRows, RowWindow, TABLE_MIN_WIDTH_VAR, TABLE_ROW_HEIGHT_VAR, reveal_slot, use_row_focus,
+        window_attributes, windowed_min_width, windowed_sx,
     },
 };
 
@@ -915,11 +915,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         ondensitychange: props.ondensitychange,
     });
     let panel = use_panel_control();
-    let tools =
-        use_context_provider(|| TableTools::new(state.hidden_columns, state.density, panel));
+    let announcer = use_announcer();
+    let tools = use_context_provider(|| {
+        TableTools::new(state.hidden_columns, state.density, panel, announcer)
+    });
     let preview = use_signal(|| None);
     let measured = use_hook(|| CopyValue::new(BTreeMap::new()));
-    let announcer = use_announcer();
     let column_drag = use_column_drag(state.column_order);
     let menu_focus = use_menu_focus();
     let drags = props.column_menu && drags_table_columns();
@@ -1053,6 +1054,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
     let mut known_rows = use_hook(|| CopyValue::new(None::<(Rc<Vec<T>>, bool, Rc<[String]>)>));
     let row_focus = use_row_focus();
+    let mut pin_edges = use_signal(|| [None::<f64>; 2]);
+    let pin_edge = use_callback(move |(side, width): (PinSide, f64)| {
+        let at = usize::from(side == PinSide::End);
+        if pin_edges.peek()[at] != Some(width) {
+            pin_edges.write()[at] = Some(width);
+        }
+    });
 
     let widths = state.column_widths.read();
     let mut headers = header_specs(
@@ -1108,7 +1116,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     });
     let pins_select = props.selectable && pins_start;
     let pins = headers.iter().any(|spec| spec.pin.is_some());
-    let pinned_pads = [PinSide::Start, PinSide::End].map(|side| pinned_extent(&headers, side));
+    let edges = pin_edges();
+    let pinned_pads = [(PinSide::Start, edges[0]), (PinSide::End, edges[1])]
+        .map(|(side, measured)| pinned_extent(&headers, side, measured));
     let mut warned = use_hook(|| CopyValue::new(Vec::<String>::new()));
     if !unknown.is_empty() && *warned.peek() != unknown {
         warn(&format!(
@@ -1160,9 +1170,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                         ColumnMenu {
                             index,
                             columns: columns.clone(),
+                            // A move swaps it with the next shown unpinned column: one place over.
                             moves: (
-                                moved(&headers, &column_order, index, false),
-                                moved(&headers, &column_order, index, true),
+                                moved(&headers, &column_order, index, false).zip(at),
+                                moved(&headers, &column_order, index, true)
+                                    .zip(at)
+                                    .map(|(next, at)| (next, at + 2)),
                             ),
                             order: state.column_order,
                             width: resize.zip(headers[index].resize).map(|(resize, limits)| MenuWidth {
@@ -1183,6 +1196,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                             panel: props.filter_panel.then_some(panel),
                             focus: menu_focus,
                             neighbour,
+                            announcer,
                         }
                     }
                 })
@@ -1327,7 +1341,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             (data.clone(), columns.clone(), layout.clone(), order.clone());
         let mut export = tools.export;
         export.set(Some(Rc::new(move || {
-            shown_csv(&columns, &shown, &data, &order)
+            (shown_csv(&columns, &shown, &data, &order), order.len())
         })));
     }
     // The count when more rows were asked for: their arrival is said once loading ends.
@@ -1595,6 +1609,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             TABLE_ROW_HEIGHT_VAR,
             row_height.map(|height| format!("{height}px")),
         )
+        .with(
+            TABLE_MIN_WIDTH_VAR,
+            row_height.map(|_| windowed_min_width(lead_width.as_deref(), &headers, &layout)),
+        )
         .into();
     let table = use_box()
         .framework_sx(&TABLE_SX)
@@ -1633,6 +1651,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 drag: drags.then_some(column_drag),
                 head_height: bounded.then(|| EventHandler::new(move |height| head.set(height))),
                 head: head_element,
+                pin_edge,
             }),
         );
     // The live region: valid in no part of a table, so beside it.
@@ -1642,6 +1661,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         || props.column_menu
         || props.header_filters
         || props.filter_panel
+        || props.toolbar.is_some()
         || onbottomreached.is_some();
     let table = match announces {
         true => rsx! {

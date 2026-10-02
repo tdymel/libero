@@ -11,7 +11,7 @@ use super::{
     groups::{HeaderCell, header_rows},
     header_filters::filter_row,
     overlay::EmptyBody,
-    pinning::{CellPin, pin_edge_at, span_pin},
+    pinning::{CellPin, PinSide, pin_edge_at, span_pin},
     resize::{ColumnResize, ColumnWidths, ResizeHandle, ResizeLimits},
     row_reorder::{ReorderRow, ReorderSlot, RowReorder},
     use_table::StateSlice,
@@ -20,7 +20,7 @@ use super::{
 use crate::{
     components::{accessibility::VisuallyHidden, common::Glyph},
     context::IconSlot,
-    hooks::ElementHandle,
+    hooks::{ElementHandle, listener},
     localization::fill,
 };
 
@@ -144,6 +144,9 @@ pub(super) fn header_specs<T>(
             }
             .map(|width| format!("{width}px"));
             let width = resized.as_deref().or(resolved.width);
+            // An overflowing auto table holds each column at its content width, past a
+            // resized `width`: a resize is a floor too, or Widen shows nothing (todo 2017).
+            let min_width = resized.as_deref().or(resolved.min_width);
             HeaderSpec {
                 header: column.header.clone(),
                 align: resolved.align,
@@ -152,7 +155,7 @@ pub(super) fn header_specs<T>(
                 hideable: column.hideable,
                 hidden,
                 width: width.map(str::to_string),
-                style: width_style(width, resolved.min_width),
+                style: width_style(width, min_width),
                 body: match hidden {
                     true => None,
                     false => column.header_render.as_ref().map(|render| render()),
@@ -409,6 +412,8 @@ pub(super) struct BodySpec {
     pub head_height: Option<EventHandler<f64>>,
     /// The `thead`, which Blitz measures for `head_height`.
     pub head: ElementHandle,
+    /// Told the rendered width of each side's innermost pinned column without `width`.
+    pub pin_edge: Callback<(PinSide, f64)>,
 }
 
 /// Whether a header click adds its column to the others: a modifier, or a touch,
@@ -471,6 +476,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
         drag,
         head_height,
         head,
+        pin_edge,
     } = body;
     let columns = shown.len().max(1)
         + usize::from(select_all.is_some())
@@ -545,6 +551,21 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                         });
                         let resizable = grip.is_some();
                         let draggable = drag.is_some() && spec.pin.is_none();
+                        // An unsized innermost pin is measured: the scroll padding clears it (todo 1973).
+                        let measure: Vec<Attribute> = spec
+                            .pin
+                            .as_ref()
+                            .filter(|pin| pin.edge && spec.width.is_none())
+                            .map(|pin| {
+                                let side = pin.side;
+                                listener("onresize", move |event: Event<ResizeData>| {
+                                    if let Ok(size) = event.get_border_box_size() {
+                                        pin_edge.call((side, size.width));
+                                    }
+                                })
+                            })
+                            .into_iter()
+                            .collect();
                         // A pinned column moves by its pin.
                         let mover = drag.filter(|_| spec.pin.is_none()).map(|drag| {
                             rsx! {
@@ -572,6 +593,7 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                                     .iter()
                                     .find(|(column, _)| *column == index)
                                     .map(|(_, direction)| direction.aria_value()),
+                                ..measure,
                                 {mover}
                                 {header_cell(spec, index, &context, menu_of(index))}
                                 {grip}
@@ -978,7 +1000,7 @@ mod tests {
         assert_eq!(headers[0].width.as_deref(), Some("90px"));
         assert_eq!(
             headers[0].style.as_deref(),
-            Some("box-sizing:border-box;width:90px;")
+            Some("box-sizing:border-box;width:90px;min-width:90px;")
         );
     }
 
@@ -1130,6 +1152,25 @@ mod tests {
         assert_eq!(
             width_style(Some("50%"), Some("4rem")).as_deref(),
             Some("box-sizing:border-box;width:50%;min-width:4rem;")
+        );
+    }
+
+    /// 2017: an overflowing table keeps a resized column at its width.
+    #[test]
+    fn a_resized_width_is_the_columns_floor_too() {
+        let (_, columns) = ages();
+        let widths = ColumnWidths::from([("Age".to_string(), 240.0)]);
+        let sizing = WidthSpec {
+            resizable: true,
+            widths: &widths,
+            preview: None,
+        };
+        let headers = header_specs(&columns, &ColumnDefaults::new(), &[], sizing);
+
+        assert_eq!(headers[0].style, None);
+        assert_eq!(
+            headers[1].style.as_deref(),
+            Some("box-sizing:border-box;width:240px;min-width:240px;")
         );
     }
 }

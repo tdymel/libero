@@ -304,6 +304,30 @@ fn a_checkbox_item_is_a_checkbox_that_says_so() {
     assert_eq!(undo[0]["tabindex"], "0", "{undo:?}");
 }
 
+/// 1460: a description is read through `aria-describedby`, hidden, so out of the name.
+#[test]
+fn a_described_item_points_at_its_hidden_description() {
+    let html = opened(|| {
+        vec![
+            MenuItem::new("Copy").onselect(|_| {}).into(),
+            MenuItem::new("Paste")
+                .disabled(true)
+                .description("The clipboard is empty")
+                .onselect(|_| {})
+                .into(),
+        ]
+    });
+    let copy = tags_with(&html, r#"data-menu-index="0""#);
+    assert!(!copy[0].contains_key("aria-describedby"), "{copy:?}");
+
+    let paste = tags_with(&html, r#"data-menu-index="1""#);
+    let id = &paste[0]["aria-describedby"];
+    assert_eq!(paste[0]["aria-disabled"], "true", "{paste:?}");
+    let described = tag_with(&html, &format!(r#"id="{id}""#));
+    assert!(described.contains_key("hidden"), "{described:?}");
+    assert_eq!(html.matches("The clipboard is empty").count(), 1, "{html}");
+}
+
 /// The later of `radio` and `checkbox` wins: an item is one or the other.
 #[test]
 fn radio_and_checkbox_replace_each_other() {
