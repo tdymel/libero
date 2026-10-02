@@ -25,6 +25,12 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 1992: a click at the hidden input's centre lands on the box.
+#[test]
+fn a_click_at_the_hidden_input_lands_on_the_box() {
+    block_on(super::switch::assert_inputs_over_their_boxes("/checkbox"));
+}
+
 /// The value the last `onchange` carried, as `<id>:<value>`.
 async fn emitted(fixture: &Fixture) -> String {
     fixture

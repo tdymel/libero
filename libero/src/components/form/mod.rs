@@ -92,7 +92,7 @@ pub use slider::{
     SliderStep, SliderTrack, SliderValue,
 };
 pub use switch::{Switch, SwitchPart, SwitchProps};
-pub use tags_field::{TagsField, TagsFieldPart, TagsFieldProps};
+pub use tags_field::{TagRejectReason, TagRejection, TagsField, TagsFieldPart, TagsFieldProps};
 pub use text_field::{TextField, TextFieldProps};
 pub use textarea::{Textarea, TextareaPart, TextareaProps};
 pub(crate) use use_field::{Activation, PreparedField, Setter, use_bound, use_field};

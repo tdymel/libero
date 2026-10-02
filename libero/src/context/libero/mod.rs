@@ -180,11 +180,15 @@ impl LiberoContext {
             return;
         };
 
+        let pair_sheet = self.shows_pair();
         let carried = document()
             .is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, Some(name)));
+        let mut css = self.theme_css;
         if !carried {
-            let mut css = self.theme_css;
             css.set(Rc::from(Stylesheet::from(theme).as_str()));
+        } else if !pair_sheet {
+            // A named theme's sheet has no attribute blocks to select (todo 1837).
+            css.set(Rc::from(Stylesheet::from(&*self.themes.peek()).as_str()));
         }
 
         let (mut active, mut current) = (self.active, self.theme);
@@ -199,9 +203,10 @@ impl LiberoContext {
         let themes = self.themes.peek().clone();
         let theme = themes.get(name).unwrap_or_else(|| themes.light_theme());
 
+        let pair_sheet = self.shows_pair();
         let cleared =
             document().is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, None));
-        if !cleared {
+        if !cleared || !pair_sheet {
             // No attribute to clear: rebuild with the whole set, whose media
             // block follows the system on its own.
             let mut css = self.theme_css;
@@ -211,6 +216,11 @@ impl LiberoContext {
         let (mut active, mut current) = (self.active, self.theme);
         active.set(name);
         current.set(theme);
+    }
+
+    /// Whether the sheet is the pair's, not one a theme beyond it rebuilt.
+    fn shows_pair(&self) -> bool {
+        self.themes.peek().is_in_pair(*self.active.peek())
     }
 
     /// Turns the app's text, on the document root, and keeps the choice.

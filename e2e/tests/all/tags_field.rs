@@ -90,6 +90,30 @@ fn its_listbox_is_named_by_the_label() {
     });
 }
 
+/// Todo 1947: a paste that adds one tag and rejects the next hands the reason
+/// after the change, so a handler that clears on change keeps the rejection.
+#[test]
+fn a_rejection_arrives_after_the_change_with_its_reason() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/reject", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#reject", 10).await.unwrap();
+        keyboard::insert_text(page, "rust,wasm,").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector(\"[data-slot='tag'] [data-slot='label']\")?.textContent === 'rust' \
+             && document.querySelector('#rejected').textContent === 'wasm:Full'",
+            "rust added and wasm rejected",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a mixed paste").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn typing_keeps_home_end_and_expanded_honest() {
     super::autocomplete::editable_combobox_typing("/tags-field", "s");

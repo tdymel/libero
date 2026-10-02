@@ -28,6 +28,12 @@ pub(crate) fn visually_hidden_sx() -> Sx {
         .opacity("0")
 }
 
+/// For a control's `& > input`: over the drawn box's centre rather than 1px before
+/// it, so a click at the input's own centre hits the box (todo 1992).
+pub(crate) fn hidden_input_centred_sx() -> Sx {
+    sx().top("50%").left("50%").margin("0")
+}
+
 /// The same recipe, `fixed`, for a box with no positioned host: an absolute one
 /// would add to the page's scrollable overflow.
 pub(crate) static VISUALLY_HIDDEN_FIXED_SX: StaticSx = StaticSx::new(fixed_recipe);

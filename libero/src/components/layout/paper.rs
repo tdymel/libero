@@ -97,6 +97,8 @@ fn paper_variables(props: &PaperProps, tint: Option<GlassTint>) -> Option<String
         variables()
             .with(PAPER_FILL, fill_color(&base))
             .with(PAPER_FILL_CONTRAST, contrast.clone())
+            // Over `paper_sx`'s reset, as `Header` does (todo 1834).
+            .with(SURFACE_LABEL, contrast.clone())
             .with(PAPER_TINT_SHARE, share)
             .with(GLASS_SHEEN, sheen)
             .with(
@@ -320,6 +322,27 @@ mod tests {
                 .as_deref(),
             Some("colored")
         );
+    }
+
+    /// Todo 1834: a standard Button on the fill takes its label, as on a coloured `Header`.
+    #[test]
+    fn a_palette_fill_hands_its_label_to_standard_buttons() {
+        let palette = PaperProps {
+            color: Input::Value("primary".into()),
+            ..props()
+        };
+        let style = paper_variables(&palette, None).unwrap();
+
+        assert!(
+            style.contains("--lsx-surface-label:var(--lsx-primary-contrast-6);"),
+            "{style}"
+        );
+        let literal = PaperProps {
+            color: Input::Value("#123456".into()),
+            ..props()
+        };
+        let style = paper_variables(&literal, None).unwrap();
+        assert!(!style.contains("--lsx-surface-label"), "{style}");
     }
 
     /// A literal is used as given; its label is the caller's.

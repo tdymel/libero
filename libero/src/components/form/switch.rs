@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        accessibility::VISUALLY_HIDDEN_SX,
+        accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
             HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color, contrast_color,
             disabled_look_sx, fill_color, focus_ring_sx, names_itself, ring_overlay,
@@ -38,6 +38,7 @@ static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // The visually hidden input is absolutely positioned; without this it
         // escapes to the nearest positioned ancestor.
         .position("relative")
+        .selector("& > input", hidden_input_centred_sx())
         // On the control rather than the track, so `disabled` below reaches it.
         .cursor("pointer")
         // The ring hugs the track, drawn by the overlay: the focus is on the

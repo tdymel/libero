@@ -84,7 +84,7 @@ pub struct LightboxOptions {
     pub preload: usize,
     /// A downward touch swipe closes, unless zoomed.
     pub close_on_swipe_down: bool,
-    /// Names the dialog. Defaults to the theme's `"Gallery"`.
+    /// Names the dialog. Defaults to the localization's `"Gallery"`.
     pub aria_label: Option<String>,
     /// Styles the dialog box.
     pub sx: Input<Sx>,

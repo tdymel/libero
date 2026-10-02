@@ -33,11 +33,11 @@ pub(super) fn WindowSteps(
     }));
     let (name, [up, down, left, right]) = match adjust {
         Adjust::Resize => (
-            labels.resize_handle,
+            labels.resize_steps,
             [labels.shorter, labels.taller, labels.narrower, labels.wider],
         ),
         _ => (
-            labels.move_handle,
+            labels.move_steps,
             [
                 labels.move_up,
                 labels.move_down,

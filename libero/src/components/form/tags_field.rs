@@ -82,9 +82,10 @@ field_props! {
         /// Accepts or refuses one tag before it is added. Shows no message.
         #[props(default)]
         tag_rules: Option<Callback<String, bool>>,
-        /// A tag was refused: a duplicate, past `max_tags`, or by `tag_rules`.
+        /// A tag was rejected, with why: a duplicate, past `max_tags`, or by
+        /// `tag_rules`. Called after the edit's `onchange`.
         #[props(default)]
-        onrefuse: Option<EventHandler<String>>,
+        onreject: Option<EventHandler<TagRejection>>,
         /// Rules over the whole list, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Vec<String>>,
@@ -192,24 +193,34 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
 
     // Every path that adds a tag merges here, so the rules cannot disagree.
     let merging = held.clone();
-    let onrefuse = props.onrefuse;
+    let onreject = props.onreject;
     let emit = onchange.clone();
     // An `Rc`, not a `use_callback`: blur calls it ([[codebase/reentrant-handlers]]).
-    // Returns the first refused tag, which the draft keeps.
+    // Returns the first rejected tag, which the draft keeps.
     let refusals = use_announcer();
     let localization = use_localization();
     let words = localization.tags_field;
     let add: Add = Rc::new(move |pieces: Vec<String>| {
-        let merged = merge(&merging, pieces, &rules, &onrefuse);
+        let merged = merge(&merging, pieces, &rules);
         if let Some(next) = merged.next
             && let Some(emit) = &emit
         {
             emit(next);
         }
+        // After the change, so a handler clearing on change keeps the rejection.
+        if let Some(onreject) = &onreject {
+            for rejection in &merged.refused {
+                onreject.call(rejection.clone());
+            }
+        }
         if let Some(message) = refusal_message(&merged.refused, &words) {
             refusals.say(message);
         }
-        merged.refused.into_iter().next().map(|(tag, _)| tag)
+        merged
+            .refused
+            .into_iter()
+            .next()
+            .map(|rejection| rejection.tag)
     });
 
     let tags = tags_field_chips(
@@ -349,11 +360,22 @@ struct TagRules {
     rule: Option<Callback<String, bool>>,
 }
 
-/// Why a tag was turned away.
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum Refusal {
+/// A typed or pasted tag the field turned away, handed to `onreject`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TagRejection {
+    /// Trimmed, as it would have been added.
+    pub tag: String,
+    pub reason: TagRejectReason,
+}
+
+/// Why a `TagsField` turned a tag away.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TagRejectReason {
+    /// Already held, and `allow_duplicates` is off.
     Duplicate,
+    /// The field holds `max_tags`.
     Full,
+    /// `tag_rules` refused it.
     NotAllowed,
 }
 
@@ -363,17 +385,12 @@ struct Merged {
     /// `None` when nothing was added, which keeps a refused edit from
     /// emitting a change.
     next: Option<Vec<String>>,
-    refused: Vec<(String, Refusal)>,
+    refused: Vec<TagRejection>,
 }
 
 /// Folds every candidate into the list one at a time, so a batch behaves
 /// exactly like the same tags typed one after another.
-fn merge(
-    held: &[String],
-    pieces: Vec<String>,
-    rules: &TagRules,
-    onrefuse: &Option<EventHandler<String>>,
-) -> Merged {
+fn merge(held: &[String], pieces: Vec<String>, rules: &TagRules) -> Merged {
     let mut next = held.to_vec();
     let mut added = false;
     let mut refused = Vec::new();
@@ -383,22 +400,19 @@ fn merge(
             continue;
         }
         let folded = tag.to_lowercase();
-        let refusal = if !rules.allow_duplicates
+        let reason = if !rules.allow_duplicates
             && next.iter().any(|held| held.trim().to_lowercase() == folded)
         {
-            Some(Refusal::Duplicate)
+            Some(TagRejectReason::Duplicate)
         } else if rules.max_tags.is_some_and(|max| next.len() >= max) {
-            Some(Refusal::Full)
+            Some(TagRejectReason::Full)
         } else if rules.rule.is_some_and(|rule| !rule.call(tag.clone())) {
-            Some(Refusal::NotAllowed)
+            Some(TagRejectReason::NotAllowed)
         } else {
             None
         };
-        if let Some(refusal) = refusal {
-            if let Some(onrefuse) = onrefuse {
-                onrefuse.call(tag.clone());
-            }
-            refused.push((tag, refusal));
+        if let Some(reason) = reason {
+            refused.push(TagRejection { tag, reason });
             continue;
         }
         next.push(tag);
@@ -411,18 +425,18 @@ fn merge(
 }
 
 /// One sentence per reason, in a fixed order; `None` when nothing was refused.
-fn refusal_message(refused: &[(String, Refusal)], words: &TagsFieldLabels) -> Option<String> {
+fn refusal_message(refused: &[TagRejection], words: &TagsFieldLabels) -> Option<String> {
     let sentences: Vec<String> = [
-        (Refusal::Duplicate, words.duplicate),
-        (Refusal::Full, words.full),
-        (Refusal::NotAllowed, words.not_allowed),
+        (TagRejectReason::Duplicate, words.duplicate),
+        (TagRejectReason::Full, words.full),
+        (TagRejectReason::NotAllowed, words.not_allowed),
     ]
     .into_iter()
     .filter_map(|(reason, template)| {
         let labels: Vec<&str> = refused
             .iter()
-            .filter(|(_, why)| *why == reason)
-            .map(|(tag, _)| tag.as_str())
+            .filter(|rejection| rejection.reason == reason)
+            .map(|rejection| rejection.tag.as_str())
             .collect();
         (!labels.is_empty()).then(|| fill(template, &[("labels", &labels.join(", "))]))
     })
@@ -811,10 +825,36 @@ mod tests {
             &tags(&["rust"]),
             tags(&["dioxus", "wasm", "css"]),
             &rules(false, Some(3)),
-            &None,
         );
         assert_eq!(merged.next, Some(tags(&["rust", "dioxus", "wasm"])));
-        assert_eq!(merged.refused, [("css".to_string(), Refusal::Full)]);
+        assert_eq!(merged.refused, [rejection("css", TagRejectReason::Full)]);
+    }
+
+    fn rejection(tag: &str, reason: TagRejectReason) -> TagRejection {
+        TagRejection {
+            tag: tag.to_string(),
+            reason,
+        }
+    }
+
+    /// Todo 1947: a duplicate allowed through is no rejection; a mixed batch
+    /// carries each tag's own reason.
+    #[test]
+    fn each_rejection_carries_its_own_reason() {
+        let merged = merge(
+            &tags(&["rust"]),
+            tags(&["Rust", "wasm", "css"]),
+            &rules(false, Some(2)),
+        );
+        assert_eq!(
+            merged.refused,
+            [
+                rejection("Rust", TagRejectReason::Duplicate),
+                rejection("css", TagRejectReason::Full),
+            ]
+        );
+        let allowed = merge(&tags(&["rust"]), tags(&["rust"]), &rules(true, Some(1)));
+        assert_eq!(allowed.refused, [rejection("rust", TagRejectReason::Full)]);
     }
 
     /// Todo 545: a refusal says why, one sentence per reason.
@@ -824,15 +864,14 @@ mod tests {
             &tags(&["rust", "css"]),
             tags(&["Rust", "wasm", "CSS"]),
             &rules(false, Some(3)),
-            &None,
         );
         assert_eq!(
             refusal_message(&merged.refused, &TagsFieldLabels::ENGLISH),
             Some("Already added: Rust, CSS".to_string())
         );
         let full = [
-            ("a".to_string(), Refusal::Full),
-            ("b".to_string(), Refusal::Duplicate),
+            rejection("a", TagRejectReason::Full),
+            rejection("b", TagRejectReason::Duplicate),
         ];
         assert_eq!(
             refusal_message(&full, &TagsFieldLabels::ENGLISH),
@@ -846,21 +885,15 @@ mod tests {
     #[test]
     fn duplicates_are_refused_unless_they_are_allowed() {
         assert_eq!(
-            merge(
-                &tags(&["Rust"]),
-                tags(&[" rust "]),
-                &rules(false, None),
-                &None
-            )
-            .next,
+            merge(&tags(&["Rust"]), tags(&[" rust "]), &rules(false, None)).next,
             None
         );
         assert_eq!(
-            merge(&tags(&[]), tags(&["a", "A"]), &rules(false, None), &None).next,
+            merge(&tags(&[]), tags(&["a", "A"]), &rules(false, None)).next,
             Some(tags(&["a"]))
         );
         assert_eq!(
-            merge(&tags(&["Rust"]), tags(&["rust"]), &rules(true, None), &None).next,
+            merge(&tags(&["Rust"]), tags(&["rust"]), &rules(true, None)).next,
             Some(tags(&["Rust", "rust"]))
         );
     }
@@ -880,11 +913,11 @@ mod tests {
     #[test]
     fn an_edit_that_adds_nothing_reports_no_change() {
         assert_eq!(
-            merge(&tags(&["a"]), tags(&["  "]), &rules(false, None), &None).next,
+            merge(&tags(&["a"]), tags(&["  "]), &rules(false, None)).next,
             None
         );
         assert_eq!(
-            merge(&tags(&["a"]), tags(&["b"]), &rules(false, Some(1)), &None).next,
+            merge(&tags(&["a"]), tags(&["b"]), &rules(false, Some(1))).next,
             None
         );
     }

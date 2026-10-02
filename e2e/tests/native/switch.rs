@@ -74,13 +74,13 @@ fn the_hidden_input_paints_nothing() {
     }
     let mut page = mount(padded);
     let (x, y, ..) = page.rect(INPUT);
-    // Around the input, inside the ring, which starts 2px left of it.
+    // Around the input, under the track's centre since todo 1992: only the track shows.
     let (x, y) = (x as u32, y as u32);
     let window: Vec<_> = (x - 1..x + 3)
         .flat_map(|px| (y - 4..y + 5).map(move |py| (px, py)))
         .collect();
-    let background = page.painted_pixel(1, 1);
-    assert_eq!(page.painted_pixel(x, y), background, "a speck at the input");
+    let track = page.painted_pixel(x + 5, y);
+    assert_eq!(page.painted_pixel(x, y), track, "a speck at the input");
     let idle = page.painted_pixels(&window);
     page.tab();
     assert!(page.is_focused(INPUT), "Tab reached {}", page.focus_owner());

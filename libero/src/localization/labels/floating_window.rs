@@ -2,13 +2,16 @@
 /// [`CommonLabels::close`](super::CommonLabels::close).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FloatingWindowLabels {
-    /// Names the title bar, which is the keyboard move handle, and the group
-    /// of move buttons.
+    /// Names the title bar, which is the keyboard move handle.
     pub move_handle: &'static str,
+    /// Names the group of move buttons, apart from the handle.
+    pub move_steps: &'static str,
     /// The move handle's description: how to move it.
     pub move_hint: &'static str,
-    /// Names the corner resize handle, and the group of resize buttons.
+    /// Names the corner resize handle.
     pub resize_handle: &'static str,
+    /// Names the group of resize buttons, apart from the handle.
+    pub resize_steps: &'static str,
     /// The resize handle's value text: `{width}` and `{height}` in pixels.
     pub size: &'static str,
     /// Names the title bar's menu button.
@@ -34,8 +37,10 @@ pub struct FloatingWindowLabels {
 impl FloatingWindowLabels {
     pub const ENGLISH: Self = Self {
         move_handle: "Move window",
+        move_steps: "Move window by steps",
         move_hint: "Use arrow keys to move the window",
         resize_handle: "Resize window",
+        resize_steps: "Resize window by steps",
         size: "{width} by {height} pixels",
         menu: "Window menu",
         move_item: "Move",
@@ -54,8 +59,10 @@ impl FloatingWindowLabels {
 
     pub const GERMAN: Self = Self {
         move_handle: "Fenster verschieben",
+        move_steps: "Fenster schrittweise verschieben",
         move_hint: "Mit den Pfeiltasten das Fenster verschieben",
         resize_handle: "Fenstergröße ändern",
+        resize_steps: "Fenstergröße schrittweise ändern",
         size: "{width} mal {height} Pixel",
         menu: "Fenstermenü",
         move_item: "Verschieben",
@@ -71,4 +78,18 @@ impl FloatingWindowLabels {
         taller: "Höher",
         done: "Fertig",
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 2012: the step row is a group of its own, not a second handle.
+    #[test]
+    fn the_step_groups_are_named_apart_from_the_handles() {
+        for labels in [FloatingWindowLabels::ENGLISH, FloatingWindowLabels::GERMAN] {
+            assert_ne!(labels.move_steps, labels.move_handle);
+            assert_ne!(labels.resize_steps, labels.resize_handle);
+        }
+    }
 }

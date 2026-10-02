@@ -1,7 +1,7 @@
 //! `TagsField` for the combobox archetype, with `suggestions`: without them there is no listbox.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, TagsField, Text};
+use libero::components::{Flex, TagRejection, TagsField, Text};
 
 use crate::Routes;
 
@@ -9,7 +9,34 @@ pub const ROUTES: Routes = &[
     ("/tags-field", || rsx! { TagsFieldPage {} }),
     ("/tags-field/cursor", || rsx! { TagsCursorPage {} }),
     ("/tags-field/echo", || rsx! { TagsEchoPage {} }),
+    ("/tags-field/reject", || rsx! { TagsRejectPage {} }),
 ];
+
+/// Todo 1947: room for one tag; a change clears `#rejected`, a rejection fills it.
+#[component]
+fn TagsRejectPage() -> Element {
+    let mut topics = use_signal(Vec::<String>::new);
+    let mut rejected = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TagsField {
+                id: "reject",
+                label: "Topics",
+                max_tags: 1,
+                value: topics(),
+                onchange: move |next| {
+                    topics.set(next);
+                    rejected.set(String::new());
+                },
+                onreject: move |rejection: TagRejection| {
+                    rejected.set(format!("{}:{:?}", rejection.tag, rejection.reason));
+                },
+            }
+            Text { id: "rejected", "{rejected}" }
+        }
+    }
+}
 
 /// The `/tags-field` field with its value echoed in `#echo`, for the shared
 /// web/native scenarios.

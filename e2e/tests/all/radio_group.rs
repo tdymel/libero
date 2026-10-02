@@ -21,6 +21,14 @@ const CHECKED: &str = "[role=radiogroup] input[type=radio]:checked";
 const THIRD_CHECKED: &str =
     "[role=radiogroup] input[type=radio][data-radio-index=\"2\"]:checked + *";
 
+/// Todo 1992: a click at a hidden radio's centre lands on its circle.
+#[test]
+fn a_click_at_the_hidden_input_lands_on_the_circle() {
+    block_on(super::switch::assert_inputs_over_their_boxes(
+        "/radio-group",
+    ));
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("radio_group", "/radio-group")

@@ -3,7 +3,10 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, pr
 use dioxus::prelude::*;
 use libero::components::TagsFieldPart;
 use libero::{
-    components::{ActionIcon, Chip, Code, FieldStatus, SelectionArgs, TagsField, Text},
+    components::{
+        ActionIcon, Chip, Code, FieldStatus, SelectionArgs, TagRejectReason, TagRejection,
+        TagsField, Text,
+    },
     hooks::use_localization,
     localization::{Localization, fill},
     sx::sx,
@@ -51,37 +54,32 @@ const SUGGESTIONS: &str =
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
 const TAG_RULES: &str = r#"tag_rules: |tag: String| tag.chars().count() >= 3"#;
 
-/// Printed above the snippet while `onrefuse` is on. The field announces a
-/// refusal to screen readers only, so the caller shows the reason on screen.
-const WHY: &str = r#"/// Why the field refused `tag`, in the order it checks.
-fn why(held: &[String], tag: &str, max_tags: Option<usize>) -> String {
-    if held.iter().any(|held| held.trim().to_lowercase() == tag.to_lowercase()) {
-        format!("\"{tag}\" is already a topic.")
-    } else if let Some(max) = max_tags.filter(|max| held.len() >= *max) {
-        format!("\"{tag}\" was not added: {max} topics at most.")
-    } else {
-        format!("\"{tag}\" is too short: 3 characters at least.")
+/// Printed above the snippet while `onreject` is on. The field announces a
+/// rejection to screen readers only, so the caller shows the reason on screen.
+const WHY: &str = r#"/// The on-screen message for a rejected tag.
+fn why(rejection: TagRejection) -> String {
+    let tag = rejection.tag;
+    match rejection.reason {
+        TagRejectReason::Duplicate => format!("\"{tag}\" is already a topic."),
+        TagRejectReason::Full => format!("\"{tag}\" was not added: the topic limit is reached."),
+        TagRejectReason::NotAllowed => format!("\"{tag}\" is too short: 3 characters at least."),
     }
 }
 
 "#;
 
 /// The demo's copy of `WHY`.
-fn why(held: &[String], tag: &str, max_tags: Option<usize>) -> String {
-    if held
-        .iter()
-        .any(|held| held.trim().to_lowercase() == tag.to_lowercase())
-    {
-        format!("\"{tag}\" is already a topic.")
-    } else if let Some(max) = max_tags.filter(|max| held.len() >= *max) {
-        format!("\"{tag}\" was not added: {max} topics at most.")
-    } else {
-        format!("\"{tag}\" is too short: 3 characters at least.")
+fn why(rejection: TagRejection) -> String {
+    let tag = rejection.tag;
+    match rejection.reason {
+        TagRejectReason::Duplicate => format!("\"{tag}\" is already a topic."),
+        TagRejectReason::Full => format!("\"{tag}\" was not added: the topic limit is reached."),
+        TagRejectReason::NotAllowed => format!("\"{tag}\" is too short: 3 characters at least."),
     }
 }
 
 fn refusing(values: &DemoValues) -> bool {
-    values.str("onrefuse") == "true"
+    values.str("onreject") == "true"
 }
 
 /// The status the switch picks, as code.
@@ -157,8 +155,8 @@ pub fn TagsFieldPage() -> Element {
                         .doc("The most tags the field accepts. A paste fills the room that is left and refuses the rest."),
                     prop("tag_rules", "Callback<String, bool>")
                         .doc("Accepts or refuses one tag before it is added. A refused tag stays in the input, and the field tells screen readers why."),
-                    prop("onrefuse", "EventHandler<String>")
-                        .doc("A tag was refused, as a duplicate, past `max_tags`, or by `tag_rules`. The field shows no message, so say why on screen, such as through `status`, and clear it on the next change."),
+                    prop("onreject", "EventHandler<TagRejection>")
+                        .doc("A tag was rejected: its `tag` and a `TagRejectReason` of `Duplicate`, `Full` (past `max_tags`) or `NotAllowed` (by `tag_rules`). Called after the same edit's `onchange`. The field shows no message, so say why on screen, such as through `status`, and clear it on the next change."),
                     prop("validate", "Validators<Vec<String>>")
                         .doc("Rules over the whole list, shown once the field loses focus or its form is submitted."),
                     prop("name", "FieldName<Vec<String>>")
@@ -239,14 +237,11 @@ pub fn TagsFieldPage() -> Element {
                 ],
                 controls: vec![
                     // The reason shows in `status` until the next change to the list.
-                    Control::switch("onrefuse").default("true").code(|_, values| {
+                    Control::switch("onreject").default("true").code(|_, values| {
                         match refusing(values) {
                             true => vec![
                                 "onchange: move |next| { refused.set(None); topics.set(next) }".to_string(),
-                                format!(
-                                    "onrefuse: move |tag: String| refused.set(Some(why(&topics(), &tag, {:?})))",
-                                    max_tags(values)
-                                ),
+                                "onreject: move |rejection: TagRejection| refused.set(Some(why(rejection)))".to_string(),
                             ],
                             false => vec!["onchange: move |next| topics.set(next)".to_string()],
                         }
@@ -320,7 +315,6 @@ pub fn TagsFieldPage() -> Element {
                 render: move |values: DemoValues| {
                     let ruled = values.str("tag_rules") == "true";
                     let refuses = refusing(&values);
-                    let max = max_tags(&values);
                     let status = match values.str("status").as_str() {
                         "warning" => FieldStatus::Warning("Two of these are rarely read.".to_string()),
                         "error" => FieldStatus::Error("Add at least one topic.".to_string()),
@@ -343,9 +337,9 @@ pub fn TagsFieldPage() -> Element {
                             }),
                             tag_rules: ruled
                                 .then(|| Callback::new(|tag: String| tag.chars().count() >= 3)),
-                            onrefuse: move |tag: String| {
+                            onreject: move |rejection: TagRejection| {
                                 if refuses {
-                                    refused.set(Some(why(&value(), &tag, max)));
+                                    refused.set(Some(why(rejection)));
                                 }
                             },
                             tag: (values.str("tag") == "true").then(|| Callback::new(move |t| topic_tag(words, t))),

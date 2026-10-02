@@ -125,7 +125,8 @@ explains how parts work.
 - A window takes focus when it opens.
 - The title bar's menu offers Move, Resize and Reset. Move and Resize show
   step buttons, one click per step, so neither needs a drag. Done or Escape
-  hides them.
+  hides them. Their group is named "Move window by steps" or "Resize window by
+  steps", apart from the handles.
 
 ### You must
 

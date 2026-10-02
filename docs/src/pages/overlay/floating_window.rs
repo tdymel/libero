@@ -304,7 +304,7 @@ pub fn FloatingWindowPage() -> Element {
                 .key(["F6"], "Moves focus between the page and the topmost window.")
                 .handles([
                     "A window takes focus when it opens.",
-                    "The title bar's menu offers Move, Resize and Reset. Move and Resize show step buttons, one click per step, so neither needs a drag. Done or Escape hides them.",
+                    "The title bar's menu offers Move, Resize and Reset. Move and Resize show step buttons, one click per step, so neither needs a drag. Done or Escape hides them. Their group is named \"Move window by steps\" or \"Resize window by steps\", apart from the handles.",
                 ])
                 .must([
                     "Pick a `placement` that does not cover the page's controls: the page behind a window still takes Tab.",

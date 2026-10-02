@@ -79,6 +79,64 @@ fn track_and_thumb_keep_an_outline_in_forced_colours() {
     });
 }
 
+/// Todo 1992: every hidden input on `route` lies inside its drawn box, so a click at
+/// the input's centre (a test's, Playwright's) lands on the box. Shared with Checkbox and Radio.
+pub(crate) async fn assert_inputs_over_their_boxes(route: &str) {
+    let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+    let page = &fixture.page;
+    wait::for_visible(page, "[data-slot=control] > input + [aria-hidden]")
+        .await
+        .unwrap();
+    // A card's input centres on the card, all hit area: not a box to hit.
+    let misses: Vec<String> = page
+        .evaluate(
+            "[...document.querySelectorAll('[data-slot=control] > input')]
+                .filter(i => getComputedStyle(i.parentElement).position === 'relative')
+                .filter(i => {
+                    const r = i.getBoundingClientRect();
+                    const b = i.nextElementSibling.getBoundingClientRect();
+                    const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+                    return r.left < b.left || r.right > b.right || r.top < b.top || r.bottom > b.bottom
+                        || !i.nextElementSibling.contains(hit);
+                })
+                .map(i => i.id || i.outerHTML.slice(0, 80))",
+        )
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert!(misses.is_empty(), "{route}: off the box: {misses:?}");
+    fixture.console.assert_clean(route).unwrap();
+    fixture.close().await.unwrap();
+}
+
+#[test]
+fn a_click_at_the_hidden_input_lands_on_the_track() {
+    block_on(async {
+        assert_inputs_over_their_boxes("/switch").await;
+
+        let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let before: bool = page
+            .evaluate(checked("plain"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        // At the input's own centre, which `pointer::click` refuses for landing on the track.
+        let at = pointer::centre_of(page, "#plain").await.unwrap();
+        pointer::click_at(page, at).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} === {}", checked("plain"), !before),
+            "a click at the input's centre to toggle",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 fn changes() -> &'static str {
     "document.querySelector('#changes').dataset.changes"
 }

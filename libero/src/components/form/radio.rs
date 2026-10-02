@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        accessibility::VISUALLY_HIDDEN_SX,
+        accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
             HtmlTag, Input, Part, States, base_color, disabled_look_sx, fill_color, focus_ring_sx,
             names_itself, ring_overlay, ring_overlay_sx, use_name_warning, variables,
@@ -32,6 +32,7 @@ static RADIO_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // The visually hidden input is absolutely positioned; without this it
         // escapes to the nearest positioned ancestor.
         .position("relative")
+        .selector("& > input", hidden_input_centred_sx())
         // On the control rather than the circle, so `disabled` below reaches it.
         .cursor("pointer")
         // Drawn by the overlay after the circle, because the focus is on the

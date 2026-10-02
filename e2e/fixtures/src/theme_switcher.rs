@@ -1,9 +1,10 @@
 //! `ThemeSwitcher`, the toggle alone.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, MenuPart, Parts, Text, ThemeSwitcher};
+use libero::LiberoContext;
+use libero::components::{Button, Flex, MenuPart, Parts, Text, ThemeSwitcher};
 use libero::sx::sx;
-use libero::theme::ThemeSet;
+use libero::theme::{HexColor, Theme, ThemeSet};
 
 use crate::Routes;
 
@@ -11,7 +12,32 @@ pub const ROUTES: Routes = &[
     ("/theme-switcher", || rsx! { ThemeSwitcherPage {} }),
     ("/theme-switcher/themes", || rsx! { ThemesPage {} }),
     ("/theme-switcher/system", || rsx! { SystemPage {} }),
+    ("/theme-switcher/named", || rsx! { NamedPage {} }),
 ];
+
+/// Todo 1837: a theme beyond the pair, then a pinned scheme of the pair.
+#[component]
+fn NamedPage() -> Element {
+    static SEPIA: Theme = Theme {
+        primary: HexColor::new(0x70_4214),
+        ..Theme::DEFAULT
+    };
+    let context = use_context::<LiberoContext>();
+    let named = context.clone();
+    rsx! {
+        Flex { direction: "row", gap: "md", align: "center",
+            Button {
+                id: "named",
+                onclick: move |_| {
+                    named.set_theme_set(ThemeSet::new().named("sepia", &SEPIA));
+                    named.set_active_theme("sepia");
+                },
+                "Sepia"
+            }
+            Button { id: "dark", onclick: move |_| context.set_active_theme(ThemeSet::DARK), "Dark" }
+        }
+    }
+}
 
 /// The toggle with the system entry in its cycle.
 #[component]

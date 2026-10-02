@@ -120,6 +120,49 @@ fn the_menu_opens_on_the_checked_theme() {
     });
 }
 
+/// Todo 1837: pinning dark after a theme beyond the pair shows dark, not the named theme.
+#[test]
+fn a_pinned_scheme_after_a_named_theme_shows_the_pair() {
+    block_on(async {
+        let fixture = Fixture::open("/theme-switcher/named", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(SHIELD_STORAGE).await.unwrap();
+        let root_var = |name: &str| {
+            format!("getComputedStyle(document.documentElement).getPropertyValue('{name}').trim()")
+        };
+
+        pointer::click(page, "#named").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} === '#704214'", root_var("--lsx-primary-6")),
+            "the named theme",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#dark").await.unwrap();
+        wait_for_pin(page, Some("dark")).await;
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} === '#1A1B1E' && {} !== '#704214'",
+                root_var("--lsx-surface"),
+                root_var("--lsx-primary-6")
+            ),
+            "the dark theme of the pair",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a named theme, then dark")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1045: a press on nothing closes the theme menu, by touch too.
 async fn a_press_outside_closes_the_theme_menu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     for _ in 0..2 {
