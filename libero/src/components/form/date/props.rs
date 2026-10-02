@@ -94,7 +94,7 @@ macro_rules! date_props {
     };
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] columns $($rest:ident)*) => {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
-            /// Months side by side. One by default, two for a range.
+            /// Months side by side. One by default, two for a range wider than the `sm` breakpoint.
             #[props(default)]
             columns: Option<usize>,
         ] $($rest)*);

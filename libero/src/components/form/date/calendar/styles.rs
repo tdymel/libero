@@ -29,6 +29,8 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .display("inline-flex")
         .flex_direction("column")
         .gap("4px")
+        // A mini strip shrinks to its parent's width rather than overflow it.
+        .max_width("100%")
         .font_size(CHRONO_FONT_SIZE.value())
         .selector(
             ChronoPickerPart::Header.selector(),
@@ -83,19 +85,29 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             button.clone().width(day.clone()).height(day.clone()),
         )
         // The mini variant: one row of taller days, a month label over the number.
+        // Seven days are ~430px: on a narrower page they shrink instead (1.4.10).
         .selector(
             ChronoPickerPart::Strip.selector(),
             sx().display("flex").align_items("center").gap("4px"),
+        )
+        .selector(
+            "& [data-slot='strip'] > [data-slot='months']",
+            sx().min_width("0"),
         )
         .selector(
             "& [data-slot='strip'] [role='grid']",
             sx().display("flex").gap("2px"),
         )
         .selector(
+            "& [data-slot='strip'] [role='gridcell']",
+            sx().flex("0 1 auto").min_width("0"),
+        )
+        .selector(
             "& [data-slot='strip'] [data-slot='day']",
             sx().flex_direction("column")
                 .gap("2px")
                 .width(format!("calc(1.4 * {day})"))
+                .max_width("100%")
                 .height(format!("calc(1.6 * {day})")),
         )
         .selector(

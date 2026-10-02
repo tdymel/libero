@@ -15,6 +15,7 @@ pub const ROUTES: Routes = &[
     ("/tabs-crowded", || rsx! { TabsCrowdedPage {} }),
     ("/tabs-named", || rsx! { TabsNamedPage {} }),
     ("/tabs-manual", || rsx! { TabsManualPage {} }),
+    ("/tabs-late", || rsx! { TabsLatePage {} }),
 ];
 
 /// Todo 502: manual activation, Billing disabled so the arrows skip it.
@@ -138,6 +139,35 @@ enum Crowded {
     Members,
     Billing,
     Integrations,
+}
+
+/// Todo 1595: the last tab selected from the start, and by a button outside the strip.
+#[component]
+fn TabsLatePage() -> Element {
+    let mut late = use_signal(|| Crowded::Overview);
+
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            Tabs {
+                id: "initial",
+                aria_label: "Initial",
+                value: Crowded::Integrations,
+                onchange: |_| {},
+                panel: |t: Crowded| rsx! { Text { "panel for {t.label()}" } },
+            }
+            button { id: "late-button", r#type: "button",
+                onclick: move |_| late.set(Crowded::Integrations),
+                "Integrations"
+            }
+            Tabs {
+                id: "late",
+                aria_label: "Late",
+                value: late(),
+                onchange: move |next| late.set(next),
+                panel: |t: Crowded| rsx! { Text { "panel for {t.label()}" } },
+            }
+        }
+    }
 }
 
 /// More tabs than a phone's width holds.

@@ -17,10 +17,11 @@ use crate::{
     str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
-        CssVar, STEPPER_COLOR, STEPPER_COLOR_CONTRAST, STEPPER_CONNECTOR_COLOR,
-        STEPPER_CONTENT_PADDING, STEPPER_DESCRIPTION_COLOR, STEPPER_DESCRIPTION_SIZE,
-        STEPPER_ERROR, STEPPER_ERROR_CONTRAST, STEPPER_FILL, STEPPER_GAP, STEPPER_LINE_WIDTH,
-        STEPPER_MARKER, STEPPER_PENDING, STEPPER_SPACING, Size, StepLabelPosition, StepperDefaults,
+        CssVar, FOCUS_RING_HALO_SPREAD, STEPPER_COLOR, STEPPER_COLOR_CONTRAST,
+        STEPPER_CONNECTOR_COLOR, STEPPER_CONTENT_PADDING, STEPPER_DESCRIPTION_COLOR,
+        STEPPER_DESCRIPTION_SIZE, STEPPER_ERROR, STEPPER_ERROR_CONTRAST, STEPPER_FILL, STEPPER_GAP,
+        STEPPER_LINE_WIDTH, STEPPER_MARKER, STEPPER_PENDING, STEPPER_SPACING, Size,
+        StepLabelPosition, StepperDefaults,
     },
 };
 
@@ -46,8 +47,21 @@ const STEPPER_CONNECTOR: CssVar = CssVar::new("--lsx-stepper-connector");
 /// The root's container name, which the side-label fallback queries.
 const STEPPER_CONTAINER: &str = "lsx-stepper";
 
-/// Under the width three side-labelled steps need.
-const NARROW: &str = "(max-width: 359.98px)";
+/// Under the width `steps` side-labelled steps need, 120px each.
+fn narrow(steps: usize) -> String {
+    format!("(max-width: {}.98px)", steps * 120 - 1)
+}
+
+/// States for the step counts past three, whose side labels stack under a wider
+/// box; more steps take the last.
+const STEP_COUNTS: [&str; 5] = ["steps-4", "steps-5", "steps-6", "steps-7", "steps-8"];
+
+/// The [`STEP_COUNTS`] state for `steps`, `None` for three or fewer.
+fn step_count_state(steps: usize) -> Option<&'static str> {
+    steps
+        .checked_sub(4)
+        .map(|index| STEP_COUNTS[index.min(STEP_COUNTS.len() - 1)])
+}
 
 fn rail() -> Rail {
     Rail {
@@ -157,10 +171,18 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
 
     // The connector is a `::before` flex item on each step but the first, at
     // `Rail::connector_start`, the vertical rail's centreline.
+    // Steps the shrunk connectors can't fit scroll in the strip, not the page (1.4.10).
+    // The padding keeps the headers' rings clear of its clip; the margin takes it back.
+    let ring_room = FOCUS_RING_HALO_SPREAD.value();
     let horizontal = sx()
         .selector(
             "& > ol",
-            sx().flex_direction("row").align_items("flex-start"),
+            sx().flex_direction("row")
+                .align_items("flex-start")
+                .overflow_x("auto")
+                .padding(ring_room.clone())
+                .margin_top(format!("calc(-1 * {ring_room})"))
+                .margin_bottom(format!("calc(-1 * {ring_room})")),
         )
         .selector(
             "& > ol > li",
@@ -171,7 +193,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             "& > ol > li + li::before",
             sx().content("\"\"")
                 .flex("1 1 auto")
-                .min_width(STEPPER_SPACING.value())
+                // A quarter of the spacing, so five steps fit a 320px page.
+                .min_width(format!("calc({} / 4)", STEPPER_SPACING.value()))
                 .margin_top(rail.connector_start())
                 // As close to a marker as its label sits.
                 .margin_left(STEPPER_GAP.value())
@@ -190,11 +213,13 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             .align_items("center")
             .text_align("center"),
     );
-    // Under ~360px side labels broke mid-word, so they stack (1.4.10). Blitz has
+    // Under ~120px a step side labels broke mid-word, so they stack (1.4.10). Blitz has
     // no container queries: natively only a narrow window stacks them.
-    let side = sx()
-        .container_query(STEPPER_CONTAINER, NARROW, below.clone())
-        .media(NARROW, below.clone());
+    let stacked = |steps: usize| {
+        sx().container_query(STEPPER_CONTAINER, narrow(steps), below.clone())
+            .media(narrow(steps), below.clone())
+    };
+    let side = stacked(3);
 
     // Marker, rail and content inset all measure from the item's inline-start edge.
     let vertical = sx()
@@ -226,6 +251,18 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                         .padding_right(rail.content_inset(&STEPPER_GAP.value())),
                 ),
         );
+
+    let side_state = format!(
+        "{} && {}",
+        Orientation::Horizontal.state_name(),
+        StepLabelPosition::Side.state_name()
+    );
+    let by_count = STEP_COUNTS
+        .iter()
+        .zip(4..)
+        .fold(sx(), |acc, (state, steps)| {
+            acc.when(format!("{side_state} && {state}"), stacked(steps))
+        });
 
     StepperDefaults::theme_vars()
         .display("block")
@@ -306,14 +343,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             ),
             below,
         )
-        .when(
-            format!(
-                "{} && {}",
-                Orientation::Horizontal.state_name(),
-                StepLabelPosition::Side.state_name()
-            ),
-            side,
-        )
+        .when(side_state, side)
+        .and(by_count)
         .when(Orientation::Vertical.state_name(), vertical)
 });
 
@@ -411,12 +442,15 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         repay.repay();
     }));
 
-    let states: Input<States> = states
+    let mut states = states
         .unwrap_or_default()
         .with(size.state_name(), true)
         .with(orientation.state_name(), true)
-        .with(label_position.state_name(), !vertical)
-        .into();
+        .with(label_position.state_name(), !vertical);
+    if let Some(count) = step_count_state(steps.len()) {
+        states = states.with(count, true);
+    }
+    let states: Input<States> = states.into();
 
     let mut root_variables = variables();
     if let Some((color, fill, contrast)) = color {
@@ -606,5 +640,19 @@ fn StepItem(
             {header}
             {body}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_side_fallback_widens_with_the_step_count() {
+        assert_eq!(narrow(3), "(max-width: 359.98px)");
+        assert_eq!(narrow(5), "(max-width: 599.98px)");
+        assert_eq!(step_count_state(3), None);
+        assert_eq!(step_count_state(4), Some("steps-4"));
+        assert_eq!(step_count_state(12), Some("steps-8"));
     }
 }

@@ -122,6 +122,7 @@ pub fn TabsPage() -> Element {
                 .handles([
                     "Only the selected tab is in the tab order.",
                     "`aria_label` and `aria_labelledby` land on the tablist, not the root.",
+                    "In a strip too wide for its box, the selected tab scrolls into view, also when `value` changes from outside.",
                 ])
                 .must([
                     "Name the strip with `aria_label` or `aria_labelledby`. Without either it warns in debug builds.",

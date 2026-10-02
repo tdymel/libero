@@ -98,7 +98,8 @@ pub fn SplitterPage() -> Element {
                     .doc("Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it."),
                 prop("min_size", "f64").default("10").doc("The smallest size of either pane in percent, at most 50."),
                 prop("divider_size", "Size").default("sm").doc("Thickness of the divider line."),
-                prop("divider_color", "ThemeAwareValue").doc("The divider's color."),
+                prop("divider_color", "ThemeAwareValue")
+                    .doc("The divider's color. Unset it is `muted.6`, 3:1 on the page and `Paper`."),
                 prop("onresize", "EventHandler<SplitterResizeEvent>")
                     .doc("Fires as the divider moves, with both panes' sizes in percent. A key press or double-click sends `Change` then `End`."),
                 prop("aria_label", "String")
@@ -116,6 +117,7 @@ pub fn SplitterPage() -> Element {
                     "The divider is a focusable separator.",
                     "Double-clicking the divider resizes without dragging (WCAG 2.5.7): pane A collapses to `min_size`, and the next double-click restores it. A single click only focuses the divider.",
                     "The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses about 12px into each pane.",
+                    "Each pane scrolls its own overflow, so a pane at `min_size` never paints over the divider or hides its controls under the other pane.",
                     "A debug build warns without `aria_label`.",
                 ])
                 .must([

@@ -78,7 +78,7 @@ every resize.
 | `initial_size` | `f64` | required | Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it. |
 | `min_size` | `f64` | `10` | The smallest size of either pane in percent, at most 50. |
 | `divider_size` | `Size` | `sm` | Thickness of the divider line. |
-| `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is grey. |
+| `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is `muted.6`, 3:1 on the page and `Paper`. |
 | `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' sizes in percent. A key press or double-click sends `Change` then `End`. |
 | `aria_label` | `String` | - | Names the divider after the pane it resizes. A debug build warns without it. |
 | `panel_a` | `Element` | required | The start or top pane. |
@@ -107,6 +107,8 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
   click only focuses the divider.
 - The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses about
   12px into each pane.
+- Each pane scrolls its own overflow, so a pane at `min_size` never paints
+  over the divider or hides its controls under the other pane.
 - A debug build warns without `aria_label`.
 
 ### You must
@@ -136,7 +138,7 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
 |---|---|
 | `--lsx-splitter-divider-size-<size>` | Visible divider thickness for that size step. |
 | `--lsx-splitter-hit-size-<size>` | Hit-target thickness for that size step. |
-| `--lsx-splitter-divider-color` | Set by `divider_color`. Unset falls back to grey. |
+| `--lsx-splitter-divider-color` | Set by `divider_color`. Unset falls back to `muted.6`. |
 | `--lsx-splitter-a` | Pane A's current size in percent. |
 
 ## Data attributes

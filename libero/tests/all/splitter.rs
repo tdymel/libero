@@ -1,7 +1,58 @@
-use crate::common::{body, render};
+use std::collections::BTreeMap;
+
+use crate::common::{body, css_rules_for, render, tag_with};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::Splitter};
+
+fn two_panes() -> Element {
+    rsx! {
+        LiberoProvider {
+            Splitter {
+                initial_size: 50.0,
+                panel_a: rsx! { div { id: "a-content", "left" } },
+                panel_b: rsx! { div { id: "b-content", "right" } },
+            }
+        }
+    }
+}
+
+/// The `<div>` opening just before the tag carrying `marker`: its wrapper or previous sibling.
+fn div_before(html: &str, marker: &str) -> BTreeMap<String, String> {
+    let at = html.find(marker).expect("the marker");
+    let open = html[..at].rfind('<').expect("the marked tag");
+    let before = html[..open].rfind("<div").expect("a div before it");
+    tag_with(&html[before..], "<div")
+}
+
+/// Every declaration `property` the element's rules set, at-rules included.
+fn declared(html: &str, element: &BTreeMap<String, String>, property: &str) -> Vec<String> {
+    css_rules_for(html, element)
+        .into_iter()
+        .filter_map(|rule| rule.declarations.get(property).cloned())
+        .collect()
+}
+
+#[test]
+fn both_panes_scroll_their_own_overflow() {
+    // A pane at its floor otherwise paints over the divider and the other pane (todo 1581).
+    let html = render(two_panes);
+
+    for content in [r#"id="a-content""#, r#"id="b-content""#] {
+        let pane = div_before(&html, content);
+        assert_eq!(declared(&html, &pane, "overflow"), ["auto"], "{pane:?}");
+    }
+}
+
+#[test]
+fn the_default_divider_line_is_the_3_to_1_boundary_shade() {
+    // muted.4 was about 1.5:1 on the page; muted.6 is 3:1 (WCAG 1.4.11, todo 1580).
+    let html = render(two_panes);
+    let bar = div_before(&html, r#"role="separator""#);
+
+    let background = declared(&html, &bar, "background").join(" ");
+    assert!(background.contains("muted-6"), "{background}");
+}
 
 #[test]
 fn splitter_renders_both_panes_around_a_divider() {

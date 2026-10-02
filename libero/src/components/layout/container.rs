@@ -2,22 +2,25 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Variables, base_props, focus_ring_sx, variables},
+        common::{HtmlTag, Input, Variables, base_props, inset_focus_ring_sx, variables},
         layout::use_box,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CONTAINER_GUTTERS, CONTAINER_SIZE, SizeCss},
+    theme::{CONTAINER_GUTTERS, CONTAINER_SIZE, FOCUS_RING_WIDTH, SizeCss},
 };
 
 static CONTAINER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
-        .height("100%")
         .margin_left("auto")
         .margin_right("auto")
         .max_width(CONTAINER_SIZE.overridable())
         .padding_left(CONTAINER_GUTTERS.overridable())
         .padding_right(CONTAINER_GUTTERS.overridable())
-        .focus_visible(focus_ring_sx())
+        // Inset: a full-width container's outer ring is clipped at the viewport sides.
+        .focus_visible(inset_focus_ring_sx(&format!(
+            "calc(-1 * {})",
+            FOCUS_RING_WIDTH.value()
+        )))
 });
 
 fn container_variables(props: &ContainerProps) -> Variables {
@@ -70,6 +73,8 @@ pub fn Container(props: ContainerProps) -> Element {
         .sx(&props.sx)
         .states(&props.states)
         .variables(&variables)
+        // The inset ring above replaces the box's outer one.
+        .focus_ring(false)
         .prepare()
         .render(
             props.component.copied_or_default(),

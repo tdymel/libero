@@ -67,7 +67,7 @@ web. A server render and native builds mark no day unless `today` is set.
 | `max` | `V::Bound` | - | The latest value that can be picked. For a range, the latest end. |
 | `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that cannot be picked, on top of `min` and `max`. |
 | `allow_deselect` | `bool` | `false` | Clicking the picked day again clears it. Only for a day. |
-| `columns` | `usize` | `1, or 2 for a range` | Months side by side, for a day or a range of days. |
+| `columns` | `usize` | `1, or 2 for a range above sm` | Months side by side, for a day or a range of days. |
 | `calendar` | `CalendarVariant` | `full` | A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time. |
 | `days` | `usize` | `7` | Days in the mini calendar's row. |
 | `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |

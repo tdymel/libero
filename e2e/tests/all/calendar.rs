@@ -1,6 +1,7 @@
 //! `ChronoPicker`'s day grid keys, and a month change that keeps focus in the grid (406).
 //! `/calendar` picks 2026-03-18, also `today`, so nothing depends on the clock.
 
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, Key};
 use e2e::passes::pointer;
@@ -622,6 +623,37 @@ fn the_picked_day_shows_in_forced_colours() {
             .into_value()
             .unwrap();
         assert_ne!(picked, canvas, "the picked day's fill is the page's own");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1552: the mini strip's seven days fit a 320px page; the days narrow instead.
+#[test]
+fn the_mini_strip_fits_320px() {
+    block_on(async {
+        let fixture = Fixture::open("/calendar/mini", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+            .await
+            .unwrap();
+        wait::for_visible(page, "[data-slot=strip]").await.unwrap();
+        // Against 320, not `innerWidth`: a mobile layout viewport widens to its content.
+        let [overflow, right, days]: [f64; 3] = page
+            .evaluate(
+                "(() => { const strip = document.querySelector('[data-slot=strip]'); \
+                 return [document.documentElement.scrollWidth - 320, \
+                   strip.getBoundingClientRect().right - 320, \
+                   strip.querySelectorAll('[data-slot=day]').length]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(days, 7.0);
+        assert!(overflow <= 0.0, "the page scrolls sideways by {overflow}px");
+        assert!(right <= 0.0, "the strip ends {right}px past the viewport");
         fixture.close().await.unwrap();
     });
 }

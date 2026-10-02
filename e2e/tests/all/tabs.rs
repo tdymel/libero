@@ -1,6 +1,7 @@
 //! `Tabs`: the roving-tabindex archetype's first consumer.
 
 use anyhow::Result;
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::archetypes::{Orientation, RovingTabindex, reset_tab_position};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
@@ -493,6 +494,51 @@ fn a_crowded_strip_scrolls_inside_itself() {
         assert!(visible, "End left the last tab outside the strip");
 
         fixture.console.assert_clean("a crowded strip").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Whether `root`'s selected tab lies inside its strip.
+fn selected_shown(root: &str) -> String {
+    format!(
+        "(() => {{ const list = document.querySelector('{root} > [role=tablist]').getBoundingClientRect(); \
+         const tab = document.querySelector('{root} {SELECTED}').getBoundingClientRect(); \
+         return tab.left >= list.left - 1 && tab.right <= list.right + 1; }})()"
+    )
+}
+
+/// Todo 1595: at 320px a selected tab past the strip's edge scrolls into view, when
+/// selected from the start and when the value arrives later from outside the strip.
+#[test]
+fn a_selected_tab_scrolls_into_its_strip() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-late", Viewport::Mobile).await.unwrap();
+        let page = &fixture.page;
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+            .await
+            .unwrap();
+        // Mounted at 320px: the reveal follows the value, not a later resize.
+        page.reload().await.unwrap();
+        wait::for_visible(page, "#late-button").await.unwrap();
+        wait::for_js_true(
+            page,
+            &selected_shown("#initial"),
+            "the initial last tab in view",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#late-button").await.unwrap();
+        wait::for_js_true(page, &selected_shown("#late"), "the late last tab in view")
+            .await
+            .unwrap();
+        let page_width: f64 = page
+            .evaluate("document.documentElement.scrollWidth")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(page_width <= 320.0, "the page is {page_width}px wide");
+        fixture.console.assert_clean("late tabs").unwrap();
         fixture.close().await.unwrap();
     });
 }

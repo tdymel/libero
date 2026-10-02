@@ -3,6 +3,7 @@
 
 use anyhow::{Result, bail, ensure};
 use chromiumoxide::Page;
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, linger};
 use e2e::passes::{focus, keyboard};
@@ -257,4 +258,55 @@ async fn dialog_contract(page: &Page, input: &str) -> Result<()> {
         bail!("the dialog does not trap focus, so it must not claim aria-modal");
     }
     Ok(())
+}
+
+/// Todo 1552: under the `sm` breakpoint the range dropdown shows one month and fits a
+/// 320px page; above it, two months side by side (1.4.10).
+#[test]
+fn a_date_range_field_opens_one_month_on_a_narrow_page() {
+    block_on(async {
+        let route = "/date-range-field";
+        for (narrow, months) in [(true, 1), (false, 2)] {
+            let viewport = if narrow {
+                Viewport::Mobile
+            } else {
+                Viewport::Desktop
+            };
+            let fixture = Fixture::open(route, viewport).await.unwrap();
+            let page = &fixture.page;
+            if narrow {
+                page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+                    .await
+                    .unwrap();
+            }
+            keyboard::tab_to(page, "#date-range-field", 5)
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("document.querySelectorAll('{DIALOG} [role=grid]').length === {months}"),
+                &format!("{months} month grids, narrow {narrow}"),
+            )
+            .await
+            .unwrap();
+            // Not `innerWidth`: a mobile layout viewport widens to its content.
+            let width = if narrow {
+                320
+            } else {
+                Viewport::Desktop.size().0
+            };
+            let overflow: f64 = page
+                .evaluate(format!("document.documentElement.scrollWidth - {width}"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                overflow <= 0.0,
+                "narrow {narrow}: the page scrolls sideways by {overflow}px"
+            );
+            fixture.console.assert_clean(route).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
 }

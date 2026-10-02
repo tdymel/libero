@@ -52,14 +52,21 @@ static SPLITTER_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("dragging", sx().user_select("none"))
 });
 
+// Each pane scrolls its own overflow: at its floor it would paint over the divider
+// and the other pane, its focusables under them.
 static SPLITTER_PANEL_A_SX: StaticSx = StaticSx::new(|| {
     sx().flex(format!("0 0 {}", SPLITTER_A_VAR.value_or("50%")))
         .min_width("0")
         .min_height("0")
+        .overflow("auto")
 });
 
-static SPLITTER_PANEL_B_SX: StaticSx =
-    StaticSx::new(|| sx().flex("1 1 0%").min_width("0").min_height("0"));
+static SPLITTER_PANEL_B_SX: StaticSx = StaticSx::new(|| {
+    sx().flex("1 1 0%")
+        .min_width("0")
+        .min_height("0")
+        .overflow("auto")
+});
 
 fn splitter_variables(a: f64, divider_color: Option<&ThemeAwareValue>) -> Variables {
     variables()

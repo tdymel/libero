@@ -233,6 +233,81 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
     });
 }
 
+/// Per stepper of `/stepper-many`: its scroll and client widths, its strip's, and its first
+/// header's flex direction.
+const MANY: &str = "(() => ['#side-5', '#below-5', '#side-9', '#below-9'].map(id => {
+    const s = document.querySelector(id);
+    const ol = s.querySelector('ol');
+    const header = getComputedStyle(s.querySelector('[data-slot=header]')).flexDirection;
+    return [id, s.scrollWidth, s.clientWidth, ol.scrollWidth, ol.clientWidth, header];
+}))()";
+
+type Many = Vec<(String, f64, f64, f64, f64, String)>;
+
+/// Five steps fit 390 and 320px by shrinking the connectors; nine scroll in their strip;
+/// the page never scrolls sideways (1.4.10, todo 1573).
+#[test]
+fn many_steps_shrink_then_scroll_in_their_strip() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-many", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#below-9-step-8").await.unwrap();
+        for width in [390, 320] {
+            page.execute(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, true))
+                .await
+                .unwrap();
+            let page_width: f64 = page
+                .evaluate("document.documentElement.scrollWidth")
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let many: Many = page.evaluate(MANY).await.unwrap().into_value().unwrap();
+            assert!(
+                page_width <= f64::from(width),
+                "{width}px: the page scrolls sideways: {many:?}"
+            );
+            for (id, scroll, client, strip, strip_client, _) in &many {
+                assert!(
+                    scroll <= client,
+                    "{width}px {id}: the stepper overflows: {many:?}"
+                );
+                if id.ends_with("-5") {
+                    assert!(
+                        strip <= strip_client,
+                        "{width}px {id}: five steps scroll: {many:?}"
+                    );
+                }
+            }
+        }
+        fixture.console.assert_clean("many steps").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Side labels stack under the width their step count needs, not a fixed 360px (todo 1573).
+#[test]
+fn the_side_fallback_follows_the_step_count() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-many", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#side-5-step-4").await.unwrap();
+        for (width, five, nine) in [(500, "column", "column"), (1280, "row", "row")] {
+            page.execute(SetDeviceMetricsOverrideParams::new(width, 800, 1.0, false))
+                .await
+                .unwrap();
+            let many: Many = page.evaluate(MANY).await.unwrap().into_value().unwrap();
+            assert_eq!(many[0].5, five, "{width}px: {many:?}");
+            assert_eq!(many[2].5, nine, "{width}px: {many:?}");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Words of the `#plain` stepper's labels and descriptions split across lines, and how many
 /// words it examined: a label without a direct text node is skipped (todo 1829).
 const SPLIT_WORDS: &str = "(() => {

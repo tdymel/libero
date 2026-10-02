@@ -71,7 +71,7 @@ fn Demo() -> Element {
 | `onstepclick` | `EventHandler<T>` | - | Called with the picked step. Without it the steps are plain text with no tab stops. |
 | `allow_next_steps` | `bool` | `false` | With `onstepclick`, lets steps not reached yet be picked too. |
 | `orientation` | `Orientation` | `horizontal` | `vertical` puts each step's content under the step itself. |
-| `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Below 360px wide, `side` draws as `below`. |
+| `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Under 120px a step (360px for three), `side` draws as `below`. |
 | `size` | `Size` | `md` | Marker, type and spacing. |
 | `color` | `ThemeAwareValue` | `primary` | The current and completed markers, and the connectors behind them. |
 | `parts` | `Parts<StepperPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
@@ -103,6 +103,8 @@ explains how parts work.
 - With `onstepclick`, each clickable step is a button and a tab stop. Enter
   and Space activate. There are no arrow keys.
 - `aria_label` and `aria_labelledby` land on the step list, not the root.
+- A horizontal strip never widens the page (WCAG 1.4.10): the connectors
+  shrink first, then steps that still don't fit scroll inside the strip.
 
 ### You must
 

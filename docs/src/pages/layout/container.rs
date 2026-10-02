@@ -29,7 +29,11 @@ pub fn ContainerPage() -> Element {
                     .doc("Horizontal padding, a spacing step or a CSS length."),
                 prop("children", "Element").doc("The container's content."),
             ])],
-            accessibility: a11y().must([
+            accessibility: a11y()
+                .handles([
+                    "A focused container, such as a skip-link target with `tabindex`, draws its focus ring inside its edges, so a full-width one keeps it on screen.",
+                ])
+                .must([
                 "Use `component: \"main\"` or `\"section\"` when the region is a landmark.",
                 "Name a `section` (`aria-label` or `aria-labelledby`) for it to count as a landmark.",
             ]),

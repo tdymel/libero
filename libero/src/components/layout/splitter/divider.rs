@@ -19,7 +19,8 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
         .position("relative")
         .flex_shrink("0")
         .align_self("stretch")
-        .background(SPLITTER_DIVIDER_COLOR_VAR.value_or(ColorCss::MUTED.value(ColorShade::S4)));
+        // Shade 6, 3:1 on page and paper: shade 4 was about 1.5:1, under WCAG 1.4.11.
+        .background(SPLITTER_DIVIDER_COLOR_VAR.value_or(ColorCss::MUTED.value(ColorShade::S6)));
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         acc.when(

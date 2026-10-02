@@ -43,6 +43,11 @@ Like every component, `Container` also takes the shared props `sx`, `class`,
 
 ## Accessibility
 
+### Libero handles
+
+- A focused container, such as a skip-link target with `tabindex`, draws its
+  focus ring inside its edges, so a full-width one keeps it on screen.
+
 ### You must
 
 - Use `component: "main"` or `"section"` when the region is a landmark.

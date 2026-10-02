@@ -92,7 +92,7 @@ pub fn ChronoFieldPage() -> Element {
                     prop("twelve_hour", "bool").doc("A 12-hour clock with AM and PM. Defaults to whether the time format is one."),
                     prop("calendar", "CalendarVariant").default(theme.chrono_picker.calendar.as_str()).doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
                     prop("days", "usize").default(theme.chrono_picker.days.to_string()).doc("Days in the mini calendar's row."),
-                    prop("columns", "usize").default("1, or 2 for a range").doc("Months side by side."),
+                    prop("columns", "usize").default("1, or 2 for a range above sm").doc("Months side by side."),
                     prop("close_on_change", "bool").default(theme.chrono_field.close_on_change.to_string()).doc("Picking a day, or a range's second end, closes the dropdown."),
                     prop("name", "FieldName<Option<V>>").doc("What the field posts as, the value in ISO 8601 whatever the text shows. A path also binds it to the surrounding `Form`'s value when it has no `onchange`."),
                     prop("validate", "Validators<Option<V>>").doc("Rules over the value, shown once the field loses focus or its form is submitted."),

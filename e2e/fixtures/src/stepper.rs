@@ -13,7 +13,46 @@ pub const ROUTES: Routes = &[
     ),
     ("/stepper-long", || rsx! { LongLabelPage {} }),
     ("/stepper-named", || rsx! { NamedPage {} }),
+    ("/stepper-many", || rsx! { ManyStepsPage {} }),
 ];
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Phase {
+    Cart,
+    Account,
+    Shipping,
+    Billing,
+    Payment,
+    Review,
+    Confirm,
+    Receipt,
+    Survey,
+}
+
+/// Todo 1573: five and nine steps in both horizontal arms, for reflow at 390 and 320px.
+#[component]
+fn ManyStepsPage() -> Element {
+    let all = Phase::options();
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            for (id, count, position) in [
+                ("side-5", 5, "side"),
+                ("below-5", 5, "below"),
+                ("side-9", 9, "side"),
+                ("below-9", 9, "below"),
+            ] {
+                Stepper {
+                    key: "{id}",
+                    id,
+                    value: Some(Phase::Account),
+                    options: all[..count].to_vec(),
+                    label_position: position,
+                    onstepclick: |_| {},
+                }
+            }
+        }
+    }
+}
 
 /// Todo 541: one step list named by `aria_label`, one by a heading.
 #[component]

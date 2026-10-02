@@ -6,8 +6,6 @@ expression: tree
 button "Previous month"
 button "March 2026" [live=polite]
   StaticText "March 2026"
-button "April 2026" [live=polite]
-  StaticText "April 2026"
 button "Next month"
 grid "March 2026"
   row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
@@ -113,7 +111,7 @@ grid "March 2026"
     gridcell "March 28, 2026" [selected=false]
       button "March 28, 2026"
         StaticText "28"
-  row "March 29, 2026 March 30, 2026 March 31, 2026"
+  row "March 29, 2026 March 30, 2026 March 31, 2026 April 1, 2026 April 2, 2026 April 3, 2026 April 4, 2026"
     gridcell "March 29, 2026" [selected=false]
       button "March 29, 2026"
         StaticText "29"
@@ -123,38 +121,6 @@ grid "March 2026"
     gridcell "March 31, 2026" [selected=false]
       button "March 31, 2026"
         StaticText "31"
-    gridcell
-    gridcell
-    gridcell
-    gridcell
-  row
-    gridcell
-    gridcell
-    gridcell
-    gridcell
-    gridcell
-    gridcell
-    gridcell
-grid "April 2026"
-  row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
-    columnheader "Sunday"
-      StaticText "Su"
-    columnheader "Monday"
-      StaticText "Mo"
-    columnheader "Tuesday"
-      StaticText "Tu"
-    columnheader "Wednesday"
-      StaticText "We"
-    columnheader "Thursday"
-      StaticText "Th"
-    columnheader "Friday"
-      StaticText "Fr"
-    columnheader "Saturday"
-      StaticText "Sa"
-  row "April 1, 2026 April 2, 2026 April 3, 2026 April 4, 2026"
-    gridcell
-    gridcell
-    gridcell
     gridcell "April 1, 2026" [selected=false]
       button "April 1, 2026"
         StaticText "1"
@@ -189,73 +155,3 @@ grid "April 2026"
     gridcell "April 11, 2026" [selected=false]
       button "April 11, 2026"
         StaticText "11"
-  row "April 12, 2026 April 13, 2026 April 14, 2026 April 15, 2026 April 16, 2026 April 17, 2026 April 18, 2026"
-    gridcell "April 12, 2026" [selected=false]
-      button "April 12, 2026"
-        StaticText "12"
-    gridcell "April 13, 2026" [selected=false]
-      button "April 13, 2026"
-        StaticText "13"
-    gridcell "April 14, 2026" [selected=false]
-      button "April 14, 2026"
-        StaticText "14"
-    gridcell "April 15, 2026" [selected=false]
-      button "April 15, 2026"
-        StaticText "15"
-    gridcell "April 16, 2026" [selected=false]
-      button "April 16, 2026"
-        StaticText "16"
-    gridcell "April 17, 2026" [selected=false]
-      button "April 17, 2026"
-        StaticText "17"
-    gridcell "April 18, 2026" [selected=false]
-      button "April 18, 2026"
-        StaticText "18"
-  row "April 19, 2026 April 20, 2026 April 21, 2026 April 22, 2026 April 23, 2026 April 24, 2026 April 25, 2026"
-    gridcell "April 19, 2026" [selected=false]
-      button "April 19, 2026"
-        StaticText "19"
-    gridcell "April 20, 2026" [selected=false]
-      button "April 20, 2026"
-        StaticText "20"
-    gridcell "April 21, 2026" [selected=false]
-      button "April 21, 2026"
-        StaticText "21"
-    gridcell "April 22, 2026" [selected=false]
-      button "April 22, 2026"
-        StaticText "22"
-    gridcell "April 23, 2026" [selected=false]
-      button "April 23, 2026"
-        StaticText "23"
-    gridcell "April 24, 2026" [selected=false]
-      button "April 24, 2026"
-        StaticText "24"
-    gridcell "April 25, 2026" [selected=false]
-      button "April 25, 2026"
-        StaticText "25"
-  row "April 26, 2026 April 27, 2026 April 28, 2026 April 29, 2026 April 30, 2026"
-    gridcell "April 26, 2026" [selected=false]
-      button "April 26, 2026"
-        StaticText "26"
-    gridcell "April 27, 2026" [selected=false]
-      button "April 27, 2026"
-        StaticText "27"
-    gridcell "April 28, 2026" [selected=false]
-      button "April 28, 2026"
-        StaticText "28"
-    gridcell "April 29, 2026" [selected=false]
-      button "April 29, 2026"
-        StaticText "29"
-    gridcell "April 30, 2026" [selected=false]
-      button "April 30, 2026"
-        StaticText "30"
-    gridcell
-    gridcell
-  row
-    gridcell
-    gridcell
-    gridcell
-    gridcell
-    gridcell
-    gridcell
-    gridcell

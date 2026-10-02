@@ -10,8 +10,8 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{id_selector, use_element, use_focus_within},
-    platform::{ElementApi, logical_key},
+    hooks::{ElementHandle, id_selector, use_element, use_focus_within},
+    platform::{ElementApi, logical_key, when_laid_out},
     sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, Size, SizeCss, TABS_BORDER_COLOR, TABS_GAP, TABS_HOVER, TABS_LINE, TABS_PAD_X,
@@ -99,6 +99,46 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .selector("& [role=\"tab\"]", sx().flex("1 1 0")),
         )
 });
+
+/// Scrolls `strip` sideways just enough to show its descendant `selector`, as
+/// `scrollIntoView` `nearest` would, without scrolling the page.
+fn reveal_inline(strip: ElementHandle, selector: &str) {
+    let Ok(tab) = strip.query_selector(selector) else {
+        return;
+    };
+    let reads = (
+        strip.client_offset(),
+        strip.dimensions(),
+        strip.scroll_offset(),
+        tab.client_offset(),
+        tab.dimensions(),
+    );
+    spawn(async move {
+        let (strip_at, strip_size, scroll, tab_at, tab_size) = reads;
+        let (
+            Ok((strip_x, _)),
+            Ok(strip_size),
+            Ok((scroll_x, scroll_y)),
+            Ok((tab_x, _)),
+            Ok(tab_size),
+        ) = (
+            strip_at.await,
+            strip_size.await,
+            scroll.await,
+            tab_at.await,
+            tab_size.await,
+        )
+        else {
+            return;
+        };
+        let before = tab_x - strip_x;
+        let after = tab_x + tab_size.width - (strip_x + strip_size.width);
+        let shift = if before < 0.0 { before } else { after.max(0.0) };
+        if shift != 0.0 {
+            let _ = strip.scroll_to(scroll_x + shift, scroll_y);
+        }
+    });
+}
 
 /// One tab, with `T` already gone: `content` is the rendered label and `name`
 /// the accessible one, or empty for the content's own.
@@ -196,6 +236,15 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
             let _ = tab.focus();
         }
     });
+
+    // A selected tab past the overflowing strip's edge scrolls into view, also a late `value`.
+    let reveal_root = root.clone();
+    use_effect(use_reactive!(|(selected,)| {
+        if let Some(index) = selected {
+            let tab = id_selector(&format!("{reveal_root}-tab-{index}"));
+            when_laid_out(move || reveal_inline(list_element, &tab));
+        }
+    }));
 
     let states: Input<States> = states
         .unwrap_or_default()

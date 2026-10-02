@@ -229,7 +229,7 @@ date_props! {
     field DateRangeFieldProps(DateRange<NaiveDate>, NaiveDate): format, limits, exclude_date, today, columns, close_on_change
 }
 
-/// A text field holding a range of days, with two months in a dropdown.
+/// A text field holding a range of days, with two months in a dropdown, one under `sm`.
 ///
 /// ```
 /// # use dioxus::prelude::*;

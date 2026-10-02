@@ -102,7 +102,7 @@ pub fn StepperPage() -> Element {
                     prop("onstepclick", "EventHandler<T>").doc("Called with the picked step. Without it the steps are plain text with no tab stops."),
                     prop("allow_next_steps", "bool").default("false").doc("With `onstepclick`, lets steps not reached yet be picked too."),
                     prop("orientation", "Orientation").default("horizontal").doc("`vertical` puts each step's content under the step itself."),
-                    prop("label_position", "StepLabelPosition").default("side").doc("`side` or `below` the marker. Ignored when vertical. Below 360px wide, `side` draws as `below`."),
+                    prop("label_position", "StepLabelPosition").default("side").doc("`side` or `below` the marker. Ignored when vertical. Under 120px a step (360px for three), `side` draws as `below`."),
                     prop("size", "Size").default("md").doc("Marker, type and spacing."),
                     prop("color", "ThemeAwareValue").default("primary").doc("The current and completed markers, and the connectors behind them."),
                     prop("parts", "Parts<StepperPart>")
@@ -123,6 +123,7 @@ pub fn StepperPage() -> Element {
                 .handles([
                     "With `onstepclick`, each clickable step is a button and a tab stop. Enter and Space activate. There are no arrow keys.",
                     "`aria_label` and `aria_labelledby` land on the step list, not the root.",
+                    "A horizontal strip never widens the page (WCAG 1.4.10): the connectors shrink first, then steps that still don't fit scroll inside the strip.",
                 ])
                 .must([
                     "Name the steps with `aria_label` or `aria_labelledby`.",

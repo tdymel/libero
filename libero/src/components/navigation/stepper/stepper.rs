@@ -44,7 +44,7 @@ pub struct StepperProps<T: Options> {
     /// `horizontal` (default) or `vertical`.
     #[props(default, into)]
     orientation: Input<Orientation>,
-    /// `side` or `below` the marker; `side` falls back to `below` under 360px wide.
+    /// `side` or `below` the marker; `side` falls back to `below` under 120px a step.
     #[props(default, into)]
     label_position: Input<StepLabelPosition>,
     #[props(default, into)]

@@ -14,7 +14,7 @@ use super::{
 };
 use crate::{
     components::common::{ClassList, Input, Parts, States},
-    hooks::use_theme,
+    hooks::{use_media_query, use_theme},
     sx::Sx,
     theme::{CalendarVariant, Size, TimePickerVariant},
     utils::warn,
@@ -504,11 +504,16 @@ impl Sealed for DateRange<NaiveDate> {
                 onchange.call(Some(DateRange::pick(value, day)));
             }
         });
+        // Two months are ~520px: under `sm` one, as the Cascader's single column (1.4.10).
+        let narrow = use_media_query(&format!(
+            "not all and (min-width: {})",
+            Size::Sm.breakpoint_value()
+        ));
         rsx! {
             Calendar {
                 selection: Selection::Range(value),
                 onpick,
-                columns: options.columns.unwrap_or(2),
+                columns: options.columns.unwrap_or(if narrow() { 1 } else { 2 }),
                 lowest: DateLevel::Day,
                 min: options.min,
                 max: options.max,

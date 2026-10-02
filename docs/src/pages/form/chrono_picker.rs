@@ -47,7 +47,7 @@ pub fn ChronoPickerPage() -> Element {
                     prop("exclude_date", "Callback<NaiveDate, bool>")
                         .doc("Days that cannot be picked, on top of `min` and `max`."),
                     prop("allow_deselect", "bool").default("false").doc("Clicking the picked day again clears it. Only for a day."),
-                    prop("columns", "usize").default("1, or 2 for a range").doc("Months side by side, for a day or a range of days."),
+                    prop("columns", "usize").default("1, or 2 for a range above sm").doc("Months side by side, for a day or a range of days."),
                     prop("calendar", "CalendarVariant").default(theme.chrono_picker.calendar.as_str()).doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
                     prop("days", "usize").default(theme.chrono_picker.days.to_string()).doc("Days in the mini calendar's row."),
                     prop("variant", "TimePickerVariant").default(theme.time_picker.variant.as_str()).doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
