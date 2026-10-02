@@ -62,7 +62,7 @@ pub fn CarouselPage() -> Element {
             markdown: "/md/carousel.md",
             properties: vec![
                 props("Carousel", vec![
-                    prop("slides", "Vec<Element>").doc("The slides, in order."),
+                    prop("slides", "Vec<Element>").default("vec![]").doc("The slides, in order."),
                     prop("slide_label", "Callback<usize, String>")
                         .default("{n} of {m}")
                         .doc("Each slide's accessible name."),
@@ -70,6 +70,7 @@ pub fn CarouselPage() -> Element {
                         .default("None, uncontrolled")
                         .doc("The current slide. Set it and the carousel follows."),
                     prop("onindexchange", "EventHandler<usize>")
+                        .default("None")
                         .doc("Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here."),
                     prop("per_view", "f64")
                         .default(theme.carousel.per_view.to_string())
@@ -90,13 +91,15 @@ pub fn CarouselPage() -> Element {
                     prop("indicators", "bool")
                         .default(theme.carousel.indicators.to_string())
                         .doc("The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1."),
-                    prop("aria_label", "String").doc("Names the region. Unset, it falls back to the localization's label and warns."),
+                    prop("aria_label", "String")
+                        .default("localization label")
+                        .doc("Names the region. Unset, it falls back to the localization's label and warns."),
                     prop("draggable", "bool")
                         .default("false")
                         .doc("Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track."),
                     prop("autoplay", "bool")
                         .default("false")
-                        .doc("Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused."),
+                        .doc("Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. Without `loop` it stops on the last slide and presses Pause; Play there starts over from the first."),
                     prop("r#loop", "bool")
                         .default("false")
                         .doc("Wraps around at both ends."),

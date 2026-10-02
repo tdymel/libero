@@ -17,4 +17,4 @@ pub use doc_page::{DocPage, ExtraTab};
 pub use doc_section::{DocSection, SectionLink};
 pub use icon_catalogue::IconCatalogue;
 pub use pictogram_note::PictogramNote;
-pub use prop_doc::{PartsPanel, PropGroup, PropertyTable, prop, props};
+pub use prop_doc::{PartsPanel, PropGroup, PropertyTable, prop, props, prose};

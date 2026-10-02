@@ -41,7 +41,10 @@ pub fn PictogramPage() -> Element {
                     prop("aria_label", "Option<String>")
                         .default("None")
                         .doc("Names the glyph: `role=\"img\"` instead of `aria-hidden`. Leave unset next to a text label."),
-                ]),
+                    prop("attributes", "Vec<Attribute>")
+                        .doc("Any svg attribute, winning over the glyph's own: `width`, `height`, `stroke_width`, `class`. Others by name in quotes, as `\"aria-labelledby\": \"logo-title\"`."),
+                ])
+                .without_base_props(),
             ],
             accessibility: a11y()
                 .handles([

@@ -82,7 +82,7 @@ Pass the handle to `Audio { media }` to drive the built-in player from outside.
 | `autoplay` | `bool` | `false` | Starts on load. Browsers refuse it with sound: pair it with `muted`; a debug build warns otherwise. |
 | `muted` | `bool` | `false` | Starts muted. |
 | `looping` | `bool` | `false` | Starts again at the end. |
-| `preload` | `MediaPreload` | `metadata` | How much loads before a press: `none`, `metadata` or `auto`. Unless `none`, the whole file is fetched once to draw the bars. |
+| `preload` | `MediaPreload` | `metadata` | How much loads before a press: `none`, `metadata` or `auto`. Unless `none`, a file up to 10 minutes is fetched whole once more to draw the bars, unless its `Content-Length` is over 20 MB. |
 | `size` | `Size` | theme | Of the buttons and the seek slider. |
 | `onplay` | `EventHandler<()>` | `None` | Playing started. |
 | `onpause` | `EventHandler<()>` | `None` | Playing paused. |

@@ -570,6 +570,39 @@ fn autoplay_stops_once_focus_enters_until_play() {
     });
 }
 
+/// Todo 1928, APG: without `loop`, autoplay rests on the last slide and presses Pause;
+/// Play pressed there starts over from the first.
+#[test]
+fn autoplay_without_loop_rests_on_the_last_slide() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        hold_rotation(page).await;
+        instant_scroll(page).await;
+        let mut at = index(page).await.unwrap();
+        while at < 3 {
+            rotates(page, at, "autoplay to advance to the last slide").await;
+            at = index(page).await.unwrap();
+        }
+        clock::fire_all(page, AUTOPLAY_MS).await.unwrap();
+        assert_pressed(page, "true", "the last slide's tick").await;
+        assert_stopped(page, 3, "rotated past the last slide").await;
+
+        page.evaluate(format!("document.querySelector({PAUSE:?}).click()"))
+            .await
+            .unwrap();
+        rotates(page, 3, "Play on the last slide to start over").await;
+        assert_eq!(index(page).await.unwrap(), 0, "Play on the last slide");
+        fixture
+            .console
+            .assert_clean("autoplay resting on the last slide")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A mouse press on Pause while it rotates pauses it: the focus the press
 /// brings in is not an entry that stops it first, which the click would undo.
 #[test]

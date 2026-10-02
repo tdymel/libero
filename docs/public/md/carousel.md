@@ -108,10 +108,10 @@ Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: s
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `slides` | `Vec<Element>` | `[]` | The slides, in order. |
+| `slides` | `Vec<Element>` | `vec![]` | The slides, in order. |
 | `slide_label` | `Callback<usize, String>` | `{n} of {m}` | Each slide's accessible name. |
 | `index` | `Option<usize>` | `None`, uncontrolled | The current slide. Set it and the carousel follows. |
-| `onindexchange` | `EventHandler<usize>` | - | Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here. |
+| `onindexchange` | `EventHandler<usize>` | `None` | Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here. |
 | `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. |
 | `gap` | `Size` | `md` | Between slides. |
 | `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach. |
@@ -121,7 +121,7 @@ Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: s
 | `indicators` | `bool` | `false` | The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1. |
 | `aria_label` | `String` | localization `label` | Names the region. Unset, it falls back to the localization's label and warns. |
 | `draggable` | `bool` | `false` | Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track. |
-| `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. |
+| `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. Without `loop` it stops on the last slide and presses Pause; Play there starts over from the first. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
 | `r#loop` | `bool` | `false` | Wraps around at both ends. The cloned slides at each end are `aria-hidden` and `inert`. |
 | `parts` | `Parts<CarouselPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

@@ -37,7 +37,7 @@ pub fn AudioPage() -> Element {
                     prop("looping", "bool").default("false").doc("Starts again at the end."),
                     prop("preload", "MediaPreload")
                         .default("metadata")
-                        .doc("How much loads before a press: `none`, `metadata` or `auto`. Unless `none`, the whole file is fetched once to draw the bars."),
+                        .doc("How much loads before a press: `none`, `metadata` or `auto`. Unless `none`, a file up to 10 minutes is fetched whole once more to draw the bars, unless its `Content-Length` is over 20 MB."),
                     prop("size", "Size").default("theme").doc("Of the buttons and the seek slider."),
                     prop("onplay", "EventHandler<()>").default("None").doc("Playing started."),
                     prop("onpause", "EventHandler<()>").default("None").doc("Playing paused."),

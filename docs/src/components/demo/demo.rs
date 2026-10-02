@@ -4,6 +4,7 @@ use libero::{
         Box, CodeBlock, Flex, Input, NativeSelect, OptionLabel, SegmentedControl, Slider,
         SliderChangeEvent, Switch, Text,
     },
+    hooks::use_id,
     sx::{Sx, sx},
     theme::{CODE_BLOCK_BORDER, Size, TEXT_FONT_SIZE},
 };
@@ -304,6 +305,8 @@ pub fn Demo(
     title: Option<String>,
 ) -> Element {
     let mut values = use_signal(|| DemoValues::defaults(&controls));
+    // Prefixes each switch's id, so its caption is a `<label for>` a click toggles.
+    let demo_id = use_id();
     // An `options_from` control follows the control its options hang on: settled in this
     // render, stored by the effect.
     let settle = controls.clone();
@@ -418,7 +421,15 @@ pub fn Demo(
                                 gap: if control.kind == ControlKind::Slider { "sm" } else { "xs" },
                                 // `NativeSelect` renders its own `<label>`, which is
                                 // what names it - a second one would duplicate it.
-                                if control.kind != ControlKind::Select {
+                                if control.kind == ControlKind::Switch {
+                                    Text {
+                                        component: "label",
+                                        "for": "{demo_id}-{control.name}",
+                                        size: "sm",
+                                        sx: sx().font_weight("600"),
+                                        {label(control.name)}
+                                    }
+                                } else if control.kind != ControlKind::Select {
                                     Text {
                                         size: "sm",
                                         sx: sx().font_weight("600"),
@@ -484,6 +495,7 @@ pub fn Demo(
                                     },
                                     ControlKind::Switch => rsx! {
                                         Switch {
+                                            id: "{demo_id}-{control.name}",
                                             aria_label: label(control.name),
                                             checked: control.is_on(&current.str(control.name)),
                                             onchange: move |on: bool| {

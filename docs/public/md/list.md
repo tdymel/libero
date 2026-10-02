@@ -8,8 +8,9 @@ Description: A `<ul>` of `<li>` items without the browser's list styling, with t
 
 A `<ul>` of `<li>` items without the browser's list styling. A nested list
 indents from its own content. Set `size` on the outer list only, since the
-parent sets a nested list's indent. On an inner `List`, `size` changes only the
-gap. `ordered: true` renders an `<ol>` with visible numbers.
+parent sets a nested list's indent. A nested ordered list keeps a fixed 2em,
+room for its numbers. On an inner `List`, `size` changes only the gap.
+`ordered: true` renders an `<ol>` with visible numbers.
 
 An `icon` on the list marks every item. A `ListItem`'s own `icon` replaces it
 for that item. A nested list does not take its parent's icon.
@@ -71,7 +72,7 @@ fn Checklist() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Item gap and nested-list indent, together. |
+| `size` | `Size` | `md` | Item gap and nested-list indent, together. A nested ordered list keeps the fixed `2em` its numbers need. |
 | `ordered` | `bool` | `false` | An `ol` with visible numbers, for items whose order matters. |
 | `icon` | `Option<Element>` | `None` | Shown at the start of every item, beside its first line. Hidden from screen readers. |
 | `children` | `Element` | required | The list's items. |

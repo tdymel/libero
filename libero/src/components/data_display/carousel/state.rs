@@ -501,6 +501,7 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
     // the effect below moves. `go_to` there panicked in `spawn` on the web.
     let ticks = use_signal(|| 0usize);
     let mut advanced = use_signal(|| 0usize);
+    let mut rested = use_signal(|| false);
     use_effect(use_reactive!(|running, delay| {
         if !running {
             subscription.set(None);
@@ -539,11 +540,21 @@ pub(super) fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
             true => nav.count.saturating_sub(1),
             false => last,
         };
-        let next = match *nav.current.peek() >= end {
-            // Autoplay wraps; the controls deliberately do not.
-            true => 0,
-            false => *nav.current.peek() + 1,
+        let next = match (*nav.current.peek() >= end, nav.clones > 0) {
+            (false, _) => *nav.current.peek() + 1,
+            (true, true) => 0,
+            // Without `loop` it rests on the last slide (APG); Play pressed there starts over.
+            (true, false) if !*rested.peek() => {
+                rested.set(true);
+                let mut paused = paused;
+                paused.set(true);
+                return;
+            }
+            (true, false) => 0,
         };
+        if *rested.peek() {
+            rested.set(false);
+        }
         nav.go_to(next);
     }));
 

@@ -53,7 +53,7 @@ pub fn IndicatorPage() -> Element {
                     .doc("The dot's diameter, and the height of a labelled one, from 6px to 22px."),
                 prop("color", "ThemeAwareValue")
                     .default(theme.indicator.color.as_str())
-                    .doc("The fill, a theme color name or a CSS color. A theme color also sets a label color that reads on it."),
+                    .doc("The fill, a theme color name or a CSS color. A theme or hex color also sets a label color that reads on it; any other CSS color gets `contrast-color()`."),
                 prop("radius", "Size")
                     .default(theme.indicator.radius.as_str())
                     .doc("A step on the indicator's own radius scale, `1px` to `6px`. The default `xxl` is round at every size."),
@@ -67,13 +67,13 @@ pub fn IndicatorPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "Screen readers never read the indicator.",
-                    "A theme color labels the count at 4.5:1 or better.",
+                    "A theme or hex color labels the count at 4.5:1 or better.",
                 ])
                 .must([
                     "Put the count in the name of what it marks, as the demo avatar's `alt: \"Ada Lovelace, 128 unread\"`, or `aria_label: \"Messages, 128 unread\"` on a button.",
                     "To have the indicator read, pass `aria_hidden: \"false\"` and wrap it in your own `role=\"status\"` region.",
                     "`processing` pings until you turn it off. Set it back to `false` when the work ends, since motion that never stops fails WCAG 2.2.2.",
-                    "With a CSS color, check the contrast yourself.",
+                    "Give the fill 3:1 against what is around it (WCAG 1.4.11). A CSS color other than hex labels the count with `contrast-color()`, which a browser without it ignores.",
                 ]),
             lead: rsx! {
                 Text {

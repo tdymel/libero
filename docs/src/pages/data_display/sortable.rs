@@ -52,21 +52,23 @@ pub fn SortablePage() -> Element {
                         .default("vertical")
                         .doc("`vertical` stacks the items, `horizontal` puts them in a row."),
                     prop("onreorder", "EventHandler<SortableMove>")
+                        .default("required")
                         .doc("Fires on drop, or on a move button, when an item changed place. Apply the move to your data with `SortableMove::apply`; until then the list keeps its old order."),
                     prop("move_buttons", "bool")
                         .default("true")
                         .doc("Each item's two buttons that move it one slot without dragging (WCAG 2.5.7). Hidden, offer another way to reorder without a drag."),
-                    prop("children", "Element").doc("The `SortableItem`s."),
+                    prop("children", "Element").default("required").doc("The `SortableItem`s."),
                 ]),
                 props("SortableItem", vec![
                     prop("index", "usize")
+                        .default("required")
                         .doc("The item's current position, from 0. Key the item by its data, not by this."),
                     prop("label", "Option<String>")
                         .default("\"Item {n}\"")
                         .doc("Names the item in its controls and the announcements. Unset, the handle reads the item's content (\"Reorder Apple\"), and the move buttons and announcements `SortableLabels::item` with its position when it was lifted."),
                     prop("parts", "Parts<SortableItemPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
-                    prop("children", "Element").doc("The item's content, between the handle and the move buttons."),
+                    prop("children", "Element").default("required").doc("The item's content, between the handle and the move buttons."),
                 ])
                 .parts("SortableItemPart", vec![
                     (SortableItemPart::Handle, "The drag handle."),

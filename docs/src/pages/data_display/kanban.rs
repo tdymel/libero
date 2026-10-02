@@ -243,22 +243,26 @@ pub fn KanbanPage() -> Element {
             properties: vec![
                 props("Kanban", vec![
                     prop("onmove", "EventHandler<KanbanMove>")
+                        .default("required")
                         .doc("Fires when a card changed place: on a drop, a move button or a Move to entry. Apply it to your data with `KanbanMove::apply`; until then the board keeps its old order."),
                     prop("move_buttons", "bool")
                         .default("true")
                         .doc("Each card's two buttons that move it one slot in its column without dragging (WCAG 2.5.7)."),
-                    prop("children", "Element").doc("The `KanbanColumn`s."),
+                    prop("children", "Element").default("required").doc("The `KanbanColumn`s."),
                 ]),
                 props("KanbanColumn", vec![
                     prop("index", "usize")
+                        .default("required")
                         .doc("The column's position on the board, from 0. Key the column by its data, not by this."),
                     prop("label", "String")
+                        .default("required")
                         .doc("The column's name: the header's text, the card list's accessible name, its entry in every Move to menu and the announcements."),
                     prop("header", "Option<Element>")
+                        .default("None")
                         .doc("The header's content instead of `label`, e.g. with a count. `label` stays the list's name."),
                     prop("parts", "Parts<KanbanColumnPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
-                    prop("children", "Element").doc("The column's `KanbanCard`s."),
+                    prop("children", "Element").default("required").doc("The column's `KanbanCard`s."),
                 ])
                 .parts("KanbanColumnPart", vec![
                     (KanbanColumnPart::Header, "The header naming the column."),
@@ -266,13 +270,14 @@ pub fn KanbanPage() -> Element {
                 ]),
                 props("KanbanCard", vec![
                     prop("index", "usize")
+                        .default("required")
                         .doc("The card's position in its column, from 0. Key the card by its data, not by this."),
                     prop("label", "Option<String>")
                         .default("\"Item {n}\"")
                         .doc("Names the card in its controls and the announcements. Unset, the handle reads the card's content, and the other controls and announcements `SortableLabels::item` with its position."),
                     prop("parts", "Parts<KanbanCardPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
-                    prop("children", "Element").doc("The card's content, between the handle and the move buttons."),
+                    prop("children", "Element").default("required").doc("The card's content, between the handle and the move buttons."),
                 ])
                 .parts("KanbanCardPart", vec![
                     (KanbanCardPart::Handle, "The drag handle."),

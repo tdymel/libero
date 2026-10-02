@@ -77,9 +77,7 @@ colour variants are left out: they hard-code their fills.
 |---|---|---|---|
 | `icon` | `SvgData` | required | The glyph: a const from a pictogram icon crate, or `SvgData::new(include_str!("x.svg"))`. |
 | `aria_label` | `Option<String>` | `None` | Names the glyph: `role="img"` instead of `aria-hidden`. Leave unset next to a text label. |
-
-`Pictogram` also takes every svg attribute (`stroke_width`, `width`, `class`,
-...), and any other attribute by its name in quotes (`"aria-labelledby": "logo-title"`).
+| `attributes` | `Vec<Attribute>` | - | Any svg attribute, winning over the glyph's own: `width`, `height`, `stroke_width`, `class`. Others by name in quotes, as `"aria-labelledby": "logo-title"`. |
 
 ## Accessibility
 

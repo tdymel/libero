@@ -203,7 +203,13 @@ pub fn LocalizationPage() -> Element {
 /// direction, which it sets from the controls and puts back on leaving.
 #[component]
 fn LocalizationPreview(values: DemoValues) -> Element {
-    let (_, language) = picked(&LANGUAGES, &values.str("localization"));
+    let (language_name, language) = picked(&LANGUAGES, &values.str("localization"));
+    // The page stays English: only the preview speaks the picked language (WCAG 3.1.2).
+    let lang = if language_name == LANGUAGES[1].1 {
+        "de"
+    } else {
+        "en"
+    };
     let (_, conventions) = picked(&FORMATS, &values.str("formats"));
     let rtl = values.str("direction") == "rtl";
     let localization = use_localization_handle();
@@ -239,14 +245,46 @@ fn LocalizationPreview(values: DemoValues) -> Element {
             .map(|(day, time)| NaiveDateTime::new(day, time))
     });
     rsx! {
-        Flex { gap: "md", wrap: "wrap", align: "start", justify: "center",
+        Flex { lang, gap: "md", wrap: "wrap", align: "start", justify: "center",
             DatePicker { value: day(), onchange: move |next| day.set(next) }
             ChronoField::<NaiveDateTime> {
                 value: moment(),
                 onchange: move |next| moment.set(next),
-                label: "When",
+                label: if lang == "de" { "Wann" } else { "When" },
                 sx: sx().width("260px"),
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use libero::context::LiberoProvider;
+
+    #[component]
+    fn Preview(language: &'static str) -> Element {
+        let values = DemoValues::defaults(&[
+            Control::toggle("localization", options(&LANGUAGES)).default(language),
+            Control::toggle("formats", options(&FORMATS)),
+            Control::toggle("direction", ["ltr", "rtl"]),
+        ]);
+        rsx! {
+            LiberoProvider { LocalizationPreview { values } }
+        }
+    }
+
+    /// WCAG 3.1.2: German words in the preview sit under `lang="de"` (todo 1994).
+    #[test]
+    fn the_preview_speaks_its_language() {
+        for (language, lang) in [("Deutsch", "de"), ("English", "en")] {
+            let mut dom = VirtualDom::new_with_props(Preview, PreviewProps { language });
+            dom.rebuild_in_place();
+            let html = dioxus_ssr::render(&dom);
+            assert!(
+                html.contains(&format!("lang=\"{lang}\"")),
+                "{language}: {html}"
+            );
         }
     }
 }

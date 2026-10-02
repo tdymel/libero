@@ -64,7 +64,7 @@ end.
 |---|---|---|---|
 | `index` | `usize` | required | The column's position on the board, from 0. Key the column by its data, not by this. |
 | `label` | `String` | required | The column's name: the header's text, the card list's accessible name, its entry in every Move to menu and the announcements. |
-| `header` | `Option<Element>` | - | The header's content instead of `label`, e.g. with a count. `label` stays the list's name. |
+| `header` | `Option<Element>` | `None` | The header's content instead of `label`, e.g. with a count. `label` stays the list's name. |
 | `parts` | `Parts<KanbanColumnPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The column's `KanbanCard`s. |
 

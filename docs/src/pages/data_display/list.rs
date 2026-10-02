@@ -33,7 +33,7 @@ pub fn ListPage() -> Element {
                 props("List", vec![
                     prop("size", "Size")
                         .default(theme.list.size.as_str())
-                        .doc("Item gap and nested-list indent, together."),
+                        .doc("Item gap and nested-list indent, together. A nested ordered list keeps the fixed `2em` its numbers need."),
                     prop("ordered", "bool")
                         .default("false")
                         .doc("An `ol` with visible numbers, for items whose order matters."),
@@ -70,7 +70,8 @@ pub fn ListPage() -> Element {
                     " items without the browser's list styling. A nested list indents from "
                     "its own content. Set "
                     Code { source: "size" }
-                    " on the outer list only, since the parent sets a nested list's indent."
+                    " on the outer list only, since the parent sets a nested list's indent. "
+                    "A nested ordered list keeps a fixed 2em, room for its numbers."
                 }
                 Text {
                     "An "

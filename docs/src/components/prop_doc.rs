@@ -305,7 +305,7 @@ fn PartRows(name: String, parts: Vec<PartDoc>) -> Element {
 }
 
 /// Inline prose with `` `code` `` and `*emphasis*` runs, as the docs write them.
-pub(super) fn prose(text: &str) -> Element {
+pub fn prose(text: &str) -> Element {
     rsx! {
         for (code, run) in code_spans(text) {
             if code {

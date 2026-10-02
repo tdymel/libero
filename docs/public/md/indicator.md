@@ -58,7 +58,7 @@ fn Demo(unread: u32) -> Element {
 | `label` | `Option<u32>` | `None` | The count. `None` is the bare dot. A number, so `max` can cap it. |
 | `max` | `Option<u32>` | `99` | Above it, the label renders as `{max}+`. Falls back to the theme's cap. |
 | `size` | `Size` | `md` | The dot's diameter, and the height of a labelled one, from 6px to 22px. |
-| `color` | `ThemeAwareValue` | `error` | The fill, a theme color name or a CSS color. A theme color also sets a label color that reads on it. |
+| `color` | `ThemeAwareValue` | `error` | The fill, a theme color name or a CSS color. A theme or hex color also sets a label color that reads on it; any other CSS color gets `contrast-color()`. |
 | `radius` | `Size` | `xxl` | A step on the indicator's own radius scale, `1px` to `6px`. The default `xxl` is round at every size. |
 | `with_border` | `bool` | `false` | A ring in the surface color, so the dot reads on top of a picture. |
 | `processing` | `bool` | `false` | A ping behind the dot that repeats until you set it back to `false`. Stops under `prefers-reduced-motion`. |
@@ -71,7 +71,7 @@ Like every component, `Indicator` also takes the shared props `sx`, `class`,
 ### Libero handles
 
 - Screen readers never read the indicator.
-- A theme color labels the count at 4.5:1 or better.
+- A theme or hex color labels the count at 4.5:1 or better.
 
 ### You must
 
@@ -82,7 +82,9 @@ Like every component, `Indicator` also takes the shared props `sx`, `class`,
   own `role="status"` region.
 - `processing` pings until you turn it off. Set it back to `false` when the
   work ends, since motion that never stops fails WCAG 2.2.2.
-- With a CSS color, check the contrast yourself.
+- Give the fill 3:1 against what is around it (WCAG 1.4.11). A CSS color other
+  than hex labels the count with `contrast-color()`, which a browser without it
+  ignores.
 
 ## Theme defaults
 
@@ -113,7 +115,7 @@ Like every component, `Indicator` also takes the shared props `sx`, `class`,
 | `--lsx-indicator-border-width` | The ring's width. Its color is `--lsx-paper-background`. |
 | `--lsx-indicator-processing-duration` | One ping cycle. |
 | `--lsx-indicator-color` | Resolved `color`. |
-| `--lsx-indicator-contrast` | Label color on that fill. Unset for a literal CSS color. |
+| `--lsx-indicator-contrast` | Label color on that fill: black or white for a hex color, `contrast-color()` for any other CSS color. |
 
 The ping is `@keyframes lsx-indicator-processing`, appended to the theme
 stylesheet.

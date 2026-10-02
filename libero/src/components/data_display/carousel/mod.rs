@@ -149,7 +149,7 @@ base_props! {
         /// Mouse drag-to-scroll over the track; touch already swipes.
         #[props(default)]
         draggable: bool,
-        /// Advances on a timer, with a pause control (WCAG 2.2.2).
+        /// Advances on a timer, with a pause control (WCAG 2.2.2). Without `loop` it stops on the last slide.
         #[props(default)]
         autoplay: bool,
         /// Milliseconds between advances.
