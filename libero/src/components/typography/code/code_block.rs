@@ -10,10 +10,10 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::Copy,
         common::{
-            HtmlTag, Input, Part, States, Variables, base_props, inset_focus_ring_sx, names_itself,
-            parts_enum, variables,
+            HtmlTag, Input, Part, States, Variables, attr, base_props, inset_focus_ring_sx,
+            names_itself, parts_enum, variables,
         },
-        layout::{Box, use_box},
+        layout::{Box, BoxStyle, use_box},
     },
     hooks::{use_css, use_element, use_localization, use_theme},
     localization::{CodeBlockLabels, fill},
@@ -318,6 +318,25 @@ fn parse_highlighted_lines(spec: &str, line_count: usize) -> (HashSet<usize>, Op
 /// `None` outside a diff; a diff draws a marker column on every row.
 type DiffCell = Option<Option<DiffStatus>>;
 
+/// A row's parts, resolved once per block: a `Box` scope each was three per line.
+#[derive(Clone)]
+struct LineStyles {
+    row: BoxStyle,
+    number: BoxStyle,
+    marker: BoxStyle,
+    content: BoxStyle,
+}
+
+fn use_line_styles() -> LineStyles {
+    LineStyles {
+        row: use_box().framework_sx(&CODE_LINE_ROW_SX).prepare(),
+        number: use_box().framework_sx(&CODE_BLOCK_LINE_NUMBER_SX).prepare(),
+        marker: use_box().framework_sx(&CODE_DIFF_MARKER_SX).prepare(),
+        content: use_box().framework_sx(&CODE_LINE_CONTENT_SX).prepare(),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 fn code_line_row(
     index: usize,
     line: &HighlightedLine,
@@ -326,6 +345,7 @@ fn code_line_row(
     row_state: Option<&'static str>,
     copy_space: bool,
     labels: &CodeBlockLabels,
+    styles: &LineStyles,
 ) -> Element {
     let states = row_state
         .map(|s| States::new().active(s))
@@ -335,47 +355,56 @@ fn code_line_row(
         Some(DiffStatus::Removed) => ("-", Some(labels.removed)),
         None => (" ", None),
     };
+    // Read aloud, the numbers interleave with the code.
+    let hidden = |slot: &'static str| vec![attr("aria-hidden", "true"), attr("data-slot", slot)];
+    let number = line_numbers.then(|| {
+        styles.number.clone().render(
+            HtmlTag::Span,
+            hidden("line-number"),
+            rsx! { {(index + 1).to_string()} },
+        )
+    });
+    let marker = diff.is_some().then(|| {
+        styles
+            .marker
+            .clone()
+            .with_states(&States::new().with("no-gutter", !line_numbers))
+            .render(HtmlTag::Span, hidden("marker"), rsx! { {marker} })
+    });
+    let content = styles
+        .content
+        .clone()
+        .with_states(
+            &States::new()
+                .with("no-gutter", !line_numbers && diff.is_none())
+                .with("copy-space", copy_space),
+        )
+        .render(
+            HtmlTag::Span,
+            Vec::new(),
+            rsx! {
+                for (text, class) in line.iter() {
+                    span { class: *class, {text.as_str()} }
+                }
+            },
+        );
     // A `span`: a row sits inside `code`, which holds phrasing content only.
-    rsx! {
-        Box {
-            component: "span",
-            framework_sx: &CODE_LINE_ROW_SX,
-            states,
-            if line_numbers {
-                Box {
-                    component: "span",
-                    framework_sx: &CODE_BLOCK_LINE_NUMBER_SX,
-                    // Read aloud, the numbers interleave with the code.
-                    aria_hidden: "true",
-                    "data-slot": "line-number",
-                    {(index + 1).to_string()}
-                }
+    styles.row.clone().with_states(&states).render(
+        HtmlTag::Span,
+        Vec::new(),
+        rsx! {
+            if let Some(number) = number {
+                {number}
             }
-            if diff.is_some() {
-                Box {
-                    component: "span",
-                    framework_sx: &CODE_DIFF_MARKER_SX,
-                    states: States::new().with("no-gutter", !line_numbers),
-                    aria_hidden: "true",
-                    "data-slot": "marker",
-                    {marker}
-                }
+            if let Some(marker) = marker {
+                {marker}
             }
             if let Some(spoken) = spoken {
                 VisuallyHidden { sx: &CODE_DIFF_LABEL_SX, "{spoken} " }
             }
-            Box {
-                component: "span",
-                framework_sx: &CODE_LINE_CONTENT_SX,
-                states: States::new()
-                    .with("no-gutter", !line_numbers && diff.is_none())
-                    .with("copy-space", copy_space),
-                for (text, class) in line.iter() {
-                    span { class: *class, {text.as_str()} }
-                }
-            }
-        }
-    }
+            {content}
+        },
+    )
 }
 
 fn gutter_variables(gutter_width: String) -> Variables {
@@ -389,6 +418,7 @@ fn code_lines(
     diff_statuses: Option<&[Option<DiffStatus>]>,
     floating_copy: bool,
     labels: &CodeBlockLabels,
+    styles: &LineStyles,
 ) -> Element {
     let gutter_width = format!("{}ch", lines.len().to_string().len());
 
@@ -410,7 +440,7 @@ fn code_lines(
                             None => None,
                         };
                         let copy_space = floating_copy && index == 0;
-                        code_line_row(index, line, line_numbers, diff, row_state, copy_space, labels)
+                        code_line_row(index, line, line_numbers, diff, row_state, copy_space, labels, styles)
                     }
                 }
             }
@@ -476,6 +506,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
             (!names_itself(&props.attributes)).then(|| group_label.clone()),
         );
     let header_class = use_css(header.then_some(&CODE_BLOCK_HEADER_SX), CssLayer::Framework);
+    let line_styles = use_line_styles();
 
     // Diff statuses need the markers still present.
     let diff_statuses: Vec<Option<DiffStatus>> = if props.diff {
@@ -579,6 +610,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
             props.diff.then_some(&diff_statuses[..]),
             floating_copy,
             &labels,
+            &line_styles,
         ),
         None => rsx! {
             Box {

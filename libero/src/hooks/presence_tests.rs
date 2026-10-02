@@ -50,6 +50,41 @@ fn an_initially_closed_presence_renders_neither_mounted_nor_visible() {
     assert!(html.contains(r#"data-visible="no""#), "{html}");
 }
 
+thread_local! {
+    static RENDERS: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+/// Renders of `app` once its mount effects ran.
+fn renders_after_mount(app: fn() -> Element) -> u32 {
+    RENDERS.with(|r| r.set(0));
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    for _ in 0..3 {
+        dom.process_events();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    }
+    RENDERS.with(|r| r.get())
+}
+
+/// The mount effect writes no value already there: an equal write still re-rendered,
+/// so every closed `Collapse` drew twice on mount (todo 2031).
+#[test]
+fn a_settled_presence_renders_once_on_mount() {
+    fn closed() -> Element {
+        RENDERS.with(|r| r.set(r.get() + 1));
+        let presence = use_presence(false, "grid-template-rows", None);
+        rsx! { div { "data-visible": presence.visible() } }
+    }
+    fn open() -> Element {
+        RENDERS.with(|r| r.set(r.get() + 1));
+        let presence = use_presence(true, "grid-template-rows", None);
+        rsx! { div { "data-visible": presence.visible() } }
+    }
+
+    assert_eq!(renders_after_mount(closed), 1);
+    assert_eq!(renders_after_mount(open), 1);
+}
+
 /// A caller with a duration gets the exit fallback (todo 321). No `transitionend`
 /// fires here, as on a suppressed exit.
 #[test]

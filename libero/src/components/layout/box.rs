@@ -228,6 +228,12 @@ impl BoxStyle {
         self.style
     }
 
+    /// Replaces the `data-state`, so one resolved style serves many elements (`CodeBlock`'s rows).
+    pub fn with_states(mut self, states: &States) -> Self {
+        self.style.data_state = states.data_state();
+        self
+    }
+
     /// An attribute the component sets itself, e.g. `type="button"`. A `false`
     /// or `None` is not pushed (see `meaningful`).
     pub fn attr<T>(mut self, name: &'static str, value: impl IntoAttributeValue<T>) -> Self {

@@ -1001,6 +1001,125 @@ fn survey() {
     });
 }
 
+/// The mount cases `/perf/mount` and `/timing/mount` offer, `PERF_CASE` applied.
+async fn mount_cases(page: &Page) -> Vec<String> {
+    let only = std::env::var("PERF_CASE").ok();
+    let all: Vec<String> = page
+        .evaluate("[...document.querySelectorAll('[id^=m-]')].map((b) => b.id.slice(2))")
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    all.into_iter()
+        .filter(|stem| picked(only.as_deref(), stem))
+        .collect()
+}
+
+/// Every element on the page, portals and style tags included.
+const NODES: &str = "document.getElementsByTagName('*').length";
+
+/// The mounted subtree's elements, its markup length and the page's style tags, so a
+/// render-count fix shows it left the DOM alone.
+const MOUNTED_SHAPE: &str = "(() => { const m = document.getElementById('mounted'); \
+     return `${m.querySelectorAll('*').length} in #mounted, ${m.innerHTML.length} chars, \
+     ${document.querySelectorAll('style').length} style tags`; })()";
+
+/// Clicks `#m-<stem>` (or `#unmount` for `None`) and waits for `#mounted` to show it.
+async fn mount(page: &Page, stem: Option<&str>) -> anyhow::Result<()> {
+    let button = stem.map_or("#unmount".to_string(), |stem| format!("#m-{stem}"));
+    pointer::click(page, &button).await?;
+    wait::for_js_true(
+        page,
+        &format!(
+            "document.getElementById('mounted').dataset.case === {:?}",
+            stem.unwrap_or("")
+        ),
+        "the mount",
+    )
+    .await
+}
+
+/// The mounts todo 2031 fixed: a `Box` scope per CodeBlock row part (1504 for 500 lines) and
+/// a second render of every closed `Collapse` (100 for an Accordion of 50).
+#[test]
+fn mounting_stays_in_budget() {
+    block_on(async {
+        let fixture = open("/perf/mount").await;
+        let page = &fixture.page;
+        let page_scopes = [("MountPage", 1), ("Flex", 1), ("StyleOutlet", 2)];
+        for (stem, budget) in [
+            (
+                "code-block-500",
+                // The second CodeBlock pass is the highlight landing.
+                &[
+                    ("MountCodeBlock", 1),
+                    ("CodeBlock", 2),
+                    ("Box", 4),
+                    ("Copy", 1),
+                    ("ActionIcon", 1),
+                    ("Glyph", 1),
+                    ("VisuallyHidden", 1),
+                ][..],
+            ),
+            (
+                "accordion-50",
+                &[
+                    ("MountAccordion", 1),
+                    ("Accordion", 1),
+                    ("AccordionSection", 50),
+                    ("Collapse", 50),
+                    ("Glyph", 50),
+                ][..],
+            ),
+        ] {
+            reset(page).await;
+            mount(page, Some(stem)).await.unwrap();
+            let renders = settled(page, stem).await;
+            let all: Vec<_> = page_scopes.iter().chain(budget).copied().collect();
+            assert_within(&renders, &all, stem);
+            mount(page, None).await.unwrap();
+            settled(page, "unmount").await;
+        }
+        fixture.console.assert_clean("mounting").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Scope renders and elements added per mount, first and second time (todo 2031):
+/// `cargo run -p e2e -- perf::mount_survey --ignored --nocapture`, `PERF_CASE` picks.
+#[test]
+#[ignore = "mount survey, run on request"]
+fn mount_survey() {
+    block_on(async {
+        let fixture = open("/perf/mount").await;
+        let page = &fixture.page;
+        for stem in mount_cases(page).await {
+            for pass in 0..2 {
+                mount(page, None).await.unwrap();
+                settled(page, "unmount").await;
+                let before: u32 = page.evaluate(NODES).await.unwrap().into_value().unwrap();
+                reset(page).await;
+                mount(page, Some(&stem)).await.unwrap();
+                let renders = settled(page, &stem).await;
+                let after: u32 = page.evaluate(NODES).await.unwrap().into_value().unwrap();
+                let shape: String = page
+                    .evaluate(MOUNTED_SHAPE)
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                println!(
+                    "nodes   | {stem:<20} | pass {pass} | {} | {shape}",
+                    after - before
+                );
+                print_renders(&stem, "mount", pass, &renders);
+            }
+        }
+        fixture.console.assert_clean("mounting").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The transitions and animations running right after a step, counted by property and target.
 const ANIMATIONS: &str = "(() => { const seen = {}; for (const a of document.getAnimations()) { \
      const t = a.effect && a.effect.target; \
@@ -1682,6 +1801,25 @@ pub(crate) mod timing {
                 .await;
             }
         });
+    }
+
+    /// Main-thread time of each mount case, mounted and dropped again eight times; the
+    /// `empty` row is the click's own floor. `E2E_RELEASE=1`, `PERF_CASE` picks.
+    #[test]
+    #[ignore = "mount timing report, run on request"]
+    fn mount() {
+        block_on(timed("/timing/mount", async |page| {
+            for stem in super::mount_cases(page).await {
+                let rows = measure(page, 16, async |i| {
+                    let mounting = i % 2 == 0;
+                    super::mount(page, mounting.then_some(stem.as_str())).await?;
+                    Ok(if mounting { "mount" } else { "unmount" })
+                })
+                .await?;
+                report(&stem, &rows, &[("mount", 500.0), ("unmount", 500.0)]);
+            }
+            Ok(())
+        }));
     }
 
     /// Nothing done: what a rep costs the page at rest, the floor under every row.

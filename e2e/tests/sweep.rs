@@ -272,6 +272,173 @@ fn the_landing_gradients_are_measured() {
     });
 }
 
+/// Main-thread milliseconds of the CDP counters since `before`.
+async fn spent(
+    page: &chromiumoxide::Page,
+    before: &std::collections::BTreeMap<String, f64>,
+) -> (std::collections::BTreeMap<String, f64>, [f64; 3]) {
+    use chromiumoxide::cdp::browser_protocol::performance::GetMetricsParams;
+    let now: std::collections::BTreeMap<String, f64> = page
+        .execute(GetMetricsParams::default())
+        .await
+        .unwrap()
+        .result
+        .metrics
+        .iter()
+        .map(|m| (m.name.clone(), m.value))
+        .collect();
+    let ms = |key: &str| (now.get(key).unwrap_or(&0.0) - before.get(key).unwrap_or(&0.0)) * 1e3;
+    let spent = [
+        ms("TaskDuration"),
+        ms("ScriptDuration"),
+        ms("LayoutDuration") + ms("RecalcStyleDuration"),
+    ];
+    (now, spent)
+}
+
+/// A client-side navigation, as the router's own back button would do it, then until 60 ms
+/// pass with under 2 ms of main-thread work.
+async fn go(page: &chromiumoxide::Page, path: &str, ready: &str) {
+    page.evaluate(format!(
+        "history.pushState(null, '', {path:?}); dispatchEvent(new PopStateEvent('popstate'))"
+    ))
+    .await
+    .unwrap();
+    wait::for_js_true(page, ready, path).await.unwrap();
+    let (mut last, _) = spent(page, &Default::default()).await;
+    loop {
+        tokio::time::sleep(std::time::Duration::from_millis(60)).await;
+        let (now, [task, ..]) = spent(page, &last).await;
+        if task < 2.0 {
+            return;
+        }
+        last = now;
+    }
+}
+
+/// Each docs page's client-side mount (todo 2031): task, script and style plus layout ms,
+/// medians of three navigations from the not-found page, and the elements in `#docs-main`;
+/// slowest first. `E2E_RELEASE=1 cargo run -p e2e -- sweep docs_mount --ignored`;
+/// `PERF_CASE` picks pages by part of the path.
+#[test]
+#[ignore = "docs mount report, run on request"]
+fn docs_mount() {
+    use chromiumoxide::cdp::js_protocol::profiler;
+    const BASE: &str = "/no-such-page";
+    const AT_BASE: &str =
+        "document.querySelector('#docs-main h1')?.textContent === 'Page not found'";
+    block_on(async {
+        let only = std::env::var("PERF_CASE").ok();
+        // A release `dx` still pre-compresses the icon sets for a while after it reports ready.
+        let mut found = e2e::sweep::discover().await;
+        for _ in 0..3 {
+            if found.is_ok() {
+                break;
+            }
+            found = e2e::sweep::discover().await;
+        }
+        let pages: Vec<String> = found
+            .unwrap()
+            .into_iter()
+            .filter(|p| p != "/" && p != BASE)
+            .filter(|p| {
+                only.as_deref()
+                    .is_none_or(|o| o.split(',').any(|o| p.contains(o)))
+            })
+            .collect();
+        let fixture = Fixture::open_until(BASE, Viewport::Desktop, Scheme::Light, "#docs-main h1")
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let front = e2e::frames::bring_to_front(page).await.unwrap();
+        page.execute(chromiumoxide::cdp::browser_protocol::performance::EnableParams::default())
+            .await
+            .unwrap();
+        // `PERF_PROFILE=1`: the 30 functions most sampled (100 us) per page, by self time.
+        let profiling = std::env::var_os("PERF_PROFILE").is_some();
+        if profiling {
+            page.evaluate(
+                "(() => { const seen = window.__styleReads = {}; const get = CSSStyleDeclaration.prototype.getPropertyValue; \
+                 CSSStyleDeclaration.prototype.getPropertyValue = function (name) { seen[name] = (seen[name] || 0) + 1; return get.call(this, name); }; })()",
+            )
+            .await
+            .unwrap();
+            page.execute(profiler::EnableParams::default())
+                .await
+                .unwrap();
+            page.execute(profiler::SetSamplingIntervalParams::new(100))
+                .await
+                .unwrap();
+        }
+        let mut rows = Vec::new();
+        for path in &pages {
+            let ready = format!(
+                "location.pathname === {path:?} && !!document.querySelector('#docs-main h1') && !({AT_BASE})"
+            );
+            let mut reps: Vec<[f64; 4]> = Vec::new();
+            let mut hot = std::collections::BTreeMap::<String, i64>::new();
+            // One unmeasured visit first: its wasm paths and styles warm up.
+            for rep in 0..4 {
+                go(page, BASE, AT_BASE).await;
+                if profiling {
+                    page.execute(profiler::StartParams::default())
+                        .await
+                        .unwrap();
+                }
+                let (before, _) = spent(page, &Default::default()).await;
+                go(page, path, &ready).await;
+                let (_, [task, script, layout]) = spent(page, &before).await;
+                if profiling {
+                    let profile = page.execute(profiler::StopParams::default()).await.unwrap();
+                    for node in &profile.result.profile.nodes {
+                        *hot.entry(node.call_frame.function_name.clone())
+                            .or_default() += node.hit_count.unwrap_or(0);
+                    }
+                }
+                let nodes: f64 = page
+                    .evaluate("document.querySelectorAll('#docs-main *').length")
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                if rep > 0 {
+                    reps.push([task, script, layout, nodes]);
+                }
+            }
+            let median = |i: usize| {
+                let mut v: Vec<f64> = reps.iter().map(|r| r[i]).collect();
+                v.sort_by(f64::total_cmp);
+                v[v.len() / 2]
+            };
+            rows.push((path.clone(), [median(0), median(1), median(2), median(3)]));
+            let mut hot: Vec<_> = hot.into_iter().filter(|(_, n)| *n > 0).collect();
+            hot.sort_by_key(|a| std::cmp::Reverse(a.1));
+            for (name, samples) in hot.iter().take(30) {
+                println!("profile | {path} | {samples:>5} | {name}");
+            }
+            if profiling {
+                let reads: String = page
+                    .evaluate("(() => { const r = JSON.stringify(window.__styleReads); for (const k in window.__styleReads) delete window.__styleReads[k]; return r; })()")
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                println!("style reads | {path} | {reads}");
+            }
+        }
+        rows.sort_by(|a, b| b.1[0].total_cmp(&a.1[0]));
+        println!("| Page | task | script | layout | rest | elements |\n|---|---|---|---|---|---|");
+        for (path, [task, script, layout, nodes]) in &rows {
+            println!(
+                "| {path} | {task:.1} | {script:.1} | {layout:.1} | {:.1} | {nodes} |",
+                task - script - layout
+            );
+        }
+        front.release().await.unwrap();
+        close(fixture).await;
+    });
+}
+
 /// The docs demos follow their own rule: the trigger's blur closes the list.
 #[test]
 fn a_combobox_demo_closes_on_an_outside_click() {

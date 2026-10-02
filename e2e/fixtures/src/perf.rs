@@ -5,11 +5,13 @@ use dioxus::prelude::*;
 use libero::chrono::NaiveDate;
 use libero::components::{
     Accordion, AccordionOpen, Autocomplete, Badge, Box, Button, Carousel, Checkbox, ChronoField,
-    ChronoPicker, ColorCode, ColorPicker, Dialog, Fields, Flex, FloatingWindowOptions, Form, List,
-    ListItem, Menu, MenuEntry, MenuItem, MultiSelect, NumberField, Options, Pagination, ScrollArea,
+    ChronoPicker, CodeBlock, ColorCode, ColorPicker, Combobox, ComboboxOption, ComboboxOptionArgs,
+    DataList, DataListItem, DateRange, DateRangePicker, Dialog, Fields, Flex,
+    FloatingWindowOptions, Form, Image, ImageBar, ImageItem, ImageList, List, ListItem, Menu,
+    MenuEntry, MenuItem, MonthPicker, MultiSelect, NumberField, Options, Pagination, ScrollArea,
     SegmentedControl, Select, Slider, SliderChangeEvent, Splitter, SpotlightAction,
-    SpotlightOptions, Switch, Tabs, Text, TextField, Tooltip, Tree, TreeNode, Virtualize,
-    spotlight_filter, use_menu, use_spotlight,
+    SpotlightOptions, Switch, Tabs, Text, TextField, Timeline, TimelineEvent, Tooltip, Tree,
+    TreeNode, Virtualize, YearPicker, spotlight_filter, use_combobox, use_menu, use_spotlight,
 };
 use libero::hooks::{
     DrawerOptions, ModalScope, PopoverOptions, use_drawer, use_element, use_floating_window,
@@ -87,6 +89,8 @@ pub const ROUTES: Routes = &[
     ("/timing/big-form", || rsx! { BigFormPage {} }),
     ("/timing/color-picker", || rsx! { ColorPickerPage {} }),
     ("/timing/list", || rsx! { ListPage {} }),
+    ("/perf/mount", || rsx! { MountPage {} }),
+    ("/timing/mount", || rsx! { MountPage {} }),
 ];
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -877,6 +881,242 @@ fn ListPage() -> Element {
                     ListItem { key: "{city}", "{city}" }
                 }
             }
+        }
+    }
+}
+
+type Mount = fn() -> Element;
+
+/// The mount survey's cases (todo 2031): `#m-<stem>` mounts one under `#mounted`, `#unmount`
+/// drops it. `empty` mounts nothing, the floor under every row.
+const MOUNTS: &[(&str, Mount)] = &[
+    ("empty", || rsx! {}),
+    ("list-300", || rsx! { MountList {} }),
+    ("tree-1000", || rsx! { MountTree {} }),
+    ("timeline-100", || rsx! { MountTimeline {} }),
+    ("select-300", || rsx! { MountSelect {} }),
+    ("combobox-300", || rsx! { MountCombobox {} }),
+    ("accordion-50", || rsx! { MountAccordion {} }),
+    ("tabs-20", || rsx! { MountTabs {} }),
+    ("image-list-30", || rsx! { MountImageList {} }),
+    ("code-block-500", || rsx! { MountCodeBlock {} }),
+    ("calendar", || rsx! { MountCalendar {} }),
+    ("month-picker", || rsx! { MountMonthPicker {} }),
+    ("year-picker", || rsx! { MountYearPicker {} }),
+    ("range-picker", || rsx! { MountRangePicker {} }),
+    ("data-list-100", || rsx! { MountDataList {} }),
+    ("menu-100", || rsx! { MountMenu {} }),
+];
+
+#[component]
+fn MountPage() -> Element {
+    let mut case = use_signal(|| None::<usize>);
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            div {
+                for (i, (stem, _)) in MOUNTS.iter().enumerate() {
+                    button { key: "{stem}", id: "m-{stem}", onclick: move |_| case.set(Some(i)), "{stem}" }
+                }
+                button { id: "unmount", onclick: move |_| case.set(None), "Unmount" }
+            }
+            div { id: "mounted", "data-case": case().map_or("", |i| MOUNTS[i].0), style: "max-width: 640px",
+                if let Some(i) = case() {
+                    {MOUNTS[i].1()}
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn MountList() -> Element {
+    rsx! {
+        List {
+            for city in cities(300) {
+                ListItem { key: "{city}", "{city}" }
+            }
+        }
+    }
+}
+
+/// Twenty branches of fifty leaves.
+#[component]
+fn MountTree() -> Element {
+    let data = (0..20)
+        .map(|b| {
+            TreeNode::new(format!("b{b}"), format!("Folder {b}")).children(
+                (0..50)
+                    .map(|l| TreeNode::new(format!("b{b}/{l}"), format!("File {l}.rs")))
+                    .collect(),
+            )
+        })
+        .collect::<Vec<_>>();
+    rsx! { Tree { aria_label: "Files", data } }
+}
+
+#[component]
+fn MountTimeline() -> Element {
+    let items = (0..100)
+        .map(|i| {
+            TimelineEvent::new(format!("Event {i}")).content(rsx! { "What happened at step {i}." })
+        })
+        .collect::<Vec<_>>();
+    rsx! { Timeline { active: 40, items } }
+}
+
+#[component]
+fn MountSelect() -> Element {
+    let mut value = use_signal(|| None::<String>);
+    rsx! {
+        Select::<String> { label: "City", options: cities(300), value: value(), onchange: move |next| value.set(next) }
+    }
+}
+
+#[component]
+fn MountCombobox() -> Element {
+    let state = use_combobox();
+    let mut picked = use_signal(|| "City 0".to_string());
+    rsx! {
+        Combobox {
+            state,
+            options: cities(300),
+            option: move |row: ComboboxOptionArgs<String>| {
+                let value = row.value.clone();
+                rsx! {
+                    ComboboxOption {
+                        selected: picked() == row.value,
+                        onpick: move |_| {
+                            picked.set(value.clone());
+                            state.close();
+                        },
+                        "{row.value}"
+                    }
+                }
+            },
+            Button {
+                attributes: state.a11y_attributes(),
+                onclick: move |_| state.toggle(),
+                onblur: move |_| state.close(),
+                "{picked}"
+            }
+        }
+    }
+}
+
+#[component]
+fn MountAccordion() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(None::<String>));
+    rsx! {
+        Accordion::<String> {
+            options: cities(50),
+            open: open(),
+            onchange: move |next| open.set(next),
+            panel: |city: String| rsx! {
+                for line in 0..8 {
+                    Text { key: "{line}", "{city} line {line} of the panel." }
+                }
+            },
+        }
+    }
+}
+
+#[component]
+fn MountTabs() -> Element {
+    let mut tab = use_signal(|| "City 0".to_string());
+    rsx! {
+        Tabs::<String> {
+            aria_label: "Cities",
+            options: cities(20),
+            value: tab(),
+            onchange: move |next| tab.set(next),
+            panel: |city: String| rsx! {
+                for line in 0..8 {
+                    Text { key: "{line}", "{city} line {line} of the panel." }
+                }
+            },
+        }
+    }
+}
+
+/// An inline picture, so no request is timed.
+const PIXEL: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Crect width='4' height='3' fill='%23889'/%3E%3C/svg%3E";
+
+#[component]
+fn MountImageList() -> Element {
+    let items = (0..30)
+        .map(|i| {
+            ImageItem::new(rsx! { Image { src: PIXEL, alt: "Picture {i}", fit: "cover" } })
+                .bar(ImageBar::new(rsx! { "Picture {i}" }))
+        })
+        .collect::<Vec<_>>();
+    rsx! { ImageList { cols: 3u8, items } }
+}
+
+#[component]
+fn MountCodeBlock() -> Element {
+    let source = use_hook(|| {
+        (0..500)
+            .map(|i| format!("let value_{i} = compute({i}, \"line\"); // step {i}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    });
+    rsx! { CodeBlock { source, language: "rust", line_numbers: true } }
+}
+
+#[component]
+fn MountCalendar() -> Element {
+    let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 3, 18));
+    rsx! {
+        ChronoPicker { value: day(), today: NaiveDate::from_ymd_opt(2026, 3, 18), onchange: move |next: Option<NaiveDate>| day.set(next) }
+    }
+}
+
+#[component]
+fn MountMonthPicker() -> Element {
+    let mut month = use_signal(|| None::<NaiveDate>);
+    rsx! {
+        MonthPicker { value: month(), today: NaiveDate::from_ymd_opt(2026, 3, 18), onchange: move |v| month.set(v) }
+    }
+}
+
+#[component]
+fn MountYearPicker() -> Element {
+    let mut year = use_signal(|| None::<NaiveDate>);
+    rsx! {
+        YearPicker { value: year(), today: NaiveDate::from_ymd_opt(2026, 3, 18), onchange: move |v| year.set(v) }
+    }
+}
+
+#[component]
+fn MountRangePicker() -> Element {
+    let mut range = use_signal(|| None::<DateRange<NaiveDate>>);
+    rsx! {
+        DateRangePicker { value: range(), today: NaiveDate::from_ymd_opt(2026, 3, 18), onchange: move |v| range.set(v) }
+    }
+}
+
+#[component]
+fn MountDataList() -> Element {
+    rsx! {
+        DataList { orientation: "horizontal",
+            for i in 0..100 {
+                DataListItem { key: "{i}", label: rsx! { "Term {i}" }, "Description {i}" }
+            }
+        }
+    }
+}
+
+#[component]
+fn MountMenu() -> Element {
+    let menu = use_menu();
+    let items: Vec<MenuEntry> = (0..100)
+        .map(|i| MenuItem::new(format!("Action {i}")).onselect(|_| {}).into())
+        .collect();
+    rsx! {
+        Menu {
+            state: menu,
+            items,
+            Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
         }
     }
 }

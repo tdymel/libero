@@ -164,7 +164,7 @@ fn report_path() -> PathBuf {
 }
 
 /// Every page path the rendered docs nav links (all sections expanded), home first.
-async fn discover() -> Result<Vec<String>> {
+pub async fn discover() -> Result<Vec<String>> {
     let mut fixture = Fixture::open_until("/", Viewport::Desktop, Scheme::Light, READY).await?;
     // The landing page is full width with the nav hidden: read it from the first page it links.
     let hidden: bool = fixture

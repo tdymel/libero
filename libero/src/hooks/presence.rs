@@ -31,7 +31,7 @@ impl Presence {
 
     /// Attach to the element's `onmounted`.
     pub fn on_mounted(&self) {
-        if self.open {
+        if self.open && !*self.visible.peek() {
             let mut visible = self.visible;
             visible.set(true);
         }
@@ -69,18 +69,21 @@ pub(crate) fn use_presence(open: bool, property: &'static str, exit: Option<Dura
     let mut visible = use_signal(|| open);
     let fallback = use_scheduled(move |_| mounted.set(false));
 
+    // A write re-renders even when unchanged: every presence mounted twice (todo 2031).
     use_effect(use_reactive!(|open, exit| {
         if open {
             fallback.cancel();
-            if mounted() {
-                visible.set(true);
-            } else {
+            if !mounted() {
                 mounted.set(true);
+            } else if !*visible.peek() {
+                visible.set(true);
             }
             return;
         }
 
-        visible.set(false);
+        if *visible.peek() {
+            visible.set(false);
+        }
         // `peek`: this arm must not re-run when its own latch lands.
         if !*mounted.peek() {
             return;
