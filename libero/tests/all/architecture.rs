@@ -41,7 +41,7 @@ const RENDERER_CRATES: [&str; 11] = [
 ];
 
 /// Every crate `docs` may name, each for one reason.
-const DOCS_CRATES: [(&str, &str); 9] = [
+const DOCS_CRATES: [(&str, &str); 10] = [
     ("dioxus", "the app itself"),
     (
         "pictogram_icons_lucide",
@@ -68,6 +68,10 @@ const DOCS_CRATES: [(&str, &str); 9] = [
     (
         "web_sys",
         "reads the stored direction before the first render",
+    ),
+    (
+        "web_time",
+        "the use_timers stopwatch's `Instant`, which std panics on in wasm",
     ),
 ];
 

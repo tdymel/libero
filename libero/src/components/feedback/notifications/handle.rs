@@ -267,7 +267,7 @@ fn NotificationMessage(props: MessageProps) -> Element {
 mod tests {
     use super::*;
     use crate::{
-        LiberoProvider, components::Notifications, theme::AutoClose, utils::take_warnings,
+        LiberoProvider, components::feedback::Notifications, theme::AutoClose, utils::take_warnings,
     };
 
     thread_local! {

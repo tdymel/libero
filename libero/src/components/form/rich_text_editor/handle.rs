@@ -238,7 +238,7 @@ mod tests {
     use super::*;
     use crate::{
         LiberoProvider,
-        components::{RichTextEditor, rich_text::Builtin},
+        components::form::{RichTextEditor, rich_text::Builtin},
     };
 
     thread_local! {
