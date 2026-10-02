@@ -350,6 +350,12 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     // past `select_width`, the inset of a start-pinned column. Outranks the
     // field's own `[data-state~=inline]` gap whatever the stylesheet order.
     .selector("& [data-select] > [data-state]", sx().column_gap("0"))
+    // A select-all restyles every row's box at once, and a thousand fades doubled
+    // its main-thread time (todo 1462): only the box under the pointer or focus fades.
+    .selector(
+        "& tbody [data-select]:not(:hover, :focus-within) [data-slot=\"box\"]",
+        sx().transition("none"),
+    )
     .selector(
         "& [data-detail-toggle]",
         sx().box_sizing("border-box")
