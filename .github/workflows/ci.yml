@@ -122,28 +122,7 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
           cache-key: e2e
-      # `dx` from the same dioxus source as the lockfile's, so CLI and app speak one protocol.
-      - id: dx
-        run: |
-          src=$(awk '/^name = "dioxus"$/ { f = 1 } f && /^$/ { exit } f && /^source = / { gsub(/"/, "", $3); print $3; exit }' Cargo.lock)
-          case "$src" in
-            git+*)
-              url=${src#git+}
-              echo "args=--git ${url%%[?#]*} --rev ${src##*#}" >> "$GITHUB_OUTPUT"
-              echo "key=${src##*#}" >> "$GITHUB_OUTPUT" ;;
-            registry+*)
-              ver=$(awk '/^name = "dioxus"$/ { getline; gsub(/"/, "", $3); print $3; exit }' Cargo.lock)
-              echo "args=--version $ver" >> "$GITHUB_OUTPUT"
-              echo "key=$ver" >> "$GITHUB_OUTPUT" ;;
-            *) echo "no dioxus source in Cargo.lock: '$src'" >&2; exit 1 ;;
-          esac
-      - id: dx-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/dx
-          key: dx-${{ runner.os }}-${{ steps.dx.outputs.key }}
-      - if: steps.dx-cache.outputs.cache-hit != 'true'
-        run: cargo install dioxus-cli ${{ steps.dx.outputs.args }} --locked --bin dx
+      - uses: ./.github/actions/dx
       # Pinned: the AX snapshots follow Chrome's tree. Bump it in the same commit as the
       # re-blessed snapshots, see .agents/brain/codebase/testing/e2e-harness.md.
       - id: chrome

@@ -1,5 +1,5 @@
 name: dx
-description: The `dx` CLI from the lockfile's dioxus source, so CLI and app speak one protocol. A copy of ci.yml's e2e step.
+description: The `dx` CLI from the lockfile's dioxus source, so CLI and app speak one protocol.
 
 runs:
   using: composite
@@ -27,6 +27,7 @@ runs:
           ~/.cargo/bin/dx
           ~/.cargo/bin/dx.exe
         key: dx-${{ runner.os }}-${{ runner.arch }}-${{ steps.dx.outputs.key }}
+    # `--force`: the setup action's cargo cache can restore an older `dx` into ~/.cargo/bin.
     - if: steps.dx-cache.outputs.cache-hit != 'true'
       shell: bash
-      run: cargo install dioxus-cli ${{ steps.dx.outputs.args }} --locked --bin dx
+      run: cargo install dioxus-cli ${{ steps.dx.outputs.args }} --locked --bin dx --force
