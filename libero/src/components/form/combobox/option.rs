@@ -23,14 +23,15 @@ pub(super) struct ComboboxContext {
     pub id: Signal<String>,
     pub size: Signal<Size>,
     pub radius: Signal<Size>,
-    /// Each drawn row's `onpick` by index, so Enter fires the highlighted one. Not reactive.
+    /// Each drawn row's `onpick` by row key, so Enter fires the highlighted one. Not reactive.
     pub picks: CopyValue<HashMap<usize, Callback<()>>>,
 }
 
 /// Provided per row, so `ComboboxOption` needs no props for its `id`, highlight or `disabled`.
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct ComboboxRowContext {
-    pub index: usize,
+    /// The row's stable key (its index without `row_keys`): names its `id` and pick slot.
+    pub key: usize,
     pub active: bool,
     pub disabled: bool,
 }
@@ -148,7 +149,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
             .unwrap_or_else(|| row.is_some_and(|row| row().active));
     let id = combobox
         .zip(row)
-        .map(|(combobox, row)| option_id(&(combobox.id)(), row().index));
+        .map(|(combobox, row)| option_id(&(combobox.id)(), row().key));
 
     let onpick = props.onpick;
     // The one gate for click and Enter.
@@ -160,12 +161,12 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
             onpick.call(());
         }
     });
-    // Registered in render by index: an Enter right after an arrow must not wait for this row
+    // Registered in render by key: an Enter right after an arrow must not wait for this row
     // to re-render as the highlight (todo 1367).
     if let (Some(context), Some(row)) = (combobox, row) {
-        let (mut picks, index) = (context.picks, row().index);
-        if picks.peek().get(&index) != Some(&pick) {
-            picks.write().insert(index, pick);
+        let (mut picks, key) = (context.picks, row().key);
+        if picks.peek().get(&key) != Some(&pick) {
+            picks.write().insert(key, pick);
         }
     }
     use_drop(move || {

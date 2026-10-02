@@ -115,18 +115,28 @@ impl ComboboxState {
         self.aria(self.is_open() && (self.rows)() > 0)
     }
 
-    /// [`a11y_attributes`](Self::a11y_attributes) for a caller that knows its row count. Reading
-    /// `rows` instead re-ran the caller once more after the list wrote it, rows and all.
-    pub(crate) fn a11y_attributes_for(&self, rows: usize) -> Vec<Attribute> {
-        self.aria_rows(self.is_open() && rows > 0, rows)
+    /// [`a11y_attributes`](Self::a11y_attributes) by key, for a caller that keys its rows but
+    /// leaves the count to `rows`.
+    pub(crate) fn a11y_attributes_keyed(&self, row_keys: &[usize]) -> Vec<Attribute> {
+        let rows = (self.rows)();
+        self.aria_rows(self.is_open() && rows > 0, rows, row_keys)
+    }
+
+    /// [`a11y_attributes`](Self::a11y_attributes) for a caller that knows its rows' keys (the
+    /// `row_keys` it hands the list; none while loading). Reading `rows` instead re-ran the
+    /// caller once more after the list wrote it, rows and all.
+    pub(crate) fn a11y_attributes_for(&self, row_keys: &[usize]) -> Vec<Attribute> {
+        let rows = row_keys.len();
+        self.aria_rows(self.is_open() && rows > 0, rows, row_keys)
     }
 
     /// [`a11y_attributes`](Self::a11y_attributes) for a list that says itself whether it is mounted.
     pub(crate) fn aria(&self, listbox: bool) -> Vec<Attribute> {
-        self.aria_rows(listbox, (self.rows)())
+        self.aria_rows(listbox, (self.rows)(), &[])
     }
 
-    fn aria_rows(&self, listbox: bool, rows: usize) -> Vec<Attribute> {
+    /// `row_keys` names the active option's id; empty is index keys.
+    fn aria_rows(&self, listbox: bool, rows: usize, row_keys: &[usize]) -> Vec<Attribute> {
         let opened = self.is_open() && !(self.held)();
         let listbox = listbox && opened;
         // Clamped as the list clamps its highlight. Unread while closed: the owner
@@ -134,7 +144,8 @@ impl ComboboxState {
         let active = (opened && rows > 0)
             .then(|| self.active())
             .flatten()
-            .map(|row| row.min(rows - 1));
+            .map(|row| row.min(rows - 1))
+            .map(|row| row_keys.get(row).copied().unwrap_or(row));
         trigger_aria(&self.id(), opened, listbox, active)
     }
 }

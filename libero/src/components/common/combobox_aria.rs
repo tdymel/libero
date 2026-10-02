@@ -6,11 +6,12 @@ pub(crate) fn listbox_id(id: &str) -> String {
     format!("{id}-listbox")
 }
 
-pub(crate) fn option_id(id: &str, index: usize) -> String {
-    format!("{id}-option-{index}")
+/// By the row's key, not its place: a filter must not rename a kept row.
+pub(crate) fn option_id(id: &str, key: usize) -> String {
+    format!("{id}-option-{key}")
 }
 
-/// A group heading's id, keyed on its first row: a position would shift when the filter
+/// A group heading's id, keyed on its first row's key: a position would shift when the filter
 /// empties a group.
 pub(crate) fn group_id(id: &str, first_row: usize) -> String {
     format!("{id}-group-{first_row}")

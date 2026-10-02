@@ -8,10 +8,11 @@ use libero::components::{
     ChronoPicker, CodeBlock, ColorCode, ColorPicker, Combobox, ComboboxOption, ComboboxOptionArgs,
     DataList, DataListItem, DateRange, DateRangePicker, Dialog, Fields, Flex,
     FloatingWindowOptions, Form, Image, ImageBar, ImageItem, ImageList, List, ListItem, Menu,
-    MenuEntry, MenuItem, MonthPicker, MultiSelect, NumberField, Options, Pagination, ScrollArea,
-    SegmentedControl, Select, Slider, SliderChangeEvent, Splitter, SpotlightAction,
-    SpotlightOptions, Switch, Tabs, Text, TextField, Timeline, TimelineEvent, Tooltip, Tree,
-    TreeNode, Virtualize, YearPicker, spotlight_filter, use_combobox, use_menu, use_spotlight,
+    MenuEntry, MenuItem, MonthPicker, MultiSelect, NumberField, Options, Pagination, RadioGroup,
+    RichTextEditor, ScrollArea, SegmentedControl, Select, Slider, SliderChangeEvent, Splitter,
+    SpotlightAction, SpotlightOptions, Switch, Tabs, Text, TextField, Textarea, Timeline,
+    TimelineEvent, Tooltip, Tree, TreeNode, Virtualize, YearPicker, rich_text::Doc,
+    spotlight_filter, use_combobox, use_menu, use_spotlight,
 };
 use libero::hooks::{
     DrawerOptions, ModalScope, PopoverOptions, use_drawer, use_element, use_floating_window,
@@ -51,6 +52,13 @@ pub const ROUTES: Routes = &[
     ("/perf/big-form", || rsx! { BigFormPage {} }),
     ("/perf/color-picker", || rsx! { ColorPickerPage {} }),
     ("/perf/list", || rsx! { ListPage {} }),
+    ("/perf/text-field", || rsx! { TimedTextFieldPage {} }),
+    ("/perf/textarea", || rsx! { TextareaPage {} }),
+    ("/perf/rich-text", || rsx! { RichTextPage {} }),
+    ("/perf/button", || rsx! { ButtonPage {} }),
+    ("/perf/checkbox", || rsx! { CheckboxPage {} }),
+    ("/perf/switch", || rsx! { SwitchPage {} }),
+    ("/perf/radio", || rsx! { RadioPage {} }),
     // Interaction timing (perf::timing): no render counter, so the timings are an app's.
     ("/timing/virtualize", || rsx! { TimedVirtualizePage {} }),
     ("/timing/scroll-area", || rsx! { TimedScrollAreaPage {} }),
@@ -91,6 +99,12 @@ pub const ROUTES: Routes = &[
     ("/timing/list", || rsx! { ListPage {} }),
     ("/perf/mount", || rsx! { MountPage {} }),
     ("/timing/mount", || rsx! { MountPage {} }),
+    ("/timing/textarea", || rsx! { TextareaPage {} }),
+    ("/timing/rich-text", || rsx! { RichTextPage {} }),
+    ("/timing/button", || rsx! { ButtonPage {} }),
+    ("/timing/checkbox", || rsx! { CheckboxPage {} }),
+    ("/timing/switch", || rsx! { SwitchPage {} }),
+    ("/timing/radio", || rsx! { RadioPage {} }),
 ];
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -855,6 +869,67 @@ fn ColorPickerPage() -> Element {
                 hue_label: "Hue",
                 oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
             }
+        }
+    }
+}
+
+#[component]
+fn TextareaPage() -> Element {
+    let mut value = use_signal(String::new);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Textarea { label: "Note", value: value(), oninput: move |next| value.set(next) }
+        }
+    }
+}
+
+#[component]
+fn RichTextPage() -> Element {
+    let mut doc = use_signal(Doc::new);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "520px",
+            RichTextEditor { label: "Notes", value: doc(), onchange: move |next| doc.set(next) }
+        }
+    }
+}
+
+/// A press flips the label, so each one changes what the page shows.
+#[component]
+fn ButtonPage() -> Element {
+    let mut on = use_signal(|| false);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "press", onclick: move |_| on.toggle(), "Pressed {on}" }
+        }
+    }
+}
+
+#[component]
+fn CheckboxPage() -> Element {
+    let mut on = use_signal(|| false);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Checkbox { id: "check", label: "Remember me", checked: on(), onchange: move |next| on.set(next) }
+        }
+    }
+}
+
+#[component]
+fn SwitchPage() -> Element {
+    let mut on = use_signal(|| false);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Switch { id: "switch", label: "Alerts", checked: on(), onchange: move |next| on.set(next) }
+        }
+    }
+}
+
+#[component]
+fn RadioPage() -> Element {
+    let mut section = use_signal(|| Some(Section::Account));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            RadioGroup { label: "Section", value: section(), onchange: move |next| section.set(Some(next)) }
         }
     }
 }

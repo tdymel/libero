@@ -242,8 +242,8 @@ pub struct DropdownArgs<V: 'static> {
     pub value: Option<V>,
     pub today: Option<NaiveDate>,
     pub size: Size,
-    /// Emits a picked value; `true` also closes the dropdown.
-    pub pick: Callback<(Option<V>, bool)>,
+    /// Emits a picked value, closing the dropdown when the field's close rule says so.
+    pub pick: Callback<Option<V>>,
 }
 
 /// Builds a [`PickerField`] from a field's props.
@@ -281,6 +281,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     field: PickerField<'_, V>,
     formats: Formats,
     accepts: impl Fn(V) -> Result<(), String> + Clone + 'static,
+    closes: impl Fn(Option<V>) -> bool + 'static,
     dropdown: impl FnOnce(DropdownArgs<V>) -> Element,
 ) -> Element {
     let theme = use_theme();
@@ -296,7 +297,14 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let value = bound.value().unwrap_or(field.value);
     let today = use_today(field.today);
 
-    let mut opened = use_signal(|| false);
+    let opened = use_signal(|| false);
+    // Peek-compared: focus then click both open, and an unchanged `set` still redraws.
+    let open_to = move |next: bool| {
+        let mut opened = opened;
+        if *opened.peek() != next {
+            opened.set(next);
+        }
+    };
     // The text as typed, until it is committed. `None` shows `value`.
     let mut draft = use_signal(|| Option::<String>::None);
     // Why the last commit was refused; cleared by the next keystroke.
@@ -414,7 +422,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
             let inside = anchor.query_selector(":focus").is_ok()
                 || floating.query_selector(":focus").is_ok();
             if !inside {
-                opened.set(false);
+                open_to(false);
             }
         });
     };
@@ -435,18 +443,17 @@ pub(super) fn use_picker_field<V: FieldValue>(
             if floating.query_selector(":focus").is_ok() {
                 focus_input();
             }
-            opened.set(false);
+            open_to(false);
         }),
     );
     let focused = move || match (returning(), readonly) {
         (true, _) | (_, true) => returning.set(false),
-        (false, false) => opened.set(true),
+        (false, false) => open_to(true),
     };
     // Element 0 is the text input, 1 the dropdown; closes once focus is in neither.
     let focus = use_focus_within(
         move || vec![anchor.mounted(), floating.mounted()],
         move |change| {
-            let mut opened = opened;
             match (change.element, change.within) {
                 (0, true) => {
                     let mut focused = focused;
@@ -459,7 +466,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
             }
             match change.in_group {
                 Some(true) => {}
-                Some(false) => opened.set(false),
+                Some(false) => open_to(false),
                 None => settle(),
             }
         },
@@ -491,7 +498,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .event("onfocus", focus.focusin(0))
         .event("onclick", move |_: MouseEvent| {
             if !readonly {
-                opened.set(true);
+                open_to(true);
             }
         })
         .event("onblur", focus.focusout(0))
@@ -507,12 +514,12 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 event.prevent_default();
                 // The picker then enters on the typed day, not the one it showed.
                 commit_on_enter_picker();
-                opened.set(true);
+                open_to(true);
                 entering.set(true);
             }
             Key::Escape if opened() => {
                 event.prevent_default();
-                opened.set(false);
+                open_to(false);
             }
             _ => {}
         })
@@ -531,19 +538,20 @@ pub(super) fn use_picker_field<V: FieldValue>(
 
     // Portaled past `overflow: hidden`. Mousedown is cancelled so a click keeps focus on the input;
     // the keyboard enters with Arrow Down and leaves with Escape.
-    popover.show(showing.then(|| {
-        let pick = Callback::new(move |(next, close): (Option<V>, bool)| {
-            draft.set(None);
-            rejected.set(None);
-            emit(next);
-            if close {
-                // The focused cell is about to go; focus goes back first.
-                if floating.query_selector(":focus").is_ok() {
-                    focus_input();
-                }
-                opened.set(false);
+    // Stable across renders, so the picker memoizes while the field redraws.
+    let pick = use_callback(move |next: Option<V>| {
+        draft.set(None);
+        rejected.set(None);
+        emit(next);
+        if closes(next) {
+            // The focused cell is about to go; focus goes back first.
+            if floating.query_selector(":focus").is_ok() {
+                focus_input();
             }
-        });
+            open_to(false);
+        }
+    });
+    popover.show(showing.then(|| {
         dropdown_box
             .element(popover.floating())
             .attr("id", dialog_id)
@@ -558,7 +566,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 Key::Escape => {
                     event.prevent_default();
                     focus_input();
-                    opened.set(false);
+                    open_to(false);
                 }
                 // Portaled after the page: Tab past either end goes back via the input.
                 Key::Tab => {

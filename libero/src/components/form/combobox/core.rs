@@ -174,10 +174,15 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     if *enabled_rows.peek() != enabled {
         enabled_rows.set(enabled);
     }
+    let mut shown_keys = use_hook(|| CopyValue::new(Vec::new()));
+    if *shown_keys.peek() != props.row_keys {
+        shown_keys.set(props.row_keys.clone());
+    }
 
     let keys = ComboboxKeys {
         state: props.state,
         enabled: enabled_rows,
+        row_keys: shown_keys,
         set_active,
         onopened: props.onopened,
         picks: context.picks,
@@ -453,6 +458,8 @@ struct ComboboxKeys {
     state: ComboboxState,
     /// The rows the arrows move through, as last drawn.
     enabled: CopyValue<Vec<usize>>,
+    /// Each row's key, as last drawn; empty is index keys. Picks are registered by key.
+    row_keys: CopyValue<Vec<usize>>,
     set_active: EventHandler<usize>,
     onopened: EventHandler<bool>,
     picks: CopyValue<HashMap<usize, Callback<()>>>,
@@ -487,7 +494,8 @@ impl ComboboxKeys {
         let arrows = arrow_targets(&enabled, active_row, opened);
         let request = |next: bool| self.onopened.call(next);
         let pick = || {
-            let pick = active_row.and_then(|row| self.picks.peek().get(&row).copied());
+            let key = active_row.map(|row| self.row_keys.peek().get(row).copied().unwrap_or(row));
+            let pick = key.and_then(|key| self.picks.peek().get(&key).copied());
             if let Some(pick) = pick {
                 pick.call(());
             }

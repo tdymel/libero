@@ -264,8 +264,8 @@ fn a_multi_select_pick_stays_in_budget() {
     });
 }
 
-/// The rows a key or an arrow leaves alone skip (todo 2022). The filtered steps redraw every
-/// kept row: its index, and so its id, moved.
+/// The rows a key or an arrow leaves alone skip (todo 2022). A kept row keeps its key, id and
+/// pick slot through a filter, so only the highlight's old and new rows redraw (todo 2046).
 #[test]
 fn a_searchable_select_filter_and_arrow_stay_in_budget() {
     block_on(async {
@@ -293,8 +293,8 @@ fn a_searchable_select_filter_and_arrow_stay_in_budget() {
                 ("ComboboxCore", 1),
                 ("ComboboxPopup", 1),
                 ("ComboboxDropdown", 1),
-                ("ComboboxRow", 138),
-                ("ComboboxOption", 138),
+                ("ComboboxRow", 2),
+                ("ComboboxOption", 2),
                 ("ScrollArea", 1),
                 ("ScrollAreaContent", 1),
                 ("ScrollAreaBars", 2),
@@ -680,6 +680,80 @@ fn a_first_blur_redraws_only_its_field() {
     });
 }
 
+/// A keystroke that changes no toolbar state leaves the toolbar alone; it redrew 8 buttons
+/// and 7 tooltips per key (todo 2002).
+#[test]
+fn a_rich_text_key_redraws_no_toolbar_button() {
+    block_on(async {
+        let fixture = open("/perf/rich-text").await;
+        let page = &fixture.page;
+        step(
+            page,
+            &("focus", Act::Click("[contenteditable]"), "true".into()),
+        )
+        .await
+        .unwrap();
+        // The first key enables Undo, a toolbar change.
+        step(page, &("key", Act::Type("1"), value_is("1")))
+            .await
+            .unwrap();
+        settled(page, "the first key").await;
+        reset(page).await;
+        step(page, &("key", Act::Type("2"), value_is("12")))
+            .await
+            .unwrap();
+        let renders = settled(page, "the second key").await;
+        assert_within(
+            &renders,
+            &[("RichTextPage", 1), ("Flex", 1), ("RichTextEditor", 1)],
+            "a key in the rich text editor",
+        );
+        fixture.console.assert_clean("typing").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Opening a date picker draws its picker once; focus then click both opened it, and the
+/// picker redrew with the field (todo 2002).
+#[test]
+fn a_date_picker_opens_in_one_pass() {
+    block_on(async {
+        let fixture = open("/perf/date-picker").await;
+        let page = &fixture.page;
+        reset(page).await;
+        step(
+            page,
+            &(
+                "open",
+                Act::Click("input[data-controlled]"),
+                shown("[role=dialog]"),
+            ),
+        )
+        .await
+        .unwrap();
+        let renders = settled(page, "opening").await;
+        assert_within(
+            &renders,
+            &[
+                ("ChronoField", 2),
+                ("PortalOutlet", 2),
+                ("StyleOutlet", 1),
+                ("Fragment", 2),
+                ("ChronoPicker", 1),
+                ("Calendar", 2),
+                ("Nav", 2),
+                ("ActionIcon", 2),
+                ("Glyph", 2),
+                ("Weekdays", 1),
+                ("Week", 6),
+            ],
+            "opening a date picker",
+        );
+        fixture.console.assert_clean("opening").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// One user action of an interaction survey.
 #[derive(Clone, Copy)]
 enum Act {
@@ -753,8 +827,30 @@ fn nth_is(selector: &str, n: usize, attribute: &str) -> String {
     )
 }
 
+/// The focused field's text: an input's value, else a contenteditable's.
 fn value_is(text: &str) -> String {
-    format!("document.activeElement.value === {text:?}")
+    format!("(e => (e.value ?? e.innerText).trim())(document.activeElement) === {text:?}")
+}
+
+/// Two toggles of the `n`th match of `selector`, on then off.
+fn toggles(component: &'static str, stem: &'static str, selector: &'static str, n: usize) -> Case {
+    Case {
+        component,
+        stem,
+        setup: vec![],
+        steps: vec![
+            (
+                "toggle",
+                Act::Nth(selector, n),
+                nth_is(selector, n, "aria-checked"),
+            ),
+            (
+                "toggle",
+                Act::Nth(selector, n),
+                format!("!{}", nth_is(selector, n, "aria-checked")),
+            ),
+        ],
+    }
 }
 
 fn open_close(component: &'static str, stem: &'static str, trigger: Act, shows: &str) -> Case {
@@ -788,6 +884,7 @@ const SLIDER: &str = "[role=slider]";
 const PAD: &str = "[role=slider][aria-label=Saturation]";
 const RADIO: &str = "input[type=radio]";
 const SEGMENT: &str = "label[for*='-segment-']";
+const PRESSED: &str = "document.querySelector('#press').textContent.includes('Pressed N')";
 const FIRST_ITEM: &str = "document.querySelector('[role=list] li')?.textContent.trim()";
 
 fn cases() -> Vec<Case> {
@@ -892,32 +989,8 @@ fn cases() -> Vec<Case> {
             )],
         ),
         typing("NumberField", "number-field", focus("input")),
-        Case {
-            component: "Form (30) Switch",
-            stem: "big-form",
-            setup: vec![],
-            steps: vec![
-                ("toggle", Act::Nth("#s3", 0), nth_is("#s3", 0, "aria-checked")),
-                (
-                    "toggle",
-                    Act::Nth("#s3", 0),
-                    format!("!{}", nth_is("#s3", 0, "aria-checked")),
-                ),
-            ],
-        },
-        Case {
-            component: "Form (30) Checkbox",
-            stem: "big-form",
-            setup: vec![],
-            steps: vec![
-                ("toggle", Act::Nth("#c3", 0), nth_is("#c3", 0, "aria-checked")),
-                (
-                    "toggle",
-                    Act::Nth("#c3", 0),
-                    format!("!{}", nth_is("#c3", 0, "aria-checked")),
-                ),
-            ],
-        },
+        toggles("Form (30) Switch", "big-form", "#s3", 0),
+        toggles("Form (30) Checkbox", "big-form", "#c3", 0),
         Case {
             component: "Slider",
             stem: "slider",
@@ -946,6 +1019,30 @@ fn cases() -> Vec<Case> {
             ],
         },
         typing("List (40) filter", "list", focus("input")),
+        open_close("Spotlight (60)", "spotlight", Act::Click("#open"), "[role=dialog]"),
+        typing("TextField", "text-field", focus("input")),
+        typing("Textarea", "textarea", focus("textarea")),
+        typing("RichTextEditor", "rich-text", focus("[contenteditable]")),
+        Case {
+            component: "Button",
+            stem: "button",
+            setup: vec![],
+            steps: vec![
+                ("press", Act::Click("#press"), PRESSED.replace('N', "true")),
+                ("press", Act::Click("#press"), PRESSED.replace('N', "false")),
+            ],
+        },
+        toggles("Checkbox", "checkbox", "#check", 0),
+        toggles("Switch", "switch", "#switch", 0),
+        Case {
+            component: "Radio",
+            stem: "radio",
+            setup: vec![],
+            steps: vec![
+                ("press", Act::Nth(RADIO, 1), nth_is(RADIO, 1, "aria-checked")),
+                ("press", Act::Nth(RADIO, 0), nth_is(RADIO, 0, "aria-checked")),
+            ],
+        },
     ]
 }
 

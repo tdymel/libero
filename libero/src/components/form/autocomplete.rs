@@ -272,7 +272,10 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .prepare();
 
     // The count `ComboboxCore` tells the state: none while fetching.
-    let mut attributes = state.a11y_attributes_for(if loading.is_some() { 0 } else { rows.len() });
+    let mut attributes = state.a11y_attributes_for(match loading {
+        Some(_) => &[],
+        None => &row_keys,
+    });
     attributes.extend(props.attributes);
     let input = field
         .aria(control)

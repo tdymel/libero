@@ -644,6 +644,73 @@ pub fn search_matching_nothing(route: &str, trigger: &str) {
     });
 }
 
+/// Todo 2046: a filter keeps each kept row's id, the search box names a drawn row, and Enter
+/// picks the row the arrows reached, not the one that held its place before the filter.
+#[test]
+fn a_filter_keeps_the_option_ids_and_enter_picks_the_named_row() {
+    const ROUTE: &str = "/select/field";
+    const OPTIONS: &str =
+        "[...document.querySelectorAll('[role=option]')].map(o => [o.textContent, o.id])";
+    block_on(async {
+        let fixture = Fixture::open(ROUTE, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({SEARCH:?})"),
+            "the search box to take focus",
+        )
+        .await
+        .unwrap();
+        let read = async || -> Vec<(String, String)> {
+            page.evaluate(OPTIONS).await.unwrap().into_value().unwrap()
+        };
+        let before = read().await;
+        assert_eq!(before.len(), 5, "{before:?}");
+
+        // "e" keeps Apple, Cherry (disabled) and Elderberry, and moves each up the list.
+        keyboard::type_text(page, "e").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[role=option]').length === 3",
+            "the filter",
+        )
+        .await
+        .unwrap();
+        let after = read().await;
+        for (label, id) in &after {
+            assert!(
+                before.contains(&(label.clone(), id.clone())),
+                "{label} got a new id {id}: {before:?} -> {after:?}"
+            );
+        }
+        let ids: std::collections::HashSet<_> = after.iter().map(|(_, id)| id).collect();
+        assert_eq!(ids.len(), after.len(), "duplicate ids: {after:?}");
+
+        // Apple is armed; the arrow skips the disabled Cherry to Elderberry.
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        let named = format!(
+            "(id => id && document.getElementById(id)?.textContent)(document.querySelector({SEARCH:?}).getAttribute('aria-activedescendant')) === 'Elderberry'"
+        );
+        wait::for_js_true(page, &named, "the search box to name Elderberry")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "!document.querySelector('[role=listbox]') && document.querySelector({TRIGGER:?}).textContent.includes('Elderberry')"
+            ),
+            "Enter to pick Elderberry",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean(ROUTE).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 842: a controlled caller refusing a pick keeps the old row, in the form value and
 /// `aria-selected`; one it takes moves both.
 #[test]

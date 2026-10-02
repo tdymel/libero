@@ -400,6 +400,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             rows.rows.len()
         });
     }
+    let aria = state.a11y_attributes_keyed(&rows.keys);
 
     let search_box = use_box().framework_sx(&SEARCH_SX).prepare();
     // The caller's name follows the combobox role onto the open search box.
@@ -421,6 +422,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                     blurred,
                 },
                 state,
+                aria.clone(),
                 naming,
                 &field,
                 required,
@@ -480,6 +482,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             multiple,
             chevron: !multiple && clear.is_none(),
             toolbar_item,
+            aria,
         },
         content,
         attributes,
@@ -718,6 +721,8 @@ struct TriggerParts {
     chevron: bool,
     /// Inside a `Toolbar`: a roving tab stop, focusable even disabled.
     toolbar_item: Option<ToolbarItem>,
+    /// The state's combobox ARIA, by row key.
+    aria: Vec<Attribute>,
 }
 
 /// The one element `ComboboxCore` doesn't draw; it holds focus throughout.
@@ -737,6 +742,7 @@ fn select_trigger(
         multiple,
         chevron,
         toolbar_item,
+        aria,
     } = parts;
     let open = keys.open;
     let state = open.state;
@@ -746,7 +752,7 @@ fn select_trigger(
     let searching = searchable && opened;
     let mut attributes = match searching {
         true => vec![attr("aria-haspopup", "listbox")],
-        false => state.a11y_attributes(),
+        false => aria,
     };
     // Only while closed: the open list is the other owner of this attribute.
     if let Some(index) = keys.chip_cursor.filter(|_| !opened) {
@@ -1029,6 +1035,8 @@ fn select_search_box(
     search_box: BoxStyle,
     search: SelectSearch,
     state: ComboboxState,
+    // The state's combobox ARIA, by row key.
+    mut attributes: Vec<Attribute>,
     naming: Vec<Attribute>,
     field: &PreparedField,
     required: bool,
@@ -1038,7 +1046,6 @@ fn select_search_box(
         mut query,
         mut blurred,
     } = search;
-    let mut attributes = state.a11y_attributes();
     attributes.extend(naming);
     search_box
         .element(&search)

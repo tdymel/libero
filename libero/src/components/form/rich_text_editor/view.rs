@@ -38,6 +38,7 @@ use crate::{
         ElementHandle, HistoryHandle, ModalScope, PopoverOptions, Rect, UndoHistory, listener,
         place, use_element, use_history, use_id, use_localization, use_modal, use_theme,
     },
+    localization::RichTextEditorLabels,
     platform::{Dimensions, ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
     theme::{ANCHOR_COLOR, CODE_FONT_FAMILY, ColorCss, ColorShade},
@@ -322,9 +323,12 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         let mut commands = commands;
         commands.set(props.commands.clone());
     }
+    // Bumped with the keymap: the toolbar's tooltips show its chords.
+    let mut keymap_revision = use_hook(|| CopyValue::new(0u32));
     if *keymap.peek() != props.keymap {
         let mut keymap = keymap;
         keymap.set(props.keymap.clone());
+        *keymap_revision.write() += 1;
     }
     let registry = use_hook(|| CopyValue::new(None::<NodeRegistry>));
     if *registry.peek() != props.registry {
@@ -1146,8 +1150,25 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             language_width.set(Some(size.width));
         }
     }));
+    let look = ToolbarLook {
+        words,
+        tools: buttons
+            .iter()
+            .map(|tool| (tool.builtin, tool.selected, tool.disabled))
+            .collect(),
+        custom_tools: custom_tools.clone(),
+        block_kind: block_kind.clone(),
+        crowded,
+        menus: [
+            block_menu.a11y_attributes(),
+            language_menu.a11y_attributes(),
+            more_menu.a11y_attributes(),
+        ],
+        keymap: *keymap_revision.peek(),
+    };
     let toolbar = (props.toolbar && editable).then(|| {
         rsx! {
+            ToolbarSlot { look, bar: rsx! {
             div { onresize,
                 Toolbar { "aria-label": words.toolbar, focus_from: element, onmousedown: keep,
                     ToolbarGroup { "aria-label": words.marks,
@@ -1200,6 +1221,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     }
                 }
             }
+            } }
         }
     });
 
@@ -1278,6 +1300,39 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             span { id: leave_hint, hidden: true, {words.leave_hint} }
         }
     })
+}
+
+/// Everything the toolbar shows. Its handlers read only stable handles, so a bar drawn from
+/// an equal look is still current.
+#[derive(Clone, PartialEq)]
+struct ToolbarLook {
+    words: RichTextEditorLabels,
+    tools: Vec<(Builtin, Option<bool>, bool)>,
+    custom_tools: Vec<(RichTextTool, Option<bool>)>,
+    /// The block type and code language menus' radios and labels.
+    block_kind: BlockKind,
+    crowded: usize,
+    menus: [Vec<Attribute>; 3],
+    keymap: u32,
+}
+
+#[derive(Props, Clone)]
+struct ToolbarSlotProps {
+    look: ToolbarLook,
+    bar: Element,
+}
+
+/// Compares the look alone: `bar` never compares equal.
+impl PartialEq for ToolbarSlotProps {
+    fn eq(&self, other: &Self) -> bool {
+        self.look == other.look
+    }
+}
+
+/// The toolbar, skipped while its look holds: typing redrew every button and tooltip (todo 2002).
+#[component]
+fn ToolbarSlot(props: ToolbarSlotProps) -> Element {
+    props.bar
 }
 
 /// The href of the link around the caret.

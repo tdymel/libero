@@ -13,18 +13,19 @@ use crate::{
 
 use super::option::{ComboboxContext, ComboboxRowContext};
 
-/// Publishes the row's place to `ComboboxOption`. A `Signal` written in render: a provider runs once.
+/// Publishes the row's key to `ComboboxOption`. A `Signal` written in render: a provider runs once.
+/// No visible index: a filter that shifts a kept row must not redraw it.
 #[component]
-fn ComboboxRow(index: usize, active: bool, disabled: bool, children: Element) -> Element {
+fn ComboboxRow(row_key: usize, active: bool, disabled: bool, children: Element) -> Element {
     let mut context = use_context_provider(|| {
         Signal::new(ComboboxRowContext {
-            index,
+            key: row_key,
             active,
             disabled,
         })
     });
     let next = ComboboxRowContext {
-        index,
+        key: row_key,
         active,
         disabled,
     };
@@ -69,15 +70,16 @@ pub(super) fn ComboboxDropdown(
         },
         (false, true) => empty.unwrap_or_else(|| rsx! {}),
         (false, false) => {
+            let key_of = |index: usize| row_keys.get(index).copied().unwrap_or(index);
             let drawn: Vec<Element> = rows
                 .into_iter()
                 .enumerate()
                 .map(|(index, row)| {
-                    let key = row_keys.get(index).copied().unwrap_or(index);
+                    let key = key_of(index);
                     rsx! {
                         ComboboxRow {
                             key: "{key}",
-                            index,
+                            row_key: key,
                             active: active == Some(index),
                             disabled: row_disabled.get(index).copied().unwrap_or(false),
                             // The row itself, not `{row}` wrapped anew: an unchanged one compares equal and skips.
@@ -99,12 +101,12 @@ pub(super) fn ComboboxDropdown(
                     for (label , start , end) in runs {
                         if let Some(label) = label {
                             div {
-                                key: "group-{start}",
+                                key: "group-{key_of(start)}",
                                 "data-slot": DropdownPart::Group.slot(),
                                 role: "group",
-                                "aria-labelledby": group_id(&id, start),
+                                "aria-labelledby": group_id(&id, key_of(start)),
                                 div {
-                                    id: group_id(&id, start),
+                                    id: group_id(&id, key_of(start)),
                                     // Already the group's name; would be read twice.
                                     role: "presentation",
                                     "data-slot": DropdownPart::GroupLabel.slot(),

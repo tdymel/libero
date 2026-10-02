@@ -182,14 +182,13 @@ pub(super) fn chrono_field<V: DateValue>(
                 .accepts(&picker)
                 .map_err(|refusal| value.refusal(refusal, picker.min, picker.max, &bounds))
         },
+        move |next| close && V::closes(next),
         // Only the props `V` reads, so the picker has nothing to warn about.
         move |args: DropdownArgs<V>| {
             rsx! {
                 ChronoPicker::<V> {
                     value: args.value,
-                    onchange: move |next: Option<V>| {
-                        args.pick.call((next, close && V::closes(next)));
-                    },
+                    onchange: args.pick,
                     min: picker.min,
                     max: picker.max,
                     exclude_date: used::<V, _>("exclude_date", picker.exclude_date).flatten().filter(|_| day),
