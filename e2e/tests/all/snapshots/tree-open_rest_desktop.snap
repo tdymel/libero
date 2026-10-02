@@ -1,0 +1,15 @@
+---
+source: e2e/src/suite.rs
+description: tree-open at desktop (rest)
+expression: tree
+---
+tree "Project files"
+  treeitem "src" [expanded=false] [level=1] [selected=false]
+    button "src"
+      StaticText "src"
+  treeitem "docs" [expanded=false] [level=1] [selected=false]
+    button "docs"
+      StaticText "docs"
+  treeitem "README.md" [level=1] [selected=false]
+    button "README.md"
+      StaticText "README.md"

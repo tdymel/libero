@@ -1,0 +1,24 @@
+---
+source: e2e/src/suite.rs
+description: menu at desktop (submenu)
+expression: tree
+---
+button "Actions" [expanded] [haspopup=menu]
+  StaticText "Actions"
+menu "Actions"
+  group "Edit"
+    StaticText "Edit"
+    menuitem "Cut"
+      StaticText "Cut"
+    menuitem "Paste" [disabled]
+      StaticText "Paste"
+  separator
+  menuitem "Save"
+    StaticText "Save"
+  menuitem "Share" [expanded] [haspopup=menu]
+    StaticText "Share"
+menu "Share"
+  menuitem "Email"
+    StaticText "Email"
+--> aria-controls [id="lsx-N-menu"] (rendered above)
+--> aria-controls [id="lsx-N-menu-3"] (rendered above)

@@ -28,6 +28,15 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Labels that wrap (todo 1773).
+#[test]
+fn the_long_labels_meet_the_baseline() {
+    Suite::new("accordion-long", "/accordion-long")
+        .focusable(TRIGGER)
+        .targets(TRIGGER)
+        .run();
+}
+
 /// Todo 517: the disabled trigger faded only, which forced colours undo.
 #[test]
 fn a_disabled_trigger_is_gray_text_in_forced_colours() {

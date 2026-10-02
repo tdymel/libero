@@ -6,6 +6,7 @@ use e2e::archetypes::TreeWalk;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
+use e2e::suite::Step;
 use e2e::wait;
 use e2e::{Fixture, Suite, Viewport};
 
@@ -88,6 +89,25 @@ pub(crate) const WALK: TreeWalk = TreeWalk {
 fn it_meets_the_baseline() {
     Suite::new("tree", "/tree")
         .focusable(ROW)
+        .targets(ROW)
+        .run();
+}
+
+/// A branch open, and the guides with their current-row marker (todo 1773).
+#[test]
+fn an_open_branch_meets_the_baseline() {
+    Suite::new("tree-open", "/tree")
+        .focusable(ROW)
+        .targets(ROW)
+        .state(
+            "open",
+            &[Step::TabTo(ROW), Step::Press(keyboard::ARROW_RIGHT)],
+            "[role=treeitem][aria-expanded=true]",
+        )
+        .run();
+    // The current row, lib.rs, holds the tab stop.
+    Suite::new("tree-guides", "/tree/guides")
+        .focusable(ROVING)
         .targets(ROW)
         .run();
 }

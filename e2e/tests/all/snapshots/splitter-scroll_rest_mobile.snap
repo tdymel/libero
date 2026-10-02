@@ -1,0 +1,20 @@
+---
+source: e2e/src/suite.rs
+description: splitter-scroll at mobile (rest)
+expression: tree
+---
+paragraph
+  StaticText "Pane A"
+separator "Resize the row" = 50 [valuemax=90] [valuemin=10]
+paragraph
+  StaticText "Pane B"
+paragraph
+paragraph
+paragraph
+  StaticText "Pane A"
+separator "Resize the column" = 50 [valuemax=90] [valuemin=10]
+paragraph
+  StaticText "Pane B"
+paragraph
+--> aria-controls [id="lsx-N"] (rendered above)
+--> aria-controls [id="lsx-N"] (rendered above)

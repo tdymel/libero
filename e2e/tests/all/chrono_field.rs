@@ -259,6 +259,26 @@ fn the_duration_field_meets_the_baseline() {
         .run();
 }
 
+/// The other levels, open on their grid or clock (todo 1773).
+#[test]
+fn the_other_fields_meet_the_baseline() {
+    for (name, route) in [
+        ("chrono_field-day", "/chrono-field/day"),
+        ("chrono_field-month", "/chrono-field/month"),
+        ("chrono_field-moment", "/chrono-field/moment"),
+        ("chrono_field-digital", "/chrono-field/digital"),
+    ] {
+        Suite::new(name, route)
+            .focusable(INPUT)
+            .state(
+                "open",
+                &[Step::TabTo(INPUT), Step::Press(keyboard::ARROW_DOWN)],
+                "[role=dialog]:focus-within",
+            )
+            .run();
+    }
+}
+
 /// Typed units read leniently, the form gets ISO 8601, and a duration past
 /// `max` or short of `min` says the bounds in the field's own words.
 #[test]

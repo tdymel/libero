@@ -1,0 +1,13 @@
+---
+source: e2e/src/suite.rs
+description: toolbar-vertical at mobile (rest)
+expression: tree
+---
+toolbar "Tools"
+  button "Pen"
+    StaticText "P"
+  separator
+  button "Eraser"
+    StaticText "E"
+  button "Fill"
+    StaticText "F"

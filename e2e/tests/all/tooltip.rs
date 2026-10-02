@@ -126,12 +126,14 @@ e2e::scenario!(
     hover_opens_it_below_the_trigger_and_leaving_closes_it,
     "/tooltip/quick",
     hover_places_and_leaving_closes,
+    web: skip("1760: hover_shows_the_bubble_and_the_pointer_can_cross_the_gap places and leaves it"),
     android: skip("996: no hover on touch; a long press opens it instead")
 );
 e2e::scenario!(
     the_pointer_can_rest_on_the_bubble,
     "/tooltip/quick",
     rests_on_the_bubble,
+    web: skip("1760: hover_shows_the_bubble_and_the_pointer_can_cross_the_gap rests on it"),
     android: skip("996: no hover on touch; a long press opens it instead")
 );
 e2e::scenario!(
@@ -144,9 +146,15 @@ e2e::scenario!(
 e2e::scenario!(
     escape_closes_it_under_the_pointer,
     "/tooltip/quick",
-    escape_under_the_pointer
+    escape_under_the_pointer,
+    web: skip("1760: escape_closes_it_under_the_pointer_and_on_focus covers it")
 );
-e2e::scenario!(tab_focus_opens_it, "/tooltip/quick", tab_focus_opens);
+e2e::scenario!(
+    tab_focus_opens_it,
+    "/tooltip/quick",
+    tab_focus_opens,
+    web: skip("1760: tab_focus_shows_the_bubble_and_leaving_hides_it covers it")
+);
 
 #[test]
 fn it_meets_the_baseline() {
@@ -225,6 +233,8 @@ struct Gap {
     x: f64,
     y: f64,
     height: f64,
+    /// The bubble's centre from the trigger's, across.
+    off: f64,
     hit_bubble: bool,
 }
 
@@ -247,14 +257,19 @@ fn hover_shows_the_bubble_and_the_pointer_can_cross_the_gap() {
             "(() => { const t = document.querySelector('#save').getBoundingClientRect(); \
              const b = document.querySelector('#save-tip').getBoundingClientRect(); \
              const x = t.x + t.width / 2, y = (t.bottom + b.top) / 2; \
-             return { x, y, height: b.top - t.bottom, \
+             return { x, y, height: b.top - t.bottom, off: b.x + b.width / 2 - x, \
                hit_bubble: document.elementFromPoint(x, y) === document.querySelector('#save-tip') }; })()",
         )
         .await;
         assert!(
-            gap.height >= 2.0,
-            "a {}px gap is no gap to cross",
+            (2.0..=16.0).contains(&gap.height),
+            "a {}px gap is no gap to cross, or the bubble is not below the trigger",
             gap.height
+        );
+        assert!(
+            gap.off.abs() <= 2.0,
+            "the bubble sits {}px off the trigger's centre",
+            gap.off
         );
         assert!(gap.hit_bubble, "the gap should hit the bubble's bridge");
 

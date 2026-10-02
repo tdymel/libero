@@ -29,6 +29,29 @@ fn it_meets_the_baseline() {
             &[Step::TabTo(TRIGGER), Step::Press(keyboard::ARROW_DOWN)],
             MENU,
         )
+        // Share, the last item, opens its submenu (todo 1773).
+        .state(
+            "submenu",
+            &[
+                Step::Press(keyboard::END),
+                Step::Press(keyboard::ARROW_RIGHT),
+            ],
+            "[role=menuitem][aria-haspopup=menu][aria-expanded=true]",
+        )
+        .run();
+}
+
+/// Radio and checkbox items with shortcuts, a long label and a disabled one (todo 1773).
+#[test]
+fn the_choices_menu_meets_the_baseline() {
+    Suite::new("menu-choices", "/menu-choices")
+        .focusable(TRIGGER)
+        .targets("[role=menu] [role^=menuitem]")
+        .state(
+            "open",
+            &[Step::TabTo(TRIGGER), Step::Press(keyboard::ARROW_DOWN)],
+            MENU,
+        )
         .run();
 }
 

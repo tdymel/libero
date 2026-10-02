@@ -1,0 +1,22 @@
+---
+source: e2e/src/suite.rs
+description: tree-open at mobile (open)
+expression: tree
+---
+tree "Project files"
+  treeitem "src" [expanded] [level=1] [selected=false]
+    button "src"
+      StaticText "src"
+    group
+      treeitem "lib.rs" [level=2] [selected=false]
+        button "lib.rs"
+          StaticText "lib.rs"
+      treeitem "main.rs" [level=2] [selected=false]
+        button "main.rs"
+          StaticText "main.rs"
+  treeitem "docs" [expanded=false] [level=1] [selected=false]
+    button "docs"
+      StaticText "docs"
+  treeitem "README.md" [level=1] [selected=false]
+    button "README.md"
+      StaticText "README.md"

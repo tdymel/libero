@@ -1,0 +1,28 @@
+---
+source: e2e/src/suite.rs
+description: menu-choices at mobile (open)
+expression: tree
+---
+paragraph
+  StaticText "Name"
+paragraph
+  StaticText "false"
+button "View" [expanded] [haspopup=menu]
+  StaticText "View"
+menu "View"
+  group "Sort by"
+    StaticText "Sort by"
+    menuitemradio "Name" [checked]
+      StaticText "Name"
+    menuitemradio "Date" [checked=false]
+      StaticText "Date"
+    menuitemradio "Size" [checked=false]
+      StaticText "Size"
+  separator
+  menuitemcheckbox "Show grid" [checked=false]
+    StaticText "Show grid"
+  menuitem "Export every selected row as a comma separated values file"
+    StaticText "Export every selected row as a comma separated values file"
+  menuitem "Print" [disabled]
+    StaticText "Print"
+--> aria-controls [id="lsx-N-menu"] (rendered above)

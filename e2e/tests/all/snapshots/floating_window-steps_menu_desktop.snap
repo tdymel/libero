@@ -1,0 +1,26 @@
+---
+source: e2e/src/suite.rs
+description: floating_window-steps at desktop (menu)
+expression: tree
+---
+button "Inspector"
+  StaticText "Inspector"
+dialog "Inspector"
+  group "Move window"
+    heading "Inspector" [level=2]
+      StaticText "Inspector"
+  button "Window menu" [expanded] [haspopup=menu]
+  button "Close"
+  paragraph
+    StaticText "Drag the title bar, or focus it and use the arrow keys."
+  button "Done"
+    StaticText "Done"
+  separator "Resize window" = 378 [valuemax=480] [valuemin=240]
+menu "Window menu"
+  menuitem "Move"
+    StaticText "Move"
+  menuitem "Resize"
+    StaticText "Resize"
+  menuitem "Reset position and size"
+    StaticText "Reset position and size"
+--> aria-controls [id="lsx-N-menu"] (rendered above)

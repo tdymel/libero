@@ -157,6 +157,15 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// The sidebar and its active link's ring (todo 1773).
+#[test]
+fn the_sidebar_meets_the_baseline() {
+    Suite::new("nav_link-sidebar", "/nav-link")
+        .focusable("#here")
+        .targets("#here")
+        .run();
+}
+
 fn burger(expression: &str) -> String {
     format!("document.querySelector('#burger').{expression}")
 }

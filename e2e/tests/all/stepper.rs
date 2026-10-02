@@ -159,6 +159,14 @@ fn it_meets_the_baseline_vertically() {
     suite("stepper_vertical", "/stepper-vertical").run();
 }
 
+/// Long labels and the two named step lists (todo 1773).
+#[test]
+fn the_long_and_named_steppers_meet_the_baseline() {
+    // Neither page has a header to press, so nothing to tab to or measure.
+    Suite::new("stepper-long", "/stepper-long").run();
+    Suite::new("stepper-named", "/stepper-named").run();
+}
+
 /// WCAG 1.4.11: a pending marker is a ring alone, and the connector into it
 /// shows the path; both part from the page at 3:1, as Timeline's (todo 599).
 #[test]

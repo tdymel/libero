@@ -1,0 +1,32 @@
+---
+source: e2e/src/suite.rs
+description: toolbar-editor at mobile (help)
+expression: tree
+---
+toolbar "Formatting"
+  button "Bold"
+    StaticText "Bold"
+  button "Italic"
+    StaticText "Italic"
+  button "Shortcuts"
+    StaticText "Shortcuts"
+textbox "Text"
+dialog "Keyboard shortcuts" [modal]
+  heading "Keyboard shortcuts" [level=2]
+    StaticText "Keyboard shortcuts"
+  button "Close"
+  DescriptionList
+    term "Alt + F10"
+      StaticText "Alt"
+      StaticText "+"
+      StaticText "F10"
+    definition
+      StaticText "Go to the toolbar"
+    term "Ctrl + Shift + K"
+      StaticText "Ctrl"
+      StaticText "+"
+      StaticText "Shift"
+      StaticText "+"
+      StaticText "K"
+    definition
+      StaticText "Insert a link"

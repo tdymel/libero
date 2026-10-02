@@ -1,0 +1,47 @@
+---
+source: e2e/src/suite.rs
+description: chrono_field-month at mobile (rest)
+expression: tree
+---
+LabelText
+  StaticText "Billing month"
+combobox "Billing month" = March 2026 [expanded] [haspopup=dialog]
+  StaticText "March 2026"
+status [atomic] [live=polite]
+paragraph
+  StaticText "2026-03-01"
+dialog "Date"
+  button "Previous year"
+  button "2026" [live=polite]
+    StaticText "2026"
+  button "Next year"
+  grid "2026"
+    row "January 2026 February 2026 March 2026"
+      gridcell "January 2026" [selected=false]
+        StaticText "Jan"
+      gridcell "February 2026" [selected=false]
+        StaticText "Feb"
+      gridcell "March 2026" [current=date] [selected]
+        StaticText "Mar"
+    row "April 2026 May 2026 June 2026"
+      gridcell "April 2026" [selected=false]
+        StaticText "Apr"
+      gridcell "May 2026" [selected=false]
+        StaticText "May"
+      gridcell "June 2026" [selected=false]
+        StaticText "Jun"
+    row "July 2026 August 2026 September 2026"
+      gridcell "July 2026" [selected=false]
+        StaticText "Jul"
+      gridcell "August 2026" [selected=false]
+        StaticText "Aug"
+      gridcell "September 2026" [selected=false]
+        StaticText "Sep"
+    row "October 2026 November 2026 December 2026"
+      gridcell "October 2026" [selected=false]
+        StaticText "Oct"
+      gridcell "November 2026" [selected=false]
+        StaticText "Nov"
+      gridcell "December 2026" [selected=false]
+        StaticText "Dec"
+--> aria-controls [id="lsx-N-dialog"] (rendered above)

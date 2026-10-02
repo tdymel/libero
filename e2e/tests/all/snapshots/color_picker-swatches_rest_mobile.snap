@@ -1,0 +1,8 @@
+---
+source: e2e/src/suite.rs
+description: color_picker-swatches at mobile (rest)
+expression: tree
+---
+button "#fa5252" [pressed]
+button "#40c057" [pressed=false]
+button "#f8f9fa" [pressed=false]

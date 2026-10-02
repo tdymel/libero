@@ -1,0 +1,24 @@
+---
+source: e2e/src/suite.rs
+description: toolbar-fields at desktop (rest)
+expression: tree
+---
+toolbar "Fields"
+  button "First"
+    StaticText "First"
+  checkbox "Bold" [checked=false]
+  switch "Wrap" [checked=false]
+  radiogroup "Font"
+    radio "Serif" [checked]
+    LabelText
+      StaticText "Serif"
+    radio "Sans" [checked=false]
+    LabelText
+      StaticText "Sans"
+    radio "Mono" [checked=false]
+    LabelText
+      StaticText "Mono"
+  textbox "Find" = ab
+    StaticText "ab"
+  spinbutton "Size" = 12 [valuemax=0] [valuemin=0] [valuetext=12]
+    StaticText "12"

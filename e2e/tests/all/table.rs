@@ -21,9 +21,16 @@ async fn the_arrow_turns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const ARROW: &str = "th[data-sortable] svg";
     d.click(SORT).await?;
     sorted(d, "ascending").await?;
-    // Past the turn's transition.
-    linger(d, 30).await;
-    let ascending = d.style(ARROW, "transform").await?;
+    // Past the turn's transition: the same angle across a drawn frame, not a fixed wait (1763).
+    let mut ascending = d.style(ARROW, "transform").await?;
+    eventually(d, "the arrow's turn to end", async |d| {
+        d.frame().await?;
+        let now = d.style(ARROW, "transform").await?;
+        let still = now == ascending;
+        ascending = now;
+        Ok(still)
+    })
+    .await?;
     d.click(SORT).await?;
     sorted(d, "descending").await?;
     eventually(
@@ -475,9 +482,9 @@ fn a_shift_click_adds_a_sorted_column() {
             .unwrap();
         let page = &fixture.page;
 
-        click_with(page, STOCK, 0).await;
+        pointer::click(page, STOCK).await.unwrap();
         wait_text(page, "#sort", "Stock ascending").await;
-        click_with(page, NAME, SHIFT).await;
+        pointer::click_with(page, NAME, SHIFT).await.unwrap();
         wait_text(page, "#sort", "Stock ascending,Name ascending").await;
         // Ties on Stock break by Name: Cherry before Date, Apple before Elder.
         rows(page, ":Banana:0|:Cherry:3|:Date:3|:Apple:12|:Elder:12")
@@ -488,9 +495,9 @@ fn a_shift_click_adds_a_sorted_column() {
         let snapshot = ax::snapshot(page, "table").await.unwrap();
         assert!(snapshot.contains("sort order 2"), "{snapshot}");
 
-        click_with(page, STOCK, SHIFT).await;
+        pointer::click_with(page, STOCK, SHIFT).await.unwrap();
         wait_text(page, "#sort", "Stock descending,Name ascending").await;
-        click_with(page, STOCK, SHIFT).await;
+        pointer::click_with(page, STOCK, SHIFT).await.unwrap();
         wait_text(page, "#sort", "Name ascending").await;
         assert_eq!(count(page, "[data-sort-order]").await, 0.0);
 
@@ -510,35 +517,6 @@ fn a_shift_click_adds_a_sorted_column() {
 }
 
 const SHIFT: i64 = 8;
-
-/// A mouse click at `selector`'s centre with CDP `modifiers` held.
-async fn click_with(page: &Page, selector: &str, modifiers: i64) {
-    use chromiumoxide::cdp::browser_protocol::input::{
-        DispatchMouseEventParams, DispatchMouseEventType, MouseButton,
-    };
-    let point = page
-        .find_element(selector)
-        .await
-        .unwrap()
-        .clickable_point()
-        .await
-        .unwrap();
-    for kind in [
-        DispatchMouseEventType::MousePressed,
-        DispatchMouseEventType::MouseReleased,
-    ] {
-        let event = DispatchMouseEventParams::builder()
-            .r#type(kind)
-            .x(point.x)
-            .y(point.y)
-            .button(MouseButton::Left)
-            .click_count(1)
-            .modifiers(modifiers)
-            .build()
-            .unwrap();
-        page.execute(event).await.unwrap();
-    }
-}
 
 async fn wait_text(page: &Page, selector: &str, expected: &str) {
     wait::for_js_true(

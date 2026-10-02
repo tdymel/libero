@@ -1,0 +1,10 @@
+---
+source: e2e/src/suite.rs
+description: color_picker-alpha at desktop (rest)
+expression: tree
+---
+slider "Saturation" = 87 [valuemax=100] [valuemin=0]
+slider "Hue" = 208 [valuemax=360] [valuemin=0]
+slider "Alpha" = 1 [valuemax=1] [valuemin=0]
+paragraph
+  StaticText "#1c7ed6"

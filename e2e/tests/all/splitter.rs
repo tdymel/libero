@@ -201,6 +201,18 @@ fn it_meets_the_baseline() {
     Suite::new("splitter", "/splitter").focusable(DIVIDER).run();
 }
 
+/// RTL, the minimum-size page and the two scrolling splitters (todo 1773).
+#[test]
+fn the_other_splitters_meet_the_baseline() {
+    for (name, route) in [
+        ("splitter-rtl", "/splitter/rtl"),
+        ("splitter-min-size", "/splitter/min-size"),
+        ("splitter-scroll", "/splitter/scroll"),
+    ] {
+        Suite::new(name, route).focusable(DIVIDER).run();
+    }
+}
+
 /// The drag scenario at the phone width; its web arm runs at the desktop one (todo 1826).
 #[test]
 fn a_drag_leaves_the_divider_focused_on_mobile() {

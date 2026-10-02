@@ -56,6 +56,18 @@ async fn mouse_n(
     buttons: i64,
     clicks: i64,
 ) -> Result<()> {
+    mouse_held(page, kind, at, buttons, clicks, 0).await
+}
+
+/// `modifiers` as CDP counts them: Alt 1, Ctrl 2, Meta 4, Shift 8.
+async fn mouse_held(
+    page: &Page,
+    kind: DispatchMouseEventType,
+    at: Point,
+    buttons: i64,
+    clicks: i64,
+    modifiers: i64,
+) -> Result<()> {
     page.execute(
         DispatchMouseEventParams::builder()
             .r#type(kind)
@@ -64,6 +76,7 @@ async fn mouse_n(
             .button(MouseButton::Left)
             .buttons(buttons)
             .click_count(clicks)
+            .modifiers(modifiers)
             .build()
             .map_err(anyhow::Error::msg)?,
     )
@@ -233,6 +246,11 @@ struct Aimed {
 /// Click an element at its centre, scrolled in first when the centre is off screen. Fails
 /// when the centre hits another element, so a covered target is no silent miss (todo 1756).
 pub async fn click(page: &Page, selector: &str) -> Result<()> {
+    click_with(page, selector, 0).await
+}
+
+/// [`click`] with CDP `modifiers` held: Alt 1, Ctrl 2, Meta 4, Shift 8.
+pub async fn click_with(page: &Page, selector: &str, modifiers: i64) -> Result<()> {
     let aimed: Aimed = page
         .evaluate(format!(
             r#"(() => {{
@@ -268,12 +286,26 @@ pub async fn click(page: &Page, selector: &str) -> Result<()> {
             aimed.y
         );
     }
-    click_at_unchecked(
+    let at = Point {
+        x: aimed.x,
+        y: aimed.y,
+    };
+    mouse_held(
         page,
-        Point {
-            x: aimed.x,
-            y: aimed.y,
-        },
+        DispatchMouseEventType::MousePressed,
+        at,
+        1,
+        1,
+        modifiers,
+    )
+    .await?;
+    mouse_held(
+        page,
+        DispatchMouseEventType::MouseReleased,
+        at,
+        0,
+        1,
+        modifiers,
     )
     .await
 }

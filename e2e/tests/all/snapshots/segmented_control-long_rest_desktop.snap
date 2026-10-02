@@ -1,0 +1,29 @@
+---
+source: e2e/src/suite.rs
+description: segmented_control-long at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Day"
+radiogroup "Day"
+  radio "Monday" [checked=false]
+  LabelText
+    StaticText "Monday"
+  radio "Tuesday" [checked=false]
+  LabelText
+    StaticText "Tuesday"
+  radio "Wednesday" [checked]
+  LabelText
+    StaticText "Wednesday"
+  radio "Thursday" [checked=false]
+  LabelText
+    StaticText "Thursday"
+  radio "Friday" [checked=false]
+  LabelText
+    StaticText "Friday"
+  radio "Saturday" [checked=false]
+  LabelText
+    StaticText "Saturday"
+  radio "Sunday" [checked=false]
+  LabelText
+    StaticText "Sunday"

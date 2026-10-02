@@ -1,0 +1,24 @@
+---
+source: e2e/src/suite.rs
+description: segmented_control-field at desktop (rest)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+LabelText
+  StaticText "Alignment"
+StaticText "Where each line starts."
+radiogroup "Alignment" [invalid] [required]
+  radio "Left" [checked=false]
+  LabelText
+    StaticText "Left"
+  radio "Center" [checked]
+  LabelText
+    StaticText "Center"
+  radio "Right" [checked=false]
+  LabelText
+    StaticText "Right"
+StaticText "Applies to the whole document."
+StaticText "Pick an alignment."
+button "After"
+  StaticText "After"

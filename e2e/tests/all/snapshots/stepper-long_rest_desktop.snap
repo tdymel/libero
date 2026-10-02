@@ -1,0 +1,61 @@
+---
+source: e2e/src/suite.rs
+description: stepper-long at desktop (rest)
+expression: tree
+---
+list
+  listitem [level=1]
+    StaticText "Account, Completed"
+  listitem [level=1]
+    generic [current=step]
+      StaticText "Versandkostenberechnungsgrundlagenverordnung"
+  listitem [level=1]
+    StaticText "Review"
+region "Versandkostenberechnungsgrundlagenverordnung"
+  StaticText "Body."
+list
+  listitem [level=1]
+    StaticText "Account, Completed"
+  listitem [level=1]
+    generic [current=step]
+      StaticText "Versandkostenberechnungsgrundlagenverordnung"
+  listitem [level=1]
+    StaticText "Review"
+region "Versandkostenberechnungsgrundlagenverordnung"
+  StaticText "Body."
+list
+  listitem [level=1]
+    StaticText "Account, Completed"
+  listitem [level=1]
+    generic [current=step]
+      StaticText "Versandkostenberechnungsgrundlagenverordnung"
+    region "Versandkostenberechnungsgrundlagenverordnung"
+      StaticText "Body."
+  listitem [level=1]
+    StaticText "Review"
+list
+  listitem [level=1]
+    StaticText "Account, Completed"
+    StaticText "About the Account"
+  listitem [level=1]
+    generic [current=step]
+      StaticText "Shipping"
+      StaticText "About the Shipping"
+  listitem [level=1]
+    StaticText "Review"
+    StaticText "About the Review"
+region "Shipping About the Shipping"
+  StaticText "Body."
+list
+  listitem [level=1]
+    StaticText "Account, Completed"
+    StaticText "About the Account"
+  listitem [level=1]
+    generic [current=step]
+      StaticText "Shipping"
+      StaticText "About the Shipping"
+  listitem [level=1]
+    StaticText "Review"
+    StaticText "About the Review"
+region "Shipping About the Shipping"
+  StaticText "Body."

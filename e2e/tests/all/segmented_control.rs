@@ -110,6 +110,40 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// The field with its error, read-only, the disabled segments and long labels (todo 1773).
+#[test]
+fn the_other_variants_meet_the_baseline() {
+    // The disabled pick's tab stop is the first enabled segment.
+    for (name, route, stop) in [
+        (
+            "segmented_control-field",
+            "/segmented-control/field",
+            CHECKED,
+        ),
+        (
+            "segmented_control-readonly",
+            "/segmented-control/readonly",
+            CHECKED,
+        ),
+        (
+            "segmented_control-disabled-middle",
+            "/segmented-control/disabled-middle",
+            CHECKED,
+        ),
+        (
+            "segmented_control-disabled-pick",
+            "/segmented-control/disabled-pick",
+            "input[aria-label=Left]",
+        ),
+        ("segmented_control-long", "/segmented-control/long", CHECKED),
+    ] {
+        Suite::new(name, route)
+            .focusable(stop)
+            .targets("[role=radiogroup] label")
+            .run();
+    }
+}
+
 #[test]
 fn it_honours_the_radio_group_contract() {
     block_on(async {

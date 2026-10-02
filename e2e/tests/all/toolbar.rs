@@ -5,6 +5,7 @@ use e2e::archetypes::{Orientation, RovingTabindex};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
+use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const ITEMS: &str = "[role=toolbar] [data-toolbar-item]";
@@ -375,6 +376,33 @@ fn it_meets_the_baseline() {
         .focusable("#bold")
         // `Select`'s trigger sits inside its taller frame, which takes the press.
         .targets("[role=toolbar] button[data-toolbar-item]")
+        .run();
+}
+
+/// The vertical bar, fields as items, and the editor's bar with its help dialog (todo 1773).
+#[test]
+fn the_other_toolbars_meet_the_baseline() {
+    Suite::new("toolbar-vertical", "/toolbar-vertical")
+        .focusable("#pen")
+        .targets("[role=toolbar] button[data-toolbar-item]")
+        .run();
+    Suite::new("toolbar-fields", "/toolbar-fields")
+        .focusable("#first")
+        // The text and number inputs sit inside their taller frames, which take the press.
+        .targets("[role=toolbar] button[data-toolbar-item]")
+        .run();
+    Suite::new("toolbar-editor", "/toolbar-editor")
+        .focusable("#bold")
+        .targets("[role=toolbar] button[data-toolbar-item]")
+        .state(
+            "help",
+            &[
+                Step::TabTo("#bold"),
+                Step::Press(keyboard::END),
+                Step::Press(keyboard::ENTER),
+            ],
+            "[role=dialog]",
+        )
         .run();
 }
 

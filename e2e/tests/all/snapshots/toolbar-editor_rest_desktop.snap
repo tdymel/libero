@@ -1,0 +1,13 @@
+---
+source: e2e/src/suite.rs
+description: toolbar-editor at desktop (rest)
+expression: tree
+---
+toolbar "Formatting"
+  button "Bold"
+    StaticText "Bold"
+  button "Italic"
+    StaticText "Italic"
+  button "Shortcuts"
+    StaticText "Shortcuts"
+textbox "Text"

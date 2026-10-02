@@ -112,6 +112,16 @@ fn it_meets_the_baseline() {
             &[Step::TabTo(FIRST), Step::Press(keyboard::ARROW_DOWN)],
             MENU,
         )
+        // Edit's Find, its last item, opens a submenu (todo 1773).
+        .state(
+            "submenu",
+            &[
+                Step::Press(keyboard::ARROW_RIGHT),
+                Step::Press(keyboard::END),
+                Step::Press(keyboard::ARROW_RIGHT),
+            ],
+            "[role=menu] [role=menuitem][aria-haspopup=menu][aria-expanded=true]",
+        )
         .run();
 }
 

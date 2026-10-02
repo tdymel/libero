@@ -54,6 +54,32 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// The title-bar menu, then Move's step buttons, 2.5.7's alternative to a drag (todo 1773).
+/// Apart from the rest: the open menu covers the corner grip the spacing pass measures.
+#[test]
+fn the_menu_and_the_step_buttons_meet_the_baseline() {
+    Suite::new("floating_window-steps", "/floating-window")
+        .contrast_covers(DIALOG)
+        .targets("[role=menu] [role=menuitem]")
+        .targets("[data-slot=steps] button")
+        .state(
+            "open",
+            &[Step::TabTo(TRIGGER), Step::Press(keyboard::ENTER)],
+            DIALOG,
+        )
+        .state(
+            "menu",
+            &[Step::TabTo(MENU), Step::Press(keyboard::ENTER)],
+            "[role=menu]",
+        )
+        .state(
+            "steps",
+            &[Step::Press(keyboard::ENTER)],
+            "[data-slot=steps]",
+        )
+        .run();
+}
+
 #[test]
 fn it_honours_the_overlay_contract() {
     block_on(async {

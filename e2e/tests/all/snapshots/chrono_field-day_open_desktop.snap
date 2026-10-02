@@ -1,0 +1,170 @@
+---
+source: e2e/src/suite.rs
+description: chrono_field-day at desktop (open)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+LabelText
+  StaticText "Due date"
+combobox "Due date" = March 18, 2026 [expanded] [haspopup=dialog]
+  StaticText "March 18, 2026"
+status [atomic] [live=polite]
+button "After"
+  StaticText "After"
+paragraph
+  StaticText "2026-03-18"
+dialog "Date"
+  button "Previous month" [disabled]
+  button "March 2026" [live=polite]
+    StaticText "March 2026"
+  button "Next month"
+  grid "March 2026"
+    row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday"
+      columnheader "Sunday"
+        StaticText "Su"
+      columnheader "Monday"
+        StaticText "Mo"
+      columnheader "Tuesday"
+        StaticText "Tu"
+      columnheader "Wednesday"
+        StaticText "We"
+      columnheader "Thursday"
+        StaticText "Th"
+      columnheader "Friday"
+        StaticText "Fr"
+      columnheader "Saturday"
+        StaticText "Sa"
+    row "March 1, 2026 March 2, 2026 March 3, 2026 March 4, 2026 March 5, 2026 March 6, 2026 March 7, 2026"
+      gridcell "March 1, 2026" [selected=false]
+        button "March 1, 2026" [disabled]
+          StaticText "1"
+      gridcell "March 2, 2026" [selected=false]
+        button "March 2, 2026" [disabled]
+          StaticText "2"
+      gridcell "March 3, 2026" [selected=false]
+        button "March 3, 2026" [disabled]
+          StaticText "3"
+      gridcell "March 4, 2026" [selected=false]
+        button "March 4, 2026" [disabled]
+          StaticText "4"
+      gridcell "March 5, 2026" [selected=false]
+        button "March 5, 2026"
+          StaticText "5"
+      gridcell "March 6, 2026" [selected=false]
+        button "March 6, 2026"
+          StaticText "6"
+      gridcell "March 7, 2026" [selected=false]
+        button "March 7, 2026" [disabled]
+          StaticText "7"
+    row "March 8, 2026 March 9, 2026 March 10, 2026 March 11, 2026 March 12, 2026 March 13, 2026 March 14, 2026"
+      gridcell "March 8, 2026" [selected=false]
+        button "March 8, 2026" [disabled]
+          StaticText "8"
+      gridcell "March 9, 2026" [selected=false]
+        button "March 9, 2026"
+          StaticText "9"
+      gridcell "March 10, 2026" [selected=false]
+        button "March 10, 2026"
+          StaticText "10"
+      gridcell "March 11, 2026" [selected=false]
+        button "March 11, 2026"
+          StaticText "11"
+      gridcell "March 12, 2026" [selected=false]
+        button "March 12, 2026"
+          StaticText "12"
+      gridcell "March 13, 2026" [selected=false]
+        button "March 13, 2026"
+          StaticText "13"
+      gridcell "March 14, 2026" [selected=false]
+        button "March 14, 2026" [disabled]
+          StaticText "14"
+    row "March 15, 2026 March 16, 2026 March 17, 2026 March 18, 2026 March 19, 2026 March 20, 2026 March 21, 2026"
+      gridcell "March 15, 2026" [selected=false]
+        button "March 15, 2026" [disabled]
+          StaticText "15"
+      gridcell "March 16, 2026" [selected=false]
+        button "March 16, 2026"
+          StaticText "16"
+      gridcell "March 17, 2026" [selected=false]
+        button "March 17, 2026"
+          StaticText "17"
+      gridcell "March 18, 2026" [selected]
+        button "March 18, 2026" [current=date]
+          StaticText "18"
+      gridcell "March 19, 2026" [selected=false]
+        button "March 19, 2026"
+          StaticText "19"
+      gridcell "March 20, 2026" [selected=false]
+        button "March 20, 2026"
+          StaticText "20"
+      gridcell "March 21, 2026" [selected=false]
+        button "March 21, 2026" [disabled]
+          StaticText "21"
+    row "March 22, 2026 March 23, 2026 March 24, 2026 March 25, 2026 March 26, 2026 March 27, 2026 March 28, 2026"
+      gridcell "March 22, 2026" [selected=false]
+        button "March 22, 2026" [disabled]
+          StaticText "22"
+      gridcell "March 23, 2026" [selected=false]
+        button "March 23, 2026"
+          StaticText "23"
+      gridcell "March 24, 2026" [selected=false]
+        button "March 24, 2026"
+          StaticText "24"
+      gridcell "March 25, 2026" [selected=false]
+        button "March 25, 2026"
+          StaticText "25"
+      gridcell "March 26, 2026" [selected=false]
+        button "March 26, 2026"
+          StaticText "26"
+      gridcell "March 27, 2026" [selected=false]
+        button "March 27, 2026"
+          StaticText "27"
+      gridcell "March 28, 2026" [selected=false]
+        button "March 28, 2026" [disabled]
+          StaticText "28"
+    row "March 29, 2026 March 30, 2026 March 31, 2026 April 1, 2026 April 2, 2026 April 3, 2026 April 4, 2026"
+      gridcell "March 29, 2026" [selected=false]
+        button "March 29, 2026" [disabled]
+          StaticText "29"
+      gridcell "March 30, 2026" [selected=false]
+        button "March 30, 2026"
+          StaticText "30"
+      gridcell "March 31, 2026" [selected=false]
+        button "March 31, 2026"
+          StaticText "31"
+      gridcell "April 1, 2026" [selected=false]
+        button "April 1, 2026"
+          StaticText "1"
+      gridcell "April 2, 2026" [selected=false]
+        button "April 2, 2026"
+          StaticText "2"
+      gridcell "April 3, 2026" [selected=false]
+        button "April 3, 2026"
+          StaticText "3"
+      gridcell "April 4, 2026" [selected=false]
+        button "April 4, 2026" [disabled]
+          StaticText "4"
+    row "April 5, 2026 April 6, 2026 April 7, 2026 April 8, 2026 April 9, 2026 April 10, 2026 April 11, 2026"
+      gridcell "April 5, 2026" [selected=false]
+        button "April 5, 2026" [disabled]
+          StaticText "5"
+      gridcell "April 6, 2026" [selected=false]
+        button "April 6, 2026"
+          StaticText "6"
+      gridcell "April 7, 2026" [selected=false]
+        button "April 7, 2026"
+          StaticText "7"
+      gridcell "April 8, 2026" [selected=false]
+        button "April 8, 2026"
+          StaticText "8"
+      gridcell "April 9, 2026" [selected=false]
+        button "April 9, 2026"
+          StaticText "9"
+      gridcell "April 10, 2026" [selected=false]
+        button "April 10, 2026"
+          StaticText "10"
+      gridcell "April 11, 2026" [selected=false]
+        button "April 11, 2026" [disabled]
+          StaticText "11"
+--> aria-controls [id="lsx-N-dialog"] (rendered above)

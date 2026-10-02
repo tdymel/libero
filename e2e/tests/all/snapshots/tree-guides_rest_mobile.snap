@@ -1,0 +1,15 @@
+---
+source: e2e/src/suite.rs
+description: tree-guides at mobile (rest)
+expression: tree
+---
+tree "Files"
+  treeitem "src" [expanded] [level=1] [selected=false]
+    StaticText "src"
+    group
+      treeitem "lib.rs" [current=true] [level=2] [selected=false]
+        StaticText "lib.rs"
+      treeitem "main.rs" [level=2] [selected=false]
+        StaticText "main.rs"
+  treeitem "README.md" [level=1] [selected=false]
+    StaticText "README.md"

@@ -24,6 +24,21 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// The fixed bar over its page, and the sticky one closing a pane (todo 1773).
+#[test]
+fn the_fixed_and_sticky_bars_meet_the_baseline() {
+    Suite::new("bottom_navigation-fixed", "/bottom-navigation/fixed")
+        .focusable("#fixed-home")
+        .targets("#fixed [id^=fixed-]")
+        .tab_budget(40)
+        .run();
+    Suite::new("bottom_navigation-scroller", "/bottom-navigation/scroller")
+        .focusable("#sticky-home")
+        .targets("#sticky [id^=sticky-]")
+        .tab_budget(30)
+        .run();
+}
+
 /// Every item is a Tab stop in order, and Enter on one selects it.
 /// 1.4.10 and 2.5.8: five items fit a 320px column, each at least 48px square,
 /// and a long label stops at two lines.

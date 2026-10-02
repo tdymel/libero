@@ -1,0 +1,20 @@
+---
+source: e2e/src/suite.rs
+description: chrono_field-digital at mobile (rest)
+expression: tree
+---
+LabelText
+  StaticText "Alarm"
+combobox "Alarm" = 9:30 AM [expanded] [haspopup=dialog]
+  StaticText "9:30 AM"
+status [atomic] [live=polite]
+paragraph
+  StaticText "09:30:00"
+dialog "Time"
+  spinbutton "Hours" = 9 [valuemax=12] [valuemin=1]
+    StaticText "09"
+  spinbutton "Minutes" = 30 [valuemax=55] [valuemin=0]
+    StaticText "30"
+  spinbutton "AM/PM" = 0 [valuemax=1] [valuemin=0]
+    StaticText "AM"
+--> aria-controls [id="lsx-N-dialog"] (rendered above)

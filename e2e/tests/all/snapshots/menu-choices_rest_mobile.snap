@@ -1,0 +1,11 @@
+---
+source: e2e/src/suite.rs
+description: menu-choices at mobile (rest)
+expression: tree
+---
+paragraph
+  StaticText "Name"
+paragraph
+  StaticText "false"
+button "View" [expanded=false] [haspopup=menu]
+  StaticText "View"

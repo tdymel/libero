@@ -1,0 +1,24 @@
+---
+source: e2e/src/suite.rs
+description: menubar at mobile (submenu)
+expression: tree
+---
+menubar "Editor"
+  menuitem "File" [expanded=false] [haspopup=menu]
+    StaticText "File"
+  menuitem "Edit" [expanded] [haspopup=menu]
+    StaticText "Edit"
+  menuitem "View" [expanded=false] [haspopup=menu]
+    StaticText "View"
+menu "Edit"
+  menuitem "Undo"
+    StaticText "Undo"
+  menuitem "Redo"
+    StaticText "Redo"
+  menuitem "Find" [expanded] [haspopup=menu]
+    StaticText "Find"
+menu "Find"
+  menuitem "Find next"
+    StaticText "Find next"
+--> aria-controls [id="lsx-N-1-menu"] (rendered above)
+--> aria-controls [id="lsx-N-1-menu-2"] (rendered above)

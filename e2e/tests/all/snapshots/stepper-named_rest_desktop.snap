@@ -1,0 +1,23 @@
+---
+source: e2e/src/suite.rs
+description: stepper-named at desktop (rest)
+expression: tree
+---
+list "Checkout"
+  listitem [level=1]
+    StaticText "Account, Completed"
+  listitem [level=1]
+    generic [current=step]
+      StaticText "Shipping"
+  listitem [level=1]
+    StaticText "Review"
+heading "Onboarding" [level=2]
+  StaticText "Onboarding"
+list "Onboarding"
+  listitem [level=1]
+    StaticText "Account, Completed"
+  listitem [level=1]
+    generic [current=step]
+      StaticText "Shipping"
+  listitem [level=1]
+    StaticText "Review"

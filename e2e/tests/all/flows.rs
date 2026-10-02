@@ -3,6 +3,7 @@
 
 use anyhow::Result;
 use chromiumoxide::Page;
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
 use e2e::passes::{focus, pointer};
@@ -94,131 +95,169 @@ fn a_signup_form_is_filled_fixed_and_submitted() {
         let fixture = Fixture::open("/flows/signup", Viewport::Desktop)
             .await
             .unwrap();
+        signup(&fixture.page).await;
+        fixture.console.assert_clean("the signup flow").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// WCAG 1.4.10: the same flow on a 320px wide screen, with no sideways scroll (todo 1830).
+#[test]
+fn the_signup_form_works_at_320px() {
+    block_on(async {
+        let fixture = Fixture::open("/flows/signup", Viewport::Mobile)
+            .await
+            .unwrap();
         let page = &fixture.page;
-
-        click_text(page, "button", "Sign up").await.unwrap();
-        wait_texts(
-            page,
-            SUMMARY,
-            &[
-                "Name: Enter your name.",
-                "Email: Enter your email.",
-                "Age: You must be 18.",
-                "Plan: Pick a plan.",
-                "Contact me by: Pick a way to reach you.",
-                "Street: Enter a street.",
-                "I accept the terms: Accept the terms.",
-            ],
-            "an empty submit lists every required field",
-        )
-        .await;
-        focus::wait_for_focus(page, "[data-slot=summary]", "an empty submit")
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 844, 1.0, true))
             .await
             .unwrap();
-
-        click_text(
-            page,
-            SUMMARY.replace(" li", " li a").as_str(),
-            "Age: You must be 18.",
-        )
-        .await
-        .unwrap();
-        focus::wait_for_focus(page, "input[name=age]", "following the age link")
-            .await
-            .unwrap();
-
-        fill(page, "input[name=name]", "Ada Lovelace")
-            .await
-            .unwrap();
-        fill(page, "input[name=email]", "ada@").await.unwrap();
-        keyboard::press(page, keyboard::TAB).await.unwrap();
         wait::for_js_true(
             page,
-            "document.body.textContent.includes('That is not an email address.') \
-             && document.querySelector('input[name=email]').getAttribute('aria-invalid') === 'true'",
-            "a half email to be refused on blur",
+            "document.documentElement.clientWidth === 320",
+            "the 320px viewport",
         )
         .await
         .unwrap();
-        fill(page, "input[name=email]", "ada@example.com")
-            .await
-            .unwrap();
-        fill(page, "input[name=age]", "17").await.unwrap();
-        keyboard::press(page, keyboard::TAB).await.unwrap();
-        wait_texts(
-            page,
-            SUMMARY,
-            &[
-                "Age: You must be 18.",
-                "Plan: Pick a plan.",
-                "Contact me by: Pick a way to reach you.",
-                "Street: Enter a street.",
-                "I accept the terms: Accept the terms.",
-            ],
-            "fixed fields drop out of the summary, a 17 keeps its line",
-        )
-        .await;
-        fill(page, "input[name=age]", "36").await.unwrap();
-
-        click(page, "[role=combobox]").await.unwrap();
-        wait::for_visible(page, "[role=option]").await.unwrap();
-        click_text(page, "[role=option]", "Team").await.unwrap();
-        wait::for_hidden(page, "[role=option]").await.unwrap();
-        click_text(page, "label", "Phone").await.unwrap();
-
-        fill(page, "input[name='address.street']", "1 Analytical Way")
-            .await
-            .unwrap();
-        fill(page, "input[name='address.city']", "London")
-            .await
-            .unwrap();
-        fill(page, "textarea[name=notes]", "Ring twice, then wait")
-            .await
-            .unwrap();
-
-        click_text(page, "button", "Sign up").await.unwrap();
-        wait_texts(
-            page,
-            SUMMARY,
-            &[
-                "Notes: Keep notes under 20 characters.",
-                "I accept the terms: Accept the terms.",
-                "A city needs its zip code.",
-            ],
-            "the second submit lists what is still wrong",
-        )
-        .await;
-        assert_eq!(data(page, "submits", "submits").await, "0");
-
-        fill(page, "input[name='address.zip']", "N1").await.unwrap();
-        fill(page, "textarea[name=notes]", "Ring twice")
-            .await
-            .unwrap();
-        click_text(page, "label", "Newsletter").await.unwrap();
-        click_text(page, "label", "I accept the terms")
-            .await
-            .unwrap();
-        wait_texts(page, SUMMARY, &[], "every line fixed").await;
-
-        click_text(page, "button", "Sign up").await.unwrap();
-        wait::for_selector(page, "#submitted").await.unwrap();
-        let submitted: String = page
-            .evaluate("document.getElementById('submitted').textContent")
+        signup(page).await;
+        let overflow: f64 = page
+            .evaluate("document.documentElement.scrollWidth - 320")
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(
-            submitted,
-            "Signup { name: \"Ada Lovelace\", email: \"ada@example.com\", age: Some(36), \
-             plan: Some(Team), contact: Some(Phone), address: Address { street: \"1 Analytical Way\", \
-             zip: \"N1\", city: \"London\" }, notes: \"Ring twice\", newsletter: true, terms: true }"
+        assert!(
+            overflow <= 0.0,
+            "the filled form scrolls {overflow}px sideways at 320px"
         );
-        assert_eq!(data(page, "submits", "submits").await, "1");
-
-        fixture.console.assert_clean("the signup flow").unwrap();
+        fixture
+            .console
+            .assert_clean("the signup flow at 320px")
+            .unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+async fn signup(page: &Page) {
+    click_text(page, "button", "Sign up").await.unwrap();
+    wait_texts(
+        page,
+        SUMMARY,
+        &[
+            "Name: Enter your name.",
+            "Email: Enter your email.",
+            "Age: You must be 18.",
+            "Plan: Pick a plan.",
+            "Contact me by: Pick a way to reach you.",
+            "Street: Enter a street.",
+            "I accept the terms: Accept the terms.",
+        ],
+        "an empty submit lists every required field",
+    )
+    .await;
+    focus::wait_for_focus(page, "[data-slot=summary]", "an empty submit")
+        .await
+        .unwrap();
+
+    click_text(
+        page,
+        SUMMARY.replace(" li", " li a").as_str(),
+        "Age: You must be 18.",
+    )
+    .await
+    .unwrap();
+    focus::wait_for_focus(page, "input[name=age]", "following the age link")
+        .await
+        .unwrap();
+
+    fill(page, "input[name=name]", "Ada Lovelace")
+        .await
+        .unwrap();
+    fill(page, "input[name=email]", "ada@").await.unwrap();
+    keyboard::press(page, keyboard::TAB).await.unwrap();
+    wait::for_js_true(
+        page,
+        "document.body.textContent.includes('That is not an email address.') \
+         && document.querySelector('input[name=email]').getAttribute('aria-invalid') === 'true'",
+        "a half email to be refused on blur",
+    )
+    .await
+    .unwrap();
+    fill(page, "input[name=email]", "ada@example.com")
+        .await
+        .unwrap();
+    fill(page, "input[name=age]", "17").await.unwrap();
+    keyboard::press(page, keyboard::TAB).await.unwrap();
+    wait_texts(
+        page,
+        SUMMARY,
+        &[
+            "Age: You must be 18.",
+            "Plan: Pick a plan.",
+            "Contact me by: Pick a way to reach you.",
+            "Street: Enter a street.",
+            "I accept the terms: Accept the terms.",
+        ],
+        "fixed fields drop out of the summary, a 17 keeps its line",
+    )
+    .await;
+    fill(page, "input[name=age]", "36").await.unwrap();
+
+    click(page, "[role=combobox]").await.unwrap();
+    wait::for_visible(page, "[role=option]").await.unwrap();
+    click_text(page, "[role=option]", "Team").await.unwrap();
+    wait::for_hidden(page, "[role=option]").await.unwrap();
+    click_text(page, "label", "Phone").await.unwrap();
+
+    fill(page, "input[name='address.street']", "1 Analytical Way")
+        .await
+        .unwrap();
+    fill(page, "input[name='address.city']", "London")
+        .await
+        .unwrap();
+    fill(page, "textarea[name=notes]", "Ring twice, then wait")
+        .await
+        .unwrap();
+
+    click_text(page, "button", "Sign up").await.unwrap();
+    wait_texts(
+        page,
+        SUMMARY,
+        &[
+            "Notes: Keep notes under 20 characters.",
+            "I accept the terms: Accept the terms.",
+            "A city needs its zip code.",
+        ],
+        "the second submit lists what is still wrong",
+    )
+    .await;
+    assert_eq!(data(page, "submits", "submits").await, "0");
+
+    fill(page, "input[name='address.zip']", "N1").await.unwrap();
+    fill(page, "textarea[name=notes]", "Ring twice")
+        .await
+        .unwrap();
+    click_text(page, "label", "Newsletter").await.unwrap();
+    click_text(page, "label", "I accept the terms")
+        .await
+        .unwrap();
+    wait_texts(page, SUMMARY, &[], "every line fixed").await;
+
+    click_text(page, "button", "Sign up").await.unwrap();
+    wait::for_selector(page, "#submitted").await.unwrap();
+    let submitted: String = page
+        .evaluate("document.getElementById('submitted').textContent")
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert_eq!(
+        submitted,
+        "Signup { name: \"Ada Lovelace\", email: \"ada@example.com\", age: Some(36), \
+         plan: Some(Team), contact: Some(Phone), address: Address { street: \"1 Analytical Way\", \
+         zip: \"N1\", city: \"London\" }, notes: \"Ring twice\", newsletter: true, terms: true }"
+    );
+    assert_eq!(data(page, "submits", "submits").await, "1");
 }
 
 const ROWS: &str = "table tbody tr";
@@ -435,6 +474,70 @@ fn a_dialog_form_refuses_saves_and_dismisses() {
         fixture
             .console
             .assert_clean("the dialog form flow")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The dialog flow with no pointer at all (todo 1830): Enter in a field submits and
+/// is refused, the plan is picked from the keys, and Save hands focus back.
+#[test]
+fn a_dialog_form_is_filled_with_the_keyboard_alone() {
+    block_on(async {
+        let fixture = Fixture::open("/flows/dialog-form", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let name = "[role=dialog] input[name=name]";
+        let plan = "[role=dialog] [role=combobox]";
+
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        keyboard::tab_to(page, name, 5).await.unwrap();
+        keyboard::type_text(page, "Grace").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait_texts(
+            page,
+            SUMMARY,
+            &["Member plan: Pick a plan."],
+            "Enter in the name field to submit and be refused",
+        )
+        .await;
+
+        keyboard::tab_to(page, plan, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_visible(page, "[role=option]").await.unwrap();
+        keyboard::press(page, keyboard::END).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_hidden(page, "[role=option]").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({plan:?}).textContent.includes('Enterprise')"),
+            "End and Enter to pick Enterprise",
+        )
+        .await
+        .unwrap();
+
+        keyboard::tab_to(page, "[role=dialog] button[type=submit]", 5)
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_hidden(page, DIALOG).await.unwrap();
+        wait_texts(
+            page,
+            "#members li",
+            &["Grace (Enterprise)"],
+            "the member saved from the keys",
+        )
+        .await;
+        focus::wait_for_focus(page, TRIGGER, "saving from the keys")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("the keyboard dialog form flow")
             .unwrap();
         fixture.close().await.unwrap();
     });

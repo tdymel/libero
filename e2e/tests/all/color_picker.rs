@@ -22,6 +22,20 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// The swatch row and the alpha slider (todo 1773). No thumb targets: a 16px thumb
+/// sits on a pad or track that takes the press anywhere, 2.5.8's equivalent.
+#[test]
+fn the_swatches_and_the_alpha_slider_meet_the_baseline() {
+    Suite::new("color_picker-swatches", "/color-picker-swatches")
+        .focusable("[data-slot=swatch]")
+        .targets("[data-slot=swatch]")
+        .no_contrast_coverage("three colour swatches and no text")
+        .run();
+    Suite::new("color_picker-alpha", "/color-picker-alpha")
+        .focusable("[role=slider][aria-label=Alpha]")
+        .run();
+}
+
 /// A move in the same task as the press, before the pad is measured, still lands (1266).
 #[test]
 fn an_early_move_on_the_pad_still_lands() {

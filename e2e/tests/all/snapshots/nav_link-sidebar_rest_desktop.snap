@@ -1,0 +1,7 @@
+---
+source: e2e/src/suite.rs
+description: nav_link-sidebar at desktop (rest)
+expression: tree
+---
+link "Here" [current=page]
+  StaticText "Here"
