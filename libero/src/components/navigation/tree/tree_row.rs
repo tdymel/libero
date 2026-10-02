@@ -30,6 +30,13 @@ pub(super) struct TreeRowState {
     pub disabled: bool,
     /// `None` for a leaf.
     pub expanded: Option<bool>,
+    /// The row draws the current look itself, so a `NavLink` in it skips its own (todo 2037).
+    pub current_look: bool,
+}
+
+/// Whether the enclosing tree row already draws the current look; outside a tree, `false`.
+pub(crate) fn row_draws_current() -> bool {
+    try_consume_context::<TreeRowContext>().is_some_and(|row| row.0.read().current_look)
 }
 
 // No hover here: the `<li>` holds its descendants, so it would paint the chain.
@@ -126,8 +133,8 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
             .with("border-start-start-radius", "0")
             .with("border-end-start-radius", "0"),
         )
-        // NavLink's active look where no guide marks the current row (todo 1571); no
-        // `:has(a)` to skip a link row, as Blitz drops it.
+        // NavLink's active look where no guide marks the current row (todo 1571); a
+        // NavLink in it skips its own through `row_draws_current` (todo 2037).
         .when("current", current_look_sx().hover(current_look_sx()))
 });
 
@@ -172,10 +179,15 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     // The `<li>` is the roving tab stop; `render_node`'s content is always "-1".
     let li_tabindex = if is_roving_active { "0" } else { "-1" };
 
+    let is_current = props.current.as_deref().is_some_and(<[usize]>::is_empty);
+    // A top-level row has no guide to mark.
+    let guide_current = props.guides && is_current && props.depth > 0;
+    let current_look = is_current && !guide_current;
     let state = TreeRowState {
         tabindex: "-1",
         disabled,
         expanded: is_expanded,
+        current_look,
     };
     let mut row_context = use_context_provider(|| Signal::new(state));
     if *row_context.peek() != state {
@@ -207,7 +219,6 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         }
     };
 
-    let is_current = props.current.as_deref().is_some_and(<[usize]>::is_empty);
     // The node's own flag: the ancestor's opacity already covers this row.
     let row_states = states()
         .with("disabled", node.disabled)
@@ -218,11 +229,9 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .framework_sx(&TREE_ROW_SX)
         .states(&row_states)
         .prepare();
-    // A top-level row has no guide to mark.
-    let guide_current = props.guides && is_current && props.depth > 0;
     let content_states = states()
         .with("guide-current", guide_current)
-        .with("current", is_current && !guide_current)
+        .with("current", current_look)
         .into();
     // On the inner div, a sibling of the children `List`, so a child's click
     // never toggles the parent.

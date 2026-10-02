@@ -183,19 +183,19 @@ fn a_pending_ring_and_connector_part_at_3_to_1() {
 }
 
 /// The page's and each stepper's scroll and client widths, and the widest
-/// step header's right edge.
+/// step header's width.
 const WIDTHS: &str = "(() => {
     const steppers = ['#side', '#below', '#vertical', '#plain'].map(id => {
         const s = document.querySelector(id);
-        const right = Math.max(...[...s.querySelectorAll('[data-slot=header]')]
-            .map(h => h.getBoundingClientRect().right));
-        return [s.scrollWidth, s.clientWidth, right];
+        const widest = Math.max(...[...s.querySelectorAll('[data-slot=header]')]
+            .map(h => h.getBoundingClientRect().width));
+        return [s.scrollWidth, s.clientWidth, widest];
     });
     return [[document.documentElement.scrollWidth, innerWidth, 0], ...steppers];
 })()";
 
 /// A label with no break opportunity wraps in its step at 390px and 320px, in every arm:
-/// nothing scrolls sideways (1.4.10, 518, 525).
+/// the page never scrolls sideways (1.4.10, 518, 525, 2029).
 #[test]
 fn a_long_label_wraps_instead_of_widening_the_page() {
     block_on(async {
@@ -209,12 +209,15 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
                 .await
                 .unwrap();
             let widths: Vec<[f64; 3]> = page.evaluate(WIDTHS).await.unwrap().into_value().unwrap();
-            let [page_width, viewport, _] = widths[0];
+            // Not `innerWidth`: mobile emulation widens it to the content (todo 2029).
+            let viewport = f64::from(width);
+            let page_width = widths[0][0];
             assert!(
                 page_width <= viewport,
                 "{width}px: the page scrolls sideways: {widths:?}"
             );
-            for (arm, [scroll, client, right]) in ["side", "below", "vertical", "plain"]
+            // The strip may scroll inside the stepper (todo 2030), but no step is wider than it.
+            for (arm, [scroll, client, widest]) in ["side", "below", "vertical", "plain"]
                 .iter()
                 .zip(&widths[1..])
             {
@@ -223,8 +226,8 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
                     "{width}px {arm}: the stepper overflows: {widths:?}"
                 );
                 assert!(
-                    *right <= viewport,
-                    "{width}px {arm}: a step is off screen: {widths:?}"
+                    widest <= client,
+                    "{width}px {arm}: a step is wider than the stepper: {widths:?}"
                 );
             }
         }
@@ -244,8 +247,8 @@ const MANY: &str = "(() => ['#side-5', '#below-5', '#side-9', '#below-9'].map(id
 
 type Many = Vec<(String, f64, f64, f64, f64, String)>;
 
-/// Five steps fit 390 and 320px by shrinking the connectors; nine scroll in their strip;
-/// the page never scrolls sideways (1.4.10, todo 1573).
+/// Steps that no longer fit once the connectors shrank scroll in their strip rather than
+/// split a word; the page never scrolls sideways (1.4.10, 1573, 2030).
 #[test]
 fn many_steps_shrink_then_scroll_in_their_strip() {
     block_on(async {
@@ -269,17 +272,25 @@ fn many_steps_shrink_then_scroll_in_their_strip() {
                 page_width <= f64::from(width),
                 "{width}px: the page scrolls sideways: {many:?}"
             );
-            for (id, scroll, client, strip, strip_client, _) in &many {
+            for (id, scroll, client, ..) in &many {
                 assert!(
                     scroll <= client,
                     "{width}px {id}: the stepper overflows: {many:?}"
                 );
-                if id.ends_with("-5") {
-                    assert!(
-                        strip <= strip_client,
-                        "{width}px {id}: five steps scroll: {many:?}"
-                    );
-                }
+            }
+            // The strip scrolls before a word splits (todo 2030).
+            for id in ["#side-5", "#below-5"] {
+                let (split, words): (Vec<String>, usize) = page
+                    .evaluate(SPLIT_WORDS.replace("#plain", id))
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                assert!(words > 0, "{width}px {id}: no label word examined");
+                assert!(
+                    split.is_empty(),
+                    "{width}px {id}: words broken across lines: {split:?}"
+                );
             }
         }
         fixture.console.assert_clean("many steps").unwrap();

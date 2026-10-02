@@ -3,7 +3,7 @@
 use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
-use e2e::passes::{contrast, focus, keyboard, motion, pointer};
+use e2e::passes::{focus, keyboard, motion, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The strip's scrolling viewport.
@@ -14,12 +14,6 @@ fn it_meets_the_baseline() {
     Suite::new("scroller", "/scroller")
         .focusable("#tag-0")
         .targets("#strip > button")
-        .waive(&[contrast::Waiver {
-            rule: "focus-clipped",
-            contains: "#tag-0",
-            floor: 0.0,
-            why: "todo 2043: the viewport cuts an edge item's outset ring",
-        }])
         .run();
 }
 
@@ -81,6 +75,42 @@ fn a_tabbed_item_is_not_left_under_a_control() {
             !scrolls.is_empty() && scrolls.iter().all(|scroll| !scroll.smooth),
             "the strip's scrolls under reduced motion: {scrolls:?}"
         );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Px of the focused item's outset ring the strip's clip cuts, per side: `[left, top, right,
+/// bottom]`. The ring reaches the halo spread past the item's box.
+const RING_CUT: &str = "(() => { const e = document.activeElement; \
+    const p = document.createElement('div'); \
+    p.style.cssText = 'position: absolute; width: var(--lsx-focus-ring-halo-spread)'; \
+    document.body.append(p); const spread = p.getBoundingClientRect().width; p.remove(); \
+    if (!(spread > 0)) throw new Error('no ring spread'); \
+    const a = e.getBoundingClientRect(); \
+    const v = document.querySelector('[role=region]'); const r = v.getBoundingClientRect(); \
+    const clip = { left: r.left + v.clientLeft, top: r.top + v.clientTop, \
+    right: r.left + v.clientLeft + v.clientWidth, bottom: r.top + v.clientTop + v.clientHeight }; \
+    return [clip.left - (a.left - spread), clip.top - (a.top - spread), \
+    (a.right + spread) - clip.right, (a.bottom + spread) - clip.bottom].map(c => Math.max(0, c)); })()";
+
+/// Todo 2043: the strip's clip cut the first and last items' outset focus rings (2.4.7).
+#[test]
+fn an_edge_items_focus_ring_is_not_clipped() {
+    block_on(async {
+        let fixture = Fixture::open("/scroller", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        keyboard::tab_to(page, "#before", 3).await.unwrap();
+        for (tag, sides) in [("#tag-0", [0, 1, 3]), ("#tag-11", [1, 2, 3])] {
+            keyboard::tab_to(page, tag, 12).await.unwrap();
+            wait::for_js_true(page, &format!("{HIDDEN} <= 0.5"), "the item in view")
+                .await
+                .unwrap();
+            let cut: [f64; 4] = page.evaluate(RING_CUT).await.unwrap().into_value().unwrap();
+            for side in sides {
+                assert!(cut[side] <= 0.5, "{tag}: ring cut [l, t, r, b] {cut:?}");
+            }
+        }
         fixture.close().await.unwrap();
     });
 }

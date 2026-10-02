@@ -145,8 +145,9 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         .font("inherit")
         .color("inherit")
         .text_align_start()
-        // A long word wraps instead of widening a narrow page (1.4.10).
-        .with("overflow-wrap", "anywhere")
+        // Not `anywhere`: words stay whole down to the step's min-content, and the strip
+        // scrolls before one splits (todo 2030); only a word wider than the strip breaks.
+        .with("overflow-wrap", "break-word")
         // No min-content measure: Blitz kept a label broken per glyph from one (734).
         .min_width("0")
         .selector(format!("& > {marker_slot}"), marker)
@@ -184,9 +185,12 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 .margin_top(format!("calc(-1 * {ring_room})"))
                 .margin_bottom(format!("calc(-1 * {ring_room})")),
         )
+        // The cap also caps the step's min-content floor, so a word wider than the strip breaks.
         .selector(
             "& > ol > li",
-            sx().display("flex").align_items("flex-start"),
+            sx().display("flex")
+                .align_items("flex-start")
+                .max_width("100%"),
         )
         .selector("& > ol > li + li", sx().flex("1 1 auto"))
         .selector(

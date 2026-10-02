@@ -105,6 +105,7 @@ explains how parts work.
 - `aria_label` and `aria_labelledby` land on the step list, not the root.
 - A horizontal strip never widens the page (WCAG 1.4.10): the connectors
   shrink first, then steps that still don't fit scroll inside the strip.
+  Labels keep their words whole; only a word wider than the strip breaks.
 
 ### You must
 

@@ -414,6 +414,36 @@ fn a_search_matching_nothing_is_shown_and_said() {
     crate::select::search_matching_nothing("/cascader/search", TRIGGER);
 }
 
+/// Todo 2035: a search leaving some paths says how many, as `ComboboxCore` does.
+#[test]
+fn a_narrowing_search_says_its_result_count() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader/search", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({SEARCH:?})"),
+            "the search box to take focus",
+        )
+        .await
+        .unwrap();
+        keyboard::type_text(page, "a").await.unwrap();
+        let said = "(() => { const n = document.querySelectorAll('[role=option]').length; \
+             const word = n === 1 ? 'result' : 'results'; \
+             return n > 0 && [...document.querySelectorAll('[role=status]')] \
+             .some(s => s.textContent.trim() === `${n} ${word}`); })()";
+        wait::for_js_true(page, said, "the status to say the row count")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("cascader count").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The open search box carries the field's label, captions and states.
 #[test]
 fn the_open_search_box_is_announced_as_the_field() {

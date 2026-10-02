@@ -9,7 +9,7 @@ use crate::{
             parts_enum, parts_source, sx_source, use_style_attributes, variables, with_parts,
         },
         layout::{Collapse, box_style, use_box},
-        navigation::{NewTabHint, wants_new_tab_hint},
+        navigation::{NewTabHint, tree::row_draws_current, wants_new_tab_hint},
     },
     context::IconSlot,
     hooks::{
@@ -252,11 +252,12 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         (props.color.clone(), theme.nav_link.color),
         |(color, default_color)| nav_link_variables(color.as_ref(), *default_color).render(),
     );
+    // A tree row already drawing the current look would stack its tint on ours (todo 2037).
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with("disabled", disabled)
-        .with("active", is_active)
+        .with("active", is_active && !row_draws_current())
         .into();
     let aria_current = is_active.then_some("page");
 

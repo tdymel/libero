@@ -269,7 +269,7 @@ pub fn KanbanPage() -> Element {
                         .doc("The card's position in its column, from 0. Key the card by its data, not by this."),
                     prop("label", "Option<String>")
                         .default("\"Item {n}\"")
-                        .doc("Names the card in its controls and the announcements. Unset, `SortableLabels::item` with its position."),
+                        .doc("Names the card in its controls and the announcements. Unset, the handle reads the card's content, and the other controls and announcements `SortableLabels::item` with its position."),
                     prop("parts", "Parts<KanbanCardPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                     prop("children", "Element").doc("The card's content, between the handle and the move buttons."),

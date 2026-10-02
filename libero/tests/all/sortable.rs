@@ -67,7 +67,7 @@ fn a_rows_unlabelled_items_are_named_by_position() {
 }
 
 /// The text of the elements `ids` points at, joined as a name is.
-fn labelled_by(html: &str, ids: &str) -> String {
+pub fn labelled_by(html: &str, ids: &str) -> String {
     ids.split_whitespace()
         .map(|id| {
             let after = html.split(&format!("id=\"{id}\"")).nth(1).unwrap();

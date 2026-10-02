@@ -310,6 +310,9 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
 
     // Drawn in the list's place and said by the status region below.
     let nothing_found = (searching && visible.is_empty()).then_some(nothing_found);
+    // What a query left, said but not shown (WCAG 4.1.3, todo 2035).
+    let results =
+        (searching && !visible.is_empty()).then(|| (words.combobox.results)(visible.len()));
     let body = match nothing_found {
         Some(text) => nothing_found_row(text),
         None => body,
@@ -394,6 +397,9 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         // Always mounted: a region inserted with its text is not announced.
         VisuallyHidden { role: "status",
             if let Some(text) = nothing_found {
+                "{text}"
+            }
+            if let Some(text) = results {
                 "{text}"
             }
         }

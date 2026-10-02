@@ -15,6 +15,62 @@ const BRANCH: &str = "[role=treeitem][aria-expanded]";
 const CHEVRON: &str = "[role=treeitem][aria-expanded] [data-tree-chevron]";
 const ROVING: &str = "[role=tree] [tabindex='0']";
 
+/// Per tree of `/tree/links/current`: the current link's background image and colour,
+/// its text colour, and its row content's background image and colour.
+const CURRENT_LOOKS: &str = "['#plain', '#guided'].map(t => { \
+    const link = document.querySelector(`${t} a[aria-current=page]`); \
+    const row = link.closest('[data-slot=content]'); \
+    const [l, r] = [getComputedStyle(link), getComputedStyle(row)]; \
+    return [l.backgroundImage, l.backgroundColor, l.color, r.backgroundImage, r.backgroundColor]; })";
+
+/// Todo 2037: without guides the current row draws the tint and start bar, so its active
+/// `NavLink` draws none; with guides the guide marks the row and the link keeps its look.
+#[test]
+fn a_current_link_row_draws_one_look() {
+    block_on(async {
+        let fixture = Fixture::open("/tree/links/current", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#guided a[aria-current=page]")
+            .await
+            .unwrap();
+        let looks: Vec<[String; 5]> = page
+            .evaluate(CURRENT_LOOKS)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let [plain, guided] = &looks[..] else {
+            panic!("{looks:?}")
+        };
+        let painted = |image: &str, colour: &str| image != "none" || colour != "rgba(0, 0, 0, 0)";
+        assert!(!painted(&plain[0], &plain[1]), "plain link: {looks:?}");
+        assert!(painted(&plain[3], &plain[4]), "plain row: {looks:?}");
+        assert!(painted(&guided[0], &guided[1]), "guided link: {looks:?}");
+
+        e2e::browser::force_colours(page).await.unwrap();
+        let looks: Vec<[String; 5]> = page
+            .evaluate(CURRENT_LOOKS)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let plain = &looks[0];
+        assert_eq!(
+            plain[1], "rgba(0, 0, 0, 0)",
+            "forced, plain link: {looks:?}"
+        );
+        assert_ne!(plain[4], "rgba(0, 0, 0, 0)", "forced, plain row: {looks:?}");
+        assert_ne!(
+            plain[2], plain[4],
+            "forced, the link text on its row: {looks:?}"
+        );
+        fixture.console.assert_clean("current link rows").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The chevron turns by a state-driven `transform` as its branch expands.
 async fn chevron_turns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let collapsed = d.style(CHEVRON, "transform").await?;

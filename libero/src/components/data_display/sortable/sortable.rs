@@ -241,35 +241,15 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
 
     let content_class = use_css(Some(&SORTABLE_CONTENT_SX), CssLayer::Framework);
     let move_class = use_css(Some(&SORTABLE_MOVE_SX), CssLayer::Framework);
-    let (content_id, before_id, after_id) = (use_id()(), use_id()(), use_id()());
-    // Unlabelled, the handle reads its item's content inside the template's words (todo 1280).
-    let (before, after) = words
-        .handle
-        .split_once("{label}")
-        .unwrap_or((words.handle, ""));
-    let labelled_by = props.label.is_none().then(|| {
-        [
-            (before, &before_id),
-            ("{label}", &content_id),
-            (after, &after_id),
-        ]
-        .into_iter()
-        .filter(|(words, _)| !words.trim().is_empty())
-        .map(|(_, id)| id.as_str())
-        .collect::<Vec<_>>()
-        .join(" ")
-    });
+    let handle_name = use_handle_name(words.handle, props.label.as_deref());
     let handle = use_box()
         .framework_sx(&SORTABLE_HANDLE_SX)
         .prepare()
         .element(&item.handle)
         .attr("data-slot", SortableItemPart::Handle.slot())
         .attr("type", "button")
-        .attr(
-            "aria-label",
-            props.label.is_some().then(|| named(words.handle)),
-        )
-        .attr("aria-labelledby", labelled_by.clone())
+        .attr("aria-label", handle_name.aria_label)
+        .attr("aria-labelledby", handle_name.aria_labelledby)
         .attr("aria-describedby", view.instructions.clone())
         .event("onpointerdown", item.onpointerdown)
         .event("onkeydown", item.onkeydown)
@@ -279,10 +259,7 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
             Vec::new(),
             rsx! {
                 Glyph { slot: IconSlot::Grip, icon: lucide::grip_vertical::outlined }
-                if labelled_by.is_some() {
-                    span { id: "{before_id}", hidden: true, {before.trim()} }
-                    span { id: "{after_id}", hidden: true, {after.trim()} }
-                }
+                {handle_name.words}
             },
         );
 
@@ -339,7 +316,7 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
             rsx! {
                 {handle}
                 div {
-                    id: "{content_id}",
+                    id: "{handle_name.content_id}",
                     class: content_class,
                     "data-slot": SortableItemPart::Content.slot(),
                     {props.children}
@@ -352,6 +329,46 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
 /// What an item's controls call it: its `label`, else `item` at its current position.
 pub(crate) fn item_name(item: &str, label: Option<&str>, index: usize) -> String {
     label.map_or_else(|| fill(item, &[("n", &(index + 1))]), str::to_owned)
+}
+
+/// A drag handle's name: `template` filled with the label, or unlabelled, the item's
+/// content read inside the template's words (todos 1280, 2036).
+pub(crate) struct HandleName {
+    /// For the element holding the item's content.
+    pub content_id: String,
+    pub aria_label: Option<String>,
+    pub aria_labelledby: Option<String>,
+    /// The template's own words, hidden in the handle for `aria_labelledby`.
+    pub words: Element,
+}
+
+pub(crate) fn use_handle_name(template: &'static str, label: Option<&str>) -> HandleName {
+    let (content_id, before_id, after_id) = (use_id()(), use_id()(), use_id()());
+    let (before, after) = template.split_once("{label}").unwrap_or((template, ""));
+    let aria_labelledby = label.is_none().then(|| {
+        [
+            (before, &before_id),
+            ("{label}", &content_id),
+            (after, &after_id),
+        ]
+        .into_iter()
+        .filter(|(words, _)| !words.trim().is_empty())
+        .map(|(_, id)| id.as_str())
+        .collect::<Vec<_>>()
+        .join(" ")
+    });
+    let words = rsx! {
+        if aria_labelledby.is_some() {
+            span { id: "{before_id}", hidden: true, {before.trim()} }
+            span { id: "{after_id}", hidden: true, {after.trim()} }
+        }
+    };
+    HandleName {
+        aria_label: label.map(|label| fill(template, &[("label", &label)])),
+        content_id,
+        aria_labelledby,
+        words,
+    }
 }
 
 #[cfg(test)]

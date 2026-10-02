@@ -20,6 +20,7 @@ pub const ROUTES: Routes = &[
     ("/tree/chevron", || rsx! { ChevronTreePage {} }),
     ("/tree/activate", || rsx! { ActivateTreePage {} }),
     ("/tree/guides", || rsx! { GuidesTreePage {} }),
+    ("/tree/links/current", || rsx! { CurrentLinkTreePage {} }),
     (
         "/tree/guides/rtl",
         || rsx! { div { dir: "rtl", GuidesTreePage {} } },
@@ -55,6 +56,35 @@ fn GuidesTreePage() -> Element {
                         "{args.data}"
                     }
                 },
+            }
+        }
+    }
+}
+
+/// Todo 2037: NavLink rows with this page current, `#plain` without guides, `#guided` with.
+#[component]
+fn CurrentLinkTreePage() -> Element {
+    let data = || {
+        vec![TreeNode::new("section", "Section").children(vec![
+            TreeNode::new("/tree/links/current", "Here"),
+            TreeNode::new("/tree/links/arrived", "Elsewhere"),
+        ])]
+    };
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            for (id, guides) in [("plain", false), ("guided", true)] {
+                Tree {
+                    key: "{id}",
+                    id,
+                    aria_label: "Pages",
+                    data: data(),
+                    guides,
+                    current: "/tree/links/current",
+                    default_expanded: HashSet::from(["section".to_string()]),
+                    render_node: move |args: TreeNodeRenderArgs<&'static str>| rsx! {
+                        NavLink { to: args.id, tabindex: args.tabindex, "{args.data}" }
+                    },
+                }
             }
         }
     }

@@ -99,7 +99,7 @@ fn LongLabelPage() -> Element {
                 option_description: |stage: Stage| format!("About the {}", stage.label()),
                 panel: |_: Stage| rsx! { "Body." },
             }
-            // The same in `side`, in a 320px box: the container query stacks it.
+            // The same in `side`, in a box up to 320px: the container query stacks it.
             div { max_width: "320px",
                 Stepper {
                     id: "boxed",

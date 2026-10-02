@@ -19,7 +19,7 @@ use crate::{
     },
     platform::{ElementApi, is_measured_resize, next_task, scroll, when_laid_out},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
+    theme::{FOCUS_RING_HALO_SPREAD, SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
 };
 
 pub use crate::theme::ScrollerControls;
@@ -199,9 +199,16 @@ static SCROLLER_ROOT_SX: StaticSx = StaticSx::new(|| {
 
 /// Merged onto `ScrollArea`'s own: x axis, hidden scrollbar, native scrolling.
 static SCROLLER_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
+    // The padding keeps an edge item's outset ring clear of the clip, the margin takes the
+    // height back; `scroll-padding` keeps that room when focus scrolls an item in (todo 2043).
+    let ring_room = FOCUS_RING_HALO_SPREAD.value();
     // As tall as its content, not the parent.
     scroll_area_base(
         sx().height("auto")
+            .padding(ring_room.clone())
+            .margin_top(format!("calc(-1 * {ring_room})"))
+            .margin_bottom(format!("calc(-1 * {ring_room})"))
+            .with("scroll-padding-inline", ring_room)
             .overscroll_behavior_x("contain")
             .scroll_behavior("smooth")
             // Only Firefox drops smooth scrolling under reduced motion by itself.

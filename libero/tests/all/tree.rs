@@ -5,7 +5,7 @@ use crate::common::{attributes_of, body, render, tag_with, tags_with};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Tree, TreeItem, TreeItemContent, TreeNode, TreeNodeRenderArgs},
+    components::{NavLink, Tree, TreeItem, TreeItemContent, TreeNode, TreeNodeRenderArgs},
 };
 
 /// The row hands its content the tab stop and the `disabled` flag through
@@ -185,6 +185,43 @@ fn rows_are_unselected_and_the_current_row_is_aria_current() {
             .is_some_and(|state| state.split(' ').any(|state| state == "current")),
         "{content:?}"
     );
+}
+
+/// Todo 2037: an active `NavLink` in the current row leaves the look to the row, so the
+/// tint and start bar are drawn once; elsewhere it keeps its own.
+#[test]
+fn an_active_nav_link_in_the_current_row_leaves_the_look_to_the_row() {
+    fn app() -> Element {
+        let data = vec![
+            TreeNode::new("a", "Alpha".to_string()),
+            TreeNode::new("b", "Beta".to_string()),
+        ];
+        rsx! {
+            LiberoProvider {
+                Tree {
+                    aria_label: "Pages",
+                    data,
+                    current: "b",
+                    render_node: move |args: TreeNodeRenderArgs<String>| rsx! {
+                        NavLink { to: "/page", active: true, "{args.data}" }
+                    },
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    let links = tags_with(&html, r#"aria-current="page""#);
+    assert_eq!(links.len(), 2, "{html}");
+    let active = |link: &std::collections::BTreeMap<String, String>| {
+        link.get("data-state")
+            .is_some_and(|state| state.split(' ').any(|state| state == "active"))
+    };
+    assert!(
+        active(&links[0]),
+        "a plain row keeps the link's look: {links:?}"
+    );
+    assert!(!active(&links[1]), "the current row draws it: {links:?}");
 }
 
 /// A `current` hidden in a collapsed branch hands the tab stop to the branch.

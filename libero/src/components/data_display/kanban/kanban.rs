@@ -15,7 +15,8 @@ use crate::{
         common::{Glyph, HtmlTag, Input, Orientation, Part, States, base_props, parts_enum},
         data_display::sortable::{
             SORTABLE_CONTENT_SX, SORTABLE_HANDLE_SX, SORTABLE_MOVE_SX, SortableMove,
-            SortableOptions, item_name, sortable_item_sx, use_labelled_sortable_item, use_sortable,
+            SortableOptions, item_name, sortable_item_sx, use_handle_name,
+            use_labelled_sortable_item, use_sortable,
         },
         layout::use_box,
         overlay::{Menu, MenuItem, use_menu},
@@ -371,7 +372,8 @@ base_props! {
     pub struct KanbanCardProps {
         /// The card's position in its column, from 0. Key it by its data, not this.
         index: usize,
-        /// Names the card in its controls and the announcements. Unset, "Item {n}" by its position.
+        /// Names the card in its controls and the announcements. Unset, the handle reads the
+        /// card's content, the rest "Item {n}" by its position.
         #[props(default, into)]
         label: Option<String>,
         children: Element,
@@ -510,13 +512,15 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .collect::<Vec<_>>()
         .join(" ");
     let move_class = use_css(Some(&SORTABLE_MOVE_SX), CssLayer::Framework);
+    let handle_name = use_handle_name(words.sortable.handle, props.label.as_deref());
     let handle = use_box()
         .framework_sx(&SORTABLE_HANDLE_SX)
         .prepare()
         .element(&item.handle)
         .attr("data-slot", KanbanCardPart::Handle.slot())
         .attr("type", "button")
-        .attr("aria-label", named(words.sortable.handle))
+        .attr("aria-label", handle_name.aria_label)
+        .attr("aria-labelledby", handle_name.aria_labelledby)
         .attr("aria-describedby", (column.instructions)())
         .event("onpointerdown", carried.onpointerdown)
         .event("onkeydown", carried.onkeydown)
@@ -524,7 +528,10 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
         .render(
             HtmlTag::Button,
             Vec::new(),
-            rsx! { Glyph { slot: IconSlot::Grip, icon: lucide::grip_vertical::outlined } },
+            rsx! {
+                Glyph { slot: IconSlot::Grip, icon: lucide::grip_vertical::outlined }
+                {handle_name.words}
+            },
         );
 
     let moves = (board.move_buttons)().then(|| {
@@ -580,7 +587,12 @@ pub fn KanbanCard(props: KanbanCardProps) -> Element {
             props.attributes,
             rsx! {
                 {handle}
-                div { class: content_class, "data-slot": KanbanCardPart::Content.slot(), {props.children} }
+                div {
+                    id: "{handle_name.content_id}",
+                    class: content_class,
+                    "data-slot": KanbanCardPart::Content.slot(),
+                    {props.children}
+                }
                 {moves}
                 Menu { state: menu, items, {move_to} }
             },

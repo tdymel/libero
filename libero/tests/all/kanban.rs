@@ -107,10 +107,28 @@ fn move_buttons_false_keeps_the_handle_and_the_menu() {
     let html = body(&render(no_buttons_app));
 
     assert!(!html.contains("Move up"), "{html}");
-    // Unlabelled, a card is named by its position.
-    assert!(html.contains("aria-label=\"Reorder Item 1\""), "{html}");
+    // Unlabelled, the menu names a card by its position.
     assert!(
         html.contains("aria-label=\"Move Item 1 to column\""),
         "{html}"
     );
+}
+
+/// Todo 2036: an unlabelled card's handle reads its content, as Sortable's does.
+#[test]
+fn an_unlabelled_cards_handle_is_named_by_its_content() {
+    let html = body(&render(no_buttons_app));
+
+    let handle = html
+        .split("<button")
+        .find(|tag| tag.contains("data-slot=\"handle\""))
+        .map(|tag| &tag[..tag.find('>').unwrap()])
+        .unwrap_or_else(|| panic!("no handle: {html}"));
+    assert!(!handle.contains("aria-label="), "{handle}");
+    let ids = handle
+        .split("aria-labelledby=\"")
+        .nth(1)
+        .and_then(|rest| rest.split('"').next())
+        .unwrap_or_else(|| panic!("no aria-labelledby: {handle}"));
+    assert_eq!(crate::sortable::labelled_by(&html, ids), "Reorder Write");
 }
