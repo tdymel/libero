@@ -1,6 +1,9 @@
 //! `ScrollArea` re-measures when its pane resizes (425), resized by script as a `Splitter`
 //! would, with the window left alone.
 
+use chromiumoxide::cdp::browser_protocol::input::{
+    DispatchMouseEventParams, DispatchMouseEventType,
+};
 use chromiumoxide::cdp::browser_protocol::page::AddScriptToEvaluateOnNewDocumentParams;
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, pointer};
@@ -486,11 +489,37 @@ fn without_scroll_timelines_the_track_still_stays_put() {
     });
 }
 
+/// One 120px wheel notch down over `selector`'s centre, waited until it scrolled.
+async fn wheel_step(page: &chromiumoxide::Page, selector: &str) {
+    let at = pointer::centre_of(page, selector).await.unwrap();
+    let top = format!("document.querySelector('{selector}').scrollTop");
+    let before: f64 = page
+        .evaluate(top.as_str())
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    page.execute(
+        DispatchMouseEventParams::builder()
+            .r#type(DispatchMouseEventType::MouseWheel)
+            .x(at.x)
+            .y(at.y)
+            .delta_x(0.0)
+            .delta_y(120.0)
+            .build()
+            .unwrap(),
+    )
+    .await
+    .unwrap();
+    wait::for_js_true(page, &format!("{top} !== {before}"), "the wheel to scroll")
+        .await
+        .unwrap();
+}
+
 /// A scroll redraws nothing under scroll timelines (1954): a resize between two scrolls
 /// must still bring the thumb's size and travel up to date.
 #[test]
 fn a_resize_between_scrolls_keeps_the_thumb_on_its_track() {
-    const AREA: &str = "document.querySelector('#bars-v')";
     block_on(async {
         let fixture = Fixture::open("/scroll-area/bars", Viewport::Desktop)
             .await
@@ -500,13 +529,11 @@ fn a_resize_between_scrolls_keeps_the_thumb_on_its_track() {
             .await
             .unwrap();
 
-        page.evaluate(format!("{AREA}.scrollTop = {AREA}.scrollHeight"))
-            .await
-            .unwrap();
+        wheel_step(page, "#bars-v").await;
         wait::for_js_true(
             page,
-            &part("bars-v", V_THUMB, "Math.abs(p.bottom) < 1"),
-            "the thumb at the bottom",
+            &part("bars-v", V_THUMB, V_THUMB_PLACED),
+            "the thumb after the first wheel step",
         )
         .await
         .unwrap();
@@ -522,25 +549,17 @@ fn a_resize_between_scrolls_keeps_the_thumb_on_its_track() {
         .unwrap();
         wait::for_js_true(
             page,
-            &part(
-                "bars-v",
-                V_THUMB,
-                &format!("Math.abs(p.bottom) < 1 && {V_THUMB_PLACED}"),
-            ),
-            "the resized thumb still at the bottom",
+            &part("bars-v", V_THUMB, V_THUMB_PLACED),
+            "the resized thumb in place",
         )
         .await
         .unwrap();
 
-        page.evaluate(format!(
-            "{AREA}.scrollTop = ({AREA}.scrollHeight - {AREA}.clientHeight) / 2"
-        ))
-        .await
-        .unwrap();
+        wheel_step(page, "#bars-v").await;
         wait::for_js_true(
             page,
             &part("bars-v", V_THUMB, V_THUMB_PLACED),
-            "the resized thumb half way",
+            "the resized thumb after the second wheel step",
         )
         .await
         .unwrap();
