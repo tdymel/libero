@@ -195,9 +195,10 @@ field_props! {
         /// over, so the editor does nothing with it. Drives an `overlay` from the keyboard.
         #[props(default, into)]
         intercept: Option<Callback<EditorInput, bool>>,
-        /// Floats at the caret while `Some`, such as a mention list, through the page's
-        /// portal, so no clipping ancestor cuts it. Focus stays in the text: steer it
-        /// through `intercept`, insert through the handle's `edit`.
+        /// Floats at the caret while `Some`, such as a mention list. It renders in the
+        /// page's portal: no ancestor clips it, and it does not inherit the editor's CSS
+        /// context. Focus stays in the text: steer it through `intercept`, insert through
+        /// the handle's `edit`.
         #[props(default, into)]
         overlay: Option<Element>,
         /// The id of the `overlay`'s highlighted option, so a screen reader announces it.
