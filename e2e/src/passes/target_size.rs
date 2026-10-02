@@ -165,6 +165,19 @@ pub fn assert_sizes_spaced(selector: &str, measured: &[Spaced]) -> Result<()> {
         }
         let centre = target.centre();
         for neighbour in neighbours {
+            // An undersized neighbour's own box counts too: a long thin bar has a far centre.
+            let clearance = neighbour.distance_from(centre);
+            if clearance < RADIUS - EPSILON {
+                bail!(
+                    "target size: WCAG 2.5.8's spacing exception fails for {selector}: the \
+                     {MINIMUM}px circle on a {}x{} target reaches a {}x{} target \
+                     {clearance:.2}px away, where it needs {RADIUS}px of clearance",
+                    target.width,
+                    target.height,
+                    neighbour.width,
+                    neighbour.height
+                );
+            }
             if neighbour.undersized() {
                 let (nx, ny) = neighbour.centre();
                 let pitch = (centre.0 - nx).hypot(centre.1 - ny);
@@ -179,21 +192,42 @@ pub fn assert_sizes_spaced(selector: &str, measured: &[Spaced]) -> Result<()> {
                         neighbour.height
                     );
                 }
-            } else {
-                let clearance = neighbour.distance_from(centre);
-                if clearance < RADIUS - EPSILON {
-                    bail!(
-                        "target size: WCAG 2.5.8's spacing exception fails for {selector}: the \
-                         {MINIMUM}px circle on a {}x{} target reaches a {}x{} target \
-                         {clearance:.2}px away, where it needs {RADIUS}px of clearance",
-                        target.width,
-                        target.height,
-                        neighbour.width,
-                        neighbour.height
-                    );
-                }
             }
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn size(x: f64, y: f64, width: f64, height: f64) -> Size {
+        Size {
+            width,
+            height,
+            x,
+            y,
+        }
+    }
+
+    #[test]
+    fn an_undersized_bar_beside_a_small_target_fails_by_its_box() {
+        // Centres 65px apart, but the bar's box sits 5px from the button's centre.
+        let measured = [Spaced {
+            target: size(0.0, 0.0, 10.0, 10.0),
+            neighbours: vec![size(10.0, 0.0, 120.0, 12.0)],
+        }];
+        let error = assert_sizes_spaced("#x", &measured).unwrap_err();
+        assert!(
+            format!("{error}").contains("needs 12px of clearance"),
+            "{error}"
+        );
+
+        let apart = [Spaced {
+            target: size(0.0, 0.0, 10.0, 10.0),
+            neighbours: vec![size(30.0, 0.0, 120.0, 12.0)],
+        }];
+        assert_sizes_spaced("#x", &apart).unwrap();
+    }
 }

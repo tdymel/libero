@@ -25,7 +25,7 @@ fn ImageListCaptionsPage() -> Element {
     let picture = |alt: &str| rsx! { Image { src: PICTURE, alt: alt.to_string() } };
 
     rsx! {
-        div { style: "width: 600px",
+        div { style: "max-width: 600px",
             ImageList {
                 cols: 2u8,
                 items: vec![

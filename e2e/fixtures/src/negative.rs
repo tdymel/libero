@@ -7,6 +7,10 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/broken/focus-ring", || rsx! { NoFocusRing {} }),
+    ("/broken/translucent-ring", || rsx! { TranslucentRing {} }),
+    ("/broken/clipped-ring", || rsx! { ClippedRing {} }),
+    ("/broken/covered-focus", || rsx! { CoveredFocus {} }),
+    ("/broken/reflow", || rsx! { NoReflow {} }),
     ("/broken/target-size", || rsx! { TinyTarget {} }),
     ("/broken/target-spacing", || rsx! { CrampedTargets {} }),
     ("/broken/contrast", || rsx! { LowContrast {} }),
@@ -60,11 +64,62 @@ pub fn NoFocusRing() -> Element {
     rsx! {
         document::Style {
             "#no-ring:focus, #no-ring:focus-visible, #unmarked-ring:focus-visible {{ outline: none; box-shadow: none; }} \
-             #unmarked-ring:focus-visible > div {{ outline: 2px solid #000; }}"
+             #unmarked-ring:focus-visible > div {{ outline: 2px solid #000; }} \
+             #zero-ring:focus, #zero-ring:focus-visible {{ outline: solid 0px #000; box-shadow: none; }}"
         }
         button { id: "no-ring", style: "padding: 8px 16px; border: 1px solid #888;", "No ring" }
         div { id: "unmarked-ring", tabindex: "0", role: "button",
             div { "Unmarked ring" }
+        }
+        // A solid outline 0px wide: the shorthand changes, nothing is drawn (todo 1797).
+        button { id: "zero-ring", style: "padding: 8px 16px; border: 1px solid #888;", "Zero ring" }
+    }
+}
+
+/// WCAG 1.4.11: a black ring at 10% alpha, a faint grey as it shows on white (todo 1796).
+#[component]
+pub fn TranslucentRing() -> Element {
+    rsx! {
+        document::Style {
+            "#translucent-ring:focus-visible {{ outline: 2px solid rgba(0, 0, 0, 0.1); outline-offset: 2px; }}"
+        }
+        button { id: "translucent-ring", style: "padding: 8px 16px; border: 1px solid #888;", "Translucent ring" }
+    }
+}
+
+/// WCAG 1.4.10: a fixed 360px box scrolls a 320px page sideways; the wide grid is 2D content
+/// a test exempts (todo 1794).
+#[component]
+pub fn NoReflow() -> Element {
+    rsx! {
+        div { id: "too-wide", style: "width: 400px; height: 24px; background: #ddd;" }
+        div { id: "wide-grid", style: "width: 600px; height: 24px; background: #eee;" }
+    }
+}
+
+/// WCAG 2.4.7: an offset ring cut by its `overflow: hidden` parent (todo 1793).
+#[component]
+pub fn ClippedRing() -> Element {
+    rsx! {
+        document::Style { "#clipped-ring:focus-visible {{ outline: 2px solid #000; outline-offset: 2px; }}" }
+        div { style: "overflow: hidden; display: inline-block; margin: 24px;",
+            button { id: "clipped-ring", style: "display: block; padding: 8px 16px; border: 1px solid #888;", "Clipped ring" }
+        }
+    }
+}
+
+/// WCAG 2.4.11: a sticky bar pulled over the start of its scroller's content, where the
+/// target sits; focus does not scroll a target already in the scrollport (todo 1793).
+#[component]
+pub fn CoveredFocus() -> Element {
+    rsx! {
+        document::Style { "#covered-focus:focus-visible {{ outline: 2px solid #000; outline-offset: 2px; }}" }
+        div { style: "height: 160px; width: 240px; overflow: auto; border: 1px solid #888;",
+            div { style: "position: sticky; top: 0; height: 64px; margin-bottom: -64px; background: #333; color: #fff;",
+                "Sticky bar"
+            }
+            button { id: "covered-focus", style: "margin: 16px; padding: 8px 16px;", "Under the bar" }
+            div { style: "height: 400px;" }
         }
     }
 }
@@ -147,6 +202,19 @@ pub fn CrampedTargets() -> Element {
                 id: "cramped-b",
                 "aria-label": "Cramped B",
                 style: "box-sizing: border-box; width: 20px; height: 20px; padding: 0; margin: 0; border: 1px solid #555;",
+            }
+        }
+        // Centres 65px apart, yet the bar lies inside the small button's circle (todo 1792).
+        div { style: "display: flex; gap: 0; margin-top: 48px;",
+            button {
+                id: "beside-bar",
+                "aria-label": "Beside a bar",
+                style: "box-sizing: border-box; width: 10px; height: 10px; padding: 0; margin: 0; border: 1px solid #555;",
+            }
+            button {
+                id: "bar",
+                "aria-label": "Bar",
+                style: "box-sizing: border-box; width: 120px; height: 12px; padding: 0; margin: 0; border: 1px solid #555;",
             }
         }
     }

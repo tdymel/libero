@@ -100,7 +100,7 @@ fn LongLabelPage() -> Element {
                 panel: |_: Stage| rsx! { "Body." },
             }
             // The same in `side`, in a 320px box: the container query stacks it.
-            div { width: "320px",
+            div { max_width: "320px",
                 Stepper {
                     id: "boxed",
                     value: Some(Stage::Shipping),

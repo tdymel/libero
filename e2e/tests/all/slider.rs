@@ -805,7 +805,16 @@ fn tab_reaches_readonly_and_skips_disabled() {
             .await
             .unwrap();
         keyboard::press(page, keyboard::END).await.unwrap();
+        // Whatever End would do has run once its handler's renders have.
+        e2e::clock::settle(page).await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement !== document.querySelector('#fixed [role=slider]')",
+            "Tab to leave the read-only thumb",
+        )
+        .await
+        .unwrap();
         let state: Vec<String> = page
             .evaluate(
                 "[document.querySelector('#fixed [role=slider]').getAttribute('aria-valuenow'), \
@@ -956,6 +965,10 @@ fn a_track_press_does_not_pin_the_value_bubble() {
         )
         .await
         .unwrap();
+        // Up first, or its going proves nothing.
+        wait::for_visible(page, BUBBLE).await.unwrap_or_else(|e| {
+            panic!("no value bubble under the pointer after a track press: {e}")
+        });
         pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 })
             .await
             .unwrap();
@@ -986,10 +999,10 @@ fn a_disabled_slider_shows_not_allowed_and_ignores_the_pointer() {
         };
         pointer::drag(page, from, to, 10).await.unwrap();
         pointer::move_to(page, from).await.unwrap();
+        e2e::clock::settle(page).await.unwrap();
         let (now, bubble): (String, bool) = page
             .evaluate(format!(
-                "new Promise(r => setTimeout(() => r([{value}, \
-                 [...document.querySelectorAll('[role=tooltip]')].some(t => t.checkVisibility())]), 600))"
+                "[{value}, [...document.querySelectorAll('[role=tooltip]')].some(t => t.checkVisibility())]"
             ))
             .await
             .unwrap()

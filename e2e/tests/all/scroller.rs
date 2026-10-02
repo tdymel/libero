@@ -3,7 +3,7 @@
 use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
-use e2e::passes::{focus, keyboard, motion, pointer};
+use e2e::passes::{contrast, focus, keyboard, motion, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The strip's scrolling viewport.
@@ -14,6 +14,12 @@ fn it_meets_the_baseline() {
     Suite::new("scroller", "/scroller")
         .focusable("#tag-0")
         .targets("#strip > button")
+        .waive(&[contrast::Waiver {
+            rule: "focus-clipped",
+            contains: "#tag-0",
+            floor: 0.0,
+            why: "todo 2043: the viewport cuts an edge item's outset ring",
+        }])
         .run();
 }
 

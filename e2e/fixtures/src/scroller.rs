@@ -17,7 +17,7 @@ pub const ROUTES: Routes = &[
 fn PlainPage() -> Element {
     rsx! {
         button { id: "before", "Before" }
-        div { style: "width: 300px",
+        div { style: "max-width: 300px",
             Scroller { id: "wide", aria_label: "Wide",
                 Flex { direction: "row", gap: "sm", wrap: false,
                     for i in 0..12 {
@@ -41,7 +41,7 @@ fn ScrollerPage(#[props(default)] rtl: bool) -> Element {
     rsx! {
         div { dir: if rtl { "rtl" } else { "ltr" },
             button { id: "before", "Before" }
-            div { style: "width: 300px",
+            div { style: "max-width: 300px",
                 Scroller { id: "strip", aria_label: "Tags", draggable: rtl,
                     Flex { direction: "row", gap: "sm",
                         for i in 0..12 {

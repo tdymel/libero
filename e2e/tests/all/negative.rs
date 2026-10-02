@@ -3,7 +3,7 @@
 
 use e2e::archetypes::{Combobox, Orientation, Overlay, RovingTabindex};
 use e2e::browser::block_on;
-use e2e::passes::{contrast, dismissal, focus, keyboard, target_size};
+use e2e::passes::{contrast, dismissal, focus, keyboard, reflow, target_size};
 use e2e::{Fixture, Viewport, wait};
 
 /// Opens a broken fixture, runs `check`, and requires an error containing `because`: a bare
@@ -88,6 +88,64 @@ fn the_focus_ring_pass_ignores_a_ring_on_an_unmarked_child() {
     });
 }
 
+/// `outline: solid 0px` changes the shorthand and draws nothing (todo 1797).
+#[test]
+fn the_focus_ring_pass_catches_a_zero_width_outline() {
+    block_on(ring_must_fail(
+        "/broken/focus-ring",
+        "#zero-ring",
+        "produced no visible ring anywhere on it",
+    ));
+}
+
+/// A translucent ring is measured as it shows over the surface, not as solid (todo 1796).
+#[test]
+fn the_focus_ring_pass_catches_a_translucent_ring() {
+    block_on(ring_must_fail(
+        "/broken/translucent-ring",
+        "#translucent-ring",
+        "WCAG 1.4.11",
+    ));
+}
+
+/// WCAG 2.4.7: a ring cut by an `overflow: hidden` parent (todo 1793).
+#[test]
+fn the_focus_ring_pass_catches_a_clipped_ring() {
+    block_on(ring_must_fail(
+        "/broken/clipped-ring",
+        "#clipped-ring",
+        "by a clipping ancestor",
+    ));
+}
+
+/// WCAG 2.4.11: a sticky bar over the focused control (todo 1793).
+#[test]
+fn the_focus_ring_pass_catches_covered_focus() {
+    block_on(ring_must_fail(
+        "/broken/covered-focus",
+        "#covered-focus",
+        "is covered at its centre by div",
+    ));
+}
+
+/// `must_fail` for the ring and its contrast together, as `Suite` runs them.
+async fn ring_must_fail(route: &str, selector: &'static str, expected: &'static str) {
+    must_fail(
+        route,
+        "assert_focus_ring + assert_ring_contrast",
+        expected,
+        |fixture| async move {
+            let result = async {
+                let ring = focus::assert_focus_ring(&fixture.page, selector, 5).await?;
+                focus::assert_ring_contrast(&ring)
+            }
+            .await;
+            (fixture, result)
+        },
+    )
+    .await;
+}
+
 /// WCAG 1.4.11 on a field: the ring is the `[data-ring]` overlay, so a faint one fails even
 /// though the border changes strongly.
 #[test]
@@ -144,6 +202,43 @@ fn the_target_size_pass_catches_targets_too_close_together() {
             |fixture| async move {
                 let result =
                     target_size::assert_minimum_or_spacing(&fixture.page, "#cramped-a").await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// An undersized neighbour is judged by its box too: a long thin bar's centre is far away
+/// although the bar lies inside the small target's circle (todo 1792).
+#[test]
+fn the_target_size_pass_catches_a_small_target_beside_a_thin_bar() {
+    block_on(async {
+        must_fail(
+            "/broken/target-spacing",
+            "assert_minimum_or_spacing",
+            "needs 12px of clearance",
+            |fixture| async move {
+                let result =
+                    target_size::assert_minimum_or_spacing(&fixture.page, "#beside-bar").await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// WCAG 1.4.10 Reflow: a 360px box at 320px wide, named past the exempted 2D grid (todo 1794).
+#[test]
+fn the_reflow_pass_catches_sideways_scroll_at_320() {
+    block_on(async {
+        must_fail(
+            "/broken/reflow",
+            "assert_reflows",
+            "past div#too-wide reaching",
+            |fixture| async move {
+                let result =
+                    reflow::assert_reflows(&fixture.page, &["#wide-grid"], "the fixture").await;
                 (fixture, result)
             },
         )

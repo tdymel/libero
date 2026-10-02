@@ -5,7 +5,7 @@ use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::ImeSetCompositionParams;
 use e2e::browser::{Scheme, block_on};
 use e2e::passes::keyboard::{self, BACKSPACE, CTRL, ENTER, Key};
-use e2e::passes::{contrast, pointer};
+use e2e::passes::{contrast, live_region, pointer};
 use e2e::{Fixture, Viewport, js, wait};
 
 const KEY_B: Key = Key {
@@ -71,6 +71,57 @@ async fn holds(page: &Page, check: &str, what: &str) {
     {
         panic!("{what}: {}", js::<String>(page, check).await);
     }
+}
+
+/// A real press on the element `expression` finds: a JS `.click()` skips the `mousedown`
+/// that would take focus from the caret (todo 1795).
+async fn press(page: &Page, expression: &str) {
+    let marked: bool = js(
+        page,
+        format!(
+            "(() => {{ document.querySelectorAll('[data-e2e-press]').forEach(e => e.removeAttribute('data-e2e-press')); \
+               const el = {expression}; if (!el) return false; el.setAttribute('data-e2e-press', ''); return true; }})()"
+        ),
+    )
+    .await;
+    assert!(marked, "nothing to press at {expression}");
+    pointer::click(page, "[data-e2e-press]").await.unwrap();
+}
+
+/// The editor's own live region, polite and present before any message (todo 1800).
+const STATUS: &str = "#e2e-editor-status";
+
+/// Marks the status region next to the editor's text as [`STATUS`] and checks it is polite.
+async fn editor_status(page: &Page) {
+    let marked: bool = js(
+        page,
+        format!(
+            "(() => {{ let p = {EDITOR}; while (p && !p.querySelector('[role=status]')) p = p.parentElement; \
+               const s = p?.querySelector('[role=status]'); if (!s) return false; s.id = 'e2e-editor-status'; return true; }})()"
+        ),
+    )
+    .await;
+    assert!(marked, "no live region beside the editor");
+    live_region::assert_politeness(page, STATUS, "polite")
+        .await
+        .unwrap();
+}
+
+/// Waits for the editor's live region to say `message`.
+async fn announced(page: &Page, message: &str) {
+    let last = std::cell::RefCell::new(String::new());
+    let said = wait::until(&format!("{message:?} announced"), || async {
+        let now = live_region::text_of(page, STATUS).await?;
+        let found = now == message;
+        *last.borrow_mut() = now;
+        Ok(found)
+    })
+    .await;
+    assert!(
+        said.is_ok(),
+        "{message:?} not announced; the region says {:?}",
+        last.borrow()
+    );
 }
 
 /// No transition or animation still running, as a screenshot or a colour read needs.
@@ -217,9 +268,7 @@ fn a_caller_toolbar_runs_commands_and_reads_state_through_the_handle() {
         keyboard::type_text(page, "ab").await.unwrap();
         out_eq(page, "ab\n").await;
         select_first_leaf(page).await;
-        page.evaluate("document.getElementById('ext-bold').click()")
-            .await
-            .unwrap();
+        pointer::click(page, "#ext-bold").await.unwrap();
         out_eq(page, "**ab**\n").await;
         wait::for_js_true(
             page,
@@ -231,9 +280,7 @@ fn a_caller_toolbar_runs_commands_and_reads_state_through_the_handle() {
         .await
         .unwrap();
 
-        page.evaluate("document.getElementById('ext-undo').click()")
-            .await
-            .unwrap();
+        pointer::click(page, "#ext-undo").await.unwrap();
         out_eq(page, "ab\n").await;
         fixture.close().await.unwrap();
     });
@@ -275,18 +322,14 @@ fn link_dialog_shortcut_help_block_menu_and_announcements() {
         keyboard::type_text(page, "ab").await.unwrap();
         out_eq(page, "ab\n").await;
 
-        // Mod+B from the keyboard is announced.
+        // Mod+B from the keyboard is announced, on and off.
+        editor_status(page).await;
         select_first_leaf(page).await;
         keyboard::press_with(page, KEY_B, CTRL).await.unwrap();
-        wait::for_js_true(
-            page,
-            "document.querySelector('[role=status]').textContent === 'Bold on'",
-            "Mod+B announced",
-        )
-        .await
-        .unwrap();
+        announced(page, "Bold on").await;
         keyboard::press_with(page, KEY_B, CTRL).await.unwrap();
         out_eq(page, "ab\n").await;
+        announced(page, "Bold off").await;
 
         // Mod+K: an unsafe scheme is a field error, a safe one links the selection.
         select_first_leaf(page).await;
@@ -348,11 +391,11 @@ fn link_dialog_shortcut_help_block_menu_and_announcements() {
         .unwrap();
 
         // The block-type menu turns the paragraph into a heading.
-        page.evaluate(format!("{TRIGGER}.click()")).await.unwrap();
+        press(page, TRIGGER).await;
         wait::for_js_true(page, &format!("!!{HEADING}"), "the block menu")
             .await
             .unwrap();
-        page.evaluate(format!("{HEADING}.click()")).await.unwrap();
+        press(page, HEADING).await;
         out_eq(page, "## [ab](https://example.com)\n").await;
         wait::for_js_true(
             page,
@@ -492,10 +535,10 @@ fn a_narrow_toolbar_keeps_one_row_and_moves_the_rest_into_more() {
             ),
         )
         .await;
-        page.evaluate(format!("{MORE}.click()")).await.unwrap();
+        press(page, MORE).await;
         let quote = "[...document.querySelectorAll('[role=menuitemcheckbox]')].find(i => i.textContent.includes('Quote'))";
         assert!(until(page, quote).await, "no Quote in the More menu");
-        page.evaluate(format!("{quote}.click()")).await.unwrap();
+        press(page, quote).await;
         let quoted = until(
             page,
             "document.getElementById('out').textContent.startsWith('> above')",
@@ -695,11 +738,14 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
 
         keyboard::type_text(page, "ab").await.unwrap();
         out_eq(page, "ab\n").await;
-        page.evaluate(
-            "document.querySelector('[role=toolbar] button[aria-label=\"Bulleted list\"]').click()",
-        )
-        .await
-        .unwrap();
+        pointer::click(page, "[role=toolbar] button[aria-label=\"Bulleted list\"]")
+            .await
+            .unwrap();
+        // Off the button: its tooltip rising mid-composition commits the composed text
+        // (`- abcに日本`), todo 2044.
+        pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 })
+            .await
+            .unwrap();
         out_eq(page, "- ab\n").await;
         wait::for_js_true(
             page,
@@ -726,11 +772,9 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
         // A code block is source with fences while the caret is in it, `CodeBlock` after.
         keyboard::press(page, ENTER).await.unwrap();
         keyboard::press(page, ENTER).await.unwrap();
-        page.evaluate(
-            "document.querySelector('[role=toolbar] button[aria-label=\"Code block\"]').click()",
-        )
-        .await
-        .unwrap();
+        pointer::click(page, "[role=toolbar] button[aria-label=\"Code block\"]")
+            .await
+            .unwrap();
         keyboard::type_text(page, "let x = 1;").await.unwrap();
         out_where(page, "the typed code", |now| {
             now.ends_with("```\nlet x = 1;\n```\n")
@@ -889,11 +933,11 @@ fn a_typed_fence_sets_the_language_and_the_toolbar_menu_changes_it() {
         let shown: bool = js(page, &format!("!!{LANGUAGE}")).await;
         assert!(!shown, "the language menu shows outside a code block");
         enter_code(page).await;
-        page.evaluate(format!("{LANGUAGE}.click()")).await.unwrap();
+        press(page, LANGUAGE).await;
         wait::for_js_true(page, &format!("!!{PLAIN}"), "the language menu")
             .await
             .unwrap();
-        page.evaluate(format!("{PLAIN}.click()")).await.unwrap();
+        press(page, PLAIN).await;
         out_eq(page, "intro\n\n```\nlet x = 1;\n```\n").await;
 
         // Down out of the block, then a fence and Enter: a Python block.
@@ -934,11 +978,11 @@ fn the_fence_button_and_mod_shift_l_change_the_language_and_return_to_the_caret(
             "the name starts with the visible text"
         );
         assert_eq!(tabindex, "-1");
-        page.evaluate(format!("{FENCE}.click()")).await.unwrap();
+        press(page, FENCE).await;
         wait::for_js_true(page, &format!("!!{PLAIN}"), "the fence's language menu")
             .await
             .unwrap();
-        page.evaluate(format!("{PLAIN}.click()")).await.unwrap();
+        press(page, PLAIN).await;
         out_eq(page, "intro\n\n```\nlet x = 1;\n```\n").await;
         wait::for_js_true(page, IN_TEXT, "focus back in the text")
             .await
@@ -1159,13 +1203,11 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
 
         // The caller's toolbar button types the @; a click on an option picks it.
         keyboard::type_text(page, " ").await.unwrap();
-        page.evaluate("document.querySelector('[aria-label=\"Mention someone\"]').click()")
+        pointer::click(page, "[aria-label=\"Mention someone\"]")
             .await
             .unwrap();
         options(4).await.unwrap();
-        page.evaluate("document.getElementById('mention-grace').click()")
-            .await
-            .unwrap();
+        pointer::click(page, "#mention-grace").await.unwrap();
         out_eq(page, "hi \u{fffc} @g \u{fffc} ").await;
         fixture.close().await.unwrap();
     });
@@ -1323,8 +1365,43 @@ fn a_readonly_editor_is_a_tab_stop_and_a_disabled_one_says_so() {
 
 #[test]
 fn toolbar_and_menu_actions_are_announced() {
-    const STATUS: &str = "document.querySelector('[role=status]')?.textContent";
+    const BULLETS: &str = "[role=toolbar] button[aria-label=\"Bulleted list\"]";
     const HEADING: &str = "[...document.querySelectorAll('[role=menuitemradio]')].find(i => i.textContent.includes('Heading 3'))";
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        editor_status(page).await;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        keyboard::type_text(page, "ab").await.unwrap();
+        wait::for_js_true(page, &out_is("ab\n"), "the typed text")
+            .await
+            .unwrap();
+
+        pointer::click(page, BULLETS).await.unwrap();
+        announced(page, "Bulleted list on").await;
+        pointer::click(page, BULLETS).await.unwrap();
+        announced(page, "Bulleted list off").await;
+
+        pointer::click(page, "[role=toolbar] button[aria-haspopup]")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("!!{HEADING}"), "the block menu")
+            .await
+            .unwrap();
+        press(page, HEADING).await;
+        announced(page, "Heading 3").await;
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1795: the toolbar is one tab stop the arrows walk, Tab leaves it for the text, and
+/// the block-type menu runs from the keyboard.
+#[test]
+fn the_toolbar_and_its_block_menu_work_from_the_keyboard() {
+    const ITEMS: &str =
+        "[...document.querySelectorAll('[role=toolbar] button')].filter(b => b.offsetParent)";
     block_on(async {
         let fixture = Fixture::open("/rich-text-editor", Viewport::Desktop)
             .await
@@ -1332,34 +1409,146 @@ fn toolbar_and_menu_actions_are_announced() {
         let page = &fixture.page;
         page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
         keyboard::type_text(page, "ab").await.unwrap();
-        wait::for_js_true(page, &out_is("ab\n"), "the typed text")
+        out_eq(page, "ab\n").await;
+        let at = |index: &str| format!("{ITEMS}.indexOf(document.activeElement) === {index}");
+
+        page.evaluate("document.activeElement.blur()")
             .await
             .unwrap();
-
-        page.evaluate(
-            "document.querySelector('[role=toolbar] button[aria-label=\"Bulleted list\"]').click()",
+        keyboard::tab_to(page, "[role=toolbar] button", 10)
+            .await
+            .unwrap();
+        for (key, index, what) in [
+            (keyboard::ARROW_RIGHT, "1", "ArrowRight to the second tool"),
+            (
+                keyboard::END,
+                &format!("{ITEMS}.length - 1"),
+                "End to the last tool",
+            ),
+            (keyboard::HOME, "0", "Home to the first tool"),
+        ] {
+            keyboard::press(page, key).await.unwrap();
+            wait::for_js_true(page, &at(index), what).await.unwrap();
+        }
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === {EDITOR}"),
+            "Tab from the toolbar to the text",
         )
         .await
         .unwrap();
+
+        // Back on the remembered tool, then right to the block-type trigger.
+        keyboard::press_with(page, keyboard::TAB, keyboard::SHIFT)
+            .await
+            .unwrap();
+        wait::for_js_true(page, &at("0"), "Shift+Tab back to the first tool")
+            .await
+            .unwrap();
+        let trigger: usize = js(
+            page,
+            format!("{ITEMS}.findIndex(b => b.hasAttribute('aria-haspopup'))"),
+        )
+        .await;
+        for step in 1..=trigger {
+            keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+            wait::for_js_true(page, &at(&step.to_string()), "ArrowRight along the toolbar")
+                .await
+                .unwrap();
+        }
+        keyboard::press(page, ENTER).await.unwrap();
         wait::for_js_true(
             page,
-            &format!("{STATUS} === 'Bulleted list on'"),
-            "the toolbar toggle announced",
+            "document.activeElement?.getAttribute('role') === 'menuitemradio'",
+            "Enter to open the block menu with focus in it",
         )
         .await
         .unwrap();
-
-        page.evaluate("document.querySelector('[role=toolbar] button[aria-haspopup]').click()")
+        let on_heading =
+            "document.activeElement?.textContent.includes('Heading 2') ?? false".to_string();
+        for _ in 0..8 {
+            if js::<bool>(page, &on_heading).await {
+                break;
+            }
+            let before: String = js(page, "document.activeElement.textContent").await;
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!("document.activeElement.textContent !== {before:?}"),
+                "ArrowDown to the next block type",
+            )
             .await
             .unwrap();
-        wait::for_js_true(page, &format!("!!{HEADING}"), "the block menu")
-            .await
-            .unwrap();
-        page.evaluate(format!("{HEADING}.click()")).await.unwrap();
+        }
+        assert!(js::<bool>(page, &on_heading).await, "no Heading 2 in reach");
+        keyboard::press(page, ENTER).await.unwrap();
+        out_eq(page, "## ab\n").await;
         wait::for_js_true(
             page,
-            &format!("{STATUS} === 'Heading 3'"),
-            "the block type announced",
+            &format!("document.activeElement === {EDITOR}"),
+            "focus back in the text after the pick",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1795: on a phone the overflow tools sit in More, whose menu the arrows walk and
+/// Escape closes back onto its trigger.
+#[test]
+fn the_more_menu_works_from_the_keyboard_on_a_phone() {
+    const ACTIVE_ROLE: &str = "document.activeElement?.getAttribute('role')";
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/code", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        assert!(until(page, MORE).await, "no More trigger");
+        keyboard::tab_to(page, "[role=toolbar] button", 10)
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::END).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === {MORE}"),
+            "End to the More trigger",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{ACTIVE_ROLE} === 'menuitemcheckbox'"),
+            "Enter to open More with focus in it",
+        )
+        .await
+        .unwrap();
+        let first: String = js(page, "document.activeElement.textContent").await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{ACTIVE_ROLE} === 'menuitemcheckbox' && document.activeElement.textContent !== {first:?}"
+            ),
+            "ArrowDown to the next hidden tool",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === {MORE}"),
+            "Escape back onto More",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === {EDITOR}"),
+            "Tab from the toolbar to the text",
         )
         .await
         .unwrap();

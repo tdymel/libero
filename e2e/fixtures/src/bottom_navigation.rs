@@ -50,13 +50,14 @@ fn BottomNavigationPage() -> Element {
     let mut clicked = use_signal(|| false);
     rsx! {
         div { style: "display: flex; flex-direction: column; gap: 24px;",
-            div { id: "column", style: "width: 320px;",
+            // `max-width`: a phone column that still reflows at 320px (WCAG 1.4.10).
+            div { id: "column", style: "max-width: 320px;",
                 Bar { prefix: "", count: 5, show_labels: "always" }
             }
-            div { id: "rtl", dir: "rtl", style: "width: 320px;",
+            div { id: "rtl", dir: "rtl", style: "max-width: 320px;",
                 Bar { prefix: "rtl-", count: 3, show_labels: "always" }
             }
-            div { style: "width: 320px;",
+            div { style: "max-width: 320px;",
                 BottomNavigation { "aria-label": "Links",
                     BottomNavigationItem { id: "link", to: "/bottom-navigation", selected: true,
                         icon: rsx! { Pictogram { icon: lucide::house::outlined } },
@@ -84,7 +85,7 @@ fn BottomNavigationPage() -> Element {
 #[component]
 fn ScrollerPage() -> Element {
     rsx! {
-        div { id: "pane", style: "width: 320px; height: 300px; overflow-y: auto; scroll-padding-bottom: var(--lsx-bottom-navigation-height);",
+        div { id: "pane", style: "max-width: 320px; height: 300px; overflow-y: auto; scroll-padding-bottom: var(--lsx-bottom-navigation-height);",
             for index in 0..20 {
                 a { key: "{index}", id: "row-{index}", href: "#row-{index}", style: "display: block; padding: 12px;", "Row {index}" }
             }

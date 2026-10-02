@@ -14,7 +14,7 @@
 //! Behaviour contracts live in `archetypes` or the component's own test, not here.
 
 use crate::passes::keyboard::{self, Key};
-use crate::passes::{contrast, focus, motion, pointer, target_size};
+use crate::passes::{contrast, focus, motion, pointer, reflow, target_size};
 use crate::{Fixture, Scheme, Viewport, ax, browser};
 
 /// How long a state's entry animation may take; well past the theme's longest (200 ms).
@@ -68,6 +68,8 @@ pub struct Suite {
     reduced_motion: bool,
     /// Visible once the page is at rest; the battery waits for it first.
     ready: Option<&'static str>,
+    /// 2D content allowed to scroll sideways at 320 px, each with why (WCAG 1.4.10's exception).
+    reflow_exempt: Vec<(&'static str, &'static str)>,
 }
 
 impl Suite {
@@ -90,6 +92,7 @@ impl Suite {
             tab_budget: 10,
             reduced_motion: false,
             ready: None,
+            reflow_exempt: Vec::new(),
         }
     }
 
@@ -124,8 +127,8 @@ impl Suite {
         self
     }
 
-    /// Known axe violations, each naming a todo; still printed. A `target-size`
-    /// waiver holds a target whose selector contains its `contains`.
+    /// Known axe violations, each naming a todo; still printed. A `target-size`, `focus-clipped`
+    /// or `focus-obscured` waiver holds a target or focusable whose selector contains its `contains`.
     pub fn waive(mut self, waivers: &'static [contrast::Waiver]) -> Self {
         self.waivers = waivers;
         self
@@ -205,6 +208,19 @@ impl Suite {
     /// that lands after the first render (a broken picture's fallback).
     pub fn ready(mut self, selector: &'static str) -> Self {
         self.ready = Some(selector);
+        self
+    }
+
+    /// 2D content (a data grid, a canvas) that may scroll the page sideways at 320 px, saying why.
+    /// Repeatable; a todo number belongs in `why` when the overflow is a defect. A state's
+    /// `settled` selector here may also close over the resize.
+    pub fn reflow_exempt(mut self, selector: &'static str, why: &'static str) -> Self {
+        assert!(
+            !why.trim().is_empty(),
+            "{}: a reflow exemption must say why",
+            self.name
+        );
+        self.reflow_exempt.push((selector, why));
         self
     }
 
@@ -304,8 +320,15 @@ impl Suite {
         // A ring on every control that can be tabbed to, and enough contrast on
         // it to be seen.
         for selector in &self.focusable {
-            let ring = focus::assert_focus_ring(page, selector, self.tab_budget).await?;
+            let ring = focus::focus_ring(page, selector, self.tab_budget).await?;
             focus::assert_ring_contrast(&ring)?;
+            if let Some(cut) = ring.clipped() {
+                let error = anyhow::anyhow!("tabbing to {selector}: {cut}");
+                self.waived("focus-clipped", selector, error, fired)?;
+            }
+            if let Err(error) = focus::assert_focus_not_obscured(page, selector).await {
+                self.waived("focus-obscured", selector, error, fired)?;
+            }
         }
 
         // Targets are measured wherever they exist: an open-state control matches nothing at rest.
@@ -318,6 +341,7 @@ impl Suite {
         if self.snapshot {
             self.take_snapshot(fixture, "rest").await?;
         }
+        self.assert_reflows(fixture, "rest").await?;
 
         // Then every declared state, snapshotted and axe-checked in place.
         for state in &self.states {
@@ -330,6 +354,8 @@ impl Suite {
             if self.snapshot {
                 self.take_snapshot(fixture, state.name).await?;
             }
+            self.assert_reflows(fixture, state.name).await?;
+            self.assert_survives_reflow(fixture, state).await?;
         }
 
         // A coverage selector that found text in no state checked nothing.
@@ -403,22 +429,31 @@ impl Suite {
                 seen[index] = true;
                 target_size::assert_sizes(selector, &sizes)
             };
-            let Err(error) = verdict else { continue };
-            let waiver = self
-                .waivers
-                .iter()
-                .position(|w| w.rule == "target-size" && selector.contains(w.contains));
-            match waiver {
-                Some(at) => {
-                    fired[at] = true;
-                    eprintln!(
-                        "waived: target-size - {}\n      {error:#}",
-                        self.waivers[at].why
-                    );
-                }
-                None => return Err(error),
+            if let Err(error) = verdict {
+                self.waived("target-size", selector, error, fired)?;
             }
         }
+        Ok(())
+    }
+
+    /// `error` unless a waiver for `rule` names part of `selector`, as the `target-size`,
+    /// `focus-clipped` and `focus-obscured` waivers do; a waived one is printed.
+    fn waived(
+        &self,
+        rule: &str,
+        selector: &str,
+        error: anyhow::Error,
+        fired: &mut [bool],
+    ) -> anyhow::Result<()> {
+        let waiver = self
+            .waivers
+            .iter()
+            .position(|w| w.rule == rule && selector.contains(w.contains));
+        let Some(at) = waiver else {
+            return Err(error);
+        };
+        fired[at] = true;
+        eprintln!("waived: {rule} - {}\n      {error:#}", self.waivers[at].why);
         Ok(())
     }
 
@@ -528,6 +563,41 @@ impl Suite {
             );
         }
         Ok(())
+    }
+
+    /// WCAG 1.4.10 at 320 px, once per state: in the light mobile run only, the width it narrows.
+    async fn assert_reflows(&self, fixture: &Fixture, state: &str) -> anyhow::Result<()> {
+        if fixture.viewport != Viewport::Mobile || fixture.scheme != Scheme::Light {
+            return Ok(());
+        }
+        let exempt: Vec<&str> = self
+            .reflow_exempt
+            .iter()
+            .map(|(selector, _)| *selector)
+            .collect();
+        reflow::assert_reflows(&fixture.page, &exempt, &format!("the {state:?} state")).await
+    }
+
+    /// The 320 px round trip may close or re-place an overlay; the next state starts from this one.
+    async fn assert_survives_reflow(&self, fixture: &Fixture, state: &State) -> anyhow::Result<()> {
+        let narrowed = fixture.viewport == Viewport::Mobile && fixture.scheme == Scheme::Light;
+        let exempt = self
+            .reflow_exempt
+            .iter()
+            .any(|(selector, _)| *selector == state.settled);
+        if !narrowed || exempt {
+            return Ok(());
+        }
+        crate::wait::for_visible(&fixture.page, state.settled)
+            .await
+            .map_err(|e| {
+                e.context(format!(
+                    "the {:?} state lost {} over the 320px reflow check; if a resize closes it by \
+                 design, exempt it with `reflow_exempt({:?}, why)`",
+                    state.name, state.settled, state.settled
+                ))
+            })?;
+        self.assert_settled_in_root(&fixture.page, state).await
     }
 
     /// Snapshots live beside the tests: `insta` would write next to this file by default.
