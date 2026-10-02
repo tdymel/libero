@@ -229,7 +229,7 @@ impl BoxStyle {
     }
 
     /// Replaces the `data-state`, so one resolved style serves many elements (`CodeBlock`'s rows).
-    pub fn with_states(mut self, states: &States) -> Self {
+    pub(crate) fn with_states(mut self, states: &States) -> Self {
         self.style.data_state = states.data_state();
         self
     }
