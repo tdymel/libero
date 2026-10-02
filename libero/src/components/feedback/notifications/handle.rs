@@ -23,6 +23,8 @@ pub struct NotificationScope<T: 'static> {
     store: NotificationStore,
     args: Signal<std::boxed::Box<dyn Any>>,
     closable: bool,
+    /// Resolves to `AutoClose::Never`: only a close control or `hide` ends it.
+    stays: bool,
     ty: PhantomData<fn() -> T>,
 }
 
@@ -92,12 +94,13 @@ impl<T: 'static> NotificationHandle<T> {
         let args =
             store.owned_signal(std::boxed::Box::new(args.into()) as std::boxed::Box<dyn Any>);
         let closable = options.closable;
-        let draw: Draw = Rc::new(move || {
+        let draw: Draw = Rc::new(move |stays| {
             template(NotificationScope {
                 id,
                 store,
                 args,
                 closable,
+                stays,
                 ty: PhantomData,
             })
         });
@@ -208,6 +211,14 @@ pub fn use_notifications_with<T: 'static>(
 }
 
 fn default_template(s: NotificationScope<NotificationData>) -> Element {
+    use_hook(|| {
+        if !s.closable && s.stays {
+            warn(
+                "Notifications: `closable: false` with `AutoClose::Never` leaves the user no way \
+                 to close it; only `hide` does.",
+            );
+        }
+    });
     // All but the message text, so a text-only update redraws just `NotificationMessage`.
     let chrome = use_memo(move || {
         let data = s.args();
@@ -250,4 +261,42 @@ fn NotificationMessage(props: MessageProps) -> Element {
         .map(|data| data.message.as_str())
         .unwrap_or_default();
     rsx! { "{message}" }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        LiberoProvider, components::Notifications, theme::AutoClose, utils::take_warnings,
+    };
+
+    thread_local! {
+        static OPTIONS: Cell<NotificationOptions> = Cell::new(NotificationOptions::default());
+    }
+
+    fn warns(closable: bool, auto_close: AutoClose) -> bool {
+        OPTIONS.set(NotificationOptions {
+            closable,
+            auto_close: Some(auto_close),
+            ..Default::default()
+        });
+        take_warnings();
+        let mut dom = VirtualDom::new(|| {
+            let notify = use_notifications();
+            use_hook(|| notify.show_with("Saved.", OPTIONS.get()));
+            rsx! { LiberoProvider { Notifications {} } }
+        });
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        take_warnings()
+            .iter()
+            .any(|warning| warning.starts_with("Notifications: `closable: false`"))
+    }
+
+    #[test]
+    fn a_notification_nobody_can_close_warns() {
+        assert!(warns(false, AutoClose::Never));
+        assert!(!warns(true, AutoClose::Never));
+        assert!(!warns(false, AutoClose::After(4000)));
+    }
 }

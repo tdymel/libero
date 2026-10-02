@@ -41,7 +41,7 @@ input_from_str!(LabelPosition);
 const DIVIDER_COLOR_VAR: CssVar = CssVar::new("--lsx-divider-color");
 const DIVIDER_SPACING_VAR: CssVar = CssVar::new("--lsx-divider-spacing");
 
-/// The caller's `color` if they set one, else the theme's grey-4.
+/// The caller's `color` if they set one, else the theme's `muted.4`.
 fn divider_color() -> String {
     DIVIDER_COLOR_VAR.value_or(ColorCss::MUTED.value(ColorShade::S4))
 }

@@ -50,7 +50,7 @@ pub struct CarouselDefaults {
     pub indicator_current_length: &'static str,
     pub indicator_thickness: &'static str,
     pub indicators_gap: &'static str,
-    /// An idle dot. SC 1.4.11 asks 3:1: `grey.6` is 3.32:1 on white, `grey.5` about 2.0:1.
+    /// An idle dot. SC 1.4.11 asks 3:1: `muted.6` is 3.32:1 on white, `muted.5` about 2.0:1.
     pub indicator_color: ColorValue,
     pub indicator_current_color: ColorValue,
     /// The previous/next and pause buttons' fill, over the slides.

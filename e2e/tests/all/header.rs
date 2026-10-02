@@ -12,6 +12,11 @@ fn it_meets_the_baseline() {
 
 /// Scrolls `#item-5` just under the stuck banner, Shift+Tabs from `#item-6`, and returns
 /// how far the focused button's bottom sits below the banner's (negative: covered).
+/// A length as laid out, so a published `calc()` with the safe-area inset compares as pixels.
+const RESOLVED_HEIGHT: &str = "((height) => { const probe = document.createElement('div'); \
+     probe.style.height = height; document.body.append(probe); \
+     const px = probe.getBoundingClientRect().height; probe.remove(); return px; })";
+
 async fn clearance_after_shift_tab(padded: bool) -> f64 {
     let fixture = Fixture::open("/header", Viewport::Desktop).await.unwrap();
     let page = &fixture.page;
@@ -29,11 +34,12 @@ async fn clearance_after_shift_tab(padded: bool) -> f64 {
             .await
             .unwrap();
     }
-    // The banner publishes both on `:root` itself.
+    // The banner publishes both on `:root` itself; the height with a top inset of 0px added.
     let published: String = page
         .evaluate(
             "(() => { const root = getComputedStyle(document.documentElement); \
-             return root.getPropertyValue('--lsx-header-height').trim() + '|' + root.scrollPaddingTop; })()",
+             return resolved('var(--lsx-header-height)') + 'px|' + root.scrollPaddingTop; })()"
+                .replace("resolved", RESOLVED_HEIGHT),
         )
         .await
         .unwrap()
@@ -72,10 +78,9 @@ fn only_an_opted_in_header_publishes_its_height() {
         wait::for_visible(page, "#nested").await.unwrap();
         let heights: String = page
             .evaluate(
-                "(() => { const root = getComputedStyle(document.documentElement); \
-                 const lg = root.getPropertyValue('--lsx-header-height-lg').trim(); \
-                 return [root.getPropertyValue('--lsx-header-height').trim(), lg, \
-                 document.querySelector('#nested').getBoundingClientRect().height].join('|'); })()",
+                "(() => [resolved('var(--lsx-header-height)'), resolved('var(--lsx-header-height-lg)'), \
+                 document.querySelector('#nested').getBoundingClientRect().height].join('|'))()"
+                    .replace("resolved", RESOLVED_HEIGHT),
             )
             .await
             .unwrap()

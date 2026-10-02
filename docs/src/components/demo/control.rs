@@ -81,7 +81,7 @@ impl Control {
         Self::new(name, ControlKind::Color, &THEME_COLORS)
     }
 
-    /// Only the swatches given, for a prop that wants shades (`grey.1`)
+    /// Only the swatches given, for a prop that wants shades (`muted.1`)
     /// rather than the palette. The first option is the default.
     pub fn color_shades<const N: usize>(name: &'static str, options: [&str; N]) -> Self {
         Self::new(name, ControlKind::Color, &options)

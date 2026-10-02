@@ -77,7 +77,7 @@ pub fn DividerPage() -> Element {
                         .labels(["Start", "Center", "End"])
                         .default("center")
                         .hidden_when(|values| values.str("with_label") != "true"),
-                    // Unset draws grey-4, which bare `grey` (shade 3) is not: the unset swatch is painted grey-4.
+                    // Unset draws muted.4, which bare `muted` (shade 3) is not: the unset swatch is painted muted.4.
                     Control::color("color").with_unset()
                     .unset_swatch("muted.4"),
                     Control::slider("spacing", ["auto", "xs", "sm", "md", "lg", "xl"])

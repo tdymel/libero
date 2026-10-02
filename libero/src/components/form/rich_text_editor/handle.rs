@@ -228,3 +228,43 @@ impl RichTextHandle {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::cell::Cell;
+
+    use dioxus::core::{ScopeId, current_scope_id};
+
+    use super::*;
+    use crate::{
+        LiberoProvider,
+        components::{RichTextEditor, rich_text::Builtin},
+    };
+
+    thread_local! {
+        static CALLER: Cell<Option<(RichTextHandle, ScopeId)>> = const { Cell::new(None) };
+    }
+
+    /// Todo 1979: the editor owns the values a command reads, so the caller's call runs as the editor.
+    #[test]
+    fn the_handle_runs_as_the_editor_not_its_caller() {
+        let mut dom = VirtualDom::new(|| {
+            let editor = use_rich_text_editor();
+            use_hook(|| CALLER.set(Some((editor, current_scope_id()))));
+            rsx! { LiberoProvider { RichTextEditor { label: "Comment", handle: editor } } }
+        });
+        dom.rebuild_in_place();
+        let (handle, caller) = CALLER.get().expect("the caller rendered");
+
+        let mut ran_in = None;
+        let edited = dom.in_scope(caller, || {
+            handle.edit(|state| {
+                ran_in = Some(current_scope_id());
+                state.insert_text("a")
+            })
+        });
+        assert!(edited);
+        assert_ne!(ran_in, Some(caller));
+        assert!(dom.in_scope(caller, || handle.run(Builtin::Undo)));
+    }
+}

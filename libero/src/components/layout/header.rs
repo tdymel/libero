@@ -10,7 +10,8 @@ use crate::{
     CssLayer,
     components::{
         common::{
-            HtmlTag, Input, States, Variables, base_props, fill_color, input_from_str, variables,
+            HtmlTag, Input, States, Variables, base_props, fill_color, input_from_str,
+            safe_area_padding, variables,
         },
         layout::use_box,
     },
@@ -22,7 +23,8 @@ use crate::{
     theme::{
         ANCHOR_COLOR, AnchorDefaults, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GLASS_SHEEN,
         GRADIENT_CONTRAST, GlassTint, Gradient, HEADER_HEIGHT, HEADER_HEIGHT_VAR, NamedColorCss,
-        PAPER_BACKGROUND, PaperDefaults, SURFACE_LABEL, Size, Z_INDEX_HEADER, gradient_surface_sx,
+        PAPER_BACKGROUND, PaperDefaults, SURFACE_LABEL, Size, SizeCss, Z_INDEX_HEADER,
+        gradient_surface_sx,
     },
 };
 
@@ -115,18 +117,20 @@ fn publish(published: &Rc<Published>, retry: bool) {
     }
 }
 
-/// This Header's height and the scroll padding on `:root`, live while the root
-/// names it. Focus moved under a stuck banner is then scrolled clear (2.4.11), natively too.
+/// This Header's height, with the top safe area it pads, and the scroll padding on
+/// `:root`, live while the root names it. Focus moved under a stuck banner is then scrolled clear (2.4.11), natively too.
 fn publish_css(id: &str, height: &str) -> String {
     let padding = HEADER_HEIGHT_VAR.value();
     format!(
-        ":root[{PUBLISHER_ATTRIBUTE}=\"{id}\"]{{{}:{height};scroll-padding-top:{padding};{}:{padding};}}",
+        ":root[{PUBLISHER_ATTRIBUTE}=\"{id}\"]{{{}:{};scroll-padding-top:{padding};{}:{padding};}}",
         HEADER_HEIGHT_VAR.name(),
+        safe_area_padding(height, "top"),
         SCROLL_PADDING_VARS[0],
     )
 }
 
 static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
+    let spacing = SizeCss::SPACING.value(Size::Md);
     sx().display("flex")
         .align_items("center")
         .width("100%")
@@ -135,9 +139,11 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
             HEADER_HEIGHT.overridable(Size::Md),
         )
         // Content that wraps (200% text, 320 px) grows the banner instead of spilling.
-        .min_height(HEADER_HEIGHT_VAR.value())
-        .padding_left("md")
-        .padding_right("md")
+        .min_height(safe_area_padding(&HEADER_HEIGHT_VAR.value(), "top"))
+        // Physical, as `env()` is: clear of a phone's status bar and a landscape notch.
+        .with("padding-top", safe_area_padding("0px", "top"))
+        .with("padding-left", safe_area_padding(&spacing, "left"))
+        .with("padding-right", safe_area_padding(&spacing, "right"))
         .background(HEADER_BACKGROUND_VAR.value_or(PAPER_BACKGROUND.value()))
         .color(HEADER_COLOR_VAR.value_or("inherit"))
         // Uncoloured, the surface: its buttons keep their own colour (todo 1663).
@@ -147,7 +153,13 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .z_index(Z_INDEX_HEADER.overridable())
         .position("sticky")
         .top("0")
-        .when("static", sx().position("static"))
+        // A banner in the flow need not sit at the top of the screen.
+        .when(
+            "static",
+            sx().position("static")
+                .padding_top("0")
+                .min_height(HEADER_HEIGHT_VAR.value()),
+        )
         .when("fixed", sx().position("fixed").top("0"))
         // Links take the fill's text colour there (todo 1576), so the underline marks them.
         .when("colored", AnchorDefaults::underline_at_rest())
@@ -242,7 +254,8 @@ base_props! {
     }
 }
 
-/// The page's `banner` landmark, a sticky `<header>` for nav and actions.
+/// The page's `banner` landmark, a sticky `<header>` for nav and actions. It pads the
+/// left and right safe-area insets, and unless `Static` the top, for a `viewport-fit=cover` page.
 ///
 /// ```
 /// # use dioxus::prelude::*;
@@ -375,9 +388,46 @@ mod tests {
     fn a_publisher_sets_its_height_and_scroll_padding_on_the_root() {
         assert_eq!(
             publish_css("lsx-7", "var(--lsx-header-height-lg)"),
-            ":root[data-lsx-header=\"lsx-7\"]{--lsx-header-height:var(--lsx-header-height-lg);\
+            ":root[data-lsx-header=\"lsx-7\"]{--lsx-header-height:\
+             calc(var(--lsx-header-height-lg) + env(safe-area-inset-top, 0px));\
              scroll-padding-top:var(--lsx-header-height);\
              --lsx-scroll-padding-top:var(--lsx-header-height);}"
+        );
+    }
+
+    /// Todo 1972: the browser harness cannot emulate a notch, so the rule itself.
+    #[test]
+    fn a_stuck_banner_pads_the_safe_areas() {
+        let css = Stylesheet::from(&HEADER_BASE_SX);
+        let css = css.as_str();
+        for side in ["left", "right"] {
+            assert!(
+                css.contains(&format!(
+                    "padding-{side}:calc({} + env(safe-area-inset-{side}, 0px))",
+                    SizeCss::SPACING.value(Size::Md)
+                )),
+                "{css}"
+            );
+        }
+        let (base, stat) = css
+            .split_once(r#"[data-state~="static"]"#)
+            .unwrap_or_else(|| panic!("no static rule: {css}"));
+        assert!(
+            base.contains(
+                "min-height:calc(var(--lsx-header-height) + env(safe-area-inset-top, 0px));"
+            ),
+            "{css}"
+        );
+        assert!(
+            base.contains("padding-top:calc(0px + env(safe-area-inset-top, 0px));"),
+            "{css}"
+        );
+        // A banner in the flow need not sit at the top of the screen.
+        let stat = &stat[..stat.find('}').unwrap()];
+        assert!(stat.contains("padding-top:0;"), "{css}");
+        assert!(
+            stat.contains("min-height:var(--lsx-header-height);"),
+            "{css}"
         );
     }
 

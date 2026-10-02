@@ -5,6 +5,7 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use dioxus::core::{Runtime, current_scope_id};
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
@@ -464,17 +465,26 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         let handle = props.handle;
         if let Some(handle) = handle {
             let owner = token.clone();
-            let run = Rc::new(move |name| run_command(name, true, false));
+            // The caller's scope sits above the values these read, so they run as the editor's.
+            let scope = current_scope_id();
+            let as_editor = move |f: &mut dyn FnMut() -> bool| {
+                Runtime::try_current().is_some_and(|runtime| runtime.in_scope(scope, f))
+            };
+            let run = Rc::new(move |name: CommandName| {
+                as_editor(&mut || run_command(name.clone(), true, false))
+            });
             let edit = Rc::new(move |f: &mut dyn FnMut(&mut EditorState) -> bool| {
-                if !*can_edit.peek() {
-                    return false;
-                }
-                let f = std::cell::RefCell::new(f);
-                let mut edit = edit;
-                edit(
-                    &|live| live.apply(Record::Step, |state| (f.borrow_mut())(state)),
-                    true,
-                )
+                as_editor(&mut || {
+                    if !*can_edit.peek() {
+                        return false;
+                    }
+                    let f = std::cell::RefCell::new(&mut *f);
+                    let mut edit = edit;
+                    edit(
+                        &|live| live.apply(Record::Step, |state| (f.borrow_mut())(state)),
+                        true,
+                    )
+                })
             });
             handle.attach(&owner, Runner { run, edit });
         }

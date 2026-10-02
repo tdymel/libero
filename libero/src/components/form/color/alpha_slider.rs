@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     components::{
-        common::{Input, Part, base_props},
+        common::{Input, Part, base_props, use_name_warning},
         form::SliderChangeEvent,
         form::slider::{SliderCore, SliderCoreValue},
     },
@@ -112,6 +112,10 @@ fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> E
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size);
     let sx = color_slider_sx(&props.sx, &props.parts);
+    use_name_warning(
+        props.aria_label.is_some(),
+        "AlphaSlider: no `aria_label`, so the thumb is announced as just \"slider\".",
+    );
 
     let oninput = props.oninput;
     let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {

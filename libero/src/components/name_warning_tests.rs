@@ -7,10 +7,11 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, Audio, Avatar, Button, ButtonGroup, Carousel, Checkbox, ColorCode,
-        ColorSwatch, Dialog, Drawer, FloatingWindowOptions, HoverCard, ProgressBar, Radio,
-        RadioGroup, RangeSlider, Rating, RichTextEditor, ScrollArea, SegmentedControl, Slider,
-        Splitter, SpotlightOptions, Switch, Table, Tabs, Toolbar, ToolbarGroup, Video, column,
+        ActionIcon, AlphaSlider, Anchor, Audio, Avatar, Button, ButtonGroup, Carousel, Checkbox,
+        ColorCode, ColorPicker, ColorSwatch, Dialog, Drawer, FloatingWindowOptions, HoverCard,
+        HueSlider, ProgressBar, Radio, RadioGroup, RangeSlider, Rating, RichTextEditor, ScrollArea,
+        SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, Table, Tabs, Toolbar,
+        ToolbarGroup, Video, column,
         rich_text::{NodeViewProps, NodeViews, use_rich_text_editor},
         use_spotlight,
     },
@@ -506,6 +507,40 @@ fn an_unlabelled_audio_or_video_warns() {
         || rsx! { LiberoProvider { Video { src: "/a.mp4", label: "Trailer" } } },
         "Video:"
     ));
+}
+
+#[test]
+fn an_unnamed_hue_or_alpha_slider_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { HueSlider { value: 0.0 } } },
+        "HueSlider:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { HueSlider { value: 0.0, aria_label: "Hue" } } },
+        "HueSlider:"
+    ));
+    assert!(warns(
+        || rsx! { LiberoProvider { AlphaSlider { value: 1.0, color: ColorCode::default() } } },
+        "AlphaSlider:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { AlphaSlider { value: 1.0, color: ColorCode::default(), aria_label: "Opacity" } } },
+        "AlphaSlider:"
+    ));
+}
+
+/// The picker names its own sliders.
+#[test]
+fn a_color_pickers_sliders_do_not_warn() {
+    let warnings = warnings_of(
+        || rsx! { LiberoProvider { ColorPicker { value: ColorCode::default(), with_alpha: true } } },
+    );
+    assert!(
+        !warnings
+            .iter()
+            .any(|warning| warning.starts_with("HueSlider:") || warning.starts_with("AlphaSlider:")),
+        "{warnings:?}"
+    );
 }
 
 #[test]

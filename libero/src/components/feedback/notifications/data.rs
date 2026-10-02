@@ -75,7 +75,8 @@ impl From<String> for NotificationData {
     }
 }
 
-pub(super) type Draw = Rc<dyn Fn() -> Element>;
+/// Called with whether the notification stays until closed.
+pub(super) type Draw = Rc<dyn Fn(bool) -> Element>;
 
 /// A notification with its type erased, so the store, the timers and the host
 /// compile once whatever `T`s an app uses.

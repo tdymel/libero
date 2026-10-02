@@ -50,7 +50,7 @@ fn FormPartsPage() -> Element {
                     .part(ColorPickerPart::Thumb, sx().border_width("3px"))
                     .part(ColorPickerPart::Swatch, sx().margin_top("5px")),
             }
-            HueSlider { id: "hue", value: 120.0, oninput: move |_| {},
+            HueSlider { id: "hue", value: 120.0, oninput: move |_| {}, aria_label: "Hue",
                 parts: Parts::new().part(ColorSliderPart::Track, sx().margin_top("7px")),
             }
         }

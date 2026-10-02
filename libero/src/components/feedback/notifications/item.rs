@@ -216,5 +216,9 @@ pub(super) fn NotificationItem(props: ItemProps) -> Element {
         })
         .event("onfocusin", focus.focusin(0))
         .event("onfocusout", focus.focusout(0))
-        .render(HtmlTag::Li, Vec::new(), (props.draw.0)())
+        .render(
+            HtmlTag::Li,
+            Vec::new(),
+            (props.draw.0)(auto_close.is_none()),
+        )
 }
