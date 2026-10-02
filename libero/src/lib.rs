@@ -8,6 +8,9 @@
 // A public type reachable only through a private path is a leak: re-export it,
 // or seal it with an item-level `allow` (todo 469).
 #![warn(unnameable_types)]
+// On Android, clippy flags `thread_local!` initializers that already are
+// `const { .. }` (7 false positives).
+#![cfg_attr(target_os = "android", allow(clippy::missing_const_for_thread_local))]
 
 pub mod components;
 pub mod context;
