@@ -477,6 +477,48 @@ e2e::scenario!(
     rows_select_and_sort
 );
 
+/// 1982: the light boxes keep select-all's mixed property, and under forced colours
+/// every outline shows and only a checked or mixed box shows its mark.
+#[test]
+fn the_boxes_show_their_state_in_forced_colours() {
+    block_on(async {
+        let fixture = Fixture::open("/table/select", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelector('thead input').indeterminate === true",
+            "select-all's indeterminate property",
+        )
+        .await
+        .unwrap();
+        e2e::browser::force_colours(page).await.unwrap();
+        let wrong: Vec<String> = page
+            .evaluate(
+                "(() => { const probe = document.createElement('div'); \
+                 probe.style.background = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 return [...document.querySelectorAll('[data-select] [data-slot=box]')].flatMap(box => { \
+                   const input = box.previousElementSibling, mark = box.querySelector('svg'); \
+                   const on = input.checked || input.indeterminate; \
+                   const shown = getComputedStyle(mark).opacity === '1'; \
+                   const name = input.getAttribute('aria-label'); \
+                   return [ \
+                     getComputedStyle(box).borderTopColor === canvas ? name + ': no outline' : null, \
+                     getComputedStyle(mark).color === canvas ? name + ': a Canvas mark' : null, \
+                     on !== shown ? name + ': mark shown ' + shown : null, \
+                   ].filter(Boolean); }); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(wrong.is_empty(), "{wrong:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 1156-1c: Shift adds a column after the sorted ones and ranks both headers.
 #[test]
 fn a_shift_click_adds_a_sorted_column() {

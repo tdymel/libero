@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use pictogram_core::Svg as SvgData;
 use pictogram_icons_lucide as lucide;
 
 use crate::{
@@ -7,21 +8,19 @@ use crate::{
         accessibility::{VISUALLY_HIDDEN_SX, hidden_input_centred_sx},
         common::{
             Glyph, HtmlTag, Input, Part, States, TOOLBAR_ITEM, ToolbarItem, base_color,
-            contrast_color, disabled_look_sx, fill_color, focus_ring_sx, names_itself,
+            contrast_color, disabled_look_sx, draw_svg, fill_color, focus_ring_sx, names_itself,
             ring_overlay, ring_overlay_sx, use_name_warning, use_toolbar_item, variables,
         },
         form::{Activation, field_parts_enum, field_props, use_bound, use_field},
         layout::{BoxStyle, use_box},
     },
     context::IconSlot,
-    hooks::{ElementHandle, use_cache, use_css, use_element, use_theme},
+    hooks::{ElementHandle, use_cache, use_css, use_element, use_icon, use_theme},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar, Size},
     utils::warn,
 };
-
-use super::use_field::FIELD_SX;
 
 /// Background and border of the box; equal when checked, so one value would
 /// not do - an unchecked box is transparent with a visible outline.
@@ -330,15 +329,104 @@ fn checkbox_control(
         )
 }
 
-/// A plain [`Checkbox`]'s styling, resolved once for many label-less boxes
-/// (a table's rows): each box then costs no styling hooks.
+/// The light box's control: block-level and box-sized, so it needs no field wrapper.
+static LIGHT_CONTROL_SX: StaticSx = StaticSx::new(|| {
+    let on = || {
+        sx().selector("& > [data-slot='box']::before", sx().opacity("1"))
+            .selector("& > [data-slot='box'] > svg", sx().opacity("1"))
+            // Once faded in, the box paints the fill itself, as Checkbox's does: same edge pixels.
+            .selector(
+                "& > [data-slot='box']",
+                sx().background(CHECKBOX_BACKGROUND.value())
+                    .border_color(CHECKBOX_BACKGROUND.value())
+                    .transition("background 0s linear 150ms, border-color 0s linear 150ms"),
+            )
+    };
+    CheckboxDefaults::theme_vars()
+        .display("flex")
+        .position("relative")
+        .width(CHECKBOX_BOX.value())
+        .cursor("pointer")
+        // Over the box's centre, so a click at the input's centre lands on the box (todo 1992).
+        .selector("& > input", hidden_input_centred_sx())
+        .selector(
+            "& > input:focus-visible + [data-slot='box']::after",
+            focus_ring_sx(),
+        )
+        .when("checked", on())
+        .when("mixed", on())
+        .when("disabled", disabled_look_sx("not-allowed"))
+});
+
+/// [`CHECKBOX_BOX_SX`] at rest unchecked; the checked fill and the mark fade in by
+/// `opacity` alone, so a toggle repaints nothing (todo 1984).
+static LIGHT_BOX_SX: StaticSx = StaticSx::new(|| {
+    let layer = || sx().opacity("0").transition("opacity 150ms ease");
+    sx().display("inline-flex")
+        .align_items("center")
+        .justify_content("center")
+        .flex("0 0 auto")
+        .position("relative")
+        .width(CHECKBOX_BOX.value())
+        .height(CHECKBOX_BOX.value())
+        .border_radius(CHECKBOX_RADIUS.value())
+        .border(format!("1px solid {}", CHECKBOX_BORDER.value()))
+        .color(CHECKBOX_MARK.value())
+        .selector(
+            "::before",
+            layer()
+                .content("\"\"")
+                .position("absolute")
+                .inset("0")
+                .border_radius(format!("calc({} - 1px)", CHECKBOX_RADIUS.value()))
+                .background(CHECKBOX_BACKGROUND.value()),
+        )
+        .selector(
+            "& > svg",
+            layer().position("relative").width("65%").height("65%"),
+        )
+        // The ring of `ring_overlay`, on the box's own layer: square, over the border box.
+        .selector(
+            "::after",
+            ring_overlay_sx()
+                .content("\"\"")
+                .inset("-1px")
+                .border_radius("0"),
+        )
+        .media(
+            crate::sx::FORCED_COLORS,
+            sx().selector("::before", sx().display("none")),
+        )
+});
+
+/// [`checkbox_variables`] for the light box: the fill and mark of the checked state,
+/// the outline of the unchecked one.
+fn light_variables(base: &ThemeAwareValue) -> String {
+    variables()
+        .with(CHECKBOX_BACKGROUND, fill_color(base))
+        .with(
+            CHECKBOX_BORDER,
+            ThemeAwareValue::from("muted.6").resolve(None),
+        )
+        .with(
+            CHECKBOX_MARK,
+            contrast_color(base).and_then(|color| color.resolve(None)),
+        )
+        .render()
+}
+
+/// A lighter [`Checkbox`] for many label-less boxes (a table's rows): four
+/// elements, its styling resolved once, so each box costs no hooks (todo 1982).
 #[derive(Clone, PartialEq)]
 pub(crate) struct CheckboxLook {
-    wrapper: BoxStyle,
     on: BoxStyle,
     off: BoxStyle,
+    mixed: BoxStyle,
+    disabled: BoxStyle,
     input: BoxStyle,
     box_class: Option<String>,
+    check: SvgData,
+    dash: SvgData,
 }
 
 /// [`CheckboxLook`] at `size` in the theme's radius and colour; `None`, and no
@@ -346,79 +434,115 @@ pub(crate) struct CheckboxLook {
 pub(crate) fn use_checkbox_look(size: Size, enabled: bool) -> Option<CheckboxLook> {
     let theme = use_theme();
     let color = base_color(None);
-    let field: Input<States> = States::new()
+    let base = States::new()
         .with(size.state_name(), true)
-        .with(theme.checkbox.radius.radius_state_name(), true)
-        .with("inline", true)
-        .into();
-    let checked: Input<States> = field
-        .as_ref()
-        .cloned()
-        .unwrap_or_default()
-        .with("checked", true)
-        .into();
-    let style = |on: bool| {
-        use_cache((on, color.clone()), |(on, color)| {
-            checkbox_variables(*on, color)
-        })
-    };
-    let (on_style, off_style) = (style(true), style(false));
-    let framework = |sx: &'static StaticSx| {
+        .with(theme.checkbox.radius.radius_state_name(), true);
+    let states = |state: &'static str| -> Input<States> { base.clone().with(state, true).into() };
+    let style = use_cache(color, light_variables);
+    let framework = |sx: &'static StaticSx, states: Input<States>| {
         let builder = use_box();
         match enabled {
             true => builder.framework_sx(sx),
             false => builder,
         }
+        .states(&states)
+        .style(Some(style.clone()))
+        .prepare()
     };
-    let wrapper = framework(&FIELD_SX).states(&field).prepare();
-    let on = framework(&CHECKBOX_CONTROL_SX)
-        .states(&checked)
-        .style(Some(on_style))
-        .prepare();
-    let off = framework(&CHECKBOX_CONTROL_SX)
-        .states(&field)
-        .style(Some(off_style))
-        .prepare();
-    let input = framework(&VISUALLY_HIDDEN_SX).focus_ring(false).prepare();
-    let box_class = use_css(enabled.then_some(&CHECKBOX_BOX_SX), CssLayer::Framework);
+    let on = framework(&LIGHT_CONTROL_SX, states("checked"));
+    let mixed = framework(&LIGHT_CONTROL_SX, states("mixed"));
+    let off = framework(&LIGHT_CONTROL_SX, base.clone().into());
+    let disabled = framework(&LIGHT_CONTROL_SX, states("disabled"));
+    let input = {
+        let builder = use_box();
+        match enabled {
+            true => builder.framework_sx(&VISUALLY_HIDDEN_SX),
+            false => builder,
+        }
+        .focus_ring(false)
+        .prepare()
+    };
+    let box_class = use_css(enabled.then_some(&LIGHT_BOX_SX), CssLayer::Framework);
+    let check = use_icon(IconSlot::CheckboxCheck, lucide::check::outlined);
+    let dash = use_icon(IconSlot::CheckboxIndeterminate, lucide::minus::outlined);
     enabled.then_some(CheckboxLook {
-        wrapper,
         on,
         off,
+        mixed,
+        disabled,
         input,
         box_class,
+        check,
+        dash,
     })
 }
 
+/// A [`CheckboxLook`] box's state; a disabled box draws unchecked.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) struct LightState {
+    pub checked: bool,
+    pub indeterminate: bool,
+    pub disabled: bool,
+}
+
 impl CheckboxLook {
-    /// [`Checkbox`]'s markup and activation for a label-less, unbound, enabled box.
+    /// [`Checkbox`]'s input and activation for a label-less, unbound box.
+    /// `onchange` gets the value `checked` should take next.
     pub fn render(
         &self,
         element: ElementHandle,
-        checked: bool,
+        state: LightState,
         aria_label: String,
         onchange: impl Fn(bool) + Clone + 'static,
     ) -> Element {
-        let toggle = move || onchange(!checked);
+        let LightState {
+            checked,
+            indeterminate,
+            disabled,
+        } = state;
+        let next = indeterminate || !checked;
+        let toggle = move || {
+            if !disabled {
+                onchange(next);
+            }
+        };
         let input = checkbox_input(
             Activation::new(element, toggle.clone()).wire(self.input.clone()),
             checked,
-            false,
+            indeterminate,
         )
+        .attr("disabled", disabled)
         .attr("aria-label", aria_label)
         .render(HtmlTag::Input, Vec::new(), ());
-        let control = match checked {
-            true => &self.on,
-            false => &self.off,
+        let control = match (disabled, indeterminate, checked) {
+            (true, ..) => &self.disabled,
+            (_, true, _) => &self.mixed,
+            (_, _, true) => &self.on,
+            _ => &self.off,
         };
-        let press = move || {
+        let icon = match indeterminate {
+            true => &self.dash,
+            false => &self.check,
+        };
+        let mark = draw_svg(icon, vec![Attribute::new("stroke-width", "3", None, false)]);
+        let press = move |_| {
             toggle();
-            let _ = element.focus();
+            if !disabled {
+                let _ = element.focus();
+            }
         };
-        self.wrapper.clone().render(
-            HtmlTag::Div,
-            Vec::new(),
-            checkbox_control(control.clone(), input, self.box_class.clone(), false, press),
-        )
+        let box_node = rsx! {
+            span {
+                class: self.box_class.clone(),
+                "data-slot": CheckboxPart::Box.slot(),
+                "aria-hidden": "true",
+                onclick: press,
+                {mark}
+            }
+        };
+        control
+            .clone()
+            .attr("data-slot", CheckboxPart::Control.slot())
+            .render(HtmlTag::Span, Vec::new(), vec![input, box_node])
     }
 }

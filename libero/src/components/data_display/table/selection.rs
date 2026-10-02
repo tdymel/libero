@@ -6,11 +6,11 @@ use super::use_table::StateSlice;
 use crate::{
     components::{
         accessibility::Announcer,
-        form::{Checkbox, CheckboxLook},
+        form::{CheckboxLook, LightState},
     },
     hooks::use_element,
     localization::TableLabels,
-    theme::Size,
+    platform::ElementApi,
 };
 
 /// The checkbox column: the selection, the rows select-all covers, and its live region.
@@ -21,9 +21,7 @@ pub(super) struct Selection {
     pub scope: Rc<[String]>,
     pub announcer: Announcer,
     pub labels: TableLabels,
-    /// The table's, so the box scales with its text.
-    pub size: Size,
-    /// The rows' boxes, styled at `size`.
+    /// The boxes, styled at the table's size so they scale with its text.
     pub look: Rc<CheckboxLook>,
 }
 
@@ -48,12 +46,14 @@ impl Selection {
                 scope: "col",
                 rowspan: (rowspan > 1).then(|| rowspan.to_string()),
                 "data-select": true,
-                Checkbox {
+                SelectAll {
                     aria_label: self.labels.select_all,
-                    size: self.size,
-                    checked: all,
-                    indeterminate: count > 0 && !all,
-                    disabled: self.scope.is_empty(),
+                    look: self.look.clone(),
+                    state: LightState {
+                        checked: all,
+                        indeterminate: count > 0 && !all,
+                        disabled: self.scope.is_empty(),
+                    },
                     onchange: move |on| this.set(toggle_all(&this.slice.read(), &this.scope, on)),
                 }
             }
@@ -96,14 +96,35 @@ fn RowSelect(
     toggle: Callback<(String, bool)>,
 ) -> Element {
     let element = use_element();
+    let state = LightState {
+        checked,
+        indeterminate: false,
+        disabled: false,
+    };
     rsx! {
         td {
             "data-select": true,
             // The box is not a row click.
             onclick: |event| event.stop_propagation(),
-            {look.render(element, checked, aria_label, move |on| toggle((row.clone(), on)))}
+            {look.render(element, state, aria_label, move |on| toggle((row.clone(), on)))}
         }
     }
+}
+
+/// The header's box. A browser reads a native checkbox's mixed state from the property alone.
+#[component]
+fn SelectAll(
+    aria_label: String,
+    look: Rc<CheckboxLook>,
+    state: LightState,
+    onchange: EventHandler<bool>,
+) -> Element {
+    let element = use_element();
+    let indeterminate = state.indeterminate;
+    use_effect(use_reactive!(|indeterminate| {
+        let _ = element.set_indeterminate(indeterminate);
+    }));
+    look.render(element, state, aria_label, move |on| onchange.call(on))
 }
 
 /// `selection` with `key` in or out, the others in their order.

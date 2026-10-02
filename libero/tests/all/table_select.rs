@@ -62,23 +62,44 @@ fn select_all_is_checked_only_with_every_row_selected() {
     assert!(!none.contains("aria-selected=\"true\""), "{none}");
 }
 
-#[test]
-fn a_row_box_renders_as_a_plain_checkbox() {
-    fn table() -> Element {
-        rsx! {
-            LiberoProvider {
-                Table {
-                    aria_label: "Stock",
-                    size: Size::Sm,
-                    selectable: true,
-                    default_selection: vec!["7".to_string()],
-                    data: vec![Stock { id: 7, name: "Apple", cents: 120 }],
-                    columns: vec![column("Name").value(|s: &Stock| s.name.to_string()).row_header()],
-                    row_key: |s: &Stock| s.id.to_string(),
-                }
+fn sm_table() -> Element {
+    rsx! {
+        LiberoProvider {
+            Table {
+                aria_label: "Stock",
+                size: Size::Sm,
+                selectable: true,
+                default_selection: vec!["7".to_string()],
+                data: vec![Stock { id: 7, name: "Apple", cents: 120 }],
+                columns: vec![column("Name").value(|s: &Stock| s.name.to_string()).row_header()],
+                row_key: |s: &Stock| s.id.to_string(),
             }
         }
     }
+}
+
+/// The markup of the first body row's checkbox cell, inside its `<td>`.
+fn row_cell(table: &str) -> String {
+    let cell = table.split("<td data-select=true>").nth(1).unwrap();
+    cell[..cell.find("</td>").unwrap()].to_string()
+}
+
+/// The first `<input ...>` tag of `html`, its `id` dropped.
+fn input_tag(html: &str) -> String {
+    let start = html.find("<input").unwrap();
+    let tag = &html[start..start + html[start..].find('>').unwrap() + 1];
+    match tag.find(" id=\"") {
+        Some(id) => {
+            let end = id + 5 + tag[id + 5..].find('"').unwrap() + 1;
+            format!("{}{}", &tag[..id], &tag[end..])
+        }
+        None => tag.to_string(),
+    }
+}
+
+/// The table's lighter box (todo 1982) keeps the plain Checkbox's input: role, name and state.
+#[test]
+fn a_row_box_has_the_input_of_a_plain_checkbox() {
     fn checkbox() -> Element {
         rsx! {
             LiberoProvider {
@@ -91,19 +112,17 @@ fn a_row_box_renders_as_a_plain_checkbox() {
             }
         }
     }
-    // The table's lighter box (todo 1195) must stay the same markup, ids aside.
-    let table = body(&render(table));
-    let cell = table.split("<td data-select=true>").nth(1).unwrap();
-    let cell = &cell[..cell.find("</td>").unwrap()];
-    let plain = render(checkbox);
-    // The provider's empty portal follows the box.
-    let plain = body(&plain)
-        .strip_suffix("<div></div>")
-        .unwrap()
-        .to_string();
-    let id = plain.find(" id=\"").unwrap();
-    let end = id + 5 + plain[id + 5..].find('"').unwrap() + 1;
-    assert_eq!(cell, format!("{}{}", &plain[..id], &plain[end..]));
+    let cell = row_cell(&body(&render(sm_table)));
+    let plain = body(&render(checkbox));
+    assert_eq!(input_tag(&cell), input_tag(&plain), "{cell}");
+}
+
+/// A row's checkbox cell holds the control, the input, the box and its mark: 5 elements (todo 1982).
+#[test]
+fn a_row_box_stays_within_its_element_budget() {
+    let cell = row_cell(&body(&render(sm_table)));
+    let elements = cell.matches('<').count() - cell.matches("</").count();
+    assert!(elements <= 5, "{elements} elements: {cell}");
 }
 
 #[test]

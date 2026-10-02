@@ -13,4 +13,3 @@ pub(super) use nodes::{
     caption_content, join_ids, labelled_focus_selector, slot_node, status_node,
 };
 pub(crate) use prepared::PreparedField;
-pub(super) use styles::FIELD_SX;

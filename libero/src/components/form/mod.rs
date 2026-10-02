@@ -45,7 +45,7 @@ pub use cascader::{
     CascaderProps,
 };
 pub use checkbox::{Checkbox, CheckboxPart, CheckboxProps};
-pub(crate) use checkbox::{CheckboxLook, use_checkbox_look};
+pub(crate) use checkbox::{CheckboxLook, LightState, use_checkbox_look};
 pub use chip::{Chip, ChipPart, ChipProps};
 pub(crate) use clear::{clear_button, use_refocus_on_close};
 pub use color::{
