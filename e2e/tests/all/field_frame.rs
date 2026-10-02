@@ -6,6 +6,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::Result;
 use chromiumoxide::Page;
+use chromiumoxide::cdp::browser_protocol::input::{
+    DispatchMouseEventParams, DispatchMouseEventType, MouseButton,
+};
 use chromiumoxide::cdp::browser_protocol::page::{
     EventFileChooserOpened, SetInterceptFileChooserDialogParams,
 };
@@ -454,13 +457,26 @@ async fn drag_across(page: &Page, input: &str) -> Result<()> {
         ))
         .await?
         .into_value()?;
-    let from = pointer::Point { x: x + 1.0, y };
-    let to = pointer::Point {
-        x: x + width - 2.0,
-        y,
+    // A press with no move first, then one move: each move waits for a frame (1632, 1669).
+    let mouse = |kind: DispatchMouseEventType, x: f64, buttons: i64| {
+        DispatchMouseEventParams::builder()
+            .r#type(kind)
+            .x(x)
+            .y(y)
+            .button(MouseButton::Left)
+            .buttons(buttons)
+            .click_count(1)
+            .build()
+            .map_err(anyhow::Error::msg)
     };
-    // One step: each move waits for a frame (todo 1632).
-    pointer::drag(page, from, to, 1).await
+    let (from, to) = (x + 1.0, x + width - 2.0);
+    page.execute(mouse(DispatchMouseEventType::MousePressed, from, 1)?)
+        .await?;
+    page.execute(mouse(DispatchMouseEventType::MouseMoved, to, 1)?)
+        .await?;
+    page.execute(mouse(DispatchMouseEventType::MouseReleased, to, 0)?)
+        .await?;
+    Ok(())
 }
 
 async fn blur(page: &Page) -> Result<()> {

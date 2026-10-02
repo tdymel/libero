@@ -193,7 +193,7 @@ fn modifier_chords_are_left_to_the_browser() {
 #[test]
 fn a_drag_moves_the_pad_and_leaves_the_thumb_focused() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/color-picker", viewport).await.unwrap();
             let page = &fixture.page;
@@ -230,7 +230,8 @@ fn a_drag_moves_the_pad_and_leaves_the_thumb_focused() {
                 .assert_clean(&format!("a pad drag at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

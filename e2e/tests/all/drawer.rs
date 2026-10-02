@@ -119,7 +119,7 @@ fn an_end_drawer_docks_left_in_rtl() {
 #[test]
 fn a_drawer_taller_than_the_viewport_scrolls() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/drawer/tall", viewport).await.unwrap();
             let page = &fixture.page;
             keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
@@ -140,7 +140,8 @@ fn a_drawer_taller_than_the_viewport_scrolls() {
                 viewport.name()
             );
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -148,7 +149,7 @@ fn a_drawer_taller_than_the_viewport_scrolls() {
 #[test]
 fn a_wide_drawer_stays_inside_a_narrow_viewport() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/drawer/wide", viewport).await.unwrap();
             let page = &fixture.page;
             keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
@@ -169,7 +170,8 @@ fn a_wide_drawer_stays_inside_a_narrow_viewport() {
                 viewport.name()
             );
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

@@ -264,6 +264,10 @@ pub async fn assert_chords_ignored_with(
 ) -> Result<()> {
     let read = format!("JSON.stringify({probe})");
     let before: String = page.evaluate(read.as_str()).await?.into_value()?;
+    let settled = format!(
+        "new Promise((done) => setTimeout(() => setTimeout(() => \
+         done([{read}, window.__chordCancelled]), 0), 0))"
+    );
     page.evaluate(
         "window.__chordCancelled = []; if (!window.__chordListener) { \
          window.__chordListener = true; window.addEventListener('keydown', e => { \
@@ -282,19 +286,16 @@ pub async fn assert_chords_ignored_with(
                 continue;
             }
             press_with(page, *key, modifier).await?;
-            // Past the chord's handlers and renders; a reaction on a timer is not waited for (1631).
-            crate::clock::settle(page).await?;
-            let after: String = page.evaluate(read.as_str()).await?.into_value()?;
+            // Read after `clock::settle`'s two macrotasks, in the same round trip (todo 1670):
+            // past the chord's handlers and renders; a reaction on a timer is not waited for (1631).
+            let (after, cancelled): (String, Vec<String>) =
+                page.evaluate(settled.as_str()).await?.into_value()?;
             if after != before {
                 bail!(
                     "{name}+{} changed {probe} from {before} to {after}",
                     key.key
                 );
             }
-            let cancelled: Vec<String> = page
-                .evaluate("window.__chordCancelled")
-                .await?
-                .into_value()?;
             if !cancelled.is_empty() {
                 bail!(
                     "{name}+{} was cancelled; the chord belongs to the browser",

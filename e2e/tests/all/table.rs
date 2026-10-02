@@ -1225,7 +1225,7 @@ fn only_the_sorted_header_carries_aria_sort_and_the_others_still_hint() {
 fn a_wide_table_scrolls_from_a_focused_header() {
     const REGION: &str = AREA;
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/table/wide", viewport).await.unwrap();
             let page = &fixture.page;
@@ -1265,7 +1265,8 @@ fn a_wide_table_scrolls_from_a_focused_header() {
                 .assert_clean("scrolling a wide table")
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

@@ -50,6 +50,17 @@ pub async fn at_every_viewport<T>(run: impl AsyncFn(Viewport) -> T) -> [T; 2] {
     [first, second]
 }
 
+/// Runs `run` on every item at once, as [`at_every_viewport`] runs its two: for a loop over
+/// routes, keys or schemes whose turns each open a page of their own (todo 1716).
+pub async fn at_once<I, T>(
+    items: impl IntoIterator<Item = I>,
+    run: impl AsyncFn(I) -> T,
+) -> Vec<T> {
+    let items: Vec<I> = items.into_iter().collect();
+    let _pages = page_permit(items.len()).await;
+    futures::future::join_all(items.into_iter().map(|item| run(item))).await
+}
+
 /// The colour scheme a page is opened under, through the system case:
 /// `prefers-color-scheme`, which is what an app naming no theme follows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -559,6 +570,8 @@ impl Fixture {
     }
 
     async fn close_page(mut self) -> Result<()> {
+        // A closed target's undelivered events are lost.
+        self.console.settle().await?;
         self.closes_on_drop.0 = None;
         self.page.close().await.context("close the page")?;
         let messages = self.console.peek();

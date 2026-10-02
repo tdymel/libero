@@ -442,7 +442,7 @@ fn nested_modals_close_one_layer_at_a_time() {
 #[test]
 fn a_dialog_taller_than_the_viewport_stays_reachable() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let fixture = Fixture::open("/modal/tall", viewport).await.unwrap();
             let page = &fixture.page;
             keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
@@ -462,7 +462,8 @@ fn a_dialog_taller_than_the_viewport_stays_reachable() {
             )
             .await;
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

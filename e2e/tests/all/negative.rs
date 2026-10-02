@@ -291,6 +291,31 @@ fn the_console_recorder_catches_a_mount_time_error() {
     });
 }
 
+/// What the page logged before `Recorder::settle` is in the recorder once it returns,
+/// with no wait: a step's `assert_clean` sees its own messages (todo 1720).
+#[test]
+fn a_settled_recorder_holds_what_the_page_just_logged() {
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        for n in 0..20 {
+            fixture
+                .page
+                .evaluate(format!("console.warn('settled {n}')"))
+                .await
+                .unwrap();
+            fixture.console.settle().await.unwrap();
+            let messages = fixture.console.drain();
+            assert!(
+                messages
+                    .iter()
+                    .any(|message| message.ends_with(&format!("\"settled {n}\""))),
+                "warning {n} was not recorded at settle: {messages:?}"
+            );
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A `console.warn` must fail the console pass. Dioxus reports a misused
 /// scope at warn level (todo 283), and the pass used to keep only errors.
 #[test]

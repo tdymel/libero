@@ -380,22 +380,26 @@ fn a_closed_panels_links_are_out_of_the_tab_order() {
 #[test]
 fn a_query_on_the_address_keeps_the_route_link_current() {
     block_on(async {
-        for route in [
-            "/nav-link/states",
-            "/nav-link/states?tab=2",
-            "/nav-link/states?tab=2#top",
-        ] {
-            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
-            let current = fixture
-                .page
-                .evaluate("document.querySelector('#auto').getAttribute('aria-current')")
-                .await
-                .unwrap()
-                .into_value::<Option<String>>()
-                .unwrap();
-            assert_eq!(current.as_deref(), Some("page"), "{route}");
-            fixture.close().await.unwrap();
-        }
+        e2e::browser::at_once(
+            [
+                "/nav-link/states",
+                "/nav-link/states?tab=2",
+                "/nav-link/states?tab=2#top",
+            ],
+            async |route| {
+                let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+                let current = fixture
+                    .page
+                    .evaluate("document.querySelector('#auto').getAttribute('aria-current')")
+                    .await
+                    .unwrap()
+                    .into_value::<Option<String>>()
+                    .unwrap();
+                assert_eq!(current.as_deref(), Some("page"), "{route}");
+                fixture.close().await.unwrap();
+            },
+        )
+        .await;
     });
 }
 
@@ -417,7 +421,7 @@ fn description_ratio(id: &str) -> String {
 fn the_description_reads_on_the_active_tint_and_on_hover() {
     use e2e::Scheme;
     block_on(async {
-        for scheme in [Scheme::Light, Scheme::Dark] {
+        e2e::browser::at_once([Scheme::Light, Scheme::Dark], async |scheme| {
             let fixture = Fixture::open_in("/nav-link/states", Viewport::Desktop, scheme)
                 .await
                 .unwrap();
@@ -443,7 +447,8 @@ fn the_description_reads_on_the_active_tint_and_on_hover() {
                 scheme.name()
             );
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

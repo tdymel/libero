@@ -409,28 +409,30 @@ fn the_other_toolbars_meet_the_baseline() {
 #[test]
 fn it_honours_the_roving_tabindex_contract() {
     block_on(async {
-        e2e::browser::at_every_viewport(async |viewport| {
-            for (route, orientation, wraps) in [
-                ("/toolbar", Orientation::Horizontal, true),
-                ("/toolbar-vertical", Orientation::Vertical, false),
-            ] {
-                let fixture = Fixture::open(route, viewport).await.unwrap();
+        let toolbars = [
+            ("/toolbar", Orientation::Horizontal, true),
+            ("/toolbar-vertical", Orientation::Vertical, false),
+        ];
+        let cases = Viewport::ALL
+            .into_iter()
+            .flat_map(|viewport| toolbars.map(|toolbar| (viewport, toolbar)));
+        e2e::browser::at_once(cases, async |(viewport, (route, orientation, wraps))| {
+            let fixture = Fixture::open(route, viewport).await.unwrap();
 
-                RovingTabindex {
-                    items: ITEMS,
-                    orientation,
-                    wraps,
-                }
-                .assert_contract(&fixture.page)
-                .await
-                .unwrap_or_else(|e| panic!("{route} at {}: {e}", viewport.name()));
-
-                fixture
-                    .console
-                    .assert_clean(&format!("{route} contract at {}", viewport.name()))
-                    .unwrap();
-                fixture.close().await.unwrap();
+            RovingTabindex {
+                items: ITEMS,
+                orientation,
+                wraps,
             }
+            .assert_contract(&fixture.page)
+            .await
+            .unwrap_or_else(|e| panic!("{route} at {}: {e}", viewport.name()));
+
+            fixture
+                .console
+                .assert_clean(&format!("{route} contract at {}", viewport.name()))
+                .unwrap();
+            fixture.close().await.unwrap();
         })
         .await;
     });

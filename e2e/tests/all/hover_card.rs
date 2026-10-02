@@ -262,7 +262,7 @@ fn the_pointer_opens_and_closes_it_on_its_delays() {
 #[test]
 fn tab_crosses_into_the_portaled_card_and_back() {
     block_on(async {
-        for viewport in Viewport::ALL {
+        e2e::browser::at_every_viewport(async |viewport| {
             let at = viewport.name();
             let fixture = Fixture::open("/hover-card", viewport).await.unwrap();
             let page = &fixture.page;
@@ -318,7 +318,8 @@ fn tab_crosses_into_the_portaled_card_and_back() {
                 .assert_clean(&format!("tabbing through a hover card at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -344,7 +345,7 @@ fn escape_closes_it_and_returns_focus_to_the_trigger() {
             .await
             .unwrap();
         // A reopen would come from the trigger's `focusin` a render later.
-        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        e2e::clock::settle(page).await.unwrap();
         assert!(
             !wait::is_visible(page, CARD).await.unwrap(),
             "focus returning to the trigger opened the card again"
@@ -464,30 +465,24 @@ fn a_trigger_with_nothing_focusable_warns() {
         let fixture = Fixture::open("/hover-card-text", Viewport::Desktop)
             .await
             .unwrap();
-        wait::for_js_true(
-            &fixture.page,
-            "new Promise((r) => setTimeout(() => r(true), 300))",
-            "the mount effect to run",
-        )
-        .await
-        .unwrap();
+        let warned = wait::until("the mount effect's warning", || async {
+            Ok(fixture
+                .console
+                .peek()
+                .iter()
+                .any(|message| message.contains(WARNING)))
+        })
+        .await;
         let messages = fixture.console.drain();
-        assert!(
-            messages.iter().any(|message| message.contains(WARNING)),
-            "no warning: {messages:?}"
-        );
+        assert!(warned.is_ok(), "no warning: {messages:?}");
         fixture.close().await.unwrap();
 
+        // Nothing to wait for on a quiet page; `close` checks the console again, later.
         let fixture = Fixture::open("/hover-card", Viewport::Desktop)
             .await
             .unwrap();
-        wait::for_js_true(
-            &fixture.page,
-            "new Promise((r) => setTimeout(() => r(true), 300))",
-            "the mount effect to run",
-        )
-        .await
-        .unwrap();
+        e2e::clock::settle(&fixture.page).await.unwrap();
+        fixture.console.settle().await.unwrap();
         fixture.console.assert_clean("a button trigger").unwrap();
         fixture.close().await.unwrap();
     });

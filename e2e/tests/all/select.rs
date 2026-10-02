@@ -427,7 +427,7 @@ pub fn leaving_commits(route: &str, key: keyboard::Key, modifiers: i64, expected
 #[test]
 fn space_while_typing_commits_nothing() {
     block_on(async {
-        for (route, searchable) in [("/select/field", true), ("/select", false)] {
+        e2e::browser::at_once([("/select/field", true), ("/select", false)], async |(route, searchable)| {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
             keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
@@ -446,9 +446,7 @@ fn space_while_typing_commits_nothing() {
             // A real keydown: typeahead listens to it, `type_text` sends none.
             keyboard::press(page, KEY_D).await.unwrap();
             keyboard::press(page, keyboard::SPACE).await.unwrap();
-            page.evaluate("new Promise(r => setTimeout(() => r(1), 100))")
-                .await
-                .unwrap();
+            e2e::clock::settle(page).await.unwrap();
             // A search box that took the space is still open, whatever it
             // matches. The trigger keeps the field's id, role or not.
             let (open, value): (bool, String) = page
@@ -470,7 +468,8 @@ fn space_while_typing_commits_nothing() {
             );
             fixture.console.assert_clean(route).unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

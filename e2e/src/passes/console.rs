@@ -4,58 +4,83 @@
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::js_protocol::runtime::{EventConsoleApiCalled, EventExceptionThrown};
-use futures::StreamExt;
+use chromiumoxide::listeners::EventStream;
+use futures::{FutureExt, StreamExt};
 use std::sync::{Arc, Mutex};
 
 /// Everything the page said while the recorder was alive.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Recorder {
-    messages: Arc<Mutex<Vec<String>>>,
+    page: Page,
+    inner: Arc<Mutex<Inner>>,
+}
+
+/// The streams are read on every look, not by a task of their own: a spawned reader
+/// could still hold an event the look should have seen (todo 1720).
+struct Inner {
+    errors: EventStream<EventExceptionThrown>,
+    logs: EventStream<EventConsoleApiCalled>,
+    messages: Vec<String>,
+}
+
+impl Inner {
+    /// Moves every event already delivered into `messages`, without waiting for more.
+    fn pump(&mut self) {
+        while let Some(Some(event)) = self.errors.next().now_or_never() {
+            let detail = &event.exception_details;
+            let text = detail
+                .exception
+                .as_ref()
+                .and_then(|e| e.description.clone())
+                .unwrap_or_else(|| detail.text.clone());
+            self.messages.push(format!("pageerror: {text}"));
+        }
+        while let Some(Some(event)) = self.logs.next().now_or_never() {
+            let level = format!("{:?}", event.r#type).to_lowercase();
+            let args: Vec<&serde_json::Value> =
+                event.args.iter().filter_map(|a| a.value.as_ref()).collect();
+            if let Some((level, text)) = classify(&level, &args) {
+                self.messages.push(format!("{level}: {text}"));
+            }
+        }
+    }
 }
 
 impl Recorder {
     /// Subscribe to the page's console and uncaught exceptions.
     pub async fn attach(page: &Page) -> Result<Self> {
-        let recorder = Recorder::default();
+        let errors = page.event_listener::<EventExceptionThrown>().await?;
+        let logs = page.event_listener::<EventConsoleApiCalled>().await?;
+        Ok(Recorder {
+            page: page.clone(),
+            inner: Arc::new(Mutex::new(Inner {
+                errors,
+                logs,
+                messages: Vec::new(),
+            })),
+        })
+    }
 
-        let mut errors = page.event_listener::<EventExceptionThrown>().await?;
-        let sink = recorder.messages.clone();
-        tokio::spawn(async move {
-            while let Some(event) = errors.next().await {
-                let detail = &event.exception_details;
-                let text = detail
-                    .exception
-                    .as_ref()
-                    .and_then(|e| e.description.clone())
-                    .unwrap_or_else(|| detail.text.clone());
-                sink.lock().unwrap().push(format!("pageerror: {text}"));
-            }
-        });
-
-        let mut logs = page.event_listener::<EventConsoleApiCalled>().await?;
-        let sink = recorder.messages.clone();
-        tokio::spawn(async move {
-            while let Some(event) = logs.next().await {
-                let level = format!("{:?}", event.r#type).to_lowercase();
-                let args: Vec<&serde_json::Value> =
-                    event.args.iter().filter_map(|a| a.value.as_ref()).collect();
-                let Some((level, text)) = classify(&level, &args) else {
-                    continue;
-                };
-                sink.lock().unwrap().push(format!("{level}: {text}"));
-            }
-        });
-
-        Ok(recorder)
+    /// Returns once every message the page sent before the call is readable here. Two round
+    /// trips: chromiumoxide hands a batch's events on one handler turn after its response.
+    pub async fn settle(&self) -> Result<()> {
+        for _ in 0..2 {
+            self.page.evaluate("0").await?;
+        }
+        Ok(())
     }
 
     /// Look without draining, e.g. to wait for a message to arrive.
     pub fn peek(&self) -> Vec<String> {
-        self.messages.lock().unwrap().clone()
+        let mut inner = self.inner.lock().unwrap();
+        inner.pump();
+        inner.messages.clone()
     }
 
     pub fn drain(&self) -> Vec<String> {
-        std::mem::take(&mut *self.messages.lock().unwrap())
+        let mut inner = self.inner.lock().unwrap();
+        inner.pump();
+        std::mem::take(&mut inner.messages)
     }
 
     /// Fail if the page said anything at warning level or above, except what

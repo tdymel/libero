@@ -192,3 +192,73 @@ fn every_test_file_is_registered() {
          declared with no file: {missing:?}"
     );
 }
+
+/// Every baseline in `snapshots/` names a suite and a state the sources still quote (todo
+/// 1722): a renamed suite or state leaves its old `.snap` behind, read by nothing.
+#[test]
+fn every_ax_baseline_is_referenced() {
+    fn sources(dir: &std::path::Path, into: &mut Vec<(std::path::PathBuf, String)>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                sources(&path, into);
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                into.push((path.clone(), std::fs::read_to_string(&path).unwrap()));
+            }
+        }
+    }
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut files = Vec::new();
+    sources(&root.join("tests/all"), &mut files);
+    let tests = files.len();
+    sources(&root.join("src"), &mut files);
+    let quoted = |text: &str, literal: &str| text.contains(&format!("\"{literal}\""));
+    // A state may come from a shared helper in `src/`, a suite's name never does.
+    let shared_state = |state: &str| files[tests..].iter().any(|(_, text)| quoted(text, state));
+
+    let mut unreferenced = Vec::new();
+    for entry in std::fs::read_dir(root.join("tests/all/snapshots")).unwrap() {
+        let file = entry.unwrap().file_name().to_string_lossy().into_owned();
+        let Some(stem) = file.strip_suffix(".snap") else {
+            continue;
+        };
+        // A plain `insta::assert_snapshot!` in `tests/all/<module>.rs`.
+        if let Some((module, name)) = stem.strip_prefix("all__").and_then(|s| s.split_once("__")) {
+            if !files.iter().any(|(path, text)| {
+                path.file_stem().is_some_and(|stem| stem == module) && quoted(text, name)
+            }) {
+                unreferenced.push(file);
+            }
+            continue;
+        }
+        let (stem, dark) = match stem.strip_suffix("_dark") {
+            Some(stem) => (stem, true),
+            None => (stem, false),
+        };
+        let Some(base) = ["_desktop", "_mobile"]
+            .into_iter()
+            .find_map(|viewport| stem.strip_suffix(viewport))
+        else {
+            unreferenced.push(file);
+            continue;
+        };
+        let referenced = base.match_indices('_').any(|(at, _)| {
+            let (suite, state) = (&base[..at], &base[at + 1..]);
+            files[..tests].iter().any(|(_, text)| {
+                quoted(text, suite)
+                    && (state == "rest" || quoted(text, state) || shared_state(state))
+                    && (!dark || text.contains(".dark_snapshot("))
+            })
+        });
+        if !referenced {
+            unreferenced.push(file);
+        }
+    }
+    unreferenced.sort();
+    assert!(
+        unreferenced.is_empty(),
+        "baselines no suite or state in tests/all names any more; delete them, or \
+         rename them with the suite or state:\n  {}",
+        unreferenced.join("\n  ")
+    );
+}

@@ -651,9 +651,7 @@ fn modifier_chords_leave_the_walk_alone() {
         keyboard::press_with(page, keyboard::ARROW_DOWN, keyboard::ALT)
             .await
             .unwrap();
-        page.evaluate("new Promise(r => setTimeout(() => r(1), 60))")
-            .await
-            .unwrap();
+        e2e::clock::settle(page).await.unwrap();
         expect(
             page,
             "France|2|true",
@@ -738,9 +736,7 @@ fn tab_on_a_branch_commits_nothing() {
         expect(page, "France|2|true", "ArrowRight into Europe", "desktop").await;
         keyboard::press(page, keyboard::TAB).await.unwrap();
         expect(page, "closed", "Tab to close", "desktop").await;
-        page.evaluate("new Promise(r => setTimeout(() => r(1), 100))")
-            .await
-            .unwrap();
+        e2e::clock::settle(page).await.unwrap();
         let picked: String = page
             .evaluate("document.querySelector('#picked').textContent")
             .await
@@ -758,7 +754,7 @@ fn tab_on_a_branch_commits_nothing() {
 #[test]
 fn leaving_commits_the_highlighted_branch_with_any_level() {
     block_on(async {
-        for (key, modifiers) in [(keyboard::TAB, 0), (keyboard::ARROW_UP, keyboard::ALT)] {
+        e2e::browser::at_once([(keyboard::TAB, 0), (keyboard::ARROW_UP, keyboard::ALT)], async |(key, modifiers)| {
             let fixture = Fixture::open("/cascader/any-level", Viewport::Desktop)
                 .await
                 .unwrap();
@@ -779,7 +775,8 @@ fn leaving_commits_the_highlighted_branch_with_any_level() {
             .unwrap();
             fixture.console.assert_clean(key.key).unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -788,10 +785,10 @@ fn leaving_commits_the_highlighted_branch_with_any_level() {
 #[test]
 fn space_and_tab_commit_a_path_row() {
     block_on(async {
-        for (route, key) in [
+        e2e::browser::at_once([
             ("/cascader/paths", keyboard::SPACE),
             ("/cascader/search", keyboard::TAB),
-        ] {
+        ], async |(route, key)| {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
             keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
@@ -832,7 +829,8 @@ fn space_and_tab_commit_a_path_row() {
             .unwrap();
             fixture.console.assert_clean(route).unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 
@@ -913,6 +911,9 @@ fn typing_moves_to_the_row_it_starts() {
     block_on(async {
         let fixture = Fixture::open("/cascader", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
+        // libero's `TYPEAHEAD_RESET`, held so each letter starts afresh without a real wait.
+        const RESET_MS: u32 = 500;
+        e2e::clock::hold(page, &[RESET_MS]).await.unwrap();
         keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
         for (key, want, what) in [
             (
@@ -928,11 +929,13 @@ fn typing_moves_to_the_row_it_starts() {
             ),
         ] {
             keyboard::press(page, key).await.unwrap();
+            // Settled first: "a" expects the cursor it already has, so a late move must show.
+            e2e::clock::settle(page).await.unwrap();
             expect(page, want, what, "desktop").await;
-            // Past the typeahead's reset, so the next letter starts afresh.
-            page.evaluate("new Promise(r => setTimeout(() => r(1), 600))")
+            e2e::clock::until_armed(page, RESET_MS, 1, "the typeahead's reset")
                 .await
                 .unwrap();
+            e2e::clock::fire(page, RESET_MS).await.unwrap();
         }
         keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
         expect(page, "France|2|true", "ArrowRight into Europe", "desktop").await;

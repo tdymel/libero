@@ -484,7 +484,7 @@ fn a_disabled_trigger_grays_out_in_forced_colours() {
 #[test]
 fn a_menu_starts_at_its_trigger_s_start_edge() {
     block_on(async {
-        for dir in ["ltr", "rtl"] {
+        e2e::browser::at_once(["ltr", "rtl"], async |dir| {
             let fixture = crate::rtl_keys::open_in("/menubar", dir).await;
             let page = &fixture.page;
 
@@ -508,7 +508,8 @@ fn a_menu_starts_at_its_trigger_s_start_edge() {
 
             fixture.console.assert_clean(dir).unwrap();
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

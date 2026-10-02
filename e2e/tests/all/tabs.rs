@@ -220,28 +220,32 @@ fn it_honours_the_roving_tabindex_contract() {
 #[test]
 fn the_arrows_part_ways_from_a_selected_disabled_tab() {
     block_on(async {
-        for (key, expected) in [(keyboard::ARROW_LEFT, 0), (keyboard::ARROW_RIGHT, 2)] {
-            let fixture = Fixture::open("/tabs-disabled-selected", Viewport::Desktop)
-                .await
-                .unwrap();
-            let page = &fixture.page;
-            reset_tab_position(page).await.unwrap();
-            keyboard::press(page, keyboard::TAB).await.unwrap();
-            keyboard::press(page, key).await.unwrap();
-            let selected = format!(
-                "document.querySelector('[role=tablist] > [role=tab]:nth-child({})')\
+        e2e::browser::at_once(
+            [(keyboard::ARROW_LEFT, 0), (keyboard::ARROW_RIGHT, 2)],
+            async |(key, expected)| {
+                let fixture = Fixture::open("/tabs-disabled-selected", Viewport::Desktop)
+                    .await
+                    .unwrap();
+                let page = &fixture.page;
+                reset_tab_position(page).await.unwrap();
+                keyboard::press(page, keyboard::TAB).await.unwrap();
+                keyboard::press(page, key).await.unwrap();
+                let selected = format!(
+                    "document.querySelector('[role=tablist] > [role=tab]:nth-child({})')\
                  .getAttribute('aria-selected') === 'true'",
-                expected + 1
-            );
-            wait::for_js_true(page, &selected, "the arrow to select its neighbour")
-                .await
-                .unwrap_or_else(|e| panic!("{key:?} did not select tab {expected}: {e}"));
-            fixture
-                .console
-                .assert_clean("arrowing off a disabled tab")
-                .unwrap();
-            fixture.close().await.unwrap();
-        }
+                    expected + 1
+                );
+                wait::for_js_true(page, &selected, "the arrow to select its neighbour")
+                    .await
+                    .unwrap_or_else(|e| panic!("{key:?} did not select tab {expected}: {e}"));
+                fixture
+                    .console
+                    .assert_clean("arrowing off a disabled tab")
+                    .unwrap();
+                fixture.close().await.unwrap();
+            },
+        )
+        .await;
     });
 }
 

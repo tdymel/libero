@@ -114,7 +114,7 @@ async fn region(page: &Page, index: usize) -> (Option<String>, Option<String>) {
 #[test]
 fn the_keys_toggle_sections_and_only_an_open_panel_is_a_landmark() {
     block_on(async {
-        for reduced in [false, true] {
+        e2e::browser::at_once([false, true], async |reduced| {
             let fixture = Fixture::open("/accordion", Viewport::Desktop)
                 .await
                 .unwrap();
@@ -173,7 +173,8 @@ fn the_keys_toggle_sections_and_only_an_open_panel_is_a_landmark() {
             d.finish(&format!("the accordion keys, reduced={reduced}"))
                 .await
                 .unwrap();
-        }
+        })
+        .await;
     });
 }
 

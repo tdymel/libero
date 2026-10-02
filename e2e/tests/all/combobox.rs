@@ -97,7 +97,7 @@ pub(crate) fn the_trigger_names_the_lit_row(route: &str, expected: &str) {
 #[test]
 fn an_rtl_dropdown_stays_inside_the_viewport() {
     block_on(async {
-        for route in ["/combobox", "/select"] {
+        e2e::browser::at_once(["/combobox", "/select"], async |route| {
             let fixture = Fixture::open(route, Viewport::Mobile).await.unwrap();
             let page = &fixture.page;
             page.evaluate("document.documentElement.dir = 'rtl'")
@@ -113,28 +113,22 @@ fn an_rtl_dropdown_stays_inside_the_viewport() {
             keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
             keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
             wait::for_visible(page, LISTBOX).await.unwrap();
-            page.evaluate("new Promise(r => setTimeout(() => r(1), 500))")
+            let edges = "(() => { let p = document.querySelector('[role=listbox]'); \
+                 while (p && getComputedStyle(p).position !== 'fixed') p = p.parentElement; \
+                 const r = p.getBoundingClientRect(); return [r.left, r.right, innerWidth]; })()";
+            // Until placed, in place of a 500 ms sleep: the placement may take a frame or two.
+            let inside = format!("(([l, r, w]) => l >= 0 && r <= w + 0.5)({edges})");
+            if wait::for_js_true(page, &inside, "the dropdown inside the viewport")
                 .await
-                .unwrap();
-            let edges: (f64, f64, f64) = page
-                .evaluate(
-                    "(() => { let p = document.querySelector('[role=listbox]'); \
-                     while (p && getComputedStyle(p).position !== 'fixed') p = p.parentElement; \
-                     const r = p.getBoundingClientRect(); return [r.left, r.right, innerWidth]; })()",
-                )
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
-            assert!(
-                edges.0 >= 0.0 && edges.1 <= edges.2 + 0.5,
-                "{route}: the dropdown spans {}..{} in a {}px viewport",
-                edges.0,
-                edges.1,
-                edges.2
-            );
+                .is_err()
+            {
+                let (left, right, width): (f64, f64, f64) =
+                    page.evaluate(edges).await.unwrap().into_value().unwrap();
+                panic!("{route}: the dropdown spans {left}..{right} in a {width}px viewport");
+            }
             fixture.close().await.unwrap();
-        }
+        })
+        .await;
     });
 }
 

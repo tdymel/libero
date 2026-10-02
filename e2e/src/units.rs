@@ -71,7 +71,8 @@ pub(crate) fn exact(listed: &[String], args: &[String]) -> Vec<String> {
     rest
 }
 
-/// Units whose tests open other modules' fixtures too, from the route literals in their sources.
+/// Units whose tests open other modules' fixtures too, from the route literals in their sources
+/// (`tests::extra_fixtures_list_the_routes_each_unit_opens` keeps it so).
 const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
     ("color_picker", &["color_field"]),
     (
@@ -94,6 +95,7 @@ const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
             "collapse",
             "drawer",
             "floating_window",
+            "lightbox",
             "menu",
             "menubar",
             "multi_select",
@@ -212,6 +214,108 @@ mod tests {
         assert_eq!(fixtures(&["rtl_keys::"]), None);
         assert_eq!(fixtures(&["--nocapture"]), None);
         assert_eq!(fixtures(&["table::", "--list"]), None);
+    }
+
+    /// Modules `e2e/fixtures/src/lib.rs` builds always, and the files that are no module.
+    const ALWAYS_BUILT: &[&str] = &["common", "docs_shell", "home", "lib", "main", "perf"];
+
+    /// The route-shaped `"/..."` literals in `source`, a query cut off.
+    fn route_literals(source: &str) -> Vec<String> {
+        source
+            .match_indices("\"/")
+            .filter_map(|(at, _)| {
+                let text = &source[at + 1..];
+                let text = &text[..text.find('"')?];
+                let route = text.split('?').next()?;
+                route
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || "/-_".contains(c))
+                    .then(|| route.to_string())
+            })
+            .collect()
+    }
+
+    fn rust_files(path: &std::path::Path) -> Vec<String> {
+        let read = |path: &std::path::Path| std::fs::read_to_string(path).unwrap();
+        if path.is_dir() {
+            std::fs::read_dir(path)
+                .unwrap()
+                .map(|entry| entry.unwrap().path())
+                .filter(|path| path.extension().is_some_and(|ext| ext == "rs"))
+                .map(|path| read(&path))
+                .collect()
+        } else if path.with_extension("rs").is_file() {
+            vec![read(&path.with_extension("rs"))]
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Todo 1721: a unit's run builds every other fixture module whose route it names, and
+    /// `EXTRA_FIXTURES` lists no module it does not.
+    #[test]
+    fn extra_fixtures_list_the_routes_each_unit_opens() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let mut owners = std::collections::HashMap::new();
+        let mut modules = Vec::new();
+        for entry in std::fs::read_dir(root.join("fixtures/src")).unwrap() {
+            let path = entry.unwrap().path();
+            let module = path.file_stem().unwrap().to_string_lossy().into_owned();
+            if ALWAYS_BUILT.contains(&module.as_str()) {
+                continue;
+            }
+            let source = std::fs::read_to_string(&path).unwrap();
+            let Some(start) = source.find("pub const ROUTES") else {
+                continue;
+            };
+            let block = &source[start..];
+            let block = &block[..block.find("\n];").unwrap_or(block.len())];
+            for route in route_literals(block) {
+                owners.insert(route, module.clone());
+            }
+            modules.push(module);
+        }
+        modules.sort();
+
+        let mut wrong = Vec::new();
+        for module in &modules {
+            let sources = rust_files(&root.join("tests/all").join(module));
+            let mut opened: Vec<&str> = sources
+                .iter()
+                .flat_map(|source| route_literals(source))
+                .filter_map(|route| owners.get(&route).map(String::as_str))
+                .filter(|owner| *owner != module.as_str())
+                .collect();
+            opened.sort();
+            opened.dedup();
+            let listed = EXTRA_FIXTURES
+                .iter()
+                .find(|(unit, _)| *unit == module.as_str())
+                .map_or(&[][..], |(_, extras)| *extras);
+            if opened != listed {
+                wrong.push(format!(
+                    "(\"{module}\", &{opened:?}) but it lists {listed:?}"
+                ));
+            }
+        }
+        for (unit, _) in EXTRA_FIXTURES {
+            if !modules.iter().any(|module| module.as_str() == *unit) {
+                wrong.push(format!(
+                    "{unit} has no fixture module, so its run builds all"
+                ));
+            }
+        }
+        assert!(
+            wrong.is_empty(),
+            "EXTRA_FIXTURES disagrees with the routes the units open:\n  {}",
+            wrong.join("\n  ")
+        );
+    }
+
+    #[test]
+    fn route_literals_are_quoted_paths_only() {
+        let source = r#"open("/a-b/c_1?x=1", "/b c", "/Up", r"\"/d"); "word"/2"#;
+        assert_eq!(route_literals(source), strings(&["/a-b/c_1", "/d"]));
     }
 
     #[test]
