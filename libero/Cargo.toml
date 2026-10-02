@@ -57,7 +57,7 @@ js-sys = "0.3"
 # 0.2.128+ imports a wasm exception tag (`__wbindgen_jstag`) that dx's hotpatch parser rejects.
 wasm-bindgen = "=0.2.127"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlImageElement", "HtmlInputElement", "HtmlMediaElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "FilePropertyBag", "NodeList", "Navigator", "ScrollBehavior", "ScrollToOptions", "Clipboard", "CssStyleDeclaration", "DomRect", "KeyboardEvent", "MediaError", "MediaQueryList", "MutationObserver", "MutationObserverInit", "IntersectionObserver", "IntersectionObserverEntry", "IntersectionObserverInit", "Storage", "MouseEvent", "FocusEvent", "FocusOptions", "PointerEvent", "TransitionEvent", "console"] }
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlImageElement", "HtmlInputElement", "HtmlMediaElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "FilePropertyBag", "NodeList", "Navigator", "ScrollBehavior", "ScrollToOptions", "Clipboard", "CssStyleDeclaration", "DomRect", "KeyboardEvent", "MediaError", "MediaQueryList", "MutationObserver", "MutationObserverInit", "IntersectionObserver", "IntersectionObserverEntry", "IntersectionObserverInit", "Storage", "MouseEvent", "FocusEvent", "FocusOptions", "PointerEvent", "TransitionEvent", "console", "Blob", "BlobPropertyBag", "Url", "HtmlAnchorElement"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # Only for `serialize`, which is what defines `SerializedTransitionData` - the
@@ -90,8 +90,9 @@ style = { package = "stylo", version = "0.20", optional = true }
 # copied text is gone before anything can paste it. Same version and feature
 # set as blitz-shell's, so cargo keeps one copy.
 arboard = { version = "3.6", optional = true, default-features = false }
-# The file dialog Blitz does not open for `input[type=file]`. The portal
-# backend only, as blitz-shell's copy in the lock, so no second copy.
+# The file dialog Blitz does not open for `input[type=file]`, and the save
+# dialog of `save_file` (Blitz, desktop WebView). The portal backend only, as
+# blitz-shell's copy in the lock, so no second copy.
 rfd = { version = "0.17", optional = true, default-features = false, features = ["xdg-portal"] }
 # `FileField { crop }`'s cut where Blitz has no canvas. blitz-dom's copy; the
 # codecs are the types the crop keeps, plus BMP to read.
@@ -133,7 +134,8 @@ web-time = "1.1"
 native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cursor-icon", "dep:style", "dep:arboard", "dep:rfd", "dep:image", "dep:futures-channel", "dep:dbus"]
 # The desktop WebView (`dioxus/desktop`) on Linux: WebKitGTK denies the page's
 # `Notification`, so system notifications go over the session bus (todo 1470).
-desktop = ["dep:futures-channel", "dep:dbus", "dep:dioxus-desktop"]
+# `save_file` opens rfd's save dialog there, as under `native` (todo 2016).
+desktop = ["dep:futures-channel", "dep:dbus", "dep:dioxus-desktop", "dep:rfd"]
 default = [
     "code-lang-rust",
     "code-lang-bash",

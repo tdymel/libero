@@ -97,6 +97,7 @@ mod repository;
 mod rich_text_editor;
 mod rtl_keys;
 mod rtl_layout;
+mod save_file;
 mod scroll_area;
 mod scroller;
 mod segmented_control;

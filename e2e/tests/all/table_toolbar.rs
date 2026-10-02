@@ -2,8 +2,13 @@
 //! shown columns, Columns hides one, Density sets the row height.
 
 use anyhow::{Result, bail};
+use chromiumoxide::cdp::browser_protocol::browser::{
+    SetDownloadBehaviorBehavior, SetDownloadBehaviorParams,
+};
+use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer};
+use e2e::{Fixture, Viewport, wait};
 
 /// Clicks the open menu's entry reading `label`, once it shows (todo 1502).
 async fn pick<D: Driver>(d: &mut D, label: &str) -> Result<()> {
@@ -126,3 +131,40 @@ e2e::scenario!(
     "/table-toolbar",
     the_filter_piece_opens_the_panel
 );
+
+/// 2016: Export through `save_file` downloads the CSV on the web, named and whole.
+#[test]
+fn an_export_saved_with_save_file_downloads_the_csv() {
+    block_on(async {
+        let dir = std::env::temp_dir().join(format!("e2e-save-file-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let fixture = Fixture::open("/table-toolbar/save", Viewport::Desktop)
+            .await
+            .unwrap();
+        fixture
+            .page
+            .execute(
+                SetDownloadBehaviorParams::builder()
+                    .behavior(SetDownloadBehaviorBehavior::Allow)
+                    .download_path(dir.to_string_lossy())
+                    .build()
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        pointer::click(&fixture.page, "[data-table-tool=export]")
+            .await
+            .unwrap();
+        let file = dir.join("fruit.csv");
+        wait::until("fruit.csv with the CSV", || async {
+            Ok(std::fs::read_to_string(&file).ok().as_deref()
+                == Some("Name,Stock\r\nApple,12\r\nBanana,0\r\nCherry,3\r\n"))
+        })
+        .await
+        .unwrap();
+        fixture.console.assert_clean("saving the export").unwrap();
+        fixture.close().await.unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+    });
+}

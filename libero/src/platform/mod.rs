@@ -36,6 +36,7 @@ mod press;
 mod push;
 mod regex;
 mod resize;
+mod save_file;
 mod scroll;
 mod select;
 mod session;
@@ -126,6 +127,7 @@ pub(crate) use push::{PushApi, push};
 pub use push::{PushEndpoint, PushError, PushOptions};
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub(crate) use resize::{is_measured_resize, on_resize};
+pub use save_file::{SaveOutcome, save_file};
 pub(crate) use scroll::{
     SCROLL_QUIET, clips_z_indexed, draws_own_scrollbars, fires_scroll_end,
     fires_scroll_on_scroll_to, scroll_range, scroll_timelines, scrolls_on_keys, snaps_scroll,

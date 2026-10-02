@@ -444,7 +444,8 @@ opens a checklist that shows and hides the hideable columns. `TableDensityButton
 picks compact, standard or comfortable rows, the `size` small, medium or large;
 the pick wins over `size`, and `density` with `ondensitychange` holds it.
 `TableExportButton` hands `onexport` the filtered, sorted rows of every page as
-CSV, in the shown columns; you save it. `TableFilterButton` opens
+CSV, in the shown columns; `save_file` saves it, a download on the web, a save
+dialog on the desktop, the share sheet on Android. `TableFilterButton` opens
 `filter_panel`'s dialog from where you put it; with a `toolbar`, the table
 leaves the Filters button to it. Only `TableExportButton` takes a prop,
 `onexport`.
@@ -454,6 +455,7 @@ use dioxus::prelude::*;
 use libero::components::{
     Table, TableColumnsButton, TableDensityButton, TableExportButton, column,
 };
+use libero::platform::save_file;
 
 #[derive(Clone, PartialEq)]
 struct Person {
@@ -462,15 +464,19 @@ struct Person {
 
 #[component]
 fn Demo() -> Element {
-    let mut csv = use_signal(String::new);
-
     rsx! {
         Table {
             caption: "Team members",
             toolbar: rsx! {
                 TableColumnsButton {}
                 TableDensityButton {}
-                TableExportButton { onexport: move |text| csv.set(text) }
+                TableExportButton {
+                    onexport: move |csv: String| {
+                        spawn(async move {
+                            save_file("team.csv", "text/csv", csv.into_bytes()).await;
+                        });
+                    }
+                }
             },
             data: Vec::<Person>::new(),
             columns: vec![column("Name").value(|p: &Person| p.name.clone())],
@@ -902,14 +908,14 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `table_csv` | `fn(&[Column<T>], &[T]) -> String` | none | The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; saving the file is yours. |
+| `table_csv` | `fn(&[Column<T>], &[T]) -> String` | none | The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; `save_file` saves it as a file. |
 | `table_text` | `fn(&[Column<T>], &[T]) -> Vec<Vec<String>>` | none | The same cells unjoined, the header row first, for your own writer. |
 
 ### TableExportButton
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `onexport` | `EventHandler<String>` | required | Called with the table as CSV, as `table_csv` writes it: the filtered, sorted rows of every page, in the shown columns. Saving it is yours. `TableColumnsButton`, `TableDensityButton` and `TableFilterButton` take no props, and none of the four takes `class`, `sx` or `attributes`. |
+| `onexport` | `EventHandler<String>` | required | Called with the table as CSV, as `table_csv` writes it: the filtered, sorted rows of every page, in the shown columns. `save_file` saves it as a file. `TableColumnsButton`, `TableDensityButton` and `TableFilterButton` take no props, and none of the four takes `class`, `sx` or `attributes`. |
 
 ## Accessibility
 

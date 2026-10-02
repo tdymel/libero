@@ -10,7 +10,7 @@ use libero::components::{
     TableDensityButton, TableExportButton, TableFilterButton, Text, column,
 };
 use libero::hooks::SortableMove;
-use libero::platform::{TimerSubscription, timer};
+use libero::platform::{TimerSubscription, save_file, timer};
 use libero::sx::sx;
 
 #[derive(Clone, PartialEq)]
@@ -289,22 +289,32 @@ fn day(year: i32, month: u32, day: u32) -> NaiveDate {{
 const DETAIL: &str = r#"row_detail: |p: &Person| Some(rsx! { "{p.name} joined as {p.role}." })"#;
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
-// snippet: let mut csv = use_signal(String::new);
 // snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], .. }
 const TOOLBAR: &str = r#"toolbar: rsx! {
     TableColumnsButton {}
     TableDensityButton {}
-    TableExportButton { onexport: move |text: String| csv.set(text) }
+    TableExportButton {
+        onexport: move |csv: String| {
+            spawn(async move {
+                save_file("team.csv", "text/csv", csv.into_bytes()).await;
+            });
+        }
+    }
     Button { variant: "outlined", size: "sm", "Add member" }
 }"#;
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
-// snippet: let mut csv = use_signal(String::new);
 // snippet: in Table { caption: "Team members", data: Vec::<Person>::new(), columns: vec![], filter_panel: true, .. }
 const TOOLBAR_FILTERS: &str = r#"toolbar: rsx! {
     TableColumnsButton {}
     TableDensityButton {}
-    TableExportButton { onexport: move |text: String| csv.set(text) }
+    TableExportButton {
+        onexport: move |csv: String| {
+            spawn(async move {
+                save_file("team.csv", "text/csv", csv.into_bytes()).await;
+            });
+        }
+    }
     TableFilterButton {}
     Button { variant: "outlined", size: "sm", "Add member" }
 }"#;
@@ -364,7 +374,6 @@ fn TeamTable(values: DemoValues) -> Element {
     // Built on the first flip only, then kept: a flip re-renders the table, not the data.
     let many = use_hook(|| Rc::new(OnceCell::<Vec<Person>>::new()));
     let mut widths = use_signal(ColumnWidths::new);
-    let mut csv = use_signal(String::new);
     let mut loaded = use_signal(|| fetch(0));
     let mut fetching = use_signal(|| false);
     let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
@@ -425,7 +434,13 @@ fn TeamTable(values: DemoValues) -> Element {
             toolbar: on("toolbar").then(|| rsx! {
                 TableColumnsButton {}
                 TableDensityButton {}
-                TableExportButton { onexport: move |text: String| csv.set(text) }
+                TableExportButton {
+                    onexport: move |csv: String| {
+                        spawn(async move {
+                            save_file("team.csv", "text/csv", csv.into_bytes()).await;
+                        });
+                    }
+                }
                 if on("filter_panel") {
                     TableFilterButton {}
                 }
@@ -448,9 +463,6 @@ fn TeamTable(values: DemoValues) -> Element {
                 (false, false) => rows(),
             },
             columns: team_columns(on("column_groups")),
-        }
-        if on("toolbar") && !csv.read().is_empty() {
-            Text { size: "sm", "Exported {csv.read().lines().count()} lines of CSV." }
         }
     }
 }
@@ -559,11 +571,11 @@ pub fn TablePage() -> Element {
                     prop("col_span", "fn(&T) -> usize").default("None").doc("How many shown columns a row's cell covers, from this one on, say a total row's label. The covered cells are left out; the span stops at the row's end. Capture signals, not values: the closure is not compared."),
                 ]).without_base_props(),
                 props("table_csv()", vec![
-                    prop("table_csv", "fn(&[Column<T>], &[T]) -> String").default("none").doc("The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; saving the file is yours."),
+                    prop("table_csv", "fn(&[Column<T>], &[T]) -> String").default("none").doc("The header row and one line per row as CSV (RFC 4180, CRLF), each cell as its column's text, `format` applied and `render` ignored. Pass the rows and columns in the order you want; `save_file` saves it as a file."),
                     prop("table_text", "fn(&[Column<T>], &[T]) -> Vec<Vec<String>>").default("none").doc("The same cells unjoined, the header row first, for your own writer."),
                 ]).without_base_props(),
                 props("TableExportButton", vec![
-                    prop("onexport", "EventHandler<String>").default("required").doc("Called with the table as CSV, as `table_csv` writes it: the filtered, sorted rows of every page, in the shown columns. Saving it is yours. `TableColumnsButton`, `TableDensityButton` and `TableFilterButton` take no props, and none of the four takes `class`, `sx` or `attributes`."),
+                    prop("onexport", "EventHandler<String>").default("required").doc("Called with the table as CSV, as `table_csv` writes it: the filtered, sorted rows of every page, in the shown columns. `save_file` saves it as a file. `TableColumnsButton`, `TableDensityButton` and `TableFilterButton` take no props, and none of the four takes `class`, `sx` or `attributes`."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()
@@ -760,7 +772,9 @@ pub fn TablePage() -> Element {
                     Code { source: "TableExportButton" }
                     " hands "
                     Code { source: "onexport" }
-                    " the filtered, sorted rows of every page as CSV, in the shown columns; you save it. "
+                    " the filtered, sorted rows of every page as CSV, in the shown columns; "
+                    Code { source: "save_file" }
+                    " saves it, a download on the web, a save dialog on the desktop, the share sheet on Android. "
                     Code { source: "TableFilterButton" }
                     " opens "
                     Code { source: "filter_panel" }

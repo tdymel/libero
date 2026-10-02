@@ -1,15 +1,20 @@
 //! `Table` toolbar pieces (1416, 1448): Columns, Density, Filters and Export over
 //! a paged, sorted table; the exported CSV and the picked density printed below.
+//! `/save` also saves the export with `save_file` (2016).
 
 use dioxus::prelude::*;
 use libero::components::{
     SortDirection, Table, TableColumnsButton, TableDensityButton, TableExportButton,
     TableFilterButton, TableSort, column,
 };
+use libero::platform::save_file;
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/table-toolbar", || rsx! { ToolbarTablePage {} })];
+pub const ROUTES: Routes = &[
+    ("/table-toolbar", || rsx! { ToolbarTablePage { save: false } }),
+    ("/table-toolbar/save", || rsx! { ToolbarTablePage { save: true } }),
+];
 
 #[derive(Clone, PartialEq)]
 struct Fruit {
@@ -36,7 +41,7 @@ fn fruit() -> Vec<Fruit> {
 
 /// Two rows a page, so an export over every page shows.
 #[component]
-fn ToolbarTablePage() -> Element {
+fn ToolbarTablePage(save: bool) -> Element {
     let mut csv = use_signal(String::new);
     let mut density = use_signal(String::new);
     rsx! {
@@ -46,7 +51,16 @@ fn ToolbarTablePage() -> Element {
                 TableColumnsButton {}
                 TableDensityButton {}
                 TableFilterButton {}
-                TableExportButton { onexport: move |text: String| csv.set(text.replace("\r\n", "|")) }
+                TableExportButton {
+                    onexport: move |text: String| {
+                        csv.set(text.replace("\r\n", "|"));
+                        if save {
+                            spawn(async move {
+                                save_file("fruit.csv", "text/csv", text.into_bytes()).await;
+                            });
+                        }
+                    }
+                }
             },
             filter_panel: true,
             data: fruit(),

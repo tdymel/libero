@@ -18,6 +18,12 @@ use serde_json::{Value, json};
 use crate::platform::a11y_media::{
     A11yMediaSubscription, REDUCED_MOTION_STORAGE_KEY, kept_reduced_motion, parse_reduced_motion,
 };
+#[cfg(all(
+    not(target_os = "android"),
+    not(feature = "native"),
+    not(feature = "desktop")
+))]
+use crate::platform::save_file::SaveFileApi;
 #[cfg(not(target_os = "android"))]
 use crate::platform::system_notification::{
     Answer, NOTIFICATION_SCRIPT, NotificationEvent, Shown, ShownNotification, SystemNotification,
@@ -86,6 +92,16 @@ pub(crate) fn clipboard() -> Option<&'static dyn ClipboardApi> {
 
 pub(crate) fn file_dialog() -> Option<&'static dyn FileDialogApi> {
     runs_scripts().then_some(&FILE_DIALOG as &'static dyn FileDialogApi)
+}
+
+/// A liveview or fullstack tab: the browser downloads it.
+#[cfg(all(
+    not(target_os = "android"),
+    not(feature = "native"),
+    not(feature = "desktop")
+))]
+pub(crate) fn save_file() -> Option<&'static dyn SaveFileApi> {
+    runs_scripts().then_some(&page_save_file::SAVE_FILE as &'static dyn SaveFileApi)
 }
 
 pub(crate) fn image_crop() -> Option<&'static dyn ImageCropApi> {
@@ -2225,5 +2241,42 @@ mod tests {
         assert_eq!(text.unwrap(), "hello");
         let untyped = held_file("a".into(), String::new(), 0, Vec::new());
         assert_eq!(untyped.content_type(), None);
+    }
+}
+
+#[cfg(all(
+    not(target_os = "android"),
+    not(feature = "native"),
+    not(feature = "desktop")
+))]
+mod page_save_file {
+    use serde_json::json;
+
+    use super::eval_with;
+    use crate::platform::SaveOutcome;
+    use crate::platform::save_file::{SaveFileApi, Saving};
+    use crate::utils::encode_base64;
+
+    pub(super) struct PageSaveFile;
+
+    pub(super) static SAVE_FILE: PageSaveFile = PageSaveFile;
+
+    impl SaveFileApi for PageSaveFile {
+        fn save(&self, name: &str, mime: &str, bytes: Vec<u8>) -> Saving {
+            eval_with(
+                json!([name, mime, encode_base64(&bytes)]),
+                "const [name, type, base64] = data;
+                const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+                const url = URL.createObjectURL(new Blob([bytes], { type }));
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = name;
+                document.body.append(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 40000);",
+            );
+            Box::pin(std::future::ready(SaveOutcome::Saved))
+        }
     }
 }

@@ -180,6 +180,7 @@ fetch only the file you need.
 - [Geolocation](use_geolocation.md): The device's position, once or followed, with the location permission; never prompts on mount.
 - [User media](use_user_media.md): The camera and microphone with a preview, a PNG snapshot and a chunked recording; never prompts on mount.
 - [System notifications](use_system_notification.md): Notifications the operating system draws and a web push subscription; never prompt on mount.
+- [Save file](save_file.md): Saves bytes the app made as a file: a download on the web, a save dialog on the desktop and Blitz, the share sheet on Android.
 - [Theme set](use_theme_set.md): Reads and swaps the active theme set, which a theme picker is built on.
 - [Stylesheet](use_stylesheet.md): Registers a stylesheet of your own above every libero layer and returns its class.
 

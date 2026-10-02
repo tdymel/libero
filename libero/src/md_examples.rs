@@ -122,6 +122,7 @@ md_pages! {
     RadioGroup => "radio_group",
     RangeSlider => "range_slider",
     Rating => "rating",
+    SaveFile => "save_file",
     Repository => "repository",
     RichTextEditor => "rich_text_editor",
     ScrollArea => "scroll_area",
