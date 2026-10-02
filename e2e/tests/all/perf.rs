@@ -883,7 +883,9 @@ pub(crate) mod timing {
         script: f64,
         /// Style recalculation and layout.
         layout: f64,
-        /// The longest frame while it ran: over 16.7 is a dropped frame.
+        /// The longest main-thread (rAF) frame while it ran: over 16.7 skipped one. Not
+        /// what showed: a scroll that commits DOM under a scroll timeline skips a main
+        /// frame while the compositor still draws every vsync (todo 1987).
         frame: f64,
         /// Long animation frames (50 ms and over).
         long: usize,

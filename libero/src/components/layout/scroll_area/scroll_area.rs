@@ -20,7 +20,7 @@ use crate::{
     platform::{
         Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, SCROLL_QUIET, TimerSubscription,
         clips_z_indexed, draws_own_scrollbars, fires_scroll_end, fires_scroll_on_scroll_to,
-        has_match_by_tag, scroll, scroll_range, scrolls_on_keys, timer, when_laid_out,
+        has_match_by_tag, scroll, scroll_range, scrolls_on_keys, timer, when_free, when_laid_out,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
@@ -297,6 +297,25 @@ fn measure_area(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometry>
     });
 }
 
+/// A scroll moves only the offset: read it once the document is free, not a
+/// layout later, so a `Virtualize` follows in the same poll (todo 1873).
+fn measure_offset(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometry>>) {
+    when_free(move || {
+        let offset = root.scroll_offset();
+        spawn(async move {
+            let (Ok((_, top)), Some(known)) = (offset.await, *geometry.peek()) else {
+                return;
+            };
+            if known.offset != top {
+                geometry.set(Some(ScrollGeometry {
+                    offset: top,
+                    ..known
+                }));
+            }
+        });
+    });
+}
+
 /// Reads the area's position once laid out, for `check` (`x`, `y`, `max_x`, `max_y`).
 fn measure_edges(root: ElementHandle, check: impl Fn(f64, f64, f64, f64) + 'static) {
     when_laid_out(move || {
@@ -566,10 +585,16 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
 
     // Re-runs once the root is mounted, and once a `Virtualize` asks: only then
     // do scroll and resize events keep the geometry current.
+    let mut seen_reports = use_hook(|| CopyValue::new(0u64));
     use_effect(move || {
         let reports = platform_scrolls();
+        let scrolled = reports != *seen_reports.peek();
+        seen_reports.set(reports);
         if virtualized() {
-            measure();
+            match scrolled && geometry.peek().is_some() && root.is_mounted() {
+                true => measure_offset(root, geometry),
+                false => measure(),
+            }
         }
         if reports > 0 && *reports_edges.peek() && root.is_mounted() {
             measure_edges(root, check_edges);

@@ -8,6 +8,7 @@ use e2e::native::{Page, mount};
 use libero::{
     components::{
         Box, Button, Container, Flex, ScrollArea, ScrollPositionEvent, Sidebar, Virtualize,
+        use_scroll_area,
     },
     sx::sx,
 };
@@ -86,6 +87,55 @@ fn a_wheel_renders_the_rows_it_scrolls_to() {
     assert!(
         first > 50 && last >= 100,
         "rows {first}..={last} after a 2000px wheel"
+    );
+}
+
+fn handled() -> Element {
+    let area = use_scroll_area();
+    let mut tall = use_signal(|| false);
+    rsx! {
+        Button { id: "end", onclick: move |_| area.scroll_to(0.0, 19_000.0), "End" }
+        Button { id: "grow", onclick: move |_| tall.set(true), "Grow" }
+        div { id: "list-pane", height: if tall() { "600px" } else { "120px" },
+            ScrollArea { handle: area,
+                Virtualize {
+                    count: 1000,
+                    item_size: Some(20.0),
+                    item: move |i: usize| rsx! {
+                        div { "data-row": i, height: "20px", "Row {i}" }
+                    },
+                }
+            }
+        }
+    }
+}
+
+/// Todo 1873: a `scroll_to` moves the window in the poll it lands in, not a
+/// layout timer later.
+#[test]
+fn a_scroll_to_moves_the_window_at_once() {
+    let mut page = mount(handled);
+    page.wait_for(|page| last_row(page, |last| last < 29));
+    page.click("#end");
+    let (first, last) = rows(&page);
+    assert!(
+        first > 900 && last >= 956,
+        "rows {first}..={last} right after a scroll_to 19000"
+    );
+}
+
+/// A resize still re-measures the pane, so the next `scroll_to` fills it.
+#[test]
+fn a_scroll_to_after_a_resize_fills_the_taller_pane() {
+    let mut page = mount(handled);
+    page.wait_for(|page| last_row(page, |last| last < 29));
+    page.click("#grow");
+    page.wait_for(|page| last_row(page, |last| last >= 30));
+    page.click("#end");
+    let (first, last) = rows(&page);
+    assert!(
+        first > 900 && last >= 979,
+        "rows {first}..={last} right after a scroll_to 19000 in a 600px pane"
     );
 }
 
