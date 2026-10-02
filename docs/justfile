@@ -7,6 +7,8 @@ cargo_dx := env_var_or_default("CARGO_HOME", home_directory() / ".cargo") / "bin
 dx := env_var_or_default("DX", if path_exists(cargo_dx) == "true" { cargo_dx } else { "dx" })
 dioxus_version := `awk '/^name = "dioxus"$/ { getline; gsub(/"/, "", $3); print $3; exit }' ../Cargo.lock`
 dioxus_rev := `awk '/^name = "dioxus"$/ { f = 1 } f && /^source = / { n = split($3, a, "#"); gsub(/"/, "", a[n]); print a[n]; exit }' ../Cargo.lock`
+# `dx --version` of a dx built at that rev; a stale build of the same version differs only in the rev.
+dx_wanted := "dioxus " + dioxus_version + " (" + `awk '/^name = "dioxus"$/ { f = 1 } f && /^source = / { n = split($3, a, "#"); gsub(/"/, "", a[n]); print substr(a[n], 1, 7); exit }' ../Cargo.lock` + ")"
 
 import 'native.just'
 import 'desktop.just'
@@ -25,7 +27,7 @@ test:
 
 # An older `dx` (0.7.10 from a package manager) refuses the workspace.
 _dx:
-    @{{dx}} --version | grep -qF "{{dioxus_version}}" || (echo "{{dx}} ($({{dx}} --version)) is not dioxus {{dioxus_version}} - run \`just install-dx\`" && exit 1)
+    @{{dx}} --version | grep -qxF "{{dx_wanted}}" || (echo "{{dx}} ($({{dx}} --version)) is not {{dx_wanted}} - run \`just install-dx\`" && exit 1)
 
 start: _dx
     {{dx}} serve --platform web --debug-symbols=false --hotpatch
@@ -65,4 +67,4 @@ serve_dist port="8080":
 
 # `dx` from the lockfile's dioxus rev, as ci.yml's e2e job installs it.
 install-dx:
-    cargo install dioxus-cli --git https://github.com/DioxusLabs/dioxus --rev {{dioxus_rev}} --locked --bin dx
+    cargo install dioxus-cli --git https://github.com/DioxusLabs/dioxus --rev {{dioxus_rev}} --locked --bin dx --force

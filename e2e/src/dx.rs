@@ -73,8 +73,8 @@ fn main_checkout(root: &Path) -> Option<PathBuf> {
     common.parent().map(Path::to_path_buf)
 }
 
-/// Whether `dx --version` output is `version` at `rev`. A dx built outside a git
-/// checkout reports no rev and only has to match the version.
+/// Whether `dx --version` output is `version` at `rev`. With a locked rev, a dx that
+/// reports none (built outside a git checkout) may be stale and does not match.
 fn matches(reported: &str, version: &str, rev: Option<&str>) -> bool {
     let Some(rest) = reported.strip_prefix("dioxus ") else {
         return false;
@@ -87,10 +87,13 @@ fn matches(reported: &str, version: &str, rev: Option<&str>) -> bool {
         return false;
     }
     match (rev, reported_rev) {
-        (Some(rev), Some(reported)) if reported.chars().all(|c| c.is_ascii_hexdigit()) => {
-            rev.starts_with(reported)
+        (None, _) => true,
+        (Some(rev), Some(reported)) => {
+            !reported.is_empty()
+                && reported.chars().all(|c| c.is_ascii_hexdigit())
+                && rev.starts_with(reported)
         }
-        _ => true,
+        (Some(_), None) => false,
     }
 }
 
@@ -146,7 +149,13 @@ mod tests {
             version,
             rev
         ));
-        assert!(matches("dioxus 0.8.0-alpha.1", version, rev));
+        // No rev to compare: a crates.io or tarball build of the same version.
+        assert!(!matches("dioxus 0.8.0-alpha.1", version, rev));
+        assert!(!matches(
+            "dioxus 0.8.0-alpha.1 (was built without git repository)",
+            version,
+            rev
+        ));
         assert!(matches("dioxus 0.8.0-alpha.1 (c607e4e)", version, None));
         assert!(!matches("dioxus 0.8.0-alpha.10", version, None));
     }

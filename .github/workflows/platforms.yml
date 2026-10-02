@@ -32,6 +32,7 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
           cache-key: platforms-web
+          save-cache: false
       - uses: ./.github/actions/dx
       - working-directory: docs
         run: |
@@ -53,6 +54,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-key: platforms-native
+          save-cache: false
       - uses: ./.github/actions/dx
       - working-directory: docs
         run: dx build --platform linux --renderer native --debug-symbols=false --features native-vello
@@ -70,6 +72,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-key: platforms-native-check
+          save-cache: false
       - run: cargo check -p docs --features native-vello
 
   # wry on the system WebView: WebKitGTK, WebView2, WKWebView.
@@ -87,6 +90,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-key: platforms-desktop
+          save-cache: false
       - uses: ./.github/actions/dx
       - working-directory: docs
         run: dx build --platform desktop --renderer webview --debug-symbols=false --features desktop
@@ -107,6 +111,7 @@ jobs:
         with:
           targets: aarch64-linux-android
           cache-key: platforms-android
+          save-cache: false
       - uses: ./.github/actions/dx
       # `dx` finds the NDK only with ANDROID_HOME exported; the image sets it, the rest is ours.
       - run: |
@@ -137,6 +142,7 @@ jobs:
         with:
           targets: aarch64-apple-ios-sim
           cache-key: platforms-ios
+          save-cache: false
       - uses: ./.github/actions/dx
       - working-directory: docs
         run: dx build --platform ios --target aarch64-apple-ios-sim --debug-symbols=false --features mobile
