@@ -11,6 +11,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/time-picker", || rsx! { TimePickerPage {} }),
     ("/time-picker/date-time", || rsx! { DateTimePage {} }),
+    ("/time-picker/date-time-pinned", || rsx! { DateTimePage { today: NaiveDate::from_ymd_opt(2026, 3, 18) } }),
     ("/time-picker/analog", || rsx! { AnalogPage {} }),
     ("/time-picker/range", || rsx! { RangePage {} }),
 ];
@@ -99,10 +100,10 @@ fn TimePickerPage() -> Element {
     }
 }
 
-/// An empty date-time picker with no `today` prop: a time picked first takes
-/// its day from the clock.
+/// An empty date-time picker. Without `today` a time picked first takes its day
+/// from the clock; the baseline pins it, so the snapshot keeps its date.
 #[component]
-fn DateTimePage() -> Element {
+fn DateTimePage(today: Option<NaiveDate>) -> Element {
     let mut moment = use_signal(|| None::<NaiveDateTime>);
     let shown = moment().map(|value| value.to_string()).unwrap_or_default();
 
@@ -110,6 +111,7 @@ fn DateTimePage() -> Element {
         ChronoPicker::<NaiveDateTime> {
             variant: "digital",
             twelve_hour: false,
+            today,
             value: moment(),
             onchange: move |next: Option<NaiveDateTime>| moment.set(next),
         }

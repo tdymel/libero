@@ -157,10 +157,10 @@ fn the_date_time_range_steps_meet_the_baseline() {
         .run();
 }
 
-/// The other variants (todo 1773).
+/// The other variants (todo 1773). `today` pinned: the real one moves the snapshot (2042).
 #[test]
 fn the_date_time_picker_meets_the_baseline() {
-    Suite::new("time-picker-date-time", "/time-picker/date-time").run();
+    Suite::new("time-picker-date-time", "/time-picker/date-time-pinned").run();
 }
 
 #[test]
