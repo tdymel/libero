@@ -528,6 +528,48 @@ fn a_textarea_renders_its_rows_inside_the_frame() {
     assert!(frame.contains("<div"), "{body}");
 }
 
+/// Todo 1584: iOS has no minus on its `numeric` and `decimal` keypads, and `numeric` has no
+/// point, so the keypad follows the type and `min`; an `inputmode` attribute still wins.
+#[test]
+fn a_number_fields_keypad_follows_its_type_and_min() {
+    #[component]
+    fn Probe<T: libero::components::NumberValue>(min: Option<T>) -> Element {
+        rsx! {
+            NumberField::<T> { value: None, min, onchange: move |_| {} }
+        }
+    }
+    fn mode(app: fn() -> Element) -> String {
+        attributes_of(&body(&render(app)), "input")["inputmode"].clone()
+    }
+
+    assert_eq!(
+        mode(|| rsx! { LiberoProvider { Probe::<u8> {} } }),
+        "numeric"
+    );
+    assert_eq!(
+        mode(|| rsx! { LiberoProvider { Probe::<i32> { min: 0 } } }),
+        "numeric"
+    );
+    assert_eq!(
+        mode(|| rsx! { LiberoProvider { Probe::<f64> { min: 0.5 } } }),
+        "decimal"
+    );
+    // Negatives allowed: only a full keyboard has the minus.
+    assert_eq!(mode(|| rsx! { LiberoProvider { Probe::<i32> {} } }), "text");
+    assert_eq!(
+        mode(|| rsx! { LiberoProvider { Probe::<f64> { min: -1.0 } } }),
+        "text"
+    );
+    assert_eq!(
+        mode(|| rsx! {
+            LiberoProvider {
+                NumberField::<i32> { value: None, inputmode: "decimal", onchange: move |_| {} }
+            }
+        }),
+        "decimal"
+    );
+}
+
 /// `NumberField` is generic over the caller's number type, and every primitive
 /// already implements `NumberValue` - `i32` here needs no code at all.
 #[test]
@@ -556,7 +598,8 @@ fn a_number_field_is_a_spinbutton_carrying_its_range() {
     assert_eq!(input["aria-valuenow"], "4");
     assert_eq!(input["aria-valuemin"], "1");
     assert_eq!(input["aria-valuemax"], "99");
-    assert_eq!(input["inputmode"], "decimal");
+    // A whole number from 1 up: digits only.
+    assert_eq!(input["inputmode"], "numeric");
     assert_eq!(attributes_of(&body, "label")["for"], input["id"]);
 
     // Both steppers are real buttons in the trailing slot.

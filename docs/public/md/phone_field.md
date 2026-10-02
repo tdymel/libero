@@ -10,7 +10,9 @@ A country picker in front of a `tel` input. The picker holds the dial code, the
 input the national number, and the value is one E.164 string such as
 `"+12133734253"`. The field regroups the digits when it loses focus, for
 countries with a fixed number format. It ships the country list but no number
-validation, so add a rule through `validate`.
+validation, so add a rule through `validate`. It does not strip a national
+trunk prefix: `0171 1234567` typed under Germany becomes `"+4901711234567"`,
+which is not E.164. Say so in `helper`, or add a rule that refuses a leading 0.
 
 ## Usage
 

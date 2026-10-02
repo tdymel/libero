@@ -83,6 +83,12 @@ pub(crate) fn focus_entered_from(
     backend::focus_entered_from(event, boundary)
 }
 
+/// For a `focusout` inside `element`: whether focus went out of it, by `relatedTarget`.
+/// `None` off wasm32, where the event carries none.
+pub(crate) fn focus_left(event: &Event<FocusData>, element: &Rc<MountedData>) -> Option<bool> {
+    backend::focus_left(event, element)
+}
+
 /// After a `focusout`, whether focus landed inside an element matching `boundary`:
 /// the stand-in for `relatedTarget` off the web. `Unsupported` on the web.
 pub(crate) fn focus_lands_in(boundary: &str) -> super::Read<bool> {

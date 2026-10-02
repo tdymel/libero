@@ -1,13 +1,13 @@
 use std::rc::Rc;
 
-use dioxus::prelude::*;
+use dioxus::{core::current_scope_id, prelude::*};
 
 use crate::{
     components::{
         common::{HtmlTag, Input, Part, base_props, parts_enum},
         form::{
-            Binding, Caption, Disabled, FieldName, FieldStatus, FormScope, FormValue, Source,
-            Validators, issues_of,
+            Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, FormValue,
+            Source, Validators, issues_of,
             use_field::{caption_content, join_ids, slot_node, status_node},
             worst,
         },
@@ -129,7 +129,10 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     let mut scope = use_hook(|| try_consume_context::<FormScope>().unwrap_or_else(FormScope::new));
     use_context_provider(|| scope);
     let key = use_hook(|| scope.key());
-    use_drop(move || scope.withdraw(key));
+    use_drop(move || {
+        scope.withdraw(key);
+        scope.unregister(key);
+    });
 
     let binding = use_hook(|| {
         let parent = try_consume_context::<Binding>().unwrap_or_default();
@@ -177,9 +180,22 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         true => scope.unnamed_issue(key),
         false => FieldStatus::Valid,
     };
-    let status = worst(props.status.as_ref().cloned().unwrap_or_default(), unnamed);
+    let explicit = props.status.as_ref().cloned().unwrap_or_default();
+    let status = worst(explicit.clone(), unnamed);
 
     let id = crate::hooks::use_root_id(&props.attributes)();
+    // In error, the group is one input in error, as a field's explicit status: it blocks a
+    // submit and has a summary line (Maintainer, todo 1273).
+    scope.register(
+        key,
+        FieldEntry {
+            id: id.clone(),
+            label: props.label.text().map(str::to_string),
+            name: None,
+            status: explicit,
+            owner: current_scope_id(),
+        },
+    );
     // The same chrome a field draws around its control, from the same helpers.
     let describedby = join_ids(
         &id,

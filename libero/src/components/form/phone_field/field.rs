@@ -173,7 +173,7 @@ field_props! {
 }
 
 /// A country picker and a `tel` input, holding one E.164 string. Validates
-/// nothing on its own.
+/// nothing on its own, and keeps a typed trunk prefix: `0171` under `DE` is `+490171`.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

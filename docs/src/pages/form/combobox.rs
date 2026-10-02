@@ -196,6 +196,7 @@ fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
             "state: suggestions",
             "options: results().map(OptionList::from)",
             r#"loading_label: "Searching fruit""#,
+            r#"empty_label: "No fruit matches""#,
             r#"empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } }"#,
         ]
         .map(String::from)
@@ -205,7 +206,11 @@ fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
         true => ("state: suggestions", "options: matches"),
         false => ("state: fruit", "options: Fruit::options().to_vec()"),
     };
-    vec![state.to_string(), options.to_string()]
+    let mut code = vec![state.to_string(), options.to_string()];
+    if !suggesting(values) {
+        code.push("labelled_by: label.clone()".to_string());
+    }
+    code
 }
 
 fn option_code(_: &Control, values: &DemoValues) -> Vec<String> {
@@ -333,6 +338,7 @@ fn SelectDemo(values: DemoValues) -> Element {
                 disabled: disabled.then_some(true),
                 state: fruit,
                 options: Fruit::options().to_vec(),
+                labelled_by: label.clone(),
                 option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                     ComboboxOption {
                         selected: picked() == Some(o.value),
@@ -405,6 +411,7 @@ fn FetchingDemo(values: DemoValues) -> Element {
             state: suggestions,
             options: results().map(OptionList::from),
             loading_label: "Searching fruit",
+            empty_label: "No fruit matches",
             empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } },
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption {
@@ -512,9 +519,14 @@ pub fn ComboboxPage() -> Element {
                         .doc("The trigger, and anything that belongs with it, such as a hidden input."),
                     prop("empty", "Element")
                         .doc("Shown in place of the list when `options` is empty."),
+                    prop("empty_label", "String")
+                        .default("combobox.nothing_found")
+                        .doc("What screen readers hear when the open list has no options, and what it shows there without `empty`."),
                     prop("loading_label", "String")
                         .default("common.loading")
                         .doc("What screen readers hear while `options` is pending. A pending list shows a `Loader` instead of the rows or `empty`."),
+                    prop("labelled_by", "String")
+                        .doc("The id of the element that names the list, usually the trigger's label. Screen readers read it with the list."),
                     prop("size", "Size")
                         .default("md")
                         .doc("A row's height and font size."),
@@ -560,12 +572,14 @@ pub fn ComboboxPage() -> Element {
                 .key(["Escape", "Tab"], "Close the list.")
                 .handles([
                     "Focus stays on your trigger, so typing keeps working.",
+                    "An open list with no options says `empty_label`, so an empty search is heard, not only seen.",
                     "Android's Back button calls `onopened(false)` while the list is open, rather than closing the app.",
                 ])
                 .must([
                     "Spread `state.a11y_attributes()` on your trigger, or screen readers cannot tie the list to it.",
                     "Close the list on your trigger's blur, or an enclosing `Modal` stops hearing Escape while the list stays open.",
                     "Name the trigger: it becomes a `combobox`, which takes no name from its content. Point a button trigger's `aria-labelledby` at a visible label, and give a text field a `label`.",
+                    "Pass the same label's id as `labelled_by`, so the list has a name too.",
                 ]),
             lead: rsx! {
                 Text {

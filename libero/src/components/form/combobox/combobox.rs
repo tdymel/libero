@@ -27,9 +27,16 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// Shown in place of the list when `options` is empty.
     #[props(default)]
     empty: Option<Element>,
+    /// Said when an open list has no options, and drawn there without `empty`. Defaults to
+    /// [`ComboboxLabels::nothing_found`](crate::localization::ComboboxLabels::nothing_found).
+    #[props(default, into)]
+    empty_label: Option<String>,
     /// Said while fetching. Defaults to [`CommonLabels::loading`](crate::localization::CommonLabels::loading).
     #[props(default, into)]
     loading_label: Option<String>,
+    /// Names the listbox, usually the id of the trigger's label.
+    #[props(default, into)]
+    labelled_by: Option<String>,
     /// A row's height and font size.
     #[props(default, into)]
     size: Input<Size>,
@@ -91,7 +98,8 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
 /// Docs: <https://libero-ui.dev/form/combobox>
 #[component]
 pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Element {
-    let common = use_localization().common;
+    let localization = use_localization();
+    let common = localization.common;
     let list = props.options.list();
     let values = list.values();
     let count = values.len();
@@ -139,6 +147,12 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             onopened: move |opened| state.set_open(opened),
             state,
             empty: props.empty,
+            nothing_found: Some(
+                props
+                    .empty_label
+                    .unwrap_or_else(|| localization.combobox.nothing_found.to_string()),
+            ),
+            labelled_by: props.labelled_by,
             loading: loading.then(|| {
                 props
                     .loading_label

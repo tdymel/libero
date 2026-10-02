@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, base_props, parts_enum},
+        common::{FOCUSABLE_SELECTOR, HtmlTag, Input, Part, base_props, parts_enum},
         feedback::Alert,
         form::{
             Binding, Source, Validators,
@@ -41,11 +41,12 @@ static SUMMARY_LIST_SX: StaticSx = StaticSx::new(|| {
     sx().margin("0")
         .padding_left("20px")
         .rtl(sx().padding_left("0").padding_right("20px"))
-        // The line itself is the link: readable on the tint, no underline.
+        // The line itself is the link: readable on the tint, and underlined so it reads as one
+        // without colour, in forced colours too (GOV.UK's summary, todo 1272).
         .selector(
             "& a",
             sx().color("inherit")
-                .text_decoration("none")
+                .text_decoration("underline")
                 .cursor("pointer"),
         )
 });
@@ -220,9 +221,10 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
                             match &item.target {
                                 Some(id) => {
                                     // A group has no control with the id: its tab stop is named by the label.
+                                    // A `Fieldset`'s line goes to its first tab stop.
+                                    let at = crate::hooks::id_selector(id);
                                     let target = format!(
-                                        "{}, {}",
-                                        crate::hooks::id_selector(id),
+                                        "{at}:not(fieldset), {at} {FOCUSABLE_SELECTOR}:not([type=\"hidden\"]), {}",
                                         labelled_focus_selector(&format!("{id}-label"))
                                     );
                                     rsx! {

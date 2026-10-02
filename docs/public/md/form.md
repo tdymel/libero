@@ -174,6 +174,11 @@ explains how parts work. The fields take their own `parts`.
   name is still valid.
 - Each summary line starts with its field's label, or its `aria_label` when it
   has no text label.
+- A `Fieldset` with an error `status` is one field in error: it blocks the
+  submit and has a line named by its legend.
+- A rule shows once focus leaves its field, not on a move inside it, such as
+  from one `PinField` cell to the next. The desktop WebView cannot tell the two
+  apart, so there any move shows it.
 
 ### You must
 

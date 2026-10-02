@@ -172,7 +172,10 @@ pub fn NumberFieldPage() -> Element {
             accessibility: a11y()
                 .key(["Up", "Down"], "Step the value, with or without `steppers`.")
                 .key(["PageUp", "PageDown"], "Step the value ten steps.")
-                .handles(["The stepper buttons are not tab stops, since the arrow keys do the same from the field."])
+                .handles([
+                    "The stepper buttons are not tab stops, since the arrow keys do the same from the field.",
+                    "The phone keypad follows the type and `min`: digits for a whole number from 0, digits and a point for a fraction from 0, the full keyboard where a negative is allowed, since iOS keypads have no minus. An `inputmode` attribute overrides it.",
+                ])
                 .must([
                     "Leave `label` unset only when something else names the field.",
                     "With `steppers` on several fields of one form, name the buttons by their field with `increment_label` and `decrement_label`, such as \"Add a guest\". Unset, every field's are \"Increase\" and \"Decrease\".",

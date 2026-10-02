@@ -123,7 +123,13 @@ pub fn PhoneFieldPage() -> Element {
                     "fixed number format. It ships the country list but no number validation, so "
                     "add a rule through "
                     Code { source: "validate" }
-                    "."
+                    ". It does not strip a national trunk prefix: "
+                    Code { source: "0171 1234567" }
+                    " typed under Germany becomes "
+                    Code { source: "\"+4901711234567\"" }
+                    ", which is not E.164. Say so in "
+                    Code { source: "helper" }
+                    ", or add a rule that refuses a leading 0."
                 }
             },
             // snippet: let mut phone = use_signal(String::new);

@@ -748,6 +748,17 @@ pub(crate) fn focus_entered_from(
     return None;
 }
 
+/// Only the web can see a focus event's `relatedTarget` - see
+/// [`focus_left`](crate::platform::focus_left).
+pub(crate) fn focus_left(event: &Event<FocusData>, element: &Rc<MountedData>) -> Option<bool> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (event, element);
+    #[cfg(target_arch = "wasm32")]
+    return web::focus_left(event, element);
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
+}
+
 /// Off the web - see [`focus_lands_in`](crate::platform::focus_lands_in).
 pub(crate) fn focus_lands_in(boundary: &str) -> super::Read<bool> {
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]

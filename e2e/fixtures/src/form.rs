@@ -176,6 +176,12 @@ fn TargetsPage() -> Element {
                 oninput: move |text| nickname.set(text),
                 validate: not_empty.error("Enter a nickname."),
             }
+            // A group in error is one input in error: its line focuses a control inside (1273).
+            Fieldset::<()> {
+                label: "Address",
+                status: "Address not found.",
+                TextField { label: "Street", value: "" }
+            }
             Button { r#type: "submit", "Send" }
         }
     }

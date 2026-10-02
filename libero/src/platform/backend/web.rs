@@ -211,6 +211,14 @@ pub(super) fn focus_entered_from(
     Some(Some(Box::new(WebElement { element })))
 }
 
+/// A `focusout` to nothing (`<body>`) left it too.
+pub(super) fn focus_left(event: &Event<FocusData>, element: &Rc<MountedData>) -> Option<bool> {
+    let element = element.downcast::<web_sys::Element>()?;
+    let to = event.downcast::<web_sys::FocusEvent>()?.related_target();
+    let to = to.and_then(|to| to.dyn_into::<web_sys::Node>().ok());
+    Some(!to.is_some_and(|to| element.contains(Some(&to))))
+}
+
 /// Walks up from the target because dioxus-web delegates from the root, so
 /// `currentTarget` is not the handle.
 pub(super) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>) {

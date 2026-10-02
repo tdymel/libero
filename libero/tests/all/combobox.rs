@@ -285,6 +285,57 @@ fn a_closed_list_says_nothing_while_loading() {
     assert_eq!(status(&body(&dioxus_ssr::render(&dom))), "");
 }
 
+/// An open list, its `empty_label` and `labelled_by` set.
+#[component]
+fn Labelled(options: Vec<&'static str>, empty_label: Option<String>) -> Element {
+    let fruit = use_combobox();
+    use_hook(|| fruit.open());
+    rsx! {
+        Combobox {
+            state: fruit,
+            options,
+            empty_label,
+            labelled_by: "fruit-label",
+            option: move |o: ComboboxOptionArgs<&'static str>| rsx! {
+                ComboboxOption { onpick: move |_| {}, "{o.value}" }
+            },
+            Button { attributes: fruit.a11y_attributes(), "pick" }
+        }
+    }
+}
+
+/// Todo 1269: an empty list is said, not only drawn, as on `Select` and `Autocomplete`.
+#[test]
+fn an_empty_list_says_its_empty_label() {
+    fn default_label() -> Element {
+        rsx! { LiberoProvider { Labelled { options: Vec::new() } } }
+    }
+    fn own_label() -> Element {
+        rsx! { LiberoProvider { Labelled { options: Vec::new(), empty_label: "No fruit" } } }
+    }
+
+    let html = loading(default_label);
+    assert_eq!(status(&html), "No results", "{html}");
+    assert!(html.contains(">No results<"), "drawn too: {html}");
+
+    let html = loading(own_label);
+    assert_eq!(status(&html), "No fruit", "{html}");
+}
+
+/// Todo 1270: the bare `Combobox` names its listbox as `Select` and `Autocomplete` do.
+#[test]
+fn labelled_by_names_the_listbox() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { Labelled { options: vec!["apple"] } } }
+    }
+    let html = loading(app);
+    let listbox = html.find(r#"role="listbox""#).expect("a listbox");
+    assert!(
+        element_at(&html, listbox).contains(r#"aria-labelledby="fruit-label""#),
+        "{html}"
+    );
+}
+
 /// The region is the trigger's sibling, not the dropdown's content: the
 /// dropdown is `aria-busy` while loading, and the loader inside it is silent.
 #[test]

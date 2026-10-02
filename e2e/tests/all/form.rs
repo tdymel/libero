@@ -105,9 +105,37 @@ fn a_blocked_submit_focuses_the_summary_and_its_lines_reach_the_fields() {
     });
 }
 
+/// Todo 1272: a summary line reads as a link by its underline, not by colour alone, also in
+/// forced colours (GOV.UK's summary).
+#[test]
+fn the_summary_lines_are_underlined_also_in_forced_colours() {
+    const UNDERLINED: &str = "(() => { const links = [...document.querySelectorAll('[data-slot=summary] a')]; \
+        return links.length > 0 && links.every(a => getComputedStyle(a).textDecorationLine.includes('underline')); })()";
+    block_on(async {
+        let fixture = Fixture::open("/form/summary", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "input[type=email]").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        focus::wait_for_focus(page, "[data-slot=summary]", "a blocked submit")
+            .await
+            .unwrap();
+        wait::for_js_true(page, UNDERLINED, "underlined summary lines")
+            .await
+            .unwrap();
+        e2e::browser::force_colours(page).await.unwrap();
+        wait::for_js_true(page, UNDERLINED, "underlined lines in forced colours")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A group field has no single control to carry the id its summary line links
 /// to: the line must still focus the group's tab stop. Every validated field type (1274).
-/// A field named by `aria_label` only is named in its line (1526).
+/// A field named by `aria_label` only is named in its line (1526). A fieldset in error has a
+/// line, which focuses a control inside it (1273).
 #[test]
 fn every_summary_line_focuses_something_in_its_field() {
     block_on(async {
@@ -129,7 +157,7 @@ fn every_summary_line_focuses_something_in_its_field() {
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(lines, 20);
+        assert_eq!(lines, 21);
         // A field named by `aria_label` only still names its line (1526).
         let texts: Vec<String> = page
             .evaluate(
@@ -139,7 +167,11 @@ fn every_summary_line_focuses_something_in_its_field() {
             .unwrap()
             .into_value()
             .unwrap();
-        for line in ["Newsletter: Tick the box.", "Nickname: Enter a nickname."] {
+        for line in [
+            "Newsletter: Tick the box.",
+            "Nickname: Enter a nickname.",
+            "Address: Address not found.",
+        ] {
             assert!(
                 texts.iter().any(|text| text == line),
                 "no {line:?} in {texts:?}"

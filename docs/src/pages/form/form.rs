@@ -206,6 +206,8 @@ pub fn FormPage() -> Element {
                 .handles([
                     "A form becomes a `form` landmark only once it has a name. A form without a name is still valid.",
                     "Each summary line starts with its field's label, or its `aria_label` when it has no text label.",
+                    "A `Fieldset` with an error `status` is one field in error: it blocks the submit and has a line named by its legend.",
+                    "A rule shows once focus leaves its field, not on a move inside it, such as from one `PinField` cell to the next. The desktop WebView cannot tell the two apart, so there any move shows it.",
                 ])
                 .must([
                     "Name the form when the page holds more than one form, or when the form is the page's main task, such as a checkout. Pass `aria-labelledby` pointing at a visible heading, or `aria-label`.",

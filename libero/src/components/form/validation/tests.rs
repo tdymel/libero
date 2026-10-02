@@ -787,3 +787,33 @@ fn a_field_shown_by_another_fields_value_only_validates_while_shown() {
     settle(&mut dom);
     assert!(!has_errors(&dom), "the field kept its error after hiding");
 }
+
+/// Todo 1273 (Maintainer): a `Fieldset` in error is one input in error, as a field's explicit
+/// status: it blocks a submit and has its own summary line, named by its legend.
+#[test]
+fn a_fieldset_in_error_blocks_the_submit_and_joins_the_summary() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Form::<()> {
+                    Spy {}
+                    Fieldset::<()> {
+                        label: "Address",
+                        status: "Address not found",
+                        TextField { name: "zip", value: "" }
+                    }
+                }
+            }
+        }
+    }
+
+    let (dom, _) = mount(app);
+    let scope = scope(&dom);
+    let summary = dom.in_runtime(|| {
+        assert!(scope.has_errors(), "the fieldset's error does not block");
+        scope.summary()
+    });
+    let messages: Vec<_> = summary.iter().map(|item| item.message.as_str()).collect();
+    assert_eq!(messages, ["Address: Address not found"]);
+    assert!(summary[0].target.is_some());
+}

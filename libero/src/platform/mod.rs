@@ -83,8 +83,8 @@ pub(crate) use eye_dropper::eye_dropper;
 pub(crate) use file_dialog::pick_files;
 pub(crate) use focus::{
     FocusMove, SilentFocusApi, SilentFocusSubscription, blur_counts, element_contains,
-    focus_entered_from, focus_is_in, focus_lands_in, focus_pressed, focus_selectors, focus_visible,
-    reads_dom_synchronously, silent_focus,
+    focus_entered_from, focus_is_in, focus_lands_in, focus_left, focus_pressed, focus_selectors,
+    focus_visible, reads_dom_synchronously, silent_focus,
 };
 pub(crate) use form::{lifts_legends, submit_event, submit_listeners};
 pub(crate) use fullscreen::{FullscreenApi, FullscreenSubscription, fullscreen};

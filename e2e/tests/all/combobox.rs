@@ -138,9 +138,9 @@ fn an_rtl_dropdown_stays_inside_the_viewport() {
     });
 }
 
-/// An open list with nothing to draw is not expanded for a screen reader.
+/// Todo 1269: an open list with no options draws and says its empty label, so it is expanded.
 #[test]
-fn a_list_with_nothing_to_draw_is_not_expanded() {
+fn an_empty_open_list_says_its_empty_label() {
     block_on(async {
         let fixture = Fixture::open("/combobox/none", Viewport::Desktop)
             .await
@@ -148,24 +148,21 @@ fn a_list_with_nothing_to_draw_is_not_expanded() {
         let page = &fixture.page;
         keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        page.evaluate("new Promise(r => setTimeout(() => r(1), 300))")
-            .await
-            .unwrap();
-        let read: (Option<String>, bool) = page
-            .evaluate(
-                "[document.querySelector('[role=combobox]').getAttribute('aria-expanded'), \
-                 !!document.querySelector('[role=listbox]')]",
-            )
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('[role=status]')].some(s => s.textContent === 'No results') \
+             && document.querySelector('[data-slot=nothing-found]')?.textContent === 'No results'",
+            "the empty label drawn and said",
+        )
+        .await
+        .unwrap();
+        let expanded: Option<String> = page
+            .evaluate("document.querySelector('[role=combobox]').getAttribute('aria-expanded')")
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert!(!read.1, "nothing should be drawn");
-        assert_eq!(
-            read.0.as_deref(),
-            Some("false"),
-            "aria-expanded with nothing drawn"
-        );
+        assert_eq!(expanded.as_deref(), Some("true"), "a drawn empty label");
         fixture.close().await.unwrap();
     });
 }

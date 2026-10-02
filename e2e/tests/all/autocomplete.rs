@@ -126,6 +126,43 @@ fn typing_keeps_home_end_and_expanded_honest() {
     editable_combobox_typing("/autocomplete", "e");
 }
 
+/// Todo 1585: a prefiltered list still on its way says and draws the loader, never
+/// "No results"; once it lands empty, "No results" comes back.
+#[test]
+fn a_pending_fetch_says_loading_not_nothing_found() {
+    block_on(async {
+        let fixture = Fixture::open("/autocomplete/fetch", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::type_text(page, "B").await.unwrap();
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('[role=status]')].some(e => e.textContent === 'Loading') \
+             && document.querySelector('[aria-busy=true]') !== null",
+            "the pending list to say Loading",
+        )
+        .await
+        .unwrap();
+        let nothing: bool = page
+            .evaluate(
+                "document.body.textContent.includes('No results') \
+                 || document.querySelector(\"[data-slot='nothing-found']\") !== null",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!nothing, "a list that has not arrived said No results");
+
+        keyboard::type_text(page, "erx").await.unwrap();
+        wait_for_nothing_found(page, "the landed empty list").await;
+        fixture.console.assert_clean("a pending fetch").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Waits until a status region says "No results" and the dropdown shows it.
 pub async fn wait_for_nothing_found(page: &chromiumoxide::Page, what: &str) {
     wait::for_js_true(

@@ -146,6 +146,7 @@ fn NumberFieldShell<T: NumberValue>(
     let onchange = props.onchange;
     let setter = bound.setter();
     let separator = float_separator::<T>(use_formats().decimal_separator);
+    let kind = use_hook(Keypad::<T>::of);
 
     let publish = move |next: Option<T>| {
         let next = next.map(|next| next.clamp_between(min, max));
@@ -235,7 +236,7 @@ fn NumberFieldShell<T: NumberValue>(
     let input = field
         .aria(control)
         .attr_default("type", "text")
-        .attr_default("inputmode", "decimal")
+        .attr_default("inputmode", keypad(kind, min))
         // The role carries the range: `min`/`max` mean nothing on `type="text"`.
         .attr("role", "spinbutton")
         .attr("aria-valuemin", min.map(|min| min.to_string()))
@@ -334,6 +335,34 @@ fn float_separator<T: 'static>(separator: &'static str) -> Option<&'static str> 
     let float =
         TypeId::of::<T>() == TypeId::of::<f64>() || TypeId::of::<T>() == TypeId::of::<f32>();
     (float && separator != ".").then_some(separator)
+}
+
+/// What `T` can hold, read once per field from its parse.
+#[derive(Clone, Copy)]
+struct Keypad<T> {
+    signed: bool,
+    fractional: bool,
+    zero: Option<T>,
+}
+
+impl<T: NumberValue> Keypad<T> {
+    fn of() -> Self {
+        Self {
+            signed: T::parse("-1").is_some(),
+            fractional: T::parse("0.5").is_some(),
+            zero: T::zero(),
+        }
+    }
+}
+
+/// The `inputmode`: iOS's `numeric` and `decimal` keypads have no minus, and `numeric` no point.
+fn keypad<T: NumberValue>(kind: Keypad<T>, min: Option<T>) -> &'static str {
+    let negatives = kind.signed && min.is_none_or(|min| kind.zero.is_none_or(|zero| min < zero));
+    match (negatives, kind.fractional) {
+        (true, _) => "text",
+        (false, true) => "decimal",
+        (false, false) => "numeric",
+    }
 }
 
 /// `T::parse`, taking the separator as well as `.`: a German user on a US

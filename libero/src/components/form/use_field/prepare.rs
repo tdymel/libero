@@ -14,6 +14,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{ElementHandle, use_localization, use_root_id, use_silent_focus_out},
+    platform,
 };
 
 impl FieldBuilder<'_> {
@@ -153,16 +154,23 @@ impl FieldBuilder<'_> {
         });
         // The label of a `labelled_by` control finds that control in here.
         let focuses = self.labelled_by && !self.group;
-        let own = use_hook(|| focuses.then(ElementHandle::new));
+        // A touching field also asks whether focus left it.
+        let own = use_hook(|| (focuses || touches).then(ElementHandle::new));
         let root = silent.or(own);
         if let Some(element) = &root {
             wrapper = wrapper.element(element);
         }
-        // `focusout` bubbles, so one listener on the wrapper sees the control
-        // lose focus whatever it is - and leaves a caller's own `onblur` alone.
+        // `focusout` bubbles, so one listener on the wrapper sees the control lose focus whatever
+        // it is - and leaves a caller's own `onblur` alone. A move inside (a `PinField` cell to the
+        // next) is no blur (1564).
         if touches {
-            wrapper = wrapper.event("onfocusout", move |_: FocusEvent| touch());
+            wrapper = wrapper.event("onfocusout", move |event: FocusEvent| {
+                if focus_left(&event, root) {
+                    touch();
+                }
+            });
         }
+        let root = root.filter(|_| silent.is_some() || focuses);
 
         PreparedField {
             label: label_node(
@@ -189,5 +197,17 @@ impl FieldBuilder<'_> {
             wrapper,
             root,
         }
+    }
+}
+
+/// Whether a `focusout` inside `root` took focus out of it. The web reads `relatedTarget`; Blitz
+/// fires it after the move, so asks where focus is. A WebView cannot answer: any move counts.
+fn focus_left(event: &FocusEvent, root: Option<ElementHandle>) -> bool {
+    let Some(mounted) = root.and_then(|root| root.mounted()) else {
+        return true;
+    };
+    match platform::focus_left(event, &mounted) {
+        Some(left) => left,
+        None => !platform::reads_dom_synchronously() || !platform::focus_is_in(&mounted),
     }
 }

@@ -133,9 +133,9 @@ pub fn AutocompletePage() -> Element {
                         .doc("What the field posts as. A path such as `Signup::FIELDS.city()` also binds it to the surrounding `Form`'s value when it has no `oninput`."),
                     prop("validate", "Validators<String>")
                         .doc("Rules over the text, shown once the field loses focus or its form is submitted."),
-                    prop("options", "Vec<T>")
+                    prop("options", "OptionSource<T>")
                         .default("[]")
-                        .doc("The suggestions to offer. `T` is inferred from it."),
+                        .doc("The suggestions to offer. `T` is inferred from it. A `Vec<T>` converts, and so does a `Resource<Vec<T>>` or an `Option<OptionList<T>>` that is `None` while you fetch: a pending list shows the loader and says `loading_label`, never \"No results\" for an answer that has not arrived. Groups and disabled options of an `OptionList` are not drawn."),
                     prop("option", "Callback<AutocompleteOptionArgs<T>, Element>")
                         .default("T::label()")
                         .doc("Draws one row's content. The highlight and click stay the component's."),
@@ -153,6 +153,9 @@ pub fn AutocompletePage() -> Element {
                         .doc("Shows an x at the end of the frame that empties the field."),
                     prop("empty", "Element")
                         .doc("Shown in place of the list when nothing matches. Screen readers hear the localization's `combobox.nothing_found` either way, so change that string to match."),
+                    prop("loading_label", "String")
+                        .default("common.loading")
+                        .doc("What screen readers hear while `options` is pending."),
                     prop("leading", "Element").doc("Inside the frame, before the control, such as a search icon."),
                     prop("trailing", "Element").doc("Inside the frame, after the control, before the clear x."),
                     prop("describe_leading", "bool")

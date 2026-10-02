@@ -167,6 +167,7 @@ fn Demo() -> Element {
             state: suggestions,
             options: results().map(OptionList::from),
             loading_label: "Searching fruit",
+            empty_label: "No fruit matches",
             empty: rsx! { Text { size: "sm", "No fruit matches" } },
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
                 ComboboxOption {
@@ -208,7 +209,9 @@ fn Demo() -> Element {
 | `option` | `Callback<ComboboxOptionArgs<T>, Element>` | required | Draws one row, usually a `ComboboxOption`. |
 | `children` | `Element` | required | The trigger, and anything that belongs with it, such as a hidden input. |
 | `empty` | `Element` | - | Shown in place of the list when `options` is empty. |
+| `empty_label` | `String` | `combobox.nothing_found` | What screen readers hear when the open list has no options, and what it shows there without `empty`. |
 | `loading_label` | `String` | `common.loading` | What screen readers hear while `options` is pending. A pending list shows a `Loader` instead of the rows or `empty`. |
+| `labelled_by` | `String` | - | The id of the element that names the list, usually the trigger's label. Screen readers read it with the list. |
 | `size` | `Size` | `md` | A row's height and font size. |
 | `radius` | `Size` | `sm` | The dropdown's corner radius. |
 | `disabled` | `bool` | `false` | Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too. |
@@ -284,6 +287,8 @@ match at any depth inside the list.
 ### Libero handles
 
 - Focus stays on your trigger, so typing keeps working.
+- An open list with no options says `empty_label`, so an empty search is heard,
+  not only seen.
 - Android's Back button calls `onopened(false)` while the list is open, rather
   than closing the app.
 
@@ -296,6 +301,7 @@ match at any depth inside the list.
 - Name the trigger: it becomes a `combobox`, which takes no name from its
   content. Point a button trigger's `aria-labelledby` at a visible label, and
   give a text field a `label`.
+- Pass the same label's id as `labelled_by`, so the list has a name too.
 
 ## Theme defaults
 

@@ -29,6 +29,94 @@ e2e::scenario!(
     one_digit_per_cell
 );
 
+/// Todo 1564: a cell-to-cell move stays inside the field, so the rule waits until Tab
+/// leaves the cells. Web only: a WebView cannot tell, and touches on any move.
+#[test]
+fn the_rule_waits_until_focus_leaves_the_cells() {
+    const SHOWN: &str = "document.body.textContent.includes('Enter all four digits.') \
+        || document.querySelector('[aria-invalid=true]') !== null";
+    block_on(async {
+        let fixture = Fixture::open("/pin-field/rule", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::passes::pointer::click(page, "[data-pin-index='0']")
+            .await
+            .unwrap();
+        keyboard::type_text(page, "1").await.unwrap();
+        e2e::passes::focus::wait_for_focus(page, "[data-pin-index='1']", "one digit")
+            .await
+            .unwrap();
+        let shown = after_two_frames(page, SHOWN).await;
+        assert!(!shown, "a move between cells showed the rule");
+
+        // Each cell is a tab stop: two Tabs stay inside, the third reaches Next.
+        for _ in 0..2 {
+            keyboard::press(page, keyboard::TAB).await.unwrap();
+        }
+        e2e::passes::focus::wait_for_focus(page, "[data-pin-index='3']", "two Tabs")
+            .await
+            .unwrap();
+        let shown = after_two_frames(page, SHOWN).await;
+        assert!(!shown, "a Tab between cells showed the rule");
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(page, SHOWN, "the rule once Tab left the cells")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("a pin rule").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// `js` once the render a move scheduled has landed: two frames on.
+async fn after_two_frames(page: &Page, js: &str) -> bool {
+    page.evaluate(format!(
+        "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r({js}))))"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
+/// The same on Blitz, whose `focusout` comes after the move and whose Tab fires none.
+async fn the_rule_waits_for_focus_to_leave<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const SHOWN: &str = "[aria-invalid='true']";
+    d.click("[data-pin-index='0']").await?;
+    d.type_text("1").await?;
+    eventually_focused(d, "[data-pin-index='1']", "one digit").await?;
+    d.settle().await?;
+    anyhow::ensure!(
+        !d.exists(SHOWN).await?,
+        "{:?}: a move between cells showed the rule",
+        d.platform()
+    );
+    // Each cell is a tab stop: two Tabs stay inside, the third reaches Next.
+    d.press(keyboard::TAB).await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "[data-pin-index='3']", "two Tabs").await?;
+    d.settle().await?;
+    anyhow::ensure!(
+        !d.exists(SHOWN).await?,
+        "{:?}: a Tab between cells showed the rule",
+        d.platform()
+    );
+    d.press(keyboard::TAB).await?;
+    eventually(d, "the rule once Tab left the cells", async |d| {
+        d.exists(SHOWN).await
+    })
+    .await
+}
+
+e2e::scenario!(
+    the_rule_waits_for_focus_to_leave_the_cells,
+    "/pin-field/rule",
+    the_rule_waits_for_focus_to_leave,
+    web: skip("the_rule_waits_until_focus_leaves_the_cells checks it after two frames"),
+    desktop: skip("1564: a WebView cannot tell a move inside the field from a blur"),
+    android: skip("1564: a WebView cannot tell a move inside the field from a blur")
+);
+
 async fn cells_read<D: Driver>(d: &mut D, expected: [&str; 4], during: &str) -> Result<()> {
     eventually(
         d,

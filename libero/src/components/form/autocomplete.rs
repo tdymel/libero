@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Options, Parts, use_combobox},
+        common::{HtmlTag, Input, OptionSource, Options, Parts, use_combobox},
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, clear_button,
             field_props, row_label, use_bound, use_field, use_field_frame,
@@ -43,9 +43,10 @@ field_props! {
         /// Rules over the text, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<String>,
-        /// The suggestions to offer.
-        #[props(default)]
-        options: Vec<T>,
+        /// The suggestions to offer. A `Vec<T>`, or a [`Resource`] or `Option` (`None` while
+        /// fetching): a pending list says `loading_label` rather than `nothing_found`.
+        #[props(default, into)]
+        options: OptionSource<T>,
         /// Draws one row's content. Defaults to `Options::label`.
         #[props(default)]
         option: Option<Callback<AutocompleteOptionArgs<T>, Element>>,
@@ -70,6 +71,9 @@ field_props! {
         /// `combobox.nothing_found` either way.
         #[props(default)]
         empty: Option<Element>,
+        /// Said while fetching. Defaults to [`CommonLabels::loading`](crate::localization::CommonLabels::loading).
+        #[props(default, into)]
+        loading_label: Option<String>,
         /// Inside the frame, before the control.
         #[props(default, into)]
         leading: Option<Element>,
@@ -110,7 +114,8 @@ field_props! {
 #[component]
 pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let theme = use_theme();
-    let nothing_found = use_localization().combobox.nothing_found;
+    let localization = use_localization();
+    let nothing_found = localization.combobox.nothing_found;
     let size = props.size.copied_or(theme.autocomplete.size);
     let radius = props.radius.copied_or(theme.autocomplete.radius);
     let required = props.required.unwrap_or(false);
@@ -133,8 +138,10 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let input_element = use_element();
 
     let query = text.to_lowercase();
-    let matches: Vec<T> = props
-        .options
+    // A pending list draws the loader, never its stale rows or "nothing found".
+    let loading = props.options.is_pending();
+    let options = props.options.list().values();
+    let matches: Vec<T> = options
         .iter()
         .filter(|value| match (prefiltered, &props.filter) {
             (true, _) => true,
@@ -205,8 +212,13 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .collect();
     let has_rows = !rows.is_empty();
     // Typed text against a list that has options to match, or a fetched one.
-    let nothing_found = (!text.is_empty() && (prefiltered || !props.options.is_empty()))
+    let nothing_found = (!text.is_empty() && (prefiltered || !options.is_empty()))
         .then(|| nothing_found.to_string());
+    let loading = loading.then(|| {
+        props
+            .loading_label
+            .unwrap_or_else(|| localization.common.loading.to_string())
+    });
 
     let clear_input = oninput.clone();
     let clear = clear_button(
@@ -288,12 +300,13 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             opened: state.is_open()
                 && !disabled
                 && !readonly
-                && (has_rows || props.empty.is_some() || nothing_found.is_some()),
+                && (has_rows || loading.is_some() || props.empty.is_some() || nothing_found.is_some()),
             onopened: move |opened| state.set_open(opened),
             state,
             caret_keys: CaretKeys::Unhighlighted,
             empty: props.empty,
             nothing_found,
+            loading,
             size,
             radius,
             disabled: disabled || readonly,

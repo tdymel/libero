@@ -51,7 +51,7 @@ Autocomplete {
     },
 }
 
-// A list fetched per keystroke.
+// A list fetched per keystroke: a `Resource` says "Loading" until it answers.
 Autocomplete {
     options: results(),
     prefiltered: true,
@@ -98,7 +98,7 @@ Autocomplete {
 | `oninput` | `EventHandler<String>` | - | Fires per keystroke, and again with the label when a suggestion is picked or the field is cleared. |
 | `name` | `FieldName<String>` | - | What the field posts as. A path such as `Signup::FIELDS.city()` also binds it to the surrounding `Form`'s value when it has no `oninput`. |
 | `validate` | `Validators<String>` | - | Rules over the text, shown once the field loses focus or its form is submitted. |
-| `options` | `Vec<T>` | `[]` | The suggestions to offer. `T` is inferred from it. |
+| `options` | `OptionSource<T>` | `[]` | The suggestions to offer. `T` is inferred from it. A `Vec<T>` converts, and so does a `Resource<Vec<T>>` or an `Option<OptionList<T>>` that is `None` while you fetch: a pending list shows the loader and says `loading_label`, never "No results" for an answer that has not arrived. Groups and disabled options of an `OptionList` are not drawn. |
 | `option` | `Callback<AutocompleteOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight and click stay the component's. |
 | `onpick` | `EventHandler<T>` | - | A suggestion was accepted, with the whole value behind the text. Fires after `oninput`. |
 | `filter` | `Callback<AutocompleteFilterArgs<T>, bool>` | `contains` | Narrows `options`. Defaults to a case-insensitive `contains` over the label. |
@@ -106,6 +106,7 @@ Autocomplete {
 | `placeholder` | `String` | - | Shown while the field is empty. |
 | `clearable` | `bool` | `false` | Shows an x at the end of the frame that empties the field. |
 | `empty` | `Element` | - | Shown in place of the list when nothing matches. Screen readers hear the localization's `combobox.nothing_found` either way, so change that string to match. |
+| `loading_label` | `String` | `common.loading` | What screen readers hear while `options` is pending. |
 | `leading` | `Element` | - | Inside the frame, before the control, such as a search icon. |
 | `trailing` | `Element` | - | Inside the frame, after the control, before the clear x. |
 | `describe_leading` | `bool` | `false` | `leading` is text that describes the value, such as a unit, so screen readers read it with the input. |

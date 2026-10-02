@@ -1,7 +1,7 @@
 //! `PinField`.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, PinField, Text};
+use libero::components::{Button, Flex, PinField, Rule, Text, min_length};
 
 use crate::Routes;
 
@@ -10,7 +10,27 @@ pub const ROUTES: Routes = &[
     ("/pin-field/error", || rsx! { PinFieldErrorPage {} }),
     ("/pin-field/echo", || rsx! { PinFieldEchoPage {} }),
     ("/pin-field/wide", || rsx! { PinFieldWidePage {} }),
+    ("/pin-field/rule", || rsx! { PinFieldRulePage {} }),
 ];
+
+/// A length rule, and a button to Tab to: the rule shows only once focus leaves the cells (1564).
+#[component]
+fn PinFieldRulePage() -> Element {
+    let mut pin = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            PinField {
+                label: "Code",
+                length: 4usize,
+                value: pin(),
+                oninput: move |next: String| pin.set(next),
+                validate: min_length(4).error("Enter all four digits."),
+            }
+            Button { "Next" }
+        }
+    }
+}
 
 /// Eight letter cells with a separator, centred as the docs demo is, in a
 /// 320px screen less its margins (todos 1597, 1598, 1600).

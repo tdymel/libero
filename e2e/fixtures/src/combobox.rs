@@ -14,7 +14,7 @@ pub const ROUTES: Routes = &[
     ("/combobox/none", || rsx! { NonePage {} }),
 ];
 
-/// No options and no `empty`: an open list draws nothing.
+/// No options and no `empty`: an open list draws and says "No results" (1269).
 #[component]
 fn NonePage() -> Element {
     let fruit = use_combobox();

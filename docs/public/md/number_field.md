@@ -174,6 +174,10 @@ explains how parts work.
 
 - The stepper buttons are not tab stops, since the arrow keys do the same from
   the field.
+- The phone keypad follows the type and `min`: digits for a whole number from 0,
+  digits and a point for a fraction from 0, the full keyboard where a negative
+  is allowed, since iOS keypads have no minus. An `inputmode` attribute
+  overrides it.
 
 ### You must
 
