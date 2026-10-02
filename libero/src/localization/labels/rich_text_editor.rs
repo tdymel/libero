@@ -59,6 +59,8 @@ pub struct RichTextEditorLabels {
     pub on: &'static str,
     /// Announced when a toggle turns off.
     pub off: &'static str,
+    /// Describes the text: how to leave it when Tab indents a list.
+    pub leave_hint: &'static str,
 }
 
 impl RichTextEditorLabels {
@@ -100,6 +102,7 @@ impl RichTextEditorLabels {
         code_language: "Code language",
         on: "{name} on",
         off: "{name} off",
+        leave_hint: "In a list, Tab indents. Press Escape, then Tab, to leave the editor.",
     };
 
     pub const GERMAN: Self = Self {
@@ -140,5 +143,6 @@ impl RichTextEditorLabels {
         code_language: "Codesprache",
         on: "{name} an",
         off: "{name} aus",
+        leave_hint: "In einer Liste rückt Tab ein. Escape, dann Tab verlässt den Editor.",
     };
 }

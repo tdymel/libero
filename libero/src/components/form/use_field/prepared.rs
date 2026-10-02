@@ -55,6 +55,14 @@ impl PreparedField {
         self.describedby.clone()
     }
 
+    /// Adds `id`, a control's own hint, after the caption slots in `aria-describedby`.
+    pub fn describe_also(&mut self, id: String) {
+        self.describedby = Some(match self.describedby.take() {
+            Some(ids) => format!("{ids} {id}"),
+            None => id,
+        });
+    }
+
     /// The ids the frame gives its leading and trailing slot, for the slots
     /// [`FieldBuilder::text_slots`] named; `aria-describedby` points at them.
     pub fn slot_ids(&self) -> [Option<String>; 2] {

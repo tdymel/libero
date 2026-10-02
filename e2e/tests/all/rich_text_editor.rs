@@ -77,6 +77,57 @@ async fn holds(page: &Page, check: &str, what: &str) {
 const STILL: &str = "document.getAnimations().every(a => a.playState !== 'running' \
     || a.effect?.getComputedTiming().iterations === Infinity)";
 
+/// Todo 1610 (WCAG 2.1.2): Tab indents a list item, Escape then Tab leaves the editor,
+/// and the way out is in the text's description.
+#[test]
+fn escape_then_tab_leaves_a_list() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        let hint: String = js(
+            page,
+            &format!(
+                "{EDITOR}.getAttribute('aria-describedby').split(' ').map(id => document.getElementById(id)?.textContent).join(' ')"
+            ),
+        )
+        .await;
+        assert!(hint.contains("Press Escape, then Tab"), "{hint}");
+
+        keyboard::type_text(page, "- a").await.unwrap();
+        keyboard::press(page, ENTER).await.unwrap();
+        keyboard::type_text(page, "b").await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!!{EDITOR}.querySelector('ul ul')"),
+            "Tab to nest the item",
+        )
+        .await
+        .unwrap();
+        holds(
+            page,
+            &format!("(document.activeElement === {EDITOR} ? 'ok' : 'focus left on Tab')"),
+            "Tab in a list keeps focus",
+        )
+        .await;
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        holds(
+            page,
+            &format!("(document.activeElement !== {EDITOR} ? 'ok' : 'focus stayed')"),
+            "Escape then Tab to leave",
+        )
+        .await;
+        let nested: usize = js(page, &format!("{EDITOR}.querySelectorAll('ul ul').length")).await;
+        assert_eq!(nested, 1, "the leaving Tab indented again");
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
     block_on(async {
@@ -498,8 +549,9 @@ async fn clipboard(page: &Page, kind: &str) -> (String, String, bool) {
     .await
 }
 
+/// Both flavours carry the Markdown, so a code block keeps its fence (todo 1258).
 #[test]
-fn copy_writes_plain_text_and_markdown_and_cut_edits_the_model() {
+fn copy_writes_markdown_and_cut_edits_the_model() {
     block_on(async {
         let fixture = Fixture::open("/rich-text-editor/code", Viewport::Desktop)
             .await
@@ -514,8 +566,8 @@ fn copy_writes_plain_text_and_markdown_and_cut_edits_the_model() {
         )
         .await;
         let (plain, markdown, cancelled) = clipboard(page, "copy").await;
-        assert_eq!(plain, "above\nlet x = 1;\nbelow");
-        assert_eq!(markdown, "above\n\n```\nlet x = 1;\n```\n\nbelow\n");
+        assert_eq!(plain, "above\n\n```\nlet x = 1;\n```\n\nbelow");
+        assert_eq!(markdown, plain);
         assert!(cancelled, "the browser's own copy ran too");
 
         // Cut the first paragraph's text: through the model, so `onchange` sees it.

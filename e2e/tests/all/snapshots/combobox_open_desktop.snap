@@ -6,6 +6,7 @@ expression: tree
 combobox "Fruit" = Apple [expanded] [haspopup=listbox]
   StaticText "Apple"
 status [atomic] [live=polite]
+  StaticText "5 results"
 listbox
   option "Apple" [selected]
     StaticText "Apple"

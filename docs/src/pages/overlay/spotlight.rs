@@ -374,7 +374,7 @@ pub fn SpotlightPage() -> Element {
                     (SpotlightPart::Label, "A row's label."),
                     (SpotlightPart::Description, "A row's second line."),
                     (SpotlightPart::Shortcut, "A row's key hint, one `Kbd` per key."),
-                    (SpotlightPart::Status, "The status line: \"nothing found\" or the loader."),
+                    (SpotlightPart::Status, "The status line: \"nothing found\" or the loader, and the result count for a reader only."),
                 ]),
                 props("SpotlightAction", vec![
                     prop("label", "String").default("required").doc("The row's text, and the first thing `spotlight_filter` matches."),
@@ -398,6 +398,7 @@ pub fn SpotlightPage() -> Element {
                 .key(["Escape"], "Closes, as a click outside does. Focus goes back to what opened it.")
                 .handles([
                     "Focus stays in the search box.",
+                    "A polite status region says how many actions a query left (`SpotlightLabels::results`, \"2 results\"), \"nothing found\" when none, and \"searching\" while `loading`.",
                     "The hotkey is ignored while you type in another text field, and while a dialog or popover is open.",
                 ])
                 .must([

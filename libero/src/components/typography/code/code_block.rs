@@ -253,7 +253,7 @@ fn diff_status(line: &str) -> Option<DiffStatus> {
     }
 }
 
-/// Drops a leading `+`/`-`, not a space. Shared by rendering and copying, so both match.
+/// Drops a leading `+`/`-`, not a space.
 fn strip_diff_markers(source: &str) -> String {
     source
         .lines()
@@ -261,6 +261,16 @@ fn strip_diff_markers(source: &str) -> String {
             Some(b'+') | Some(b'-') => &line[1..],
             _ => line,
         })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// What a diff copies: the unmarked and `+` lines, so the result compiles.
+fn new_side(source: &str) -> String {
+    source
+        .lines()
+        .filter(|line| !line.starts_with('-'))
+        .map(|line| line.strip_prefix('+').unwrap_or(line))
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -433,7 +443,6 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     // Nothing to name and nothing to copy: no empty bar (todo 1252).
     let header =
         props.header.unwrap_or(theme.code_block.header) && (language.is_some() || copyable);
-    // Everything shown or copied uses the stripped version, so the two match.
     let display_source = if props.diff {
         strip_diff_markers(&props.source)
     } else {
@@ -484,7 +493,13 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .or_else(|| (language.is_none() && marked).then(|| plain_lines(&display_source)));
     // No language, no label: the empty span keeps the copy button at the end.
     let label = language.map(|language| language.name(&labels));
-    let copy_source = copyable.then(|| display_source.clone());
+    let copy_source = copyable.then(|| {
+        if props.diff {
+            new_side(&props.source)
+        } else {
+            display_source.clone()
+        }
+    });
     let floating_copy = copyable && !header;
     let (highlighted_lines, overrun) = props
         .highlight_lines
@@ -772,6 +787,12 @@ mod tests {
             strip_diff_markers(source),
             "fn greet() {\n    old();\n    new();\n}"
         );
+    }
+
+    #[test]
+    fn a_diff_copies_the_new_side_only() {
+        let source = "fn greet() {\n-    old();\n+    new();\n}";
+        assert_eq!(new_side(source), "fn greet() {\n    new();\n}");
     }
 
     #[test]

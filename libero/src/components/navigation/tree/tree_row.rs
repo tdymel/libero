@@ -3,14 +3,14 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::states,
-        common::{HtmlTag, Part, focus_ring_sx},
+        common::{HtmlTag, Part, focus_ring_sx, forced_on_sx, on_start_bar_sx, on_tint_color},
         data_display::List,
         layout::use_box,
     },
-    sx::{StaticSx, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        CssVar, ICON_SIZE, LIST_INDENT, Size, TREE_GUIDE_ACTIVE_COLOR, TREE_GUIDE_ACTIVE_WIDTH,
-        TREE_GUIDE_COLOR, TREE_GUIDE_WIDTH,
+        Color, ColorShade, ColorValue, CssVar, ICON_SIZE, LIST_INDENT, Size,
+        TREE_GUIDE_ACTIVE_COLOR, TREE_GUIDE_ACTIVE_WIDTH, TREE_GUIDE_COLOR, TREE_GUIDE_WIDTH,
     },
 };
 
@@ -126,7 +126,21 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
             .with("border-start-start-radius", "0")
             .with("border-end-start-radius", "0"),
         )
+        // NavLink's active look where no guide marks the current row (todo 1571); no
+        // `:has(a)` to skip a link row, as Blitz drops it.
+        .when("current", current_look_sx().hover(current_look_sx()))
 });
+
+fn current_look_sx() -> crate::sx::Sx {
+    let bar = on_tint_color(&ThemeAwareValue::ColorValue(ColorValue::Shade(
+        Color::Primary,
+        ColorShade::S6,
+    )))
+    .unwrap_or_default();
+    sx().background("primary.1")
+        .and(on_start_bar_sx("0px", &bar))
+        .and(forced_on_sx())
+}
 
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct TreeRowProps {
@@ -205,11 +219,10 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .states(&row_states)
         .prepare();
     // A top-level row has no guide to mark.
+    let guide_current = props.guides && is_current && props.depth > 0;
     let content_states = states()
-        .with(
-            "guide-current",
-            props.guides && is_current && props.depth > 0,
-        )
+        .with("guide-current", guide_current)
+        .with("current", is_current && !guide_current)
         .into();
     // On the inner div, a sibling of the children `List`, so a child's click
     // never toggles the parent.
@@ -283,8 +296,25 @@ pub(super) fn child_active(active: Option<&[usize]>, index: usize) -> Option<Vec
 
 #[cfg(test)]
 mod tests {
-    use super::TREE_ROW_SX;
+    use super::{TREE_ROW_CONTENT_SX, TREE_ROW_SX};
     use crate::css::Stylesheet;
+
+    /// Todo 1571: where no guide marks it.
+    #[test]
+    fn a_current_row_takes_the_tint_and_start_bar() {
+        let css = Stylesheet::from(&*TREE_ROW_CONTENT_SX);
+        let css = css.as_str();
+
+        let rule = css
+            .find(r#"[data-state~="current"]{"#)
+            .expect("the current look");
+        let body = &css[rule..css[rule..].find('}').map_or(css.len(), |end| rule + end)];
+        assert!(body.contains("background-image:linear-gradient("), "{css}");
+        assert!(
+            body.contains("background:var(--lsx-primary-fill-1)"),
+            "{css}"
+        );
+    }
 
     /// An open branch's `<li>` holds its subtree, so the ring goes on the row's line (todo 1570).
     #[test]

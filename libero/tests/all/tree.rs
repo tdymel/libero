@@ -177,6 +177,14 @@ fn rows_are_unselected_and_the_current_row_is_aria_current() {
     assert_eq!(current.len(), 1);
     assert!(current[0].contains(r#"aria-current="true""#));
     assert!(current[0].contains("Gamma"));
+    // Drawn too without guides: NavLink's tint and start bar (todo 1571).
+    let content = tag_with(current[0], r#"data-slot="content""#);
+    assert!(
+        content
+            .get("data-state")
+            .is_some_and(|state| state.split(' ').any(|state| state == "current")),
+        "{content:?}"
+    );
 }
 
 /// A `current` hidden in a collapsed branch hands the tab stop to the branch.

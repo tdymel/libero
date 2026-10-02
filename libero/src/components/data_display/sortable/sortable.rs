@@ -209,7 +209,8 @@ base_props! {
     pub struct SortableItemProps {
         /// The item's current position, from 0. Key it by its data, not this.
         index: usize,
-        /// Names the item in its controls and the announcements. Unset, "Item {n}" by where it was lifted.
+        /// Names the item in its controls and the announcements. Unset, the handle reads the
+        /// item's content, the rest "Item {n}" by where it was lifted.
         #[props(default, into)]
         label: Option<String>,
         children: Element,
@@ -237,13 +238,35 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
 
     let content_class = use_css(Some(&SORTABLE_CONTENT_SX), CssLayer::Framework);
     let move_class = use_css(Some(&SORTABLE_MOVE_SX), CssLayer::Framework);
+    let (content_id, before_id, after_id) = (use_id()(), use_id()(), use_id()());
+    // Unlabelled, the handle reads its item's content inside the template's words (todo 1280).
+    let (before, after) = words
+        .handle
+        .split_once("{label}")
+        .unwrap_or((words.handle, ""));
+    let labelled_by = props.label.is_none().then(|| {
+        [
+            (before, &before_id),
+            ("{label}", &content_id),
+            (after, &after_id),
+        ]
+        .into_iter()
+        .filter(|(words, _)| !words.trim().is_empty())
+        .map(|(_, id)| id.as_str())
+        .collect::<Vec<_>>()
+        .join(" ")
+    });
     let handle = use_box()
         .framework_sx(&SORTABLE_HANDLE_SX)
         .prepare()
         .element(&item.handle)
         .attr("data-slot", SortableItemPart::Handle.slot())
         .attr("type", "button")
-        .attr("aria-label", named(words.handle))
+        .attr(
+            "aria-label",
+            props.label.is_some().then(|| named(words.handle)),
+        )
+        .attr("aria-labelledby", labelled_by.clone())
         .attr("aria-describedby", view.instructions.clone())
         .event("onpointerdown", item.onpointerdown)
         .event("onkeydown", item.onkeydown)
@@ -251,7 +274,13 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
         .render(
             HtmlTag::Button,
             Vec::new(),
-            rsx! { Glyph { slot: IconSlot::Grip, icon: lucide::grip_vertical::outlined } },
+            rsx! {
+                Glyph { slot: IconSlot::Grip, icon: lucide::grip_vertical::outlined }
+                if labelled_by.is_some() {
+                    span { id: "{before_id}", hidden: true, {before.trim()} }
+                    span { id: "{after_id}", hidden: true, {after.trim()} }
+                }
+            },
         );
 
     let moves = view.move_buttons.then(|| {
@@ -306,7 +335,12 @@ pub fn SortableItem(props: SortableItemProps) -> Element {
             props.attributes,
             rsx! {
                 {handle}
-                div { class: content_class, "data-slot": SortableItemPart::Content.slot(), {props.children} }
+                div {
+                    id: "{content_id}",
+                    class: content_class,
+                    "data-slot": SortableItemPart::Content.slot(),
+                    {props.children}
+                }
                 {moves}
             },
         )

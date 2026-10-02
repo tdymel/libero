@@ -3,7 +3,7 @@
 //! never one while the list is loading or empty, and a highlight past the end
 //! names the last row, the one drawn as active. What the list says while it
 //! loads comes from the localization, and it is said by a status region that is always
-//! mounted and sits outside the `aria-busy` dropdown.
+//! mounted and sits outside the `aria-busy` dropdown; so is the result count.
 
 use crate::common::{attributes_of, body, element_at};
 
@@ -255,14 +255,14 @@ fn status(html: &str) -> String {
     text[..text.find('<').unwrap()].to_string()
 }
 
-/// The region is there before the loading starts, says the label while it
-/// runs, and empties once the results land - without ever unmounting, which a
-/// screen reader needs to announce a change at all.
+/// The region counts the results, says the label while loading, and counts
+/// again once they land (todo 1574) - without ever unmounting, which a screen
+/// reader needs to announce a change at all.
 #[test]
 fn the_status_region_stays_mounted_and_its_text_changes() {
     let mut dom = mount();
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    assert_eq!(status(&body(&dioxus_ssr::render(&dom))), "");
+    assert_eq!(status(&body(&dioxus_ssr::render(&dom))), "3 results");
 
     dom.in_runtime(|| get(&LOADING).set(true));
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
@@ -270,7 +270,7 @@ fn the_status_region_stays_mounted_and_its_text_changes() {
 
     dom.in_runtime(|| get(&LOADING).set(false));
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    assert_eq!(status(&body(&dioxus_ssr::render(&dom))), "");
+    assert_eq!(status(&body(&dioxus_ssr::render(&dom))), "3 results");
 }
 
 /// A closed list is not loading anything the user asked for, so it says nothing.

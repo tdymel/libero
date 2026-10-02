@@ -23,7 +23,7 @@ pub fn ProgressBarPage() -> Element {
                 prop("max", "f64").default("100.0").doc("Range end. At or below `min` the bar draws empty."),
                 prop("color", "ThemeAwareValue")
                     .default("primary")
-                    .doc("The fill. A theme color name or any CSS color."),
+                    .doc("The fill. A theme color name paints its text shade, darker on a light page so the bar stands out from its track. Any other CSS color paints as given."),
                 prop("size", "Size").default("md").doc("Track height, 3px at `xs` to 20px at `xxl`."),
                 prop("radius", "Size")
                     .default("xl")
@@ -40,6 +40,7 @@ pub fn ProgressBarPage() -> Element {
                 .handles([
                     "A screen reader reads the rounded percentage, or `aria_valuetext` when you set it.",
                     "The bar takes no focus.",
+                    "A theme color fills in its text shade, at 3:1 or more against the track and the page. Yellow on a light page stays short of that.",
                     "With reduced motion an indeterminate bar stops sweeping and shows as a dimmed full bar, so it does not read as part done.",
                 ])
                 .must([

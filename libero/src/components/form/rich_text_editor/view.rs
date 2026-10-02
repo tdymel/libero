@@ -698,7 +698,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     };
 
     // `for` names only a labelable element, and the surface is a `div`.
-    let field = use_field()
+    let mut field = use_field()
         .labelled_by()
         .label(&props.label)
         .description(&props.description)
@@ -716,6 +716,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
+    // Read on focus: Tab indents a list, so say the way out (WCAG 2.1.2, todo 1610).
+    let leave_hint = format!("{}-leave-hint", field.id());
+    if editable {
+        field.describe_also(leave_hint.clone());
+    }
     use_name_warning(
         field.label_id().is_some() || names_itself(&props.attributes),
         "RichTextEditor: no `label`, `aria-label` or `aria-labelledby`, so it is announced as just \"edit text\".",
@@ -735,6 +740,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let taken = move |input: EditorInput| intercept.is_some_and(|intercept| intercept.call(input));
     // Android soft keyboards press "Unidentified": their Enter shows up as an insertParagraph.
     let mut last_key = use_hook(|| CopyValue::new(String::new()));
+    let mut escaped = use_hook(|| CopyValue::new(false));
     let onkeydown = move |event: KeyboardEvent| {
         // Not `is_composing()`: Gboard keeps a composing region open over typed words.
         if std::mem::take(&mut *fence_key.write()) || *composing.peek() {
@@ -752,6 +758,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         last_key.set(press.key.clone());
         if taken(EditorInput::Key(press.clone())) {
             event.prevent_default();
+            return;
+        }
+        // Escape then Tab leaves instead of indenting (WCAG 2.1.2, todo 1610).
+        let armed = std::mem::replace(&mut *escaped.write(), press.key == "Escape");
+        if armed && press.key == "Tab" {
             return;
         }
         let name = keymap.peek().command_for(&press, apple).cloned();
@@ -796,18 +807,25 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         }
     };
 
+    // Markdown back into nodes: the editor's own copy, else text read a paragraph per line.
     let onpaste = move |event: ClipboardEvent| {
         event.prevent_default();
-        let Some(text) = event.data().data_transfer().get_as_text() else {
-            return;
+        let transfer = event.data().data_transfer();
+        let (text, markdown) = match transfer.get_data("text/markdown") {
+            Some(text) if !text.is_empty() => (text, true),
+            _ => match transfer.get_as_text() {
+                Some(text) => (text, false),
+                None => return,
+            },
         };
         edit(
-            &|live| live.apply(Record::Step, |state| paste(state, &text)),
+            &|live| live.apply(Record::Step, |state| state.paste(&text, markdown)),
             false,
         );
     };
 
-    // The selection as plain text and Markdown; `false` when nothing was written.
+    // The selection as Markdown, in both plain text and `text/markdown` (todo 1258);
+    // `false` when nothing was written.
     let copy = move |event: &ClipboardEvent| -> bool {
         let fragment = {
             let live = editor.peek();
@@ -818,11 +836,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         };
         let registry = registry.peek().clone().unwrap_or_default();
         let transfer = event.data().data_transfer();
-        let written = transfer
-            .set_data("text/plain", &fragment.plain_text_with(&registry))
-            .is_ok();
+        let markdown = fragment.to_markdown_with(&registry);
+        let markdown = markdown.trim_end_matches('\n');
+        let written = transfer.set_data("text/plain", markdown).is_ok();
         if written {
-            let _ = transfer.set_data("text/markdown", &fragment.to_markdown_with(&registry));
+            let _ = transfer.set_data("text/markdown", markdown);
             event.prevent_default();
         }
         written
@@ -1256,6 +1274,9 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             {overlay}
         }
         {announcer.render()}
+        if editable {
+            span { id: leave_hint, hidden: true, {words.leave_hint} }
+        }
     })
 }
 
@@ -1277,19 +1298,6 @@ fn link_href(state: &EditorState) -> Option<String> {
         Mark::Link { href, .. } => Some(href.as_str().to_string()),
         _ => None,
     }
-}
-
-/// Plain text at the caret; each line after the first starts a new block.
-fn paste(state: &mut EditorState, text: &str) -> bool {
-    let text = text.replace("\r\n", "\n");
-    let mut changed = state.delete_selection();
-    for (index, line) in text.split('\n').enumerate() {
-        if index > 0 {
-            changed |= state.split_block();
-        }
-        changed |= state.insert_text(line);
-    }
-    changed
 }
 
 /// Puts the caret at the start or end of code block `key`, which then renders as source.

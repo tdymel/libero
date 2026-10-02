@@ -214,6 +214,15 @@ fn a_narrowing_query_keeps_the_highlight_on_a_live_row() {
         wait::for_js_true(page, &count(2), "\"n\" to narrow to two rows")
             .await
             .unwrap();
+        // Todo 1574: the count is said, as "nothing found" is.
+        let says = |text: &str| {
+            format!(
+                "[...document.querySelectorAll('[role=status]')].some(e => e.textContent.includes({text:?}))"
+            )
+        };
+        wait::for_js_true(page, &says("2 results"), "the status to say 2 results")
+            .await
+            .unwrap();
         let ids: Vec<String> = js(
             page,
             &format!("[...document.querySelectorAll({OPTIONS:?})].map(o => o.id)"),
@@ -230,6 +239,9 @@ fn a_narrowing_query_keeps_the_highlight_on_a_live_row() {
         .await;
         keyboard::type_text(page, "e").await.unwrap();
         wait::for_js_true(page, &count(1), "\"ne\" to narrow to one row")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &says("1 result"), "the status to say 1 result")
             .await
             .unwrap();
         expect_active(page, &ids[0], "narrowing again").await;

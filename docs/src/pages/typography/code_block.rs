@@ -67,7 +67,7 @@ pub fn CodeBlockPage() -> Element {
                     .doc("Lines to emphasize, counted from 1, such as `\"1,5-7,10\"`. Malformed parts are skipped."),
                 prop("diff", "bool")
                     .default("false")
-                    .doc("Marks changed lines: a leading `+` or `-` colors the row and stays out of what is copied. Other lines take no prefix, so this is not a unified diff: a context line's leading space stays, and `---` and `+++` headers show as removed and added rows. Wins over `highlight_lines`."),
+                    .doc("Marks changed lines: a leading `+` or `-` colors the row. Copy yields the new side only: `-` lines are left out, `+` markers dropped. Other lines take no prefix, so this is not a unified diff: a context line's leading space stays, and `---` and `+++` headers show as removed and added rows. Wins over `highlight_lines`."),
                 prop("label", "String")
                     .doc("Names the block and describes its copy button, such as \"The booking card, Rust code\". Unset, the language, such as \"Rust code\"."),
                 prop("parts", "Parts<CodeBlockPart>")

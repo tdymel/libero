@@ -129,7 +129,7 @@ fn Fruit(index: usize, name: &'static str) -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `index` | `usize` | required | The item's current position, from 0. Key the item by its data, not by this. |
-| `label` | `Option<String>` | `"Item {n}"` | Names the item in its controls and the announcements. Unset, `SortableLabels::item` with its position when it was lifted. |
+| `label` | `Option<String>` | `"Item {n}"` | Names the item in its controls and the announcements. Unset, the handle reads the item's content ("Reorder Apple"), and the move buttons and announcements `SortableLabels::item` with its position when it was lifted. |
 | `parts` | `Parts<SortableItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content, between the handle and the move buttons. |
 
@@ -164,7 +164,8 @@ parts work.
 ### Libero handles
 
 - Each item's handle is a button named by `SortableLabels::handle` with the
-  item's name ("Reorder Apple"), at least 24px square (WCAG 2.5.8). It is
+  item's name ("Reorder Apple"); without a `label`, the template's words and
+  the item's content through `aria-labelledby`. It is at least 24px square (WCAG 2.5.8). It is
   described by
   `SortableLabels::instructions`, how to move by keyboard; on a touch screen
   (`pointer: coarse`) with the move buttons shown, by

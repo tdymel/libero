@@ -7,6 +7,7 @@ mod editor;
 mod mark;
 mod markdown;
 mod parse;
+mod paste;
 mod registry;
 mod rules;
 mod state;

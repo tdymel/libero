@@ -56,8 +56,9 @@ fn Demo() -> Element {
 }
 ```
 
-`diff: true` marks changed lines. A leading `+` or `-` colors the row and stays
-out of what is copied, so the copy button still yields compilable code. Other
+`diff: true` marks changed lines. A leading `+` or `-` colors the row. The copy
+button yields the new side only: unmarked and `+` lines without their marker,
+`-` lines left out, so it still yields compilable code. Other
 lines take no prefix: it is not a unified diff, so paste the changed code, not a
 patch.
 
@@ -90,7 +91,7 @@ fn Demo() -> Element {
 | `max_lines` | `u32` | - | Caps the height at about this many lines and scrolls the rest. Unset, the block grows to fit. |
 | `line_numbers` | `bool` | `true` | Shows the line-number gutter. |
 | `highlight_lines` | `String` | - | Lines to emphasize, counted from 1, such as `"1,5-7,10"`. Malformed parts are skipped. |
-| `diff` | `bool` | `false` | Marks changed lines: a leading `+` or `-` colors the row and stays out of what is copied. Other lines take no prefix, so this is not a unified diff: a context line's leading space stays, and `---` and `+++` headers show as removed and added rows. Wins over `highlight_lines`. |
+| `diff` | `bool` | `false` | Marks changed lines: a leading `+` or `-` colors the row. Copy yields the new side only: `-` lines are left out, `+` markers dropped. Other lines take no prefix, so this is not a unified diff: a context line's leading space stays, and `---` and `+++` headers show as removed and added rows. Wins over `highlight_lines`. |
 | `label` | `String` | - | Names the block and describes its copy button, such as "The booking card, Rust code". Unset, the language, such as "Rust code". |
 | `parts` | `Parts<CodeBlockPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 

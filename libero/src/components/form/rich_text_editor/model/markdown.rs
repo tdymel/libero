@@ -1,6 +1,6 @@
 //! The Markdown emitter; [`super::parse`] reads it back.
 
-use super::doc::{Block, BlockKind, ContentKind, Doc, Inline, normalize_inlines, visit};
+use super::doc::{Block, BlockKind, ContentKind, Doc, Inline, normalize_inlines};
 use super::mark::{Mark, MarkKind, Marks};
 use super::registry::NodeRegistry;
 use super::syntax::valid_inner;
@@ -17,32 +17,6 @@ impl Doc {
             out.push('\n');
         }
         out
-    }
-
-    /// One line per text leaf, as [`Doc::plain_text`]; caller inline nodes write
-    /// through their registered `to_markdown` instead of a placeholder.
-    pub(crate) fn plain_text_with(&self, registry: &NodeRegistry) -> String {
-        let mut lines = Vec::new();
-        visit(&self.blocks, &mut |block| {
-            if block.kind.content() != ContentKind::Inline {
-                return;
-            }
-            let line: String = block
-                .inlines()
-                .iter()
-                .map(|inline| match inline {
-                    Inline::Text { text, .. } => text.clone(),
-                    Inline::HardBreak => "\n".to_string(),
-                    Inline::Node { name, attrs } => registry
-                        .get(name)
-                        .and_then(|spec| spec.to_markdown.as_ref())
-                        .map(|write| write(attrs, ""))
-                        .unwrap_or_default(),
-                })
-                .collect();
-            lines.push(line);
-        });
-        lines.join("\n")
     }
 }
 

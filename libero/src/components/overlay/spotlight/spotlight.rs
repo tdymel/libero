@@ -337,7 +337,10 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
 
         let rows = spotlight_rows(groups, &id, generation, active, run);
 
-        let empty = !loading && count == 0 && !query().trim().is_empty();
+        let filtered = !loading && !query().trim().is_empty();
+        let empty = filtered && count == 0;
+        // What a query left, said but not shown (WCAG 4.1.3, todo 1574).
+        let results = (filtered && count > 0).then(|| (labels.results)(count));
         let nothing_found = empty.then(|| {
             options
                 .nothing_found
@@ -418,6 +421,9 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                             VisuallyHidden { "{labels.loading}" }
                         }
                         {nothing_found}
+                        if let Some(results) = results {
+                            VisuallyHidden { "{results}" }
+                        }
                     }
                 }
             }

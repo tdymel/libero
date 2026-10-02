@@ -487,7 +487,7 @@ fn selected_doc_cuts_the_end_leaves_and_keeps_containers_and_atoms() {
 }
 
 #[test]
-fn plain_text_writes_caller_nodes_through_the_registry() {
+fn the_copied_markdown_writes_caller_nodes_through_the_registry() {
     let mut doc = Doc::from_markdown("x");
     let leaf = doc.first_leaf();
     *doc.get_mut(leaf).unwrap().inlines_mut() = vec![
@@ -504,8 +504,7 @@ fn plain_text_writes_caller_nodes_through_the_registry() {
                 .markdown(|attrs, _| format!("@{}", attrs["user"].as_str().unwrap_or_default())),
         )
         .unwrap();
-    assert_eq!(doc.plain_text_with(&registry), "hi @al");
-    assert_eq!(doc.plain_text_with(&NodeRegistry::default()), "hi ");
+    assert_eq!(doc.to_markdown_with(&registry), "hi @al\n");
 }
 
 #[test]
@@ -523,4 +522,46 @@ fn exit_end_adds_a_line_only_after_a_block_without_one() {
     check("```\na|b\n```", EditorState::exit_end, "```\nab\n```\n\n|");
     check("x|\n\n---", EditorState::exit_end, "x\n\n---\n\n|");
     check("|ab", EditorState::exit_end, "ab|");
+}
+
+/// Todo 1258: the editor's own Markdown pastes back as formatted blocks; a leading
+/// and a trailing paragraph join the text around the caret.
+#[test]
+fn pasted_markdown_becomes_blocks() {
+    check(
+        "a|b",
+        |s| s.paste("> quote\n\n```rust\nlet x = 1;\n```", true),
+        "a\n\n> quote\n\n```rust\nlet x = 1;|\n```\n\nb",
+    );
+    check("a|b", |s| s.paste("**x**", true), "a**x|**b");
+    check(
+        "a|b",
+        |s| s.paste("x\n\n- one\n- two\n\ny", true),
+        "ax\n\n- one\n- two\n\ny|b",
+    );
+}
+
+#[test]
+fn a_copied_selection_pastes_back_the_same() {
+    let source = state("|> quote\n\n```rust\nlet x = 1;\n```\n\n1. one\n2. two|");
+    let copied = source.selected_doc().to_markdown();
+    let mut target = state("|");
+    target.paste(&copied, true);
+    assert_eq!(md(&target.doc), md(&source.doc));
+}
+
+/// Plain text from elsewhere: Markdown, a paragraph per line, as before (todo 1258).
+#[test]
+fn pasted_plain_text_is_a_paragraph_per_line() {
+    check("a|b", |s| s.paste("1\n2\n3", false), "a1\n\n2\n\n3|b");
+    check("|", |s| s.paste("# Title\nbody", false), "# Title\n\nbody|");
+}
+
+#[test]
+fn a_paste_in_code_stays_raw() {
+    check(
+        "```\na|b\n```",
+        |s| s.paste("# x\n*y*", true),
+        "```\na# x\n*y*|b\n```",
+    );
 }

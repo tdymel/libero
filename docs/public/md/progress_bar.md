@@ -42,7 +42,7 @@ ProgressBar { aria_label: "Connecting", value: None }
 | `value` | `Option<f64>` | required | Current progress, clamped into `min..=max`. `None` makes it indeterminate. |
 | `min` | `f64` | `0.0` | Range start. |
 | `max` | `f64` | `100.0` | Range end. At or below `min` the bar draws empty. |
-| `color` | `ThemeAwareValue` | `primary` | The fill. A theme color name or any CSS color. |
+| `color` | `ThemeAwareValue` | `primary` | The fill. A theme color name paints its text shade, darker on a light page so the bar stands out from its track. Any other CSS color paints as given. |
 | `size` | `Size` | `md` | Track height, 3px at `xs` to 20px at `xxl`. |
 | `radius` | `Size` | `xl` | Corner of the track and the fill. On a thin track most steps draw the same pill. |
 | `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "4.2 MB of 12 MB". |
@@ -68,6 +68,7 @@ explains how parts work.
 - A screen reader reads the rounded percentage, or `aria_valuetext` when you
   set it.
 - The bar takes no focus.
+- A theme color fills in its text shade, at 3:1 or more against the track and the page. Yellow on a light page stays short of that.
 - With reduced motion an indeterminate bar stops sweeping and shows as a dimmed
   full bar, so it does not read as part done.
 
@@ -110,7 +111,7 @@ Where the radius stops mattering, radius scale `2/4/8/16/32/64px`:
 | `--lsx-progress-bar-radius` | The picked radius, resolved on the root; the fill inherits the corner. |
 | `--lsx-progress-bar-track` | The unfilled track, `muted.2`. Themed once. |
 | `--lsx-progress-bar-transition` | Duration of the fill's `width` transition. Themed once. |
-| `--lsx-progress-bar-color` | The resolved `color`, per instance. |
+| `--lsx-progress-bar-color` | The resolved `color` in its text shade, per instance. |
 | `--lsx-progress-bar-fill` | The drawn percentage, e.g. `42%`, per instance. Not written while indeterminate, and nothing reads it then. |
 
 The sweep is `@keyframes lsx-progress-bar-indeterminate`, emitted once in the

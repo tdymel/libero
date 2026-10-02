@@ -208,6 +208,7 @@ pub fn AutocompletePage() -> Element {
                 .handles([
                     "Nothing is highlighted until you arrow onto a row, so Enter on text that matches nothing still submits the form.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
+                    "A polite status region says how many options the typed text left (`ComboboxLabels::results`, \"2 results\"), or \"No results\".",
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
             lead: rsx! {

@@ -4,16 +4,17 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, States, Variables, base_color, base_props, names_itself,
-            parts_enum, use_name_warning, variables,
+            parts_enum, text_color, use_name_warning, variables,
         },
         layout::use_box,
     },
     hooks::use_theme,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
-        ColorCss, ColorShade, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION, PROGRESS_BAR_COLOR,
-        PROGRESS_BAR_FILL, PROGRESS_BAR_INDETERMINATE_STATE, PROGRESS_BAR_RADIUS,
-        PROGRESS_BAR_SIZE, PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION, ProgressBarDefaults, Size,
+        Color, ColorShade, ColorValue, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION,
+        PROGRESS_BAR_COLOR, PROGRESS_BAR_FILL, PROGRESS_BAR_INDETERMINATE_STATE,
+        PROGRESS_BAR_RADIUS, PROGRESS_BAR_SIZE, PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION,
+        ProgressBarDefaults, Size,
     },
     utils::warn,
 };
@@ -40,7 +41,9 @@ static PROGRESS_BAR_TRACK_SX: StaticSx = StaticSx::new(|| {
 static PROGRESS_BAR_FILL_SX: StaticSx = StaticSx::new(|| {
     sx().height("100%")
         .border_radius("inherit")
-        .background(PROGRESS_BAR_COLOR.value_or(ColorCss::PRIMARY.value(ColorShade::S6)))
+        .background(
+            PROGRESS_BAR_COLOR.value_or(ColorValue::Text(Color::Primary, ColorShade::S6).value()),
+        )
         .media(FORCED_COLORS, sx().background("Highlight"))
         .when(
             DETERMINATE_STATE,
@@ -107,9 +110,14 @@ fn aria_number(value: f64) -> String {
     }
 }
 
+/// The text role: it reads at 4.5:1 on the page, so the bar clears 3:1 on its track (todo 1577).
+fn fill_paint(color: &ThemeAwareValue) -> Option<String> {
+    text_color(color)
+}
+
 fn progress_bar_variables(color: &ThemeAwareValue, fill: Option<String>) -> Variables {
     variables()
-        .with(PROGRESS_BAR_COLOR, color.resolve(None))
+        .with(PROGRESS_BAR_COLOR, fill_paint(color))
         .with(PROGRESS_BAR_FILL, fill)
 }
 
@@ -133,7 +141,8 @@ base_props! {
         /// Range end.
         #[props(default = 100.0)]
         max: f64,
-        /// The fill. A theme color name or a literal CSS color.
+        /// The fill. A theme color name paints its text shade, darker on a light page so
+        /// the bar stands out from its track; a literal CSS color paints as given.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Track thickness.
@@ -303,6 +312,78 @@ mod tests {
         assert_eq!(aria_number(0.0), "0");
         assert_eq!(aria_number(-3.0), "-3");
         assert_eq!(aria_number(2.5), "2.5");
+    }
+
+    /// Todo 1577: the bar has no text, so its fill needs 3:1 on the track and the page (1.4.11).
+    #[test]
+    fn every_shipped_fill_reaches_3_to_1_on_its_track_and_page() {
+        use crate::{
+            css::Stylesheet,
+            theme::{ColorCss, HexColor, ThemeSet},
+        };
+
+        let mut short = Vec::new();
+        for set in ThemeSet::CATALOGUE {
+            for theme in [Some(set.light_theme()), set.dark_theme()]
+                .into_iter()
+                .flatten()
+            {
+                let css = Stylesheet::from(theme).as_str().to_string();
+                let hex = |value: String| {
+                    let name = value.trim_start_matches("var(").trim_end_matches(')');
+                    let (_, rest) = css.split_once(&format!("{name}:")).expect("declared");
+                    HexColor::parse(&rest[..7]).expect("a hex")
+                };
+                let track = hex(ColorCss::MUTED.value(ProgressBarDefaults::DEFAULT.track_shade));
+                for name in ["primary", "error", "info", "success", "warning"] {
+                    let color = base_color(Some(&ThemeAwareValue::from(name)));
+                    let fill = hex(fill_paint(&color).expect("a palette colour"));
+                    let ratio = fill
+                        .contrast_ratio(track)
+                        .min(fill.contrast_ratio(theme.surface));
+                    if ratio < 3.0 {
+                        let scheme = theme.surface.color_scheme();
+                        short.push(format!("{} {scheme} {name}: {ratio:.2}:1", set.name()));
+                    }
+                }
+            }
+        }
+        // Recorded: the text role caps at the S9 mix, and yellow on a light page gets no further.
+        assert_eq!(
+            short,
+            [
+                "Libero light warning: 2.77:1",
+                "Ayu light warning: 2.69:1",
+                "Ayu Mirage light warning: 2.69:1",
+                "Catppuccin light warning: 2.39:1",
+                "Dracula light warning: 2.54:1",
+                "Ef Night light warning: 2.50:1",
+                "Everforest light warning: 2.59:1",
+                "Flexoki light warning: 2.59:1",
+                "GitHub light warning: 2.61:1",
+                "Gruvbox light warning: 2.11:1",
+                "Gruvbox Classic light warning: 2.38:1",
+                "Gruvbox Soft light warning: 2.11:1",
+                "Kanagawa light warning: 2.33:1",
+                "Kanagawa Dragon light warning: 2.33:1",
+                "kettek16 light primary: 2.70:1",
+                "kettek16 light info: 2.27:1",
+                "kettek16 light warning: 2.30:1",
+                "Nord light primary: 2.39:1",
+                "Nord light info: 2.48:1",
+                "Nord light success: 2.44:1",
+                "Nord light warning: 2.25:1",
+                "One light warning: 2.55:1",
+                "Osmium light primary: 2.76:1",
+                "Osmium light info: 2.46:1",
+                "Osmium light success: 1.93:1",
+                "Osmium light warning: 2.41:1",
+                "Rosé Pine light warning: 2.44:1",
+                "shadcn/ui light warning: 2.67:1",
+                "Vague light warning: 2.58:1",
+            ],
+            "the shipped fills' contrast moved"
+        );
     }
 
     #[test]

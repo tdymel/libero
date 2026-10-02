@@ -259,6 +259,7 @@ shows Ctrl.
 | `ArrowDown` | On the last line of a code block that ends the document: leaves it for a new paragraph. Clicking below the last block does the same. |
 | `Enter` | Twice at the end of a code block: the second drops the empty line and leaves the block, also on a touch keyboard. |
 | `Tab` or `Shift+Tab` | In a list item: nests it under the item before, or moves it out. Elsewhere Tab moves focus on as usual. |
+| `Escape`, then `Tab` | Escape, then Tab or Shift+Tab: leaves the editor, also from a list item. |
 | `Shift+Enter` | Line break inside the block. |
 | `Ctrl+Backspace` or `Ctrl+Delete` | Deletes the word before or after the caret (`Alt` on a Mac). |
 | `Cmd+Backspace` or `Cmd+Delete` | On a Mac: deletes to the start or end of the line, which ends at a line break or the block's edge. |
@@ -277,6 +278,8 @@ shows Ctrl.
   it.
 - The text stays a tab stop while `readonly`; while `disabled` it carries
   `aria-disabled` and is skipped.
+- The text is described by a hint read on focus: in a list Tab indents, and
+  Escape, then Tab leaves (`RichTextEditorLabels::leave_hint`).
 - The toolbar is one tab stop with arrow-key movement, named by the
   localization's `rich_text_editor` words. Each mark and block button reports
   `aria-pressed`.
@@ -326,10 +329,13 @@ shows Ctrl.
 ### Limits
 
 - On Blitz (native) the document is shown read-only.
-- Paste takes plain text only, one block per line.
-- Copy and cut write the selection as plain text and as `text/markdown`;
-  custom nodes write through their `NodeSpec::markdown` (pass `registry`).
-  Cut is one undo step.
+- Copy and cut write the selection as Markdown, as plain text and as
+  `text/markdown`: a quote as `>`, a code block fenced with its language,
+  lists, headings, rules, marks and links as written. Custom nodes write
+  through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.
+- Paste reads Markdown back into formatted blocks; custom nodes stay text.
+  Text from elsewhere is read the same way, one paragraph per line. In a code
+  block it is pasted as is.
 - Drag and drop of text and replacements (spellcheck, autocorrect, macOS text
   substitutions) are ignored, so `spellcheck` is off.
 

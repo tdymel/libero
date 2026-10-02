@@ -106,8 +106,8 @@ fn every_text_role_reads_on_the_dark_theme_s_page() {
     assert_eq!(text_roles_falling_short(&Theme::DARK), Vec::<&str>::new());
 }
 
-/// Every shipped set: ink must read on page and card. Short text roles and pale
-/// `muted.6` (todo 394) are recorded, not asserted: ported palettes are others' designs.
+/// Every shipped set: ink must read on page and card, `muted.6` reach 3:1. Short text
+/// roles and `muted.6` under 4.5:1 (todo 394) are recorded: ported palettes are others' designs.
 ///
 /// Every set keeps Libero's amber `warning`; the long entries are light halves keeping
 /// dark-page accents (Nord's own guidance, and the derived Vague, Osmium, kettek16).
@@ -139,6 +139,12 @@ fn every_shipped_set_reads_on_its_own_page() {
             }
 
             let ratio = muted_on_its_page(theme);
+            // Todo 1308: borders and handles are non-text, so 3:1 is a floor (WCAG 1.4.11).
+            assert!(
+                ratio >= 3.0,
+                "{} {scheme}: muted.6 on its own page is {ratio:.2}:1",
+                set.name()
+            );
             if ratio < TEXT_CONTRAST {
                 // Floored, so a hair short never prints as a pass.
                 let ratio = (ratio * 100.0).floor() / 100.0;
@@ -188,11 +194,11 @@ fn every_shipped_set_reads_on_its_own_page() {
             "Everforest light: 3.08:1",
             "Everforest dark: 4.24:1",
             "Gruvbox Classic light: 4.28:1",
-            "Kanagawa light: 2.93:1",
+            "Kanagawa light: 3.00:1",
             "Kanagawa dark: 3.33:1",
-            "Kanagawa Dragon light: 2.93:1",
+            "Kanagawa Dragon light: 3.00:1",
             "One dark: 3.72:1",
-            "Vague light: 2.98:1",
+            "Vague light: 3.02:1",
             "Vague dark: 3.02:1",
         ],
         "the shipped palettes' muted.6 moved"

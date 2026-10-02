@@ -177,7 +177,7 @@ pub fn TreePage() -> Element {
                         "The expanded ids, controlled. The tree follows it and asks for every change through `onexpandedchange`. Unset, the tree keeps its own.",
                     ),
                     prop("current", "String").doc(
-                        "The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current`.",
+                        "The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current` and, unless a `guides` line marks it, NavLink's tint and start bar. A row that renders a `NavLink` draws both, so pair one with `guides`.",
                     ),
                     prop("onexpandedchange", "EventHandler<HashSet<String>>")
                         .doc("Called with the whole new set of expanded ids. Store it when `expanded` is set; without `expanded` it only notifies."),

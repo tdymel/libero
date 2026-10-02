@@ -513,6 +513,7 @@ pub fn RichTextEditorPage() -> Element {
                 .key(["ArrowDown"], "On the last line of a code block that ends the document: leaves it for a new paragraph. Clicking below the last block does the same.")
                         .key(["Enter"], "Twice at the end of a code block: the second drops the empty line and leaves the block, also on a touch keyboard.")
                 .key(["Tab", "Shift+Tab"], "In a list item: nests it under the item before, or moves it out. Elsewhere Tab moves focus on as usual.")
+                .key(["Escape", "Tab"], "Escape, then Tab or Shift+Tab: leaves the editor, also from a list item.")
                 .key(["Shift+Enter"], "Line break inside the block.")
                 .key(["Ctrl+Z"], "Undo.")
                 .key(["Ctrl+Shift+Z", "Ctrl+Y"], "Redo.")
@@ -522,6 +523,7 @@ pub fn RichTextEditorPage() -> Element {
                 .key(["Alt+F10"], "Moves focus to the toolbar; the arrow keys move through it, Escape returns to the text.")
                 .handles([
                     "The text is a `role=\"textbox\"` with `aria-multiline`, named by `label` and described by `description` and `helper`.",
+                    "The text is described by a hint read on focus: in a list Tab indents, and Escape, then Tab leaves (`RichTextEditorLabels::leave_hint`).",
                     "The toolbar is one tab stop with arrow-key movement, named by the localization's `rich_text_editor` words. Each mark and block button reports `aria-pressed`.",
                     "The toolbar keeps focus and the selection in the text when clicked.",
                     "Each toolbar button shows its name and its chord in a tooltip on hover and keyboard focus, and carries the chord as `aria-keyshortcuts`.",
@@ -542,8 +544,8 @@ pub fn RichTextEditorPage() -> Element {
                 ])
                 .limits([
                     "On Blitz (native) the document is shown read-only.",
-                    "Paste takes plain text only, one block per line.",
-                    "Copy and cut write the selection as plain text and as `text/markdown`; custom nodes write through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.",
+                    "Copy and cut write the selection as Markdown, as plain text and as `text/markdown`: a quote as `>`, a code block fenced with its language, lists, headings, rules, marks and links as written. Custom nodes write through their `NodeSpec::markdown` (pass `registry`). Cut is one undo step.",
+                    "Paste reads Markdown back into formatted blocks; custom nodes stay text. Text from elsewhere is read the same way, one paragraph per line. In a code block it is pasted as is.",
                     "Drag and drop of text and spellcheck replacements are ignored, so `spellcheck` is off.",
                 ]),
             lead: rich_lead(),

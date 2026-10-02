@@ -6,7 +6,8 @@
 //! - the five accents are the dark half's; the stylesheet re-derives roles per page;
 //! - `ink` is the dark `bg`, `#141415`;
 //! - page and card are the dark `text` (`#cdcdcd`) mixed 80% and 60% toward white;
-//! - `muted` is the dark `text-muted` (`#606079`) moved to the same 2.99:1 from the page.
+//! - `muted` is the dark `text-muted` (`#606079`) moved to 3.03:1 from the page,
+//!   the first step past 3:1.
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
@@ -15,7 +16,7 @@ pub static VAGUE_LIGHT: Theme = Theme {
     surface: HexColor::new(0xF5F5F5),
     ink: HexColor::new(0x141415),
     neutral: HexColor::new(0x141415),
-    muted: HexColor::new(0x8D8D9F),
+    muted: HexColor::new(0x8C8C9E),
     primary: HexColor::new(0x6E94B2),
     secondary: HexColor::new(0xBB9DBD),
     info: HexColor::new(0x7E98E8),

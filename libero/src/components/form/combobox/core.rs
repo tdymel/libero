@@ -13,8 +13,8 @@ use crate::{
         layout::{paper_sx, use_box},
     },
     hooks::{
-        ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PopoverWidth, use_element,
-        use_field_list_layer, use_popover_on, use_theme,
+        ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PopoverWidth,
+        current_localization, use_element, use_field_list_layer, use_popover_on, use_theme,
     },
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
@@ -136,15 +136,20 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // Said outside the `aria-busy` dropdown, whose changes some readers hold back. While
     // fetching, the rows are the previous query's, so none are drawn or reachable.
     let count = if loading { 0 } else { props.rows.len() };
+    let filtering = opened && !loading && props.nothing_found.is_some();
     let nothing_found = props
         .nothing_found
         .clone()
-        .filter(|_| opened && !loading && count == 0);
+        .filter(|_| filtering && count == 0);
+    // What a query left, said too (WCAG 4.1.3, todo 1574).
+    let results =
+        (filtering && count > 0).then(|| (current_localization().combobox.results)(count));
     let status = props
         .loading
         .clone()
         .filter(|_| opened)
-        .or_else(|| nothing_found.clone());
+        .or_else(|| nothing_found.clone())
+        .or(results);
     let empty = props
         .empty
         .or_else(|| nothing_found.map(|text| nothing_found_row(&text)));

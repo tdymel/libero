@@ -232,6 +232,11 @@ async fn typing_keeps_the_list_honest<D: Driver>(d: &mut D, _route: &str) -> Res
     d.focus(TRIGGER).await?;
     d.type_text("e").await?;
     eventually(d, "the list to open", async |d| d.exists(LISTBOX).await).await?;
+    // Todo 1574: what the query left is said too.
+    eventually(d, "the result count, said", async |d| {
+        Ok(d.text(STATUS).await?.contains(" result"))
+    })
+    .await?;
     for key in [keyboard::HOME, keyboard::END] {
         d.press(key).await?;
         d.settle().await?;

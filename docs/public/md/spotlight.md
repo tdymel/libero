@@ -160,7 +160,7 @@ explains how parts work.
 | `SpotlightPart::Label` | `label` | A row's label. |
 | `SpotlightPart::Description` | `description` | A row's second line. |
 | `SpotlightPart::Shortcut` | `shortcut` | A row's key hint, one `Kbd` per key. |
-| `SpotlightPart::Status` | `status` | The status line: "nothing found" or the loader. |
+| `SpotlightPart::Status` | `status` | The status line: "nothing found" or the loader, and the result count for a reader only. |
 
 ## Accessibility
 
@@ -175,6 +175,9 @@ explains how parts work.
 ### Libero handles
 
 - Focus stays in the search box.
+- A polite status region says how many actions a query left
+  (`SpotlightLabels::results`, "2 results"), "nothing found" when none, and
+  "searching" while `loading`.
 - The hotkey is ignored while you type in another text field, and while a
   dialog or popover is open.
 

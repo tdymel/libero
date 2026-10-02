@@ -135,7 +135,7 @@ state, not part of `Tree`.
 | `render_node` | `Callback<TreeNodeRenderArgs<T>, Element>` | `default_tree_render` | Each visible row's content. A custom one can still call the default for some rows. |
 | `default_expanded` | `HashSet<String>` | - | The ids expanded at first. Read once, and ignored when `expanded` is set. |
 | `expanded` | `HashSet<String>` | - | The expanded ids, controlled. The tree follows it and asks for every change through `onexpandedchange`. Unset, the tree keeps its own. |
-| `current` | `String` | - | The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current`. |
+| `current` | `String` | - | The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current` and, unless a `guides` line marks it, NavLink's tint and start bar. A row that renders a `NavLink` draws both, so pair one with `guides`. |
 | `onexpandedchange` | `EventHandler<HashSet<String>>` | - | Called with the whole new set of expanded ids. Store it when `expanded` is set; without `expanded` it only notifies. |
 | `parts` | `Parts<TreePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 

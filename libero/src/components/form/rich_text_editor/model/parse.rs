@@ -12,9 +12,19 @@ use super::syntax::{BlockSyntax, DELIMITERS, block_syntax, closing_span, valid_i
 
 impl Doc {
     pub fn from_markdown(markdown: &str) -> Self {
+        Self::read(markdown, false)
+    }
+
+    /// Pasted text from elsewhere: Markdown, but each line its own paragraph, as
+    /// plain text means it. A `\`-newline break still joins.
+    pub(crate) fn from_pasted(text: &str) -> Self {
+        Self::read(text, true)
+    }
+
+    fn read(markdown: &str, per_line: bool) -> Self {
         let lines: Vec<&str> = markdown.lines().collect();
         let mut doc = Doc::empty();
-        doc.blocks = blocks(&mut doc, &lines);
+        doc.blocks = blocks(&mut doc, &lines, per_line);
         doc.normalize();
         doc
     }
@@ -41,7 +51,7 @@ fn line_syntax(line: &str) -> Option<(BlockSyntax, &str)> {
         .map(|syntax| (syntax, rest))
 }
 
-fn blocks(doc: &mut Doc, lines: &[&str]) -> Vec<Block> {
+fn blocks(doc: &mut Doc, lines: &[&str], per_line: bool) -> Vec<Block> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < lines.len() {
@@ -52,10 +62,11 @@ fn blocks(doc: &mut Doc, lines: &[&str]) -> Vec<Block> {
                 continue;
             }
             let mut text = vec![line.trim()];
-            while let Some(next) = lines
-                .get(i)
-                .filter(|next| !blank(next) && line_syntax(next).is_none())
-            {
+            while let Some(next) = lines.get(i).filter(|next| {
+                !blank(next)
+                    && line_syntax(next).is_none()
+                    && (!per_line || text.last().is_some_and(|last| last.ends_with('\\')))
+            }) {
                 text.push(next.trim());
                 i += 1;
             }
@@ -87,7 +98,7 @@ fn blocks(doc: &mut Doc, lines: &[&str]) -> Vec<Block> {
                     inner.push(rest);
                     i += 1;
                 }
-                let children = blocks(doc, &inner);
+                let children = blocks(doc, &inner, per_line);
                 doc.container(BlockKind::Quote, children)
             }
             BlockSyntax::Bullet(_) | BlockSyntax::Ordered(..) => {
@@ -109,7 +120,7 @@ fn blocks(doc: &mut Doc, lines: &[&str]) -> Vec<Block> {
                         inner.push(next.get(width..).unwrap_or(""));
                         i += 1;
                     }
-                    let children = blocks(doc, &inner);
+                    let children = blocks(doc, &inner, per_line);
                     items.push(doc.container(BlockKind::ListItem, children));
                     match lines.get(i).and_then(|l| Some((*l, line_syntax(l)?))) {
                         Some((next, (other, rest))) if same(&other) => {

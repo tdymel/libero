@@ -3,12 +3,12 @@
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
-/// Kanagawa Lotus.
+/// Kanagawa Lotus. `muted` is upstream's `#8a8980` nudged toward the ink to 3:1 (todo 1308).
 pub static KANAGAWA_LIGHT: Theme = Theme {
     surface: HexColor::new(0xF2ECBC),
     ink: HexColor::new(0x545464),
     neutral: HexColor::new(0x545464),
-    muted: HexColor::new(0x8A8980),
+    muted: HexColor::new(0x88877F),
     primary: HexColor::new(0x4D699B),
     secondary: HexColor::new(0x624C83),
     info: HexColor::new(0x4E8CA2),
