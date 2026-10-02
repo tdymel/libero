@@ -1,9 +1,9 @@
 //! When a status shows. SSR cannot fire a submit, so the tests submit the
 //! scope directly, as `Form`'s handler does.
 
-use std::cell::Cell;
+use std::{cell::Cell, rc::Rc};
 
-use dioxus::prelude::*;
+use dioxus::{core::provide_root_context, prelude::*};
 
 use crate::{
     LiberoProvider,
@@ -13,26 +13,31 @@ use crate::{
     },
 };
 
-thread_local! {
-    static SCOPE: Cell<Option<FormScope>> = const { Cell::new(None) };
+/// Hands `value` to the test, which reads it back with `exposed`. Root context,
+/// not a `thread_local!`, so every `VirtualDom` keeps its own.
+fn expose<T: Clone + 'static>(value: T) {
+    use_hook(|| provide_root_context(value));
 }
 
-/// Grabs the scope the nearest `Form` or `Fieldset` provides.
+fn exposed<T: Clone + 'static>(dom: &VirtualDom) -> T {
+    dom.in_scope(ScopeId::ROOT, consume_context::<T>)
+}
+
+/// Exposes the scope the nearest `Form` or `Fieldset` provides.
 #[component]
 fn Spy() -> Element {
-    let scope = use_context::<FormScope>();
-    SCOPE.with(|cell| cell.set(Some(scope)));
+    expose(use_context::<FormScope>());
     rsx! {}
 }
 
+fn scope(dom: &VirtualDom) -> FormScope {
+    exposed(dom)
+}
+
 fn submit(dom: &mut VirtualDom) -> String {
-    dom.in_runtime(|| {
-        let mut scope = SCOPE.with(Cell::get).expect("a Spy inside a form");
-        scope.submit();
-    });
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    dioxus_ssr::render(dom)
+    let mut scope = scope(dom);
+    dom.in_runtime(|| scope.submit());
+    settle(dom)
 }
 
 fn mount(app: fn() -> Element) -> (VirtualDom, String) {
@@ -41,6 +46,13 @@ fn mount(app: fn() -> Element) -> (VirtualDom, String) {
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
     let html = dioxus_ssr::render(&dom);
     (dom, html)
+}
+
+fn settle(dom: &mut VirtualDom) -> String {
+    dom.process_events();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    dioxus_ssr::render(dom)
 }
 
 #[derive(Clone, PartialEq, Default)]
@@ -136,10 +148,6 @@ fn a_composite_rule_lands_on_every_field_it_names() {
     assert_eq!(after.matches("Passwords differ").count(), 2);
 }
 
-thread_local! {
-    static SHOWN: Cell<Option<Signal<bool>>> = const { Cell::new(None) };
-}
-
 /// The composite rule of `a_composite_rule_lands_on_every_field_it_names`,
 /// with both fields behind a toggle.
 fn toggled_signup() -> Element {
@@ -148,7 +156,7 @@ fn toggled_signup() -> Element {
         confirm: "b".into(),
     });
     let shown = use_signal(|| true);
-    SHOWN.with(|cell| cell.set(Some(shown)));
+    expose(shown);
     rsx! {
         LiberoProvider {
             Form {
@@ -169,14 +177,15 @@ fn toggled_signup() -> Element {
 }
 
 fn toggle(dom: &mut VirtualDom, to: bool) -> String {
-    dom.in_runtime(|| SHOWN.with(Cell::get).expect("mounted").set(to));
+    let mut shown = exposed::<Signal<bool>>(dom);
+    dom.in_runtime(|| shown.set(to));
     settle(dom)
 }
 
 /// What each field's `focusout` does to the shared scope.
 fn touch(dom: &mut VirtualDom, names: &[&str]) -> String {
+    let mut scope = scope(dom);
     dom.in_runtime(|| {
-        let mut scope = SCOPE.with(Cell::get).expect("a Spy inside a form");
         for name in names {
             scope.touch(name);
         }
@@ -196,7 +205,7 @@ fn a_remounted_field_waits_for_its_own_blur_again() {
         !remounted.contains("Passwords differ"),
         "a remounted field kept its old touched state: {remounted}"
     );
-    assert!(!dom.in_runtime(|| SCOPE.with(Cell::get).expect("mounted").touched_under("")));
+    assert!(!dom.in_runtime(|| scope(&dom).touched_under("")));
 }
 
 #[test]
@@ -217,7 +226,7 @@ fn a_remounted_field_after_a_failed_submit_still_shows_its_error() {
 fn a_field_leaving_keeps_the_touched_name_another_field_still_carries() {
     fn app() -> Element {
         let shown = use_signal(|| true);
-        SHOWN.with(|cell| cell.set(Some(shown)));
+        expose(shown);
         rsx! {
             LiberoProvider {
                 Form::<()> {
@@ -234,12 +243,7 @@ fn a_field_leaving_keeps_the_touched_name_another_field_still_carries() {
     let (mut dom, _) = mount(app);
     touch(&mut dom, &["topic"]);
     toggle(&mut dom, false);
-    assert!(dom.in_runtime(|| {
-        SCOPE
-            .with(Cell::get)
-            .expect("mounted")
-            .touched_under("topic")
-    }));
+    assert!(dom.in_runtime(|| scope(&dom).touched_under("topic")));
 }
 
 #[test]
@@ -297,7 +301,7 @@ fn the_summary_lists_field_errors_and_composite_errors() {
 
     let (dom, _) = mount(app);
     let summary = dom.in_runtime(|| {
-        let scope = SCOPE.with(Cell::get).expect("a Spy inside a form");
+        let scope = scope(&dom);
         assert!(scope.has_errors());
         scope.summary()
     });
@@ -350,10 +354,19 @@ fn a_path_name_binds_the_field_to_the_form_value_and_posts_in_full() {
 
 #[test]
 fn a_handler_or_a_string_name_leaves_the_field_unbound() {
+    /// Has a `zip` like `Shipping`, so only the root type tells them apart.
+    #[derive(Clone, PartialEq, Default)]
+    struct Parcel {
+        zip: String,
+    }
+
     fn app() -> Element {
         let order = use_store(|| Order {
             email: "tom@libero.dev".into(),
             address: Shipping::default(),
+        });
+        let parcel = use_store(|| Parcel {
+            zip: "99999".into(),
         });
         rsx! {
             LiberoProvider {
@@ -361,6 +374,9 @@ fn a_handler_or_a_string_name_leaves_the_field_unbound() {
                     value: order,
                     TextField { name: crate::path!(Order => email), oninput: move |_| {} }
                     TextField { name: "email" }
+                }
+                Form {
+                    value: parcel,
                     // Rooted at the wrong type: warns and stays unbound.
                     TextField { name: crate::path!(Shipping => zip) }
                 }
@@ -370,6 +386,7 @@ fn a_handler_or_a_string_name_leaves_the_field_unbound() {
 
     let (_, html) = mount(app);
     assert!(!html.contains("tom@libero.dev"), "{html}");
+    assert!(!html.contains("99999"), "{html}");
 }
 
 #[test]
@@ -392,28 +409,23 @@ fn a_bound_write_lands_in_the_form_value() {
     });
 }
 
-thread_local! {
-    static EMAIL_RENDERS: Cell<usize> = const { Cell::new(0) };
-    static STREET_RENDERS: Cell<usize> = const { Cell::new(0) };
-    static ZIP_RENDERS: Cell<usize> = const { Cell::new(0) };
-    static SET_ZIP: std::cell::RefCell<Option<crate::components::form::Setter<String>>> =
-        const { std::cell::RefCell::new(None) };
+/// The render count of each `Probe` by slot, and the setter of the last one.
+#[derive(Default)]
+struct Probes {
+    renders: [Cell<usize>; 3],
+    setter: std::cell::RefCell<Option<crate::components::form::Setter<String>>>,
 }
 
 /// A bound field reduced to what binding does: reads its value, counts its
 /// renders, and hands out its setter.
 #[component]
-fn Probe(#[props(into)] name: crate::components::FieldName<String>, renders: usize) -> Element {
+fn Probe(#[props(into)] name: crate::components::FieldName<String>, slot: usize) -> Element {
     let bound = crate::components::form::use_bound(&name, false);
     let value = bound.value().unwrap_or_default();
-    let counter = match renders {
-        0 => &EMAIL_RENDERS,
-        1 => &STREET_RENDERS,
-        _ => &ZIP_RENDERS,
-    };
-    counter.with(|count| count.set(count.get() + 1));
-    if renders == 2 {
-        SET_ZIP.with(|cell| *cell.borrow_mut() = bound.setter());
+    let probes = use_context::<Rc<Probes>>();
+    probes.renders[slot].set(probes.renders[slot].get() + 1);
+    if slot == 2 {
+        *probes.setter.borrow_mut() = bound.setter();
     }
     rsx! { "{value}" }
 }
@@ -433,16 +445,17 @@ fn a_bound_write_re_renders_only_the_field_it_names() {
 
     fn app() -> Element {
         let place = use_store(Place::default);
+        expose(Rc::new(Probes::default()));
         rsx! {
             LiberoProvider {
                 Form {
                     value: place,
                     validate: [(|p: &Place| !p.email.is_empty()).error("Email needed")],
-                    Probe { name: crate::path!(Place => email), renders: 0 }
+                    Probe { name: crate::path!(Place => email), slot: 0 }
                     Fieldset {
                         path: crate::path!(Place => address),
-                        Probe { name: crate::path!(Address => street), renders: 1 }
-                        Probe { name: crate::path!(Address => zip), renders: 2 }
+                        Probe { name: crate::path!(Address => street), slot: 1 }
+                        Probe { name: crate::path!(Address => zip), slot: 2 }
                     }
                 }
             }
@@ -450,18 +463,12 @@ fn a_bound_write_re_renders_only_the_field_it_names() {
     }
 
     let (mut dom, _) = mount(app);
-    let counts =
-        || [&EMAIL_RENDERS, &STREET_RENDERS, &ZIP_RENDERS].map(|count| count.with(Cell::get));
+    let probes = exposed::<Rc<Probes>>(&dom);
+    let counts = || probes.renders.each_ref().map(Cell::get);
     let before = counts();
 
-    dom.in_runtime(|| {
-        SET_ZIP.with(|cell| {
-            cell.borrow()
-                .clone()
-                .expect("zip mounted")
-                .set("10115".into())
-        })
-    });
+    let set_zip = probes.setter.borrow().clone().expect("zip mounted");
+    dom.in_runtime(|| set_zip.set("10115".into()));
     let html = settle(&mut dom);
     let after = counts();
 
@@ -481,15 +488,11 @@ fn a_bound_write_re_renders_only_the_field_it_names() {
     );
 }
 
-thread_local! {
-    static DISABLED: Cell<Option<Signal<bool>>> = const { Cell::new(None) };
-}
-
 #[test]
 fn a_disabled_fieldset_disables_its_fields_and_nested_groups_and_follows_a_toggle() {
     fn app() -> Element {
         let disabled = use_signal(|| false);
-        DISABLED.with(|cell| cell.set(Some(disabled)));
+        expose(disabled);
         rsx! {
             LiberoProvider {
                 Fieldset::<()> {
@@ -503,29 +506,53 @@ fn a_disabled_fieldset_disables_its_fields_and_nested_groups_and_follows_a_toggl
         }
     }
 
+    // Both fieldsets and inputs by attribute, each field's wrapper and frame by
+    // `data-state`; the inner field through the nested group.
+    let parts = [
+        "fieldset", "wrapper", "frame", "input", "fieldset", "wrapper", "frame", "input",
+    ];
     let (mut dom, before) = mount(app);
-    let markup = |html: &str| {
-        let body = &html[html.find("<fieldset").unwrap_or(0)..];
-        body[..body.find("<style").unwrap_or(body.len())].to_string()
-    };
-    assert!(!markup(&before).contains("disabled"), "{}", markup(&before));
+    assert_eq!(disabled_parts(&before), parts.map(|part| (part, false)));
 
-    dom.in_runtime(|| DISABLED.with(Cell::get).expect("mounted").set(true));
-    dom.process_events();
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    let after = dioxus_ssr::render(&dom);
-    let body = markup(&after);
-    // Wrapper and frame of both fields draw the state, the inner one through
-    // the nested group; both fieldsets and both inputs carry the attribute.
-    assert_eq!(body.matches("radius-sm disabled").count(), 4, "{body}");
-    assert_eq!(body.matches("disabled=true").count(), 4, "{body}");
+    let mut disabled = exposed::<Signal<bool>>(&dom);
+    dom.in_runtime(|| disabled.set(true));
+    let after = settle(&mut dom);
+    assert_eq!(disabled_parts(&after), parts.map(|part| (part, true)));
 }
 
-thread_local! {
-    static HANDLE: Cell<Option<FormHandle>> = const { Cell::new(None) };
-    static PASSED: Cell<Option<FormHandle>> = const { Cell::new(None) };
-    static LOGIN: Cell<Option<Store<Login>>> = const { Cell::new(None) };
+/// Each fieldset, input and `data-state` element of a fieldset's markup, in
+/// document order, and whether it says disabled.
+fn disabled_parts(html: &str) -> Vec<(&str, bool)> {
+    let body = &html[html.find("<fieldset").unwrap_or(0)..];
+    let body = &body[..body.find("<style").unwrap_or(body.len())];
+    body.split('<')
+        .filter_map(|tag| {
+            let (name, attributes) = tag[..tag.find('>')?].split_once(' ')?;
+            match name {
+                "fieldset" | "input" => {
+                    Some((name, attribute(attributes, "disabled") == Some("true")))
+                }
+                _ => {
+                    let state = attribute(attributes, "data-state")?;
+                    let part = attribute(attributes, "data-slot").unwrap_or("wrapper");
+                    Some((part, state.split(' ').any(|token| token == "disabled")))
+                }
+            }
+        })
+        .collect()
+}
+
+/// The value of attribute `name` in an SSR tag's attribute text.
+fn attribute<'a>(attributes: &'a str, name: &str) -> Option<&'a str> {
+    let key = format!("{name}=");
+    let (at, _) = attributes
+        .match_indices(&key)
+        .find(|(at, _)| *at == 0 || attributes.as_bytes()[at - 1] == b' ')?;
+    let value = &attributes[at + key.len()..];
+    match value.strip_prefix('"') {
+        Some(quoted) => quoted.split('"').next(),
+        None => value.split(' ').next(),
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -534,23 +561,15 @@ struct Login {
     name: String,
 }
 
-/// Grabs what `use_form_context` answers where it is placed.
+/// Exposes what `use_form_context` answers where it is placed.
 #[component]
 fn HandleSpy() -> Element {
-    let handle = use_form_context();
-    HANDLE.with(|cell| cell.set(handle));
+    expose(use_form_context());
     rsx! {}
 }
 
-fn handle() -> FormHandle {
-    HANDLE.with(Cell::get).expect("a HandleSpy inside a form")
-}
-
-fn settle(dom: &mut VirtualDom) -> String {
-    dom.process_events();
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    dioxus_ssr::render(dom)
+fn handle(dom: &VirtualDom) -> FormHandle {
+    exposed::<Option<FormHandle>>(dom).expect("a HandleSpy inside a form")
 }
 
 /// The summary's markup alone, or `None` while it is not shown.
@@ -563,7 +582,7 @@ fn summary_of(html: &str) -> Option<&str> {
 /// Both fields fail while empty, so a submit lists two lines.
 fn login_app() -> Element {
     let login = use_store(Login::default);
-    LOGIN.with(|cell| cell.set(Some(login)));
+    expose(login);
     rsx! {
         LiberoProvider {
             Form {
@@ -584,15 +603,15 @@ fn login_app() -> Element {
     }
 }
 
-fn login() -> Store<Login> {
-    LOGIN.with(Cell::get).expect("the login app mounted")
+fn login(dom: &VirtualDom) -> Store<Login> {
+    exposed(dom)
 }
 
 #[test]
 fn the_context_reaches_a_forms_handle_and_nothing_outside_one() {
     fn inside() -> Element {
         let form = use_form();
-        PASSED.with(|cell| cell.set(Some(form)));
+        expose(form);
         rsx! {
             LiberoProvider {
                 Form::<()> { form, HandleSpy {} }
@@ -607,16 +626,15 @@ fn the_context_reaches_a_forms_handle_and_nothing_outside_one() {
         }
     }
 
-    mount(inside);
+    let (dom, _) = mount(inside);
     assert!(
-        HANDLE.with(Cell::get) == PASSED.with(Cell::get),
+        handle(&dom) == exposed::<FormHandle>(&dom),
         "the context is not the handle passed as `form`"
     );
 
-    HANDLE.with(|cell| cell.set(None));
-    mount(alone);
+    let (dom, _) = mount(alone);
     assert!(
-        HANDLE.with(Cell::get).is_none(),
+        exposed::<Option<FormHandle>>(&dom).is_none(),
         "a fieldset without a form hands out a handle"
     );
 }
@@ -626,7 +644,7 @@ fn validate_shows_the_summary_and_reset_clears_it_with_the_value() {
     let (mut dom, before) = mount(login_app);
     assert!(summary_of(&before).is_none());
 
-    let valid = dom.in_runtime(|| handle().validate());
+    let valid = dom.in_runtime(|| handle(&dom).validate());
     let failed = settle(&mut dom);
     assert!(!valid);
     let summary = summary_of(&failed).expect("a failed validate shows no summary");
@@ -634,11 +652,11 @@ fn validate_shows_the_summary_and_reset_clears_it_with_the_value() {
     assert!(summary.contains("Name: Name needed"), "{summary}");
 
     dom.in_runtime(|| {
-        login().set(Login {
+        login(&dom).set(Login {
             email: "tom@libero.dev".into(),
             name: "Tom".into(),
         });
-        handle().reset();
+        handle(&dom).reset();
     });
     let reset = settle(&mut dom);
     assert!(summary_of(&reset).is_none(), "the summary survived a reset");
@@ -646,29 +664,32 @@ fn validate_shows_the_summary_and_reset_clears_it_with_the_value() {
         !reset.contains("needed"),
         "a status survived a reset: {reset}"
     );
-    assert_eq!(dom.in_runtime(|| login().peek().clone()), Login::default());
+    assert_eq!(
+        dom.in_runtime(|| login(&dom).peek().clone()),
+        Login::default()
+    );
 }
 
 #[test]
 fn a_fixed_line_leaves_the_summary_and_a_new_error_does_not_join_it() {
     let (mut dom, _) = mount(login_app);
-    dom.in_runtime(|| handle().validate());
+    dom.in_runtime(|| handle(&dom).validate());
     settle(&mut dom);
 
-    dom.in_runtime(|| login().write().email = "tom@libero.dev".into());
+    dom.in_runtime(|| login(&dom).write().email = "tom@libero.dev".into());
     let one_fixed = settle(&mut dom);
     let summary = summary_of(&one_fixed).expect("the summary vanished with a line left");
     assert!(!summary.contains("Email needed"), "{summary}");
     assert!(summary.contains("Name needed"), "{summary}");
 
     // Broken again: the field shows it, the summary does not take it back.
-    dom.in_runtime(|| login().write().email.clear());
+    dom.in_runtime(|| login(&dom).write().email.clear());
     let broken_again = settle(&mut dom);
     let summary = summary_of(&broken_again).expect("the summary vanished with a line left");
     assert!(!summary.contains("Email needed"), "{summary}");
     assert!(broken_again.contains("Email needed"));
 
-    dom.in_runtime(|| login().write().name = "Tom".into());
+    dom.in_runtime(|| login(&dom).write().name = "Tom".into());
     let all_fixed = settle(&mut dom);
     assert!(
         summary_of(&all_fixed).is_none(),
@@ -676,16 +697,12 @@ fn a_fixed_line_leaves_the_summary_and_a_new_error_does_not_join_it() {
     );
 }
 
-thread_local! {
-    static MESSAGE: Cell<Option<Signal<&'static str>>> = const { Cell::new(None) };
-}
-
 /// Equal rules let the field skip its parent's render; a new message must not.
 #[test]
 fn a_changed_rule_message_redraws_a_field_that_otherwise_skips() {
     fn app() -> Element {
         let message = use_signal(|| "First");
-        MESSAGE.with(|cell| cell.set(Some(message)));
+        expose(message);
         rsx! {
             LiberoProvider {
                 Form::<()> {
@@ -699,7 +716,8 @@ fn a_changed_rule_message_redraws_a_field_that_otherwise_skips() {
     let (mut dom, _) = mount(app);
     assert!(submit(&mut dom).contains("First"));
 
-    dom.in_runtime(|| MESSAGE.with(Cell::get).expect("mounted").set("Second"));
+    let mut message = exposed::<Signal<&str>>(&dom);
+    dom.in_runtime(|| message.set("Second"));
     let after = settle(&mut dom);
     assert!(after.contains("Second"), "the field kept a stale message");
     assert!(!after.contains("First"));
@@ -710,7 +728,7 @@ fn is_valid_follows_the_fields_without_revealing_them() {
     fn app() -> Element {
         let form = use_form();
         let login = use_store(Login::default);
-        LOGIN.with(|cell| cell.set(Some(login)));
+        expose(login);
         rsx! {
             LiberoProvider {
                 span { if form.is_valid() { "valid" } else { "invalid" } }
@@ -731,7 +749,7 @@ fn is_valid_follows_the_fields_without_revealing_them() {
         "is_valid revealed a status"
     );
 
-    dom.in_runtime(|| login().write().email = "tom@libero.dev".into());
+    dom.in_runtime(|| login(&dom).write().email = "tom@libero.dev".into());
     let after = settle(&mut dom);
     assert!(after.contains(">valid<"), "{after}");
 }
@@ -740,7 +758,7 @@ fn is_valid_follows_the_fields_without_revealing_them() {
 fn a_field_shown_by_another_fields_value_only_validates_while_shown() {
     fn app() -> Element {
         let login = use_store(Login::default);
-        LOGIN.with(|cell| cell.set(Some(login)));
+        expose(login);
         rsx! {
             LiberoProvider {
                 Form {
@@ -754,19 +772,18 @@ fn a_field_shown_by_another_fields_value_only_validates_while_shown() {
             }
         }
     }
-    let has_errors =
-        |dom: &VirtualDom| dom.in_runtime(|| SCOPE.with(Cell::get).expect("mounted").has_errors());
+    let has_errors = |dom: &VirtualDom| dom.in_runtime(|| scope(dom).has_errors());
 
     let (mut dom, _) = mount(app);
     let hidden = submit(&mut dom);
     assert!(!hidden.contains("Name needed"), "{hidden}");
     assert!(!has_errors(&dom), "a hidden field blocks the submit");
 
-    dom.in_runtime(|| login().write().email = "tom@libero.dev".into());
+    dom.in_runtime(|| login(&dom).write().email = "tom@libero.dev".into());
     settle(&mut dom);
     assert!(has_errors(&dom), "the shown field does not validate");
 
-    dom.in_runtime(|| login().write().email.clear());
+    dom.in_runtime(|| login(&dom).write().email.clear());
     settle(&mut dom);
     assert!(!has_errors(&dom), "the field kept its error after hiding");
 }
