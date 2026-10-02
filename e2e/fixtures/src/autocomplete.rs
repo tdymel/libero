@@ -9,7 +9,27 @@ pub const ROUTES: Routes = &[
     ("/autocomplete", || rsx! { AutocompletePage {} }),
     ("/autocomplete/echo", || rsx! { AutocompleteEchoPage {} }),
     ("/autocomplete/fetch", || rsx! { AutocompleteFetchPage {} }),
+    ("/autocomplete/odd", || rsx! { AutocompleteOddPage {} }),
 ];
+
+/// Spaces, quotes, non-ASCII and two equal labels, for the option ids (todo 2046).
+#[component]
+fn AutocompleteOddPage() -> Element {
+    let mut value = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Autocomplete {
+                label: "Place",
+                options: ODD.iter().map(|c| c.to_string()).collect::<Vec<_>>(),
+                value: value(),
+                oninput: move |next| value.set(next),
+            }
+        }
+    }
+}
+
+const ODD: &[&str] = &["New York", "O'Brien \"Jr\"", "Zürich", "Paris", "Paris", "Pärnu"];
 
 /// A server-side search: the answer for one or two letters is still on its way (todo 1585).
 #[component]

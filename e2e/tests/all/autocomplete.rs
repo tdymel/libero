@@ -268,3 +268,76 @@ e2e::scenario!(
     "/autocomplete",
     typing_keeps_the_list_honest
 );
+
+/// Todo 2046: option ids are valid, unique tokens whatever the labels hold, and a filter
+/// keeps each kept row's id; two equal labels keep two ids.
+#[test]
+fn odd_and_equal_labels_get_stable_unique_option_ids() {
+    const ROUTE: &str = "/autocomplete/odd";
+    const OPTIONS: &str = "[...document.querySelectorAll('[role=option]')].map(o => o.id)";
+    const LABELS: &str =
+        "[...document.querySelectorAll('[role=option]')].map(o => o.textContent.trim())";
+    block_on(async {
+        let fixture = Fixture::open(ROUTE, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let read = async |js: &str| -> Vec<String> {
+            page.evaluate(js).await.unwrap().into_value().unwrap()
+        };
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        // Every label holds an "r".
+        keyboard::type_text(page, "r").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[role=option]').length === 6",
+            "all six rows",
+        )
+        .await
+        .unwrap();
+        let before: Vec<(String, String)> = read(LABELS)
+            .await
+            .into_iter()
+            .zip(read(OPTIONS).await)
+            .collect();
+        for (label, id) in &before {
+            assert!(
+                !id.is_empty()
+                    && id
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'),
+                "{label} has the id {id:?}"
+            );
+        }
+        let unique: std::collections::HashSet<_> = before.iter().map(|(_, id)| id).collect();
+        assert_eq!(unique.len(), 6, "duplicate ids: {before:?}");
+
+        // "ri" keeps O'Brien, Zürich and both Parises, each moved up the list.
+        keyboard::type_text(page, "i").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[role=option]').length === 4",
+            "the filter",
+        )
+        .await
+        .unwrap();
+        let after: Vec<(String, String)> = read(LABELS)
+            .await
+            .into_iter()
+            .zip(read(OPTIONS).await)
+            .collect();
+        assert_eq!(after, before[1..5], "the kept rows changed ids");
+
+        // The input names a drawn row by the kept id.
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(id => !!id && !!document.getElementById(id))(document.querySelector({TRIGGER:?}).getAttribute('aria-activedescendant'))"
+            ),
+            "aria-activedescendant to name a drawn row",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean(ROUTE).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
