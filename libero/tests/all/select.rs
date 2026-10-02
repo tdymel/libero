@@ -708,4 +708,67 @@ mod dispatched {
             );
         }
     }
+
+    /// An open list hands unchanged rows out again (todo 2022); a renamed or disabled row
+    /// must still redraw, and so must the highlight it loses.
+    mod select_row_cache {
+        use super::*;
+        use libero::components::{OptionItem, OptionList, Select};
+
+        fn city(_: ()) -> Element {
+            let generation = use_context_provider(|| Signal::new(1u32))();
+            let options = OptionList::new([
+                "Berlin".to_string().into(),
+                OptionItem::new(format!("Bonn {generation}")).disabled(generation > 1),
+                "Cologne".to_string().into(),
+            ]);
+            rsx! {
+                LiberoProvider {
+                    Select::<String> { options, value: "Berlin".to_string(), onchange: move |_| {} }
+                }
+            }
+        }
+
+        fn row<'a>(html: &'a str, label: &str) -> &'a str {
+            let at = html
+                .find(&format!(r#"data-slot="label">{label}<"#))
+                .unwrap_or_else(|| panic!("no {label} row:\n{html}"));
+            &html[html[..at].rfind("<div").expect("the row")..at]
+        }
+
+        #[test]
+        fn a_renamed_or_disabled_row_redraws_in_an_open_list() {
+            dioxus::html::set_event_converter(Box::new(TestConverter));
+            let mut dom = VirtualDom::new_with_props(city, ());
+            let mut find = FindClickListener::default();
+            dom.rebuild(&mut find);
+            dom.render_immediate(&mut find);
+            let trigger = *find.keydown.last().expect("the trigger takes keys");
+            press_twice(&mut dom, trigger, Key::ArrowDown);
+            press_twice(&mut dom, trigger, Key::ArrowDown);
+            let html = body(&dioxus_ssr::render(&dom));
+            assert!(row(&html, "Bonn 1").contains("active"), "{html}");
+
+            let mut generation = dom.in_scope(ScopeId::APP, consume_context::<Signal<u32>>);
+            dom.in_runtime(|| generation.set(2));
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            let html = body(&dioxus_ssr::render(&dom));
+            assert!(!html.contains("Bonn 1"), "a stale label:\n{html}");
+            let bonn = row(&html, "Bonn 2");
+            assert!(bonn.contains(r#"aria-disabled="true""#), "{html}");
+            assert!(
+                !bonn.contains("active"),
+                "a disabled row kept the highlight:\n{html}"
+            );
+            assert!(!row(&html, "Berlin").contains(r#"aria-disabled"#), "{html}");
+        }
+
+        fn press_twice(dom: &mut VirtualDom, trigger: ElementId, key: Key) {
+            dom.runtime()
+                .handle_event("keydown", Event::new(key_event(key), true), trigger);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+    }
 }
