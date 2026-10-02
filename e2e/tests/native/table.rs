@@ -192,6 +192,11 @@ fn pins_hold(mut page: Page, rtl: bool) {
         true => (area.0 + area.2, area.0),
         false => (area.0, area.0 + area.2),
     };
+    // The sticky shift follows the scroll at the next layout.
+    page.wait_for(|page| {
+        (edges(page, "thead th:first-child").0 - start).abs() <= 1.0
+            && (edges(page, "thead th:last-child").1 - end).abs() <= 1.0
+    });
     for cell in [
         "thead th:first-child",
         "tbody tr:nth-child(2) td:first-child",
@@ -404,24 +409,28 @@ fn row_indices(page: &Page) -> Vec<usize> {
 #[test]
 fn a_wheel_moves_the_window() {
     let mut page = mount(windowed);
-    page.wait_for(|page| {
+    let windowed = page.wait_for(|page| {
         row_indices(page)
             .iter()
             .max()
             .is_some_and(|&last| last < 40)
     });
+    assert!(windowed, "rendered {:?}", row_indices(&page));
     page.hover("tbody td");
     page.wheel("tbody td", 20_000.0);
-    page.wait_for(|page| {
+    let moved = page.wait_for(|page| {
         row_indices(page)
             .iter()
             .min()
             .is_some_and(|&first| first > 400)
     });
-    let (_, header, _, _) = page.rect("thead th");
-    let (_, area, _, _) = page.rect("[data-table-scroll]");
+    assert!(moved, "the window stayed at {:?}", row_indices(&page));
+    // The sticky shift follows the scroll at the next layout, not with the rows.
+    let gap = |page: &Page| page.rect("thead th").1 - page.rect("[data-table-scroll]").1;
+    page.wait_for(|page| gap(page).abs() <= 1.0);
     assert!(
-        (header - area).abs() <= 1.0,
-        "header at {header}, area at {area}"
+        gap(&page).abs() <= 1.0,
+        "header {} px off the area",
+        gap(&page)
     );
 }

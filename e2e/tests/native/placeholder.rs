@@ -200,7 +200,8 @@ fn searches(mut page: Page, text: &str) {
     };
     assert!(drawn.iter().any(|drawn| drawn == text), "drew {drawn:?}");
     let (x, y, width, height) = page.rect(SEARCH);
-    let (left, right) = ink_span(&page, (x + 1.0, y, width - 2.0, height))
+    // Inside the focused box's inset ring (todo 1547), which Blitz draws on a pointer open too.
+    let (left, right) = ink_span(&page, (x + 4.0, y + 4.0, width - 8.0, height - 8.0))
         .expect("the search placeholder painted nothing");
     assert!(
         f64::from(left) >= x + 4.0 && f64::from(right) <= x + width,

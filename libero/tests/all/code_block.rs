@@ -173,6 +173,8 @@ fn a_floating_copy_button_reserves_space_on_the_first_row_only() {
 }
 
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].
+/// No clipboard without `native`; `native` has arboard, which may write, and the in-crate tests fake both answers.
+#[cfg(not(feature = "native"))]
 mod dispatched {
 
     use crate::dispatch::*;
@@ -180,9 +182,7 @@ mod dispatched {
     use dioxus::prelude::*;
     use libero::{LiberoProvider, components::CodeBlock};
 
-    /// No clipboard without `native`, so the copy fails and the status says so.
-    /// `native` has arboard, which may write; the in-crate tests fake both answers.
-    #[cfg(not(feature = "native"))]
+    /// No clipboard, so the copy fails and the status says so.
     #[test]
     fn a_copy_without_a_clipboard_is_announced_as_failed() {
         fn app() -> Element {
