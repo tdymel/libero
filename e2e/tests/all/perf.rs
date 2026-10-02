@@ -476,6 +476,354 @@ fn opening_the_spotlight_stays_in_budget() {
     });
 }
 
+/// One user action of an interaction survey.
+#[derive(Clone, Copy)]
+enum Act {
+    Click(&'static str),
+    /// The `n`th match of the selector.
+    Nth(&'static str, usize),
+    Hover(&'static str),
+    Key(keyboard::Key),
+    Type(&'static str),
+    /// Ten moves by `(x, y)` from the selector's centre.
+    Drag(&'static str, f64, f64),
+}
+
+impl Act {
+    async fn run(self, page: &Page) -> anyhow::Result<()> {
+        match self {
+            Act::Click(selector) => pointer::click(page, selector).await,
+            Act::Nth(selector, n) => {
+                page.evaluate(format!(
+                    "(() => {{ document.querySelectorAll('[data-e2e-nth]').forEach((e) => e.removeAttribute('data-e2e-nth')); \
+                     const e = document.querySelectorAll({selector:?})[{n}]; \
+                     e.setAttribute('data-e2e-nth', ''); e.scrollIntoView({{ block: 'center' }}); }})()"
+                ))
+                .await?;
+                // At its centre, whatever covers it: a hidden native input under its label.
+                let at = pointer::centre_of(page, "[data-e2e-nth]").await?;
+                pointer::click_at(page, at).await
+            }
+            Act::Hover(selector) => pointer::hover(page, selector).await,
+            Act::Key(key) => keyboard::press(page, key).await,
+            Act::Type(text) => keyboard::type_text(page, text).await,
+            Act::Drag(selector, x, y) => {
+                let from = pointer::centre_of(page, selector).await?;
+                let to = pointer::Point {
+                    x: from.x + x,
+                    y: from.y + y,
+                };
+                pointer::drag(page, from, to, 10).await
+            }
+        }
+    }
+}
+
+/// An action, the row it reports under, and a JS condition true once it took effect.
+type Step = (&'static str, Act, String);
+
+/// One component's interaction cycle on `/perf/<stem>` (counted) and `/timing/<stem>` (timed);
+/// `setup` runs once first.
+struct Case {
+    component: &'static str,
+    stem: &'static str,
+    setup: Vec<Step>,
+    steps: Vec<Step>,
+}
+
+fn shown(selector: &str) -> String {
+    format!(
+        "(() => {{ const e = document.querySelector({selector:?}); \
+         return !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden'; }})()"
+    )
+}
+
+fn hidden(selector: &str) -> String {
+    format!("!{}", shown(selector))
+}
+
+fn nth_is(selector: &str, n: usize, attribute: &str) -> String {
+    format!(
+        "(() => {{ const e = document.querySelectorAll({selector:?})[{n}]; \
+         return !!e && (e.getAttribute({attribute:?}) === 'true' || e.checked === true); }})()"
+    )
+}
+
+fn value_is(text: &str) -> String {
+    format!("document.activeElement.value === {text:?}")
+}
+
+fn open_close(component: &'static str, stem: &'static str, trigger: Act, shows: &str) -> Case {
+    Case {
+        component,
+        stem,
+        setup: vec![],
+        steps: vec![
+            ("open", trigger, shown(shows)),
+            ("close", Act::Key(keyboard::ESCAPE), hidden(shows)),
+        ],
+    }
+}
+
+/// Two keys typed and deleted again, after `setup` focused the field.
+fn typing(component: &'static str, stem: &'static str, setup: Vec<Step>) -> Case {
+    Case {
+        component,
+        stem,
+        setup,
+        steps: vec![
+            ("key", Act::Type("1"), value_is("1")),
+            ("key", Act::Type("2"), value_is("12")),
+            ("backspace", Act::Key(keyboard::BACKSPACE), value_is("1")),
+            ("backspace", Act::Key(keyboard::BACKSPACE), value_is("")),
+        ],
+    }
+}
+
+const SLIDER: &str = "[role=slider]";
+const PAD: &str = "[role=slider][aria-label=Saturation]";
+const RADIO: &str = "input[type=radio]";
+const SEGMENT: &str = "label[for*='-segment-']";
+const FIRST_ITEM: &str = "document.querySelector('[role=list] li')?.textContent.trim()";
+
+fn cases() -> Vec<Case> {
+    let focus = |selector: &'static str| vec![("focus", Act::Click(selector), "true".to_string())];
+    vec![
+        open_close("Select (50)", "long-select", Act::Click("[role=combobox]"), "[role=option]"),
+        open_close(
+            "MultiSelect (50)",
+            "long-multi-select",
+            Act::Click("[role=combobox]"),
+            "[role=option]",
+        ),
+        open_close(
+            "Menu",
+            "menu",
+            Act::Click("button[aria-haspopup]"),
+            "[role=menu]",
+        ),
+        open_close("Popover", "popover", Act::Click("#open"), "[role=dialog]"),
+        open_close("Modal", "modal", Act::Click("#open"), "[role=dialog]"),
+        open_close("Drawer", "drawer", Act::Click("#open"), "[role=dialog]"),
+        open_close(
+            "DatePicker",
+            "date-picker",
+            Act::Click("input[data-controlled]"),
+            "[role=dialog]",
+        ),
+        Case {
+            component: "Tooltip",
+            stem: "tooltip",
+            setup: vec![],
+            steps: vec![
+                ("open", Act::Hover("#open"), shown("[role=tooltip]")),
+                ("close", Act::Hover("#away"), hidden("[role=tooltip]")),
+            ],
+        },
+        Case {
+            component: "Calendar",
+            stem: "calendar",
+            setup: vec![],
+            steps: vec![
+                (
+                    "month",
+                    Act::Click("[aria-label='Next month']"),
+                    "document.querySelector('[role=grid]').getAttribute('aria-label') === 'April 2026'".into(),
+                ),
+                (
+                    "month",
+                    Act::Click("[aria-label='Previous month']"),
+                    "document.querySelector('[role=grid]').getAttribute('aria-label') === 'March 2026'".into(),
+                ),
+            ],
+        },
+        Case {
+            component: "Tabs",
+            stem: "tabs",
+            setup: vec![],
+            steps: vec![
+                ("switch", Act::Nth("[role=tab]", 1), nth_is("[role=tab]", 1, "aria-selected")),
+                ("switch", Act::Nth("[role=tab]", 0), nth_is("[role=tab]", 0, "aria-selected")),
+            ],
+        },
+        Case {
+            component: "Accordion",
+            stem: "accordion",
+            setup: vec![],
+            steps: vec![
+                (
+                    "open",
+                    Act::Nth("button[aria-expanded]", 0),
+                    nth_is("button[aria-expanded]", 0, "aria-expanded"),
+                ),
+                (
+                    "switch",
+                    Act::Nth("button[aria-expanded]", 1),
+                    nth_is("button[aria-expanded]", 1, "aria-expanded"),
+                ),
+                (
+                    "close",
+                    Act::Nth("button[aria-expanded]", 1),
+                    format!("!{}", nth_is("button[aria-expanded]", 1, "aria-expanded")),
+                ),
+            ],
+        },
+        Case {
+            component: "SegmentedControl",
+            stem: "segmented",
+            setup: vec![],
+            steps: vec![
+                ("switch", Act::Nth(SEGMENT, 1), nth_is(RADIO, 1, "aria-checked")),
+                ("switch", Act::Nth(SEGMENT, 0), nth_is(RADIO, 0, "aria-checked")),
+            ],
+        },
+        typing("Autocomplete (100)", "autocomplete", focus("input")),
+        typing(
+            "Select search (300)",
+            "search-select",
+            vec![(
+                "open",
+                Act::Click("[role=combobox]"),
+                "document.activeElement.tagName === 'INPUT'".into(),
+            )],
+        ),
+        typing("NumberField", "number-field", focus("input")),
+        Case {
+            component: "Form (30) Switch",
+            stem: "big-form",
+            setup: vec![],
+            steps: vec![
+                ("toggle", Act::Nth("#s3", 0), nth_is("#s3", 0, "aria-checked")),
+                (
+                    "toggle",
+                    Act::Nth("#s3", 0),
+                    format!("!{}", nth_is("#s3", 0, "aria-checked")),
+                ),
+            ],
+        },
+        Case {
+            component: "Form (30) Checkbox",
+            stem: "big-form",
+            setup: vec![],
+            steps: vec![
+                ("toggle", Act::Nth("#c3", 0), nth_is("#c3", 0, "aria-checked")),
+                (
+                    "toggle",
+                    Act::Nth("#c3", 0),
+                    format!("!{}", nth_is("#c3", 0, "aria-checked")),
+                ),
+            ],
+        },
+        Case {
+            component: "Slider",
+            stem: "slider",
+            setup: vec![],
+            steps: vec![
+                ("drag", Act::Drag(SLIDER, 100.0, 0.0), "true".into()),
+                ("drag", Act::Drag(SLIDER, -100.0, 0.0), "true".into()),
+            ],
+        },
+        Case {
+            component: "ColorPicker pad",
+            stem: "color-picker",
+            setup: vec![],
+            steps: vec![
+                ("drag", Act::Drag(PAD, -40.0, 40.0), "true".into()),
+                ("drag", Act::Drag(PAD, 40.0, -40.0), "true".into()),
+            ],
+        },
+        Case {
+            component: "List (40) sort",
+            stem: "list",
+            setup: vec![],
+            steps: vec![
+                ("sort", Act::Click("#sort"), format!("{FIRST_ITEM} === 'City 39'")),
+                ("sort", Act::Click("#sort"), format!("{FIRST_ITEM} === 'City 0'")),
+            ],
+        },
+        typing("List (40) filter", "list", focus("input")),
+    ]
+}
+
+/// `PERF_CASE`, comma separated parts of component names; unset picks every case.
+fn picked(only: Option<&str>, component: &str) -> bool {
+    only.is_none_or(|only| only.split(',').any(|part| component.contains(part)))
+}
+
+async fn step(page: &Page, (name, act, done): &Step) -> anyhow::Result<()> {
+    act.run(page).await?;
+    wait::for_js_true(page, done, name).await?;
+    Ok(())
+}
+
+/// The render counts of every survey step, twice through each cycle: a cost table for
+/// picking what to fix, no budget. `PERF_CASE` picks cases by name;
+/// `cargo run -p e2e -- perf::survey --ignored --nocapture`.
+#[test]
+#[ignore = "interaction survey, run on request"]
+fn survey() {
+    let only = std::env::var("PERF_CASE").ok();
+    block_on(async {
+        for case in cases() {
+            if !picked(only.as_deref(), case.component) {
+                continue;
+            }
+            let fixture = open(&format!("/perf/{}", case.stem)).await;
+            let page = &fixture.page;
+            let outcome: anyhow::Result<()> = async {
+                for setup in &case.setup {
+                    step(page, setup).await?;
+                }
+                for pass in 0..2 {
+                    for s in &case.steps {
+                        settled(page, s.0).await;
+                        reset(page).await;
+                        step(page, s).await?;
+                        let running: String = page.evaluate(ANIMATIONS).await?.into_value()?;
+                        if !running.is_empty() {
+                            println!("animations | {} | {} | {running}", case.component, s.0);
+                        }
+                        print_renders(case.component, s.0, pass, &settled(page, s.0).await);
+                    }
+                }
+                Ok(())
+            }
+            .await;
+            if let Err(e) = outcome {
+                println!("renders | {:<20} | FAILED: {e}", case.component);
+            }
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// The transitions and animations running right after a step, counted by property and target.
+const ANIMATIONS: &str = "(() => { const seen = {}; for (const a of document.getAnimations()) { \
+     const t = a.effect && a.effect.target; \
+     const what = (a.transitionProperty || a.animationName) + ' on ' + (t ? t.tagName.toLowerCase() + (t.dataset.slot ? '[' + t.dataset.slot + ']' : '') + (t.getAttribute('role') ? '(' + t.getAttribute('role') + ')' : '') : '?') + ' ' + Math.round(a.effect.getComputedTiming().duration) + 'ms'; \
+     seen[what] = (seen[what] || 0) + 1; } \
+     return Object.entries(seen).map(([k, v]) => v + 'x ' + k).join('; '); })()";
+
+/// One survey line: the total, the scope count and the eight busiest scopes.
+fn print_renders(component: &str, step: &str, pass: usize, renders: &Renders) {
+    let total: u32 = renders.values().sum();
+    let mut top: Vec<_> = renders.iter().collect();
+    top.sort_by(|a, b| b.1.cmp(a.1));
+    let top: Vec<String> = top
+        .iter()
+        .take(8)
+        .map(|(name, n)| {
+            let name = name.split('<').next().unwrap_or(name);
+            format!("{} {n}", name.rsplit("::").next().unwrap_or(name))
+        })
+        .collect();
+    println!(
+        "renders | {component:<20} | {step:<9} | pass {pass} | total {total:>4} | scopes {:>3} | {}",
+        renders.len(),
+        top.join(", ")
+    );
+}
+
 /// Main-thread time per interaction in a real browser, each repeated: one report row per
 /// interaction, its median task time held to a budget of about 5x the release medians of
 /// 2026-10-05, so only a real regression trips it. Opt-in, a shared CPU makes milliseconds
@@ -1088,6 +1436,44 @@ mod timing {
                 Ok(())
             })
             .await;
+        });
+    }
+
+    /// Every survey case, each step about eight times; `PERF_CASE` picks cases by name.
+    #[test]
+    #[ignore = "interaction timing report, run on request"]
+    fn survey() {
+        let only = std::env::var("PERF_CASE").ok();
+        block_on(async {
+            for case in super::cases() {
+                if !super::picked(only.as_deref(), case.component) {
+                    continue;
+                }
+                timed(&format!("/timing/{}", case.stem), async |page| {
+                    // Extra CSS for an ablation, e.g. `*, ::after { animation: none !important }`.
+                    if let Ok(css) = std::env::var("PERF_CSS") {
+                        page.evaluate(format!(
+                            "document.head.insertAdjacentHTML('beforeend', {:?})",
+                            format!("<style>{css}</style>")
+                        ))
+                        .await?;
+                    }
+                    for setup in &case.setup {
+                        super::step(page, setup).await?;
+                    }
+                    let n = case.steps.len();
+                    let rows = measure(page, 8 * n, async |i| {
+                        let s = &case.steps[i % n];
+                        super::step(page, s).await?;
+                        Ok(s.0)
+                    })
+                    .await?;
+                    let budgets: Vec<_> = case.steps.iter().map(|s| (s.0, 500.0)).collect();
+                    report(case.component, &rows, &budgets);
+                    Ok(())
+                })
+                .await;
+            }
         });
     }
 

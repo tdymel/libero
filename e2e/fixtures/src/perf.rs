@@ -4,12 +4,18 @@
 use dioxus::prelude::*;
 use libero::chrono::NaiveDate;
 use libero::components::{
-    Autocomplete, Badge, Button, Carousel, ChronoPicker, Dialog, Flex, FloatingWindowOptions, Menu,
-    MenuEntry, MenuItem, MultiSelect, Options, Pagination, ScrollArea, Select, Slider,
-    SliderChangeEvent, Splitter, SpotlightAction, SpotlightOptions, Table, Text, TextField, Tree,
-    TreeNode, Virtualize, column, spotlight_filter, use_menu, use_spotlight,
+    Accordion, AccordionOpen, Autocomplete, Badge, Box, Button, Carousel, Checkbox, ChronoField,
+    ChronoPicker, ColorCode, ColorPicker, Dialog, Fields, Flex, FloatingWindowOptions, Form, List,
+    ListItem, Menu, MenuEntry, MenuItem, MultiSelect, NumberField, Options, Pagination, ScrollArea,
+    SegmentedControl, Select, Slider, SliderChangeEvent, Splitter, SpotlightAction,
+    SpotlightOptions, Switch, Table, Tabs, Text, TextField, Tooltip, Tree, TreeNode, Virtualize,
+    column, spotlight_filter, use_menu, use_spotlight,
 };
-use libero::hooks::{ModalScope, use_floating_window, use_modal};
+use libero::hooks::{
+    DrawerOptions, ModalScope, PopoverOptions, use_drawer, use_element, use_floating_window,
+    use_modal, use_popover,
+};
+use libero::{sx::sx, use_theme};
 
 use crate::Routes;
 
@@ -23,6 +29,26 @@ pub const ROUTES: Routes = &[
     ("/perf/autocomplete", || rsx! { TimedAutocompletePage {} }),
     ("/perf/slider", || rsx! { TimedSliderPage {} }),
     ("/perf/spotlight", || rsx! { TimedSpotlightPage {} }),
+    ("/perf/long-select", || rsx! { LongSelectPage {} }),
+    (
+        "/perf/long-multi-select",
+        || rsx! { LongMultiSelectPage {} },
+    ),
+    ("/perf/search-select", || rsx! { SearchSelectPage {} }),
+    ("/perf/menu", || rsx! { TimedMenuPage {} }),
+    ("/perf/popover", || rsx! { PopoverPage {} }),
+    ("/perf/tooltip", || rsx! { TooltipPage {} }),
+    ("/perf/modal", || rsx! { TimedModalPage {} }),
+    ("/perf/drawer", || rsx! { DrawerPage {} }),
+    ("/perf/date-picker", || rsx! { DatePickerPage {} }),
+    ("/perf/calendar", || rsx! { TimedCalendarPage {} }),
+    ("/perf/tabs", || rsx! { TabsPage {} }),
+    ("/perf/accordion", || rsx! { AccordionPage {} }),
+    ("/perf/segmented", || rsx! { SegmentedPage {} }),
+    ("/perf/number-field", || rsx! { NumberFieldPage {} }),
+    ("/perf/big-form", || rsx! { BigFormPage {} }),
+    ("/perf/color-picker", || rsx! { ColorPickerPage {} }),
+    ("/perf/list", || rsx! { ListPage {} }),
     // Interaction timing (perf::timing): no render counter, so the timings are an app's.
     (
         "/timing/table",
@@ -52,6 +78,23 @@ pub const ROUTES: Routes = &[
         "/timing/floating-window",
         || rsx! { TimedFloatingWindowPage {} },
     ),
+    ("/timing/long-select", || rsx! { LongSelectPage {} }),
+    (
+        "/timing/long-multi-select",
+        || rsx! { LongMultiSelectPage {} },
+    ),
+    ("/timing/search-select", || rsx! { SearchSelectPage {} }),
+    ("/timing/popover", || rsx! { PopoverPage {} }),
+    ("/timing/tooltip", || rsx! { TooltipPage {} }),
+    ("/timing/drawer", || rsx! { DrawerPage {} }),
+    ("/timing/date-picker", || rsx! { DatePickerPage {} }),
+    ("/timing/tabs", || rsx! { TabsPage {} }),
+    ("/timing/accordion", || rsx! { AccordionPage {} }),
+    ("/timing/segmented", || rsx! { SegmentedPage {} }),
+    ("/timing/number-field", || rsx! { NumberFieldPage {} }),
+    ("/timing/big-form", || rsx! { BigFormPage {} }),
+    ("/timing/color-picker", || rsx! { ColorPickerPage {} }),
+    ("/timing/list", || rsx! { ListPage {} }),
 ];
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -541,5 +584,343 @@ fn TimedFloatingWindowPage() -> Element {
     );
     rsx! {
         Button { id: "open", variant: "outlined", onclick: move |_| window.open(), "Inspector" }
+    }
+}
+
+fn cities(n: usize) -> Vec<String> {
+    (0..n).map(|i| format!("City {i}")).collect()
+}
+
+/// Fifty options, the trigger a combobox.
+#[component]
+fn LongSelectPage() -> Element {
+    let mut value = use_signal(|| None::<String>);
+    let options = use_hook(|| cities(50));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Select::<String> { label: "City", options: options.clone(), value: value(), onchange: move |next| value.set(next) }
+        }
+    }
+}
+
+#[component]
+fn LongMultiSelectPage() -> Element {
+    let mut value = use_signal(Vec::<String>::new);
+    let options = use_hook(|| cities(50));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            MultiSelect::<String> { label: "Cities", options: options.clone(), value: value(), onchange: move |next| value.set(next) }
+        }
+    }
+}
+
+/// A searchable select of three hundred, typed into once open.
+#[component]
+fn SearchSelectPage() -> Element {
+    let mut value = use_signal(|| None::<String>);
+    let options = use_hook(|| cities(300));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Select::<String> {
+                label: "City",
+                searchable: true,
+                options: options.clone(),
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+        }
+    }
+}
+
+#[component]
+fn PopoverPage() -> Element {
+    let theme = use_theme();
+    let mut opened = use_signal(|| false);
+    let anchor = use_element();
+    let options = PopoverOptions::new(theme.popover.gap, theme.popover.padding).dismiss(true);
+    let popover = use_popover(anchor, opened(), options);
+    popover.on_dismiss(move || opened.set(false));
+    let floating = *popover.floating();
+    popover.show(opened().then(|| {
+        rsx! {
+            Box {
+                role: "dialog",
+                aria_label: "Details",
+                tabindex: "-1",
+                attributes: popover.floating_events(),
+                style: popover.style(),
+                onmounted: floating.mount(),
+                sx: sx().background("surface").padding("8px").z_index("var(--lsx-z-index-popover)"),
+                Text { "Popover content" }
+                Button { "Inside" }
+            }
+        }
+    }));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button {
+                id: "open",
+                onmounted: anchor.mount(),
+                onclick: move |_| opened.toggle(),
+                attributes: popover.anchor_events(),
+                aria_haspopup: "dialog",
+                aria_expanded: "{opened()}",
+                "Details"
+            }
+        }
+    }
+}
+
+#[component]
+fn TooltipPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Tooltip { label: rsx! { "Saves the draft" }, open_delay: 0, close_delay: 0,
+                Button { id: "open", "Save" }
+            }
+            p { id: "away", style: "height: 200px", "Away" }
+        }
+    }
+}
+
+#[component]
+fn DrawerPage() -> Element {
+    let nav = use_drawer(
+        DrawerOptions {
+            aria_label: Some("Menu".into()),
+            ..Default::default()
+        },
+        |s: ModalScope<()>| {
+            rsx! {
+                for line in 0..20 {
+                    Text { key: "{line}", "Entry {line}" }
+                }
+                Button { variant: "text", onclick: move |_| s.close(), "Close" }
+            }
+        },
+    );
+    rsx! {
+        Button {
+            id: "open",
+            onclick: move |_| {
+                nav.open();
+            },
+            "Open menu"
+        }
+    }
+}
+
+#[component]
+fn DatePickerPage() -> Element {
+    let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 3, 18));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            ChronoField::<NaiveDate> {
+                label: "Due date",
+                today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                value: day(),
+                onchange: move |next| day.set(next),
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Debug, Options)]
+enum Section {
+    Account,
+    Profile,
+    Billing,
+    Security,
+    Alerts,
+    Devices,
+}
+
+fn section_body(section: Section) -> Element {
+    rsx! {
+        for line in 0..8 {
+            Text { key: "{line}", "{section:?} line {line} of the panel." }
+        }
+    }
+}
+
+#[component]
+fn TabsPage() -> Element {
+    let mut section = use_signal(|| Section::Account);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "520px",
+            Tabs {
+                aria_label: "Settings",
+                value: section(),
+                onchange: move |next| section.set(next),
+                panel: section_body,
+            }
+        }
+    }
+}
+
+#[component]
+fn AccordionPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(None::<Section>));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "520px",
+            Accordion {
+                open: open(),
+                onchange: move |next| open.set(next),
+                panel: section_body,
+            }
+        }
+    }
+}
+
+#[component]
+fn SegmentedPage() -> Element {
+    let mut section = use_signal(|| Section::Account);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "640px",
+            SegmentedControl { label: "Section", value: section(), onchange: move |next| section.set(next) }
+        }
+    }
+}
+
+#[component]
+fn NumberFieldPage() -> Element {
+    let mut value = use_signal(|| None::<i64>);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            NumberField { label: "Amount", steppers: true, value: value(), onchange: move |next| value.set(next) }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Settings {
+    t0: String,
+    t1: String,
+    t2: String,
+    t3: String,
+    t4: String,
+    t5: String,
+    t6: String,
+    t7: String,
+    t8: String,
+    t9: String,
+    s0: bool,
+    s1: bool,
+    s2: bool,
+    s3: bool,
+    s4: bool,
+    s5: bool,
+    s6: bool,
+    s7: bool,
+    s8: bool,
+    s9: bool,
+    c0: bool,
+    c1: bool,
+    c2: bool,
+    c3: bool,
+    c4: bool,
+    c5: bool,
+    c6: bool,
+    c7: bool,
+    c8: bool,
+    c9: bool,
+}
+
+/// Thirty bound fields in one `Form`: ten text fields, ten switches, ten checkboxes.
+#[component]
+fn BigFormPage() -> Element {
+    let value = use_store(Settings::default);
+    let f = Settings::FIELDS;
+    let texts = [
+        f.t0(),
+        f.t1(),
+        f.t2(),
+        f.t3(),
+        f.t4(),
+        f.t5(),
+        f.t6(),
+        f.t7(),
+        f.t8(),
+        f.t9(),
+    ];
+    let switches = [
+        f.s0(),
+        f.s1(),
+        f.s2(),
+        f.s3(),
+        f.s4(),
+        f.s5(),
+        f.s6(),
+        f.s7(),
+        f.s8(),
+        f.s9(),
+    ];
+    let checks = [
+        f.c0(),
+        f.c1(),
+        f.c2(),
+        f.c3(),
+        f.c4(),
+        f.c5(),
+        f.c6(),
+        f.c7(),
+        f.c8(),
+        f.c9(),
+    ];
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Form { value,
+                for (i, name) in texts.into_iter().enumerate() {
+                    TextField { key: "t{i}", label: "Text {i}", name }
+                }
+                for (i, name) in switches.into_iter().enumerate() {
+                    Switch { key: "s{i}", id: "s{i}", label: "Switch {i}", name }
+                }
+                for (i, name) in checks.into_iter().enumerate() {
+                    Checkbox { key: "c{i}", id: "c{i}", label: "Check {i}", name }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn ColorPickerPage() -> Element {
+    let mut color = use_signal(|| "#1c7ed6".parse::<ColorCode>().unwrap());
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            ColorPicker {
+                value: color(),
+                saturation_label: "Saturation",
+                hue_label: "Hue",
+                oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+            }
+        }
+    }
+}
+
+/// Forty items, sorted by a button and filtered by a field.
+#[component]
+fn ListPage() -> Element {
+    let mut descending = use_signal(|| false);
+    let mut query = use_signal(String::new);
+    let all = use_hook(|| cities(40));
+    let mut shown: Vec<&String> = all
+        .iter()
+        .filter(|c| c.contains(query().as_str()))
+        .collect();
+    if descending() {
+        shown.reverse();
+    }
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "sort", onclick: move |_| descending.toggle(), "Sort" }
+            TextField { label: "Filter", value: query(), oninput: move |next| query.set(next) }
+            List {
+                for city in shown {
+                    ListItem { key: "{city}", "{city}" }
+                }
+            }
+        }
     }
 }
