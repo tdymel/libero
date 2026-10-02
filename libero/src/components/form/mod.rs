@@ -53,7 +53,7 @@ pub use color::{
     ColorPicker, ColorPickerPart, ColorPickerProps, ColorSliderPart, ColorSwatch, ColorSwatchProps,
     HueSlider, HueSliderProps, ParseColorError, Swatches,
 };
-pub(crate) use combobox::{CaretKeys, ComboboxCore, row_label};
+pub(crate) use combobox::{CaretKeys, ComboboxCore, RowCache, row_label, use_row_cache};
 pub use combobox::{
     Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxProps,
     ComboboxState, use_combobox,

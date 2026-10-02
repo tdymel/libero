@@ -112,12 +112,21 @@ impl ComboboxState {
         self.aria(self.is_open() && (self.rows)() > 0)
     }
 
+    /// [`a11y_attributes`](Self::a11y_attributes) for a caller that knows its row count. Reading
+    /// `rows` instead re-ran the caller once more after the list wrote it, rows and all.
+    pub(crate) fn a11y_attributes_for(&self, rows: usize) -> Vec<Attribute> {
+        self.aria_rows(self.is_open() && rows > 0, rows)
+    }
+
     /// [`a11y_attributes`](Self::a11y_attributes) for a list that says itself whether it is mounted.
     pub(crate) fn aria(&self, listbox: bool) -> Vec<Attribute> {
+        self.aria_rows(listbox, (self.rows)())
+    }
+
+    fn aria_rows(&self, listbox: bool, rows: usize) -> Vec<Attribute> {
         let opened = self.is_open() && !(self.held)();
         let listbox = listbox && opened;
         // Clamped as the list clamps its highlight.
-        let rows = (self.rows)();
         let active = self
             .active()
             .filter(|_| opened && rows > 0)

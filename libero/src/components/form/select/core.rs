@@ -10,9 +10,10 @@ use crate::{
             ring_overlay, use_toolbar_item,
         },
         form::{
-            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, clear_button,
-            field_control_sx, field_parts_enum, field_props, use_chip_announcer, use_field,
-            use_field_frame, use_refocus_on_close, with_drawn_placeholder,
+            CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, PreparedField, RowCache,
+            clear_button, field_control_sx, field_parts_enum, field_props, use_chip_announcer,
+            use_field, use_field_frame, use_refocus_on_close, use_row_cache,
+            with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -279,6 +280,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let search = use_element();
     let trigger_element = use_element();
     let toolbar_item = use_toolbar_item();
+    let row_cache = use_row_cache();
 
     let picked = props.picked;
     let visible = visible_rows(searchable, props.matches, query, picked);
@@ -389,13 +391,13 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .states(&trigger_states)
         .prepare();
 
-    let (rows, groups, row_disabled) = select_rows(&props, &visible, state);
+    let rows = select_rows(&props, &visible, state, &row_cache);
     // Written before the trigger reads it; from `ComboboxCore` it re-ran this scope per open (todo 842).
     if opened {
         state.set_rows(if props.loading.is_some() {
             0
         } else {
-            rows.len()
+            rows.rows.len()
         });
     }
 
@@ -486,8 +488,6 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     let listbox = select_listbox(Listbox {
         rows,
-        groups,
-        row_disabled,
         header,
         control: frame.render(control),
         open,
@@ -524,9 +524,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
 /// The dropdown, hung off the whole field frame.
 struct Listbox {
-    rows: Vec<Element>,
-    groups: Vec<Option<String>>,
-    row_disabled: Vec<bool>,
+    rows: SelectRows,
     header: Option<Element>,
     /// The frame, already rendered around the trigger.
     control: Element,
@@ -547,9 +545,13 @@ struct Listbox {
 fn select_listbox(list: Listbox) -> Element {
     let Listbox {
         parts,
-        rows,
-        groups,
-        row_disabled,
+        rows:
+            SelectRows {
+                rows,
+                keys,
+                groups,
+                row_disabled,
+            },
         header,
         control,
         open,
@@ -568,6 +570,7 @@ fn select_listbox(list: Listbox) -> Element {
     rsx! {
         ComboboxCore {
             rows,
+            row_keys: keys,
             groups,
             row_disabled,
             loading,
@@ -921,12 +924,58 @@ fn visible_rows(
     }
 }
 
+/// Everything a row draws from: a change to any of them redraws it.
+#[derive(Clone, PartialEq)]
+struct SelectRowInputs {
+    label: Element,
+    selected: bool,
+    close_on_pick: bool,
+    onpick: EventHandler<usize>,
+    state: ComboboxState,
+}
+
+/// One kept row; `index` is the full-list index.
+fn select_row(index: usize, inputs: &SelectRowInputs) -> Element {
+    let SelectRowInputs {
+        label,
+        selected,
+        close_on_pick,
+        onpick,
+        state,
+    } = inputs.clone();
+    rsx! {
+        ComboboxOption {
+            selected,
+            onpick: move |_| {
+                // A single select's re-pick emits nothing, as a native `<select>`.
+                if !(close_on_pick && selected) {
+                    onpick.call(index);
+                }
+                if close_on_pick {
+                    state.close();
+                }
+            },
+            {label}
+        }
+    }
+}
+
+/// The kept rows, keyed by their full-list index, and their parallel group labels and disabled flags.
+#[derive(Default)]
+struct SelectRows {
+    rows: Vec<Element>,
+    keys: Vec<usize>,
+    groups: Vec<Option<String>>,
+    row_disabled: Vec<bool>,
+}
+
 /// The kept rows as `ComboboxOption`s, with their group labels and disabled flags, filtered in parallel.
 fn select_rows(
     props: &SelectCoreProps,
     visible: &[usize],
     state: ComboboxState,
-) -> (Vec<Element>, Vec<Option<String>>, Vec<bool>) {
+    cache: &RowCache<SelectRowInputs>,
+) -> SelectRows {
     if props.rows.is_empty() {
         return Default::default();
     }
@@ -942,32 +991,28 @@ fn select_rows(
     let onpick = props.onpick;
     let close_on_pick = !props.multiple;
     let picked = props.picked.read();
-    let rows = visible
+    let inputs: Vec<(usize, SelectRowInputs)> = visible
         .iter()
         .copied()
         .filter_map(|index| {
-            let row = props.rows.get(index)?.clone();
-            let selected = picked.selected.get(index).copied().unwrap_or(false);
-            Some(rsx! {
-                ComboboxOption {
-                    selected,
-                    // `index` is the full-list index.
-                    onpick: move |_| {
-                        // A single select's re-pick emits nothing, as a native `<select>`.
-                        if !(close_on_pick && selected) {
-                            onpick.call(index);
-                        }
-                        if close_on_pick {
-                            state.close();
-                        }
-                    },
-                    {row}
-                }
-            })
+            let inputs = SelectRowInputs {
+                label: props.rows.get(index)?.clone(),
+                selected: picked.selected.get(index).copied().unwrap_or(false),
+                close_on_pick,
+                onpick,
+                state,
+            };
+            Some((index, inputs))
         })
         .collect();
+    let keys = inputs.iter().map(|(index, _)| *index).collect();
 
-    (rows, groups, row_disabled)
+    SelectRows {
+        rows: cache.rows(inputs, select_row),
+        keys,
+        groups,
+        row_disabled,
+    }
 }
 
 #[derive(Clone, Copy)]

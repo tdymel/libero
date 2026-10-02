@@ -5,7 +5,7 @@ use crate::{
         common::{HtmlTag, Input, OptionSource, Options, Parts, use_combobox},
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FIELD_CONTROL_SX, clear_button,
-            field_props, row_label, use_bound, use_field, use_field_frame,
+            field_props, row_label, use_bound, use_field, use_field_frame, use_row_cache,
         },
         layout::use_box,
     },
@@ -136,14 +136,17 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
 
     let state = use_combobox();
     let input_element = use_element();
+    let row_cache = use_row_cache();
 
     let query = text.to_lowercase();
     // A pending list draws the loader, never its stale rows or "nothing found".
     let loading = props.options.is_pending();
     let options = props.options.list().values();
-    let matches: Vec<T> = options
+    // With their place in `options`, the rows' stable key.
+    let matches: Vec<(usize, T)> = options
         .iter()
-        .filter(|value| match (prefiltered, &props.filter) {
+        .enumerate()
+        .filter(|(_, value)| match (prefiltered, &props.filter) {
             (true, _) => true,
             (false, Some(filter)) => filter.call(AutocompleteFilterArgs {
                 value: (*value).clone(),
@@ -151,7 +154,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             }),
             (false, None) => value.label().to_lowercase().contains(&query),
         })
-        .cloned()
+        .map(|(key, value)| (key, value.clone()))
         .collect();
 
     // The label also names the listbox, which `for` cannot reach.
@@ -194,22 +197,29 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     // A caller's `option` content is drawn eagerly and handed down as a value, so a narrowed
     // list never leaves a stale row on screen.
     let option = props.option;
-    let rows: Vec<Element> = matches
-        .iter()
-        .cloned()
-        .enumerate()
-        .map(|(index, value)| {
-            let content = option.as_ref().map(|option| {
-                option.call(AutocompleteOptionArgs {
-                    value: value.clone(),
-                    index,
-                })
-            });
-            rsx! {
-                AutocompleteRow::<T> { value, pick, content }
-            }
-        })
-        .collect();
+    let row_keys: Vec<usize> = matches.iter().map(|(key, _)| *key).collect();
+    let rows = row_cache.rows(
+        matches
+            .into_iter()
+            .enumerate()
+            .map(|(index, (key, value))| {
+                let content = option.as_ref().map(|option| {
+                    option.call(AutocompleteOptionArgs {
+                        value: value.clone(),
+                        index,
+                    })
+                });
+                (
+                    key,
+                    AutocompleteRowInputs {
+                        value,
+                        pick,
+                        content,
+                    },
+                )
+            }),
+        autocomplete_row::<T>,
+    );
     let has_rows = !rows.is_empty();
     // Typed text against a list that has options to match, or a fetched one.
     let nothing_found = (!text.is_empty() && (prefiltered || !options.is_empty()))
@@ -261,7 +271,8 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .focus_ring(false)
         .prepare();
 
-    let mut attributes = state.a11y_attributes();
+    // The count `ComboboxCore` tells the state: none while fetching.
+    let mut attributes = state.a11y_attributes_for(if loading.is_some() { 0 } else { rows.len() });
     attributes.extend(props.attributes);
     let input = field
         .aria(control)
@@ -293,6 +304,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let listbox = rsx! {
         ComboboxCore {
             rows,
+            row_keys,
             active: state.active(),
             onactive: move |row| state.set_active(Some(row)),
             // Nothing to show is not open: `aria-expanded` must not claim a
@@ -320,10 +332,20 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     field.render(listbox)
 }
 
-/// A default row skips a keystroke that keeps its value: every row redrew per key. A caller's
-/// `content` never compares equal, so such a row still redraws.
-#[component]
-fn AutocompleteRow<T: Options>(value: T, pick: Callback<T>, content: Option<Element>) -> Element {
+/// Everything a row draws from. A caller's `content` never compares equal, so such a row redraws per key.
+#[derive(Clone, PartialEq)]
+struct AutocompleteRowInputs<T: 'static> {
+    value: T,
+    pick: Callback<T>,
+    content: Option<Element>,
+}
+
+fn autocomplete_row<T: Options>(_key: usize, inputs: &AutocompleteRowInputs<T>) -> Element {
+    let AutocompleteRowInputs {
+        value,
+        pick,
+        content,
+    } = inputs.clone();
     let label = content.unwrap_or_else(|| row_label(value.label()));
     rsx! {
         ComboboxOption { onpick: move |_| pick.call(value.clone()), {label} }

@@ -39,6 +39,8 @@ fn ComboboxRow(index: usize, active: bool, disabled: bool, children: Element) ->
 #[component]
 pub(super) fn ComboboxDropdown(
     rows: Vec<Element>,
+    /// One stable key per row, parallel to `rows`; empty keys by position. A kept row then keeps its scope.
+    row_keys: Vec<usize>,
     active: Option<usize>,
     id: String,
     max_height: String,
@@ -71,13 +73,15 @@ pub(super) fn ComboboxDropdown(
                 .into_iter()
                 .enumerate()
                 .map(|(index, row)| {
+                    let key = row_keys.get(index).copied().unwrap_or(index);
                     rsx! {
                         ComboboxRow {
-                            key: "{index}",
+                            key: "{key}",
                             index,
                             active: active == Some(index),
                             disabled: row_disabled.get(index).copied().unwrap_or(false),
-                            {row}
+                            // The row itself, not `{row}` wrapped anew: an unchanged one compares equal and skips.
+                            children: row,
                         }
                     }
                 })

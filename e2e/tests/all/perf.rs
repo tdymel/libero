@@ -264,6 +264,154 @@ fn a_multi_select_pick_stays_in_budget() {
     });
 }
 
+/// The rows a key or an arrow leaves alone skip (todo 2022). The filtered steps redraw every
+/// kept row: its index, and so its id, moved.
+#[test]
+fn a_searchable_select_filter_and_arrow_stay_in_budget() {
+    block_on(async {
+        let fixture = open("/perf/search-select").await;
+        let page = &fixture.page;
+        pointer::click(page, "[role=combobox]").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.tagName === 'INPUT'",
+            "the search box",
+        )
+        .await
+        .unwrap();
+        settled(page, "opening").await;
+        reset(page).await;
+        keyboard::type_text(page, "1").await.unwrap();
+        wait::for_js_true(page, &option_count_is(138), "the filter")
+            .await
+            .unwrap();
+        let filtered = settled(page, "filtering").await;
+        assert_within(
+            &filtered,
+            &[
+                ("SelectCore", 1),
+                ("ComboboxCore", 1),
+                ("ComboboxPopup", 1),
+                ("ComboboxDropdown", 1),
+                ("ComboboxRow", 138),
+                ("ComboboxOption", 138),
+                ("ScrollArea", 1),
+                ("ScrollAreaContent", 1),
+                ("ScrollAreaBars", 2),
+                ("Fragment", 1),
+                ("PortalOutlet", 1),
+                ("StyleOutlet", 1),
+            ],
+            "a key filtering 300 rows to 138",
+        );
+        reset(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(page, &active_row_is(1), "the arrow")
+            .await
+            .unwrap();
+        let arrowed = settled(page, "arrowing").await;
+        assert_within(
+            &arrowed,
+            &[
+                ("SelectCore", 1),
+                ("ComboboxCore", 1),
+                ("ComboboxPopup", 1),
+                ("ComboboxDropdown", 1),
+                ("ComboboxRow", 2),
+                ("ComboboxOption", 2),
+                ("ScrollArea", 1),
+                ("ScrollAreaContent", 1),
+                ("ScrollAreaBars", 2),
+                ("Fragment", 1),
+                ("PortalOutlet", 1),
+                ("StyleOutlet", 1),
+            ],
+            "an arrow over 138 rows",
+        );
+        fixture
+            .console
+            .assert_clean("the searchable select")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// One pass per key: the state's row count, read back through the trigger's ARIA, ran a second.
+#[test]
+fn an_autocomplete_key_draws_each_row_once() {
+    block_on(async {
+        let fixture = open("/perf/autocomplete").await;
+        let page = &fixture.page;
+        pointer::click(page, "input").await.unwrap();
+        settled(page, "focusing").await;
+        reset(page).await;
+        keyboard::type_text(page, "1").await.unwrap();
+        wait::for_js_true(page, &option_count_is(19), "the filter")
+            .await
+            .unwrap();
+        let filtered = settled(page, "filtering").await;
+        assert_within(
+            &filtered,
+            &[
+                ("TimedAutocompletePage", 1),
+                ("Flex", 1),
+                ("Autocomplete", 1),
+                ("ComboboxCore", 1),
+                ("ComboboxPopup", 3),
+                ("ComboboxDropdown", 1),
+                ("ComboboxRow", 19),
+                ("ComboboxOption", 19),
+                ("ScrollArea", 1),
+                ("ScrollAreaContent", 1),
+                ("ScrollAreaBars", 3),
+                ("Fragment", 3),
+                ("PortalOutlet", 3),
+                ("StyleOutlet", 1),
+            ],
+            "a key opening 19 of 100 rows",
+        );
+        reset(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(page, &active_row_is(0), "the arrow")
+            .await
+            .unwrap();
+        let arrowed = settled(page, "arrowing").await;
+        assert_within(
+            &arrowed,
+            &[
+                ("Autocomplete", 1),
+                ("ComboboxCore", 1),
+                ("ComboboxPopup", 1),
+                ("ComboboxDropdown", 1),
+                ("ComboboxRow", 1),
+                ("ComboboxOption", 1),
+                ("ScrollArea", 1),
+                ("ScrollAreaContent", 1),
+                ("ScrollAreaBars", 2),
+                ("Fragment", 1),
+                ("PortalOutlet", 1),
+                ("StyleOutlet", 1),
+            ],
+            "an arrow onto the first of 19 rows",
+        );
+        fixture.console.assert_clean("the autocomplete").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+fn option_count_is(count: usize) -> String {
+    format!("document.querySelectorAll('[role=option]').length === {count}")
+}
+
+/// The focused control names the `row`th drawn option as active.
+fn active_row_is(row: usize) -> String {
+    format!(
+        "(() => {{ const id = document.activeElement.getAttribute('aria-activedescendant'); \
+         const option = document.querySelectorAll('[role=option]')[{row}]; \
+         return !!id && !!option && option.id === id; }})()"
+    )
+}
+
 /// Three page changes.
 #[test]
 fn paging_stays_in_budget() {

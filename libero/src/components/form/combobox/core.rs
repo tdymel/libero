@@ -60,6 +60,10 @@ base_props! {
     pub(crate) struct ComboboxCoreProps {
         /// Already drawn: erases the caller's `T` and stops memoizing below.
         rows: Vec<Element>,
+        /// One stable key per row, parallel to `rows`, so a filter keeps each kept row's scope.
+        /// Empty keys rows by position.
+        #[props(default)]
+        row_keys: Vec<usize>,
         /// One group label per row, parallel to `rows`. Wraps rows, never changes their index.
         #[props(default)]
         groups: Vec<Option<String>>,
@@ -229,6 +233,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 states,
                 attributes: props.attributes,
                 rows: props.rows,
+                row_keys: props.row_keys,
                 groups: props.groups,
                 row_disabled: props.row_disabled,
                 active: active_row,
@@ -282,6 +287,7 @@ struct ComboboxPopupProps {
     states: Input<States>,
     attributes: Vec<Attribute>,
     rows: Vec<Element>,
+    row_keys: Vec<usize>,
     groups: Vec<Option<String>>,
     row_disabled: Vec<bool>,
     active: Option<usize>,
@@ -348,6 +354,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
                 rsx! {
                     ComboboxDropdown {
                         rows: props.rows,
+                        row_keys: props.row_keys,
                         groups: props.groups,
                         row_disabled: props.row_disabled,
                         active: props.active,

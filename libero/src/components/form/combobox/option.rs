@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use dioxus::prelude::*;
 
@@ -213,6 +213,52 @@ pub(crate) fn row_label(label: String) -> Element {
     }
 }
 
+/// Drawn rows by key, handed out again while their inputs compare equal: the dropdown then gets
+/// the very same `Element`, so an unchanged `ComboboxRow` skips its render (todo 2022).
+pub(crate) struct RowCache<I: 'static>(Rc<RefCell<HashMap<usize, (I, Element)>>>);
+
+impl<I: 'static> Clone for RowCache<I> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+pub(crate) fn use_row_cache<I: 'static>() -> RowCache<I> {
+    use_hook(RowCache::default)
+}
+
+impl<I: 'static> Default for RowCache<I> {
+    fn default() -> Self {
+        Self(Rc::default())
+    }
+}
+
+impl<I: PartialEq + 'static> RowCache<I> {
+    /// The rows in order. `draw` is a `fn`, so a row depends on `inputs` alone and every change
+    /// redraws it; a key missing from one call is forgotten.
+    pub(crate) fn rows(
+        &self,
+        rows: impl IntoIterator<Item = (usize, I)>,
+        draw: fn(usize, &I) -> Element,
+    ) -> Vec<Element> {
+        let mut old = self.0.take();
+        let mut kept = HashMap::with_capacity(old.len());
+        let drawn = rows
+            .into_iter()
+            .map(|(key, inputs)| {
+                let element = match old.remove(&key) {
+                    Some((cached, element)) if cached == inputs => element,
+                    _ => draw(key, &inputs),
+                };
+                kept.insert(key, (inputs, element.clone()));
+                element
+            })
+            .collect();
+        *self.0.borrow_mut() = kept;
+        drawn
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,6 +294,52 @@ mod tests {
                 "the disabled greying folds before the last {state} rule: {css}"
             );
         }
+    }
+
+    fn draw_label(key: usize, label: &String) -> Element {
+        rsx! {
+            span { "{key}: {label}" }
+        }
+    }
+
+    fn rows(cache: &RowCache<String>, labels: &[(usize, &str)]) -> Vec<Element> {
+        cache.rows(
+            labels.iter().map(|(key, label)| (*key, label.to_string())),
+            draw_label,
+        )
+    }
+
+    /// The same `Element`, pointer-equal, is what lets the dropdown's row skip.
+    #[test]
+    fn an_unchanged_row_is_handed_out_again() {
+        let cache = RowCache::default();
+        let first = rows(&cache, &[(0, "Apple"), (1, "Pear")]);
+        let second = rows(&cache, &[(1, "Pear"), (0, "Apple")]);
+        assert!(first[0] == second[1] && first[1] == second[0]);
+    }
+
+    #[test]
+    fn a_changed_input_redraws_only_that_row() {
+        let cache = RowCache::default();
+        let first = rows(&cache, &[(0, "Apple"), (1, "Pear")]);
+        let second = rows(&cache, &[(0, "Apple"), (1, "Plum")]);
+        assert!(first[0] == second[0]);
+        assert!(first[1] != second[1]);
+        assert_eq!(
+            dioxus_ssr::render_element(second[1].clone()),
+            "<span>1: Plum</span>"
+        );
+    }
+
+    /// A row filtered out is forgotten, so it never comes back drawn from stale inputs.
+    #[test]
+    fn a_row_missing_from_one_call_is_redrawn_when_it_returns() {
+        let cache = RowCache::default();
+        let first = rows(&cache, &[(0, "Apple"), (1, "Pear")]);
+        rows(&cache, &[(1, "Pear")]);
+        let third = rows(&cache, &[(0, "Apple"), (1, "Pear")]);
+        assert!(first[0] != third[0]);
+        assert!(first[1] == third[1]);
     }
 
     #[test]
