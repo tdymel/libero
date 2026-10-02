@@ -44,6 +44,46 @@ e2e::scenario!(
     native: skip("1156-4d: the first grip drag resizes, a second one moves nothing")
 );
 
+/// Todo 2015: a finger 18px inside the header's end edge, past the old 8px grip, still resizes.
+#[test]
+fn a_touch_in_the_grip_lane_resizes_the_column() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer::{Point, touch_drag};
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/table-resize", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let edge: (f64, f64) = page
+            .evaluate(format!(
+                "(r => [r.right, r.y + r.height / 2])(document.querySelector('{NAME}').getBoundingClientRect())"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let from = Point {
+            x: edge.0 - 18.0,
+            y: edge.1,
+        };
+        let to = Point {
+            x: from.x + 60.0,
+            y: from.y,
+        };
+        touch_drag(page, from, to, 8).await.unwrap();
+        wait::for_js_true(
+            page,
+            "parseFloat(document.querySelector('#widths').textContent.replace('Name=', '')) >= 175",
+            "a touch drag in the grip lane to widen Name by about 60px",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a touch resize").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1451: the grip is a separator Tab reaches; the arrows step it, Home and End go to the limits.
 async fn the_keys_resize<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let grip = format!("{NAME} [data-resize-handle]");

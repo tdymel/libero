@@ -67,6 +67,8 @@ use super::{
 /// A draggable header's grip lane, its press target.
 const GRIP_LANE: &str = "24px";
 
+const COARSE: &str = "(pointer: coarse)";
+
 static TABLE_SX: StaticSx = StaticSx::new(|| {
     let vars = TableDefaults::theme_vars();
     match widens_sized_tables() {
@@ -240,15 +242,50 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .with("background-size", "2px 50%")
             .with("background-position", "right center")
             .cursor("col-resize")
-            .touch_action("none"),
+            .touch_action("none")
+            // A finger gets the grip lane; the header's content ends before it (todo 2015).
+            .media(COARSE, sx().width(GRIP_LANE)),
+    )
+    .selector(
+        "& th[data-resizable]",
+        sx().media(
+            COARSE,
+            sx().with(
+                "padding-inline-end",
+                format!("max({GRIP_LANE}, {})", TABLE_PAD_X.value()),
+            ),
+        ),
+    )
+    .selector(
+        "& th[data-resizable][data-sortable]",
+        sx().media(COARSE, sx().with("padding-inline-end", GRIP_LANE)),
+    )
+    // The menu button's 4px end margin is part of the lane.
+    .selector(
+        "& th[data-resizable][data-menu]",
+        sx().media(
+            COARSE,
+            sx().with("padding-inline-end", format!("calc({GRIP_LANE} - 4px)")),
+        ),
+    )
+    .selector(
+        "& th[data-resizable] [data-sort-button], & th[data-resizable] [data-header-text]",
+        sx().media(
+            COARSE,
+            sx().with(
+                "padding-inline-end",
+                format!("max(0px, calc({} - {GRIP_LANE}))", TABLE_PAD_X.value()),
+            ),
+        ),
     )
     .rtl(sx().selector(
         "& [data-resize-handle]",
         sx().with("background-position", "left center"),
     ))
+    // `:active` makes Chromium's touch adjustment count the grip as a target (as 1463).
     .selector(
         "& th:hover [data-resize-handle], & [data-resize-handle][data-dragging], \
-         & [data-resize-handle]:focus-visible",
+         & [data-resize-handle]:active, & [data-resize-handle]:focus-visible",
         sx().color("primary.6").with("background-size", "2px 100%"),
     )
     .selector(
