@@ -1,4 +1,5 @@
 use crate::common::{body, render};
+use crate::table_fixture::{Person, order_of};
 
 use dioxus::prelude::*;
 use libero::{
@@ -7,28 +8,17 @@ use libero::{
     localization::Localization,
 };
 
-#[derive(Clone, PartialEq)]
-struct Row {
-    name: &'static str,
-    age: u32,
-}
-
-fn people() -> Vec<Row> {
+fn people() -> Vec<Person> {
     ["Ada", "Bea", "Cy", "Dan", "Eve"]
         .into_iter()
         .zip([36, 28, 51, 19, 44])
-        .map(|(name, age)| Row { name, age })
+        .map(|(name, age)| Person { name, age })
         .collect()
 }
 
 /// Names in the order the body shows them.
 fn shown(body: &str) -> Vec<&'static str> {
-    let mut names: Vec<(usize, &'static str)> = ["Ada", "Bea", "Cy", "Dan", "Eve"]
-        .into_iter()
-        .filter_map(|name| body.find(&format!(">{name}<")).map(|at| (at, name)))
-        .collect();
-    names.sort();
-    names.into_iter().map(|(_, name)| name).collect()
+    order_of(body, &["Ada", "Bea", "Cy", "Dan", "Eve"])
 }
 
 #[test]
@@ -39,7 +29,7 @@ fn a_table_without_page_props_draws_no_page_controls() {
                 Table {
                     caption: "People",
                     data: people(),
-                    columns: vec![column("Name").value(|row: &Row| row.name.to_string())],
+                    columns: vec![column("Name").value(|row: &Person| row.name.to_string())],
                 }
             }
         }
@@ -59,7 +49,7 @@ fn a_default_page_shows_its_slice_and_range() {
                 Table {
                     caption: "People",
                     data: people(),
-                    columns: vec![column("Name").value(|row: &Row| row.name.to_string())],
+                    columns: vec![column("Name").value(|row: &Person| row.name.to_string())],
                     default_page_size: 2,
                     default_page: 2,
                 }
@@ -91,8 +81,8 @@ fn the_table_sorts_before_it_pages() {
                     aria_label: "People",
                     data: people(),
                     columns: vec![
-                        column("Name").value(|row: &Row| row.name.to_string()),
-                        column("Age").value(|row: &Row| row.age).sortable(),
+                        column("Name").value(|row: &Person| row.name.to_string()),
+                        column("Age").value(|row: &Person| row.age).sortable(),
                     ],
                     default_sort: vec![TableSort::new("Age", SortDirection::Descending)],
                     default_page_size: 2,
@@ -115,7 +105,7 @@ fn a_controlled_page_past_the_end_shows_the_last_page() {
                 Table {
                     aria_label: "People",
                     data: people(),
-                    columns: vec![column("Name").value(|row: &Row| row.name.to_string())],
+                    columns: vec![column("Name").value(|row: &Person| row.name.to_string())],
                     page: 9,
                     onpagechange: |_| {},
                     page_size: 2,
@@ -141,8 +131,8 @@ fn manual_stages_draw_data_as_given() {
                     aria_label: "People",
                     data: people().into_iter().take(2).collect::<Vec<_>>(),
                     columns: vec![
-                        column("Name").value(|row: &Row| row.name.to_string()),
-                        column("Age").value(|row: &Row| row.age).sortable(),
+                        column("Name").value(|row: &Person| row.name.to_string()),
+                        column("Age").value(|row: &Person| row.age).sortable(),
                     ],
                     sort: vec![TableSort::new("Age", SortDirection::Descending)],
                     onsortchange: |_| {},
@@ -174,7 +164,7 @@ fn page_sizes_draw_a_localized_picker() {
                 Table {
                     caption: "Leute",
                     data: people(),
-                    columns: vec![column("Name").value(|row: &Row| row.name.to_string())],
+                    columns: vec![column("Name").value(|row: &Person| row.name.to_string())],
                     page_sizes: vec![3, 10],
                 }
             }

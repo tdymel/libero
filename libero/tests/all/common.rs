@@ -22,6 +22,18 @@ pub fn render(app: fn() -> Element) -> String {
     dioxus_ssr::render(&dom)
 }
 
+/// [`render`] for an app that takes its setup as props, so a test hands it
+/// in rather than through a `thread_local!` the app reads.
+pub fn render_with<P: Clone + 'static, M: 'static>(
+    app: impl dioxus::core::ComponentFunction<P, M>,
+    props: P,
+) -> String {
+    let mut dom = VirtualDom::new_with_props(app, props);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    dioxus_ssr::render(&dom)
+}
+
 /// The rendered markup with the `<style>` and `<script>` blocks stripped -
 /// the CSS is bigger than the markup and full of words like `first-child`,
 /// and the provider's colour-scheme script carries `light`/`dark`, so
@@ -230,6 +242,140 @@ pub fn rules_for(html: &str, element: &BTreeMap<String, String>) -> String {
     rules
 }
 
+/// One CSS rule from the rendered sheets: the at-rules around it (`@media ...`,
+/// outermost first), its selector, and its declarations, parsed.
+#[derive(Debug)]
+pub struct CssRule {
+    pub at: Vec<String>,
+    pub selector: String,
+    pub declarations: BTreeMap<String, String>,
+}
+
+impl CssRule {
+    /// Whether the rule always applies: no `@media` or `@supports` around
+    /// it, only cascade layers.
+    pub fn unconditional(&self) -> bool {
+        self.at.iter().all(|at| at.starts_with("@layer"))
+    }
+}
+
+/// Every rule in every `<style>` block of `html`, in document order.
+pub fn css_rules(html: &str) -> Vec<CssRule> {
+    let mut rules = Vec::new();
+    let mut rest = html;
+    while let Some(start) = rest.find("<style") {
+        let sheet = &rest[start + rest[start..].find('>').expect("a closed <style>") + 1..];
+        let end = sheet.find("</style>").expect("a </style>");
+        parse_sheet(&sheet[..end], &mut rules);
+        rest = &sheet[end..];
+    }
+    rules
+}
+
+fn parse_sheet(mut sheet: &str, rules: &mut Vec<CssRule>) {
+    let mut at = Vec::new();
+    loop {
+        sheet = sheet.trim_start();
+        if let Some(after) = sheet.strip_prefix('}') {
+            at.pop();
+            sheet = after;
+            continue;
+        }
+        let Some(open) = sheet.find('{') else {
+            return;
+        };
+        // A statement such as `@layer a, b;` has no block.
+        if let Some(end) = sheet[..open].find(';').filter(|_| sheet.starts_with('@')) {
+            sheet = &sheet[end + 1..];
+            continue;
+        }
+        let prelude = sheet[..open].trim().to_string();
+        sheet = &sheet[open + 1..];
+        if prelude.starts_with('@') {
+            at.push(prelude);
+            continue;
+        }
+        let close = sheet.find('}').expect("a closed rule");
+        rules.push(CssRule {
+            at: at.clone(),
+            selector: prelude,
+            declarations: declarations(&sheet[..close]),
+        });
+        sheet = &sheet[close + 1..];
+    }
+}
+
+/// `name:value;` pairs, as a rule body or a `style` attribute writes them. A
+/// `;` inside parentheses or quotes does not end a declaration.
+pub fn declarations(block: &str) -> BTreeMap<String, String> {
+    let (mut parts, mut depth, mut quote, mut start) = (Vec::new(), 0usize, None, 0);
+    for (i, c) in block.char_indices() {
+        match (c, quote) {
+            ('"' | '\'', None) => quote = Some(c),
+            (c, Some(q)) if c == q => quote = None,
+            (_, Some(_)) => {}
+            ('(', None) => depth += 1,
+            (')', None) => depth = depth.saturating_sub(1),
+            (';', None) if depth == 0 => {
+                parts.push(&block[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&block[start..]);
+    parts
+        .into_iter()
+        .filter_map(|part| part.split_once(':'))
+        .map(|(name, value)| (name.trim().to_string(), value.trim().to_string()))
+        .collect()
+}
+
+/// The declarations of the unconditional rules written exactly `selector`;
+/// with several, the last wins, as in the cascade within one layer.
+pub fn rule_of(html: &str, selector: &str) -> BTreeMap<String, String> {
+    css_rules(html)
+        .into_iter()
+        .filter(|rule| rule.unconditional() && rule.selector == selector)
+        .map(|rule| rule.declarations)
+        .reduce(|mut all, later| {
+            all.extend(later);
+            all
+        })
+        .unwrap_or_else(|| panic!("no rule `{selector}` in the rendered sheets:\n{html}"))
+}
+
+/// The parsed form of [`rules_for`]: every rule, at-rules included, whose
+/// selector names one of `element`'s classes.
+pub fn css_rules_for(html: &str, element: &BTreeMap<String, String>) -> Vec<CssRule> {
+    let classes: Vec<String> = element
+        .get("class")
+        .map_or("", String::as_str)
+        .split_whitespace()
+        .map(|class| format!(".{class}"))
+        .collect();
+    css_rules(html)
+        .into_iter()
+        .filter(|rule| {
+            classes.iter().any(|name| {
+                rule.selector.match_indices(name.as_str()).any(|(at, _)| {
+                    !rule.selector[at + name.len()..]
+                        .starts_with(|c: char| c.is_alphanumeric() || matches!(c, '-' | '_'))
+                })
+            })
+        })
+        .collect()
+}
+
+/// An element's inline `style`, parsed; empty when it has none.
+pub fn style_of(element: &BTreeMap<String, String>) -> BTreeMap<String, String> {
+    element
+        .get("style")
+        .map(String::as_str)
+        .map(declarations)
+        .unwrap_or_default()
+}
+
 /// Polls `dom` until `done` holds for its markup or `limit` runs out, for a
 /// test on a real timer. `process_events` drains the task a timer delivers
 /// through, and `render_immediate` applies what it wrote.
@@ -366,4 +512,23 @@ fn rules_for_reads_only_the_rules_naming_the_elements_class() {
 
     let rules = rules_for(html, &attributes_of(html, "p"));
     assert_eq!(rules, r#".a{color:red;}.a[data-state~="on"]{gap:0;}"#);
+}
+
+#[test]
+fn css_rules_parse_declarations_and_keep_their_at_rules() {
+    let html = r#"<style>@layer x, y;.a{color:red;background:url("x;y") no-repeat}@media (x){.a{gap:0;}}@layer y{.a{top:0}}</style><p style="width:calc(1px + 2px);left:0;">"#;
+
+    let rules = css_rules(html);
+    assert_eq!(rules.len(), 3, "{rules:?}");
+    assert_eq!(rules[0].selector, ".a");
+    assert_eq!(rules[1].at, ["@media (x)"]);
+    assert_eq!(rules[2].at, ["@layer y"]);
+
+    let a = rule_of(html, ".a");
+    assert_eq!(a["background"], r#"url("x;y") no-repeat"#);
+    assert_eq!(a["top"], "0");
+    assert!(!a.contains_key("gap"), "{a:?}");
+    let style = style_of(&attributes_of(html, "p"));
+    assert_eq!(style["width"], "calc(1px + 2px)");
+    assert_eq!(style.len(), 2, "{style:?}");
 }

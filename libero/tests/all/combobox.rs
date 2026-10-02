@@ -5,7 +5,7 @@
 //! loads comes from the localization, and it is said by a status region that is always
 //! mounted and sits outside the `aria-busy` dropdown.
 
-use crate::common::{body, element_at};
+use crate::common::{attributes_of, body, element_at};
 
 use dioxus::prelude::*;
 use libero::{
@@ -59,18 +59,20 @@ fn get<T: Copy>(key: &'static std::thread::LocalKey<RefCell<Option<T>>>) -> T {
         .expect("the app rendered")
 }
 
-/// The trigger's `aria-activedescendant`, if it has one.
+/// The trigger's attribute `name`, if it has one, and the markup it was read from.
 ///
 /// Two passes: the list reports its row count while it renders, after the
 /// trigger has already been drawn, so the trigger catches up one pass later.
-fn descendant(dom: &mut VirtualDom) -> Option<String> {
+fn trigger_attribute(dom: &mut VirtualDom, name: &str) -> (Option<String>, String) {
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
     let html = body(&dioxus_ssr::render(dom));
-    let button = &html[html.find("<button").expect("the trigger")..];
-    let button = &button[..button.find('>').unwrap()];
-    let at = button.find(r#"aria-activedescendant=""#)? + r#"aria-activedescendant=""#.len();
-    Some(button[at..at + button[at..].find('"').unwrap()].to_string())
+    (attributes_of(&html, "button").get(name).cloned(), html)
+}
+
+/// The trigger's `aria-activedescendant`, if it has one.
+fn descendant(dom: &mut VirtualDom) -> Option<String> {
+    trigger_attribute(dom, "aria-activedescendant").0
 }
 
 fn mount() -> VirtualDom {
@@ -106,19 +108,9 @@ fn an_empty_list_names_no_row() {
     assert_eq!(descendant(&mut dom), None);
 }
 
-/// The trigger's `aria-controls`, if it has one. Two passes, as for
-/// [`descendant`].
+/// The trigger's `aria-controls`, if it has one, and the markup.
 fn controls(dom: &mut VirtualDom) -> (Option<String>, String) {
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    let html = body(&dioxus_ssr::render(dom));
-    let button = &html[html.find("<button").expect("the trigger")..];
-    let button = &button[..button.find('>').unwrap()];
-    let id = button.find(r#"aria-controls=""#).map(|at| {
-        let at = at + r#"aria-controls=""#.len();
-        button[at..at + button[at..].find('"').unwrap()].to_string()
-    });
-    (id, html)
+    trigger_attribute(dom, "aria-controls")
 }
 
 /// A closed, empty or loading list draws no listbox, so there is nothing for
@@ -321,48 +313,14 @@ fn the_status_region_sits_outside_the_busy_dropdown() {
 /// memoized subtree, so moving the highlight - or filtering the options -
 /// changed state nothing redrew.
 mod combobox_highlight {
-    use crate::common::{attributes_of, body};
+    use super::{App, OPTIONS, STATE, get};
+    use crate::common::{attributes_of, body, rule_of, style_of, tags_with};
     use dioxus::prelude::*;
-    use libero::components::use_combobox;
-    use libero::{
-        LiberoProvider,
-        components::{Button, Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxState},
-    };
-    use std::cell::RefCell;
-
-    thread_local! {
-        /// The rendered app's state, so the test can move the highlight.
-        static STATE: RefCell<Option<ComboboxState>> = const { RefCell::new(None) };
-        /// Its `options`, so the test can filter them the way typing does.
-        static OPTIONS: RefCell<Option<Signal<Vec<&'static str>>>> = const { RefCell::new(None) };
-    }
-
-    #[component]
-    fn App() -> Element {
-        let fruit = use_combobox();
-        let options = use_signal(|| vec!["apple", "banana", "grape"]);
-        use_hook(|| fruit.open());
-        STATE.with(|handle| *handle.borrow_mut() = Some(fruit));
-        OPTIONS.with(|handle| *handle.borrow_mut() = Some(options));
-
-        rsx! {
-            LiberoProvider {
-                Combobox {
-                    state: fruit,
-                    options: options(),
-                    option: move |o: ComboboxOptionArgs<&'static str>| rsx! {
-                        ComboboxOption { onpick: move |_| {}, "{o.value}" }
-                    },
-                    Button { attributes: fruit.a11y_attributes(), "pick" }
-                }
-            }
-        }
-    }
+    use libero::components::ComboboxState;
+    use std::collections::BTreeMap;
 
     fn state() -> ComboboxState {
-        STATE
-            .with(|handle| *handle.borrow())
-            .expect("the app rendered")
+        get(&STATE)
     }
 
     /// One row, opening tag through closing tag, found by the `id`
@@ -413,9 +371,7 @@ mod combobox_highlight {
         dom.rebuild_in_place();
         assert!(render_pass(&mut dom).contains("banana"));
 
-        let options = OPTIONS
-            .with(|handle| *handle.borrow())
-            .expect("the app rendered");
+        let options = get(&OPTIONS);
         // What typing "ap" leaves: a shorter list whose second row is a
         // different option at the same index.
         dom.in_runtime(|| options.clone().set(vec!["apple", "grape"]));
@@ -443,15 +399,7 @@ mod combobox_highlight {
         dom.render_immediate(&mut dioxus::core::NoOpMutations);
         let html = dioxus_ssr::render(&dom);
 
-        let markup = body(&html);
-        let listbox = markup
-            .find(r#"role="listbox""#)
-            .expect("the dropdown rendered");
-        let root = markup[..listbox]
-            .rfind("position:fixed")
-            .and_then(|style| markup[..style].rfind("<div"))
-            .expect("the portaled dropdown root");
-        let root = attributes_of(&markup[root..], "div");
+        let root = dropdown_root(&html);
 
         assert!(
             root["data-state"]
@@ -460,18 +408,29 @@ mod combobox_highlight {
             "{root:?}"
         );
         let class = root["class"].split(' ').next().expect("a framework class");
-        assert!(
-            html.contains(&format!(
-                ".{class}{{background:var(--lsx-paper-background);--lsx-focus-contrast:var(--lsx-paper-contrast);"
-            )),
-            "the dropdown's base no longer starts from `paper_sx()`"
+        let base = rule_of(&html, &format!(".{class}"));
+        assert_eq!(
+            base["background"], "var(--lsx-paper-background)",
+            "the dropdown's base no longer starts from `paper_sx()`: {base:?}"
         );
-        assert!(
-            html.contains(&format!(
-                r#".{class}[data-state~="bordered"]{{border:1px solid var(--lsx-paper-border-color);}}"#
-            )),
+        assert_eq!(
+            base["--lsx-focus-contrast"], "var(--lsx-paper-contrast)",
+            "{base:?}"
+        );
+        let bordered = rule_of(&html, &format!(r#".{class}[data-state~="bordered"]"#));
+        assert_eq!(
+            bordered["border"], "1px solid var(--lsx-paper-border-color)",
             "nothing answers the `bordered` token"
         );
+    }
+
+    /// The portaled dropdown's root: the tag whose inline style publishes the
+    /// popover's available height.
+    fn dropdown_root(html: &str) -> BTreeMap<String, String> {
+        tags_with(&body(html), "style=")
+            .into_iter()
+            .find(|tag| style_of(tag).contains_key("--lsx-popover-available-height"))
+            .unwrap_or_else(|| panic!("no portaled dropdown root in:\n{html}"))
     }
 
     /// The port to `use_popover`: the dropdown leaves the wrapper entirely, so
@@ -527,12 +486,12 @@ mod combobox_highlight {
         dom.rebuild_in_place();
         let html = render_pass(&mut dom);
 
-        assert!(
-            html.contains(
-                r#"style="position:fixed;left:0px;top:0px;width:auto;min-width:auto;max-width:calc(100vw - 16px);visibility:hidden;--lsx-popover-available-height:100vh;""#
-            ),
-            "the dropdown is not laid out fixed and hidden before its first \
-             measurement, which under SSR never lands:\n{html}"
+        let style = style_of(&dropdown_root(&html));
+        assert_eq!(style["position"], "fixed", "{style:?}");
+        assert_eq!(
+            style["visibility"], "hidden",
+            "the dropdown is shown before its first measurement, which under \
+             SSR never lands: {style:?}"
         );
     }
 
@@ -546,9 +505,10 @@ mod combobox_highlight {
         dom.rebuild_in_place();
         let html = render_pass(&mut dom);
 
-        assert!(
-            html.contains("max-width:calc(100vw - 16px);"),
-            "the dropdown can grow past the viewport:\n{html}"
+        let style = style_of(&dropdown_root(&html));
+        assert_eq!(
+            style["max-width"], "calc(100vw - 16px)",
+            "the dropdown can grow past the viewport: {style:?}"
         );
     }
 

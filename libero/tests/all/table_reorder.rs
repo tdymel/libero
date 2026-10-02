@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
-use crate::common::{body, render, tag_with, tags_with};
+use crate::common::{body, render, style_of, tag_with, tags_with};
+use crate::table_fixture::{Person, people};
 
 use dioxus::prelude::*;
 use libero::{
@@ -10,29 +11,6 @@ use libero::{
         column,
     },
 };
-
-#[derive(Clone, PartialEq)]
-struct Person {
-    name: &'static str,
-    age: u32,
-}
-
-fn people() -> Vec<Person> {
-    vec![
-        Person {
-            name: "Ada",
-            age: 36,
-        },
-        Person {
-            name: "Grace",
-            age: 45,
-        },
-        Person {
-            name: "Linus",
-            age: 28,
-        },
-    ]
-}
 
 fn columns() -> Vec<Column<Person>> {
     vec![
@@ -98,7 +76,12 @@ fn row_reorder_adds_a_handle_column_with_move_buttons() {
     assert_eq!(body.matches("data-reorder-handle").count(), 3);
     assert_eq!(body.matches("data-reorder-move=\"up\"").count(), 3);
     assert!(body.contains("Move Ada up"), "{body}");
-    assert!(!body.contains("transform"), "{body}");
+    // Nothing is mid-drag, so no row is moved.
+    let moved: Vec<_> = tags_with(&body, "style=")
+        .into_iter()
+        .filter(|tag| style_of(tag).contains_key("transform"))
+        .collect();
+    assert!(moved.is_empty(), "{moved:?}");
     // The first row has nothing above. "Down" waits for the rows to mount and count.
     assert!(tag_with(&body, r#"aria-label="Move Ada up""#).contains_key("disabled"));
     assert!(!tag_with(&body, r#"aria-label="Move Grace up""#).contains_key("disabled"));
@@ -195,11 +178,11 @@ fn a_column_menu_puts_a_hidden_drag_grip_in_each_unpinned_header() {
     let head = &head[head.find("<thead").unwrap()..head.find("</thead>").unwrap()];
 
     assert_eq!(head.matches("data-draggable=true").count(), 2, "{head}");
-    assert_eq!(head.matches("data-drag-handle=true").count(), 2, "{head}");
-    assert!(
-        head.contains("<div aria-hidden=\"true\" data-drag-handle=true>"),
-        "{head}"
-    );
+    let handles = tags_with(head, "data-drag-handle=true");
+    assert_eq!(handles.len(), 2, "{head}");
+    for handle in &handles {
+        assert_eq!(handle["aria-hidden"], "true", "{handle:?}");
+    }
     assert!(!head.contains("tabindex"), "{head}");
 }
 

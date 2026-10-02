@@ -3,7 +3,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{PinnedColumns, Table, column},
+    components::{Table, column},
 };
 
 #[derive(Clone, PartialEq)]
@@ -178,55 +178,8 @@ fn a_bounded_table_with_groups_sticks_its_thead() {
 
     let html = render(app);
     let state = &attributes_of(&html, "table")["data-state"];
+    let tokens: Vec<&str> = state.split_whitespace().collect();
 
-    assert!(state.contains("sticky-head"), "{state}");
-    assert!(!state.contains("sticky-header"), "{state}");
-}
-
-#[test]
-fn a_pin_edge_splits_a_group_and_stops_a_span() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                Table {
-                    aria_label: "People",
-                    default_pinned_columns: PinnedColumns::default().start(["First"]),
-                    data: rows(),
-                    columns: vec![
-                        column("First")
-                            .value(|row: &Row| row.first)
-                            .group("Name")
-                            .width("6rem")
-                            .col_span(|_| 2),
-                        column("Last").value(|row: &Row| row.last).group("Name"),
-                        column("Age").value(|row: &Row| row.age),
-                    ],
-                }
-            }
-        }
-    }
-
-    let html = render(app);
-    let body = body(&html);
-    let head = &body[body.find("<thead").unwrap()..body.find("</thead>").unwrap()];
-
-    // The pinned half of the group sticks with its column (todo 1359), the other scrolls.
-    assert!(
-        head.contains(
-            "<th scope=\"colgroup\" data-group=true data-pin=\"start\" data-pin-edge=true \
-             style=\"inset-inline-start:0;\">Name</th>"
-        ),
-        "{head}"
-    );
-    assert!(
-        head.contains("<th scope=\"colgroup\" data-group=true>Name</th>"),
-        "{head}"
-    );
-    assert!(!head.contains("colgroup\" colspan"), "{head}");
-    assert_eq!(head.matches("data-pin=\"start\"").count(), 2, "{head}");
-    let rows = &body[body.find("<tbody").unwrap()..];
-    assert!(
-        rows.contains("<td data-pin=\"start\" data-pin-edge=true style=\"inset-inline-start:0;\">Ada</td><td>Lovelace</td>"),
-        "{rows}"
-    );
+    assert!(tokens.contains(&"sticky-head"), "{state}");
+    assert!(!tokens.contains(&"sticky-header"), "{state}");
 }

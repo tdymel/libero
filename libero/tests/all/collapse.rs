@@ -269,14 +269,6 @@ fn toggled_app(duration: u32) -> Element {
     }
 }
 
-fn toggled_30ms() -> Element {
-    toggled_app(30)
-}
-
-fn toggled_0ms() -> Element {
-    toggled_app(0)
-}
-
 fn set_open(dom: &mut VirtualDom, value: bool) {
     let mut open = dom.in_scope(ScopeId::APP, consume_context::<Signal<bool>>);
     dom.in_runtime(|| open.set(value));
@@ -287,7 +279,7 @@ fn set_open(dom: &mut VirtualDom, value: bool) {
 /// good (todo 36b).
 #[test]
 fn a_close_with_no_transitionend_unmounts_after_the_duration() {
-    let mut dom = VirtualDom::new(toggled_30ms);
+    let mut dom = VirtualDom::new_with_props(toggled_app, 30);
     dom.rebuild_in_place();
     let html = drive_until(&mut dom, Duration::from_secs(2), |html| {
         html.contains("panel body")
@@ -310,7 +302,7 @@ fn a_close_with_no_transitionend_unmounts_after_the_duration() {
 
 #[test]
 fn a_zero_duration_close_unmounts_without_waiting() {
-    let mut dom = VirtualDom::new(toggled_0ms);
+    let mut dom = VirtualDom::new_with_props(toggled_app, 0);
     dom.rebuild_in_place();
     set_open(&mut dom, false);
 
@@ -325,7 +317,7 @@ fn a_zero_duration_close_unmounts_without_waiting() {
 /// and only the mount count shows the content's state was thrown away.
 #[test]
 fn reopening_before_the_fallback_keeps_the_content() {
-    let mut dom = VirtualDom::new(toggled_30ms);
+    let mut dom = VirtualDom::new_with_props(toggled_app, 30);
     dom.rebuild_in_place();
     set_open(&mut dom, false);
     // The close rendered, so its effect armed the 180ms fallback.

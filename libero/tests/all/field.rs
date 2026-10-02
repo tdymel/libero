@@ -2,7 +2,10 @@
 //! wiring that ties them to it. `TextField` carries most of the cases;
 //! `NativeSelect` covers what changed when it was ported off its wrapping `<label>`.
 
-use crate::common::{attributes_of, body, nth_attributes, render, tag_with, tags_with};
+use crate::common::{
+    attributes_of, body, css_rules, css_rules_for, nth_attributes, render, rule_of, tag_with,
+    tags_with,
+};
 
 use dioxus::prelude::*;
 use libero::{
@@ -358,10 +361,15 @@ fn the_frame_draws_the_focus_ring_and_the_control_does_not() {
     // The ring is the frame's, drawn by an overlay after the control and
     // keyed off the control's `:focus-visible` - there is no
     // `:focus-visible-within`, and `:has()` never matches natively.
-    assert!(
-        html.contains(" :focus-visible ~ [data-ring]{outline:"),
-        "the frame must draw the ring: {html}"
-    );
+    let ring = css_rules(&html)
+        .into_iter()
+        .find(|rule| {
+            frame_class
+                .split_whitespace()
+                .any(|class| rule.selector == format!(".{class} :focus-visible ~ [data-ring]"))
+        })
+        .unwrap_or_else(|| panic!("the frame must draw the ring: {html}"));
+    assert!(ring.declarations.contains_key("outline"), "{ring:?}");
     assert!(body(&html).contains("data-ring"), "{html}");
     // Both would draw one, at two different offsets, if the control kept the
     // shared ring class.
@@ -437,9 +445,32 @@ fn a_select_and_a_text_field_share_one_size_scale() {
     }
 
     let html = render(app);
+    let markup = body(&html);
+    let frame_heights = |control: &str| -> Vec<String> {
+        let at = markup.find(control).expect("the control rendered");
+        let frame = attributes_of(
+            &markup[markup[..at].rfind("<div").expect("a frame")..],
+            "div",
+        );
+        css_rules_for(&html, &frame)
+            .into_iter()
+            .filter_map(|rule| rule.declarations.get("min-height").cloned())
+            .collect()
+    };
 
-    assert!(html.contains("--lsx-field-height-lg"), "{html}");
-    assert!(!html.contains("--lsx-select-height"), "{html}");
+    for control in ["<input", "<select"] {
+        let heights = frame_heights(control);
+        assert!(
+            heights.iter().any(|h| h == "var(--lsx-field-height-lg)"),
+            "{control}: {heights:?}"
+        );
+    }
+    let own_scale = css_rules(&html).into_iter().find(|rule| {
+        rule.declarations
+            .iter()
+            .any(|(name, value)| (name.clone() + value).contains("--lsx-select-height"))
+    });
+    assert!(own_scale.is_none(), "{own_scale:?}");
 }
 
 /// `PasswordField` is a `TextField` with a narrower contract - the first use of
@@ -1072,11 +1103,18 @@ fn a_full_width_segmented_control_stretches_its_field_wrapper() {
     let html = render(app);
     let body = body(&html);
     let wrapper = attributes_of(&body, "div");
-    assert!(wrapper["data-state"].contains("full-width"), "{wrapper:?}");
     assert!(
-        html.contains("[data-state~=\"full-width\"]{width:100%"),
-        "{html}"
+        wrapper["data-state"]
+            .split_whitespace()
+            .any(|token| token == "full-width"),
+        "{wrapper:?}"
     );
+    let widths: Vec<_> = css_rules_for(&html, &wrapper)
+        .into_iter()
+        .filter(|rule| rule.selector.ends_with(r#"[data-state~="full-width"]"#))
+        .filter_map(|rule| rule.declarations.get("width").cloned())
+        .collect();
+    assert_eq!(widths, ["100%"], "{html}");
 }
 
 /// The hidden radio is `position: absolute` beside its label, so the group has
@@ -1099,16 +1137,14 @@ fn a_segmented_control_contains_its_hidden_radios() {
     let group = nth_attributes(&body, "div", 1);
     assert_eq!(group["role"], "radiogroup");
 
-    let class = group["class"]
-        .split_whitespace()
-        .find(|class| html.contains(&format!(".{class} > input{{position:absolute")))
+    let rules = css_rules_for(&html, &group);
+    let radio = rules
+        .iter()
+        .find(|rule| rule.unconditional() && rule.selector.ends_with(" > input"))
         .unwrap_or_else(|| panic!("no class positions the radio: {group:?}"));
-    let rule = format!(".{class}{{");
-    let base = &html[html
-        .find(&rule)
-        .unwrap_or_else(|| panic!("no {rule} in {html}"))..];
-    let base = &base[..base.find('}').unwrap()];
-    assert!(base.contains("position:relative"), "{base}");
+    assert_eq!(radio.declarations["position"], "absolute", "{radio:?}");
+    let class = radio.selector.strip_suffix(" > input").unwrap();
+    assert_eq!(rule_of(&html, class)["position"], "relative", "{html}");
 }
 
 #[derive(Clone, Copy, PartialEq, Default, Options)]
@@ -1346,20 +1382,19 @@ fn the_frame_reads_the_surface_and_publishes_its_focus_contrast() {
         .expect("a framework class")
         .to_string();
 
-    let start = html
-        .find(&format!(".{class}{{"))
-        .expect("the frame's base rule");
-    let rule = &html[start..start + html[start..].find('}').expect("a closed rule")];
-    assert!(
-        rule.contains("background:var(--lsx-paper-background);"),
-        "{rule}"
+    let rule = rule_of(&html, &format!(".{class}"));
+    assert_eq!(
+        rule["background"], "var(--lsx-paper-background)",
+        "{rule:?}"
+    );
+    assert_eq!(
+        rule["--lsx-focus-contrast"], "var(--lsx-paper-contrast)",
+        "{rule:?}"
     );
     assert!(
-        rule.contains("--lsx-focus-contrast:var(--lsx-paper-contrast);"),
-        "{rule}"
-    );
-    assert!(
-        html.contains("--lsx-paper-contrast:"),
+        css_rules(&html)
+            .iter()
+            .any(|rule| rule.declarations.contains_key("--lsx-paper-contrast")),
         "no referent declared"
     );
 }

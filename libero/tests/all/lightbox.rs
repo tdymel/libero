@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::common::{attributes_of, body, render, tag_with, tags_with};
+use crate::common::{attributes_of, body, render, render_with, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -28,30 +28,28 @@ fn open(options: LightboxOptions, index: usize) -> String {
     open_items(options, gallery(), index)
 }
 
-fn open_items(options: LightboxOptions, items: Vec<LightboxItem>, index: usize) -> String {
-    type Setup = (LightboxOptions, Vec<LightboxItem>, usize);
-    thread_local! {
-        static SETUP: std::cell::RefCell<Option<Setup>> =
-            const { std::cell::RefCell::new(None) };
-    }
-    SETUP.with(|setup| *setup.borrow_mut() = Some((options, items, index)));
+type Setup = (LightboxOptions, Vec<LightboxItem>, usize);
 
+fn open_items(options: LightboxOptions, items: Vec<LightboxItem>, index: usize) -> String {
+    /// `use_lightbox` needs the provider above it, so the setup reaches the
+    /// opener through context.
     #[component]
     fn Opener() -> Element {
-        let (options, items, index) = SETUP.with(|setup| setup.borrow().clone().expect("a setup"));
+        let (options, items, index) = use_context::<Setup>();
         let lightbox = use_lightbox(options);
         use_hook(move || lightbox.open_with((items, index)));
 
         rsx! {}
     }
 
-    fn app() -> Element {
+    fn app(setup: Setup) -> Element {
+        use_context_provider(|| setup);
         rsx! {
             LiberoProvider { Opener {} }
         }
     }
 
-    body(&render(app))
+    body(&render_with(app, (options, items, index)))
 }
 
 /// The pictures on the stage - the thumbnails' `alt` is empty.

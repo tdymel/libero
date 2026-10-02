@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::common::{body, render, tags_with};
+use crate::common::{body, render, render_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -34,145 +34,59 @@ fn picked() -> Option<String> {
     Some("apple".to_string())
 }
 
-fn chosen() -> Element {
+/// What a test sets on the one cascader; the rest is the plain case.
+#[derive(Clone, Default)]
+struct Setup {
+    value: Option<String>,
+    name: &'static str,
+    separator: Option<String>,
+    /// `format_value` keeps the last label only.
+    last_label: bool,
+    disabled: bool,
+    any_level: bool,
+    clearable: bool,
+}
+
+fn cascader(setup: Setup) -> Element {
     rsx! {
         LiberoProvider {
             Cascader {
                 label: "Category",
                 placeholder: "Pick a category",
                 data: categories(),
-                value: picked(),
+                value: setup.value,
+                name: setup.name,
+                separator: setup.separator,
+                format_value: setup.last_label.then(|| {
+                    Callback::new(|labels: Vec<String>| labels.last().cloned().unwrap_or_default())
+                }),
+                disabled: setup.disabled,
+                any_level: setup.any_level,
+                clearable: setup.clearable,
                 onchange: move |_: Option<String>| {},
             }
         }
     }
 }
 
-fn empty() -> Element {
-    rsx! {
-        LiberoProvider {
-            Cascader {
-                label: "Category",
-                placeholder: "Pick a category",
-                data: categories(),
-                onchange: move |_: Option<String>| {},
-            }
-        }
+/// The cascader's markup for `setup`, without the sheets.
+fn shown(setup: Setup) -> String {
+    body(&render_with(cascader, setup))
+}
+
+/// The leaf value picked, and nothing else set.
+fn chosen() -> Setup {
+    Setup {
+        value: picked(),
+        ..Setup::default()
     }
 }
 
-fn dashed() -> Element {
-    rsx! {
-        LiberoProvider {
-            Cascader {
-                label: "Category",
-                data: categories(),
-                value: picked(),
-                separator: " - ",
-                onchange: move |_: Option<String>| {},
-            }
-        }
-    }
-}
-
-fn formatted() -> Element {
-    rsx! {
-        LiberoProvider {
-            Cascader {
-                label: "Category",
-                data: categories(),
-                value: picked(),
-                format_value: move |labels: Vec<String>| labels.last().cloned().unwrap_or_default(),
-                onchange: move |_: Option<String>| {},
-            }
-        }
-    }
-}
-
-fn posting() -> Element {
-    rsx! {
-        LiberoProvider {
-            Cascader {
-                label: "Category",
-                name: "category",
-                data: categories(),
-                value: picked(),
-                onchange: move |_: Option<String>| {},
-            }
-        }
-    }
-}
-
-fn off() -> Element {
-    rsx! {
-        LiberoProvider {
-            Cascader {
-                label: "Category",
-                name: "category",
-                data: categories(),
-                value: picked(),
-                disabled: true,
-                onchange: move |_: Option<String>| {},
-            }
-        }
-    }
-}
-
-fn stale() -> Element {
-    rsx! {
-        LiberoProvider {
-            Cascader {
-                label: "Category",
-                placeholder: "Pick a category",
-                data: categories(),
-                // No option holds this value.
-                value: "banana".to_string(),
-                onchange: move |_: Option<String>| {},
-            }
-        }
-    }
-}
-
-fn branch() -> Element {
-    rsx! {
-        LiberoProvider {
-            Cascader {
-                label: "Category",
-                name: "category",
-                data: categories(),
-                // A branch's own value - what `any_level` commits.
-                value: "fruit".to_string(),
-                any_level: true,
-                onchange: move |_: Option<String>| {},
-            }
-        }
-    }
-}
-
-fn clearable() -> Element {
-    rsx! {
-        LiberoProvider {
-            Cascader {
-                label: "Category",
-                data: categories(),
-                value: picked(),
-                clearable: true,
-                onchange: move |_: Option<String>| {},
-            }
-        }
-    }
-}
-
-fn clearable_empty() -> Element {
-    rsx! {
-        LiberoProvider {
-            Cascader {
-                label: "Category",
-                data: categories(),
-                clearable: true,
-                onchange: move |_: Option<String>| {},
-            }
-        }
+/// [`chosen`], posting as `category`.
+fn posting() -> Setup {
+    Setup {
+        name: "category",
+        ..chosen()
     }
 }
 
@@ -188,7 +102,7 @@ fn trigger_of(html: &str) -> BTreeMap<String, String> {
 /// and the trigger is a tab stop of its own.
 #[test]
 fn the_trigger_is_a_named_focusable_combobox() {
-    let html = body(&render(chosen));
+    let html = shown(chosen());
     let trigger = trigger_of(&html);
 
     assert!(tags_with(&html, "<div").contains(&trigger), "{trigger:?}");
@@ -209,7 +123,7 @@ fn the_trigger_is_a_named_focusable_combobox() {
 /// until it opens (todo 360).
 #[test]
 fn a_closed_trigger_points_at_no_list() {
-    let trigger = trigger_of(&body(&render(chosen)));
+    let trigger = trigger_of(&shown(chosen()));
     assert!(!trigger.contains_key("aria-controls"), "{trigger:?}");
     // Nothing is highlighted while the list is closed, so there is no row for
     // `aria-activedescendant` to point at.
@@ -225,19 +139,31 @@ fn a_closed_trigger_points_at_no_list() {
 #[test]
 fn the_trigger_shows_the_joined_path() {
     assert!(
-        body(&render(chosen)).contains("Food / Fruit / Apple"),
+        shown(chosen()).contains("Food / Fruit / Apple"),
         "the default separator joins every level"
     );
     assert!(
-        body(&render(dashed)).contains("Food - Fruit - Apple"),
+        shown(Setup {
+            separator: Some(" - ".into()),
+            ..chosen()
+        })
+        .contains("Food - Fruit - Apple"),
         "`separator` reaches the trigger"
     );
     assert!(
-        body(&render(formatted)).contains(">Apple<"),
+        shown(Setup {
+            last_label: true,
+            ..chosen()
+        })
+        .contains(">Apple<"),
         "`format_value` replaces the join outright"
     );
     assert!(
-        !body(&render(formatted)).contains("Food / Fruit"),
+        !shown(Setup {
+            last_label: true,
+            ..chosen()
+        })
+        .contains("Food / Fruit"),
         "and nothing else draws the path beside it"
     );
 }
@@ -246,17 +172,29 @@ fn the_trigger_shows_the_joined_path() {
 /// holds.
 #[test]
 fn a_value_that_is_not_in_the_tree_selects_nothing() {
-    assert!(body(&render(empty)).contains("Pick a category"));
-    assert!(body(&render(stale)).contains("Pick a category"));
-    assert!(!body(&render(stale)).contains("banana"));
-    assert!(!body(&render(chosen)).contains("Pick a category"));
+    assert!(shown(Setup::default()).contains("Pick a category"));
+    assert!(
+        shown(Setup {
+            value: Some("banana".into()),
+            ..Setup::default()
+        })
+        .contains("Pick a category")
+    );
+    assert!(
+        !shown(Setup {
+            value: Some("banana".into()),
+            ..Setup::default()
+        })
+        .contains("banana")
+    );
+    assert!(!shown(chosen()).contains("Pick a category"));
 }
 
 /// A `div` cannot carry a `name`, so one hidden input does - carrying the
 /// value alone, not the path to it. Nothing selected posts nothing.
 #[test]
 fn the_value_posts_as_one_hidden_input() {
-    let html = body(&render(posting));
+    let html = shown(posting());
 
     assert_eq!(
         html.matches("type=\"hidden\"").count(),
@@ -270,7 +208,7 @@ fn the_value_posts_as_one_hidden_input() {
     );
     assert!(!html.contains("value=\"food\""), "{html}");
     assert!(
-        !body(&render(empty)).contains("type=\"hidden\""),
+        !shown(Setup::default()).contains("type=\"hidden\""),
         "nothing selected posts nothing"
     );
 }
@@ -279,7 +217,11 @@ fn the_value_posts_as_one_hidden_input() {
 /// value, and the trigger shows the path down to it and no further.
 #[test]
 fn a_branch_value_shows_the_path_to_the_branch() {
-    let html = body(&render(branch));
+    let html = shown(Setup {
+        value: Some("fruit".into()),
+        any_level: true,
+        ..posting()
+    });
 
     assert!(html.contains("Food / Fruit<"), "{html}");
     assert!(html.contains("value=\"fruit\""), "{html}");
@@ -289,7 +231,10 @@ fn a_branch_value_shows_the_path_to_the_branch() {
 /// disabled control behaves.
 #[test]
 fn a_disabled_cascader_neither_focuses_nor_posts() {
-    let html = body(&render(off));
+    let html = shown(Setup {
+        disabled: true,
+        ..posting()
+    });
     let trigger = trigger_of(&html);
 
     assert!(!trigger.contains_key("tabindex"), "{trigger:?}");
@@ -311,11 +256,19 @@ fn a_disabled_cascader_neither_focuses_nor_posts() {
 #[test]
 fn the_clear_button_appears_only_with_a_selection() {
     assert!(
-        body(&render(clearable)).contains("aria-label=\"Clear\""),
+        shown(Setup {
+            clearable: true,
+            ..chosen()
+        })
+        .contains("aria-label=\"Clear\""),
         "a chosen path is clearable"
     );
     assert!(
-        !body(&render(clearable_empty)).contains("aria-label=\"Clear\""),
+        !shown(Setup {
+            clearable: true,
+            ..Setup::default()
+        })
+        .contains("aria-label=\"Clear\""),
         "an empty one has nothing to clear"
     );
 }

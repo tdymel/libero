@@ -53,17 +53,12 @@ mod select_listbox {
         );
     }
 
-    thread_local! {
-        static FRUIT: std::cell::Cell<Option<Signal<Fruit>>> = const { std::cell::Cell::new(None) };
-    }
-
     /// A pick on a closed select skips `SelectCore` and redraws only what shows
     /// the value, so the trigger and the posted value must still move.
     #[test]
     fn a_pick_on_a_closed_select_redraws_its_value_and_its_post() {
         fn app() -> Element {
-            let fruit = use_signal(|| Fruit::Apple);
-            use_hook(|| FRUIT.set(Some(fruit)));
+            let fruit = use_context_provider(|| Signal::new(Fruit::Apple));
             let onchange = use_callback(|_: Option<Fruit>| {});
             rsx! {
                 LiberoProvider {
@@ -81,7 +76,7 @@ mod select_listbox {
         };
         assert_eq!(value(&dom), (false, false));
 
-        let mut fruit = FRUIT.get().expect("the app stored its signal");
+        let mut fruit = dom.in_scope(ScopeId::APP, consume_context::<Signal<Fruit>>);
         dom.in_runtime(|| fruit.set(Fruit::Cherry));
         dom.render_immediate(&mut dioxus::core::NoOpMutations);
         assert_eq!(value(&dom), (true, true), "the pick left a stale value");
@@ -567,12 +562,13 @@ mod dispatched {
         use libero::components::Select;
 
         thread_local! {
-            static GENERATION: std::cell::Cell<u32> = const { std::cell::Cell::new(1) };
             static PICKS: std::cell::RefCell<Vec<(u32, String)>> = const { std::cell::RefCell::new(Vec::new()) };
         }
 
-        fn city(value: &'static str, own_selection: bool) -> Element {
-            let generation = GENERATION.get();
+        /// A select on `value`, drawing its own selection when `own_selection`.
+        /// Each render's handler and selection carry the generation the test set.
+        fn city((value, own_selection): (&'static str, bool)) -> Element {
+            let generation = use_context_provider(|| Signal::new(1u32))();
             let selection = own_selection
                 .then(|| Callback::new(move |city: String| rsx! { "{city} #{generation}" }));
             rsx! {
@@ -589,11 +585,10 @@ mod dispatched {
             }
         }
 
-        fn mount(app: fn() -> Element) -> (VirtualDom, ElementId) {
+        fn mount(value: &'static str, own_selection: bool) -> (VirtualDom, ElementId) {
             dioxus::html::set_event_converter(Box::new(TestConverter));
-            GENERATION.set(1);
             PICKS.with_borrow_mut(Vec::clear);
-            let mut dom = VirtualDom::new(app);
+            let mut dom = VirtualDom::new_with_props(city, (value, own_selection));
             let mut find = FindClickListener::default();
             dom.rebuild(&mut find);
             dom.render_immediate(&mut find);
@@ -602,8 +597,8 @@ mod dispatched {
         }
 
         fn rerender(dom: &mut VirtualDom, generation: u32) {
-            GENERATION.set(generation);
-            dom.mark_dirty(dioxus::core::ScopeId::APP);
+            let mut current = dom.in_scope(ScopeId::APP, consume_context::<Signal<u32>>);
+            dom.in_runtime(|| current.set(generation));
             dom.render_immediate(&mut dioxus::core::NoOpMutations);
         }
 
@@ -616,7 +611,7 @@ mod dispatched {
 
         #[test]
         fn a_closed_select_picks_through_the_newest_onchange() {
-            let (mut dom, trigger) = mount(|| city("Berlin", false));
+            let (mut dom, trigger) = mount("Berlin", false);
             rerender(&mut dom, 2);
             rerender(&mut dom, 3);
             // Typeahead on a closed select picks in place: "b" from Berlin is Bonn.
@@ -626,7 +621,7 @@ mod dispatched {
 
         #[test]
         fn a_callers_selection_redraws_on_its_own_state() {
-            let (mut dom, _) = mount(|| city("Berlin", true));
+            let (mut dom, _) = mount("Berlin", true);
             assert!(body(&dioxus_ssr::render(&dom)).contains("Berlin #1"));
             rerender(&mut dom, 2);
             let html = body(&dioxus_ssr::render(&dom));
@@ -640,7 +635,7 @@ mod dispatched {
         /// counted over the options, not over the rows.
         #[test]
         fn opening_after_skipped_renders_highlights_the_selected_row() {
-            let (mut dom, trigger) = mount(|| city("Hamburg", false));
+            let (mut dom, trigger) = mount("Hamburg", false);
             rerender(&mut dom, 2);
             press(&mut dom, trigger, Key::ArrowDown);
             let html = body(&dioxus_ssr::render(&dom));

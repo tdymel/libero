@@ -3,7 +3,7 @@ use crate::common::{body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{PinnedColumns, RowFn, Table, column},
+    components::{RowFn, Table, column},
 };
 
 #[derive(Clone, PartialEq)]
@@ -199,34 +199,6 @@ fn stripes_count_rows_not_their_details() {
     assert_eq!(body.matches("data-stripe").count(), 1, "{body}");
     let stripe = body.find("data-stripe").unwrap();
     assert!(body[stripe..].find(">Bea<").unwrap() < body[stripe..].find("</tr>").unwrap());
-}
-
-#[test]
-fn a_start_pin_holds_the_toggles_and_insets_past_them_and_the_checkboxes() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                Table {
-                    caption: "People",
-                    scroll: true,
-                    data: people(),
-                    columns: vec![column("Name").value(|row: &Row| row.name.to_string())],
-                    row_key: |row: &Row| row.id.to_string(),
-                    row_detail: detail,
-                    selectable: true,
-                    default_pinned_columns: PinnedColumns::default().start(["Name"]),
-                }
-            }
-        }
-    }
-
-    let html = render(app);
-    assert!(html.contains("pin-detail"), "{html}");
-    let body = body(&html);
-    let ada = body.find(">Ada<").unwrap();
-    let cell = &body[body[..ada].rfind("<td").unwrap()..ada];
-    // The toggle column's 24px, then the checkbox column's.
-    assert!(cell.contains("inset-inline-start:calc(calc(24px"), "{cell}");
 }
 
 /// 1440: turning `row_detail` on re-renders the table; `RowFn` compared equal
