@@ -148,7 +148,8 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 
 | Method | Returns | Description |
 |---|---|---|
-| `args()` | `S` | The arguments this opening was given. |
+| `args()` | `S` | The arguments this opening was given. Panics once the opening has ended. |
+| `try_args()` | `Option<S>` | `args`, or `None` once the opening has closed or a later one superseded it. |
 | `close()` | `()` | Ends it as a dismissal, the same as Escape. |
 | `resolve(value: R)` | `()` | Ends it with an answer for the caller. |
 

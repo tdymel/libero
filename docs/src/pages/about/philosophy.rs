@@ -75,7 +75,6 @@ pub fn PhilosophyPage() -> Element {
                           into your app, not into stitching libraries together.",
                     ListItem {"Cover the everyday needs, forms and overlays included: {components} components." }
                     ListItem {"Work the same on the web and natively, and say where a platform falls short." }
-                    ListItem {"Be honest where a platform falls short: a missing feature is absent, not broken." }
                 }
                 Principle {
                     number: 4,

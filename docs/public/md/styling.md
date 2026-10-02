@@ -65,6 +65,10 @@ sx()
 A theme color given to `background` also tells the focus rings inside the
 element which color reads on it. A `var()` tells them nothing.
 
+CSS text reaches the stylesheet unescaped, and so do selectors and media
+queries. Never build them from user text: a `}` or `</style>` in it ends the
+rule or the style element.
+
 ## States
 
 Fold every variant into one `sx` with `when`, and pick one with the `states`

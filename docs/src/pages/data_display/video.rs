@@ -35,7 +35,7 @@ pub fn VideoPage() -> Element {
                         .doc("The picture's CSS `aspect-ratio`, which the box holds before the file loads, poster or not. A portrait clip wants `\"9 / 16\"`; `\"auto\"` follows the file, and the box jumps as it loads. A picture of another shape is letterboxed."),
                     prop("tracks", "Vec<MediaTrack>")
                         .default("[]")
-                        .doc("WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button."),
+                        .doc("WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button; two or more make it a menu of them."),
                     prop("media", "Option<MediaHandle>")
                         .default("None")
                         .doc("A handle from `use_media()`, to drive or read the player from outside."),
@@ -72,7 +72,7 @@ pub fn VideoPage() -> Element {
                 .key(["Space"], "On a slider: plays or pauses. On a button: presses it.")
                 .key(["J", "L"], "Jumps 10 seconds back or ahead.")
                 .key(["M"], "Mutes or unmutes.")
-                .key(["C"], "Shows or hides the captions, with a captions or subtitles track.")
+                .key(["C"], "Shows or hides the captions, with a captions or subtitles track: the last one chosen in the track menu.")
                 .key(["F"], "Enters or leaves fullscreen.")
                 .key(["Shift+?"], "Lists these keys in a `ShortcutHelp` dialog, inside the player in fullscreen.")
                 .key(["Escape"], "Closes the speed or volume menu and returns to its button; else leaves fullscreen.")
@@ -85,9 +85,10 @@ pub fn VideoPage() -> Element {
                     "A press anywhere on the seek track jumps there; a drag scrubs.",
                     "The speed button shows the rate (\"1×\", \"1,5×\" under `Formats::GERMAN`) and is named \"Playback speed 1×\"; its menu offers 0.5× to 2× as radio items.",
                     "Without a captions or subtitles track the captions button stays, disabled but focusable, and says \"No captions for this video\".",
+                            "With two or more captions or subtitles tracks the captions button opens a menu: Off and each track by its `label` (else its `srclang`), as radio items. With one it stays a toggle.",
                     "The speaker button mutes and unmutes. The chevron beside it, named \"Volume\", opens a `dialog` holding the volume slider and focuses it, as `Audio`'s.",
                     "At volume 0 the mute button offers Unmute, which brings back the last audible volume; moving the volume up while muted unmutes.",
-                    "Where the page may not go fullscreen, the player covers the window as a fixed box instead, which Escape, F and a Tab out of the player leave, so focus never hides behind it. Focus stays on the control that was pressed, inside the box, and is there again when the box closes.",
+                    "Where the page may not go fullscreen, the player covers the window as a fixed box instead, which Escape, F and a Tab out of the player leave, so focus never hides behind it. The page behind it does not scroll, as under a modal. Focus stays on the control that was pressed, inside the box, and is there again when the box closes.",
                     "The controls overlay the bottom of the picture, as YouTube's, and fade after 3 seconds of playing untouched or as the mouse leaves the player; while paused they stay. A pointer move, a tap or a key brings them back. After a key they stay until the next click or tap, so keyboard focus never sits on a faded control, and focus moved into them by code or a screen reader shows them too. They never leave the Tab order.",
                     "A click on the picture plays or pauses, as YouTube's. A tap on it while the controls are faded only shows them; once shown, a tap plays or pauses.",
                     "No control leaves the player at any width: the seek track has a row of its own and shrinks with the player, below 22rem the total time goes, and below 15rem the bar moves under the picture and wraps, so it fits at 320px and 200% zoom (WCAG 1.4.10).",
@@ -132,7 +133,7 @@ pub fn VideoPage() -> Element {
                     "The demo plays \"Big Buck Bunny\", (c) 2008 Blender Foundation, "
                     Anchor { to: "https://peach.blender.org", target: "_blank", "peach.blender.org" }
                     ", under CC BY 3.0, streamed from Wikimedia Commons, so it plays only online. "
-                    "Its English track is one placeholder caption, not the film's sound."
+                    "Its English and German tracks are one placeholder caption each, not the film's sound."
                 }
             },
             Demo {
@@ -144,8 +145,12 @@ pub fn VideoPage() -> Element {
                     format!("poster: {:?}", crate::site::SAMPLE_POSTER),
                     r#"aspect_ratio: "16 / 9""#.to_string(),
                     format!(
-                        r#"tracks: vec![MediaTrack {{ src: {:?}.into(), kind: TrackKind::Captions, srclang: "en".into(), label: "English".into(), default: true }}]"#,
+                        r#"tracks: vec![
+    MediaTrack {{ src: {:?}.into(), kind: TrackKind::Captions, srclang: "en".into(), label: "English".into(), default: true }},
+    MediaTrack {{ src: {:?}.into(), kind: TrackKind::Subtitles, srclang: "de".into(), label: "Deutsch".into(), default: false }},
+]"#,
                         crate::site::SAMPLE_CAPTIONS,
+                        crate::site::SAMPLE_UNTERTITEL,
                     ),
                 ],
                 controls: vec![
@@ -163,13 +168,22 @@ pub fn VideoPage() -> Element {
                             label: "Big Buck Bunny",
                             poster: crate::site::SAMPLE_POSTER,
                             aspect_ratio: "16 / 9",
-                            tracks: vec![MediaTrack {
-                                src: crate::site::SAMPLE_CAPTIONS.into(),
-                                kind: TrackKind::Captions,
-                                srclang: "en".into(),
-                                label: "English".into(),
-                                default: true,
-                            }],
+                            tracks: vec![
+                                MediaTrack {
+                                    src: crate::site::SAMPLE_CAPTIONS.into(),
+                                    kind: TrackKind::Captions,
+                                    srclang: "en".into(),
+                                    label: "English".into(),
+                                    default: true,
+                                },
+                                MediaTrack {
+                                    src: crate::site::SAMPLE_UNTERTITEL.into(),
+                                    kind: TrackKind::Subtitles,
+                                    srclang: "de".into(),
+                                    label: "Deutsch".into(),
+                                    default: false,
+                                },
+                            ],
                             size: Input::from(Size::from(values.str("size").as_str())),
                             muted: muted == "true",
                             looping: values.str("looping") == "true",

@@ -28,7 +28,8 @@ fn the_captions_button_and_c_toggle_the_subtitle_track() {
         wait::for_js_true(
             page,
             &format!(
-                "{} === 'showing' && document.querySelector('{CAPTIONS}').getAttribute('aria-pressed') === 'true'",
+                "{} === 'showing' && document.querySelector('{CAPTIONS}').getAttribute('aria-pressed') === 'true' \
+                 && !document.querySelector('{CAPTIONS}').hasAttribute('aria-haspopup')",
                 track_mode()
             ),
             "the button to show the track",
@@ -100,6 +101,119 @@ fn a_default_captions_track_loads_and_toggles() {
         wait::for_js_true(page, &state("showing", "true"), "the button to show them")
             .await
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1284: with two caption or subtitle tracks the captions button opens a menu of
+/// them and Off, as native players do; C toggles the one last chosen, else the first.
+#[test]
+fn two_tracks_make_the_captions_button_a_track_menu() {
+    const MODES: &str =
+        "[...document.querySelector('#player video').textTracks].map((t) => t.mode).join()";
+    const ITEM: &str = "[...document.querySelectorAll('[role=menuitemradio]')]";
+    block_on(async {
+        let fixture = Fixture::open("/video/languages", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let closed_on_button = format!(
+            "document.querySelector('[role=menu]') === null \
+             && document.activeElement === document.querySelector('{CAPTIONS}')"
+        );
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('{CAPTIONS}')?.getAttribute('aria-haspopup') === 'menu' \
+                 && !document.querySelector('{CAPTIONS}').hasAttribute('aria-pressed')"
+            ),
+            "a menu button, not a toggle",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!("document.querySelector('{CAPTIONS}').focus()"))
+            .await
+            .unwrap();
+        keyboard::press(page, C).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{MODES} === 'showing,hidden'"),
+            "C with no choice yet to show the first track",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, C).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{MODES} === 'hidden,hidden'"),
+            "C to hide it",
+        )
+        .await
+        .unwrap();
+
+        pointer::click(page, CAPTIONS).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{ITEM}.map((e) => e.textContent.trim() + ':' + e.getAttribute('aria-checked')).join() \
+                 === 'Off:true,English:false,Deutsch:false'"
+            ),
+            "Off and both tracks, Off checked",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!(
+            "{ITEM}.find((e) => e.textContent.includes('Deutsch')).click()"
+        ))
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{MODES} === 'hidden,showing' && {closed_on_button}"),
+            "Deutsch shown, the menu closed and focus on the button",
+        )
+        .await
+        .unwrap();
+
+        keyboard::press(page, C).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{MODES} === 'hidden,hidden'"),
+            "C to hide it",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, C).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{MODES} === 'hidden,showing'"),
+            "C to show the last chosen again",
+        )
+        .await
+        .unwrap();
+
+        pointer::click(page, CAPTIONS).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{ITEM}.find((e) => e.textContent.includes('Deutsch'))?.getAttribute('aria-checked') === 'true'"
+            ),
+            "Deutsch checked",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!(
+            "{ITEM}.find((e) => e.textContent.includes('Off')).click()"
+        ))
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{MODES} === 'hidden,hidden' && {closed_on_button}"),
+            "Off to hide them",
+        )
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }

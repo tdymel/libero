@@ -308,7 +308,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)
-        .style(popover.style())
+        .style(Some(popover.style()))
         .prepare();
 
     // Placed means measured and visible, the first moment focus can take.

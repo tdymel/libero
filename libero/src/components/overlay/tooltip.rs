@@ -425,7 +425,7 @@ fn TooltipBubble(
         .into();
     // The class carries the popover's inline cap, so a caller `sx` can change it.
     let inline_cap = format!("max-width:calc(100vw - {}px);", 2.0 * padding);
-    let style = popover.style().map(|style| style.replace(&inline_cap, ""));
+    let style = Some(popover.style().replace(&inline_cap, ""));
 
     let bubble = use_box()
         .framework_sx(&TOOLTIP_BUBBLE_SX)

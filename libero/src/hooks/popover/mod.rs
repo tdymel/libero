@@ -95,7 +95,7 @@ impl PopoverHandle {
     ///
     /// Every declaration is emitted on every render: a renderer never removes
     /// one that stops being printed. The CSS width cap keeps it on a phone (todo 357).
-    pub fn style(&self) -> Option<String> {
+    pub fn style(&self) -> String {
         let (x, y, visibility, available) = match *self.placed.read() {
             Some(placed) => (
                 placed.x,
@@ -119,10 +119,10 @@ impl PopoverHandle {
 
         let edges = 2.0 * self.padding;
 
-        Some(format!(
+        format!(
             "position:fixed;left:{x}px;top:{y}px;width:{width};min-width:{min_width};max-width:calc(100vw - {edges}px);visibility:{visibility};{}:{available};",
             AVAILABLE_HEIGHT.name()
-        ))
+        )
     }
 
     /// Portals the box, `None` takes it away. Already rendered, so its reads

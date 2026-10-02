@@ -23,6 +23,8 @@ pub struct MediaLabels {
     pub speed: &'static str,
     /// Why a video's captions button is disabled.
     pub no_captions: &'static str,
+    /// The track menu's item that hides every caption and subtitle track.
+    pub captions_off: &'static str,
     /// The rows of the `ShortcutHelp` that Shift+? opens in the player.
     pub shortcut_play: &'static str,
     pub shortcut_back: &'static str,
@@ -52,6 +54,7 @@ impl MediaLabels {
         exit_fullscreen: "Exit fullscreen",
         speed: "Playback speed {rate}",
         no_captions: "No captions for this video",
+        captions_off: "Off",
         shortcut_play: "Play or pause",
         shortcut_back: "Back 10 seconds",
         shortcut_forward: "Forward 10 seconds",
@@ -79,6 +82,7 @@ impl MediaLabels {
         exit_fullscreen: "Vollbild beenden",
         speed: "Wiedergabegeschwindigkeit {rate}",
         no_captions: "Keine Untertitel für dieses Video",
+        captions_off: "Aus",
         shortcut_play: "Abspielen oder pausieren",
         shortcut_back: "10 Sekunden zurückspulen",
         shortcut_forward: "10 Sekunden vorspulen",

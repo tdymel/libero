@@ -273,6 +273,14 @@ pub fn StylingPage() -> Element {
                 Text { "A value is a plain string. The ones the theme knows resolve against it." }
                 CodeTable { label: "Theme values", head: ["Value", "Resolves to"], rows: VALUES.to_vec() }
                 CodeBlock { source: THEME_VALUES, language: "rust" }
+                Text {
+                    "CSS text reaches the stylesheet unescaped, and so do selectors and media "
+                    "queries. Never build them from user text: a "
+                    Code { source: "}}" }
+                    " or "
+                    Code { source: "</style>" }
+                    " in it ends the rule or the style element."
+                }
             }
 
             DocSection {

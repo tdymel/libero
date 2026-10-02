@@ -191,7 +191,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         .framework_sx(&CASCADER_DROPDOWN_SX)
         .parts(parts)
         .states(&dropdown_states)
-        .style(popover.style())
+        .style(Some(popover.style()))
         .prepare();
 
     use_focus_search(opened, searchable, popover.placed(), search);

@@ -1,9 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Flex, FocusTrap, Text},
-    hooks::use_focus_return,
-};
+use libero::components::{Button, Code, Flex, FocusTrap, Text};
 
 const TRAPPED: &str = r#"Flex {
     direction: "row",
@@ -13,14 +10,9 @@ const TRAPPED: &str = r#"Flex {
     Button { variant: "outlined", "Third" }
 }"#;
 
-/// The trap as `Preview` wires it: Release and Escape switch it off and hand focus back, and the
-/// button that switches it on remembers the focus first (the page's own switch does that live).
+/// The trap as `Preview` wires it: Release and Escape switch it off, and `restore_focus` hands
+/// focus back to the button that switched it on.
 const RELEASABLE: &str = r#"let mut trapped = use_signal(|| true);
-let back = use_focus_return();
-let mut release = move || {
-    trapped.set(false);
-    back.restore();
-};
 
 rsx! {
     Flex {
@@ -30,29 +22,23 @@ rsx! {
         Button { variant: "text", "Before" }
         if trapped() {
             FocusTrap {
+                restore_focus: true,
                 Flex {
                     direction: "row",
                     gap: "sm",
                     onkeydown: move |event: KeyboardEvent| {
                         if event.key() == Key::Escape {
-                            release();
+                            trapped.set(false);
                         }
                     },
                     Button { variant: "outlined", "First" }
                     Button { variant: "outlined", "Second" }
                     Button { variant: "outlined", "Third" }
-                    Button { variant: "filled", onclick: move |_| release(), "Release" }
+                    Button { variant: "filled", onclick: move |_| trapped.set(false), "Release" }
                 }
             }
         } else {
-            Button {
-                variant: "outlined",
-                onclick: move |_| {
-                    back.remember_active();
-                    trapped.set(true);
-                },
-                "Trap focus"
-            }
+            Button { variant: "outlined", onclick: move |_| trapped.set(true), "Trap focus" }
         }
         Button { variant: "text", "After" }
     }
@@ -81,15 +67,23 @@ pub fn FocusTrapPage() -> Element {
                 prop("children", "Element")
                     .default("required")
                     .doc("The content that keeps the focus."),
+                prop("restore_focus", "bool")
+                    .default("false")
+                    .doc("On unmount, hands focus back to whatever held it when the trap mounted."),
             ])],
             accessibility: a11y()
                 .key(["Tab", "Shift+Tab"], "Cycles through the focusable children, wrapping at either end.")
                 .handles([
                     "On mount the trap focuses the element marked `data-autofocus`, or else its first focusable child.",
+                    "With `restore_focus`, unmounting the trap puts focus back where it was before the trap took it.",
                 ])
                 .must([
                     "To focus nothing visible, so a dialog does not open with its first button looking pressed, render `FocusTrapInitialFocus` as the first child.",
                     "Keep a trap only around content that is the one thing that matters on screen, such as an open overlay. A keyboard user who cannot Tab out of a region has no way back to the page.",
+                    "Give the user a way out: the trap has no Escape of its own, so close it on Escape and on a button.",
+                ])
+                .limits([
+                    "Without `restore_focus`, focus is not restored on unmount: it falls to the page body.",
                 ]),
             lead: rsx! {
                 Text {
@@ -97,7 +91,9 @@ pub fn FocusTrapPage() -> Element {
                     "dialog. It focuses its first focusable child on mount and adds no box of "
                     "its own. Switch it on below, and Tab cycles First, Second, Third and "
                     "Release without reaching Before or After. Release or Escape switches "
-                    "it off and puts focus back on the switch."
+                    "it off, and "
+                    Code { source: "restore_focus" }
+                    " puts focus back on the switch."
                 }
             },
             Demo {
@@ -105,8 +101,8 @@ pub fn FocusTrapPage() -> Element {
                 children_text: "",
                 children_code: TRAPPED.to_string(),
                 controls: vec![
-                    // Not a prop - `FocusTrap` has none - so it prints
-                    // nothing and `wrap_page` drops the component itself.
+                    // Not a prop: whether the trap exists. It prints nothing,
+                    // and `wrap_page` drops the component itself.
                     Control::switch("activate_focus_trap").code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -119,16 +115,12 @@ pub fn FocusTrapPage() -> Element {
 }
 
 /// Before, the three buttons and After. On, the buttons sit in a trap that Release or
-/// Escape switches off, handing focus back to the switch (2.1.2, todo 1528).
+/// Escape switches off; `restore_focus` hands focus back to the switch (2.1.2, todos 1528, 1534).
 #[component]
 fn Preview(values: DemoValues) -> Element {
-    let back = use_focus_return();
     let release = {
         let values = values.clone();
-        move || {
-            values.set("activate_focus_trap", "false");
-            back.restore();
-        }
+        move || values.set("activate_focus_trap", "false")
     };
     let on_escape = release.clone();
     let on_click = release;
@@ -141,7 +133,7 @@ fn Preview(values: DemoValues) -> Element {
             Button { variant: "text", "Before" }
             if values.str("activate_focus_trap") == "true" {
                 FocusTrap {
-                    Remember { onrender: move |_| back.remember_active() }
+                    restore_focus: true,
                     Flex {
                         direction: "row",
                         gap: "sm",
@@ -168,11 +160,4 @@ fn Preview(values: DemoValues) -> Element {
             Button { variant: "text", "After" }
         }
     }
-}
-
-/// Remembers what held focus as the trap renders, before the trap's mount moves it.
-#[component]
-fn Remember(onrender: Callback) -> Element {
-    use_hook(|| onrender.call(()));
-    rsx! {}
 }

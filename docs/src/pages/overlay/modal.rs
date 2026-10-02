@@ -195,7 +195,8 @@ pub fn ModalPage() -> Element {
                     prop("is_open", "fn() -> bool").doc("Whether this modal is showing."),
                 ]).without_base_props(),
                 props("ModalScope<S, R>", vec![
-                    prop("args", "fn() -> S").doc("The arguments this opening was given."),
+                    prop("args", "fn() -> S").doc("The arguments this opening was given. Panics once the opening has ended."),
+                            prop("try_args", "fn() -> Option<S>").doc("`args`, or `None` once the opening has closed or a later one superseded it."),
                     prop("close", "fn()").doc("Ends it as a dismissal, the same as Escape."),
                     prop("resolve", "fn(R)").doc("Ends it with an answer for the caller."),
                 ]).without_base_props(),

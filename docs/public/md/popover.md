@@ -175,7 +175,7 @@ only Escape and your own handlers close the box.
 | `floating()` | `&ElementHandle` | Mount it on the box. Nothing is placed until it is attached. |
 | `placed()` | `bool` | Whether the box has been measured. `false` on the render that opens it. |
 | `placement()` | `Placement` | The side and align the box landed on, after flipping. |
-| `style()` | `Option<String>` | The box's `style`, with its position and width. |
+| `style()` | `String` | The box's `style`, with its position and width. |
 | `show(content)` | `Option<Element>` | Renders the box. `None` removes it. |
 | `on_dismiss(f)` | `impl FnMut()` | What Escape and a press outside call, with `dismiss` on. Call it on every render. |
 | `anchor_events()` | `Vec<Attribute>` | Spread on the trigger: `dismiss`, and on a WebView the link `Hotkey::within` follows into the box. |

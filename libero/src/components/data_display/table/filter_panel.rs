@@ -375,9 +375,7 @@ pub(super) fn FilterPanel(
             attr("tabindex", "-1"),
             attr("data-filter-panel", true),
         ];
-        if let Some(style) = popover.style() {
-            attributes.push(attr("style", style));
-        }
+        attributes.push(attr("style", popover.style()));
         attributes.extend(popover.floating_events());
         let mut close = close;
         panel

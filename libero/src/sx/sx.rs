@@ -12,6 +12,7 @@ pub(crate) const FORCED_COLORS: &str = "(forced-colors: active)";
 
 /// A style: declarations plus nested modifiers, rendered to one hashed class.
 /// Values take theme tokens: sizes (`"md"`), palette colours (`"primary.7"`), vars.
+/// Values, selectors and queries reach the stylesheet unescaped: never user text.
 ///
 /// ```
 /// # use libero::sx::sx;

@@ -808,7 +808,7 @@ fn the_documented_wiring_builds_and_renders() {
             },
         );
 
-        let dropdown = use_box().style(popover.style()).prepare();
+        let dropdown = use_box().style(Some(popover.style())).prepare();
         popover.show(opened().then(|| {
             dropdown.clone().element(popover.floating()).render(
                 HtmlTag::Div,

@@ -175,6 +175,8 @@ pub(super) struct Captions {
     pub shown: Signal<bool>,
     /// Its index among the element's tracks; `None` disables the button.
     pub track: Option<usize>,
+    /// The track last chosen in the track menu, which `track` then is.
+    pub picked: Signal<Option<usize>>,
 }
 
 impl Captions {
@@ -185,6 +187,20 @@ impl Captions {
         let on = !*self.shown.peek();
         media.show_captions(on.then_some(track));
         self.shown.set(on);
+    }
+
+    /// Shows `track`, or none: the track menu's choice.
+    fn choose(mut self, media: MediaHandle, track: Option<usize>) {
+        if let Some(track) = track {
+            self.picked.set(Some(track));
+        }
+        media.show_captions(track);
+        self.shown.set(track.is_some());
+    }
+
+    /// The track showing now, if any.
+    fn showing(&self) -> Option<usize> {
+        self.track.filter(|_| (self.shown)())
     }
 }
 
@@ -200,6 +216,10 @@ pub(super) fn MediaControls(
     sound: Sound,
     size: Input<Size>,
     #[props(default)] captions: Option<Captions>,
+    /// A video's caption and subtitle tracks, index and name, when it has two or
+    /// more: the captions button then opens a menu of them.
+    #[props(default)]
+    caption_tracks: Vec<(usize, String)>,
     #[props(default)] fullscreen: Option<FullscreenHandle>,
     #[props(default)] overlay: bool,
     /// The row's border-box height, each time it changes.
@@ -234,14 +254,17 @@ pub(super) fn MediaControls(
         MediaVolume { media, sound, size: size.clone() }
     };
     let speed = rsx! {
-        MediaSpeed { media, size, overlay }
+        MediaSpeed { media, size: size.clone(), overlay }
     };
     let captions_button = rsx! {
-        if let Some(captions) = captions {
+        if let (Some(captions), false) = (captions, caption_tracks.is_empty()) {
+            CaptionsMenu { media, captions, tracks: caption_tracks, size: size.clone() }
+        } else if let Some(captions) = captions {
             // Without a track: still a Tab stop, so its reason is heard (todo 1324).
             ActionIcon {
                 aria_label: labels.captions,
-                aria_pressed: if captions.track.is_some() && (captions.shown)() { "true" } else { "false" },
+                aria_pressed: if captions.showing().is_some() { "true" } else { "false" },
+                "data-captions": if captions.showing().is_some() { "on" } else { "off" },
                 "aria-describedby": captions.track.is_none().then(|| no_captions.cloned()),
                 disabled: captions.track.is_none(),
                 focusable_when_disabled: true,
@@ -306,6 +329,52 @@ pub(super) fn MediaControls(
             }
         }
         MediaStatus { media }
+    }
+}
+
+/// The captions button of a video with two or more text tracks: a menu of Off
+/// and each track, as native players offer (todo 1284).
+#[component]
+fn CaptionsMenu(
+    media: MediaHandle,
+    captions: Captions,
+    tracks: Vec<(usize, String)>,
+    size: Input<Size>,
+) -> Element {
+    let labels = use_localization().media;
+    let menu = use_menu();
+    let showing = captions.showing();
+    let items = std::iter::once(
+        MenuItem::new(labels.captions_off)
+            .radio(showing.is_none())
+            .onselect(move |_| captions.choose(media, None)),
+    )
+    .chain(tracks.into_iter().map(|(track, name)| {
+        MenuItem::new(name)
+            .radio(showing == Some(track))
+            .onselect(move |_| captions.choose(media, Some(track)))
+    }))
+    .map(Into::into)
+    .collect();
+    let mut attributes = menu.a11y_attributes();
+    attributes.push(Attribute::new(
+        "data-captions",
+        AttributeValue::Text(if showing.is_some() { "on" } else { "off" }.into()),
+        None,
+        false,
+    ));
+    rsx! {
+        Menu { state: menu, items, size: size.clone(),
+            ActionIcon {
+                attributes,
+                aria_label: labels.captions,
+                tooltip: true,
+                shortcut: "c",
+                size: icon_size(&size),
+                Glyph { slot: IconSlot::Captions, icon: lucide::captions::outlined }
+                span { "data-mark": "", "aria-hidden": "true" }
+            }
+        }
     }
 }
 
@@ -405,7 +474,7 @@ pub(super) fn MediaVolume(media: MediaHandle, sound: Sound, size: Input<Size>) -
     let floating = *popover.floating();
     let card = use_box()
         .framework_sx(&VOLUME_MENU_SX)
-        .style(popover.style())
+        .style(Some(popover.style()))
         .prepare();
 
     // Focus goes to the slider once the card is placed, once per opening.

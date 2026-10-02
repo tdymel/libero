@@ -281,7 +281,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .framework_sx(&COLOR_FIELD_DROPDOWN_SX)
         .parts(&props.dropdown_parts)
         .states(&dropdown_states)
-        .style(popover.style())
+        .style(Some(popover.style()))
         .prepare();
     // Waits for placement too: Arrow Down on a closed field opens it, and the
     // picker is not drawn until the box has been measured.

@@ -217,7 +217,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
-        .style(popover.style())
+        .style(Some(popover.style()))
         .prepare();
 
     if props.disabled.unwrap_or(false) {

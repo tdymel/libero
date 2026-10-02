@@ -270,7 +270,7 @@ pub fn PopoverPage() -> Element {
                         .doc("Whether the box has been measured. `false` on the render that opens it."),
                     prop("placement()", "Placement")
                         .doc("The side and align the box landed on, after flipping."),
-                    prop("style()", "Option<String>")
+                    prop("style()", "String")
                         .doc("The box's `style`, with its position and width."),
                     prop("show(content)", "Option<Element>")
                         .doc("Renders the box. `None` removes it."),

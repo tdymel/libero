@@ -4,7 +4,7 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Dialog, FocusTrap, Switch, Text},
-    hooks::{ModalScope, use_focus_return, use_modal},
+    hooks::{ModalScope, use_modal},
 };
 
 use crate::Routes;
@@ -18,39 +18,27 @@ pub const ROUTES: Routes = &[
 ];
 
 /// The docs demo's shape: a switch mounts the trap, and Release or Escape inside
-/// switches it off and hands focus back (todo 1528).
+/// switches it off; `restore_focus` hands focus back (todos 1528, 1534).
 #[component]
 fn ExitPage() -> Element {
     let mut on = use_signal(|| false);
-    let back = use_focus_return();
-    let mut release = move || {
-        on.set(false);
-        back.restore();
-    };
     rsx! {
         Switch { id: "switch", aria_label: "activate focus trap", checked: on(), onchange: move |next| on.set(next) }
         if on() {
-            FocusTrap {
-                Remember { onrender: move |_| back.remember_active() }
+            FocusTrap { restore_focus: true,
                 div {
                     onkeydown: move |event: KeyboardEvent| {
                         if event.key() == Key::Escape {
-                            release();
+                            on.set(false);
                         }
                     },
                     button { id: "first", "First" }
-                    button { id: "release", onclick: move |_| release(), "Release" }
+                    button { id: "release", onclick: move |_| on.set(false), "Release" }
                 }
             }
         }
         button { id: "after", "After" }
     }
-}
-
-#[component]
-fn Remember(onrender: Callback) -> Element {
-    use_hook(|| onrender.call(()));
-    rsx! {}
 }
 
 /// Two radio groups (one checked, one not), a `display: none` button and a

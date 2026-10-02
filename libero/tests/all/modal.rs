@@ -316,6 +316,59 @@ fn a_replaced_opening_ends_its_awaiting_task_with_no_result() {
     assert_eq!(dom.in_runtime(|| outcome.peek().clone()), ["first awaited"]);
 }
 
+type Kept = CopyValue<Option<ModalScope<String>>>;
+
+thread_local! {
+    static KEPT: std::cell::Cell<Option<(ModalHandle<String>, Kept)>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Todo 1963: a scope kept past its opening reads `None`, not a panic or the
+/// superseding opening's arguments.
+#[test]
+fn a_stale_scope_reads_no_args() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Owner {} }
+        }
+    }
+
+    #[component]
+    fn Owner() -> Element {
+        let kept: Kept = use_hook(|| CopyValue::new(None));
+        let modal = use_modal(move |s: ModalScope<String>| {
+            let mut kept = kept;
+            if kept.peek().is_none() {
+                kept.set(Some(s));
+            }
+            rsx! { Dialog { "{s.args()}" } }
+        });
+        use_hook(move || {
+            KEPT.set(Some((modal, kept)));
+            modal.open_with("first");
+        });
+        rsx! {}
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.process_events();
+    let (modal, kept) = KEPT.get().expect("the app rendered");
+    let first = dom.in_runtime(|| kept.peek().expect("the modal drew"));
+    assert_eq!(dom.in_runtime(|| first.try_args()), Some("first".into()));
+
+    dom.in_runtime(|| {
+        modal.open_with("second");
+    });
+    dom.render_immediate(&mut NoOpMutations);
+    assert!(dioxus_ssr::render(&dom).contains("second"));
+    assert_eq!(dom.in_runtime(|| first.try_args()), None, "superseded");
+
+    dom.in_runtime(|| modal.close());
+    dom.render_immediate(&mut NoOpMutations);
+    assert_eq!(dom.in_runtime(|| first.try_args()), None, "closed");
+}
+
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].
 mod dispatched {
 

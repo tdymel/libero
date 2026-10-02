@@ -26,6 +26,8 @@ pub const ROUTES: Routes = &[
     ),
     ("/video/centered", || rsx! { CenteredPage {} }),
     ("/video/variants", || rsx! { VariantsPage {} }),
+    // Todo 1284: two languages turn the captions button into a track menu.
+    ("/video/languages", || rsx! { LanguagesPage {} }),
 ];
 
 /// Todos 1378 and 1379: a player muted from the start, one in a right-to-left page.
@@ -88,6 +90,29 @@ fn CaptionsPage(#[props(default = Size::Md)] size: Size) -> Element {
 }
 
 const SUBTITLES: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 00:04.000%0ASilence";
+const UNTERTITEL: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 00:04.000%0AStille";
+
+#[component]
+fn LanguagesPage() -> Element {
+    let src = use_hook(|| silent_wav(4));
+    let track = |src: &str, srclang: &str, label: &str| MediaTrack {
+        src: src.into(),
+        kind: TrackKind::Subtitles,
+        srclang: srclang.into(),
+        label: label.into(),
+        default: false,
+    };
+    rsx! {
+        div { id: "player", max_width: "32rem",
+            Video {
+                src,
+                label: "Two languages",
+                aspect_ratio: "16 / 9",
+                tracks: vec![track(SUBTITLES, "en", "English"), track(UNTERTITEL, "de", "Deutsch")],
+            }
+        }
+    }
+}
 
 /// The player refuses the Fullscreen API, as a WebView without it does; marks `#player` once set.
 const REFUSE: &str = "const player = document.querySelector('#player [role=group]');

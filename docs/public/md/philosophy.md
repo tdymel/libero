@@ -50,8 +50,6 @@ What we do:
 
 - Cover the everyday needs, forms and overlays included.
 - Work the same on the web and natively, and say where a platform falls short.
-- Be honest where a platform falls short: a missing feature is absent, not
-  broken.
 
 Why it matters: Starting an app should not mean hunting for a date picker. Your
 time goes into your app, not into stitching libraries together.

@@ -12,22 +12,16 @@ It focuses its first focusable child on mount and adds no box of its own.
 ## Usage
 
 Tab inside the trap cycles First, Second, Third and Release without reaching
-Before or After. Release or Escape switches the trap off and puts focus back
-where it was before the trap took it.
+Before or After. Release or Escape switches the trap off, and `restore_focus`
+puts focus back where it was before the trap took it.
 
 ```rust
 use dioxus::prelude::*;
 use libero::components::{Button, Flex, FocusTrap};
-use libero::hooks::use_focus_return;
 
 #[component]
 fn Demo() -> Element {
     let mut trapped = use_signal(|| true);
-    let back = use_focus_return();
-    let mut release = move || {
-        trapped.set(false);
-        back.restore();
-    };
 
     rsx! {
         Flex {
@@ -37,29 +31,23 @@ fn Demo() -> Element {
             Button { variant: "text", "Before" }
             if trapped() {
                 FocusTrap {
+                    restore_focus: true,
                     Flex {
                         direction: "row",
                         gap: "sm",
                         onkeydown: move |event: KeyboardEvent| {
                             if event.key() == Key::Escape {
-                                release();
+                                trapped.set(false);
                             }
                         },
                         Button { variant: "outlined", "First" }
                         Button { variant: "outlined", "Second" }
                         Button { variant: "outlined", "Third" }
-                        Button { variant: "filled", onclick: move |_| release(), "Release" }
+                        Button { variant: "filled", onclick: move |_| trapped.set(false), "Release" }
                     }
                 }
             } else {
-                Button {
-                    variant: "outlined",
-                    onclick: move |_| {
-                        back.remember_active();
-                        trapped.set(true);
-                    },
-                    "Trap focus"
-                }
+                Button { variant: "outlined", onclick: move |_| trapped.set(true), "Trap focus" }
             }
             Button { variant: "text", "After" }
         }
@@ -72,6 +60,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `children` | `Element` | required | The content that keeps the focus. |
+| `restore_focus` | `bool` | `false` | On unmount, hands focus back to whatever held it when the trap mounted. |
 
 Like every component, `FocusTrap` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. `FocusTrapInitialFocus` takes
@@ -89,6 +78,8 @@ no props at all.
 
 - On mount the trap focuses the element marked `data-autofocus`, or else its
   first focusable child.
+- With `restore_focus`, unmounting the trap puts focus back where it was before
+  the trap took it.
 
 ### You must
 
@@ -97,6 +88,8 @@ no props at all.
 - Keep a trap only around content that is the one thing that matters on
   screen, such as an open overlay. A keyboard user who cannot Tab out of a
   region has no way back to the page.
+- Give the user a way out: the trap has no Escape of its own, so close it on
+  Escape and on a button.
 
 ```rust
 use dioxus::prelude::*;
@@ -113,6 +106,11 @@ fn Demo() -> Element {
     }
 }
 ```
+
+### Limits
+
+- Without `restore_focus`, focus is not restored on unmount: it falls to the
+  page body.
 
 ## Theme defaults
 

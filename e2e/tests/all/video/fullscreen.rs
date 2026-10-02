@@ -9,8 +9,11 @@ use e2e::{Fixture, Viewport, wait};
 
 use super::{F, FULLSCREEN, PLAY, STATE};
 
+const BODY_OVERFLOW: &str = "getComputedStyle(document.body).overflowY";
+
 /// The fallback where the Fullscreen API is refused: the player as a fixed box over the
-/// page, which Escape and F leave. The route refuses it, so this runs every time (1758).
+/// page, which locks the page's scroll as a modal does (1285), and which Escape and F
+/// leave. The route refuses it, so this runs every time (1758).
 #[test]
 fn fullscreen_takes_the_player_and_escape_or_f_gives_it_back() {
     block_on(async {
@@ -48,10 +51,21 @@ fn fullscreen_takes_the_player_and_escape_or_f_gives_it_back() {
         )
         .await
         .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{BODY_OVERFLOW} === 'hidden'"),
+            "the page behind to stop scrolling",
+        )
+        .await
+        .unwrap();
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
-        wait::for_js_true(page, &format!("{STATE} === 'none'"), "Escape to leave")
-            .await
-            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{STATE} === 'none' && {BODY_OVERFLOW} !== 'hidden'"),
+            "Escape to leave and give the scroll back",
+        )
+        .await
+        .unwrap();
         keyboard::press(page, F).await.unwrap();
         wait::for_js_true(page, &format!("{STATE} !== 'none'"), "F to enter")
             .await

@@ -121,15 +121,21 @@ impl<S: Clone + 'static, R: 'static> ModalScope<S, R> {
     ///
     /// # Panics
     ///
-    /// Once the modal has closed: Escape, the backdrop, [`close`](Self::close) and
-    /// [`resolve`](Self::resolve) clear them at once, so read them before, not in a
-    /// task that outlives the opening. A scope kept past a reopening reads the new
-    /// opening's arguments.
+    /// Once this opening has ended: Escape, the backdrop, [`close`](Self::close),
+    /// [`resolve`](Self::resolve) and a superseding `open_with` end it at once. A
+    /// task that outlives the opening reads [`try_args`](Self::try_args) instead.
     pub fn args(&self) -> S {
-        self.args
-            .read()
-            .clone()
-            .expect("ModalScope outside an open modal")
+        self.try_args().expect("ModalScope outside its opening")
+    }
+
+    /// The arguments this opening was given, or `None` once it has ended,
+    /// including when a later opening superseded it.
+    pub fn try_args(&self) -> Option<S> {
+        let live = self
+            .resolution
+            .try_peek()
+            .is_ok_and(|resolution| resolution.generation == self.generation);
+        live.then(|| self.args.try_read().ok()?.clone()).flatten()
     }
 }
 

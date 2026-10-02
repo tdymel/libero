@@ -393,7 +393,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .framework_sx(&PICKER_FIELD_DROPDOWN_SX)
         .parts(field.dropdown_parts)
         .states(&dropdown_states)
-        .style(popover.style())
+        .style(Some(popover.style()))
         .prepare();
     // Waits for placement: the picker is not drawn until the box is measured.
     use_effect(move || {

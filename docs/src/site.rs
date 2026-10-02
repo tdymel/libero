@@ -43,6 +43,9 @@ pub(crate) const SAMPLE_VIDEO: &str = "https://upload.wikimedia.org/wikipedia/co
 /// One placeholder cue over the whole film, so the captions button shows something
 /// wherever it is pressed; inline, so no `.vtt` file ships. Not the film's sound.
 pub(crate) const SAMPLE_CAPTIONS: &str = "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 10:00.000%0A[Placeholder caption, not the film's sound]";
+/// The demo's second track, so its captions button shows the track menu.
+pub(crate) const SAMPLE_UNTERTITEL: &str =
+    "data:text/vtt,WEBVTT%0A%0A00:00.000 --> 10:00.000%0A[Platzhalter, nicht der Ton des Films]";
 /// Its Commons poster frame.
 pub(crate) const SAMPLE_POSTER: &str = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Big_Buck_Bunny_4K.webm/960px--Big_Buck_Bunny_4K.webm.jpg";
 /// Stands in for a source that failed to load.

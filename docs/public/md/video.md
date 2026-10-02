@@ -32,8 +32,8 @@ fn Demo() -> Element {
 
 The demo plays "Big Buck Bunny", (c) 2008 Blender Foundation,
 <https://peach.blender.org>, under CC BY 3.0, streamed from Wikimedia Commons,
-so it plays only online. Its English track is one placeholder caption, not the
-film's sound.
+so it plays only online. Its English and German tracks are one placeholder
+caption each, not the film's sound.
 
 ## Usage
 
@@ -49,20 +49,30 @@ fn Demo() -> Element {
             label: "Launch day",
             poster: "/launch.jpg",
             aspect_ratio: "16 / 9",
-            tracks: vec![MediaTrack {
-                src: "/launch.en.vtt".into(),
-                kind: TrackKind::Captions,
-                srclang: "en".into(),
-                label: "English".into(),
-                default: false,
-            }],
+            tracks: vec![
+                MediaTrack {
+                    src: "/launch.en.vtt".into(),
+                    kind: TrackKind::Captions,
+                    srclang: "en".into(),
+                    label: "English".into(),
+                    default: false,
+                },
+                MediaTrack {
+                    src: "/launch.de.vtt".into(),
+                    kind: TrackKind::Subtitles,
+                    srclang: "de".into(),
+                    label: "Deutsch".into(),
+                    default: false,
+                },
+            ],
         }
     }
 }
 ```
 
 A captions or subtitles track enables the captions button: it shows the
-default one, else the first. Without one the button stays, disabled. Pass a `use_media()` handle to `Video { media }` to drive
+default one, else the first. Two or more make it a menu of Off and each track.
+Without one the button stays, disabled. Pass a `use_media()` handle to `Video { media }` to drive
 the player from outside.
 
 ## Props
@@ -74,7 +84,7 @@ the player from outside.
 | `label` | `String` | required | Names the player, e.g. the video's title. |
 | `poster` | `Option<String>` | `None` | A picture shown until playing starts. |
 | `aspect_ratio` | `Option<String>` | `16 / 9` | The picture's CSS `aspect-ratio`, which the box holds before the file loads, poster or not. A portrait clip wants `"9 / 16"`; `"auto"` follows the file, and the box jumps as it loads. A picture of another shape is letterboxed. |
-| `tracks` | `Vec<MediaTrack>` | `[]` | WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button. |
+| `tracks` | `Vec<MediaTrack>` | `[]` | WebVTT files: `src`, `kind` (`Captions`, `Subtitles`, `Descriptions`, `Chapters`), `srclang`, `label`, `default`. A captions or subtitles track enables the captions button; two or more make it a menu of them. |
 | `media` | `Option<MediaHandle>` | `None` | A handle from `use_media()`, to drive or read the player from outside. |
 | `autoplay` | `bool` | `false` | Starts on load. Browsers refuse it with sound: pair it with `muted`; a debug build warns otherwise. |
 | `muted` | `bool` | `false` | Starts muted. |
@@ -118,7 +128,7 @@ screen, from [use_fullscreen](use_fullscreen.md).
 | `Space` | On a slider: plays or pauses. On a button: presses it. |
 | `J` or `L` | Jumps 10 seconds back or ahead. |
 | `M` | Mutes or unmutes. |
-| `C` | Shows or hides the captions, with a captions or subtitles track. |
+| `C` | Shows or hides the captions, with a captions or subtitles track: the last one chosen in the track menu. |
 | `F` | Enters or leaves fullscreen. |
 | `Shift+?` | Lists these keys in a `ShortcutHelp` dialog, inside the player in fullscreen. |
 | `Escape` | Closes the speed or volume menu and returns to its button; else leaves fullscreen. |
@@ -140,14 +150,18 @@ screen, from [use_fullscreen](use_fullscreen.md).
   named "Playback speed 1×"; its menu offers 0.5× to 2× as radio items.
 - Without a captions or subtitles track the captions button stays, disabled
   but focusable, and says "No captions for this video".
+- With two or more captions or subtitles tracks the captions button opens a
+  menu: Off and each track by its `label` (else its `srclang`), as radio items.
+  With one it stays a toggle.
 - The speaker button mutes and unmutes. The chevron beside it, named "Volume",
   opens a `dialog` holding the volume slider and focuses it, as `Audio`'s.
 - At volume 0 the mute button offers Unmute, which brings back the last audible
   volume; moving the volume up while muted unmutes.
 - Where the page may not go fullscreen, the player covers the window as a fixed
   box instead, which Escape, F and a Tab out of the player leave, so focus never
-  hides behind it. Focus stays on the control that was pressed, inside the box,
-  and is there again when the box closes.
+  hides behind it. The page behind it does not scroll, as under a modal. Focus
+  stays on the control that was pressed, inside the box, and is there again when
+  the box closes.
 - The controls overlay the bottom of the picture, as YouTube's, and fade after 3
   seconds of playing untouched or as the mouse leaves the player; while paused
   they stay. A pointer move, a tap or a key brings them back. After a key they

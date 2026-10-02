@@ -79,23 +79,6 @@ fn parse_stars(body: &str, field: &str) -> Option<u64> {
         .as_u64()
 }
 
-/// `999`, `1.2k`, `12k`, `1.2M`. Rounds down, so it never shows more than it is.
-fn compact_count(count: u64, separator: &str) -> String {
-    let scaled = |unit: u64, suffix: &str| {
-        let tenths = count * 10 / unit;
-        if tenths >= 100 || tenths.is_multiple_of(10) {
-            format!("{}{suffix}", tenths / 10)
-        } else {
-            format!("{}{separator}{}{suffix}", tenths / 10, tenths % 10)
-        }
-    };
-    match count {
-        0..1_000 => count.to_string(),
-        1_000..1_000_000 => scaled(1_000, "k"),
-        _ => scaled(1_000_000, "M"),
-    }
-}
-
 /// Half the button, from its size rather than its width, which a pill grows.
 static GLYPH_SX: StaticSx = StaticSx::new(|| {
     let side = format!("calc({} * 0.5)", ACTION_ICON_SIZE.overridable());
@@ -177,6 +160,7 @@ pub fn Repository(props: RepositoryProps) -> Element {
     let theme = use_theme();
     let localization = use_localization();
     let separator = use_formats().decimal_separator;
+    let compact = localization.repository.compact;
     let host = props.host;
     let api = host.api_url(&props.repo);
 
@@ -209,7 +193,7 @@ pub fn Repository(props: RepositoryProps) -> Element {
         (Some(label), _) => label,
         (None, Some(count)) => format!(
             "{subject}, {} {new_tab}",
-            (localization.repository.stars)(count, &compact_count(count, separator))
+            (localization.repository.stars)(count, &compact(count, separator))
         ),
         (None, None) => format!("{subject} {new_tab}"),
     };
@@ -254,7 +238,7 @@ pub fn Repository(props: RepositoryProps) -> Element {
         .attr("data-slot", RepositoryPart::Count.slot());
     // Not heard: the link's `aria-label` replaces its content in the name.
     let count_text = count.map(|count| {
-        let shown = compact_count(count, separator);
+        let shown = compact(count, separator);
         count_box.render(HtmlTag::Span, Vec::new(), rsx! { "{shown}" })
     });
     let wrapper_states: Input<States> = States::new().with("stars", count.is_some()).into();
@@ -301,24 +285,6 @@ mod tests {
                 ("count", "& > [data-slot='count']"),
             ]
         );
-    }
-
-    #[test]
-    fn compact_count_steps_through_units() {
-        let cases = [
-            (0, "0"),
-            (999, "999"),
-            (1_000, "1k"),
-            (1_234, "1.2k"),
-            (9_999, "9.9k"),
-            (12_345, "12k"),
-            (999_999, "999k"),
-            (1_250_000, "1.2M"),
-        ];
-        for (count, expected) in cases {
-            assert_eq!(compact_count(count, "."), expected, "{count}");
-        }
-        assert_eq!(compact_count(1_234, ","), "1,2k");
     }
 
     #[test]

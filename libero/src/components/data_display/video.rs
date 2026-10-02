@@ -15,7 +15,7 @@ use crate::{
     context::{HostOutlet, PortalHost},
     hooks::{
         FULLSCREEN_ATTR, Hotkey, MediaError, MediaHandle, listener, use_element, use_fullscreen,
-        use_localization, use_media, use_portal_slot, use_timeout,
+        use_localization, use_media, use_portal_slot, use_scroll_lock, use_timeout,
     },
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
     theme::{ACTION_ICON_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, Size, SizeCss, Z_INDEX_MODAL},
@@ -132,7 +132,7 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                 )
                 // Shown captions: a bar under the icon, as YouTube's; a border survives forced colours.
                 .selector(
-                    "& button[aria-pressed]",
+                    "& button[data-captions]",
                     sx().position("relative").selector(
                         "& > [data-mark]",
                         sx().display("none")
@@ -143,7 +143,7 @@ static VIDEO_SX: StaticSx = StaticSx::new(|| {
                     ),
                 )
                 .selector(
-                    "& button[aria-pressed='true'] > [data-mark]",
+                    "& button[data-captions='on'] > [data-mark]",
                     sx().display("block"),
                 ),
         )
@@ -330,6 +330,8 @@ pub fn Video(props: VideoProps) -> Element {
     use_drop(move || portals.entries.manually_drop());
     let mut portaled_out = use_hook(|| CopyValue::new(false));
     let inside = fullscreen.is_fullscreen();
+    // The drawn box covers the page, which a wheel would scroll behind it (todo 1285).
+    let scroll_lock = use_scroll_lock(player, fullscreen.is_drawn());
     if *portaled_out.peek() == inside {
         portaled_out.set(!inside);
         page_portal.show((!inside).then(|| rsx! { HostOutlet { host: portals } }));
@@ -348,22 +350,45 @@ pub fn Video(props: VideoProps) -> Element {
         }
     });
 
-    // The track the captions button shows: the default text one, else the first.
-    let text_tracks = props
+    // The track the captions button shows: the one last picked in the track menu,
+    // else the default text one, else the first.
+    let text_tracks: Vec<(usize, &MediaTrack)> = props
         .tracks
         .iter()
         .enumerate()
-        .filter(|(_, t)| t.kind.shows_text());
-    let caption_track = text_tracks
-        .clone()
-        .find(|(_, t)| t.default)
-        .or_else(|| text_tracks.clone().next())
-        .map(|(index, _)| index);
-    let shown_at_start = text_tracks.clone().any(|(_, t)| t.default);
+        .filter(|(_, t)| t.kind.shows_text())
+        .collect();
+    let picked = use_signal(|| None::<usize>);
+    let caption_track = picked()
+        .filter(|picked| text_tracks.iter().any(|(index, _)| index == picked))
+        .or_else(|| {
+            text_tracks
+                .iter()
+                .find(|(_, t)| t.default)
+                .or(text_tracks.first())
+                .map(|(index, _)| *index)
+        });
+    let shown_at_start = text_tracks.iter().any(|(_, t)| t.default);
     let shown = use_signal(|| shown_at_start);
     let captions = Captions {
         shown,
         track: caption_track,
+        picked,
+    };
+    // Two or more: the captions button opens a menu of them (todo 1284).
+    let caption_tracks: Vec<(usize, String)> = match text_tracks.len() {
+        0 | 1 => Vec::new(),
+        _ => text_tracks
+            .iter()
+            .map(|(index, t)| {
+                let name = if t.label.is_empty() {
+                    &t.srclang
+                } else {
+                    &t.label
+                };
+                (*index, name.clone())
+            })
+            .collect(),
     };
 
     let sound = use_sound(media);
@@ -550,6 +575,7 @@ pub fn Video(props: VideoProps) -> Element {
                 sound,
                 size: props.size.clone(),
                 captions: Some(captions),
+                caption_tracks,
                 fullscreen: Some(fullscreen),
                 overlay: true,
                 onheight: move |height: f64| {
@@ -562,6 +588,7 @@ pub fn Video(props: VideoProps) -> Element {
         if inside {
             HostOutlet { host: portals }
         }
+        {scroll_lock}
     };
 
     use_box()

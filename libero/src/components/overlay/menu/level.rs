@@ -242,7 +242,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)
-        .style(open.then(|| popover.style()).flatten())
+        .style(open.then(|| popover.style()))
         .prepare();
 
     popover.show(rows.map(|rows| {

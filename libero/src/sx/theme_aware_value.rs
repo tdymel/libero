@@ -11,6 +11,8 @@ const DIMMED_TEXT_TOKEN: &str = "text-dimmed";
 /// An `sx` value: a size word (`"md"`), a palette colour (`"primary"`, `"primary.7"`),
 /// a var, a number, or plain CSS text. Built by `From`, never by hand.
 ///
+/// CSS text reaches the stylesheet unescaped: never build it from user text.
+///
 /// ```
 /// # use libero::sx::ThemeAwareValue;
 /// let value: ThemeAwareValue = "primary.7".into();

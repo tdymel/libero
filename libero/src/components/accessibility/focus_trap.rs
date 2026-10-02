@@ -7,7 +7,7 @@ use crate::{
         common::{FOCUSABLE_SELECTOR, HtmlTag, Input, base_props},
         layout::use_box,
     },
-    hooks::{ElementHandle, use_element, use_local_state},
+    hooks::{ElementHandle, use_element, use_focus_return, use_local_state},
     platform::{ElementApi, OBSERVE_ATTR, focus_first_of, key_taken},
     sx::{StaticSx, sx},
 };
@@ -129,10 +129,14 @@ fn focus_next(
 base_props! {
     pub struct FocusTrapProps {
         children: Element,
+        /// On unmount, hands focus back to whatever held it when the trap mounted.
+        #[props(default)]
+        restore_focus: bool,
     }
 }
 
 /// Keeps Tab and Shift+Tab cycling inside its children, and focuses the first one on mount.
+/// It has no Escape, and restores focus on unmount only with `restore_focus`.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -167,6 +171,15 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         attributes.extend(root.attributes());
     }
 
+    let back = use_focus_return();
+    let mut restore = use_hook(|| CopyValue::new(false));
+    restore.set(props.restore_focus);
+    use_drop(move || {
+        if restore.try_peek().is_ok_and(|restore| *restore) {
+            back.restore_detached();
+        }
+    });
+
     use_box()
         .framework_sx(&FOCUS_TRAP_SX)
         .class(&props.class)
@@ -176,6 +189,9 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         // Not `.element(&root)`: mount and first focus share the one `onmounted`.
         .event("onmounted", move |event: Event<MountedData>| {
             (root.mount())(event);
+            if *restore.peek() {
+                back.remember_focused();
+            }
             focus_first(&root, tag.as_deref());
         })
         .event("onkeydown", move |event: Event<KeyboardData>| {
