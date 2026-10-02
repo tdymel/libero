@@ -484,15 +484,14 @@ fn a_long_label_wraps_in_its_row() {
             .await
             .unwrap();
         open_by_keyboard(page).await;
-        let overflows: Vec<serde_json::Value> = js(
+        crate::floating_window::assert_fits_at_320(
             page,
+            DIALOG,
             &format!(
-                "[document.documentElement, document.querySelector({DIALOG:?}), ...document.querySelectorAll({OPTIONS:?})] \
-                 .filter(e => e.scrollWidth > e.clientWidth).map(e => [e.tagName, e.scrollWidth, e.clientWidth])"
+                "[document.documentElement, document.querySelector({DIALOG:?}), ...document.querySelectorAll({OPTIONS:?})]"
             ),
         )
         .await;
-        assert!(overflows.is_empty(), "320px: {overflows:?}");
         fixture
             .console
             .assert_clean("spotlight long label")

@@ -235,22 +235,30 @@ fn menu_button(header: &str) -> String {
 
 /// Opens `header`'s menu from the keyboard and picks `entry` with the arrows.
 async fn pick_by_keys<D: Driver>(d: &mut D, header: &str, entry: &str) -> Result<()> {
-    let button = menu_button(header);
-    d.focus(&button).await?;
-    eventually_focused(d, &button, "the menu button").await?;
+    pick_from(d, &menu_button(header), entry).await
+}
+
+/// [`pick_by_keys`] from the menu `button`, whatever language names it.
+async fn pick_from<D: Driver>(d: &mut D, button: &str, entry: &str) -> Result<()> {
+    d.focus(button).await?;
+    eventually_focused(d, button, "the menu button").await?;
     d.press(keyboard::ENTER).await?;
     // Todo 1502: the entry itself, not only the menu's first.
     let mut item = None;
-    eventually(d, &format!("{entry:?} in {header}'s menu"), async |d| {
-        for index in 0..12 {
-            let at = format!("[role=menuitem][data-menu-index=\"{index}\"]");
-            if d.exists(&at).await? && d.text(&at).await? == entry {
-                item = Some(at);
-                return Ok(true);
+    eventually(
+        d,
+        &format!("{entry:?} in the menu of {button}"),
+        async |d| {
+            for index in 0..12 {
+                let at = format!("[role=menuitem][data-menu-index=\"{index}\"]");
+                if d.exists(&at).await? && d.text(&at).await? == entry {
+                    item = Some(at);
+                    return Ok(true);
+                }
             }
-        }
-        Ok(false)
-    })
+            Ok(false)
+        },
+    )
     .await?;
     let item = item.expect("the wait held");
     for _ in 0..12 {
@@ -293,6 +301,29 @@ e2e::scenario!(
     a_pin_or_hide_from_the_menu_keeps_focus_on_a_menu_button,
     "/table-reorder",
     menu_picks_keep_focus,
+    android: skip("958: element identity on the WebView")
+);
+
+/// Todo 2049: the column menu's move, pin, unpin and hide are said in German too.
+async fn german_menu_announcements<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let button = |header: &str| format!("button[aria-label=\"Optionen für Spalte {header}\"]");
+    for (header, entry, said) in [
+        ("Name", "Nach rechts", "Name an Spalte 2 von 3 verschoben"),
+        ("Name", "Am Ende fixieren", "Name am Ende fixiert"),
+        ("Name", "Am Anfang fixieren", "Name am Anfang fixiert"),
+        ("Name", "Fixierung lösen", "Fixierung von Name gelöst"),
+        ("Stock", "Spalte ausblenden", "Stock ausgeblendet"),
+    ] {
+        pick_from(d, &button(header), entry).await?;
+        eventually_text(d, "[role=status]", said, entry).await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    the_column_menu_announces_in_german,
+    "/table-reorder-de",
+    german_menu_announcements,
     android: skip("958: element identity on the WebView")
 );
 

@@ -651,6 +651,62 @@ e2e::scenario!(
     the_column_filters_narrow_the_rows
 );
 
+/// Todo 2048, 1.4.10: in a short viewport the filter popover caps at the room on its
+/// side and scrolls inside, rather than running off the screen.
+#[test]
+fn a_filter_popover_caps_at_the_available_height() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    block_on(async {
+        let fixture = Fixture::open("/table/column-filter", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let (width, _) = Viewport::Desktop.size();
+        page.execute(SetDeviceMetricsOverrideParams::new(width, 200, 1.0, false))
+            .await
+            .unwrap();
+        page.evaluate("document.querySelector('[aria-label=\"Name column options\"]').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.matches('[role=menuitem]')",
+            "the opened column menu",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::HOME).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.textContent.trim() === 'Filter'",
+            "Home on Filter",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        // Capped (it scrolls, so the viewport is short enough to matter) and inside.
+        let state = "(() => { const p = document.querySelector('[data-filter-popover]'); \
+             if (!p) return 'closed'; const r = p.getBoundingClientRect(); \
+             const ok = getComputedStyle(p).visibility !== 'hidden' && r.top >= -1 \
+               && r.bottom <= innerHeight + 1 && p.scrollHeight > p.clientHeight + 1 \
+               && getComputedStyle(p).overflowY === 'auto'; \
+             return ok ? 'capped' : JSON.stringify([r.top, r.bottom, innerHeight, p.scrollHeight, \
+               p.clientHeight, getComputedStyle(p).maxHeight]); })()";
+        let capped =
+            wait::for_js_true(page, &format!("{state} === 'capped'"), "the capped popover").await;
+        if capped.is_err() {
+            let state: String = page.evaluate(state).await.unwrap().into_value().unwrap();
+            panic!("the filter popover is not capped inside a 200px viewport: {state}");
+        }
+        fixture
+            .console
+            .assert_clean("a filter popover in a short viewport")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 1401: a date header filter keeps the typed day; the menu's Filter set to
 /// Between keeps the days from its From field on, the To field left open.
 /// 1425: a `DateField`, whose calendar counts as inside the filter popover; a
@@ -1297,10 +1353,19 @@ fn a_column_menu_sorts_hides_and_shows_columns() {
                 "[...document.querySelectorAll('[role^=menuitem]')]\
                  .find(e => e.textContent.trim() === {item:?})"
             );
-            wait::for_js_true(page, &format!("!!{find}"), item)
+            // A real press at the item's centre, once the placed menu shows it there.
+            let centre = format!(
+                "(() => {{ const e = {find}; if (!e) return null; \
+                 const r = e.getBoundingClientRect(); const [x, y] = [r.x + r.width / 2, r.y + r.height / 2]; \
+                 return e.contains(document.elementFromPoint(x, y)) ? [x, y] : null; }})()"
+            );
+            wait::for_js_true(page, &format!("!!{centre}"), item)
                 .await
                 .unwrap();
-            page.evaluate(format!("{find}.click()")).await.unwrap();
+            let (x, y): (f64, f64) = page.evaluate(centre).await.unwrap().into_value().unwrap();
+            pointer::click_at(page, pointer::Point { x, y })
+                .await
+                .unwrap();
         }
         let sort_of = |column: usize| {
             format!(
@@ -1585,6 +1650,58 @@ fn a_focused_header_button_stays_clear_of_the_pinned_columns() {
             fixture.console.assert_clean("pinned focus scroll").unwrap();
             fixture.close().await.unwrap();
         }
+    });
+}
+
+/// Todo 2047: an innermost pin with no declared width pads the focus scroll by its
+/// measured width, so a header button focused under it scrolls clear of it.
+#[test]
+fn a_focus_scroll_clears_an_unsized_pinned_column() {
+    block_on(async {
+        let fixture = Fixture::open("/table/pinned-unsized", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        const ORIGIN: &str = "th[aria-label=Origin] button";
+        // Scrolled to the far end, Origin sits under the pinned Name; focusing it scrolls back.
+        // The padding lands with the first measure, after the first paint.
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const r = document.querySelector({AREA:?}); \
+                 if (!r || r.scrollWidth - r.clientWidth < 300) return false; \
+                 if (getComputedStyle(r).scrollPaddingInlineStart === 'auto') return false; \
+                 r.scrollLeft = r.scrollWidth; \
+                 const origin = document.querySelector({ORIGIN:?}).getBoundingClientRect(); \
+                 return origin.left < document.querySelector('th[aria-label=Name]').getBoundingClientRect().right - 1; }})()"
+            ),
+            "the measured pin padding, and Origin scrolled under Name",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!("document.querySelector({ORIGIN:?}).focus()"))
+            .await
+            .unwrap();
+        let check = format!(
+            "(() => {{ const b = document.querySelector({ORIGIN:?}).getBoundingClientRect(); \
+             const name = document.querySelector('th[aria-label=Name]').getBoundingClientRect(); \
+             const area = document.querySelector({AREA:?}); \
+             return b.left >= name.right - 1 ? 'clear' : 'under ' + JSON.stringify([b.left, name.left, name.right, \
+               area.getBoundingClientRect().left, area.scrollLeft, \
+               document.activeElement === document.querySelector({ORIGIN:?}), \
+               getComputedStyle(area).scrollPaddingInlineStart]); }})()"
+        );
+        let cleared =
+            wait::for_js_true(page, &format!("{check} === 'clear'"), "the focus scroll").await;
+        if cleared.is_err() {
+            let state: String = page.evaluate(check).await.unwrap().into_value().unwrap();
+            panic!("the focused Origin button stays under the pinned Name: {state}");
+        }
+        fixture
+            .console
+            .assert_clean("an unsized pinned column")
+            .unwrap();
+        fixture.close().await.unwrap();
     });
 }
 

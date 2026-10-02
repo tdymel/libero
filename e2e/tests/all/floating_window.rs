@@ -256,41 +256,6 @@ async fn assert_separator(page: &Page, drawn: (f64, f64, f64, f64), what: &str) 
     Ok(())
 }
 
-/// `use_drag` cancels the pointerdown and its focus, so the hook focuses the pressed
-/// handle itself (439c). Focus starts on the window root.
-#[test]
-fn a_drag_leaves_its_handle_focused() {
-    block_on(async {
-        let fixture = Fixture::open("/floating-window", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        open(page).await.unwrap();
-
-        for (handle, what) in [(SEPARATOR, "the resize grip"), (HANDLE, "the title bar")] {
-            let from = pointer::centre_of(page, handle).await.unwrap();
-            let to = pointer::Point {
-                x: from.x + 20.0,
-                y: from.y + 20.0,
-            };
-            pointer::drag(page, from, to, 5).await.unwrap();
-            wait::for_js_true(
-                page,
-                &format!(
-                    "document.activeElement === document.querySelector({})",
-                    serde_json::to_string(handle).unwrap()
-                ),
-                &format!("{what} to hold focus after a drag"),
-            )
-            .await
-            .unwrap();
-        }
-
-        fixture.console.assert_clean("a pointer drag").unwrap();
-        fixture.close().await.unwrap();
-    });
-}
-
 /// Todo 570: the title-bar menu moves, resizes and resets the window with
 /// clicks alone (2.5.7), each reported like a keyboard move.
 #[test]
@@ -581,19 +546,44 @@ fn a_long_title_wraps_at_320px() {
             .unwrap();
         activate(page, "#open-first").await;
         wait::for_visible(page, DIALOG).await.unwrap();
-        let overflows: Vec<serde_json::Value> = page
-            .evaluate(
-                "[document.documentElement, document.querySelector('[role=dialog]'), document.querySelector('[role=dialog] h2')] \
-                 .filter(e => e.scrollWidth > e.clientWidth).map(e => [e.tagName, e.scrollWidth, e.clientWidth])",
-            )
+        assert_fits_at_320(
+            page,
+            DIALOG,
+            "[document.documentElement, document.querySelector('[role=dialog]'), document.querySelector('[role=dialog] h2')]",
+        )
+        .await;
+        fixture.console.assert_clean("a long title").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// 1.4.10: nothing in `boxes` (a JS array) scrolls sideways and `dialog` sits inside the
+/// viewport, waited for its placement; a fixed box wider than the viewport widens no scroll.
+pub async fn assert_fits_at_320(page: &Page, dialog: &str, boxes: &str) {
+    let probe = format!(
+        "(() => {{ const d = document.querySelector({}).getBoundingClientRect(); \
+         const over = {boxes}.filter(e => e.scrollWidth > e.clientWidth) \
+           .map(e => [e.tagName, e.scrollWidth, e.clientWidth]); \
+         if (d.left < -0.5 || d.right > innerWidth + 0.5) \
+           over.push(['clipped', d.left, d.right, innerWidth]); \
+         return over; }})()",
+        serde_json::to_string(dialog).unwrap()
+    );
+    let js = probe.as_str();
+    let fits = wait::until("everything inside the 320px viewport", || async move {
+        let over: Vec<serde_json::Value> = page.evaluate(js.to_string()).await?.into_value()?;
+        Ok(over.is_empty())
+    })
+    .await;
+    if fits.is_err() {
+        let over: Vec<serde_json::Value> = page
+            .evaluate(probe.clone())
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert!(overflows.is_empty(), "320px: {overflows:?}");
-        fixture.console.assert_clean("a long title").unwrap();
-        fixture.close().await.unwrap();
-    });
+        panic!("320px: {over:?}");
+    }
 }
 
 /// Alt+ArrowLeft is Back: neither handle may swallow a browser chord (todo 562).
@@ -755,14 +745,36 @@ async fn f6_round_trips<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 }
 
 async fn a_drag_past_the_edge<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    opened(d).await?;
-    let (width, _) = d.viewport().await?;
-    d.drag(HANDLE, 900.0, 0.0).await?;
-    eventually(d, "the window to stay inside the viewport", async |d| {
-        let r = d.rect(DIALOG).await?;
-        Ok(r.x + r.width <= width + 1.0)
-    })
-    .await
+    let first = opened(d).await?;
+    let (vw, vh) = d.viewport().await?;
+    // Right, then up-left, then down: each edge the title bar could leave by.
+    for (dx, dy, edge) in [
+        (900.0, 0.0, "right"),
+        (-900.0, -900.0, "top left"),
+        (0.0, 900.0, "bottom"),
+    ] {
+        let before = d.rect(DIALOG).await?;
+        d.drag(HANDLE, dx, dy).await?;
+        // Moved (not a lost drag) and clamped: window and title bar inside.
+        let inside = eventually(d, &format!("a drag past the {edge} edge"), async |d| {
+            let r = d.rect(DIALOG).await?;
+            let bar = d.rect(HANDLE).await?;
+            let moved = !near(r.x, before.x) || !near(r.y, before.y);
+            let fits = first.height > vh || r.y + r.height <= vh + 1.0;
+            Ok(moved
+                && fits
+                && r.x >= -1.0
+                && r.y >= -1.0
+                && r.x + r.width <= vw + 1.0
+                && bar.y + bar.height <= vh + 1.0)
+        })
+        .await;
+        if let Err(e) = inside {
+            let (r, bar) = (d.rect(DIALOG).await?, d.rect(HANDLE).await?);
+            bail!("{e}: the window is at {r:?}, its title bar at {bar:?}, in {vw}x{vh}");
+        }
+    }
+    Ok(())
 }
 
 async fn arrows_on_the_title_bar<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -883,6 +895,8 @@ async fn a_title_bar_drag<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
+/// `use_drag` cancels the pointerdown and its focus, so the hook focuses the pressed
+/// handle itself (439c).
 async fn drags_leave_the_handle_focused<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     opened(d).await?;
     for handle in [SEPARATOR, HANDLE] {

@@ -243,6 +243,10 @@ fn a_clicked_link_row_takes_focus() {
         )
         .await
         .unwrap();
+        fixture
+            .console
+            .assert_clean("a click on a link row")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }
@@ -477,6 +481,8 @@ fn a_disabled_row_shows_not_allowed_and_takes_no_focus() {
         crate::action_icon::assert_disabled_look(&fixture.page, row).await;
 
         pointer::click(&fixture.page, row).await.unwrap();
+        // A negative: a focus that lands a render later must be seen.
+        crate::settle::painted(&fixture.page).await.unwrap();
         let focused: String = fixture
             .page
             .evaluate("document.activeElement.dataset.treeId ?? document.activeElement.id")
@@ -488,6 +494,21 @@ fn a_disabled_row_shows_not_allowed_and_takes_no_focus() {
             !["off", "tree-off"].contains(&focused.as_str()),
             "a press focused the disabled row: {focused}"
         );
+        // Control: the same press on the enabled row does focus it.
+        pointer::click(&fixture.page, "[data-tree-id=\"on\"]")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "document.activeElement?.dataset.treeId === 'on'",
+            "a press to focus the enabled row",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("a press on a disabled row")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

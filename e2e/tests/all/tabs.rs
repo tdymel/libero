@@ -55,14 +55,16 @@ async fn arrows_wrap_and_jump<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     step(d, keyboard::ARROW_RIGHT, "Account").await
 }
 
-/// Manual mode: Tab leaves from the focused tab, not from the selected one.
+/// Manual mode: the strip is one tab stop wherever focus sits, so Tab leaves from the
+/// focused tab for the panel, not for the selected tab.
 async fn leaves_from_focused_unselected<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(SELECTED).await?;
     d.press(keyboard::END).await?;
     eventually_focused(d, "[role=tablist] > [role=tab]:nth-child(3)", "End").await?;
     selected_is(d, "Account", "End in manual mode").await?;
     d.press(keyboard::TAB).await?;
-    leaves_the_strip(d, "Tab").await?;
+    eventually_focused(d, "[role=tabpanel]", "Tab from the focused tab").await?;
+    selected_is(d, "Account", "Tab out of the strip").await?;
     d.press_shift(keyboard::TAB).await?;
     eventually_focused(d, SELECTED, "Shift+Tab").await
 }
@@ -339,84 +341,6 @@ fn manual_activation_selects_on_enter_and_space() {
         fixture
             .console
             .assert_clean("manual tab activation")
-            .unwrap();
-        fixture.close().await.unwrap();
-    });
-}
-
-/// The strip is one tab stop wherever focus sits: Tab from an unselected tab leaves for the
-/// panel, not the selected tab.
-#[test]
-fn tab_leaves_the_strip_from_a_focused_unselected_tab() {
-    block_on(async {
-        let fixture = Fixture::open("/tabs-manual", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        reset_tab_position(page).await.unwrap();
-        keyboard::press(page, keyboard::TAB).await.unwrap();
-        for key in [keyboard::END, keyboard::ENTER, keyboard::HOME] {
-            keyboard::press(page, key).await.unwrap();
-            settle(&fixture).await;
-        }
-        assert_eq!(focus_and_selection(&fixture).await, "0:2", "before Tab");
-        keyboard::press(page, keyboard::TAB).await.unwrap();
-        settle(&fixture).await;
-        let role: String = page
-            .evaluate(
-                "document.activeElement.getAttribute('role') || document.activeElement.tagName",
-            )
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert_eq!(role, "tabpanel", "Tab from the focused tab");
-
-        fixture
-            .console
-            .assert_clean("tabbing out of the strip")
-            .unwrap();
-        fixture.close().await.unwrap();
-    });
-}
-
-/// Shift+Tab from a clicked disabled tab leaves the strip too, rather than
-/// stopping on the selected tab before it.
-#[test]
-fn shift_tab_leaves_the_strip_from_a_clicked_disabled_tab() {
-    block_on(async {
-        let fixture = Fixture::open("/tabs-disabled", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        pointer::click(page, "[role=tab]:nth-child(2)")
-            .await
-            .unwrap();
-        settle(&fixture).await;
-        assert_eq!(
-            focus_and_selection(&fixture).await,
-            "1:0",
-            "after the click"
-        );
-        keyboard::press_with(page, keyboard::TAB, keyboard::SHIFT)
-            .await
-            .unwrap();
-        settle(&fixture).await;
-        let inside: bool = page
-            .evaluate("!!document.activeElement.closest('[role=tablist]')")
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert!(
-            !inside,
-            "Shift+Tab stayed in the strip: {}",
-            focus_and_selection(&fixture).await
-        );
-
-        fixture
-            .console
-            .assert_clean("shift-tabbing out of the strip")
             .unwrap();
         fixture.close().await.unwrap();
     });

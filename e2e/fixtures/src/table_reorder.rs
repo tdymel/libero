@@ -4,7 +4,8 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Chip, Table, column},
-    hooks::SortableMove,
+    hooks::{SortableMove, use_localization_handle},
+    localization::Localization,
     sx::sx,
 };
 
@@ -12,6 +13,7 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/table-reorder", || rsx! { ReorderTablePage {} }),
+    ("/table-reorder-de", || rsx! { ReorderGermanPage {} }),
     ("/table-reorder-detail", || rsx! { ReorderDetailPage {} }),
     ("/table-reorder-windowed", || rsx! { ReorderWindowedPage {} }),
     ("/table-column-drag", || rsx! { ColumnDragPage {} }),
@@ -36,6 +38,14 @@ fn fruit() -> Vec<Fruit> {
             origin,
         })
         .collect()
+}
+
+/// The same table in German, for the column menu's announcements (todo 2049).
+#[component]
+fn ReorderGermanPage() -> Element {
+    let localization = use_localization_handle();
+    use_effect(move || localization.set(&Localization::GERMAN));
+    rsx! { ReorderTablePage {} }
 }
 
 #[component]

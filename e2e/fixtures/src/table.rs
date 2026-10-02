@@ -45,6 +45,10 @@ pub const ROUTES: Routes = &[
         || rsx! { PinnedTablePage { rtl: true } },
     ),
     (
+        "/table/pinned-unsized",
+        || rsx! { PinnedTablePage { rtl: false, sized: false } },
+    ),
+    (
         "/table/windowed",
         || rsx! { WindowedTablePage { pinned: false } },
     ),
@@ -482,9 +486,9 @@ fn StickySelectPage() -> Element {
 
 /// The wide table, selectable with column menus: Name pinned to the start,
 /// Supplier to the end; `#pinned` echoes `onpinnedcolumnschange`. `rtl` sets
-/// `dir="rtl"` around it.
+/// `dir="rtl"` around it. Without `sized` no column declares a width (todo 2047).
 #[component]
-fn PinnedTablePage(rtl: bool) -> Element {
+fn PinnedTablePage(rtl: bool, #[props(default = true)] sized: bool) -> Element {
     let mut pinned = use_signal(String::new);
     let headers = [
         "Name", "Origin", "Season", "Colour", "Taste", "Storage", "Price", "Supplier",
@@ -492,9 +496,9 @@ fn PinnedTablePage(rtl: bool) -> Element {
     let columns = headers
         .into_iter()
         .map(|header| {
-            column(header)
-                .value(move |fruit: &Fruit| format!("{}_{header}_description", fruit.name))
-                .width("240px")
+            let column = column(header)
+                .value(move |fruit: &Fruit| format!("{}_{header}_description", fruit.name));
+            if sized { column.width("240px") } else { column }
         })
         .collect();
     rsx! {

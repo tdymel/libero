@@ -574,27 +574,40 @@ fn the_scroll_lock_keeps_the_scrollbar_gutter() {
         let before = width().await;
         let gutter: f64 = page.evaluate(GUTTER).await.unwrap().into_value().unwrap();
         assert!(gutter > 0.0, "no classic scrollbar to test with");
+        let (w, _) = Viewport::Desktop.size();
+        let (strip_x, backdrop_x) = (w as f64 - 2.0, w as f64 - gutter - 20.0);
+        let undimmed = pixel(page, backdrop_x, 600.0).await;
 
         keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         wait::for_js_true(
             page,
-            "getComputedStyle(document.body).overflow === 'hidden'",
-            "the scroll lock",
+            &format!(
+                "getComputedStyle(document.body).overflow === 'hidden' \
+                 && !!document.elementFromPoint({backdrop_x}, 600)?.closest('[data-lsx-scroll-lock]')"
+            ),
+            "the scroll lock and the backdrop",
         )
         .await
         .unwrap();
         let open = width().await;
         assert_eq!(open, before, "the page shifted on open (gutter {gutter}px)");
         // Todo 1316: the backdrop dims the scrollbar's old strip too. Compared by
-        // paint: hit testing skips a `scrollbar-gutter`.
-        let (w, _) = Viewport::Desktop.size();
-        let strip = pixel(page, w as f64 - 2.0, 600.0).await;
-        let backdrop = pixel(page, w as f64 - gutter - 20.0, 600.0).await;
-        assert!(
-            strip == backdrop,
-            "the {gutter}px scrollbar strip is not dimmed by the backdrop"
-        );
+        // paint: hit testing skips a `scrollbar-gutter`. Control: the backdrop dims at all.
+        let undimmed = undimmed.as_slice();
+        let painted = wait::until(
+            "the backdrop to dim the page and the strip",
+            || async move {
+                let backdrop = pixel(page, backdrop_x, 600.0).await;
+                Ok(backdrop != undimmed && pixel(page, strip_x, 600.0).await == backdrop)
+            },
+        )
+        .await;
+        if painted.is_err() {
+            let backdrop = pixel(page, backdrop_x, 600.0).await;
+            assert!(backdrop != undimmed, "the backdrop does not dim the page");
+            panic!("the {gutter}px scrollbar strip is not dimmed by the backdrop");
+        }
 
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_js_true(
