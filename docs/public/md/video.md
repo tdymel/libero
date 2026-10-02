@@ -11,6 +11,25 @@ speed, captions and fullscreen, in a bar over the picture as YouTube's, in the
 theme's look on every platform that plays media. `use_media()` drives the same engine for a
 layout of your own: see [use_media](use_media.md).
 
+A browser plays the first `sources` entry whose type it supports, then `src`.
+WebM first and an MP4 as `src` reach every browser, Safari included.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{MediaSource, Video};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Video {
+            src: "/launch.mp4",
+            sources: vec![MediaSource::new("/launch.webm", "video/webm")],
+            label: "Launch day",
+        }
+    }
+}
+```
+
 The demo plays "Big Buck Bunny", (c) 2008 Blender Foundation,
 <https://peach.blender.org>, under CC BY 3.0, streamed from Wikimedia Commons,
 so it plays only online. Its English track is one placeholder caption, not the
@@ -45,27 +64,6 @@ fn Demo() -> Element {
 A captions or subtitles track enables the captions button: it shows the
 default one, else the first. Without one the button stays, disabled. Pass a `use_media()` handle to `Video { media }` to drive
 the player from outside.
-
-### Several formats
-
-A browser plays the first `sources` entry whose type it supports, then `src`.
-WebM first and an MP4 as `src` reach every browser, Safari included.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{MediaSource, Video};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Video {
-            src: "/launch.mp4",
-            sources: vec![MediaSource::new("/launch.webm", "video/webm")],
-            label: "Launch day",
-        }
-    }
-}
-```
 
 ## Props
 

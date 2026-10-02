@@ -58,7 +58,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `xs` | Line thickness. |
 | `label_position` | `LabelPosition` | `center` | Where the label sits along the rule: `center`, `start` or `end`. |
 | `spacing` | `ThemeAwareValue` | `none` | Margin on both sides of the rule, a spacing step or a CSS length. |
-| `color` | `ThemeAwareValue` | `muted.4` | Line color. A bare theme color like `blue` resolves to its shade 3. |
+| `color` | `ThemeAwareValue` | `muted.4` | Line color. A bare theme color like `primary` resolves to its shade 3. |
 | `children` | `Element` | - | An optional label in the line. |
 | `parts` | `Parts<DividerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 

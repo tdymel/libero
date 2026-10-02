@@ -278,7 +278,11 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "FileData" }
                     " like a picked file. Options apply on the next "
                     Code { source: "start()" }
-                    "."
+                    ". "
+                    Code { source: "camera_permission()" }
+                    " and "
+                    Code { source: "microphone_permission()" }
+                    " read the permission state, kept current where the platform reports changes."
                 }
                 Text {
                     Code { source: "use_user_media_devices()" }
@@ -286,7 +290,9 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "cameras()" }
                     " and "
                     Code { source: "microphones()" }
-                    "; labels and ids fill in once a start is granted. "
+                    ", kept current as devices come and go, and "
+                    Code { source: "refresh()" }
+                    " lists them again; labels and ids fill in once a start is granted. "
                     Code { source: "switch_camera(id)" }
                     " reopens a live stream on another camera, "
                     Code { source: "camera_id()" }

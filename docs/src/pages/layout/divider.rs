@@ -48,7 +48,7 @@ pub fn DividerPage() -> Element {
                     .doc("Margin on both sides of the rule, a spacing step or a CSS length."),
                 prop("color", "ThemeAwareValue")
                     .default("muted.4")
-                    .doc("Line color. A bare theme color like `blue` resolves to its shade 3."),
+                    .doc("Line color. A bare theme color like `primary` resolves to its shade 3."),
                 prop("children", "Element")
                     .doc("An optional label in the line."),
                 prop("parts", "Parts<DividerPart>")

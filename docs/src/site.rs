@@ -5,8 +5,15 @@ pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
 pub(crate) static LOGO_INLINE: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
     include_str!("../assets/logo.svg").replace("#228be6", "currentColor")
 });
+// A macro, so `concat!` builds the repository addresses from it.
+macro_rules! github_owner {
+    () => {
+        "https://github.com/tdymel"
+    };
+}
 pub(crate) const REPO: &str = "tdymel/libero";
-pub(crate) const GITHUB: &str = "https://github.com/tdymel/libero";
+pub(crate) const GITHUB: &str = concat!(github_owner!(), "/libero");
+pub(crate) const PICTOGRAM_REPO: &str = concat!(github_owner!(), "/pictogram");
 /// A repo-relative path's page on GitHub, at `main`.
 pub(crate) fn github_tree(path: &str) -> String {
     format!("{GITHUB}/tree/main/{path}")

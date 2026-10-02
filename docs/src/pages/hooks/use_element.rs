@@ -1,5 +1,5 @@
 use crate::Route;
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
+use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Box, Button, Code, Flex, Text},
@@ -117,18 +117,6 @@ pub fn UseElementPage() -> Element {
                     Anchor { to: Route::PlatformPage {}, "Platform" }
                     "."
                 }
-            },
-
-            Demo {
-                component: "use_element",
-                children_text: "",
-                controls: Vec::new(),
-                render: move |_: DemoValues| rsx! { Measure {} },
-                wrap: Wrap(code),
-            }
-
-            DocSection {
-                title: "Web and native",
                 Text {
                     "The handle picks the richest backing the renderer offers: the DOM "
                     "element on the web, a Blitz node natively (the "
@@ -142,8 +130,22 @@ pub fn UseElementPage() -> Element {
                     Code { source: "is_focused()" }
                     " always answers "
                     Code { source: "false" }
-                    "."
+                    ". Where a webview has to find the element, as "
+                    Code { source: "use_intersection" }
+                    "'s "
+                    Code { source: "root" }
+                    ", spread "
+                    Code { source: "..handle.attributes()" }
+                    " on it; on the web and Blitz they are empty."
                 }
+            },
+
+            Demo {
+                component: "use_element",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { Measure {} },
+                wrap: Wrap(code),
             }
         }
     }

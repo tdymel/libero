@@ -18,6 +18,10 @@ component's scope, so it may write signals, spawn or read elements. A server
 render never fires it. Natively every interval tick costs a thread, so keep the
 period to a second or more.
 
+The stopwatch below reads a clock, not the count of ticks, so a late tick loses
+no time. The clock is the `web-time` crate's `Instant`: `std::time::Instant`
+panics on wasm.
+
 ## Usage
 
 ```rust
@@ -26,22 +30,37 @@ use libero::{
     components::{Button, Flex, Text},
     hooks::{use_interval, use_timeout},
 };
+use web_time::Instant;
 
 #[component]
 fn Stopwatch() -> Element {
+    let mut since = use_signal(|| None::<Instant>);
+    let mut banked = use_signal(|| 0.0);
     let mut seconds = use_signal(|| 0);
-    let mut laps = use_signal(Vec::new);
+    let mut laps = use_signal(Vec::<f64>::new);
     let mut saved = use_signal(|| false);
-    let interval = use_interval(move || seconds += 1, 1000);
+    // Reads the clock, so a late tick loses no time.
+    let elapsed = move || banked() + since().map_or(0.0, |at: Instant| at.elapsed().as_secs_f64());
+    let interval = use_interval(move || seconds.set(elapsed() as u64), 1000);
     let flash = use_timeout(move || saved.set(false), 2000);
-    let list = laps.read().iter().map(|lap| format!("{lap} s")).collect::<Vec<_>>().join(", ");
+    let list = laps.read().iter().map(|lap| format!("{lap:.1} s")).collect::<Vec<_>>().join(", ");
 
     rsx! {
         Flex { direction: "column", align: "flex-start", gap: "sm",
             Text { "{seconds} s" }
             Flex { gap: "sm",
                 Button {
-                    onclick: move |_| interval.toggle(),
+                    onclick: move |_| {
+                        match since() {
+                            Some(at) => {
+                                banked.set(banked() + at.elapsed().as_secs_f64());
+                                since.set(None);
+                                seconds.set(banked() as u64);
+                            }
+                            None => since.set(Some(Instant::now())),
+                        }
+                        interval.toggle();
+                    },
                     if interval.active() {
                         "Stop"
                     } else {
@@ -51,7 +70,7 @@ fn Stopwatch() -> Element {
                 Button {
                     variant: "outlined",
                     onclick: move |_| {
-                        laps.push(seconds());
+                        laps.push(elapsed());
                         saved.set(true);
                         flash.start();
                     },

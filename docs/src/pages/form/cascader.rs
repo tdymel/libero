@@ -3,7 +3,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, 
 use dioxus::prelude::*;
 use libero::components::CascaderPart;
 use libero::{
-    components::{Cascader, CascaderOption, Code, FieldStatus, Flex, Text},
+    components::{Cascader, CascaderNodeArgs, CascaderOption, Code, FieldStatus, Flex, Text},
     sx::sx,
 };
 
@@ -39,6 +39,55 @@ const DATA_CODE: &str = r#"fn categories() -> Vec<CascaderOption<String>> {
 /// What a value looks like: one option's value. The path to it is the
 /// cascader's to find.
 const CHOSEN: &str = r#"let mut chosen = use_signal(|| Some("tea".to_string()));"#;
+
+/// Uses every `CascaderNodeArgs` flag: an icon on the roots, the expanded branch bold, a check on
+/// the committed option.
+// snippet: after DATA_CODE
+// snippet: let mut chosen = use_signal(|| Some("tea".to_string()));
+// snippet: in Cascader { data: categories(), value: chosen(), onchange: move |next: Option<String>| chosen.set(next), aria_label: "Category", .. }
+const CUSTOM_NODE: &str = r#"node: move |n: CascaderNodeArgs<String>| {
+    let icon = match n.value.as_str() {
+        "food" => "🍽️",
+        "drink" => "🥤",
+        _ => "🧽",
+    };
+    rsx! {
+        // Decoration, hidden from screen readers: the row reads as its label.
+        if n.level == 0 {
+            span { "aria-hidden": "true", "{icon} " }
+        }
+        Text {
+            component: "span",
+            sx: sx().font_weight(if n.expanded { "600" } else { "inherit" }),
+            "{n.label}"
+        }
+        if n.selected {
+            span { "aria-hidden": "true", " ✓" }
+        }
+    }
+}"#;
+
+/// The demo's `node`, as `CUSTOM_NODE` prints it.
+fn category_node(n: CascaderNodeArgs<String>) -> Element {
+    let icon = match n.value.as_str() {
+        "food" => "🍽️",
+        "drink" => "🥤",
+        _ => "🧽",
+    };
+    rsx! {
+        if n.level == 0 {
+            span { "aria-hidden": "true", "{icon} " }
+        }
+        Text {
+            component: "span",
+            sx: sx().font_weight(if n.expanded { "600" } else { "inherit" }),
+            "{n.label}"
+        }
+        if n.selected {
+            span { "aria-hidden": "true", " ✓" }
+        }
+    }
+}
 
 fn categories() -> Vec<CascaderOption<String>> {
     vec![
@@ -239,6 +288,11 @@ pub fn CascaderPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    // Draws the rows through `node`.
+                    Control::switch("node").code(|_, values| match values.str("node").as_str() {
+                        "true" => vec![CUSTOM_NODE.to_string()],
+                        _ => vec![],
+                    }),
                     Control::switch("searchable"),
                     Control::switch("any_level"),
                     Control::switch("allow_deselect"),
@@ -265,6 +319,7 @@ pub fn CascaderPage() -> Element {
                                 "error" => FieldStatus::Error("Pick a category.".to_string()),
                                 _ => FieldStatus::Valid,
                             },
+                            node: (values.str("node") == "true").then(|| Callback::new(category_node)),
                             searchable: (values.str("searchable") == "true").then_some(true),
                             any_level: (values.str("any_level") == "true").then_some(true),
                             allow_deselect: (values.str("allow_deselect") == "true").then_some(true),

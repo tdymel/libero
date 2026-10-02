@@ -164,7 +164,7 @@ const PLAIN_ROW: &str = r#"        "{o.value.label()}""#;
 // snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
 // snippet: let fruit = use_combobox();
 // snippet: in Combobox { state: fruit, options: Fruit::options().to_vec(), option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. } } }
-const RICH_ROW: &str = r#"        Text { component: "span", size: "xl", "{o.value.emoji()}" }
+const RICH_ROW: &str = r#"        Text { component: "span", size: "xl", "aria-hidden": "true", "{o.value.emoji()}" }
         Flex {
             direction: "column",
             justify: "center",
@@ -292,7 +292,7 @@ impl Fruit {
 fn RowContent(fruit: Fruit, rich: bool) -> Element {
     rsx! {
         if rich {
-            Text { component: "span", size: "xl", "{fruit.emoji()}" }
+            Text { component: "span", size: "xl", "aria-hidden": "true", "{fruit.emoji()}" }
             Flex {
                 direction: "column",
                 justify: "center",

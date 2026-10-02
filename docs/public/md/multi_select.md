@@ -42,17 +42,19 @@ fn Demo() -> Element {
 
 `selection` draws one selected value and replaces the default chip, remove
 control included, so a custom chip wires `s.remove` itself. `option` works as on
-`Select`, and its `selected` flag is there for a checkmark:
+`Select`, and its `selected` flag is there for a checkmark. The emoji and the
+checkmark are decoration, hidden from screen readers so the row reads as its
+label alone:
 
 ```rust,ignore
 MultiSelect {
     value: value(),
     onchange: move |next| value.set(next),
     option: move |o: SelectOptionArgs<Topping>| rsx! {
-        Text { component: "span", size: "lg", "{o.value.emoji()}" }
+        Text { component: "span", size: "lg", "aria-hidden": "true", "{o.value.emoji()}" }
         Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
         if o.selected {
-            Text { component: "span", "✓" }
+            Text { component: "span", "aria-hidden": "true", "✓" }
         }
     },
     selection: move |s: SelectionArgs<Topping>| rsx! {
@@ -75,7 +77,8 @@ MultiSelect {
                     }
                 }
             },
-            "{s.value.emoji()} {s.value.label()}"
+            span { "aria-hidden": "true", "{s.value.emoji()} " }
+            "{s.value.label()}"
         }
     },
 }
@@ -128,7 +131,7 @@ MultiSelect {
 | `name` | `FieldName<Vec<T>>` | - | Posts each selected option's `Options::value()` under this name. A path such as `Order::FIELDS.toppings()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<Vec<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. |
-| `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. `selected` on the args is there for a checkmark. |
+| `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. `selected` on the args is there for a checkmark. Hide a decorative glyph such as an emoji or the checkmark with `aria-hidden`, or a screen reader reads it with the label. |
 | `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value in the trigger, remove control included. `remove` on the args drops that value. |
 | `placeholder` | `String` | - | Shown while `value` is empty. |
 | `clearable` | `bool` | `false` | Shows an x in place of the chevron that empties the selection. |

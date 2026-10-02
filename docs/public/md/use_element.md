@@ -17,6 +17,14 @@ mounts, every call answers `PlatformError::Unsupported`. `is_mounted()` is
 reactive, so an effect that reads it runs again once the element is there. The
 full method list is on [Platform](platform.md).
 
+The handle picks the richest backing the renderer offers: the DOM element on the
+web, a Blitz node natively (the `native` feature), and dioxus's portable mounted
+data in a webview. A webview still measures, scrolls and focuses, but
+`query_selector` answers `Unsupported` there, and `is_focused()` always answers
+`false`. Where a webview has to find the element, as `use_intersection`'s
+`root`, spread `..handle.attributes()` on it; on the web and Blitz they are
+empty.
+
 ## Usage
 
 ```rust
@@ -59,14 +67,6 @@ fn Measure() -> Element {
 }
 ```
 
-## Web and native
-
-The handle picks the richest backing the renderer offers: the DOM element on the
-web, a Blitz node natively (the `native` feature), and dioxus's portable mounted
-data in a webview. A webview still measures, scrolls and focuses, but
-`query_selector` answers `Unsupported` there, and `is_focused()` always answers
-`false`.
-
 ## Accessibility
 
 ### Libero handles
@@ -93,6 +93,7 @@ pub fn use_element() -> ElementHandle
 |---|---|---|
 | `mount()` | `impl FnMut(Event<MountedData>)` | The `onmounted` handler that fills the handle in. |
 | `is_mounted()` | `bool` | Reactive: an effect reading it re-runs once the element mounts. |
+| `attributes()` | `Vec<Attribute>` | Spread on the element (`..handle.attributes()`) where a webview has to find it, as `use_intersection`'s `root`. Empty on the web and Blitz. |
 
 `ElementHandle` is `Copy` and `PartialEq`, and implements `ElementApi`. See
 [platform.md](platform.md) for its methods.

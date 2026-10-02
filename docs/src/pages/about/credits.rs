@@ -1,4 +1,5 @@
 use crate::components::{DocPage, DocSection};
+use crate::site::PICTOGRAM_REPO;
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Code, Table, Text, column},
@@ -19,7 +20,7 @@ const CREDITS: [Row; 9] = [
         "pictogram",
         "Carries the Lucide icons and the Lobe and Simple Icons marks as Rust data.",
         "MIT OR Apache-2.0",
-        "https://github.com/tdymel/pictogram",
+        PICTOGRAM_REPO,
     ),
     (
         "Lobe Icons",

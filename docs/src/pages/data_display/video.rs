@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Code, CodeBlock, Input, MediaTrack, Text, TrackKind, Video, VideoPart},
@@ -119,6 +119,16 @@ pub fn VideoPage() -> Element {
                     " drives the same engine for a layout of your own."
                 }
                 Text {
+                    "A browser plays the first "
+                    Code { source: "sources" }
+                    " entry whose type it supports, then "
+                    Code { source: "src" }
+                    ". WebM first and an MP4 as "
+                    Code { source: "src" }
+                    " reach every browser, Safari included."
+                }
+                CodeBlock { source: FORMATS, language: "rust" }
+                Text {
                     "The demo plays \"Big Buck Bunny\", (c) 2008 Blender Foundation, "
                     Anchor { to: "https://peach.blender.org", target: "_blank", "peach.blender.org" }
                     ", under CC BY 3.0, streamed from Wikimedia Commons, so it plays only online. "
@@ -166,19 +176,6 @@ pub fn VideoPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection {
-                title: "Several formats",
-                Text {
-                    "A browser plays the first "
-                    Code { source: "sources" }
-                    " entry whose type it supports, then "
-                    Code { source: "src" }
-                    ". WebM first and an MP4 as "
-                    Code { source: "src" }
-                    " reach every browser, Safari included."
-                }
-                CodeBlock { source: FORMATS, language: "rust" }
             }
         }
     }

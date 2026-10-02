@@ -58,10 +58,10 @@ const TOPPING_IMPL: &str = r#"impl Topping {
 // snippet: let mut value = use_signal(Vec::<Topping>::new);
 // snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
 const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! {
-    Text { component: "span", size: "lg", "{o.value.emoji()}" }
+    Text { component: "span", size: "lg", "aria-hidden": "true", "{o.value.emoji()}" }
     Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
     if o.selected {
-        Text { component: "span", "✓" }
+        Text { component: "span", "aria-hidden": "true", "✓" }
     }
 }"#;
 
@@ -91,7 +91,8 @@ const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rs
                 }
             }
         },
-        "{s.value.emoji()} {s.value.label()}"
+        span { "aria-hidden": "true", "{s.value.emoji()} " }
+        "{s.value.label()}"
     }
 }"#;
 
@@ -103,7 +104,8 @@ const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rs
 const CUSTOM_SELECTION_DISABLED: &str = r#"selection: move |s: SelectionArgs<Topping>| rsx! {
     // The field is disabled, so the chip has no remove control.
     Chip { size: "xs", variant: "outlined",
-        "{s.value.emoji()} {s.value.label()}"
+        span { "aria-hidden": "true", "{s.value.emoji()} " }
+        "{s.value.label()}"
     }
 }"#;
 
@@ -232,10 +234,10 @@ fn topping_filter(f: SelectFilterArgs<Topping>) -> bool {
 /// A checkmark as well as the tint: `selected` is on the args for exactly this.
 fn topping_row(o: SelectOptionArgs<Topping>) -> Element {
     rsx! {
-        Text { component: "span", size: "lg", "{o.value.emoji()}" }
+        Text { component: "span", size: "lg", "aria-hidden": "true", "{o.value.emoji()}" }
         Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
         if o.selected {
-            Text { component: "span", "✓" }
+            Text { component: "span", "aria-hidden": "true", "✓" }
         }
     }
 }
@@ -251,7 +253,10 @@ fn topping_selection(
     let remove_label = fill(words.common.remove, &[("label", &label)]);
     if disabled {
         return rsx! {
-            Chip { size: "xs", variant: "outlined", "{s.value.emoji()} {label}" }
+            Chip { size: "xs", variant: "outlined",
+                span { "aria-hidden": "true", "{s.value.emoji()} " }
+                "{label}"
+            }
         };
     }
     rsx! {
@@ -270,7 +275,8 @@ fn topping_selection(
                     }
                 }
             },
-            "{s.value.emoji()} {label}"
+            span { "aria-hidden": "true", "{s.value.emoji()} " }
+            "{label}"
         }
     }
 }
@@ -304,7 +310,7 @@ pub fn MultiSelectPage() -> Element {
                         .doc("Narrows or reorders the list. A runtime set goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches."),
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
-                        .doc("Draws one row's content. `selected` on the args is there for a checkmark."),
+                        .doc("Draws one row's content. `selected` on the args is there for a checkmark. Hide a decorative glyph such as an emoji or the checkmark with `aria-hidden`, or a screen reader reads it with the label."),
                     prop("selection", "Callback<SelectionArgs<T>, Element>")
                         .default("Chip with an x")
                         .doc("Draws one selected value in the trigger, remove control included. `remove` on the args drops that value. The args carry no `disabled` or `readonly`, so leave the remove control out when you set either."),

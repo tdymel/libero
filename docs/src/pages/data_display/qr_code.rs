@@ -1,11 +1,11 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::site::GITHUB as DATA;
 use dioxus::prelude::*;
 use libero::{
     components::{Code, QrCode, Text},
     sx::sx,
 };
 
-const DATA: &str = "https://github.com/tdymel/libero";
 const LABEL: &str = "The libero repository on GitHub";
 
 #[component]

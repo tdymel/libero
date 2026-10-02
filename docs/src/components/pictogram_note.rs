@@ -1,7 +1,6 @@
+use crate::site::PICTOGRAM_REPO;
 use dioxus::prelude::*;
 use libero::components::{Anchor, Text};
-
-pub const PICTOGRAM_REPO: &str = "https://github.com/tdymel/pictogram";
 
 /// The pictogram promo at the top of the Icon, ActionIcon, Pictogram and IconProvider pages.
 #[component]

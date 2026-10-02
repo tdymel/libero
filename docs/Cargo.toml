@@ -26,6 +26,8 @@ pictogram-icons-lucide = "0.5"
 serde_json = "1"
 # The GitHub and Markdown marks on every page's source and markdown links.
 pictogram-icons-simple = "0.5"
+# The use_timers stopwatch's clock: `std::time::Instant` panics on wasm. Already in the graph.
+web-time = "1.1"
 # `dioxus/native` would pull this in with its default features, and its
 # default renderer (`vello-hybrid`) can't be switched off from here - so
 # `native-cpu` depends on it directly, with the default set minus the

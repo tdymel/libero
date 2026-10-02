@@ -64,6 +64,39 @@ Values must be unique across the whole tree, not just among siblings. The
 cascader finds its value by searching the tree with `==`, and a value no option
 holds selects nothing and warns. The hidden input posts `Options::value()`.
 
+`node` draws a row's content from `CascaderNodeArgs`: its `level` (0 for a
+root), whether it is `expanded` and whether it is `selected`. The highlight,
+chevron and click stay the component's. In `"paths"` it draws each level of the
+path. The icon and the check are decoration, hidden from screen readers:
+
+```rust,ignore
+Cascader {
+    data: categories(),
+    value: chosen(),
+    onchange: move |next: Option<String>| chosen.set(next),
+    node: move |n: CascaderNodeArgs<String>| {
+        let icon = match n.value.as_str() {
+            "food" => "🍽️",
+            "drink" => "🥤",
+            _ => "🧽",
+        };
+        rsx! {
+            if n.level == 0 {
+                span { "aria-hidden": "true", "{icon} " }
+            }
+            Text {
+                component: "span",
+                sx: sx().font_weight(if n.expanded { "600" } else { "inherit" }),
+                "{n.label}"
+            }
+            if n.selected {
+                span { "aria-hidden": "true", " ✓" }
+            }
+        }
+    },
+}
+```
+
 ## Props
 
 ### `Cascader`

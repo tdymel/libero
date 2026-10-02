@@ -150,7 +150,8 @@ pub fn ScrollerPage() -> Element {
             properties: vec![
                 props("Scroller", vec![
                     prop("aria_label", "String")
-                        .doc("Required. Names the strip, a tab stop while it overflows with nothing focusable inside."),
+                        .default("required")
+                        .doc("Names the strip, a tab stop while it overflows with nothing focusable inside."),
                     prop("scroll_amount", "u32")
                         .default(theme.scroller.scroll_amount.to_string())
                         .doc("Pixels one control press scrolls."),
