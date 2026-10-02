@@ -240,6 +240,57 @@ fn a_click_on_the_dialog_text_keeps_escape_and_the_trap() {
 }
 
 const MENU_ITEM: &str = "[role=menuitem]";
+const MENU_TRIGGER: &str = "[role=dialog] [aria-haspopup=menu]";
+
+/// Android's Back or Escape, the key that closes the top layer.
+#[derive(Clone, Copy, PartialEq)]
+enum Dismiss {
+    Back,
+    Escape,
+}
+
+impl Dismiss {
+    async fn press<D: Driver>(self, d: &mut D) -> Result<()> {
+        match self {
+            Dismiss::Back => d.press_back().await,
+            Dismiss::Escape => d.press(keyboard::ESCAPE).await,
+        }
+    }
+}
+
+/// A menu in a dialog: the first dismissal closes only the menu, the second the
+/// dialog. On web focus also returns to the menu's trigger and Tab stays trapped (1805).
+async fn the_menu_closes_before_its_dialog<D: Driver>(d: &mut D, key: Dismiss) -> Result<()> {
+    open(d, TRIGGER).await?;
+    d.click(MENU_TRIGGER).await?;
+    eventually(d, "the menu to open", async |d| d.exists(MENU_ITEM).await).await?;
+    key.press(d).await?;
+    eventually(d, "the first dismissal to close the menu", async |d| {
+        Ok(!d.exists(MENU_ITEM).await?)
+    })
+    .await?;
+    d.settle().await?;
+    ensure!(
+        d.exists(DIALOG).await?,
+        "one dismissal closed the dialog too"
+    );
+    if key == Dismiss::Escape {
+        eventually_focused(d, MENU_TRIGGER, "Escape on the menu").await?;
+        for step in 0..4 {
+            d.press(keyboard::TAB).await?;
+            assert_inside(d, &format!("Tab {step} after the menu closed")).await?;
+        }
+    }
+    key.press(d).await?;
+    eventually(d, "a second dismissal to close the dialog", async |d| {
+        Ok(!d.exists(DIALOG).await?)
+    })
+    .await?;
+    if key == Dismiss::Escape {
+        eventually_focused(d, TRIGGER, "closing the dialog").await?;
+    }
+    Ok(())
+}
 
 /// Android's Back closes the top layer, a menu before its dialog, and the app
 /// stays (1275). Only Android has the key.
@@ -251,21 +302,7 @@ async fn back_closes_the_top_layer<D: Driver>(d: &mut D, _route: &str) -> Result
     })
     .await?;
 
-    open(d, TRIGGER).await?;
-    d.click("[role=dialog] [aria-haspopup=menu]").await?;
-    eventually(d, "the menu to open", async |d| d.exists(MENU_ITEM).await).await?;
-    d.press_back().await?;
-    eventually(d, "Back to close the menu", async |d| {
-        Ok(!d.exists(MENU_ITEM).await?)
-    })
-    .await?;
-    d.settle().await?;
-    ensure!(d.exists(DIALOG).await?, "one Back closed the dialog too");
-    d.press_back().await?;
-    eventually(d, "a second Back to close the dialog", async |d| {
-        Ok(!d.exists(DIALOG).await?)
-    })
-    .await?;
+    the_menu_closes_before_its_dialog(d, Dismiss::Back).await?;
     // Still in the app: the page answers.
     ensure!(
         d.exists(TRIGGER).await?,
@@ -279,6 +316,18 @@ e2e::scenario!(
     "/modal/menu",
     back_closes_the_top_layer,
     android_only("1275: no Back key off Android")
+);
+
+async fn escape_closes_the_menu_first<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    the_menu_closes_before_its_dialog(d, Dismiss::Escape).await
+}
+
+e2e::scenario!(
+    escape_in_a_modal_menu_closes_only_the_menu,
+    "/modal/menu",
+    escape_closes_the_menu_first,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
 );
 
 async fn eval_bool(page: &chromiumoxide::Page, js: &str) -> bool {
@@ -399,39 +448,19 @@ fn a_dialog_taller_than_the_viewport_stays_reachable() {
             keyboard::tab_to(page, TRIGGER, 3).await.unwrap();
             keyboard::press(page, keyboard::ENTER).await.unwrap();
             wait::for_visible(page, DIALOG).await.unwrap();
-            let probe: String = page
-                .evaluate(
-                    "(() => { const r = document.querySelector('[role=dialog]').getBoundingClientRect(); \
-                     const a = document.querySelector('#accept'); a.focus(); const b = a.getBoundingClientRect(); \
-                     return JSON.stringify({top: r.top, bottom: r.bottom, vh: innerHeight, acceptTop: b.top, acceptBottom: b.bottom}); })()",
-                )
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
-            let probe: serde_json::Value = serde_json::from_str(&probe).unwrap();
-            let at = |key: &str| probe[key].as_f64().unwrap();
             let name = viewport.name();
-            assert!(
-                at("acceptBottom") <= at("vh"),
-                "Accept is below the fold at {name}: {probe}"
-            );
-            assert!(
-                at("acceptTop") >= 0.0,
-                "Accept is above the fold at {name}: {probe}"
-            );
-            // Scrolled back up, the title and the close button are on screen.
-            let top_reachable = eval_bool(
+            assert_reachable(
                 page,
-                "(() => { const d = document.querySelector('[role=dialog]'); \
-                 for (let el = d.parentElement; el; el = el.parentElement) el.scrollTop = 0; \
-                 return d.getBoundingClientRect().top >= 0; })()",
+                "document.querySelector('#accept')",
+                &format!("Accept at {name}"),
             )
             .await;
-            assert!(
-                top_reachable,
-                "the dialog's top is clipped at {name}: {probe}"
-            );
+            assert_reachable(
+                page,
+                "document.querySelector('[role=dialog] button[aria-label]')",
+                &format!("the close button at {name}"),
+            )
+            .await;
             fixture.close().await.unwrap();
         }
     });

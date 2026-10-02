@@ -1311,15 +1311,23 @@ fn a_column_menu_sorts_hides_and_shows_columns() {
         // Todo 1260: with a mouse, the menu button shows on its header's hover or focus.
         const STOCK_MENU: &str = "button[aria-label=\"Stock column options\"]";
         // Headless Chromium has no hover-capable pointer and CDP cannot emulate
-        // one: match the fine-pointer rule's selector by hand.
+        // one: copy the fine-pointer rules out of their query, read the computed opacity.
+        wait::for_js_true(
+            page,
+            "(() => { const all = rs => [...rs].flatMap(r => [r, ...all(r.cssRules ?? [])]); \
+             const query = [...document.styleSheets, ...document.adoptedStyleSheets] \
+             .flatMap(s => all(s.cssRules)).find(r => r.conditionText?.includes('pointer: fine')); \
+             if (!query) return false; \
+             const style = document.createElement('style'); \
+             style.textContent = [...query.cssRules].map(r => r.cssText).join('\\n'); \
+             document.head.append(style); return true; })()",
+            "the fine-pointer rules copied out of their query",
+        )
+        .await
+        .unwrap();
         let menu_opacity = |expected: &str| {
             format!(
-                "(() => {{ const all = rs => [...rs].flatMap(r => [r, ...all(r.cssRules ?? [])]); \
-                 const rule = [...document.styleSheets, ...document.adoptedStyleSheets] \
-                 .flatMap(s => all(s.cssRules)) \
-                 .find(r => r.conditionText?.includes('pointer: fine')).cssRules[0]; \
-                 const faded = document.querySelector({STOCK_MENU:?}).matches(rule.selectorText) \
-                 && rule.style.opacity === '0'; return (faded ? '0' : '1') === {expected:?}; }})()"
+                "getComputedStyle(document.querySelector({STOCK_MENU:?})).opacity === {expected:?}"
             )
         };
         wait::for_js_true(page, &menu_opacity("0"), "the idle menu button faded")
@@ -1489,7 +1497,8 @@ fn pinned_columns_hold_at_their_edges_in_both_directions() {
                      return [near(select[0], start), near(name[0], select[1]), \
                        near(supplier[1], end), rtl ? origin[0] > name[0] : origin[0] < name[0], \
                        cell.contains(hit), bg === getComputedStyle(cell.parentElement).backgroundColor, \
-                       bg !== 'rgba(0, 0, 0, 0)', \
+                       (() => {{ const x = document.createElement('canvas').getContext('2d'); \
+                         x.fillStyle = bg; x.fillRect(0, 0, 1, 1); return x.getImageData(0, 0, 1, 1).data[3] === 255; }})(), \
                        getComputedStyle(document.querySelector('th[aria-label=Name]')).zIndex === '3' \
                        && getComputedStyle(document.querySelector('th[aria-label=Origin]')).zIndex === '2' \
                        && getComputedStyle(cell).zIndex === '1'].join('|') + ' ' + JSON.stringify([start, end, select, name, supplier]); }})()"

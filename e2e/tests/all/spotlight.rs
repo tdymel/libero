@@ -198,6 +198,115 @@ fn the_arrows_move_the_highlight_and_enter_runs_it() {
     });
 }
 
+/// Some status region says `text`.
+fn status_says(text: &str) -> String {
+    format!(
+        "[...document.querySelectorAll('[role=dialog] [role=status]')].some(e => e.textContent.includes({text:?}))"
+    )
+}
+
+/// WCAG 4.1.3 (todo 1810): a query matching nothing is shown and said, focus stays
+/// in the search box, and Enter runs nothing.
+#[test]
+fn a_query_matching_nothing_is_shown_and_said() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        keyboard::type_text(page, "zzz").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && document.querySelectorAll({OPTIONS:?}).length === 0 \
+                 && document.querySelector('[role=dialog] [role=status]').offsetHeight > 0",
+                status_says("Nothing found")
+            ),
+            "zzz to say Nothing found",
+        )
+        .await
+        .unwrap();
+        focus::assert_focused(page, SEARCH, "a query matching nothing")
+            .await
+            .unwrap();
+
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        // Keys run in order: once the query below lands, the Enter above is handled.
+        for _ in 0..3 {
+            keyboard::press(page, keyboard::BACKSPACE).await.unwrap();
+        }
+        keyboard::type_text(page, "home").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelectorAll({OPTIONS:?}).length === 1"),
+            "the query after Enter to narrow to Home",
+        )
+        .await
+        .unwrap();
+        let ran_nothing: bool = js(
+            page,
+            &format!(
+                "document.querySelector({RAN:?}).dataset.ran === '' && document.querySelector({DIALOG:?}) !== null"
+            ),
+        )
+        .await;
+        assert!(
+            ran_nothing,
+            "Enter on nothing found ran or closed something"
+        );
+        fixture
+            .console
+            .assert_clean("a query matching nothing")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// WCAG 4.1.3 (todo 1810): a search still on its way says Searching and marks the list
+/// busy, never Nothing found; the landed empty answer says Nothing found.
+#[test]
+fn a_pending_search_says_searching_not_nothing_found() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight-fetch", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        keyboard::type_text(page, "z").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && document.querySelector('[role=dialog] [role=listbox][aria-busy=true]') !== null",
+                status_says("Searching")
+            ),
+            "the pending search to say Searching",
+        )
+        .await
+        .unwrap();
+        let nothing: bool = js(page, &status_says("Nothing found")).await;
+        assert!(!nothing, "a search that has not landed said Nothing found");
+        focus::assert_focused(page, SEARCH, "a pending search")
+            .await
+            .unwrap();
+
+        keyboard::type_text(page, "zz").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} && !{} && document.querySelector('[aria-busy=true]') === null",
+                status_says("Nothing found"),
+                status_says("Searching")
+            ),
+            "the landed empty search to say Nothing found",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a pending search").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 627: a narrowing query remounts the rows. Focus stays in the search
 /// box, and the highlight and `aria-activedescendant` land on the new row.
 #[test]

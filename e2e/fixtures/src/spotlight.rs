@@ -11,7 +11,29 @@ pub const ROUTES: Routes = &[
     ("/spotlight", || rsx! { SpotlightPage {} }),
     ("/spotlight-long", || rsx! { SpotlightLongPage {} }),
     ("/spotlight-tall", || rsx! { SpotlightTallPage {} }),
+    ("/spotlight-fetch", || rsx! { SpotlightFetchPage {} }),
 ];
+
+/// A server-side search: the answer for one or two letters is still on its way (todo 1810).
+#[component]
+fn SpotlightFetchPage() -> Element {
+    let mut query = use_signal(String::new);
+    let all = use_hook(|| vec![SpotlightAction::new("Home"), SpotlightAction::new("Changelog")]);
+    let actions = use_callback(move |query: String| spotlight_filter(&query, &all));
+    let onquery = use_callback(move |next: String| query.set(next));
+    let typed = query().trim().chars().count();
+    let spotlight = use_spotlight(SpotlightOptions {
+        actions: Some(actions),
+        onquery: Some(onquery),
+        loading: (1..3).contains(&typed),
+        aria_label: Some("Command palette".into()),
+        ..Default::default()
+    });
+
+    rsx! {
+        Button { id: "open-spotlight", onclick: move |_| spotlight.open(), "Open the palette" }
+    }
+}
 
 /// Many described actions: the palette must not outgrow the viewport (todo 1307).
 #[component]

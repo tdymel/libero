@@ -234,6 +234,77 @@ fn a_drag_moves_the_pad_and_leaves_the_thumb_focused() {
     });
 }
 
+/// A press, no drag, jumps the thumb to the pressed spot and focuses it, on the pad
+/// and on the hue track: the equivalent that spares the 16px thumbs 2.5.8 (todo 1811).
+#[test]
+fn a_press_on_the_pad_or_the_hue_track_jumps_the_thumb() {
+    block_on(async {
+        let fixture = Fixture::open("/color-picker", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#before", 5).await.unwrap();
+
+        let (pressed, _) = pad_points(page, (0.25, 0.25), (0.0, 0.0)).await;
+        pointer::click_at(page, pressed).await.unwrap();
+        let near = "(() => { const [s, b] = READING.split(',').map(Number); \
+             return Math.abs(s - 25) <= 1 && Math.abs(b - 75) <= 1; })()"
+            .replace("READING", READING);
+        if let Err(e) = wait::for_js_true(page, &near, "a press to land at 25%, 75%").await {
+            panic!("{e}; reading {}", reading(page).await);
+        }
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({THUMB:?})"),
+            "the pad thumb to take focus on a press",
+        )
+        .await
+        .unwrap();
+
+        let track: [f64; 4] = page
+            .evaluate(format!(
+                "(() => {{ let el = document.querySelector({HUE:?}); \
+                 while (el.getBoundingClientRect().width < 100) el = el.parentElement; \
+                 const r = el.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let (x, y) = (track[0] + track[2] * 0.25, track[1] + track[3] / 2.0);
+        pointer::click_at(page, pointer::Point { x, y })
+            .await
+            .unwrap();
+        if let Err(e) = wait::for_js_true(
+            page,
+            &format!(
+                "Math.abs(Number(document.querySelector({HUE:?}).getAttribute('aria-valuenow')) - 90) <= 20 \
+                 && document.activeElement === document.querySelector({HUE:?})"
+            ),
+            "a press a quarter along the hue track to land near 90 and focus its thumb",
+        )
+        .await
+        {
+            let state: String = page
+                .evaluate(format!(
+                    "`${{document.querySelector({HUE:?}).getAttribute('aria-valuenow')}} on ${{document.activeElement.outerHTML.slice(0, 120)}} track ${{JSON.stringify({track:?})}} hit ${{document.elementFromPoint({}, {})?.outerHTML.slice(0, 160)}}`",
+                    x, y
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            panic!("{e}; hue {state}");
+        }
+
+        fixture
+            .console
+            .assert_clean("presses on the pad and the hue")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The hue thumb's face and the preview are painted from vars, not redrawn:
 /// a hue step must still repaint both (todo 29).
 #[test]

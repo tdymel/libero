@@ -78,6 +78,50 @@ async fn hovering_switches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     Ok(())
 }
 
+/// APG: Escape and ArrowLeft in File's Open recent close that submenu only, focus
+/// goes back to Open recent and File stays open (1812; `rtl_keys` covers the mirror).
+async fn a_key_closes_only_the_submenu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const RECENT: &str = "[role=menu] [role=menuitem][aria-haspopup=menu]";
+    const SUBMENU_ITEM: &str = "[role=menu][aria-labelledby$='-item-2'] [role=menuitem]";
+    let item = |index: usize| format!("[role=menu] [data-menu-index=\"{index}\"]");
+    for (key, name) in [
+        (keyboard::ESCAPE, "Escape"),
+        (keyboard::ARROW_LEFT, "ArrowLeft"),
+    ] {
+        d.focus(&trigger(0)).await?;
+        d.press(keyboard::ARROW_DOWN).await?;
+        only_open(d, 0, "ArrowDown").await?;
+        eventually_focused(d, &item(0), "ArrowDown on File").await?;
+        d.press(keyboard::ARROW_DOWN).await?;
+        eventually_focused(d, &item(1), "ArrowDown to Open").await?;
+        d.press(keyboard::ARROW_DOWN).await?;
+        eventually_focused(d, RECENT, "ArrowDown to Open recent").await?;
+        d.press(keyboard::ARROW_RIGHT).await?;
+        eventually_focused(d, SUBMENU_ITEM, "ArrowRight on Open recent").await?;
+        d.press(key).await?;
+        eventually(d, &format!("{name} to close the submenu"), async |d| {
+            Ok(d.attr(RECENT, "aria-expanded").await?.as_deref() != Some("true"))
+        })
+        .await?;
+        eventually_focused(d, RECENT, name).await?;
+        only_open(d, 0, name).await?;
+        d.press(keyboard::ESCAPE).await?;
+        eventually(d, "Escape to close File", async |d| {
+            Ok(!d.exists(MENU).await?)
+        })
+        .await?;
+        eventually_focused(d, &trigger(0), "Escape on File").await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    escape_and_arrow_left_close_only_the_submenu,
+    "/menubar-docs",
+    a_key_closes_only_the_submenu,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
 e2e::scenario!(
     the_arrows_rove_along_the_bar_and_wrap,
     "/menubar-docs",

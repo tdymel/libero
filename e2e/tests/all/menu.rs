@@ -167,6 +167,43 @@ e2e::scenario!(
     android: skip("958: element identity on the WebView")
 );
 
+/// APG: Escape and ArrowLeft in a submenu close that level only and focus its
+/// parent item (1812; `rtl_keys` covers the mirror).
+async fn a_key_closes_only_the_submenu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const SHARE: &str = "[role=menu] [role=menuitem][aria-haspopup=menu]";
+    const SUBMENU_ITEM: &str = "[role=menu][aria-labelledby$='-item-0'] [role=menuitem]";
+    for (key, name) in [
+        (keyboard::ESCAPE, "Escape"),
+        (keyboard::ARROW_LEFT, "ArrowLeft"),
+    ] {
+        d.focus(TRIGGER).await?;
+        d.press(keyboard::ENTER).await?;
+        expanded(d, true).await?;
+        eventually_focused(d, SHARE, "Enter on the trigger").await?;
+        d.press(keyboard::ARROW_RIGHT).await?;
+        eventually_focused(d, SUBMENU_ITEM, "ArrowRight on Share").await?;
+        d.press(key).await?;
+        eventually(d, &format!("{name} to close the submenu"), async |d| {
+            Ok(d.attr(SHARE, "aria-expanded").await?.as_deref() != Some("true"))
+        })
+        .await?;
+        eventually_focused(d, SHARE, name).await?;
+        expanded(d, true).await?;
+        d.press(keyboard::ESCAPE).await?;
+        expanded(d, false).await?;
+        eventually_focused(d, TRIGGER, "Escape on the root").await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    escape_and_arrow_left_close_only_the_submenu,
+    "/menu-submenu-reopen",
+    a_key_closes_only_the_submenu,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView")
+);
+
 /// `level` is open and placed: an unplaced box sits hidden at 0,0.
 async fn placed<D: Driver>(d: &mut D, level: &str) -> Result<()> {
     eventually(d, &format!("{level} to open"), async |d| {

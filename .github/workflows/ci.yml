@@ -135,6 +135,10 @@ jobs:
       - run: cargo run -p e2e
         env:
           CHROME: ${{ steps.chrome.outputs.chrome-path }}
+      # The docs behaviour tests in e2e/tests/sweep.rs no other run reaches (1708).
+      - run: cargo run -p e2e -- sweep a_route_change the_landing a_combobox
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
