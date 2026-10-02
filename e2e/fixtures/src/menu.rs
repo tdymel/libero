@@ -12,6 +12,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/menu", || rsx! { MenuPage {} }),
     ("/menu-open-on-mount", || rsx! { MenuOpenOnMountPage {} }),
+    ("/menu-items-late", || rsx! { MenuItemsLatePage {} }),
     ("/menu-submenu-reopen", || rsx! { MenuSubmenuReopenPage {} }),
     ("/menu-choices", || rsx! { MenuChoicesPage {} }),
     ("/menu-row", || rsx! { MenuRowPage {} }),
@@ -195,6 +196,33 @@ fn MenuOpenOnMountPage() -> Element {
         MenuItem::new("Save").onselect(|_| {}).into(),
         MenuItem::new("Share").onselect(|_| {}).into(),
     ];
+
+    rsx! {
+        Menu {
+            state: menu,
+            items,
+            Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+        }
+    }
+}
+
+/// Todo 1789: opened empty, its items land a render later, as a load would.
+#[component]
+fn MenuItemsLatePage() -> Element {
+    let menu = use_menu();
+    let mut loaded = use_signal(|| false);
+    use_effect(move || {
+        if menu.is_open() && !*loaded.peek() {
+            loaded.set(true);
+        }
+    });
+    let items: Vec<MenuEntry> = match loaded() {
+        true => vec![
+            MenuItem::new("Save").onselect(|_| {}).into(),
+            MenuItem::new("Share").onselect(|_| {}).into(),
+        ],
+        false => Vec::new(),
+    };
 
     rsx! {
         Menu {

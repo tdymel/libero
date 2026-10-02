@@ -275,6 +275,32 @@ fn a_menu_opened_before_it_mounts_focuses_its_first_item() {
     });
 }
 
+/// Todo 1789: an open menu with no items draws nothing; items arriving show
+/// it and focus moves in as on any open.
+#[test]
+fn items_arriving_in_an_open_menu_show_it_and_take_focus() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-items-late", Viewport::Desktop)
+            .await
+            .unwrap();
+        let outcome = async {
+            fixture.page.find_element(TRIGGER).await?.click().await?;
+            wait::for_visible(&fixture.page, MENU).await?;
+            wait::for_js_true(
+                &fixture.page,
+                "document.activeElement?.textContent.trim() === 'Save' && \
+                 document.querySelector('[aria-haspopup=menu]').getAttribute('aria-expanded') === 'true'",
+                "focus on the first item and an expanded trigger",
+            )
+            .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
 /// Todo 29: a closed menu unmounts its submenu levels, so a reopen starts
 /// them closed, working, and on the items changed while closed.
 #[test]
