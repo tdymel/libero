@@ -61,8 +61,9 @@ pub use debounce::{
     use_debounced_callback, use_debounced_value, use_throttled_callback, use_throttled_value,
 };
 pub use direction::{DirectionHandle, use_direction};
+pub use dismiss::use_back;
 pub(crate) use dismiss::{
-    DismissHandle, DismissOptions, PressMarker, escape_closes, listener, use_back, use_dismiss,
+    DismissHandle, DismissOptions, PressMarker, escape_closes, listener, use_dismiss,
     use_dismiss_layer, use_escape_dismiss, use_field_list_layer, use_press_marker,
 };
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};

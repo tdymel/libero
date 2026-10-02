@@ -91,6 +91,8 @@ pub(crate) enum Route {
     UseMediaQueryPage {},
     #[route("/hooks/use-media")]
     UseMediaPage {},
+    #[route("/hooks/use-back")]
+    UseBackPage {},
     #[route("/hooks/use-fullscreen")]
     UseFullscreenPage {},
     #[route("/hooks/use-geolocation")]

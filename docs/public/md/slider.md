@@ -84,6 +84,29 @@ fn Demo() -> Element {
 }
 ```
 
+`track: SliderTrack::Bars(heights)` draws the track as a row of bars, as
+`Audio`'s seek track: each bar as tall as its fraction of the track, the bars
+up to the value filled.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Slider, SliderChangeEvent, SliderTrack};
+
+#[component]
+fn Demo() -> Element {
+    let mut position = use_signal(|| 40.0);
+
+    rsx! {
+        Slider {
+            aria_label: "Position",
+            value: position(),
+            track: SliderTrack::Bars(vec![0.3, 0.6, 1.0, 0.7, 0.4, 0.8, 0.5, 0.2]),
+            oninput: move |event: SliderChangeEvent| position.set(event.value()),
+        }
+    }
+}
+```
+
 `marks` puts ticks on the track, and a labeled one gets a caption below it. On
 a discrete slider they replace the one mark per option. `format` sets the text
 of the bubble and the thumb's `aria-valuetext`.
@@ -137,6 +160,7 @@ fn Demo() -> Element {
 | `required` | `bool` | `false` | Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value. |
 | `disabled` | `bool` | `false` | Takes the thumb out of the tab order and dims the slider. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead. |
+| `track` | `SliderTrack` | `Line` | How the track is drawn. `SliderTrack::Bars(heights)` draws a row of rounded bars, each as tall as its fraction (0 to 1) of a taller track, like `Audio`'s waveform; the bars up to the value fill in `color`. |
 
 ### `SliderMark`
 
@@ -166,6 +190,7 @@ explains how parts work.
 | `SliderPart::Control` | `control` | The slider under the label: the track and the room around it. |
 | `SliderPart::Track` | `track` | The rail the thumbs run along. |
 | `SliderPart::Bar` | `bar` | The filled stretch of the track. |
+| `SliderPart::Bars` | `bars` | The row of bars of a `SliderTrack::Bars` track. |
 | `SliderPart::Mark` | `mark` | One tick on the track. |
 | `SliderPart::MarkLabel` | `mark-label` | A tick's caption. |
 | `SliderPart::Thumb` | `thumb` | The handle; a range has two. |
@@ -243,6 +268,7 @@ below, space separated.
 | `disabled` | `disabled` is set. |
 | `readonly` | `readonly` is set. The thumb keeps its tab stop, but neither a key nor a drag moves it. |
 | `marks-labeled` | At least one mark carries a label, so the captions need room. |
+| `bars` | `track` is `SliderTrack::Bars`: the bars draw the track, a filled one carries `data-state="filled"`. |
 
 The unfilled track is `muted.6`, 3:1 on the page (WCAG 1.4.11). A mark is an
 open `surface` dot ringed in `muted.6`. A mark on the filled bar carries

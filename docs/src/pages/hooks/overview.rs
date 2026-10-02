@@ -128,6 +128,11 @@ fn hooks() -> Vec<HookRow> {
             Route::UseFullscreenPage {},
         ),
         row(
+            "use_back",
+            "Runs a handler on Android's Back button instead of leaving the app.",
+            Route::UseBackPage {},
+        ),
+        row(
             "use_geolocation",
             "The device's position, once or followed, and the location permission.",
             Route::UseGeolocationPage {},

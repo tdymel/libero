@@ -124,13 +124,27 @@ impl DismissLayer {
     }
 }
 
-/// Android's Back runs `onback` while `open` and this is the newest open layer
-/// (1275). Nothing elsewhere: the WebView on a desktop has no Back.
-pub(crate) fn use_back(open: bool, onback: Callback<()>) {
+/// Android's Back button runs `onback` instead of leaving the app, while
+/// `active`. The newest active one wins, so a `Modal` or menu opened later
+/// closes first. Does nothing on web and desktop, which have no such button.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::hooks::use_back;
+/// # fn app() -> Element {
+/// let mut step = use_signal(|| 2);
+/// // Back goes one step back while there is one; at the first, it leaves the app.
+/// use_back(step() > 0, Callback::new(move |()| step -= 1));
+/// rsx! { "Step {step}" }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/hooks/use-back>
+pub fn use_back(active: bool, onback: Callback<()>) {
     #[cfg(target_os = "android")]
-    back::use_back(open, onback);
+    back::use_back(active, onback);
     #[cfg(not(target_os = "android"))]
-    let _ = (open, onback);
+    let _ = (active, onback);
 }
 
 /// On the stack until dropped.

@@ -65,6 +65,8 @@ field_parts_enum! {
         Track = "track" => "& > [data-slot='control'] > [data-slot='track']",
         /// The filled stretch of the track.
         Bar = "bar" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='bar']",
+        /// The row of bars a `SliderTrack::Bars` track draws.
+        Bars = "bars" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='bars']",
         /// One tick on the track.
         Mark = "mark" => "& > [data-slot='control'] > [data-slot='track'] > [data-slot='mark']",
         /// A tick's caption.
@@ -99,6 +101,14 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
         )
         // White ring and dark halo read on any track color. The shadow only
         // unfocused, or it outranks the thumb's `:focus-visible` ring.
+        // As the `Audio` seek track: the bars draw it, and a press anywhere on them moves.
+        .when(
+            "bars",
+            sx().selector(
+                format!("& > [data-slot='{}']", SliderPart::Track.slot()),
+                sx().background("transparent").height("1.5rem"),
+            ),
+        )
         .when(
             "plain",
             sx().selector(
@@ -140,6 +150,40 @@ static SLIDER_BAR_SX: StaticSx = StaticSx::new(|| {
         // Under RTL the track runs right to left, as a native range does.
         .rtl(sx().left("auto").right("0"))
 });
+
+/// Inset by half a thumb, so the first and last bar sit under the thumb's ends of travel.
+static SLIDER_BARS_SX: StaticSx = StaticSx::new(|| {
+    let inset = format!("calc({} / 2)", SLIDER_THUMB.value());
+    sx().position("absolute")
+        .top("0")
+        .bottom("0")
+        .left(inset.clone())
+        .right(inset)
+        .display("flex")
+        .align_items("center")
+        .justify_content("space-between")
+        .pointer_events("none")
+        .selector(
+            "& > span",
+            sx().flex("0 1 2px")
+                .min_width("1px")
+                .min_height("2px")
+                .border_radius("999px")
+                // The line track's 3:1 (WCAG 1.4.11).
+                .background(ColorValue::Shade(Color::Muted, ColorShade::S6).value())
+                .media(FORCED_COLORS, sx().background("CanvasText")),
+        )
+        .selector(
+            "& > span[data-state='filled']",
+            sx().background(SLIDER_COLOR.value())
+                .media(FORCED_COLORS, sx().background("Highlight")),
+        )
+});
+
+/// How many of `count` bars are filled at `fraction`: the `Audio` track's rule.
+fn filled_bars(fraction: f64, count: usize) -> usize {
+    (fraction.clamp(0.0, 1.0) * count as f64).round() as usize
+}
 
 /// A range fills *between* its thumbs, so the bar starts at the lower one's
 /// centre rather than at the track's edge, and spans the difference.
@@ -336,6 +380,9 @@ pub(in crate::components::form) struct SliderCoreProps {
     /// The root's `data-slot`: `control` in a field, `hue`/`alpha` for a colour scale.
     #[props(default = SliderPart::Control.slot())]
     slot: &'static str,
+    /// The bar heights of a `SliderTrack::Bars` track, drawn in place of the filled line.
+    #[props(default)]
+    bars: Option<Vec<f64>>,
 }
 
 /// What a value move changes. Only the thumbs' scope reads it, so the rest of
@@ -732,6 +779,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .with("readonly", props.readonly)
         .with("marks-labeled", marks_labeled)
         .with("plain", props.plain)
+        .with("bars", props.bars.is_some())
         .into();
 
     let root_variables: Input<Variables> =
@@ -798,6 +846,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         invalid: props.invalid,
                         readonly: props.readonly,
                         plain: props.plain,
+                        bars: props.bars,
                         focusable,
                         bubble_id,
                         thumb_elements,
@@ -833,6 +882,7 @@ struct SliderThumbsProps {
     invalid: bool,
     readonly: bool,
     plain: bool,
+    bars: Option<Vec<f64>>,
     focusable: bool,
     bubble_id: Signal<String>,
     thumb_elements: [ElementHandle; 2],
@@ -1028,9 +1078,26 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         }
     });
 
+    let bars_class = use_css(Some(&SLIDER_BARS_SX), CssLayer::Framework);
+    let bars = props.bars.as_ref().map(|heights| {
+        let filled = filled_bars(bar.1, heights.len());
+        rsx! {
+            div { class: bars_class, "data-slot": SliderPart::Bars.slot(), "aria-hidden": "true",
+                for (index, height) in heights.iter().enumerate() {
+                    span {
+                        key: "{index}",
+                        "data-state": (index < filled).then_some("filled"),
+                        style: "height: {height.clamp(0.0, 1.0) * 100.0:.0}%",
+                    }
+                }
+            }
+        }
+    });
+
     let bar_style = bar_variables(bar);
     rsx! {
-        if !props.plain {
+        {bars}
+        if !props.plain && props.bars.is_none() {
             div { class: bar_class, "data-slot": SliderPart::Bar.slot(), style: bar_style }
         }
         {marks}
@@ -1056,4 +1123,19 @@ fn SliderHidden(live: Signal<Live>, name: String, disabled: bool) -> Element {
     // A range posts its two values under one name, in track order:
     // `FormData::get_all` reads them back as a pair.
     rsx! { {inputs} }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::filled_bars;
+
+    #[test]
+    fn the_filled_bars_follow_the_value() {
+        assert_eq!(filled_bars(0.0, 8), 0);
+        assert_eq!(filled_bars(0.25, 8), 2);
+        assert_eq!(filled_bars(0.3, 8), 2);
+        assert_eq!(filled_bars(1.0, 8), 8);
+        assert_eq!(filled_bars(1.5, 8), 8, "clamped to the bars there are");
+        assert_eq!(filled_bars(0.5, 0), 0);
+    }
 }

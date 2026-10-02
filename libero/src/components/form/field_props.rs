@@ -231,7 +231,15 @@ mod tests {
         );
         assert_eq!(
             table::<SliderPart>(),
-            caption(&["control", "track", "bar", "mark", "mark-label", "thumb"])
+            caption(&[
+                "control",
+                "track",
+                "bar",
+                "bars",
+                "mark",
+                "mark-label",
+                "thumb"
+            ])
         );
         assert_eq!(
             table::<RatingPart>(),

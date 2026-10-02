@@ -69,6 +69,57 @@ fn escape_returns_focus_to_the_chevron() {
     });
 }
 
+/// Todo 2005: the theme menu reopens scrolled to the checked set, not at the top.
+#[test]
+fn the_menu_opens_on_the_checked_theme() {
+    block_on(async {
+        let fixture = Fixture::open("/theme-switcher/themes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(SHIELD_STORAGE).await.unwrap();
+        let outcome = async {
+            pointer::click(page, CHEVRON).await?;
+            wait::for_visible(page, "[role=menuitemradio]").await?;
+            // Not the last: Vague's gradient warns on its label contrast.
+            page.evaluate(format!(
+                "[...document.querySelectorAll('{MENU} [role=menuitemradio]')].at(-3).click()"
+            ))
+            .await?;
+            wait::for_js_true(
+                page,
+                &format!("!document.querySelector('{MENU}') || getComputedStyle(document.querySelector('{MENU}')).visibility !== 'visible'"),
+                "the pick to close the menu",
+            )
+            .await?;
+            pointer::click(page, CHEVRON).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.getAttribute('aria-checked') === 'true'",
+                "focus to land on the checked theme",
+            )
+            .await?;
+            let (shown, scrolled): (bool, f64) = page
+                .evaluate(format!(
+                    "(() => {{ const menu = document.querySelector('{MENU}'); \
+                     const item = menu.querySelector('[aria-checked=true]').getBoundingClientRect(); \
+                     const box = menu.getBoundingClientRect(); \
+                     return [item.top >= box.top && item.bottom <= box.bottom, menu.scrollTop]; }})()"
+                ))
+                .await?
+                .into_value()?;
+            anyhow::ensure!(scrolled > 0.0, "the menu does not overflow, so nothing was checked");
+            anyhow::ensure!(shown, "the checked theme is scrolled out of the menu");
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("reopening the theme menu");
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
 /// Todo 1045: a press on nothing closes the theme menu, by touch too.
 async fn a_press_outside_closes_the_theme_menu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     for _ in 0..2 {

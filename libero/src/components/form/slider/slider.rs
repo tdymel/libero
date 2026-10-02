@@ -53,7 +53,20 @@ field_props! {
         /// Rules over the value, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<V>,
+        #[props(default)]
+        track: SliderTrack,
     }
+}
+
+/// How a [`Slider`]'s track is drawn.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub enum SliderTrack {
+    /// A thin rail, filled up to the value.
+    #[default]
+    Line,
+    /// A row of rounded bars as tall as these fractions (0 to 1) of the track,
+    /// like a voice message's waveform; the bars up to the value are filled.
+    Bars(Vec<f64>),
 }
 
 /// A draggable value along a track. A [`SliderValue`] enum that lists its
@@ -195,6 +208,10 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             // The same `use_callback` every render, so the core's props can
             // compare equal.
             oninput: (props.oninput.is_some() || bound.is_bound()).then_some(emit),
+            bars: match props.track {
+                SliderTrack::Line => None,
+                SliderTrack::Bars(heights) => Some(heights),
+            },
         }
     };
 

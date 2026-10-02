@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use libero::use_theme_set;
 
 mod overview;
+mod use_back;
 mod use_debounce;
 mod use_drag;
 mod use_element;
@@ -20,6 +21,7 @@ mod use_timers;
 mod use_user_media;
 
 pub use overview::HooksPage;
+pub use use_back::UseBackPage;
 pub use use_debounce::UseDebouncePage;
 pub use use_drag::UseDragPage;
 pub use use_element::UseElementPage;

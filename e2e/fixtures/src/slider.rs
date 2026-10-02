@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Flex, RangeSlider, Slider, SliderChangeEvent, SliderValue, Text},
+    components::{Flex, RangeSlider, Slider, SliderChangeEvent, SliderTrack, SliderValue, Text},
     sx::sx,
 };
 
@@ -14,7 +14,37 @@ pub const ROUTES: Routes = &[
     ("/slider/drag", || rsx! { SliderDragPage {} }),
     ("/slider/scroll", || rsx! { SliderScrollPage {} }),
     ("/slider/edges", || rsx! { SliderEdgesPage {} }),
+    ("/slider/bars", || rsx! { SliderBarsPage {} }),
 ];
+
+/// Todo 2004: a bars track at 25, left to right and right to left.
+#[component]
+fn SliderBarsPage() -> Element {
+    let mut ltr = use_signal(|| 25.0f64);
+    let mut rtl = use_signal(|| 25.0f64);
+    let heights = vec![0.3, 0.6, 1.0, 0.7, 0.4, 0.8, 0.5, 0.2];
+
+    rsx! {
+        Flex { direction: "column", gap: "lg", max_width: "320px",
+            Slider {
+                id: "bars",
+                label: "Position",
+                value: ltr(),
+                track: SliderTrack::Bars(heights.clone()),
+                oninput: move |e: SliderChangeEvent<f64>| ltr.set(e.value()),
+            }
+            div { dir: "rtl",
+                Slider {
+                    id: "bars-rtl",
+                    label: "Position, right to left",
+                    value: rtl(),
+                    track: SliderTrack::Bars(heights),
+                    oninput: move |e: SliderChangeEvent<f64>| rtl.set(e.value()),
+                }
+            }
+        }
+    }
+}
 
 /// Todo 1065: a slider in an `overflow: hidden` box its own height, and one
 /// fixed to the viewport's top edge, with no room above for its bubble.

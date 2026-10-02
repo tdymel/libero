@@ -1093,3 +1093,55 @@ fn under_rtl_a_range_puts_its_minimum_on_the_right() {
         }
     });
 }
+
+/// For `#id`: the filled bars, whether they all sit on the minimum's side of
+/// the others, and whether the line track's bar is gone.
+fn bars_js(id: &str) -> String {
+    format!(
+        "(() => {{ const root = document.querySelector('#{id}'); \
+         const bars = [...root.querySelectorAll('[data-slot=bars] > span')]; \
+         const x = bar => bar.getBoundingClientRect().x; \
+         const filled = bars.filter(bar => bar.dataset.state === 'filled').map(x); \
+         const empty = bars.filter(bar => bar.dataset.state !== 'filled').map(x); \
+         const rtl = getComputedStyle(root).direction === 'rtl'; \
+         const before = filled.every(a => empty.every(b => rtl ? a > b : a < b)); \
+         return [filled.length, before, !root.querySelector('[data-slot=bar]')]; }})()"
+    )
+}
+
+/// Todo 2004: a bars track fills as many bars as the value covers, from the
+/// minimum's side in either direction, and a key moves the fill.
+#[test]
+fn a_bars_track_fills_from_the_minimum_in_either_direction() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/bars", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            for id in ["bars", "bars-rtl"] {
+                wait::for_visible(page, &format!("#{id} [data-slot=bars] > span")).await?;
+                let (filled, before, no_line): (usize, bool, bool) =
+                    page.evaluate(bars_js(id)).await?.into_value()?;
+                ensure!(filled == 2, "#{id}: {filled} of 8 bars filled at 25");
+                ensure!(before, "#{id}: the filled bars are not on the minimum's side");
+                ensure!(no_line, "#{id}: the line track's bar still draws");
+            }
+            page.evaluate("document.querySelector('#bars-rtl [role=slider]').focus()")
+                .await?;
+            keyboard::press(page, keyboard::END).await?;
+            wait::for_js_true(
+                page,
+                "document.querySelectorAll('#bars-rtl [data-slot=bars] > [data-state=filled]').length === 8",
+                "End to fill every bar",
+            )
+            .await?;
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("the bars track");
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}

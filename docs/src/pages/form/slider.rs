@@ -3,7 +3,8 @@ use dioxus::prelude::*;
 use libero::components::SliderPart;
 use libero::{
     components::{
-        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderMark, SliderValue, Text,
+        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderMark, SliderTrack, SliderValue,
+        Text,
     },
     sx::sx,
     use_theme,
@@ -12,6 +13,25 @@ use libero::{
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 const MIN_VALUES: [&str; 4] = ["auto", "0.5", "10.0", "50.0"];
 const MAX_VALUES: [&str; 4] = ["auto", "3.0", "50.0", "200.0"];
+/// The `bars` switch's heights: a voice message's waveform, as `Audio` draws it.
+const WAVEFORM: [f64; 24] = [
+    0.3, 0.5, 0.8, 0.6, 0.4, 0.7, 1.0, 0.8, 0.5, 0.3, 0.6, 0.9, 0.7, 0.4, 0.5, 0.8, 0.6, 0.3, 0.4,
+    0.7, 0.5, 0.3, 0.4, 0.2,
+];
+
+fn track(values: &DemoValues) -> SliderTrack {
+    match is_on(values, "bars") {
+        true => SliderTrack::Bars(WAVEFORM.to_vec()),
+        false => SliderTrack::Line,
+    }
+}
+
+fn bars_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+    match is_on(values, "bars") {
+        true => vec![format!("track: SliderTrack::Bars(vec!{WAVEFORM:?})")],
+        false => vec![],
+    }
+}
 
 /// The demo's own discrete type, so the code block can show the derive that
 /// makes it one - the preview slides over exactly this enum.
@@ -307,6 +327,9 @@ pub fn SliderPage() -> Element {
                     prop("readonly", "bool")
                         .default("false")
                         .doc("Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead."),
+                    prop("track", "SliderTrack")
+                        .default("Line")
+                        .doc("How the track is drawn. `SliderTrack::Bars(heights)` draws a row of rounded bars, each as tall as its fraction (0 to 1) of a taller track, like `Audio`'s waveform; the bars up to the value fill in `color`."),
                 ])
                 .parts("SliderPart", vec![
                     (SliderPart::Label, "The label above the control."),
@@ -315,6 +338,7 @@ pub fn SliderPage() -> Element {
                     (SliderPart::Control, "The slider under the label: the track and the room around it."),
                     (SliderPart::Track, "The rail the thumbs run along."),
                     (SliderPart::Bar, "The filled stretch of the track."),
+                    (SliderPart::Bars, "The row of bars of a `SliderTrack::Bars` track."),
                     (SliderPart::Mark, "One tick on the track."),
                     (SliderPart::MarkLabel, "A tick's caption."),
                     (SliderPart::Thumb, "The handle; a range has two."),
@@ -400,6 +424,7 @@ pub fn SliderPage() -> Element {
                             "error" => vec![r#"status: "Pick a lower setting.""#.to_string()],
                             _ => vec![],
                         }),
+                    Control::switch("bars").code(bars_code),
                     Control::switch("marks").code(marks_code),
                     Control::switch("format").code(format_code),
                     Control::switch("label").default("true").code(|_, values| {
@@ -440,6 +465,7 @@ pub fn SliderPage() -> Element {
                                     max: quality_of(&values, "max"),
                                     step: values.str("step").parse::<usize>().unwrap_or(1),
                                     marks: discrete_marks(&values),
+                                    track: track(&values),
                                     format: is_on(&values, "format")
                                         .then(|| {
                                             Callback::new(|quality: Quality| {
@@ -482,6 +508,7 @@ pub fn SliderPage() -> Element {
                                     max: number(&values, "max_value"),
                                     step: number(&values, "step_value"),
                                     marks: continuous_marks(&values),
+                                    track: track(&values),
                                     format: is_on(&values, "format")
                                         .then(|| Callback::new(|value: f64| format!("{value}%"))),
                                     label: is_on(&values, "label")
