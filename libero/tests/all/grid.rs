@@ -142,25 +142,21 @@ fn a_responsive_span_queries_its_zone_not_the_viewport() {
             .contains("--lsx-grid-zone-container:lsx-zone-body")
     );
 
-    // The base span still rides the recycled framework class; only the
-    // breakpoint needs a rule of its own, and it is a container query.
+    // The base span still rides the recycled framework class. That the
+    // breakpoint queries the zone is e2e `grid_zone::a_responsive_span_*`.
     let item = nth_attributes(&body(&html), "div", 2);
     assert!(
         item.get("data-state")
             .expect("the item states")
             .contains("span-full")
     );
-    assert!(html.contains("@container lsx-zone-body (min-width: 62rem){"));
-    assert!(html.contains("grid-column:span 6;"));
-    // A viewport query would be the bug this replaces.
-    assert!(!html.contains("@media (min-width: 62rem){"));
 }
 
 /// Regression: `container-type: inline-size` zeroes an element's intrinsic
 /// contribution, so on a standalone zone - a shrink-to-fit flex item, as in
 /// the docs preview - it collapsed the zone to zero width and stacked every
 /// item at x=0. A zone with no area has no container name to be queried by
-/// either, so it must not be a container at all.
+/// either, so it must not be a container at all (e2e `grid_zone::a_zone_without_an_area_*`).
 #[test]
 fn only_a_zone_filling_an_area_is_a_query_container() {
     fn standalone() -> Element {
@@ -195,25 +191,6 @@ fn only_a_zone_filling_an_area_is_a_query_container() {
             .expect("the zone states")
             .contains("container")
     );
-    let zone = nth_attributes(&body(&html), "div", 1);
-    assert!(
-        rules_for(&html, &zone)
-            .contains("[data-state~=\"container\"]{container-type:inline-size;}"),
-        "{zone:?}"
-    );
-}
-
-#[test]
-fn a_plain_span_emits_no_container_query() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                GridZone { GridItem { span: GridSpan::Half, "card" } }
-            }
-        }
-    }
-
-    assert!(!render(app).contains("@container"));
 }
 
 #[test]
@@ -249,7 +226,7 @@ fn the_zone_places_items_at_a_higher_specificity_than_the_item_styles_itself() {
 
 /// `rows` is the caller's own row span, and it writes a **different variable**
 /// from the masonry engine's: one property, one writer. Outside a masonry zone
-/// the item sets `grid-row` from its own stylesheet.
+/// the item sets `grid-row` from its own stylesheet (e2e `grid_zone::an_item_spans_rows_*`).
 #[test]
 fn an_item_can_span_rows_of_its_own() {
     fn app() -> Element {
@@ -273,7 +250,6 @@ fn an_item_can_span_rows_of_its_own() {
             .expect("the row span")
             .contains("--lsx-grid-item-row-span:2")
     );
-    assert!(html.contains("grid-row:span var(--lsx-grid-item-row-span, 1)"));
 }
 
 /// And the masonry engine wins by the item simply not writing it: the span
@@ -310,6 +286,7 @@ fn a_masonry_zone_drops_an_items_own_row_span() {
 /// margin, not just the `gap` shorthand - in masonry the row gap is zero and
 /// the vertical spacing is entirely that margin. A per-size class could only
 /// change the shorthand, so the resolved value is published as the var itself.
+/// The spacing it makes is e2e `grid_zone::a_masonry_zones_gap_*`.
 #[test]
 fn a_zones_gap_reaches_the_vertical_spacing_masonry_actually_uses() {
     fn app() -> Element {
@@ -328,8 +305,6 @@ fn a_zones_gap_reaches_the_vertical_spacing_masonry_actually_uses() {
             .expect("the resolved gap")
             .contains("--lsx-grid-zone-gap:var(--lsx-spacing-xl)")
     );
-    assert!(html.contains("margin-bottom:var(--lsx-grid-zone-gap)"));
-    assert!(html.contains("margin-bottom:calc(-1 * var(--lsx-grid-zone-gap))"));
 }
 
 /// Twelve tracks carry eleven gaps whatever spans them, and a length gap does

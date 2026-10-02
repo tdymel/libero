@@ -352,6 +352,28 @@ fn read_only_refuses_in_the_order_and_disabled_leaves_it() {
     );
 }
 
+/// The dropzone's surface button follows the same split as the input's Browse.
+#[test]
+fn a_read_only_dropzone_refuses_in_the_order_and_a_disabled_one_leaves_it() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField { id: "held", label: "Held", variant: "dropzone", readonly: true, onchange: move |_| {} }
+                FileField { id: "off", label: "Off", variant: "dropzone", disabled: true, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let held = tag_with(&body, r#"id="held""#);
+    assert_eq!(held["aria-disabled"], "true", "{held:?}");
+    assert!(!held.contains_key("disabled"), "{held:?}");
+
+    let off = tag_with(&body, r#"id="off""#);
+    assert!(off.contains_key("disabled"), "{off:?}");
+    assert!(!off.contains_key("aria-disabled"), "{off:?}");
+}
+
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].
 mod dispatched {
     use crate::common::{body, tags_with};

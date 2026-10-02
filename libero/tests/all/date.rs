@@ -1,7 +1,7 @@
 //! The date and time pickers and fields as a server renders them: the grid,
 //! the marked days, and what posts with a form.
 
-use crate::common::{body, render, tags_with};
+use crate::common::{body, render, rules_for, tag_with, tags_with};
 
 use std::cell::Cell;
 use std::collections::BTreeMap;
@@ -13,9 +13,9 @@ use libero::{
     chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Weekday},
     components::{
         ChronoField, ChronoPicker, DateField, DateLevel, DatePicker, DateRange, DateRangePicker,
-        MonthPicker, TimePicker, YearPicker,
+        MonthPicker, TimeField, TimePicker, YearPicker,
     },
-    localization::Formats,
+    localization::{Formats, Localization},
     theme::CalendarVariant,
 };
 
@@ -802,6 +802,149 @@ fn a_picker_follows_a_new_exclude_date_rule_in_the_same_scope() {
         }
     }
     assert_eq!(disabled_per_flip(app), [0, 12, 0, 12, 0, 12, 0, 12, 0]);
+}
+
+#[test]
+fn an_empty_picker_selects_nothing_and_posts_an_empty_value() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                DatePicker { value: None, today: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, name: "day" }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    assert!(
+        tags_with(&html, r#"aria-selected="true""#).is_empty(),
+        "{html}"
+    );
+    assert!(
+        tags_with(&html, r#"data-selected="true""#).is_empty(),
+        "{html}"
+    );
+    assert_eq!(tab_stop(&html, "day"), "2026-09-14");
+    assert_eq!(tag_with(&html, r#"name="day""#)["value"], "");
+}
+
+/// The one `role="combobox"` text input of a field.
+fn text_input(html: &str) -> BTreeMap<String, String> {
+    let inputs = tags_with(html, r#"role="combobox""#);
+    assert_eq!(inputs.len(), 1, "{html}");
+    inputs[0].clone()
+}
+
+#[test]
+fn an_empty_field_shows_its_placeholder_and_posts_an_empty_value() {
+    fn date() -> Element {
+        rsx! {
+            LiberoProvider {
+                DateField { value: None, onchange: move |_| {}, name: "at", placeholder: "Pick a day" }
+            }
+        }
+    }
+    fn time() -> Element {
+        rsx! {
+            LiberoProvider {
+                TimeField { value: None, onchange: move |_| {}, name: "at", placeholder: "Pick a time" }
+            }
+        }
+    }
+    for (app, placeholder) in [
+        (date as fn() -> Element, "Pick a day"),
+        (time, "Pick a time"),
+    ] {
+        let html = body(&render(app));
+        let input = text_input(&html);
+        assert_eq!(input["value"], "", "{input:?}");
+        assert_eq!(input["placeholder"], placeholder, "{input:?}");
+        assert_eq!(tag_with(&html, r#"name="at""#)["value"], "");
+    }
+}
+
+/// Neither opens: the dropdown is not drawn, so the input controls nothing.
+#[test]
+fn a_disabled_field_and_a_readonly_field_say_so_on_the_input() {
+    fn disabled() -> Element {
+        rsx! {
+            LiberoProvider {
+                DateField { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, disabled: true }
+            }
+        }
+    }
+    fn readonly() -> Element {
+        rsx! {
+            LiberoProvider {
+                DateField { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, readonly: true }
+            }
+        }
+    }
+    let input = text_input(&body(&render(disabled)));
+    assert!(input.contains_key("disabled"), "{input:?}");
+    assert!(!input.contains_key("readonly"), "{input:?}");
+    assert_eq!(input["aria-expanded"], "false", "{input:?}");
+    assert!(!input.contains_key("aria-controls"), "{input:?}");
+
+    // Readonly still focuses and posts, so it is not disabled.
+    let input = text_input(&body(&render(readonly)));
+    assert!(input.contains_key("readonly"), "{input:?}");
+    assert!(!input.contains_key("disabled"), "{input:?}");
+    assert_eq!(input["value"], "September 4, 2026", "{input:?}");
+}
+
+#[test]
+fn german_formats_and_labels_reach_the_field_and_the_picker() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { localization: &Localization::GERMAN, formats: &Formats::GERMAN,
+                DateField { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, name: "arrival" }
+                DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 18), onchange: move |_| {} }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    assert_eq!(text_input(&html)["value"], "4. September 2026");
+    // The form still gets ISO 8601.
+    assert_eq!(tag_with(&html, r#"name="arrival""#)["value"], "2026-09-04");
+    assert_eq!(
+        tag_with(&html, r#"data-date="2026-09-18""#)["aria-label"],
+        "18. September 2026"
+    );
+    let headers = tags_with(&html, r#"role="columnheader""#);
+    assert_eq!(headers[0]["aria-label"], "Montag", "{headers:?}");
+    let navs: Vec<_> = tags_with(&html, r#"data-slot="nav""#)
+        .into_iter()
+        .map(|nav| nav["aria-label"].clone())
+        .collect();
+    assert_eq!(navs, ["Vorheriger Monat", "Nächster Monat"]);
+}
+
+/// The header runs right to left under RTL, so each chevron is mirrored there,
+/// by `:dir()` and by a `[dir=rtl]` ancestor for Blitz.
+#[test]
+fn the_nav_chevrons_mirror_under_rtl() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                div { dir: "rtl",
+                    DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 18), onchange: move |_| {} }
+                }
+            }
+        }
+    }
+    let html = render(app);
+
+    let nav = rules_for(&html, &tag_with(&html, r#"data-slot="nav""#));
+    for arm in [":dir(rtl) svg{", ":where([dir=rtl]) "] {
+        let rule = nav
+            .split_inclusive('}')
+            .find(|rule| rule.contains(arm))
+            .unwrap_or_else(|| panic!("{arm}: {nav}"));
+        assert!(rule.contains("transform:scaleX(-1)"), "{rule}");
+    }
+    let day = rules_for(&html, &tag_with(&html, r#"data-date="2026-09-18""#));
+    assert!(!day.contains("scaleX(-1)"), "{day}");
 }
 
 /// Events dispatched the way a renderer does, through [`crate::dispatch`].

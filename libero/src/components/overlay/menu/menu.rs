@@ -103,7 +103,11 @@ pub fn Menu(props: MenuProps) -> Element {
     let wrapper_box = use_box().prepare();
 
     let opened = state.is_open();
-    let open = opened && !disabled;
+    // No empty `role="menu"`: it reads as "menu, 0 items" (todo 447). The state
+    // stays open, so items arriving later show the menu.
+    let empty = props.items.is_empty();
+    let open = opened && !disabled && !empty;
+    use_effect(use_reactive!(|empty| state.set_empty(empty)));
     // Disabled means closed, not hidden: `aria-expanded` stays true, and
     // re-enabling would pop it back up.
     use_effect(use_reactive!(|(disabled, opened)| {

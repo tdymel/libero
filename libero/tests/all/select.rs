@@ -197,6 +197,36 @@ mod select_listbox {
         );
     }
 
+    /// A disabled field's chips keep their x, disabled, and the field leaves
+    /// the tab order.
+    #[test]
+    fn a_disabled_multi_select_disables_every_chips_remove_button() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    MultiSelect {
+                        value: vec![Fruit::Cherry, Fruit::Apple],
+                        disabled: true,
+                        onchange: move |_| {},
+                    }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        for name in ["Remove Cherry", "Remove Apple"] {
+            let remove = tag_with(&html, &format!(r#"aria-label="{name}""#));
+            assert_eq!(
+                remove.get("disabled").map(String::as_str),
+                Some("true"),
+                "{remove:?}"
+            );
+        }
+        let trigger = tag_with(&html, r#"role="combobox""#);
+        assert_eq!(trigger["aria-disabled"], "true", "{trigger:?}");
+        assert!(!trigger.contains_key("tabindex"), "{trigger:?}");
+    }
+
     /// Todo 70 (b): inside the combobox, each chip's x was part of its value,
     /// which read "Cherry Remove Cherry Apple Remove Apple". The chips now sit
     /// before the trigger, and the trigger says the selection as text.

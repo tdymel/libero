@@ -32,10 +32,10 @@
 //! renders the other one untimed first. `Modal`, `Drawer` and `Spotlight` are
 //! one per app, not divided - two are never open at once.
 //!
-//! A row marked `memoized` came in below `Leaf`. That component takes no
-//! `children`, so its props compare equal and dioxus skips the re-render
-//! entirely - the number is the parent's diff, not the component's render.
-//! Price those with a first render instead.
+//! A row marked `memoized` came in below `Leaf`: a timing guess that dioxus
+//! skipped the re-render because the props compared equal, so the number is
+//! the parent's diff. Price those with a first render instead. Whether a
+//! component skips is asserted by render count in `tests/all/render_counts.rs`.
 
 use std::any::Any;
 use std::cell::RefCell;

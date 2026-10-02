@@ -45,6 +45,10 @@ struct Setup {
     disabled: bool,
     any_level: bool,
     clearable: bool,
+    readonly: bool,
+    required: bool,
+    /// `data` holds no options.
+    empty: bool,
 }
 
 fn cascader(setup: Setup) -> Element {
@@ -53,7 +57,7 @@ fn cascader(setup: Setup) -> Element {
             Cascader {
                 label: "Category",
                 placeholder: "Pick a category",
-                data: categories(),
+                data: if setup.empty { Vec::new() } else { categories() },
                 value: setup.value,
                 name: setup.name,
                 separator: setup.separator,
@@ -63,6 +67,8 @@ fn cascader(setup: Setup) -> Element {
                 disabled: setup.disabled,
                 any_level: setup.any_level,
                 clearable: setup.clearable,
+                readonly: setup.readonly,
+                required: setup.required,
                 onchange: move |_: Option<String>| {},
             }
         }
@@ -249,6 +255,52 @@ fn a_disabled_cascader_neither_focuses_nor_posts() {
         1,
         "and it carries it:\n{html}"
     );
+}
+
+/// A read-only field is still a tab stop and still posts, but says so and
+/// offers no x to clear it.
+#[test]
+fn a_readonly_cascader_focuses_and_posts_but_cannot_clear() {
+    let html = shown(Setup {
+        readonly: true,
+        clearable: true,
+        ..posting()
+    });
+    let trigger = trigger_of(&html);
+
+    assert_eq!(trigger["aria-readonly"], "true", "{trigger:?}");
+    assert_eq!(trigger["tabindex"], "0", "{trigger:?}");
+    assert!(!html.contains("aria-label=\"Clear\""), "{html}");
+    assert!(html.contains("value=\"apple\""), "{html}");
+    assert!(!html.contains("disabled=true"), "{html}");
+}
+
+/// `required` reaches the combobox; the label's star is not read twice.
+#[test]
+fn a_required_cascader_says_so_on_the_trigger() {
+    let html = shown(Setup {
+        required: true,
+        ..Setup::default()
+    });
+
+    assert_eq!(trigger_of(&html)["aria-required"], "true", "{html}");
+    let star = tags_with(&html, r#"data-slot="required""#);
+    assert_eq!(star.len(), 1, "{html}");
+    assert_eq!(star[0]["aria-hidden"], "true", "{star:?}");
+}
+
+/// Empty `data` still draws a focusable field showing its placeholder.
+#[test]
+fn an_empty_cascader_shows_its_placeholder_and_posts_nothing() {
+    let html = shown(Setup {
+        empty: true,
+        name: "category",
+        ..Setup::default()
+    });
+
+    assert_eq!(trigger_of(&html)["tabindex"], "0", "{html}");
+    assert!(html.contains("Pick a category"), "{html}");
+    assert!(!html.contains("type=\"hidden\""), "{html}");
 }
 
 /// The x replaces the chevron rather than sitting beside it, and only while

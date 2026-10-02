@@ -425,6 +425,55 @@ fn a_notification_leaves_after_its_time_and_is_then_removed() {
     assert!(items(&html).is_empty(), "{html}");
 }
 
+/// The host's `auto_close` beats the theme's six seconds.
+#[test]
+fn the_hosts_auto_close_beats_the_theme() {
+    fn app() -> Element {
+        let notify = use_notifications();
+        use_hook(|| notify.show("Saved."));
+        rsx! {
+            LiberoProvider { Notifications { auto_close: AutoClose::After(30) } }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+
+    let html = drive_until(&mut dom, Duration::from_secs(2), |html| {
+        items(html).is_empty()
+    });
+    assert!(items(&html).is_empty(), "{html}");
+}
+
+/// The host's `placement` takes what names none; a notification's own wins.
+#[test]
+fn the_hosts_placement_takes_the_notifications_without_one() {
+    fn app() -> Element {
+        let notify = use_notifications();
+        use_hook(|| {
+            notify.show("Saved.");
+            notify.show_with(
+                "Pinned",
+                NotificationOptions {
+                    placement: Some(Placement::BottomEnd),
+                    ..Default::default()
+                },
+            );
+        });
+        rsx! {
+            LiberoProvider { Notifications { placement: Placement::TopStart } }
+        }
+    }
+
+    let html = body(&render(app));
+    let top_start = items(stack(&html, "top", "start"));
+    assert_eq!(top_start.len(), 1, "{html}");
+    assert!(top_start[0].contains("Saved."), "{}", top_start[0]);
+    let bottom_end = items(stack(&html, "bottom", "end"));
+    assert_eq!(bottom_end.len(), 1, "{html}");
+    assert!(bottom_end[0].contains("Pinned"), "{}", bottom_end[0]);
+}
+
 #[test]
 fn a_sticky_notification_stays_and_the_next_one_moves_up() {
     fn app() -> Element {

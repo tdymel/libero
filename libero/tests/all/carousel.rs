@@ -1,6 +1,6 @@
 //! `Carousel`'s rendered contract.
 
-use crate::common::{attributes_of, body, render, tag_with};
+use crate::common::{attributes_of, body, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::Carousel};
@@ -86,10 +86,9 @@ fn a_strip_whose_slides_all_fit_is_one_position() {
     assert!(!html.contains(r#"aria-label="Go to slide 2""#), "{html}");
 }
 
-/// The five-part DOM and the a11y wiring in one pass, because every part of it
-/// is a projection of the same `(count, current)` pair.
-#[test]
-fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
+/// Six slides three-up with dots: every part below is a projection of the same
+/// `(count, current)` pair.
+fn photos() -> String {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -102,8 +101,12 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
             }
         }
     }
+    body(&render(app))
+}
 
-    let html = body(&render(app));
+#[test]
+fn a_carousel_is_a_named_region_of_named_slides() {
+    let html = photos();
     let root = attributes_of(&html, "section");
 
     assert_eq!(root["role"], "region");
@@ -130,10 +133,13 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
         let slide = tag_with(&html, &format!(r#"aria-label="{n} of 6""#));
         assert!(slide.contains_key("inert"), "{slide:?}");
     }
+}
 
-    // The controls name the element they scroll, and the track is the tab stop.
-    // The track is the only element here that carries an id, and the controls
-    // have to name that one rather than whatever `attributes_of` finds first.
+#[test]
+fn the_controls_point_at_the_track_the_status_describes() {
+    let html = photos();
+    // The controls have to name the track's id rather than whatever
+    // `attributes_of` finds first.
     let track_id = track_id_of(&html);
     assert_eq!(
         html.matches(&format!(r#"aria-controls="{track_id}""#))
@@ -153,21 +159,33 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
         Some(&track["aria-describedby"]),
         "{status:?}"
     );
-    // The track and the current dot, and nothing else.
-    assert_eq!(html.matches(r#"tabindex="0""#).count(), 2, "{html}");
+}
 
-    // Six slides three-up stop at index 3, so four dots, not six, in a named
-    // group (todo 549).
-    assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 4);
-    let dots = tag_with(&html, r#"aria-label="Choose slide""#);
-    assert_eq!(dots["role"], "group");
+#[test]
+fn the_track_and_the_current_dot_are_the_tab_stops() {
+    let html = photos();
+    assert_eq!(html.matches(r#"tabindex="0""#).count(), 2, "{html}");
     // At the first slide the previous control is disabled but keeps its place
     // in the tab order.
     assert!(html.contains(r#"aria-disabled="true""#), "{html}");
     assert!(!html.contains("disabled=true"), "{html}");
+}
 
-    // The live region reads the settled position, politely, as one
-    // utterance - the slides showing, three-up (todo 550).
+/// Six slides three-up stop at index 3, so four dots, not six, in a named
+/// group (todo 549).
+#[test]
+fn the_dots_are_a_named_group_of_resting_places() {
+    let html = photos();
+    assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 4);
+    let dots = tag_with(&html, r#"aria-label="Choose slide""#);
+    assert_eq!(dots["role"], "group");
+}
+
+/// The live region reads the settled position, politely, as one utterance -
+/// the slides showing, three-up (todo 550).
+#[test]
+fn the_status_reads_the_slides_showing() {
+    let html = photos();
     assert!(html.contains(r#"role="status""#), "{html}");
     assert!(html.contains(r#"aria-live="polite""#), "{html}");
     assert!(html.contains("Slides 1–3 of 6"), "{html}");
@@ -448,6 +466,31 @@ fn an_unnamed_carousel_falls_back_to_the_theme_label() {
     let root = attributes_of(&body(&render(app)), "section");
 
     assert_eq!(root["aria-label"], "Carousel");
+}
+
+/// One slide is one position: it is announced, but both controls are at an end.
+#[test]
+fn a_one_slide_carousel_has_nowhere_to_go() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel { aria_label: "Photos", indicators: true, controls: true, slides: vec![rsx! { "only" }] }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert!(html.contains("Slide 1 of 1"), "{html}");
+    let slide = tag_with(&html, r#"aria-label="1 of 1""#);
+    assert!(!slide.contains_key("inert"), "{slide:?}");
+    let track_id = track_id_of(&html);
+    let controls = tags_with(&html, &format!(r#"aria-controls="{track_id}""#));
+    assert_eq!(controls.len(), 2, "{html}");
+    for control in &controls {
+        assert_eq!(control["aria-disabled"], "true", "{control:?}");
+    }
+    assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 1);
 }
 
 /// No slides is not one slide: there is no position to announce, nothing to go

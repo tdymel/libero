@@ -39,6 +39,36 @@ fn six_column_app() -> Element {
     }
 }
 
+/// No empty list: a screen reader reads it as "list, 0 items" (todo 447).
+#[test]
+fn an_empty_image_list_draws_no_list() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { ImageList { items: vec![] } }
+        }
+    }
+    let html = body(&render(app));
+
+    assert!(!html.contains("<ul"), "{html}");
+    assert!(!html.contains(r#"role="list""#), "{html}");
+}
+
+/// The explicit `role` is a default: a caller's own replaces it, not doubles it.
+#[test]
+fn the_callers_role_replaces_the_list_role() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { ImageList { role: "group", items: items() } }
+        }
+    }
+    let html = body(&render(app));
+    let ul = &html[html.find("<ul").expect("a ul")..];
+    let open_tag = &ul[..ul.find('>').expect("the tag ends")];
+
+    assert_eq!(open_tag.matches("role=").count(), 1, "{open_tag}");
+    assert_eq!(attributes_of(&html, "ul")["role"], "group");
+}
+
 /// The count is half of why this is a component rather than a `GridZone`, and
 /// `list-style: none` is what takes it away in Safari with VoiceOver - so the
 /// `role` is explicit, exactly as `Timeline`'s is.

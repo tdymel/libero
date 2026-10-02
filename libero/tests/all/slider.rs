@@ -165,6 +165,50 @@ fn a_range_slider_renders_two_thumbs_and_posts_both_values() {
 }
 
 #[test]
+fn a_single_slider_posts_its_value_under_its_name() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Slider { label: "Volume", value: 40.0, name: "volume", oninput: move |_| {} } }
+        }
+    }
+    let html = render(app);
+
+    let inputs = tags_with(&html, r#"type="hidden""#);
+    assert_eq!(inputs.len(), 1, "{html}");
+    assert_eq!(inputs[0]["name"], "volume");
+    assert_eq!(inputs[0]["value"], "40");
+}
+
+/// A disabled thumb leaves the tab order; a read-only one stays, to be read.
+#[test]
+fn a_disabled_thumb_is_skipped_and_a_readonly_thumb_is_reached() {
+    fn disabled() -> Element {
+        rsx! {
+            LiberoProvider { Slider { aria_label: "Volume", value: 40.0, disabled: true, oninput: move |_| {} } }
+        }
+    }
+    fn readonly() -> Element {
+        rsx! {
+            LiberoProvider { Slider { aria_label: "Volume", value: 40.0, readonly: true, oninput: move |_| {} } }
+        }
+    }
+
+    let thumb = tag_with(&render(disabled), r#"role="slider""#);
+    assert_eq!(thumb["aria-disabled"], "true", "{thumb:?}");
+    assert_eq!(thumb["tabindex"], "-1", "{thumb:?}");
+    assert!(!thumb.contains_key("aria-readonly"), "{thumb:?}");
+
+    let thumb = tag_with(&render(readonly), r#"role="slider""#);
+    assert_eq!(thumb["aria-readonly"], "true", "{thumb:?}");
+    assert_eq!(thumb["tabindex"], "0", "{thumb:?}");
+    assert_ne!(
+        thumb.get("aria-disabled").map(String::as_str),
+        Some("true"),
+        "{thumb:?}"
+    );
+}
+
+#[test]
 fn a_range_slider_names_its_thumbs_from_the_localization_unless_told() {
     static WORDS: Localization = Localization {
         slider: SliderLabels {

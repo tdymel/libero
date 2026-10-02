@@ -94,6 +94,7 @@ mod polymorphic_tiers;
 mod progress_bar;
 mod qr_code;
 mod rating;
+mod render_counts;
 mod repository;
 mod rsx_wrapping;
 mod scroll_area;

@@ -8,11 +8,13 @@ use crate::{
     LiberoProvider,
     components::{
         ActionIcon, Anchor, Audio, Avatar, Button, ButtonGroup, Carousel, Checkbox, ColorCode,
-        ColorSwatch, Dialog, Drawer, ProgressBar, Radio, RadioGroup, RangeSlider, Rating,
-        ScrollArea, SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, Tabs, Toolbar,
-        ToolbarGroup, Video, use_spotlight,
+        ColorSwatch, Dialog, Drawer, FloatingWindowOptions, HoverCard, ProgressBar, Radio,
+        RadioGroup, RangeSlider, Rating, RichTextEditor, ScrollArea, SegmentedControl, Slider,
+        Splitter, SpotlightOptions, Switch, Table, Tabs, Toolbar, ToolbarGroup, Video, column,
+        rich_text::{NodeViewProps, NodeViews, use_rich_text_editor},
+        use_spotlight,
     },
-    hooks::{LightboxItem, LightboxOptions, use_lightbox},
+    hooks::{LightboxItem, LightboxOptions, use_floating_window, use_lightbox},
     utils::{take_warnings, warnings_of},
 };
 
@@ -520,4 +522,104 @@ fn an_unnamed_avatar_warns() {
         || rsx! { LiberoProvider { Avatar { name: "", alt: "" } } },
         "Avatar:"
     ));
+}
+
+#[test]
+fn an_unnamed_table_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { Table { data: vec![1u32], columns: vec![column("N").value(|n: &u32| *n)] } } },
+        "Table:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Table { caption: "Numbers", data: vec![1u32], columns: vec![column("N").value(|n: &u32| *n)] } } },
+        "Table:"
+    ));
+}
+
+#[test]
+fn an_unnamed_rich_text_editor_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { RichTextEditor {} } },
+        "RichTextEditor:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { RichTextEditor { label: "Notes" } } },
+        "RichTextEditor:"
+    ));
+}
+
+#[test]
+fn an_unnamed_floating_window_warns() {
+    #[component]
+    fn Window(named: bool) -> Element {
+        let window = use_floating_window(
+            FloatingWindowOptions {
+                title: named.then(|| "Inspector".to_string()),
+                ..Default::default()
+            },
+            |_| rsx! { "x" },
+        );
+        use_hook(|| window.open());
+        rsx! {}
+    }
+    assert!(warns(
+        || rsx! { LiberoProvider { Window { named: false } } },
+        "FloatingWindow:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Window { named: true } } },
+        "FloatingWindow:"
+    ));
+}
+
+#[test]
+fn an_unnamed_hover_card_warns() {
+    let prefix = "HoverCard: the card is a dialog";
+    assert!(warns(
+        || rsx! { LiberoProvider { HoverCard { content: rsx! { "c" }, "x" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { HoverCard { content: rsx! { "c" }, "aria-label": "Profile", "x" } } },
+        prefix
+    ));
+}
+
+/// One handle drives one editor: a second editor taking it over warns.
+#[test]
+fn a_rich_text_handle_shared_by_two_editors_warns() {
+    #[component]
+    fn Editors(two: bool) -> Element {
+        let editor = use_rich_text_editor();
+        rsx! {
+            RichTextEditor { label: "A", handle: editor }
+            if two {
+                RichTextEditor { label: "B", handle: editor }
+            }
+        }
+    }
+    assert!(warns(
+        || rsx! { LiberoProvider { Editors { two: true } } },
+        "RichTextHandle:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Editors { two: false } } },
+        "RichTextHandle:"
+    ));
+}
+
+#[test]
+fn a_code_block_node_view_warns() {
+    fn view(_: NodeViewProps) -> Element {
+        rsx! {}
+    }
+    take_warnings();
+    let _ = NodeViews::new().with("callout", view);
+    assert!(take_warnings().is_empty());
+    let _ = NodeViews::new().with("code_block", view);
+    assert!(
+        take_warnings()
+            .iter()
+            .any(|warning| warning.starts_with("NodeViews:"))
+    );
 }

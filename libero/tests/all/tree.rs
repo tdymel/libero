@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -43,6 +43,48 @@ fn a_tree_item_takes_its_tabindex_from_the_row() {
         Some("0"),
         "{alone:?}"
     );
+}
+
+/// Read at the first render: a closed branch says `false`, an open one `true`
+/// and shows its group, a leaf says nothing.
+#[test]
+fn a_branch_says_whether_it_is_open_from_the_first_render() {
+    fn app() -> Element {
+        let data = vec![
+            TreeNode::new("closed", "Closed".to_string())
+                .children(vec![TreeNode::new("c1", "Hidden".to_string())]),
+            TreeNode::new("open", "Open".to_string())
+                .children(vec![TreeNode::new("o1", "Shown".to_string())]),
+            TreeNode::new("leaf", "Leaf".to_string()),
+        ];
+        rsx! {
+            LiberoProvider {
+                Tree { aria_label: "Files", data, default_expanded: HashSet::from(["open".to_string()]) }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    let row = |id: &str| tag_with(&html, &format!(r#"data-tree-id="{id}""#));
+    assert_eq!(row("closed")["aria-expanded"], "false");
+    assert_eq!(row("open")["aria-expanded"], "true");
+    assert!(!row("leaf").contains_key("aria-expanded"));
+    assert!(html.contains("Shown"), "{html}");
+    assert!(!html.contains("Hidden"), "{html}");
+    assert_eq!(tags_with(&html, r#"role="group""#).len(), 1, "{html}");
+}
+
+#[test]
+fn an_empty_tree_draws_no_rows() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Tree::<String> { aria_label: "Files", data: vec![] } }
+        }
+    }
+    let html = body(&render(app));
+
+    assert_eq!(tag_with(&html, r#"role="tree""#)["aria-label"], "Files");
+    assert!(tags_with(&html, r#"role="treeitem""#).is_empty(), "{html}");
 }
 
 #[test]

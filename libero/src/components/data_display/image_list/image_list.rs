@@ -498,6 +498,10 @@ pub fn ImageList(props: ImageListProps) -> Element {
         }
     });
     let cells = cells.collect::<Vec<_>>();
+    // No empty list: a screen reader reads it as "list, 0 items" (todo 447).
+    if cells.is_empty() {
+        return rsx! {};
+    }
 
     let caller_sx = parts_under_sx(&props.parts, props.sx.clone());
     let root_sx: Input<Sx> = match caller_sx.as_ref() {

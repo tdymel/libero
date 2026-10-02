@@ -385,3 +385,14 @@ fn a_plain_image_is_still_a_bare_img() {
     assert!(!html.contains("<button"));
     assert_eq!(attributes_of(&html, "img")["alt"], "X");
 }
+
+/// No items still opens a dialog that can be closed, with nothing on the stage.
+#[test]
+fn an_empty_gallery_opens_a_closable_dialog_with_no_pictures() {
+    let html = open_items(LightboxOptions::default(), vec![], 0);
+
+    assert_eq!(tags_with(&html, r#"role="dialog""#).len(), 1, "{html}");
+    assert!(html.contains(r#"aria-label="Close""#), "{html}");
+    assert!(stage_images(&html).is_empty(), "{html}");
+    assert!(thumbnails(&html).is_empty(), "{html}");
+}

@@ -3,12 +3,13 @@
 //! it opens. Focus movement needs a real renderer - `ElementApi` is
 //! `Unsupported` here - and is verified in the browser instead.
 
-use crate::common::{attributes_of, body, render_with, tag_with, tags_with};
+use crate::common::{attributes_of, body, drive_once, render_with, tag_with, tags_with};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{Button, Menu, MenuEntry, MenuItem, use_menu},
 };
+use std::cell::Cell;
 
 fn items() -> Vec<MenuEntry> {
     vec![
@@ -156,6 +157,72 @@ fn a_submenu_item_announces_a_closed_menu() {
     let delete = tags_with(&html, r#"data-menu-index="3""#);
     assert!(!delete[0].contains_key("aria-haspopup"));
     assert!(!delete[0].contains_key("aria-expanded"));
+}
+
+/// Every item disabled: each still says so and the first is still the tab
+/// stop, so the menu can be entered and read (APG keeps disabled items focusable).
+#[test]
+fn a_menu_of_disabled_items_still_has_one_tab_stop() {
+    let html = opened(|| {
+        vec![
+            MenuItem::new("Copy").disabled(true).onselect(|_| {}).into(),
+            MenuItem::new("Paste")
+                .disabled(true)
+                .onselect(|_| {})
+                .into(),
+        ]
+    });
+    let items = tags_with(&html, r#"role="menuitem""#);
+    assert_eq!(items.len(), 2, "{html}");
+    for (index, item) in items.iter().enumerate() {
+        assert_eq!(item["aria-disabled"], "true", "{item:?}");
+        let tabindex = if index == 0 { "0" } else { "-1" };
+        assert_eq!(item["tabindex"], tabindex, "{item:?}");
+    }
+}
+
+/// No items draws no empty `role="menu"`, and the trigger says closed but
+/// still announces a menu (todo 1789, as 447 did for Notifications).
+#[test]
+fn an_empty_menu_draws_no_menu_and_its_trigger_says_closed() {
+    let html = opened(Vec::new);
+    assert!(!html.contains(r#"role="menu""#), "{html}");
+
+    let trigger = attributes_of(&html, "button");
+    assert_eq!(trigger["aria-expanded"], "false", "{trigger:?}");
+    assert!(!trigger.contains_key("aria-controls"), "{trigger:?}");
+    assert_eq!(trigger["aria-haspopup"], "menu", "{trigger:?}");
+}
+
+thread_local! {
+    static FILLED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// The state stays open while empty, so items arriving show the menu.
+#[test]
+fn items_arriving_in_an_open_empty_menu_show_it() {
+    fn later() -> Vec<MenuEntry> {
+        match FILLED.get() {
+            true => vec![MenuItem::new("Copy").onselect(|_| {}).into()],
+            false => Vec::new(),
+        }
+    }
+    FILLED.set(false);
+    let mut dom = VirtualDom::new_with_props(open_menu, later as fn() -> Vec<MenuEntry>);
+    dom.rebuild_in_place();
+    let empty = drive_once(&mut dom);
+    assert!(!empty.contains(r#"role="menu""#), "{empty}");
+
+    FILLED.set(true);
+    dom.mark_dirty(ScopeId::APP);
+    // The trigger hears of the items one pass after the menu draws them.
+    drive_once(&mut dom);
+    let html = drive_once(&mut dom);
+    assert_eq!(tags_with(&html, r#"role="menu""#).len(), 1, "{html}");
+    assert_eq!(tags_with(&html, r#"role="menuitem""#).len(), 1, "{html}");
+    let trigger = attributes_of(&html, "button");
+    assert_eq!(trigger["aria-expanded"], "true", "{trigger:?}");
+    assert!(trigger.contains_key("aria-controls"), "{trigger:?}");
 }
 
 #[test]

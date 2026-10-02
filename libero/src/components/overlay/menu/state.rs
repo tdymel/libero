@@ -18,6 +18,8 @@ pub struct MenuState {
     opened: Signal<bool>,
     /// Bumped per open, so the same item is focused again on a repeat request.
     request: Signal<(u64, MenuFocus)>,
+    /// No items: an open state draws no menu, so the trigger says closed.
+    empty: Signal<bool>,
 }
 
 /// One `Menu`'s state.
@@ -28,6 +30,7 @@ pub fn use_menu() -> MenuState {
         id: use_id(),
         opened: use_signal(|| false),
         request: use_signal(|| (0, MenuFocus::First)),
+        empty: use_signal(|| false),
     }
 }
 
@@ -39,6 +42,7 @@ impl MenuState {
             id: Signal::new(id),
             opened: Signal::new(false),
             request: Signal::new((0, MenuFocus::First)),
+            empty: Signal::new(false),
         }
     }
 
@@ -85,6 +89,13 @@ impl MenuState {
         (self.request)()
     }
 
+    pub(super) fn set_empty(&self, empty: bool) {
+        let mut flag = self.empty;
+        if *flag.peek() != empty {
+            flag.set(empty);
+        }
+    }
+
     /// The trigger's ARIA wiring. Spread it on the control inside the `Menu`:
     ///
     /// ```no_run
@@ -98,7 +109,7 @@ impl MenuState {
     /// ```
     pub fn a11y_attributes(&self) -> Vec<Attribute> {
         let id = self.id();
-        let opened = self.is_open();
+        let opened = self.is_open() && !(self.empty)();
         let mut attributes = vec![
             attr("id", trigger_id(&id)),
             attr("aria-haspopup", "menu"),
