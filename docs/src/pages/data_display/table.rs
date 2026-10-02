@@ -786,7 +786,7 @@ pub fn TablePage() -> Element {
                     Code { source: "onexport" }
                     "; the demo's "
                     Code { source: "toolbar" }
-                    " switch shows them, "
+                    " switch, on at first, shows them, "
                     Code { source: "TableFilterButton" }
                     " with "
                     Code { source: "filter_panel" }
@@ -988,7 +988,8 @@ pub fn TablePage() -> Element {
                         false => vec![],
                     }).hidden_when(windowed),
                     Control::switch("show_quick_filter"),
-                    Control::switch("toolbar").code(|_, values| match (values.str("toolbar") == "true", values.str("filter_panel") == "true") {
+                    // On, so the toolbar pieces and Export show without another switch.
+                    Control::switch("toolbar").default("true").code(|_, values| match (values.str("toolbar") == "true", values.str("filter_panel") == "true") {
                         (true, true) => vec![TOOLBAR_FILTERS.to_string()],
                         (true, false) => vec![TOOLBAR.to_string()],
                         (false, _) => vec![],
