@@ -291,7 +291,9 @@ pub use rating::{
 };
 pub use repository::RepositoryDefaults;
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_CLIP_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
-pub(crate) use scroll_area::{SCROLL_AREA_KEYFRAMES, SCROLL_AREA_RANGE_X, SCROLL_AREA_RANGE_Y};
+pub(crate) use scroll_area::{
+    SCROLL_AREA_KEYFRAMES, SCROLL_AREA_RANGE_X, SCROLL_AREA_RANGE_Y, SCROLL_AREA_THUMB_TRAVEL,
+};
 pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 pub use scroller::{
     SCROLLER_CONTROL, SCROLLER_CONTROL_SIZE, SCROLLER_FADE, SCROLLER_FADE_DEFAULT,

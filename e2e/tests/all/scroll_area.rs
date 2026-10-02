@@ -1,6 +1,7 @@
 //! `ScrollArea` re-measures when its pane resizes (425), resized by script as a `Splitter`
 //! would, with the window left alone.
 
+use chromiumoxide::cdp::browser_protocol::page::AddScriptToEvaluateOnNewDocumentParams;
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
@@ -419,8 +420,15 @@ fn flex_and_grid_areas_lay_out_as_without_the_bars() {
     });
 }
 
-/// Where scroll timelines are missing (Firefox), the layers' inline `translate` keeps the
-/// track in place: here with the timeline animations switched off.
+/// The vertical thumb of `#bars-v` sits where its share of the padding box and the
+/// scroll offset put it.
+const V_THUMB_PLACED: &str = "(() => { const a = document.querySelector('#bars-v'); \
+     const thumb = Math.max(a.clientHeight ** 2 / a.scrollHeight, 20); \
+     const at = (a.clientHeight - thumb) * a.scrollTop / (a.scrollHeight - a.clientHeight); \
+     return Math.abs(p.top - at) < 1 && Math.abs(p.height - thumb) < 1; })()";
+
+/// Where scroll timelines are missing (Firefox), inline styles keep the track in place
+/// and move the thumb: here with `CSS.supports` denying them and their animations off.
 #[test]
 fn without_scroll_timelines_the_track_still_stays_put() {
     const AREA: &str = "document.querySelector('#bars-v')";
@@ -429,10 +437,21 @@ fn without_scroll_timelines_the_track_still_stays_put() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(
-            "(() => { const s = document.createElement('style'); \
-             s.textContent = '[data-slot=scrollbars],[data-scrollbars-x]{animation:none!important}'; \
-             document.head.append(s); })()",
+        // Before the app reads it: a reload runs the script first.
+        page.execute(AddScriptToEvaluateOnNewDocumentParams::new(
+            "(() => { const supports = CSS.supports.bind(CSS); \
+             CSS.supports = (...a) => !String(a.join(':')).includes('animation-timeline') && supports(...a); \
+             addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); \
+             s.textContent = '[data-slot=scrollbars],[data-scrollbars-x],[data-scrollbars-x] [data-slot=thumb]{animation:none!important}'; \
+             document.head.append(s); }); })()",
+        ))
+        .await
+        .unwrap();
+        page.reload().await.unwrap();
+        wait::for_js_true(
+            page,
+            "!CSS.supports('animation-timeline: scroll()') && !!document.querySelector('#bars-v')",
+            "the reloaded app",
         )
         .await
         .unwrap();
@@ -454,8 +473,82 @@ fn without_scroll_timelines_the_track_still_stays_put() {
         )
         .await
         .unwrap();
+        wait::for_js_true(
+            page,
+            &part("bars-v", V_THUMB, V_THUMB_PLACED),
+            "the thumb placed by its inline style",
+        )
+        .await
+        .unwrap();
 
         fixture.console.assert_clean("the fallback").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A scroll redraws nothing under scroll timelines (1954): a resize between two scrolls
+/// must still bring the thumb's size and travel up to date.
+#[test]
+fn a_resize_between_scrolls_keeps_the_thumb_on_its_track() {
+    const AREA: &str = "document.querySelector('#bars-v')";
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/bars", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, &part("bars-v", V_THUMB, "true"), "the drawn thumb")
+            .await
+            .unwrap();
+
+        page.evaluate(format!("{AREA}.scrollTop = {AREA}.scrollHeight"))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &part("bars-v", V_THUMB, "Math.abs(p.bottom) < 1"),
+            "the thumb at the bottom",
+        )
+        .await
+        .unwrap();
+        page.evaluate("document.querySelector('#bars-pane').style.height = '300px'")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &part("bars-v", V_TRACK, "Math.abs(p.height - 300) < 1"),
+            "the track to follow the pane",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &part(
+                "bars-v",
+                V_THUMB,
+                &format!("Math.abs(p.bottom) < 1 && {V_THUMB_PLACED}"),
+            ),
+            "the resized thumb still at the bottom",
+        )
+        .await
+        .unwrap();
+
+        page.evaluate(format!(
+            "{AREA}.scrollTop = ({AREA}.scrollHeight - {AREA}.clientHeight) / 2"
+        ))
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &part("bars-v", V_THUMB, V_THUMB_PLACED),
+            "the resized thumb half way",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a resize between scrolls")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

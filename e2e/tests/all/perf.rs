@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Viewport, clock, wait};
 
 type Renders = BTreeMap<String, u32>;
 
@@ -25,19 +25,22 @@ async fn read(page: &Page) -> Renders {
     serde_json::from_str(&json).unwrap()
 }
 
-/// The counts once nothing has rendered for 300 ms; a count still growing
-/// after 3 s is a runaway.
+/// The counts once nothing has rendered for 300 ms and a drawn frame; a count still
+/// growing after 6 s is a runaway.
 async fn settled(page: &Page, what: &str) -> Renders {
     let started = Instant::now();
     let mut last = read(page).await;
     loop {
         tokio::time::sleep(Duration::from_millis(300)).await;
+        // A background tab draws every 500 ms: its resize reports, and the bars'
+        // re-measure on them, landed after a 300 ms quiet spell (todo 1955).
+        clock::frame(page).await.unwrap();
         let now = read(page).await;
         if now == last {
             return now;
         }
         assert!(
-            started.elapsed() < Duration::from_secs(3),
+            started.elapsed() < Duration::from_secs(6),
             "{what}: still rendering after 3 s, a runaway: {now:?}"
         );
         last = now;
@@ -319,13 +322,13 @@ fn scrolling_a_virtual_list_stays_in_budget() {
         }
         let renders = settled(page, "scrolling").await;
         // No row is a scope of its own: a step redraws the window and the
-        // padding box around it, never the area. The drawn thumb moves each step.
+        // padding box around it, never the area. The drawn thumb rides a scroll timeline (1954).
         assert_within(
             &renders,
             &[
                 ("ScrollAreaContent", 10),
                 ("Virtualize", 10),
-                ("ScrollAreaBars", 10),
+                ("ScrollAreaBars", 0),
             ],
             "ten scroll steps",
         );
@@ -394,6 +397,81 @@ fn typing_into_an_autocomplete_stays_in_budget() {
             assert_within(&renders, budget, &format!("typing to {typed:?}"));
         }
         fixture.console.assert_clean("typing").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A ten-move drag of a slider thumb (todo 1953).
+#[test]
+fn a_slider_drag_stays_in_budget() {
+    const VALUE: &str = "document.querySelector('[role=slider]').getAttribute('aria-valuenow')";
+    block_on(async {
+        let fixture = open("/perf/slider").await;
+        let page = &fixture.page;
+        let from = pointer::centre_of(page, "[role=slider]").await.unwrap();
+        let to = pointer::Point {
+            x: from.x + 100.0,
+            y: from.y,
+        };
+        pointer::drag(page, from, to, 10).await.unwrap();
+        wait::for_js_true(page, &format!("{VALUE} !== '50'"), "the drag")
+            .await
+            .unwrap();
+        let renders = settled(page, "dragging").await;
+        // Ten moves, the press and the release each redraw the page, the slider, its
+        // thumbs and the pinned bubble; the closed tooltip takes the new label too.
+        assert_within(
+            &renders,
+            &[
+                ("TimedSliderPage", 12),
+                ("Slider", 12),
+                ("SliderCore", 10),
+                ("SliderBody", 2),
+                ("SliderThumbs", 12),
+                ("Tooltip", 15),
+                ("TooltipBubble", 4),
+                ("TooltipPinned", 12),
+                ("Fragment", 16),
+                ("PortalOutlet", 17),
+                ("StyleOutlet", 4),
+            ],
+            "a ten-move drag",
+        );
+        fixture.console.assert_clean("dragging").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Opening a palette of sixty actions (todo 1952).
+#[test]
+fn opening_the_spotlight_stays_in_budget() {
+    block_on(async {
+        let fixture = open("/perf/spotlight").await;
+        let page = &fixture.page;
+        pointer::click(page, "#open").await.unwrap();
+        wait::for_visible(page, "[role=dialog]").await.unwrap();
+        let renders = settled(page, "opening").await;
+        // The sixty rows are no scopes of their own: the open is the modal's mount.
+        assert_within(
+            &renders,
+            &[
+                ("Button", 1),
+                ("Modal", 2),
+                ("ModalSlot", 1),
+                ("Overlay", 1),
+                ("Dialog", 1),
+                ("FocusTrap", 2),
+                ("Box", 1),
+                ("ScrollArea", 1),
+                ("ScrollAreaContent", 1),
+                ("ScrollAreaBars", 2),
+                ("Fragment", 1),
+                ("PortalOutlet", 1),
+                ("StyleOutlet", 1),
+            ],
+            "opening the palette",
+        );
+        fixture.console.assert_clean("opening").unwrap();
         fixture.close().await.unwrap();
     });
 }

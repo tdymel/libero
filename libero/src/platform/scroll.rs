@@ -33,6 +33,44 @@ pub(crate) fn draws_own_scrollbars() -> bool {
     !NATIVE
 }
 
+/// Whether CSS scroll timelines move the drawn bars, so a scroll writes nothing to the
+/// DOM: a write per scroll cost Chromium a frame per wheel step (todo 1954).
+pub(crate) fn scroll_timelines() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        thread_local! {
+            static SUPPORTED: bool = web::css_supports("animation-timeline: scroll()");
+        }
+        SUPPORTED.with(|supported| *supported)
+    }
+    // A WebView may have them, but answers only asynchronously.
+    #[cfg(not(target_arch = "wasm32"))]
+    false
+}
+
+#[cfg(target_arch = "wasm32")]
+mod web {
+    use js_sys::{Function, Reflect};
+    use wasm_bindgen::{JsCast, JsValue};
+
+    /// `CSS.supports(condition)`, by name: web-sys's `Css` feature is not enabled.
+    pub(super) fn css_supports(condition: &str) -> bool {
+        let css = Reflect::get(&js_sys::global(), &JsValue::from_str("CSS")).ok();
+        let supports = css.as_ref().and_then(|css| {
+            Reflect::get(css, &JsValue::from_str("supports"))
+                .ok()?
+                .dyn_into::<Function>()
+                .ok()
+        });
+        match (css, supports) {
+            (Some(css), Some(supports)) => supports
+                .call1(&css, &JsValue::from_str(condition))
+                .is_ok_and(|answer| answer.is_truthy()),
+            _ => false,
+        }
+    }
+}
+
 /// Whether a released scroll comes to rest on its `scroll-snap` points. Blitz
 /// has no scroll snap.
 pub(crate) fn snaps_scroll() -> bool {

@@ -21,6 +21,8 @@ pub const ROUTES: Routes = &[
     ("/perf/pagination", || rsx! { PaginationPage {} }),
     ("/perf/scroll", || rsx! { ScrollPage {} }),
     ("/perf/autocomplete", || rsx! { TimedAutocompletePage {} }),
+    ("/perf/slider", || rsx! { TimedSliderPage {} }),
+    ("/perf/spotlight", || rsx! { TimedSpotlightPage {} }),
     // Interaction timing (perf::timing): no render counter, so the timings are an app's.
     (
         "/timing/table",

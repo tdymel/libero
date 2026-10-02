@@ -50,9 +50,9 @@ fn main() -> Result<()> {
         passthrough.remove(0);
         passthrough.push("--nocapture".into());
     }
-    let (app_dir, title, test) = match sweep {
-        true => ("docs", DOCS_TITLE, "sweep"),
-        false => ("e2e/fixtures", FIXTURE_TITLE, "all"),
+    let (app_dir, app_package, title, test) = match sweep {
+        true => ("docs", "docs", DOCS_TITLE, "sweep"),
+        false => ("e2e/fixtures", "e2e-fixtures", FIXTURE_TITLE, "all"),
     };
     let root = workspace_root()?;
     let port = free_port()?;
@@ -125,6 +125,14 @@ fn main() -> Result<()> {
     // `E2E_RELEASE=1`: optimised fixtures, for the frame-time report (1086).
     if std::env::var_os("E2E_RELEASE").is_some() {
         server.arg("--release");
+        // dx serves the last release bundle while it rebuilds, and readiness took that
+        // one; the first navigation then timed out (todo 1956).
+        let stale = target_dir.join("dx").join(app_package).join("release/web");
+        if let Err(error) = std::fs::remove_dir_all(&stale)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            bail!("remove the stale bundle {}: {error}", stale.display());
+        }
     }
     let bindgen_report = bindgen::wrap(&mut server, &root, &target_dir)?;
     // A unit filter builds only that unit's fixture modules: 2 s instead of 25 (1618).

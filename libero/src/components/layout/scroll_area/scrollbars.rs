@@ -10,9 +10,12 @@ use crate::{
         layout::use_box,
     },
     hooks::{DragMove, DragOptions, ElementHandle, use_drag, use_element},
-    platform::{ElementApi, when_laid_out},
+    platform::{ElementApi, scroll_timelines, when_laid_out},
     sx::{FORCED_COLORS, StaticSx, sx},
-    theme::{SCROLL_AREA_RANGE_X, SCROLL_AREA_RANGE_Y, ScrollAxis, ScrollbarSize},
+    theme::{
+        SCROLL_AREA_RANGE_X, SCROLL_AREA_RANGE_Y, SCROLL_AREA_THUMB_TRAVEL, ScrollAxis,
+        ScrollbarSize,
+    },
 };
 
 /// Two layers over the area's padding box, out of its flow, each shifted by
@@ -103,6 +106,30 @@ pub(super) struct ScrollMetrics {
     pub left: f64,
 }
 
+impl ScrollMetrics {
+    /// Whether `next` changes what the bars draw. Under scroll timelines the offsets
+    /// move them on the compositor, so only a size does.
+    fn redraws(previous: Option<Self>, next: Self, timelines: bool) -> bool {
+        let Some(previous) = previous else {
+            return true;
+        };
+        match timelines {
+            true => {
+                let size = |m: Self| {
+                    (
+                        m.view_width,
+                        m.view_height,
+                        m.content_width,
+                        m.content_height,
+                    )
+                };
+                size(previous) != size(next)
+            }
+            false => previous != next,
+        }
+    }
+}
+
 /// One drawn bar, along its axis: track length, thumb length and thumb start.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct Bar {
@@ -126,6 +153,18 @@ impl Bar {
             at,
             range,
         })
+    }
+
+    /// Where the thumb's inline style puts it: at the track's start where a scroll
+    /// timeline moves it, so a scroll writes nothing.
+    fn start(&self, timelines: bool) -> f64 {
+        if timelines { 0.0 } else { self.at }
+    }
+
+    /// How far a scroll timeline moves the thumb, in px: leftwards for an RTL x bar.
+    fn travel(&self, leftwards: bool) -> f64 {
+        let travel = self.track - self.thumb;
+        if leftwards { -travel } else { travel }
     }
 
     /// The scroll offset that puts the thumb's start `at` px along the track.
@@ -188,13 +227,26 @@ pub(super) struct DrawnBars {
     pub root: ElementHandle,
     /// The drawn layer, as big as the area's padding box.
     pub layer: ElementHandle,
+    /// What the bars drew from.
     pub metrics: Signal<Option<ScrollMetrics>>,
+    /// The latest read, offsets included: under scroll timelines a scroll alone
+    /// leaves `metrics` behind.
+    pub latest: CopyValue<Option<ScrollMetrics>>,
 }
 
 impl DrawnBars {
+    fn update(mut self, next: ScrollMetrics) -> bool {
+        self.latest.set(Some(next));
+        let redraws = ScrollMetrics::redraws(*self.metrics.peek(), next, scroll_timelines());
+        if redraws {
+            self.metrics.set(Some(next));
+        }
+        redraws
+    }
+
     /// From a scroll event, which carries every size and offset.
-    pub fn scrolled(mut self, data: &ScrollData) {
-        let next = Some(ScrollMetrics {
+    pub fn scrolled(self, data: &ScrollData) {
+        self.update(ScrollMetrics {
             view_width: data.client_width() as f64,
             view_height: data.client_height() as f64,
             content_width: data.scroll_width() as f64,
@@ -203,19 +255,12 @@ impl DrawnBars {
             y: data.scroll_top(),
             left: data.scroll_left(),
         });
-        if *self.metrics.peek() != next {
-            self.metrics.set(next);
-        }
     }
 
     /// Re-reads the geometry once laid out. A changed one is read once more:
     /// the tracks it replaced may have stretched the overflow it measured.
     pub fn measure(self, tries: u8) {
-        let Self {
-            root,
-            layer,
-            mut metrics,
-        } = self;
+        let Self { root, layer, .. } = self;
         // Mounting the layer measures again.
         if !layer.is_mounted() {
             return;
@@ -239,11 +284,8 @@ impl DrawnBars {
                     y,
                     left,
                 };
-                if *metrics.peek() != Some(measured) {
-                    metrics.set(Some(measured));
-                    if tries > 0 {
-                        self.measure(tries - 1);
-                    }
+                if self.update(measured) && tries > 0 {
+                    self.measure(tries - 1);
                 }
             });
         });
@@ -265,10 +307,15 @@ pub(super) fn ScrollAreaBars(
     size: ScrollbarSize,
     inset_top: f64,
 ) -> Element {
-    let DrawnBars { root, metrics, .. } = state;
+    let DrawnBars {
+        root,
+        metrics,
+        latest,
+        ..
+    } = state;
     let thick = thickness(size);
     let current = move |axis: Axis| {
-        let drawn = bars(scrollbars, (*metrics.peek())?, thick, inset_top);
+        let drawn = bars(scrollbars, latest()?, thick, inset_top);
         match axis {
             Axis::X => drawn.x,
             Axis::Y => drawn.y,
@@ -276,7 +323,7 @@ pub(super) fn ScrollAreaBars(
     };
     // Scrolls so the thumb starts `at` px along its track; the other axis stays.
     let scroll_along = move |axis: Axis, at: f64, rtl: bool| {
-        let (Some(metrics), Some(bar)) = (*metrics.peek(), current(axis)) else {
+        let (Some(metrics), Some(bar)) = (latest(), current(axis)) else {
             return;
         };
         let (x, y) = match axis {
@@ -368,8 +415,10 @@ pub(super) fn ScrollAreaBars(
     }
     // Under RTL the content moves right as it scrolls on: the layer follows left.
     let range_x = (measured.content_width - measured.view_width).max(0.0);
-    let range_x = if root.is_rtl() { -range_x } else { range_x };
+    let rtl = root.is_rtl();
+    let range_x = if rtl { -range_x } else { range_x };
     let corner = |other: Option<Bar>| if other.is_some() { thick } else { 0.0 };
+    let timelines = scroll_timelines();
 
     let tracks = rsx! {
         div {
@@ -383,7 +432,7 @@ pub(super) fn ScrollAreaBars(
                     onpointerdown: press(Axis::Y),
                     div {
                         "data-slot": ScrollAreaPart::Thumb.slot(),
-                        style: "top: {bar.at}px; height: {bar.thumb}px",
+                        style: "top: {bar.start(timelines)}px; height: {bar.thumb}px; {SCROLL_AREA_THUMB_TRAVEL.name()}: {bar.travel(false)}px",
                         onmounted: thumb_y.mount(),
                         onpointerdown: move |event: Event<PointerData>| {
                             event.stop_propagation();
@@ -403,7 +452,7 @@ pub(super) fn ScrollAreaBars(
                     onpointerdown: press(Axis::X),
                     div {
                         "data-slot": ScrollAreaPart::Thumb.slot(),
-                        style: "inset-inline-start: {bar.at}px; width: {bar.thumb}px",
+                        style: "inset-inline-start: {bar.start(timelines)}px; width: {bar.thumb}px; {SCROLL_AREA_THUMB_TRAVEL.name()}: {bar.travel(rtl)}px",
                         onmounted: thumb_x.mount(),
                         onpointerdown: move |event: Event<PointerData>| {
                             event.stop_propagation();
@@ -522,5 +571,33 @@ mod tests {
         assert_eq!(bar.offset_at(37.5), 150.0);
         assert_eq!(bar.offset_at(-10.0), 0.0);
         assert_eq!(bar.offset_at(500.0), 300.0);
+    }
+
+    /// Todo 1954: a scroll timeline moves the thumb, so a scroll alone redraws nothing.
+    #[test]
+    fn under_scroll_timelines_only_a_size_redraws() {
+        let scrolled = ScrollMetrics { y: 150.0, ..TALL };
+        let grown = ScrollMetrics {
+            content_height: 800.0,
+            ..TALL
+        };
+
+        assert!(ScrollMetrics::redraws(None, TALL, true));
+        assert!(!ScrollMetrics::redraws(Some(TALL), scrolled, true));
+        assert!(ScrollMetrics::redraws(Some(scrolled), grown, true));
+        let bar = bars(ScrollAxis::Vertical, scrolled, 8.0, 0.0).y.unwrap();
+        assert_eq!((bar.start(true), bar.travel(false)), (0.0, 75.0));
+        assert_eq!(bar.travel(true), -75.0);
+    }
+
+    /// Without scroll timelines every offset redraws, the inline style placing the thumb.
+    #[test]
+    fn without_scroll_timelines_a_scroll_redraws() {
+        let scrolled = ScrollMetrics { y: 150.0, ..TALL };
+
+        assert!(ScrollMetrics::redraws(Some(TALL), scrolled, false));
+        assert!(!ScrollMetrics::redraws(Some(scrolled), scrolled, false));
+        let bar = bars(ScrollAxis::Vertical, scrolled, 8.0, 0.0).y.unwrap();
+        assert_eq!(bar.start(false), 37.5);
     }
 }
