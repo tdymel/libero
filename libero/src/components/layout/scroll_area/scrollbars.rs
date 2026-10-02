@@ -415,7 +415,7 @@ pub(super) fn ScrollAreaBars(
     }
     // Under RTL the content moves right as it scrolls on: the layer follows left.
     let range_x = (measured.content_width - measured.view_width).max(0.0);
-    let rtl = root.is_rtl();
+    let rtl = needs_direction(&drawn, range_x) && root.is_rtl();
     let range_x = if rtl { -range_x } else { range_x };
     let corner = |other: Option<Bar>| if other.is_some() { thick } else { 0.0 };
     let timelines = scroll_timelines();
@@ -467,6 +467,11 @@ pub(super) fn ScrollAreaBars(
         }
     };
     render(Some(tracks))
+}
+
+/// The direction is a computed-style read: only a horizontal bar or range needs it (todo 2060).
+fn needs_direction(drawn: &Bars, range_x: f64) -> bool {
+    drawn.x.is_some() || range_x > 0.0
 }
 
 #[cfg(test)]
@@ -588,6 +593,27 @@ mod tests {
         let bar = bars(ScrollAxis::Vertical, scrolled, 8.0, 0.0).y.unwrap();
         assert_eq!((bar.start(true), bar.travel(false)), (0.0, 75.0));
         assert_eq!(bar.travel(true), -75.0);
+    }
+
+    #[test]
+    fn only_a_horizontal_bar_or_range_reads_the_direction() {
+        let wide = ScrollMetrics {
+            content_width: 800.0,
+            ..TALL
+        };
+
+        assert!(!needs_direction(
+            &bars(ScrollAxis::Vertical, TALL, 8.0, 0.0),
+            0.0
+        ));
+        assert!(needs_direction(
+            &bars(ScrollAxis::Both, wide, 8.0, 0.0),
+            600.0
+        ));
+        assert!(needs_direction(
+            &bars(ScrollAxis::Vertical, wide, 8.0, 0.0),
+            600.0
+        ));
     }
 
     /// Without scroll timelines every offset redraws, the inline style placing the thumb.
