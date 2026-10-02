@@ -358,18 +358,19 @@ fn code_line_row(
     // Read aloud, the numbers interleave with the code.
     let hidden = |slot: &'static str| vec![attr("aria-hidden", "true"), attr("data-slot", slot)];
     let number = line_numbers.then(|| {
-        styles.number.clone().render(
-            HtmlTag::Span,
-            hidden("line-number"),
-            rsx! { {(index + 1).to_string()} },
-        )
+        let text = rsx! { {(index + 1).to_string()} };
+        styles
+            .number
+            .clone()
+            .render(HtmlTag::Span, hidden("line-number"), text)
     });
     let marker = diff.is_some().then(|| {
+        let text = rsx! { {marker} };
         styles
             .marker
             .clone()
             .with_states(&States::new().with("no-gutter", !line_numbers))
-            .render(HtmlTag::Span, hidden("marker"), rsx! { {marker} })
+            .render(HtmlTag::Span, hidden("marker"), text)
     });
     let content = styles
         .content
