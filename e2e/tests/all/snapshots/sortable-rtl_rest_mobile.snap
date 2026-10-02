@@ -1,0 +1,33 @@
+---
+source: e2e/src/suite.rs
+description: sortable-rtl at mobile (rest)
+expression: tree
+---
+list
+  listitem [level=1]
+    button "Reorder Alpha"
+    paragraph
+      StaticText "Alpha"
+    button "Move Alpha backward" [disabled]
+    button "Move Alpha forward"
+  listitem [level=1]
+    button "Reorder Beta"
+    paragraph
+      StaticText "Beta"
+    button "Move Beta backward"
+    button "Move Beta forward"
+  listitem [level=1]
+    button "Reorder Gamma"
+    paragraph
+      StaticText "Gamma"
+    button "Move Gamma backward"
+    button "Move Gamma forward"
+  listitem [level=1]
+    button "Reorder Delta"
+    paragraph
+      StaticText "Delta"
+    button "Move Delta backward"
+    button "Move Delta forward" [disabled]
+status [atomic] [live=polite]
+paragraph
+  StaticText "Alpha Beta Gamma Delta"

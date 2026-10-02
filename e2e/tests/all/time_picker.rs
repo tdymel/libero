@@ -157,6 +157,18 @@ fn the_date_time_range_steps_meet_the_baseline() {
         .run();
 }
 
+/// The other variants (todo 1773).
+#[test]
+fn the_date_time_picker_meets_the_baseline() {
+    Suite::new("time-picker-date-time", "/time-picker/date-time").run();
+}
+
+#[test]
+#[ignore = "1773: the analog clock's disabled marks read 3.87:1, which the suite counts"]
+fn the_analog_clock_meets_the_baseline() {
+    Suite::new("time-picker-analog", "/time-picker/analog").run();
+}
+
 /// Todo 815: days, start time, end time, each step moving on once complete, under tabs
 /// showing the picked values.
 #[test]
@@ -340,16 +352,19 @@ fn a_time_picked_first_lands_on_today() {
         )
         .await
         .unwrap();
+        let today = "(() => { const d = new Date(); \
+                     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()";
+        // Today read before the pick and at each check: a run across midnight passes (todo 1775).
+        let _: bool = e2e::js(page, format!("(window.__before = {today}, true)")).await;
         page.evaluate(format!("document.querySelector({HOURS_ANY:?}).focus()"))
             .await
             .unwrap();
         digits(page, "10").await;
-        let today = "(() => { const d = new Date(); \
-                     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()";
         wait::for_js_true(
             page,
             &format!(
-                "document.getElementById('moment-value').textContent === {today} + ' 10:00:00'"
+                "[window.__before, {today}].map(day => day + ' 10:00:00') \
+                 .includes(document.getElementById('moment-value').textContent)"
             ),
             "the time to land on today",
         )
@@ -585,26 +600,12 @@ async fn expect_mark(page: &chromiumoxide::Page, value: &str, label: &str, at: &
 /// hand the readout is on, and the hand itself must not vanish (1.4.1, 1.4.11).
 #[test]
 fn picks_and_the_hand_show_in_forced_colours() {
-    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     block_on(async {
         let fixture = Fixture::open("/time-picker", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(
-            SetEmulatedMediaParams::builder()
-                .features(vec![MediaFeature::new("forced-colors", "active")])
-                .build(),
-        )
-        .await
-        .unwrap();
-        wait::for_js_true(
-            page,
-            "matchMedia('(forced-colors: active)').matches",
-            "forced colours to apply",
-        )
-        .await
-        .unwrap();
+        e2e::browser::force_colours(page).await.unwrap();
         let canvas_filled: Vec<String> = page
             .evaluate(
                 "(() => { const probe = document.createElement('div'); \
@@ -651,7 +652,7 @@ fn the_readout_hand_is_ringed_and_disabled_parts_gray_out() {
             .unwrap();
         assert_eq!(active, idle, "the active hand keeps a tint under its ring");
 
-        crate::calendar::force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         assert_gray_in_forced_colours(page, r#"#fine [data-slot="mark"][data-disabled]"#).await;
         fixture.close().await.unwrap();
     });

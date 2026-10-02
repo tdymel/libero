@@ -1,0 +1,15 @@
+---
+source: e2e/src/suite.rs
+description: scroll_area_rtl at mobile (rest)
+expression: tree
+---
+paragraph
+  StaticText "0"
+paragraph
+  StaticText "0"
+paragraph
+  StaticText "0"
+button "End"
+  StaticText "End"
+region "Wide"
+  StaticText "Wide content"

@@ -1,8 +1,10 @@
 //! Frame time on a page: an injected recorder (rAF deltas, long animation frames) and the
 //! stats read off it. Report only; headless numbers are machine-specific, compare ratios.
 
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use chromiumoxide::Page;
@@ -70,9 +72,34 @@ fn percentile(sorted: &[f64], fraction: f64) -> f64 {
 /// ([`keep_fullscreen`]), [`bring_to_front`] takes it alone.
 static FOREGROUND: tokio::sync::RwLock<()> = tokio::sync::RwLock::const_new(());
 
+tokio::task_local! {
+    /// Set while this test holds [`keep_fullscreen`]: its own gestures skip the lock.
+    static HOLDS_FULLSCREEN: Cell<bool>;
+}
+
+/// Runs a test body where [`keep_fullscreen`] can mark its holder; `browser::block_on`
+/// wraps every test in it.
+pub(crate) async fn scoped<F: Future>(body: F) -> F::Output {
+    HOLDS_FULLSCREEN.scope(Cell::new(false), body).await
+}
+
+/// This test's share of [`FOREGROUND`], from entering fullscreen to the test's end.
+#[must_use = "fullscreen lasts as long as this is held"]
+pub struct Fullscreen {
+    _shared: tokio::sync::RwLockReadGuard<'static, ()>,
+}
+
+impl Drop for Fullscreen {
+    fn drop(&mut self) {
+        let _ = HOLDS_FULLSCREEN.try_with(|holds| holds.set(false));
+    }
+}
+
 /// Held from entering fullscreen to the test's end, no other tab is brought to front.
-pub async fn keep_fullscreen() -> tokio::sync::RwLockReadGuard<'static, ()> {
-    FOREGROUND.read().await
+pub async fn keep_fullscreen() -> Fullscreen {
+    let shared = FOREGROUND.read().await;
+    let _ = HOLDS_FULLSCREEN.try_with(|holds| holds.set(true));
+    Fullscreen { _shared: shared }
 }
 
 /// A page in front; no test enters fullscreen until [`Front::release`].
@@ -93,9 +120,25 @@ impl Front {
     }
 }
 
-/// Brings `page` to front once no test holds [`keep_fullscreen`].
+/// Brings `page` to front once no test holds [`keep_fullscreen`], within the wait budget
+/// (todo 1755); a wait past 100 ms goes to the journal.
 pub async fn bring_to_front(page: &Page) -> Result<Front> {
-    let alone = FOREGROUND.write().await;
+    let started = Instant::now();
+    let alone = tokio::time::timeout(crate::wait::timeout(), FOREGROUND.write())
+        .await
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "waited {:.1}s to bring a page to front: a test in fullscreen holds the tabs",
+                started.elapsed().as_secs_f64()
+            )
+        })?;
+    let waited = started.elapsed();
+    if waited > Duration::from_millis(100) {
+        crate::journal::note(&format!(
+            "front: waited {:.1}s for the fullscreen tests",
+            waited.as_secs_f64()
+        ));
+    }
     page.bring_to_front()
         .await
         .context("bring the page to front")?;
@@ -104,11 +147,19 @@ pub async fn bring_to_front(page: &Page) -> Result<Front> {
 
 /// Runs `work` with `page` in front: a tab behind it draws about a frame a second, and each
 /// pointer move, wheel or touch event waits for one. Pages open behind the home tab.
+/// Inside [`keep_fullscreen`] the work runs where it is: the lock is this test's own, and
+/// bringing a tab to front would end the other tests' fullscreen.
 pub async fn in_front<T>(page: &Page, work: impl Future<Output = Result<T>>) -> Result<T> {
+    if HOLDS_FULLSCREEN.try_with(Cell::get).unwrap_or(false) {
+        return work.await;
+    }
     let front = bring_to_front(page).await?;
     let done = work.await;
-    front.release().await?;
-    done
+    // Released either way; the work's own error comes first.
+    let released = front.release().await;
+    let done = done?;
+    released?;
+    Ok(done)
 }
 
 /// Starts recording; a recorder already on the page is stopped and replaced. The tab is

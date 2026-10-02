@@ -2,15 +2,12 @@
 //! on, and focus returns to the step the user is now on (todo 406).
 
 use anyhow::Result;
-use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
-use e2e::passes::{focus, keyboard};
+use e2e::passes::keyboard;
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
-
-const ROUTES: [&str; 2] = ["/stepper", "/stepper-vertical"];
 
 fn header(index: usize) -> String {
     format!("#stepper-step-{index}")
@@ -228,9 +225,11 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
     });
 }
 
-/// Words of the `#plain` stepper's labels and descriptions split across lines.
+/// Words of the `#plain` stepper's labels and descriptions split across lines, and how many
+/// words it examined: a label without a direct text node is skipped (todo 1829).
 const SPLIT_WORDS: &str = "(() => {
     const split = [];
+    let words = 0;
     for (const el of document.querySelectorAll('#plain [data-slot=label] > :not([aria-hidden]), #plain [data-slot=description], #plain [data-slot=label]:not(:has(*))')) {
         const text = el.firstChild;
         if (!text || text.nodeType !== 3) continue;
@@ -238,10 +237,11 @@ const SPLIT_WORDS: &str = "(() => {
             const r = document.createRange();
             r.setStart(text, m.index);
             r.setEnd(text, m.index + m[0].length);
+            words++;
             if (r.getClientRects().length > 1) split.push(m[0]);
         }
     }
-    return split;
+    return [split, words];
 })()";
 
 /// Three ordinary steps with descriptions fit a 320px page in the side arm
@@ -257,12 +257,13 @@ fn ordinary_labels_fit_320px_whole() {
         page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
             .await
             .unwrap();
-        let split: Vec<String> = page
+        let (split, words): (Vec<String>, usize) = page
             .evaluate(SPLIT_WORDS)
             .await
             .unwrap()
             .into_value()
             .unwrap();
+        assert!(words > 0, "no label or description word examined");
         assert!(split.is_empty(), "words broken across lines: {split:?}");
         fixture.close().await.unwrap();
     });
@@ -288,12 +289,13 @@ fn side_labels_stack_in_a_narrow_box() {
             .into_value()
             .unwrap();
         assert_eq!(directions, ["column", "row"]);
-        let split: Vec<String> = page
+        let (split, words): (Vec<String>, usize) = page
             .evaluate(SPLIT_WORDS.replace("#plain", "#boxed"))
             .await
             .unwrap()
             .into_value()
             .unwrap();
+        assert!(words > 0, "no label or description word examined");
         assert!(split.is_empty(), "words broken across lines: {split:?}");
         fixture.close().await.unwrap();
     });
@@ -320,26 +322,12 @@ fn the_current_marker_carries_the_on_state_ring() {
 /// pending step's (524).
 #[test]
 fn completed_and_current_steps_show_in_forced_colours() {
-    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     block_on(async {
         let fixture = Fixture::open("/stepper-long", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(
-            SetEmulatedMediaParams::builder()
-                .features(vec![MediaFeature::new("forced-colors", "active")])
-                .build(),
-        )
-        .await
-        .unwrap();
-        wait::for_js_true(
-            page,
-            "matchMedia('(forced-colors: active)').matches",
-            "forced colours to apply",
-        )
-        .await
-        .unwrap();
+        e2e::browser::force_colours(page).await.unwrap();
         let [completed, canvas, current, pending]: [String; 4] = page
             .evaluate(
                 "(() => { const probe = document.createElement('div'); \
@@ -375,50 +363,6 @@ fn completed_and_current_steps_show_in_forced_colours() {
             "the current marker's shape cue under forced colours"
         );
         fixture.close().await.unwrap();
-    });
-}
-
-/// Press `button` from the keyboard, then focus must be on `landing`.
-async fn continue_from(page: &Page, button: &str, landing: &str, route: &str) {
-    keyboard::tab_to(page, button, 4)
-        .await
-        .unwrap_or_else(|e| panic!("{route}: {e}"));
-    keyboard::press(page, keyboard::ENTER).await.unwrap();
-    focus::wait_for_focus(page, landing, &format!("pressing {button} on {route}"))
-        .await
-        .unwrap();
-}
-
-/// Each "Continue" unmounts itself; focus lands on the next, `aria-current` header, and
-/// after "Finish" on the step that just closed.
-#[test]
-fn moving_on_returns_focus_to_the_current_step() {
-    block_on(async {
-        for route in ROUTES {
-            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
-            let page = &fixture.page;
-
-            continue_from(page, "#next-0", &header(1), route).await;
-            let current: Option<String> = page
-                .evaluate(format!(
-                    "document.querySelector('{}').getAttribute('aria-current')",
-                    header(1)
-                ))
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
-            assert_eq!(current.as_deref(), Some("step"), "{route}");
-
-            continue_from(page, "#next-1", &header(2), route).await;
-            continue_from(page, "#finish", &header(2), route).await;
-
-            fixture
-                .console
-                .assert_clean(&format!("stepping through {route}"))
-                .unwrap();
-            fixture.close().await.unwrap();
-        }
     });
 }
 

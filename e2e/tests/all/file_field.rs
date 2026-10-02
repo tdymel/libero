@@ -1,6 +1,8 @@
 //! `FileField`: a real CDP drop, a chooser pick (1061), focus after its file is removed (406), and the group,
 //! Browse button and chip list (529, 530).
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use anyhow::Result;
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::{
@@ -22,6 +24,9 @@ const REMOVE_BETA: &str = "[aria-label=\"Remove beta.txt\"]";
 const CONTROL: &str = "#attachments";
 /// The `Input` variant's frames.
 const FRAME: &str = "[data-fixture-ready] [data-frame]";
+
+/// What the field's live region says (todo 1822).
+const STATUS: &str = "document.querySelector('[data-fixture-ready] [role=status]').textContent";
 
 const DELETE: Key = Key {
     key: "Delete",
@@ -97,18 +102,34 @@ fn the_dropzone_border_parts_at_3_to_1() {
     );
 }
 
-/// Real files on disk, so the drop carries a `FileList` the page can read.
-fn files_on_disk() -> Vec<String> {
-    let dir = std::env::temp_dir().join(format!("e2e-file-field-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    ["alpha.txt", "beta.txt"]
-        .iter()
-        .map(|name| {
-            let path = dir.join(name);
-            std::fs::write(&path, format!("{name} contents")).unwrap();
-            path.to_string_lossy().into_owned()
-        })
-        .collect()
+/// Real files on disk, so the drop carries a `FileList` the page can read. A directory per
+/// test, removed with it: parallel tests rewrote one shared pair (todo 1830).
+struct OnDisk(std::path::PathBuf);
+
+impl OnDisk {
+    fn new() -> Self {
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let n = NEXT.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!("e2e-file-field-{}-{n}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in ["alpha.txt", "beta.txt"] {
+            std::fs::write(dir.join(name), format!("{name} contents")).unwrap();
+        }
+        Self(dir)
+    }
+
+    fn paths(&self) -> Vec<String> {
+        ["alpha.txt", "beta.txt"]
+            .iter()
+            .map(|name| self.0.join(name).to_string_lossy().into_owned())
+            .collect()
+    }
+}
+
+impl Drop for OnDisk {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
 }
 
 /// Enter, over, drop: what the browser sends for an OS file dragged onto the
@@ -144,16 +165,17 @@ async fn drop_files_at(page: &Page, x: f64, y: f64, files: Vec<String>) {
     }
 }
 
-async fn open_with_two_files() -> Fixture {
+async fn open_with_two_files() -> (Fixture, OnDisk) {
     let fixture = Fixture::open("/file-field", Viewport::Desktop)
         .await
         .unwrap();
     wait::for_visible(&fixture.page, SURFACE).await.unwrap();
-    drop_files(&fixture.page, SURFACE, files_on_disk()).await;
+    let disk = OnDisk::new();
+    drop_files(&fixture.page, SURFACE, disk.paths()).await;
     wait::for_selector(&fixture.page, REMOVE_BETA)
         .await
         .unwrap();
-    fixture
+    (fixture, disk)
 }
 
 /// Counts the picker's openings, and keeps the dialog shut: the component
@@ -194,7 +216,8 @@ fn modifier_chords_leave_the_chips_alone() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, CONTROL).await.unwrap();
-        drop_files(page, CONTROL, files_on_disk()).await;
+        let disk = OnDisk::new();
+        drop_files(page, CONTROL, disk.paths()).await;
         wait::for_selector(page, REMOVE_BETA).await.unwrap();
         page.evaluate(format!("document.querySelector({CONTROL:?}).focus()"))
             .await
@@ -228,7 +251,8 @@ fn the_chips_take_the_focus_and_the_required_field_stays_clean() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#contract").await.unwrap();
-        drop_files(page, "#contract", files_on_disk()).await;
+        let disk = OnDisk::new();
+        drop_files(page, "#contract", disk.paths()).await;
         wait::for_selector(page, "#contract-file-1").await.unwrap();
 
         keyboard::tab_to(page, "#contract-file-0", 10)
@@ -307,7 +331,8 @@ fn read_only_and_disabled_refuse_the_picker_and_the_remove() {
             .await
             .unwrap();
 
-        drop_files(page, "#modes", files_on_disk()).await;
+        let disk = OnDisk::new();
+        drop_files(page, "#modes", disk.paths()).await;
         wait::for_selector(page, "#modes-file-1").await.unwrap();
         pointer::click(page, "#to-readonly").await.unwrap();
         wait::for_js_true(
@@ -360,11 +385,11 @@ fn read_only_and_disabled_refuse_the_picker_and_the_remove() {
 }
 
 /// The cards alone could come from `value`; the hidden input's `FileList` is
-/// what a form posts, so it must hold the same two files.
+/// what a form posts, so it must hold the same two files. The drop is announced.
 #[test]
 fn a_dropped_file_becomes_a_card_and_posts() {
     block_on(async {
-        let fixture = open_with_two_files().await;
+        let (fixture, _disk) = open_with_two_files().await;
         let page = &fixture.page;
 
         wait::for_selector(page, REMOVE_ALPHA).await.unwrap();
@@ -376,6 +401,13 @@ fn a_dropped_file_becomes_a_card_and_posts() {
         )
         .await
         .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{STATUS}.includes('alpha.txt') && {STATUS}.includes('beta.txt')"),
+            "the live region to name both added files",
+        )
+        .await
+        .unwrap();
 
         fixture.console.assert_clean("dropping two files").unwrap();
         fixture.close().await.unwrap();
@@ -383,11 +415,12 @@ fn a_dropped_file_becomes_a_card_and_posts() {
 }
 
 /// Removing the focused card moves focus to the new last card, then Browse. The last goes
-/// first: cards are keyed by index, so removing the first would pass unrepaired.
+/// first: cards are keyed by index, so removing the first would pass unrepaired. The removal
+/// is announced.
 #[test]
 fn removing_a_file_moves_focus_to_what_took_its_place() {
     block_on(async {
-        let fixture = open_with_two_files().await;
+        let (fixture, _disk) = open_with_two_files().await;
         let page = &fixture.page;
 
         keyboard::tab_to(page, REMOVE_BETA, 5).await.unwrap();
@@ -396,6 +429,13 @@ fn removing_a_file_moves_focus_to_what_took_its_place() {
             page,
             &format!("!document.querySelector({REMOVE_BETA:?})"),
             "the beta card to go",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{STATUS}.includes('beta.txt') && !{STATUS}.includes('alpha.txt')"),
+            "the live region to name the removed file alone",
         )
         .await
         .unwrap();
@@ -451,7 +491,8 @@ fn an_empty_control_fills_its_frame_and_takes_a_drop() {
         );
 
         // One file: a single-file field warns when it drops the second.
-        drop_files(page, "#bare", files_on_disk()[..1].to_vec()).await;
+        let disk = OnDisk::new();
+        drop_files(page, "#bare", disk.paths()[..1].to_vec()).await;
         wait::for_js_true(
             page,
             "document.querySelector('#bare').closest('[role=group]').textContent.includes('alpha.txt')",
@@ -491,7 +532,8 @@ fn a_drop_on_the_frame_padding_is_taken() {
             .unwrap();
         assert!(on_frame, "({x}, {y}) is not on the frame's own padding");
 
-        drop_files_at(page, x, y, files_on_disk()[..1].to_vec()).await;
+        let disk = OnDisk::new();
+        drop_files_at(page, x, y, disk.paths()[..1].to_vec()).await;
         wait::for_js_true(
             page,
             "document.querySelector('#bare').closest('[role=group]').textContent.includes('alpha.txt')",

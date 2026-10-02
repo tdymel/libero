@@ -221,15 +221,84 @@ pub async fn pinch(page: &Page, at: Point, from: f64, to: f64, steps: usize) -> 
     Ok(())
 }
 
-/// Click an element at its centre.
+#[derive(Debug, Deserialize)]
+struct Aimed {
+    found: bool,
+    x: f64,
+    y: f64,
+    /// What the centre hits when it is not the element: a covered target.
+    miss: Option<String>,
+}
+
+/// Click an element at its centre, scrolled in first when the centre is off screen. Fails
+/// when the centre hits another element, so a covered target is no silent miss (todo 1756).
 pub async fn click(page: &Page, selector: &str) -> Result<()> {
-    click_at(page, centre_of(page, selector).await?).await
+    let aimed: Aimed = page
+        .evaluate(format!(
+            r#"(() => {{
+                const el = document.querySelector({});
+                if (!el) return {{ found: false, x: 0, y: 0, miss: null }};
+                const centre = () => {{
+                    const r = el.getBoundingClientRect();
+                    return [r.x + r.width / 2, r.y + r.height / 2];
+                }};
+                let [x, y] = centre();
+                if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) {{
+                    el.scrollIntoView({{ block: 'nearest', inline: 'nearest', behavior: 'instant' }});
+                    [x, y] = centre();
+                }}
+                const hit = document.elementFromPoint(x, y);
+                const lands = !!hit && (el.contains(hit)
+                    || (hit.contains(el) && getComputedStyle(el).pointerEvents === 'none'));
+                const name = n => n.tagName.toLowerCase() + (n.id ? '#' + n.id : '')
+                    + [...n.classList].map(c => '.' + c).join('');
+                return {{ found: true, x, y, miss: lands ? null : (hit ? name(hit) : 'nothing') }};
+            }})()"#,
+            serde_json::to_string(selector)?
+        ))
+        .await?
+        .into_value()?;
+    if !aimed.found {
+        anyhow::bail!("no element at {selector} to point at");
+    }
+    if let Some(miss) = aimed.miss {
+        anyhow::bail!(
+            "a click on {selector} at ({:.0}, {:.0}) would land on {miss}",
+            aimed.x,
+            aimed.y
+        );
+    }
+    click_at_unchecked(
+        page,
+        Point {
+            x: aimed.x,
+            y: aimed.y,
+        },
+    )
+    .await
+}
+
+/// A primary click at a viewport point; fails on a point that hits nothing, off the
+/// viewport (todo 1756). See [`click_at_unchecked`].
+pub async fn click_at(page: &Page, at: Point) -> Result<()> {
+    let hits: bool = page
+        .evaluate(format!(
+            "document.elementFromPoint({}, {}) !== null",
+            at.x, at.y
+        ))
+        .await?
+        .into_value()?;
+    if !hits {
+        anyhow::bail!("a click at ({:.0}, {:.0}) hits nothing", at.x, at.y);
+    }
+    click_at_unchecked(page, at).await
 }
 
 /// A primary click at a viewport point, with no move first: a background page holds a
 /// move for its next frame, up to 1 s (todo 1632). The press still sends the pointer's
-/// boundary events (`field_frame::a_press_without_a_move_enters_its_target`).
-pub async fn click_at(page: &Page, at: Point) -> Result<()> {
+/// boundary events (`field_frame::a_press_without_a_move_enters_its_target`). Unchecked:
+/// each caller says why a miss is what it wants.
+pub async fn click_at_unchecked(page: &Page, at: Point) -> Result<()> {
     mouse(page, DispatchMouseEventType::MousePressed, at, 1).await?;
     mouse(page, DispatchMouseEventType::MouseReleased, at, 0).await
 }

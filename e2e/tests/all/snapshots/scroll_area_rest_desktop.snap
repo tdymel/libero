@@ -1,0 +1,19 @@
+---
+source: e2e/src/suite.rs
+description: scroll_area at desktop (rest)
+expression: tree
+---
+paragraph
+  StaticText "1"
+region "Rows"
+  StaticText "Row 0"
+  StaticText "Row 1"
+  StaticText "Row 2"
+  StaticText "Row 3"
+  StaticText "Row 4"
+  StaticText "Row 5"
+  StaticText "Row 6"
+  StaticText "Row 7"
+  StaticText "Row 8"
+  StaticText "Row 9"
+  StaticText "Row 10"

@@ -25,7 +25,7 @@ fn a_disabled_day_grays_out_in_forced_colours() {
             .await
             .unwrap();
         let page = &fixture.page;
-        force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         crate::button::assert_gray_in_forced_colours(page, CLOSED).await;
         let [border, canvas]: [String; 2] = page
             .evaluate(format!(
@@ -383,6 +383,25 @@ fn the_month_view_meets_the_baseline() {
         .run();
 }
 
+/// The other variants (todo 1773).
+#[test]
+fn the_range_and_limited_calendars_meet_the_baseline() {
+    for (name, route) in [
+        ("calendar-range", "/calendar/range"),
+        ("calendar-limited", "/calendar/limited"),
+    ] {
+        Suite::new(name, route).focusable(STOP).run();
+    }
+}
+
+#[test]
+#[ignore = "1773: the mini calendar's month label reads 3.07:1 on the picked fill"]
+fn the_mini_calendar_meets_the_baseline() {
+    Suite::new("calendar-mini", "/calendar/mini")
+        .focusable(STOP)
+        .run();
+}
+
 /// Rows of three gridcells, one of them selected, under a labelled grid.
 const GRID_SHAPE: &str = "(() => { const grid = document.querySelector('[role=grid]'); \
      const rows = [...grid.children]; \
@@ -538,25 +557,6 @@ async fn expect_focus(page: &chromiumoxide::Page, date: &str, month: &str, what:
     }
 }
 
-/// Switches the page to forced colours and waits until the media query reads so.
-pub async fn force_colours(page: &chromiumoxide::Page) {
-    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
-    page.execute(
-        SetEmulatedMediaParams::builder()
-            .features(vec![MediaFeature::new("forced-colors", "active")])
-            .build(),
-    )
-    .await
-    .unwrap();
-    wait::for_js_true(
-        page,
-        "matchMedia('(forced-colors: active)').matches",
-        "forced colours to apply",
-    )
-    .await
-    .unwrap();
-}
-
 /// Forced colours turn every day's transparent border into a visible one, so
 /// today's did not stand out, and the range tint went `Canvas` (todo 537).
 #[test]
@@ -566,7 +566,7 @@ fn today_and_the_range_show_in_forced_colours() {
             .await
             .unwrap();
         let page = &fixture.page;
-        force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         let day = |date: &str| format!("[role=grid] [data-date='{date}']:not([data-outside])");
         pointer::click(page, &day("2026-03-10")).await.unwrap();
         pointer::click(page, &day("2026-03-13")).await.unwrap();
@@ -607,7 +607,7 @@ fn the_picked_day_shows_in_forced_colours() {
     block_on(async {
         let fixture = Fixture::open("/calendar", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         // The page itself is `Canvas`; a fill the same colour is no fill.
         let [picked, canvas]: [String; 2] = page
             .evaluate(format!(

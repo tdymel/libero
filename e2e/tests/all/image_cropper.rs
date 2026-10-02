@@ -5,7 +5,7 @@
 use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, frames, wait};
 
 const BOX: &str = "[data-slot=box]";
@@ -30,30 +30,25 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// The other variants (todo 1773).
+#[test]
+fn the_pan_and_disabled_croppers_meet_the_baseline() {
+    Suite::new("image_cropper_pan", "/image-cropper/pan")
+        .focusable(BOX)
+        .run();
+    Suite::new("image_cropper_disabled", "/image-cropper/disabled").run();
+}
+
 /// Forced colours drop a box-shadow: the dim mask opts out, so the crop still
 /// stands out from the rest of the image (1278).
 #[test]
 fn the_dim_mask_stays_in_forced_colours() {
-    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     block_on(async {
         let fixture = Fixture::open("/image-cropper", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(
-            SetEmulatedMediaParams::builder()
-                .features(vec![MediaFeature::new("forced-colors", "active")])
-                .build(),
-        )
-        .await
-        .unwrap();
-        wait::for_js_true(
-            page,
-            "matchMedia('(forced-colors: active)').matches",
-            "forced colours to apply",
-        )
-        .await
-        .unwrap();
+        e2e::browser::force_colours(page).await.unwrap();
         let shadow: String = page
             .evaluate("getComputedStyle(document.querySelector('[data-slot=mask] > *')).boxShadow")
             .await
@@ -68,24 +63,40 @@ fn the_dim_mask_stays_in_forced_colours() {
     });
 }
 
+/// Removes a temp file when dropped, a failed test's too.
+struct TempFile(std::path::PathBuf);
+
+impl TempFile {
+    fn new(name: &str, bytes: &[u8]) -> Self {
+        let path = std::env::temp_dir().join(format!("{name}-{}.png", std::process::id()));
+        std::fs::write(&path, bytes).unwrap();
+        Self(path)
+    }
+
+    fn drop_arg(&self) -> Vec<String> {
+        vec![self.0.to_string_lossy().into_owned()]
+    }
+}
+
+impl Drop for TempFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
 /// A dropped PNG opens the dialog at 80% of the largest centred square, the
 /// picture named as one to crop (1612); Apply hands `onchange` that 16 px
 /// square, cut by the canvas and held by `max_size` at 16 px, still a PNG.
 #[test]
 fn a_dropped_image_is_cropped_before_the_field_takes_it() {
-    let path = std::env::temp_dir().join(format!("e2e-crop-{}.png", std::process::id()));
-    std::fs::write(&path, PNG).unwrap();
+    let file = TempFile::new("e2e-crop", PNG);
     block_on(async {
         let fixture = Fixture::open("/file-field/crop", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        crate::file_field::drop_files(
-            page,
-            "[data-fixture-ready] [role=group]",
-            vec![path.to_string_lossy().into_owned()],
-        )
-        .await;
+        crate::file_field::drop_files(page, "[data-fixture-ready] [role=group]", file.drop_arg())
+            .await;
         wait::for_js_true(
             page,
             "!!document.querySelector('[role=dialog] [data-slot=box]')
@@ -95,17 +106,19 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
         )
         .await
         .unwrap();
+        // Cancel, then Apply, the footer's last button.
+        let apply = "[role=dialog] button:last-of-type:not(:first-of-type)";
         wait::for_js_true(
             page,
-            "(() => { const apply = [...document.querySelectorAll('[role=dialog] button')]
-                .find((button) => button.textContent.trim() === 'Apply');
-              if (!apply || apply.disabled) return false;
-              apply.click();
-              return true; })()",
+            &format!(
+                "(() => {{ const apply = document.querySelector({apply:?}); \
+                 return !!apply && apply.textContent.trim() === 'Apply' && !apply.disabled; }})()"
+            ),
             "Apply to be pressable",
         )
         .await
         .unwrap();
+        pointer::click(page, apply).await.unwrap();
         wait::for_js_true(
             page,
             "document.getElementById('rect').textContent === '30,10,40,80'
@@ -125,25 +138,20 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
         fixture.console.assert_clean("the crop").unwrap();
         fixture.close().await.unwrap();
     });
-    let _ = std::fs::remove_file(path);
+    drop(file);
 }
 
 /// A dropped file that is no image: the dialog says so and Apply stays off (1265).
 #[test]
 fn a_broken_image_in_the_crop_dialog_says_so() {
-    let path = std::env::temp_dir().join(format!("e2e-broken-{}.png", std::process::id()));
-    std::fs::write(&path, b"not an image").unwrap();
+    let file = TempFile::new("e2e-broken", b"not an image");
     block_on(async {
         let fixture = Fixture::open("/file-field/crop", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        crate::file_field::drop_files(
-            page,
-            "[data-fixture-ready] [role=group]",
-            vec![path.to_string_lossy().into_owned()],
-        )
-        .await;
+        crate::file_field::drop_files(page, "[data-fixture-ready] [role=group]", file.drop_arg())
+            .await;
         wait::for_js_true(
             page,
             "(() => { const alert = document.querySelector('[role=dialog] [role=alert]');
@@ -161,7 +169,7 @@ fn a_broken_image_in_the_crop_dialog_says_so() {
             .await
             .unwrap();
     });
-    let _ = std::fs::remove_file(path);
+    drop(file);
 }
 
 /// The same crop through Browse, the PNG handed to the page's canvas and back
@@ -215,6 +223,50 @@ async fn a_disabled_cropper_shows_no_grab_cursor<D: Driver>(d: &mut D, _route: &
     Ok(())
 }
 
+/// Todo 1769: a disabled cropper says so on the box, its handles and the zoom slider, and
+/// neither a key nor a drag on the box or a corner moves it.
+async fn a_disabled_cropper_takes_no_input<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const BOX: &str = "#disabled [data-slot=box]";
+    const CORNER: &str = "#disabled [aria-label='Bottom right corner']";
+    const ZOOM: &str = "#disabled-pan [data-slot=zoom] [role=slider]";
+    for part in [
+        BOX,
+        CORNER,
+        "#disabled [aria-label='Top left corner']",
+        ZOOM,
+    ] {
+        let disabled = d.attr(part, "aria-disabled").await?;
+        anyhow::ensure!(
+            disabled.as_deref() == Some("true"),
+            "{part}'s aria-disabled is {disabled:?}"
+        );
+    }
+    let values = async |d: &mut D| -> Result<(Option<String>, Option<String>)> {
+        Ok((
+            d.attr(BOX, "aria-valuetext").await?,
+            d.attr(CORNER, "aria-valuetext").await?,
+        ))
+    };
+    // Uncontrolled, it emits its first fit at mount, disabled too.
+    eventually_text(d, "#crop", "10,10,80,80", "the first fit").await?;
+    let before = values(d).await?;
+    d.focus(BOX).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.drag("#disabled [data-slot=frame]", 30.0, 20.0).await?;
+    d.drag(CORNER, -30.0, -20.0).await?;
+    d.settle().await?;
+    let crop = d.text("#crop").await?;
+    anyhow::ensure!(crop == "10,10,80,80", "the disabled cropper emitted {crop}");
+    let after = values(d).await?;
+    anyhow::ensure!(after == before, "the box moved: {before:?} -> {after:?}");
+    Ok(())
+}
+
+e2e::scenario!(
+    a_disabled_cropper_takes_no_key_or_drag,
+    "/image-cropper/disabled",
+    a_disabled_cropper_takes_no_input
+);
 e2e::scenario!(
     only_the_box_claims_touches,
     "/image-cropper",
@@ -262,15 +314,23 @@ fn a_touch_drags_the_box_and_two_pinch_it() {
         wait::for_js_true(page, &format!("{crop} === '25,25,50,50'"), "the box")
             .await
             .unwrap();
-        let (left, top, width, height, scroll): (f64, f64, f64, f64, f64) = page
+        // Room to scroll, so a drag that scrolled the page would show.
+        let _: bool = e2e::js(page, "(document.body.style.paddingBottom = '200vh', true)").await;
+        let (left, top, width, height, scroll, scrolls): (f64, f64, f64, f64, f64, bool) = page
             .evaluate(
                 "(() => { const r = document.querySelector('[data-slot=image]').getBoundingClientRect();
-                  return [r.left, r.top, r.width, r.height, scrollY]; })()",
+                  return [r.left, r.top, r.width, r.height, scrollY,
+                    document.documentElement.scrollHeight > innerHeight]; })()",
             )
             .await
             .unwrap()
             .into_value()
             .unwrap();
+        // Else an unchanged `scrollY` below proves nothing (todo 1768).
+        assert!(
+            scrolls,
+            "the page cannot scroll, so a scroll would not show"
+        );
         let centre = Point {
             x: left + width / 2.0,
             y: top + height / 2.0,
@@ -292,9 +352,19 @@ fn a_touch_drags_the_box_and_two_pinch_it() {
             };
             pointer::pinch(page, middle, width * 0.2, width * 0.6, 8).await?;
             wait::for_js_true(page, &format!("{crop} === '0,0,100,100'"), "a pinch out").await?;
-            // Back to a fifth of the spread: about a fifth of the size, centred.
+            // Back to a fifth of the spread: about a fifth of the size, centred. Waits for that
+            // range, not the first change: an intermediate frame is not the end (todo 1768).
             pointer::pinch(page, centre, width * 0.5, width * 0.1, 8).await?;
-            wait::for_js_true(page, &format!("{crop} !== '0,0,100,100'"), "a pinch in").await?;
+            wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{ const [x, y, w, h] = {crop}.split(',').map(Number); \
+                     return Math.abs(w - 20) <= 2 && Math.abs(h - w) <= 1 \
+                       && Math.abs(x + w / 2 - 50) <= 1 && Math.abs(y + h / 2 - 50) <= 1; }})()"
+                ),
+                "a pinch in to about a fifth, centred",
+            )
+            .await?;
             let shrunk: String = page.evaluate(crop).await?.into_value()?;
             Ok((after, shrunk))
         })

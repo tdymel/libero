@@ -74,6 +74,7 @@ e2e::scenario!(
     the_arrows_move_focus_with_the_selection_and_wrap,
     "/segmented-control",
     the_arrows_move_focus_and_wrap,
+    web: skip("1826: it_honours_the_radio_group_contract runs these keys at both viewports"),
     android: skip("958: element identity on the WebView"),
     desktop: skip("958: element identity on the WebView")
 );
@@ -151,32 +152,40 @@ fn the_picked_segment_shows_the_on_state_ring() {
             .unwrap();
         let page = &fixture.page;
         assert_on_marker(page, PICKED, OTHER).await;
-        crate::calendar::force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         assert_on_in_forced_colours(page, PICKED, OTHER).await;
         fixture.close().await.unwrap();
 
         let fixture = Fixture::open("/segmented-control/disabled-middle", Viewport::Desktop)
             .await
             .unwrap();
-        crate::calendar::force_colours(&fixture.page).await;
+        e2e::browser::force_colours(&fixture.page).await.unwrap();
         assert_gray_in_forced_colours(&fixture.page, PICKED).await;
         fixture.close().await.unwrap();
 
         let fixture = Fixture::open("/segmented-control/disabled-pick", Viewport::Desktop)
             .await
             .unwrap();
-        crate::calendar::force_colours(&fixture.page).await;
+        e2e::browser::force_colours(&fixture.page).await.unwrap();
         crate::button::assert_text_in_forced_colours(&fixture.page, PICKED, "HighlightText").await;
         fixture.close().await.unwrap();
     });
 }
 
-async fn settle(fixture: &Fixture) {
-    fixture
-        .page
-        .evaluate("new Promise(r => setTimeout(() => r(1), 100))")
-        .await
-        .unwrap();
+/// Waits until the focused and the checked radio are at `focused` and `checked` (todo 1820);
+/// `None` reads no focus.
+async fn until_at(fixture: &Fixture, focused: Option<i64>, checked: i64, what: &str) {
+    let radios = format!("[...document.querySelectorAll('{RADIOS}')]");
+    let focus = focused.map_or("true".to_string(), |at| {
+        format!("{radios}.indexOf(document.activeElement) === {at}")
+    });
+    e2e::wait::for_js_true(
+        &fixture.page,
+        &format!("{focus} && {radios}.findIndex(el => el.checked) === {checked}"),
+        what,
+    )
+    .await
+    .unwrap();
 }
 
 /// The focused radio's index in the group, `-1` when focus is elsewhere.
@@ -213,7 +222,6 @@ async fn tab_in(fixture: &Fixture) -> i64 {
         .unwrap();
     for _ in 0..4 {
         keyboard::press(&fixture.page, keyboard::TAB).await.unwrap();
-        settle(fixture).await;
         let at = focused(fixture).await;
         if at >= 0 {
             return at;
@@ -260,22 +268,14 @@ fn the_group_carries_the_field_wiring() {
     });
 }
 
-/// Todo 508: Enter submits the form around the strip, as it does around a
-/// native radio, and keeps the pick.
-#[test]
-fn enter_submits_the_form() {
-    enter_submits("/segmented-control/form");
-}
-
-/// Todo 660: a raw `<form>` counts too, read off the DOM.
+/// Todo 660: a raw `<form>` counts too, read off the DOM; Enter submits it and keeps the
+/// pick. The `Form` case is the scenario's (todo 1826).
 #[test]
 fn enter_submits_a_raw_form() {
-    enter_submits("/segmented-control/raw-form");
-}
-
-fn enter_submits(route: &str) {
     block_on(async {
-        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let fixture = Fixture::open("/segmented-control/raw-form", Viewport::Desktop)
+            .await
+            .unwrap();
         let page = &fixture.page;
 
         assert_eq!(
@@ -284,8 +284,7 @@ fn enter_submits(route: &str) {
             "Tab enters at the checked segment"
         );
         keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
-        settle(&fixture).await;
-        assert_eq!(checked(&fixture).await, 2, "the arrow picked");
+        until_at(&fixture, None, 2, "the arrow to pick").await;
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         e2e::wait::for_js_true(
             page,
@@ -321,7 +320,7 @@ fn a_read_only_strip_keeps_its_pick() {
         pointer::click(page, "label[for$='-segment-0']")
             .await
             .unwrap();
-        settle(&fixture).await;
+        e2e::clock::settle(page).await.unwrap();
         assert_eq!(checked(&fixture).await, 1);
         // Todo 746: focus stays on the checked segment, the one tab stop.
         e2e::wait::for_js_true(
@@ -356,13 +355,11 @@ fn the_arrows_skip_a_disabled_segment() {
         keyboard::press(&fixture.page, keyboard::ARROW_RIGHT)
             .await
             .unwrap();
-        settle(&fixture).await;
-        assert_eq!((focused(&fixture).await, checked(&fixture).await), (2, 2));
+        until_at(&fixture, Some(2), 2, "ArrowRight over the disabled segment").await;
         keyboard::press(&fixture.page, keyboard::ARROW_LEFT)
             .await
             .unwrap();
-        settle(&fixture).await;
-        assert_eq!((focused(&fixture).await, checked(&fixture).await), (0, 0));
+        until_at(&fixture, Some(0), 0, "ArrowLeft back over it").await;
 
         fixture
             .console
@@ -385,8 +382,13 @@ fn tab_reaches_a_strip_whose_pick_is_disabled() {
         keyboard::press(&fixture.page, keyboard::ARROW_RIGHT)
             .await
             .unwrap();
-        settle(&fixture).await;
-        assert_eq!((focused(&fixture).await, checked(&fixture).await), (2, 2));
+        until_at(
+            &fixture,
+            Some(2),
+            2,
+            "ArrowRight to the next enabled segment",
+        )
+        .await;
 
         fixture.console.assert_clean("disabled pick").unwrap();
         fixture.close().await.unwrap();

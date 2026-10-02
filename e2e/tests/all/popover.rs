@@ -34,7 +34,10 @@ async fn placed<D: Driver>(
     d.click(ANCHOR).await?;
     let viewport = d.viewport().await?;
     let settled = eventually(d, what, async |d| {
-        if !d.exists(FLOATING).await? {
+        // An unplaced box sits hidden at 0,0, inside the viewport (todo 1759).
+        if !d.exists(FLOATING).await?
+            || d.style(FLOATING, "visibility").await.unwrap_or_default() != "visible"
+        {
             return Ok(false);
         }
         Ok(holds(
@@ -176,14 +179,13 @@ fn a_press_outside_closes_it() {
 
 /// Open means placed too: an unplaced box sits hidden at 0,0, and a tap
 /// aimed at it lands outside.
+async fn is_shown<D: Driver>(d: &mut D) -> Result<bool> {
+    // A box removed between the two reads fails the second.
+    Ok(d.exists(BOX).await? && d.style(BOX, "visibility").await.unwrap_or_default() == "visible")
+}
+
 async fn shown<D: Driver>(d: &mut D, open: bool, what: &str) -> Result<()> {
-    eventually(d, what, async |d| {
-        // A box removed between the two reads fails the second.
-        let placed = d.exists(BOX).await?
-            && d.style(BOX, "visibility").await.unwrap_or_default() == "visible";
-        Ok(placed == open)
-    })
-    .await
+    eventually(d, what, async |d| Ok(is_shown(d).await? == open)).await
 }
 
 /// Todo 1019: the same by touch, where the WebView cannot tell where focus went.
@@ -197,7 +199,7 @@ async fn a_tap_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     shown(d, true, "the box to reopen").await?;
     d.click(BOX_TEXT).await?;
     d.settle().await?;
-    if !d.exists(BOX).await? {
+    if !is_shown(d).await? {
         bail!("{:?}: a tap on the box's text closed it", d.platform());
     }
     d.click(TRIGGER).await?;
@@ -232,7 +234,7 @@ async fn a_field_dropdown_stays_inside<D: Driver>(d: &mut D, _route: &str) -> Re
         Ok(!d.exists(DROPDOWN).await? && d.focused_id().await? == "box-field")
     })
     .await?;
-    if !d.exists(BOX).await? {
+    if !is_shown(d).await? {
         bail!(
             "{:?}: focus in the field's dropdown or its Escape closed the box",
             d.platform()
@@ -252,11 +254,7 @@ e2e::scenario!(
 
 /// Android's Back closes the box, and the app stays (1289).
 async fn back_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    archetypes::back_closes(d, TRIGGER, async |d| {
-        Ok(d.exists(BOX).await?
-            && d.style(BOX, "visibility").await.unwrap_or_default() == "visible")
-    })
-    .await
+    archetypes::back_closes(d, TRIGGER, is_shown).await
 }
 
 e2e::scenario!(

@@ -84,6 +84,20 @@ pub async fn emulate_media(
     Ok(())
 }
 
+/// Switches the page to forced colours and waits until the media query reads so. Replaces
+/// the emulated feature list, as [`emulate_media`] does.
+pub async fn force_colours(page: &Page) -> Result<()> {
+    let features = vec![MediaFeature::new("forced-colors", "active")];
+    page.execute(SetEmulatedMediaParams::builder().features(features).build())
+        .await?;
+    crate::wait::for_js_true(
+        page,
+        "matchMedia('(forced-colors: active)').matches",
+        "forced colours to apply",
+    )
+    .await
+}
+
 /// Headless Chrome reports `(pointer: coarse)` and CDP cannot emulate `pointer`: fakes the
 /// `matchMedia` lists of `(pointer: coarse)` and `(pointer: fine)`, fine at first. Reloads.
 pub async fn fake_pointer(page: &Page) -> Result<()> {
@@ -255,7 +269,7 @@ fn harness() -> &'static Harness {
 /// Run an async body on the shared runtime. Tests are ordinary `#[test]` fns.
 pub fn block_on<F: std::future::Future>(fut: F) -> F::Output {
     crate::journal::time_this_test();
-    harness().runtime.block_on(fut)
+    harness().runtime.block_on(crate::frames::scoped(fut))
 }
 
 /// A fixture page, open at one route and one viewport.

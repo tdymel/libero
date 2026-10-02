@@ -198,7 +198,7 @@ pub fn selected_row_is_marked(route: &str) {
         assert_eq!(image, "none", "{route}: the selected row has no bar");
         assert_eq!(off, "none", "{route}: an idle row has no image");
 
-        crate::calendar::force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         crate::button::assert_unmarked_in_forced_colours(
             page,
             "[role=option][aria-selected=true]",

@@ -25,44 +25,6 @@ fn it_meets_the_baseline() {
 }
 
 /// Every item is a Tab stop in order, and Enter on one selects it.
-#[test]
-fn each_item_is_a_tab_stop_and_enter_selects_it() {
-    block_on(async {
-        let fixture = Fixture::open("/bottom-navigation", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        wait::for_visible(page, "#home").await.unwrap();
-
-        keyboard::tab_to(page, "#home", 5).await.unwrap();
-        for next in ["search", "inbox", "long", "profile"] {
-            keyboard::press(page, keyboard::TAB).await.unwrap();
-            wait::for_js_true(
-                page,
-                &format!("document.activeElement.id === '{next}'"),
-                "Tab to the next item",
-            )
-            .await
-            .unwrap();
-        }
-
-        keyboard::tab_to(page, "#search", 10).await.unwrap();
-        keyboard::press(page, keyboard::ENTER).await.unwrap();
-        wait::for_js_true(
-            page,
-            "document.querySelector('#search').getAttribute('aria-current') === 'page' \
-             && !document.querySelector('#home').hasAttribute('aria-current') \
-             && document.querySelectorAll('#bar [aria-current]').length === 1",
-            "Enter to select the item",
-        )
-        .await
-        .unwrap();
-
-        fixture.console.assert_clean("selecting an item").unwrap();
-        fixture.close().await.unwrap();
-    });
-}
-
 /// 1.4.10 and 2.5.8: five items fit a 320px column, each at least 48px square,
 /// and a long label stops at two lines.
 #[test]
@@ -109,7 +71,7 @@ fn the_selected_pill_shows_in_forced_colours() {
             .unwrap();
         let page = &fixture.page;
         wait::for_visible(page, "#home").await.unwrap();
-        crate::calendar::force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
 
         let differs = js::<serde_json::Value>(
             page,
@@ -219,9 +181,21 @@ fn disabled_items_are_skipped_and_dimmed() {
         .await;
         assert_eq!(left, true);
 
-        e2e::passes::pointer::click(page, "#disabled-button")
+        // The control: the press lands on the item, so a missed click cannot pass (todo 1830).
+        let at = e2e::passes::pointer::centre_of(page, "#disabled-button")
             .await
             .unwrap();
+        let hit = js::<serde_json::Value>(
+            page,
+            &format!(
+                "!!document.elementFromPoint({}, {})?.closest('#disabled-button')",
+                at.x, at.y
+            ),
+        )
+        .await;
+        assert_eq!(hit, true, "the press misses the disabled item");
+        e2e::passes::pointer::click_at(page, at).await.unwrap();
+        e2e::clock::settle(page).await.unwrap();
         let clicked = js::<serde_json::Value>(page, "!!document.querySelector('#clicked')").await;
         assert_eq!(clicked, false);
 
@@ -343,11 +317,15 @@ async fn items_take_the_keyboard_and_the_pointer<D: Driver>(d: &mut D, _route: &
 
     d.focus("#search").await?;
     d.press(keyboard::ENTER).await?;
+    // Search alone is current: the one check the web twin had (todo 1826).
     eventually(d, "Enter to select Search", async |d| {
-        Ok(
-            d.attr("#search", "aria-current").await?.as_deref() == Some("page")
-                && d.attr("#home", "aria-current").await?.is_none(),
-        )
+        for id in ["home", "search", "inbox", "long", "profile"] {
+            let current = d.attr(&format!("#{id}"), "aria-current").await?;
+            if current.as_deref() != (id == "search").then_some("page") {
+                return Ok(false);
+            }
+        }
+        Ok(true)
     })
     .await?;
 
@@ -405,6 +383,35 @@ e2e::scenario!(
     "/bottom-navigation/scroller",
     a_sticky_bar_in_a_pane_leaves_the_focused_link_clear,
     native: skip("Blitz's focus scroll ignores scroll-padding; see the native unit")
+);
+
+/// 2.4.11 for the fixed bar (todo 1827): each link Tab reaches, the one in view but behind the
+/// bar included (no scroll without `scroll-padding-bottom`), ends clear of the bar.
+async fn a_fixed_bar_leaves_the_focused_link_clear<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    const LINKS: usize = 30;
+    d.focus("#link-0").await?;
+    for index in 1..LINKS {
+        let link = format!("#link-{index}");
+        d.press(keyboard::TAB).await?;
+        eventually_focused(d, &link, "Tab").await?;
+        eventually(d, &format!("{link} to end clear of the bar"), async |d| {
+            let at = d.rect(&link).await?;
+            let bar = d.rect("#fixed").await?;
+            Ok(at.y + at.height <= bar.y + 1.0)
+        })
+        .await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_fixed_bar_clears_the_focused_link,
+    "/bottom-navigation/fixed",
+    a_fixed_bar_leaves_the_focused_link_clear,
+    native: skip("Blitz lays position: fixed out as absolute; see the native unit")
 );
 
 /// A fixed bar docks to the viewport's bottom edge, spans its width, publishes the

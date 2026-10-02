@@ -1,0 +1,10 @@
+---
+source: e2e/src/suite.rs
+description: cascader_any_level at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Place"
+combobox "Place" [expanded=false] [haspopup=listbox]
+status [atomic] [live=polite]
+paragraph

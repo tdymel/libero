@@ -5,9 +5,9 @@ use anyhow::{Result, ensure};
 use e2e::archetypes::reset_tab_position;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
-use e2e::passes::{focus, keyboard, motion};
+use e2e::passes::{keyboard, motion};
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, js, wait};
 
 use chromiumoxide::Page;
 
@@ -35,7 +35,7 @@ fn a_disabled_trigger_is_gray_text_in_forced_colours() {
         let fixture = Fixture::open("/accordion", Viewport::Desktop)
             .await
             .unwrap();
-        crate::calendar::force_colours(&fixture.page).await;
+        e2e::browser::force_colours(&fixture.page).await.unwrap();
         crate::button::assert_gray_in_forced_colours(&fixture.page, "#checkout-trigger-1").await;
         fixture.close().await.unwrap();
     });
@@ -79,13 +79,6 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
     });
 }
 
-/// `true` once trigger `index` reports `aria-expanded` as `expanded`.
-fn expanded(index: usize, expanded: bool) -> String {
-    format!(
-        "document.querySelector('#checkout-trigger-{index}').getAttribute('aria-expanded') === '{expanded}'"
-    )
-}
-
 /// `true` once region `index`'s root is `visibility: hidden`, which takes the
 /// landmark out of the accessibility tree.
 fn hidden(index: usize) -> String {
@@ -106,33 +99,9 @@ async fn region(page: &Page, index: usize) -> (Option<String>, Option<String>) {
     .unwrap()
 }
 
-async fn is(page: &Page, expression: &str) -> bool {
-    page.evaluate(expression)
-        .await
-        .unwrap()
-        .into_value()
-        .unwrap()
-}
-
-async fn expect_focus(page: &Page, id: &str, what: &str) {
-    let arrived = wait::for_js_true(
-        page,
-        &format!("document.activeElement && document.activeElement.id === '{id}'"),
-        what,
-    )
-    .await;
-    if let Err(e) = arrived {
-        panic!("{e}; focus is on {:?}", focus::active_element(page).await);
-    }
-}
-
-async fn press_and_expect_focus(page: &Page, key: keyboard::Key, id: &str) {
-    keyboard::press(page, key).await.unwrap();
-    expect_focus(page, id, &format!("{} to focus #{id}", key.key)).await;
-}
-
-/// Both motion settings, because headless Chromium defaults to reduced and a
-/// zero-duration close is where the focus return reads a DOM already gone.
+/// The scenarios under both motion settings, because headless Chromium defaults to reduced
+/// and a zero-duration close is where the focus return reads a DOM already gone; plus what
+/// they do not read: the regions' names, the disabled tab stop, the chevron (todo 1826).
 #[test]
 fn the_keys_toggle_sections_and_only_an_open_panel_is_a_landmark() {
     block_on(async {
@@ -146,122 +115,55 @@ fn the_keys_toggle_sections_and_only_an_open_panel_is_a_landmark() {
                 motion::assert_reduced_motion_matches(page).await.unwrap();
             }
 
-            // Closed: a labelled region, hidden by `Collapse`'s root.
-            reset_tab_position(page).await.unwrap();
-            press_and_expect_focus(page, keyboard::TAB, "checkout-trigger-0").await;
+            // Each panel is a region named by its trigger, which controls it.
             for index in 0..3 {
-                assert!(
-                    is(page, &expanded(index, false)).await,
-                    "panel {index} starts open"
-                );
                 assert_eq!(
                     region(page, index).await,
                     (
                         Some("region".into()),
                         Some(format!("checkout-trigger-{index}"))
                     ),
-                    "closed panel {index}"
+                    "panel {index}"
                 );
-                assert!(is(page, &hidden(index)).await, "closed panel {index} shows");
+                let controls: Option<String> = js(
+                    page,
+                    &format!(
+                        "document.querySelector('{}').getAttribute('aria-controls')",
+                        trigger(index)
+                    ),
+                )
+                .await;
+                assert_eq!(controls, Some(format!("checkout-region-{index}")));
             }
+            // The disabled Payment is still a tab stop.
+            reset_tab_position(page).await.unwrap();
+            keyboard::tab_to(page, &trigger(1), 2).await.unwrap();
 
-            // Arrows skip the disabled Payment, wrap, and never toggle.
-            press_and_expect_focus(page, keyboard::ARROW_DOWN, "checkout-trigger-2").await;
-            press_and_expect_focus(page, keyboard::ARROW_DOWN, "checkout-trigger-0").await;
-            press_and_expect_focus(page, keyboard::ARROW_UP, "checkout-trigger-2").await;
-            press_and_expect_focus(page, keyboard::HOME, "checkout-trigger-0").await;
-            press_and_expect_focus(page, keyboard::END, "checkout-trigger-2").await;
-            assert!(
-                is(page, &expanded(2, false)).await,
-                "an arrow toggled Review"
-            );
-
-            // The disabled trigger is a tab stop Enter does not open. Once the first
-            // reads open, the disabled trigger's Enter has been handled too.
-            keyboard::press_shift(page, keyboard::TAB).await.unwrap();
-            expect_focus(
-                page,
-                "checkout-trigger-1",
-                "Shift+Tab to the disabled Payment",
-            )
-            .await;
-            keyboard::press(page, keyboard::ENTER).await.unwrap();
-            keyboard::press_shift(page, keyboard::TAB).await.unwrap();
-            expect_focus(page, "checkout-trigger-0", "Shift+Tab to Shipping").await;
-            keyboard::press(page, keyboard::ENTER).await.unwrap();
-            wait::for_js_true(page, &expanded(0, true), "Enter to open Shipping")
-                .await
-                .unwrap();
-            assert!(
-                is(page, &expanded(1, false)).await,
-                "Enter opened the disabled Payment"
-            );
-
-            // Open: a region named by its trigger, and `aria-controls` finds it.
-            wait::for_visible(page, CONTINUE).await.unwrap();
-            assert!(!is(page, &hidden(0)).await, "the open panel is hidden");
-            assert_eq!(
-                region(page, 0).await,
-                (Some("region".into()), Some("checkout-trigger-0".into()))
-            );
-            let controls: String = page
-                .evaluate(format!(
-                    "document.querySelector('{FIRST}').getAttribute('aria-controls')"
-                ))
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
-            assert_eq!(controls, "checkout-region-0");
-
-            // Space closes it again, and the root hides once the close ends.
-            keyboard::press(page, keyboard::SPACE).await.unwrap();
-            wait::for_js_true(page, &expanded(0, false), "Space to close Shipping")
-                .await
-                .unwrap();
-            wait::for_js_true(
-                page,
-                "!document.querySelector('#continue')",
-                "the closed panel to unmount",
-            )
-            .await
-            .unwrap();
-            wait::for_js_true(page, &hidden(0), "the closed root to hide")
-                .await
-                .unwrap();
-
-            // Focus return: Continue opens Review and closes the panel it sits in.
-            keyboard::press(page, keyboard::ENTER).await.unwrap();
-            wait::for_visible(page, CONTINUE).await.unwrap();
-            press_and_expect_focus(page, keyboard::TAB, "continue").await;
-            keyboard::press(page, keyboard::ENTER).await.unwrap();
-            wait::for_js_true(page, &expanded(2, true), "Continue to open Review")
-                .await
-                .unwrap();
-            expect_focus(
-                page,
-                "checkout-trigger-0",
-                "focus to return to Shipping's trigger",
-            )
-            .await;
+            let mut d = e2e::driver::Web { fixture };
+            arrows_move_focus(&mut d, "/accordion").await.unwrap();
+            enter_and_space_toggle(&mut d, "/accordion").await.unwrap();
+            focus_returns(&mut d, "/accordion").await.unwrap();
+            let page = &d.fixture.page;
             wait::for_js_true(page, &hidden(0), "Continue's closed root to hide")
                 .await
                 .unwrap();
 
-            // The chevron turns, except under reduced motion.
-            let still = motion::assert_still(page, "#checkout").await;
+            // The chevron turns, except under reduced motion: the chevron's own (todo 1830).
             match reduced {
-                true => still.expect("the accordion under reduced motion"),
+                true => motion::assert_still(page, "#checkout")
+                    .await
+                    .expect("the accordion under reduced motion"),
                 false => {
-                    still.expect_err("the chevron should transition without reduced motion");
+                    let moving = motion::assert_still(page, "#checkout [data-accordion-chevron]")
+                        .await
+                        .expect_err("the chevron should transition without reduced motion");
+                    assert!(moving.to_string().contains("still animates"), "{moving}");
                 }
             }
 
-            fixture
-                .console
-                .assert_clean(&format!("the accordion keys, reduced={reduced}"))
+            d.finish(&format!("the accordion keys, reduced={reduced}"))
+                .await
                 .unwrap();
-            fixture.close().await.unwrap();
         }
     });
 }

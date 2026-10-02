@@ -335,19 +335,12 @@ fn a_diff_without_a_language_is_still_marked() {
 /// the wash and the inset shadow that draw it otherwise.
 #[test]
 fn a_highlighted_line_keeps_its_bar_in_forced_colours() {
-    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     block_on(async {
         let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         const BAR: &str = "(() => { const rows = [...document.querySelectorAll('#wide-block pre > code > span')]; \
             return rows.length === 3 && rows.map(r => getComputedStyle(r).borderLeftWidth).join() === '0px,3px,0px'; })()";
-        page.execute(
-            SetEmulatedMediaParams::builder()
-                .features(vec![MediaFeature::new("forced-colors", "active")])
-                .build(),
-        )
-        .await
-        .unwrap();
+        e2e::browser::force_colours(page).await.unwrap();
         wait::for_js_true(page, BAR, "a bar on line 2 only")
             .await
             .unwrap();

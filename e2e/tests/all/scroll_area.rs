@@ -7,7 +7,7 @@ use chromiumoxide::cdp::browser_protocol::input::{
 use chromiumoxide::cdp::browser_protocol::page::AddScriptToEvaluateOnNewDocumentParams;
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The highest row index a `Virtualize` has in the document.
 const LAST_ROW: &str = "Math.max(...[...document.querySelectorAll('#list-pane [data-row]')].map(r => Number(r.dataset.row)))";
@@ -16,6 +16,18 @@ const RESIZES: &str = "Number(document.querySelector('#list-resizes').textConten
 
 /// 20px rows: a 120px pane shows a dozen, 600px needs 29. The area listens for `onresize`
 /// itself; a caller's listener must still run.
+/// Todo 1773: none before; axe's `scrollable-region-focusable` among the rest.
+#[test]
+fn it_meets_the_baseline() {
+    for (name, route) in [
+        ("scroll_area", "/scroll-area"),
+        ("scroll_area_bars", "/scroll-area/bars"),
+        ("scroll_area_rtl", "/scroll-area/rtl"),
+    ] {
+        Suite::new(name, route).run();
+    }
+}
+
 #[test]
 fn a_taller_pane_renders_rows_to_its_new_bottom() {
     block_on(async {
@@ -813,7 +825,6 @@ fn both_axes_share_the_corner_and_rtl_starts_at_the_right() {
 /// in `CanvasText` rather than dropping it to the page's `Canvas`.
 #[test]
 fn the_drawn_thumb_has_contrast_and_shows_in_forced_colours() {
-    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     const THUMB: &str =
         "getComputedStyle(document.querySelector('#bars-v [data-slot=thumb]')).backgroundColor";
     block_on(async {
@@ -844,20 +855,7 @@ fn the_drawn_thumb_has_contrast_and_shows_in_forced_colours() {
             assert!(ratio >= 3.0, "the drawn {scheme} thumb has {ratio:.2}:1");
         }
 
-        page.execute(
-            SetEmulatedMediaParams::builder()
-                .features(vec![MediaFeature::new("forced-colors", "active")])
-                .build(),
-        )
-        .await
-        .unwrap();
-        wait::for_js_true(
-            page,
-            "matchMedia('(forced-colors: active)').matches",
-            "forced colours to apply",
-        )
-        .await
-        .unwrap();
+        e2e::browser::force_colours(page).await.unwrap();
         let [thumb, canvas]: [String; 2] = page
             .evaluate(format!(
                 "(() => {{ const probe = document.createElement('div'); \

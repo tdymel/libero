@@ -415,7 +415,7 @@ fn a_disabled_trigger_grays_out_in_forced_colours() {
             .await
             .unwrap();
         let page = &fixture.page;
-        crate::calendar::force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         crate::button::assert_gray_in_forced_colours(
             page,
             r#"[role=menubar] [data-menubar-index][aria-disabled="true"]"#,

@@ -15,11 +15,13 @@ const THUMB: &str = "[role=slider]";
 
 const TRACK: &str = "[data-state~=size-md] > [data-state~=size-md] > div";
 
+/// A missing or unparsable `aria-valuenow` fails, not reads as 0 (todo 1762).
 async fn value_now<D: Driver>(d: &mut D) -> Result<f64> {
-    Ok(d.attr(THUMB, "aria-valuenow")
+    let now = d
+        .attr(THUMB, "aria-valuenow")
         .await?
-        .and_then(|v| v.parse().ok())
-        .unwrap_or_default())
+        .ok_or_else(|| anyhow::anyhow!("the thumb has no aria-valuenow"))?;
+    Ok(now.parse()?)
 }
 
 /// The 400px track's centre is 50; a quarter of it further is 75. A touch
@@ -68,6 +70,16 @@ async fn held_thumb<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         Ok(!d.exists(BUBBLE).await?)
     })
     .await?;
+    // The first read can come before the tap's bubble renders: settle, then read again.
+    d.settle().await?;
+    ensure!(!d.exists(BUBBLE).await?, "a bubble rose after the release");
+    if held {
+        let lingering = d.armed(TOUCH_LINGER_MS).await?;
+        ensure!(
+            lingering == 0,
+            "{lingering} touch lingers armed after the release"
+        );
+    }
     ensure!(
         held || released.elapsed() < std::time::Duration::from_millis(u64::from(TOUCH_LINGER_MS)),
         "the bubble lingered after the release"

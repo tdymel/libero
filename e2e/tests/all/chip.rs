@@ -39,12 +39,20 @@ async fn emitted(fixture: &Fixture) -> String {
         .unwrap()
 }
 
+/// Before a "nothing happened" read: what the last input queued has run.
 async fn settle(fixture: &Fixture) {
-    fixture
-        .page
-        .evaluate("new Promise(r => setTimeout(() => r(1), 100))")
-        .await
-        .unwrap();
+    e2e::clock::settle(&fixture.page).await.unwrap();
+}
+
+/// Waits for the last emitted value to be `expected`.
+async fn emitted_is(fixture: &Fixture, expected: &str, what: &str) {
+    e2e::wait::for_js_true(
+        &fixture.page,
+        &format!("document.querySelector('[data-emitted]').dataset.emitted === {expected:?}"),
+        what,
+    )
+    .await
+    .unwrap();
 }
 
 async fn focused(fixture: &Fixture) -> String {
@@ -129,7 +137,7 @@ fn a_selected_chip_shows_the_on_state_ring() {
         let fixture = Fixture::open("/chip", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         assert_on_marker(page, "#rust", "#css").await;
-        crate::calendar::force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         assert_on_in_forced_colours(page, "#rust", "#css").await;
         assert_gray_in_forced_colours(page, "#off").await;
         fixture.close().await.unwrap();
@@ -145,7 +153,7 @@ fn a_selected_chips_remove_x_follows_it_in_forced_colours() {
             .unwrap();
         let page = &fixture.page;
         crate::button::assert_on_marker(page, "#removable", "#plain").await;
-        crate::calendar::force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         crate::button::assert_on_in_forced_colours(page, "#removable", "#plain").await;
         crate::button::assert_on_in_forced_colours(page, "#removable-filled", "#plain").await;
         fixture.close().await.unwrap();
@@ -160,8 +168,7 @@ fn space_toggles_a_filter_chip_and_enter_does_not() {
 
         keyboard::tab_to(page, "#css > input", 10).await.unwrap();
         keyboard::press(page, SPACE).await.unwrap();
-        assert_eq!(emitted(&fixture).await, "css:true");
-        settle(&fixture).await;
+        emitted_is(&fixture, "css:true", "Space to tick #css").await;
         let css = e2e::ax::snapshot(page, "#css").await.unwrap();
         assert!(css.contains("checkbox \"css\" [checked]"), "{css}");
 
@@ -179,40 +186,40 @@ fn space_toggles_a_filter_chip_and_enter_does_not() {
     });
 }
 
-/// The whole pill is the target, not only its label: the label used to cover
-/// the text alone, so a click on the pill's padding did nothing.
+/// The whole pill is the target at xs too (`#css`'s padding is the scenario's), and an
+/// uncontrolled chip ticks itself.
 #[test]
 fn a_click_anywhere_on_the_pill_toggles_it() {
     block_on(async {
         let fixture = Fixture::open("/chip", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        for (id, expected) in [("css", "css:true"), ("small", "small:true")] {
-            let edge: Point = page
-                .evaluate(format!(
-                    "(() => {{ const r = document.getElementById('{id}').getBoundingClientRect(); \
-                     return {{ x: r.left + 3, y: r.top + r.height / 2 }}; }})()"
-                ))
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
-            pointer::drag(page, edge, edge, 0).await.unwrap();
-            settle(&fixture).await;
-            assert_eq!(emitted(&fixture).await, expected, "a click on #{id}'s edge");
-            assert_eq!(focused(&fixture).await, id, "focus after a click on #{id}");
-        }
-
-        // A `name` alone keeps its own state.
-        pointer::click(page, "#named").await.unwrap();
-        settle(&fixture).await;
-        let ticked: bool = page
-            .evaluate("!!document.querySelector('#named > input:checked')")
+        let edge: Point = page
+            .evaluate(
+                "(() => { const r = document.getElementById('small').getBoundingClientRect(); \
+                 return { x: r.left + 3, y: r.top + r.height / 2 }; })()",
+            )
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert!(ticked, "an uncontrolled chip did not tick");
+        pointer::click_at(page, edge).await.unwrap();
+        emitted_is(&fixture, "small:true", "a click on #small's edge").await;
+        assert_eq!(
+            focused(&fixture).await,
+            "small",
+            "focus after a click on #small"
+        );
+
+        // A `name` alone keeps its own state.
+        pointer::click(page, "#named").await.unwrap();
+        e2e::wait::for_js_true(
+            page,
+            "!!document.querySelector('#named > input:checked')",
+            "an uncontrolled chip to tick",
+        )
+        .await
+        .unwrap();
 
         fixture.console.assert_clean("chip clicks").unwrap();
         fixture.close().await.unwrap();
@@ -380,6 +387,8 @@ fn a_control_in_a_clickable_chips_trailing_warns() {
         e2e::wait::until("both chips to warn", || async { Ok(warned() == 2) })
             .await
             .unwrap();
+        settle(&fixture).await;
+        assert_eq!(warned(), 2, "the chips warned again");
         fixture.console.drain();
         fixture.close().await.unwrap();
     });

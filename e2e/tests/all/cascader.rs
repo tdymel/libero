@@ -341,13 +341,19 @@ fn a_phone_names_the_one_column_by_its_parent() {
         let tree = e2e::ax::snapshot(page, TRIGGER).await.unwrap();
         assert!(tree.contains("listbox \"Europe\""), "{tree}");
         assert!(tree.contains("France"), "{tree}");
-        let roots = e2e::ax::snapshot(page, "[id$='-listbox-0']").await;
-        assert!(
-            roots
-                .as_ref()
-                .map_or(true, |tree| !tree.contains("Oceania")),
-            "the hidden roots are in the tree: {roots:?}"
-        );
+        // Only "no node" passes: any other snapshot error is no proof (todo 1770).
+        const ROOTS: &str = "[id$='-listbox-0']";
+        wait::for_selector(page, ROOTS).await.unwrap();
+        match e2e::ax::snapshot(page, ROOTS).await {
+            Ok(tree) => assert!(
+                !tree.contains("Oceania"),
+                "the hidden roots are in the tree: {tree}"
+            ),
+            Err(e) => assert!(
+                e.to_string().starts_with("no accessibility node"),
+                "the roots' snapshot failed: {e:#}"
+            ),
+        }
         fixture
             .console
             .assert_clean("a phone's cascader tree")
@@ -389,6 +395,17 @@ fn a_searchable_field_meets_the_baseline() {
             "[role=listbox]",
         )
         .run();
+}
+
+/// The other variants (todo 1773).
+#[test]
+fn the_paths_and_any_level_fields_meet_the_baseline() {
+    for (name, route) in [
+        ("cascader_paths", "/cascader/paths"),
+        ("cascader_any_level", "/cascader/any-level"),
+    ] {
+        Suite::new(name, route).focusable(TRIGGER).run();
+    }
 }
 
 /// Todo 482: a search matching nothing shows "No results" and says it.

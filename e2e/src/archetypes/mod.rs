@@ -6,6 +6,7 @@ mod combobox;
 mod overlay;
 mod radio_set;
 mod roving;
+mod second_drag;
 mod tree_walk;
 
 pub use back::back_closes;
@@ -13,4 +14,5 @@ pub use combobox::Combobox;
 pub use overlay::Overlay;
 pub use radio_set::RadioSet;
 pub use roving::{Orientation, RovingTabindex, count_tab_stops, reset_tab_position};
+pub use second_drag::{Round, second_drag};
 pub use tree_walk::TreeWalk;

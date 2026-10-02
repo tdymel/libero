@@ -624,9 +624,10 @@ fn a_card_stands_apart_from_its_column_in_both_schemes() {
                 "{name}: the card shares its column's {card}"
             );
             assert!(!card.contains("rgba(0, 0, 0, 0)"), "{name}: a clear card");
+            // The edge parts the card from the column it sits on (todo 1775).
             assert!(
-                border.starts_with("1px solid ") && border != format!("1px solid {card}"),
-                "{name}: no visible edge, {border} on {card}"
+                border.starts_with("1px solid ") && border != format!("1px solid {column}"),
+                "{name}: no visible edge, {border} on the column's {column}"
             );
         }
         fixture.close().await.unwrap();
@@ -636,6 +637,7 @@ fn a_card_stands_apart_from_its_column_in_both_schemes() {
 /// A second drag still slides the neighbours before the drop, as the first did (1438).
 #[test]
 fn a_second_drag_still_slides_the_neighbours() {
+    use e2e::archetypes::{Round, second_drag};
     use e2e::browser::{Fixture, Viewport, block_on};
     use e2e::passes::pointer;
     block_on(async {
@@ -643,46 +645,23 @@ fn a_second_drag_still_slides_the_neighbours() {
         let page = &fixture.page;
         let outcome = async {
             e2e::wait::for_visible(page, "#Gamma").await?;
-            for (round, (card, passed, order)) in [
-                ("#Alpha", "#Beta", "Beta Alpha Gamma | Delta | "),
-                ("#Beta", "#Alpha", "Alpha Beta Gamma | Delta | "),
-            ]
-            .into_iter()
-            .enumerate()
-            {
-                let from = pointer::centre_of(page, &format!("{card} [data-slot=handle]")).await?;
-                // Gamma never moves: the dropped card may still be settling.
-                let (beta, gamma) = (
-                    pointer::centre_of(page, "#Beta").await?,
-                    pointer::centre_of(page, "#Gamma").await?,
-                );
-                let pitch = if round == 0 { gamma.y - beta.y } else { (gamma.y - beta.y) / 2.0 };
-                let to = pointer::Point {
-                    x: from.x,
-                    y: from.y + pitch * 1.4,
-                };
-                pointer::drag_held(page, from, to, 8).await?;
-                e2e::wait::for_js_true(
-                    page,
-                    &format!(
-                        "(() => {{ const t = getComputedStyle(document.querySelector('{passed}')).transform; \
-                         return t !== 'none' && new DOMMatrix(t).m42 < -1; }})()"
-                    ),
-                    &format!("drag {}: the passed card to step up", round + 1),
-                )
-                .await?;
-                pointer::release(page, to).await?;
-                e2e::wait::for_js_true(
-                    page,
-                    &format!(
-                        "document.querySelector('#order').textContent.trim() === '{}'",
-                        order.trim()
-                    ),
-                    &format!("drag {}: the drop", round + 1),
-                )
-                .await?;
-            }
-            anyhow::Ok(())
+            let (beta, gamma) = (
+                pointer::centre_of(page, "#Beta").await?,
+                pointer::centre_of(page, "#Gamma").await?,
+            );
+            let rounds = [
+                Round {
+                    handle: "#Alpha [data-slot=handle]",
+                    passed: "#Beta",
+                    order: "Beta Alpha Gamma | Delta |",
+                },
+                Round {
+                    handle: "#Beta [data-slot=handle]",
+                    passed: "#Alpha",
+                    order: "Alpha Beta Gamma | Delta |",
+                },
+            ];
+            second_drag(page, &rounds, "#Gamma", gamma.y - beta.y).await
         }
         .await;
         fixture.close().await.unwrap();
@@ -693,25 +672,11 @@ fn a_second_drag_still_slides_the_neighbours() {
 /// Forced colours paint the column's fill as `Canvas`, so only a border draws its edge.
 #[test]
 fn a_column_keeps_an_edge_in_forced_colours() {
-    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     use e2e::browser::{Fixture, Viewport, block_on};
     block_on(async {
         let fixture = Fixture::open("/kanban", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
-            SetEmulatedMediaParams::builder()
-                .features(vec![MediaFeature::new("forced-colors", "active")])
-                .build(),
-        )
-        .await
-        .unwrap();
-        e2e::wait::for_js_true(
-            page,
-            "matchMedia('(forced-colors: active)').matches",
-            "forced colours to apply",
-        )
-        .await
-        .unwrap();
+        e2e::browser::force_colours(page).await.unwrap();
         let edge: String = page
             .evaluate(
                 "(() => { const s = getComputedStyle(document.querySelector('#column-0')); \

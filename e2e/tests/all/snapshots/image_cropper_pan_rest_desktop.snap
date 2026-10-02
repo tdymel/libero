@@ -1,0 +1,10 @@
+---
+source: e2e/src/suite.rs
+description: image_cropper_pan at desktop (rest)
+expression: tree
+---
+image "A sun on blue"
+slider "Crop area" = 30 [valuemax=100] [valuemin=0]
+slider "Zoom" = -0.003143551293760538 [valuemax=2.0768563747406006] [valuemin=-0.2231435477733612]
+paragraph
+  StaticText "30,10,40,80"

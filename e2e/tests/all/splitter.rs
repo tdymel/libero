@@ -149,60 +149,71 @@ e2e::scenario!(
     a_swipe_scrolls
 );
 
+/// Todo 1821: the horizontal divider takes ArrowDown/ArrowUp (step 1), Shift for the big
+/// step (10), Home/End; ArrowLeft/Right are not its keys. Pane A grows downwards.
+async fn the_column_keys<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    async fn column<D: Driver>(d: &mut D, what: &str, want: f64) -> Result<()> {
+        eventually(d, what, async |d| {
+            let now = d
+                .attr(COLUMN, "aria-valuenow")
+                .await?
+                .context("no aria-valuenow")?;
+            Ok(now.parse::<f64>()? == want)
+        })
+        .await
+    }
+
+    let orientation = d.attr(COLUMN, "aria-orientation").await?;
+    ensure!(
+        orientation.as_deref() == Some("horizontal"),
+        "the column divider's aria-orientation is {orientation:?}"
+    );
+    d.focus(COLUMN).await?;
+    column(d, "the divider to start at 50", 50.0).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    column(d, "ArrowDown to grow pane A by a step", 51.0).await?;
+    d.press(keyboard::ARROW_UP).await?;
+    column(d, "ArrowUp to shrink it back", 50.0).await?;
+    d.press_shift(keyboard::ARROW_DOWN).await?;
+    column(d, "Shift+ArrowDown to grow it by the big step", 60.0).await?;
+    d.press_shift(keyboard::ARROW_UP).await?;
+    column(d, "Shift+ArrowUp to shrink it by the big step", 50.0).await?;
+    // Inert keys first: the step after lands on 49 only if they moved nothing.
+    d.press(keyboard::ARROW_LEFT).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.press(keyboard::ARROW_UP).await?;
+    column(d, "ArrowLeft/Right to move nothing", 49.0).await?;
+    d.press(keyboard::HOME).await?;
+    column(d, "Home to reach the floor", 10.0).await?;
+    d.press(keyboard::END).await?;
+    column(d, "End to reach the ceiling", 90.0).await
+}
+
+e2e::scenario!(
+    the_horizontal_divider_takes_up_down_shift_and_home_end,
+    "/splitter/scroll",
+    the_column_keys
+);
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("splitter", "/splitter").focusable(DIVIDER).run();
 }
 
-/// Focus starts on a button outside, so a divider that never takes focus
-/// fails the first assertion rather than passing on focus it already had.
+/// The drag scenario at the phone width; its web arm runs at the desktop one (todo 1826).
 #[test]
-fn a_drag_leaves_the_divider_focused_for_the_arrow_keys() {
+fn a_drag_leaves_the_divider_focused_on_mobile() {
     block_on(async {
-        e2e::browser::at_every_viewport(async |viewport| {
-            let at = viewport.name();
-            let fixture = Fixture::open("/splitter", viewport).await.unwrap();
-            let page = &fixture.page;
-
-            keyboard::tab_to(page, "#before", 5).await.unwrap();
-
-            let from = pointer::centre_of(page, DIVIDER).await.unwrap();
-            let to = pointer::Point {
-                x: from.x + 40.0,
-                y: from.y,
-            };
-            wait::for_js_change(page, VALUE_NOW, "the drag to move the divider", || {
-                pointer::drag(page, from, to, 10)
-            })
-            .await
-            .unwrap_or_else(|e| panic!("at {at}: {e}"));
-
-            wait::for_js_true(
-                page,
-                &format!("document.activeElement === document.querySelector({DIVIDER:?})"),
-                "the divider to hold focus after the drag",
-            )
-            .await
-            .unwrap_or_else(|e| panic!("at {at}: {e}"));
-
-            wait::for_js_change(page, VALUE_NOW, "ArrowRight to move the divider", || {
-                keyboard::press(page, keyboard::ARROW_RIGHT)
-            })
-            .await
-            .unwrap_or_else(|e| panic!("at {at}: {e}"));
-
-            fixture
-                .console
-                .assert_clean(&format!("a splitter drag at {at}"))
-                .unwrap();
-            fixture.close().await.unwrap();
-        })
-        .await;
+        let fixture = Fixture::open("/splitter", Viewport::Mobile).await.unwrap();
+        let mut d = e2e::driver::Web { fixture };
+        a_drag_leaves_it_focused(&mut d, "/splitter").await.unwrap();
+        d.finish("a splitter drag on mobile").await.unwrap();
     });
 }
 
-/// Under RTL pane A is on the right: the arrow keys and a drag move the
-/// divider the way they point, so rightwards shrinks pane A.
+/// Under RTL pane A is on the right, and ArrowLeft grows it: the arrow keys move the
+/// divider the way they point.
 #[test]
 fn under_rtl_the_divider_moves_the_way_the_arrow_and_pointer_go() {
     block_on(async {
@@ -223,37 +234,14 @@ fn under_rtl_the_divider_moves_the_way_the_arrow_and_pointer_go() {
             .unwrap();
         assert!(pane_a_right, "pane A is not on the right under RTL");
 
+        // Rightwards shrinking is the scenario's; here the other way grows it (todo 1826).
         keyboard::tab_to(page, DIVIDER, 5).await.unwrap();
         let start = value_now(page).await;
-        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
-        wait::for_js_true(
-            page,
-            &format!("Number({VALUE_NOW}) < {start}"),
-            "ArrowRight to shrink pane A",
-        )
-        .await
-        .unwrap();
-        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
         keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
         wait::for_js_true(
             page,
             &format!("Number({VALUE_NOW}) > {start}"),
             "ArrowLeft to grow pane A",
-        )
-        .await
-        .unwrap();
-
-        let before = value_now(page).await;
-        let from = pointer::centre_of(page, DIVIDER).await.unwrap();
-        let to = pointer::Point {
-            x: from.x + 40.0,
-            y: from.y,
-        };
-        pointer::drag(page, from, to, 10).await.unwrap();
-        wait::for_js_true(
-            page,
-            &format!("Number({VALUE_NOW}) < {before}"),
-            "a drag to the right to shrink pane A",
         )
         .await
         .unwrap();
@@ -298,10 +286,10 @@ fn modifier_chords_are_left_to_the_browser() {
     });
 }
 
-/// The drag-free path (WCAG 2.5.7): a single click only focuses, a double-click
-/// collapses pane A to the floor and the next one restores it.
+/// The drag-free path (WCAG 2.5.7) around the scenario's collapse and restore: a single
+/// click only focuses, and a double-click in a pane is not the divider's (todo 1826).
 #[test]
-fn a_double_click_toggles_pane_a_collapsed() {
+fn a_click_only_focuses_and_a_double_click_in_a_pane_does_nothing() {
     block_on(async {
         let fixture = Fixture::open("/splitter", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
@@ -318,6 +306,7 @@ fn a_double_click_toggles_pane_a_collapsed() {
         )
         .await
         .unwrap();
+        e2e::clock::settle(page).await.unwrap();
         let now: String = page
             .evaluate(VALUE_NOW)
             .await
@@ -336,6 +325,7 @@ fn a_double_click_toggles_pane_a_collapsed() {
         pointer::double_click(page, &format!("[id={pane_a:?}]"))
             .await
             .unwrap();
+        e2e::clock::settle(page).await.unwrap();
         let now: String = page
             .evaluate(VALUE_NOW)
             .await
@@ -343,15 +333,6 @@ fn a_double_click_toggles_pane_a_collapsed() {
             .into_value()
             .unwrap();
         assert_eq!(now, "50", "a double-click in pane A moved the divider");
-
-        pointer::double_click(page, DIVIDER).await.unwrap();
-        wait::for_js_true(page, &value_is("10"), "a double-click to collapse pane A")
-            .await
-            .unwrap();
-        pointer::double_click(page, DIVIDER).await.unwrap();
-        wait::for_js_true(page, &value_is("50"), "a double-click to restore pane A")
-            .await
-            .unwrap();
 
         fixture
             .console

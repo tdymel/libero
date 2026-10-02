@@ -3,12 +3,11 @@
 
 use e2e::browser::block_on;
 use e2e::clock::HELD_CLOCK;
-use e2e::passes::{keyboard, pointer, target_size};
+use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, js, wait};
 
 const TRIGGER: &str = "#notify";
-const MESSAGE: &str = "Saved to your library";
 
 /// A shown notification's close button, the one undersized control here.
 const CLOSE: &str = "[aria-live] li [data-slot=close]";
@@ -223,39 +222,70 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
     });
 }
 
-/// WCAG 4.1.3: the status is announced and focus does not move, which no screenshot shows.
+/// WCAG 2.2.1: a timed notification under the pointer or holding focus is paused (no auto-close
+/// armed) and gets its full time back on leaving; one removed under the pointer, which never
+/// sees `mouseleave`, leaves the store unpaused (todo 1767).
 #[test]
-fn a_notification_is_announced_without_stealing_focus() {
+fn hover_and_focus_pause_a_timed_notification() {
+    const ITEM: &str = "[aria-live] li";
+
     block_on(async {
         let fixture = Fixture::open("/notifications", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
+        e2e::clock::hold(page, &[AUTO_CLOSE_MS, EXIT_MS])
+            .await
+            .unwrap();
+        let armed = async |count: usize, what: &str| {
+            e2e::clock::until_armed(page, AUTO_CLOSE_MS, count, what)
+                .await
+                .unwrap();
+        };
 
-        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
-        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        pointer::click(page, TIMED_TRIGGER).await.unwrap();
+        wait::for_visible(page, ITEM).await.unwrap();
+        armed(1, "the auto-close to arm").await;
 
-        // The notification arrives in a live region somewhere on the page.
+        pointer::hover(page, ITEM).await.unwrap();
+        armed(0, "the pointer on the item to pause it").await;
+        pointer::hover(page, TIMED_TRIGGER).await.unwrap();
+        armed(1, "the pointer leaving to resume it").await;
+
+        keyboard::tab_to(page, CLOSE, 5).await.unwrap();
+        armed(0, "focus on the close button to pause it").await;
+        keyboard::press_shift(page, keyboard::TAB).await.unwrap();
+        e2e::passes::focus::assert_focused(page, TIMED_TRIGGER, "Shift+Tab out")
+            .await
+            .unwrap();
+        armed(1, "focus leaving to resume it").await;
+
+        // Closed under the pointer: the next one must arm with the pointer elsewhere.
+        pointer::hover(page, CLOSE).await.unwrap();
+        armed(0, "the pointer on the close button to pause it").await;
+        pointer::click(page, CLOSE).await.unwrap();
+        e2e::clock::until_armed(page, EXIT_MS, 1, "the exit to arm")
+            .await
+            .unwrap();
+        e2e::clock::fire(page, EXIT_MS).await.unwrap();
         wait::for_js_true(
             page,
-            &format!(
-                "[...document.querySelectorAll('[aria-live], [role=status], [role=alert]')]\
-                 .some(el => el.textContent.includes({}))",
-                serde_json::to_string(MESSAGE).unwrap()
-            ),
-            "the notification to reach a live region",
+            &format!("!document.querySelector({ITEM:?})"),
+            "the item to be removed",
         )
         .await
-        .expect("a notification should be announced through a live region");
-
-        // And focus is still on the button that asked for it.
-        e2e::passes::focus::assert_focused(page, TRIGGER, "showing a notification")
-            .await
-            .expect("showing a notification must not move focus (WCAG 4.1.3)");
+        .unwrap();
+        pointer::click(page, TIMED_TRIGGER).await.unwrap();
+        wait::for_visible(page, ITEM).await.unwrap();
+        armed(
+            1,
+            "a new item to arm: the removed one left the store paused",
+        )
+        .await;
 
         fixture
             .console
-            .assert_clean("showing a notification")
+            .assert_clean("pausing on hover and focus")
             .unwrap();
         fixture.close().await.unwrap();
     });
@@ -324,38 +354,6 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
         assert_eq!(empty, 0, "{empty} empty list(s) in the page at rest");
 
         fixture.close().await.unwrap();
-    });
-}
-
-/// WCAG 2.5.8 for the close button's 24x24 press box (366). Pins the count, so a selector
-/// matching nothing after a rename fails instead of passing empty.
-#[test]
-fn its_close_button_takes_presses_in_a_24px_box() {
-    block_on(async {
-        e2e::browser::at_every_viewport(async |viewport| {
-            let fixture = Fixture::open("/notifications", viewport).await.unwrap();
-            let page = &fixture.page;
-
-            pointer::click(page, TRIGGER).await.unwrap();
-            wait::for_visible(page, CLOSE).await.unwrap();
-
-            let measured = target_size::measure_all(page, CLOSE).await.unwrap();
-            assert_eq!(
-                measured.len(),
-                1,
-                "at {}: {CLOSE} matched {} element(s), expected exactly one. A selector that \
-                 matches nothing measures nothing and reports the same green as one that \
-                 measures and passes, which is the defect this test exists for. Found: \
-                 {measured:?}",
-                viewport.name(),
-                measured.len()
-            );
-            println!("{}: {measured:?}", viewport.name());
-            target_size::assert_sizes(CLOSE, &measured).unwrap();
-
-            fixture.close().await.unwrap();
-        })
-        .await;
     });
 }
 

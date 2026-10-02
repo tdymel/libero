@@ -108,7 +108,8 @@ fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
         out_eq(page, "hello\n\nwörl\n").await;
 
         keyboard::press_with(page, KEY_Z, CTRL).await.unwrap();
-        out_where(page, "Ctrl+Z to undo", |now| now != "hello\n\nwörl\n").await;
+        // Undo takes back the last deletion only, not some other change (todo 1757).
+        out_eq(page, "hello\n\nwörld\n").await;
 
         // Markdown typing shortcut, through the model's recognizers.
         select(
@@ -147,6 +148,7 @@ fn typing_enter_backspace_undo_and_shortcuts_edit_the_model() {
         )
         .await;
         assert_eq!(paragraphs, 1);
+        fixture.close().await.unwrap();
     });
 }
 
@@ -182,6 +184,7 @@ fn a_caller_toolbar_runs_commands_and_reads_state_through_the_handle() {
             .await
             .unwrap();
         out_eq(page, "ab\n").await;
+        fixture.close().await.unwrap();
     });
 }
 
@@ -307,6 +310,7 @@ fn link_dialog_shortcut_help_block_menu_and_announcements() {
         )
         .await
         .unwrap();
+        fixture.close().await.unwrap();
     });
 }
 
@@ -345,6 +349,7 @@ fn node_views_draw_caller_nodes_and_keep_their_content_editable() {
         )
         .await;
         assert_eq!(note, 1, "the view renders once, its children once");
+        fixture.close().await.unwrap();
     });
 }
 
@@ -392,6 +397,7 @@ fn arrow_up_enters_a_rendered_code_block_and_shift_slash_opens_help() {
         )
         .await
         .unwrap();
+        fixture.close().await.unwrap();
     });
 }
 
@@ -445,6 +451,7 @@ fn a_narrow_toolbar_keeps_one_row_and_moves_the_rest_into_more() {
         )
         .await;
         assert!(quoted, "{:?}", out(page).await);
+        fixture.close().await.unwrap();
     });
 }
 
@@ -475,6 +482,7 @@ fn a_toolbar_with_larger_icons_still_keeps_one_row() {
         let (overflow, rows, _): (bool, u32, u32) = js(page, TOOLBAR_ROWS).await;
         assert!(!overflow, "the toolbar runs out of its column");
         assert_eq!(rows, 1, "the toolbar wraps");
+        fixture.close().await.unwrap();
     });
 }
 
@@ -520,6 +528,7 @@ fn copy_writes_plain_text_and_markdown_and_cut_edits_the_model() {
         )
         .await;
         assert!(cut, "{:?}", out(page).await);
+        fixture.close().await.unwrap();
     });
 }
 
@@ -562,6 +571,7 @@ fn node_views_draw_built_in_blocks_and_keep_them_editable() {
             now.starts_with("## TitleX\n")
         })
         .await;
+        fixture.close().await.unwrap();
     });
 }
 
@@ -701,6 +711,7 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
             now.ends_with("```\nZlet x = 1;\n```\n")
         })
         .await;
+        fixture.close().await.unwrap();
     });
 }
 
@@ -790,6 +801,7 @@ fn a_trailing_code_block_is_left_by_arrow_down_mod_enter_and_a_click_below() {
         .unwrap();
         keyboard::type_text(page, "end").await.unwrap();
         out_eq(page, "intro\n\n```rust\nlet x = 1;\n```\n\nend\n").await;
+        fixture.close().await.unwrap();
     });
 }
 
@@ -806,6 +818,7 @@ fn enter_twice_at_the_end_leaves_a_trailing_code_block() {
         left_code(page).await;
         keyboard::type_text(page, "out").await.unwrap();
         out_eq(page, "intro\n\n```rust\nlet x = 1;\n```\n\nout\n").await;
+        fixture.close().await.unwrap();
     });
 }
 
@@ -839,6 +852,7 @@ fn a_typed_fence_sets_the_language_and_the_toolbar_menu_changes_it() {
         keyboard::press(page, ENTER).await.unwrap();
         keyboard::type_text(page, "x = 1").await.unwrap();
         out_eq(page, "intro\n\n```\nlet x = 1;\n```\n\n```py\nx = 1\n```\n").await;
+        fixture.close().await.unwrap();
     });
 }
 
@@ -896,6 +910,7 @@ fn the_fence_button_and_mod_shift_l_change_the_language_and_return_to_the_caret(
         page.evaluate(SYNCED).await.unwrap();
         keyboard::type_text(page, "z").await.unwrap();
         out_eq(page, "intro\n\n```\nlet x = 1;z\n```\n").await;
+        fixture.close().await.unwrap();
     });
 }
 
@@ -926,6 +941,7 @@ fn toolbar_buttons_show_their_name_and_chord_in_a_tooltip() {
         )
         .await;
         assert_eq!(text, "Bold Ctrl + B");
+        fixture.close().await.unwrap();
     });
 }
 
@@ -1004,6 +1020,7 @@ fn the_editor_overlays_keep_their_contrast_in_both_schemes() {
             contrast::assert_clean_except(page, "body", contrast::LINE_NUMBERS)
                 .await
                 .unwrap();
+            fixture.close().await.unwrap();
         }
     });
 }
@@ -1098,6 +1115,7 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
             .await
             .unwrap();
         out_eq(page, "hi \u{fffc} @g \u{fffc} ").await;
+        fixture.close().await.unwrap();
     });
 }
 
@@ -1142,6 +1160,7 @@ fn a_long_code_line_does_not_widen_the_editor() {
                 : JSON.stringify([r.width, editor.width, row.scrollWidth, pre && pre.scrollWidth]); })()";
         holds(page, source, "the source to fit").await;
         fixture.console.assert_clean("the code block").unwrap();
+        fixture.close().await.unwrap();
     });
 }
 
@@ -1185,6 +1204,7 @@ fn a_mention_list_near_the_viewport_bottom_flips_above_the_caret() {
             "the list back under the line",
         )
         .await;
+        fixture.close().await.unwrap();
     });
 }
 
@@ -1208,6 +1228,7 @@ fn the_text_is_named_by_its_label_and_a_label_click_focuses_it() {
         )
         .await
         .unwrap();
+        fixture.close().await.unwrap();
     });
 }
 
@@ -1244,6 +1265,7 @@ fn a_readonly_editor_is_a_tab_stop_and_a_disabled_one_says_so() {
         )
         .await
         .unwrap();
+        fixture.close().await.unwrap();
     });
 }
 
@@ -1289,6 +1311,7 @@ fn toolbar_and_menu_actions_are_announced() {
         )
         .await
         .unwrap();
+        fixture.close().await.unwrap();
     });
 }
 
@@ -1351,5 +1374,6 @@ fn ctrl_backspace_and_ctrl_delete_take_a_word_and_replacements_are_ignored() {
         let typed = until(page, &out_is(&format!("^ one z{CODE}"))).await;
         let now: String = js(page, "document.getElementById('out').textContent").await;
         assert!(typed, "{now:?}");
+        fixture.close().await.unwrap();
     });
 }

@@ -6,7 +6,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, linger};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, js, wait};
+use e2e::{Fixture, Suite, Viewport, clock, js, wait};
 
 const TRIGGER: &str = "#save";
 const BUBBLE: &str = "#save-tip";
@@ -17,6 +17,8 @@ const AWAY: pointer::Point = pointer::Point { x: 2.0, y: 2.0 };
 const OPEN: &str = "#save-tip:not([hidden])";
 /// The touch open delay (libero's `LONG_PRESS`).
 const LONG_PRESS_MS: u32 = 500;
+/// The route's close delay.
+const CLOSE_MS: u32 = 10;
 
 async fn is_open<D: Driver>(d: &mut D, open: bool, after: &str) -> Result<()> {
     eventually(d, &format!("{after}: bubble open={open}"), async |d| {
@@ -55,18 +57,28 @@ async fn no_close_pending<D: Driver>(d: &mut D) -> Result<()> {
 async fn rests_on_the_bubble<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     hover_open(d).await?;
     // The trigger's leave armed the close, the bubble's enter must have cancelled it.
+    // Held, the read waits for both; else the wait can pass before the leave (1760).
+    let held = d.hold_timers(&[CLOSE_MS]).await?;
     d.hover(OPEN).await?;
-    no_close_pending(d).await?;
+    if held {
+        d.settle().await?;
+        ensure!(
+            d.armed(CLOSE_MS).await? == 0,
+            "moving onto the bubble left its close armed"
+        );
+    } else {
+        no_close_pending(d).await?;
+    }
     ensure!(d.exists(OPEN).await?, "moving onto the bubble closed it");
-    // The mark the wait above relies on, held where the clock can be.
-    if d.hold_timers(&[10]).await? {
+    if held {
         d.hover("#away").await?;
         d.settle().await?;
         ensure!(
-            d.attr(OPEN, "data-closing").await?.as_deref() == Some("true"),
-            "leaving armed no close mark"
+            d.attr(OPEN, "data-closing").await?.as_deref() == Some("true")
+                && d.armed(CLOSE_MS).await? == 1,
+            "leaving armed no close"
         );
-        d.fire_timers(10).await?;
+        d.fire_timers(CLOSE_MS).await?;
     } else {
         d.hover("#away").await?;
     }
@@ -148,15 +160,18 @@ async fn settle(page: &chromiumoxide::Page) {
     crate::settle::painted(page).await.unwrap();
 }
 
-/// Until no close counts down: a wrong one has then fired and taken the bubble.
-async fn no_close_pending_on(page: &chromiumoxide::Page) {
-    wait::for_js_true(
-        page,
-        "!document.querySelector('#save-tip')?.hasAttribute('data-closing')",
-        "the pending close to clear",
-    )
-    .await
-    .unwrap();
+/// No close armed past the renders a leave takes, its control the leave that arms one.
+async fn no_close_armed(page: &chromiumoxide::Page, at: &str) {
+    clock::settle(page).await.unwrap();
+    assert_eq!(
+        clock::armed(page, CLOSE_MS).await.unwrap(),
+        0,
+        "{at}: a close is armed"
+    );
+    assert!(
+        wait::is_visible(page, BUBBLE).await.unwrap(),
+        "{at}: closed"
+    );
 }
 
 #[test]
@@ -214,15 +229,18 @@ struct Gap {
 }
 
 /// The pointer resting in the gap keeps the bubble (its transparent `::before`); leaving
-/// elsewhere is the control that it drops.
+/// elsewhere is the control that it drops. The close held, as its 0 ms default cannot be.
 #[test]
 fn hover_shows_the_bubble_and_the_pointer_can_cross_the_gap() {
     block_on(async {
-        let fixture = Fixture::open("/tooltip", Viewport::Desktop).await.unwrap();
+        let fixture = Fixture::open("/tooltip/quick", Viewport::Desktop)
+            .await
+            .unwrap();
         let page = &fixture.page;
 
         pointer::hover(page, TRIGGER).await.unwrap();
         wait::for_visible(page, BUBBLE).await.unwrap();
+        clock::hold(page, &[CLOSE_MS]).await.unwrap();
 
         let gap: Gap = js(
             page,
@@ -243,17 +261,16 @@ fn hover_shows_the_bubble_and_the_pointer_can_cross_the_gap() {
         pointer::move_to(page, pointer::Point { x: gap.x, y: gap.y })
             .await
             .unwrap();
-        no_close_pending_on(page).await;
-        assert!(wait::is_visible(page, BUBBLE).await.unwrap(), "in the gap");
+        no_close_armed(page, "in the gap").await;
 
         pointer::hover(page, BUBBLE).await.unwrap();
-        no_close_pending_on(page).await;
-        assert!(
-            wait::is_visible(page, BUBBLE).await.unwrap(),
-            "on the bubble"
-        );
+        no_close_armed(page, "on the bubble").await;
 
         pointer::move_to(page, AWAY).await.unwrap();
+        clock::until_armed(page, CLOSE_MS, 1, "the close")
+            .await
+            .unwrap();
+        clock::fire(page, CLOSE_MS).await.unwrap();
         wait::for_hidden(page, BUBBLE).await.unwrap();
 
         fixture.console.assert_clean("hovering a tooltip").unwrap();

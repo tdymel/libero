@@ -280,19 +280,21 @@ fn track_mode() -> &'static str {
 
 const STATE: &str = "(document.querySelector('#player [role=group]').dataset.fullscreen ?? 'none')";
 
-/// Headless Chromium refuses the Fullscreen API, so this also covers the fallback:
-/// the player as a fixed box over the page, which Escape and F leave.
+/// The fallback where the Fullscreen API is refused: the player as a fixed box over the
+/// page, which Escape and F leave. The route refuses it, so this runs every time (1758).
 #[test]
 fn fullscreen_takes_the_player_and_escape_or_f_gives_it_back() {
     block_on(async {
         let _fullscreen = e2e::frames::keep_fullscreen().await;
-        let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        let fixture = Fixture::open("/video/refused", Viewport::Desktop)
+            .await
+            .unwrap();
         let page = &fixture.page;
 
         wait::for_js_true(
             page,
-            "document.querySelector('#player [data-slot=time]').textContent === '0:00 / 0:04'",
-            "the duration",
+            "document.querySelector('#player[data-refused] [data-slot=time]')?.textContent === '0:00 / 0:04'",
+            "the refusal and the duration",
         )
         .await
         .unwrap();
@@ -308,24 +310,23 @@ fn fullscreen_takes_the_player_and_escape_or_f_gives_it_back() {
         .await
         .unwrap();
         let state: String = page.evaluate(STATE).await.unwrap().into_value().unwrap();
-        if state == "drawn" {
-            wait::for_js_true(
-                page,
-                "(() => { const r = document.querySelector('#player [role=group]').getBoundingClientRect(); \
-                 return r.top === 0 && r.left === 0 && r.width === innerWidth && r.height === innerHeight; })()",
-                "the fixed box to cover the viewport",
-            )
+        assert_eq!(state, "drawn", "the refused player draws its own box");
+        wait::for_js_true(
+            page,
+            "(() => { const r = document.querySelector('#player [role=group]').getBoundingClientRect(); \
+             return r.top === 0 && r.left === 0 && r.width === innerWidth && r.height === innerHeight; })()",
+            "the fixed box to cover the viewport",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(page, &format!("{STATE} === 'none'"), "Escape to leave")
             .await
             .unwrap();
-            keyboard::press(page, keyboard::ESCAPE).await.unwrap();
-            wait::for_js_true(page, &format!("{STATE} === 'none'"), "Escape to leave")
-                .await
-                .unwrap();
-            keyboard::press(page, F).await.unwrap();
-            wait::for_js_true(page, &format!("{STATE} !== 'none'"), "F to enter")
-                .await
-                .unwrap();
-        }
+        keyboard::press(page, F).await.unwrap();
+        wait::for_js_true(page, &format!("{STATE} !== 'none'"), "F to enter")
+            .await
+            .unwrap();
 
         keyboard::press(page, F).await.unwrap();
         wait::for_js_true(
@@ -525,7 +526,7 @@ async fn tab_out_leaves_pseudo<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     .await?;
     d.focus(PLAY).await?;
     d.press(keyboard::TAB).await?;
-    d.idle().await;
+    d.settle().await?;
     let inside = d.attr("#player [role=group]", "data-fullscreen").await?;
     anyhow::ensure!(pseudo_state(inside), "a Tab inside the player left the box");
     d.focus("#player button[aria-label='Exit fullscreen']")
@@ -600,12 +601,23 @@ async fn stay_shown<D: Driver>(d: &mut D, held: bool, why: &str) -> Result<()> {
     Ok(())
 }
 
+/// The player and its bar, read by `faded` and `faded_js` alike.
+const GROUP: &str = "#player [role=group]";
+const BAR: &str = "#player [data-slot=controls]";
+
 async fn faded<D: Driver>(d: &mut D) -> Result<bool> {
-    Ok(d.attr("#player [role=group]", "data-controls")
-        .await?
-        .as_deref()
-        == Some("hidden")
-        && d.style("#player [data-slot=controls]", "opacity").await? == "0")
+    Ok(
+        d.attr(GROUP, "data-controls").await?.as_deref() == Some("hidden")
+            && d.style(BAR, "opacity").await? == "0",
+    )
+}
+
+/// `faded`, for a page read.
+fn faded_js() -> String {
+    format!(
+        "document.querySelector('{GROUP}').dataset.controls === 'hidden' \
+         && getComputedStyle(document.querySelector('{BAR}')).opacity === '0'"
+    )
 }
 
 async fn controls_shown<D: Driver>(d: &mut D) -> Result<bool> {
@@ -1078,13 +1090,11 @@ async fn fade(page: &chromiumoxide::Page) {
         .await
         .unwrap();
     clock::fire(page, IDLE_MS).await.unwrap();
-    wait::for_js_true(page, FADED, "the controls to fade")
+    wait::for_js_true(page, &faded_js(), "the controls to fade")
         .await
         .unwrap();
 }
 
-const FADED: &str = "document.querySelector('#player [role=group]').dataset.controls === 'hidden'
-    && getComputedStyle(document.querySelector('#player [data-slot=controls]')).opacity === '0'";
 // The play button's name too: `paused` flips at `play()`, before the player's own state,
 // and a click that lands in between toggles from the stale one.
 const PLAYING: &str = "!document.querySelector('#player video').paused
@@ -1195,7 +1205,7 @@ fn a_click_on_the_picture_plays_or_pauses() {
         pointer::touch_drag(page, at, at, 0).await.unwrap();
         wait::for_js_true(
             page,
-            &format!("!({FADED}) && {PLAYING}"),
+            &format!("!({}) && {PLAYING}", faded_js()),
             "a tap to show the controls and keep playing",
         )
         .await
@@ -1237,7 +1247,12 @@ fn focus_from_code_shows_the_faded_controls() {
         // As after a key, they stay while focus is in them: past the idle timer.
         clock::fire_all(page, IDLE_MS).await.unwrap();
         clock::settle(page).await.unwrap();
-        let faded: bool = page.evaluate(FADED).await.unwrap().into_value().unwrap();
+        let faded: bool = page
+            .evaluate(faded_js())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
         assert!(!faded, "the row faded with focus in it");
         fixture.close().await.unwrap();
     });
@@ -1271,7 +1286,7 @@ fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {
             .unwrap();
         wait::for_js_true(
             page,
-            &format!("!({FADED})"),
+            &format!("!({})", faded_js()),
             "focus from code to show the row",
         )
         .await

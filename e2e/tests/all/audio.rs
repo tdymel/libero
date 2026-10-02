@@ -3,10 +3,14 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, Key};
-use e2e::passes::pointer;
+use e2e::passes::{pointer, target_size};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const PLAY: &str = "#player [data-slot=controls] button";
+/// The other Tab stops `PLAY`'s first match leaves out (todo 1823).
+const SEEK: &str = "#player [data-slot=seek] [role=slider]";
+const CHEVRON: &str = "#player [data-slot=volume] button[aria-haspopup=dialog]";
+const SPEED: &str = "#player [data-slot=controls] button[aria-label^='Playback speed']";
 
 const M: Key = Key {
     key: "m",
@@ -25,11 +29,15 @@ const L: Key = Key {
 fn it_meets_the_baseline() {
     Suite::new("audio", "/audio")
         .focusable(PLAY)
+        .focusable(SEEK)
+        .focusable(CHEVRON)
+        .focusable(SPEED)
         .targets(PLAY)
         .run();
 }
 
-/// Todo 1465: a control's tooltip opens only after 2s of hover, as Video's does.
+/// Todo 1465: a control's tooltip opens only after 2s of hover, as Video's does; the delay
+/// runs on the held clock (todo 1824).
 #[test]
 fn a_control_tooltip_waits_two_seconds_on_hover() {
     const TIP: &str = "[...document.querySelectorAll('[role=tooltip]')].some((e) => !e.hidden && e.textContent.includes('Play'))";
@@ -43,19 +51,25 @@ fn a_control_tooltip_waits_two_seconds_on_hover() {
         )
         .await
         .unwrap();
-        let start = std::time::Instant::now();
+        e2e::clock::hold(page, &[TOOLTIP_DELAY_MS]).await.unwrap();
         pointer::hover(page, PLAY).await.unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(1000));
-        let early: bool = page.evaluate(TIP).await.unwrap().into_value().unwrap();
-        assert!(!early, "the tooltip opened within a second");
+        e2e::clock::until_armed(page, TOOLTIP_DELAY_MS, 1, "the 2 s hover delay")
+            .await
+            .unwrap();
+        e2e::clock::settle(page).await.unwrap();
+        let early: bool = e2e::js(page, TIP).await;
+        assert!(!early, "the tooltip opened before its delay ran out");
+        e2e::clock::fire(page, TOOLTIP_DELAY_MS).await.unwrap();
         wait::for_js_true(page, TIP, "the tooltip after the delay")
             .await
             .unwrap();
-        let waited = start.elapsed().as_millis();
-        assert!(waited >= 1900, "opened after {waited}ms");
+        fixture.console.assert_clean("a control's tooltip").unwrap();
         fixture.close().await.unwrap();
     });
 }
+
+/// A media control's tooltip delay, as Video's test holds it.
+const TOOLTIP_DELAY_MS: u32 = 2000;
 
 /// WCAG 1.4.10, todos 1325 and 1385: a bubble of at most 22rem whose row stays
 /// one line down to 160px (320px at 200% zoom), nothing leaving the player; the
@@ -99,6 +113,10 @@ fn the_controls_fit_a_narrow_player() {
             )
             .await
             .unwrap();
+            // Every button's own box or spacing, not the height alone (todo 1823).
+            let buttons = "#player [data-slot=controls] button";
+            let measured = target_size::measure_all(page, buttons).await.unwrap();
+            target_size::assert_sizes(&format!("{buttons} at {width}px"), &measured).unwrap();
         }
         wait::for_js_true(
             page,
@@ -364,6 +382,8 @@ fn the_controls_follow_the_element() {
         )
         .await
         .unwrap();
+        // Near the end, not 4 s of real play (todo 1825).
+        let _: f64 = e2e::js(page, audio("player", "a.currentTime = a.duration - 0.1")).await;
         wait::for_js_true(page, &audio("player", "a.ended"), "the end")
             .await
             .unwrap();
@@ -375,11 +395,34 @@ fn the_controls_follow_the_element() {
         .await
         .unwrap();
 
-        // Focus is on the play button now: Space presses it, once.
+        // Focus is on the play button now: Space presses it, once. Counted at the element:
+        // two toggles in one turn both read "paused" and both play (todo 1825).
+        let _: bool = e2e::js(
+            page,
+            audio(
+                "player",
+                "(window.__calls = [], ['play', 'pause'].forEach((name) => { \
+                   a[name] = function () { window.__calls.push(name); \
+                     return HTMLMediaElement.prototype[name].call(this); }; }), true)",
+            ),
+        )
+        .await;
         keyboard::press(page, keyboard::SPACE).await.unwrap();
         wait::for_js_true(page, &audio("player", "!a.paused"), "Space to play")
             .await
             .unwrap();
+        e2e::clock::settle(page).await.unwrap();
+        let (calls, label): (Vec<String>, String) = e2e::js(
+            page,
+            format!(
+                "[window.__calls, document.querySelector('{PLAY}').getAttribute('aria-label')]"
+            ),
+        )
+        .await;
+        assert!(
+            calls == ["play"] && label == "Pause",
+            "Space made the calls {calls:?}, the button offers {label}"
+        );
 
         fixture.console.assert_clean("playing").unwrap();
         fixture.close().await.unwrap();

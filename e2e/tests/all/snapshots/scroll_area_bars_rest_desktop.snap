@@ -1,0 +1,203 @@
+---
+source: e2e/src/suite.rs
+description: scroll_area_bars at desktop (rest)
+expression: tree
+---
+region "Lines"
+  paragraph
+    StaticText "Line 0"
+  paragraph
+    StaticText "Line 1"
+  paragraph
+    StaticText "Line 2"
+  paragraph
+    StaticText "Line 3"
+  paragraph
+    StaticText "Line 4"
+  paragraph
+    StaticText "Line 5"
+  paragraph
+    StaticText "Line 6"
+  paragraph
+    StaticText "Line 7"
+  paragraph
+    StaticText "Line 8"
+  paragraph
+    StaticText "Line 9"
+  paragraph
+    StaticText "Line 10"
+  paragraph
+    StaticText "Line 11"
+  paragraph
+    StaticText "Line 12"
+  paragraph
+    StaticText "Line 13"
+  paragraph
+    StaticText "Line 14"
+  paragraph
+    StaticText "Line 15"
+  paragraph
+    StaticText "Line 16"
+  paragraph
+    StaticText "Line 17"
+  paragraph
+    StaticText "Line 18"
+  paragraph
+    StaticText "Line 19"
+  paragraph
+    StaticText "Line 20"
+  paragraph
+    StaticText "Line 21"
+  paragraph
+    StaticText "Line 22"
+  paragraph
+    StaticText "Line 23"
+  paragraph
+    StaticText "Line 24"
+  paragraph
+    StaticText "Line 25"
+  paragraph
+    StaticText "Line 26"
+  paragraph
+    StaticText "Line 27"
+  paragraph
+    StaticText "Line 28"
+  paragraph
+    StaticText "Line 29"
+  paragraph
+    StaticText "Line 30"
+  paragraph
+    StaticText "Line 31"
+  paragraph
+    StaticText "Line 32"
+  paragraph
+    StaticText "Line 33"
+  paragraph
+    StaticText "Line 34"
+  paragraph
+    StaticText "Line 35"
+  paragraph
+    StaticText "Line 36"
+  paragraph
+    StaticText "Line 37"
+  paragraph
+    StaticText "Line 38"
+  paragraph
+    StaticText "Line 39"
+region "Grid"
+  StaticText "Both ways"
+region "Wide"
+  StaticText "Wide content"
+region "Hover"
+  paragraph
+    StaticText "Line 0"
+  paragraph
+    StaticText "Line 1"
+  paragraph
+    StaticText "Line 2"
+  paragraph
+    StaticText "Line 3"
+  paragraph
+    StaticText "Line 4"
+  paragraph
+    StaticText "Line 5"
+  paragraph
+    StaticText "Line 6"
+  paragraph
+    StaticText "Line 7"
+  paragraph
+    StaticText "Line 8"
+  paragraph
+    StaticText "Line 9"
+  paragraph
+    StaticText "Line 10"
+  paragraph
+    StaticText "Line 11"
+  paragraph
+    StaticText "Line 12"
+  paragraph
+    StaticText "Line 13"
+  paragraph
+    StaticText "Line 14"
+  paragraph
+    StaticText "Line 15"
+  paragraph
+    StaticText "Line 16"
+  paragraph
+    StaticText "Line 17"
+  paragraph
+    StaticText "Line 18"
+  paragraph
+    StaticText "Line 19"
+  paragraph
+    StaticText "Line 20"
+  paragraph
+    StaticText "Line 21"
+  paragraph
+    StaticText "Line 22"
+  paragraph
+    StaticText "Line 23"
+  paragraph
+    StaticText "Line 24"
+  paragraph
+    StaticText "Line 25"
+  paragraph
+    StaticText "Line 26"
+  paragraph
+    StaticText "Line 27"
+  paragraph
+    StaticText "Line 28"
+  paragraph
+    StaticText "Line 29"
+  paragraph
+    StaticText "Line 30"
+  paragraph
+    StaticText "Line 31"
+  paragraph
+    StaticText "Line 32"
+  paragraph
+    StaticText "Line 33"
+  paragraph
+    StaticText "Line 34"
+  paragraph
+    StaticText "Line 35"
+  paragraph
+    StaticText "Line 36"
+  paragraph
+    StaticText "Line 37"
+  paragraph
+    StaticText "Line 38"
+  paragraph
+    StaticText "Line 39"
+region "Flex"
+  StaticText "Flex 0"
+  StaticText "Flex 1"
+  StaticText "Flex 2"
+  StaticText "Flex 3"
+  StaticText "Flex 4"
+  StaticText "Flex 5"
+  StaticText "Flex 6"
+  StaticText "Flex 7"
+  StaticText "Flex 8"
+  StaticText "Flex 9"
+region "Grid cells"
+  StaticText "Cell 0"
+  StaticText "Cell 1"
+  StaticText "Cell 2"
+  StaticText "Cell 3"
+  StaticText "Cell 4"
+  StaticText "Cell 5"
+  StaticText "Cell 6"
+  StaticText "Cell 7"
+  StaticText "Cell 8"
+  StaticText "Cell 9"
+  StaticText "Cell 10"
+  StaticText "Cell 11"
+  StaticText "Cell 12"
+  StaticText "Cell 13"
+  StaticText "Cell 14"
+  StaticText "Cell 15"
+  StaticText "Cell 16"
+  StaticText "Cell 17"
+  StaticText "Cell 18"
+  StaticText "Cell 19"

@@ -12,7 +12,7 @@ use chromiumoxide::cdp::browser_protocol::page::{
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_text};
 use e2e::passes::{focus, keyboard, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Viewport, js, wait};
 use futures::StreamExt;
 
 #[test]
@@ -189,33 +189,30 @@ fn every_framed_field_takes_a_padding_press() {
             .unwrap();
         let page = &fixture.page;
 
-        for case in [
-            "textarea",
-            "native",
-            "phone",
-            "color",
-            "date",
-            "time",
-            "file",
-            "autocomplete",
-            "cascader",
-            "tags",
+        // The control a press focuses, and whether it opened its popup (todo 1764).
+        for (case, want) in [
+            ("textarea", "TEXTAREA expanded=null"),
+            ("native", "SELECT expanded=null"),
+            ("phone", "INPUT expanded=null"),
+            ("color", "INPUT expanded=true"),
+            ("date", "INPUT expanded=true"),
+            ("time", "INPUT expanded=true"),
+            ("file", "BUTTON expanded=null"),
+            ("autocomplete", "INPUT expanded=false"),
+            ("cascader", "DIV expanded=true"),
+            ("tags", "INPUT expanded=null"),
         ] {
             blur(page).await.unwrap();
             press(page, &bottom_padding(case)).await.unwrap();
             let frame = format!("[data-case={case}] [data-frame]");
             in_control(page, &frame).await.unwrap();
-            let state: String = page
-                .evaluate(
-                    "(() => { const el = document.activeElement; \
-                     return el.tagName + ' expanded=' + el.getAttribute('aria-expanded'); })()"
-                        .to_string(),
-                )
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
-            println!("{case}: {state}");
+            let state: String = js(
+                page,
+                "(() => { const el = document.activeElement; \
+                 return el.tagName + ' expanded=' + el.getAttribute('aria-expanded'); })()",
+            )
+            .await;
+            assert_eq!(state, want, "{case}");
             keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         }
 

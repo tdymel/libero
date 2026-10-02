@@ -63,13 +63,26 @@ fn ImageCropperPage() -> Element {
     }
 }
 
+/// `#crop` reads what `#disabled` emits; `#disabled-pan` has the zoom slider.
 #[component]
 fn DisabledCropperPage() -> Element {
+    let mut crop = use_signal(String::new);
     rsx! {
         Flex { direction: "column", gap: "md", padding: "md",
             ImageCropper {
+                id: "disabled",
                 src: PICTURE,
                 alt: "A sun on blue",
+                disabled: true,
+                onchange: move |next| crop.set(reading(next)),
+            }
+            p { id: "crop", "{crop}" }
+            ImageCropper {
+                id: "disabled-pan",
+                src: PICTURE,
+                alt: "A sun on blue, to pan",
+                aspect: 1.0,
+                pan: true,
                 disabled: true,
                 onchange: |_: CropRect| {},
             }

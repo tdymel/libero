@@ -85,7 +85,7 @@ const EXTRA_FIXTURES: &[(&str, &[&str])] = &[
         ],
     ),
     ("image_cropper", &["file_field"]),
-    ("negative", &["modal", "tabs"]),
+    ("negative", &["button", "modal", "tabs"]),
     (
         "planted",
         &[

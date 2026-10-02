@@ -1,0 +1,38 @@
+---
+source: e2e/src/suite.rs
+description: sortable-lifted at desktop (rest)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+list
+  listitem [level=1]
+    button "Reorder Alpha"
+    paragraph
+      StaticText "Alpha"
+    button "Move Alpha up" [disabled]
+    button "Move Alpha down"
+  listitem [level=1]
+    button "Reorder Beta"
+    paragraph
+      StaticText "Beta"
+    button "Move Beta up"
+    button "Move Beta down"
+  listitem [level=1]
+    button "Reorder Gamma"
+    paragraph
+      StaticText "Gamma"
+    button "Move Gamma up"
+    button "Move Gamma down"
+  listitem [level=1]
+    button "Reorder Delta"
+    paragraph
+      StaticText "Delta"
+    button "Move Delta up"
+    button "Move Delta down" [disabled]
+status [atomic] [live=polite]
+paragraph
+  StaticText "Alpha Beta Gamma Delta"
+paragraph
+button "After"
+  StaticText "After"

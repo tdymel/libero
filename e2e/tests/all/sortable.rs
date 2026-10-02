@@ -4,6 +4,7 @@ use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
+use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The distance between two neighbours' tops (or lefts, in a row).
@@ -497,54 +498,30 @@ fn a_row_scrolls_inside_itself_at_320px() {
 /// A second drag still shows its preview: the neighbour steps aside before the drop (todo 1438).
 #[test]
 fn a_second_drag_still_moves_the_neighbours_before_the_drop() {
+    use e2e::archetypes::{Round, second_drag};
     use e2e::passes::pointer;
     block_on(async {
         let fixture = Fixture::open("/sortable", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         let outcome = async {
             wait::for_visible(page, "#Alpha").await?;
-            let shift = "(() => { const t = getComputedStyle(document.querySelector('#Gamma')).transform; \
-                 return t === 'none' ? 0 : new DOMMatrix(t).m42; })()";
-            for (round, (handle, order)) in [
-                ("#Alpha button", "Beta Alpha Gamma Delta"),
-                ("#Beta button", "Alpha Beta Gamma Delta"),
-            ]
-            .into_iter()
-            .enumerate()
-            {
-                let from = pointer::centre_of(page, handle).await?;
-                // Gamma and Delta never move: the dropped item may still be settling.
-                let (c, d) = (
-                    pointer::centre_of(page, "#Gamma").await?,
-                    pointer::centre_of(page, "#Delta").await?,
-                );
-                let to = pointer::Point {
-                    x: from.x,
-                    y: from.y + (d.y - c.y) * 1.4,
-                };
-                pointer::drag_held(page, from, to, 8).await?;
-                // Gamma, below the dragged item's new slot, never moves; the one passed does.
-                let passed = if round == 0 { "#Beta" } else { "#Alpha" };
-                wait::for_js_true(
-                    page,
-                    &format!(
-                        "(() => {{ const t = getComputedStyle(document.querySelector('{passed}')).transform; \
-                         return t !== 'none' && new DOMMatrix(t).m42 < -1; }})()"
-                    ),
-                    &format!("drag {}: the passed item to step up", round + 1),
-                )
-                .await?;
-                let gamma: f64 = page.evaluate(shift).await?.into_value()?;
-                anyhow::ensure!(gamma.abs() < 1.0, "Gamma moved by {gamma}");
-                pointer::release(page, to).await?;
-                wait::for_js_true(
-                    page,
-                    &format!("document.querySelector('#order').textContent.trim() === '{order}'"),
-                    &format!("drag {}: the drop", round + 1),
-                )
-                .await?;
-            }
-            anyhow::Ok(())
+            let (gamma, delta) = (
+                pointer::centre_of(page, "#Gamma").await?,
+                pointer::centre_of(page, "#Delta").await?,
+            );
+            let rounds = [
+                Round {
+                    handle: "#Alpha button",
+                    passed: "#Beta",
+                    order: "Beta Alpha Gamma Delta",
+                },
+                Round {
+                    handle: "#Beta button",
+                    passed: "#Alpha",
+                    order: "Alpha Beta Gamma Delta",
+                },
+            ];
+            second_drag(page, &rounds, "#Gamma", delta.y - gamma.y).await
         }
         .await;
         fixture.close().await.unwrap();
@@ -588,4 +565,26 @@ fn it_meets_the_baseline() {
     Suite::new("sortable", "/sortable")
         .focusable("#Alpha button")
         .run();
+}
+
+/// Lifted by the keyboard, and the other layouts (todo 1773).
+#[test]
+fn the_lifted_item_meets_the_baseline() {
+    Suite::new("sortable-lifted", "/sortable")
+        .state(
+            "lifted",
+            &[Step::TabTo("#Alpha button"), Step::Press(keyboard::SPACE)],
+            "#Alpha[data-state~=dragging]",
+        )
+        .run();
+}
+
+#[test]
+fn the_horizontal_list_meets_the_baseline() {
+    Suite::new("sortable-horizontal", "/sortable/horizontal").run();
+}
+
+#[test]
+fn the_rtl_list_meets_the_baseline() {
+    Suite::new("sortable-rtl", "/sortable/rtl").run();
 }

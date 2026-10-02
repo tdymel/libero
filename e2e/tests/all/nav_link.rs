@@ -82,7 +82,7 @@ fn the_active_link_shows_the_on_state_bar() {
         let page = &fixture.page;
         // Todo 715: the start bar, not the ring the other on states draw.
         assert_on_bar(page, "#active", "#idle").await;
-        crate::calendar::force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         assert_on_in_forced_colours(page, "#active", "#idle").await;
         assert_gray_in_forced_colours(page, "#disabled").await;
         crate::button::assert_text_in_forced_colours(page, "#disabled-active", "HighlightText")
@@ -210,20 +210,12 @@ fn the_burger_toggles_its_panel_from_the_keyboard() {
 /// X must drop the middle bar's outline too, or it draws an asterisk.
 #[test]
 fn the_open_burger_drops_its_middle_bar_in_forced_colours() {
-    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     block_on(async {
         let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        page.execute(
-            SetEmulatedMediaParams::builder()
-                .features(vec![MediaFeature::new("forced-colors", "active")])
-                .build(),
-        )
-        .await
-        .unwrap();
-        // Each bar's outline: the middle one, then the two that cross.
+        e2e::browser::force_colours(page).await.unwrap(); // Each bar's outline: the middle one, then the two that cross.
         let outlines = format!(
             "(() => {{ const glyph = {}; return [null, '::before', '::after'] \
              .map(p => getComputedStyle(glyph, p).outlineStyle).join(' '); }})()",
@@ -239,12 +231,7 @@ fn the_open_burger_drops_its_middle_bar_in_forced_colours() {
         .await
         .unwrap();
 
-        page.find_element("#burger")
-            .await
-            .unwrap()
-            .click()
-            .await
-            .unwrap();
+        e2e::passes::pointer::click(page, "#burger").await.unwrap();
         wait::for_js_true(
             page,
             &format!("{outlines} === 'none solid solid'"),
@@ -310,8 +297,8 @@ fn a_new_tab_anchor_shows_an_icon_and_says_so() {
     });
 }
 
-/// Todo 580: the toggle beside a parent link is an APG disclosure button,
-/// named after the link; Enter shows the nested links and focus stays put.
+/// Todo 580: the toggle beside a parent link is an APG disclosure button, named after the
+/// link, that controls the nested links' panel.
 #[test]
 fn a_parent_link_discloses_its_nested_links() {
     const TOGGLE: &str = "document.querySelector('#docs').nextElementSibling";
@@ -335,25 +322,14 @@ fn a_parent_link_discloses_its_nested_links() {
             "Guides and API"
         );
 
-        keyboard::tab_to(page, "#docs", 20).await.unwrap();
-        keyboard::press(page, keyboard::TAB).await.unwrap();
-        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        // The keys are the scenario's; here the panel the toggle controls (todo 1826).
         wait::for_js_true(
             page,
             &format!(
-                "{TOGGLE}.getAttribute('aria-expanded') === 'true' \
-                 && document.activeElement === {TOGGLE} \
-                 && document.getElementById({TOGGLE}.getAttribute('aria-controls')).contains(document.querySelector('#install'))"
+                "document.getElementById({TOGGLE}.getAttribute('aria-controls'))\
+                 ?.contains(document.querySelector('#install')) === true"
             ),
-            "Enter to show the nested links",
-        )
-        .await
-        .unwrap();
-        keyboard::press(page, keyboard::TAB).await.unwrap();
-        wait::for_js_true(
-            page,
-            "document.activeElement.id === 'install'",
-            "Tab into the shown links",
+            "the toggle to control the nested links",
         )
         .await
         .unwrap();

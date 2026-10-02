@@ -188,7 +188,7 @@ fn a_pressed_toggle_shows_the_on_state_ring_with_and_without_a_variant() {
         pointer::click(page, "#bare-toggle").await.unwrap();
         assert_on_marker(page, "#bare-toggle", "#plain").await;
         assert_on_marker(page, "#toggle", "#plain").await;
-        crate::calendar::force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         assert_on_in_forced_colours(page, "#bare-toggle", "#plain").await;
         assert_on_in_forced_colours(page, "#toggle", "#plain").await;
         assert_gray_in_forced_colours(page, "#disabled").await;

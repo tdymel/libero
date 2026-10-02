@@ -13,6 +13,9 @@ pub const ROUTES: Routes = &[
     ("/bottom-navigation/scroller", || rsx! { ScrollerPage {} }),
 ];
 
+/// `/bottom-navigation/fixed`'s `#link-0..`, past any viewport's height.
+const LINKS: usize = 30;
+
 const ITEMS: [(&str, &str, SvgData); 5] = [
     ("home", "Home", lucide::house::outlined),
     ("search", "Search", lucide::search::outlined),
@@ -104,8 +107,12 @@ fn ScrollerPage() -> Element {
 #[component]
 fn FixedPage() -> Element {
     rsx! {
-        div { id: "page", style: "height: 2000px; padding-bottom: var(--lsx-bottom-navigation-height);",
-            "Page"
+        // Links down past the fold: Tab reaches one in view but under the bar (todo 1827).
+        div { id: "page", style: "padding-bottom: var(--lsx-bottom-navigation-height);",
+            for index in 0..LINKS {
+                a { key: "{index}", id: "link-{index}", href: "#link-{index}", style: "display: block; padding: 12px;", "Link {index}" }
+            }
+            div { style: "height: 2000px", "Page" }
         }
         BottomNavigation { id: "fixed", "aria-label": "Main", position: "fixed", show_labels: "selected",
             for (index, (id, label, icon)) in ITEMS.into_iter().take(3).enumerate() {

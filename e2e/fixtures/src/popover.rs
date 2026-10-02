@@ -24,7 +24,7 @@ pub const ROUTES: Routes = &[
     ),
     (
         "/popover/place/shift",
-        || rsx! { PlacedPage { left: "calc(100vw - 230px)", top: "100px", align: Align::Center } },
+        || rsx! { PlacedPage { left: "-100px", top: "100px", align: Align::Center } },
     ),
     (
         "/popover/place/match",

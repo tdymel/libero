@@ -60,9 +60,13 @@ impl Language {
     }
 }
 
-/// Unrecognized input means "don't highlight", not "guess a language".
+/// Unrecognized input means "don't highlight", not "guess a language". An empty name, as
+/// a plain fence gives, names no language, so it does not warn.
 impl From<&str> for Input<Language> {
     fn from(value: &str) -> Self {
+        if value.trim().is_empty() {
+            return Input::None;
+        }
         match Language::parse(value) {
             Some(language) => Input::Value(language),
             None => {
@@ -707,6 +711,16 @@ mod tests {
     fn unrecognized_language_string_falls_back_to_no_highlighting() {
         let input: Input<Language> = "cobol".into();
         assert!(matches!(input, Input::None));
+        assert_eq!(crate::utils::take_warnings().len(), 1);
+    }
+
+    #[test]
+    fn an_empty_language_is_none_without_a_warning() {
+        for value in ["", "  "] {
+            let input: Input<Language> = value.into();
+            assert!(matches!(input, Input::None), "{value:?}");
+        }
+        assert_eq!(crate::utils::take_warnings(), Vec::<String>::new());
     }
 
     #[test]

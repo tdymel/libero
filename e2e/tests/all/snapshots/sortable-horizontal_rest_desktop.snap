@@ -1,0 +1,33 @@
+---
+source: e2e/src/suite.rs
+description: sortable-horizontal at desktop (rest)
+expression: tree
+---
+list
+  listitem [level=1]
+    button "Reorder Item 1"
+    paragraph
+      StaticText "Alpha"
+    button "Move Item 1 backward" [disabled]
+    button "Move Item 1 forward"
+  listitem [level=1]
+    button "Reorder Item 2"
+    paragraph
+      StaticText "Beta"
+    button "Move Item 2 backward"
+    button "Move Item 2 forward"
+  listitem [level=1]
+    button "Reorder Item 3"
+    paragraph
+      StaticText "Gamma"
+    button "Move Item 3 backward"
+    button "Move Item 3 forward"
+  listitem [level=1]
+    button "Reorder Item 4"
+    paragraph
+      StaticText "Delta"
+    button "Move Item 4 backward"
+    button "Move Item 4 forward" [disabled]
+status [atomic] [live=polite]
+paragraph
+  StaticText "Alpha Beta Gamma Delta"

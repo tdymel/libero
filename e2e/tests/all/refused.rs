@@ -17,7 +17,10 @@ async fn a_disabled_button<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 }
 
 async fn an_inert_button<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.click("#asleep-button").await?;
+    // At the point, not the element: an inert box takes no hit, which `click` reads as a miss.
+    let at = d.rect("#asleep-button").await?;
+    d.click_at(at.x + at.width / 2.0, at.y + at.height / 2.0)
+        .await?;
     d.settle().await?;
     ensure!(
         d.text("#clicks").await? == "0",

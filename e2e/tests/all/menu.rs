@@ -661,7 +661,7 @@ fn a_lone_toggle_lines_up_and_a_disabled_shortcut_dims() {
                 colours[0] != colours[1],
                 "the disabled shortcut keeps the enabled colour: {colours:?}"
             );
-            crate::calendar::force_colours(page).await;
+            e2e::browser::force_colours(page).await.unwrap();
             crate::button::assert_gray_in_forced_colours(
                 page,
                 r#"[role=menu] [data-menu-index][aria-disabled="true"]"#,

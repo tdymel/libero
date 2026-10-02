@@ -202,31 +202,55 @@ fn the_shared_colour_reader_takes_color_srgb() {
 }
 
 /// Todo 452: an outlined `primary` label read 3.52:1 on its hover tint. Resting unfilled
-/// buttons paint no background, so any ratio means the hover rule applied.
+/// buttons paint no background, so any ratio means the hover rule applied; for all four the
+/// fill must change from rest under `:hover`, in both schemes (todo 1828).
 #[test]
 fn a_hovered_button_s_label_reads_on_its_hover_fill() {
+    use e2e::Scheme;
     block_on(async {
-        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
-        let page = &fixture.page;
-
-        for selector in ["#outlined", "#standard-error", "#elevated", "#filled-muted"] {
-            pointer::hover(page, selector).await.unwrap();
-            let settled = format!(
-                "(() => {{ const r = {}; \
-                 if (r === null || r !== window.__last) {{ window.__last = r; return false; }} \
-                 return true; }})()",
-                pair(selector)
-            );
-            wait::for_js_true(page, &settled, "a settled hover pair")
+        for scheme in [Scheme::Light, Scheme::Dark] {
+            let fixture = Fixture::open_in("/button", Viewport::Desktop, scheme)
                 .await
                 .unwrap();
-            let ratio: f64 = e2e::js(page, pair(selector)).await;
-            eprintln!("{selector} hovered: {ratio:.2}:1");
-            assert!(ratio >= 4.5, "{selector} hovered reads {ratio:.2}:1");
-        }
+            let page = &fixture.page;
 
-        fixture.console.assert_clean("hovering buttons").unwrap();
-        fixture.close().await.unwrap();
+            for selector in ["#outlined", "#standard-error", "#elevated", "#filled-muted"] {
+                let fill = format!(
+                    "getComputedStyle(document.querySelector({selector:?})).backgroundColor"
+                );
+                let _: bool = e2e::js(
+                    page,
+                    format!("(window.__rest = {fill}, window.__last = undefined, true)"),
+                )
+                .await;
+                pointer::hover(page, selector).await.unwrap();
+                let settled = format!(
+                    "(() => {{ if (!document.querySelector({selector:?}).matches(':hover') \
+                     || {fill} === window.__rest) return false; const r = {}; \
+                     if (r === null || r !== window.__last) {{ window.__last = r; return false; }} \
+                     return true; }})()",
+                    pair(selector)
+                );
+                wait::for_js_true(
+                    page,
+                    &settled,
+                    &format!("{selector}'s hover fill to settle"),
+                )
+                .await
+                .unwrap_or_else(|e| panic!("{scheme:?}: {e}"));
+                let ratio: f64 = e2e::js(page, pair(selector)).await;
+                assert!(
+                    ratio >= 4.5,
+                    "{scheme:?}: {selector} hovered reads {ratio:.2}:1"
+                );
+            }
+
+            fixture
+                .console
+                .assert_clean(&format!("hovering buttons, {scheme:?}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
     });
 }
 
@@ -391,7 +415,7 @@ fn a_pressed_button_shows_the_on_state_ring_in_every_variant() {
         for variant in VARIANTS {
             assert_on_marker(page, &format!("#on-{variant}"), &format!("#off-{variant}")).await;
         }
-        crate::calendar::force_colours(page).await;
+        e2e::browser::force_colours(page).await.unwrap();
         for variant in VARIANTS {
             assert_on_in_forced_colours(
                 page,
