@@ -6,13 +6,14 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, OptionLabel, Options, States,
-            disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx, use_closing_focus,
+            ClassList, HtmlTag, Input, LogicalTextAlign, OptionLabel, Options, States,
+            disabled_look_sx, draw_svg, has_shortcut_modifier, inset_focus_ring_sx,
+            use_closing_focus,
         },
         layout::{Collapse, use_box},
     },
     context::IconSlot,
-    hooks::{ElementHandle, id_selector, use_element},
+    hooks::{ElementHandle, id_selector, use_element, use_icon},
     platform::ElementApi,
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
@@ -234,6 +235,11 @@ fn AccordionSection<T: Options>(
     let region_id = format!("{root}-region-{index}");
     let name = label.name;
     let content = label.content.unwrap_or_else(|| rsx! { "{name}" });
+    // Drawn in this scope, not by a `Glyph` scope per section: same `<svg>`, 50 scopes fewer at 50.
+    let chevron = draw_svg(
+        &use_icon(IconSlot::ChevronDown, lucide::chevron_down::outlined),
+        Vec::new(),
+    );
     // Built while open; a closing panel animates out with its last body, and
     // `Collapse` drops it once closed.
     let kept = use_hook(|| Rc::new(RefCell::new(None::<Element>)));
@@ -285,7 +291,7 @@ fn AccordionSection<T: Options>(
             },
             onkeydown,
             span { {content} }
-            span { "data-accordion-chevron": "", Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } }
+            span { "data-accordion-chevron": "", {chevron} }
         }
     };
     rsx! {

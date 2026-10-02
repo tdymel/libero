@@ -66,9 +66,12 @@ impl ComboboxState {
         *self.active.peek()
     }
 
+    /// Peek-compared like `set_rows`.
     pub fn set_active(&self, row: Option<usize>) {
         let mut active = self.active;
-        active.set(row);
+        if *active.peek() != row {
+            active.set(row);
+        }
     }
 
     /// Peek-compared, so an unchanged count does not re-render the caller.
@@ -126,10 +129,11 @@ impl ComboboxState {
     fn aria_rows(&self, listbox: bool, rows: usize) -> Vec<Attribute> {
         let opened = self.is_open() && !(self.held)();
         let listbox = listbox && opened;
-        // Clamped as the list clamps its highlight.
-        let active = self
-            .active()
-            .filter(|_| opened && rows > 0)
+        // Clamped as the list clamps its highlight. Unread while closed: the owner
+        // need not redraw for a highlight it does not show.
+        let active = (opened && rows > 0)
+            .then(|| self.active())
+            .flatten()
             .map(|row| row.min(rows - 1));
         trigger_aria(&self.id(), opened, listbox, active)
     }

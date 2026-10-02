@@ -1068,7 +1068,30 @@ fn mounting_stays_in_budget() {
                     ("Accordion", 1),
                     ("AccordionSection", 50),
                     ("Collapse", 50),
-                    ("Glyph", 50),
+                ][..],
+            ),
+            (
+                // Closed: no option rows built, and the mount effect's highlight redraws nothing.
+                "combobox-300",
+                &[
+                    ("MountCombobox", 1),
+                    ("Combobox", 1),
+                    ("ComboboxCore", 1),
+                    ("Button", 1),
+                ][..],
+            ),
+            (
+                // A fixed `today` skips the clock write: one Calendar pass.
+                "calendar",
+                &[
+                    ("MountCalendar", 1),
+                    ("ChronoPicker", 1),
+                    ("Calendar", 1),
+                    ("Weekdays", 1),
+                    ("Week", 6),
+                    ("Nav", 2),
+                    ("ActionIcon", 2),
+                    ("Glyph", 2),
                 ][..],
             ),
         ] {

@@ -113,28 +113,35 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
         state.set_active(Some(0));
     });
 
-    let active_row = state
-        .active()
+    // Read only while open: the mount effect's write then redraws nothing.
+    let opened = state.is_open();
+    let active_row = opened
+        .then(|| state.active())
+        .flatten()
         .filter(|_| count > 0)
         .map(|row| row.min(count - 1));
 
     // Drawn eagerly: `Callback`s from one scope compare equal across renders and left stale rows.
     // A `Vec<Element>` never compares equal, so the subtree never memoizes.
+    // Closed, no list is drawn: placeholders keep the count the keys move through.
     let option = props.option;
     let row_disabled = list.disabled();
     let groups = list.group_labels();
-    let rows: Vec<Element> = values
-        .iter()
-        .enumerate()
-        .map(|(index, value)| {
-            option.call(ComboboxOptionArgs {
-                value: value.clone(),
-                index,
-                active: active_row == Some(index),
-                disabled: row_disabled[index],
+    let rows: Vec<Element> = match opened {
+        true => values
+            .iter()
+            .enumerate()
+            .map(|(index, value)| {
+                option.call(ComboboxOptionArgs {
+                    value: value.clone(),
+                    index,
+                    active: active_row == Some(index),
+                    disabled: row_disabled[index],
+                })
             })
-        })
-        .collect();
+            .collect(),
+        false => vec![VNode::empty(); count],
+    };
 
     rsx! {
         ComboboxCore {
@@ -143,7 +150,7 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             row_disabled,
             active: active_row,
             onactive: move |row| state.set_active(Some(row)),
-            opened: state.is_open(),
+            opened,
             onopened: move |opened| state.set_open(opened),
             state,
             empty: props.empty,
