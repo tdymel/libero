@@ -109,13 +109,14 @@ list gets the arrow keys, Enter and Escape while it is open. `overlay` floats
 at the caret: under its line, above it near the window's bottom edge. The
 handle's `with_state` reads the text before the caret and `edit` swaps the
 typed `@name` for a mention node as one undo step. `tools` adds your own
-toolbar button, here one that types the `@`.
+toolbar button, here one that types the `@`. A command can insert a node too:
+Mod+Shift+2 runs `mention`, which inserts the registry's default user.
 
 ```rust
 use dioxus::prelude::*;
 use libero::components::rich_text::{
-    Attrs, Commands, EditorInput, EditorState, NodeRegistry, NodeSpec, NodeViewProps, NodeViews,
-    Position, RichTextTool, Selection, use_rich_text_editor,
+    Attrs, Chord, Commands, EditorInput, EditorState, Keymap, NodeRegistry, NodeSpec,
+    NodeViewProps, NodeViews, Position, RichTextTool, Selection, use_rich_text_editor,
 };
 use libero::components::{Paper, RichTextEditor};
 use libero::sx::sx;
@@ -166,7 +167,16 @@ fn MentionEditor() -> Element {
     let commands = use_hook(|| {
         let mut commands = Commands::default();
         commands.register("at", |state| state.insert_text("@"));
+        commands.register("mention", |state| {
+            let mention = registry().new_inline("mention", Attrs::new());
+            mention.is_some_and(|mention| state.insert_inline(mention))
+        });
         commands
+    });
+    let keymap = use_hook(|| {
+        let mut keymap = Keymap::default();
+        keymap.bind(Chord::parse("Mod+Shift+2").unwrap(), "mention");
+        keymap
     });
     let query = editor.with_state(mention_query).flatten();
     let people: Vec<&'static str> = match &query {
@@ -218,6 +228,7 @@ fn MentionEditor() -> Element {
             placeholder: "Type @ to mention someone",
             handle: editor,
             commands,
+            keymap,
             tools: vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
             nodes: NodeViews::new().with("mention", Mention),
             registry: registry(),

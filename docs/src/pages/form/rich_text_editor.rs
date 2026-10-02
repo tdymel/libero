@@ -54,9 +54,14 @@ static SHOUT_COMMAND: &str = r#"    commands.register("shout", |state| {
         !text.is_empty() && state.insert_text(&text)
     });"#;
 
-static AT_COMMAND: &str = r#"    commands.register("at", |state| state.insert_text("@"));"#;
+static AT_COMMAND: &str = r#"    commands.register("at", |state| state.insert_text("@"));
+    commands.register("mention", |state| {
+        let mention = registry().new_inline("mention", Attrs::new());
+        mention.is_some_and(|mention| state.insert_inline(mention))
+    });"#;
 
 static SHOUT_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+1").unwrap(), "shout");"#;
+static MENTION_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+2").unwrap(), "mention");"#;
 static KEYMAP_CHORDS: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+h").unwrap(), Builtin::Heading2);
     keymap.unbind_command(Builtin::Rule);"#;
 
@@ -161,7 +166,7 @@ impl Extensions {
 
     /// Something binds a chord, so the snippet prints `keymap()`.
     fn binds(self) -> bool {
-        self.shout || self.keymap
+        self.shout || self.mentions || self.keymap
     }
 }
 
@@ -312,6 +317,12 @@ fn shout(state: &mut EditorState) -> bool {
     !text.is_empty() && state.insert_text(&text)
 }
 
+/// A node command: a mention of the registry's default user.
+fn mention(state: &mut EditorState) -> bool {
+    let mention = registry().new_inline("mention", Attrs::new());
+    mention.is_some_and(|mention| state.insert_inline(mention))
+}
+
 fn chord(chord: &str) -> Chord {
     Chord::parse(chord).expect("a valid demo chord")
 }
@@ -323,6 +334,7 @@ fn demo_commands(on: Extensions) -> Commands {
     }
     if on.mentions {
         commands.register("at", |state| state.insert_text("@"));
+        commands.register("mention", mention);
     }
     commands
 }
@@ -331,6 +343,9 @@ fn demo_keymap(on: Extensions) -> Keymap {
     let mut keymap = Keymap::default();
     if on.shout {
         keymap.bind(chord("Mod+Shift+1"), "shout");
+    }
+    if on.mentions {
+        keymap.bind(chord("Mod+Shift+2"), "mention");
     }
     if on.keymap {
         keymap.bind(chord("Mod+Shift+h"), Builtin::Heading2);
@@ -384,10 +399,14 @@ fn wrap_extensions(values: &DemoValues, code: &str) -> String {
         ));
     }
     if on.binds() {
-        let bound: Vec<&str> = [(on.shout, SHOUT_CHORD), (on.keymap, KEYMAP_CHORDS)]
-            .into_iter()
-            .filter_map(|(on, line)| on.then_some(line))
-            .collect();
+        let bound: Vec<&str> = [
+            (on.shout, SHOUT_CHORD),
+            (on.mentions, MENTION_CHORD),
+            (on.keymap, KEYMAP_CHORDS),
+        ]
+        .into_iter()
+        .filter_map(|(on, line)| on.then_some(line))
+        .collect();
         items.push(format!(
             "fn keymap() -> Keymap {{\n    let mut keymap = Keymap::default();\n{}\n    keymap\n}}",
             bound.join("\n")
@@ -405,7 +424,7 @@ fn captions(values: &DemoValues) -> Vec<&'static str> {
     let on = Extensions::of(values);
     [
         (on.shout, "Custom command: select a word and press Ctrl+Shift+1 (Cmd on a Mac) to upper-case it, one undo step."),
-        (on.mentions, "Mentions: type @ and a name, or press the @ button. While the list is open, intercept gives it the arrow keys, Enter and Escape; overlay floats it at the caret; the handle's edit swaps the typed @name for a mention node, drawn by your own component, in one undo step."),
+        (on.mentions, "Mentions: type @ and a name, or press the @ button. While the list is open, intercept gives it the arrow keys, Enter and Escape; overlay floats it at the caret; the handle's edit swaps the typed @name for a mention node, drawn by your own component, in one undo step. Ctrl+Shift+2 runs a node command that inserts @ada."),
         (on.keymap, "Custom keymap: Ctrl+Shift+H makes a heading, and Ctrl+Shift+Enter no longer adds a rule. Ctrl+/ lists the live keymap."),
         (values.str("toolbar") != "true", "No toolbar: the keymap, or your own buttons through a handle, drive the editor."),
     ]
