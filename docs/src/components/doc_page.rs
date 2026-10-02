@@ -54,6 +54,9 @@ pub fn DocPage(
     #[props(default)]
     accessibility: Option<A11yDoc>,
     #[props(default)] extra_tab: Option<ExtraTab>,
+    /// The TLDR chip; off for a page with nothing to summarize, such as the not-found page.
+    #[props(default = true)]
+    tldr: bool,
     children: Element,
 ) -> Element {
     #[cfg(test)]
@@ -186,7 +189,9 @@ pub fn DocPage(
                                 "View as markdown"
                             }
                         }
-                        Tldr { url: format!("{SITE}{tldr_path}"), prompt: TLDR_PROMPT, size: "sm" }
+                        if tldr {
+                            Tldr { url: format!("{SITE}{tldr_path}"), prompt: TLDR_PROMPT, size: "sm" }
+                        }
                     }
                 }
                 {lead}

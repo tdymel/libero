@@ -45,10 +45,10 @@ fn Demo() -> Element {
                 }
             }
             Flex { direction: "row", gap: "sm",
-                Button { variant: "outlined", onclick: move |_| strip.step_back(), "Back" }
-                Button { variant: "outlined", onclick: move |_| strip.step_forward(), "Forward" }
+                Button { variant: "outlined", onclick: move |_| strip.step_back(), "Scroll tags back" }
+                Button { variant: "outlined", onclick: move |_| strip.step_forward(), "Scroll tags forward" }
             }
-            Text { size: "sm",
+            Text { size: "sm", role: "status",
                 match edges() {
                     Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
                     Some(ScrollerEdges { at_end: false, .. }) => "More after this",

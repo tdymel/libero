@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::rich_text::{
     Attrs, Builtin, Chord, Commands, Doc, EditorInput, EditorState, Keymap, NodeRegistry, NodeSpec,
@@ -6,6 +6,7 @@ use libero::components::rich_text::{
 };
 use libero::components::{Code, FieldPart, FieldStatus, Flex, Paper, RichTextEditor, Text};
 use libero::sx::sx;
+use libero::use_theme;
 
 static SAMPLE: &str = r#"## Release notes
 
@@ -53,24 +54,16 @@ static SHOUT_COMMAND: &str = r#"    commands.register("shout", |state| {
         !text.is_empty() && state.insert_text(&text)
     });"#;
 
-static MENTION_COMMAND: &str = r#"    commands.register("mention", |state| {
-        let mention = registry().new_inline("mention", Attrs::new());
-        mention.is_some_and(|mention| state.insert_inline(mention))
-    });"#;
+static AT_COMMAND: &str = r#"    commands.register("at", |state| state.insert_text("@"));"#;
 
 static SHOUT_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+1").unwrap(), "shout");"#;
-static MENTION_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+2").unwrap(), "mention");"#;
 static KEYMAP_CHORDS: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+h").unwrap(), Builtin::Heading2);
     keymap.unbind_command(Builtin::Rule);"#;
 
-static MENTIONS_USE: &str = r#"use libero::components::rich_text::{
-    Attrs, Commands, EditorInput, EditorState, NodeRegistry, NodeSpec, NodeViewProps, NodeViews,
-    Position, RichTextTool, Selection, use_rich_text_editor,
-};
-use libero::components::{Paper, RichTextEditor};
-use libero::sx::sx;"#;
+static MENTIONS: &str = r##"use libero::components::Paper;
+use libero::sx::sx;
 
-static MENTIONS: &str = r##"const PEOPLE: [&str; 4] = ["ada", "alan", "grace", "linus"];
+const PEOPLE: [&str; 4] = ["ada", "alan", "grace", "linus"];
 
 /// The word after an `@` that starts a word, up to the caret.
 fn mention_query(state: &EditorState) -> Option<String> {
@@ -94,88 +87,62 @@ fn insert_mention(state: &mut EditorState, user: &str) -> bool {
     };
     state.select(Selection::range(from, at));
     state.insert_inline(mention) && state.insert_text(" ")
-}
+}"##;
 
-#[component]
-fn MentionEditor() -> Element {
-    let editor = use_rich_text_editor();
-    let mut active = use_signal(|| 0usize);
-    let mut dismissed = use_signal(|| None::<String>);
-    let commands = use_hook(|| {
-        let mut commands = Commands::default();
-        commands.register("at", |state| state.insert_text("@"));
-        commands
-    });
-    let query = editor.with_state(mention_query).flatten();
-    let people: Vec<&'static str> = match &query {
-        Some(query) if dismissed.read().as_ref() != Some(query) => PEOPLE
-            .into_iter()
-            .filter(|user| user.starts_with(query.as_str()))
-            .collect(),
-        _ => Vec::new(),
+// The mention list's state and handlers, printed before the rsx.
+static MENTIONS_BODY: &str = r##"let editor = use_rich_text_editor();
+let mut active = use_signal(|| 0usize);
+let mut dismissed = use_signal(|| None::<String>);
+let query = editor.with_state(mention_query).flatten();
+let people: Vec<&'static str> = match &query {
+    Some(query) if dismissed.read().as_ref() != Some(query) => PEOPLE
+        .into_iter()
+        .filter(|user| user.starts_with(query.as_str()))
+        .collect(),
+    _ => Vec::new(),
+};
+let current = active() % people.len().max(1);
+let picked = people.get(current).copied();
+let count = people.len();
+let pick = move |user: &'static str| {
+    editor.edit(move |state| insert_mention(state, user));
+    let mut active = active;
+    active.set(0);
+};
+// The list takes the arrows, Enter and Escape while it is open; the rest types.
+let intercept = move |input: EditorInput| -> bool {
+    let Some(user) = picked else {
+        return false;
     };
-    let current = active() % people.len().max(1);
-    let picked = people.get(current).copied();
-    let count = people.len();
-    let pick = move |user: &'static str| {
-        editor.edit(move |state| insert_mention(state, user));
-        let mut active = active;
-        active.set(0);
-    };
-    // The list takes the arrows, Enter and Escape while it is open; the rest types.
-    let intercept = move |input: EditorInput| -> bool {
-        let Some(user) = picked else {
-            return false;
-        };
-        match input.key() {
-            Some("ArrowDown") => active.set((current + 1) % count),
-            Some("ArrowUp") => active.set((current + count - 1) % count),
-            Some("Enter" | "Tab") => pick(user),
-            Some("Escape") => dismissed.set(query.clone()),
-            _ => return false,
-        }
-        true
-    };
-    let overlay = (!people.is_empty()).then(|| rsx! {
-        Paper { shadow: "md", bordered: true, role: "listbox", "aria-label": "People",
-            sx: sx().padding("xs").min_width("10rem"),
-            for (index, user) in people.iter().copied().enumerate() {
-                div { id: "mention-{user}", role: "option", "aria-selected": index == current,
-                    onclick: move |_| pick(user),
-                    Paper { radius: "sm", color: (index == current).then_some("primary"),
-                        sx: sx().padding("0.25rem 0.5rem"),
-                        "@{user}"
-                    }
+    match input.key() {
+        Some("ArrowDown") => active.set((current + 1) % count),
+        Some("ArrowUp") => active.set((current + count - 1) % count),
+        Some("Enter" | "Tab") => pick(user),
+        Some("Escape") => dismissed.set(query.clone()),
+        _ => return false,
+    }
+    true
+};
+let overlay = (!people.is_empty()).then(|| rsx! {
+    Paper { shadow: "md", bordered: true, role: "listbox", "aria-label": "People",
+        sx: sx().padding("xs").min_width("10rem"),
+        for (index, user) in people.iter().copied().enumerate() {
+            div { id: "mention-{user}", role: "option", "aria-selected": index == current,
+                onclick: move |_| pick(user),
+                Paper { radius: "sm", color: (index == current).then_some("primary"),
+                    sx: sx().padding("0.25rem 0.5rem"),
+                    "@{user}"
                 }
             }
         }
-    });
-    rsx! {
-        RichTextEditor {
-            label: "Message",
-            placeholder: "Type @ to mention someone",
-            handle: editor,
-            commands,
-            tools: vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
-            nodes: NodeViews::new().with("mention", Mention),
-            registry: registry(),
-            intercept,
-            overlay,
-            active_descendant: picked.map(|user| format!("mention-{user}")),
-        }
     }
-}"##;
+});"##;
 
-/// The mention demo's items, printed above its rsx.
-fn wrap_mentions(_: &DemoValues, code: &str) -> String {
-    [MENTIONS_USE, MENTION, MENTIONS, code].join("\n\n")
-}
-
-/// The demo's extension switches: a command, a node and a keymap.
+/// The demo's extension switches: a command, mentions and a keymap.
 #[derive(Clone, Copy)]
 struct Extensions {
     shout: bool,
-    mention: bool,
+    mentions: bool,
     keymap: bool,
 }
 
@@ -183,13 +150,18 @@ impl Extensions {
     fn of(values: &DemoValues) -> Self {
         Self {
             shout: values.str("commands") == "true",
-            mention: values.str("nodes") == "true",
+            mentions: values.str("mentions") == "true",
             keymap: values.str("keymap") == "true",
         }
     }
 
     fn any(self) -> bool {
-        self.shout || self.mention || self.keymap
+        self.shout || self.mentions || self.keymap
+    }
+
+    /// Something binds a chord, so the snippet prints `keymap()`.
+    fn binds(self) -> bool {
+        self.shout || self.keymap
     }
 }
 
@@ -237,17 +209,17 @@ fn insert_mention(state: &mut EditorState, user: &str) -> bool {
     state.insert_inline(mention) && state.insert_text(" ")
 }
 
+/// The demo's editor; the mention list's hooks run always, its props only with `mentions` on.
 #[component]
-fn MentionEditor() -> Element {
+fn NotesEditor(values: DemoValues, mut doc: Signal<Doc>) -> Element {
+    let on = Extensions::of(&values);
     let editor = use_rich_text_editor();
     let mut active = use_signal(|| 0usize);
     let mut dismissed = use_signal(|| None::<String>);
-    let commands = use_hook(|| {
-        let mut commands = Commands::default();
-        commands.register("at", |state| state.insert_text("@"));
-        commands
-    });
-    let query = editor.with_state(mention_query).flatten();
+    let query = match on.mentions {
+        true => editor.with_state(mention_query).flatten(),
+        false => None,
+    };
     let people: Vec<&'static str> = match &query {
         Some(query) if dismissed.read().as_ref() != Some(query) => PEOPLE
             .into_iter()
@@ -293,18 +265,44 @@ fn MentionEditor() -> Element {
             }
         }
     });
+    let (nodes, tools) = match on.mentions {
+        true => (
+            NodeViews::new().with("mention", Mention),
+            vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
+        ),
+        false => (NodeViews::new(), vec![]),
+    };
     rsx! {
         RichTextEditor {
-            label: "Message",
-            placeholder: "Type @ to mention someone",
+            size: values.str("size"),
+            radius: values.str("radius"),
+            label: (values.str("label") == "true").then(|| "Notes".to_string()),
+            aria_label: (values.str("label") != "true").then_some("Notes"),
+            description: (values.str("description") == "true")
+                .then(|| "What changed in this release.".to_string()),
+            helper: (values.str("helper") == "true")
+                .then(|| "Markdown shortcuts work as you type.".to_string()),
+            status: match values.str("status").as_str() {
+                "warning" => FieldStatus::Warning("Long notes get cut short in the feed.".to_string()),
+                "error" => FieldStatus::Error("Write a few words.".to_string()),
+                _ => FieldStatus::Valid,
+            },
+            placeholder: (values.str("placeholder") == "true").then(|| "Start writing".to_string()),
+            toolbar: values.str("toolbar") == "true",
+            required: (values.str("required") == "true").then_some(true),
+            disabled: (values.str("disabled") == "true").then_some(true),
+            readonly: (values.str("readonly") == "true").then_some(true),
+            commands: demo_commands(on),
+            keymap: demo_keymap(on),
             handle: editor,
-            commands,
-            tools: vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
-            nodes: NodeViews::new().with("mention", Mention),
-            registry: registry(),
+            tools,
+            nodes,
+            registry: on.mentions.then(registry),
             intercept,
             overlay,
             active_descendant: picked.map(|user| format!("mention-{user}")),
+            value: doc(),
+            onchange: move |next| doc.set(next),
         }
     }
 }
@@ -312,11 +310,6 @@ fn MentionEditor() -> Element {
 fn shout(state: &mut EditorState) -> bool {
     let text = state.selected_text().to_uppercase();
     !text.is_empty() && state.insert_text(&text)
-}
-
-fn mention(state: &mut EditorState) -> bool {
-    let mention = registry().new_inline("mention", Attrs::new());
-    mention.is_some_and(|mention| state.insert_inline(mention))
 }
 
 fn chord(chord: &str) -> Chord {
@@ -328,8 +321,8 @@ fn demo_commands(on: Extensions) -> Commands {
     if on.shout {
         commands.register("shout", shout);
     }
-    if on.mention {
-        commands.register("mention", mention);
+    if on.mentions {
+        commands.register("at", |state| state.insert_text("@"));
     }
     commands
 }
@@ -338,9 +331,6 @@ fn demo_keymap(on: Extensions) -> Keymap {
     let mut keymap = Keymap::default();
     if on.shout {
         keymap.bind(chord("Mod+Shift+1"), "shout");
-    }
-    if on.mention {
-        keymap.bind(chord("Mod+Shift+2"), "mention");
     }
     if on.keymap {
         keymap.bind(chord("Mod+Shift+h"), Builtin::Heading2);
@@ -356,15 +346,21 @@ fn wrap_extensions(values: &DemoValues, code: &str) -> String {
         return code.to_string();
     }
     let used: Vec<&str> = [
-        (on.mention, "Attrs"),
+        (on.mentions, "Attrs"),
         (on.keymap, "Builtin"),
-        (true, "Chord"),
-        (on.shout || on.mention, "Commands"),
-        (true, "Keymap"),
-        (on.mention, "NodeRegistry"),
-        (on.mention, "NodeSpec"),
-        (on.mention, "NodeViewProps"),
-        (on.mention, "NodeViews"),
+        (on.binds(), "Chord"),
+        (on.shout || on.mentions, "Commands"),
+        (on.mentions, "EditorInput"),
+        (on.mentions, "EditorState"),
+        (on.binds(), "Keymap"),
+        (on.mentions, "NodeRegistry"),
+        (on.mentions, "NodeSpec"),
+        (on.mentions, "NodeViewProps"),
+        (on.mentions, "NodeViews"),
+        (on.mentions, "Position"),
+        (on.mentions, "RichTextTool"),
+        (on.mentions, "Selection"),
+        (on.mentions, "use_rich_text_editor"),
     ]
     .into_iter()
     .filter_map(|(on, name)| on.then_some(name))
@@ -373,11 +369,12 @@ fn wrap_extensions(values: &DemoValues, code: &str) -> String {
         "use libero::components::rich_text::{{{}}};",
         used.join(", ")
     )];
-    if on.mention {
+    if on.mentions {
         items.push(MENTION.to_string());
+        items.push(MENTIONS.to_string());
     }
-    if on.shout || on.mention {
-        let registered: Vec<&str> = [(on.shout, SHOUT_COMMAND), (on.mention, MENTION_COMMAND)]
+    if on.shout || on.mentions {
+        let registered: Vec<&str> = [(on.shout, SHOUT_COMMAND), (on.mentions, AT_COMMAND)]
             .into_iter()
             .filter_map(|(on, line)| on.then_some(line))
             .collect();
@@ -386,18 +383,19 @@ fn wrap_extensions(values: &DemoValues, code: &str) -> String {
             registered.join("\n")
         ));
     }
-    let bound: Vec<&str> = [
-        (on.shout, SHOUT_CHORD),
-        (on.mention, MENTION_CHORD),
-        (on.keymap, KEYMAP_CHORDS),
-    ]
-    .into_iter()
-    .filter_map(|(on, line)| on.then_some(line))
-    .collect();
-    items.push(format!(
-        "fn keymap() -> Keymap {{\n    let mut keymap = Keymap::default();\n{}\n    keymap\n}}",
-        bound.join("\n")
-    ));
+    if on.binds() {
+        let bound: Vec<&str> = [(on.shout, SHOUT_CHORD), (on.keymap, KEYMAP_CHORDS)]
+            .into_iter()
+            .filter_map(|(on, line)| on.then_some(line))
+            .collect();
+        items.push(format!(
+            "fn keymap() -> Keymap {{\n    let mut keymap = Keymap::default();\n{}\n    keymap\n}}",
+            bound.join("\n")
+        ));
+    }
+    if on.mentions {
+        items.push(MENTIONS_BODY.to_string());
+    }
     items.push(code.to_string());
     items.join("\n\n")
 }
@@ -407,7 +405,7 @@ fn captions(values: &DemoValues) -> Vec<&'static str> {
     let on = Extensions::of(values);
     [
         (on.shout, "Custom command: select a word and press Ctrl+Shift+1 (Cmd on a Mac) to upper-case it, one undo step."),
-        (on.mention, "Custom node: Ctrl+Shift+2 inserts an @ada mention, drawn by your own component."),
+        (on.mentions, "Mentions: type @ and a name, or press the @ button. While the list is open, intercept gives it the arrow keys, Enter and Escape; overlay floats it at the caret; the handle's edit swaps the typed @name for a mention node, drawn by your own component, in one undo step."),
         (on.keymap, "Custom keymap: Ctrl+Shift+H makes a heading, and Ctrl+Shift+Enter no longer adds a rule. Ctrl+/ lists the live keymap."),
         (values.str("toolbar") != "true", "No toolbar: the keymap, or your own buttons through a handle, drive the editor."),
     ]
@@ -418,7 +416,8 @@ fn captions(values: &DemoValues) -> Vec<&'static str> {
 
 #[component]
 pub fn RichTextEditorPage() -> Element {
-    let mut doc = use_signal(|| Doc::from_markdown(SAMPLE));
+    let theme = use_theme();
+    let doc = use_signal(|| Doc::from_markdown(SAMPLE));
 
     rsx! {
         DocPage {
@@ -462,9 +461,9 @@ pub fn RichTextEditorPage() -> Element {
                     prop("tools", "Vec<RichTextTool>")
                         .default("vec![]")
                         .doc("Your toolbar buttons, after the block buttons: `RichTextTool::new(command, label, icon)` runs the command by name; `.active(fn)` makes it a toggle with `aria-pressed`. They never move into the More menu."),
-                    prop("size", "Size").default("md").doc("Padding and font size."),
+                    prop("size", "Size").default(theme.textarea.size.as_str()).doc("Padding and font size."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.textarea.radius.as_str())
                         .doc("Corner radius, independent of `size`."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the toolbar. It names the text."),
@@ -602,25 +601,30 @@ pub fn RichTextEditorPage() -> Element {
                             _ => vec!["toolbar: false".to_string()],
                         }
                     }),
-                    // `keymap` prints the one keymap all three extension switches add to.
+                    // `commands` and `keymap` print the one function each that the extension switches add to.
                     Control::switch("commands").code(|_, values| {
                         let on = Extensions::of(values);
-                        match on.shout || on.mention {
+                        match on.shout || on.mentions {
                             true => vec!["commands: commands()".to_string()],
                             false => vec![],
                         }
                     }),
-                    Control::switch("nodes").code(|_, values| {
-                        match values.str("nodes").as_str() {
+                    Control::switch("mentions").code(|_, values| {
+                        match values.str("mentions").as_str() {
                             "true" => vec![
+                                "handle: editor".to_string(),
+                                "tools: vec![RichTextTool::new(\"at\", \"Mention someone\", rsx! { \"@\" })]".to_string(),
                                 "nodes: NodeViews::new().with(\"mention\", Mention)".to_string(),
                                 "registry: registry()".to_string(),
+                                "intercept".to_string(),
+                                "overlay".to_string(),
+                                "active_descendant: picked.map(|user| format!(\"mention-{user}\"))".to_string(),
                             ],
                             _ => vec![],
                         }
                     }),
                     Control::switch("keymap").code(|_, values| {
-                        match Extensions::of(values).any() {
+                        match Extensions::of(values).binds() {
                             true => vec!["keymap: keymap()".to_string()],
                             false => vec![],
                         }
@@ -630,68 +634,14 @@ pub fn RichTextEditorPage() -> Element {
                     Control::switch("readonly"),
                 ],
                 wrap: Wrap(wrap_extensions),
-                render: move |values: DemoValues| {
-                    let on = Extensions::of(&values);
-                    let nodes = match on.mention {
-                        true => NodeViews::new().with("mention", Mention),
-                        false => NodeViews::new(),
-                    };
-                    rsx! {
-                        Flex { direction: "column", gap: "sm",
-                            RichTextEditor {
-                                size: values.str("size"),
-                                radius: values.str("radius"),
-                                label: (values.str("label") == "true").then(|| "Notes".to_string()),
-                                aria_label: (values.str("label") != "true").then_some("Notes"),
-                                description: (values.str("description") == "true")
-                                    .then(|| "What changed in this release.".to_string()),
-                                helper: (values.str("helper") == "true")
-                                    .then(|| "Markdown shortcuts work as you type.".to_string()),
-                                status: match values.str("status").as_str() {
-                                    "warning" => FieldStatus::Warning("Long notes get cut short in the feed.".to_string()),
-                                    "error" => FieldStatus::Error("Write a few words.".to_string()),
-                                    _ => FieldStatus::Valid,
-                                },
-                                placeholder: (values.str("placeholder") == "true")
-                                    .then(|| "Start writing".to_string()),
-                                toolbar: values.str("toolbar") == "true",
-                                required: (values.str("required") == "true").then_some(true),
-                                disabled: (values.str("disabled") == "true").then_some(true),
-                                readonly: (values.str("readonly") == "true").then_some(true),
-                                commands: demo_commands(on),
-                                keymap: demo_keymap(on),
-                                nodes,
-                                registry: on.mention.then(registry),
-                                value: doc(),
-                                onchange: move |next| doc.set(next),
-                            }
-                            for caption in captions(&values) {
-                                Text { size: "sm", "{caption}" }
-                            }
+                render: move |values: DemoValues| rsx! {
+                    Flex { direction: "column", gap: "sm",
+                        NotesEditor { values: values.clone(), doc }
+                        for caption in captions(&values) {
+                            Text { size: "sm", "{caption}" }
                         }
                     }
                 },
-            }
-            DocSection { title: "Mentions",
-                Text {
-                    "Type @ and a name. "
-                    Code { source: "intercept" }
-                    " gives the list the arrow keys, Enter and Escape while it is open; "
-                    Code { source: "overlay" }
-                    " floats it at the caret and flips it above near the window's edge; the handle's "
-                    Code { source: "edit" }
-                    " swaps the typed @name for a mention node, one undo step. The @ button is a "
-                    Code { source: "RichTextTool" }
-                    " running a custom command."
-                }
-                Demo {
-                    title: "Mentions",
-                    component: "MentionEditor",
-                    children_text: "",
-                    controls: vec![],
-                    wrap: Wrap(wrap_mentions),
-                    render: move |_: DemoValues| rsx! { MentionEditor {} },
-                }
             }
         }
     }
@@ -709,7 +659,12 @@ fn rich_lead() -> Element {
             Code { source: "Doc::from_markdown" }
             " convert it; the types live in "
             Code { source: "libero::components::rich_text" }
-            ". A code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language."
+            ". A code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language. "
+            "The mentions switch adds an @ list at the caret, built from "
+            Code { source: "intercept" }
+            ", "
+            Code { source: "overlay" }
+            " and a custom node."
         }
     }
 }

@@ -29,11 +29,13 @@ struct Message {
     initials: &'static str,
     title: Option<String>,
     text: &'static str,
+    onaction: Callback<String>,
 }
 
-// A `fn`, not a capturing closure. Everything it draws travels in `Message`.
+// A `fn`, not a capturing closure. Everything it draws and calls travels in `Message`.
 fn card_notification(s: NotificationScope<Message>) -> Element {
     let data = s.args();
+    let (onaction, sender) = (data.onaction, data.sender);
 
     rsx! {
         Paper { shadow: "md", sx: sx().padding("md"),
@@ -53,8 +55,14 @@ fn card_notification(s: NotificationScope<Message>) -> Element {
                         }
                     }
                     Flex { direction: "row", gap: "sm",
-                        Button { variant: "outlined", size: "xs", onclick: move |_| s.close(), "Reply" }
-                        Button { variant: "standard", size: "xs", onclick: move |_| s.close(), "Mute" }
+                        Button { variant: "outlined", size: "xs",
+                            onclick: move |_| { onaction.call(format!("Replying to {sender}.")); s.close() },
+                            "Reply"
+                        }
+                        Button { variant: "standard", size: "xs",
+                            onclick: move |_| { onaction.call(format!("Muted {sender}.")); s.close() },
+                            "Mute"
+                        }
                     }
                 }
             }
@@ -68,6 +76,7 @@ struct Message {
     initials: &'static str,
     title: Option<String>,
     text: &'static str,
+    onaction: Callback<String>,
 }
 
 /// The senders the demo button cycles through.
@@ -81,6 +90,7 @@ const SENDERS: [(&str, &str, &str); 3] = [
 /// text, with an action row below.
 fn card_notification(s: NotificationScope<Message>) -> Element {
     let data = s.args();
+    let (onaction, sender) = (data.onaction, data.sender);
 
     rsx! {
         Paper { shadow: "md", sx: sx().padding("md"),
@@ -119,13 +129,19 @@ fn card_notification(s: NotificationScope<Message>) -> Element {
                         Button {
                             variant: "outlined",
                             size: "xs",
-                            onclick: move |_| s.close(),
+                            onclick: move |_| {
+                                onaction.call(format!("Replying to {sender}."));
+                                s.close()
+                            },
                             "Reply"
                         }
                         Button {
                             variant: "standard",
                             size: "xs",
-                            onclick: move |_| s.close(),
+                            onclick: move |_| {
+                                onaction.call(format!("Muted {sender}."));
+                                s.close()
+                            },
                             "Mute"
                         }
                     }
@@ -307,7 +323,7 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
             false => "None",
         };
         format!(
-            "// Each message carries its own sender.\nMessage {{\n        sender: \"Ada Lovelace\",\n        initials: \"AL\",\n        title: {title},\n        text: \"The engine is ready for review.\",\n    }}"
+            "// Each message carries its own sender.\nMessage {{\n        sender: \"Ada Lovelace\",\n        initials: \"AL\",\n        title: {title},\n        text: \"The engine is ready for review.\",\n        onaction,\n    }}"
         )
     } else if fields.is_empty() {
         "\"Your changes are safe.\"".to_string()
@@ -365,7 +381,11 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
     let mut code = host;
     if template == "card" {
         code.push_str(CARD_EXAMPLE);
-        code.push_str("\n\n");
+        code.push_str(
+            "\n\n// Reply and Mute report here; show `last` in a role=\"status\" Text.\n\
+             let mut last = use_signal(String::new);\n\
+             let onaction = use_callback(move |action: String| last.set(action));\n",
+        );
     }
     if upload {
         code.push_str(TEMPLATE_EXAMPLE);
@@ -402,6 +422,8 @@ fn Examples(
     let notify = use_notifications();
     let cards = use_notifications_with(card_notification);
     let next_sender = use_hook(|| Rc::new(Cell::new(0)));
+    let mut last = use_signal(String::new);
+    let onaction = use_callback(move |action: String| last.set(action));
     let uploads = use_notifications_with(upload_notification);
     // Each upload's ticker. Dropped with the preview, which is what stops them.
     let tickers = use_hook(|| {
@@ -478,6 +500,7 @@ fn Examples(
                     initials,
                     title: title.then(|| "Saved".into()),
                     text,
+                    onaction,
                 },
                 // Its Reply and Mute are actions, so it waits for the reader (WCAG 2.2.1).
                 options(true),
@@ -516,6 +539,8 @@ fn Examples(
                     },
                     "Clear all" }
             }
+            // Always mounted, so a screen reader hears what Reply or Mute did.
+            Text { size: "sm", role: "status", "{last}" }
             Text { size: "sm",
                 if contained {
                     "This host is contained, so it draws its stacks in its own box. The "

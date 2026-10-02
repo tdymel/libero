@@ -17,22 +17,14 @@ async fn wait_for(page: &chromiumoxide::Page, what: &str, script: &str) {
     wait::for_js_true(page, script, what).await.unwrap();
 }
 
-/// The docs shell's page `ScrollArea` warns it has no name once the page scrolls (todo
-/// filed with 1708); any other console message still fails, at `close`.
+/// Any console message the page reported fails, at `close`.
 async fn close(fixture: Fixture) {
-    let (known, other): (Vec<_>, Vec<_>) = fixture
-        .console
-        .drain()
-        .into_iter()
-        .partition(|m| m.contains("ScrollArea: a tab stop with no `aria-label`"));
-    for message in known {
-        eprintln!("console: the shell's unnamed ScrollArea, as filed: {message}");
-    }
+    let messages = fixture.console.drain();
     fixture.close().await.unwrap();
     assert!(
-        other.is_empty(),
+        messages.is_empty(),
         "the page reported:\n  {}",
-        other.join("\n  ")
+        messages.join("\n  ")
     );
 }
 
@@ -194,12 +186,7 @@ const GRADIENT_MEASURE: &str = r#"(() => {
 
 /// Shortfalls filed and not fixed yet: a line's name, the lowest ratio it may read, and why.
 /// A drop below that ratio still fails.
-const KNOWN_SHORT: &[(&str, f64, &str)] = &[(
-    "browse text",
-    4.01,
-    "filed with 1708: the outlined Browse components label on the closing card's tint, \
-     4.01:1 light, 4.18:1 dark",
-)];
+const KNOWN_SHORT: &[(&str, f64, &str)] = &[];
 
 #[test]
 fn the_landing_gradients_are_measured() {

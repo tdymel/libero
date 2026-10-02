@@ -2,6 +2,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::RatingPart;
 use libero::components::{Code, CodeBlock, Rating, Text};
+use libero::use_theme;
 use pictogram_icons_lucide as lucide;
 
 /// The `value` steps up to `count`, in `fractions` steps per star.
@@ -20,6 +21,7 @@ const HEART_EXAMPLE: &str = r#"IconProvider {
 
 #[component]
 pub fn RatingPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Rating",
@@ -44,9 +46,9 @@ pub fn RatingPage() -> Element {
                     .default("IconSlot::Star")
                     .doc("The symbol, drawn empty and filled in `currentColor`. A stroked glyph turns solid when filled; a solid one only changes colour."),
                 prop("color", "ThemeAwareValue")
-                    .default("warning")
+                    .default(theme.rating.color.as_str())
                     .doc("The filled stars' colour; `theme.rating.color` when unset. Empty stars are `muted`."),
-                prop("size", "Size").default("md").doc("Star size and the gap between stars."),
+                prop("size", "Size").default(theme.rating.size.as_str()).doc("Star size and the gap between stars."),
                 prop("format", "Callback<f64, String>")
                     .doc("What a screen reader says for the value. Runs during render, so it can translate. The localization's `rating.value` (\"3.5 of 5\") when unset."),
                 prop("focusable", "bool")

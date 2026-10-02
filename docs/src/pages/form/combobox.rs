@@ -3,6 +3,7 @@ use std::time::Duration;
 use super::dropdown_parts::{COMBOBOX_DROPDOWN, list_dropdown_parts};
 use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::use_theme;
 use libero::{
     components::{
         Button, Code, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, OptionList, Options,
@@ -502,6 +503,7 @@ fn SuggestionsDemo(values: DemoValues) -> Element {
 
 #[component]
 pub fn ComboboxPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Combobox",
@@ -528,10 +530,10 @@ pub fn ComboboxPage() -> Element {
                     prop("labelled_by", "String")
                         .doc("The id of the element that names the list, usually the trigger's label. Screen readers read it with the list."),
                     prop("size", "Size")
-                        .default("md")
+                        .default(theme.combobox.size.as_str())
                         .doc("A row's height and font size."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.combobox.radius.as_str())
                         .doc("The dropdown's corner radius."),
                     prop("disabled", "bool")
                         .default("false")

@@ -4,6 +4,7 @@ use libero::components::FileFieldPart;
 use libero::components::{
     Code, CropOptions, FieldStatus, FileField, FileRejection, Files, Flex, Text,
 };
+use libero::use_theme;
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
@@ -35,6 +36,7 @@ const PROMPT: &str = "Drop files here, or click to pick";
 
 #[component]
 pub fn FileFieldPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "FileField",
@@ -49,7 +51,7 @@ pub fn FileFieldPage() -> Element {
                         .default("false")
                         .doc("Lets the user pick and drop several files, each drawn as a chip. A single-file field shows the file name, and a new pick replaces it."),
                     prop("variant", "FileFieldVariant")
-                        .default("input")
+                        .default(theme.file_field.variant.as_str())
                         .doc("`input` is one line in the field frame. `dropzone` is a tall surface to drop onto or click, with the files as cards below it. A single-file dropzone hides its surface while it holds a file."),
                     prop("accept", "String")
                         .doc("The file types to take, such as `.pdf`, `image/png`, `image/*` or a comma-separated list. It applies to the picker and to a drop: a file of another type is refused, and the field says so. A dropzone also shows them as a hint under its prompt."),
@@ -58,7 +60,7 @@ pub fn FileFieldPage() -> Element {
                     prop("placeholder", "String")
                         .doc("Shown while nothing is picked. It is the dropzone's prompt when `children` is empty. A dropzone with neither says the localization's `file_field.drop_file` or `drop_files`; the `input` variant shows nothing."),
                     prop("clearable", "bool")
-                        .default("true")
+                        .default(theme.file_field.clearable.to_string())
                         .doc("Shows an x that empties the field. `input` variant only: a dropzone's cards each have their own x."),
                     prop("loading", "bool")
                         .default("false")
@@ -80,8 +82,8 @@ pub fn FileFieldPage() -> Element {
                         .doc("Rules over the files, shown once the field loses focus or its form is submitted."),
                     prop("children", "Element")
                         .doc("The dropzone's prompt. The `input` variant shows `placeholder` instead."),
-                    prop("size", "Size").default("md").doc("Control height, font size and the chips' size."),
-                    prop("radius", "Size").default("sm").doc("Corner radius of the frame."),
+                    prop("size", "Size").default(theme.file_field.size.as_str()).doc("Control height, font size and the chips' size."),
+                    prop("radius", "Size").default(theme.file_field.radius.as_str()).doc("Corner radius of the frame."),
                     prop("label", "Caption")
                         .doc("The field's caption. It names the field and its Browse button."),
                     prop("description", "Caption").doc("Between the label and the control. Which files are wanted."),

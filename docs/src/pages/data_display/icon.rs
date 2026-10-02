@@ -4,6 +4,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, Text};
+use libero::use_theme;
 
 /// The glyph the box draws; no control varies it.
 const GLYPH: &str = "svg: pictogram_icons_lucide::check::outlined";
@@ -13,6 +14,7 @@ const NAME: &str = "Done";
 
 #[component]
 pub fn IconPage() -> Element {
+    let theme = use_theme();
     let [gradient_to, gradient_deg] = gradient_controls(not_gradient_variant);
     rsx! {
         DocPage {
@@ -23,7 +25,7 @@ pub fn IconPage() -> Element {
                 props("Icon", vec![
                     prop("component", "HtmlTag").default("span").doc("Element to render as."),
                     prop("variant", "Variant")
-                        .default("filled")
+                        .default(theme.icon.variant.as_str())
                         .doc("The look, shared with `Button`. An icon is not interactive, so it has no hover state."),
                     prop("gradient", "Gradient")
                         .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),

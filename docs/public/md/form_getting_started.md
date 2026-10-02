@@ -134,6 +134,8 @@ fn OrderForm() -> Element {
             EmailField { label: "Email", name: Order::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             AddressFieldset { label: "Shipping address", path: Order::FIELDS.shipping() }
             Checkbox { label: "Bill to the shipping address", name: Order::FIELDS.same_billing() }
+            // Rendered only while unticked: ticked, the billing fields neither validate nor
+            // post, though `order().billing` keeps what was typed.
             if !order().same_billing {
                 AddressFieldset { label: "Billing address", path: Order::FIELDS.billing() }
             }

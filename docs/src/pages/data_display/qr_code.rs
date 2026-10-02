@@ -1,6 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use crate::site::GITHUB as DATA;
 use dioxus::prelude::*;
+use libero::use_theme;
 use libero::{
     components::{Code, QrCode, Text},
     sx::sx,
@@ -10,6 +11,7 @@ const LABEL: &str = "The libero repository on GitHub";
 
 #[component]
 pub fn QrCodePage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "QrCode",
@@ -19,7 +21,7 @@ pub fn QrCodePage() -> Element {
                 props("QrCode", vec![
                     prop("data", "String").default("required").doc("The payload encoded into the code."),
                     prop("robustness", "QrRobustness")
-                        .default("medium")
+                        .default(theme.qr_code.robustness.as_str())
                         .doc("How much damage the code survives. Higher levels make a denser code."),
                     prop("aria_label", "String")
                         .default("required")

@@ -72,7 +72,7 @@ pub fn CarouselPage() -> Element {
                     prop("onindexchange", "EventHandler<usize>")
                         .doc("Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here."),
                     prop("per_view", "f64")
-                        .default("1")
+                        .default(theme.carousel.per_view.to_string())
                         .doc("Slides visible at once. A fraction lets the next one peek in."),
                     prop("gap", "Size").default(theme.carousel.gap.as_str()).doc("Between slides."),
                     prop("align", "CarouselAlign")

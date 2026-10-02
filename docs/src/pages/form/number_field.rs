@@ -2,6 +2,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, pr
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, FieldStatus, NumberField, NumberValue, Text};
+use libero::use_theme;
 
 /// Printed above the snippet when the demo is on the custom type - the field
 /// is only as short as it is because the impl exists.
@@ -75,6 +76,7 @@ impl NumberValue for Cents {
 
 #[component]
 pub fn NumberFieldPage() -> Element {
+    let theme = use_theme();
     let mut quantity = use_signal(|| Some(4i32));
     let mut weight = use_signal(|| Some(1.5f64));
     let mut price = use_signal(|| Some(Cents(1234)));
@@ -86,9 +88,9 @@ pub fn NumberFieldPage() -> Element {
             markdown: "/md/number_field.md",
             properties: vec![
                 props("NumberField", vec![
-                    prop("size", "Size").default("md").doc("Height, padding and font size."),
+                    prop("size", "Size").default(theme.number_field.size.as_str()).doc("Height, padding and font size."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.number_field.radius.as_str())
                         .doc("Corner radius, independent of `size`."),
                     prop("value", "Option<T>")
                         .doc("The number in the field, strictly controlled. `None` is the empty field. A signal that starts at `None` needs its type, such as `None::<i32>`."),

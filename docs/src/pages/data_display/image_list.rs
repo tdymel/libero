@@ -93,11 +93,17 @@ fn picture(index: usize) -> Element {
 
 /// A caller's caption. `min-width: 0` and ellipses keep a long title from pushing the control
 /// out; `color: inherit`, since a `<button>` inherits none and the bar's colour is the scrim's.
-fn caption(index: usize) -> Element {
+fn caption(index: usize, mut selected: Signal<[bool; 6]>) -> Element {
     let line = sx()
         .overflow("hidden")
         .text_overflow("ellipsis")
         .white_space("nowrap");
+    let on = selected()[index];
+    // Filled when selected; otherwise the bar's colour, the scrim's.
+    let icon = match on {
+        true => sx().flex("0 0 auto"),
+        false => sx().color("inherit").flex("0 0 auto"),
+    };
 
     rsx! {
         Box { sx: sx().flex("1 1 auto").min_width("0"),
@@ -105,16 +111,18 @@ fn caption(index: usize) -> Element {
             Box { sx: line.font_size("0.75rem"), "{AUTHORS[index]}" }
         }
         ActionIcon {
-            variant: "standard",
-            sx: sx().color("inherit").flex("0 0 auto"),
+            variant: if on { "filled" } else { "standard" },
+            sx: icon,
             size: "sm",
             aria_label: format!("Select {}", TITLES[index]),
+            aria_pressed: on,
+            onclick: move |_| selected.write()[index] ^= true,
             Pictogram { icon: lucide::check::outlined }
         }
     }
 }
 
-fn items(values: &DemoValues) -> Vec<ImageItem> {
+fn items(values: &DemoValues, selected: Signal<[bool; 6]>) -> Vec<ImageItem> {
     let bar = values.str("bar");
     let scrim = values.str("scrim") == "true";
     let cols = values.str("cols").parse::<u8>().unwrap_or(2);
@@ -127,7 +135,7 @@ fn items(values: &DemoValues) -> Vec<ImageItem> {
             let mut item = ImageItem::new(picture(index));
             if bar != "none" {
                 item = item.bar(
-                    ImageBar::new(caption(index))
+                    ImageBar::new(caption(index, selected))
                         .position(bar.as_str().into())
                         .scrim(scrim),
                 );
@@ -230,6 +238,7 @@ fn placeholder_header(values: &DemoValues, code: &str) -> String {
 pub fn ImageListPage() -> Element {
     let theme = use_theme();
     let defaults = &theme.image_list;
+    let selected = use_signal(|| [false; 6]);
 
     rsx! {
         DocPage {
@@ -392,7 +401,7 @@ pub fn ImageListPage() -> Element {
                             (_, "16:9") => Input::Value(16.0 / 9.0),
                             _ => Input::None,
                         },
-                        items: items(&values),
+                        items: items(&values, selected),
                     }
                 },
                 wrap: Wrap(placeholder_header),

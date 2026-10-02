@@ -378,11 +378,11 @@ pub fn MenuPage() -> Element {
                         .default("start")
                         .code(enum_code),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                        .default("md"),
+                        .default(theme.menu.size.as_str()),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                        .default("sm"),
-                    Control::switch("close_on_select").default("true"),
-                    Control::switch("loop_focus").default("true"),
+                        .default(theme.menu.radius.as_str()),
+                    Control::switch("close_on_select").default(theme.menu.close_on_select.to_string()),
+                    Control::switch("loop_focus").default(theme.menu.loop_focus.to_string()),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {

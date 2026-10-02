@@ -111,8 +111,9 @@ fn Demo() -> Element {
                     }
                 },
             }
-            if let Some(selected) = selected() {
-                Text { "Selected: " Code { source: "{selected}" } }
+            // Always mounted, so a screen reader hears the text it gains.
+            Text { role: "status",
+                if let Some(selected) = selected() { "Selected: " Code { source: "{selected}" } }
             }
         }
     }

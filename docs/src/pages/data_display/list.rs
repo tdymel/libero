@@ -4,6 +4,7 @@ use pictogram_icons_lucide as lucide;
 
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, List, ListItem, ListItemPart, Text};
+use libero::use_theme;
 
 /// The items, printed verbatim. Only the outer list carries `size`: nested indent comes from
 /// the parent's `& ul` rule.
@@ -22,6 +23,7 @@ const ICON_CODE: &str = r#"icon: rsx! { Icon { variant: "standard", color: "prim
 
 #[component]
 pub fn ListPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "List",
@@ -30,7 +32,7 @@ pub fn ListPage() -> Element {
             properties: vec![
                 props("List", vec![
                     prop("size", "Size")
-                        .default("md")
+                        .default(theme.list.size.as_str())
                         .doc("Item gap and nested-list indent, together."),
                     prop("ordered", "bool")
                         .default("false")

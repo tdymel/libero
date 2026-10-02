@@ -2,6 +2,7 @@ use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::SelectPart;
+use libero::use_theme;
 use libero::{
     components::{
         Code, FieldStatus, Flex, OptionItem, OptionList, Options, Select, SelectFilterArgs,
@@ -213,6 +214,7 @@ fn fruit_selection(fruit: Fruit) -> Element {
 
 #[component]
 pub fn SelectPage() -> Element {
+    let theme = use_theme();
     let mut value = use_signal(|| Some(Fruit::Banana));
 
     rsx! {
@@ -222,9 +224,9 @@ pub fn SelectPage() -> Element {
             markdown: "/md/select.md",
             properties: vec![
                 props("Select", vec![
-                    prop("size", "Size").default("md").doc("Height, padding and font size of the field and its rows."),
+                    prop("size", "Size").default(theme.select.size.as_str()).doc("Height, padding and font size of the field and its rows."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.select.radius.as_str())
                         .doc("Corner radius of the frame and the list."),
                     prop("value", "Option<T>")
                         .doc("The selected option. Pair it with `onchange`. `None` shows `placeholder`."),

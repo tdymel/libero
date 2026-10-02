@@ -131,7 +131,7 @@ const FIXED: [&str; 6] = [
 /// buttons and the readout are part of the example.
 fn wrap_selection(_: &DemoValues, code: &str) -> String {
     format!(
-        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\").max_width(\"320px\"),\n{EXPAND_BUTTONS}{}    if let Some(selected) = selected() {{\n        Text {{ \"Selected: \" Code {{ source: \"{{selected}}\" }} }}\n    }}\n}}",
+        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\").max_width(\"320px\"),\n{EXPAND_BUTTONS}{}    // Always mounted, so a screen reader hears the text it gains.\n    Text {{ role: \"status\",\n        if let Some(selected) = selected() {{ \"Selected: \" Code {{ source: \"{{selected}}\" }} }}\n    }}\n}}",
         indent(code)
     )
 }
@@ -162,7 +162,7 @@ pub fn TreePage() -> Element {
             properties: vec![
                 props("Tree", vec![
                     prop("size", "Size")
-                        .default("md")
+                        .default(theme.tree.size.as_str())
                         .doc("Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`."),
                     prop("guides", "bool")
                         .default("false")
@@ -328,8 +328,11 @@ pub fn TreePage() -> Element {
                                 }
                             },
                         }
-                        if let Some(selected) = selected() {
-                            Text { "Selected: " Code { source: "{selected}" } }
+                        Text { role: "status",
+                            if let Some(selected) = selected() {
+                                "Selected: "
+                                Code { source: "{selected}" }
+                            }
                         }
                     }
                 },

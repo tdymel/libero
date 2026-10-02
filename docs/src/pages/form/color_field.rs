@@ -5,6 +5,7 @@ use libero::components::FieldPart;
 use libero::components::{
     Code, ColorCode, ColorField, FieldStatus, Flex, SliderChangeEvent, Swatches, Text,
 };
+use libero::use_theme;
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
@@ -18,6 +19,7 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
 
 #[component]
 pub fn ColorFieldPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "ColorField",
@@ -42,22 +44,24 @@ pub fn ColorFieldPage() -> Element {
                     prop("with_picker", "bool")
                         .default("true")
                         .doc("`false` leaves only the swatches in the dropdown, and no dropdown without them."),
-                    prop("with_preview", "bool").default("true").doc("Shows the color as a swatch in the leading slot."),
+                    prop("with_preview", "bool").default(theme.color_field.with_preview.to_string()).doc("Shows the color as a swatch in the leading slot."),
                     prop("with_eye_dropper", "bool")
-                        .default("true")
+                        .default(theme.color_field.with_eye_dropper.to_string())
                         .doc("Adds a button in the trailing slot that picks a color off the screen. Shown only where the browser supports it, Chromium today."),
                     prop("disallow_input", "bool")
                         .default("false")
                         .doc("Makes the text read-only, so a color comes from the dropdown alone."),
                     prop("fix_on_blur", "bool")
-                        .default("true")
+                        .default(theme.color_field.fix_on_blur.to_string())
                         .doc("Text that does not parse goes back to the last valid color on blur. Off, it stays and shows `color.invalid` as an error. Either way the blur announces `color.invalid`."),
-                    prop("close_on_swatch_click", "bool").default("false").doc("Picking a swatch closes the dropdown."),
+                    prop("close_on_swatch_click", "bool")
+                        .default(theme.color_field.close_on_swatch_click.to_string())
+                        .doc("Picking a swatch closes the dropdown."),
                     prop("name", "FieldName<ColorCode>")
                         .doc("What the field posts as, the text in `format`. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),
-                    prop("size", "Size").default("md").doc("Control height, font size and the dropdown's picker."),
-                    prop("radius", "Size").default("sm").doc("Corner radius of the frame."),
+                    prop("size", "Size").default(theme.color_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
+                    prop("radius", "Size").default(theme.color_field.radius.as_str()).doc("Corner radius of the frame."),
                     prop("label", "Caption").doc("The field's caption."),
                     prop("description", "Caption").doc("Between the label and the control."),
                     prop("helper", "Caption").doc("Under the control."),

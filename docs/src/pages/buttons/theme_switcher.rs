@@ -1,5 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::use_theme;
 use libero::{
     components::{Code, Input, Text, ThemeSwitcher, ThemeSwitcherPart},
     theme::{ColorSchemeSetting, ThemeSet},
@@ -23,6 +24,7 @@ const LABEL: &str = r#"label: |to: ColorSchemeSetting| match to {
 
 #[component]
 pub fn ThemeSwitcherPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "ThemeSwitcher",
@@ -30,10 +32,10 @@ pub fn ThemeSwitcherPage() -> Element {
             markdown: "/md/theme_switcher.md",
             properties: vec![props("ThemeSwitcher", vec![
                 prop("variant", "Variant")
-                    .default("outlined")
+                    .default(theme.theme_switcher.variant.as_str())
                     .doc("Visual style, as on `ActionIcon`."),
                 prop("color", "ThemeAwareValue")
-                    .default("muted")
+                    .default(theme.theme_switcher.color.as_str())
                     .doc("Accent color. A theme color name or any CSS color."),
                 prop("size", "ThemeAwareValue")
                     .default("md")

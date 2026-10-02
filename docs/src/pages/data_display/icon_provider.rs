@@ -1,5 +1,7 @@
 use crate::Route;
-use crate::components::{Control, Demo, DemoValues, DocPage, PictogramNote, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, PictogramNote, Wrap, a11y, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     IconProvider, IconSet, IconSlot,
@@ -94,6 +96,47 @@ enum Fruit {
     Pear,
 }
 
+// `static`: the snippet scan would compile a `const` alone, without `Fruit`.
+static INPUTS: &str = r#"#[component]
+fn Inputs() -> Element {
+    let mut fruit = use_signal(|| Some(Fruit::Apple));
+    let mut ripe = use_signal(|| true);
+    let mut quantity = use_signal(|| Some(1));
+    let mut page = use_signal(|| 2);
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            Select { label: "Fruit", value: fruit(), onchange: move |next| fruit.set(next) }
+            Checkbox { label: "Ripe", checked: ripe(), onchange: move |next| ripe.set(next) }
+            PasswordField { label: "Password" }
+            NumberField { label: "Quantity", steppers: true, value: quantity(), onchange: move |next: Option<i32>| quantity.set(next) }
+            Pagination { total: 3, page: page(), onchange: move |next| page.set(next), aria_label: "Pages", with_edges: true }
+        }
+    }
+}"#;
+
+/// The provider, then the inputs whose glyphs it swaps.
+fn wrap(_: &DemoValues, code: &str) -> String {
+    format!("{code}\n\n{INPUTS}")
+}
+
+/// Controls drawing the swappable glyphs: a chevron, a check, an eye and the steppers.
+#[component]
+fn Inputs() -> Element {
+    let mut fruit = use_signal(|| Some(Fruit::Apple));
+    let mut ripe = use_signal(|| true);
+    let mut quantity = use_signal(|| Some(1));
+    let mut page = use_signal(|| 2);
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            Select { label: "Fruit", value: fruit(), onchange: move |next| fruit.set(next) }
+            Checkbox { label: "Ripe", checked: ripe(), onchange: move |next| ripe.set(next) }
+            PasswordField { label: "Password" }
+            NumberField { label: "Quantity", steppers: true, value: quantity(), onchange: move |next: Option<i32>| quantity.set(next) }
+            Pagination { total: 3, page: page(), onchange: move |next| page.set(next), aria_label: "Pages", with_edges: true }
+        }
+    }
+}
+
 #[component]
 pub fn IconProviderPage() -> Element {
     rsx! {
@@ -148,23 +191,16 @@ pub fn IconProviderPage() -> Element {
             Demo {
                 component: "IconProvider",
                 children_text: "",
-                children_code: "Flex {{ direction: \"column\", gap: \"md\",\n    Select {{ label: \"Fruit\", value: Fruit::Apple, onchange: |_| {{}} }}\n    Checkbox {{ label: \"Ripe\", checked: true, onchange: |_| {{}} }}\n    PasswordField {{ label: \"Password\" }}\n    NumberField {{ label: \"Quantity\", steppers: true, value: Some(1), onchange: |_: Option<i32>| {{}} }}\n    Pagination {{ total: 3, page: 2, onchange: |_| {{}}, aria_label: \"Pages\", with_edges: true }}\n}}",
+                children_code: "Inputs {{}}",
                 controls: vec![
                     Control::select("set", SETS).code(|_, values| vec![demo_code(values)]),
                     Control::select("chevron", CHEVRONS).code(|_, _| vec![]),
                     Control::select("check", CHECKS).code(|_, _| vec![]),
                     Control::select("eye", EYES).code(|_, _| vec![]),
                 ],
+                wrap: Wrap(wrap),
                 render: move |values: DemoValues| rsx! {
-                    IconProvider { icons: demo_icons(&values),
-                        Flex { direction: "column", gap: "md",
-                            Select { label: "Fruit", value: Fruit::Apple, onchange: |_| {} }
-                            Checkbox { label: "Ripe", checked: true, onchange: |_| {} }
-                            PasswordField { label: "Password" }
-                            NumberField { label: "Quantity", steppers: true, value: Some(1), onchange: |_: Option<i32>| {} }
-                            Pagination { total: 3, page: 2, onchange: |_| {}, aria_label: "Pages", with_edges: true }
-                        }
-                    }
+                    IconProvider { icons: demo_icons(&values), Inputs {} }
                 },
             }
         }

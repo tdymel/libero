@@ -4,6 +4,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::{Box, Button, Code, CodeBlock, Flex, Input, Skeleton, Text};
 use libero::sx::sx;
+use libero::use_theme;
 
 /// What the wrapper covers. A button in it, so the preview shows that covered
 /// content is out of the tab order, not only out of sight.
@@ -95,6 +96,7 @@ fn length(value: String, unset: &str) -> Input<libero::sx::ThemeAwareValue> {
 
 #[component]
 pub fn SkeletonPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Skeleton",
@@ -113,10 +115,10 @@ pub fn SkeletonPage() -> Element {
                     .default("false")
                     .doc("A circle as wide as `height`. Without `height`, as wide as the children."),
                 prop("radius", "Size")
-                    .default("sm")
+                    .default(theme.skeleton.radius.as_str())
                     .doc("Corner radius. Ignored with `circle`."),
                 prop("animate", "bool")
-                    .default("true")
+                    .default(theme.skeleton.animate.to_string())
                     .doc("Runs the pulse. With reduced motion it stops half-way."),
                 prop("children", "Element")
                     .doc("The real content, when the skeleton wraps it."),

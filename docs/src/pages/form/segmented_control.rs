@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 use libero::components::{
     Code, FieldStatus, Icon, Input, OptionLabel, OptionList, Options, SegmentedControl, Text,
 };
+use libero::use_theme;
 
 /// The enum is the strip, so the snippet has to show it.
 const ALIGNMENT_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -100,6 +101,7 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
 
 #[component]
 pub fn SegmentedControlPage() -> Element {
+    let theme = use_theme();
     let mut alignment = use_signal(|| Alignment::Left);
 
     rsx! {
@@ -127,14 +129,14 @@ pub fn SegmentedControlPage() -> Element {
                         .default("horizontal")
                         .doc("A row or a column."),
                     prop("variant", "Variant")
-                        .default("filled")
+                        .default(theme.segmented_control.variant.as_str())
                         .doc("The unselected look, shared by every segment: `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("Accent color. A theme color name or any CSS color."),
-                    prop("size", "Size").default("md").doc("Size of the segments and the captions."),
+                    prop("size", "Size").default(theme.button.size.as_str()).doc("Size of the segments and the captions."),
                     prop("radius", "Size")
-                        .default("md")
+                        .default(theme.button.radius.as_str())
                         .doc("Radius of the control's outer corners. Inner corners are square."),
                     prop("gap", "Size")
                         .doc("Space between the segments. Set, each segment gets its own border and radius."),

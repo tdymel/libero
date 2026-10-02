@@ -2,6 +2,7 @@ use super::dropdown_parts::{CASCADER_DROPDOWN, list_dropdown_parts};
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::CascaderPart;
+use libero::use_theme;
 use libero::{
     components::{Cascader, CascaderNodeArgs, CascaderOption, Code, FieldStatus, Flex, Text},
     sx::sx,
@@ -126,6 +127,7 @@ fn wrap_value(_: &DemoValues, code: &str) -> String {
 
 #[component]
 pub fn CascaderPage() -> Element {
+    let theme = use_theme();
     let mut chosen = use_signal(|| Some("tea".to_string()));
 
     rsx! {
@@ -135,8 +137,8 @@ pub fn CascaderPage() -> Element {
             markdown: "/md/cascader.md",
             properties: vec![
                 props("Cascader", vec![
-                    prop("size", "Size").default("md").doc("Height, padding and font size of the frame and its rows."),
-                    prop("radius", "Size").default("sm").doc("Corner radius of the frame and the list."),
+                    prop("size", "Size").default(theme.cascader.size.as_str()).doc("Height, padding and font size of the frame and its rows."),
+                    prop("radius", "Size").default(theme.cascader.radius.as_str()).doc("Corner radius of the frame and the list."),
                     prop("data", "Vec<CascaderOption<T>>")
                         .doc("The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree."),
                     prop("value", "Option<T>")
@@ -166,7 +168,7 @@ pub fn CascaderPage() -> Element {
                         .default("label")
                         .doc("Draws one row's content. The highlight, chevron and click stay the component's."),
                     prop("column_width", "String")
-                        .default("220px")
+                        .default(theme.cascader.column_width)
                         .doc("Width and minimum width of one column. A trigger wider than the open columns shares the rest among them. `\"max-content\"` fits the longest row. On a narrow screen, the minimum width of the one level shown."),
                     prop("name", "FieldName<Option<T>>")
                         .doc("Posts the selected value's `Options::value()` in a hidden input of that name. A path such as `Listing::FIELDS.category()` also binds the selection to the surrounding `Form`'s value when there is no `onchange`."),

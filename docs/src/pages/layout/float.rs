@@ -30,13 +30,13 @@ pub fn FloatPage() -> Element {
             markdown: "/md/float.md",
             properties: vec![props("Float", vec![
                 prop("placement", "Placement")
-                    .default("center-center")
+                    .default(theme.float.placement.as_str())
                     .doc("The corner or edge to anchor to, such as `\"top-start\"`."),
                 prop("offset_x", "ThemeAwareValue")
-                    .default("0px")
+                    .default(theme.float.offset_x)
                     .doc("Shift to the right, a spacing step or a CSS length. A negative step like `\"-md\"` shifts left."),
                 prop("offset_y", "ThemeAwareValue")
-                    .default("0px")
+                    .default(theme.float.offset_y)
                     .doc("Shift down, a spacing step or a CSS length. A negative step shifts up."),
                 prop("fixed", "bool")
                     .default("false")

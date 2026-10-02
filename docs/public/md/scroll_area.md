@@ -61,7 +61,9 @@ fn Demo() -> Element {
                     }
                 }
             }
-            Text { size: "sm", "{readout(position())}, last edge: {edge()}" }
+            Text { size: "sm", "{readout(position())}" }
+            // A reached edge is a result, so a screen reader hears it.
+            Text { size: "sm", role: "status", "Last edge: {edge()}" }
             Flex {
                 gap: "sm",
                 Button { size: "sm", variant: "outlined", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), "Scroll to top" }

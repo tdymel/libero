@@ -149,7 +149,10 @@ pub(crate) fn AppShell() -> Element {
                     sx: sx()
                         .display("flex")
                         .align_items("center")
-                        .gap("md")
+                        // `md` from `Sm` up; at 320px the name ran 9px past its box (todo 1885),
+                        // so below `Sm` the gap and the logo shrink.
+                        .gap("xs")
+                        .breakpoint(Size::Sm, sx().gap("md"))
                         .color("inherit")
                         .min_width("0"),
                     // Inline, not `src`: Android's WebView draws the mask of `src` as a solid box.
@@ -158,7 +161,7 @@ pub(crate) fn AppShell() -> Element {
                         color: "primary",
                         // Wide, and the glyph nearly filling it: at icon size the bars blur together.
                         sx: sx()
-                            .width("44px")
+                            .width("40px")
                             .breakpoint(Size::Sm, sx().width("72px"))
                             .min_width("0")
                             .height("44px")

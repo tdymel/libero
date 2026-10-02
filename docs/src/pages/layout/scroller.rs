@@ -50,8 +50,8 @@ fn wrap_edges(values: &DemoValues, source: &str) -> String {
         true => (
             "let strip = use_scroller();\n",
             "        Flex { direction: \"row\", gap: \"sm\",\n            \
-             Button { variant: \"outlined\", onclick: move |_| strip.step_back(), \"Back\" }\n            \
-             Button { variant: \"outlined\", onclick: move |_| strip.step_forward(), \"Forward\" }\n        \
+             Button { variant: \"outlined\", onclick: move |_| strip.step_back(), \"Scroll tags back\" }\n            \
+             Button { variant: \"outlined\", onclick: move |_| strip.step_forward(), \"Scroll tags forward\" }\n        \
              }\n",
         ),
         false => ("", ""),
@@ -60,7 +60,7 @@ fn wrap_edges(values: &DemoValues, source: &str) -> String {
         "let mut edges = use_signal(|| None::<ScrollerEdges>);\n{handle}\n\
          rsx! {{\n    \
          Flex {{ direction: \"column\", gap: \"sm\", sx: sx().width(\"100%\"),\n\
-         {}{buttons}        Text {{ size: \"sm\",\n            \
+         {}{buttons}        Text {{ size: \"sm\", role: \"status\",\n            \
          match edges() {{\n                \
          Some(ScrollerEdges {{ at_start: true, at_end: true }}) => \"Everything fits\",\n                \
          Some(ScrollerEdges {{ at_end: false, .. }}) => \"More after this\",\n                \
@@ -117,16 +117,16 @@ fn ScrollerDemo(values: DemoValues) -> Element {
                     Button {
                         variant: "outlined",
                         onclick: move |_| strip.step_back(),
-                        "Back"
+                        "Scroll tags back"
                     }
                     Button {
                         variant: "outlined",
                         onclick: move |_| strip.step_forward(),
-                        "Forward"
+                        "Scroll tags forward"
                     }
                 }
             }
-            Text { size: "sm",
+            Text { size: "sm", role: "status",
                 match edges() {
                     Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
                     Some(ScrollerEdges { at_end: false, .. }) => "More after this",

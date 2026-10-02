@@ -2,9 +2,11 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, FieldStatus, Flex, PinField, Text};
+use libero::use_theme;
 
 #[component]
 pub fn PinFieldPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "PinField",
@@ -12,10 +14,10 @@ pub fn PinFieldPage() -> Element {
             markdown: "/md/pin_field.md",
             properties: vec![
                 props("PinField", vec![
-                    prop("size", "Size").default("md").doc("The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size."),
-                    prop("radius", "Size").default("sm").doc("Corner radius of each cell, independent of `size`."),
-                    prop("length", "usize").default("4").doc("How many cells, clamped to 1 through 32."),
-                    prop("kind", "PinKind").default("numeric").doc("`numeric` takes the digits 0-9, `alphanumeric` the ASCII letters and digits. Any other character, an accented letter too, is ignored as it is typed."),
+                    prop("size", "Size").default(theme.pin_field.size.as_str()).doc("The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size."),
+                    prop("radius", "Size").default(theme.pin_field.radius.as_str()).doc("Corner radius of each cell, independent of `size`."),
+                    prop("length", "usize").default(theme.pin_field.length.to_string()).doc("How many cells, clamped to 1 through 32."),
+                    prop("kind", "PinKind").default(theme.pin_field.kind.as_str()).doc("`numeric` takes the digits 0-9, `alphanumeric` the ASCII letters and digits. Any other character, an accented letter too, is ignored as it is typed."),
                     prop("value", "Option<String>")
                         .doc("The pin so far, one character per filled cell. Leave it out and the field keeps its own pin."),
                     prop("oninput", "EventHandler<String>")

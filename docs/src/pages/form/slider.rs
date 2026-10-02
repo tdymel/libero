@@ -262,7 +262,7 @@ pub fn SliderPage() -> Element {
             markdown: "/md/slider.md",
             properties: vec![
                 props("Slider", vec![
-                    prop("size", "Size").default("md").doc("Track, thumb and font size."),
+                    prop("size", "Size").default(theme.slider.size.as_str()).doc("Track, thumb and font size."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("Accent color. A theme color name or any CSS color."),

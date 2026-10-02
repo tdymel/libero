@@ -1,6 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, DataList, DataListItem, Text};
+use libero::use_theme;
 
 /// The pairs, printed verbatim. The `for` loop shows several descriptions per term.
 // snippet: let phones = ["+49 30 1234567"];
@@ -19,6 +20,7 @@ DataListItem {
 
 #[component]
 pub fn DataListPage() -> Element {
+    let theme = use_theme();
     let phones = vec!["555-1234", "555-5678"];
 
     rsx! {
@@ -32,7 +34,7 @@ pub fn DataListPage() -> Element {
                         .default("vertical")
                         .doc("`horizontal` puts each description beside its term, `vertical` below it."),
                     prop("gap", "Size")
-                        .default("md")
+                        .default(theme.data_list.size.as_str())
                         .doc("Row gap. Other values go through `sx`."),
                     prop("children", "Element")
                         .default("required")

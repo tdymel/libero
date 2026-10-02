@@ -2,6 +2,7 @@ use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::SelectPart;
+use libero::use_theme;
 use libero::{
     components::{
         ActionIcon, Chip, FieldStatus, MultiSelect, OptionItem, OptionList, Options,
@@ -269,6 +270,7 @@ fn topping_selection(words: &'static Localization, s: SelectionArgs<Topping>) ->
 
 #[component]
 pub fn MultiSelectPage() -> Element {
+    let theme = use_theme();
     let mut value = use_signal(|| vec![Topping::Cheese, Topping::Olives]);
     let words = use_localization();
 
@@ -279,9 +281,9 @@ pub fn MultiSelectPage() -> Element {
             markdown: "/md/multi_select.md",
             properties: vec![
                 props("MultiSelect", vec![
-                    prop("size", "Size").default("md").doc("Height, padding and font size of the field and its rows."),
+                    prop("size", "Size").default(theme.multi_select.size.as_str()).doc("Height, padding and font size of the field and its rows."),
                     prop("radius", "Size")
-                        .default("sm")
+                        .default(theme.multi_select.radius.as_str())
                         .doc("Corner radius of the frame and the list."),
                     prop("value", "Vec<T>")
                         .doc("The selection, in the order it was picked. Pair it with `onchange`. Empty shows `placeholder`."),

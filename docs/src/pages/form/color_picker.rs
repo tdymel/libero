@@ -6,6 +6,7 @@ use libero::components::{
     AlphaSlider, Code, ColorCode, ColorPicker, ColorSwatch, Flex, HueSlider, SliderChangeEvent,
     Swatches, Text,
 };
+use libero::use_theme;
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
@@ -81,6 +82,7 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
 
 #[component]
 pub fn ColorPickerPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "ColorPicker",
@@ -88,8 +90,8 @@ pub fn ColorPickerPage() -> Element {
             markdown: "/md/color_picker.md",
             properties: vec![
                 props("ColorPicker", vec![
-                    prop("size", "Size").default("md").doc("Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker."),
-                    prop("radius", "Size").default("xxl").doc("Corner radius of the swatches and the preview. `xs` makes them square."),
+                    prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker."),
+                    prop("radius", "Size").default(theme.color_picker.radius.as_str()).doc("Corner radius of the swatches and the preview. `xs` makes them square."),
                     prop("value", "ColorCode")
                         .doc("The color. Pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<ColorCode>>")
@@ -124,7 +126,7 @@ pub fn ColorPickerPage() -> Element {
                 props("HueSlider", vec![
                     prop("value", "f64").doc("The hue in degrees, 0 to 360. Pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent>").doc("Every new hue."),
-                    prop("size", "Size").default("md").doc("Track height and thumb."),
+                    prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Track height and thumb."),
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the thumb out of the tab order."),
                     prop("aria_label", "String").doc("Names the thumb. Unset, the thumb has no name: unlike `ColorPicker`, the standalone slider falls back to no localization."),
@@ -137,7 +139,7 @@ pub fn ColorPickerPage() -> Element {
                     prop("value", "f64").doc("The alpha, 0.0 to 1.0. Pair it with `oninput`."),
                     prop("color", "ColorCode").doc("The color the track fades in. Its own alpha is ignored."),
                     prop("oninput", "EventHandler<SliderChangeEvent>").doc("Every new alpha."),
-                    prop("size", "Size").default("md").doc("Track height and thumb."),
+                    prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Track height and thumb."),
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the thumb out of the tab order."),
                     prop("aria_label", "String").doc("Names the thumb. Unset, the thumb has no name: unlike `ColorPicker`, the standalone slider falls back to no localization."),
@@ -148,8 +150,8 @@ pub fn ColorPickerPage() -> Element {
                 ]),
                 props("ColorSwatch", vec![
                     prop("color", "ColorCode").doc("The color. A translucent one shows a checkerboard through."),
-                    prop("size", "Size").default("md").doc("Diameter."),
-                    prop("radius", "Size").default("xxl").doc("Corner radius. Round by default."),
+                    prop("size", "Size").default(theme.color_swatch.size.as_str()).doc("Diameter."),
+                    prop("radius", "Size").default(theme.color_swatch.radius.as_str()).doc("Corner radius. Round by default."),
                     prop("with_shadow", "bool").default("true").doc("A faint inner ring, so a color close to the background keeps an edge."),
                     prop("onclick", "EventHandler<MouseEvent>").doc("Makes the swatch a `<button>`."),
                     prop("children", "Element").doc("Drawn on the color, such as a check mark, in black or white, whichever reads."),

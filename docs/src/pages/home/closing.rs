@@ -33,7 +33,7 @@ pub fn Closing() -> Element {
                         CtaStack {
                             Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center", sx: cta_row_sx(),
                                 Button { to: Route::GettingStarted {}, size: "lg", "Get started" }
-                                Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "primary.8", "Browse components" }
+                                Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "primary.9", "Browse components" }
                             }
                             CodeBlock {
                                 // copy: install

@@ -179,78 +179,29 @@ fn Header(label: &'static str, count: usize) -> Element {
     }
 }
 
-/// The board in the code tab: the demo's cards, on less sample data.
+/// The board in the code tab: the demo's wiring, with a minimal card.
 fn code(values: &DemoValues, _: &str) -> String {
     let buttons = match values.str("move_buttons").as_str() {
         "false" => "\n        move_buttons: false,",
         _ => "",
     };
     format!(
-        r#"#[derive(Clone, PartialEq)]
-struct Issue {{
-    key: &'static str,
-    title: &'static str,
-    labels: Vec<&'static str>,
-    points: u8,
-    assignee: &'static str,
-    initials: &'static str,
-}}
-
-#[component]
-fn IssueCard(issue: Issue) -> Element {{
-    rsx! {{
-        Flex {{ gap: "xs",
-            Text {{ size: "sm", "{{issue.title}}" }}
-            Flex {{ direction: "row", gap: "4px",
-                for label in issue.labels.clone() {{
-                    Badge {{ key: "{{label}}", variant: "outlined", color: "secondary", size: "xs", "{{label}}" }}
-                }}
-            }}
-            Flex {{ direction: "row", justify: "space-between", gap: "xs", wrap: false,
-                Flex {{ direction: "row", gap: "4px", wrap: false,
-                    Icon {{ svg: pictogram_icons_lucide::bookmark::outlined, color: "success", variant: "standard", size: "sm", role: "img", aria_label: "Story" }}
-                    Text {{ component: "span", size: "xs", "{{issue.key}}" }}
-                }}
-                Flex {{ direction: "row", gap: "4px", wrap: false,
-                    Icon {{ svg: pictogram_icons_lucide::arrow_up::outlined, color: "warning", variant: "standard", size: "sm", role: "img", aria_label: "High priority" }}
-                    Badge {{ variant: "tonal", color: "muted", size: "sm", circle: true,
-                        "{{issue.points}}"
-                        VisuallyHidden {{ " story points" }}
-                    }}
-                    Avatar {{ name: issue.assignee, initials: issue.initials, size: "xs" }}
-                }}
-            }}
-        }}
-    }}
-}}
-
-let columns = ["To do", "In progress", "Done"];
-let issue = |key, title, points| Issue {{
-    key, title, points, labels: vec!["kanban"], assignee: "Ada Lovelace", initials: "AL",
-}};
-let mut issues = use_signal(move || vec![
-    vec![issue("LIB-142", "Drag cards between columns", 5)],
-    vec![issue("LIB-139", "Touch drag on Android", 8)],
+        r#"let columns = ["To do", "In progress", "Done"];
+let mut cards = use_signal(|| vec![
+    vec!["Drag cards between columns", "Document the column states"],
+    vec!["Touch drag on Android"],
     vec![],
 ]);
 
 rsx! {{
     Kanban {{{buttons}
-        onmove: move |step: KanbanMove| step.apply(&mut issues.write()),
+        onmove: move |step: KanbanMove| step.apply(&mut cards.write()),
         for (column, label) in columns.into_iter().enumerate() {{
             KanbanColumn {{ key: "{{label}}", index: column, label,
-                header: rsx! {{
-                    Flex {{ direction: "row", justify: "space-between",
-                        Text {{ component: "span", size: "sm", "{{label}}" }}
-                        Badge {{ variant: "tonal", color: "muted", size: "sm", circle: true,
-                            "{{issues()[column].len()}}"
-                        }}
-                    }}
-                }},
-                for (index, issue) in issues()[column].clone().into_iter().enumerate() {{
-                    KanbanCard {{ key: "{{issue.key}}", index,
-                        label: format!("{{}} {{}}", issue.key, issue.title),
-                        IssueCard {{ issue }}
+                for (index, title) in cards()[column].clone().into_iter().enumerate() {{
+                    KanbanCard {{ key: "{{title}}", index, label: title,
+                        // Any content: the demo's issue card is Text, Badge, Icon and Avatar.
+                        Text {{ size: "sm", "{{title}}" }}
                     }}
                 }}
             }}

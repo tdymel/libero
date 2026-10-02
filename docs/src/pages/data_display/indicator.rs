@@ -46,16 +46,16 @@ pub fn IndicatorPage() -> Element {
                     .default("None")
                     .doc("The count. `None` is the bare dot. A number, so `max` can cap it."),
                 prop("max", "Option<u32>")
-                    .default("99")
+                    .default(theme.indicator.max.to_string())
                     .doc("Above it, the label renders as `{max}+`. Falls back to the theme's cap."),
                 prop("size", "Size")
-                    .default("md")
+                    .default(theme.indicator.size.as_str())
                     .doc("The dot's diameter, and the height of a labelled one, from 6px to 22px."),
                 prop("color", "ThemeAwareValue")
-                    .default("error")
+                    .default(theme.indicator.color.as_str())
                     .doc("The fill, a theme color name or a CSS color. A theme color also sets a label color that reads on it."),
                 prop("radius", "Size")
-                    .default("xxl")
+                    .default(theme.indicator.radius.as_str())
                     .doc("A step on the indicator's own radius scale, `1px` to `6px`. The default `xxl` is round at every size."),
                 prop("with_border", "bool")
                     .default("false")

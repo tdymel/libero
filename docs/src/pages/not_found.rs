@@ -10,6 +10,7 @@ pub fn NotFound(segments: Vec<String>) -> Element {
     rsx! {
         DocPage {
             title: "Page not found",
+            tldr: false,
             lead: rsx! {
                 Text {
                     "There is no page at "

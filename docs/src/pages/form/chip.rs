@@ -2,9 +2,11 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::ChipPart;
 use libero::components::{Chip, Code, Input, Text};
+use libero::use_theme;
 
 #[component]
 pub fn ChipPage() -> Element {
+    let theme = use_theme();
     rsx! {
         DocPage {
             title: "Chip",
@@ -15,11 +17,11 @@ pub fn ChipPage() -> Element {
                     .default("primary")
                     .doc("Accent color. A theme color name or any CSS color."),
                 prop("variant", "Variant")
-                    .default("filled")
+                    .default(theme.chip.variant.as_str())
                     .doc("The unselected look. A checked chip is always a tonal container."),
-                prop("size", "Size").default("md").doc("Height, padding and font size."),
+                prop("size", "Size").default(theme.chip.size.as_str()).doc("Height, padding and font size."),
                 prop("radius", "Size")
-                    .default("xl")
+                    .default(theme.chip.radius.as_str())
                     .doc("Corner radius."),
                 prop("checked", "bool")
                     .doc("Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it."),

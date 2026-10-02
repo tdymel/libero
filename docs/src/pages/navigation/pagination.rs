@@ -37,13 +37,13 @@ pub fn PaginationPage() -> Element {
                     .doc("Asks for a new page. Without it the page never changes, and the component warns."),
                 prop("aria_label", "String").default("required")
                     .doc("Names the `<nav>` landmark, so two paginations on one page can be told apart."),
-                prop("siblings", "u8").default("1")
+                prop("siblings", "u8").default(theme.pagination.siblings.to_string())
                     .doc("Pages on each side of the current one. The row is always `2·siblings + 2·boundaries + 3` items wide, and an ellipsis never stands for a single page."),
-                prop("boundaries", "u8").default("1")
+                prop("boundaries", "u8").default(theme.pagination.boundaries.to_string())
                     .doc("Pages pinned at each end. `0` counts as 1."),
-                prop("size", "Size").default("md").doc("Control box and font size."),
-                prop("radius", "Size").default("sm").doc("Corner radius, independent of `size`."),
-                prop("color", "ThemeAwareValue").default("primary")
+                prop("size", "Size").default(theme.pagination.size.as_str()).doc("Control box and font size."),
+                prop("radius", "Size").default(theme.pagination.radius.as_str()).doc("Corner radius, independent of `size`."),
+                prop("color", "ThemeAwareValue").default(theme.pagination.color.as_str())
                     .doc("Fill of the current page. Its text takes the matching `-contrast` color."),
                 prop("disabled", "bool").default("false").doc("Disables every control."),
                 prop("with_controls", "bool").default("true").doc("Shows the previous and next controls."),

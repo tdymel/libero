@@ -74,7 +74,7 @@ let mut edge = use_signal(|| "none");
 /// Prints the sized parent a scroll area fills, and the readout and jump buttons it wires to.
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
-        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}}, last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
+        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}}\" }}\n        // A reached edge is a result, so a screen reader hears it.\n        Text {{ size: \"sm\", role: \"status\", \"Last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
         indent(&indent(&indent(code)))
     )
 }
@@ -93,13 +93,13 @@ pub fn ScrollAreaPage() -> Element {
             markdown: "/md/scroll_area.md",
             properties: vec![props("ScrollArea", vec![
                 prop("scrollbars", "ScrollAxis")
-                    .default("vertical")
+                    .default(theme.scroll_area.scrollbars.as_str())
                     .doc("Which axes scroll and show a scrollbar. `none` clips the overflow."),
                 prop("scrollbar_visibility", "ScrollbarVisibility")
-                    .default("always")
+                    .default(theme.scroll_area.visibility.as_str())
                     .doc("When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now. In a browser or WebView, `always` draws its own track and thumb, so the bar stays where the system overlays and fades its scrollbars; drag the thumb or press the track. The other values keep the native bar."),
                 prop("scrollbar_size", "ScrollbarSize")
-                    .default("thin")
+                    .default(theme.scroll_area.size.as_str())
                     .doc("`thin` or `auto`: the CSS `scrollbar-width`, or 8px and 12px for the bar `always` draws."),
                 prop("scrollbar_color", "ThemeAwareValue")
                     .doc("Thumb color. The track stays transparent."),
@@ -135,7 +135,7 @@ pub fn ScrollAreaPage() -> Element {
                 prop("item_size", "f64")
                     .doc("A row's height plus the gap below it, in px. Unset, it is measured from the first rows. Every row must have the same height."),
                 prop("overscan", "usize")
-                    .default("4")
+                    .default(theme.scroll_area.overscan.to_string())
                     .doc("Rows rendered beyond each edge, so a fast scroll has something to show."),
                 prop("keep_rendered", "usize")
                     .doc("An index rendered even out of view, e.g. the row holding focus, so scrolling it away keeps the focus."),
@@ -242,7 +242,9 @@ pub fn ScrollAreaPage() -> Element {
                                 }
                             }
                         }
-                        Text { size: "sm", "{readout(position())}, last edge: {edge()}" }
+                        // The position changes per scroll and stays silent; a reached edge is a result.
+                        Text { size: "sm", "{readout(position())}" }
+                        Text { size: "sm", role: "status", "Last edge: {edge()}" }
                         Flex {
                             gap: "sm",
                             Button {
