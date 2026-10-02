@@ -76,34 +76,24 @@ const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rs
         // The chip is the caller's, remove control included. The keys stay
         // the control's either way.
         trailing: rsx! {
-            // Keeps focus in the field, and the click off the field.
-            span { onmousedown: move |event| event.prevent_default(),
-                onclick: move |event| event.stop_propagation(),
-                ActionIcon {
-                    // `words` is `use_localization()`, read in the component.
-                    aria_label: fill(words.common.remove, &[("label", &s.value.label())]),
-                    size: "16px",
-                    // A `<button>` inherits no colour of its own.
-                    sx: sx().color("inherit"),
-                    tabindex: "-1",
-                    onclick: move |_| s.remove.call(()),
-                    "x"
+            // A disabled or read-only field's chip has no remove control.
+            if !s.disabled && !s.readonly {
+                // Keeps focus in the field, and the click off the field.
+                span { onmousedown: move |event| event.prevent_default(),
+                    onclick: move |event| event.stop_propagation(),
+                    ActionIcon {
+                        // `words` is `use_localization()`, read in the component.
+                        aria_label: fill(words.common.remove, &[("label", &s.value.label())]),
+                        size: "16px",
+                        // A `<button>` inherits no colour of its own.
+                        sx: sx().color("inherit"),
+                        tabindex: "-1",
+                        onclick: move |_| s.remove.call(()),
+                        "x"
+                    }
                 }
             }
         },
-        span { "aria-hidden": "true", "{s.value.emoji()} " }
-        "{s.value.label()}"
-    }
-}"#;
-
-/// The args carry no `disabled`, so a disabled field's chip drops the x itself.
-// snippet: after TOPPING_ENUM
-// snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
-// snippet: let mut value = use_signal(Vec::<Topping>::new);
-// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
-const CUSTOM_SELECTION_DISABLED: &str = r#"selection: move |s: SelectionArgs<Topping>| rsx! {
-    // The field is disabled, so the chip has no remove control.
-    Chip { size: "xs", variant: "outlined",
         span { "aria-hidden": "true", "{s.value.emoji()} " }
         "{s.value.label()}"
     }
@@ -244,14 +234,10 @@ fn topping_row(o: SelectOptionArgs<Topping>) -> Element {
 
 /// The chip's inside is the caller's, the remove control with it - `remove` on
 /// the args is the wiring. The keyboard stays `MultiSelect`'s either way.
-fn topping_selection(
-    words: &'static Localization,
-    s: SelectionArgs<Topping>,
-    disabled: bool,
-) -> Element {
+fn topping_selection(words: &'static Localization, s: SelectionArgs<Topping>) -> Element {
     let label = s.value.label();
     let remove_label = fill(words.common.remove, &[("label", &label)]);
-    if disabled {
+    if s.disabled || s.readonly {
         return rsx! {
             Chip { size: "xs", variant: "outlined",
                 span { "aria-hidden": "true", "{s.value.emoji()} " }
@@ -313,7 +299,7 @@ pub fn MultiSelectPage() -> Element {
                         .doc("Draws one row's content. `selected` on the args is there for a checkmark. Hide a decorative glyph such as an emoji or the checkmark with `aria-hidden`, or a screen reader reads it with the label."),
                     prop("selection", "Callback<SelectionArgs<T>, Element>")
                         .default("Chip with an x")
-                        .doc("Draws one selected value in the trigger, remove control included. `remove` on the args drops that value. The args carry no `disabled` or `readonly`, so leave the remove control out when you set either."),
+                        .doc("Draws one selected value in the trigger, remove control included. `remove` on the args drops that value; `disabled` and `readonly` say the field refuses it, so leave the remove control out then."),
                     prop("placeholder", "String").doc("Shown while `value` is empty."),
                     prop("clearable", "bool")
                         .default("false")
@@ -366,6 +352,8 @@ pub fn MultiSelectPage() -> Element {
                 props("SelectionArgs", vec![
                     prop("value", "T").doc("The value this chip draws."),
                     prop("remove", "Callback<()>").doc("Drops this value, the same edit as picking its row again."),
+                    prop("disabled", "bool").doc("The field is disabled: `remove` does nothing, so draw no remove control."),
+                    prop("readonly", "bool").doc("The field is read-only: `remove` does nothing, so draw no remove control."),
                 ])
                 .without_base_props(),
             ],
@@ -445,11 +433,7 @@ pub fn MultiSelectPage() -> Element {
                     Control::switch("custom").code(|_, values| match custom(values) {
                         true => vec![
                             CUSTOM_OPTION.to_string(),
-                            match values.str("disabled") == "true" {
-                                true => CUSTOM_SELECTION_DISABLED,
-                                false => CUSTOM_SELECTION,
-                            }
-                            .to_string(),
+                            CUSTOM_SELECTION.to_string(),
                         ],
                         false => vec![],
                     }),
@@ -505,10 +489,8 @@ pub fn MultiSelectPage() -> Element {
                         },
                         options: topping_options(&values),
                         option: custom(&values).then(|| Callback::new(topping_row)),
-                        selection: custom(&values).then(|| {
-                            let disabled = values.str("disabled") == "true";
-                            Callback::new(move |s| topping_selection(words, s, disabled))
-                        }),
+                        selection: custom(&values)
+                            .then(|| Callback::new(move |s| topping_selection(words, s))),
                         searchable: (values.str("searchable") == "true").then_some(true),
                         search_placeholder: "Search toppings",
                         filter: filtering(&values).then(|| Callback::new(topping_filter)),

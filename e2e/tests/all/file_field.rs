@@ -104,22 +104,26 @@ fn the_dropzone_border_parts_at_3_to_1() {
 
 /// Real files on disk, so the drop carries a `FileList` the page can read. A directory per
 /// test, removed with it: parallel tests rewrote one shared pair (todo 1830).
-struct OnDisk(std::path::PathBuf);
+struct OnDisk(std::path::PathBuf, &'static [&'static str]);
 
 impl OnDisk {
     fn new() -> Self {
+        Self::with(&["alpha.txt", "beta.txt"])
+    }
+
+    fn with(names: &'static [&'static str]) -> Self {
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let n = NEXT.fetch_add(1, Ordering::Relaxed);
         let dir = std::env::temp_dir().join(format!("e2e-file-field-{}-{n}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        for name in ["alpha.txt", "beta.txt"] {
+        for name in names {
             std::fs::write(dir.join(name), format!("{name} contents")).unwrap();
         }
-        Self(dir)
+        Self(dir, names)
     }
 
     fn paths(&self) -> Vec<String> {
-        ["alpha.txt", "beta.txt"]
+        self.1
             .iter()
             .map(|name| self.0.join(name).to_string_lossy().into_owned())
             .collect()
@@ -490,7 +494,7 @@ fn an_empty_control_fills_its_frame_and_takes_a_drop() {
             "the control is {control}px tall in a {frame}px frame"
         );
 
-        // One file: a single-file field warns when it drops the second.
+        // One file: a single-file field refuses the second.
         let disk = OnDisk::new();
         drop_files(page, "#bare", disk.paths()[..1].to_vec()).await;
         wait::for_js_true(
@@ -546,6 +550,67 @@ fn a_drop_on_the_frame_padding_is_taken() {
             .console
             .assert_clean("dropping on the frame padding")
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1819: a drop the field refuses is said, not dropped silently: a PDF on an
+/// `image/*` field, then a second file on a single-file one.
+#[test]
+fn a_refused_drop_is_announced() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/reject", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#photo").await.unwrap();
+
+        let pdf = OnDisk::with(&["note.pdf"]);
+        drop_files(page, "#photo", pdf.paths()).await;
+        wait::for_js_true(
+            page,
+            &format!(
+                "{STATUS}.includes('note.pdf') && {STATUS}.includes('not an accepted file type')"
+            ),
+            "the live region to name the refused PDF",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.getElementById('rejected').textContent === 'note.pdf:Type'",
+            "onreject to get the PDF",
+        )
+        .await
+        .unwrap();
+        assert!(
+            !page
+                .evaluate("document.querySelector('#photo').closest('[role=group]').textContent.includes('note.pdf')")
+                .await
+                .unwrap()
+                .into_value::<bool>()
+                .unwrap(),
+            "the refused PDF became a chip"
+        );
+
+        let two = OnDisk::with(&["one.png", "two.png"]);
+        drop_files(page, "#photo", two.paths()).await;
+        wait::for_js_true(
+            page,
+            &format!("{STATUS}.includes('one.png') && {STATUS}.includes('two.png') && {STATUS}.includes('takes one file')"),
+            "the live region to name the kept and the refused file",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.getElementById('rejected').textContent === 'two.png:TooMany'",
+            "onreject to get the second file",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("refused drops").unwrap();
         fixture.close().await.unwrap();
     });
 }

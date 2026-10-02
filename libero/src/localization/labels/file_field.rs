@@ -36,6 +36,10 @@ pub struct FileFieldLabels {
     pub size_units: [&'static str; 5],
     /// The picture's alt text in a `crop` dialog; `{name}` is the file's name.
     pub crop_image: &'static str,
+    /// Said when a pick or drop holds a type `accept` excludes; `{names}` lists them.
+    pub rejected_type: &'static str,
+    /// Said when a single-file field gets more than one; `{names}` lists the rest.
+    pub rejected_many: &'static str,
 }
 
 /// `FileFieldLabels::ENGLISH.any_of`. A named fn, so every copy compares equal.
@@ -63,6 +67,8 @@ impl FileFieldLabels {
         any_of: english_any_of,
         size_units: ["B", "kB", "MB", "GB", "TB"],
         crop_image: "Picture to crop: {name}",
+        rejected_type: "Not added, not an accepted file type: {names}",
+        rejected_many: "Not added, the field takes one file: {names}",
     };
 
     pub const GERMAN: Self = Self {
@@ -73,5 +79,7 @@ impl FileFieldLabels {
         any_of: german_any_of,
         size_units: ["B", "kB", "MB", "GB", "TB"],
         crop_image: "Zu beschneidendes Bild: {name}",
+        rejected_type: "Nicht hinzugefügt, kein erlaubter Dateityp: {names}",
+        rejected_many: "Nicht hinzugefügt, das Feld nimmt nur eine Datei: {names}",
     };
 }

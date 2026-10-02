@@ -84,26 +84,47 @@ struct Announced {
     message: Option<String>,
     /// Bumped per message: the same text rewritten fires nothing.
     count: u64,
+    /// The number of the last note said.
+    noted: u64,
 }
 
 /// A polite live region saying which chips a list gained or lost, by diffing
 /// labels. Always mounted: a region inserted with its text is not announced.
 pub(crate) fn use_chip_announcer(labels: Vec<String>) -> Element {
+    use_noting_chip_announcer(labels, None)
+}
+
+/// The same, also saying `note` each time its number changes, after the chips' change.
+pub(crate) fn use_noting_chip_announcer(
+    labels: Vec<String>,
+    note: Option<(u64, String)>,
+) -> Element {
     let words = &use_localization().chips;
     let announced = use_hook(|| {
         Rc::new(RefCell::new(Announced {
             labels: labels.clone(),
             message: None,
             count: 0,
+            noted: note.as_ref().map_or(0, |(number, _)| *number),
         }))
     });
     let mut announced = announced.borrow_mut();
+    let mut change = None;
     if announced.labels != labels {
-        if let Some(message) = chip_change(&announced.labels, &labels, words) {
-            announced.message = Some(message);
-            announced.count += 1;
-        }
+        change = chip_change(&announced.labels, &labels, words);
         announced.labels = labels;
+    }
+    let note = note.filter(|(number, _)| *number != announced.noted);
+    if let Some((number, _)) = &note {
+        announced.noted = *number;
+    }
+    let message = match (change, note) {
+        (Some(change), Some((_, note))) => Some(format!("{change} {note}")),
+        (change, note) => change.or(note.map(|(_, note)| note)),
+    };
+    if let Some(message) = message {
+        announced.message = Some(message);
+        announced.count += 1;
     }
     let spoken = announced
         .message

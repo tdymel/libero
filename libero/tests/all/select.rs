@@ -309,6 +309,35 @@ mod select_listbox {
         );
     }
 
+    /// Todo 1888: a caller's chip hears what the default one does, so it can
+    /// drop or disable its remove control.
+    #[test]
+    fn a_custom_selection_hears_disabled_and_readonly() {
+        fn app() -> Element {
+            let chip = move |args: SelectionArgs<Fruit>| {
+                rsx! {
+                    span { "{args.value.label()}:{args.disabled}:{args.readonly}" }
+                }
+            };
+            rsx! {
+                LiberoProvider {
+                    MultiSelect { value: vec![Fruit::Cherry], onchange: move |_| {}, selection: chip }
+                    MultiSelect { value: vec![Fruit::Cherry], onchange: move |_| {}, disabled: true, selection: chip }
+                    MultiSelect { value: vec![Fruit::Cherry], onchange: move |_| {}, readonly: true, selection: chip }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        for drawn in [
+            "Cherry:false:false",
+            "Cherry:true:false",
+            "Cherry:false:true",
+        ] {
+            assert!(html.contains(drawn), "no {drawn:?} in\n{html}");
+        }
+    }
+
     /// `searchable` must not leak a dropdown into a closed select. The core
     /// keeps an *open* list alive through a query that matches nothing - that
     /// is what the header slot is for - and a closed one draws neither.

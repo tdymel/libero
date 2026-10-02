@@ -5,7 +5,10 @@
 use crate::common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::TagsField};
+use libero::{
+    LiberoProvider,
+    components::{SelectionArgs, TagsField},
+};
 
 fn tagged() -> Element {
     rsx! {
@@ -253,5 +256,30 @@ mod dispatched {
         }
 
         assert_eq!(click_clear(app), None);
+    }
+}
+
+/// Todo 1888: a caller's tag hears what the default chip does, so it can drop
+/// or disable its remove control.
+#[test]
+fn a_custom_tag_hears_disabled_and_readonly() {
+    fn app() -> Element {
+        let tag = move |args: SelectionArgs<String>| {
+            rsx! {
+                span { "{args.value}:{args.disabled}:{args.readonly}" }
+            }
+        };
+        rsx! {
+            LiberoProvider {
+                TagsField { label: "A", value: vec!["a".to_string()], onchange: move |_: Vec<String>| {}, tag }
+                TagsField { label: "B", value: vec!["b".to_string()], onchange: move |_: Vec<String>| {}, disabled: true, tag }
+                TagsField { label: "C", value: vec!["c".to_string()], onchange: move |_: Vec<String>| {}, readonly: true, tag }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    for drawn in ["a:false:false", "b:true:false", "c:false:true"] {
+        assert!(html.contains(drawn), "no {drawn:?} in\n{html}");
     }
 }

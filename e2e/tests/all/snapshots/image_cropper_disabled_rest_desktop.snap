@@ -9,8 +9,20 @@ slider "Top left corner" = 80 [disabled] [valuemax=100] [valuemin=0]
 slider "Top right corner" = 80 [disabled] [valuemax=100] [valuemin=0]
 slider "Bottom right corner" = 80 [disabled] [valuemax=100] [valuemin=0]
 slider "Bottom left corner" = 80 [disabled] [valuemax=100] [valuemin=0]
+group "Crop area"
+  button "Move left" [disabled]
+  button "Move up" [disabled]
+  button "Move down" [disabled]
+  button "Move right" [disabled]
+  button "Smaller" [disabled]
+  button "Larger" [disabled]
 paragraph
   StaticText "10,10,80,80"
 image "A sun on blue, to pan"
 slider "Crop area" = 30 [disabled] [valuemax=100] [valuemin=0]
 slider "Zoom" = -0.003143551293760538 [disabled] [valuemax=2.0768563747406006] [valuemin=-0.2231435477733612]
+group "Crop area"
+  button "Move left" [disabled]
+  button "Move up" [disabled]
+  button "Move down" [disabled]
+  button "Move right" [disabled]

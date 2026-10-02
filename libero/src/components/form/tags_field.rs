@@ -217,7 +217,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         &onchange,
         props.tag,
         size,
-        disabled || readonly,
+        (disabled, readonly),
         cursor,
     );
 
@@ -521,9 +521,10 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
     onchange: &Option<F>,
     draw_tag: Option<Callback<SelectionArgs<String>, Element>>,
     size: Size,
-    locked: bool,
+    (disabled, readonly): (bool, bool),
     cursor: TagCursor,
 ) -> Element {
+    let locked = disabled || readonly;
     let count = held.len();
     let chips = held.iter().cloned().enumerate().map(|(index, value)| {
         let list = held.to_vec();
@@ -544,7 +545,12 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
             onchange(next);
         });
         let chip = match &draw_tag {
-            Some(tag) => tag.call(SelectionArgs { value, remove }),
+            Some(tag) => tag.call(SelectionArgs {
+                value,
+                remove,
+                disabled,
+                readonly,
+            }),
             None => removable_chip(value, remove, size, locked),
         };
         (chip, remove)

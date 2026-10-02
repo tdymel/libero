@@ -35,14 +35,6 @@ impl Files {
         self.0
     }
 
-    /// Keeps only the first file, for a field that takes one.
-    pub(super) fn truncated(self, multiple: bool) -> Self {
-        match multiple {
-            true => self,
-            false => Self(self.0.into_iter().take(1).collect()),
-        }
-    }
-
     /// Drops the file at `index`, for the default chip's x.
     pub(super) fn without(&self, index: usize) -> Self {
         let mut files = self.0.clone();
@@ -51,6 +43,22 @@ impl Files {
         }
         Self(files)
     }
+}
+
+/// A picked or dropped file the field refused, handed to `onreject`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FileRejection {
+    pub file: FileData,
+    pub reason: RejectReason,
+}
+
+/// Why a `FileField` refused a file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RejectReason {
+    /// Not a type `accept` lists.
+    Type,
+    /// Past the first on a field without `multiple`.
+    TooMany,
 }
 
 /// A file's size for a human: powers of 1000, one decimal past a kilobyte,

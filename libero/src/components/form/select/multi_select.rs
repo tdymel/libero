@@ -134,7 +134,12 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                 }
             });
             match &draw_selection {
-                Some(selection) => selection.call(SelectionArgs { value, remove }),
+                Some(selection) => selection.call(SelectionArgs {
+                    value,
+                    remove,
+                    disabled,
+                    readonly,
+                }),
                 None => removable_chip(value.label(), remove, size, disabled || readonly),
             }
         });

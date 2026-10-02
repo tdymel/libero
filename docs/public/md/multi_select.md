@@ -62,18 +62,21 @@ MultiSelect {
         Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
             // After the label, so a long label never clips the x.
             trailing: rsx! {
-                span { onmousedown: move |event| event.prevent_default(),
-                    onclick: move |event| event.stop_propagation(),
-                    ActionIcon {
-                        // `words` is `use_localization()`, read in the component.
-                        aria_label: fill(words.common.remove, &[("label", &s.value.label())]),
-                        size: "xs",
-                        // A `<button>` takes the UA's `buttontext`, not the chip's
-                        // colour, so the cross needs this or it stays black.
-                        sx: sx().color("inherit"),
-                        tabindex: "-1",
-                        onclick: move |_| s.remove.call(()),
-                        "x"
+                // A disabled or read-only field's chip has no remove control.
+                if !s.disabled && !s.readonly {
+                    span { onmousedown: move |event| event.prevent_default(),
+                        onclick: move |event| event.stop_propagation(),
+                        ActionIcon {
+                            // `words` is `use_localization()`, read in the component.
+                            aria_label: fill(words.common.remove, &[("label", &s.value.label())]),
+                            size: "xs",
+                            // A `<button>` takes the UA's `buttontext`, not the chip's
+                            // colour, so the cross needs this or it stays black.
+                            sx: sx().color("inherit"),
+                            tabindex: "-1",
+                            onclick: move |_| s.remove.call(()),
+                            "x"
+                        }
                     }
                 }
             },
@@ -132,7 +135,7 @@ MultiSelect {
 | `validate` | `Validators<Vec<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. |
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. `selected` on the args is there for a checkmark. Hide a decorative glyph such as an emoji or the checkmark with `aria-hidden`, or a screen reader reads it with the label. |
-| `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value in the trigger, remove control included. `remove` on the args drops that value. |
+| `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value in the trigger, remove control included. `remove` on the args drops that value; `disabled` and `readonly` say the field refuses it, so leave the remove control out then. |
 | `placeholder` | `String` | - | Shown while `value` is empty. |
 | `clearable` | `bool` | `false` | Shows an x in place of the chevron that empties the selection. |
 | `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query survives a pick and is cleared when the list closes. |
@@ -148,7 +151,7 @@ MultiSelect {
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 
 `SelectOptionArgs<T>` carries `value`, `index`, `selected` and `disabled`.
-`SelectionArgs<T>` carries `value` and `remove`. `SelectFilterArgs<T>` carries
+`SelectionArgs<T>` carries `value`, `remove`, `disabled` and `readonly`. `SelectFilterArgs<T>` carries
 `value` and `query`.
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,

@@ -1,7 +1,9 @@
 use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::FileFieldPart;
-use libero::components::{Code, CropOptions, FieldStatus, FileField, Files, Flex, Text};
+use libero::components::{
+    Code, CropOptions, FieldStatus, FileField, FileRejection, Files, Flex, Text,
+};
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
@@ -50,7 +52,7 @@ pub fn FileFieldPage() -> Element {
                         .default("input")
                         .doc("`input` is one line in the field frame. `dropzone` is a tall surface to drop onto or click, with the files as cards below it. A single-file dropzone hides its surface while it holds a file."),
                     prop("accept", "String")
-                        .doc("The file types to take, such as `.pdf`, `image/png`, `image/*` or a comma-separated list. It applies to the picker and to a drop. A dropzone also shows them as a hint under its prompt."),
+                        .doc("The file types to take, such as `.pdf`, `image/png`, `image/*` or a comma-separated list. It applies to the picker and to a drop: a file of another type is refused, and the field says so. A dropzone also shows them as a hint under its prompt."),
                     prop("capture", "String")
                         .doc("Asks a phone for a fresh capture, `user` or `environment`."),
                     prop("placeholder", "String")
@@ -62,7 +64,7 @@ pub fn FileFieldPage() -> Element {
                         .default("false")
                         .doc("Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that."),
                     prop("crop", "CropOptions")
-                        .doc("A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. Under Blitz an AVIF stays whole, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field."),
+                        .doc("A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. A crop that fails keeps the dialog open on an error and hands over nothing. Under Blitz an AVIF passes through uncropped, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field."),
                     prop("oncrop", "EventHandler<CropRect>")
                         .doc("The box picked in the crop dialog, before the cut file reaches `onchange`."),
                     prop("selection","Callback<SelectionArgs<FileData>, Element>")
@@ -72,6 +74,8 @@ pub fn FileFieldPage() -> Element {
                         .doc("What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`."),
                     prop("onchange", "EventHandler<Files>")
                         .doc("Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick or a drop hands over only the files it brought, so on a `multiple` field it replaces the earlier ones, as a native file input does. A removal or a clear hands over what is left."),
+                    prop("onreject", "EventHandler<Vec<FileRejection>>")
+                        .doc("Fires with the files a pick or a drop brought that the field refused: a type `accept` excludes, or every file past the first on a field without `multiple`. Each `FileRejection` holds the `file` and a `reason`, `RejectReason::Type` or `TooMany`. The field already announces the refusal politely, in the localization's `file_field.rejected_type` and `rejected_many`. Use it to show the refusal on screen, for example in `status`."),
                     prop("validate", "Validators<Files>")
                         .doc("Rules over the files, shown once the field loses focus or its form is submitted."),
                     prop("children", "Element")
@@ -105,6 +109,13 @@ pub fn FileFieldPage() -> Element {
                 props("SelectionArgs", vec![
                     prop("value", "FileData").doc("The file this call draws."),
                     prop("remove", "Callback<()>").doc("Drops this file from the value."),
+                    prop("disabled", "bool").doc("The field is disabled: `remove` does nothing, so draw no remove control."),
+                    prop("readonly", "bool").doc("The field is read-only: `remove` does nothing, so draw no remove control."),
+                ])
+                .without_base_props(),
+                props("FileRejection", vec![
+                    prop("file", "FileData").doc("The refused file."),
+                    prop("reason", "RejectReason").doc("`Type`: `accept` excludes it. `TooMany`: it came after the first on a field without `multiple`."),
                 ])
                 .without_base_props(),
                 props("Files", vec![
@@ -230,6 +241,7 @@ pub fn FileFieldPage() -> Element {
 #[component]
 fn FileFieldDemo(values: DemoValues) -> Element {
     let mut files = use_signal(Files::default);
+    let mut refused = use_signal(Vec::<String>::new);
 
     let accept = match values.str("accept").as_str() {
         "any" => None,
@@ -264,9 +276,18 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 disabled: is_on(&values, "disabled").then_some(true),
                 loading: is_on(&values, "loading").then_some(true),
                 onchange: move |picked: Files| files.set(picked),
+                onreject: move |rejected: Vec<FileRejection>| {
+                    refused.set(
+                        rejected
+                            .iter()
+                            .map(|rejection| format!("{} ({:?})", rejection.file.name(), rejection.reason))
+                            .collect(),
+                    );
+                },
                 {prompt(&values)}
             }
             Text { size: "sm", "value: {names:?}" }
+            Text { size: "sm", "refused: {refused:?}" }
         }
     }
 }

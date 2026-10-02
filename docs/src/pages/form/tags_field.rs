@@ -17,20 +17,23 @@ const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
     // Unclipped, so the x's 24px hit area reaches past the pill.
     Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
         trailing: rsx! {
-            span { "data-slot": "remove",
-                // Keeps focus in the field, and the click off the field.
-                onmousedown: move |event| event.prevent_default(),
-                onclick: move |event| event.stop_propagation(),
-                ActionIcon {
-                    // `words` is `use_localization()`, read in the component.
-                    aria_label: fill(words.common.remove, &[("label", &t.value)]),
-                    size: "16px",
-                    // A `<button>` inherits no colour of its own.
-                    sx: sx().color("inherit"),
-                    // The input is the field's one tab stop.
-                    tabindex: "-1",
-                    onclick: move |_| t.remove.call(()),
-                    "x"
+            // A disabled or read-only field's tag has no remove control.
+            if !t.disabled && !t.readonly {
+                span { "data-slot": "remove",
+                    // Keeps focus in the field, and the click off the field.
+                    onmousedown: move |event| event.prevent_default(),
+                    onclick: move |event| event.stop_propagation(),
+                    ActionIcon {
+                        // `words` is `use_localization()`, read in the component.
+                        aria_label: fill(words.common.remove, &[("label", &t.value)]),
+                        size: "16px",
+                        // A `<button>` inherits no colour of its own.
+                        sx: sx().color("inherit"),
+                        // The input is the field's one tab stop.
+                        tabindex: "-1",
+                        onclick: move |_| t.remove.call(()),
+                        "x"
+                    }
                 }
             }
         },
@@ -96,16 +99,18 @@ fn topic_tag(words: &'static Localization, t: SelectionArgs<String>) -> Element 
     rsx! {
         Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
             trailing: rsx! {
-                span { "data-slot": "remove",
-                    onmousedown: move |event: MouseEvent| event.prevent_default(),
-                    onclick: move |event: MouseEvent| event.stop_propagation(),
-                    ActionIcon {
-                        aria_label: remove_label,
-                        size: "16px",
-                        sx: sx().color("inherit"),
-                        tabindex: "-1",
-                        onclick: move |_| t.remove.call(()),
-                        "x"
+                if !t.disabled && !t.readonly {
+                    span { "data-slot": "remove",
+                        onmousedown: move |event: MouseEvent| event.prevent_default(),
+                        onclick: move |event: MouseEvent| event.stop_propagation(),
+                        ActionIcon {
+                            aria_label: remove_label,
+                            size: "16px",
+                            sx: sx().color("inherit"),
+                            tabindex: "-1",
+                            onclick: move |_| t.remove.call(()),
+                            "x"
+                        }
                     }
                 }
             },
@@ -164,7 +169,7 @@ pub fn TagsFieldPage() -> Element {
                         .doc("Shows an x at the end of the frame that empties the field."),
                     prop("tag", "Callback<SelectionArgs<String>, Element>")
                         .default("Chip")
-                        .doc("Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: \"-1\"`."),
+                        .doc("Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: \"-1\"`, and leave it out when `args.disabled` or `args.readonly` is set."),
                     prop("label", "Caption").doc("The field's caption, above the control."),
                     prop("description", "Caption").doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry affects."),

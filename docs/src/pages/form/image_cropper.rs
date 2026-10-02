@@ -47,7 +47,7 @@ pub fn ImageCropperPage() -> Element {
                     prop("value", "Option<CropRect>")
                         .doc("The box, in fractions of the image. Pair it with `onchange`. Unset starts centred at 80% of the largest box `aspect` allows, so it can move at once, and reports it once the image has loaded. A new `src` or `aspect` starts an unset box over. A set `value` stays as it is, so reset it yourself."),
                     prop("onchange", "EventHandler<CropRect>")
-                        .doc("Fires on every move of the box, by a drag or a key. Without it the cropper only shows."),
+                        .doc("Fires on every move of the box, by a drag, a key or a button under the image. Without it the cropper only shows, with no buttons."),
                     prop("aspect", "f64")
                         .doc("Locks width over height, in image pixels: `1.0` is square, `16.0 / 9.0` wide. Unset is free."),
                     prop("shape", "CropShape")
@@ -74,6 +74,7 @@ pub fn ImageCropperPage() -> Element {
                     (ImageCropperPart::Frame, "Over the box: takes its drags and holds the handles."),
                     (ImageCropperPart::Handle, "One of the eight resize handles."),
                     (ImageCropperPart::Zoom, "With `pan`: the bar under the image holding the zoom slider."),
+                    (ImageCropperPart::Controls, "The buttons under the image that move the box and, without `pan`, make it smaller or larger."),
                 ]),
                 props("CropRect", vec![
                     prop("x, y", "f64").doc("The top left corner, a fraction of the image's width and height."),
@@ -103,6 +104,7 @@ pub fn ImageCropperPage() -> Element {
                     "On a touch screen a finger on the box drags it without scrolling the page; a touch on the image outside it still scrolls. Two fingers on the box pinch it larger or smaller around its centre.",
                     "With `pan` the whole cropper takes touches: one finger pans the image, two zoom it around their midpoint. The mouse wheel and a trackpad pinch zoom it around the pointer. Its value adds the zoom: \"40% by 80%, at 30%, 10%, zoom 100%\".",
                     "With `pan` a slider named \"Zoom\" under the image zooms around the box's centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Every step zooms by the same factor. Its value is the zoom, \"100%\".",
+                    "Under the image a group named by `aria_label` holds buttons for every drag (WCAG 2.5.7): \"Move left\", \"Move up\", \"Move down\" and \"Move right\" move the box 5% of the image, with `pan` the image under it; \"Smaller\" and \"Larger\" scale the box around its centre, without `pan`.",
                     "With an `aspect`, a corner key resizes both sides together.",
                     "The box and the corners describe their keys.",
                 ])
@@ -113,7 +115,7 @@ pub fn ImageCropperPage() -> Element {
                 .limits([
                     "The edge handles are pointer-only: the corners reach every size.",
                     "A screen reader hears where the box is, not what it shows.",
-                    "Under Blitz a `FileField` with `crop` keeps an AVIF whole: the rect still reaches `oncrop`.",
+                    "Under Blitz a `FileField` with `crop` passes an AVIF through uncropped, with no dialog.",
                     "Under Blitz a cut WebP is lossless, so it can be larger than the browser's lossy one.",
                 ]),
             lead: rsx! {

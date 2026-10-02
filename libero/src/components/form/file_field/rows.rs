@@ -85,6 +85,9 @@ pub(super) struct FileRows {
     pub(super) multiple: bool,
     /// Draws the x at all. Off while disabled or read-only.
     pub(super) editable: bool,
+    /// What a caller's `selection` hears.
+    pub(super) disabled: bool,
+    pub(super) readonly: bool,
     pub(super) icon_size: Input<ThemeAwareValue>,
     /// The field's; the chips step down from it themselves.
     pub(super) size: Size,
@@ -115,6 +118,8 @@ impl FileRows {
             Some(draw) => draw.call(SelectionArgs {
                 value: file.clone(),
                 remove,
+                disabled: self.disabled,
+                readonly: self.readonly,
             }),
             None => match self.cards {
                 true => default_card(

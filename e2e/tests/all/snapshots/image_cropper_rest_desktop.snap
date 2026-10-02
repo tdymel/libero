@@ -11,5 +11,12 @@ slider "Top left corner" = 50 [valuemax=100] [valuemin=0]
 slider "Top right corner" = 50 [valuemax=100] [valuemin=0]
 slider "Bottom right corner" = 50 [valuemax=100] [valuemin=0]
 slider "Bottom left corner" = 50 [valuemax=100] [valuemin=0]
+group "Crop area"
+  button "Move left"
+  button "Move up"
+  button "Move down"
+  button "Move right"
+  button "Smaller"
+  button "Larger"
 paragraph
   StaticText "25,25,50,50"

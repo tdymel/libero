@@ -1,7 +1,10 @@
 use crate::common::{attributes_of, body, fake_files, has_rule_for, render, tag_with};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::FileField};
+use libero::{
+    LiberoProvider,
+    components::{FileField, SelectionArgs},
+};
 
 #[test]
 fn a_file_field_draws_a_hidden_input_and_names_its_control() {
@@ -518,5 +521,30 @@ mod dispatched {
         );
 
         assert_eq!(click_clear(readonly_files_clear), None);
+    }
+}
+
+/// Todo 1888: a caller's file chip hears what the default one does, so it can
+/// drop or disable its remove control.
+#[test]
+fn a_custom_file_chip_hears_disabled_and_readonly() {
+    fn app() -> Element {
+        let chip = move |args: SelectionArgs<dioxus::html::FileData>| {
+            rsx! {
+                span { "{args.value.name()}:{args.disabled}:{args.readonly}" }
+            }
+        };
+        rsx! {
+            LiberoProvider {
+                FileField { label: "A", value: fake_files(&["a.txt"]), onchange: move |_| {}, selection: chip }
+                FileField { label: "B", value: fake_files(&["b.txt"]), onchange: move |_| {}, disabled: true, selection: chip }
+                FileField { label: "C", value: fake_files(&["c.txt"]), onchange: move |_| {}, readonly: true, selection: chip }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    for drawn in ["a.txt:false:false", "b.txt:true:false", "c.txt:false:true"] {
+        assert!(html.contains(drawn), "no {drawn:?} in\n{html}");
     }
 }

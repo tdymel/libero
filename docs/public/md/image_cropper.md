@@ -58,7 +58,7 @@ FileField {
 | `src` | `String` | - | The image: any URL, a `data:` URL included. |
 | `alt` | `String` | - | Describes the image. |
 | `value` | `Option<CropRect>` | - | The box, in fractions of the image. Pair it with `onchange`. Unset starts centred at 80% of the largest box `aspect` allows, so it can move at once, and reports it once the image has loaded. A new `src` or `aspect` starts it over. |
-| `onchange` | `EventHandler<CropRect>` | - | Fires on every move of the box, by a drag or a key. Without it the cropper only shows. |
+| `onchange` | `EventHandler<CropRect>` | - | Fires on every move of the box, by a drag, a key or a button under the image. Without it the cropper only shows, with no buttons. |
 | `aspect` | `f64` | - | Locks width over height, in image pixels: `1.0` is square, `16.0 / 9.0` wide. Unset is free. |
 | `shape` | `CropShape` | `Rect` | `Circle` masks outside an ellipse, for an avatar. The rect is the same either way. |
 | `min_size` | `f64` | `0.05` | The smallest side, a fraction of the image's. |
@@ -101,6 +101,7 @@ explains how parts work.
 | `ImageCropperPart::Frame` | `frame` | Over the box: takes its drags and holds the handles. |
 | `ImageCropperPart::Handle` | `handle` | One of the eight resize handles. |
 | `ImageCropperPart::Zoom` | `zoom` | With `pan`: the bar under the image holding the zoom slider. |
+| `ImageCropperPart::Controls` | `controls` | The buttons under the image that move the box and, without `pan`, make it smaller or larger. |
 
 ## Accessibility
 
@@ -131,6 +132,10 @@ explains how parts work.
 - With `pan` a slider named "Zoom" under the image zooms around the box's
   centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Every
   step zooms by the same factor. Its value is the zoom, "100%".
+- Under the image a group named by `aria_label` holds buttons for every drag
+  (WCAG 2.5.7): "Move left", "Move up", "Move down" and "Move right" move the
+  box 5% of the image, with `pan` the image under it; "Smaller" and "Larger"
+  scale the box around its centre, without `pan`.
 - With an `aspect`, a corner key resizes both sides together.
 - The box and the corners describe their keys.
 
@@ -143,8 +148,8 @@ explains how parts work.
 
 - The edge handles are pointer-only: the corners reach every size.
 - A screen reader hears where the box is, not what it shows.
-- Under Blitz a `FileField` with `crop` keeps an AVIF whole: the rect still
-  reaches `oncrop`.
+- Under Blitz a `FileField` with `crop` passes an AVIF through uncropped, with
+  no dialog.
 - Under Blitz a cut WebP is lossless, so it can be larger than the browser's
   lossy one.
 
@@ -157,7 +162,9 @@ and `{y}` in percent: "{width}% by {height}%, at {x}%, {y}%" in English. With
 `pan`, `pan_keys` and `pan_value` take their place; `pan_value` adds `{zoom}`, in
 percent of the starting zoom: "{width}% by {height}%, at {x}%, {y}%, zoom {zoom}%".
 The pan mode's zoom slider is named by `zoom` ("Zoom") and speaks `zoom_value`
-("{zoom}%").
+("{zoom}%"). The buttons under the image are named by `move_up`, `move_down`,
+`move_left`, `move_right`, `smaller` and `larger`. A crop dialog that cannot load
+the image says `load_failed`, one whose cut fails `crop_failed`.
 
 ## CSS variables
 

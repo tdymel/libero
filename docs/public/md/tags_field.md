@@ -77,7 +77,7 @@ The field tells screen readers why it refused a tag, but shows nothing. The
 | `name` | `FieldName<Vec<String>>` | - | Posts each tag under this name. A path such as `Article::FIELDS.topics()` also binds the list to the surrounding `Form`'s value when the field has no `onchange`. |
 | `placeholder` | `String` | - | Shown while there are no tags. |
 | `clearable` | `bool` | `false` | Shows an x at the end of the frame that empties the field. |
-| `tag` | `Callback<SelectionArgs<String>, Element>` | `Chip` | Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: "-1"`. |
+| `tag` | `Callback<SelectionArgs<String>, Element>` | `Chip` | Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: "-1"`, and leave it out when `args.disabled` or `args.readonly` is set. |
 | `label` | `Caption` | - | The field's caption, above the control. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry affects. |
@@ -87,7 +87,7 @@ The field tells screen readers why it refused a tag, but shows nothing. The
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled `suggestions` dropdown and its inner parts. |
 
-`SelectionArgs<String>` carries `value` and `remove`, as it does for
+`SelectionArgs<String>` carries `value`, `remove`, `disabled` and `readonly`, as it does for
 `MultiSelect` and `FileField`.
 
 `TagsField` also takes the `<input>` HTML attributes and, like every component,

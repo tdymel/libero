@@ -72,6 +72,37 @@ FileField {
 }
 ```
 
+A refused file, one `accept` excludes or a second on a single-file field, is
+announced by the field and handed to `onreject`, here to show it on screen:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{FileField, FileRejection, Files};
+
+#[component]
+fn Demo() -> Element {
+    let mut avatar = use_signal(Files::default);
+    let mut refused = use_signal(String::new);
+
+    rsx! {
+        FileField {
+            label: "Avatar",
+            accept: "image/*",
+            status: refused(),
+            value: avatar(),
+            onchange: move |picked: Files| {
+                refused.set(String::new());
+                avatar.set(picked);
+            },
+            onreject: move |rejected: Vec<FileRejection>| {
+                let names: Vec<String> = rejected.iter().map(|r| r.file.name()).collect();
+                refused.set(format!("Not added: {}", names.join(", ")));
+            },
+        }
+    }
+}
+```
+
 ## Props
 
 ### `FileField`
@@ -81,16 +112,17 @@ FileField {
 | `value` | `Files` | empty | Strictly controlled. Pair it with `onchange`. Takes a `FileData`, an `Option<FileData>` or a `Vec<FileData>`. |
 | `multiple` | `bool` | `false` | Lets the user pick and drop several files, each drawn as a chip. A single-file field shows the file name, and a new pick replaces it. |
 | `variant` | `FileFieldVariant` | `input` | `input` is one line in the field frame. `dropzone` is a tall surface to drop onto or click, with the files as cards below it. A single-file dropzone hides its surface while it holds a file. |
-| `accept` | `String` | - | The file types to take, such as `.pdf`, `image/png`, `image/*` or a comma-separated list. It applies to the picker and to a drop. |
+| `accept` | `String` | - | The file types to take, such as `.pdf`, `image/png`, `image/*` or a comma-separated list. It applies to the picker and to a drop: a file of another type is refused, and the field says so. |
 | `capture` | `String` | - | Asks a phone for a fresh capture, `user` or `environment`. |
 | `placeholder` | `String` | - | Shown while nothing is picked. It is the dropzone's prompt when `children` is empty. With neither, the localization's `file_field.drop_file` or `drop_files`. |
 | `clearable` | `bool` | `true` | Shows an x that empties the field. |
 | `loading` | `bool` | `false` | Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that. |
-| `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. Under Blitz an AVIF stays whole, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. |
+| `crop` | `CropOptions` | - | A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. A crop that fails keeps the dialog open on an error and hands over nothing. Under Blitz an AVIF passes through uncropped, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. |
 | `oncrop` | `EventHandler<CropRect>` | - | The box picked in the crop dialog, before the cut file reaches `onchange`. |
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | `Chip`, or the file name | Draws one picked file, remove control included. `args.remove` removes it. |
 | `name` | `FieldName<Files>` | - | What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`. |
 | `onchange` | `EventHandler<Files>` | - | Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick or a drop hands over only the files it brought, so on a `multiple` field it replaces the earlier ones, as a native file input does. A removal or a clear hands over what is left. |
+| `onreject` | `EventHandler<Vec<FileRejection>>` | - | Fires with the files a pick or a drop brought that the field refused: a type `accept` excludes, or every file past the first on a field without `multiple`. Each `FileRejection` holds the `file` and a `reason`, `RejectReason::Type` or `TooMany`. The field already announces the refusal politely, in the localization's `file_field.rejected_type` and `rejected_many`. Use it to show the refusal on screen, for example in `status`. |
 | `validate` | `Validators<Files>` | - | Rules over the files, shown once the field loses focus or its form is submitted. |
 | `children` | `Element` | - | The dropzone's prompt. The `input` variant shows `placeholder` instead. |
 | `size` | `Size` | `md` | Control height, font size and the chips' size. |
@@ -112,6 +144,15 @@ Like every component, `FileField` also takes the shared props `sx`, `class`,
 |---|---|---|---|
 | `value` | `FileData` | - | The file this call draws. |
 | `remove` | `Callback<()>` | - | Drops this file from the value. |
+| `disabled` | `bool` | - | The field is disabled: `remove` does nothing, so draw no remove control. |
+| `readonly` | `bool` | - | The field is read-only: `remove` does nothing, so draw no remove control. |
+
+### `FileRejection`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `file` | `FileData` | - | The refused file. |
+| `reason` | `RejectReason` | - | `Type`: `accept` excludes it. `TooMany`: it came after the first on a field without `multiple`. |
 
 ### `Files`
 

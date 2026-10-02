@@ -39,6 +39,43 @@ fn the_pan_and_disabled_croppers_meet_the_baseline() {
     Suite::new("image_cropper_disabled", "/image-cropper/disabled").run();
 }
 
+/// Todo 1262 (WCAG 2.5.7): buttons move and resize the box without a drag, a
+/// press each, as the arrow keys do.
+#[test]
+fn the_buttons_move_and_resize_the_box_without_a_drag() {
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, BOX).await.unwrap();
+        let reads = async |want: &str, after: &str| {
+            wait::for_js_true(
+                page,
+                &format!("document.getElementById('crop').textContent === {want:?}"),
+                &format!("the box at {want} after {after}"),
+            )
+            .await
+            .unwrap();
+        };
+        for (button, want) in [
+            ("Move right", "30,25,50,50"),
+            ("Move down", "30,30,50,50"),
+            ("Move left", "25,30,50,50"),
+            ("Move up", "25,25,50,50"),
+            ("Smaller", "27,27,45,45"),
+            ("Larger", "25,25,50,50"),
+        ] {
+            pointer::click(page, &format!("#cropper [aria-label='{button}']"))
+                .await
+                .unwrap();
+            reads(want, button).await;
+        }
+        fixture.console.assert_clean("the nudge buttons").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Forced colours drop a box-shadow: the dim mask opts out, so the crop still
 /// stands out from the rest of the image (1278).
 #[test]
@@ -84,6 +121,55 @@ impl Drop for TempFile {
     }
 }
 
+/// Todo 1611: a crop that fails keeps the dialog open on an error and hands
+/// `onchange` nothing, not the uncropped original.
+#[test]
+fn a_failed_crop_keeps_the_dialog_and_emits_nothing() {
+    let file = TempFile::new("e2e-crop-fails", PNG);
+    block_on(async {
+        let fixture = Fixture::open("/file-field/crop", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        crate::file_field::drop_files(page, "[data-fixture-ready] [role=group]", file.drop_arg())
+            .await;
+        let apply =
+            "[role=dialog] :not([data-slot=controls]) > button:last-of-type:not(:first-of-type)";
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const apply = document.querySelector({apply:?}); \
+                 return !!apply && apply.textContent.trim() === 'Apply' && !apply.disabled; }})()"
+            ),
+            "Apply to be pressable",
+        )
+        .await
+        .unwrap();
+        page.evaluate("window.createImageBitmap = () => Promise.reject(new Error('e2e'))")
+            .await
+            .unwrap();
+        pointer::click(page, apply).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const alert = document.querySelector('[role=dialog] [role=alert]');
+              return !!alert && alert.textContent.includes('could not be cropped'); })()",
+            "the dialog to report the failed crop",
+        )
+        .await
+        .unwrap();
+        let out: String = page
+            .evaluate("document.getElementById('out').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(out, "", "the field took a file from a failed crop");
+        fixture.console.assert_clean("a failed crop").unwrap();
+        fixture.close().await.unwrap();
+    });
+    drop(file);
+}
+
 /// A dropped PNG opens the dialog at 80% of the largest centred square, the
 /// picture named as one to crop (1612); Apply hands `onchange` that 16 px
 /// square, cut by the canvas and held by `max_size` at 16 px, still a PNG.
@@ -107,7 +193,8 @@ fn a_dropped_image_is_cropped_before_the_field_takes_it() {
         .await
         .unwrap();
         // Cancel, then Apply, the footer's last button.
-        let apply = "[role=dialog] button:last-of-type:not(:first-of-type)";
+        let apply =
+            "[role=dialog] :not([data-slot=controls]) > button:last-of-type:not(:first-of-type)";
         wait::for_js_true(
             page,
             &format!(
@@ -183,7 +270,8 @@ async fn a_picked_image_is_cropped<D: Driver>(d: &mut D, _route: &str) -> Result
     })
     .await?;
     // Cancel, then Apply, the footer's last button; enabled once the box settles.
-    let apply = "[role=dialog] button:last-of-type:not(:first-of-type)";
+    let apply =
+        "[role=dialog] :not([data-slot=controls]) > button:last-of-type:not(:first-of-type)";
     eventually(d, "Apply to be enabled", async |d| {
         Ok(d.attr(apply, "disabled").await?.is_none())
     })
@@ -631,11 +719,11 @@ fn a_touch_pans_and_pinch_zooms_the_image_under_the_box() {
         wait::for_js_true(page, &format!("{crop} === '30,10,40,80'"), "the square")
             .await
             .unwrap();
-        // Root left, top, width, height less the zoom bar; frame width, height; image
-        // width; box left, width.
+        // Root left, top, width, height less the zoom and button bars; frame width, height;
+        // image width; box left, width.
         let rects = "(() => { const r = (s) => document.querySelector(s).getBoundingClientRect();
-            const [root, frame, image, box, zoom] = ['#cropper', '[data-slot=frame]', '[data-slot=image]', '[data-slot=box]', '[data-slot=zoom]'].map(r);
-            return [root.left, root.top, root.width, root.height - zoom.height, frame.width, frame.height,
+            const [root, frame, image, box, zoom, controls] = ['#cropper', '[data-slot=frame]', '[data-slot=image]', '[data-slot=box]', '[data-slot=zoom]', '[data-slot=controls]'].map(r);
+            return [root.left, root.top, root.width, root.height - zoom.height - controls.height, frame.width, frame.height,
                 image.width, box.left - root.left, box.width]; })()";
         let before: Vec<f64> = page.evaluate(rects).await.unwrap().into_value().unwrap();
         let (left, top, width, height) = (before[0], before[1], before[2], before[3]);

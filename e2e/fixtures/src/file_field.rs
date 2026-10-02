@@ -1,7 +1,7 @@
 //! `FileField`, as a dropzone taking several files.
 
 use dioxus::prelude::*;
-use libero::components::{Button, CropOptions, CropRect, FileField, Files, Flex};
+use libero::components::{Button, CropOptions, CropRect, FileField, FileRejection, Files, Flex};
 
 use crate::Routes;
 
@@ -12,6 +12,7 @@ pub const ROUTES: Routes = &[
     ("/file-field/modes", || rsx! { FileModesPage {} }),
     ("/file-field/pick", || rsx! { FilePickPage {} }),
     ("/file-field/crop", || rsx! { FileCropPage {} }),
+    ("/file-field/reject", || rsx! { FileRejectPage {} }),
 ];
 
 /// The next file chooser answers itself with a 40 x 20 PNG, as no driver answers
@@ -99,6 +100,34 @@ fn FileCropPage() -> Element {
             p { id: "stubbed", "{stubbed}" }
             p { id: "rect", "{rect}" }
             p { id: "out", "{out}" }
+        }
+    }
+}
+
+/// A single-file `image/*` field: `#rejected` lists what `onreject` got, as
+/// `name:reason` (1819).
+#[component]
+fn FileRejectPage() -> Element {
+    let mut files = use_signal(Files::default);
+    let mut rejected = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            FileField {
+                id: "photo",
+                label: "Photo",
+                accept: "image/*",
+                value: files(),
+                onchange: move |next: Files| files.set(next),
+                onreject: move |refused: Vec<FileRejection>| {
+                    let named: Vec<String> = refused
+                        .iter()
+                        .map(|rejection| format!("{}:{:?}", rejection.file.name(), rejection.reason))
+                        .collect();
+                    rejected.set(named.join(","));
+                },
+            }
+            p { id: "rejected", "{rejected}" }
         }
     }
 }

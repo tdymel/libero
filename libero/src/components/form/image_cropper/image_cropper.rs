@@ -1,15 +1,18 @@
 use dioxus::prelude::*;
+use pictogram_icons_lucide as lucide;
 
 use super::crop::{CropRect, CropShape, Grip};
 use crate::{
     components::{
+        buttons::ActionIcon,
         common::{
-            HtmlTag, Input, Part, States, Variables, base_props, disabled_look_sx, focus_ring_sx,
-            has_shortcut_modifier, parts_enum, variables,
+            Glyph, HtmlTag, Input, Part, States, Variables, base_props, disabled_look_sx,
+            focus_ring_sx, has_shortcut_modifier, parts_enum, variables,
         },
         form::{Slider, SliderChangeEvent},
         layout::use_box,
     },
+    context::IconSlot,
     hooks::{
         DragMove, DragOptions, DragPoint, DragStart, use_drag, use_element, use_id,
         use_local_state, use_localization,
@@ -33,8 +36,10 @@ const IMAGE_Y: CssVar = CssVar::new("--lsx-image-cropper-image-y");
 
 /// Arrow keys move this far, Shift+arrow ten times as far.
 const KEY_STEP: f64 = 0.01;
-/// Pan mode's + and - zoom by this factor.
+/// Pan mode's + and - zoom by this factor, the Larger and Smaller buttons scale by it.
 const ZOOM_STEP: f64 = 1.1;
+/// A move button's step, Shift+arrow's half.
+const NUDGE_STEP: f64 = 0.05;
 /// The smallest box side, as a fraction of the image.
 const MIN_SIZE: f64 = 0.05;
 /// A handle's hit area (WCAG 2.5.8), around a smaller visible square.
@@ -59,6 +64,8 @@ parts_enum! {
         Handle = "handle" => "& > [data-slot='frame'] > [data-slot='handle']",
         /// Pan mode: the bar under the image holding the zoom slider.
         Zoom = "zoom" => "& > [data-slot='zoom']",
+        /// The buttons under the image that move and resize the box without a drag.
+        Controls = "controls" => "& > [data-slot='controls']",
     }
 }
 
@@ -146,9 +153,10 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                 .cursor(cursor.to_string()),
         )
     };
+    // A grid: the image's cell holds the box's parts, the rows under it the bars.
     let base = sx()
         .position("relative")
-        .display("inline-block")
+        .display("inline-grid")
         // The box maps onto this, so it must hug the image, in a flex column too.
         .width("fit-content")
         .height("fit-content")
@@ -158,9 +166,27 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > [data-slot='image']",
             sx().display("block")
+                .grid_area("1 / 1")
                 .max_width("100%")
                 .height("auto")
                 .pointer_events("none"),
+        )
+        .selector(
+            "& > [data-slot='mask'], & > [data-slot='box'], & > [data-slot='frame']",
+            // All four lines: an absolute item's `auto` line is the padding edge.
+            sx().grid_area("1 / 1 / 2 / 2"),
+        )
+        // No width of its own, so the buttons wrap under a narrow image rather than widen its cell.
+        .selector(
+            "& > [data-slot='controls']",
+            sx().grid_area("2 / 1")
+                .width("0")
+                .min_width("100%")
+                .display("flex")
+                .flex_wrap("wrap")
+                .justify_content("center")
+                .padding_block("xs")
+                .line_height("normal"),
         )
         // Clipped apart from the box, so a handle on the image's edge keeps
         // its whole hit area.
@@ -243,23 +269,15 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
         // image's cell, so the bar never covers the box (1613).
         .when(
             "pan",
-            sx().display("inline-grid")
-                .overflow("hidden")
+            sx().overflow("hidden")
                 .selector(
                     "& > [data-slot='image']",
-                    sx().grid_area("1 / 1")
-                        .with("transform-origin", "0 0")
-                        .transform(format!(
-                            "translate(calc({} * 100%), calc({} * 100%)) scale({})",
-                            IMAGE_X.value_or("0"),
-                            IMAGE_Y.value_or("0"),
-                            IMAGE_SCALE.value_or("1")
-                        )),
-                )
-                .selector(
-                    "& > [data-slot='mask'], & > [data-slot='box'], & > [data-slot='frame']",
-                    // All four lines: an absolute item's `auto` line is the padding edge.
-                    sx().grid_area("1 / 1 / 2 / 2"),
+                    sx().with("transform-origin", "0 0").transform(format!(
+                        "translate(calc({} * 100%), calc({} * 100%)) scale({})",
+                        IMAGE_X.value_or("0"),
+                        IMAGE_Y.value_or("0"),
+                        IMAGE_SCALE.value_or("1")
+                    )),
                 )
                 .selector(
                     "& > [data-slot='frame']",
@@ -278,6 +296,10 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                         .padding_block("xs")
                         .line_height("normal")
                         .background(PAPER_BACKGROUND.value()),
+                )
+                .selector(
+                    "& > [data-slot='controls']",
+                    sx().grid_area("3 / 1").background(PAPER_BACKGROUND.value()),
                 ),
         )
         .when(
@@ -370,9 +392,10 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let words = use_localization().image_cropper;
     let root = use_element();
     let image = use_element();
-    // Pan mode's image cell, the cropper less the zoom bar.
+    // Pan mode's image cell, the cropper less the bars under it.
     let frame = use_element();
-    let stage = if props.pan { frame } else { root };
+    // What the box maps onto: the image, or in pan mode its cell.
+    let stage = if props.pan { frame } else { image };
     let box_element = use_element();
     let corners = [use_element(), use_element(), use_element(), use_element()];
     let keys_id = use_id();
@@ -716,6 +739,25 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         });
     };
 
+    // The single-pointer alternative to every drag (WCAG 2.5.7): a press each.
+    let nudge = move |dx: f64, dy: f64| {
+        Callback::new(move |_: MouseEvent| {
+            let rect = shown.resized(Grip::Move, dx, dy, ratio, min);
+            if rect != shown {
+                emit.call(rect);
+            }
+        })
+    };
+    let resize = move |factor: f64| {
+        Callback::new(move |_: MouseEvent| {
+            let rect = shown.scaled(factor, min);
+            if rect != shown {
+                emit.call(rect);
+            }
+        })
+    };
+    let has_controls = props.onchange.is_some();
+
     let percent = |fraction: f64| (fraction * 100.0).round();
     let (scale, image_x, image_y) = shown.image_transform();
     let valuetext = match pan {
@@ -887,6 +929,70 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                                         emit.call(rect);
                                     }
                                 },
+                            }
+                        }
+                    }
+                    if has_controls {
+                        div {
+                            "data-slot": ImageCropperPart::Controls.slot(),
+                            role: "group",
+                            "aria-label": aria_label.clone(),
+                            ActionIcon {
+                                variant: "standard",
+                                color: "muted",
+                                size: "sm",
+                                aria_label: words.move_left,
+                                disabled: !interactive,
+                                onclick: nudge(-NUDGE_STEP, 0.0),
+                                Glyph { slot: IconSlot::ChevronLeft, icon: lucide::chevron_left::outlined }
+                            }
+                            ActionIcon {
+                                variant: "standard",
+                                color: "muted",
+                                size: "sm",
+                                aria_label: words.move_up,
+                                disabled: !interactive,
+                                onclick: nudge(0.0, -NUDGE_STEP),
+                                Glyph { slot: IconSlot::ChevronUp, icon: lucide::chevron_up::outlined }
+                            }
+                            ActionIcon {
+                                variant: "standard",
+                                color: "muted",
+                                size: "sm",
+                                aria_label: words.move_down,
+                                disabled: !interactive,
+                                onclick: nudge(0.0, NUDGE_STEP),
+                                Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined }
+                            }
+                            ActionIcon {
+                                variant: "standard",
+                                color: "muted",
+                                size: "sm",
+                                aria_label: words.move_right,
+                                disabled: !interactive,
+                                onclick: nudge(NUDGE_STEP, 0.0),
+                                Glyph { slot: IconSlot::ChevronRight, icon: lucide::chevron_right::outlined }
+                            }
+                            // Pan mode zooms through its slider instead.
+                            if !pan {
+                                ActionIcon {
+                                    variant: "standard",
+                                    color: "muted",
+                                    size: "sm",
+                                    aria_label: words.smaller,
+                                    disabled: !interactive,
+                                    onclick: resize(1.0 / ZOOM_STEP),
+                                    Glyph { slot: IconSlot::Minus, icon: lucide::minus::outlined }
+                                }
+                                ActionIcon {
+                                    variant: "standard",
+                                    color: "muted",
+                                    size: "sm",
+                                    aria_label: words.larger,
+                                    disabled: !interactive,
+                                    onclick: resize(ZOOM_STEP),
+                                    Glyph { slot: IconSlot::Plus, icon: lucide::plus::outlined }
+                                }
                             }
                         }
                     }

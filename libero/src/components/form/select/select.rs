@@ -31,6 +31,10 @@ pub struct SelectionArgs<T> {
     pub value: T,
     /// Drops this value, the same edit as picking its row again.
     pub remove: Callback<()>,
+    /// The field is disabled: `remove` does nothing, so draw no live x.
+    pub disabled: bool,
+    /// The field is read-only: `remove` does nothing, so draw no live x.
+    pub readonly: bool,
 }
 
 /// One option under test, handed to `filter` while searching. The same pair as `AutocompleteFilterArgs`.

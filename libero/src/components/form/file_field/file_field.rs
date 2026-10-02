@@ -11,7 +11,7 @@ use crate::{
         feedback::Loader,
         form::{
             CropOptions, CropRect, SelectionArgs, field_parts_enum, field_props, slot_icon_size,
-            use_bound, use_chip_announcer, use_field,
+            use_bound, use_field, use_noting_chip_announcer,
         },
         layout::{BoxStyle, use_box},
     },
@@ -27,7 +27,7 @@ use crate::{
 
 use super::accept::accept_hint;
 use super::crop::CropGate;
-use super::files::Files;
+use super::files::{FileRejection, Files};
 use super::intake::{Intake, Taking, use_file_intake, use_input_mirror};
 use super::rows::{ChipKeys, FileRows, FocusDebt, use_chip_cursor, use_focus_debt};
 use super::styles::{FILE_CARD_LIST_SX, FILE_CARD_SX, FILE_CHIP_SX, FILE_INPUT_SX};
@@ -96,13 +96,17 @@ field_props! {
         /// Fires with the next files: a pick, a drop, a removal or a clear.
         #[props(default)]
         onchange: Option<EventHandler<Files>>,
+        /// Fires with the files a pick or a drop held that `accept` or a missing
+        /// `multiple` refused. The field also says which, politely.
+        #[props(default)]
+        onreject: Option<EventHandler<Vec<FileRejection>>>,
         /// Crops a single picked PNG, JPEG, WebP, BMP or AVIF in a dialog before
-        /// `onchange` gets it, cut on every platform but an AVIF on Blitz, which
-        /// stays whole; a WebP cut on Blitz is lossless, so larger. Cancel drops
-        /// the pick. Ignored with `multiple`.
+        /// `onchange` gets it; an AVIF on Blitz passes through uncropped, and a
+        /// WebP cut on Blitz is lossless, so larger. Cancel drops the pick; a
+        /// failed crop keeps the dialog open on an error. Ignored with `multiple`.
         #[props(default)]
         crop: Option<CropOptions>,
-        /// The crop the dialog applied, on every platform.
+        /// The crop the dialog applied, before `onchange` gets the cut file.
         #[props(default)]
         oncrop: Option<EventHandler<CropRect>>,
         /// Rules over the files, shown on blur or submit.
@@ -166,7 +170,9 @@ pub fn FileField(props: FileFieldProps) -> Element {
     }
 
     let value = bound.value().unwrap_or_else(|| props.value.clone());
-    let announcer = use_chip_announcer(value.iter().map(FileData::name).collect());
+    let refused = use_signal(|| None::<(u64, String)>);
+    let announcer =
+        use_noting_chip_announcer(value.iter().map(FileData::name).collect(), refused());
     let dragging = use_local_state(|| false);
 
     let crop = props.crop.filter(|_| !multiple);
@@ -183,6 +189,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     } = use_file_intake(Taking {
         onchange: props.onchange,
         setter: bound.setter(),
+        onreject: props.onreject,
+        refused,
         accept: props.accept.clone().unwrap_or_default(),
         multiple,
         editable,
@@ -306,6 +314,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
         cards,
         multiple,
         editable,
+        disabled,
+        readonly: props.readonly.unwrap_or(false),
         icon_size: ThemeAwareValue::Size(slot_icon_size(size)).into(),
         size,
         // Only once the surface is gone: otherwise the loader is on the

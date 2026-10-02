@@ -20,6 +20,14 @@ pub struct ImageCropperLabels {
     pub top_right: &'static str,
     pub bottom_right: &'static str,
     pub bottom_left: &'static str,
+    /// The buttons under the image that move the box, or the image under it in pan mode.
+    pub move_up: &'static str,
+    pub move_down: &'static str,
+    pub move_left: &'static str,
+    pub move_right: &'static str,
+    /// The buttons that grow and shrink the box about its centre; not in pan mode.
+    pub larger: &'static str,
+    pub smaller: &'static str,
     /// The crop dialog's title.
     pub title: &'static str,
     /// The crop dialog's confirm button.
@@ -28,6 +36,8 @@ pub struct ImageCropperLabels {
     pub cancel: &'static str,
     /// The crop dialog's error when the picked image does not load.
     pub load_failed: &'static str,
+    /// The crop dialog's error when Apply cannot cut the image; it stays open.
+    pub crop_failed: &'static str,
 }
 
 impl ImageCropperLabels {
@@ -43,10 +53,17 @@ impl ImageCropperLabels {
         top_right: "Top right corner",
         bottom_right: "Bottom right corner",
         bottom_left: "Bottom left corner",
+        move_up: "Move up",
+        move_down: "Move down",
+        move_left: "Move left",
+        move_right: "Move right",
+        larger: "Larger",
+        smaller: "Smaller",
         title: "Crop image",
         apply: "Apply",
         cancel: "Cancel",
         load_failed: "This image could not be loaded. Cancel and pick another file.",
+        crop_failed: "This image could not be cropped. Try again, or cancel and pick another file.",
     };
 
     pub const GERMAN: Self = Self {
@@ -61,9 +78,16 @@ impl ImageCropperLabels {
         top_right: "Ecke oben rechts",
         bottom_right: "Ecke unten rechts",
         bottom_left: "Ecke unten links",
+        move_up: "Nach oben",
+        move_down: "Nach unten",
+        move_left: "Nach links",
+        move_right: "Nach rechts",
+        larger: "Größer",
+        smaller: "Kleiner",
         title: "Bild zuschneiden",
         apply: "Übernehmen",
         cancel: "Abbrechen",
         load_failed: "Dieses Bild lässt sich nicht laden. Abbrechen und eine andere Datei wählen.",
+        crop_failed: "Dieses Bild lässt sich nicht zuschneiden. Erneut versuchen oder abbrechen und eine andere Datei wählen.",
     };
 }

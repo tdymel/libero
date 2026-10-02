@@ -10,4 +10,4 @@ mod surface;
 mod tests;
 
 pub use file_field::{FileField, FileFieldPart, FileFieldProps};
-pub use files::Files;
+pub use files::{FileRejection, Files, RejectReason};
