@@ -476,6 +476,62 @@ fn opening_the_spotlight_stays_in_budget() {
     });
 }
 
+/// A tab switch builds the panel once: the focus moves redraw only the strip (todo 2023).
+#[test]
+fn a_tab_switch_builds_the_panel_once() {
+    block_on(async {
+        let fixture = open("/perf/tabs").await;
+        let page = &fixture.page;
+        let to = |n| {
+            (
+                "switch",
+                Act::Nth("[role=tab]", n),
+                nth_is("[role=tab]", n, "aria-selected"),
+            )
+        };
+        step(page, &to(1)).await.unwrap();
+        settled(page, "the first switch").await;
+        reset(page).await;
+        // From a focused tab: its focusout, the new tab's focus, then the pick.
+        step(page, &to(0)).await.unwrap();
+        let renders = settled(page, "switching back").await;
+        assert_within(
+            &renders,
+            &[
+                ("TabsPage", 1),
+                ("Flex", 1),
+                ("Tabs", 1),
+                ("TabStrip", 3),
+                ("Text", 8),
+            ],
+            "a tab switch",
+        );
+        fixture.console.assert_clean("switching").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A field's first blur redraws that field alone, not every field of the form (todo 2025).
+#[test]
+fn a_first_blur_redraws_only_its_field() {
+    block_on(async {
+        let fixture = open("/perf/big-form").await;
+        let page = &fixture.page;
+        let toggle = |on: bool| {
+            let checked = nth_is("#s3", 0, "aria-checked");
+            let done = if on { checked } else { format!("!{checked}") };
+            ("toggle", Act::Nth("#s3", 0), done)
+        };
+        step(page, &toggle(true)).await.unwrap();
+        // The second toggle touches the switch; every field used to redraw for it.
+        step(page, &toggle(false)).await.unwrap();
+        let renders = settled(page, "two toggles").await;
+        assert_within(&renders, &[("Switch", 3)], "two toggles of one switch");
+        fixture.console.assert_clean("toggling").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// One user action of an interaction survey.
 #[derive(Clone, Copy)]
 enum Act {

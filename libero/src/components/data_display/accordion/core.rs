@@ -6,13 +6,13 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, States, disabled_look_sx,
-            has_shortcut_modifier, inset_focus_ring_sx, use_closing_focus,
+            ClassList, Glyph, HtmlTag, Input, LogicalTextAlign, OptionLabel, Options, States,
+            disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx, use_closing_focus,
         },
         layout::{Collapse, use_box},
     },
     context::IconSlot,
-    hooks::{id_selector, use_element},
+    hooks::{ElementHandle, id_selector, use_element},
     platform::ElementApi,
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
@@ -96,17 +96,16 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// One section, `T` resolved: `content` is the rendered label, `name` the accessible one.
-pub(crate) struct SectionSpec {
-    pub name: String,
-    pub content: Element,
+pub(crate) struct SectionSpec<T> {
+    pub value: T,
+    pub label: OptionLabel,
     pub disabled: bool,
     pub open: bool,
-    pub panel: Element,
 }
 
-pub(crate) struct AccordionView {
-    pub sections: Vec<SectionSpec>,
+pub(crate) struct AccordionView<T: Options> {
+    pub sections: Vec<SectionSpec<T>>,
+    pub panel: Option<Callback<T, Element>>,
     pub ontoggle: Callback<usize>,
     /// `h1`..`h6`, already checked.
     pub heading: HtmlTag,
@@ -139,10 +138,11 @@ fn heading(level: HtmlTag, trigger: Element) -> Element {
     }
 }
 
-/// A plain `fn`, not a component: `Vec<Element>` props defeat memoization.
-pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
+/// A plain `fn`, run in `Accordion`'s scope; each section is a scope of its own.
+pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String) -> Element {
     let AccordionView {
         sections,
+        panel,
         ontoggle,
         heading: level,
         size,
@@ -184,69 +184,24 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
 
     let disabled: Vec<bool> = sections.iter().map(|section| section.disabled).collect();
 
-    let items = sections.into_iter().enumerate().map(|(index, section)| {
-        let trigger_id = format!("{root}-trigger-{index}");
-        let region_id = format!("{root}-region-{index}");
-        let targets = arrow_targets(&disabled, index);
-        let key_root = root.clone();
-        // A plain closure, not `use_callback`: a focus handler is re-entrant.
-        let onkeydown = move |event: Event<KeyboardData>| {
-            let Some([next, previous, first, last]) = targets else {
-                return;
-            };
-            // Ctrl/Alt/Meta chords are the browser's.
-            if has_shortcut_modifier(&event) {
-                return;
-            }
-            // Arrows move focus and never toggle - the opposite of `Tabs`.
-            let to = match event.key() {
-                Key::ArrowDown => next,
-                Key::ArrowUp => previous,
-                Key::Home => first,
-                Key::End => last,
-                _ => return,
-            };
-            event.prevent_default();
-            let _ = root_element
-                .query_selector(&id_selector(&format!("{key_root}-trigger-{to}")))
-                .and_then(|trigger| trigger.focus());
-        };
-        let disabled = section.disabled;
-        let trigger = rsx! {
-            button {
-                id: "{trigger_id}",
-                r#type: "button",
-                // Strings: SSR writes a bare `true`, and the chevron CSS matches `"true"`.
-                "aria-expanded": if section.open { "true" } else { "false" },
-                "aria-controls": "{region_id}",
-                // `aria-disabled`, not `disabled`: the section stays a tab stop.
-                "aria-disabled": if disabled { "true" } else { "false" },
-                "aria-label": section.name,
-                onclick: move |_| {
-                    if !disabled {
-                        ontoggle.call(index);
-                    }
-                },
-                onkeydown,
-                span { {section.content} }
-                span { "data-accordion-chevron": "", Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } }
-            }
-        };
-        rsx! {
-            div { key: "{index}", "data-accordion-item": "",
-                {heading(level, trigger)}
-                Collapse {
-                    open: section.open,
-                    keep_mounted: false,
-                    id: "{region_id}",
-                    role: "region",
-                    aria_labelledby: "{trigger_id}",
-                    div { "data-accordion-body": "", {section.panel} }
-                }
+    let items = rsx! {
+        for (index, section) in sections.into_iter().enumerate() {
+            AccordionSection {
+                key: "{index}",
+                value: section.value,
+                label: section.label,
+                index,
+                open: section.open,
+                disabled: section.disabled,
+                targets: arrow_targets(&disabled, index),
+                level,
+                root: root.clone(),
+                root_element,
+                ontoggle,
+                panel,
             }
         }
-    });
-    let items: Vec<Element> = items.collect();
+    };
 
     use_box()
         .framework_sx(&ACCORDION_SX)
@@ -256,6 +211,96 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
         .prepare()
         .element(&root_element)
         .render(HtmlTag::Div, attributes, items)
+}
+
+/// One section, its own scope: a switch redraws the two sections it changes, and a
+/// panel is built only when its section redraws.
+#[component]
+fn AccordionSection<T: Options>(
+    value: T,
+    label: OptionLabel,
+    index: usize,
+    open: bool,
+    disabled: bool,
+    /// From [`arrow_targets`].
+    targets: Option<[usize; 4]>,
+    level: HtmlTag,
+    root: String,
+    root_element: ElementHandle,
+    ontoggle: Callback<usize>,
+    panel: Option<Callback<T, Element>>,
+) -> Element {
+    let trigger_id = format!("{root}-trigger-{index}");
+    let region_id = format!("{root}-region-{index}");
+    let name = label.name;
+    let content = label.content.unwrap_or_else(|| rsx! { "{name}" });
+    // Built while open; a closing panel animates out with its last body, and
+    // `Collapse` drops it once closed.
+    let kept = use_hook(|| Rc::new(RefCell::new(None::<Element>)));
+    let body = match (&panel, open) {
+        (Some(panel), true) => {
+            let body = panel.call(value.clone());
+            *kept.borrow_mut() = Some(body.clone());
+            body
+        }
+        (None, true) => rsx! {},
+        (_, false) => kept.borrow().clone().unwrap_or_else(|| rsx! {}),
+    };
+    // A plain closure, not `use_callback`: a focus handler is re-entrant.
+    let onkeydown = move |event: Event<KeyboardData>| {
+        let Some([next, previous, first, last]) = targets else {
+            return;
+        };
+        // Ctrl/Alt/Meta chords are the browser's.
+        if has_shortcut_modifier(&event) {
+            return;
+        }
+        // Arrows move focus and never toggle - the opposite of `Tabs`.
+        let to = match event.key() {
+            Key::ArrowDown => next,
+            Key::ArrowUp => previous,
+            Key::Home => first,
+            Key::End => last,
+            _ => return,
+        };
+        event.prevent_default();
+        let _ = root_element
+            .query_selector(&id_selector(&format!("{root}-trigger-{to}")))
+            .and_then(|trigger| trigger.focus());
+    };
+    let trigger = rsx! {
+        button {
+            id: "{trigger_id}",
+            r#type: "button",
+            // Strings: SSR writes a bare `true`, and the chevron CSS matches `"true"`.
+            "aria-expanded": if open { "true" } else { "false" },
+            "aria-controls": "{region_id}",
+            // `aria-disabled`, not `disabled`: the section stays a tab stop.
+            "aria-disabled": if disabled { "true" } else { "false" },
+            "aria-label": name,
+            onclick: move |_| {
+                if !disabled {
+                    ontoggle.call(index);
+                }
+            },
+            onkeydown,
+            span { {content} }
+            span { "data-accordion-chevron": "", Glyph { slot: IconSlot::ChevronDown, icon: lucide::chevron_down::outlined } }
+        }
+    };
+    rsx! {
+        div { "data-accordion-item": "",
+            {heading(level, trigger)}
+            Collapse {
+                open,
+                keep_mounted: false,
+                id: "{region_id}",
+                role: "region",
+                aria_labelledby: "{trigger_id}",
+                div { "data-accordion-body": "", {body} }
+            }
+        }
+    }
 }
 
 #[cfg(test)]

@@ -82,6 +82,8 @@ base_props! {
         #[props(default)]
         onchange: Option<EventHandler<AccordionOpen<T>>>,
         /// A section's body. A closed panel is never mounted, so it keeps no state.
+        /// A closure that captures a plain value redraws only when its section's
+        /// value or open state changes.
         #[props(default)]
         panel: Option<Callback<T, Element>>,
         /// The sections; defaults to every `Options::options()`. Groups are flattened,
@@ -154,27 +156,18 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
     let values = list.values();
     let option_disabled = list.disabled();
 
-    let sections: Vec<SectionSpec> = values
+    let sections: Vec<SectionSpec<T>> = values
         .iter()
         .zip(&option_disabled)
-        .map(|(value, &option_disabled)| {
-            let label = match &props.option_label {
+        .map(|(value, &option_disabled)| SectionSpec {
+            value: value.clone(),
+            // Resolved here, never stale: only a rich label redraws its section each time.
+            label: match &props.option_label {
                 Some(label) => label.call(value.clone()),
                 None => OptionLabel::from(value.label()),
-            };
-            let name = label.name;
-            SectionSpec {
-                content: label.content.unwrap_or_else(|| rsx! { "{name}" }),
-                name,
-                disabled: option_disabled,
-                open: props.open.is_open(value),
-                // Always built: a closing panel animates out around it, and
-                // `Collapse` mounts it only while open or closing.
-                panel: match &props.panel {
-                    Some(panel) => panel.call(value.clone()),
-                    None => rsx! {},
-                },
-            }
+            },
+            disabled: option_disabled,
+            open: props.open.is_open(value),
         })
         .collect();
 
@@ -191,6 +184,7 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
     render_accordion(
         AccordionView {
             sections,
+            panel: props.panel,
             ontoggle: toggle,
             heading,
             size: props.size.copied_or(theme.accordion.size),

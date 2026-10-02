@@ -142,6 +142,7 @@ fn reveal_inline(strip: ElementHandle, selector: &str) {
 
 /// One tab, with `T` already gone: `content` is the rendered label and `name`
 /// the accessible one, or empty for the content's own.
+#[derive(Clone, PartialEq)]
 pub(crate) struct TabSpec {
     pub name: String,
     pub content: Element,
@@ -188,14 +189,88 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         attributes,
     } = view;
 
+    let root_element = use_element();
+
+    let states: Input<States> = states
+        .unwrap_or_default()
+        .with(size.state_name(), true)
+        .with("full-width", full_width)
+        .into();
+    // The text role, shared by the selected label and its underline.
+    let variables: Input<Variables> = variables().with(TABS_COLOR, text_color(&color)).into();
+
+    // The caller's name goes on the tablist: `aria-label` is prohibited on the role-less root.
+    let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) = attributes
+        .into_iter()
+        .partition(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    use_name_warning(
+        names_itself(&naming),
+        "Tabs: no `aria-label` or `aria-labelledby`, so the tab list is announced without a name.",
+    );
+    let panel_id = selected.map(|selected| format!("{root}-panel-{selected}"));
+    let panel_labelled_by = selected.map(|selected| format!("{root}-tab-{selected}"));
+
+    use_box()
+        .framework_sx(&TABS_SX)
+        .class(&class)
+        .sx(&user_sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare()
+        .element(&root_element)
+        .render(
+            HtmlTag::Div,
+            attributes,
+            rsx! {
+                TabStrip {
+                    tabs,
+                    selected,
+                    onselect,
+                    manual,
+                    focusable,
+                    root: root.clone(),
+                    root_element,
+                    naming,
+                }
+                if let (Some(panel_id), Some(labelled_by)) = (panel_id, panel_labelled_by) {
+                    div {
+                        id: "{panel_id}",
+                        role: "tabpanel",
+                        "aria-labelledby": "{labelled_by}",
+                        tabindex: (focusable && panel_stop).then_some("0"),
+                        "data-slot": TabsPart::Panel.slot(),
+                        {panel}
+                    }
+                }
+            },
+        )
+}
+
+/// The tablist, its own scope: a focus move redraws the strip, not the panel.
+#[component]
+fn TabStrip(
+    tabs: Vec<TabSpec>,
+    selected: Option<usize>,
+    onselect: Callback<usize>,
+    manual: bool,
+    focusable: bool,
+    root: String,
+    root_element: ElementHandle,
+    naming: Vec<Attribute>,
+) -> Element {
     let disabled: Vec<bool> = tabs.iter().map(|tab| tab.disabled).collect();
     // One tab stop: the focused tab, else the selected one, else the first enabled.
-    let mut focused = use_signal(|| None::<usize>);
+    let focused = use_signal(|| None::<usize>);
     let tab_stop = focused()
         .filter(|&index| index < tabs.len())
         .or(selected)
         .or_else(|| disabled.iter().position(|off| !off));
-    let root_element = use_element();
+    let focus_on = move |index: Option<usize>| {
+        if *focused.peek() != index {
+            let mut focused = focused;
+            focused.set(index);
+        }
+    };
     let list_element = use_element();
     // Focus leaving the strip hands the tab stop back to the selected tab.
     // Also on Blitz, whose Tab fires no blur.
@@ -203,8 +278,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         move || vec![list_element.mounted()],
         move |change| {
             if !change.within {
-                let mut focused = focused;
-                focused.set(None);
+                focus_on(None);
             }
         },
     );
@@ -229,7 +303,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
             onselect.call(next);
         }
         // Blitz fires no focus event for a scripted `focus()`.
-        focused.set(Some(next));
+        focus_on(Some(next));
         if let Ok(tab) =
             root_element.query_selector(&id_selector(&format!("{keydown_root}-tab-{next}")))
         {
@@ -246,88 +320,46 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         }
     }));
 
-    let states: Input<States> = states
-        .unwrap_or_default()
-        .with(size.state_name(), true)
-        .with("full-width", full_width)
-        .into();
-    // The text role, shared by the selected label and its underline.
-    let variables: Input<Variables> = variables().with(TABS_COLOR, text_color(&color)).into();
-
-    // The caller's name goes on the tablist: `aria-label` is prohibited on the role-less root.
-    let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) = attributes
-        .into_iter()
-        .partition(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
-    use_name_warning(
-        names_itself(&naming),
-        "Tabs: no `aria-label` or `aria-labelledby`, so the tab list is announced without a name.",
-    );
-    let list_id = format!("{root}-tablist");
-    let panel_id = selected.map(|selected| format!("{root}-panel-{selected}"));
-    let panel_labelled_by = selected.map(|selected| format!("{root}-tab-{selected}"));
-
-    use_box()
-        .framework_sx(&TABS_SX)
-        .class(&class)
-        .sx(&user_sx)
-        .states(&states)
-        .variables(&variables)
-        .prepare()
-        .element(&root_element)
-        .render(
-            HtmlTag::Div,
-            attributes,
-            rsx! {
-                div {
-                    id: "{list_id}",
-                    role: "tablist",
-                    "aria-orientation": "horizontal",
-                    "data-slot": TabsPart::List.slot(),
-                    onmounted: list_element.mount(),
-                    onfocusout: focus.focusout(0),
-                    ..naming,
-                    for (index, tab) in tabs.iter().enumerate() {
-                        button {
-                            key: "{index}",
-                            id: "{root}-tab-{index}",
-                            r#type: "button",
-                            role: "tab",
-                            // Strings, not bools: SSR writes a bare `true`, and the
-                            // selected-tab CSS matches on `[aria-selected="true"]`.
-                            "aria-selected": if selected == Some(index) { "true" } else { "false" },
-                            // Only the selected panel exists to point at.
-                            "aria-controls": (selected == Some(index)).then(|| format!("{root}-panel-{index}")),
-                            // Not `disabled`: the tab stays reachable.
-                            "aria-disabled": if tab.disabled { "true" } else { "false" },
-                            // An empty name leaves the content to name the tab.
-                            "aria-label": (!tab.name.is_empty()).then(|| tab.name.clone()),
-                            tabindex: if focusable && tab_stop == Some(index) { "0" } else { "-1" },
-                            "data-slot": TabsPart::Tab.slot(),
-                            onkeydown: move |event| onkeydown.call((index, event)),
-                            onfocus: move |_| focused.set(Some(index)),
-                            onclick: {
-                                let disabled = tab.disabled;
-                                move |_| {
-                                    focused.set(Some(index));
-                                    if !disabled {
-                                        onselect.call(index);
-                                    }
-                                }
-                            },
-                            {tab.content.clone()}
+    rsx! {
+        div {
+            id: "{root}-tablist",
+            role: "tablist",
+            "aria-orientation": "horizontal",
+            "data-slot": TabsPart::List.slot(),
+            onmounted: list_element.mount(),
+            onfocusout: focus.focusout(0),
+            ..naming,
+            for (index, tab) in tabs.iter().enumerate() {
+                button {
+                    key: "{index}",
+                    id: "{root}-tab-{index}",
+                    r#type: "button",
+                    role: "tab",
+                    // Strings, not bools: SSR writes a bare `true`, and the
+                    // selected-tab CSS matches on `[aria-selected="true"]`.
+                    "aria-selected": if selected == Some(index) { "true" } else { "false" },
+                    // Only the selected panel exists to point at.
+                    "aria-controls": (selected == Some(index)).then(|| format!("{root}-panel-{index}")),
+                    // Not `disabled`: the tab stays reachable.
+                    "aria-disabled": if tab.disabled { "true" } else { "false" },
+                    // An empty name leaves the content to name the tab.
+                    "aria-label": (!tab.name.is_empty()).then(|| tab.name.clone()),
+                    tabindex: if focusable && tab_stop == Some(index) { "0" } else { "-1" },
+                    "data-slot": TabsPart::Tab.slot(),
+                    onkeydown: move |event| onkeydown.call((index, event)),
+                    onfocus: move |_| focus_on(Some(index)),
+                    onclick: {
+                        let disabled = tab.disabled;
+                        move |_| {
+                            focus_on(Some(index));
+                            if !disabled {
+                                onselect.call(index);
+                            }
                         }
-                    }
+                    },
+                    {tab.content.clone()}
                 }
-                if let (Some(panel_id), Some(labelled_by)) = (panel_id, panel_labelled_by) {
-                    div {
-                        id: "{panel_id}",
-                        role: "tabpanel",
-                        "aria-labelledby": "{labelled_by}",
-                        tabindex: (focusable && panel_stop).then_some("0"),
-                        "data-slot": TabsPart::Panel.slot(),
-                        {panel}
-                    }
-                }
-            },
-        )
+            }
+        }
+    }
 }

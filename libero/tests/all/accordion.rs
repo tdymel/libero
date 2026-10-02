@@ -2,9 +2,11 @@
 //! its region, which panels are in the DOM, the heading level, and the
 //! open-set arithmetic behind `onchange`.
 
-use crate::common::{attributes_of, body, render};
+use std::time::Duration;
 
-use dioxus::prelude::*;
+use crate::common::{attributes_of, body, drive_until, render};
+
+use dioxus::{core::ScopeId, prelude::*};
 use libero::{
     LiberoProvider,
     components::{Accordion, AccordionOpen, OptionLabel, OptionList, Options},
@@ -300,4 +302,93 @@ fn an_accordion_left_without_options_still_lists_the_enums_own_sections() {
 
     assert_eq!(triggers.len(), 3);
     assert!(triggers.iter().all(|t| t["aria-disabled"] == "false"));
+}
+
+thread_local! {
+    static PANELS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[derive(Clone, Copy)]
+struct Held {
+    open: Signal<AccordionOpen<Step>>,
+    note: Signal<&'static str>,
+    parent: Signal<u32>,
+}
+
+/// The panel bodies read `note`, a signal, and count their builds.
+fn held_app() -> Element {
+    let held = use_context_provider(|| Held {
+        open: Signal::new(AccordionOpen::One(Some(Step::Shipping))),
+        note: Signal::new("first"),
+        parent: Signal::new(0),
+    });
+    let note = held.note;
+    rsx! {
+        LiberoProvider {
+            Accordion::<Step> {
+                class: "render-{held.parent}",
+                open: (held.open)(),
+                onchange: |_| {},
+                panel: move |step: Step| {
+                    PANELS.with(|panels| panels.set(panels.get() + 1));
+                    rsx! { "{step.label()} {note}" }
+                },
+            }
+        }
+    }
+}
+
+fn mount_held() -> (VirtualDom, Held) {
+    let mut dom = VirtualDom::new(held_app);
+    dom.rebuild_in_place();
+    let held = dom.in_scope(ScopeId::APP, consume_context::<Held>);
+    (dom, held)
+}
+
+/// The body once it shows `shown` after `change`, and the panels built meanwhile.
+fn step(dom: &mut VirtualDom, change: impl FnOnce(), shown: &str) -> (String, usize) {
+    PANELS.with(|panels| panels.set(0));
+    dom.in_runtime(change);
+    // An opening `Collapse` mounts its body from an effect.
+    let html = drive_until(dom, Duration::from_secs(2), |html| html.contains(shown));
+    (html, PANELS.with(std::cell::Cell::get))
+}
+
+/// A render-count budget (todo 2024): a switch builds the opening panel alone, and an
+/// `Accordion` render that changes no section builds none.
+#[test]
+fn a_switch_builds_only_the_opening_panel() {
+    let (mut dom, mut held) = mount_held();
+
+    let (html, built) = step(&mut dom, || held.parent.set(1), "render-1");
+    assert!(html.contains("render-1"), "{html}");
+    assert_eq!(built, 0, "{html}");
+    let open = || held.open.set(AccordionOpen::One(Some(Step::Payment)));
+    let (html, built) = step(&mut dom, open, "Payment method first");
+    assert!(html.contains("Payment method first"), "{html}");
+    assert_eq!(built, 1, "{html}");
+}
+
+/// A section scope still follows a signal its open panel reads (todo 2024).
+#[test]
+fn a_signal_an_open_panel_reads_redraws_it() {
+    let (mut dom, mut held) = mount_held();
+
+    let (html, _) = step(&mut dom, || held.note.set("second"), "Shipping second");
+    assert!(html.contains("Shipping second"), "{html}");
+    assert!(!html.contains("first"), "{html}");
+}
+
+/// A panel closed while its signal changed opens with the current value.
+#[test]
+fn a_closed_panel_opens_with_the_signal_value_of_now() {
+    let (mut dom, mut held) = mount_held();
+
+    step(&mut dom, || held.note.set("second"), "Shipping second");
+    let open = || {
+        held.open
+            .set(AccordionOpen::Many(vec![Step::Shipping, Step::Review]))
+    };
+    let (html, _) = step(&mut dom, open, "Review second");
+    assert!(html.contains("Review second"), "{html}");
 }

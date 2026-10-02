@@ -172,15 +172,21 @@ impl FormScope {
     }
 
     /// The worst composite issue naming `name` that may show: after a submit,
-    /// or once every field it names is touched. Reactive.
+    /// or once every field it names is touched. Reactive, but on `touched` only while
+    /// an issue names `name`: a blur elsewhere re-renders no other field.
     pub fn visible_issue(&self, name: &str) -> FieldStatus {
-        let submitted = self.submitted();
-        let touched = self.touched.read();
-        self.issues
-            .read()
+        let issues = self.issues.read();
+        let mut naming = issues
             .values()
             .flatten()
             .filter(|issue| issue.paths.iter().any(|path| path == name))
+            .peekable();
+        if naming.peek().is_none() {
+            return FieldStatus::Valid;
+        }
+        let submitted = self.submitted();
+        let touched = self.touched.read();
+        naming
             .filter(|issue| submitted || issue.paths.iter().all(|path| touched.contains(path)))
             .fold(FieldStatus::Valid, |status, issue| {
                 worst(status, issue.status.clone())

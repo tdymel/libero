@@ -150,7 +150,7 @@ pub fn AccordionPage() -> Element {
                         .doc("Called with the whole new open set, in the same mode, ready to store."),
                     prop("panel", "Callback<T, Element>")
                         .default("None")
-                        .doc("A section's body. A closed panel is not mounted, so it keeps no state."),
+                        .doc("A section's body. A closed panel is not mounted, so it keeps no state. A closure that captures a plain value redraws only when its section's value or open state changes."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
                         .doc("The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. Groups are drawn flat."),
@@ -269,19 +269,24 @@ pub fn AccordionPage() -> Element {
                         Step::Payment => rsx! { Text { "Card, invoice or bank transfer." } },
                         Step::Review => rsx! { Text { "Check the order, then place it." } },
                     };
+                    // Keyed by mode, so a switch remounts it: `panel` captures `is_many` and
+                    // the mode's signal, and a section redraws only when it changes.
                     rsx! {
-                        Accordion {
-                            size: values.str("size"),
-                            heading: values.str("heading"),
-                            options: {
-                                let off = values.str("disabled_option") == "true";
-                                OptionList::from_options()
-                                    .disabling(move |step| off && *step == Step::Review)
-                            },
-                            option_label: (values.str("rich_label") == "true").then(|| Callback::new(rich)),
-                            open: open(),
-                            onchange: move |next| open.set(next),
-                            panel,
+                        for mode in [is_many] {
+                            Accordion {
+                                key: "{mode}",
+                                size: values.str("size"),
+                                heading: values.str("heading"),
+                                options: {
+                                    let off = values.str("disabled_option") == "true";
+                                    OptionList::from_options()
+                                        .disabling(move |step| off && *step == Step::Review)
+                                },
+                                option_label: (values.str("rich_label") == "true").then(|| Callback::new(rich)),
+                                open: open(),
+                                onchange: move |next| open.set(next),
+                                panel,
+                            }
                         }
                     }
                 },
