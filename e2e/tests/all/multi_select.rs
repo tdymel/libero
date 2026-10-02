@@ -5,7 +5,7 @@ use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
 use e2e::suite::Step;
 use e2e::{
-    Fixture, Suite, Viewport,
+    Fixture, Suite, Viewport, clock,
     passes::{keyboard, pointer},
     wait,
 };
@@ -93,7 +93,7 @@ async fn open_on_damson(page: &chromiumoxide::Page) {
     keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
     wait::for_visible(page, "[role=option]").await.unwrap();
     keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-    page.evaluate("new Promise(r => setTimeout(() => r(1), 60))")
+    crate::select::highlight_reads(page, "Damson")
         .await
         .unwrap();
 }
@@ -113,9 +113,7 @@ fn leaving_keeps_the_value(key: keyboard::Key, modifiers: i64) {
         )
         .await
         .unwrap();
-        page.evaluate("new Promise(r => setTimeout(() => r(1), 100))")
-            .await
-            .unwrap();
+        clock::settle(page).await.unwrap();
         let text: String = page
             .evaluate("document.body.innerText")
             .await

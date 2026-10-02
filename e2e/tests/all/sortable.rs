@@ -521,7 +521,12 @@ fn a_second_drag_still_moves_the_neighbours_before_the_drop() {
                     order: "Alpha Beta Gamma Delta",
                 },
             ];
-            second_drag(page, &rounds, "#Gamma", delta.y - gamma.y).await
+            // In front: behind, each move waits about a second for a frame.
+            e2e::frames::in_front(
+                page,
+                second_drag(page, &rounds, "#Gamma", delta.y - gamma.y),
+            )
+            .await
         }
         .await;
         fixture.close().await.unwrap();

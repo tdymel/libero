@@ -113,13 +113,17 @@ async fn scrolls_under_the_header<D: Driver>(
 ) -> Result<()> {
     let (_, row, _) = tops(d).await?;
     for _ in 1..presses {
-        // WebKit drops a press that lands while the last step still animates.
         let (_, before, _) = tops(d).await?;
         d.press(key).await?;
         eventually(d, "a step to scroll the rows", async |d| {
             Ok(tops(d).await?.1 < before)
         })
         .await?;
+        // WebKit drops a press that lands while the last step still animates; Chromium
+        // retargets it, and Blitz does not animate.
+        if d.platform() != Platform::Desktop {
+            continue;
+        }
         // Held still over 4 idle rounds, not a fixed 7.5 s.
         let mut last = tops(d).await?.1;
         eventually(d, "the step's scroll to settle", async |d| {
@@ -1479,8 +1483,10 @@ async fn count(page: &Page, selector: &str) -> f64 {
 async fn arrow_opacity(page: &Page, header: &str, expected: &str) -> Result<()> {
     wait::for_js_true(
         page,
+        // Its transition finished at once: a tab behind runs it at ~1 frame/s.
         &format!(
-            "getComputedStyle(document.querySelector('{header} svg')).opacity === {expected:?}"
+            "(svg => (svg.getAnimations().forEach((a) => a.finish()), getComputedStyle(svg).opacity === {expected:?}))\
+             (document.querySelector('{header} svg'))"
         ),
         &format!("{header}'s arrow at opacity {expected}"),
     )

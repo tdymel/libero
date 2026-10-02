@@ -18,11 +18,12 @@ fn it_meets_the_baseline() {
 }
 
 /// How much of the focused item is hidden, in px: under a control that is
-/// showing, or outside the strip's clip.
+/// showing, or outside the strip's clip. A control's fade is finished at once:
+/// a tab behind runs it at ~1 frame/s.
 const HIDDEN: &str = "(() => { const a = document.activeElement.getBoundingClientRect(); \
     const v = document.querySelector('[role=region]').getBoundingClientRect(); \
     const under = [...document.querySelectorAll('#strip > button')] \
-    .filter(b => getComputedStyle(b).opacity !== '0') \
+    .filter(b => (b.getAnimations().forEach(t => t.finish()), getComputedStyle(b).opacity !== '0')) \
     .map(b => { const c = b.getBoundingClientRect(); \
     return Math.min(a.right, c.right) - Math.max(a.left, c.left); }); \
     return Math.max(0, v.left - a.left, a.right - v.right, ...under); })()";
@@ -315,7 +316,13 @@ fn a_tabbed_item_scrolls_into_view_with_smooth_scrolling() {
         let page = &fixture.page;
         motion::set_reduced_motion(page, false).await.unwrap();
         motion::spy_scrolls(page, STRIP, true).await.unwrap();
-        tab_along(page).await;
+        // In front: a tab behind runs a smooth scroll at ~1 frame/s.
+        e2e::frames::in_front(page, async {
+            tab_along(page).await;
+            Ok(())
+        })
+        .await
+        .unwrap();
         let scrolls = motion::scrolls(page).await.unwrap();
         assert!(
             scrolls.iter().any(|scroll| scroll.cut),

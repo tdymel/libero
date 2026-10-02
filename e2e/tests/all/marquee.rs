@@ -156,8 +156,11 @@ fn a_focused_link_is_never_hidden_under_the_pause_toggle() {
         wait::for_js_true(
             page,
             &format!(
+                // The fade-in finished at once: a tab behind runs it at ~1 frame/s.
                 "(() => {{ const t = document.querySelector({PAUSE:?}); \
-                 return document.activeElement === t && getComputedStyle(t).opacity === '1'; }})()"
+                 if (document.activeElement !== t) return false; \
+                 t.getAnimations().forEach((a) => a.finish()); \
+                 return getComputedStyle(t).opacity === '1'; }})()"
             ),
             "Tab from the last link to reach the drawn toggle",
         )

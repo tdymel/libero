@@ -94,8 +94,9 @@ fn the_controls_fit_a_narrow_player() {
 #[test]
 fn every_control_is_a_tab_stop_in_visual_order() {
     block_on(async {
-        let _fullscreen = e2e::frames::keep_fullscreen().await;
+        let _fullscreen;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        _fullscreen = e2e::frames::keep_fullscreen().await;
         let page = &fixture.page;
         wait::for_js_true(
             page,
@@ -223,8 +224,9 @@ fn the_overlay_bar_keeps_its_contrast_over_a_white_picture() {
         ];
     })()"#;
     block_on(async {
-        let _fullscreen = e2e::frames::keep_fullscreen().await;
+        let _fullscreen;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        _fullscreen = e2e::frames::keep_fullscreen().await;
         let page = &fixture.page;
         wait::for_js_true(
             page,
@@ -392,8 +394,9 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
     const DIALOG: &str = "[role=dialog][aria-label=Volume]";
     const VIDEO: &str = "document.querySelector('#player video')";
     block_on(async {
-        let _fullscreen = e2e::frames::keep_fullscreen().await;
+        let _fullscreen;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        _fullscreen = e2e::frames::keep_fullscreen().await;
         let page = &fixture.page;
         let speaker = |name: &str| {
             format!("document.querySelector('{SPEAKER}')?.getAttribute('aria-label') === '{name}'")
@@ -610,8 +613,9 @@ const QUESTION: Key = Key {
 fn shift_question_lists_the_keys_inside_the_player() {
     const DIALOG: &str = "[role=dialog]";
     block_on(async {
-        let _fullscreen = e2e::frames::keep_fullscreen().await;
+        let _fullscreen;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        _fullscreen = e2e::frames::keep_fullscreen().await;
         let page = &fixture.page;
         wait::for_js_true(
             page,

@@ -413,6 +413,7 @@ async fn ticks(page: &chromiumoxide::Page, done: &str, most: u32) -> bool {
 fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
     use chromiumoxide::cdp::browser_protocol::input::DispatchMouseEventType as Kind;
     use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::frames::in_front;
     use e2e::passes::pointer::Point;
     use e2e::wait;
     block_on(async {
@@ -439,20 +440,26 @@ fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
             centre(page, "#Gamma [data-slot=handle]").await,
             centre(page, "#Alpha [data-slot=handle]").await,
         );
-        mouse_at(page, Kind::MouseMoved, handle, false).await;
-        mouse_at(page, Kind::MousePressed, handle, true).await;
         let edge = Point {
             x: right - 8.0,
             y: alpha.y,
         };
-        for step in 1..=10 {
-            let t = f64::from(step) / 10.0;
-            let at = Point {
-                x: handle.x + (edge.x - handle.x) * t,
-                y: handle.y + (edge.y - handle.y) * t,
-            };
-            mouse_at(page, Kind::MouseMoved, at, true).await;
-        }
+        // In front: a tab behind holds each move for its next frame, about 1 s.
+        in_front(page, async {
+            mouse_at(page, Kind::MouseMoved, handle, false).await;
+            mouse_at(page, Kind::MousePressed, handle, true).await;
+            for step in 1..=10 {
+                let t = f64::from(step) / 10.0;
+                let at = Point {
+                    x: handle.x + (edge.x - handle.x) * t,
+                    y: handle.y + (edge.y - handle.y) * t,
+                };
+                mouse_at(page, Kind::MouseMoved, at, true).await;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
         // Held still: only the ticks scroll, up to Done's end edge and no further.
         let at_end = "(() => { const b = document.querySelector('#board').getBoundingClientRect(); \
              return Math.abs(document.querySelector('#column-2').getBoundingClientRect().right - b.right) < 2; })()";
@@ -480,8 +487,13 @@ fn a_drag_held_at_the_edge_scrolls_the_board_to_a_hidden_column() {
             x: done.x,
             y: alpha.y,
         };
-        mouse_at(page, Kind::MouseMoved, over, true).await;
-        mouse_at(page, Kind::MouseReleased, over, false).await;
+        in_front(page, async {
+            mouse_at(page, Kind::MouseMoved, over, true).await;
+            mouse_at(page, Kind::MouseReleased, over, false).await;
+            Ok(())
+        })
+        .await
+        .unwrap();
         wait::for_js_true(
             page,
             "document.querySelector('#order').textContent === 'Alpha Beta | Delta | Gamma'",
@@ -533,6 +545,7 @@ fn a_menu_move_to_a_hidden_column_scrolls_it_into_view() {
 #[test]
 fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
     use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::frames::in_front;
     use e2e::passes::pointer::{Point, touch_drag};
     use e2e::wait;
     block_on(async {
@@ -547,7 +560,10 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
             x: handle.x + (to.x - from.x),
             y: handle.y,
         };
-        touch_drag(page, handle, at, 12).await.unwrap();
+        // In front: a tab behind holds each touch event for its next frame, about 1 s.
+        in_front(page, touch_drag(page, handle, at, 12))
+            .await
+            .unwrap();
         wait::for_js_true(
             page,
             "document.querySelector('#order').textContent === 'Alpha Gamma | Delta Beta | '",
@@ -568,7 +584,9 @@ fn a_touch_on_the_handle_drags_across_and_elsewhere_scrolls_the_board() {
                 y: text.y,
             },
         );
-        touch_drag(page, start, end, 12).await.unwrap();
+        in_front(page, touch_drag(page, start, end, 12))
+            .await
+            .unwrap();
         wait::for_js_true(
             page,
             "document.querySelector('#board').scrollLeft > 50",

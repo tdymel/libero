@@ -51,6 +51,16 @@ async fn fill(page: &Page, selector: &str, text: &str) -> Result<()> {
     keyboard::type_text(page, text).await
 }
 
+/// [`fill`] by one `insert_text`, no key events: for a field with no key handler whose
+/// kind had its per-key pass (todo 1832).
+async fn fill_plain(page: &Page, selector: &str, text: &str) -> Result<()> {
+    click(page, selector).await?;
+    page.evaluate(format!("document.querySelector({selector:?}).select()"))
+        .await?;
+    keyboard::press(page, keyboard::BACKSPACE).await?;
+    keyboard::insert_text(page, text).await
+}
+
 async fn texts(page: &Page, css: &str) -> Result<Vec<String>> {
     Ok(page
         .evaluate(format!(
@@ -183,7 +193,7 @@ async fn signup(page: &Page) {
     )
     .await
     .unwrap();
-    fill(page, "input[name=email]", "ada@example.com")
+    fill_plain(page, "input[name=email]", "ada@example.com")
         .await
         .unwrap();
     fill(page, "input[name=age]", "17").await.unwrap();
@@ -209,10 +219,10 @@ async fn signup(page: &Page) {
     wait::for_hidden(page, "[role=option]").await.unwrap();
     click_text(page, "label", "Phone").await.unwrap();
 
-    fill(page, "input[name='address.street']", "1 Analytical Way")
+    fill_plain(page, "input[name='address.street']", "1 Analytical Way")
         .await
         .unwrap();
-    fill(page, "input[name='address.city']", "London")
+    fill_plain(page, "input[name='address.city']", "London")
         .await
         .unwrap();
     fill(page, "textarea[name=notes]", "Ring twice, then wait")
@@ -233,8 +243,10 @@ async fn signup(page: &Page) {
     .await;
     assert_eq!(data(page, "submits", "submits").await, "0");
 
-    fill(page, "input[name='address.zip']", "N1").await.unwrap();
-    fill(page, "textarea[name=notes]", "Ring twice")
+    fill_plain(page, "input[name='address.zip']", "N1")
+        .await
+        .unwrap();
+    fill_plain(page, "textarea[name=notes]", "Ring twice")
         .await
         .unwrap();
     click_text(page, "label", "Newsletter").await.unwrap();

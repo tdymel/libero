@@ -485,23 +485,19 @@ impl Suite {
         self.assert_settled_in_root(page, state).await
     }
 
-    /// Waits for finite animations to end: axe measured a fading-in notification at 3.72:1 (todo 315).
-    /// Infinite ones are ignored, and scroll-driven ones, which run as long as their
-    /// scroller exists (1010's drawn bars); a finite one past the budget fails.
+    /// Ends finite animations: axe measured a fading-in notification at 3.72:1 (todo 315).
+    /// Those within the budget are finished at once (1815); infinite and scroll-driven ones
+    /// (1010's drawn bars) are ignored; a finite one past the budget fails.
     async fn wait_for_animations(
         &self,
         page: &chromiumoxide::Page,
         state: &State,
     ) -> anyhow::Result<()> {
-        const RUNNING: &str = "[...document.getAnimations()] \
-             .filter(a => a.playState === 'running' && a.effect \
-               && a.effect.getComputedTiming().iterations !== Infinity \
-               && !(typeof ScrollTimeline !== 'undefined' && a.timeline instanceof ScrollTimeline)) \
-             .map(a => a.animationName || (a.effect.target && a.effect.target.tagName) || 'animation')";
         let deadline = std::time::Instant::now() + ANIMATION_BUDGET;
         loop {
-            let running: Vec<String> = page.evaluate(RUNNING).await?.into_value()?;
-            if running.is_empty() {
+            let left = deadline.saturating_duration_since(std::time::Instant::now());
+            let done = crate::clock::finish_animations(page, left).await?;
+            if done.finished == 0 && done.over.is_empty() {
                 return Ok(());
             }
             if std::time::Instant::now() >= deadline {
@@ -510,10 +506,14 @@ impl Suite {
                      A state measured mid-animation is measured against a colour and a \
                      geometry nobody sees, so this is a failure rather than a measurement",
                     state.name,
-                    running
+                    done.over
                 );
             }
-            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+            match done.finished {
+                // The end events go out with the next frame; a handler may re-measure on one.
+                1.. => crate::clock::frame(page).await?,
+                0 => tokio::time::sleep(std::time::Duration::from_millis(25)).await,
+            }
         }
     }
 

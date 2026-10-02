@@ -17,10 +17,11 @@ const BODY_OVERFLOW: &str = "getComputedStyle(document.body).overflowY";
 #[test]
 fn fullscreen_takes_the_player_and_escape_or_f_gives_it_back() {
     block_on(async {
-        let _fullscreen = e2e::frames::keep_fullscreen().await;
+        let _fullscreen;
         let fixture = Fixture::open("/video/refused", Viewport::Desktop)
             .await
             .unwrap();
+        _fullscreen = e2e::frames::keep_fullscreen().await;
         let page = &fixture.page;
 
         wait::for_js_true(
@@ -184,8 +185,9 @@ e2e::scenario!(
 fn the_speed_menu_works_in_fullscreen() {
     const SPEED: &str = "#player button[aria-label^='Playback speed']";
     block_on(async {
-        let _fullscreen = e2e::frames::keep_fullscreen().await;
+        let _fullscreen;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        _fullscreen = e2e::frames::keep_fullscreen().await;
         let page = &fixture.page;
         wait::for_js_true(
             page,
@@ -238,8 +240,9 @@ fn the_speed_menu_works_in_fullscreen() {
 #[test]
 fn a_tooltip_shows_in_fullscreen() {
     block_on(async {
-        let _fullscreen = e2e::frames::keep_fullscreen().await;
+        let _fullscreen;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
+        _fullscreen = e2e::frames::keep_fullscreen().await;
         let page = &fixture.page;
         wait::for_js_true(
             page,

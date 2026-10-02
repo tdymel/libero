@@ -491,7 +491,10 @@ fn the_analog_face_reaches_every_minute_and_second() {
             face_point(page, 40.0 / 60.0).await,
             face_point(page, 50.0 / 60.0).await,
         );
-        pointer::drag(page, from, to, 8).await.unwrap();
+        // In front: behind, each move waits about a second for a frame.
+        e2e::frames::in_front(page, pointer::drag(page, from, to, 8))
+            .await
+            .unwrap();
         value("09:50:14", "a drag to follow the pointer to minute 50").await;
 
         fixture

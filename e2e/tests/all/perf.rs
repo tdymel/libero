@@ -25,18 +25,27 @@ async fn read(page: &Page) -> Renders {
     serde_json::from_str(&json).unwrap()
 }
 
-/// The counts once nothing has rendered for 300 ms and a drawn frame; a count still
+/// Finite, time-driven animations and transitions still running: an exit renders once it ends.
+const ANIMATING: &str = "document.getAnimations().some((a) => a.playState === 'running' \
+    && a.effect?.getComputedTiming().iterations !== Infinity \
+    && !(typeof ScrollTimeline !== 'undefined' && a.timeline instanceof ScrollTimeline))";
+
+/// The counts once a drawn frame changed none and no animation runs; a count still
 /// growing after 6 s is a runaway.
 async fn settled(page: &Page, what: &str) -> Renders {
     let started = Instant::now();
     let mut last = read(page).await;
     loop {
-        tokio::time::sleep(Duration::from_millis(300)).await;
-        // A background tab draws every 500 ms: its resize reports, and the bars'
-        // re-measure on them, landed after a 300 ms quiet spell (todo 1955).
+        // Resize reports, and the bars' re-measure on them, land with a frame (todo 1955).
         clock::frame(page).await.unwrap();
         let now = read(page).await;
-        if now == last {
+        let animating: bool = page
+            .evaluate(ANIMATING)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        if now == last && !animating {
             return now;
         }
         assert!(

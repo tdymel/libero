@@ -116,10 +116,7 @@ async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         eventually_text(d, "#row-end", "50", "a vertical mouse drag").await?;
     }
 
-    // Past `DoublePress`'s 500ms, or Blitz takes the second press as a double.
-    if d.platform() == Platform::Native {
-        std::thread::sleep(std::time::Duration::from_millis(550));
-    }
+    // Blitz's `drag` waits out a double press of the last one itself.
     d.drag(ROW, 40.0, 0.0).await?;
     // `aria-valuenow` (the first divider's) truncates, `#row-end` rounds.
     eventually(d, "a sideways drag to move it and end", async |d| {

@@ -8,6 +8,7 @@ use chromiumoxide::cdp::browser_protocol::browser::{
 };
 use e2e::browser::{PERMISSIONS, block_on};
 use e2e::driver::{Driver, Platform, eventually, eventually_text};
+use e2e::frames::in_front;
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
@@ -210,8 +211,13 @@ fn the_web_shows_snapshots_records_and_stops_the_camera() {
         .await
         .unwrap();
 
-        click(page, "#snapshot").await.unwrap();
-        reads(page, "#photo", "photo.png true").await.unwrap();
+        // In front: `canvas.toBlob` encodes in an idle period, about 1 s apart in a tab behind.
+        in_front(page, async {
+            click(page, "#snapshot").await?;
+            reads(page, "#photo", "photo.png true").await
+        })
+        .await
+        .unwrap();
 
         click(page, "#record").await.unwrap();
         reads(page, "#recording", "true").await.unwrap();

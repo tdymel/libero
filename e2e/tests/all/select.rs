@@ -397,6 +397,15 @@ fn tab_commits_from_the_search_box() {
     leaving_commits("/select/field", keyboard::TAB, 0, "Damson");
 }
 
+/// Waits until the focused combobox's highlighted option reads `text`.
+pub async fn highlight_reads(page: &chromiumoxide::Page, text: &str) -> Result<()> {
+    let check = format!(
+        "(id => !!id && !!document.getElementById(id)?.textContent.includes({text:?}))\
+         (document.activeElement?.getAttribute('aria-activedescendant'))"
+    );
+    wait::for_js_true(page, &check, &format!("the highlight to reach {text}")).await
+}
+
 /// Opens `route`'s list, moves one row down, presses `key` with `modifiers`,
 /// and expects a closed list showing `expected`.
 pub fn leaving_commits(route: &str, key: keyboard::Key, modifiers: i64, expected: &str) {
@@ -407,9 +416,7 @@ pub fn leaving_commits(route: &str, key: keyboard::Key, modifiers: i64, expected
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         wait::for_visible(page, "[role=option]").await.unwrap();
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        page.evaluate("new Promise(r => setTimeout(() => r(1), 60))")
-            .await
-            .unwrap();
+        highlight_reads(page, expected).await.unwrap();
         keyboard::press_with(page, key, modifiers).await.unwrap();
         let check = format!(
             "(t => t.getAttribute('aria-expanded') === 'false' && t.textContent.includes({expected:?}))(document.querySelector({TRIGGER:?}))"

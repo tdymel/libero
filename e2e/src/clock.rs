@@ -127,6 +127,31 @@ pub async fn frame(page: &Page) -> Result<()> {
     settle(page).await
 }
 
+/// What [`finish_animations`] did: how many it finished, and those it left running.
+#[derive(Debug, serde::Deserialize)]
+pub struct Finished {
+    pub finished: usize,
+    pub over: Vec<String>,
+}
+
+/// Finishes every running finite animation that ends within `budget`: a tab behind runs them
+/// at ~1 frame/s. Infinite, paused and scroll-driven ones stay; their end events still fire (1815).
+pub async fn finish_animations(page: &Page, budget: std::time::Duration) -> Result<Finished> {
+    let script = format!(
+        "(() => {{ let finished = 0; const over = []; \
+         for (const a of document.getAnimations()) {{ \
+           if (a.playState !== 'running' || !a.effect \
+               || a.effect.getComputedTiming().iterations === Infinity \
+               || (typeof ScrollTimeline !== 'undefined' && a.timeline instanceof ScrollTimeline)) continue; \
+           const left = (a.effect.getComputedTiming().endTime - a.currentTime) / Math.abs(a.playbackRate || 1); \
+           if (left <= {}) {{ a.finish(); finished++; }} \
+           else over.push(a.animationName || a.transitionProperty || (a.effect.target && a.effect.target.tagName) || 'animation'); \
+         }} return {{ finished, over }}; }})()",
+        budget.as_millis()
+    );
+    Ok(page.evaluate(script).await?.into_value()?)
+}
+
 /// Fires every pending timer of `ms` (an interval stays armed); returns how many ran.
 pub async fn fire_all(page: &Page, ms: u32) -> Result<usize> {
     Ok(page

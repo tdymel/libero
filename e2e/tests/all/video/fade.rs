@@ -81,11 +81,19 @@ async fn faded<D: Driver>(d: &mut D) -> Result<bool> {
     )
 }
 
+/// The bar's opacity with its transition finished: a tab behind runs it at ~1 frame/s.
+fn bar_opacity_js() -> String {
+    format!(
+        "(() => {{ const bar = document.querySelector('{BAR}'); \
+         bar.getAnimations().forEach((a) => a.finish()); return getComputedStyle(bar).opacity; }})()"
+    )
+}
+
 /// `faded`, for a page read.
 fn faded_js() -> String {
     format!(
-        "document.querySelector('{GROUP}').dataset.controls === 'hidden' \
-         && getComputedStyle(document.querySelector('{BAR}')).opacity === '0'"
+        "document.querySelector('{GROUP}').dataset.controls === 'hidden' && {} === '0'",
+        bar_opacity_js()
     )
 }
 
@@ -250,10 +258,11 @@ fn a_click_on_the_picture_plays_or_pauses() {
 #[test]
 fn focus_from_code_shows_the_faded_controls() {
     block_on(async {
-        let _fullscreen = e2e::frames::keep_fullscreen().await;
+        let _fullscreen;
         let fixture = Fixture::open("/video/long", Viewport::Desktop)
             .await
             .unwrap();
+        _fullscreen = e2e::frames::keep_fullscreen().await;
         let page = &fixture.page;
         clock::hold(page, &[IDLE_MS]).await.unwrap();
         wait::for_js_true(page, LONG_DURATION, "the duration")
@@ -266,8 +275,10 @@ fn focus_from_code_shows_the_faded_controls() {
             .unwrap();
         wait::for_js_true(
             page,
-            "document.querySelector('#player [role=group]').dataset.controls === undefined
-             && getComputedStyle(document.querySelector('#player [data-slot=controls]')).opacity === '1'",
+            &format!(
+                "document.querySelector('{GROUP}').dataset.controls === undefined && {} === '1'",
+                bar_opacity_js()
+            ),
             "focus from code to show the row",
         )
         .await
@@ -290,10 +301,11 @@ fn focus_from_code_shows_the_faded_controls() {
 #[test]
 fn a_cancelled_press_does_not_stop_focus_showing_the_controls() {
     block_on(async {
-        let _fullscreen = e2e::frames::keep_fullscreen().await;
+        let _fullscreen;
         let fixture = Fixture::open("/video/long", Viewport::Desktop)
             .await
             .unwrap();
+        _fullscreen = e2e::frames::keep_fullscreen().await;
         let page = &fixture.page;
         clock::hold(page, &[IDLE_MS]).await.unwrap();
         wait::for_js_true(page, LONG_DURATION, "the duration")

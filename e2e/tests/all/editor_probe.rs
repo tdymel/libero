@@ -9,7 +9,7 @@ use chromiumoxide::cdp::browser_protocol::input::{
 use chromiumoxide::cdp::js_protocol::runtime::EvaluateParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, BACKSPACE, CTRL, ENTER, Key};
-use e2e::{Fixture, Viewport};
+use e2e::{Fixture, Viewport, clock, wait};
 
 const KEY_B: Key = Key {
     key: "b",
@@ -34,12 +34,6 @@ async fn editor_text(page: &Page) -> String {
         .unwrap()
         .into_value()
         .unwrap()
-}
-
-async fn settle(page: &Page) {
-    page.evaluate("new Promise(r => setTimeout(r, 100))")
-        .await
-        .unwrap();
 }
 
 async fn focus_editor(page: &Page) {
@@ -113,7 +107,7 @@ fn editing_events_reach_rust_and_cancel() {
                 )
                 .await
                 .unwrap();
-                settle(page).await;
+                clock::settle(page).await.unwrap();
             }
             let before = log(page).await.len();
             focus_editor(page).await;
@@ -143,7 +137,26 @@ fn editing_events_reach_rust_and_cancel() {
                 .await
                 .unwrap();
             keyboard::insert_text(page, "日本").await.unwrap();
-            settle(page).await;
+
+            const KINDS: [&str; 10] = [
+                "beforeinput insertText",
+                "beforeinput deleteContentBackward",
+                "beforeinput insertParagraph",
+                "beforeinput formatBold",
+                "beforeinput insertCompositionText",
+                "compositionstart",
+                "compositionupdate",
+                "compositionend",
+                "paste Some(\"synthetic\")",
+                "document selectionchange",
+            ];
+            let has = |lines: &[String], prefix: &str| lines.iter().any(|l| l.starts_with(prefix));
+            // A miss is reported by kind below.
+            let _ = wait::until("every editing event in the log", || async {
+                let lines = log(page).await.split_off(before);
+                Ok(KINDS.iter().all(|kind| has(&lines, kind)))
+            })
+            .await;
 
             let lines = log(page).await.split_off(before);
             let text = editor_text(page).await;
@@ -158,20 +171,11 @@ fn editing_events_reach_rust_and_cancel() {
                 eprintln!("  {line}");
             }
 
-            let has = |prefix: &str| lines.iter().any(|l| l.starts_with(prefix));
-            for kind in [
-                "beforeinput insertText",
-                "beforeinput deleteContentBackward",
-                "beforeinput insertParagraph",
-                "beforeinput formatBold",
-                "beforeinput insertCompositionText",
-                "compositionstart",
-                "compositionupdate",
-                "compositionend",
-                "paste Some(\"synthetic\")",
-                "document selectionchange",
-            ] {
-                assert!(has(kind), "cancel={cancel}: no `{kind}` reached Rust");
+            for kind in KINDS {
+                assert!(
+                    has(&lines, kind),
+                    "cancel={cancel}: no `{kind}` reached Rust"
+                );
             }
             if cancel {
                 assert!(!bold, "a cancelled formatBold still bolded");
@@ -226,7 +230,7 @@ fn highlight_cost_per_keystroke() {
                     "(() => {{ const c = document.getElementById('rust'); if (c.checked !== {rust}) c.click(); }})()"
                 );
                 page.evaluate(set).await.unwrap();
-                settle(page).await;
+                clock::settle(page).await.unwrap();
                 let ms: f64 = page
                     .evaluate(format!("({MEASURE})({lines}, 30)"))
                     .await

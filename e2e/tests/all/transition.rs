@@ -3,8 +3,8 @@
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
-use e2e::passes::{motion, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::passes::{keyboard, motion, pointer};
+use e2e::{Fixture, Viewport, clock, wait};
 
 const TOGGLE: &str = "#toggle";
 const ROOT: &str = "#panel";
@@ -146,5 +146,82 @@ fn reduced_motion_switches_its_transitions_off() {
 
         fixture.console.assert_clean("the transition").unwrap();
         fixture.close().await.unwrap();
+    });
+}
+
+/// Finishes what runs, as `Suite` does, and waits for an end event per finished animation.
+async fn finish_and_hear(page: &chromiumoxide::Page, what: &str) -> usize {
+    page.evaluate("window.__ends = []").await.unwrap();
+    let finished = clock::finish_animations(page, std::time::Duration::from_secs(5))
+        .await
+        .unwrap()
+        .finished;
+    wait::for_js_true(
+        page,
+        &format!("window.__ends.length >= {finished}"),
+        &format!("{what}: an end event for each of {finished} finished animations"),
+    )
+    .await
+    .unwrap();
+    finished
+}
+
+/// Todo 1815: an animation `Suite` finishes still sends its end event, which `Collapse`
+/// unmounts on and `Toast` and `Modal` animate by. `None` closes with Escape.
+#[test]
+fn a_finished_animation_still_sends_its_end_event() {
+    block_on(async {
+        for (route, trigger, shown, close) in [
+            (
+                "/collapse",
+                "#toggle-details",
+                "#details-text",
+                Some("#toggle-details"),
+            ),
+            (
+                "/notifications",
+                "#notify",
+                "[aria-live=polite] li",
+                Some("[aria-live] li [data-slot=close]"),
+            ),
+            ("/modal", "#open-modal", "[role=dialog]", None),
+        ] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            wait::for_visible(page, trigger).await.unwrap();
+            page.evaluate(
+                "for (const type of ['transitionend', 'animationend']) document.addEventListener(type, \
+                 (e) => window.__ends.push(e.animationName || e.propertyName), true); 1",
+            )
+            .await
+            .unwrap();
+
+            pointer::click(page, trigger).await.unwrap();
+            wait::for_selector(page, shown).await.unwrap();
+            let opened = finish_and_hear(page, &format!("{route} opening")).await;
+            match close {
+                Some(selector) => pointer::click(page, selector).await.unwrap(),
+                None => {
+                    let inside = format!("!!document.activeElement?.closest({shown:?})");
+                    wait::for_js_true(page, &inside, "focus in the dialog")
+                        .await
+                        .unwrap();
+                    keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+                }
+            }
+            let closed = finish_and_hear(page, &format!("{route} closing")).await;
+            wait::for_js_true(
+                page,
+                &format!("!document.querySelector({shown:?})"),
+                &format!("{route}: the close to unmount"),
+            )
+            .await
+            .unwrap();
+            assert!(
+                opened + closed > 0,
+                "{route}: nothing to finish, so this proves nothing"
+            );
+            fixture.close().await.unwrap();
+        }
     });
 }

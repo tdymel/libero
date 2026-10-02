@@ -10,10 +10,14 @@ use crate::Routes;
 pub const ROUTES: Routes = &[("/use-user-media", || rsx! { Captured {} })];
 
 /// Counts the recorder's non-empty chunks into `body[data-chunks]`, from 0 at each record:
-/// a test waits for one instead of sleeping out a chunk.
+/// a test waits for one instead of sleeping out a chunk. Chunks come every 100 ms, not 1 s.
 const COUNT_CHUNKS: &str = "document.body.dataset.chunks = 0;
     if (!window.__countsChunks) {
         window.__countsChunks = true;
+        const start = MediaRecorder.prototype.start;
+        MediaRecorder.prototype.start = function (slice) {
+            return start.call(this, slice === undefined ? slice : Math.min(slice, 100));
+        };
         const add = MediaRecorder.prototype.addEventListener;
         MediaRecorder.prototype.addEventListener = function (type, listener, ...rest) {
             if (type !== 'dataavailable') return add.call(this, type, listener, ...rest);

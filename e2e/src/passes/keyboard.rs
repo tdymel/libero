@@ -264,17 +264,20 @@ pub async fn assert_chords_ignored_with(
 ) -> Result<()> {
     let read = format!("JSON.stringify({probe})");
     let before: String = page.evaluate(read.as_str()).await?.into_value()?;
-    let settled = format!(
-        "new Promise((done) => setTimeout(() => setTimeout(() => \
-         done([{read}, window.__chordCancelled]), 0), 0))"
-    );
-    page.evaluate(
-        "window.__chordCancelled = []; if (!window.__chordListener) { \
-         window.__chordListener = true; window.addEventListener('keydown', e => { \
-         if ((e.ctrlKey || e.altKey || e.metaKey) && e.defaultPrevented) \
-         window.__chordCancelled.push(e.key); }); } 1",
-    )
+    // Each chord's keyup records the probe after `clock::settle`'s two macrotasks, in the page
+    // (todo 2066): past its handlers and renders; a reaction on a timer is not waited for (1631).
+    page.evaluate(format!(
+        "window.__chordProbe = () => {read}; window.__chordRecords = []; window.__chordCancelled = []; \
+         if (!window.__chordListener) {{ window.__chordListener = true; \
+         window.addEventListener('keydown', e => {{ \
+         if ((e.ctrlKey || e.altKey || e.metaKey) && e.defaultPrevented) window.__chordCancelled.push(e.key); }}); \
+         window.addEventListener('keyup', e => {{ if (e.ctrlKey || e.altKey || e.metaKey) \
+         setTimeout(() => setTimeout(() => {{ let after; \
+         try {{ after = window.__chordProbe(); }} catch (error) {{ after = 'a throw: ' + error; }} \
+         window.__chordRecords.push([after, window.__chordCancelled.splice(0)]); }}, 0), 0); }}, true); }} 1"
+    ))
     .await?;
+    let mut sent = Vec::new();
     for &(name, modifier) in modifiers {
         for key in keys {
             // Honoured, these two navigate away (Back, home page).
@@ -286,22 +289,23 @@ pub async fn assert_chords_ignored_with(
                 continue;
             }
             press_with(page, *key, modifier).await?;
-            // Read after `clock::settle`'s two macrotasks, in the same round trip (todo 1670):
-            // past the chord's handlers and renders; a reaction on a timer is not waited for (1631).
-            let (after, cancelled): (String, Vec<String>) =
-                page.evaluate(settled.as_str()).await?.into_value()?;
-            if after != before {
-                bail!(
-                    "{name}+{} changed {probe} from {before} to {after}",
-                    key.key
-                );
-            }
-            if !cancelled.is_empty() {
-                bail!(
-                    "{name}+{} was cancelled; the chord belongs to the browser",
-                    key.key
-                );
-            }
+            sent.push(format!("{name}+{}", key.key));
+        }
+    }
+    crate::wait::for_js_true(
+        page,
+        &format!("window.__chordRecords.length >= {}", sent.len()),
+        &format!("a keyup record for each of {} chords", sent.len()),
+    )
+    .await?;
+    let records: Vec<(String, Vec<String>)> =
+        page.evaluate("window.__chordRecords").await?.into_value()?;
+    for (chord, (after, cancelled)) in sent.iter().zip(records) {
+        if after != before {
+            bail!("{chord} changed {probe} from {before} to {after}");
+        }
+        if !cancelled.is_empty() {
+            bail!("{chord} was cancelled; the chord belongs to the browser");
         }
     }
     Ok(())

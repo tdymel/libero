@@ -1049,6 +1049,21 @@ fn tabs_moving_on_a_ctrl_chord_fail_the_chord_check() {
     ));
 }
 
+/// The same move a task after the key, as a dioxus render lands: the keyup's record still sees it (2066).
+#[test]
+fn tabs_moving_a_task_after_a_ctrl_chord_fail_the_chord_check() {
+    block_on(must_fail(
+        "/tabs",
+        Some(
+            "window.addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'ArrowRight') setTimeout(() => { \
+             const tabs = [...document.querySelectorAll('[role=tab]')]; \
+             tabs[(tabs.indexOf(document.activeElement) + 1) % tabs.length].focus(); }, 0); }, true)",
+        ),
+        "Ctrl+ArrowRight changed",
+        tabs_contract,
+    ));
+}
+
 /// `Tabs` that cancel Meta+End: nothing moves, but the browser loses its chord.
 #[test]
 fn tabs_cancelling_a_meta_chord_fail_the_chord_check() {

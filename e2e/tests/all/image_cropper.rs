@@ -805,19 +805,18 @@ fn the_wheel_and_a_trackpad_pinch_zoom_the_image() {
             page.execute(event).await.unwrap();
         };
 
-        wheel(-100.0, false).await;
-        wait::for_js_true(page, &format!("{crop} === '32,14,36,73'"), "a notch in")
-            .await
-            .unwrap();
-        wheel(100.0, false).await;
-        wait::for_js_true(page, &format!("{crop} === '30,10,40,80'"), "a notch out")
-            .await
-            .unwrap();
-        // A pinch to twice the spread: half the crop around the centre.
-        wheel(-100.0 * 2f64.ln(), true).await;
-        wait::for_js_true(page, &format!("{crop} === '40,30,20,40'"), "a pinch")
-            .await
-            .unwrap();
+        // In front: behind, each wheel event waits about a second for a frame.
+        frames::in_front(page, async {
+            wheel(-100.0, false).await;
+            wait::for_js_true(page, &format!("{crop} === '32,14,36,73'"), "a notch in").await?;
+            wheel(100.0, false).await;
+            wait::for_js_true(page, &format!("{crop} === '30,10,40,80'"), "a notch out").await?;
+            // A pinch to twice the spread: half the crop around the centre.
+            wheel(-100.0 * 2f64.ln(), true).await;
+            wait::for_js_true(page, &format!("{crop} === '40,30,20,40'"), "a pinch").await
+        })
+        .await
+        .unwrap();
         fixture.console.assert_clean("the wheel").unwrap();
         fixture.close().await.unwrap();
     });

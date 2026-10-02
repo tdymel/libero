@@ -200,7 +200,10 @@ fn a_drag_moves_the_pad_and_leaves_the_thumb_focused() {
 
             keyboard::tab_to(page, "#before", 5).await.unwrap();
             let (from, to) = pad_points(page, (0.25, 0.25), (0.75, 0.75)).await;
-            pointer::drag(page, from, to, 10).await.unwrap();
+            // In front: behind, each move waits about a second for a frame.
+            e2e::frames::in_front(page, pointer::drag(page, from, to, 10))
+                .await
+                .unwrap();
 
             // 75% across, 25% up from the bottom; one percent of slack for
             // sub-pixel rounding of the pad's box.
