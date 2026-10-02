@@ -306,6 +306,7 @@ fn NotesEditor(values: DemoValues, mut doc: Signal<Doc>) -> Element {
             intercept,
             overlay,
             active_descendant: picked.map(|user| format!("mention-{user}")),
+            overlay_results: count,
             value: doc(),
             onchange: move |next| doc.set(next),
         }
@@ -477,6 +478,8 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("Floats at the caret while `Some`, such as a mention list: under the caret's line, above it near the window's bottom edge, mirrored in right-to-left text. Focus stays in the text; pressing the overlay does not take it."),
                     prop("active_descendant", "String")
                         .doc("The id of the overlay's highlighted option. While `overlay` is `Some` the text carries it as `aria-activedescendant`, with `aria-controls` naming the overlay and `aria-autocomplete=\"list\"`."),
+                    prop("overlay_results", "usize")
+                        .doc("How many options the overlay lists. While `overlay` is `Some`, a change is announced through the editor's polite live region (\"2 results\", or \"No results\" at 0; `RichTextEditorLabels::results` and `nothing_found`)."),
                     prop("tools", "Vec<RichTextTool>")
                         .default("vec![]")
                         .doc("Your toolbar buttons, after the block buttons: `RichTextTool::new(command, label, icon)` runs the command by name; `.active(fn)` makes it a toggle with `aria-pressed`. They never move into the More menu."),
@@ -551,13 +554,14 @@ pub fn RichTextEditorPage() -> Element {
                     "The text type menu is a menu button whose name includes the current type, with `menuitemradio` items. So is the language menu of a code block, in the toolbar and on its opening fence (\"Code language: Rust\"); the fence button is not a tab stop, `Ctrl+Shift+L` reaches it.",
                     "Every edit goes through the document model, so undo, the `onchange` value and the screen stay in step. Input methods (IME) compose natively and are taken in when the composition ends.",
                     "While `overlay` is set, the text carries `aria-controls` naming it, `aria-autocomplete=\"list\"` and `aria-activedescendant` from `active_descendant`, so a screen reader announces the highlighted option.",
+                    "With `overlay_results`, the overlay's option count is announced through the polite live region whenever it changes while the overlay shows (\"2 results\").",
                 ])
                 .must([
                     "Leave `label` unset only when something else names the editor, such as an `aria_label`.",
                     "Document custom chords you bind in `keymap` for your users.",
                     "Bind chords the browser leaves to the page. `Ctrl+N`, `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab` and their Shift forms never reach it (on a Mac also `Cmd+Q`, `Cmd+H`, `Cmd+M`). A chord you unbind goes back to the browser: without Underline, `Ctrl+U` opens the page source. `Ctrl+P`, `Ctrl+S`, `Ctrl+D`, `Ctrl+F`, `Ctrl+L` and `Ctrl+Shift+I`/`J`/`C` belong to the browser too. On Windows `Ctrl+Alt` is AltGr, which types characters on many layouts: where it types one, the character wins over the chord (`Ctrl+Alt+2` types `²` on a German layout).",
                     "Make a `NodeViews` atom name its node in text (a mention shows `@name`): it is a non-editable island a screen reader reads as is.",
-                    "Give an `overlay` list `role=\"listbox\"` with an id per `role=\"option\"`, pass the highlighted one as `active_descendant`, and steer it with the keyboard through `intercept`; Escape should close it.",
+                    "Give an `overlay` list `role=\"listbox\"` with an id per `role=\"option\"`, pass the highlighted one as `active_descendant` and the count as `overlay_results`, and steer it with the keyboard through `intercept`; Escape should close it.",
                     "Name each `RichTextTool` with its `label`: the button shows only its icon.",
                 ])
                 .limits([
@@ -638,6 +642,7 @@ pub fn RichTextEditorPage() -> Element {
                                 "intercept".to_string(),
                                 "overlay".to_string(),
                                 "active_descendant: picked.map(|user| format!(\"mention-{user}\"))".to_string(),
+                                "overlay_results: count".to_string(),
                             ],
                             _ => vec![],
                         }

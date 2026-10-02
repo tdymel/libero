@@ -290,19 +290,22 @@ fn the_speaker_mutes_and_the_volume_sits_in_a_menu() {
 }
 
 /// Todo 1385: the bars fill as the time moves, from the start side, and a
-/// click on them seeks; right to left the start is the right.
+/// click on them seeks; right to left the start is the right. The slider's own
+/// `SliderTrack::Bars` draws them (todo 2050).
 #[test]
 fn the_bars_follow_the_time_and_a_click_seeks() {
     block_on(async {
         let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         for (id, from_right) in [("player", false), ("rtl", true)] {
-            let bars = format!("document.querySelectorAll('#{id} [data-slot=bars] > span')");
+            let bars = format!(
+                "document.querySelectorAll('#{id} [data-slot=track] > [data-slot=bars] > span')"
+            );
             wait::for_js_true(
                 page,
                 &format!(
                     "{} === '0:04' && {bars}.length === 28
-                     && document.querySelectorAll('#{id} [data-slot=bars] > [data-played]').length === 0",
+                     && document.querySelectorAll('#{id} [data-slot=bars] > [data-state=filled]').length === 0",
                     time_text(id)
                 ),
                 "28 bars, none played",
@@ -328,7 +331,7 @@ fn the_bars_follow_the_time_and_a_click_seeks() {
                 page,
                 &format!(
                     "{} && (() => {{ const b = [...{bars}];
-                     const played = b.filter((e) => e.hasAttribute('data-played'));
+                     const played = b.filter((e) => e.dataset.state === 'filled');
                      const first = b[0].getBoundingClientRect(), last = b[27].getBoundingClientRect();
                      return played.length >= 18 && played.length <= 24 && played[0] === b[0]
                          && (first.left > last.left) === {from_right}; }})()",

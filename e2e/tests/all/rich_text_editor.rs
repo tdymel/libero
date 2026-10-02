@@ -1136,8 +1136,17 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
             wait::for_js_true(page, &shown, &format!("{count} options")).await
         };
 
+        editor_status(page).await;
         keyboard::type_text(page, "hi @a").await.unwrap();
         options(2).await.expect("ada and alan");
+        // Todo 2052: the list's count is said, and again as typing narrows it.
+        announced(page, "2 results").await;
+        keyboard::type_text(page, "l").await.unwrap();
+        options(1).await.expect("alan");
+        announced(page, "1 result").await;
+        keyboard::press(page, BACKSPACE).await.unwrap();
+        options(2).await.unwrap();
+        announced(page, "2 results").await;
         // Placed under the caret's line.
         holds(
             page,

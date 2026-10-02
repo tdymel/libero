@@ -10,7 +10,7 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::{ActionIcon, Button, TooltipOpenDelay},
         common::{Glyph, HtmlTag, Input},
-        form::{Slider, SliderChangeEvent},
+        form::{Slider, SliderChangeEvent, SliderTrack},
         layout::{paper_sx, use_box},
         overlay::{Menu, MenuItem, Shortcut, ShortcutHelp, use_menu},
     },
@@ -570,7 +570,11 @@ pub(super) fn times(rate: f64, separator: &str) -> String {
 /// The seek slider. While dragged it shows the thumb's value, not the element's
 /// older answer, which trails on a WebView.
 #[component]
-pub(super) fn MediaSeek(media: MediaHandle, size: Input<Size>) -> Element {
+pub(super) fn MediaSeek(
+    media: MediaHandle,
+    size: Input<Size>,
+    #[props(default)] track: SliderTrack,
+) -> Element {
     let labels = use_localization().media;
     let mut scrub = use_signal(|| None::<f64>);
     let duration = media.duration();
@@ -592,6 +596,7 @@ pub(super) fn MediaSeek(media: MediaHandle, size: Input<Size>) -> Element {
             disabled: duration.is_none(),
             aria_label: labels.seek,
             format,
+            track,
             oninput: move |event: SliderChangeEvent| match event {
                 // A press on the track seeks at once: a click sends no `Change`.
                 SliderChangeEvent::Start(seconds) => {

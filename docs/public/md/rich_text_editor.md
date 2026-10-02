@@ -235,6 +235,7 @@ fn MentionEditor() -> Element {
             intercept,
             overlay,
             active_descendant: picked.map(|user| format!("mention-{user}")),
+            overlay_results: count,
         }
     }
 }
@@ -316,6 +317,9 @@ shows Ctrl.
 - While `overlay` is set, the text carries `aria-controls` naming it,
   `aria-autocomplete="list"` and `aria-activedescendant` from
   `active_descendant`, so a screen reader announces the highlighted option.
+- With `overlay_results`, the overlay's option count is announced through the
+  polite live region whenever it changes while the overlay shows ("2
+  results").
 
 ### You must
 
@@ -333,8 +337,9 @@ shows Ctrl.
 - Make a `NodeViews` atom name its node in text (a mention shows `@name`): it
   is a non-editable island a screen reader reads as is.
 - Give an `overlay` list `role="listbox"` with an id per `role="option"`, pass
-  the highlighted one as `active_descendant`, and steer it with the keyboard
-  through `intercept`; Escape should close it.
+  the highlighted one as `active_descendant` and the count as
+  `overlay_results`, and steer it with the keyboard through `intercept`;
+  Escape should close it.
 - Name each `RichTextTool` with its `label`: the button shows only its icon.
 
 ### Limits
@@ -370,6 +375,7 @@ shows Ctrl.
 | `intercept` | `Callback<EditorInput, bool>` | - | Sees each key press (`EditorInput::Key`, before the keymap) and typed text (`EditorInput::Text`) first; return `true` to take it over, and the editor does nothing with it. Android soft keyboards report most keys as `Unidentified` and compose their text, which never arrives as `Text`; Enter still arrives as a key. Read typed text through the handle's `with_state` instead. |
 | `overlay` | `Element` | - | Floats at the caret while `Some`, such as a mention list: under the caret's line, above it near the window's bottom edge, mirrored in right-to-left text. Focus stays in the text; pressing the overlay does not take it. |
 | `active_descendant` | `String` | - | The id of the overlay's highlighted option. While `overlay` is `Some` the text carries it as `aria-activedescendant`, with `aria-controls` naming the overlay and `aria-autocomplete="list"`. |
+| `overlay_results` | `usize` | - | How many options the overlay lists. While `overlay` is `Some`, a change is announced through the editor's polite live region ("2 results", or "No results" at 0; `RichTextEditorLabels::results` and `nothing_found`). |
 | `tools` | `Vec<RichTextTool>` | `vec![]` | Your toolbar buttons, after the block buttons: `RichTextTool::new(command, label, icon)` runs the command by name; `.active(fn)` makes it a toggle with `aria-pressed`. They never move into the More menu. |
 | `size` | `Size` | `md` | Padding and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |

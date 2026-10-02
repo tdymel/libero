@@ -1,3 +1,5 @@
+use super::combobox::{english_results, german_results};
+
 /// A `RichTextEditor`'s toolbar, link dialog, shortcut list and announcements.
 /// `{level}` and `{name}` are filled in.
 ///
@@ -12,6 +14,10 @@
 /// assert_eq!(WORDS.italic, "Italic");
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(
+    unpredictable_function_pointer_comparisons,
+    reason = "compares by address; a miss on a copied closure only re-renders"
+)]
 pub struct RichTextEditorLabels {
     pub toolbar: &'static str,
     pub marks: &'static str,
@@ -61,6 +67,10 @@ pub struct RichTextEditorLabels {
     pub off: &'static str,
     /// Describes the text: how to leave it when Tab indents a list.
     pub leave_hint: &'static str,
+    /// Announced when an `overlay` list's `overlay_results` changes. A fn, for plural forms.
+    pub results: fn(usize) -> String,
+    /// Announced when `overlay_results` drops to 0.
+    pub nothing_found: &'static str,
 }
 
 impl RichTextEditorLabels {
@@ -103,6 +113,8 @@ impl RichTextEditorLabels {
         on: "{name} on",
         off: "{name} off",
         leave_hint: "In a list, Tab indents. Press Escape, then Tab, to leave the editor.",
+        results: english_results,
+        nothing_found: "No results",
     };
 
     pub const GERMAN: Self = Self {
@@ -144,5 +156,7 @@ impl RichTextEditorLabels {
         on: "{name} an",
         off: "{name} aus",
         leave_hint: "In einer Liste rückt Tab ein. Escape, dann Tab verlässt den Editor.",
+        results: german_results,
+        nothing_found: "Keine Ergebnisse",
     };
 }

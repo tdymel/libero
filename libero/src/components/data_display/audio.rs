@@ -11,6 +11,7 @@ use crate::{
     components::{
         buttons::{ActionIcon, Button},
         common::{Glyph, HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
+        form::SliderTrack,
         layout::use_box,
     },
     context::IconSlot,
@@ -30,7 +31,7 @@ parts_enum! {
         Controls = "controls" => "& > [data-slot='controls']",
         /// The time: the total until playing starts, then the elapsed.
         Time = "time" => "& [data-slot='time']",
-        /// The seek track's wrapper: the bars and the slider over them.
+        /// The seek slider's wrapper; its track draws the bars.
         Seek = "seek" => "& [data-slot='seek']",
         /// The mute button and the volume menu's trigger.
         Volume = "volume" => "& [data-slot='volume']",
@@ -44,7 +45,6 @@ const SPEEDS: [f64; 3] = [1.0, 1.5, 2.0];
 
 /// The seek track's bars: few enough to stay apart at the track's `2rem` minimum.
 const BARS: usize = 28;
-const BARS_SLOT: &str = "bars";
 /// Longer files keep the drawn bars.
 const DECODE_MAX_SECONDS: f64 = 10.0 * 60.0;
 const AUDIO_CONTAINER: &str = "libero-audio";
@@ -80,44 +80,16 @@ static AUDIO_SX: StaticSx = StaticSx::new(|| {
             AudioPart::Seek.selector(),
             seek_sx()
                 .flex_shrink("1")
-                .position("relative")
-                // The bars draw the track; the slider keeps the thumb, the keys and the drag.
-                .selector(
-                    "& [data-slot='track'], & [data-slot='bar']",
-                    sx().background("transparent"),
-                )
-                // As tall as the bars, so a press anywhere on them seeks.
-                .selector("& [data-slot='track']", sx().height("1.5rem")),
-        )
-        .selector(
-            format!("& [data-slot='{BARS_SLOT}']"),
-            sx().position("absolute")
-                .top("0")
-                .bottom("0")
-                .left("0.5rem")
-                .right("0.5rem")
-                .display("flex")
-                .align_items("center")
-                .justify_content("space-between")
-                .pointer_events("none")
-                .selector(
-                    "& > span",
-                    sx().flex("0 1 2px")
-                        .min_width("1px")
-                        .border_radius("999px")
-                        // 3:1 against the surface, as the slider's track (WCAG 1.4.11).
-                        .background("muted.6")
-                        .media(FORCED_COLORS, sx().background("CanvasText")),
-                )
-                .selector(
-                    "& > span[data-played]",
-                    sx().background("primary.6")
-                        .media(FORCED_COLORS, sx().background("Highlight")),
-                )
                 // Half the bars where the track is short, or they run together.
                 .selector(
-                    "& > span:nth-child(even)",
+                    "& [data-slot='bars'] > span:nth-child(even)",
                     sx().container_query(AUDIO_CONTAINER, NARROW, sx().display("none")),
+                )
+                // The player's own played shade, a step darker than the slider's fill.
+                .selector(
+                    "& [data-slot='bars'] > span[data-state='filled']",
+                    sx().background("primary.6")
+                        .media(FORCED_COLORS, sx().background("Highlight")),
                 ),
         )
         .selector(
@@ -393,32 +365,13 @@ fn AudioControls(
                 }
             }
             div { "data-slot": SEEK, onkeydown: space_toggles(media),
-                AudioBars { media, heights }
-                MediaSeek { media, size: size.clone() }
+                MediaSeek { media, size: size.clone(), track: SliderTrack::Bars(heights.to_vec()) }
             }
             AudioTime { media }
             MediaVolume { media, sound, size: size.clone() }
             AudioSpeed { media, size }
         }
         MediaStatus { media }
-    }
-}
-
-/// The bars behind the seek slider, those played filled; its own component, so
-/// a time tick re-renders only this.
-#[component]
-fn AudioBars(media: MediaHandle, heights: [f64; BARS]) -> Element {
-    let played = played_bars(media.current_time(), media.duration());
-    rsx! {
-        div { "data-slot": BARS_SLOT, "aria-hidden": "true",
-            for (index, height) in heights.into_iter().enumerate() {
-                span {
-                    key: "{index}",
-                    "data-played": (index < played).then_some(""),
-                    style: "height: {height * 100.0:.0}%",
-                }
-            }
-        }
     }
 }
 
@@ -485,16 +438,6 @@ fn bar_heights(src: &str) -> [f64; BARS] {
         let after = raw[(index + 1).min(BARS - 1)];
         0.2 + 0.8 * (before + 4.0 * raw[index] + after) / 6.0
     })
-}
-
-/// How many of the [`BARS`] are played at `elapsed`.
-fn played_bars(elapsed: f64, duration: Option<f64>) -> usize {
-    match duration {
-        Some(total) if total > 0.0 => {
-            ((elapsed / total).clamp(0.0, 1.0) * BARS as f64).round() as usize
-        }
-        _ => 0,
-    }
 }
 
 /// Its own component, so a time tick re-renders only this.
@@ -597,14 +540,6 @@ mod tests {
         assert!(!decodable(Some(DECODE_MAX_SECONDS + 1.0)));
         assert!(!decodable(Some(f64::INFINITY)));
         assert!(!decodable(Some(f64::NAN)));
-    }
-
-    #[test]
-    fn the_played_bars_follow_the_time() {
-        assert_eq!(played_bars(5.0, None), 0);
-        assert_eq!(played_bars(0.0, Some(60.0)), 0);
-        assert_eq!(played_bars(30.0, Some(60.0)), BARS / 2);
-        assert_eq!(played_bars(90.0, Some(60.0)), BARS);
     }
 
     /// The slot names are public: a rename here is a breaking change.

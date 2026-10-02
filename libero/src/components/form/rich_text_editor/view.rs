@@ -201,6 +201,9 @@ field_props! {
         /// The id of the `overlay`'s highlighted option, so a screen reader announces it.
         #[props(default, into)]
         active_descendant: Option<String>,
+        /// How many options the `overlay` lists; a change is announced while it shows.
+        #[props(default, into)]
+        overlay_results: Option<usize>,
         /// Your buttons, after the block buttons; each runs a command by name.
         #[props(default)]
         tools: Vec<RichTextTool>,
@@ -1225,6 +1228,18 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         }
     });
 
+    // Said on change only; a closed overlay resets it, so reopening says it again (WCAG 4.1.3).
+    let results = props.overlay_results.filter(|_| props.overlay.is_some());
+    let mut said_results = use_hook(|| CopyValue::new(None::<usize>));
+    use_effect(use_reactive!(|results| {
+        if *said_results.peek() != results {
+            said_results.set(results);
+            if let Some(message) = results_announcement(results, &words) {
+                announcer.say(message);
+            }
+        }
+    }));
+
     let mut overlay_size = use_signal(|| None::<Dimensions>);
     let overlay = props.overlay.clone().map(|overlay| {
         let _ = caret_tick();
@@ -1335,6 +1350,14 @@ fn ToolbarSlot(props: ToolbarSlotProps) -> Element {
     props.bar
 }
 
+/// What an open overlay's option count says; `None` is silent.
+fn results_announcement(results: Option<usize>, words: &RichTextEditorLabels) -> Option<String> {
+    results.map(|count| match count {
+        0 => words.nothing_found.to_string(),
+        count => (words.results)(count),
+    })
+}
+
 /// The href of the link around the caret.
 fn link_href(state: &EditorState) -> Option<String> {
     let (key, from, _) = state.link_at_caret()?;
@@ -1424,5 +1447,36 @@ mod tests {
         let reloaded: Doc = serde_json::from_str(&json).unwrap();
         assert!(!echoes.foreign(editor.doc(), &reloaded));
         assert!(echoes.foreign(editor.doc(), &Doc::new()));
+    }
+
+    #[test]
+    fn an_overlay_count_says_its_results_in_each_language() {
+        let english = RichTextEditorLabels::ENGLISH;
+        let german = RichTextEditorLabels::GERMAN;
+        assert_eq!(results_announcement(None, &english), None);
+        assert_eq!(
+            results_announcement(Some(0), &english).as_deref(),
+            Some("No results")
+        );
+        assert_eq!(
+            results_announcement(Some(1), &english).as_deref(),
+            Some("1 result")
+        );
+        assert_eq!(
+            results_announcement(Some(3), &english).as_deref(),
+            Some("3 results")
+        );
+        assert_eq!(
+            results_announcement(Some(0), &german).as_deref(),
+            Some("Keine Ergebnisse")
+        );
+        assert_eq!(
+            results_announcement(Some(1), &german).as_deref(),
+            Some("1 Ergebnis")
+        );
+        assert_eq!(
+            results_announcement(Some(2), &german).as_deref(),
+            Some("2 Ergebnisse")
+        );
     }
 }

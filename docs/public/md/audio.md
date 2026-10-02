@@ -103,7 +103,7 @@ explains how parts work.
 |---|---|---|
 | `AudioPart::Controls` | `controls` | The row of controls, a named `group`. |
 | `AudioPart::Time` | `time` | The time: the total until playing starts, then the elapsed. |
-| `AudioPart::Seek` | `seek` | The seek track's wrapper: the bars and the slider over them. |
+| `AudioPart::Seek` | `seek` | The seek slider's wrapper; its `SliderTrack::Bars` track draws the bars. |
 | `AudioPart::Volume` | `volume` | The mute button and the volume menu's trigger. |
 | `AudioPart::Message` | `message` | The error text, or the fallback where nothing plays media. |
 
@@ -136,8 +136,9 @@ explains how parts work.
 - The speaker button mutes and unmutes, its name following (Mute/Unmute). The
   chevron beside it, named "Volume", opens a `dialog` holding the volume slider
   and focuses it; moving the volume up unmutes.
-- The seek track is a row of bars, the played ones filled, under a slider that
-  keeps the keys, the press and the drag. The bars follow the sound's
+- The seek track is a row of bars, the played ones filled: the seek slider's
+  `SliderTrack::Bars`, so it keeps the slider's keys, press and drag. The bars
+  follow the sound's
   loudness, decoded from the file, and are hidden from screen readers. A file
   over 10 minutes or 20 MB is not decoded: its bars stay drawn from the URL.
 - The row never wraps: the seek track shrinks first, then the time goes, then

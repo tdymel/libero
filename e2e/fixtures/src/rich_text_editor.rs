@@ -357,6 +357,7 @@ fn MentionsPage() -> Element {
             intercept,
             overlay,
             active_descendant: picked.map(|user| format!("mention-{user}")),
+            overlay_results: count,
             value: doc(),
             onchange: move |next| doc.set(next),
         }
