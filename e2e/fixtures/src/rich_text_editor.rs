@@ -9,6 +9,9 @@ use libero::components::rich_text::{
     use_rich_text_editor,
 };
 
+use libero::components::Dialog;
+use libero::hooks::{ModalScope, use_modal};
+
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
@@ -20,6 +23,7 @@ pub const ROUTES: Routes = &[
     ("/rich-text-editor/builtins", || rsx! { BuiltinsPage {} }),
     ("/rich-text-editor/trailing", || rsx! { TrailingPage {} }),
     ("/rich-text-editor/mentions", || rsx! { MentionsPage {} }),
+    ("/rich-text-editor/mentions-modal", || rsx! { MentionsModalPage {} }),
     ("/rich-text-editor/narrow", || rsx! { NarrowPage {} }),
     ("/rich-text-editor/states", || rsx! { StatesPage {} }),
 ];
@@ -286,6 +290,20 @@ fn insert_mention(state: &mut EditorState, user: &str) -> bool {
     state.insert_inline(mention) && state.insert_text(" ")
 }
 
+/// Todo 2067: the mention editor in a modal; its portaled list must count as inside.
+#[component]
+fn MentionsModalPage() -> Element {
+    let compose = use_modal(|_: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Compose", MentionsPage {} }
+        }
+    });
+
+    rsx! {
+        button { id: "open-modal", onclick: move |_| { compose.open(); }, "Compose" }
+    }
+}
+
 /// Type `@` and a name: a list under the caret, steered by the arrow keys through
 /// `intercept`, and a toolbar button of the caller's that types the `@`.
 #[component]
@@ -347,19 +365,22 @@ fn MentionsPage() -> Element {
     });
 
     rsx! {
-        RichTextEditor {
-            label: "Message",
-            handle: editor,
-            commands,
-            tools: vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
-            nodes: NodeViews::new().with("mention", Mention),
-            registry: registry(),
-            intercept,
-            overlay,
-            active_descendant: picked.map(|user| format!("mention-{user}")),
-            overlay_results: count,
-            value: doc(),
-            onchange: move |next| doc.set(next),
+        // Todo 2067: a clipping parent, as the docs demo pane.
+        div { id: "pane", overflow: "hidden",
+            RichTextEditor {
+                label: "Message",
+                handle: editor,
+                commands,
+                tools: vec![RichTextTool::new("at", "Mention someone", rsx! { "@" })],
+                nodes: NodeViews::new().with("mention", Mention),
+                registry: registry(),
+                intercept,
+                overlay,
+                active_descendant: picked.map(|user| format!("mention-{user}")),
+                overlay_results: count,
+                value: doc(),
+                onchange: move |next| doc.set(next),
+            }
         }
         pre { id: "out", {doc.read().plain_text()} }
     }

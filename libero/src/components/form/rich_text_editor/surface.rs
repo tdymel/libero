@@ -72,39 +72,58 @@ const locate = (leaf, offset) => {
     return found || [leaf, leaf.childNodes.length];
 };
 const leaf = (key) => { const r = root(); return r && r.querySelector(`[data-key="${key}"]`); };
-const report = () => {
-    const r = root();
-    if (!r) { document.removeEventListener('selectionchange', report); return; }
+// The DOM selection as a report, or null outside the leaves.
+const current = () => {
     const s = document.getSelection();
-    if (!s || !s.anchorNode) return;
+    if (!s || !s.anchorNode) return null;
     const a = leafOf(s.anchorNode), f = leafOf(s.focusNode);
-    if (!a || !f) return;
-    dioxus.send({ selection: [+a.dataset.key, units(a, s.anchorNode, s.anchorOffset),
-        +f.dataset.key, units(f, s.focusNode, s.focusOffset)], caret: caretAt(s, f) });
+    if (!a || !f) return null;
+    return { selection: [+a.dataset.key, units(a, s.anchorNode, s.anchorOffset),
+        +f.dataset.key, units(f, s.focusNode, s.focusOffset)], caret: caretAt(s, f) };
 };
-// The head's line box, the overlay's box and the viewport, all in viewport px.
+const report = () => {
+    if (!root()) { document.removeEventListener('selectionchange', report); return; }
+    const now = current();
+    if (now) dioxus.send(now);
+};
+// The head's line box and the viewport, in viewport px.
 const caretAt = (s, leaf) => {
-    const r = root(), box = r.closest('[data-lsx-rich-text-box]');
-    if (!box) return null;
     const range = document.createRange();
     range.setStart(s.focusNode, s.focusOffset);
     let rect = range.getClientRects()[0];
     // An empty line has no rect: its line-box filler or the leaf stands in.
     if (!rect) rect = (leaf.querySelector('[data-skip]') || leaf).getBoundingClientRect();
-    const b = box.getBoundingClientRect();
-    return { x: rect.left, y: rect.top, height: rect.height, box_x: b.left, box_y: b.top,
-        width: innerWidth, viewport_height: innerHeight,
-        rtl: getComputedStyle(r).direction === 'rtl' };
+    return { x: rect.left, y: rect.top, height: rect.height, width: innerWidth,
+        viewport_height: innerHeight, rtl: getComputedStyle(root()).direction === 'rtl' };
 };
 document.addEventListener('selectionchange', report);
+// Chrome queues `selectionchange` behind input, and a report may reach the model after the
+// next key: input right after a press goes with its selection, until the model acks it (todo 2062).
+let pressed = false, held = 0, lastKey = '';
+document.addEventListener('mousedown', (e) => {
+    const r = root();
+    if (r && r.contains(e.target)) pressed = true;
+}, true);
+document.addEventListener('keydown', (e) => { lastKey = e.key; }, true);
+document.addEventListener('beforeinput', (e) => {
+    const r = root();
+    if (!r || !r.contains(e.target) || !(pressed || held) || e.isComposing
+        || e.inputType === 'insertCompositionText') return;
+    const now = current();
+    if (!now) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    held += 1;
+    dioxus.send({ ...now, press: pressed, input: [e.inputType, e.data, lastKey] });
+    pressed = false;
+}, true);
 // A scroll or resize moves the caret in the viewport: re-place an open overlay. Both fire
 // at most once a frame; no requestAnimationFrame, which a background tab never runs.
 const onMove = () => {
     const r = root();
     if (!r) { removeEventListener('scroll', onMove, true); removeEventListener('resize', onMove); return; }
     const s = document.getSelection(), f = s && leafOf(s.focusNode);
-    const box = r.closest('[data-lsx-rich-text-box]');
-    if (f && box && box.querySelector('[data-overlay]')) dioxus.send({ caret: caretAt(s, f) });
+    if (f && document.querySelector(`[data-overlay="${token}"]`)) dioxus.send({ caret: caretAt(s, f) });
 };
 addEventListener('scroll', onMove, { capture: true, passive: true });
 addEventListener('resize', onMove);
@@ -143,6 +162,7 @@ const onPress = (e) => {
 document.addEventListener('mousedown', onPress);
 while (true) {
     const m = await dioxus.recv();
+    if (m.ack) held -= 1;
     const r = root();
     if (!r) continue;
     if (m.read !== undefined) {
@@ -184,16 +204,19 @@ pub(crate) struct Report {
     /// The DOM selection caught up with the last [`Surface::select`].
     #[serde(default)]
     pub synced: bool,
+    /// A held-back `beforeinput` to run after `selection`: its type, data and last key.
+    pub input: Option<(String, Option<String>, String)>,
+    /// `selection` is a press's, newer than any caret the model is still placing.
+    #[serde(default)]
+    pub press: bool,
 }
 
-/// The caret's line box and the editor's box (`data-lsx-rich-text-box`), in viewport px.
+/// The caret's line box, in viewport px.
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct Caret {
     pub x: f64,
     pub y: f64,
     pub height: f64,
-    pub box_x: f64,
-    pub box_y: f64,
     /// The viewport's width.
     pub width: f64,
     pub viewport_height: f64,
@@ -220,7 +243,11 @@ impl Surface {
             }
             eval.set(Some(script));
             while let Ok(report) = script.recv::<Report>().await {
+                let held = report.input.is_some();
                 on_report(report);
+                if held {
+                    let _ = script.send(serde_json::json!({ "ack": true }));
+                }
             }
         });
         Self { eval }

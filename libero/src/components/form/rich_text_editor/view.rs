@@ -36,12 +36,13 @@ use crate::{
     context::IconSlot,
     hooks::{
         ElementHandle, HistoryHandle, ModalScope, PopoverOptions, Rect, UndoHistory, listener,
-        place, use_element, use_history, use_id, use_localization, use_modal, use_theme,
+        place, use_element, use_history, use_id, use_localization, use_modal, use_portal,
+        use_theme,
     },
     localization::RichTextEditorLabels,
     platform::{Dimensions, ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
-    theme::{ANCHOR_COLOR, CODE_FONT_FAMILY, ColorCss, ColorShade},
+    theme::{ANCHOR_COLOR, CODE_FONT_FAMILY, ColorCss, ColorShade, Z_INDEX_POPOVER},
 };
 
 impl UndoStack for HistoryHandle<EditorState> {
@@ -194,8 +195,9 @@ field_props! {
         /// over, so the editor does nothing with it. Drives an `overlay` from the keyboard.
         #[props(default, into)]
         intercept: Option<Callback<EditorInput, bool>>,
-        /// Floats at the caret while `Some`, such as a mention list. Focus stays in the
-        /// text: steer it through `intercept`, insert through the handle's `edit`.
+        /// Floats at the caret while `Some`, such as a mention list, through the page's
+        /// portal, so no clipping ancestor cuts it. Focus stays in the text: steer it
+        /// through `intercept`, insert through the handle's `edit`.
         #[props(default, into)]
         overlay: Option<Element>,
         /// The id of the `overlay`'s highlighted option, so a screen reader announces it.
@@ -520,6 +522,52 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         });
     }
 
+    // Kept current for the surface's held-back input, which runs outside a render.
+    let mut intercept = use_hook(|| CopyValue::new(props.intercept));
+    intercept.set(props.intercept);
+    let taken = move |input: EditorInput| {
+        let intercept = *intercept.peek();
+        intercept.is_some_and(|intercept| intercept.call(input))
+    };
+    // A `beforeinput` by its type, data and the last key pressed; `true` cancels it.
+    let before_input = move |input_type: &str, data: Option<String>, key: &str| -> bool {
+        let (mut composing, mut edit) = (composing, edit);
+        match intent(input_type, data) {
+            Intent::Pass => {
+                composing.set(true);
+                false
+            }
+            Intent::Cancel => true,
+            Intent::Type(text) => {
+                if !taken(EditorInput::Text(text.clone())) {
+                    edit(&|live| live.type_text(&text), false);
+                }
+                true
+            }
+            Intent::Run(Builtin::SplitBlock)
+                if key != "Enter"
+                    && taken(EditorInput::Key(KeyPress {
+                        key: "Enter".into(),
+                        code: "Enter".into(),
+                        ..KeyPress::default()
+                    })) =>
+            {
+                true
+            }
+            Intent::Run(builtin) => {
+                edit(&|live| live.run(&commands.peek(), builtin), false);
+                true
+            }
+            Intent::Delete(delete) => {
+                edit(
+                    &|live| live.apply(Record::Step, |state| delete.run(state)),
+                    false,
+                );
+                true
+            }
+        }
+    };
+
     // The caret's place, kept always; redraws only while an overlay follows it.
     let mut last_caret = use_hook(|| CopyValue::new(None::<Caret>));
     let mut caret_tick = use_signal(|| 0u32);
@@ -535,10 +583,10 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     caret_tick += 1;
                 }
             }
-            if let Some((anchor_key, anchor, head_key, head)) = report.selection {
-                if *syncing.peek() || *composing.peek() {
-                    return;
-                }
+            if let Some((anchor_key, anchor, head_key, head)) = report.selection
+                && (report.press || !*syncing.peek())
+                && !*composing.peek()
+            {
                 let selection = {
                     let live = editor.peek();
                     model_position(&live, anchor_key, anchor)
@@ -551,6 +599,11 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     editor.write().select(selection);
                     revision += 1;
                 }
+            }
+            if let Some((input_type, data, key)) = report.input
+                && *can_edit.peek()
+            {
+                before_input(&input_type, data, &key);
             }
             if report.synced {
                 syncing.set(false);
@@ -743,8 +796,6 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let element = use_element();
     let apple = mod_is_meta();
 
-    let intercept = props.intercept;
-    let taken = move |input: EditorInput| intercept.is_some_and(|intercept| intercept.call(input));
     // Android soft keyboards press "Unidentified": their Enter shows up as an insertParagraph.
     let mut last_key = use_hook(|| CopyValue::new(String::new()));
     let mut escaped = use_hook(|| CopyValue::new(false));
@@ -781,36 +832,8 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     let onbeforeinput = move |event: Event<BeforeInputData>| {
         let data = event.data();
         let key = std::mem::take(&mut *last_key.write());
-        match intent(&data.input_type().to_string(), data.data()) {
-            Intent::Pass => composing.set(true),
-            Intent::Cancel => event.prevent_default(),
-            Intent::Type(text) => {
-                event.prevent_default();
-                if !taken(EditorInput::Text(text.clone())) {
-                    edit(&|live| live.type_text(&text), false);
-                }
-            }
-            Intent::Run(Builtin::SplitBlock)
-                if key != "Enter"
-                    && taken(EditorInput::Key(KeyPress {
-                        key: "Enter".into(),
-                        code: "Enter".into(),
-                        ..KeyPress::default()
-                    })) =>
-            {
-                event.prevent_default();
-            }
-            Intent::Run(builtin) => {
-                event.prevent_default();
-                edit(&|live| live.run(&commands.peek(), builtin), false);
-            }
-            Intent::Delete(delete) => {
-                event.prevent_default();
-                edit(
-                    &|live| live.apply(Record::Step, |state| delete.run(state)),
-                    false,
-                );
-            }
+        if before_input(&data.input_type().to_string(), data.data(), &key) {
+            event.prevent_default();
         }
     };
 
@@ -1262,18 +1285,19 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     &PopoverOptions::new(4.0, 8.0),
                     caret.rtl,
                 );
-                (placed.x - caret.box_x, placed.y - caret.box_y, "visible")
+                (placed.x, placed.y, "visible")
             }
             // Unmeasured: laid out hidden first, so the placer knows its size.
             _ => (0.0, 0.0, "hidden"),
         };
         // Every property each time: a style string's diff keeps a dropped one.
         let (left, top, visibility) = style;
+        let layer = Z_INDEX_POPOVER.value();
         rsx! {
             div {
                 id: overlay_id,
-                "data-overlay": "",
-                style: "position: absolute; z-index: 300; left: {left}px; top: {top}px; visibility: {visibility}",
+                "data-overlay": token.clone(),
+                style: "position: fixed; z-index: {layer}; left: {left}px; top: {top}px; visibility: {visibility}",
                 onmousedown: keep,
                 // A resize observer may report late or not at all for a fresh box: read it once.
                 onmounted: move |event: MountedEvent| {
@@ -1304,12 +1328,12 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         }
     });
 
+    // Through the portal: an ancestor's overflow would clip it in place (todo 2067).
+    use_portal(overlay);
+
     field.render(rsx! {
         {toolbar}
-        div { "data-lsx-rich-text-box": "", position: "relative",
-            {frame.render(surface_element)}
-            {overlay}
-        }
+        {frame.render(surface_element)}
         {announcer.render()}
         if editable {
             span { id: leave_hint, hidden: true, {words.leave_hint} }

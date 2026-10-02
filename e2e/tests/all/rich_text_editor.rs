@@ -1222,6 +1222,73 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
     });
 }
 
+/// Todo 2067: the list reaches past a clipping parent's edge and is still hit there.
+#[test]
+fn a_mention_list_is_not_clipped_by_its_parent() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/mentions", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        keyboard::type_text(page, "@a").await.unwrap();
+        wait::for_visible(page, "#mention-alan").await.unwrap();
+        holds(
+            page,
+            "(() => { const o = document.getElementById('mention-alan').getBoundingClientRect(); \
+               const pane = document.getElementById('pane').getBoundingClientRect(); \
+               const hit = document.elementFromPoint(o.left + o.width / 2, o.top + o.height / 2); \
+               return o.bottom > pane.bottom && hit?.id === 'mention-alan' ? 'ok' \
+                 : JSON.stringify([hit && hit.tagName + '#' + hit.id, o, pane]); })()",
+            "the last option past the pane's edge, unclipped",
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2067: in a modal the portaled list sits above it, and a press on it or an Escape
+/// for it leaves the modal open.
+#[test]
+fn a_mention_list_in_a_modal_counts_as_inside() {
+    const DIALOG: &str = "!!document.querySelector('[role=dialog]')";
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/mentions-modal", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "#open-modal").await.unwrap();
+        wait::for_selector(page, "[role=dialog] [role=textbox]")
+            .await
+            .unwrap();
+        page.evaluate(format!("{EDITOR}.focus()")).await.unwrap();
+        keyboard::type_text(page, "@a").await.unwrap();
+        wait::for_visible(page, "#mention-alan").await.unwrap();
+        pointer::click(page, "#mention-alan").await.unwrap();
+        out_eq(page, "\u{fffc} ").await;
+        assert!(
+            js::<bool>(page, DIALOG).await,
+            "a press on the list closed the modal"
+        );
+
+        keyboard::type_text(page, "@g").await.unwrap();
+        wait::for_visible(page, "#mention-grace").await.unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('[data-overlay]')",
+            "Escape to close the list",
+        )
+        .await
+        .unwrap();
+        assert!(
+            js::<bool>(page, DIALOG).await,
+            "the list's Escape closed the modal"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1466: a shown code block scrolls inside itself, the editor stays in its row.
 #[test]
 fn a_long_code_line_does_not_widen_the_editor() {
@@ -1624,6 +1691,50 @@ fn ctrl_backspace_and_ctrl_delete_take_a_word_and_replacements_are_ignored() {
         let typed = until(page, &out_is(&format!("^ one z{CODE}"))).await;
         let now: String = js(page, "document.getElementById('out').textContent").await;
         assert!(typed, "{now:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The viewport point just past the `at`th character of the leaf reading `word`.
+async fn point_in(page: &Page, word: &str, at: usize) -> pointer::Point {
+    let (x, y): (f64, f64) = js(
+        page,
+        &format!(
+            "(() => {{ const leaf = [...{EDITOR}.querySelectorAll('[data-key]')].find(l => l.textContent === '{word}'); \
+               const r = document.createRange(); r.setStart(leaf.firstChild, {at}); r.setEnd(leaf.firstChild, {at} + 1); \
+               const b = r.getBoundingClientRect(); return [b.left + 1, b.top + b.height / 2]; }})()"
+        ),
+    )
+    .await;
+    pointer::Point { x, y }
+}
+
+/// Todo 2062: the first press into an unfocused editor puts the caret where it lands, even
+/// when a key follows before the browser's `selectionchange`; once fresh, once from a field.
+#[test]
+fn a_first_press_puts_the_caret_where_it_lands() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/code", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "[role=textbox] [data-key]")
+            .await
+            .unwrap();
+        let at = point_in(page, "below", 2).await;
+        pointer::click_at(page, at).await.unwrap();
+        keyboard::type_text(page, "xy").await.unwrap();
+        out_eq(page, "above\n\n```\nlet x = 1;\n```\n\nbexylow\n").await;
+
+        page.evaluate(
+            "(() => { const i = document.createElement('input'); i.id = 'other'; document.body.prepend(i); i.focus(); })()",
+        )
+        .await
+        .unwrap();
+        let at = point_in(page, "above", 2).await;
+        pointer::click_at(page, at).await.unwrap();
+        keyboard::type_text(page, "z").await.unwrap();
+        out_eq(page, "abzove\n\n```\nlet x = 1;\n```\n\nbexylow\n").await;
         fixture.close().await.unwrap();
     });
 }

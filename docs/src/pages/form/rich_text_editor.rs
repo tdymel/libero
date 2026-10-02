@@ -475,7 +475,7 @@ pub fn RichTextEditorPage() -> Element {
                     prop("intercept", "Callback<EditorInput, bool>")
                         .doc("Sees each key press (`EditorInput::Key`, before the keymap) and typed text (`EditorInput::Text`) first; return `true` to take it over, and the editor does nothing with it. Android soft keyboards report most keys as `Unidentified` and compose their text, which never arrives as `Text`; Enter still arrives as a key. Read typed text through the handle's `with_state` instead."),
                     prop("overlay", "Element")
-                        .doc("Floats at the caret while `Some`, such as a mention list: under the caret's line, above it near the window's bottom edge, mirrored in right-to-left text. Focus stays in the text; pressing the overlay does not take it."),
+                        .doc("Floats at the caret while `Some`, such as a mention list: under the caret's line, above it near the window's bottom edge, mirrored in right-to-left text. It renders through the page's portal, so a parent's `overflow` does not clip it. Focus stays in the text; pressing the overlay does not take it."),
                     prop("active_descendant", "String")
                         .doc("The id of the overlay's highlighted option. While `overlay` is `Some` the text carries it as `aria-activedescendant`, with `aria-controls` naming the overlay and `aria-autocomplete=\"list\"`."),
                     prop("overlay_results", "usize")
