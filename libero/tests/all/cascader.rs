@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::common::{body, render, render_with, tags_with};
+use crate::common::{body, clear_buttons, render, render_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -270,7 +270,12 @@ fn a_readonly_cascader_focuses_and_posts_but_cannot_clear() {
 
     assert_eq!(trigger["aria-readonly"], "true", "{trigger:?}");
     assert_eq!(trigger["tabindex"], "0", "{trigger:?}");
-    assert!(!html.contains("aria-label=\"Clear\""), "{html}");
+    let editable = shown(Setup {
+        clearable: true,
+        ..posting()
+    });
+    assert_eq!(clear_buttons(&editable).len(), 1, "the control");
+    assert_eq!(clear_buttons(&html).len(), 0, "{html}");
     assert!(html.contains("value=\"apple\""), "{html}");
     assert!(!html.contains("disabled=true"), "{html}");
 }
@@ -307,20 +312,22 @@ fn an_empty_cascader_shows_its_placeholder_and_posts_nothing() {
 /// there is something to clear.
 #[test]
 fn the_clear_button_appears_only_with_a_selection() {
-    assert!(
-        shown(Setup {
-            clearable: true,
-            ..chosen()
-        })
-        .contains("aria-label=\"Clear\""),
+    let with_path = shown(Setup {
+        clearable: true,
+        ..chosen()
+    });
+    assert_eq!(
+        clear_buttons(&with_path).len(),
+        1,
         "a chosen path is clearable"
     );
-    assert!(
-        !shown(Setup {
-            clearable: true,
-            ..Setup::default()
-        })
-        .contains("aria-label=\"Clear\""),
+    let empty = shown(Setup {
+        clearable: true,
+        ..Setup::default()
+    });
+    assert_eq!(
+        clear_buttons(&empty).len(),
+        0,
         "an empty one has nothing to clear"
     );
 }

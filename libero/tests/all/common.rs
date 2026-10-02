@@ -108,6 +108,13 @@ pub fn tag_with(html: &str, marker: &str) -> BTreeMap<String, String> {
         .unwrap_or_else(|| panic!("no tag with {marker} in the rendered output:\n{html}"))
 }
 
+/// The x of every clearable field in `html`, found by the label its shared
+/// `clear_button` carries. Pair a "none drawn" assert with a drawn control.
+pub fn clear_buttons(html: &str) -> Vec<BTreeMap<String, String>> {
+    let clear = libero::localization::CommonLabels::ENGLISH.clear;
+    tags_with(html, &format!(r#"aria-label="{clear}""#))
+}
+
 /// The whole element whose opening tag holds byte `at`, up to its matching
 /// close tag, so an assert reads that element's subtree and nothing after it.
 pub fn element_at(html: &str, at: usize) -> &str {

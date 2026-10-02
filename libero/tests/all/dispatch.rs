@@ -495,7 +495,8 @@ pub fn assert_every_press_keeps_the_focus(app: fn() -> Element, guards: usize) {
 }
 
 /// Every element that registered a `click` listener, and the one named
-/// "Clear" - the shared `clear_button` of five fields.
+/// "Clear": the shared `clear_button` of `TagsField`, `FileField`,
+/// `Autocomplete`, `Select` and `Cascader`.
 #[derive(Default)]
 pub struct FindClear {
     pub last: Option<ElementId>,
@@ -525,7 +526,8 @@ impl WriteMutations for FindClear {
     fn insert_after(&mut self, _m: usize) {}
     fn insert_before(&mut self, _m: usize) {}
     fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
-        if name == "aria-label" && matches!(value, AttributeValue::Text(text) if text == "Clear") {
+        let clear = libero::localization::CommonLabels::ENGLISH.clear;
+        if name == "aria-label" && matches!(value, AttributeValue::Text(text) if text == clear) {
             self.clear = self.last;
         }
     }
@@ -540,7 +542,8 @@ thread_local! {
 }
 
 /// Clicks the field's Clear button and returns what `onchange` received, as
-/// value lengths. `None` when the field drew no Clear button.
+/// value lengths. `None` when the field drew no Clear button: a test expecting
+/// `None` also needs a call that gets `Some` (todo 1751).
 ///
 /// Todo 252, for `b7d1c39d`: the shared `clear_button` renders only while it
 /// has something to clear, and one click reports one change. Where focus goes

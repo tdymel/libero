@@ -14,7 +14,7 @@ fn items() -> Vec<ImageItem> {
     vec![
         ImageItem::new(rsx! { Image { src: "/a.svg", alt: "A" } }).bar(ImageBar::new(rsx! {
             div { "Breakfast" }
-            div { "@rgbagirl" }
+            div { "@demo_cook" }
         })),
         ImageItem::new(rsx! { Image { src: "/b.svg", alt: "B" } }),
         ImageItem::new(rsx! { Image { src: "/c.svg", alt: "C" } }).span(GridSpan::Full),
@@ -386,7 +386,7 @@ fn a_bar_never_becomes_the_pictures_name() {
     assert_eq!(image.get("alt").map(String::as_str), Some("A"));
     assert!(!html.contains("aria-labelledby"), "{html}");
     assert!(
-        html.contains("Breakfast") && html.contains("@rgbagirl"),
+        html.contains("Breakfast") && html.contains("@demo_cook"),
         "{html}"
     );
 }

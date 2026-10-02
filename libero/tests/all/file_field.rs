@@ -479,7 +479,7 @@ mod dispatched {
                     multiple: true,
                     clearable: true,
                     value: crate::common::fake_files(&["a.txt", "b.txt"]),
-                    readonly: true,
+                    readonly: READ_ONLY.get(),
                     onchange: move |files: libero::components::Files| {
                         CLEARED.with_borrow_mut(|seen| seen.push(files.len()));
                     },
@@ -520,6 +520,13 @@ mod dispatched {
             "{removes:?}"
         );
 
+        READ_ONLY.set(false);
+        assert_eq!(
+            click_clear(readonly_files_clear),
+            Some(vec![0]),
+            "the control"
+        );
+        READ_ONLY.set(true);
         assert_eq!(click_clear(readonly_files_clear), None);
     }
 }

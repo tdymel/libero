@@ -3,9 +3,19 @@
 //! `NativeSelect` covers what changed when it was ported off its wrapping `<label>`.
 
 use crate::common::{
-    attributes_of, body, css_rules, css_rules_for, nth_attributes, render, rule_of, tag_with,
-    tags_with,
+    attributes_of, body, css_rules, css_rules_for, element_at, render, rule_of, tag_with, tags_with,
 };
+
+const FRAME: &str = r#"data-slot="frame""#;
+
+/// The first field frame in `html` and everything inside it.
+fn frame_of(html: &str) -> &str {
+    element_at(
+        html,
+        html.find(FRAME)
+            .unwrap_or_else(|| panic!("no frame:\n{html}")),
+    )
+}
 
 use dioxus::prelude::*;
 use libero::{
@@ -337,7 +347,7 @@ fn a_field_with_no_slots_renders_an_empty_frame() {
     // but it costs no node for a slot nothing filled.
     assert!(!fills_a_slot(&body), "{body}");
     // The control is inside the frame, not a sibling of the label.
-    assert!(body.contains("</label><div"), "{body}");
+    assert!(frame_of(&body).contains("<input"), "{body}");
 }
 
 #[test]
@@ -351,11 +361,7 @@ fn the_frame_draws_the_focus_ring_and_the_control_does_not() {
     }
 
     let html = render(app);
-    // The frame is the `<div>` after the label; the first one is the field root.
-    let frame_class = {
-        let body = body(&html);
-        attributes_of(&body[body.find("</label>").expect("a label")..], "div")["class"].clone()
-    };
+    let frame_class = tag_with(&body(&html), FRAME)["class"].clone();
     let control_class = attributes_of(&body(&html), "input")["class"].clone();
 
     // The ring is the frame's, drawn by an overlay after the control and
@@ -426,9 +432,12 @@ fn a_select_names_its_control_through_for_rather_than_wrapping_it() {
     assert_eq!(select["aria-required"], "true");
     // The control sits in the frame, and the label is its sibling - not its
     // parent.
-    let after_label = body.split("</label>").nth(1).expect("a label");
-    let frame = after_label.split("<select").next().expect("a select");
-    assert!(frame.contains("<div"), "{body}");
+    let frame = frame_of(&body);
+    assert!(
+        frame.contains("<select") && !frame.contains("<label"),
+        "{body}"
+    );
+    assert!(!element_at(&body, body.find("<label").unwrap()).contains("<select"));
 }
 
 /// Both fields read one `FieldDefaults` scale now, so a `NativeSelect` beside a
@@ -446,23 +455,17 @@ fn a_select_and_a_text_field_share_one_size_scale() {
 
     let html = render(app);
     let markup = body(&html);
-    let frame_heights = |control: &str| -> Vec<String> {
-        let at = markup.find(control).expect("the control rendered");
-        let frame = attributes_of(
-            &markup[markup[..at].rfind("<div").expect("a frame")..],
-            "div",
-        );
-        css_rules_for(&html, &frame)
+    // The TextField's frame, then the NativeSelect's.
+    let frames = tags_with(&markup, FRAME);
+    assert_eq!(frames.len(), 2, "{markup}");
+    for frame in &frames {
+        let heights: Vec<String> = css_rules_for(&html, frame)
             .into_iter()
             .filter_map(|rule| rule.declarations.get("min-height").cloned())
-            .collect()
-    };
-
-    for control in ["<input", "<select"] {
-        let heights = frame_heights(control);
+            .collect();
         assert!(
             heights.iter().any(|h| h == "var(--lsx-field-height-lg)"),
-            "{control}: {heights:?}"
+            "{frame:?}: {heights:?}"
         );
     }
     let own_scale = css_rules(&html).into_iter().find(|rule| {
@@ -523,9 +526,7 @@ fn a_textarea_renders_its_rows_inside_the_frame() {
     assert_eq!(textarea["aria-invalid"], "true");
 
     // Inside the frame, not a sibling of the label.
-    let after_label = body.split("</label>").nth(1).expect("a label");
-    let frame = after_label.split("<textarea").next().expect("a textarea");
-    assert!(frame.contains("<div"), "{body}");
+    assert!(frame_of(&body).contains("<textarea"), "{body}");
 }
 
 /// Todo 1584: iOS has no minus on its `numeric` and `decimal` keypads, and `numeric` has no
@@ -978,24 +979,17 @@ fn a_radio_group_shares_one_name_and_one_tab_stop() {
 
     let html = render(app);
     let body = body(&html);
-    let group = attributes_of(&body, "div");
     let label = attributes_of(&body, "label");
     let id = label["id"].trim_end_matches("-label").to_string();
 
-    // The wrapper is the first div; the group itself is the second.
-    let group_attributes = nth_attributes(&body, "div", 1);
-    assert_eq!(group_attributes["role"], "radiogroup");
-    assert_eq!(group_attributes["aria-labelledby"], format!("{id}-label"));
-    assert_eq!(group_attributes["aria-describedby"], format!("{id}-helper"));
-    assert!(!group.contains_key("role"), "{group:?}");
+    // One group, not the field wrapper around it.
+    let groups = tags_with(&body, r#"role="radiogroup""#);
+    assert_eq!(groups.len(), 1, "{body}");
+    assert_eq!(groups[0]["aria-labelledby"], format!("{id}-label"));
+    assert_eq!(groups[0]["aria-describedby"], format!("{id}-helper"));
 
-    let names: Vec<&str> = body
-        .match_indices("name=\"")
-        .map(|(at, _)| {
-            let rest = &body[at + 6..];
-            &rest[..rest.find('"').unwrap()]
-        })
-        .collect();
+    let inputs = tags_with(&body, "<input");
+    let names: Vec<&str> = inputs.iter().map(|input| input["name"].as_str()).collect();
     assert_eq!(names.len(), 3, "{body}");
     assert!(names.iter().all(|name| *name == names[0]), "{names:?}");
 
@@ -1005,10 +999,7 @@ fn a_radio_group_shares_one_name_and_one_tab_stop() {
     assert!(body.contains(r#"data-radio-index="1""#), "{body}");
 
     // Todo 20: each radio posts `Options::value`, not the browser's `on`.
-    let values: Vec<String> = tags_with(&body, "<input")
-        .into_iter()
-        .map(|input| input["value"].clone())
-        .collect();
+    let values: Vec<&str> = inputs.iter().map(|input| input["value"].as_str()).collect();
     assert_eq!(values, ["Free", "Pro", "Team"]);
 }
 
@@ -1108,9 +1099,7 @@ fn a_segmented_control_wears_the_field_around_its_radiogroup() {
     let label = attributes_of(&body, "label");
     let id = label["id"].trim_end_matches("-label").to_string();
 
-    // The wrapper is the first div; the group itself is the second.
-    let group = nth_attributes(&body, "div", 1);
-    assert_eq!(group["role"], "radiogroup");
+    let group = tag_with(&body, r#"role="radiogroup""#);
     assert_eq!(group["aria-labelledby"], format!("{id}-label"));
     assert!(
         group["aria-describedby"].contains(&format!("{id}-helper")),
@@ -1177,8 +1166,7 @@ fn a_segmented_control_contains_its_hidden_radios() {
 
     let html = render(app);
     let body = body(&html);
-    let group = nth_attributes(&body, "div", 1);
-    assert_eq!(group["role"], "radiogroup");
+    let group = tag_with(&body, r#"role="radiogroup""#);
 
     let rules = css_rules_for(&html, &group);
     let radio = rules
@@ -1226,9 +1214,9 @@ fn a_bound_segmented_control_reads_its_form_value_and_posts_its_name() {
     let html = dioxus_ssr::render(&dom);
 
     assert_eq!(html.matches(r#"name="density""#).count(), 3, "{html}");
-    let checked: Vec<bool> = html
-        .match_indices("<input")
-        .map(|(at, _)| html[at..at + html[at..].find('>').unwrap()].contains("checked"))
+    let checked: Vec<bool> = tags_with(&html, "<input")
+        .iter()
+        .map(|input| input.contains_key("checked"))
         .collect();
     assert_eq!(checked, [false, false, true], "{html}");
 }
@@ -1284,15 +1272,8 @@ fn a_pin_field_is_one_group_of_cells_that_share_the_frame() {
     assert!(body.contains(r#"name="otp""#));
 
     // One prepared frame rendered six times: the same class, six times over,
-    // and no id on any of them. A cell's frame is the tag right before it.
-    let frames: Vec<_> = body
-        .match_indices("data-pin-index=")
-        .map(|(at, _)| {
-            let cell = body[..at].rfind('<').unwrap();
-            let frame = body[..cell].rfind("<div").expect("a cell frame");
-            attributes_of(&body[frame..], "div")
-        })
-        .collect();
+    // and no id on any of them.
+    let frames = tags_with(&body, FRAME);
     assert_eq!(frames.len(), 6);
     for frame in &frames {
         assert_eq!(frame.get("class"), frames[0].get("class"), "{frames:?}");
@@ -1417,9 +1398,7 @@ fn the_frame_reads_the_surface_and_publishes_its_focus_contrast() {
 
     let html = render(app);
     let markup = body(&html);
-    let input = markup.find("<input").expect("the control rendered");
-    let frame = markup[..input].rfind("<div").expect("the frame");
-    let class = attributes_of(&markup[frame..], "div")["class"]
+    let class = tag_with(&markup, FRAME)["class"]
         .split_whitespace()
         .next()
         .expect("a framework class")
@@ -1460,22 +1439,14 @@ fn read_only_reaches_each_control_the_way_that_control_says_it() {
         }
     }
 
-    // A boolean attribute renders unquoted, which `attributes_of` cannot
-    // split - so this one reads the markup.
     let body = body(&render(app));
-    let tag = |needle: &str| {
-        let at = body
-            .find(needle)
-            .unwrap_or_else(|| panic!("no {needle}\n{body}"));
-        body[at..]
-            .split_once('>')
-            .expect("an unterminated tag")
-            .0
-            .to_string()
-    };
 
-    assert!(tag("<input").contains("readonly=true"), "{body}");
-    assert!(tag("<textarea").contains("readonly=true"), "{body}");
+    assert_eq!(attributes_of(&body, "input")["readonly"], "true", "{body}");
+    assert_eq!(
+        attributes_of(&body, "textarea")["readonly"],
+        "true",
+        "{body}"
+    );
 
     // The two checkables say it the ARIA way, and neither writes the attribute
     // HTML says does not apply to them.
@@ -1535,18 +1506,18 @@ fn a_repeated_option_is_checked_once_on_its_first_radio() {
     }
 
     let body = body(&render(app));
-    // Open tags only, read raw: SSR writes a boolean as `checked=true`, unquoted.
-    let checked: Vec<&str> = body
-        .match_indices("<input")
-        .map(|(start, _)| &body[start..start + body[start..].find('>').unwrap()])
-        .filter(|input| input.contains("checked"))
+    let checked: Vec<_> = tags_with(&body, "<input")
+        .into_iter()
+        .filter(|input| input.contains_key("checked"))
         .collect();
     assert_eq!(checked.len(), 2, "one per group: {body}");
+    assert_eq!(checked[0]["data-radio-index"], "0", "{checked:?}");
     assert!(
-        checked[0].contains(r#"data-radio-index="0""#),
+        checked[1]
+            .values()
+            .any(|value| value.ends_with("segment-0")),
         "{checked:?}"
     );
-    assert!(checked[1].contains(r#"segment-0""#), "{checked:?}");
 }
 
 static NO_REVEAL: libero::theme::Theme = libero::theme::Theme {

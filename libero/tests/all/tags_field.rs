@@ -222,22 +222,22 @@ mod dispatched {
         assert_every_press_keeps_the_focus(app, 2);
     }
 
-    #[test]
-    fn clear_empties_a_tags_field_once() {
-        fn app() -> Element {
-            rsx! {
-                LiberoProvider {
-                    TagsField {
-                        label: "Topics",
-                        clearable: true,
-                        value: vec!["rust".to_string(), "dioxus".to_string()],
-                        onchange: move |tags: Vec<String>| CLEARED.with_borrow_mut(|seen| seen.push(tags.len())),
-                    }
+    fn clearable_topics() -> Element {
+        rsx! {
+            LiberoProvider {
+                TagsField {
+                    label: "Topics",
+                    clearable: true,
+                    value: vec!["rust".to_string(), "dioxus".to_string()],
+                    onchange: move |tags: Vec<String>| CLEARED.with_borrow_mut(|seen| seen.push(tags.len())),
                 }
             }
         }
+    }
 
-        assert_eq!(click_clear(app), Some(vec![0]));
+    #[test]
+    fn clear_empties_a_tags_field_once() {
+        assert_eq!(click_clear(clearable_topics), Some(vec![0]));
     }
 
     #[test]
@@ -255,6 +255,7 @@ mod dispatched {
             }
         }
 
+        assert!(click_clear(clearable_topics).is_some(), "the control");
         assert_eq!(click_clear(app), None);
     }
 }

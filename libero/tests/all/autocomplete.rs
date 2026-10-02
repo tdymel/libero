@@ -1,4 +1,4 @@
-use crate::common::{body, render};
+use crate::common::{body, clear_buttons, render};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::Autocomplete};
@@ -72,20 +72,21 @@ mod autocomplete_suggestions {
         }
     }
 
-    #[test]
-    fn clearable_offers_the_x_only_while_the_field_holds_text() {
-        fn typed() -> Element {
-            rsx! {
-                LiberoProvider {
-                    Autocomplete {
-                        value: "Ber",
-                        clearable: true,
-                        options: cities(),
-                        oninput: move |_| {},
-                    }
+    fn typed() -> Element {
+        rsx! {
+            LiberoProvider {
+                Autocomplete {
+                    value: "Ber",
+                    clearable: true,
+                    options: cities(),
+                    oninput: move |_| {},
                 }
             }
         }
+    }
+
+    #[test]
+    fn clearable_offers_the_x_only_while_the_field_holds_text() {
         fn blank() -> Element {
             rsx! {
                 LiberoProvider {
@@ -99,8 +100,8 @@ mod autocomplete_suggestions {
             }
         }
 
-        assert!(body(&render(typed)).contains(r#"aria-label="Clear""#));
-        assert!(!body(&render(blank)).contains(r#"aria-label="Clear""#));
+        assert_eq!(clear_buttons(&body(&render(typed))).len(), 1);
+        assert_eq!(clear_buttons(&body(&render(blank))).len(), 0);
     }
 
     /// The caller's own trailing content keeps its place when the x joins it.
@@ -130,7 +131,7 @@ mod autocomplete_suggestions {
             html.contains(&format!(r#"<span id="{id}-trailing">km</span>"#)),
             "{html}"
         );
-        assert!(html.contains(r#"aria-label="Clear""#), "{html}");
+        assert_eq!(clear_buttons(&html).len(), 1, "{html}");
     }
 
     #[test]
@@ -151,6 +152,7 @@ mod autocomplete_suggestions {
         let html = body(&render(app));
 
         assert!(html.contains("disabled"), "{html}");
-        assert!(!html.contains(r#"aria-label="Clear""#), "{html}");
+        assert_eq!(clear_buttons(&body(&render(typed))).len(), 1, "the control");
+        assert_eq!(clear_buttons(&html).len(), 0, "{html}");
     }
 }

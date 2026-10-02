@@ -1,4 +1,4 @@
-use crate::common::{body, element_at, render, tag_with, tags_with};
+use crate::common::{body, clear_buttons, element_at, render, tag_with, tags_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -122,8 +122,8 @@ mod select_listbox {
             }
         }
 
-        assert!(body(&render(picked)).contains(r#"aria-label="Clear""#));
-        assert!(!body(&render(empty)).contains(r#"aria-label="Clear""#));
+        assert_eq!(clear_buttons(&body(&render(picked))).len(), 1);
+        assert_eq!(clear_buttons(&body(&render(empty))).len(), 0);
     }
 
     #[test]
