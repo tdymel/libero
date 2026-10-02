@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// The column of detail toggles, with `row_detail`.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub(super) struct Details {
     pub slice: StateSlice<Vec<String>>,
     pub labels: TableLabels,

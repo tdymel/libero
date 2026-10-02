@@ -543,7 +543,7 @@ pub fn TablePage() -> Element {
                     prop("header", "String").default("required").doc("The column's title, the argument to `column(..)`."),
                     prop("value", "fn(&T) -> V").default("required").doc("Reads one cell out of a row. `V` sets the sort order and alignment. Text sorts as text and aligns left, numbers sort numerically and align right, and `Option<V>` renders `None` empty and sorts it last. Your own type joins them with one `impl CellValue`."),
                     prop("sortable", "bool").default("false").doc("Turns the header into a sort button."),
-                    prop("render", "fn(&T) -> Element").default("None").doc("Replaces the cell body. Sorting still uses `value`."),
+                    prop("render", "fn(&T) -> Element").default("None").doc("Replaces the cell body. Sorting still uses `value`. Capture signals: a closure that captures a plain value redraws only rows whose data changed."),
                     prop("format", "fn(&T) -> String").default("None").doc("Replaces the cell text, say a price with its currency. Sorting and alignment still follow `value`."),
                     prop("align", "CellAlign").default("follows the cell type").doc("Overrides the alignment the cell type chose and `column_defaults`."),
                     prop("width", "String").default("None").doc("The column's width, any CSS length. Columns without one share the rest."),

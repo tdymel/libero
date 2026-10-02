@@ -8,8 +8,8 @@ use libero::components::{
     ChronoPicker, ColorCode, ColorPicker, Dialog, Fields, Flex, FloatingWindowOptions, Form, List,
     ListItem, Menu, MenuEntry, MenuItem, MultiSelect, NumberField, Options, Pagination, ScrollArea,
     SegmentedControl, Select, Slider, SliderChangeEvent, Splitter, SpotlightAction,
-    SpotlightOptions, Switch, Table, Tabs, Text, TextField, Tooltip, Tree, TreeNode, Virtualize,
-    column, spotlight_filter, use_menu, use_spotlight,
+    SpotlightOptions, Switch, Tabs, Text, TextField, Tooltip, Tree, TreeNode, Virtualize,
+    spotlight_filter, use_menu, use_spotlight,
 };
 use libero::hooks::{
     DrawerOptions, ModalScope, PopoverOptions, use_drawer, use_element, use_floating_window,
@@ -50,14 +50,6 @@ pub const ROUTES: Routes = &[
     ("/perf/color-picker", || rsx! { ColorPickerPage {} }),
     ("/perf/list", || rsx! { ListPage {} }),
     // Interaction timing (perf::timing): no render counter, so the timings are an app's.
-    (
-        "/timing/table",
-        || rsx! { TimedTablePage { rows: 10_000, windowed: true } },
-    ),
-    (
-        "/timing/table-plain",
-        || rsx! { TimedTablePage { rows: 300, windowed: false } },
-    ),
     ("/timing/virtualize", || rsx! { TimedVirtualizePage {} }),
     ("/timing/scroll-area", || rsx! { TimedScrollAreaPage {} }),
     (
@@ -297,42 +289,6 @@ fn ScrollPage() -> Element {
         div { id: "pane", style: "height: 200px; width: 240px",
             ScrollArea { "aria-label": "Rows",
                 Virtualize { count: 1000, item_size: Some(20.0), item }
-            }
-        }
-    }
-}
-
-#[derive(Clone, PartialEq)]
-struct Stock {
-    name: &'static str,
-    count: u32,
-}
-
-/// A selectable, sortable table under a 300px cap; `windowed` draws only the rows in view.
-#[component]
-fn TimedTablePage(rows: u32, windowed: bool) -> Element {
-    let mut selection = use_signal(Vec::<String>::new);
-    let data: Vec<Stock> = (1..=rows)
-        .map(|count| Stock {
-            name: ["Apple", "Banana", "Cherry", "Date"][count as usize % 4],
-            count,
-        })
-        .collect();
-    rsx! {
-        div { id: "pane", style: "width: 480px",
-            Table {
-                caption: "Stock",
-                max_height: "300px",
-                virtual_row_height: windowed.then_some(40.0),
-                selectable: true,
-                selection: selection(),
-                onselectionchange: move |next| selection.set(next),
-                data,
-                columns: vec![
-                    column("Name").value(|stock: &Stock| stock.name.to_string()).sortable(),
-                    column("Count").value(|stock: &Stock| stock.count).sortable().row_header(),
-                ],
-                row_key: |stock: &Stock| stock.count.to_string(),
             }
         }
     }

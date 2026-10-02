@@ -250,7 +250,9 @@ impl<T> Column<T> {
 
     /// Replaces the cell body. Sorting still uses `value`.
     ///
-    /// Runs per row in `Table`'s scope: no hooks, and capture signals, not values.
+    /// Runs in its row's scope, again only when that row or a column changes: no hooks,
+    /// and capture signals: a closure that captures a plain value redraws only rows
+    /// whose data changed.
     pub fn render(mut self, render: impl Fn(&T) -> Element + 'static) -> Self {
         self.render = Some(Rc::new(render));
         self

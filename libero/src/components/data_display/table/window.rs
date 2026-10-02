@@ -3,7 +3,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use super::{
-    core::{HeaderSpec, RowSpec, body_rows},
+    core::{RowSpec, body_rows},
     row_reorder::RowReorder,
 };
 use crate::{
@@ -21,9 +21,9 @@ const FOCUSED_OVERSCAN: usize = 24;
 /// Every row's height in a windowed body.
 pub(super) const TABLE_ROW_HEIGHT_VAR: CssVar = CssVar::new("--lsx-table-row-height");
 
-/// The body's rows: all of them, or only the ones a `ScrollArea` shows.
+/// The body's rows: all of them, each its own scope, or only the ones a `ScrollArea` shows.
 pub(super) enum BodyRows {
-    All(Vec<RowSpec>),
+    All(Vec<Element>),
     Window(RowWindow),
 }
 
@@ -139,7 +139,6 @@ pub(super) fn reveal_slot(to: usize, pitch: f64, head: f64, top: f64, view: f64)
 /// The rows in view, `aria-rowindex`ed after the `head_rows` header rows.
 pub(super) fn render_window(
     window: RowWindow,
-    headers: Rc<Vec<HeaderSpec>>,
     head_rows: usize,
     reorder: Option<RowReorder>,
 ) -> Element {
@@ -181,7 +180,7 @@ pub(super) fn render_window(
                     });
                 }));
                 spec.attributes.push(attr("aria-rowindex", (head_rows + position + 1).to_string()));
-                body_rows(spec, &headers, 0, reorder.as_ref())
+                body_rows(spec, 0, reorder.as_ref())
                     .next()
                     .unwrap_or_else(VNode::empty)
             },

@@ -16,6 +16,7 @@ mod overlay;
 mod paging;
 mod pinning;
 mod resize;
+mod row;
 mod row_reorder;
 mod selection;
 mod table;

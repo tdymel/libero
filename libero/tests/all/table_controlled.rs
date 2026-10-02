@@ -212,3 +212,94 @@ fn a_controlled_prop_beats_its_default() {
     );
     assert_eq!(order_of(&html, &NAMES), ["Linus"], "quick_filter");
 }
+
+thread_local! {
+    static CELLS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// The cell bodies one caller change builds, counted from zero.
+fn cells_built(dom: &mut VirtualDom, change: impl FnOnce()) -> usize {
+    CELLS.with(|cells| cells.set(0));
+    step(dom, change);
+    CELLS.with(std::cell::Cell::get)
+}
+
+/// A render-count budget (todo 1981): a selection, a detail toggle or a sort redraws no
+/// cell, a column change redraws them all. The first test checks what they show.
+#[test]
+fn a_row_state_change_redraws_no_cell() {
+    fn app() -> Element {
+        let held = use_context_provider(|| Held {
+            sort: Signal::new(Vec::new()),
+            selection: Signal::new(Vec::new()),
+            expanded: Signal::new(Vec::new()),
+            hidden: Signal::new(Vec::new()),
+        });
+        let mut columns = person_columns();
+        columns[0] = columns[0].clone().render(|row: &Person| {
+            CELLS.with(|cells| cells.set(cells.get() + 1));
+            rsx! { "{row.name}" }
+        });
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    data: people(),
+                    columns,
+                    row_key: |row: &Person| row.name.to_string(),
+                    selectable: true,
+                    row_detail: |row: &Person| Some(rsx! { p { "{row.name} is {row.age}" } }),
+                    sort: (held.sort)(),
+                    selection: (held.selection)(),
+                    expanded: (held.expanded)(),
+                    hidden_columns: (held.hidden)(),
+                }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let Held {
+        mut sort,
+        mut selection,
+        mut expanded,
+        mut hidden,
+    } = dom.in_scope(ScopeId::APP, consume_context::<Held>);
+
+    assert_eq!(
+        cells_built(&mut dom, || selection.set(vec!["Linus".into()])),
+        0
+    );
+    assert_eq!(
+        cells_built(&mut dom, || expanded.set(vec!["Ada".into()])),
+        0
+    );
+    let by_age = vec![TableSort::new("Age", SortDirection::Descending)];
+    assert_eq!(cells_built(&mut dom, || sort.set(by_age)), 0);
+    assert_eq!(cells_built(&mut dom, || hidden.set(vec!["Age".into()])), 3);
+}
+
+/// A memoized row still follows a signal its column reads (todo 1981).
+#[test]
+fn a_signal_a_cell_reads_redraws_every_row() {
+    fn app() -> Element {
+        let unit = use_context_provider(|| Signal::new("years"));
+        let mut columns = person_columns();
+        columns[1] = columns[1]
+            .clone()
+            .render(move |row: &Person| rsx! { "{row.age} {unit}" });
+        rsx! {
+            LiberoProvider {
+                Table { aria_label: "People", data: people(), columns }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let mut unit = dom.in_scope(ScopeId::APP, consume_context::<Signal<&str>>);
+    let html = step(&mut dom, || unit.set("yrs"));
+    assert_eq!(html.matches(" yrs").count(), 3, "{html}");
+    assert!(!html.contains("years"), "{html}");
+}

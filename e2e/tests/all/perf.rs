@@ -828,8 +828,9 @@ fn print_renders(component: &str, step: &str, pass: usize, renders: &Renders) {
 /// interaction, its median task time held to a budget of about 5x the release medians of
 /// 2026-10-05, so only a real regression trips it. Opt-in, a shared CPU makes milliseconds
 /// noise in the gate; run it on the release build:
-/// `E2E_RELEASE=1 cargo run -p e2e -- perf::timing:: --ignored --nocapture`.
-mod timing {
+/// `E2E_RELEASE=1 cargo run -p e2e -- perf::timing:: --ignored --nocapture`. The helpers
+/// serve `table_perf` too.
+pub(crate) mod timing {
     use std::collections::BTreeMap;
     use std::path::PathBuf;
     use std::time::{Duration, Instant};
@@ -847,9 +848,9 @@ mod timing {
     use serde::{Deserialize, Serialize};
 
     /// Unmeasured passes first: the first run of a path pays for its wasm and style warm-up.
-    pub(super) const WARM_UP: usize = 2;
+    pub(crate) const WARM_UP: usize = 2;
 
-    pub(super) const RECORDER: &str = r#"(() => {
+    pub(crate) const RECORDER: &str = r#"(() => {
         const t = { frames: [], loaf: [], events: [], last: null };
         const tick = (now) => {
             if (t.last !== null) t.frames.push(now - t.last);
@@ -914,7 +915,7 @@ mod timing {
 
     /// Until 60 ms pass with under 2 ms of main-thread work: effects, placement passes and
     /// exit animations belong to the interaction that started them.
-    pub(super) async fn quiet(page: &Page) -> Result<()> {
+    pub(crate) async fn quiet(page: &Page) -> Result<()> {
         let started = Instant::now();
         let mut last = metrics(page).await?;
         loop {
@@ -923,17 +924,18 @@ mod timing {
             if delta_ms(&now, &last, "TaskDuration") < 2.0 {
                 return Ok(());
             }
-            if started.elapsed() > Duration::from_secs(5) {
+            // A 5000-row Table mount works for seconds.
+            if started.elapsed() > Duration::from_secs(20) {
                 bail!("the page never went quiet");
             }
             last = now;
         }
     }
 
-    pub(super) struct Rows(BTreeMap<&'static str, Vec<Rep>>);
+    pub(crate) struct Rows(BTreeMap<&'static str, Vec<Rep>>);
 
     /// Runs `act` `WARM_UP + reps` times; each run names the row it belongs to.
-    pub(super) async fn measure(
+    pub(crate) async fn measure(
         page: &Page,
         reps: usize,
         mut act: impl AsyncFnMut(usize) -> Result<&'static str>,
@@ -1006,7 +1008,7 @@ mod timing {
 
     /// Prints the rows, merges them into `interaction-time.json` in the target dir, then
     /// holds each row's median task time to its budget.
-    pub(super) fn report(component: &str, rows: &Rows, budgets: &[(&str, f64)]) {
+    pub(crate) fn report(component: &str, rows: &Rows, budgets: &[(&str, f64)]) {
         let mut all: BTreeMap<String, Summary> = std::fs::read_to_string(json_path())
             .ok()
             .and_then(|text| {
@@ -1083,7 +1085,7 @@ mod timing {
     }
 
     /// The page in front, the recorder and the CDP counters on; `run` gets the page.
-    pub(super) async fn timed(route: &str, run: impl AsyncFnOnce(&Page) -> Result<()>) {
+    pub(crate) async fn timed(route: &str, run: impl AsyncFnOnce(&Page) -> Result<()>) {
         let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         let front = frames::bring_to_front(page).await.unwrap();
@@ -1099,7 +1101,7 @@ mod timing {
         fixture.close().await.unwrap();
     }
 
-    pub(super) async fn js<T: serde::de::DeserializeOwned>(
+    pub(crate) async fn js<T: serde::de::DeserializeOwned>(
         page: &Page,
         expression: &str,
     ) -> Result<T> {
@@ -1107,10 +1109,10 @@ mod timing {
     }
 
     /// The first element under `#pane` that scrolls.
-    pub(super) const SCROLLER: &str = "[...document.querySelectorAll('#pane *')].find((el) => el.scrollHeight > el.clientHeight + 1)";
+    pub(crate) const SCROLLER: &str = "[...document.querySelectorAll('#pane *')].find((el) => el.scrollHeight > el.clientHeight + 1)";
 
     /// One wheel notch of 120 px per rep, half the reps down, then back up.
-    pub(super) async fn wheel_reps(page: &Page, reps: usize) -> Result<Rows> {
+    pub(crate) async fn wheel_reps(page: &Page, reps: usize) -> Result<Rows> {
         let at: Point = js(
             page,
             &format!("(() => {{ const r = {SCROLLER}.getBoundingClientRect(); return {{ x: r.x + r.width / 2, y: r.y + r.height / 2 }}; }})()"),
@@ -1144,7 +1146,7 @@ mod timing {
 
     /// A press, `moves` pointer moves `by` along x (or y), a release, on `selector`'s
     /// centre; every other rep goes back.
-    pub(super) async fn drag_reps(
+    pub(crate) async fn drag_reps(
         page: &Page,
         selector: &str,
         by: (f64, f64),
@@ -1176,9 +1178,8 @@ mod timing {
     #[ignore = "interaction timing report, run on request"]
     fn scrolling() {
         block_on(async {
+            // The Table's wheel rows are table_perf's.
             for (route, component, budget) in [
-                ("/timing/table", "Table windowed", 40.0),
-                ("/timing/table-plain", "Table plain", 40.0),
                 ("/timing/virtualize", "Virtualize", 40.0),
                 ("/timing/scroll-area", "ScrollArea", 40.0),
                 ("/timing/native-scroll", "plain div (control)", 40.0),

@@ -139,20 +139,23 @@ fn PagedPage() -> Element {
     }
 }
 
-/// 10k selectable rows, 40px each under a 400px cap, with a quick filter.
+/// 10k selectable rows, 40px each under a 400px cap, with a quick filter. In `#pane`,
+/// where the shared wheel reps find the scroller.
 #[component]
 fn WindowedPage() -> Element {
     let data = use_hook(|| people(10_000));
     rsx! {
-        Table {
-            caption: "People",
-            data: data.as_ref().clone(),
-            columns: columns(),
-            row_key: key,
-            selectable: true,
-            show_quick_filter: true,
-            max_height: "400px",
-            virtual_row_height: 40.0,
+        div { id: "pane",
+            Table {
+                caption: "People",
+                data: data.as_ref().clone(),
+                columns: columns(),
+                row_key: key,
+                selectable: true,
+                show_quick_filter: true,
+                max_height: "400px",
+                virtual_row_height: 40.0,
+            }
         }
     }
 }

@@ -18,8 +18,8 @@ use crate::{
         overlay::MenuPart,
     },
     hooks::{
-        listener, use_debounced_callback, use_element, use_id, use_localization,
-        use_resize_fallback, use_theme,
+        use_debounced_callback, use_element, use_id, use_localization, use_resize_fallback,
+        use_theme,
     },
     platform::{
         ElementApi, SCROLL_PADDING_VARS, drags_table_columns, lays_out_captions,
@@ -40,21 +40,21 @@ use super::{
     column_menu::{ColumnMenu, MenuColumn, use_menu_focus},
     column_order::{moved, order_unpinned, ranked},
     core::{
-        BodySpec, CaptionSpec, CellSpec, RowFn, RowSpec, SortedRows, TableSort, WidthSpec,
-        active_sort, header_specs, render_body,
+        BodySpec, CaptionSpec, RowFn, SortedRows, TableSort, WidthSpec, active_sort, header_specs,
+        render_body,
     },
     csv::shown_csv,
     detail::Details,
     filter::{FilteredRows, QuickFilter, query_words},
     filter_panel::{FilterPanel, FilterPanelButton, PanelColumn, use_panel_control},
     filter_popover::FilterTarget,
-    groups::spanned,
     header_filters::HeaderFilter,
     overlay::{EmptyBody, LoadingBar, SKELETON_ROWS},
     paging::{TablePager, clamp_page, page_rows, use_page_reset, use_page_size_reseed},
-    pinning::{PinSide, PinnedColumns, pin_columns, pin_runs, pinned_extent, span_pin},
+    pinning::{PinSide, PinnedColumns, pin_columns, pinned_extent},
     resize::{ColumnResize, ColumnWidths, MenuWidth},
-    row_reorder::{ReorderSlot, RowReorder},
+    row::{RowContext, RowState, TableRow},
+    row_reorder::RowReorder,
     selection::Selection,
     toolbar::{TableToolbar, TableTools, ToolView},
     use_table::{TableConfig, use_table},
@@ -1050,6 +1050,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let look = use_checkbox_look(size, props.selectable);
     let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
     let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
+    let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
+    let mut known_rows = use_hook(|| CopyValue::new(None::<(Rc<Vec<T>>, bool, Rc<[String]>)>));
     let row_focus = use_row_focus();
 
     let widths = state.column_widths.read();
@@ -1200,16 +1202,30 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             .collect::<Vec<_>>()
     });
 
-    let data = Rc::new(props.data);
-    let row_key = props.row_key.clone();
-    let key_of = {
-        let data = data.clone();
-        move |index: usize| {
-            row_key
-                .call(&data[index])
-                .unwrap_or_else(|| index.to_string())
+    // The last rows and their keys while `data` stays equal: the sort and filter caches
+    // then match it by pointer, and no key is built again (todo 1983).
+    let (data, keys) = {
+        let known = known_rows.peek();
+        match &*known {
+            Some((data, keyed, keys))
+                if *keyed == props.row_key.is_set() && **data == props.data =>
+            {
+                (data.clone(), keys.clone())
+            }
+            _ => {
+                let data = Rc::new(props.data);
+                let keys: Rc<[String]> = data
+                    .iter()
+                    .enumerate()
+                    .map(|(index, row)| {
+                        props.row_key.call(row).unwrap_or_else(|| index.to_string())
+                    })
+                    .collect();
+                (data, keys)
+            }
         }
     };
+    known_rows.set(Some((data.clone(), props.row_key.is_set(), keys.clone())));
     // The quick filter searches the shown, filterable columns.
     let words = query_words(&state.quick_filter.read());
     let searched: Vec<usize> = props
@@ -1241,7 +1257,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         ),
     };
     let selection = look.map(|look| {
-        let keys: Rc<[String]> = (0..data.len()).map(&key_of).collect();
         let scope = match &kept {
             Some(kept) => keys
                 .iter()
@@ -1253,7 +1268,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         };
         Selection {
             slice: state.selection,
-            keys,
             scope,
             announcer,
             labels,
@@ -1367,115 +1381,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         true => state.page_size.read().max(1),
         false => SKELETON_ROWS,
     });
-    // Owned, so a virtualised body can project its rows as they scroll in.
-    let (row_attrs, row_states, onrowclick) = (props.row_attrs, props.row_states, props.onrowclick);
-    let row_selection = selection.clone();
-    let key_at: Rc<dyn Fn(usize) -> String> = match &selection {
-        Some(selection) => {
-            let keys = selection.keys.clone();
-            Rc::new(move |index| keys[index].clone())
-        }
-        None => Rc::new(key_of),
-    };
+    let key_at: Rc<dyn Fn(usize) -> String> = Rc::new(move |index| keys[index].clone());
     let has_data = !data.is_empty();
     let headers = Rc::new(headers);
-    let (row_headers, row_layout, row_key_at) = (headers.clone(), layout.clone(), key_at.clone());
-    let (row_detail, striped, row_details) = (props.row_detail, props.striped, details.clone());
-    let row_has_detail = props.row_has_detail;
-    // A dragged row carries its detail row itself.
-    let animate_details = props.animate_details && !has_reorder;
-    let row_of = move |position: usize, index: usize| {
-        let row = &data[index];
-        let key = row_key_at(index);
-        let name = || {
-            columns
-                .get(name_column)
-                .map(|column| (column.text)(row))
-                .filter(|name| !name.is_empty())
-                .unwrap_or_else(|| key.clone())
-        };
-        let (open, detail) = match row_has_detail.call(row) {
-            Some(has) => {
-                let open = has.then(|| expanded.contains(&key));
-                let detail = match open {
-                    Some(true) => row_detail.call(row).flatten(),
-                    _ => None,
-                };
-                (open, detail)
-            }
-            None => {
-                let detail = row_detail.call(row).flatten();
-                (detail.as_ref().map(|_| expanded.contains(&key)), detail)
-            }
-        };
-        let detail_cell = row_details
-            .as_ref()
-            .map(|details| details.row_cell(key.clone(), &name(), index, open, toggle_detail));
-        let sliding = row_details
-            .as_ref()
-            .zip(open)
-            .filter(|_| animate_details)
-            .map(|(details, open)| (details.row_id(index), open));
-        let detail = match (&row_details, open) {
-            (Some(details), Some(true)) => detail.map(|body| (details.row_id(index), body)),
-            _ => None,
-        };
-        let mut attributes = row_attrs.call(row).unwrap_or_default();
-        if let Some(onrowclick) = onrowclick {
-            let data = data.clone();
-            attributes.push(listener("onclick", move |_: Event<MouseData>| {
-                onrowclick.call(data[index].clone());
-            }));
-        }
-        let is_selected = row_selection.as_ref().map(|_| selected_rows.contains(&key));
-        let select = row_selection.as_ref().map(|selection| {
-            selection.row_cell(key.clone(), &name(), is_selected == Some(true), toggle)
-        });
-        let reorder = has_reorder.then(|| ReorderSlot {
-            slot: position,
-            label: name(),
-        });
-        RowSpec {
-            reorder,
-            selected: is_selected,
-            select,
-            stripe: striped && position % 2 == 1,
-            toggle: detail_cell,
-            detail,
-            sliding,
-            states: row_states.call(row).and_then(|states| states.data_state()),
-            attributes,
-            cells: pin_runs(&row_headers, &row_layout)
-                .flat_map(|run| {
-                    let mut at = 0;
-                    spanned(run, |index| {
-                        columns[index].col_span.as_ref().map_or(1, |span| span(row))
-                    })
-                    .into_iter()
-                    .map(move |(index, span)| {
-                        let covered = &run[at..at + span];
-                        at += span;
-                        (index, span, covered)
-                    })
-                })
-                .map(|(index, span, covered)| {
-                    let column = &columns[index];
-                    let (text, body) = match &column.render {
-                        Some(render) => (String::new(), Some(render(row))),
-                        None => ((column.text)(row), None),
-                    };
-                    CellSpec {
-                        column: index,
-                        text,
-                        body,
-                        span,
-                        pin: span_pin(&row_headers, covered),
-                    }
-                })
-                .collect(),
-            key,
-        }
-    };
     // Detail rows have their own heights.
     let row_height = props.virtual_row_height.filter(|_| bounded && !has_detail);
     let fixed_slots = row_height.filter(|_| has_reorder).map(|pitch| FixedSlots {
@@ -1483,6 +1391,62 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         pitch,
         lift,
     });
+    let reorder = has_reorder.then(|| RowReorder {
+        onreorder: reorder_rows,
+        // The shown order is not `data`'s: a move between slots means nothing there.
+        disabled: !active.is_empty() || !words.is_empty() || !tests.is_empty(),
+        announcer,
+        labels,
+        instructions: instructions_id(),
+        fixed: fixed_slots,
+    });
+    let context = Rc::new(RowContext {
+        columns: columns.clone(),
+        headers: headers.clone(),
+        layout: layout.clone(),
+        span: layout.len().max(1)
+            + usize::from(selection.is_some())
+            + usize::from(has_detail)
+            + usize::from(has_reorder),
+        name_column,
+        row_attrs: props.row_attrs,
+        row_states: props.row_states,
+        row_detail: props.row_detail,
+        row_has_detail: props.row_has_detail,
+        onrowclick: props.onrowclick,
+        selection: selection.clone(),
+        toggle,
+        details: details.clone(),
+        toggle_detail,
+        // A dragged row carries its detail row itself.
+        animate_details: props.animate_details && !has_reorder,
+        reorder: reorder.clone(),
+    });
+    // A new generation redraws every row; an equal context keeps the last one.
+    let generation = {
+        let last = row_context.peek();
+        match &*last {
+            (generation, Some(last)) if last.same(&context) => *generation,
+            (generation, _) => generation + 1,
+        }
+    };
+    row_context.set((generation, Some(context.clone())));
+    let striped = props.striped;
+    let state_of = {
+        let key_at = key_at.clone();
+        let selects = selection.is_some();
+        move |position: usize, index: usize| {
+            let key = key_at(index);
+            RowState {
+                index,
+                stripe: striped && position % 2 == 1,
+                slot: has_reorder.then_some(position),
+                selected: selects.then(|| selected_rows.contains(&key)),
+                expanded: expanded.contains(&key),
+                key,
+            }
+        }
+    };
     // A keyboard lift carries the view by slot: its target row may not be rendered (todo 1408).
     let region = column_drag.region;
     use_effect(use_reactive!(|row_height| {
@@ -1514,7 +1478,10 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             BodyRows::Window(RowWindow {
                 order,
                 row_height,
-                row: Rc::new(row_of),
+                row: Rc::new(move |position, index| {
+                    let row = &data[index];
+                    context.spec(row, state_of(position, index), context.cells(row))
+                }),
                 key: key_at,
                 focused: row_focus.focused,
                 moves: row_focus.moves,
@@ -1524,7 +1491,18 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             order
                 .into_iter()
                 .enumerate()
-                .map(|(position, index)| row_of(position, index))
+                .map(|(position, index)| {
+                    let state = state_of(position, index);
+                    rsx! {
+                        TableRow::<T> {
+                            key: "{state.key}",
+                            row: data[index].clone(),
+                            state,
+                            context: context.clone(),
+                            generation,
+                        }
+                    }
+                })
                 .collect(),
         ),
     };
@@ -1599,15 +1577,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         )
         .with("windowed", row_height.is_some())
         .into();
-    let reorder = has_reorder.then(|| RowReorder {
-        onreorder: reorder_rows,
-        // The shown order is not `data`'s: a move between slots means nothing there.
-        disabled: !active.is_empty() || !words.is_empty() || !tests.is_empty(),
-        announcer,
-        labels,
-        instructions: instructions_id(),
-        fixed: fixed_slots,
-    });
     // Rows the filter took away, not missing data: the caller's `empty` does not apply.
     let filtered_out = !(words.is_empty() && tests.is_empty()) && (props.manual_filter || has_data);
     let empty = match (skeleton, filtered_out) {

@@ -13,12 +13,10 @@ use crate::{
     theme::Size,
 };
 
-/// The checkbox column: the selection, every row's key, and its live region.
+/// The checkbox column: the selection, the rows select-all covers, and its live region.
 #[derive(Clone)]
 pub(super) struct Selection {
     pub slice: StateSlice<Vec<String>>,
-    /// Every row of `data`, in source order.
-    pub keys: Rc<[String]>,
     /// The rows select-all covers: those the quick filter keeps.
     pub scope: Rc<[String]>,
     pub announcer: Announcer,

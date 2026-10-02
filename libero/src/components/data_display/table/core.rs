@@ -46,7 +46,8 @@ impl TableSort {
 }
 
 /// A per-row closure for a [`Table`](super::Table) prop, as `row_key`, or none
-/// by default. Two set ones compare equal, as a column's closures do.
+/// by default. Two set ones compare equal, as a column's closures do: capture
+/// signals: a closure that captures a plain value redraws only rows whose data changed.
 ///
 /// ```rust
 /// # use libero::components::RowFn;
@@ -290,7 +291,8 @@ pub(super) struct RowSpec {
     /// The row's `data-state`.
     pub states: Option<String>,
     pub attributes: Vec<Attribute>,
-    pub cells: Vec<CellSpec>,
+    /// Its cells, from [`render_cells`].
+    pub cells: Element,
     /// With `selectable`: whether it is selected, and its checkbox cell.
     pub selected: Option<bool>,
     pub select: Option<Element>,
@@ -614,9 +616,9 @@ pub(super) fn render_body(body: BodySpec) -> Element {
                 {empty.map(|empty| empty.render(columns, windowed.then_some(head_levels + 1)))}
                 match rows {
                     BodyRows::All(rows) => rsx! {
-                        {rows.into_iter().flat_map(|row| body_rows(row, &headers, columns, reorder.as_ref()))}
+                        {rows.into_iter()}
                     },
-                    BodyRows::Window(window) => render_window(window, headers, head_levels, reorder.clone()),
+                    BodyRows::Window(window) => render_window(window, head_levels, reorder.clone()),
                 }
             };
             match &reorder {
@@ -632,7 +634,6 @@ pub(super) fn render_body(body: BodySpec) -> Element {
 /// A row, then its detail row while open: siblings, each keyed.
 pub(super) fn body_rows(
     row: RowSpec,
-    headers: &[HeaderSpec],
     columns: usize,
     reorder: Option<&RowReorder>,
 ) -> impl Iterator<Item = Element> {
@@ -650,35 +651,9 @@ pub(super) fn body_rows(
         reorder: slot,
     } = row;
     let content = rsx! {
-            {toggle}
-            {select}
-            for CellSpec { column , text , body , span , pin } in cells {
-                if headers[column].row_header {
-                    th {
-                        key: "{column}",
-                        scope: "row",
-                        colspan: (span > 1).then(|| span.to_string()),
-                        "data-align": align_attr(headers[column].align),
-                        "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
-                        "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
-                        style: pin.as_ref().map(CellPin::style),
-                        "{text}"
-                        {body}
-                    }
-                } else {
-                    td {
-                        key: "{column}",
-                        colspan: (span > 1).then(|| span.to_string()),
-                        "data-align": align_attr(headers[column].align),
-                        "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
-                        "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
-                        style: pin.as_ref().map(CellPin::style),
-                        // Text inline: a nested node per cell costs ~1 us a sort.
-                        "{text}"
-                        {body}
-                    }
-                }
-            }
+        {toggle}
+        {select}
+        {cells}
     };
     let (row, detail) = match (reorder, slot) {
         // The row draws its detail row: it moves with the row.
@@ -734,6 +709,42 @@ pub(super) fn body_rows(
         ),
     };
     std::iter::once(row).chain(detail)
+}
+
+/// A row's cells, each its text or a caller's body.
+pub(super) fn render_cells(
+    cells: impl Iterator<Item = CellSpec>,
+    headers: &[HeaderSpec],
+) -> Element {
+    rsx! {
+        for CellSpec { column , text , body , span , pin } in cells {
+            if headers[column].row_header {
+                th {
+                    key: "{column}",
+                    scope: "row",
+                    colspan: (span > 1).then(|| span.to_string()),
+                    "data-align": align_attr(headers[column].align),
+                    "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
+                    "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
+                    style: pin.as_ref().map(CellPin::style),
+                    "{text}"
+                    {body}
+                }
+            } else {
+                td {
+                    key: "{column}",
+                    colspan: (span > 1).then(|| span.to_string()),
+                    "data-align": align_attr(headers[column].align),
+                    "data-pin": pin.as_ref().map(|pin| pin.side.as_str()),
+                    "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
+                    style: pin.as_ref().map(CellPin::style),
+                    // Text inline: a nested node per cell costs ~1 us a sort.
+                    "{text}"
+                    {body}
+                }
+            }
+        }
+    }
 }
 
 /// What a header's sort button needs, shared by every header.
