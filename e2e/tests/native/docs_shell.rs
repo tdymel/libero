@@ -70,7 +70,7 @@ fn a_wheel_over_the_page_scrolls_the_page_and_leaves_the_header() {
 fn titled() -> Element {
     let mut page = use_signal(|| "A");
     let content = use_element();
-    use_heading_focus(page(), content, use_signal(|| None));
+    use_heading_focus(page(), false, content, use_signal(|| None));
     rsx! {
         Button { id: "to-b", onclick: move |_| page.set("B"), "Page B" }
         div { onmounted: content.mount(),
@@ -105,7 +105,7 @@ fn sectioned() -> Element {
     let area = use_scroll_area();
     let content = use_element();
     use_scroll_reset(page(), area, content, section);
-    use_heading_focus(page(), content, section);
+    use_heading_focus(page(), false, content, section);
     rsx! {
         Button {
             id: "to-far",

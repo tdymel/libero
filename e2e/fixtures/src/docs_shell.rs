@@ -50,16 +50,22 @@ fn scroll_to_section(area: ScrollAreaHandle, content: ElementHandle, id: &str) {
 }
 
 /// Focuses the `main h1` inside `content` whenever `location` changes, or the pending
-/// section's heading, never on the first render.
+/// section's heading, never on the first render; waits while `inert`.
 pub fn use_heading_focus<T: Clone + PartialEq + 'static>(
     location: T,
+    inert: bool,
     content: ElementHandle,
     mut section: Signal<Option<String>>,
 ) {
     let mut last = use_hook(|| CopyValue::new(location.clone()));
-    use_effect(use_reactive!(|location| {
+    let mut pending = use_hook(|| CopyValue::new(false));
+    use_effect(use_reactive!(|location, inert| {
         if *last.peek() != location {
             last.set(location);
+            pending.set(true);
+        }
+        if *pending.peek() && !inert {
+            pending.set(false);
             let heading = section
                 .write()
                 .take()
@@ -124,7 +130,7 @@ fn HeadingPage() -> Element {
     let mut page = use_signal(|| "A");
     let content = use_element();
     let section = use_signal(|| None);
-    use_heading_focus(page(), content, section);
+    use_heading_focus(page(), false, content, section);
     rsx! {
         nav { aria_label: "Pages",
             Button { id: "to-a", onclick: move |_| page.set("A"), "Page A" }
@@ -164,7 +170,7 @@ fn SectionPage() -> Element {
     let area = use_scroll_area();
     let content = use_element();
     use_scroll_reset(page(), area, content, section);
-    use_heading_focus(page(), content, section);
+    use_heading_focus(page(), false, content, section);
     rsx! {
         Button {
             id: "to-far",
