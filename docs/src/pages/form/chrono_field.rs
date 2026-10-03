@@ -1,5 +1,5 @@
 use super::date_common::{
-    SIZES, calendar_controls, captions_of, day_limits, duration_limits, field_controls, has_days,
+    calendar_controls, captions_of, day_limits, duration_limits, field_controls, has_days,
     has_time, is_on, is_weekend, moment_limits, shared_controls, shown, status_of, step_of,
     text_of, time_limits, today_of, twelve_hour_of,
 };
@@ -237,8 +237,8 @@ pub fn ChronoFieldPage() -> Element {
                             code.extend(level.map(|level| format!("level: DateLevel::{level}")));
                             code
                         }),
-                        Control::slider("size", SIZES).default("md"),
-                        Control::slider("radius", SIZES).default("sm"),
+                        Control::sizes("size").default("md"),
+                        Control::sizes("radius").default("sm"),
                         // Both swap the site's own, so they add no prop.
                         Control::toggle("language", options(&LANGUAGES)).default(LANGUAGES[0].0).code(|_, _| vec![]),
                         Control::toggle("formats", options(&FORMATS)).default(FORMATS[1].0).code(|_, _| vec![]),

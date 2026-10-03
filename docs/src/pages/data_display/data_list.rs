@@ -73,7 +73,7 @@ pub fn DataListPage() -> Element {
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
                         .default("vertical"),
-                    Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("gap")
                         .default("md"),
                 ],
                 render: move |values: DemoValues| rsx! {

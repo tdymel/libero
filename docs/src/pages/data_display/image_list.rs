@@ -339,9 +339,9 @@ pub fn ImageListPage() -> Element {
                     Control::toggle("variant", ["standard", "masonry", "quilted", "woven"])
                         .labels(["Standard", "Masonry", "Quilted", "Woven"])
                         .default(defaults.variant.as_str()),
-                    Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("gap")
                         .default(defaults.gap.as_str()),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default(defaults.radius.as_str()),
                     // `masonry` takes the picture's own height, so `ratio` does
                     // not exist in that state - an ignored prop must not print.

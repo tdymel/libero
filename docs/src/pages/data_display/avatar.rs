@@ -229,11 +229,11 @@ pub fn AvatarPage() -> Element {
                             "none" => vec![],
                             value => vec![format!("max: {value}")],
                         }),
-                    Control::slider("spacing", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("spacing")
                         .default("sm")
                         .hidden_when(|values| !grouped(values)),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius")
                         .default("xxl"),
                     Control::toggle(
                         "variant",

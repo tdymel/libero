@@ -55,8 +55,8 @@ pub fn ContainerPage() -> Element {
                 children_text: "Centered, width-capped content.",
                 fixed: vec![SX.to_string()],
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("lg"),
-                    Control::slider("gutters", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size").default("lg"),
+                    Control::sizes("gutters")
                         .default("md"),
                     // No `main`: the docs page is one already, and a page has one main.
                     Control::toggle("component", ["div", "section"])

@@ -1,10 +1,10 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, align_of, delay_of, indent, prop, props,
+    side_of,
 };
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Button, Code, Flex, HoverCard, Kbd, Text},
-    hooks::{Align, Side},
     sx::sx,
     use_theme,
 };
@@ -27,49 +27,6 @@ const TRIGGER: &str = r#"Button { variant: "outlined", "Ada Lovelace" }"#;
 
 fn wrap(_: &DemoValues, source: &str) -> String {
     format!("rsx! {{\n{}}}", indent(source))
-}
-
-fn side_of(value: &str) -> Side {
-    match value {
-        "top" => Side::Top,
-        "start" => Side::Start,
-        "end" => Side::End,
-        _ => Side::Bottom,
-    }
-}
-
-fn align_of(value: &str) -> Align {
-    match value {
-        "center" => Align::Center,
-        "end" => Align::End,
-        _ => Align::Start,
-    }
-}
-
-/// `side` and `align` are the popover's enums, not strings, so the default
-/// printer's `side: "top"` would not compile.
-fn enum_code(control: &Control, values: &DemoValues) -> Vec<String> {
-    let value = values.str(control.name);
-    if value == control.default {
-        return vec![];
-    }
-    let (kind, variant) = match control.name {
-        "side" => ("Side", format!("{:?}", side_of(&value))),
-        _ => ("Align", format!("{:?}", align_of(&value))),
-    };
-    vec![format!("{}: {kind}::{variant}", control.name)]
-}
-
-/// Milliseconds print unquoted, and `auto` is the theme's own delay.
-fn delay_code(control: &Control, values: &DemoValues) -> Vec<String> {
-    match values.str(control.name).as_str() {
-        "auto" => vec![],
-        delay => vec![format!("{}: {delay}", control.name)],
-    }
-}
-
-fn delay(value: String) -> Option<u32> {
-    value.parse().ok()
 }
 
 #[component]
@@ -152,18 +109,10 @@ pub fn HoverCardPage() -> Element {
                 code_child: Child(|_| TRIGGER.to_string()),
                 wrap: Wrap(wrap),
                 controls: vec![
-                    Control::toggle("side", ["top", "end", "bottom", "start"])
-                        .labels(["Top", "End", "Bottom", "Start"])
-                        .default("bottom")
-                        .code(enum_code),
-                    Control::toggle("align", ["start", "center", "end"])
-                        .labels(["Start", "Center", "End"])
-                        .default("start")
-                        .code(enum_code),
-                    Control::slider("open_delay", ["auto", "200", "500", "1000"])
-                        .code(delay_code),
-                    Control::slider("close_delay", ["auto", "0", "300", "1000"])
-                        .code(delay_code),
+                    Control::side(["top", "end", "bottom", "start"]),
+                    Control::align(),
+                    Control::delay("open_delay", ["auto", "200", "500", "1000"]),
+                    Control::delay("close_delay", ["auto", "0", "300", "1000"]),
                     Control::toggle("open", ["auto", "false", "true"])
                         .labels(["Auto", "Off", "On"])
                         .code(
@@ -178,8 +127,8 @@ pub fn HoverCardPage() -> Element {
                     HoverCard {
                         side: side_of(&values.str("side")),
                         align: align_of(&values.str("align")),
-                        open_delay: delay(values.str("open_delay")),
-                        close_delay: delay(values.str("close_delay")),
+                        open_delay: delay_of(&values.str("open_delay")),
+                        close_delay: delay_of(&values.str("close_delay")),
                         open: match values.str("open").as_str() {
                             "auto" => None,
                             open => Some(open == "true"),

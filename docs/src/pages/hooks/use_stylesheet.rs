@@ -7,8 +7,6 @@ use libero::{
     use_stylesheet,
 };
 
-const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
-
 /// The hook call and the box that wears its class, as `Callout` renders them.
 fn code(values: &DemoValues, _: &str) -> String {
     format!(
@@ -85,8 +83,8 @@ pub fn UseStylesheetPage() -> Element {
                     Control::toggle("background", ["primary.1", "success.1", "warning.1"])
                         .labels(["Primary 1", "Success 1", "Warning 1"])
                         .default("primary.1"),
-                    Control::slider("padding", SIZES).default("md"),
-                    Control::slider("border_radius", SIZES).default("md"),
+                    Control::sizes("padding").default("md"),
+                    Control::sizes("border_radius").default("md"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Callout {

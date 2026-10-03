@@ -254,10 +254,10 @@ pub fn StylingPage() -> Element {
                         .code(|_, values| card_sx_code(values)),
                         // The whole chain prints from the control above, so
                         // the rest add nothing of their own.
-                        Control::slider("padding", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        Control::sizes("padding")
                             .default("md")
                             .code(|_, _| vec![]),
-                        Control::slider("border_radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        Control::sizes("border_radius")
                             .default("md")
                             .code(|_, _| vec![]),
                         Control::switch("hover").code(|_, _| vec![]),

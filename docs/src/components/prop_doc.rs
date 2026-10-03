@@ -55,6 +55,8 @@ pub struct PropGroup {
     extends: String,
     parts: Vec<PartDoc>,
     dropdown_parts: Vec<PartDoc>,
+    /// Every slot of the part enum behind `parts`, for the coverage test.
+    all_slots: Vec<&'static str>,
 }
 
 /// Starts a Properties block for one component.
@@ -66,6 +68,7 @@ pub fn props(component: impl Into<String>, props: Vec<PropDoc>) -> PropGroup {
         extends: String::new(),
         parts: Vec::new(),
         dropdown_parts: Vec::new(),
+        all_slots: Vec::new(),
     }
 }
 
@@ -108,6 +111,16 @@ impl PropGroup {
             .map(|part| (part.name.as_str(), part.slot))
     }
 
+    /// The part enum's slots the Style API table leaves out. Not the dropdown's: every
+    /// dropdown shares `DropdownPart` and lists only the parts it draws.
+    #[cfg(test)]
+    pub fn unlisted_parts(&self) -> impl Iterator<Item = &'static str> + '_ {
+        self.all_slots
+            .iter()
+            .copied()
+            .filter(|slot| !self.parts.iter().any(|part| part.slot == *slot))
+    }
+
     pub fn has_parts(&self) -> bool {
         !self.parts.is_empty() || !self.dropdown_parts.is_empty()
     }
@@ -133,6 +146,7 @@ impl PropGroup {
         parts: Vec<(P, &str)>,
     ) -> Self {
         self.parts = part_docs(enum_name, parts);
+        self.all_slots = P::ALL.iter().map(|part| part.slot()).collect();
         self
     }
 

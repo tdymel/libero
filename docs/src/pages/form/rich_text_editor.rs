@@ -576,9 +576,9 @@ pub fn RichTextEditorPage() -> Element {
                     "onchange: move |next| doc.set(next)".to_string(),
                 ],
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default("sm"),
                     Control::toggle("status", ["valid", "warning", "error"])
                         .labels(["Valid", "Warning", "Error"])

@@ -71,7 +71,7 @@ pub fn SidebarPage() -> Element {
                 wide_preview: true,
                 controls: vec![
                     Control::toggle("side", ["start", "end"]).labels(["Start", "End"]),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
                 ],
                 render: move |values: DemoValues| {

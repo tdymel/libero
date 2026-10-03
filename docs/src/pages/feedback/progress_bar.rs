@@ -2,8 +2,6 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Input, ProgressBar, ProgressBarPart, Text};
 
-const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
-
 fn indeterminate(values: &DemoValues) -> bool {
     values.str("indeterminate") == "true"
 }
@@ -81,8 +79,8 @@ pub fn ProgressBarPage() -> Element {
                     // An unset `color` is `base_color`'s primary shade 6, which
                     // is exactly what a bare `primary` resolves to.
                     Control::color("color"),
-                    Control::slider("size", SIZES).default("md"),
-                    Control::slider("radius", SIZES).default("xl"),
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius").default("xl"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     ProgressBar {

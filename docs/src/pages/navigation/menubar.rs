@@ -1,8 +1,9 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, align_of, indent, prop, props, side_of,
+};
 use dioxus::prelude::*;
-use libero::{
-    components::{Code, Flex, MenuEntry, MenuItem, Menubar, MenubarMenu, MenubarPart, Text},
-    hooks::{Align, Side},
+use libero::components::{
+    Code, Flex, MenuEntry, MenuItem, Menubar, MenubarMenu, MenubarPart, Text,
 };
 
 /// Everything above the `rsx!`, the pick handler and the menus. `generate_code`
@@ -51,35 +52,6 @@ fn wrap(_: &DemoValues, source: &str) -> String {
         "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"md\",\n{}        Text {{ size: \"sm\", role: \"status\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
         indent(&indent(source))
     )
-}
-
-fn side_of(value: &str) -> Side {
-    match value {
-        "top" => Side::Top,
-        _ => Side::Bottom,
-    }
-}
-
-fn align_of(value: &str) -> Align {
-    match value {
-        "center" => Align::Center,
-        "end" => Align::End,
-        _ => Align::Start,
-    }
-}
-
-/// `side` and `align` are the popover's enums, not strings, so the default
-/// printer's `side: "top"` would not compile.
-fn enum_code(control: &Control, values: &DemoValues) -> Vec<String> {
-    let value = values.str(control.name);
-    if value == control.default {
-        return vec![];
-    }
-    let (kind, variant) = match control.name {
-        "side" => ("Side", format!("{:?}", side_of(&value))),
-        _ => ("Align", format!("{:?}", align_of(&value))),
-    };
-    vec![format!("{}: {kind}::{variant}", control.name)]
 }
 
 /// The code block's example as a component, so its signal stays out of `Demo`'s hook slots.
@@ -233,18 +205,10 @@ pub fn MenubarPage() -> Element {
                 fixed: vec!["aria_label: \"Main\"".to_string(), "menus".to_string()],
                 wrap: Wrap(wrap),
                 controls: vec![
-                    Control::toggle("side", ["bottom", "top"])
-                        .labels(["Bottom", "Top"])
-                        .default("bottom")
-                        .code(enum_code),
-                    Control::toggle("align", ["start", "center", "end"])
-                        .labels(["Start", "Center", "End"])
-                        .default("start")
-                        .code(enum_code),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                        .default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                        .default("sm"),
+                    Control::side(["bottom", "top"]),
+                    Control::align(),
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius").default("sm"),
                     Control::switch("loop_focus").default("true"),
                 ],
                 render: move |values: DemoValues| rsx! {

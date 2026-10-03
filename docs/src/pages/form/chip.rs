@@ -91,9 +91,9 @@ pub fn ChipPage() -> Element {
                         ["filled", "tonal", "elevated", "outlined", "text"],
                     )
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Text"]),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default("xl"),
                     // What the chip is: a plain tag, a checkbox, a button or
                     // a link. The last three never combine.

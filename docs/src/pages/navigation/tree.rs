@@ -295,7 +295,7 @@ pub fn TreePage() -> Element {
                 fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![
                     Control::switch("guides"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default(theme.tree.size.as_str()),
                 ],
                 render: move |values: DemoValues| rsx! {

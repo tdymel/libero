@@ -68,6 +68,10 @@ fn a_route_change_closes_the_drawer() {
         wait::for_js_true(page, &closed, "the drawer to close after the search")
             .await
             .unwrap();
+        // Todo 1693: the h1 takes focus once `main` is no longer inert.
+        wait::for_js_true(page, ON_H1, "the h1 to take focus after the search")
+            .await
+            .unwrap();
 
         // Through the browser's back button.
         page.find_element(BURGER)
@@ -86,6 +90,67 @@ fn a_route_change_closes_the_drawer() {
         wait::for_js_true(page, &closed, "the drawer to close after back")
             .await
             .unwrap();
+        wait::for_js_true(page, ON_H1, "the h1 to take focus after back")
+            .await
+            .unwrap();
+
+        close(fixture).await;
+    });
+}
+
+const ON_H1: &str = "document.activeElement === document.querySelector('#docs-main h1')";
+
+/// Todo 1693: the open drawer leaves `main` inert, Escape closes it onto the burger, and the
+/// skip link moves focus to `main`.
+#[test]
+fn the_drawer_and_the_skip_link_move_focus() {
+    block_on(async {
+        let fixture = Fixture::open_until(
+            "/about/styling",
+            Viewport::Mobile,
+            Scheme::Light,
+            "#docs-main h1",
+        )
+        .await
+        .unwrap();
+        let page = &fixture.page;
+
+        page.find_element(BURGER)
+            .await
+            .unwrap()
+            .click()
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#docs-main').closest('[inert]') !== null",
+            "main to go inert under the drawer",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.activeElement === document.querySelector('{BURGER}') \
+                 && document.querySelector('#docs-main').closest('[inert]') === null"
+            ),
+            "Escape to close the drawer onto the burger",
+        )
+        .await
+        .unwrap();
+
+        page.evaluate("document.querySelector('a[href=\"#docs-main\"]').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement === document.querySelector('#docs-main')",
+            "the skip link to focus main",
+        )
+        .await
+        .unwrap();
 
         close(fixture).await;
     });

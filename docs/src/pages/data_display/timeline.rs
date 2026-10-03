@@ -189,11 +189,11 @@ pub fn TimelinePage() -> Element {
                     // No `UNSET` swatch: unset is `primary`, the default. Hidden with no
                     // `active`, since nothing is drawn in the accent then.
                     Control::color("color").hidden_when(|values| values.str("active") == "none"),
-                    Control::slider("bullet_size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("bullet_size")
                         .default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default("xl"),
-                    Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("xl"),
+                    Control::sizes("gap").default("xl"),
                     // Neither is a prop - both change what the `items` vec
                     // holds, which `Wrap` prints in full.
                     Control::switch("bullets").code(|_, _| vec![]),

@@ -69,7 +69,7 @@ pub fn DividerPage() -> Element {
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"]),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("xs"),
                     Control::switch("with_label").default("true").code(|_, _| vec![]),
                     // Meaningless without a label.

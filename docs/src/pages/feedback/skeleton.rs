@@ -173,7 +173,7 @@ pub fn SkeletonPage() -> Element {
                     // Not a prop: the caller's region around the skeleton. On by default, so
                     // the first code block is the safe setup.
                     Control::switch("busy_region").default("true").code(|_, _| vec![]),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default("sm")
                         .hidden_when(|values| values.str("circle") == "true"),
                     // Two controls for one prop: a shape with no content needs a height.

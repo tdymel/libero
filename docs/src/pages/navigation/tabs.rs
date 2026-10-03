@@ -167,7 +167,7 @@ pub fn TabsPage() -> Element {
                             _ => vec![],
                         }),
                     Control::color("color"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
                     Control::toggle("activation", ["automatic", "manual"])
                         .labels(["Automatic", "Manual"])

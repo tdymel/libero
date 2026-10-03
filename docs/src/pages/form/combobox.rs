@@ -608,9 +608,9 @@ pub fn ComboboxPage() -> Element {
                     Control::toggle("mode", ["select", "suggestions", "fetching"])
                         .labels(["Select", "Suggestions", "Fetching"])
                         .code(mode_code),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default("sm"),
                     Control::switch("option").code(option_code),
                     Control::switch("disabled"),

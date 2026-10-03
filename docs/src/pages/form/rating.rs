@@ -139,7 +139,7 @@ pub fn RatingPage() -> Element {
                 component: "Rating",
                 children_text: "",
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::sizes("size").default("md"),
                     Control::color("color").default("warning"),
                     Control::toggle("fractions", ["1", "2"])
                         .labels(["Whole", "Halves"])

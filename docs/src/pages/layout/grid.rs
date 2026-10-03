@@ -160,9 +160,7 @@ fn controls() -> Vec<Control> {
             })
             .hidden_when(wall),
         Control::switch("dense").hidden_when(wall),
-        Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"])
-            .default("md")
-            .hidden_when(wall),
+        Control::sizes("gap").default("md").hidden_when(wall),
     ]
 }
 

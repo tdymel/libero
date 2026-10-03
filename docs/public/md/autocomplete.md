@@ -177,6 +177,8 @@ The dropdown is portaled out of the field, so its parts take the
 - Android's Back button closes the list as Escape does, rather than the app.
 - A polite status region says how many options the typed text left
   (`ComboboxLabels::results`, "2 results"), or "No results".
+- The clear button is named by the field's `label`, "Clear Fruit", so two clear
+  buttons on one form tell apart. Without a `label` it is "Clear" alone.
 
 ## Theme defaults
 

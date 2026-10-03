@@ -75,7 +75,7 @@ pub fn HeaderPage() -> Element {
                 children_text: "Libero",
                 controls: vec![
                     Control::toggle("position", ["sticky", "static"]).labels(["Sticky", "Static"]),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
                     // Unset is the paper surface, the real default, so that prints nothing.
                     Control::color("color").with_unset()

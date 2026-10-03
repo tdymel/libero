@@ -123,8 +123,8 @@ pub fn ActionIconPage() -> Element {
                     Control::color("color"),
                     gradient_to,
                     gradient_deg,
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius")
                         .default("sm"),
                     // As on Button: off is still a toggle, unset a plain action.
                     Control::toggle("selected", ["unset", "false", "true"])

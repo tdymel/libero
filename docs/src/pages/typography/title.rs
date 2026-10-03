@@ -53,7 +53,7 @@ pub fn TitlePage() -> Element {
                     component: "Title",
                     children_text: "The quick brown fox",
                     controls: vec![
-                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        Control::sizes("size")
                             .default("xxl"),
                         Control::slider(
                             "component",

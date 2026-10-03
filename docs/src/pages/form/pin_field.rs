@@ -103,8 +103,8 @@ pub fn PinFieldPage() -> Element {
                             "alphanumeric" => vec!["kind: \"alphanumeric\"".to_string()],
                             _ => vec![],
                         }),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius").default("sm"),
                     Control::toggle("status", ["valid", "warning", "error"])
                         .labels(["Valid", "Warning", "Error"])
                         .default("valid")

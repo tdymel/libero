@@ -15,6 +15,8 @@ const THEME_COLORS: [&str; 8] = [
     "muted",
 ];
 
+const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
+
 /// How a control offers its options.
 #[derive(Clone, Copy, PartialEq)]
 pub enum ControlKind {
@@ -99,6 +101,11 @@ impl Control {
     /// the first step.
     pub fn slider<const N: usize>(name: &'static str, options: [&str; N]) -> Self {
         Self::new(name, ControlKind::Slider, &options)
+    }
+
+    /// The theme's size scale, `xs` to `xxl`; pair it with `default`.
+    pub fn sizes(name: &'static str) -> Self {
+        Self::slider(name, SIZES)
     }
 
     pub fn toggle<const N: usize>(name: &'static str, options: [&str; N]) -> Self {
@@ -230,6 +237,19 @@ impl Control {
 
     pub fn labels<const N: usize>(mut self, labels: [&str; N]) -> Self {
         self.labels = Some(labels.iter().map(|l| l.to_string()).collect());
+        self
+    }
+
+    /// Labels each option by its value with a capital first letter: `"top"` reads `Top`.
+    pub fn capitalised(mut self) -> Self {
+        let capital = |option: &String| {
+            let mut chars = option.chars();
+            chars
+                .next()
+                .map(|first| first.to_uppercase().chain(chars).collect())
+                .unwrap_or_default()
+        };
+        self.labels = Some(self.options.iter().map(capital).collect());
         self
     }
 

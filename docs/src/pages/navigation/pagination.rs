@@ -5,8 +5,6 @@ use libero::{
     use_theme,
 };
 
-const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
-
 /// `siblings` and `boundaries` are `u8`s, so they print unquoted.
 fn unquoted(control: &Control, values: &DemoValues) -> Vec<String> {
     let value = values.str(control.name);
@@ -103,8 +101,8 @@ pub fn PaginationPage() -> Element {
                         .default("1")
                         .code(unquoted),
                     Control::slider("boundaries", ["1", "2", "3"]).default("1").code(unquoted),
-                    Control::slider("size", SIZES).default(theme.pagination.size.as_str()),
-                    Control::slider("radius", SIZES).default(theme.pagination.radius.as_str()),
+                    Control::sizes("size").default(theme.pagination.size.as_str()),
+                    Control::sizes("radius").default(theme.pagination.radius.as_str()),
                     Control::color("color"),
                     Control::switch("with_controls").default("true"),
                     Control::switch("with_edges"),

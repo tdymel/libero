@@ -1,3 +1,4 @@
+use super::CLEAR_NAME;
 use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
@@ -372,6 +373,7 @@ pub fn MultiSelectPage() -> Element {
                     "Disabled options are read out but skipped.",
                     "With `searchable` the search box takes over typing and holds the focus while the list is open.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
+                    CLEAR_NAME,
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
             lead: rsx! {
@@ -400,8 +402,8 @@ pub fn MultiSelectPage() -> Element {
                     "placeholder: \"Pick toppings\"".to_string(),
                 ],
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius").default("sm"),
                     Control::toggle("status", ["valid", "warning", "error"])
                         .labels(["Valid", "Warning", "Error"])
                         .default("valid")

@@ -77,7 +77,7 @@ pub fn LoaderPage() -> Element {
                 controls: vec![
                     Control::toggle("variant", ["oval", "bars", "dots"])
                         .labels(["Oval", "Bars", "Dots"]),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::sizes("size").default("md"),
                     // A bare `primary` is what an unset `color` resolves to,
                     // so that swatch prints nothing.
                     Control::color("color"),

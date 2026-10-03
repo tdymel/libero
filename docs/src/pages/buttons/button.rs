@@ -108,9 +108,9 @@ pub fn ButtonPage() -> Element {
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
                     gradient_to,
                     gradient_deg,
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default("md"),
                     Control::switch("full_width"),
                     // Off is still a toggle (`aria-pressed="false"`); unset

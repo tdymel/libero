@@ -117,7 +117,7 @@ pub fn PaperPage() -> Element {
                 children_text: "",
                 children_code: CONTENT.to_string(),
                 controls: vec![
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default(theme.paper.radius.as_str()),
                     // `none` is not a `Size`: it prints the `sx` override that does it.
                     Control::slider("shadow", ["none", "xs", "sm", "md", "lg", "xl", "xxl"])

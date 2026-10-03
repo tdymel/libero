@@ -138,16 +138,23 @@ fn scroll_to_section(area: ScrollAreaHandle, content: ElementHandle, id: &str) {
 
 /// Focuses the `main h1` (needs `tabindex="-1"`) inside `content` whenever `location`
 /// changes, or the pending section's heading. Never on the first render: a fresh load
-/// keeps the browser's own start.
+/// keeps the browser's own start. `inert` is `main`'s state in this render: focus waits
+/// for the render that drops it, since an inert heading refuses focus (todo 1693).
 pub fn use_heading_focus<T: Clone + PartialEq + 'static>(
     location: T,
+    inert: bool,
     content: ElementHandle,
     mut section: Signal<Option<String>>,
 ) {
     let mut last = use_hook(|| CopyValue::new(location.clone()));
-    use_effect(use_reactive!(|location| {
+    let mut pending = use_hook(|| CopyValue::new(false));
+    use_effect(use_reactive!(|location, inert| {
         if *last.peek() != location {
             last.set(location);
+            pending.set(true);
+        }
+        if *pending.peek() && !inert {
+            pending.set(false);
             let heading = section
                 .write()
                 .take()

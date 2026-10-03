@@ -1,6 +1,6 @@
 use super::date_common::{
-    SIZES, calendar_controls, day_limits, has_days, has_time, is_mini, is_on, is_weekend,
-    moment_limits, shared_controls, shown, step_of, time_limits, today_of, twelve_hour_of,
+    calendar_controls, day_limits, has_days, has_time, is_mini, is_on, is_weekend, moment_limits,
+    shared_controls, shown, step_of, time_limits, today_of, twelve_hour_of,
 };
 use super::dropdown_parts::chrono_picker_parts;
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
@@ -159,7 +159,7 @@ pub fn ChronoPickerPage() -> Element {
                         code.extend(level.map(|level| format!("level: DateLevel::{level}")));
                         code
                     }),
-                    Control::slider("size", SIZES).default("md"),
+                    Control::sizes("size").default("md"),
                     Control::toggle("variant", ["analog", "digital"]).labels(["Analog", "Digital"]).default("analog").hidden_when(|values| !has_time(values)).code(|_, values| {
                         match values.str("variant").as_str() {
                             "digital" => vec![r#"variant: "digital""#.to_string()],

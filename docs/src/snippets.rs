@@ -654,6 +654,15 @@ fn closing(text: &str, open: usize) -> usize {
 /// The fields a builder cannot leave out: no `default` or `extends`, not `Option`, not
 /// `children` (Dioxus defaults those), as `dioxus-core-macro`'s props derive decides.
 fn required_fields(fields: &str) -> Vec<String> {
+    declared_fields(fields)
+        .into_iter()
+        .filter(|(name, required, _)| *required && name != "children")
+        .map(|(name, ..)| name)
+        .collect()
+}
+
+/// Every field's name, whether a builder cannot leave it out, and whether it is `doc(hidden)`.
+fn declared_fields(fields: &str) -> Vec<(String, bool, bool)> {
     top_level_split(fields)
         .into_iter()
         .filter_map(|field| {
@@ -673,8 +682,33 @@ fn required_fields(fields: &str) -> Vec<String> {
             let defaulted = attrs
                 .split(|c: char| !c.is_alphanumeric() && c != '_')
                 .any(|word| matches!(word, "default" | "extends"));
-            (!name.is_empty() && name != "children" && !optional && !defaulted)
-                .then(|| name.to_string())
+            let hidden = attrs.replace(' ', "").contains("doc(hidden)");
+            (!name.is_empty()).then(|| (name.to_string(), !optional && !defaulted, hidden))
+        })
+        .collect()
+}
+
+/// libero's source files, comments cut, but not a URL's `//`.
+fn libero_sources() -> Vec<String> {
+    let mut files = Vec::new();
+    rust_files(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../libero/src"),
+        &mut files,
+    );
+    files
+        .iter()
+        .map(|file| {
+            std::fs::read_to_string(file)
+                .unwrap()
+                .lines()
+                .map(|line| {
+                    let cut = line
+                        .match_indices("//")
+                        .find(|(i, _)| !line[..*i].ends_with(':'))
+                        .map_or(line.len(), |(i, _)| i);
+                    format!("{}\n", &line[..cut])
+                })
+                .collect()
         })
         .collect()
 }
@@ -682,25 +716,8 @@ fn required_fields(fields: &str) -> Vec<String> {
 /// Every libero component's required props, by name: a `#[component]` fn's own parameters
 /// or the fields of its `<Name>Props` struct.
 fn required_props() -> BTreeMap<String, Vec<String>> {
-    let mut files = Vec::new();
-    rust_files(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../libero/src"),
-        &mut files,
-    );
     let mut required = BTreeMap::new();
-    for file in files {
-        // Comments out, but not a URL's `//`.
-        let source: String = std::fs::read_to_string(&file)
-            .unwrap()
-            .lines()
-            .map(|line| {
-                let cut = line
-                    .match_indices("//")
-                    .find(|(i, _)| !line[..*i].ends_with(':'))
-                    .map_or(line.len(), |(i, _)| i);
-                format!("{}\n", &line[..cut])
-            })
-            .collect();
+    for source in libero_sources() {
         for (at, _) in source.match_indices("#[component]") {
             let after = &source[at..];
             let Some(fn_at) = after.find("fn ") else {
@@ -790,6 +807,182 @@ fn required_props_read_required() {
                             "{}: `{component}` `{name}` reads {cell:?}",
                             markdown.as_deref().unwrap_or_default()
                         ));
+                    }
+                }
+            }
+        }
+    }
+    problems.sort();
+    problems.dedup();
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// What `field_props!` adds to a struct: `without(readonly)` and `without(radius)` drop one.
+const FIELD_PROPS: [&str; 9] = [
+    "label",
+    "description",
+    "helper",
+    "status",
+    "size",
+    "radius",
+    "disabled",
+    "required",
+    "readonly",
+];
+
+/// `(component, prop or part slot)` the tables left out when todo 1926 added the checks.
+/// Each is either drift to document or a variant the component never draws.
+const KNOWN_GAPS: &[(&str, &str)] = &[
+    ("Cascader", "leading"),
+    ("ChronoField", "leading"),
+    ("Combobox", "column"),
+    ("Combobox", "dial"),
+    ("Combobox", "drill-back"),
+    ("Combobox", "name"),
+    ("Combobox", "nothing-found"),
+    ("Combobox", "pick-parent"),
+    ("Combobox", "search"),
+    ("MultiSelect", "leading"),
+    ("NativeSelect", "leading"),
+    ("NumberField", "leading"),
+    ("PasswordField", "leading"),
+    ("PinField", "leading"),
+    ("PinField", "trailing"),
+    ("Radio", "description"),
+    ("Radio", "disabled"),
+    ("Radio", "helper"),
+    ("Radio", "label"),
+    ("Radio", "required"),
+    ("Radio", "size"),
+    ("Radio", "status"),
+    ("RangeSlider", "bars"),
+    ("RichTextEditor", "leading"),
+    ("RichTextEditor", "trailing"),
+    ("Select", "chip"),
+    ("Select", "leading"),
+    ("TagsField", "leading"),
+    ("Textarea", "leading"),
+];
+
+/// What `base_props!` adds; the page's tables append all but `parts` themselves.
+const BASE_PROPS: [&str; 5] = ["parts", "class", "sx", "states", "attributes"];
+
+/// The fields a page documents: all but the `doc(hidden)` ones.
+fn documented(fields: &str) -> BTreeSet<String> {
+    declared_fields(fields)
+        .into_iter()
+        .filter(|(.., hidden)| !hidden)
+        .map(|(name, ..)| name)
+        .collect()
+}
+
+/// Every libero component's own props by name, `field_props!`'s included: a `#[component]`
+/// fn's parameters or its `<Name>Props` struct's fields.
+fn component_props() -> BTreeMap<String, BTreeSet<String>> {
+    let mut props = BTreeMap::new();
+    for source in libero_sources() {
+        for (at, _) in source.match_indices("#[component]") {
+            let after = &source[at..];
+            let Some(fn_at) = after.find("fn ") else {
+                continue;
+            };
+            let signature = &after[fn_at + 3..];
+            let name: String = signature
+                .chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            let Some(open) = signature.find('(') else {
+                continue;
+            };
+            let params = &signature[open + 1..closing(signature, open) - 1];
+            if !params.trim().starts_with("props:") {
+                props.insert(name, documented(params));
+            }
+        }
+        for (at, _) in source.match_indices("struct ") {
+            let after = &source[at + 7..];
+            let name: String = after
+                .chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            let (Some(component), Some(open)) =
+                (name.strip_suffix("Props"), after.find(['{', ';']))
+            else {
+                continue;
+            };
+            if after.as_bytes()[open] != b'{' || component.is_empty() {
+                continue;
+            }
+            let mut names = documented(&after[open + 1..closing(after, open) - 1]);
+            // The macro's header sits between its `field_props! {` and the struct.
+            let before = &source[..at];
+            if let Some(macro_at) = before.rfind("field_props! {")
+                && !before[macro_at..].contains("struct ")
+            {
+                let header = &before[macro_at..];
+                names.extend(
+                    FIELD_PROPS
+                        .iter()
+                        .filter(|name| !header.contains(&format!("without({name})")))
+                        .map(|name| name.to_string()),
+                );
+            }
+            props.entry(component.to_string()).or_insert(names);
+        }
+    }
+    props
+}
+
+/// Todo 1926: a page's Properties table names the component's own props, no more, no fewer.
+/// The descriptions and defaults stay unchecked.
+#[test]
+fn prop_tables_name_the_component_props() {
+    let declared = component_props();
+    let mut problems = Vec::new();
+    for Rendered { route, pages, .. } in rendered() {
+        for RecordedPage {
+            properties: groups, ..
+        } in pages
+        {
+            for group in groups {
+                let component = group.component().split('<').next().unwrap_or_default();
+                let Some(fields) = declared.get(component) else {
+                    continue;
+                };
+                let page: BTreeSet<&str> = group.names().map(bare).collect();
+                for field in fields.iter().filter(|field| !page.contains(field.as_str())) {
+                    let known = KNOWN_GAPS.contains(&(component, field.as_str()));
+                    if field != "children" && !BASE_PROPS.contains(&field.as_str()) && !known {
+                        problems.push(format!("{route}: `{component}` lacks `{field}`"));
+                    }
+                }
+                for name in page.iter().filter(|name| !fields.contains(**name)) {
+                    if !BASE_PROPS.contains(name) {
+                        problems.push(format!("{route}: `{component}` has no `{name}`"));
+                    }
+                }
+            }
+        }
+    }
+    problems.sort();
+    problems.dedup();
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// Todo 1926: a Style API table lists every variant of its part enum.
+#[test]
+fn part_tables_list_every_part() {
+    let mut problems = Vec::new();
+    for Rendered { route, pages, .. } in rendered() {
+        for RecordedPage {
+            properties: groups, ..
+        } in pages
+        {
+            for group in groups {
+                let component = group.component().split('<').next().unwrap_or_default();
+                for slot in group.unlisted_parts() {
+                    if !KNOWN_GAPS.contains(&(component, slot)) {
+                        problems.push(format!("{route}: `{component}` lacks the `{slot}` part"));
                     }
                 }
             }

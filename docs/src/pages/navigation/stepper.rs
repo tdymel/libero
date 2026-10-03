@@ -168,7 +168,7 @@ pub fn StepperPage() -> Element {
                         .labels(["Side", "Below"])
                         .default("side")
                         .hidden_when(|values| values.str("orientation") == "vertical"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
                     Control::color("color"),
                     Control::switch("clickable").code(|_, values| {

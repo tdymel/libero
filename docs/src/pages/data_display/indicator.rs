@@ -95,7 +95,7 @@ pub fn IndicatorPage() -> Element {
                             Some(count) => vec![format!("label: {count}")],
                             None => vec![],
                         }),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default(theme.indicator.size.as_str()),
                     // An unset `color` is the theme's error role, so that
                     // swatch prints nothing.

@@ -150,7 +150,7 @@ pub fn SplitterPage() -> Element {
                         .labels(["Horizontal", "Vertical"])
                         .default("vertical"),
                     Control::slider("min_size", ["10", "20", "30", "40"]).code(percent_code),
-                    Control::slider("divider_size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("divider_size")
                         .default("sm"),
                     // A bare `grey` is what an unset `divider_color`
                     // falls back to, so that swatch prints nothing.

@@ -1,12 +1,12 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, delay_of, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Code, Input, Text, Tooltip},
     sx::sx,
     use_theme,
 };
-
-const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
 // snippet: in Tooltip { .., Button { "Save" } }
 const LABEL: &str = r#"label: rsx! { "Saves the current draft" }"#;
@@ -24,18 +24,6 @@ fn wrap_room(_: &DemoValues, code: &str) -> String {
         "Box {{\n    sx: sx().padding(\"40px\"),\n{}}}",
         indent(code)
     )
-}
-
-/// Milliseconds print unquoted, and `auto` is the theme's own delay.
-fn delay_code(control: &Control, values: &DemoValues) -> Vec<String> {
-    match values.str(control.name).as_str() {
-        "auto" => vec![],
-        delay => vec![format!("{}: {delay}", control.name)],
-    }
-}
-
-fn delay(value: String) -> Option<u32> {
-    value.parse().ok()
 }
 
 #[component]
@@ -107,14 +95,12 @@ pub fn TooltipPage() -> Element {
                 fixed: vec![LABEL.to_string(), LABEL_ID.to_string()],
                 controls: vec![
                     Control::toggle("side", ["top", "end", "bottom", "start"])
-                        .labels(["Top", "End", "Bottom", "Start"])
+                        .capitalised()
                         .default(theme.tooltip.side.as_str()),
-                    Control::slider("size", SIZES).default(theme.tooltip.size.as_str()),
-                    Control::slider("gap", SIZES).default(theme.tooltip.gap.as_str()),
-                    Control::slider("open_delay", ["auto", "200", "500", "1000"])
-                        .code(delay_code),
-                    Control::slider("close_delay", ["auto", "200", "500", "1000"])
-                        .code(delay_code),
+                    Control::sizes("size").default(theme.tooltip.size.as_str()),
+                    Control::sizes("gap").default(theme.tooltip.gap.as_str()),
+                    Control::delay("open_delay", ["auto", "200", "500", "1000"]),
+                    Control::delay("close_delay", ["auto", "200", "500", "1000"]),
                     // `Some(false)` pins it shut, which hover cannot override.
                     Control::toggle("open", ["auto", "false", "true"])
                         .labels(["Auto", "Off", "On"])
@@ -142,8 +128,8 @@ pub fn TooltipPage() -> Element {
                             side: values.str("side"),
                             size: values.str("size"),
                             gap: values.str("gap"),
-                            open_delay: delay(values.str("open_delay")),
-                            close_delay: delay(values.str("close_delay")),
+                            open_delay: delay_of(&values.str("open_delay")),
+                            close_delay: delay_of(&values.str("close_delay")),
                             open: match values.str("open").as_str() {
                                 "auto" => None,
                                 open => Some(open == "true"),

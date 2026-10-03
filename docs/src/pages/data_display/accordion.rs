@@ -221,7 +221,7 @@ pub fn AccordionPage() -> Element {
                         .code(|_, values| {
                             vec![if many(values) { MANY_PANEL } else { ONE_PANEL }.to_string()]
                         }),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
                     Control::toggle("heading", ["h2", "h3", "h4"])
                         .labels(["H2", "H3", "H4"])

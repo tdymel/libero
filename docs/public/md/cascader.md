@@ -207,6 +207,8 @@ The dropdown is portaled out of the field, so its parts take the
   the trigger stays above the sheet.
 - Android's Back button closes the dropdown as Escape does, rather than the
   app.
+- The clear button is named by the field's `label`, "Clear Fruit", so two clear
+  buttons on one form tell apart. Without a `label` it is "Clear" alone.
 
 ### You must
 

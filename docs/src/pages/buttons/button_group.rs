@@ -82,8 +82,8 @@ pub fn ButtonGroupPage() -> Element {
                     .default("filled"),
                     // A bare `primary` is what an unset `color` resolves to, so that swatch prints nothing.
                     Control::color("color"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius")
                         .default("sm"),
                     Control::switch("disabled"),
                 ],

@@ -234,9 +234,9 @@ pub fn SegmentedControlPage() -> Element {
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
                     Control::color("color"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default("md"),
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"]),

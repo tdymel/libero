@@ -5,8 +5,6 @@ use crate::components::{Control, DemoValues};
 use libero::chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use libero::components::FieldStatus;
 
-pub const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
-
 pub fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
 }

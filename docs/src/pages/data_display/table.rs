@@ -948,7 +948,7 @@ pub fn TablePage() -> Element {
                     "data: people".to_string(),
                 ],
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
                     Control::switch("striped"),
                     Control::switch("scroll").code(|_, values| match values.str("scroll") == "true" {

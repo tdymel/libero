@@ -1,3 +1,4 @@
+use super::CLEAR_NAME;
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
@@ -209,6 +210,7 @@ pub fn AutocompletePage() -> Element {
                     "Nothing is highlighted until you arrow onto a row, so Enter on text that matches nothing still submits the form.",
                     "Android's Back button closes the list as Escape does, rather than the app.",
                     "A polite status region says how many options the typed text left (`ComboboxLabels::results`, \"2 results\"), or \"No results\".",
+                    CLEAR_NAME,
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
             lead: rsx! {
@@ -239,8 +241,8 @@ pub fn AutocompletePage() -> Element {
                     "placeholder: \"Start typing\"".to_string(),
                 ],
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius").default("sm"),
                     Control::toggle("status", ["valid", "warning", "error"])
                         .labels(["Valid", "Warning", "Error"])
                         .default("valid")

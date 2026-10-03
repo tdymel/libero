@@ -10,8 +10,8 @@ pub use a11y_doc::{A11yDoc, A11yPanel, a11y};
 #[cfg(test)]
 pub use demo::DemoCode;
 pub use demo::{
-    Child, Control, Demo, DemoValues, UNSET, Wrap, gradient_controls, gradient_value, indent,
-    not_gradient_variant, or_unset,
+    Child, Control, Demo, DemoValues, UNSET, Wrap, align_of, delay_of, gradient_controls,
+    gradient_value, indent, not_gradient_variant, or_unset, side_of,
 };
 pub use doc_page::{DocPage, ExtraTab};
 pub use doc_section::{DocSection, SectionLink};

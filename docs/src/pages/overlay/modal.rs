@@ -5,8 +5,6 @@ use libero::{
     hooks::{ModalScope, use_modal},
 };
 
-const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
-
 const CHOICE: &str = "#[derive(Clone, Copy, PartialEq)]
 enum SaveChoice {
     Save,
@@ -256,7 +254,7 @@ pub fn ModalPage() -> Element {
                 component: "ModalDemo",
                 children_text: "",
                 controls: vec![
-                    Control::slider("size", SIZES).default("md"),
+                    Control::sizes("size").default("md"),
                     // An `Opening` is also a future, for an answer that gates
                     // work which is already async.
                     Control::switch("await"),

@@ -7,8 +7,6 @@ use libero::components::{
 };
 use libero::use_theme;
 
-const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
-
 const SWATCHES: [&str; 7] = [
     "#2e2e2e", "#fa5252", "#be4bdb", "#228be6", "#12b886", "#fab005", "#fd7e14",
 ];
@@ -132,8 +130,8 @@ pub fn ColorFieldPage() -> Element {
                         .to_string(),
                 ],
                 controls: vec![
-                    Control::slider("size", SIZES).default("md"),
-                    Control::slider("radius", SIZES).default("sm"),
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius").default("sm"),
                     Control::select("format", ["hex", "hexa", "rgb", "rgba", "hsl", "hsla"])
                         .labels(["Hex", "Hexa", "RGB", "RGBA", "HSL", "HSLA"])
                         .default("hex")

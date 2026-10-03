@@ -117,7 +117,7 @@ pub fn BurgerPage() -> Element {
                     "onclick: move |_| open.toggle()".to_string(),
                 ],
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::sizes("size").default("md"),
                     // Unset is `currentColor`, so the swatch is painted (`codebase/docs/demo-controls`).
                     Control::color("color").with_unset()
                     .unset_swatch("currentColor"),

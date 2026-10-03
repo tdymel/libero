@@ -6,8 +6,6 @@ use libero::components::{
 };
 use libero::use_theme;
 
-const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
-
 fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
 }
@@ -171,8 +169,8 @@ pub fn FileFieldPage() -> Element {
                         .labels(["Input", "Dropzone"])
                         .default("input")
                         .code(variant_code),
-                    Control::slider("size", SIZES).default("md"),
-                    Control::slider("radius", SIZES).default("sm"),
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius").default("sm"),
                     Control::toggle("accept", ["any", "image/*", ".pdf"])
                         .labels(["Any", "Images", "PDF"])
                         .default("any")

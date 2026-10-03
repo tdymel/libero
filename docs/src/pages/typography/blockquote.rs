@@ -69,11 +69,11 @@ pub fn BlockquotePage() -> Element {
                 component: "Blockquote",
                 children_text: QUOTE,
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default(theme.blockquote.size.as_str()),
                     Control::color("color")
                     .default(theme.blockquote.color.as_str()),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default(theme.blockquote.radius.as_str()),
                     // Opens on, though unset is the real default, so it prints whenever on.
                     Control::switch("attribution").default("true").code(|_, values| {

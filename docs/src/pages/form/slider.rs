@@ -10,7 +10,6 @@ use libero::{
     use_theme,
 };
 
-const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 const MIN_VALUES: [&str; 4] = ["auto", "0.5", "10.0", "50.0"];
 const MAX_VALUES: [&str; 4] = ["auto", "3.0", "50.0", "200.0"];
 /// The `bars` switch's heights: a voice message's waveform, as `Audio` draws it.
@@ -388,7 +387,7 @@ pub fn SliderPage() -> Element {
                     Control::toggle("mode", ["discrete", "continuous"])
                         .labels(["Discrete", "Continuous"])
                         .code(mode_code),
-                    Control::slider("size", SIZES).default(theme.slider.size.as_str()),
+                    Control::sizes("size").default(theme.slider.size.as_str()),
                     Control::color("color"),
                     Control::slider("min", Quality::ALL)
                         .options_from(min_options)

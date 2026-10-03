@@ -19,7 +19,7 @@ const BOX_SX: &str =
 fn controls() -> Vec<Control> {
     vec![
         Control::toggle("direction", ["column", "row"]).labels(["Column", "Row"]),
-        Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+        Control::sizes("gap").default("md"),
         Control::select(
             "align",
             ["auto", "flex-start", "center", "flex-end", "stretch"],

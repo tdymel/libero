@@ -1,10 +1,11 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, align_of, indent, prop, props,
+    side_of,
 };
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Code, CodeBlock, Kbd, Text},
-    hooks::{Align, PopoverOptions, PopoverWidth, Side, use_element, use_id, use_popover},
+    hooks::{PopoverOptions, PopoverWidth, use_element, use_id, use_popover},
     platform::ElementApi,
     sx::sx,
     use_theme,
@@ -42,23 +43,6 @@ popover.show(opened().then(|| rsx! {
 let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
 use_drop(move || tick.manually_drop());"#;
 
-fn side_of(value: &str) -> Side {
-    match value {
-        "top" => Side::Top,
-        "start" => Side::Start,
-        "end" => Side::End,
-        _ => Side::Bottom,
-    }
-}
-
-fn align_of(value: &str) -> Align {
-    match value {
-        "center" => Align::Center,
-        "end" => Align::End,
-        _ => Align::Start,
-    }
-}
-
 fn width_of(value: &str) -> PopoverWidth {
     match value {
         "match" => PopoverWidth::Match,
@@ -71,19 +55,10 @@ fn width_of(value: &str) -> PopoverWidth {
 /// hook call. So the snippet is rebuilt from the control values by hand.
 fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
     let mut options = format!(
-        "PopoverOptions::new({}.0, theme.popover.padding)\n    .side(Side::{})\n    .align(Align::{})",
+        "PopoverOptions::new({}.0, theme.popover.padding)\n    .side(Side::{:?})\n    .align(Align::{:?})",
         values.str("gap"),
-        match values.str("side").as_str() {
-            "top" => "Top",
-            "start" => "Start",
-            "end" => "End",
-            _ => "Bottom",
-        },
-        match values.str("align").as_str() {
-            "center" => "Center",
-            "end" => "End",
-            _ => "Start",
-        },
+        side_of(&values.str("side")),
+        align_of(&values.str("align")),
     );
     if values.str("width") != "auto" {
         options.push_str(&format!(
@@ -323,12 +298,8 @@ pub fn PopoverPage() -> Element {
                 component: "PopoverDemo",
                 children_text: "",
                 controls: vec![
-                    Control::toggle("side", ["top", "end", "bottom", "start"])
-                        .labels(["Top", "End", "Bottom", "Start"])
-                        .default("bottom"),
-                    Control::toggle("align", ["start", "center", "end"])
-                        .labels(["Start", "Center", "End"])
-                        .default("start"),
+                    Control::side(["top", "end", "bottom", "start"]),
+                    Control::align(),
                     Control::toggle("width", ["auto", "match", "min"])
                         .labels(["Auto", "Match", "Min"])
                         .default("auto"),

@@ -8,8 +8,6 @@ use libero::components::{
 };
 use libero::use_theme;
 
-const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
-
 /// The demo swatches and their names.
 const SWATCHES: [(&str, &str); 14] = [
     ("#2e2e2e", "Dark"),
@@ -210,8 +208,8 @@ pub fn ColorPickerPage() -> Element {
                     Control::toggle("component", ["picker", "hue", "alpha", "swatch"])
                         .labels(["ColorPicker", "HueSlider", "AlphaSlider", "ColorSwatch"])
                         .code(|_, _| vec![]),
-                    Control::slider("size", SIZES).default("md").hidden_when(|values| !picker(values)),
-                    Control::slider("radius", SIZES).default("xxl").hidden_when(|values| !picker(values)),
+                    Control::sizes("size").default("md").hidden_when(|values| !picker(values)),
+                    Control::sizes("radius").default("xxl").hidden_when(|values| !picker(values)),
                     Control::switch("with_alpha").hidden_when(|values| !picker(values) || !with_picker(values)),
                     Control::switch("swatches").hidden_when(|values| !picker(values)).code(|_, values| match is_on(values, "swatches") {
                         // The whole list, one swatch to a line, so the

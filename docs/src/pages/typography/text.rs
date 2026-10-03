@@ -51,7 +51,7 @@ pub fn TextPage() -> Element {
                 component: "Text",
                 children_text: "The quick brown fox jumps over the lazy dog.",
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
                     Control::toggle("component", ["p", "span", "div"])
                         .labels(["P", "Span", "Div"]),

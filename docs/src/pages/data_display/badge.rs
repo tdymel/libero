@@ -77,9 +77,9 @@ pub fn BadgePage() -> Element {
                     Control::color("color"),
                     gradient_to,
                     gradient_deg,
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::sizes("size").default("md"),
                     // `standard` draws no box, so there is no corner to round.
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default("xxl")
                         .hidden_when(|values| values.str("variant") == "standard"),
                     Control::switch("circle"),

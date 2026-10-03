@@ -92,7 +92,7 @@ pub fn TldrPage() -> Element {
                         .labels(["Outlined", "Filled", "Tonal", "Standard"])
                         .default("outlined"),
                     Control::color("color").default("neutral"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::sizes("size").default("md"),
                     // Unset is the trigger's own: `xl` on the chip, `sm` icon-only.
                     Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("auto")

@@ -206,7 +206,7 @@ pub fn RadioGroupPage() -> Element {
                             _ => vec![],
                         }),
                     Control::color("color"),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])

@@ -1,3 +1,4 @@
+use super::CLEAR_NAME;
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
@@ -204,6 +205,7 @@ pub fn TagsFieldPage() -> Element {
                 .handles([
                     "The whole field is one tab stop, plus the clear button when `clearable` shows it.",
                     "With `suggestions`, Android's Back button closes the list as Escape does, rather than the app.",
+                    CLEAR_NAME,
                 ])
                 .must([
                     "A custom `tag` must make its remove control a button with `tabindex: \"-1\"`. The arrow keys focus it, and without the tabindex each tag adds a tab stop.",
@@ -246,8 +248,8 @@ pub fn TagsFieldPage() -> Element {
                             false => vec!["onchange: move |next| topics.set(next)".to_string()],
                         }
                     }),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
+                    Control::sizes("size").default("md"),
+                    Control::sizes("radius").default("sm"),
                     Control::toggle("status", ["valid", "warning", "error"])
                         .labels(["Valid", "Warning", "Error"])
                         .default("valid")

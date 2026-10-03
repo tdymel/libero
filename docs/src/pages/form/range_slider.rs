@@ -9,7 +9,6 @@ use libero::{
     use_theme,
 };
 
-const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 const MIN_VALUES: [&str; 4] = ["auto", "0.0", "10.0", "50.0"];
 const MAX_VALUES: [&str; 4] = ["auto", "50.0", "100.0", "200.0"];
 
@@ -372,7 +371,7 @@ pub fn RangeSliderPage() -> Element {
                         .default("continuous")
                         .labels(["Discrete", "Continuous"])
                         .code(mode_code),
-                    Control::slider("size", SIZES).default(theme.slider.size.as_str()),
+                    Control::sizes("size").default(theme.slider.size.as_str()),
                     Control::color("color"),
                     Control::slider("min", Quality::ALL)
                         .options_from(min_options)

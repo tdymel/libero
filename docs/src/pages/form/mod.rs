@@ -33,6 +33,9 @@ mod tags_field;
 mod text_field;
 mod textarea;
 
+/// The "Libero handles" line of every field whose `clear_button` takes the field's label.
+const CLEAR_NAME: &str = "The clear button is named by the field's `label`, \"Clear Fruit\", so two clear buttons on one form tell apart. Without a `label` it is \"Clear\" alone.";
+
 pub use autocomplete::AutocompletePage;
 pub use cascader::CascaderPage;
 pub use checkbox::CheckboxPage;

@@ -85,7 +85,7 @@ pub fn AnchorPage() -> Element {
                     }),
                     Control::toggle("underline", ["hover", "always", "never"])
                         .labels(["Hover", "Always", "Never"]),
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
                 ],
                 render: move |values: DemoValues| {

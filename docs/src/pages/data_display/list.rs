@@ -88,7 +88,7 @@ pub fn ListPage() -> Element {
                 children_text: "",
                 children_code: CHILDREN,
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("md"),
                     Control::switch("ordered"),
                     Control::switch("icon").code(|_, values| {

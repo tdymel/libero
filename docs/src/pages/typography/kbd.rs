@@ -36,7 +36,7 @@ pub fn KbdPage() -> Element {
                 component: "Kbd",
                 children_text: "Ctrl",
                 controls: vec![
-                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("size")
                         .default("sm"),
                 ],
                 render: move |values: DemoValues| rsx! {

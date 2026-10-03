@@ -94,7 +94,7 @@ pub fn AlertPage() -> Element {
                     .default(theme.alert.variant.as_str()),
                     Control::color("color")
                     .default(theme.alert.color),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                    Control::sizes("radius")
                         .default(theme.alert.radius.as_str()),
                     Control::switch("title").default("true").code(|_, values| {
                         match values.str("title").as_str() {
