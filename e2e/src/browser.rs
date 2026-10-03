@@ -151,6 +151,52 @@ pub(crate) fn chrome_profile() -> std::path::PathBuf {
         .unwrap_or_else(|_| std::env::temp_dir().join(format!("e2e-chrome-{}", std::process::id())))
 }
 
+/// Chrome a bare `cargo test` launched: the browser is a never-dropped static and no runner
+/// reaps it, so it outlived the run with its profile (todo 2119).
+static BARE_CHROMES: std::sync::Mutex<Vec<i32>> = std::sync::Mutex::new(Vec::new());
+
+fn end_at_exit(pid: u32) {
+    static REGISTER: std::sync::Once = std::sync::Once::new();
+    REGISTER.call_once(|| unsafe {
+        atexit(end_bare_chromes);
+    });
+    BARE_CHROMES
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .push(pid as i32);
+}
+
+/// SIGTERM, so Chrome takes its children down and lets go of the profile; SIGKILL after 5 s.
+extern "C" fn end_bare_chromes() {
+    let mut pids = std::mem::take(
+        &mut *BARE_CHROMES
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()),
+    );
+    for &pid in &pids {
+        unsafe { kill(pid, 15) };
+    }
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while !pids.is_empty() && std::time::Instant::now() < deadline {
+        // `WNOHANG`; reaped here or by tokio already (-1): gone either way.
+        pids.retain(|&pid| unsafe { waitpid(pid, std::ptr::null_mut(), 1) } == 0);
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    for &pid in &pids {
+        unsafe {
+            kill(pid, 9);
+            waitpid(pid, std::ptr::null_mut(), 0);
+        }
+    }
+    let _ = std::fs::remove_dir_all(chrome_profile());
+}
+
+unsafe extern "C" {
+    fn atexit(callback: extern "C" fn()) -> i32;
+    fn kill(pid: i32, sig: i32) -> i32;
+    fn waitpid(pid: i32, status: *mut i32, options: i32) -> i32;
+}
+
 struct Harness {
     runtime: Runtime,
     browser: Browser,
@@ -256,7 +302,12 @@ async fn launch(classic_scrollbars: bool) -> Browser {
             .user_data_dir(chrome_profile().join("classic-scrollbars"));
     }
     let config = config.build().expect("browser config");
-    let (browser, mut handler) = Browser::launch(config).await.expect("launch chromium");
+    let (mut browser, mut handler) = Browser::launch(config).await.expect("launch chromium");
+    if std::env::var_os("E2E_CHROME_PROFILE").is_none()
+        && let Some(pid) = browser.get_mut_child().and_then(|child| child.inner.id())
+    {
+        end_at_exit(pid);
+    }
     // The handler stream drives every CDP message. Nothing works if it
     // is not polled, and the failure looks like every call hanging.
     tokio::spawn(async move { while handler.next().await.is_some() {} });

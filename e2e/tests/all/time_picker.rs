@@ -631,6 +631,34 @@ fn picks_and_the_hand_show_in_forced_colours() {
     });
 }
 
+/// Todo 2121: an enabled mark's hover stands out from the face it takes its fill from.
+#[test]
+fn a_hovered_mark_stands_out_from_the_face() {
+    block_on(async {
+        let fixture = Fixture::open("/time-picker", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        expect_mark(page, "09:30:00", "9", "desktop").await;
+        pointer::move_to(page, mark_centre(page, "#analog", "11").await)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const mark = {MARKS}.find(mark => mark.textContent === '11'); \
+                 const face = document.querySelector('#analog [data-slot=face]'); \
+                 return mark.matches(':hover') && !mark.hasAttribute('data-disabled') \
+                   && getComputedStyle(mark).backgroundColor !== getComputedStyle(face).backgroundColor; }})()"
+            ),
+            "the hovered mark 11 to take a fill of its own",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 744: the readout's hand carries the on-state ring, not a tint; 745: a disabled mark
 /// is `GrayText` in forced colours, digital columns skip disabled values.
 #[test]

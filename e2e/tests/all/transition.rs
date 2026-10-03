@@ -9,6 +9,8 @@ use e2e::{Fixture, Viewport, clock, wait};
 const TOGGLE: &str = "#toggle";
 const ROOT: &str = "#panel";
 const CONTENT: &str = "#panel-text";
+/// The theme's notification `transition_duration`, the delay `Notifications` unmounts after.
+const NOTIFICATION_EXIT_MS: u32 = 200;
 
 async fn opacity<D: Driver>(d: &mut D) -> Result<f32> {
     Ok(d.style(ROOT, "opacity").await?.parse()?)
@@ -167,28 +169,34 @@ async fn finish_and_hear(page: &chromiumoxide::Page, what: &str) -> usize {
 }
 
 /// Todo 1815: an animation `Suite` finishes still sends its end event, which `Collapse`
-/// unmounts on and `Toast` and `Modal` animate by. `None` closes with Escape.
+/// unmounts on and `Toast` and `Modal` animate by. `None` closes with Escape. A held exit
+/// timer fires once the ends are heard: unthrottled, it unmounts before a background frame sends them.
 #[test]
 fn a_finished_animation_still_sends_its_end_event() {
     block_on(async {
-        for (route, trigger, shown, close) in [
+        for (route, trigger, shown, close, exit_timer) in [
             (
                 "/collapse",
                 "#toggle-details",
                 "#details-text",
                 Some("#toggle-details"),
+                None,
             ),
             (
                 "/notifications",
                 "#notify",
                 "[aria-live=polite] li",
                 Some("[aria-live] li [data-slot=close]"),
+                Some(NOTIFICATION_EXIT_MS),
             ),
-            ("/modal", "#open-modal", "[role=dialog]", None),
+            ("/modal", "#open-modal", "[role=dialog]", None, None),
         ] {
             let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
             let page = &fixture.page;
             wait::for_visible(page, trigger).await.unwrap();
+            if let Some(ms) = exit_timer {
+                clock::hold(page, &[ms]).await.unwrap();
+            }
             page.evaluate(
                 "for (const type of ['transitionend', 'animationend']) document.addEventListener(type, \
                  (e) => window.__ends.push(e.animationName || e.propertyName), true); 1",
@@ -210,6 +218,9 @@ fn a_finished_animation_still_sends_its_end_event() {
                 }
             }
             let closed = finish_and_hear(page, &format!("{route} closing")).await;
+            if let Some(ms) = exit_timer {
+                clock::fire(page, ms).await.unwrap();
+            }
             wait::for_js_true(
                 page,
                 &format!("!document.querySelector({shown:?})"),

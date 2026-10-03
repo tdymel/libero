@@ -508,10 +508,11 @@ fn over((r, g, b, a): (f64, f64, f64, f64), bottom: (f64, f64, f64)) -> (f64, f6
     (mix(r, bottom.0), mix(g, bottom.1), mix(b, bottom.2))
 }
 
+/// The sRGB curve `contrast::COLOUR_JS` uses: Rust reads the ring's parsed `rgb()` here.
 fn relative_luminance((r, g, b): (f64, f64, f64)) -> f64 {
     let channel = |c: f64| {
         let c = c / 255.0;
-        if c <= 0.03928 {
+        if c <= 0.04045 {
             c / 12.92
         } else {
             ((c + 0.055) / 1.055).powf(2.4)

@@ -1044,9 +1044,9 @@ fn toolbar_buttons_show_their_name_and_chord_in_a_tooltip() {
 /// The contrast of `selector`'s text over its own background, both opaque.
 fn hovered_contrast(selector: &str) -> String {
     format!(
-        "(() => {{ const s = getComputedStyle(document.querySelector('{selector}')); \
-           const lum = c => {{ const [r, g, b] = c.match(/[\\d.]+/g).slice(0, 3).map(v => {{ v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }}); return 0.2126 * r + 0.7152 * g + 0.0722 * b; }}; \
-           const [a, b] = [lum(s.color), lum(s.backgroundColor)].sort((x, y) => y - x); return (a + 0.05) / (b + 0.05); }})()"
+        "(() => {{ {colour} const s = getComputedStyle(document.querySelector('{selector}')); \
+           return CONTRAST(RGBA(s.color), RGBA(s.backgroundColor)); }})()",
+        colour = contrast::COLOUR_JS,
     )
 }
 

@@ -127,7 +127,9 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .border_radius("50%")
                 .padding("0")
                 // The face's fill: the hand passes under an inner mark, not behind its digits.
-                .background("muted.1"),
+                .background("muted.1")
+                // A step above the face: the button's own `muted.1` hover vanished on it.
+                .hover(sx().background("muted.2")),
         )
         // A quiet grey made for the face's tint, not half opacity: that read 3.87:1 (todo 1999).
         .selector(

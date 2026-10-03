@@ -8,6 +8,7 @@ mod fullscreen;
 use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually};
+use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::keyboard::{self, Key};
 use e2e::passes::pointer;
 use e2e::{Fixture, Suite, Viewport, clock, wait};
@@ -194,27 +195,14 @@ fn the_speed_menu_sets_the_rate() {
 #[test]
 fn the_overlay_bar_keeps_its_contrast_over_a_white_picture() {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
-    const CONTRAST: &str = r#"(() => {
-        const rgb = (s) => {
-            const m = s.match(/color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/);
-            if (m) return [m[1] * 255, m[2] * 255, m[3] * 255, m[4] === undefined ? 1 : +m[4]];
-            const n = s.match(/rgba?\(([^)]+)\)/)[1].split(/[ ,\/]+/).map(Number);
-            return [n[0], n[1], n[2], n[3] === undefined ? 1 : n[3]];
-        };
-        const over = (c, base) => [0, 1, 2].map((i) => c[i] * c[3] + base[i] * (1 - c[3]));
-        const lum = (c) => {
-            const [r, g, b] = c.slice(0, 3).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
-            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-        };
+    let contrast = format!(
+        r#"(() => {{ {COLOUR_JS}
         const q = (s) => document.querySelector('#player ' + s);
         const style = (s) => getComputedStyle(q(s));
         const bar = style('[data-slot=controls]');
         if (bar.position !== 'absolute') return [0, 0, 0, 0, 0];
-        const base = over(rgb(bar.backgroundImage.match(/rgba?\([^)]+\)/)[0]), [255, 255, 255]);
-        const ratio = (s) => {
-            const [x, y] = [lum(over(rgb(s), base)), lum(base)];
-            return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
-        };
+        const base = OVER(RGBA(bar.backgroundImage.match(/rgba?\([^)]+\)/)[0]), [255, 255, 255, 1]);
+        const ratio = (s) => CONTRAST(OVER(RGBA(s), base), base);
         return [
             ratio(style('[data-slot=time]').color),
             ratio(style("button[aria-label^='Playback speed']").color),
@@ -222,7 +210,8 @@ fn the_overlay_bar_keeps_its_contrast_over_a_white_picture() {
             ratio(style('[data-slot=seek] [data-slot=track]').backgroundColor),
             ratio(style('[data-slot=seek] [role=slider]').borderTopColor),
         ];
-    })()"#;
+    }})()"#
+    );
     block_on(async {
         let _fullscreen;
         let fixture = Fixture::open("/video", Viewport::Desktop).await.unwrap();
@@ -243,8 +232,12 @@ fn the_overlay_bar_keeps_its_contrast_over_a_white_picture() {
             )
             .await
             .unwrap();
-            let [time, speed, icon, track, thumb]: [f64; 5] =
-                page.evaluate(CONTRAST).await.unwrap().into_value().unwrap();
+            let [time, speed, icon, track, thumb]: [f64; 5] = page
+                .evaluate(contrast.as_str())
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
             assert!(time >= 4.5, "{scheme}: the time is {time:.2}:1");
             assert!(speed >= 4.5, "{scheme}: the speed is {speed:.2}:1");
             assert!(icon >= 3.0, "{scheme}: the icons are {icon:.2}:1");

@@ -6,6 +6,7 @@ use chromiumoxide::cdp::browser_protocol::input::{
 };
 use chromiumoxide::cdp::browser_protocol::page::AddScriptToEvaluateOnNewDocumentParams;
 use e2e::browser::block_on;
+use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -68,20 +69,19 @@ fn a_taller_pane_renders_rows_to_its_new_bottom() {
     });
 }
 
-/// Contrast of the `#region` area's scrollbar thumb against the page, under
+/// The `#region` area's scrollbar thumb colour, as the `thumb` of [`thumb_contrast`].
+const REGION_THUMB: &str = "getComputedStyle(document.querySelector('#region')).scrollbarColor";
+
+/// Contrast of the first colour in the JS string `thumb` against the page, under
 /// the scheme the document root is pinned to.
-const THUMB_CONTRAST: &str = r#"(() => {
-    const lum = c => {
-        const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => {
-            v = v / 255;
-            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-        });
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    };
-    const thumb = getComputedStyle(document.querySelector('#region')).scrollbarColor.match(/rgba?\([^)]*\)/)[0];
-    const [a, b] = [lum(thumb), lum(getComputedStyle(document.body).backgroundColor)].sort((x, y) => y - x);
-    return (a + 0.05) / (b + 0.05);
-})()"#;
+fn thumb_contrast(thumb: &str) -> String {
+    format!(
+        r#"(() => {{ {COLOUR_JS}
+    const thumb = {thumb}.match(/rgba?\([^)]*\)/)[0];
+    return CONTRAST(RGBA(thumb), RGBA(getComputedStyle(document.body).backgroundColor));
+}})()"#
+    )
+}
 
 /// WCAG 1.4.11: the thumb is the part that shows where the reader is and what
 /// they drag, and its colour is ours rather than the browser's.
@@ -100,7 +100,7 @@ fn the_scrollbar_thumb_has_3_to_1_against_the_page() {
             .await
             .unwrap();
             let ratio: f64 = page
-                .evaluate(THUMB_CONTRAST)
+                .evaluate(thumb_contrast(REGION_THUMB))
                 .await
                 .unwrap()
                 .into_value()
@@ -900,10 +900,7 @@ fn the_drawn_thumb_has_contrast_and_shows_in_forced_colours() {
             .await
             .unwrap();
 
-        let contrast = THUMB_CONTRAST.replace(
-            "getComputedStyle(document.querySelector('#region')).scrollbarColor",
-            THUMB,
-        );
+        let contrast = thumb_contrast(THUMB);
         for scheme in ["light", "dark"] {
             page.evaluate(format!(
                 "document.documentElement.setAttribute('data-lsx-theme', '{scheme}')"
