@@ -31,6 +31,37 @@ fn a_click_at_the_hidden_input_lands_on_the_box() {
     block_on(super::switch::assert_inputs_over_their_boxes("/checkbox"));
 }
 
+/// Todo 2088: under forced colours only a checked or mixed box shows its mark.
+#[test]
+fn only_a_checked_or_mixed_box_shows_its_mark_in_forced_colours() {
+    block_on(async {
+        let fixture = Fixture::open("/checkbox", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        e2e::wait::for_js_true(
+            page,
+            "document.querySelector('#all').indeterminate === true",
+            "the mixed box's indeterminate property",
+        )
+        .await
+        .unwrap();
+        e2e::browser::force_colours(page).await.unwrap();
+        let wrong: Vec<String> = page
+            .evaluate(
+                "[...document.querySelectorAll('[data-slot=control] > [data-slot=box]')].flatMap(box => { \
+                   const input = box.previousElementSibling, mark = box.querySelector('svg'); \
+                   const on = input.checked || input.indeterminate; \
+                   const shown = getComputedStyle(mark).opacity === '1'; \
+                   return on === shown ? [] : [(input.id || input.getAttribute('aria-label')) + ': mark shown ' + shown]; })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(wrong.is_empty(), "{wrong:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The value the last `onchange` carried, as `<id>:<value>`.
 async fn emitted(fixture: &Fixture) -> String {
     fixture

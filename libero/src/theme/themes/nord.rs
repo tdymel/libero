@@ -1,7 +1,17 @@
 //! Nord: the Kopuz pack's dark, and the bright ambiance Nord's docs describe
 //! (<https://www.nordtheme.com/docs/colors-and-palettes>) as Helix ships it.
+//!
+//! The gradient runs primary to info: no label reads at 4.5:1 on primary to secondary
+//! (todo 2051).
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
+use super::super::{
+    CodeDefaults, Color, GradientDefaults, HexColor, PaperDefaults, Theme, ThemeSet,
+};
+
+const GRADIENT: GradientDefaults = GradientDefaults {
+    to: Color::Info,
+    ..GradientDefaults::DEFAULT
+};
 
 /// Nord, bright ambiance.
 pub static NORD_LIGHT: Theme = Theme {
@@ -19,6 +29,7 @@ pub static NORD_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
+    gradient: GRADIENT,
     ..Theme::DEFAULT
 };
 
@@ -38,6 +49,7 @@ pub static NORD_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
+    gradient: GRADIENT,
     ..Theme::DARK
 };
 

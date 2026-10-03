@@ -8,8 +8,18 @@
 //! - page and card are the dark `text` (`#cdcdcd`) mixed 80% and 60% toward white;
 //! - `muted` is the dark `text-muted` (`#606079`) moved to 3.03:1 from the page,
 //!   the first step past 3:1.
+//!
+//! The gradient runs info to secondary: no label reads at 4.5:1 on primary to secondary
+//! (todo 2051).
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
+use super::super::{
+    CodeDefaults, Color, GradientDefaults, HexColor, PaperDefaults, Theme, ThemeSet,
+};
+
+const GRADIENT: GradientDefaults = GradientDefaults {
+    from: Color::Info,
+    ..GradientDefaults::DEFAULT
+};
 
 /// Vague, light - derived, not upstream.
 pub static VAGUE_LIGHT: Theme = Theme {
@@ -27,6 +37,7 @@ pub static VAGUE_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
+    gradient: GRADIENT,
     ..Theme::DEFAULT
 };
 
@@ -46,6 +57,7 @@ pub static VAGUE_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
+    gradient: GRADIENT,
     ..Theme::DARK
 };
 

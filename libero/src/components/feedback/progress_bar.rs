@@ -11,7 +11,7 @@ use crate::{
     hooks::use_theme,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
-        Color, ColorShade, ColorValue, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION,
+        Color, ColorShade, ColorValue, CssVar, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION,
         PROGRESS_BAR_COLOR, PROGRESS_BAR_FILL, PROGRESS_BAR_INDETERMINATE_STATE,
         PROGRESS_BAR_RADIUS, PROGRESS_BAR_SIZE, PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION,
         ProgressBarDefaults, Size,
@@ -23,6 +23,9 @@ use crate::{
 const DETERMINATE_STATE: &str = "determinate";
 
 const SWEEP_DURATION: &str = "1.4s";
+
+/// The whole inset shadow, unset for most fills, so they paint none.
+const PROGRESS_BAR_EDGE: CssVar = CssVar::new("--lsx-progress-bar-edge");
 
 static PROGRESS_BAR_TRACK_SX: StaticSx = StaticSx::new(|| {
     ProgressBarDefaults::theme_vars()
@@ -44,6 +47,7 @@ static PROGRESS_BAR_FILL_SX: StaticSx = StaticSx::new(|| {
         .background(
             PROGRESS_BAR_COLOR.value_or(ColorValue::Text(Color::Primary, ColorShade::S6).value()),
         )
+        .box_shadow(PROGRESS_BAR_EDGE.value_or("none"))
         .media(FORCED_COLORS, sx().background("Highlight"))
         .when(
             DETERMINATE_STATE,
@@ -115,9 +119,22 @@ fn fill_paint(color: &ThemeAwareValue) -> Option<String> {
     text_color(color)
 }
 
+/// Yellow stays under 3:1 on a light track even in the text role, so warning gets an
+/// inset edge in ink: its contrast var turns white in some themes (todo 2033).
+fn fill_edge(color: &ThemeAwareValue) -> Option<String> {
+    match color {
+        ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Warning, _)) => Some(format!(
+            "inset 0 0 0 1px {}",
+            ColorValue::Shade(Color::Ink, ColorShade::S6).value()
+        )),
+        _ => None,
+    }
+}
+
 fn progress_bar_variables(color: &ThemeAwareValue, fill: Option<String>) -> Variables {
     variables()
         .with(PROGRESS_BAR_COLOR, fill_paint(color))
+        .with(PROGRESS_BAR_EDGE, fill_edge(color))
         .with(PROGRESS_BAR_FILL, fill)
 }
 
@@ -329,18 +346,33 @@ mod tests {
                 .flatten()
             {
                 let css = Stylesheet::from(theme).as_str().to_string();
+                // Follows a var that names another var, as the contrast ones do.
                 let hex = |value: String| {
-                    let name = value.trim_start_matches("var(").trim_end_matches(')');
-                    let (_, rest) = css.split_once(&format!("{name}:")).expect("declared");
-                    HexColor::parse(&rest[..7]).expect("a hex")
+                    let mut value = value;
+                    loop {
+                        let name = value.trim_start_matches("var(").trim_end_matches(')');
+                        let (_, rest) = css.split_once(&format!("{name}:")).expect("declared");
+                        let rest = rest.trim_start();
+                        match rest.strip_prefix("var(") {
+                            Some(next) => value = next.split(')').next().unwrap().to_string(),
+                            None => break HexColor::parse(&rest[..7]).expect("a hex"),
+                        }
+                    }
                 };
                 let track = hex(ColorCss::MUTED.value(ProgressBarDefaults::DEFAULT.track_shade));
                 for name in ["primary", "error", "info", "success", "warning"] {
                     let color = base_color(Some(&ThemeAwareValue::from(name)));
-                    let fill = hex(fill_paint(&color).expect("a palette colour"));
-                    let ratio = fill
-                        .contrast_ratio(track)
-                        .min(fill.contrast_ratio(theme.surface));
+                    let reach = |paint: HexColor| {
+                        paint
+                            .contrast_ratio(track)
+                            .min(paint.contrast_ratio(theme.surface))
+                    };
+                    let fill = reach(hex(fill_paint(&color).expect("a palette colour")));
+                    // An edged fill counts when either its body or its edge clears.
+                    let edge = fill_edge(&color).map(|edge| {
+                        reach(hex(edge.trim_start_matches("inset 0 0 0 1px ").to_string()))
+                    });
+                    let ratio = fill.max(edge.unwrap_or(0.0));
                     if ratio < 3.0 {
                         let scheme = theme.surface.color_scheme();
                         short.push(format!("{} {scheme} {name}: {ratio:.2}:1", set.name()));
@@ -348,39 +380,18 @@ mod tests {
                 }
             }
         }
-        // Recorded: the text role caps at the S9 mix, and yellow on a light page gets no further.
+        // Recorded: the text role caps at the S9 mix; warning clears by its edge (todo 2033).
         assert_eq!(
             short,
             [
-                "Libero light warning: 2.77:1",
-                "Ayu light warning: 2.69:1",
-                "Ayu Mirage light warning: 2.69:1",
-                "Catppuccin light warning: 2.39:1",
-                "Dracula light warning: 2.54:1",
-                "Ef Night light warning: 2.50:1",
-                "Everforest light warning: 2.59:1",
-                "Flexoki light warning: 2.59:1",
-                "GitHub light warning: 2.61:1",
-                "Gruvbox light warning: 2.11:1",
-                "Gruvbox Classic light warning: 2.38:1",
-                "Gruvbox Soft light warning: 2.11:1",
-                "Kanagawa light warning: 2.33:1",
-                "Kanagawa Dragon light warning: 2.33:1",
                 "kettek16 light primary: 2.70:1",
                 "kettek16 light info: 2.27:1",
-                "kettek16 light warning: 2.30:1",
                 "Nord light primary: 2.39:1",
                 "Nord light info: 2.48:1",
                 "Nord light success: 2.44:1",
-                "Nord light warning: 2.25:1",
-                "One light warning: 2.55:1",
                 "Osmium light primary: 2.76:1",
                 "Osmium light info: 2.46:1",
                 "Osmium light success: 1.93:1",
-                "Osmium light warning: 2.41:1",
-                "Rosé Pine light warning: 2.44:1",
-                "shadcn/ui light warning: 2.67:1",
-                "Vague light warning: 2.58:1",
             ],
             "the shipped fills' contrast moved"
         );

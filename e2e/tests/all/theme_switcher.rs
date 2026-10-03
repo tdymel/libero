@@ -81,9 +81,8 @@ fn the_menu_opens_on_the_checked_theme() {
         let outcome = async {
             pointer::click(page, CHEVRON).await?;
             wait::for_visible(page, "[role=menuitemradio]").await?;
-            // Not the last: Vague's gradient warns on its label contrast.
             page.evaluate(format!(
-                "[...document.querySelectorAll('{MENU} [role=menuitemradio]')].at(-3).click()"
+                "[...document.querySelectorAll('{MENU} [role=menuitemradio]')].at(-1).click()"
             ))
             .await?;
             wait::for_js_true(

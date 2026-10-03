@@ -132,6 +132,34 @@ e2e::scenario!(
     the_filter_piece_opens_the_panel
 );
 
+/// 2084: in a flex parent narrower than the table the toolbar wraps at the parent's width.
+#[test]
+fn the_toolbar_wraps_in_a_narrow_flex_parent() {
+    block_on(async {
+        let fixture = Fixture::open("/table-toolbar", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[data-toolbar]").await.unwrap();
+        let outside: Vec<String> = page
+            .evaluate(
+                "(() => { const root = document.querySelector('[data-toolbar]').parentElement; \
+                 Object.assign(root.parentElement.style, { display: 'flex', width: '160px' }); \
+                 root.querySelector('table').style.minWidth = '600px'; \
+                 const edge = root.parentElement.getBoundingClientRect().right + 0.5; \
+                 return [...root.querySelector('[data-toolbar]').children] \
+                   .filter(tool => tool.getBoundingClientRect().right > edge) \
+                   .map(tool => tool.textContent.trim()); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(outside.is_empty(), "past the parent's edge: {outside:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// 2016: Export through `save_file` downloads the CSV on the web, named and whole.
 #[test]
 fn an_export_saved_with_save_file_downloads_the_csv() {

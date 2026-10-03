@@ -68,7 +68,7 @@ explains how parts work.
 - A screen reader reads the rounded percentage, or `aria_valuetext` when you
   set it.
 - The bar takes no focus.
-- A theme color fills in its text shade, at 3:1 or more against the track and the page. Yellow on a light page stays short of that.
+- A theme color fills in its text shade, at 3:1 or more against the track and the page. Yellow stays short of that on a light page, so `warning` draws a 1px ink edge inside its fill.
 - With reduced motion an indeterminate bar stops sweeping and shows as a dimmed
   full bar, so it does not read as part done.
 

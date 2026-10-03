@@ -613,6 +613,10 @@ fn caption_sx() -> Sx {
 /// font size and padding the web caption inherits from the table.
 static TABLE_CAPTION_SX: StaticSx = StaticSx::new(|| caption_sx().per_size(TableDefaults::size_sx));
 
+/// A flex parent's item at its width, not the table's: the toolbar wraps there and a
+/// `scroll` table scrolls inside it (todo 2084).
+static TABLE_ROOT_SX: StaticSx = StaticSx::new(|| sx().min_width("0"));
+
 /// As tall as the table, up to `max_height`; not the parent's height.
 static TABLE_SCROLL_SX: StaticSx =
     StaticSx::new(|| scroll_area_base(sx().height("auto").max_width("100%")));
@@ -1087,6 +1091,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .framework_sx(&TABLE_CAPTION_SX)
         .states(&size_states)
         .prepare();
+    let root_box = use_box().framework_sx(&TABLE_ROOT_SX).prepare();
     let look = use_checkbox_look(size, props.selectable);
     let mut sorted = use_hook(|| CopyValue::new(SortedRows::<T>::default()));
     let mut filtered = use_hook(|| CopyValue::new(FilteredRows::<T>::default()));
@@ -1839,13 +1844,15 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     };
     // Outside the scroll region, so the controls stay put while it scrolls. One box,
     // or a flex parent squeezes the zero-height loading bar to no width (todo 1461).
-    rsx! {
-        div {
+    root_box.render(
+        HtmlTag::Div,
+        Vec::new(),
+        rsx! {
             {search}
             {table}
             {pager}
-        }
-    }
+        },
+    )
 }
 
 #[cfg(test)]

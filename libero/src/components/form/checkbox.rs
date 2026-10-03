@@ -46,8 +46,14 @@ static CHECKBOX_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // A card rings itself: the control stops being the overlay's
         // containing block, so the same overlay covers the card.
         .when("card", sx().position("static"))
+        .when("checked", mark_shown())
+        .when("mixed", mark_shown())
         .when("disabled", disabled_look_sx("not-allowed"))
 });
+
+fn mark_shown() -> crate::sx::Sx {
+    sx().selector("& > [data-slot='box'] > svg", sx().opacity("1"))
+}
 
 static CHECKBOX_BOX_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
@@ -61,7 +67,8 @@ static CHECKBOX_BOX_SX: StaticSx = StaticSx::new(|| {
         .background(CHECKBOX_BACKGROUND.value())
         .color(CHECKBOX_MARK.value())
         .transition("background 150ms ease, border-color 150ms ease")
-        .selector("& > svg", sx().width("65%").height("65%"))
+        // Hidden by opacity: forced colours turns a transparent mark into CanvasText (todo 2088).
+        .selector("& > svg", sx().width("65%").height("65%").opacity("0"))
 });
 
 /// Depends on `(on, color)` alone - see the `use_cache` below.
@@ -86,10 +93,8 @@ fn checkbox_variables(on: bool, base: &ThemeAwareValue) -> String {
         )
         .with(
             CHECKBOX_MARK,
-            match on {
-                true => contrast_color(base).and_then(|color| color.resolve(None)),
-                false => Some("transparent".to_string()),
-            },
+            on.then(|| contrast_color(base).and_then(|color| color.resolve(None)))
+                .flatten(),
         )
         .render()
 }

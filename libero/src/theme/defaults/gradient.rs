@@ -508,6 +508,29 @@ mod tests {
         gradient.stops(color.as_ref(), &GradientDefaults::DEFAULT)
     }
 
+    /// Todo 2051: every shipped set's own gradient carries a 4.5:1 label in both its schemes.
+    #[test]
+    fn every_shipped_gradient_label_reads_in_both_schemes() {
+        use crate::theme::ThemeSet;
+
+        let mut short = Vec::new();
+        for set in ThemeSet::CATALOGUE {
+            let themes: Vec<&Theme> = [Some(set.light_theme()), set.dark_theme()]
+                .into_iter()
+                .flatten()
+                .collect();
+            for active in &themes {
+                let stops = Gradient::default().stops(None, &active.gradient);
+                let (score, ..) =
+                    best_label(&themes, |theme| gradient_points(&stops, theme, false)).unwrap();
+                if score < TEXT_CONTRAST {
+                    short.push(format!("{}: {score:.2}:1", set.name()));
+                }
+            }
+        }
+        assert!(short.is_empty(), "{short:?}");
+    }
+
     /// The default gradient's label reads at 4.5:1 on every point, in both schemes.
     #[test]
     fn the_default_gradient_label_reads_in_both_schemes() {
