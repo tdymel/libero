@@ -78,8 +78,10 @@ fn ResizeTablePage() -> Element {
                 column("Name")
                     .value(|fruit: &Fruit| fruit.name.to_string())
                     .row_header()
-                    .width("120px")
-                    .resize_limits(80.0, 300.0),
+                    // Clear of the header's min-content (117px here), which a wider fallback
+                    // font pushed past 120px on CI and off the resize base (todo 2103).
+                    .width("150px")
+                    .resize_limits(100.0, 300.0),
                 column("Stock").value(|fruit: &Fruit| fruit.stock).sortable(),
                 column("Origin").value(|fruit: &Fruit| fruit.origin.to_string()).resizable(false),
             ],

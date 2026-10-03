@@ -18,21 +18,21 @@ async fn width_near<D: Driver>(d: &mut D, want: f64, after: &str) -> Result<()> 
 
 async fn a_drag_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let grip = format!("{NAME} [data-resize-handle]");
-    width_near(d, 120.0, "the declared width").await?;
+    width_near(d, 150.0, "the declared width").await?;
     if d.exists("th[aria-label=Origin] [data-resize-handle]")
         .await?
     {
         bail!("Origin opted out, yet has a grip");
     }
     d.drag(&grip, 60.0, 0.0).await?;
-    eventually_text(d, WIDTHS, "Name=180", "a 60px drag").await?;
-    width_near(d, 180.0, "the drag's end").await?;
-    // Clamped to the column's 80px floor.
+    eventually_text(d, WIDTHS, "Name=210", "a 60px drag").await?;
+    width_near(d, 210.0, "the drag's end").await?;
+    // Clamped to the column's 100px floor.
     d.drag(&grip, -400.0, 0.0).await?;
-    eventually_text(d, WIDTHS, "Name=80", "a drag past the floor").await?;
-    // The header's text and menu button keep it wider than 80px: auto layout.
+    eventually_text(d, WIDTHS, "Name=100", "a drag past the floor").await?;
+    // The header's text and menu button may keep it wider than 100px: auto layout.
     eventually(d, "the narrowed column", async |d| {
-        Ok(d.rect(NAME).await?.width < 150.0)
+        Ok(d.rect(NAME).await?.width < 140.0)
     })
     .await
 }
@@ -87,7 +87,7 @@ fn a_touch_in_the_grip_lane_resizes_the_column() {
 /// Todo 1451: the grip is a separator Tab reaches; the arrows step it, Home and End go to the limits.
 async fn the_keys_resize<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let grip = format!("{NAME} [data-resize-handle]");
-    width_near(d, 120.0, "the declared width").await?;
+    width_near(d, 150.0, "the declared width").await?;
     if d.attr(&grip, "role").await?.as_deref() != Some("separator")
         || d.attr(&grip, "aria-label").await?.as_deref() != Some("Resize Name")
     {
@@ -96,9 +96,9 @@ async fn the_keys_resize<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(&grip).await?;
     eventually_focused(d, &grip, "focus").await?;
     d.press(keyboard::ARROW_RIGHT).await?;
-    eventually_text(d, WIDTHS, "Name=130", "ArrowRight").await?;
+    eventually_text(d, WIDTHS, "Name=160", "ArrowRight").await?;
     d.press_shift(keyboard::ARROW_LEFT).await?;
-    eventually_text(d, WIDTHS, "Name=80", "Shift+ArrowLeft").await?;
+    eventually_text(d, WIDTHS, "Name=110", "Shift+ArrowLeft").await?;
     d.press(keyboard::END).await?;
     eventually_text(d, WIDTHS, "Name=300", "End").await?;
     width_near(d, 300.0, "End").await?;
@@ -107,7 +107,7 @@ async fn the_keys_resize<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     })
     .await?;
     d.press(keyboard::HOME).await?;
-    eventually_text(d, WIDTHS, "Name=80", "Home").await
+    eventually_text(d, WIDTHS, "Name=100", "Home").await
 }
 
 e2e::scenario!(
@@ -134,7 +134,7 @@ async fn pick<D: Driver>(d: &mut D, label: &str) -> Result<()> {
 }
 
 async fn the_menu_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    width_near(d, 120.0, "the declared width").await?;
+    width_near(d, 150.0, "the declared width").await?;
     d.click("button[aria-label=\"Name column options\"]")
         .await?;
     eventually(d, "the column menu to open", async |d| {
@@ -142,15 +142,15 @@ async fn the_menu_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     })
     .await?;
     pick(d, "Widen column").await?;
-    eventually_text(d, WIDTHS, "Name=170", "Widen").await?;
-    width_near(d, 170.0, "Widen").await?;
+    eventually_text(d, WIDTHS, "Name=200", "Widen").await?;
+    width_near(d, 200.0, "Widen").await?;
     // The open menu hides the change: it is said (todo 1415).
-    eventually_text(d, "[role=status]", "Name: 170 px", "the Widen announcement").await?;
+    eventually_text(d, "[role=status]", "Name: 200 px", "the Widen announcement").await?;
     // Widen and Narrow keep the menu open, to step again.
     pick(d, "Narrow column").await?;
-    eventually_text(d, WIDTHS, "Name=120", "Narrow").await?;
+    eventually_text(d, WIDTHS, "Name=150", "Narrow").await?;
     pick(d, "Narrow column").await?;
-    eventually_text(d, WIDTHS, "Name=80", "Narrow to the floor").await?;
+    eventually_text(d, WIDTHS, "Name=100", "Narrow to the floor").await?;
     pick(d, "Reset width").await?;
     eventually_text(d, WIDTHS, "", "Reset width").await?;
     eventually_text(
@@ -160,7 +160,7 @@ async fn the_menu_resizes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         "the reset announcement",
     )
     .await?;
-    width_near(d, 120.0, "the reset").await
+    width_near(d, 150.0, "the reset").await
 }
 
 e2e::scenario!(

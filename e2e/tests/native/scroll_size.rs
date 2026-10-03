@@ -36,15 +36,17 @@ fn right(page: &Page, selector: &str) -> f64 {
 #[test]
 fn a_scroller_steps_to_its_real_end() {
     let mut page = mount(strip);
+    // The viewport's ring room (todo 2043) insets the first item at the start, the last at the end.
+    let inset = page.rect("#item-0").0 - page.rect("#frame").0;
     // Eight 150px steps pass 800px; the old range stopped at 600px.
     for _ in 0..8 {
         page.click("#forward");
         page.advance(1.0);
     }
-    let gap = right(&page, "#item-9") - right(&page, "#frame");
+    let gap = right(&page, "#item-9") - (right(&page, "#frame") - inset);
     assert!(
         gap.abs() <= 1.0,
-        "the last item ends {gap}px past the strip"
+        "the last item ends {gap}px past the strip's {inset}px inset"
     );
 }
 

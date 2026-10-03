@@ -274,7 +274,8 @@ pub async fn assert_chords_ignored_with(
          window.addEventListener('keyup', e => {{ if (e.ctrlKey || e.altKey || e.metaKey) \
          setTimeout(() => setTimeout(() => {{ let after; \
          try {{ after = window.__chordProbe(); }} catch (error) {{ after = 'a throw: ' + error; }} \
-         window.__chordRecords.push([after, window.__chordCancelled.splice(0)]); }}, 0), 0); }}, true); }} 1"
+         window.__chordRecords.push([after, window.__chordCancelled.splice(0)]); \
+         if (window.__chordWake) window.__chordWake(); }}, 0), 0); }}, true); }} 1"
     ))
     .await?;
     let mut sent = Vec::new();
@@ -290,14 +291,23 @@ pub async fn assert_chords_ignored_with(
             }
             press_with(page, *key, modifier).await?;
             sent.push(format!("{name}+{}", key.key));
+            // One chord at a time: under load input outruns timers, so a later chord's move or
+            // cancel would land in an earlier chord's record (todo 2101).
+            let recorded = page.evaluate(format!(
+                "new Promise((done) => {{ const n = {}; \
+                 window.__chordWake = () => {{ if (window.__chordRecords.length >= n) done(true); }}; \
+                 window.__chordWake(); }})",
+                sent.len()
+            ));
+            let Ok(recorded) = tokio::time::timeout(crate::wait::timeout(), recorded).await else {
+                bail!(
+                    "timed out waiting for the keyup record of {name}+{}",
+                    key.key
+                );
+            };
+            recorded?;
         }
     }
-    crate::wait::for_js_true(
-        page,
-        &format!("window.__chordRecords.length >= {}", sent.len()),
-        &format!("a keyup record for each of {} chords", sent.len()),
-    )
-    .await?;
     let records: Vec<(String, Vec<String>)> =
         page.evaluate("window.__chordRecords").await?.into_value()?;
     for (chord, (after, cancelled)) in sent.iter().zip(records) {

@@ -1212,11 +1212,40 @@ fn a_mention_list_follows_the_caret_and_takes_keys_through_intercept() {
 
         // The caller's toolbar button types the @; a click on an option picks it.
         keyboard::type_text(page, " ").await.unwrap();
+        out_eq(page, "hi \u{fffc} @g ").await;
         pointer::click(page, "[aria-label=\"Mention someone\"]")
             .await
             .unwrap();
+        out_eq(page, "hi \u{fffc} @g @").await;
         options(4).await.unwrap();
-        pointer::click(page, "#mention-grace").await.unwrap();
+        // Todo 2102: on a loaded CI runner the click missed the pick; aim at a list that holds still.
+        let last = std::cell::RefCell::new(String::new());
+        wait::until("the list placed and still", || async {
+            let rect: String = page
+                .evaluate(format!(
+                    "(() => {{ const o = {overlay}; return o && getComputedStyle(o).visibility === 'visible' \
+                     ? JSON.stringify(o.getBoundingClientRect()) : ''; }})()"
+                ))
+                .await?
+                .into_value()?;
+            let still = !rect.is_empty() && rect == *last.borrow();
+            *last.borrow_mut() = rect;
+            Ok(still)
+        })
+        .await
+        .unwrap();
+        // A click that still misses is retried while the option shows; the pick must follow one.
+        let gone = "!document.getElementById('mention-grace')";
+        for _ in 0..3 {
+            pointer::click(page, "#mention-grace").await.unwrap();
+            let picked = wait::for_js_true(page, gone, "the list gone after a pick");
+            if tokio::time::timeout(std::time::Duration::from_secs(2), picked)
+                .await
+                .is_ok()
+            {
+                break;
+            }
+        }
         out_eq(page, "hi \u{fffc} @g \u{fffc} ").await;
         fixture.close().await.unwrap();
     });
