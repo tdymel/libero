@@ -5,12 +5,18 @@ use crate::{
         common::{HtmlTag, Input, States, base_props},
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_gradient_style, use_theme},
     sx::StaticSx,
-    theme::{Size, TitleDefaults},
+    theme::{Gradient, Size, TitleDefaults},
 };
 
-static TITLE_BASE_SX: StaticSx = StaticSx::new(|| TitleDefaults::theme_vars().margin("0"));
+use super::text::gradient_text_sx;
+
+static TITLE_BASE_SX: StaticSx = StaticSx::new(|| {
+    TitleDefaults::theme_vars()
+        .margin("0")
+        .when("gradient", gradient_text_sx())
+});
 
 /// `Xxl` is h1, down to `Xs` as h6.
 fn default_component(size: Size) -> HtmlTag {
@@ -31,6 +37,10 @@ base_props! {
         /// Unset, `size`'s heading tag. Set it to keep the outline order under another size.
         #[props(default, into)]
         component: Input<HtmlTag>,
+        /// Paints the glyphs in a gradient from the theme's first stop: `("secondary", 45)` or
+        /// a [`Gradient`]. A literal stop's contrast is the caller's to check.
+        #[props(default, into)]
+        gradient: Option<Gradient>,
         children: Element,
     }
 }
@@ -52,11 +62,18 @@ base_props! {
 pub fn Title(props: TitleProps) -> Element {
     let theme = use_theme();
     let chosen_size = props.size.copied_or(theme.title.size);
+    let style = use_gradient_style(
+        props.gradient.as_ref(),
+        None,
+        props.gradient.is_some(),
+        true,
+    );
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(chosen_size.state_name(), true)
+        .with("gradient", props.gradient.is_some())
         .into();
 
     let component = props
@@ -71,6 +88,7 @@ pub fn Title(props: TitleProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
+        .style(style)
         .prepare()
         .render(component, props.attributes, props.children)
 }

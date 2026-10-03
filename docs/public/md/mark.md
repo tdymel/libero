@@ -32,7 +32,8 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `warning`, tinted | A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. |
+| `color` | `ThemeAwareValue` | `warning`, tinted | A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. Under a gradient, its first stop. |
+| `gradient` | `Gradient` | - | Fills the highlight with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text turns black or white, whichever reads on both stops and the span between; the contrast of a literal CSS stop is yours to check. Solid in its first stop where the image is dropped. |
 | `children` | `Element` | required | The highlighted content. |
 
 Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
@@ -49,11 +50,14 @@ Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
   `never`, and its focus ring clears 3:1 against the tint.
 - In forced colors the tint gives way to the system highlight colors, `Mark`
   and `MarkText`.
+- Under a `gradient`, the text is black or white, picked to read at 4.5:1 on
+  both stops and the span between in light and dark.
 
 ### You must
 
 - With a CSS color name such as `gold`, the text keeps the page's color: check
   its contrast.
+- Check the contrast of a literal CSS stop in `gradient`.
 - Say in the text why a highlight matters. Not every screen reader announces
   `<mark>`.
 

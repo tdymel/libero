@@ -407,24 +407,24 @@ fn decodable(duration: Option<f64>) -> bool {
     duration.is_some_and(|total| total.is_finite() && total <= DECODE_MAX_SECONDS)
 }
 
-/// Loudness per bar as heights from 0.2 to 1, stretched from the quietest bar to
-/// the loudest: speech and music vary little in RMS, and a scale to the loudest
-/// alone drew a near-flat row. An even sound stays flat; silence stays at 0.2.
+/// Loudness per bar as heights from 0.2 to 1, stretched from the 10th to the 90th
+/// percentile bar, else from the quietest to the loudest: music varies little in RMS,
+/// and one faded-out bar pinned the rest near the top (todo 2130). An even sound stays
+/// flat; silence stays at 0.2.
 fn scaled_heights(peaks: &[f64]) -> Option<[f64; BARS]> {
     if peaks.len() != BARS || peaks.iter().any(|peak| !peak.is_finite()) {
         return None;
     }
-    let loudest = peaks.iter().copied().fold(0.0, f64::max);
-    let quietest = peaks.iter().copied().fold(loudest, f64::min);
-    let spread = loudest - quietest;
-    Some(std::array::from_fn(|index| {
-        if spread > loudest * EVEN_SPREAD {
-            0.2 + 0.8 * (peaks[index] - quietest) / spread
-        } else if loudest > 0.0 {
-            0.2 + 0.8 * peaks[index] / loudest
-        } else {
-            0.2
-        }
+    let mut sorted = peaks.to_vec();
+    sorted.sort_by(f64::total_cmp);
+    let loudest = sorted[BARS - 1];
+    let percentile = |share: f64| sorted[(share * (BARS - 1) as f64).round() as usize];
+    let range = |low: f64, high: f64| (high - low > loudest * EVEN_SPREAD).then_some((low, high));
+    let stretch = range(percentile(0.1), percentile(0.9)).or_else(|| range(sorted[0], loudest));
+    Some(std::array::from_fn(|index| match stretch {
+        Some((low, high)) => 0.2 + 0.8 * ((peaks[index] - low) / (high - low)).clamp(0.0, 1.0),
+        None if loudest > 0.0 => 0.2 + 0.8 * peaks[index] / loudest,
+        None => 0.2,
     }))
 }
 
@@ -556,6 +556,20 @@ mod tests {
             (low.min(*h), high.max(*h))
         });
         assert!(high - low > 0.7, "spread {low}..{high}");
+    }
+
+    /// The docs track's decoded RMS (todo 2130): its faded last bar flattened the rest to 0.66..1.
+    #[test]
+    fn one_faded_bar_does_not_flatten_the_rest() {
+        let peaks = [
+            0.22, 0.18, 0.20, 0.20, 0.20, 0.22, 0.20, 0.21, 0.21, 0.20, 0.22, 0.24, 0.18, 0.20,
+            0.19, 0.20, 0.21, 0.20, 0.21, 0.20, 0.20, 0.22, 0.20, 0.20, 0.21, 0.20, 0.20, 0.11,
+        ];
+        let heights = scaled_heights(&peaks).unwrap();
+        let body = &heights[..BARS - 1];
+        let low = body.iter().copied().fold(1.0, f64::min);
+        assert!(low < 0.3, "lowest body bar {low}");
+        assert!(body.iter().sum::<f64>() / (body.len() as f64) < 0.7);
     }
 
     #[test]

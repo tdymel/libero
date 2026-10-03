@@ -13,12 +13,15 @@ pub(crate) trait WaveformApi {
 /// decodes without a user gesture and opens no output device; at 8 kHz, as bars
 /// need no treble, the decoded samples take a fifth of the memory. A file over
 /// 20 MB is not read: `null`, so the drawn bars stay. Bytes are counted too, as
-/// a response may have no Content-Length.
+/// a response may have no Content-Length. Chromium can hand the fetch the media
+/// element's cache entry, cut off where the element stops loading (todo 2130): a
+/// body short of its Content-Length is fetched again past the cache.
 #[cfg(not(feature = "native"))]
-pub(crate) const PEAKS_SCRIPT: &str = "const peaks = async (src, bars) => {
-    const response = await fetch(src);
+pub(crate) const PEAKS_SCRIPT: &str = "const load = async (src, cache) => {
+    const response = await fetch(src, { cache });
     if (!response.ok) return null;
-    if (Number(response.headers.get('content-length')) > 20e6) {
+    const expected = Number(response.headers.get('content-length'));
+    if (expected > 20e6) {
         response.body?.cancel();
         return null;
     }
@@ -35,6 +38,13 @@ pub(crate) const PEAKS_SCRIPT: &str = "const peaks = async (src, bars) => {
     }
     const bytes = new Uint8Array(size);
     chunks.reduce((at, chunk) => (bytes.set(chunk, at), at + chunk.length), 0);
+    return { bytes, short: expected > size };
+};
+const peaks = async (src, bars) => {
+    let loaded = await load(src, 'default');
+    if (loaded?.short) loaded = await load(src, 'no-store');
+    if (!loaded) return null;
+    const bytes = loaded.bytes;
     const Context = window.OfflineAudioContext ?? window.webkitOfflineAudioContext;
     const audio = await new Context(1, 1, 8000).decodeAudioData(bytes.buffer);
     const channels = Array.from({ length: audio.numberOfChannels }, (_, at) => audio.getChannelData(at));

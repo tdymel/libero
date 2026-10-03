@@ -34,6 +34,17 @@ paragraph
   StaticText "Gradient text"
 paragraph
   StaticText "Plain coloured text"
+heading "Gradient title" [level=3]
+  StaticText "Gradient title"
+heading "Plain title" [level=3]
+  StaticText "Plain title"
+paragraph
+  StaticText "A"
+  mark
+    StaticText "gradient highlight"
+  StaticText "and a"
+  mark
+    StaticText "coloured one"
 banner
   button "Menu"
     StaticText "Menu"

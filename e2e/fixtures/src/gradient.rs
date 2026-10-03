@@ -2,7 +2,7 @@
 //! gradient and on an override, plus glass over a gradient and gradient text.
 
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Badge, Button, Flex, Header, Icon, Paper, Text};
+use libero::components::{ActionIcon, Badge, Button, Flex, Header, Icon, Mark, Paper, Text, Title};
 use libero::theme::Gradient;
 
 use crate::Routes;
@@ -45,6 +45,13 @@ fn GradientPage() -> Element {
             }
             Text { id: "text", gradient: Gradient::default(), size: "xl", "Gradient text" }
             Text { id: "text-color", color: "error", "Plain coloured text" }
+            // Text's gradient on Title (2132); a plain one keeps its look.
+            Title { id: "title", size: "lg", gradient: Gradient::default(), "Gradient title" }
+            Title { id: "title-plain", size: "lg", "Plain title" }
+            // Mark's gradient is the highlight; its text takes the label (2132).
+            Text { "A " Mark { id: "mark", gradient: Gradient::default(), "gradient highlight" } " and a "
+                Mark { id: "mark-color", color: "error", gradient: ("info", 90), "coloured one" }
+            }
             // `color` is the first stop, over glass too (1016).
             Header { id: "header", position: "static", glass: true, color: "error",
                 gradient: Gradient::default(),

@@ -23,7 +23,7 @@ static TEXT_BASE_SX: StaticSx = StaticSx::new(|| {
 const TEXT_COLOR: CssVar = CssVar::new("--lsx-text-color");
 
 /// The gradient through the glyphs. Blitz paints the whole box, so there it is the first stop.
-fn gradient_text_sx() -> Sx {
+pub(super) fn gradient_text_sx() -> Sx {
     if !clips_background_to_text() {
         return sx().color(GRADIENT_FROM.value());
     }

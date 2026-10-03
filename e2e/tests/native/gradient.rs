@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{Button, Paper, Text};
+use libero::components::{Button, Mark, Paper, Text, Title};
 use libero::sx::sx;
 use libero::theme::Gradient;
 
@@ -58,7 +58,11 @@ fn libero_app() -> Element {
             sx: sx().width("200px"), "Colored"
         }
         Text { id: "text", gradient: Gradient::default(), "Gradient text" }
+        Title { id: "title", size: "md", gradient: Gradient::default(), "Gradient title" }
         Paper { id: "paper", color: "info", sx: sx().width("200px").height("40px") }
+        Mark { id: "mark", gradient: Gradient::default(),
+            sx: sx().display("inline-block").width("200px").height("40px")
+        }
     }
 }
 
@@ -73,6 +77,16 @@ fn color_starts_the_gradient_and_fills_a_paper() {
     assert_ne!(colored[0], colored[2], "one flat colour: {colored:?}");
     let paper = samples(&mut page, "#paper");
     assert_ne!(paper[1], "rgb(255, 255, 255)", "no fill: {paper:?}");
+}
+
+/// Mark's gradient highlight paints natively, one stop to the other (2132).
+#[test]
+fn a_gradient_mark_paints_its_stops() {
+    let mut page = mount(libero_app);
+    page.settle();
+    let mark = samples(&mut page, "#mark");
+    assert_ne!(mark[0], "rgb(255, 255, 255)", "no fill: {mark:?}");
+    assert_ne!(mark[0], mark[2], "one flat colour: {mark:?}");
 }
 
 /// A gradient `Button` runs from one stop to the other, and a hover lays the
@@ -91,24 +105,26 @@ fn a_gradient_button_paints_its_stops_and_hover_layer() {
 }
 
 /// Natively gradient text is its first stop, solid: never transparent glyphs
-/// on a painted box.
+/// on a painted box. Title's too (2132).
 #[test]
 fn gradient_text_is_solid_natively() {
     let mut page = mount(libero_app);
     page.settle();
-    let (left, top, width, height) = page.rect("#text");
-    let y = (top + height / 2.0) as u32;
-    // The light page, past the end of the text.
-    let right = page.painted_pixel((left + width - 2.0) as u32, y);
-    assert_eq!(
-        right, "rgb(255, 255, 255)",
-        "the box behind the text is painted"
-    );
-    let row: Vec<(u32, u32)> = (0..120).map(|dx| (left as u32 + dx, y)).collect();
-    let inked = page
-        .painted_pixels(&row)
-        .iter()
-        .filter(|px| **px != [255, 255, 255, 255])
-        .count();
-    assert!(inked > 0, "no glyph drawn");
+    for selector in ["#text", "#title"] {
+        let (left, top, width, height) = page.rect(selector);
+        let y = (top + height / 2.0) as u32;
+        // The light page, past the end of the text.
+        let right = page.painted_pixel((left + width - 2.0) as u32, y);
+        assert_eq!(
+            right, "rgb(255, 255, 255)",
+            "{selector}: the box behind the text is painted"
+        );
+        let row: Vec<(u32, u32)> = (0..120).map(|dx| (left as u32 + dx, y)).collect();
+        let inked = page
+            .painted_pixels(&row)
+            .iter()
+            .filter(|px| **px != [255, 255, 255, 255])
+            .count();
+        assert!(inked > 0, "{selector}: no glyph drawn");
+    }
 }

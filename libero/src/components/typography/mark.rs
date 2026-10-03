@@ -2,14 +2,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, Variables, base_props, variables},
+        common::{HtmlTag, Input, States, Variables, base_props, variables},
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_gradient_style, use_theme},
     sx::{ColorRole, FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
         ANCHOR_COLOR, AnchorDefaults, Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO,
-        NamedColorCss, SURFACE_LABEL,
+        GRADIENT_CONTRAST, Gradient, NamedColorCss, SURFACE_LABEL, gradient_surface_sx,
     },
 };
 
@@ -40,6 +40,11 @@ static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
         .media(FORCED_COLORS, sx().color("MarkText").background("Mark"))
         // A link in the text's colour needs its underline (1.4.1), as in `Alert` and `Header`.
         .and(AnchorDefaults::underline_at_rest())
+        // The highlight as a gradient fill, its label read on every point (2132).
+        .when(
+            "gradient",
+            gradient_surface_sx().var(ANCHOR_COLOR, GRADIENT_CONTRAST.value()),
+        )
 });
 
 /// Publishes `--lsx-focus-contrast`: `sx` infers it only from a literal, and the tint is a `var()`.
@@ -67,6 +72,11 @@ base_props! {
     pub struct MarkProps {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Fills the highlight with a gradient from `color`, its text black or white to
+        /// read on every point: `("secondary", 45)` or a [`Gradient`]. A literal stop's
+        /// contrast is the caller's to check.
+        #[props(default, into)]
+        gradient: Option<Gradient>,
         children: Element,
     }
 }
@@ -88,14 +98,26 @@ base_props! {
 #[component]
 pub fn Mark(props: MarkProps) -> Element {
     let theme = use_theme();
-    let variables: Input<Variables> = mark_variables(props.color.as_ref(), theme.mark.color).into();
+    let active = props.gradient.is_some();
+    // Under a gradient the tint's inline vars would beat the fill's.
+    let variables: Input<Variables> = match active {
+        true => Input::None,
+        false => mark_variables(props.color.as_ref(), theme.mark.color).into(),
+    };
+    let style = use_gradient_style(props.gradient.as_ref(), props.color.as_ref(), active, false);
+    let states: Input<States> = props
+        .states
+        .unwrap_or_default()
+        .with("gradient", active)
+        .into();
 
     use_box()
         .framework_sx(&MARK_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
-        .states(&props.states)
+        .states(&states)
         .variables(&variables)
+        .style(style)
         .prepare()
         .render(HtmlTag::Mark, props.attributes, props.children)
 }

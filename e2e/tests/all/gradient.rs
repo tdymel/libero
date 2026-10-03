@@ -384,6 +384,55 @@ fn glass_mixes_the_stops_down_and_text_clips_to_the_glyphs() {
     });
 }
 
+/// Todo 2132: Title takes Text's gradient glyphs; a plain Title paints none.
+#[test]
+fn title_clips_the_gradient_to_its_glyphs() {
+    block_on(async {
+        let fixture = Fixture::open("/gradient", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#title").await.unwrap();
+        assert_eq!(style(page, "#title", "background-clip").await, "text");
+        assert_eq!(style(page, "#title", "color").await, "rgba(0, 0, 0, 0)");
+        let image = style(page, "#title", "background-image").await;
+        assert!(image.starts_with("linear-gradient"), "{image}");
+        assert_eq!(
+            style(page, "#title-plain", "background-image").await,
+            "none"
+        );
+        assert_ne!(
+            style(page, "#title-plain", "color").await,
+            "rgba(0, 0, 0, 0)"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2132: Mark's gradient fills the highlight from its `color`, the text in the label.
+#[test]
+fn mark_fills_the_highlight_with_the_gradient() {
+    block_on(async {
+        let fixture = Fixture::open("/gradient", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#mark").await.unwrap();
+        for name in ["light", "dark"] {
+            scheme(page, name).await;
+            for mark in ["#mark", "#mark-color"] {
+                let image = style(page, mark, "background-image").await;
+                assert!(image.starts_with("linear-gradient"), "{mark}: {image}");
+                assert_ne!(style(page, mark, "background-clip").await, "text");
+                let worst = ratio(page, WORST_RATIO, mark).await;
+                assert!(worst >= 4.5, "{mark} in {name}: {worst:.2}:1");
+            }
+        }
+        assert_ne!(
+            style(page, "#mark", "background-color").await,
+            style(page, "#mark-color", "background-color").await,
+            "`color` is the first stop"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn forced_colours_drop_the_image() {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
@@ -409,6 +458,8 @@ fn forced_colours_drop_the_image() {
             "#paper",
             "#glass",
             "#text",
+            "#title",
+            "#mark",
             "#header",
             "#paper-glass",
         ] {
@@ -428,7 +479,13 @@ fn forced_colours_drop_the_image() {
                 "{selector}"
             );
         }
-        assert_ne!(style(page, "#text", "color").await, "rgba(0, 0, 0, 0)");
+        for selector in ["#text", "#title"] {
+            assert_ne!(
+                style(page, selector, "color").await,
+                "rgba(0, 0, 0, 0)",
+                "{selector}"
+            );
+        }
         fixture.close().await.unwrap();
     });
 }

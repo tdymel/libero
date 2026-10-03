@@ -30,6 +30,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `size` | `Size` | `xxl` | Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set. |
 | `component` | `HtmlTag` | follows `size` | The heading tag. The size's look stays. |
+| `gradient` | `Gradient` | - | Paints the glyphs with a gradient from the theme's first stop to a second, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in forced colours and in native windows. |
 | `children` | `Element` | required | The heading text. |
 
 Like every component, `Title` also takes the shared props `sx`, `class`, `style`,
@@ -47,6 +48,8 @@ Like every component, `Title` also takes the shared props `sx`, `class`, `style`
 - Keep one `h1` per page and skip no levels.
 - A `lg` heading in a section under the page's `h1` needs `component: "h2"`, or
   the document jumps from `h1` to `h3`.
+- Check the contrast of a literal CSS stop in `gradient`. A debug build warns
+  when a hex stop reads under 4.5:1 on the page background.
 
 ```rust
 use dioxus::prelude::*;
