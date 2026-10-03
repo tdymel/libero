@@ -501,6 +501,70 @@ fn without_scroll_timelines_the_track_still_stays_put() {
     });
 }
 
+/// A WebView runs the timeline animations while the app writes inline offsets (todo 2019):
+/// the thumb moved twice, hung past the end and grew the scroll range on every read.
+#[test]
+fn timelines_the_app_misses_never_grow_the_range() {
+    const AREA: &str = "document.querySelector('#bars-v')";
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/bars", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(AddScriptToEvaluateOnNewDocumentParams::new(
+            "(() => { const supports = CSS.supports.bind(CSS); \
+             CSS.supports = (...a) => !String(a.join(':')).includes('animation-timeline') && supports(...a); })()",
+        ))
+        .await
+        .unwrap();
+        page.reload().await.unwrap();
+        wait::for_js_true(
+            page,
+            "!CSS.supports('animation-timeline: scroll()') && !!document.querySelector('#bars-v')",
+            "the reloaded app",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(page, &part("bars-v", V_TRACK, "true"), "the drawn track")
+            .await
+            .unwrap();
+
+        let content: f64 = page
+            .evaluate(format!("{AREA}.scrollHeight"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        page.evaluate(format!("{AREA}.scrollTop = 1e6"))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &part("bars-v", V_THUMB, V_THUMB_PLACED),
+            "the thumb at the end of its track",
+        )
+        .await
+        .unwrap();
+        // A second scroll to the end reads the range the first one left.
+        page.evaluate(format!("{AREA}.scrollTop = 1e6"))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{AREA}.scrollHeight === {content} && \
+                 {AREA}.scrollTop + {AREA}.clientHeight >= {content} - 1"
+            ),
+            "the range as long as the content",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("the doubled thumb").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// One 120px wheel notch down over `selector`'s centre, waited until it scrolled.
 async fn wheel_step(page: &chromiumoxide::Page, selector: &str) {
     let at = pointer::centre_of(page, selector).await.unwrap();

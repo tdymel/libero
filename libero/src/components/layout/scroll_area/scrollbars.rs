@@ -155,10 +155,14 @@ impl Bar {
         })
     }
 
-    /// Where the thumb's inline style puts it: at the track's start where a scroll
-    /// timeline moves it, so a scroll writes nothing.
-    fn start(&self, timelines: bool) -> f64 {
-        if timelines { 0.0 } else { self.at }
+    /// The thumb's inline `translate`, which a scroll timeline's animation overrides:
+    /// a WebView runs those while we write offsets too (todo 2019). None then, so a scroll writes nothing.
+    fn shift(&self, timelines: bool, leftwards: bool) -> f64 {
+        match (timelines, leftwards) {
+            (true, _) => 0.0,
+            (false, true) => -self.at,
+            (false, false) => self.at,
+        }
     }
 
     /// How far a scroll timeline moves the thumb, in px: leftwards for an RTL x bar.
@@ -432,7 +436,7 @@ pub(super) fn ScrollAreaBars(
                     onpointerdown: press(Axis::Y),
                     div {
                         "data-slot": ScrollAreaPart::Thumb.slot(),
-                        style: "top: {bar.start(timelines)}px; height: {bar.thumb}px; {SCROLL_AREA_THUMB_TRAVEL.name()}: {bar.travel(false)}px",
+                        style: "top: 0; translate: 0 {bar.shift(timelines, false)}px; height: {bar.thumb}px; {SCROLL_AREA_THUMB_TRAVEL.name()}: {bar.travel(false)}px",
                         onmounted: thumb_y.mount(),
                         onpointerdown: move |event: Event<PointerData>| {
                             event.stop_propagation();
@@ -452,7 +456,7 @@ pub(super) fn ScrollAreaBars(
                     onpointerdown: press(Axis::X),
                     div {
                         "data-slot": ScrollAreaPart::Thumb.slot(),
-                        style: "inset-inline-start: {bar.start(timelines)}px; width: {bar.thumb}px; {SCROLL_AREA_THUMB_TRAVEL.name()}: {bar.travel(rtl)}px",
+                        style: "inset-inline-start: 0; translate: {bar.shift(timelines, rtl)}px 0; width: {bar.thumb}px; {SCROLL_AREA_THUMB_TRAVEL.name()}: {bar.travel(rtl)}px",
                         onmounted: thumb_x.mount(),
                         onpointerdown: move |event: Event<PointerData>| {
                             event.stop_propagation();
@@ -591,7 +595,8 @@ mod tests {
         assert!(!ScrollMetrics::redraws(Some(TALL), scrolled, true));
         assert!(ScrollMetrics::redraws(Some(scrolled), grown, true));
         let bar = bars(ScrollAxis::Vertical, scrolled, 8.0, 0.0).y.unwrap();
-        assert_eq!((bar.start(true), bar.travel(false)), (0.0, 75.0));
+        assert_eq!((bar.shift(true, false), bar.travel(false)), (0.0, 75.0));
+        assert_eq!(bar.shift(true, true), 0.0);
         assert_eq!(bar.travel(true), -75.0);
     }
 
@@ -624,6 +629,8 @@ mod tests {
         assert!(ScrollMetrics::redraws(Some(TALL), scrolled, false));
         assert!(!ScrollMetrics::redraws(Some(scrolled), scrolled, false));
         let bar = bars(ScrollAxis::Vertical, scrolled, 8.0, 0.0).y.unwrap();
-        assert_eq!(bar.start(false), 37.5);
+        assert_eq!(bar.shift(false, false), 37.5);
+        // An RTL x thumb shifts left from its inline start, the right edge.
+        assert_eq!(bar.shift(false, true), -37.5);
     }
 }
