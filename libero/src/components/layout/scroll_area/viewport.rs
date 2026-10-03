@@ -90,6 +90,17 @@ impl ScrollViewport {
     pub fn claim(&self) -> bool {
         !self.claimed.replace(true)
     }
+
+    /// Frees the claim of a `Virtualize` going away: one remounted in its place
+    /// (a Table turning on `onrowreorder`) rendered first and claimed nothing.
+    /// The geometry write rerenders it, to claim again.
+    pub fn release(&self) {
+        self.claimed.set(false);
+        let mut geometry = self.geometry;
+        if let Ok(mut geometry) = geometry.try_write() {
+            let _ = &mut *geometry;
+        }
+    }
 }
 
 /// The rows a window shows, and the px reserved on either side of them.

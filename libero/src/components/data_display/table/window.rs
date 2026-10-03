@@ -40,6 +40,8 @@ impl BodyRows {
 /// in. No detail rows: they would break the one row height the window assumes.
 pub(super) struct RowWindow {
     pub order: Rc<[usize]>,
+    /// The rows on the pages before this one, counted in `aria-rowindex`.
+    pub first: usize,
     pub row_height: f64,
     /// A row's spec by its position among the shown rows and its `data` index.
     pub row: Rc<dyn Fn(usize, usize) -> RowSpec>,
@@ -104,9 +106,10 @@ fn focused_row(table: &ElementHandle, (head_rows, order): &(usize, Rc<[usize]>))
 }
 
 /// The rows the DOM leaves out still count: the header rows plus every body row,
-/// or the one empty row.
-pub(super) fn window_attributes(head_rows: usize, rows: usize) -> Vec<Attribute> {
-    vec![attr("aria-rowcount", (head_rows + rows.max(1)).to_string())]
+/// or the one empty row; the hidden skeleton rows count none (todo 1421).
+pub(super) fn window_attributes(head_rows: usize, rows: usize, skeleton: bool) -> Vec<Attribute> {
+    let body = if skeleton { 0 } else { rows.max(1) };
+    vec![attr("aria-rowcount", (head_rows + body).to_string())]
 }
 
 /// A windowed table's least width: its sized columns, and a floor for each other one.
@@ -170,6 +173,7 @@ pub(super) fn render_window(
 ) -> Element {
     let RowWindow {
         order,
+        first,
         row_height,
         row,
         key,
@@ -205,7 +209,7 @@ pub(super) fn render_window(
                         }
                     });
                 }));
-                spec.attributes.push(attr("aria-rowindex", (head_rows + position + 1).to_string()));
+                spec.attributes.push(attr("aria-rowindex", (head_rows + first + position + 1).to_string()));
                 body_rows(spec, 0, reorder.as_ref())
                     .next()
                     .unwrap_or_else(VNode::empty)

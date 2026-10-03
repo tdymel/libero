@@ -6,8 +6,8 @@ use super::reorder::{SortableMove, Span, clamp_offset, shift, slot_offset, targe
 use crate::{
     components::common::Orientation,
     hooks::{
-        DragMove, DragOptions, DragStart, ElementHandle, current_localization, use_distance_drag,
-        use_element,
+        DragMove, DragOptions, DragStart, ElementHandle, current_localization, edge_scroll_step,
+        use_distance_drag, use_element, use_interval,
     },
     localization::fill,
     platform::{self, Dimensions, ElementApi, Read},
@@ -177,7 +177,34 @@ pub(crate) struct FixedSlots {
     pub pitch: f64,
     /// A keyboard lift's `(from, to)`, for the list to scroll its target into view.
     pub lift: Signal<Option<(usize, usize)>>,
+    /// The box the slots scroll in, vertically: a pointer drag near its edge scrolls it.
+    pub scroller: ElementHandle,
+    /// The sticky header's height over the scroller's top.
+    pub head: f64,
 }
+
+/// A fixed list's scroller at a drag's start, read in client px.
+#[derive(Clone, Copy)]
+struct EdgeScroll {
+    /// The edge zones' span: below the header to the bottom.
+    start: f64,
+    size: f64,
+    /// `scrollLeft`, `scrollTop` at the start, and the most `scrollTop`.
+    from: (f64, f64),
+    most: f64,
+}
+
+impl EdgeScroll {
+    /// Px per tick the scroller moves with the pointer at `at` along the flow,
+    /// `moved` px since the press: only toward the edge it went, so a row lifted there stays put.
+    fn step(&self, at: f64, moved: f64) -> f64 {
+        let step = edge_scroll_step(at, self.start, self.size);
+        if step * moved > 0.0 { step } else { 0.0 }
+    }
+}
+
+/// The edge scroll's tick, as a table column drag's.
+const AUTO_SCROLL_MS: u64 = 40;
 
 /// What [`use_sortable_item`] reads from its list.
 #[derive(Clone, Copy)]
@@ -398,6 +425,41 @@ pub(crate) fn use_fixed_sortable(
     let mut starting = use_hook(|| CopyValue::new((false, false)));
     // The drag's direction sign, read at its start so moves before the measure use it.
     let mut drag_sign = use_hook(|| CopyValue::new(1.0_f64));
+    // Fixed slots: the scroller once read, the pointer's (client position, travel)
+    // along the flow, and how far the edge scroll moved the slots since the start (todo 1872).
+    let mut edge = use_hook(|| CopyValue::new(None::<EdgeScroll>));
+    let mut pointer = use_hook(|| CopyValue::new((0.0_f64, 0.0_f64)));
+    let mut scrolled = use_hook(|| CopyValue::new(0.0_f64));
+    let auto_scroll = use_interval(
+        move || {
+            let (Some(scroll), Some(slots)) = (*edge.peek(), *fixed_slots.peek()) else {
+                return;
+            };
+            if session.peek().is_none() {
+                return;
+            }
+            let now = scroll.from.1 + *scrolled.peek();
+            let (at, moved) = *pointer.peek();
+            let next = (now + scroll.step(at, moved)).clamp(0.0, scroll.most);
+            if next == now {
+                return;
+            }
+            let _ = slots.scroller.scroll_to(scroll.from.0, next);
+            let at = slots.scroller.scroll_offset();
+            spawn(async move {
+                let Ok((_, top)) = at.await else {
+                    return;
+                };
+                // Dropped meanwhile: the travel is spent.
+                if edge.peek().is_none() {
+                    return;
+                }
+                scrolled.set(top - scroll.from.1);
+                travel.set(pointer.peek().1 + top - scroll.from.1);
+            });
+        },
+        AUTO_SCROLL_MS,
+    );
 
     let target = use_memo(move || {
         let session = session.read();
@@ -500,6 +562,9 @@ pub(crate) fn use_fixed_sortable(
         session.set(None);
         travel.set(0.0);
         pressed.set(None);
+        auto_scroll.stop();
+        edge.set(None);
+        scrolled.set(0.0);
         let count = ended.spans.len();
         let words_for = if commit {
             words.dropped
@@ -543,6 +608,36 @@ pub(crate) fn use_fixed_sortable(
             travel.set(0.0);
             let flipped = *horizontal.peek() && element.is_rtl();
             drag_sign.set(if flipped { -1.0 } else { 1.0 });
+            scrolled.set(0.0);
+            edge.set(None);
+            if let Some(slots) = *fixed_slots.peek()
+                && !*horizontal.peek()
+            {
+                pointer.set((start.client.y, 0.0));
+                // Started in the handler, as Blitz needs.
+                let scroller = slots.scroller;
+                let (offset, size) = (scroller.client_offset(), scroller.dimensions());
+                let (at, content) = (scroller.scroll_offset(), scroller.scroll_size());
+                spawn(async move {
+                    let (Ok((_, y)), Ok(size), Ok(from), Ok(content)) =
+                        (offset.await, size.await, at.await, content.await)
+                    else {
+                        return;
+                    };
+                    let scroll = EdgeScroll {
+                        start: y + slots.head,
+                        size: size.height - slots.head,
+                        from,
+                        most: (content.height - size.height).max(0.0),
+                    };
+                    edge.set(Some(scroll));
+                    // The pointer may already wait at the edge.
+                    let (at, moved) = *pointer.peek();
+                    if scroll.step(at, moved) != 0.0 && !auto_scroll.active() {
+                        auto_scroll.start();
+                    }
+                });
+            }
             begin(
                 from,
                 false,
@@ -563,8 +658,17 @@ pub(crate) fn use_fixed_sortable(
         onmove: use_callback(move |step: DragMove| {
             let delta = step.delta();
             let along = if *horizontal.peek() { delta.x } else { delta.y };
+            let moved = along * *drag_sign.peek();
             // Kept before the measure lands too, so the first frame is not a jump.
-            travel.set(along * *drag_sign.peek());
+            travel.set(moved + *scrolled.peek());
+            pointer.set((step.client.y, moved));
+            let near =
+                (*edge.peek()).is_some_and(|scroll| scroll.step(step.client.y, moved) != 0.0);
+            match (near, auto_scroll.active()) {
+                (true, false) => auto_scroll.start(),
+                (false, true) => auto_scroll.stop(),
+                _ => {}
+            }
         }),
         onend: use_callback(move |()| {
             if starting.peek().0 {

@@ -37,6 +37,11 @@ fn BadgePage() -> Element {
                 }
                 Badge { circle: true, "9" }
             }
+            // 2105: a literal fill takes black or white, not the page's text colour.
+            Flex { gap: "xs", wrap: "wrap",
+                Badge { id: "literal-light", color: "#ffeb3b", "Light" }
+                Badge { id: "literal-dark", color: "#123456", "Dark" }
+            }
             Flex { gap: "md", wrap: "wrap", align: "center",
                 for color in COLORS {
                     Indicator { label: 128, color }

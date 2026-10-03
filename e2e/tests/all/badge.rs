@@ -36,6 +36,27 @@ fn a_badge_grows_with_the_text_size() {
     });
 }
 
+/// Todo 2105: a filled Badge in a literal colour labels it black or white, not
+/// in the page's dark text, which vanished on `#123456`.
+#[test]
+fn a_literal_fill_takes_the_readable_label() {
+    block_on(async {
+        let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
+        let labels: Vec<String> = fixture
+            .page
+            .evaluate(
+                "['#literal-light', '#literal-dark'] \
+                 .map(id => getComputedStyle(document.querySelector(id)).color)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(labels, ["rgb(0, 0, 0)", "rgb(255, 255, 255)"]);
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 743: an ordered `List` draws its numbers, in a gutter inside its box.
 #[test]
 fn an_ordered_list_shows_its_numbers() {

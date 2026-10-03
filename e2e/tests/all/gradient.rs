@@ -16,7 +16,7 @@ fn it_meets_the_baseline() {
 /// (1.03:1 in `primary` before), at rest and on hover; a plain Paper inside gives the
 /// button its own colour back.
 #[test]
-fn a_standard_button_takes_the_gradient_label() {
+fn a_standard_or_outlined_button_takes_the_gradient_label() {
     block_on(async {
         let fixture = Fixture::open("/gradient", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
@@ -28,6 +28,23 @@ fn a_standard_button_takes_the_gradient_label() {
                     style(page, button, "color").await,
                     style(page, surface, "color").await,
                     "{button} in {name}"
+                );
+            }
+            // Todo 1833: an outlined one's label and border too.
+            for (button, surface) in [
+                ("#in-paper-outlined", "#paper"),
+                ("#in-header-outlined", "#header"),
+            ] {
+                let label = style(page, surface, "color").await;
+                assert_eq!(
+                    style(page, button, "color").await,
+                    label,
+                    "{button} in {name}"
+                );
+                assert_eq!(
+                    style(page, button, "border-top-color").await,
+                    label,
+                    "{button}'s border in {name}"
                 );
             }
             assert_eq!(

@@ -4,8 +4,8 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, States, Variables, Variant, VariantVars, base_color, base_props,
-            contrast_color, css_string, fill_color, names_itself, text_color, variables,
-            variant_chrome_sx, variant_colors,
+            contrast_color, css_string, fill_color, literal_contrast, names_itself, text_color,
+            variables, variant_chrome_sx, variant_colors,
         },
         data_display::{Pictogram, SvgData},
         layout::use_box,
@@ -94,7 +94,12 @@ fn icon_variables(props: &IconProps, variant: Variant) -> Variables {
     variables()
         .with(ICON_COLOR_VAR, text_color(&base))
         .with(ICON_FILL_VAR, fill_color(&base))
-        .with(ICON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
+        .with(
+            ICON_CONTRAST_VAR,
+            contrast
+                .and_then(|c| c.resolve(None))
+                .or_else(|| literal_contrast(&base)),
+        )
         .with(ICON_CONTAINER_VAR, colors.container)
         .with(ICON_ON_CONTAINER_VAR, colors.on_container)
         .with(
@@ -255,13 +260,13 @@ mod tests {
         assert!(variables.contains(ICON_CONTRAST_VAR.name()));
     }
 
-    /// A literal has no theme shade, so no contrast to pair with it.
+    /// A literal has no theme shade: its label is black or white, whichever reads (2105).
     #[test]
-    fn a_literal_color_emits_no_contrast() {
+    fn a_literal_color_gets_the_readable_end() {
         let variables = icon_variables(&icon_props("#123456".into()), Variant::Filled).to_string();
 
         assert!(variables.contains(&format!("{}:#123456;", ICON_COLOR_VAR.name())));
-        assert!(!variables.contains(ICON_CONTRAST_VAR.name()));
+        assert!(variables.contains(&format!("{}:#FFFFFF;", ICON_CONTRAST_VAR.name())));
     }
 
     /// Chrome only: a hover response would claim interactivity.

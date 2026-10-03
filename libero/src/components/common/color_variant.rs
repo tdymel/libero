@@ -1,4 +1,5 @@
 use crate::sx::{ColorRole, ThemeAwareValue};
+use crate::theme::{HOVER_LAYER, SELECTED_LAYER};
 use crate::tokens::{
     Color, ColorShade, ColorValue, HOVER_TINT_SHADE, HexColor, SELECTED_TINT_SHADE,
 };
@@ -78,14 +79,25 @@ pub(crate) fn selected_color(base: &ThemeAwareValue, filled: bool) -> Option<Str
     Some(ColorValue::Fill(*color, selected).value())
 }
 
-/// An unfilled control's hover or selected tint. Ink and surface have no ramp, so their
-/// tint was the label colour itself (1335): they take the muted ramp's.
+/// An unfilled control's hover or selected tint. Ink has no ramp, so its tint was the
+/// label colour itself (1335): it takes the muted ramp's.
 pub(crate) fn tint_color(base: &ThemeAwareValue, shade: ColorShade) -> Option<String> {
     let ThemeAwareValue::ColorValue(ColorValue::Shade(color, _)) = base else {
         return None;
     };
     let ramp = match color {
-        Color::Ink | Color::Surface => Color::Muted,
+        Color::Ink => Color::Muted,
+        // A surface label sits on a dark or coloured ground: a layer of the label keeps it (1351).
+        Color::Surface => {
+            let percent = match shade == HOVER_TINT_SHADE {
+                true => HOVER_LAYER,
+                false => SELECTED_LAYER,
+            };
+            let label = text_color(base)?;
+            return Some(format!(
+                "color-mix(in srgb, {label} {percent}%, transparent)"
+            ));
+        }
         other => *other,
     };
     Some(ColorValue::Fill(ramp, shade).value())
@@ -206,6 +218,20 @@ mod tests {
         assert_eq!(selected_color(&ink, false), muted(SELECTED_TINT_SHADE));
         assert_ne!(hover_color(&ink, false), text_color(&ink));
         assert_eq!(on_tint_color(&ink), None);
+    }
+
+    /// A muted tint under a light surface label read poorly (1351): a layer of the label instead.
+    #[test]
+    fn surface_tints_with_a_layer_of_its_label() {
+        let surface = base_color(Some(&ThemeAwareValue::Color(Color::Surface)));
+        let label = text_color(&surface).unwrap();
+        let layer = |percent| {
+            Some(format!(
+                "color-mix(in srgb, {label} {percent}%, transparent)"
+            ))
+        };
+        assert_eq!(hover_color(&surface, false), layer(HOVER_LAYER));
+        assert_eq!(selected_color(&surface, false), layer(SELECTED_LAYER));
     }
 
     #[test]

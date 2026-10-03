@@ -336,13 +336,7 @@ const PINNED: &str =
 const WINDOW_HEIGHT: &str = "320px";
 
 /// The switches `virtual_row_height` hides: it sets the cap, the rest render every row.
-const WINDOW_HIDES: [&str; 5] = [
-    "max_height",
-    "row_detail",
-    "reorder_rows",
-    "paginate",
-    "empty",
-];
+const WINDOW_HIDES: [&str; 4] = ["max_height", "row_detail", "paginate", "empty"];
 
 /// Ten thousand rows, windowed.
 fn windowed(values: &DemoValues) -> bool {
@@ -354,8 +348,9 @@ fn no_rows(values: &DemoValues) -> bool {
     values.str("empty") == "true" && !windowed(values)
 }
 
+/// The server's batches have no signal of the demo's own to reorder.
 fn reorders(values: &DemoValues) -> bool {
-    values.str("reorder_rows") == "true" && !windowed(values)
+    values.str("reorder_rows") == "true" && !from_server(values)
 }
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String }
@@ -373,6 +368,8 @@ fn TeamTable(values: DemoValues) -> Element {
     let mut rows = use_signal(people);
     // Built on the first flip only, then kept: a flip re-renders the table, not the data.
     let many = use_hook(|| Rc::new(OnceCell::<Vec<Person>>::new()));
+    // The ten thousand once reordered, else `many` as built.
+    let mut moved = use_signal(|| None::<Vec<Person>>);
     let mut widths = use_signal(ColumnWidths::new);
     let mut loaded = use_signal(|| fetch(0));
     let mut fetching = use_signal(|| false);
@@ -428,7 +425,13 @@ fn TeamTable(values: DemoValues) -> Element {
                 false => RowFn::default(),
             },
             onrowreorder: reorders(&values).then(|| {
-                EventHandler::new(move |step: SortableMove| step.apply(&mut rows.write()))
+                let many = many.clone();
+                EventHandler::new(move |step: SortableMove| match windowed {
+                    true => step.apply(
+                        moved.write().get_or_insert_with(|| many.get_or_init(crowd).clone()),
+                    ),
+                    false => step.apply(&mut rows.write()),
+                })
             }),
             show_quick_filter: on("show_quick_filter"),
             toolbar: on("toolbar").then(|| rsx! {
@@ -458,7 +461,7 @@ fn TeamTable(values: DemoValues) -> Element {
             empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
             data: match (windowed, no_rows(&values)) {
                 _ if server => loaded(),
-                (true, _) => many.get_or_init(crowd).clone(),
+                (true, _) => moved().unwrap_or_else(|| many.get_or_init(crowd).clone()),
                 (false, true) => Vec::new(),
                 (false, false) => rows(),
             },
@@ -486,7 +489,7 @@ pub fn TablePage() -> Element {
                     prop("toolbar", "Option<Element>").default("None").doc("A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton`, `TableFilterButton` and `TableExportButton` work only in here."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
-                    prop("virtual_row_height", "Option<f64>").default("None").doc("With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. With `onrowreorder` a keyboard move scrolls to its slot, but a dragged row does not autoscroll past the edge. Ignored with `row_detail`, which renders every row; a debug build warns."),
+                    prop("virtual_row_height", "Option<f64>").default("None").doc("With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. With `onrowreorder` a keyboard move scrolls to its slot, and a row dragged to the top or bottom edge scrolls the rows on. Ignored with `row_detail`, which renders every row; a debug build warns."),
                     prop("onbottomreached", "EventHandler<()>").default("None").doc("With `max_height`, called when the rows scroll to their bottom, by wheel, drag or End: append the next batch to `data`. Called again at the new bottom once rows were added. Not called while `loading` is set, so set it during a fetch to ask once. Without `max_height` it never fires; a debug build warns."),
                     prop("sort", "Option<Vec<TableSort>>").default("None").doc("The sorted columns, empty for source order. Set, the sort is controlled: pair it with `onsortchange`. Without `multi_sort`, one column sorts, the first entry naming a sortable header."),
                     prop("default_sort", "Vec<TableSort>").default("[]").doc("Seeds the sort once. Ignored when `sort` is set."),
@@ -621,7 +624,7 @@ pub fn TablePage() -> Element {
                     "Each Widen, Narrow or Reset width in the column menu says the column's new width in a polite live region, \"Name: 170 px\": the menu stays open over the change.",
                     "`loading` without shown rows marks the table `aria-busy` and hides its placeholder rows from screen readers. With rows shown it adds a progress bar named \"Loading rows\" and leaves the table unbusy, as some screen readers hold back a busy table's rows.",
                     "The `toolbar` is a plain row, not a `role=\"toolbar\"`: Tab moves through its controls as anywhere else. `TableExportButton` says the rows it handed over, \"Exported 12 rows\", in the polite live region; `TableColumnsButton` describes the last shown column's checkbox as the column menu does.",
-                    "With `virtual_row_height`, the table carries `aria-rowcount`, every row it holds, and each rendered row its `aria-rowindex`, so a screen reader says \"row 5 001 of 10 001\" though only a screenful is in the DOM. The scrolled-away rows leave no empty rows behind.",
+                    "With `virtual_row_height`, the table carries `aria-rowcount`, every row it holds, the other pages' too when paged, and each rendered row its `aria-rowindex`, so a screen reader says \"row 5 001 of 10 001\" though only a screenful is in the DOM. The scrolled-away rows leave no empty rows behind.",
                     "With `virtual_row_height`, Tab and Shift+Tab walk the rows' controls past the rendered ones: the focused row scrolls into view and the next one renders. The row holding focus stays rendered when it scrolls away, Blitz included.",
                     "With `onbottomreached`, once the rows it asked for arrive a polite live region says the new count, \"200 rows\". `aria-rowcount` counts the rows loaded so far.",
                 ])
@@ -1008,7 +1011,7 @@ pub fn TablePage() -> Element {
                     Control::switch("reorder_rows").code(|_, values| match reorders(values) {
                         true => vec![REORDER.to_string()],
                         false => vec![],
-                    }).hidden_when(windowed),
+                    }).hidden_when(from_server),
                     Control::switch("resizable_columns").code(|_, values| match resizes(values) {
                         true => vec![
                             "resizable_columns: true".to_string(),

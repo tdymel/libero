@@ -655,8 +655,7 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     #[props(default, into)]
     max_height: Option<String>,
     /// With `max_height`, renders only the rows in view, each clipped to this
-    /// height in px with one line per cell. Off with `row_detail`; a dragged row
-    /// does not autoscroll.
+    /// height in px with one line per cell. Off with `row_detail`.
     #[props(default)]
     virtual_row_height: Option<f64>,
     /// With `max_height`, called when the rows scroll to their bottom, to append
@@ -1406,6 +1405,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             handler.call(());
         }
     });
+    // A windowed table counts every row, the other pages' too (APG grid, todo 1421).
+    let mut counted = (0, order.len());
     let pager = paginated.then(|| {
         let total = match props.manual_pagination {
             true => props.row_count.unwrap_or(results),
@@ -1413,11 +1414,12 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         };
         let page_size = state.page_size.read().max(1);
         let page = clamp_page(total, state.page.read(), page_size);
+        let shown = page_rows(total, page, page_size);
         if !props.manual_pagination {
-            let shown = page_rows(total, page, page_size);
             order.truncate(shown.end);
             order.drain(..shown.start);
         }
+        counted = (shown.start, total.max(shown.start + order.len()));
         rsx! {
             TablePager {
                 state,
@@ -1446,6 +1448,8 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         count: order.len(),
         pitch,
         lift,
+        scroller: column_drag.region,
+        head: *head.peek(),
     });
     let reorder = has_reorder.then(|| RowReorder {
         onreorder: reorder_rows,
@@ -1527,12 +1531,14 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     }
     let rows = match row_height {
         Some(row_height) => {
-            attributes.extend(window_attributes(head_rows, order.len()));
+            let (first, total) = counted;
+            attributes.extend(window_attributes(head_rows, total, skeleton.is_some()));
             attributes.extend(row_focus.attributes());
             let order: Rc<[usize]> = order.into();
-            row_focus.show(head_rows, order.clone());
+            row_focus.show(head_rows + first, order.clone());
             BodyRows::Window(RowWindow {
                 order,
+                first,
                 row_height,
                 row: Rc::new(move |position, index| {
                     let row = &data[index];

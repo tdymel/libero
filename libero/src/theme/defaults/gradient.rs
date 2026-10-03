@@ -15,8 +15,8 @@ pub const GRADIENT_ANGLE: CssVar = CssVar::new("--lsx-gradient-angle");
 pub const GRADIENT_CONTRAST: CssVar = CssVar::new("--lsx-gradient-contrast");
 /// The other end: the hover and selected state layers are tinted with it.
 pub const GRADIENT_LAYER: CssVar = CssVar::new("--lsx-gradient-layer");
-/// A fill's label for an uncoloured `standard` Button on it, set where `ANCHOR_COLOR`
-/// follows the fill (todo 1663); `initial` on a plain surface, so the button keeps its own.
+/// A fill's label for an uncoloured `standard` or `outlined` Button on it, set where `ANCHOR_COLOR`
+/// follows the fill (todos 1663, 1833); `initial` on a plain surface, so the button keeps its own.
 pub(crate) const SURFACE_LABEL: CssVar = CssVar::new("--lsx-surface-label");
 
 // A literal gradient does not flip with the scheme, so its label may not either.
@@ -24,8 +24,8 @@ const BLACK: HexColor = HexColor::new(0x00_00_00);
 const WHITE: HexColor = HexColor::new(0xFF_FF_FF);
 
 // M3's state layer opacities.
-const HOVER_LAYER: u8 = 8;
-const SELECTED_LAYER: u8 = 12;
+pub(crate) const HOVER_LAYER: u8 = 8;
+pub(crate) const SELECTED_LAYER: u8 = 12;
 
 /// The theme's gradient, the one every `gradient` surface falls back to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

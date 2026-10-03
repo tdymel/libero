@@ -426,6 +426,55 @@ e2e::scenario!(
     native: skip("1520/2038: Blitz paints no `transform` on a `tr`, so the lifted row keeps its slot")
 );
 
+/// Todo 1872: Row 1's grip held at the bottom edge scrolls the windowed rows on,
+/// past the window's rows, and drops there.
+#[test]
+fn a_windowed_row_held_at_the_bottom_edge_scrolls_on() {
+    use e2e::browser::{Fixture, Viewport, block_on};
+    use e2e::passes::pointer::{self, Point};
+    use e2e::wait;
+    const AREA: &str = "document.querySelector('[data-table-scroll]')";
+    block_on(async {
+        let fixture = Fixture::open("/table-reorder-windowed", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let bottom: f64 = page
+            .evaluate(format!("{AREA}.getBoundingClientRect().bottom"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let from = pointer::centre_of(page, "[aria-label=\"Reorder Row 1\"]")
+            .await
+            .unwrap();
+        let edge = Point {
+            x: from.x,
+            y: bottom - 4.0,
+        };
+        pointer::drag_held(page, from, edge, 10).await.unwrap();
+        // 20 rows past the 240px view: well beyond the rows rendered at the start.
+        wait::for_js_true(
+            page,
+            &format!("{AREA}.scrollTop > 800"),
+            "a grip held at the bottom edge to scroll the rows on",
+        )
+        .await
+        .unwrap();
+        pointer::release(page, edge).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const m = /^0>(\\d+) $/.exec(document.querySelector('#moves').textContent); \
+             return !!m && +m[1] > 20; })()",
+            "a drop at the slot the scroll brought in",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("an edge row drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 e2e::scenario!(
     hiding_a_column_from_its_own_columns_submenu_keeps_focus,
     "/table-reorder",

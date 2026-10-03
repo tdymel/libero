@@ -33,6 +33,8 @@ fn GradientPage() -> Element {
                 // 1663: an uncoloured standard Button takes the gradient's label; a plain
                 // Paper inside gives its own back.
                 Button { id: "in-paper", variant: "standard", "More" }
+                // 1833: so does an outlined one, its border too (1.00:1 before).
+                Button { id: "in-paper-outlined", variant: "outlined", "Outlined" }
                 Paper { id: "nested-plain", sx: libero::sx::sx().padding("xs"),
                     Button { id: "in-nested", variant: "standard", "Nested" }
                 }
@@ -47,6 +49,7 @@ fn GradientPage() -> Element {
             Header { id: "header", position: "static", glass: true, color: "error",
                 gradient: Gradient::default(),
                 Button { id: "in-header", variant: "standard", "Menu" }
+                Button { id: "in-header-outlined", variant: "outlined", "Sign in" }
             }
             // Paper `color` (1017): a palette fill with its label, a literal as given, glass.
             Paper { id: "paper-color", color: "info", sx: libero::sx::sx().padding("md"),

@@ -109,8 +109,19 @@ pub fn Virtualize(
 ) -> Element {
     let theme = use_theme();
     let viewport = try_use_context::<ScrollViewport>();
-    // Only the first one owns the offsets; the rest fall back to every row.
-    let owned = use_hook(|| viewport.as_ref().is_some_and(ScrollViewport::claim));
+    // Only one owns the offsets; the rest fall back to every row, and try again
+    // each render, as the owner may be the instance this one replaces.
+    let mut owner = use_hook(|| CopyValue::new(false));
+    if !*owner.peek() && viewport.as_ref().is_some_and(ScrollViewport::claim) {
+        owner.set(true);
+    }
+    let owned = *owner.peek();
+    let releasing = viewport.clone();
+    use_drop(move || {
+        if let (Some(viewport), Ok(true)) = (&releasing, owner.try_peek().map(|owned| *owned)) {
+            viewport.release();
+        }
+    });
 
     let mut probe = use_signal(|| match item_size {
         Some(size) => Probe::Settled(Some(size)),
@@ -119,16 +130,16 @@ pub fn Virtualize(
 
     // Asks the ScrollArea to make the content box measurable (not `display: contents`).
     let mut virtualized = viewport.as_ref().map(|viewport| viewport.virtualized);
-    use_effect(move || {
+    use_effect(use_reactive!(|owned| {
         if let (Some(virtualized), true) = (virtualized.as_mut(), owned)
             && !*virtualized.peek()
         {
             virtualized.set(true);
         }
-    });
+    }));
 
     let content = viewport.as_ref().map(|viewport| viewport.content);
-    use_effect(use_reactive!(|count| {
+    use_effect(use_reactive!(|(count, owned)| {
         let (Some(content), Some(virtualized), true) = (content, virtualized, owned) else {
             return;
         };
@@ -184,7 +195,7 @@ pub fn Virtualize(
     // Handed up rather than drawn here: spacer elements would have to guess a
     // tag legal inside whatever list wraps these rows.
     let mut handed = viewport.as_ref().map(|viewport| viewport.spec);
-    use_effect(use_reactive!(|spec| {
+    use_effect(use_reactive!(|(spec, owned)| {
         if let (Some(handed), true) = (handed.as_mut(), owned)
             && *handed.peek() != spec
         {

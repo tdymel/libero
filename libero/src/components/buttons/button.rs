@@ -141,7 +141,10 @@ pub(crate) fn button_variables(
     // Only a toggle button reads it; the rest skip the declaration.
     let selected = selectable.then_some(colors.selected).flatten();
     let label = text_color(base).map(|label| match variant {
-        Variant::Standard if uncolored => format!("var({}, {label})", SURFACE_LABEL.name()),
+        // The outlined border is the label colour: it follows too (todo 1833).
+        Variant::Standard | Variant::Outlined if uncolored => {
+            format!("var({}, {label})", SURFACE_LABEL.name())
+        }
         _ => label,
     });
 
@@ -466,9 +469,9 @@ mod tests {
         )));
     }
 
-    /// Todo 1663: only an uncoloured `standard` label falls back through a fill's label.
+    /// Todos 1663, 1833: only an uncoloured `standard` or `outlined` label falls back through a fill's label.
     #[test]
-    fn an_uncolored_standard_label_takes_the_surface_label() {
+    fn an_uncolored_standard_or_outlined_label_takes_the_surface_label() {
         let base = base_color(None);
         let label = |variant, uncolored| {
             let variables = button_variables(variant, &base, false, uncolored);
@@ -483,7 +486,9 @@ mod tests {
         let surface = format!("var({}, ", SURFACE_LABEL.name());
         assert!(label(Variant::Standard, true).starts_with(&surface));
         assert!(!label(Variant::Standard, false).starts_with(&surface));
-        assert!(!label(Variant::Outlined, true).starts_with(&surface));
+        assert!(label(Variant::Outlined, true).starts_with(&surface));
+        assert!(!label(Variant::Outlined, false).starts_with(&surface));
+        assert!(!label(Variant::Filled, true).starts_with(&surface));
     }
 
     /// A literal fill publishes black or white, not the page's text colour; an

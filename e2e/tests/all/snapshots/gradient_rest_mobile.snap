@@ -24,6 +24,8 @@ paragraph
   StaticText "On the theme's gradient."
 button "More"
   StaticText "More"
+button "Outlined"
+  StaticText "Outlined"
 button "Nested"
   StaticText "Nested"
 paragraph
@@ -35,6 +37,8 @@ paragraph
 banner
   button "Menu"
     StaticText "Menu"
+  button "Sign in"
+    StaticText "Sign in"
 paragraph
   StaticText "On an info fill."
 button "More"

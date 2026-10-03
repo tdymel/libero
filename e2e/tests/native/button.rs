@@ -51,3 +51,29 @@ fn a_pressed_button_paints_the_on_state_ring() {
     assert_ring(&page, "#on", "#off", 1.5);
     assert_ring(&page, "#bare-on", "#bare-off", 0.5);
 }
+
+fn surface() -> Element {
+    rsx! {
+        Flex { gap: "md", sx: sx().padding("16px").background_color("#000"),
+            Button { id: "surface-on", variant: "standard", color: "surface", selected: true, "Bold" }
+            Button { id: "surface-off", variant: "standard", color: "surface", selected: false, "Bold" }
+        }
+    }
+}
+
+/// 1351: the surface tint is a `color-mix` layer of the white label, and Blitz
+/// paints it: 12% white over black.
+#[test]
+fn a_selected_surface_button_paints_its_label_layer() {
+    let page = mount(surface);
+    let fill = |id: &str| {
+        let (x, y, _, h) = page.rect(id);
+        ((x + 6.0) as u32, (y + h / 2.0) as u32)
+    };
+    let px = page.painted_pixels(&[fill("#surface-on"), fill("#surface-off")]);
+    assert_eq!(px[1], [0, 0, 0, 255], "unselected: the ground: {px:?}");
+    assert!(
+        px[0][..3].iter().all(|channel| (29..=32).contains(channel)),
+        "selected: no 12% layer: {px:?}"
+    );
+}

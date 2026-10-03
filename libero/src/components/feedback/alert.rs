@@ -6,8 +6,8 @@ use crate::{
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, Variant, VariantVars, base_color,
-            base_props, contrast_color, fill_color, parts_enum, text_color, variables,
-            variant_chrome_sx, variant_container_colors,
+            base_props, contrast_color, fill_color, literal_contrast, parts_enum, text_color,
+            variables, variant_chrome_sx, variant_container_colors,
         },
         layout::{paper_sx, use_box},
     },
@@ -118,7 +118,12 @@ fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant)
     variables()
         .with(ALERT_COLOR_VAR, text_color(base))
         .with(ALERT_FILL_VAR, fill_color(base))
-        .with(ALERT_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
+        .with(
+            ALERT_CONTRAST_VAR,
+            contrast
+                .and_then(|c| c.resolve(None))
+                .or_else(|| literal_contrast(base)),
+        )
         .with(ALERT_CONTAINER_VAR, container)
         .with(ALERT_ON_CONTAINER_VAR, on_container)
         .with(
