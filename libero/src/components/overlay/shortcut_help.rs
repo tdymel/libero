@@ -8,7 +8,7 @@ use crate::{
         overlay::Dialog,
         typography::Kbd,
     },
-    hooks::{chord_keys, current_localization, use_css, use_element},
+    hooks::{chord_keys, current_localization, use_css, use_element, use_resize_fallback},
     platform::{ElementApi, mod_is_meta},
     sx::{StaticSx, sx},
     utils::warn,
@@ -135,6 +135,7 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
             }
         });
     };
+    use_resize_fallback(scroll_element, move |_| measure());
     let scrolls = overflows();
     // `role=region` on the `dl` itself would drop its list semantics.
     let scroll_box = use_box()

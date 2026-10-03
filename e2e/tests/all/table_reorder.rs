@@ -422,7 +422,8 @@ e2e::scenario!(
     a_windowed_table_reorders_past_its_window,
     "/table-reorder-windowed",
     a_windowed_table_reorders,
-    android: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView"),
+    native: skip("1520/2038: Blitz paints no `transform` on a `tr`, so the lifted row keeps its slot")
 );
 
 e2e::scenario!(
