@@ -1,7 +1,32 @@
-use crate::common::{body, render};
+use crate::common::{body, drive_once, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Header};
+use libero::{
+    LiberoProvider,
+    components::{Header, Paper},
+};
+
+/// Turning `glass` on at runtime keeps the hook order: the release docs demo panicked
+/// (wasm `unreachable`) on its Glass switch (todo 2134).
+#[test]
+fn toggling_glass_at_runtime_renders() {
+    fn app() -> Element {
+        let mut glass = use_signal(|| false);
+        use_hook(|| spawn(async move { glass.set(true) }));
+        rsx! {
+            LiberoProvider {
+                Header { glass: glass(), "site header" }
+                Paper { glass: glass(), "card" }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let html = drive_once(&mut dom);
+
+    assert_eq!(html.matches(r#"data-state="glass""#).count(), 2, "{html}");
+}
 
 #[test]
 fn header_renders_as_a_banner_landmark() {

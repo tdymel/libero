@@ -78,10 +78,11 @@ pub(crate) fn use_glass_gradient_style(
     glass: bool,
 ) -> Option<String> {
     let style = use_gradient_style(gradient, color, active, false);
+    // A hook: called before the early return, or toggling `glass` panics (todo 2134).
+    let context = use_context::<LiberoContext>();
     if !glass {
         return style;
     }
-    let context = use_context::<LiberoContext>();
     let gradient = gradient.cloned().unwrap_or_default();
     let glass = glass_gradient_declarations(&gradient, color, &scheme_themes(&context));
     Some(style? + &glass.iter().map(ToString::to_string).collect::<String>())
