@@ -292,15 +292,58 @@ e2e::scenario!(
     native: skip("Blitz runs no script to stub the picker; `crop_bytes` unit tests cover the cut")
 );
 
-/// A touch on the image outside the box scrolls the page; only the box takes drags.
-async fn only_the_box_claims_touches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+/// The box and the image around it take touches (2113); the bars under the image still scroll the page.
+async fn the_image_claims_touches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     // An id, not `:has(...)`, which Blitz cannot parse.
     let root = d.style("#cropper", "touch-action").await?;
     anyhow::ensure!(root == "auto", "the cropper's touch-action is {root}");
-    let frame = d.style("[data-slot=frame]", "touch-action").await?;
-    anyhow::ensure!(frame == "none", "the box's touch-action is {frame}");
+    for part in ["[data-slot=frame]", "[data-slot=mask]"] {
+        let action = d.style(part, "touch-action").await?;
+        anyhow::ensure!(action == "none", "{part}'s touch-action is {action}");
+    }
     Ok(())
 }
+
+/// `controls: false` hides the button and zoom bars until focus enters one (2112).
+async fn hidden_controls_show_on_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const BUTTONS: &str = "#bare [data-slot=controls]";
+    const ZOOM: &str = "#bare-pan [data-slot=zoom]";
+    let shown =
+        async |d: &mut D, bar: &str| -> Result<bool> { Ok(d.style(bar, "opacity").await? != "0") };
+    for bar in [BUTTONS, ZOOM, "#bare-pan [data-slot=controls]"] {
+        anyhow::ensure!(!shown(d, bar).await?, "{bar} shows before a focus");
+        // An invisible full-width strip would still take the presses over the image.
+        let width = d.rect(bar).await?.width;
+        anyhow::ensure!(width <= 1.0, "{bar} is {width}px wide while hidden");
+    }
+    // Then a key that keeps focus: Blitz marks `:focus-within` at a flush, which a bare focus lacks.
+    d.focus(&format!("{BUTTONS} button")).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "the focused button bar to show", async |d| {
+        shown(d, BUTTONS).await
+    })
+    .await?;
+    anyhow::ensure!(
+        !shown(d, ZOOM).await?,
+        "the zoom bar shows with focus elsewhere"
+    );
+    d.focus(&format!("{ZOOM} [role=slider]")).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "the focused zoom bar to show", async |d| {
+        shown(d, ZOOM).await
+    })
+    .await?;
+    eventually(d, "the left button bar to hide", async |d| {
+        Ok(!shown(d, BUTTONS).await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    hidden_controls_show_on_focus,
+    "/image-cropper/bare",
+    hidden_controls_show_on_focus
+);
 
 /// A disabled cropper shows no move or resize cursor over the box and its handles.
 async fn a_disabled_cropper_shows_no_grab_cursor<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -356,9 +399,9 @@ e2e::scenario!(
     a_disabled_cropper_takes_no_input
 );
 e2e::scenario!(
-    only_the_box_claims_touches,
+    the_image_claims_touches,
     "/image-cropper",
-    only_the_box_claims_touches
+    the_image_claims_touches
 );
 e2e::scenario!(
     a_disabled_cropper_shows_no_grab_cursor,
@@ -471,6 +514,72 @@ fn a_touch_drags_the_box_and_two_pinch_it() {
             "{shrunk}"
         );
         fixture.console.assert_clean("the touches").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A mouse or touch drag begun on the image outside the box moves the box, the wheel
+/// there scales it about its centre (2113).
+#[test]
+fn a_drag_or_wheel_beside_the_box_moves_or_scales_it() {
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchMouseEventParams, DispatchMouseEventType,
+    };
+    use e2e::passes::pointer::Point;
+    block_on(async {
+        let fixture = Fixture::open("/image-cropper", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let crop = "document.getElementById('crop').textContent";
+        wait::for_js_true(page, &format!("{crop} === '25,25,50,50'"), "the box")
+            .await
+            .unwrap();
+        let (left, top, width, height): (f64, f64, f64, f64) = page
+            .evaluate(
+                "(() => { const r = document.querySelector('[data-slot=image]').getBoundingClientRect();
+                  return [r.left, r.top, r.width, r.height]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        // Near the image's left edge: clear of the box and of a moved corner's 44px finger target.
+        let from = Point {
+            x: left + width * 0.04,
+            y: top + height * 0.1,
+        };
+        let to = Point {
+            x: from.x - width / 10.0,
+            y: from.y - height / 10.0,
+        };
+        frames::in_front(page, async {
+            pointer::drag(page, from, to, 8).await?;
+            wait::for_js_true(page, &format!("{crop} === '15,15,50,50'"), "a mouse drag").await?;
+            let back = Point {
+                x: from.x + width / 10.0,
+                y: from.y + height / 10.0,
+            };
+            pointer::touch_drag(page, from, back, 8).await?;
+            wait::for_js_true(page, &format!("{crop} === '25,25,50,50'"), "a touch drag").await?;
+            for (delta_y, expected) in [(100.0, "27,27,45,45"), (-100.0, "25,25,50,50")] {
+                let event = DispatchMouseEventParams::builder()
+                    .r#type(DispatchMouseEventType::MouseWheel)
+                    .x(from.x)
+                    .y(from.y)
+                    .delta_x(0.0)
+                    .delta_y(delta_y)
+                    .build()
+                    .map_err(anyhow::Error::msg)?;
+                page.execute(event).await?;
+                wait::for_js_true(page, &format!("{crop} === '{expected}'"), "a wheel notch")
+                    .await?;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the drags").unwrap();
         fixture.close().await.unwrap();
     });
 }

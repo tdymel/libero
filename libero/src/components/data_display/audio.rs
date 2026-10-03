@@ -47,6 +47,8 @@ const SPEEDS: [f64; 3] = [1.0, 1.5, 2.0];
 const BARS: usize = 28;
 /// Longer files keep the drawn bars.
 const DECODE_MAX_SECONDS: f64 = 10.0 * 60.0;
+/// Below this share of the loudest, bars differ by noise only and are not stretched.
+const EVEN_SPREAD: f64 = 0.05;
 const AUDIO_CONTAINER: &str = "libero-audio";
 const NARROW: &str = "(max-width: 15rem)";
 const NARROWEST: &str = "(max-width: 13rem)";
@@ -405,14 +407,20 @@ fn decodable(duration: Option<f64>) -> bool {
     duration.is_some_and(|total| total.is_finite() && total <= DECODE_MAX_SECONDS)
 }
 
-/// Loudness per bar as heights from 0.2 to 1, the loudest full; silence stays at 0.2.
+/// Loudness per bar as heights from 0.2 to 1, stretched from the quietest bar to
+/// the loudest: speech and music vary little in RMS, and a scale to the loudest
+/// alone drew a near-flat row. An even sound stays flat; silence stays at 0.2.
 fn scaled_heights(peaks: &[f64]) -> Option<[f64; BARS]> {
     if peaks.len() != BARS || peaks.iter().any(|peak| !peak.is_finite()) {
         return None;
     }
     let loudest = peaks.iter().copied().fold(0.0, f64::max);
+    let quietest = peaks.iter().copied().fold(loudest, f64::min);
+    let spread = loudest - quietest;
     Some(std::array::from_fn(|index| {
-        if loudest > 0.0 {
+        if spread > loudest * EVEN_SPREAD {
+            0.2 + 0.8 * (peaks[index] - quietest) / spread
+        } else if loudest > 0.0 {
             0.2 + 0.8 * peaks[index] / loudest
         } else {
             0.2
@@ -521,15 +529,33 @@ mod tests {
     }
 
     #[test]
-    fn decoded_peaks_scale_to_the_loudest() {
+    fn decoded_peaks_stretch_from_the_quietest_to_the_loudest() {
         let mut peaks = [0.25; BARS];
         peaks[3] = 0.5;
+        peaks[5] = 0.375;
         let heights = scaled_heights(&peaks).unwrap();
         assert_eq!(heights[3], 1.0);
-        assert!((heights[0] - 0.6).abs() < 1e-9);
+        assert_eq!(heights[0], 0.2);
+        assert!((heights[5] - 0.6).abs() < 1e-9);
+        // An even sound stays flat, its noise not blown up to full bars.
+        let even: [f64; BARS] = std::array::from_fn(|index| 0.5 + 0.001 * (index % 2) as f64);
+        let heights = scaled_heights(&even).unwrap();
+        assert!(heights.iter().all(|height| *height > 0.99));
         assert_eq!(scaled_heights(&[0.0; BARS]), Some([0.2; BARS]));
         assert_eq!(scaled_heights(&[0.5; 3]), None);
         assert_eq!(scaled_heights(&[f64::NAN; BARS]), None);
+    }
+
+    /// Speech-like RMS, all within 30 % of the loudest, still spans most of the track.
+    #[test]
+    fn decoded_bars_spread_over_the_track() {
+        let peaks: [f64; BARS] =
+            std::array::from_fn(|index| 0.7 + 0.3 * ((index as f64 * 1.7).sin() + 1.0) / 2.0);
+        let heights = scaled_heights(&peaks).unwrap();
+        let (low, high) = heights.iter().fold((1.0_f64, 0.0_f64), |(low, high), h| {
+            (low.min(*h), high.max(*h))
+        });
+        assert!(high - low > 0.7, "spread {low}..{high}");
     }
 
     #[test]

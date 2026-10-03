@@ -4,7 +4,9 @@ use libero::components::rich_text::{
     Attrs, Builtin, Chord, Commands, Doc, EditorInput, EditorState, Keymap, NodeRegistry, NodeSpec,
     NodeViewProps, NodeViews, Position, RichTextTool, Selection, use_rich_text_editor,
 };
-use libero::components::{Code, FieldPart, FieldStatus, Flex, Paper, RichTextEditor, Text};
+use libero::components::{
+    Code, ComboboxOption, FieldPart, FieldStatus, Flex, Paper, RichTextEditor, Text,
+};
 use libero::sx::sx;
 use libero::use_theme;
 
@@ -65,7 +67,7 @@ static MENTION_CHORD: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+2").unwr
 static KEYMAP_CHORDS: &str = r#"    keymap.bind(Chord::parse("Mod+Shift+h").unwrap(), Builtin::Heading2);
     keymap.unbind_command(Builtin::Rule);"#;
 
-static MENTIONS: &str = r##"use libero::components::Paper;
+static MENTIONS: &str = r##"use libero::components::{ComboboxOption, Paper};
 use libero::sx::sx;
 
 const PEOPLE: [&str; 4] = ["ada", "alan", "grace", "linus"];
@@ -132,12 +134,9 @@ let overlay = (!people.is_empty()).then(|| rsx! {
     Paper { shadow: "md", bordered: true, role: "listbox", "aria-label": "People",
         sx: sx().padding("xs").min_width("10rem"),
         for (index, user) in people.iter().copied().enumerate() {
-            div { id: "mention-{user}", role: "option", "aria-selected": index == current,
-                onclick: move |_| pick(user),
-                Paper { radius: "sm", color: (index == current).then_some("primary"),
-                    sx: sx().padding("0.25rem 0.5rem"),
-                    "@{user}"
-                }
+            ComboboxOption { id: "mention-{user}", active: index == current,
+                onpick: move |_| pick(user),
+                "@{user}"
             }
         }
     }
@@ -259,12 +258,9 @@ fn NotesEditor(values: DemoValues, mut doc: Signal<Doc>) -> Element {
             Paper { shadow: "md", bordered: true, role: "listbox", "aria-label": "People",
                 sx: sx().padding("xs").min_width("10rem"),
                 for (index, user) in people.iter().copied().enumerate() {
-                    div { id: "mention-{user}", role: "option", "aria-selected": index == current,
-                        onclick: move |_| pick(user),
-                        Paper { radius: "sm", color: (index == current).then_some("primary"),
-                            sx: sx().padding("0.25rem 0.5rem"),
-                            "@{user}"
-                        }
+                    ComboboxOption { id: "mention-{user}", active: index == current,
+                        onpick: move |_| pick(user),
+                        "@{user}"
                     }
                 }
             }

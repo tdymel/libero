@@ -109,7 +109,8 @@ list gets the arrow keys, Enter and Escape while it is open. `overlay` floats
 at the caret: under its line, above it near the window's bottom edge. The
 handle's `with_state` reads the text before the caret and `edit` swaps the
 typed `@name` for a mention node as one undo step. `tools` adds your own
-toolbar button, here one that types the `@`. A command can insert a node too:
+toolbar button, here one that types the `@`. The list's rows are
+`ComboboxOption`s, which draw the highlight without a `Combobox` around them. A command can insert a node too:
 Mod+Shift+2 runs `mention`, which inserts the registry's default user.
 
 ```rust
@@ -118,7 +119,7 @@ use libero::components::rich_text::{
     Attrs, Chord, Commands, EditorInput, EditorState, Keymap, NodeRegistry, NodeSpec,
     NodeViewProps, NodeViews, Position, RichTextTool, Selection, use_rich_text_editor,
 };
-use libero::components::{Paper, RichTextEditor};
+use libero::components::{ComboboxOption, Paper, RichTextEditor};
 use libero::sx::sx;
 
 #[component]
@@ -212,12 +213,9 @@ fn MentionEditor() -> Element {
         Paper { shadow: "md", bordered: true, role: "listbox", "aria-label": "People",
             sx: sx().padding("xs").min_width("10rem"),
             for (index, user) in people.iter().copied().enumerate() {
-                div { id: "mention-{user}", role: "option", "aria-selected": index == current,
-                    onclick: move |_| pick(user),
-                    Paper { radius: "sm", color: (index == current).then_some("primary"),
-                        sx: sx().padding("0.25rem 0.5rem"),
-                        "@{user}"
-                    }
+                ComboboxOption { id: "mention-{user}", active: index == current,
+                    onpick: move |_| pick(user),
+                    "@{user}"
                 }
             }
         }

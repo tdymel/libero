@@ -33,6 +33,7 @@ mod hit;
 mod home;
 mod hover;
 mod image;
+mod image_cropper;
 mod image_list;
 mod inline_spaces;
 mod keyboard;

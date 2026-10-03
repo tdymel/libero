@@ -3,7 +3,8 @@
 //! `/refit` swaps the picture and the aspect; `/tiny` starts at `min_size`;
 //! `/broken` has a `src` that fails, `#error` counts its `onerror` calls.
 //! `/start` is free and unset, as the docs demo starts (1343). `/pan` is
-//! square, unset and in pan mode (1368).
+//! square, unset and in pan mode (1368). `/bare` is free and pan with
+//! `controls: false` (2112).
 
 use dioxus::prelude::*;
 use libero::components::{Button, CropRect, CropShape, Flex, ImageCropper};
@@ -22,6 +23,7 @@ pub const ROUTES: Routes = &[
     ("/image-cropper/broken", || rsx! { BrokenCropperPage {} }),
     ("/image-cropper/start", || rsx! { StartCropperPage {} }),
     ("/image-cropper/pan", || rsx! { PanCropperPage {} }),
+    ("/image-cropper/bare", || rsx! { BareCropperPage {} }),
 ];
 
 const PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23339af0'/%3E%3Ccircle cx='200' cy='100' r='60' fill='%23ffd43b'/%3E%3C/svg%3E";
@@ -203,6 +205,30 @@ fn PanCropperPage() -> Element {
                 onchange: move |next| crop.set(reading(next)),
             }
             p { id: "crop", "{crop}" }
+        }
+    }
+}
+
+#[component]
+fn BareCropperPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "md",
+            ImageCropper {
+                id: "bare",
+                src: PICTURE,
+                alt: "A sun on blue",
+                controls: false,
+                onchange: |_: CropRect| {},
+            }
+            ImageCropper {
+                id: "bare-pan",
+                src: PICTURE,
+                alt: "A sun on blue, to pan",
+                aspect: 1.0,
+                pan: true,
+                controls: false,
+                onchange: |_: CropRect| {},
+            }
         }
     }
 }

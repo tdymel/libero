@@ -4,6 +4,7 @@ use pictogram_icons_lucide as lucide;
 use super::crop::{CropRect, CropShape, Grip};
 use crate::{
     components::{
+        accessibility::visually_hidden_sx,
         buttons::ActionIcon,
         common::{
             Glyph, HtmlTag, Input, Part, States, Variables, base_props, disabled_look_sx,
@@ -53,7 +54,7 @@ parts_enum! {
     /// [`ImageCropper`]'s inner parts, for its `parts` prop.
     pub enum ImageCropperPart {
         Image = "image" => "& > [data-slot='image']",
-        /// The dimmed image outside the crop.
+        /// The dimmed image outside the crop; a drag on it moves the box.
         Mask = "mask" => "& > [data-slot='mask'] > *",
         /// The crop box, a tab stop of its own.
         Box = "box" => "& > [data-slot='box']",
@@ -167,6 +168,9 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
             "& > [data-slot='image']",
             sx().display("block")
                 .grid_area("1 / 1")
+                // Not stretched: Blitz sized the row by the picture at the container's width (2116).
+                .align_self("start")
+                .justify_self("start")
                 .max_width("100%")
                 .height("auto")
                 .pointer_events("none"),
@@ -189,7 +193,7 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                 .line_height("normal"),
         )
         // Clipped apart from the box, so a handle on the image's edge keeps
-        // its whole hit area.
+        // its whole hit area. Under the frame, it takes a drag or pinch begun on the image (2113).
         .selector(
             "& > [data-slot='mask']",
             sx().position("absolute")
@@ -198,8 +202,10 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                 .right("0")
                 .bottom("0")
                 .overflow("hidden")
-                .pointer_events("none"),
+                .cursor("move")
+                .touch_action("none"),
         )
+        .selector("& > [data-slot='mask'] > *", sx().pointer_events("none"))
         .selector(
             "& > [data-slot='mask'] > *",
             // Forced colours drop a box-shadow unless the element opts out (todo 1278).
@@ -212,7 +218,6 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
             placed().outline("1px solid rgba(255, 255, 255, 0.9)"),
         )
         .selector("& > [data-slot='box']:focus-visible", focus_ring_sx())
-        // Only the box claims touches: the rest of the image still scrolls the page.
         .selector(
             "& > [data-slot='frame']",
             placed().cursor("move").touch_action("none"),
@@ -302,12 +307,24 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                     sx().grid_area("3 / 1").background(PAPER_BACKGROUND.value()),
                 ),
         )
+        // `controls: false`: out of sight, back while focus is inside, so a keyboard keeps them.
+        .when(
+            "hidden-controls",
+            sx().selector(
+                "& > [data-slot='controls']:not(:focus-within), & > [data-slot='zoom']:not(:focus-within)",
+                // The bar's own `min-width: 100%` would outgrow the 1px.
+                visually_hidden_sx().min_width("0"),
+            ),
+        )
         .when(
             "disabled",
-            disabled_look_sx("not-allowed").selector(
-                "& > [data-slot='frame'], & > [data-slot='frame'] > [data-slot='handle']",
-                sx().cursor("not-allowed"),
-            ),
+            disabled_look_sx("not-allowed")
+                .selector(
+                    "& > [data-slot='mask'], & > [data-slot='frame'], & > [data-slot='frame'] > [data-slot='handle']",
+                    sx().cursor("not-allowed"),
+                )
+                // A disabled cropper lets the page scroll from its image.
+                .selector("& > [data-slot='mask']", sx().touch_action("auto")),
         );
 
     [
@@ -352,6 +369,10 @@ base_props! {
         /// The smallest side, a fraction of the image's. Default 0.05.
         #[props(default)]
         min_size: Option<f64>,
+        /// `false` hides the buttons under the image, and with `pan` the zoom bar, from
+        /// sight only: they show again while focus is inside them. The keys stay.
+        #[props(default = true)]
+        controls: bool,
         /// Draws the crop, takes no input.
         #[props(default)]
         disabled: bool,
@@ -364,8 +385,8 @@ base_props! {
     }
 }
 
-/// A box with handles over an image, picking the part to keep. Drag the box
-/// or a handle, pinch the box with two fingers, or use the arrow keys on the
+/// A box with handles over an image, picking the part to keep. Drag the box, a
+/// handle or the image around the box, pinch with two fingers, or use the arrow keys on the
 /// box and its corners. With `pan`, the image moves and zooms under a still box
 /// instead, as a phone's profile picture cropper does.
 ///
@@ -700,11 +721,12 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         }
     };
 
-    // Pan mode: a wheel notch zooms by ZOOM_STEP about the pointer, a trackpad pinch (ctrl+wheel)
-    // by its spread. Wheel events before the next render chain from the last one's rect.
+    // A wheel notch scales by ZOOM_STEP, a trackpad pinch (ctrl+wheel) by its spread: pan mode
+    // zooms about the pointer, free mode scales the box about its centre, as a pinch does.
+    // Wheel events before the next render chain from the last one's rect.
     let wheeled = use_local_state(|| None::<(CropRect, CropRect)>);
     let onwheel = move |event: Event<WheelData>| {
-        if !pan || !interactive {
+        if !interactive {
             return;
         }
         event.prevent_default();
@@ -713,6 +735,19 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             true => (-travel / 100.0).exp(),
             false => ZOOM_STEP.powf(-travel / 100.0),
         };
+        let chained = move |wheeled: &Option<(CropRect, CropRect)>| match *wheeled {
+            Some((before, after)) if before == shown => after,
+            _ => shown,
+        };
+        if !pan {
+            let base = chained(&wheeled.get());
+            let rect = base.scaled(factor, min);
+            wheeled.set(Some((shown, rect)));
+            if rect != base {
+                emit.call(rect);
+            }
+            return;
+        }
         let client = event.client_coordinates();
         let (size, offset) = (stage.dimensions(), stage.client_offset());
         let wheeled = wheeled.clone();
@@ -723,10 +758,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             if size.width <= 0.0 || size.height <= 0.0 {
                 return;
             }
-            let base = match wheeled.get() {
-                Some((before, after)) if before == shown => after,
-                _ => shown,
-            };
+            let base = chained(&wheeled.get());
             let at = (
                 (client.x - left) / size.width,
                 (client.y - top) / size.height,
@@ -810,6 +842,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         .with("circle", props.shape == CropShape::Circle)
         .with("disabled", props.disabled)
         .with("pan", pan)
+        .with("hidden-controls", !props.controls)
         .into();
     let aria_label = props
         .aria_label
@@ -859,6 +892,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     });
 
     let onpointerdown_box = press(Grip::Move);
+    let onpointerdown_image = press(Grip::Move);
     use_box()
         .framework_sx(&IMAGE_CROPPER_SX)
         .class(&props.class)
@@ -886,6 +920,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 }
                 if !failed() {
                     div { "data-slot": "mask", "aria-hidden": "true",
+                        onpointerdown: onpointerdown_image,
+                        onwheel: onwheel.clone(),
                         div {}
                     }
                     div {

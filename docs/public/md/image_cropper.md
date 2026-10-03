@@ -6,9 +6,9 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/i
 Index: [index.md](index.md) lists every other page
 Description: A box with handles over an image, picking the part to keep by drag or arrow keys, free or at a fixed aspect, with a rect or circle mask.
 
-A box with handles over an image, picking the part to keep. Drag the box or a
-handle, pinch the box with two fingers, or use the arrow keys on the box and
-its corners. `value` is a
+A box with handles over an image, picking the part to keep. Drag the box, a
+handle or the image around the box, pinch with two fingers, or use the arrow
+keys on the box and its corners. `value` is a
 `CropRect` in fractions of the image, so it fits any resolution; `to_pixels`
 turns it into pixels.
 
@@ -63,6 +63,7 @@ FileField {
 | `shape` | `CropShape` | `Rect` | `Circle` masks outside an ellipse, for an avatar. The rect is the same either way. |
 | `min_size` | `f64` | `0.05` | The smallest side, a fraction of the image's. |
 | `pan` | `bool` | `false` | Holds the box still, centred, and moves the image under it, as a phone's profile picture cropper does: a drag pans the image, a pinch, the wheel or the + and - keys zoom it. No resize handles; `value` stays the crop in fractions of the image. |
+| `controls` | `bool` | `true` | `false` hides the buttons under the image, and with `pan` the zoom bar, from sight only: they show again while focus is inside them, so a keyboard and a screen reader keep them. The box's keys stay. |
 | `disabled` | `bool` | `false` | Dims the cropper and takes no input. |
 | `aria_label` | `String` | - | Names the box; the localization's `image_cropper.label` ("Crop area") when unset. |
 | `onerror` | `EventHandler<()>` | - | Fires when `src` fails to load. The box is not drawn until `src` changes, so the alt text shows. |
@@ -96,7 +97,7 @@ explains how parts work.
 | Part | `data-slot` | Description |
 |---|---|---|
 | `ImageCropperPart::Image` | `image` | The image. |
-| `ImageCropperPart::Mask` | `mask` | The dimmed image outside the box. |
+| `ImageCropperPart::Mask` | `mask` | The dimmed image outside the box; a drag on it moves the box. |
 | `ImageCropperPart::Box` | `box` | The crop box, a tab stop. |
 | `ImageCropperPart::Frame` | `frame` | Over the box: takes its drags and holds the handles. |
 | `ImageCropperPart::Handle` | `handle` | One of the eight resize handles. |
@@ -122,9 +123,10 @@ explains how parts work.
 - Each handle is a 24px target around a 12px square.
 - A drag focuses the box or the corner it grabbed, so the keys carry on from
   there.
-- On a touch screen a finger on the box drags it without scrolling the page; a
-  touch on the image outside it still scrolls. Two fingers on the box pinch it
-  larger or smaller around its centre.
+- On a touch screen a finger on the image, on the box or beside it, drags the
+  box without scrolling the page; a disabled cropper lets the page scroll. Two
+  fingers pinch the box larger or smaller around its centre; so do the mouse
+  wheel and a trackpad pinch over the image.
 - With `pan` the whole cropper takes touches: one finger pans the image, two
   zoom it around their midpoint. The mouse wheel and a trackpad pinch zoom it
   around the pointer. Its value adds the zoom: "40% by 80%, at 30%, 10%, zoom
@@ -135,7 +137,8 @@ explains how parts work.
 - Under the image a group named by `aria_label` holds buttons for every drag
   (WCAG 2.5.7): "Move left", "Move up", "Move down" and "Move right" move the
   box 5% of the image, with `pan` the image under it; "Smaller" and "Larger"
-  scale the box around its centre, without `pan`.
+  scale the box around its centre, without `pan`. With `controls: false` the
+  buttons and the zoom bar stay out of sight until focus reaches them.
 - With an `aspect`, a corner key resizes both sides together.
 - The box and the corners describe their keys.
 
@@ -179,6 +182,6 @@ With `pan` the four above place the still box in fractions of the cropper, and
 
 ## Data attributes
 
-`data-state` on the root carries `circle`, `pan` and `disabled` when they apply. Each
+`data-state` on the root carries `circle`, `pan`, `hidden-controls` and `disabled` when they apply. Each
 handle is `data-slot="handle"` with `data-grip` one of `n`, `s`, `e`, `w`,
 `ne`, `nw`, `se`, `sw`.
