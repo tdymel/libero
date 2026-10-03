@@ -12,7 +12,8 @@ pub(crate) trait WaveformApi {
 /// `peaks(src, bars)`, run by a browser and a WebView alike. An offline context
 /// decodes without a user gesture and opens no output device; at 8 kHz, as bars
 /// need no treble, the decoded samples take a fifth of the memory. A file over
-/// 20 MB is not read: `null`, so the drawn bars stay.
+/// 20 MB is not read: `null`, so the drawn bars stay. Bytes are counted too, as
+/// a response may have no Content-Length.
 #[cfg(not(feature = "native"))]
 pub(crate) const PEAKS_SCRIPT: &str = "const peaks = async (src, bars) => {
     const response = await fetch(src);
@@ -21,8 +22,21 @@ pub(crate) const PEAKS_SCRIPT: &str = "const peaks = async (src, bars) => {
         response.body?.cancel();
         return null;
     }
+    const reader = response.body.getReader();
+    const chunks = [];
+    let size = 0;
+    for (let read = await reader.read(); !read.done; read = await reader.read()) {
+        size += read.value.length;
+        if (size > 20e6) {
+            reader.cancel();
+            return null;
+        }
+        chunks.push(read.value);
+    }
+    const bytes = new Uint8Array(size);
+    chunks.reduce((at, chunk) => (bytes.set(chunk, at), at + chunk.length), 0);
     const Context = window.OfflineAudioContext ?? window.webkitOfflineAudioContext;
-    const audio = await new Context(1, 1, 8000).decodeAudioData(await response.arrayBuffer());
+    const audio = await new Context(1, 1, 8000).decodeAudioData(bytes.buffer);
     const channels = Array.from({ length: audio.numberOfChannels }, (_, at) => audio.getChannelData(at));
     const slice = audio.length / bars;
     const stride = Math.max(1, Math.floor(slice / 2000));

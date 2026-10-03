@@ -45,7 +45,9 @@ fn App() -> Element {
 ## What ships
 
 `Localization::ENGLISH` is the default language, and `Localization::GERMAN` the
-other. Two formats ship too:
+other. Each names its language in `lang` ("en", "de"), and the outermost
+`LiberoProvider` writes it to the page root at every switch, so a screen reader
+speaks the words in it. Two formats ship too:
 
 | Formats | First weekday | Day | Time |
 |---|---|---|---|

@@ -96,6 +96,14 @@ fn handled() -> Element {
     rsx! {
         Button { id: "end", onclick: move |_| area.scroll_to(0.0, 19_000.0), "End" }
         Button { id: "grow", onclick: move |_| tall.set(true), "Grow" }
+        Button {
+            id: "grow-end",
+            onclick: move |_| {
+                tall.set(true);
+                area.scroll_to(0.0, 19_000.0);
+            },
+            "Grow and end"
+        }
         div { id: "list-pane", height: if tall() { "600px" } else { "120px" },
             ScrollArea { handle: area,
                 Virtualize {
@@ -136,6 +144,24 @@ fn a_scroll_to_after_a_resize_fills_the_taller_pane() {
     assert!(
         first > 900 && last >= 979,
         "rows {first}..={last} right after a scroll_to 19000 in a 600px pane"
+    );
+}
+
+/// Todo 2040: a resize and a `scroll_to` in one handler end with both, the new
+/// size and the new offset, whichever measure lands last.
+#[test]
+fn a_resize_and_a_scroll_to_in_one_handler_keep_both() {
+    let mut page = mount(handled);
+    page.wait_for(|page| last_row(page, |last| last < 29));
+    page.click("#grow-end");
+    page.wait_for(|page| {
+        let (first, last) = rows(page);
+        first > 900 && last >= 979
+    });
+    let (first, last) = rows(&page);
+    assert!(
+        first > 900 && last >= 979,
+        "rows {first}..={last} after growing to 600px and a scroll_to 19000 at once"
     );
 }
 

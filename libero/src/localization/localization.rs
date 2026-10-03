@@ -24,6 +24,9 @@ use super::*;
 // Not `Copy`, the `Theme` reason: a stray by-value use is a silent memcpy.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Localization {
+    /// The language as a BCP 47 tag (`"en"`, `"de"`); the outermost provider writes it
+    /// to the root's `lang`, so a screen reader speaks the words in it.
+    pub lang: &'static str,
     pub common: CommonLabels,
     /// Names and labels for every date and time component.
     pub date: DateLocale,
@@ -73,6 +76,7 @@ pub struct Localization {
 impl Localization {
     /// The default.
     pub const ENGLISH: Localization = Localization {
+        lang: "en",
         common: CommonLabels::ENGLISH,
         date: DateLocale::ENGLISH,
         pagination: PaginationLabels::ENGLISH,
@@ -120,6 +124,7 @@ impl Localization {
 
     /// Hand it to `LiberoProvider { localization }`; German dates are `Formats::GERMAN`.
     pub const GERMAN: Localization = Localization {
+        lang: "de",
         common: CommonLabels::GERMAN,
         date: DateLocale::GERMAN,
         pagination: PaginationLabels::GERMAN,

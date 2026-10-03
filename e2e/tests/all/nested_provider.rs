@@ -2,7 +2,10 @@
 //! its portaled calendar speak German, the outer one stays English.
 
 use anyhow::{Result, ensure};
+use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
+use e2e::passes::pointer;
+use e2e::{Fixture, Viewport, wait};
 
 const OUTER: &str = "#outer input[data-controlled]";
 const INNER: &str = "#inner input[data-controlled]";
@@ -39,3 +42,31 @@ e2e::scenario!(
     "/nested-provider",
     inner_speaks_german
 );
+
+/// Todo 2073: the root's `lang` is the outer provider's, and follows its switch.
+#[test]
+fn the_root_lang_follows_the_outer_provider_only() {
+    block_on(async {
+        let fixture = Fixture::open("/nested-provider", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, INNER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.documentElement.lang === 'en'",
+            "the root lang to stay the outer English",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "#outer-german").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.documentElement.lang === 'de'",
+            "the root lang to follow the outer switch",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

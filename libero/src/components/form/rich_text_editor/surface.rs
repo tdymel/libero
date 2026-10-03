@@ -84,7 +84,7 @@ const current = () => {
 const report = () => {
     if (!root()) { document.removeEventListener('selectionchange', report); return; }
     const now = current();
-    if (now) dioxus.send(now);
+    if (now) dioxus.send({ ...now, press: fresh });
 };
 // The head's line box and the viewport, in viewport px.
 const caretAt = (s, leaf) => {
@@ -99,12 +99,26 @@ const caretAt = (s, leaf) => {
 document.addEventListener('selectionchange', report);
 // Chrome queues `selectionchange` behind input, and a report may reach the model after the
 // next key: input right after a press goes with its selection, until the model acks it (todo 2062).
-let pressed = false, held = 0, lastKey = '';
+// `fresh`: the DOM selection is a press's until a key or a model caret (todo 2072).
+let pressed = false, fresh = false, held = 0, lastKey = '';
 document.addEventListener('mousedown', (e) => {
     const r = root();
-    if (r && r.contains(e.target)) pressed = true;
+    fresh = !!r && r.contains(e.target);
+    if (fresh) pressed = true;
 }, true);
-document.addEventListener('keydown', (e) => { lastKey = e.key; }, true);
+// Typed text and clipboard keys go natively; another key waits for held input too (todo 2071).
+const native = ['Control', 'Meta', 'Shift', 'Alt', 'AltGraph', 'CapsLock', 'Process', 'Unidentified', 'Dead'];
+document.addEventListener('keydown', (e) => {
+    lastKey = e.key;
+    fresh = false;
+    const mod = e.ctrlKey || e.metaKey;
+    if (!held || e.target !== root() || e.isComposing || native.includes(e.key)
+        || (e.key.length === 1 && !mod) || (mod && ['c', 'x', 'v'].includes(e.key.toLowerCase()))) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    held += 1;
+    dioxus.send({ key: [e.key, e.code, e.ctrlKey, e.metaKey, e.altKey, e.shiftKey] });
+}, true);
 document.addEventListener('beforeinput', (e) => {
     const r = root();
     if (!r || !r.contains(e.target) || !(pressed || held) || e.isComposing
@@ -170,6 +184,7 @@ while (true) {
         if (l) dioxus.send({ text: [m.read, text(l)] });
     }
     if (m.select) {
+        fresh = false;
         const [ak, ao, hk, ho] = m.select;
         const a = leaf(ak), h = leaf(hk);
         if (a && h && (m.focus || r.contains(document.activeElement))) {
@@ -206,6 +221,8 @@ pub(crate) struct Report {
     pub synced: bool,
     /// A held-back `beforeinput` to run after `selection`: its type, data and last key.
     pub input: Option<(String, Option<String>, String)>,
+    /// A keydown held behind input: key, code, ctrl, meta, alt, shift.
+    pub key: Option<(String, String, bool, bool, bool, bool)>,
     /// `selection` is a press's, newer than any caret the model is still placing.
     #[serde(default)]
     pub press: bool,
@@ -243,7 +260,7 @@ impl Surface {
             }
             eval.set(Some(script));
             while let Ok(report) = script.recv::<Report>().await {
-                let held = report.input.is_some();
+                let held = report.input.is_some() || report.key.is_some();
                 on_report(report);
                 if held {
                     let _ = script.send(serde_json::json!({ "ack": true }));

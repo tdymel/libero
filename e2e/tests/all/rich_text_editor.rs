@@ -1767,3 +1767,89 @@ fn a_first_press_puts_the_caret_where_it_lands() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 2071: a key the editor acts on, pressed while the input after a press still waits
+/// for the model, runs after that input.
+#[test]
+fn a_key_behind_held_input_runs_after_it() {
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/code", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "[role=textbox] [data-key]")
+            .await
+            .unwrap();
+        let at = point_in(page, "below", 2).await;
+        pointer::click_at(page, at).await.unwrap();
+        out_eq(page, "above\n\n```\nlet x = 1;\n```\n\nbelow\n").await;
+        // One task: the press's caret moves to `ab|ove` unreported, as Chrome queues its
+        // `selectionchange` behind input, and the typed key is still held when Enter comes.
+        page.evaluate(format!(
+            "(() => {{ const r = {EDITOR}; \
+               const leaf = [...r.querySelectorAll('[data-key]')].find(l => l.textContent === 'above'); \
+               document.getSelection().collapse(leaf.firstChild, 2); \
+               r.dispatchEvent(new InputEvent('beforeinput', {{ inputType: 'insertText', data: 'x', bubbles: true, cancelable: true }})); \
+               r.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }})); }})()"
+        ))
+        .await
+        .unwrap();
+        out_eq(page, "abx\n\nove\n\n```\nlet x = 1;\n```\n\nbelow\n").await;
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 2072: a press while the model's caret is still syncing moves the model's caret
+/// with no key after it, so a toolbar button then acts at the press.
+#[test]
+fn a_press_while_syncing_moves_the_model_caret() {
+    const BULLETS: &str = "[role=toolbar] button[aria-label=\"Bulleted list\"]";
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor/code", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, BULLETS).await.unwrap();
+        let at = point_in(page, "below", 2).await;
+        pointer::click_at(page, at).await.unwrap();
+        keyboard::type_text(page, "x").await.unwrap();
+        out_eq(page, "above\n\n```\nlet x = 1;\n```\n\nbexlow\n").await;
+
+        // The editor's synced reply is a 0 ms timer: hold it while the press lands.
+        page.evaluate(
+            "(() => { const real = window.setTimeout; window.__realTimeout = real; window.__synced = []; \
+               window.setTimeout = (f, ms, ...a) => ms ? real(f, ms, ...a) : (window.__synced.push(f), 0); })()",
+        )
+        .await
+        .unwrap();
+        keyboard::type_text(page, "y").await.unwrap();
+        out_eq(page, "above\n\n```\nlet x = 1;\n```\n\nbexylow\n").await;
+        wait::for_js_true(page, "window.__synced.length > 0", "the synced reply held")
+            .await
+            .unwrap();
+        // The editor's listener came first, so its report is out once ours runs.
+        page.evaluate(
+            "document.addEventListener('selectionchange', () => { window.__moved = true; }, { once: true })",
+        )
+        .await
+        .unwrap();
+        let at = point_in(page, "above", 2).await;
+        pointer::click_at(page, at).await.unwrap();
+        wait::for_js_true(
+            page,
+            "window.__moved === true",
+            "the press to move the selection",
+        )
+        .await
+        .unwrap();
+        page.evaluate(
+            "(() => { window.setTimeout = window.__realTimeout; window.__synced.forEach(f => f()); })()",
+        )
+        .await
+        .unwrap();
+
+        pointer::click(page, BULLETS).await.unwrap();
+        out_eq(page, "- above\n\n```\nlet x = 1;\n```\n\nbexylow\n").await;
+        fixture.close().await.unwrap();
+    });
+}

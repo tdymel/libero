@@ -569,6 +569,25 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         }
     };
 
+    // Android soft keyboards press "Unidentified": their Enter shows up as an insertParagraph.
+    let mut last_key = use_hook(|| CopyValue::new(String::new()));
+    let mut escaped = use_hook(|| CopyValue::new(false));
+    let apple = mod_is_meta();
+    // A key press through `intercept` and the keymap; `true` cancels it.
+    let mut key_down = move |press: KeyPress| -> bool {
+        last_key.set(press.key.clone());
+        if taken(EditorInput::Key(press.clone())) {
+            return true;
+        }
+        // Escape then Tab leaves instead of indenting (WCAG 2.1.2, todo 1610).
+        let armed = std::mem::replace(&mut *escaped.write(), press.key == "Escape");
+        if armed && press.key == "Tab" {
+            return false;
+        }
+        let name = keymap.peek().command_for(&press, apple).cloned();
+        name.is_some_and(|name| run_command(name, false, true))
+    };
+
     // The caret's place, kept always; redraws only while an overlay follows it.
     let mut last_caret = use_hook(|| CopyValue::new(None::<Caret>));
     let mut caret_tick = use_signal(|| 0u32);
@@ -605,6 +624,19 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                 && *can_edit.peek()
             {
                 before_input(&input_type, data, &key);
+            }
+            if let Some((key, code, ctrl, meta, alt, shift)) = report.key
+                && *can_edit.peek()
+                && !*composing.peek()
+            {
+                key_down(KeyPress {
+                    key,
+                    code,
+                    ctrl,
+                    meta,
+                    alt,
+                    shift,
+                });
             }
             if report.synced {
                 syncing.set(false);
@@ -795,11 +827,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .focus_ring(false)
         .prepare();
     let element = use_element();
-    let apple = mod_is_meta();
 
-    // Android soft keyboards press "Unidentified": their Enter shows up as an insertParagraph.
-    let mut last_key = use_hook(|| CopyValue::new(String::new()));
-    let mut escaped = use_hook(|| CopyValue::new(false));
     let onkeydown = move |event: KeyboardEvent| {
         // Not `is_composing()`: Gboard keeps a composing region open over typed words.
         if std::mem::take(&mut *fence_key.write()) || *composing.peek() {
@@ -814,18 +842,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
             alt: modifiers.alt(),
             shift: modifiers.shift(),
         };
-        last_key.set(press.key.clone());
-        if taken(EditorInput::Key(press.clone())) {
-            event.prevent_default();
-            return;
-        }
-        // Escape then Tab leaves instead of indenting (WCAG 2.1.2, todo 1610).
-        let armed = std::mem::replace(&mut *escaped.write(), press.key == "Escape");
-        if armed && press.key == "Tab" {
-            return;
-        }
-        let name = keymap.peek().command_for(&press, apple).cloned();
-        if name.is_some_and(|name| run_command(name, false, true)) {
+        if key_down(press) {
             event.prevent_default();
         }
     };

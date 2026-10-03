@@ -147,7 +147,11 @@ pub fn LocalizationPage() -> Element {
                     Code { source: "Localization::ENGLISH" }
                     " is the default language, and "
                     Code { source: "Localization::GERMAN" }
-                    " the other. Two formats ship too:"
+                    " the other. Each names its language in "
+                    Code { source: "lang" }
+                    " (\"en\", \"de\"), and the outermost "
+                    Code { source: "LiberoProvider" }
+                    " writes it to the page root at every switch, so a screen reader speaks the words in it. Two formats ship too:"
                 }
                 Table {
                     aria_label: "Shipped formats",

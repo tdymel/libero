@@ -68,8 +68,8 @@ pub(crate) use clipboard::{ClipboardApi, Write, fake_clipboard};
 pub use clock::{ClockApi, clock};
 pub use color_scheme::{ColorSchemeApi, ColorSchemeSubscription, color_scheme};
 pub(crate) use direction::{
-    apply_direction, clear_root_direction, forget_direction, set_root_direction, store_direction,
-    stored_direction,
+    apply_direction, apply_lang, clear_root_direction, forget_direction, set_root_direction,
+    store_direction, stored_direction,
 };
 pub(crate) use document::root_padding_right;
 pub use document::{DocumentApi, document};

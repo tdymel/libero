@@ -411,6 +411,8 @@ pub fn LiberoProvider(
     children: Element,
 ) -> Element {
     let themes = use_hook(|| themes.clone());
+    // Only the outermost provider owns the root's `lang`: two would race for it.
+    let outermost = use_hook(|| try_consume_context::<LiberoContext>().is_none());
     let localization = use_signal(|| localization);
     let formats = use_signal(|| formats);
     // Read at mount, so the first render paints the kept scheme, not a light flash.
@@ -518,6 +520,13 @@ pub fn LiberoProvider(
         let current = kept.peek().or(start_direction);
         if let Some(direction) = current.filter(|_| !direction_set || current != chosen_direction) {
             apply_direction(direction);
+        }
+    });
+
+    // After mount and on every switch, so a screen reader speaks the words in their language.
+    use_effect(move || {
+        if outermost {
+            platform::apply_lang(localization().lang);
         }
     });
 

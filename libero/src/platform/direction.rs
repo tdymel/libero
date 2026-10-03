@@ -1,4 +1,4 @@
-//! The app's text direction on the document root, and where a choice is kept.
+//! The app's text direction and language on the document root, and where a direction is kept.
 
 use super::document;
 use crate::tokens::Direction;
@@ -55,6 +55,14 @@ pub(crate) fn apply_direction(direction: Direction) {
             "document.documentElement.dir = '{}';",
             direction.as_str()
         ));
+    }
+}
+
+/// Sets the root's `lang`, through the page's script where no handle reaches the DOM.
+pub(crate) fn apply_lang(lang: &str) {
+    if !document().is_some_and(|document| document.set_root_attribute("lang", Some(lang))) {
+        let lang = serde_json::to_string(lang).unwrap_or_default();
+        dioxus::document::eval(&format!("document.documentElement.lang = {lang};"));
     }
 }
 
