@@ -45,14 +45,23 @@ fn main() -> Result<()> {
     if passthrough.first().is_some_and(|arg| arg == "desktop") {
         return desktop_runner::run(passthrough.split_off(1));
     }
-    let sweep = passthrough.first().is_some_and(|arg| arg == "sweep");
+    // `docs-perf` (todo 2104) likewise: the docs timing survey of `tests/docs_perf.rs`.
+    let docs_test = match passthrough.first().map(String::as_str) {
+        Some("sweep") => Some("sweep"),
+        Some("docs-perf") => Some("docs_perf"),
+        _ => None,
+    };
+    let sweep = docs_test.is_some();
     if sweep {
         passthrough.remove(0);
         passthrough.push("--nocapture".into());
     }
-    let (app_dir, app_package, title, test) = match sweep {
-        true => ("docs", "docs", DOCS_TITLE, "sweep"),
-        false => ("e2e/fixtures", "e2e-fixtures", FIXTURE_TITLE, "all"),
+    if docs_test == Some("docs_perf") {
+        passthrough.push("--ignored".into());
+    }
+    let (app_dir, app_package, title, test) = match docs_test {
+        Some(test) => ("docs", "docs", DOCS_TITLE, test),
+        None => ("e2e/fixtures", "e2e-fixtures", FIXTURE_TITLE, "all"),
     };
     let root = workspace_root()?;
     let port = free_port()?;

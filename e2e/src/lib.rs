@@ -18,6 +18,7 @@ pub mod passes;
 pub mod selftest;
 pub mod suite;
 pub mod sweep;
+pub mod timing;
 pub mod vendor;
 pub mod wait;
 

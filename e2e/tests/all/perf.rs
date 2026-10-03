@@ -1459,14 +1459,13 @@ fn print_renders(component: &str, step: &str, pass: usize, renders: &Renders) {
 pub(crate) mod timing {
     use std::collections::BTreeMap;
     use std::path::PathBuf;
-    use std::time::{Duration, Instant};
 
-    use anyhow::{Result, bail};
+    use anyhow::Result;
     use chromiumoxide::Page;
     use chromiumoxide::cdp::browser_protocol::input::{
         DispatchMouseEventParams, DispatchMouseEventType,
     };
-    use chromiumoxide::cdp::browser_protocol::performance::{EnableParams, GetMetricsParams};
+    use chromiumoxide::cdp::browser_protocol::performance::EnableParams;
     use chromiumoxide::cdp::browser_protocol::tracing::{
         EndParams, EventDataCollected, EventTracingComplete, StartParams, StartTransferMode,
         TraceConfig,
@@ -1531,39 +1530,8 @@ pub(crate) mod timing {
         event: f64,
     }
 
-    /// `name -> seconds` for the counters a rep reads.
-    async fn metrics(page: &Page) -> Result<BTreeMap<String, f64>> {
-        let reply = page.execute(GetMetricsParams::default()).await?;
-        Ok(reply
-            .result
-            .metrics
-            .iter()
-            .map(|metric| (metric.name.clone(), metric.value))
-            .collect())
-    }
-
-    fn delta_ms(after: &BTreeMap<String, f64>, before: &BTreeMap<String, f64>, key: &str) -> f64 {
-        (after.get(key).copied().unwrap_or(0.0) - before.get(key).copied().unwrap_or(0.0)) * 1e3
-    }
-
-    /// Until 60 ms pass with under 2 ms of main-thread work: effects, placement passes and
-    /// exit animations belong to the interaction that started them.
-    pub(crate) async fn quiet(page: &Page) -> Result<()> {
-        let started = Instant::now();
-        let mut last = metrics(page).await?;
-        loop {
-            tokio::time::sleep(Duration::from_millis(60)).await;
-            let now = metrics(page).await?;
-            if delta_ms(&now, &last, "TaskDuration") < 2.0 {
-                return Ok(());
-            }
-            // A 5000-row Table mount works for seconds.
-            if started.elapsed() > Duration::from_secs(20) {
-                bail!("the page never went quiet");
-            }
-            last = now;
-        }
-    }
+    pub(crate) use e2e::timing::quiet;
+    use e2e::timing::{delta_ms, metrics};
 
     pub(crate) struct Rows(BTreeMap<&'static str, Vec<Rep>>);
 
