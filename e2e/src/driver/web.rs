@@ -120,6 +120,18 @@ impl Driver for Web {
         in_front(page, pointer::touch_drag(page, from, to, 8)).await
     }
 
+    async fn touch_down(&mut self, selector: &str) -> Result<()> {
+        let page = &self.fixture.page;
+        in_front(page, pointer::touch_down(page, selector)).await?;
+        Ok(())
+    }
+
+    async fn touch_up(&mut self, selector: &str) -> Result<()> {
+        let page = &self.fixture.page;
+        let at = pointer::centre_of(page, selector).await?;
+        in_front(page, pointer::touch_up(page, at)).await
+    }
+
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {
         // Instant: a smooth scroll restarts on every poll and never arrives.
         let scroll = format!("(window.scrollBy({{ top: {dy}, behavior: 'instant' }}), true)");

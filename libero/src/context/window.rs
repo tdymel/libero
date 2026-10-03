@@ -5,7 +5,12 @@ use dioxus::prelude::*;
 /// Ids, not a counter, so z-indices stay dense however often windows are raised.
 /// Capped below `overlay` so a modal covers every window; windows past the cap tie.
 #[derive(Clone, Copy)]
-pub(crate) struct WindowHost {
+pub(crate) struct WindowHost(ZStack);
+
+/// Ids from bottom to top, each drawn at its place in the [`ZLayers`] run;
+/// `WindowHost` and `ModalHost` share it.
+#[derive(Clone, Copy)]
+pub(crate) struct ZStack {
     stack: Signal<Vec<u64>>,
     layers: ReadSignal<ZLayers>,
 }
@@ -27,10 +32,35 @@ impl ZLayers {
 
 impl WindowHost {
     pub(crate) fn new(stack: Signal<Vec<u64>>, layers: ReadSignal<ZLayers>) -> Self {
-        Self { stack, layers }
+        Self(ZStack { stack, layers })
     }
 
     /// Puts `id` on top, adding it if it is new. A no-op when it already is.
+    pub(crate) fn raise(&self, id: u64) {
+        self.0.raise(id);
+    }
+
+    /// Whether `id` is on top. Unsubscribed: a key callback asks it.
+    pub(crate) fn is_top(&self, id: u64) -> bool {
+        self.0.stack.peek().last() == Some(&id)
+    }
+
+    pub(crate) fn remove(&self, id: u64) {
+        self.0.remove(id);
+    }
+
+    /// `id`'s z-index, subscribed: a raise re-renders every window. `base`
+    /// for an id that is not stacked yet.
+    pub(crate) fn z_index(&self, id: u64) -> i32 {
+        self.0.z_index(id)
+    }
+}
+
+impl ZStack {
+    pub(crate) fn new(stack: Signal<Vec<u64>>, layers: ReadSignal<ZLayers>) -> Self {
+        Self { stack, layers }
+    }
+
     pub(crate) fn raise(&self, id: u64) {
         if self.stack.peek().last() == Some(&id) {
             return;
@@ -41,18 +71,12 @@ impl WindowHost {
         stack.push(id);
     }
 
-    /// Whether `id` is on top. Unsubscribed: a key callback asks it.
-    pub(crate) fn is_top(&self, id: u64) -> bool {
-        self.stack.peek().last() == Some(&id)
-    }
-
     pub(crate) fn remove(&self, id: u64) {
         let mut stack = self.stack;
         stack.write().retain(|other| *other != id);
     }
 
-    /// `id`'s z-index, subscribed: a raise re-renders every window. `base`
-    /// for an id that is not stacked yet.
+    /// Subscribed, so a change below `id` moves it; `base` for an unstacked id.
     pub(crate) fn z_index(&self, id: u64) -> i32 {
         let position = self
             .stack

@@ -1,10 +1,7 @@
 //! Open popups and their anchors: the portal-owner chain that lets a popup
 //! opened inside an element count as inside it (`Hotkey::within`).
 
-use std::{
-    rc::Rc,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::rc::Rc;
 
 use dioxus::core::{AttributeValue, Runtime, provide_root_context};
 use dioxus::prelude::*;
@@ -12,12 +9,11 @@ use dioxus::prelude::*;
 use crate::{
     hooks::ElementHandle,
     platform::{OWNER_ATTR, element_contains, focus_is_in},
+    utils::unique_id,
 };
 
 /// How many popups deep a chain is followed: a submenu of a submenu.
 const MAX_DEPTH: usize = 8;
-
-static NEXT_POPUP: AtomicU64 = AtomicU64::new(0);
 
 struct Popup {
     id: u64,
@@ -57,7 +53,7 @@ pub(crate) fn open_popups() -> OpenPopups {
 
 /// Lists the popup `floating`, anchored on `anchor`, while `open`.
 pub(crate) fn use_popup_owner(anchor: ElementHandle, floating: ElementHandle, open: bool) {
-    let id = use_hook(|| NEXT_POPUP.fetch_add(1, Ordering::Relaxed));
+    let id = use_hook(unique_id);
     let scope = Runtime::try_current().and_then(|runtime| runtime.try_current_scope_id());
     let OpenPopups(mut popups) = use_open_popups();
     use_effect(use_reactive!(|open| {

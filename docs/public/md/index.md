@@ -158,7 +158,7 @@ fetch only the file you need.
 - [Overview](accessibility.md): What libero's accessibility support covers across the library and what it does not, from on and disabled states to forced colors, which is covered only in part.
 - [FocusTrap](focus_trap.md): Confines Tab and Shift+Tab cycling to its children, for keeping keyboard focus inside an open overlay.
 - [VisuallyHidden](visually_hidden.md): A `span` read by screen readers but hidden from sighted layout, for extra context on something vague on its own.
-- [Unique ID](use_id.md): A process-unique id, stable for the component's lifetime, for the aria wiring between one instance's elements.
+- [Unique ID](use_id.md): An id unique within the app, stable for the component's lifetime, for the aria wiring between one instance's elements.
 - [Focus return](use_focus_return.md): Puts focus back on the element that opened a panel or popup once it closes, with fallbacks for a trigger that is gone.
 - [Accessibility settings](use_accessibility.md): Reads the reader's accessibility settings and lets an app force reduced motion.
 

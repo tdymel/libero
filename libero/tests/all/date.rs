@@ -951,7 +951,7 @@ fn the_nav_chevrons_mirror_under_rtl() {
 mod dispatched {
     use crate::common::body;
     use crate::dispatch::*;
-    use dioxus::core::{AttributeValue, ElementId, WriteMutations};
+    use dioxus::core::ElementId;
 
     use dioxus::prelude::*;
     use libero::{LiberoProvider, chrono::NaiveTime, components::TimePicker};
@@ -996,56 +996,9 @@ mod dispatched {
         use super::*;
         use chrono::NaiveDate;
         use libero::components::{ChronoField, DateRange};
-        use std::collections::HashMap;
 
         thread_local! {
             static CLOSE: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
-        }
-
-        /// The input's click listener comes first, after the frame's; every day
-        /// button carries its date in `data-date`.
-        #[derive(Default)]
-        struct FindDays {
-            last: Option<ElementId>,
-            first_click: Option<ElementId>,
-            days: HashMap<String, ElementId>,
-            frame: Option<ElementId>,
-        }
-
-        impl WriteMutations for FindDays {
-            fn push_id(&mut self, id: ElementId) {
-                self.last = Some(id);
-            }
-            fn set_id(&mut self, id: ElementId) {
-                self.last = Some(id);
-            }
-            fn add_event_listener(&mut self, name: &str) {
-                if name == "click" && self.last != self.frame {
-                    self.first_click = self.first_click.or(self.last);
-                }
-            }
-            fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
-                if name == "data-frame" {
-                    self.frame = self.last;
-                }
-                if name == "data-date"
-                    && let (AttributeValue::Text(day), Some(id)) = (value, self.last)
-                {
-                    self.days.insert(day.clone(), id);
-                }
-            }
-            fn child(&mut self, _index: usize) {}
-            fn pop(&mut self) {}
-            fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
-            fn create_text(&mut self, _value: &str) {}
-            fn clone(&mut self) {}
-            fn append_children(&mut self, _m: usize) {}
-            fn replace_with(&mut self, _m: usize) {}
-            fn insert_after(&mut self, _m: usize) {}
-            fn insert_before(&mut self, _m: usize) {}
-            fn set_text(&mut self, _value: &str) {}
-            fn remove_event_listener(&mut self, _name: &str) {}
-            fn remove(&mut self) {}
         }
 
         fn trip() -> Element {
@@ -1067,31 +1020,26 @@ mod dispatched {
             body(&dioxus_ssr::render(dom)).contains(r#"role="dialog""#)
         }
 
-        fn click(dom: &mut VirtualDom, find: &mut FindDays, id: ElementId) {
-            dom.runtime()
-                .handle_event("click", Event::new(click_event(), true), id);
-            dom.render_immediate(find);
-            dom.render_immediate(find);
+        /// The pick writes the caller's value, which re-renders the field.
+        fn click(page: &mut Page, id: ElementId) {
+            page.click(id);
+            page.render();
         }
 
         fn after_two_picks(close: bool) -> (bool, bool) {
-            dioxus::html::set_event_converter(Box::new(TestConverter));
             CLOSE.with(|cell| cell.set(close));
-            let mut dom = VirtualDom::new(trip);
-            let mut find = FindDays::default();
-            dom.rebuild(&mut find);
-            dom.render_immediate(&mut find);
-            let input = find.first_click.expect("the input takes clicks");
-            click(&mut dom, &mut find, input);
-            assert!(open(&dom), "a click opens the dropdown");
+            let mut page = Page::mount(trip);
+            // The input's click listener is the first outside the frame.
+            let input = page.rec.first_click.expect("the input takes clicks");
+            click(&mut page, input);
+            assert!(open(&page.dom), "a click opens the dropdown");
 
-            let day = |find: &FindDays, day: &str| *find.days.get(day).expect(day);
-            let first = day(&find, "2026-09-10");
-            click(&mut dom, &mut find, first);
-            let after_first = open(&dom);
-            let second = day(&find, "2026-09-14");
-            click(&mut dom, &mut find, second);
-            (after_first, open(&dom))
+            let first = page.rec.element("click", "data-date", "2026-09-10");
+            click(&mut page, first);
+            let after_first = open(&page.dom);
+            let second = page.rec.element("click", "data-date", "2026-09-14");
+            click(&mut page, second);
+            (after_first, open(&page.dom))
         }
 
         #[test]

@@ -86,6 +86,16 @@ pub trait Driver {
         let _ = (x, y, dx, dy);
         bail!("{:?}: no touch input", self.platform())
     }
+    /// A touch pressed at the first match's centre and held until [`Driver::touch_up`].
+    async fn touch_down(&mut self, selector: &str) -> Result<()> {
+        let _ = selector;
+        bail!("{:?}: no held touch", self.platform())
+    }
+    /// Lifts the held [`Driver::touch_down`] at the first match's centre.
+    async fn touch_up(&mut self, selector: &str) -> Result<()> {
+        let _ = selector;
+        bail!("{:?}: no held touch", self.platform())
+    }
     /// Two touches either side of the first match's centre, `from` px apart,
     /// spread to `to` px apart, then lifted.
     async fn pinch(&mut self, selector: &str, from: f64, to: f64) -> Result<()> {

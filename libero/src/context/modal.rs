@@ -1,10 +1,7 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-
 use dioxus::prelude::*;
 
-use super::window::ZLayers;
-
-static NEXT_MODAL_ID: AtomicU64 = AtomicU64::new(0);
+use super::window::{ZLayers, ZStack};
+use crate::utils::unique_id;
 
 /// Stacks the open modals: the last one opened is on top. Provided by
 /// [`crate::LiberoProvider`].
@@ -12,39 +9,28 @@ static NEXT_MODAL_ID: AtomicU64 = AtomicU64::new(0);
 /// Ids, not a counter: a counter leaked a step per modal closed below another.
 /// Capped below `popover` so a dropdown inside a modal clears it; past the cap they tie.
 #[derive(Clone, Copy)]
-pub(crate) struct ModalHost {
-    stack: Signal<Vec<u64>>,
-    layers: ReadSignal<ZLayers>,
-}
+pub(crate) struct ModalHost(ZStack);
 
 impl ModalHost {
     pub(crate) fn new(stack: Signal<Vec<u64>>, layers: ReadSignal<ZLayers>) -> Self {
-        Self { stack, layers }
+        Self(ZStack::new(stack, layers))
     }
 
     /// Puts a new modal on top and returns its id.
     pub(crate) fn open(&self) -> u64 {
-        let id = NEXT_MODAL_ID.fetch_add(1, Ordering::Relaxed);
-        let mut stack = self.stack;
-        stack.write().push(id);
+        let id = unique_id();
+        self.0.raise(id);
         id
     }
 
     pub(crate) fn close(&self, id: u64) {
-        let mut stack = self.stack;
-        stack.write().retain(|other| *other != id);
+        self.0.remove(id);
     }
 
     /// `id`'s z-index, subscribed: a modal closing below this one moves it
     /// down a step. `base` for an id that is not stacked.
     pub(crate) fn z_index(&self, id: u64) -> i32 {
-        let position = self
-            .stack
-            .read()
-            .iter()
-            .position(|other| *other == id)
-            .unwrap_or(0);
-        self.layers.read().at(position)
+        self.0.z_index(id)
     }
 }
 

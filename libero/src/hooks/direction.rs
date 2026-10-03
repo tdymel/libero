@@ -26,7 +26,8 @@ use crate::{context::LiberoContext, tokens::Direction};
 /// ```
 ///
 /// Reactive. It knows only what `LiberoProvider` started in and what was set
-/// through it, not a `dir` written on the root by other means.
+/// through it, not a `dir` written on the root by other means. Panics outside a
+/// `LiberoProvider`.
 pub fn use_direction() -> DirectionHandle {
     DirectionHandle {
         context: use_context::<LiberoContext>(),

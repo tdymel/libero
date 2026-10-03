@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use dioxus::core::{Attribute, AttributeValue};
 use dioxus::html::FileData;
 use dioxus::prelude::*;
@@ -11,6 +9,7 @@ use crate::platform::{
 };
 
 use super::permission::{FollowedPermission, use_permission};
+use super::use_subscription_slot;
 
 /// What [`use_user_media`] opens on [`start`](UserMedia::start).
 #[derive(Debug, Clone, PartialEq)]
@@ -435,10 +434,12 @@ impl UserMediaDevices {
         (self.supported)()
     }
 
+    /// The video inputs. Reactive.
     pub fn cameras(&self) -> Vec<MediaDevice> {
         self.list.read().cameras.clone()
     }
 
+    /// The audio inputs. Reactive.
     pub fn microphones(&self) -> Vec<MediaDevice> {
         self.list.read().microphones.clone()
     }
@@ -452,15 +453,10 @@ pub fn use_user_media_devices() -> UserMediaDevices {
         list: use_signal(DeviceList::default),
         generation: use_signal(|| 0),
     };
-    let listener: Rc<RefCell<Option<Box<dyn CaptureSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let listener = listener.clone();
-        move || drop(listener.borrow_mut().take())
-    });
+    let listener = use_subscription_slot::<dyn CaptureSubscription>();
     use_effect(move || {
         let _ = (devices.generation)();
-        listener.borrow_mut().take();
+        listener.clear();
         let Some(api) = capture() else {
             return;
         };
@@ -469,7 +465,7 @@ pub fn use_user_media_devices() -> UserMediaDevices {
             supported.set(list.is_some());
             current.set(list.unwrap_or_default());
         }));
-        *listener.borrow_mut() = Some(changes);
+        listener.set(Some(changes));
     });
     devices
 }

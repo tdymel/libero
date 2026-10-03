@@ -7,6 +7,8 @@ use std::time::{Duration, Instant};
 
 use dioxus::prelude::*;
 
+use crate::platform::manual_timer;
+
 thread_local! {
     static SETTLED: Cell<bool> = const { Cell::new(false) };
 }
@@ -44,6 +46,19 @@ pub(crate) fn pump_until(
         thread::sleep(Duration::from_millis(1));
     }
     start.elapsed()
+}
+
+/// Moves an installed [`manual_timer`] on by `ms`, rendering after each timer
+/// that fires, as a renderer would. Waits on nothing real.
+pub(crate) fn elapse(dom: &mut VirtualDom, ms: u64) {
+    let target = manual_timer::now() + Duration::from_millis(ms);
+    flush(dom);
+    while let Some(due) = manual_timer::next_due().filter(|due| *due <= target) {
+        dom.in_runtime(|| manual_timer::advance_to(due));
+        flush(dom);
+    }
+    dom.in_runtime(|| manual_timer::advance_to(target));
+    flush(dom);
 }
 
 /// Polls through a gap the scenario sets, like the time between two keystrokes.

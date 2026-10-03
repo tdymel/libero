@@ -23,10 +23,15 @@ impl Default for LongPressOptions {
 /// Handlers to spread onto the pressed element.
 #[derive(Clone, Copy)]
 pub struct LongPress {
+    /// Starts the press timer.
     pub onpointerdown: Callback<PointerEvent>,
+    /// Drops the press once the pointer moves past the tolerance.
     pub onpointermove: Callback<PointerEvent>,
+    /// Drops a press not fired yet.
     pub onpointerup: Callback<PointerEvent>,
+    /// Drops a press not fired yet.
     pub onpointerleave: Callback<PointerEvent>,
+    /// Drops the press, as a touch that starts to scroll does.
     pub onpointercancel: Callback<PointerEvent>,
     /// Suppresses the browser's own long-press menu, only after the press fired.
     pub oncontextmenu: Callback<MouseEvent>,

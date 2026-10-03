@@ -56,12 +56,12 @@ pub fn UseIdPage() -> Element {
             source: "libero/src/hooks/id.rs",
             markdown: "/md/use_id.md",
             accessibility: a11y()
-                .handles(["The id is unique in the process, so each instance's wiring stays its own. Each disclosure in the demo names its own panel, so a screen reader pairs every button with the right one."])
+                .handles(["The id is unique within the app, so each instance's wiring stays its own. Each disclosure in the demo names its own panel, so a screen reader pairs every button with the right one."])
                 .must(["Pass the id to `aria_controls`, `aria_labelledby`, `aria_describedby` or a label's `r#for`: an id is how they find their element."]),
             lead: rsx! {
                 Text {
                     Code { source: "use_id() -> Signal<String>" }
-                    " returns an id that is unique in the process and stays the same for "
+                    " returns an id that is unique within the app and stays the same for "
                     "the component's lifetime. Use it for the aria wiring between one "
                     "instance's elements, where a fixed string would clash as soon as the "
                     "component renders twice."

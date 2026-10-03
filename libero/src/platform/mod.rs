@@ -52,6 +52,8 @@ pub(crate) use a11y_media::{
     current_a11y_answers, set_current_a11y_answers,
 };
 // Renderer seams that everything above reaches `backend` through (820).
+#[cfg(all(test, not(target_arch = "wasm32")))]
+pub(crate) use backend::manual_timer;
 pub(crate) use backend::{Listener, Outlet, PortalEntry, PortalRoot, SheetWatch, element};
 pub(crate) use capture::{
     CAPTURE_ATTR, CaptureEvent, CaptureSession, CaptureSubscription, DeviceList, capture,

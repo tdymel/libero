@@ -10,10 +10,7 @@ use dioxus::prelude::*;
 pub use options::{Align, Placement, PopoverOptions, PopoverWidth, Side};
 pub(crate) use place::{Placed, Rect};
 
-use std::{
-    cell::{Cell, RefCell},
-    rc::Rc,
-};
+use std::{cell::Cell, rc::Rc};
 
 use crate::{
     hooks::{
@@ -21,9 +18,11 @@ use crate::{
         dismiss::{DismissHandle, DismissOptions, use_dismiss},
         element::use_element,
         portal::{PortalSlot, use_portal_slot},
+        use_subscription_slot,
     },
     platform::{ElementApi, ScrollSubscription, document, scroll, when_laid_out},
     theme::CssVar,
+    utils::bump,
 };
 
 #[cfg(test)]
@@ -258,28 +257,19 @@ pub(crate) fn use_popover_on(
     // the effect below measures, where a `Read` may be created.
     let scroll_tick = use_signal(|| 0u64);
     // Alive only while open, so closed dropdowns listen to nothing.
-    let subscription: Rc<RefCell<Option<Box<dyn ScrollSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
+    let listening = use_subscription_slot::<dyn ScrollSubscription>();
     // How often this open waited for the box's first layout.
     let waited: Rc<Cell<u8>> = use_hook(|| Rc::new(Cell::new(0)));
     // Whether this open measured the box again at its capped height.
     let capped: Rc<Cell<bool>> = use_hook(|| Rc::new(Cell::new(false)));
 
-    use_drop({
-        let subscription = subscription.clone();
-        move || {
-            subscription.borrow_mut().take();
-        }
-    });
-
-    let listening = subscription.clone();
     use_effect(use_reactive!(|(open, options)| {
         // Reading it is what re-runs this on a scroll.
         let _ = scroll_tick();
         // Read before any return: it subscribes the effect to every (re)mount.
         let mounted = floating.mount_token().is_some();
         if !open || !mounted {
-            listening.borrow_mut().take();
+            listening.clear();
             waited.set(0);
             capped.set(false);
             // A `set` redraws even when unchanged: every opening ran this before
@@ -294,16 +284,8 @@ pub(crate) fn use_popover_on(
             return;
         };
 
-        // Own statement, so the borrow ends before the `borrow_mut` below.
-        let unsubscribed = listening.borrow().is_none();
-        if let Some(api) = unsubscribed.then(scroll).flatten() {
-            *listening.borrow_mut() = Some(api.on_scroll(Box::new(move || {
-                // A `Fn` callback lends no `&mut`; a `Copy` of the signal is the same value.
-                let mut tick = scroll_tick;
-                // `peek`, not a read: a callback must subscribe nothing.
-                let next = tick.peek().wrapping_add(1);
-                tick.set(next);
-            })));
+        if let Some(api) = (!listening.is_some()).then(scroll).flatten() {
+            listening.set(Some(api.on_scroll(Box::new(move || bump(scroll_tick)))));
         }
 
         // Started here, awaited in the task: Blitz locks the document while
@@ -330,11 +312,7 @@ pub(crate) fn use_popover_on(
             let tries = waited.get();
             if floating_size.width == 0.0 && floating_size.height == 0.0 && tries < UNLAID_TRIES {
                 waited.set(tries + 1);
-                when_laid_out(move || {
-                    let mut tick = scroll_tick;
-                    let next = tick.peek().wrapping_add(1);
-                    tick.set(next);
-                });
+                when_laid_out(move || bump(scroll_tick));
                 return;
             }
 
@@ -349,9 +327,7 @@ pub(crate) fn use_popover_on(
             if widened {
                 anchor_width.set(Some(anchor_size.width));
                 if options.width != PopoverWidth::Auto {
-                    let mut tick = scroll_tick;
-                    let next = tick.peek().wrapping_add(1);
-                    tick.set(next);
+                    bump(scroll_tick);
                     return;
                 }
             }
@@ -362,9 +338,7 @@ pub(crate) fn use_popover_on(
             if floating_size.height > next.available_height + 0.5 && !capped.get() {
                 capped.set(true);
                 next.provisional = true;
-                let mut tick = scroll_tick;
-                let again = tick.peek().wrapping_add(1);
-                tick.set(again);
+                bump(scroll_tick);
             }
             let next = Some(next);
             if *placed.peek() != next {

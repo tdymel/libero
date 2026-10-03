@@ -3,10 +3,12 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
+use super::{SubscriptionSlot, use_subscription_slot};
 use crate::platform::{
     self, ContentSubscription, Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, is_rtl,
     next_observe_tag, observes_by_tag, on_content_change, on_form_reset, on_resize,
 };
+use crate::utils::bump;
 
 /// A handle to one of this component's own elements, and the only way to reach
 /// an element at all.
@@ -141,13 +143,13 @@ pub fn use_element() -> ElementHandle {
 #[derive(Clone)]
 pub(crate) struct ContentChanges {
     pub(crate) count: ReadSignal<u64>,
-    slot: Rc<RefCell<Option<Box<dyn ContentSubscription>>>>,
+    slot: SubscriptionSlot<dyn ContentSubscription>,
 }
 
 impl ContentChanges {
     /// An observer is live: a render that changed the subtree bumps `count`.
     pub(crate) fn watching(&self) -> bool {
-        self.slot.borrow().is_some()
+        self.slot.is_some()
     }
 }
 
@@ -156,32 +158,19 @@ impl ContentChanges {
 pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> ContentChanges {
     // Bumped from the observer, which runs outside every scope.
     let changes = use_signal(|| 0u64);
-    let slot: Rc<RefCell<Option<Box<dyn ContentSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let slot = slot.clone();
-        move || drop(slot.borrow_mut().take())
-    });
+    let slot = use_subscription_slot::<dyn ContentSubscription>();
     let watched = slot.clone();
     use_effect(use_reactive!(|enabled| {
-        let slot = &watched;
         let _ = element.mount_token();
         // Dropped first, so a remount never runs two observers.
-        slot.borrow_mut().take();
+        watched.clear();
         if !enabled {
             return;
         }
-        let watching = element.mounted().and_then(|mounted| {
-            on_content_change(
-                &mounted,
-                Box::new(move || {
-                    let mut changes = changes;
-                    let next = changes.peek().wrapping_add(1);
-                    changes.set(next);
-                }),
-            )
-        });
-        *slot.borrow_mut() = watching;
+        let watching = element
+            .mounted()
+            .and_then(|mounted| on_content_change(&mounted, Box::new(move || bump(changes))));
+        watched.set(watching);
     }));
     ContentChanges {
         count: changes.into(),
@@ -203,15 +192,10 @@ pub(crate) fn use_resize_fallback(
         Rc::new(RefCell::new(noop))
     });
     *handler.borrow_mut() = Box::new(onresize);
-    let slot: Rc<RefCell<Option<Box<dyn ContentSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let slot = slot.clone();
-        move || drop(slot.borrow_mut().take())
-    });
+    let slot = use_subscription_slot::<dyn ContentSubscription>();
     use_effect(move || {
         let _ = element.mount_token();
-        slot.borrow_mut().take();
+        slot.clear();
         let handler = handler.clone();
         let watching = element.mounted().and_then(|mounted| {
             on_resize(
@@ -219,7 +203,7 @@ pub(crate) fn use_resize_fallback(
                 Box::new(move |event| (handler.borrow_mut())(event)),
             )
         });
-        *slot.borrow_mut() = watching;
+        slot.set(watching);
     });
 }
 
@@ -228,15 +212,10 @@ pub(crate) fn use_resize_fallback(
 pub(crate) fn use_form_owner(element: ElementHandle, enabled: bool) -> ReadSignal<Option<u32>> {
     // Bumped from the listener, which runs outside every scope.
     let owner = use_signal(|| None::<u32>);
-    let slot: Rc<RefCell<Option<Box<dyn ContentSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let slot = slot.clone();
-        move || drop(slot.borrow_mut().take())
-    });
+    let slot = use_subscription_slot::<dyn ContentSubscription>();
     use_effect(use_reactive!(|enabled| {
         let _ = element.mount_token();
-        slot.borrow_mut().take();
+        slot.clear();
         let watching = enabled
             .then(|| element.mounted())
             .flatten()
@@ -256,7 +235,7 @@ pub(crate) fn use_form_owner(element: ElementHandle, enabled: bool) -> ReadSigna
             let mut owner = owner;
             owner.set(found);
         }
-        *slot.borrow_mut() = watching;
+        slot.set(watching);
     }));
     owner.into()
 }

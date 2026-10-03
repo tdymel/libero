@@ -1,16 +1,16 @@
-//! The timer, debounce and throttle hooks against the real non-wasm timer and a
-//! `VirtualDom` polled the way a renderer would.
+//! The timer, debounce and throttle hooks on the manual test clock, with a
+//! `VirtualDom` rendered after each firing the way a renderer would.
 
 use std::cell::RefCell;
-use std::time::Duration;
 
 use dioxus::prelude::*;
 
-use super::polling_tests::{flush, pump, pump_until, settle, started};
+use super::polling_tests::{elapse, flush, started};
 use crate::hooks::{
     IntervalHandle, TimeoutHandle, use_debounced_callback, use_debounced_value, use_interval,
     use_throttled_callback, use_throttled_value, use_timeout,
 };
+use crate::platform::manual_timer;
 
 type Log = Signal<Vec<String>>;
 
@@ -53,26 +53,29 @@ fn debounced_value_app() -> Element {
 
 #[test]
 fn a_debounced_value_follows_after_the_typing_stops() {
+    let _clock = manual_timer::install();
     let mut dom = started(debounced_value_app);
     assert_eq!(shown(), "first");
 
     for text in ["a", "ab", "abc"] {
         type_into(&dom, text);
-        pump(&mut dom, 20);
+        elapse(&mut dom, 20);
     }
     assert_eq!(shown(), "first", "followed before the pause");
 
-    pump_until(&mut dom, "the settled value", |_| shown() == "abc");
+    elapse(&mut dom, 60);
+    assert_eq!(shown(), "abc");
 }
 
 #[test]
 fn a_debounced_value_ignores_a_change_that_is_undone() {
+    let _clock = manual_timer::install();
     let mut dom = started(debounced_value_app);
     type_into(&dom, "other");
-    pump(&mut dom, 20);
+    elapse(&mut dom, 20);
     type_into(&dom, "first");
 
-    settle(&mut dom, 80);
+    elapse(&mut dom, 80);
     assert_eq!(shown(), "first");
 }
 
@@ -85,16 +88,18 @@ fn debounced_callback_app() -> Element {
 
 #[test]
 fn a_debounced_callback_runs_once_with_the_last_argument() {
+    let _clock = manual_timer::install();
     let mut dom = started(debounced_callback_app);
     for text in ["a", "b", "c"] {
         call(&dom, text);
-        pump(&mut dom, 20);
+        elapse(&mut dom, 20);
     }
     assert!(log(&dom).is_empty(), "ran before the pause");
 
-    pump_until(&mut dom, "the debounced call", |dom| !log(dom).is_empty());
+    elapse(&mut dom, 60);
+    assert_eq!(log(&dom), ["c"]);
     // Once: no second call follows the first.
-    settle(&mut dom, 80);
+    elapse(&mut dom, 80);
     assert_eq!(log(&dom), ["c"]);
 }
 
@@ -107,20 +112,21 @@ fn throttled_callback_app() -> Element {
 
 #[test]
 fn a_throttled_callback_runs_at_once_then_once_per_window() {
+    let _clock = manual_timer::install();
     let mut dom = started(throttled_callback_app);
     call(&dom, "a");
     assert_eq!(log(&dom), ["a"], "the leading call waited");
 
     call(&dom, "b");
     call(&dom, "c");
-    pump(&mut dom, 30);
+    elapse(&mut dom, 30);
     assert_eq!(log(&dom), ["a"], "ran again inside the window");
 
-    pump_until(&mut dom, "the trailing call", |dom| log(dom).len() == 2);
+    elapse(&mut dom, 70);
     assert_eq!(log(&dom), ["a", "c"]);
 
     // The quiet window closed, so the next call is a leading one again.
-    settle(&mut dom, 100);
+    elapse(&mut dom, 100);
     call(&dom, "d");
     assert_eq!(log(&dom), ["a", "c", "d"]);
 }
@@ -138,10 +144,12 @@ fn reading_throttled_callback_app() -> Element {
 
 #[test]
 fn a_throttled_callback_that_reads_a_signal_keeps_its_window() {
+    let _clock = manual_timer::install();
     let mut dom = started(reading_throttled_callback_app);
     call(&dom, "a");
     call(&dom, "b");
-    pump_until(&mut dom, "the trailing call", |dom| log(dom).len() == 2);
+    elapse(&mut dom, 100);
+    assert_eq!(log(&dom).len(), 2, "the trailing call");
 
     // The trailing call read `prefix`; changing it is no firing and keeps the window open.
     let mut prefix = dom.in_scope(ScopeId::APP, consume_context::<Signal<String>>);
@@ -160,21 +168,20 @@ fn throttled_value_app() -> Element {
 
 #[test]
 fn a_throttled_value_shows_the_first_change_and_the_last_of_a_burst() {
+    let _clock = manual_timer::install();
     let mut dom = started(throttled_value_app);
     type_into(&dom, "a");
-    let waited = pump_until(&mut dom, "the leading change", |_| shown() == "a");
-    assert!(
-        waited < Duration::from_millis(100),
-        "the leading change waited {waited:?}"
-    );
+    flush(&mut dom);
+    assert_eq!(shown(), "a", "the leading change waited");
 
     type_into(&dom, "b");
-    pump(&mut dom, 10);
+    elapse(&mut dom, 10);
     type_into(&dom, "c");
-    pump(&mut dom, 10);
+    elapse(&mut dom, 10);
     assert_eq!(shown(), "a", "changed inside the window");
 
-    pump_until(&mut dom, "the last change", |_| shown() == "c");
+    elapse(&mut dom, 80);
+    assert_eq!(shown(), "c");
 }
 
 fn timeout_app() -> Element {
@@ -190,23 +197,28 @@ fn timeout() -> TimeoutHandle {
 
 #[test]
 fn a_timeout_fires_once_after_start() {
+    let _clock = manual_timer::install();
     let mut dom = started(timeout_app);
     dom.in_runtime(|| timeout().start());
     assert!(dom.in_runtime(|| timeout().pending()));
 
-    pump_until(&mut dom, "the timeout", |dom| !log(dom).is_empty());
-    settle(&mut dom, 60);
+    elapse(&mut dom, 59);
+    assert!(log(&dom).is_empty(), "fired early");
+    elapse(&mut dom, 1);
+    assert_eq!(log(&dom), ["fired"]);
+    elapse(&mut dom, 60);
     assert_eq!(log(&dom), ["fired"]);
     assert!(!dom.in_runtime(|| timeout().pending()));
 }
 
 #[test]
 fn a_stopped_timeout_never_fires() {
+    let _clock = manual_timer::install();
     let mut dom = started(timeout_app);
     dom.in_runtime(|| timeout().start());
     dom.in_runtime(|| timeout().stop());
 
-    settle(&mut dom, 60);
+    elapse(&mut dom, 60);
     assert!(log(&dom).is_empty());
 }
 
@@ -221,9 +233,11 @@ fn reading_timeout_app() -> Element {
 /// `count.set(count() + 1)` is the same trap, looping with no timer at all.
 #[test]
 fn a_timeout_that_reads_a_signal_fires_once() {
+    let _clock = manual_timer::install();
     let mut dom = started(reading_timeout_app);
     dom.in_runtime(|| timeout().start());
-    pump_until(&mut dom, "the timeout", |dom| !log(dom).is_empty());
+    elapse(&mut dom, 10);
+    assert_eq!(log(&dom), ["fired"]);
 
     // A change of what the callback read is no firing.
     let mut label = dom.in_scope(ScopeId::APP, consume_context::<Signal<String>>);
@@ -245,17 +259,18 @@ fn interval() -> IntervalHandle {
 
 #[test]
 fn an_interval_ticks_between_start_and_stop() {
+    let _clock = manual_timer::install();
     let mut dom = started(interval_app);
-    settle(&mut dom, 60);
+    elapse(&mut dom, 60);
     assert!(log(&dom).is_empty(), "ticked before start");
 
     dom.in_runtime(|| interval().toggle());
     assert!(dom.in_runtime(|| interval().active()));
-    pump_until(&mut dom, "three ticks", |dom| log(dom).len() >= 3);
-    let ticks = log(&dom).len();
+    elapse(&mut dom, 90);
+    assert_eq!(log(&dom).len(), 3);
 
     dom.in_runtime(|| interval().toggle());
     assert!(!dom.in_runtime(|| interval().active()));
-    settle(&mut dom, 60);
-    assert!(log(&dom).len() <= ticks + 1, "kept ticking after stop");
+    elapse(&mut dom, 60);
+    assert_eq!(log(&dom).len(), 3, "kept ticking after stop");
 }

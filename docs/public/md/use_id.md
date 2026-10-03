@@ -4,9 +4,9 @@ Crate: `libero`
 Import: `use libero::hooks::use_id;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/id.rs>
 Index: [index.md](index.md) lists every other page
-Description: A process-unique id, stable for the component's lifetime, for the aria wiring between one instance's elements.
+Description: An id unique within the app, stable for the component's lifetime, for the aria wiring between one instance's elements.
 
-`use_id() -> Signal<String>` returns an id that is unique in the process and
+`use_id() -> Signal<String>` returns an id that is unique within the app and
 stays the same for the component's lifetime. Use it for the aria wiring between
 one instance's elements, where a fixed string would clash as soon as the
 component renders twice.
@@ -52,14 +52,15 @@ fn Faq() -> Element {
 pub fn use_id() -> Signal<String>
 ```
 
-The id reads `lsx-N`, from a counter shared by the whole process. Read it with
-`id()` where an attribute wants a `String`.
+The id reads `lsx-N`, from a counter per app that follows render order, so a
+server render and its hydration agree. Read it with `id()` where an attribute
+wants a `String`.
 
 ## Accessibility
 
 ### Libero handles
 
-- The id is unique in the process, so each instance's wiring stays its own.
+- The id is unique within the app, so each instance's wiring stays its own.
   Each disclosure in the demo names its own panel, so a screen reader pairs
   every button with the right one.
 

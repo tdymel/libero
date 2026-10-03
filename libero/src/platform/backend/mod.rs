@@ -18,6 +18,8 @@ use super::{
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
 mod blitz;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+pub(crate) mod manual_timer;
 mod mounted;
 #[cfg(not(target_arch = "wasm32"))]
 mod origin;

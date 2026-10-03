@@ -1,4 +1,8 @@
+mod edge_scroll;
+
 use dioxus::{html::input_data::MouseButton, prelude::*};
+
+pub(crate) use edge_scroll::edge_scroll_step;
 
 use crate::{
     hooks::ElementHandle,
@@ -9,7 +13,9 @@ use crate::{
 /// A pointer position in client coordinates.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DragPoint {
+    /// CSS px from the viewport's left edge.
     pub x: f64,
+    /// CSS px from the viewport's top edge.
     pub y: f64,
 }
 
@@ -17,6 +23,7 @@ pub struct DragPoint {
 /// moment the layout is known to be settled.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DragStart {
+    /// The pointer's position at the press.
     pub client: DragPoint,
     /// Abandons the drag, at once or after a measuring round-trip. Called at
     /// once, no move or end is reported for this press.
@@ -26,7 +33,9 @@ pub struct DragStart {
 /// A pointer move during a drag.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DragMove {
+    /// Where the pointer went down.
     pub start: DragPoint,
+    /// Where the pointer is now.
     pub client: DragPoint,
 }
 
@@ -48,7 +57,9 @@ pub struct DragOptions {
     /// Vetoes by calling [`DragStart::cancel`], not by returning: measuring
     /// may take a round-trip.
     pub onstart: Callback<DragStart>,
+    /// Every pointer move while the drag lasts.
     pub onmove: Callback<DragMove>,
+    /// Once, on release or cancel of a drag that started.
     pub onend: Callback<()>,
 }
 
@@ -62,12 +73,15 @@ struct ActiveDrag {
 /// Handlers to spread onto the two elements a drag involves.
 #[derive(Clone, Copy)]
 pub struct Drag {
+    /// `true` from the drag's start to its end.
     pub dragging: Signal<bool>,
     /// The grab handle.
     pub onpointerdown: Callback<Event<PointerData>>,
     /// The capture element.
     pub onpointermove: Callback<Event<PointerData>>,
+    /// The capture element.
     pub onpointerup: Callback<Event<PointerData>>,
+    /// The capture element.
     pub onpointercancel: Callback<Event<PointerData>>,
 }
 
@@ -119,27 +133,6 @@ const SIDEWAYS_SLOP: f64 = 8.0;
 
 /// How far a mouse or pen moves before a [`use_distance_drag`] drags.
 const MOUSE_SLOP: f64 = 4.0;
-
-/// How far from a scrolling box's side edge a drag starts scrolling it, in px.
-const EDGE: f64 = 48.0;
-
-/// The most a box scrolls per auto-scroll tick, at its very edge.
-const EDGE_STEP: f64 = 16.0;
-
-/// The px a drag at client `x` scrolls a box spanning `start..start + width`
-/// by per tick: negative near its left edge, positive near its right, faster
-/// the closer, 0 elsewhere.
-pub(crate) fn edge_scroll_step(x: f64, start: f64, width: f64) -> f64 {
-    let depth = |distance: f64| ((EDGE - distance) / EDGE).clamp(0.0, 1.0);
-    let (left, right) = (depth(x - start), depth(start + width - x));
-    // At least a px, so a pointer just inside the zone still moves.
-    let step = |depth: f64| (EDGE_STEP * depth).max(1.0);
-    match (left > 0.0, right > 0.0) {
-        (true, _) => -step(left),
-        (_, true) => step(right),
-        _ => 0.0,
-    }
-}
 
 /// When a press turns into a drag.
 #[derive(Clone, Copy, PartialEq)]
@@ -198,6 +191,46 @@ struct Pending {
     slop: Option<f64>,
 }
 
+/// What a move by `dx`, `dy` from the press does to a [`Pending`] one.
+#[derive(Debug, PartialEq)]
+enum PendingStep {
+    Wait,
+    Drop,
+    Begin,
+}
+
+impl Pending {
+    fn step(&self, dx: f64, dy: f64) -> PendingStep {
+        let moved = dx.hypot(dy);
+        if let Some(slop) = self.slop {
+            return match moved >= slop {
+                true => PendingStep::Begin,
+                false => PendingStep::Wait,
+            };
+        }
+        // No longer a tap, and not allowed to drag.
+        if !self.grabs {
+            return match moved >= SIDEWAYS_SLOP {
+                true => PendingStep::Drop,
+                false => PendingStep::Wait,
+            };
+        }
+        // Not yet sideways: wait, the browser cancels a swipe it scrolls.
+        match dx.abs() < SIDEWAYS_SLOP || dx.abs() <= dy.abs() {
+            true => PendingStep::Wait,
+            false => PendingStep::Begin,
+        }
+    }
+}
+
+fn client_point(event: &Event<PointerData>) -> DragPoint {
+    let coordinates = event.client_coordinates();
+    DragPoint {
+        x: coordinates.x,
+        y: coordinates.y,
+    }
+}
+
 fn use_drag_inner(
     options: DragOptions,
     activation: Activation,
@@ -227,14 +260,9 @@ fn use_drag_inner(
         if event.pointer_id() != drag.pointer_id {
             return;
         }
-        let coordinates = event.client_coordinates();
-
         onmove.call(DragMove {
             start: drag.start,
-            client: DragPoint {
-                x: coordinates.x,
-                y: coordinates.y,
-            },
+            client: client_point(&event),
         });
     });
 
@@ -292,11 +320,7 @@ fn use_drag_inner(
             return;
         }
         event.prevent_default();
-        let coordinates = event.client_coordinates();
-        let client = DragPoint {
-            x: coordinates.x,
-            y: coordinates.y,
-        };
+        let client = client_point(&event);
         let press = ActiveDrag {
             pointer_id: event.pointer_id(),
             start: client,
@@ -326,38 +350,24 @@ fn use_drag_inner(
     });
 
     let onpointermove = use_callback(move |event: Event<PointerData>| {
-        let Some(Pending { press, grabs, slop }) = *pending.peek() else {
+        let Some(waiting) = *pending.peek() else {
             track.call(event);
             return;
         };
+        let press = waiting.press;
         if event.pointer_id() != press.pointer_id {
             return;
         }
-        let coordinates = event.client_coordinates();
-        let (dx, dy) = (coordinates.x - press.start.x, coordinates.y - press.start.y);
-        if let Some(slop) = slop {
-            if dx.hypot(dy) >= slop {
+        let client = client_point(&event);
+        match waiting.step(client.x - press.start.x, client.y - press.start.y) {
+            PendingStep::Wait => {}
+            PendingStep::Drop => pending.set(None),
+            PendingStep::Begin => {
                 pending.set(None);
                 if begin.call((event.clone(), press.start)) {
                     track.call(event);
                 }
             }
-            return;
-        }
-        // No longer a tap, and not allowed to drag.
-        if !grabs {
-            if dx.hypot(dy) >= SIDEWAYS_SLOP {
-                pending.set(None);
-            }
-            return;
-        }
-        // Not yet sideways: wait, the browser cancels a swipe it scrolls.
-        if dx.abs() < SIDEWAYS_SLOP || dx.abs() <= dy.abs() {
-            return;
-        }
-        pending.set(None);
-        if begin.call((event.clone(), press.start)) {
-            track.call(event);
         }
     });
 
@@ -412,16 +422,37 @@ pub fn drag_handle_sx() -> Sx {
 mod tests {
     use super::*;
 
+    fn pending(grabs: bool, slop: Option<f64>) -> Pending {
+        let start = DragPoint { x: 0.0, y: 0.0 };
+        Pending {
+            press: ActiveDrag {
+                pointer_id: 1,
+                start,
+            },
+            grabs,
+            slop,
+        }
+    }
+
     #[test]
-    fn a_drag_near_a_side_edge_scrolls_that_way_faster_the_closer() {
-        let step = |x: f64| edge_scroll_step(x, 100.0, 600.0);
-        assert_eq!(step(400.0), 0.0);
-        assert_eq!(step(148.0), 0.0);
-        assert_eq!(step(100.0), -EDGE_STEP);
-        assert_eq!(step(124.0), -EDGE_STEP / 2.0);
-        assert_eq!(step(700.0), EDGE_STEP);
-        // Past the edge, the pointer off the box, still the full step.
-        assert_eq!(step(760.0), EDGE_STEP);
-        assert_eq!(step(147.9), -1.0);
+    fn a_distance_press_begins_once_it_moved_its_slop_any_way() {
+        let press = pending(true, Some(MOUSE_SLOP));
+        assert_eq!(press.step(2.0, 2.0), PendingStep::Wait);
+        assert_eq!(press.step(0.0, -4.0), PendingStep::Begin);
+    }
+
+    #[test]
+    fn a_sideways_touch_begins_only_moving_more_across_than_down() {
+        let press = pending(true, None);
+        assert_eq!(press.step(7.0, 0.0), PendingStep::Wait);
+        assert_eq!(press.step(10.0, 12.0), PendingStep::Wait);
+        assert_eq!(press.step(-10.0, 3.0), PendingStep::Begin);
+    }
+
+    #[test]
+    fn a_touch_that_may_not_grab_drops_once_it_is_no_tap() {
+        let press = pending(false, None);
+        assert_eq!(press.step(5.0, 0.0), PendingStep::Wait);
+        assert_eq!(press.step(20.0, 0.0), PendingStep::Drop);
     }
 }

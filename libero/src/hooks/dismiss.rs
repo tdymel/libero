@@ -17,12 +17,13 @@ use crate::{
         ElementHandle, FocusChange, FocusReturn, FocusWithin,
         focus_return::use_focus_return,
         popover::{OpenPopups, focus_in_popup_of, use_open_popups},
-        use_focus_within,
+        use_focus_within, use_subscription_slot,
     },
     platform::{
         ElementApi, KeySubscription, PRESS_MARKER_ATTR, PlatformError, PressSubscription,
         key_taken, keyboard, next_task, press,
     },
+    utils::bump,
 };
 
 /// Tells a press inside a box from one outside where focus cannot (the
@@ -402,11 +403,7 @@ impl DismissHandle {
             Some(false) if self.focus_in_owned_popup() => {}
             // Landed already, heard at `Outlet`'s flush: recorded for the
             // effect in `use_dismiss`, as Escape is.
-            Some(false) => {
-                let mut tick = self.left_tick;
-                let next = tick.peek().wrapping_add(1);
-                tick.set(next);
-            }
+            Some(false) => bump(self.left_tick),
             None => {
                 // The web lands focus after `focusout`: ask a task later. Blitz
                 // moves focus first and cannot answer from a task: ask here.
@@ -595,20 +592,13 @@ pub(crate) fn use_dismiss(
 /// Closes `handle` on a press outside it while `listen`, where [`press`] answers.
 /// As a focus move: the press put focus where it wanted.
 fn use_press_outside(listen: bool, handle: DismissHandle) {
-    let listening: Rc<RefCell<Option<Box<dyn PressSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let listening = listening.clone();
-        move || {
-            listening.borrow_mut().take();
-        }
-    });
+    let listening = use_subscription_slot::<dyn PressSubscription>();
     use_effect(use_reactive!(|(listen,)| {
         if !listen {
-            listening.borrow_mut().take();
+            listening.clear();
             return;
         }
-        if listening.borrow().is_some() {
+        if listening.is_some() {
             return;
         }
         let Some(api) = press() else {
@@ -617,12 +607,10 @@ fn use_press_outside(listen: bool, handle: DismissHandle) {
         // Records the press only, outside every scope; `use_dismiss`'s effect closes.
         let subscription = api.on_press(Box::new(move |markers| {
             if !handle.pressed_inside(&markers) {
-                let mut tick = handle.left_tick;
-                let next = tick.peek().wrapping_add(1);
-                tick.set(next);
+                bump(handle.left_tick);
             }
         }));
-        *listening.borrow_mut() = Some(subscription);
+        listening.set(Some(subscription));
     }));
 }
 
@@ -679,9 +667,7 @@ fn use_document_escape(listen: bool, global: bool, mut onescape: impl FnMut() + 
                 // the press for the layer above it.
                 return false;
             }
-            let mut tick = escape_tick;
-            let next = tick.peek().wrapping_add(1);
-            tick.set(next);
+            bump(escape_tick);
             true
         }));
         *slot.borrow_mut() = Some((subscription, layer.push()));

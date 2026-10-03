@@ -1,155 +1,43 @@
-//! The dispatch harness: recorders that find an element by its listeners,
-//! fake renderer payloads, and helpers that send an event and settle.
+//! The dispatch harness: the shared recorder, fake renderer payloads, and
+//! helpers that send an event and settle.
 
 use crate::common::{body, tags_with};
-use dioxus::core::{AttributeValue, ElementId, WriteMutations};
+use dioxus::core::ElementId;
 use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 use libero::components::Options;
-use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
-/// Records the element the `click` listener landed on, which is the only way
-/// to address it from a test - and every `mousedown` one, in order. Each
-/// element's listeners, dynamic attributes and own text are kept for
-/// [`FindClickListener::element`].
-#[derive(Default)]
-pub struct FindClickListener {
-    pub last: Option<ElementId>,
-    /// The element a dynamic attribute or a text lands on; `None` while a
-    /// template is built, whose static attributes have no element yet.
-    pub owner: Option<ElementId>,
-    pub pushed: Option<ElementId>,
-    pub attributes: HashMap<ElementId, HashMap<String, String>>,
-    pub listeners: HashMap<ElementId, HashSet<String>>,
-    pub click: Option<ElementId>,
-    pub first_click: Option<ElementId>,
-    pub clicks: Vec<ElementId>,
-    pub input: Option<ElementId>,
-    pub change: Option<ElementId>,
-    pub keydown: Vec<ElementId>,
-    pub mousedown: Vec<ElementId>,
-    pub blur: Vec<ElementId>,
-    pub transitionend: Vec<ElementId>,
-    pub submit: Option<ElementId>,
-    pub reset: Option<ElementId>,
-    /// A field frame: its padding-press listeners act only on the web.
-    pub frame: Option<ElementId>,
+pub use crate::recorder::FindClickListener;
+
+/// A mounted app and the recorder that saw it render.
+pub struct Page {
+    pub dom: VirtualDom,
+    pub rec: FindClickListener,
 }
 
-impl FindClickListener {
-    /// The one element with a `listener` listener whose `attribute` is
-    /// `value`, or whose own text is, for `"text"`. Panics unless exactly one,
-    /// so a renamed label fails here and not as a refusal that passes.
-    pub fn element(&self, listener: &str, attribute: &str, value: &str) -> ElementId {
-        let found: Vec<ElementId> = self
-            .listeners
-            .iter()
-            .filter(|(_, names)| names.contains(listener))
-            .map(|(id, _)| *id)
-            .filter(|id| {
-                self.attributes
-                    .get(id)
-                    .and_then(|attributes| attributes.get(attribute))
-                    .is_some_and(|found| found == value)
-            })
-            .collect();
-        match found[..] {
-            [id] => id,
-            _ => panic!(
-                "{} elements with {attribute}={value:?} and a {listener} listener",
-                found.len()
-            ),
-        }
+impl Page {
+    /// Builds `app` and runs its first effects, recording both passes.
+    pub fn mount(app: fn() -> Element) -> Self {
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut rec = FindClickListener::default();
+        dom.rebuild(&mut rec);
+        dom.render_immediate(&mut rec);
+        Self { dom, rec }
     }
-}
 
-impl WriteMutations for FindClickListener {
-    fn push_id(&mut self, id: ElementId) {
-        self.last = Some(id);
-        self.owner = Some(id);
-        self.pushed = Some(id);
+    /// Clicks `id`, then renders once.
+    pub fn click(&mut self, id: ElementId) {
+        self.dom
+            .runtime()
+            .handle_event("click", Event::new(click_event(), true), id);
+        self.render();
     }
-    fn set_id(&mut self, id: ElementId) {
-        self.last = Some(id);
-        self.owner = Some(id);
-        self.pushed = None;
+
+    pub fn render(&mut self) {
+        self.dom.render_immediate(&mut self.rec);
     }
-    fn add_event_listener(&mut self, name: &str) {
-        if let Some(id) = self.owner {
-            self.listeners
-                .entry(id)
-                .or_default()
-                .insert(name.to_string());
-        }
-        if self.last.is_some() && self.last == self.frame {
-            return;
-        }
-        if name == "click" {
-            self.click = self.last;
-            self.first_click = self.first_click.or(self.last);
-            self.clicks.extend(self.last);
-        }
-        if name == "input" {
-            self.input = self.last;
-        }
-        if name == "change" {
-            self.change = self.last;
-        }
-        if name == "keydown" {
-            self.keydown.extend(self.last);
-        }
-        if name == "mousedown" {
-            self.mousedown.extend(self.last);
-        }
-        if name == "blur" {
-            self.blur.extend(self.last);
-        }
-        if name == "transitionend" {
-            self.transitionend.extend(self.last);
-        }
-        if name == "submit" {
-            self.submit = self.last;
-        }
-        if name == "reset" {
-            self.reset = self.last;
-        }
-    }
-    fn child(&mut self, _index: usize) {}
-    fn pop(&mut self) {
-        self.pushed = None;
-    }
-    fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {
-        self.owner = None;
-        self.pushed = None;
-    }
-    // A text is created right after its parent's `push_id`, then appended to it.
-    fn create_text(&mut self, value: &str) {
-        if let Some(id) = self.pushed {
-            let attributes = self.attributes.entry(id).or_default();
-            attributes.entry("text".into()).or_default().push_str(value);
-        }
-    }
-    fn clone(&mut self) {
-        self.owner = None;
-        self.pushed = None;
-    }
-    fn append_children(&mut self, _m: usize) {}
-    fn replace_with(&mut self, _m: usize) {}
-    fn insert_after(&mut self, _m: usize) {}
-    fn insert_before(&mut self, _m: usize) {}
-    fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
-        if name == "data-frame" {
-            self.frame = self.last;
-        }
-        if let (Some(id), AttributeValue::Text(value)) = (self.owner, value) {
-            let attributes = self.attributes.entry(id).or_default();
-            attributes.insert(name.to_string(), value.clone());
-        }
-    }
-    fn set_text(&mut self, _value: &str) {}
-    fn remove_event_listener(&mut self, _name: &str) {}
-    fn remove(&mut self) {}
 }
 
 /// Renderers register one of these; without it every event conversion panics.
@@ -494,48 +382,6 @@ pub fn assert_every_press_keeps_the_focus(app: fn() -> Element, guards: usize) {
     }
 }
 
-/// Every element that registered a `click` listener, and the one named
-/// "Clear": the shared `clear_button` of `TagsField`, `FileField`,
-/// `Autocomplete`, `Select` and `Cascader`.
-#[derive(Default)]
-pub struct FindClear {
-    pub last: Option<ElementId>,
-    pub clicks: Vec<ElementId>,
-    pub clear: Option<ElementId>,
-}
-
-impl WriteMutations for FindClear {
-    fn push_id(&mut self, id: ElementId) {
-        self.last = Some(id);
-    }
-    fn set_id(&mut self, id: ElementId) {
-        self.last = Some(id);
-    }
-    fn add_event_listener(&mut self, name: &str) {
-        if name == "click" {
-            self.clicks.extend(self.last);
-        }
-    }
-    fn child(&mut self, _index: usize) {}
-    fn pop(&mut self) {}
-    fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
-    fn create_text(&mut self, _value: &str) {}
-    fn clone(&mut self) {}
-    fn append_children(&mut self, _m: usize) {}
-    fn replace_with(&mut self, _m: usize) {}
-    fn insert_after(&mut self, _m: usize) {}
-    fn insert_before(&mut self, _m: usize) {}
-    fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
-        let clear = libero::localization::CommonLabels::ENGLISH.clear;
-        if name == "aria-label" && matches!(value, AttributeValue::Text(text) if text == clear) {
-            self.clear = self.last;
-        }
-    }
-    fn set_text(&mut self, _value: &str) {}
-    fn remove_event_listener(&mut self, _name: &str) {}
-    fn remove(&mut self) {}
-}
-
 thread_local! {
     /// What each `onchange` handed back, in order.
     pub static CLEARED: std::cell::RefCell<Vec<usize>> = const { std::cell::RefCell::new(Vec::new()) };
@@ -553,10 +399,24 @@ pub fn click_clear(app: fn() -> Element) -> Option<Vec<usize>> {
     dioxus::html::set_event_converter(Box::new(TestConverter));
     CLEARED.with_borrow_mut(Vec::clear);
     let mut dom = VirtualDom::new(app);
-    let mut find = FindClear::default();
+    let mut find = FindClickListener::default();
     dom.rebuild(&mut find);
-    let clear = find.clear?;
-    assert!(find.clicks.contains(&clear), "Clear has no click listener");
+    // The shared `clear_button` of `TagsField`, `FileField`, `Autocomplete`,
+    // `Select` and `Cascader`, found by its label alone.
+    let label = libero::localization::CommonLabels::ENGLISH.clear;
+    let clear = *find
+        .attributes
+        .iter()
+        .find(|(_, attributes)| {
+            attributes
+                .get("aria-label")
+                .is_some_and(|found| found == label)
+        })?
+        .0;
+    assert!(
+        find.registered_for("click").contains(&clear),
+        "Clear has no click listener"
+    );
     dom.runtime()
         .handle_event("click", Event::new(click_event(), true), clear);
     dom.process_events();

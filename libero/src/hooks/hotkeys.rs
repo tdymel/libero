@@ -8,6 +8,7 @@ use crate::hooks::{
 };
 use crate::localization::ShortcutHelpLabels;
 use crate::platform::{KeyChord, KeySubscription, keyboard, mod_is_meta, warn_reserved_chord};
+use crate::utils::bump;
 
 /// One keyboard shortcut for [`use_hotkeys`]: a chord such as `"mod+k"` and what
 /// to run when it is pressed.
@@ -25,6 +26,7 @@ pub struct Hotkey {
 }
 
 impl Hotkey {
+    /// Runs `handler` on `chord`; outside text fields unless [`include_editable`](Self::include_editable).
     pub fn new(chord: impl Into<String>, handler: impl FnMut() + 'static) -> Self {
         Self {
             chord: chord.into(),
@@ -273,9 +275,7 @@ pub fn use_hotkeys(bindings: impl IntoIterator<Item = Hotkey>) {
             };
             if !pressed.repeat {
                 queue.borrow_mut().push(index);
-                let mut tick = tick;
-                let next = tick.peek().wrapping_add(1);
-                tick.set(next);
+                bump(tick);
             }
             true
         });

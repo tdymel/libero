@@ -483,13 +483,9 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     // new content and platform scrolls until a real `resize` arrives.
     let reported = use_signal(|| 0u64);
     let mut platform_scroll = use_hook(|| {
-        CopyValue::new(scroll().map(|api| {
-            api.on_scroll(Box::new(move || {
-                let mut reported = reported;
-                let next = reported.peek().wrapping_add(1);
-                reported.set(next);
-            }))
-        }))
+        CopyValue::new(
+            scroll().map(|api| api.on_scroll(Box::new(move || crate::utils::bump(reported)))),
+        )
     });
     let children = props.children.clone();
     use_effect(use_reactive!(|children| {

@@ -122,34 +122,49 @@ pub async fn move_to(page: &Page, at: Point) -> Result<()> {
 }
 
 /// A touch held at an element's centre for `ms`, with touch emulation turned on
-/// for the page. CDP rejects a `touchEnd` without a point.
+/// for the page.
 pub async fn long_press(page: &Page, selector: &str, ms: u64) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::input::DispatchTouchEventType;
+    let at = touch_down(page, selector).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
+    touch_at(page, DispatchTouchEventType::TouchEnd, at).await
+}
+
+/// A touch pressed at an element's centre and held, with touch emulation
+/// turned on for the page; returns where, for [`touch_up`].
+pub async fn touch_down(page: &Page, selector: &str) -> Result<Point> {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
-    use chromiumoxide::cdp::browser_protocol::input::{
-        DispatchTouchEventParams, DispatchTouchEventType, TouchPoint,
-    };
+    use chromiumoxide::cdp::browser_protocol::input::DispatchTouchEventType;
     page.execute(SetTouchEmulationEnabledParams::new(true))
         .await?;
     let at = centre_of(page, selector).await?;
-    for kind in [
-        DispatchTouchEventType::TouchStart,
-        DispatchTouchEventType::TouchEnd,
-    ] {
-        if kind == DispatchTouchEventType::TouchEnd {
-            tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
-        }
-        let point = TouchPoint::builder()
-            .x(at.x)
-            .y(at.y)
-            .build()
-            .map_err(anyhow::Error::msg)?;
-        let event = DispatchTouchEventParams::builder()
-            .r#type(kind)
-            .touch_point(point)
-            .build()
-            .map_err(anyhow::Error::msg)?;
-        page.execute(event).await?;
-    }
+    touch_at(page, DispatchTouchEventType::TouchStart, at).await?;
+    Ok(at)
+}
+
+/// Lifts a [`touch_down`] at `at`: CDP rejects a `touchEnd` without a point.
+pub async fn touch_up(page: &Page, at: Point) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::input::DispatchTouchEventType;
+    touch_at(page, DispatchTouchEventType::TouchEnd, at).await
+}
+
+async fn touch_at(
+    page: &Page,
+    kind: chromiumoxide::cdp::browser_protocol::input::DispatchTouchEventType,
+    at: Point,
+) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::input::{DispatchTouchEventParams, TouchPoint};
+    let point = TouchPoint::builder()
+        .x(at.x)
+        .y(at.y)
+        .build()
+        .map_err(anyhow::Error::msg)?;
+    let event = DispatchTouchEventParams::builder()
+        .r#type(kind)
+        .touch_point(point)
+        .build()
+        .map_err(anyhow::Error::msg)?;
+    page.execute(event).await?;
     Ok(())
 }
 

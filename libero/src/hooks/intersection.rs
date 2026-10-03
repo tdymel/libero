@@ -1,9 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
-
 use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
-use super::{ElementHandle, use_element};
+use super::{ElementHandle, use_element, use_subscription_slot};
 use crate::platform::{
     ContentSubscription, INTERSECT_ATTR, next_observe_tag, observes_by_tag, on_intersection,
 };
@@ -36,6 +34,7 @@ impl Default for IntersectionOptions {
 /// How much of the observed element is visible.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct IntersectionEntry {
+    /// Whether any of the element is inside the root's box.
     pub is_intersecting: bool,
     /// The visible share of the element's box, 0 to 1.
     pub ratio: f64,
@@ -54,8 +53,6 @@ pub struct Intersection {
     /// observe: Blitz, a server render.
     pub entry: ReadSignal<Option<IntersectionEntry>>,
 }
-
-type Slot = Rc<RefCell<Option<Box<dyn ContentSubscription>>>>;
 
 /// Reports how much of an element is visible inside its root.
 ///
@@ -96,11 +93,7 @@ pub fn use_intersection(options: IntersectionOptions) -> Intersection {
     let target = use_element();
     let entry = use_signal(|| None::<IntersectionEntry>);
     let tag = use_hook(|| observes_by_tag().then(next_observe_tag));
-    let slot: Slot = use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let slot = slot.clone();
-        move || drop(slot.borrow_mut().take())
-    });
+    let slot = use_subscription_slot::<dyn ContentSubscription>();
 
     use_effect({
         let slot = slot.clone();
@@ -108,7 +101,7 @@ pub fn use_intersection(options: IntersectionOptions) -> Intersection {
             let _ = target.mount_token();
             let _ = root.and_then(|root| root.mount_token());
             // Dropped first, so a changed option never leaves two observers.
-            slot.borrow_mut().take();
+            slot.clear();
             let done = once && entry.peek().is_some_and(|entry| entry.is_intersecting);
             let watching = (!done)
                 .then(|| target.mounted())
@@ -142,14 +135,14 @@ pub fn use_intersection(options: IntersectionOptions) -> Intersection {
                         }),
                     )
                 });
-            *slot.borrow_mut() = watching;
+            slot.set(watching);
         })
     });
     use_effect({
         let slot = slot.clone();
         use_reactive!(|once| {
             if once && entry().is_some_and(|entry| entry.is_intersecting) {
-                slot.borrow_mut().take();
+                slot.clear();
             }
         })
     });

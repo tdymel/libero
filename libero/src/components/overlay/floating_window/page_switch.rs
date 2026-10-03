@@ -1,11 +1,12 @@
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 use dioxus::prelude::*;
 
 use crate::{
     context::WindowHost,
-    hooks::{ElementHandle, use_dismiss_layer},
+    hooks::{ElementHandle, use_dismiss_layer, use_subscription_slot},
     platform::{ElementApi, KeyChord, KeySubscription, keyboard},
+    utils::bump,
 };
 
 /// Whether focus is known to be on `root` or inside it.
@@ -32,7 +33,8 @@ pub(super) fn use_page_switch(
     let mut page = use_hook(|| CopyValue::new(opener.call(())));
     // The key callback runs outside every scope on the web; an effect moves focus.
     let tick = use_signal(|| 0u64);
-    let slot: Rc<RefCell<Option<Box<dyn KeySubscription>>>> = use_hook(|| {
+    let slot = use_subscription_slot::<dyn KeySubscription>();
+    use_hook(|| {
         let callback = Box::new(move |chord: KeyChord| {
             let modifiers = chord.modifiers;
             // Shift+F6 too: with two stops, backward is forward.
@@ -46,18 +48,11 @@ pub(super) fn use_page_switch(
                 return false;
             }
             if !chord.repeat {
-                let mut tick = tick;
-                let next = tick.peek().wrapping_add(1);
-                tick.set(next);
+                bump(tick);
             }
             true
         });
-        Rc::new(RefCell::new(
-            keyboard().map(|api| api.on_key_unfiltered(callback)),
-        ))
-    });
-    use_drop(move || {
-        slot.borrow_mut().take();
+        slot.set(keyboard().map(|api| api.on_key_unfiltered(callback)));
     });
 
     let mut seen = use_signal(|| 0u64);

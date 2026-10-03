@@ -146,16 +146,16 @@ mod tests {
         assert_eq!(find(Some(0), "", &[]), None);
     }
 
-    /// The reset is the part that needs a timer, so it runs against the real
-    /// non-wasm arm and a real `VirtualDom` polling the task the callback is
-    /// delivered on - `platform/timer.rs`'s own harness.
+    /// The reset is the part that needs a timer, so it runs on the manual test
+    /// clock with a real `VirtualDom`.
     #[cfg(not(target_arch = "wasm32"))]
     mod reset {
         use std::cell::RefCell;
         use std::time::Duration;
 
         use super::super::*;
-        use crate::hooks::polling_tests::{pump, pump_until};
+        use crate::hooks::polling_tests::elapse;
+        use crate::platform::manual_timer;
 
         thread_local! {
             static HANDLE: RefCell<Option<Typeahead>> = const { RefCell::new(None) };
@@ -175,6 +175,7 @@ mod tests {
 
         #[test]
         fn the_query_builds_up_and_is_forgotten_after_a_pause() {
+            let _clock = manual_timer::install();
             let mut dom = VirtualDom::new(app);
             dom.rebuild_in_place();
             let typeahead = handle();
@@ -185,14 +186,14 @@ mod tests {
             });
             assert!(typeahead.is_typing());
 
-            pump_until(&mut dom, "the pause forgetting the query", |_| {
-                !typeahead.is_typing()
-            });
+            elapse(&mut dom, 100);
+            assert!(!typeahead.is_typing(), "the pause kept the query");
             dom.in_runtime(|| assert_eq!(typeahead.push('d'), "d"));
         }
 
         #[test]
         fn each_keystroke_restarts_the_pause() {
+            let _clock = manual_timer::install();
             let mut dom = VirtualDom::new(app);
             dom.rebuild_in_place();
             let typeahead = handle();
@@ -203,7 +204,7 @@ mod tests {
                 dom.in_runtime(|| {
                     typeahead.push(ch);
                 });
-                pump(&mut dom, 20);
+                elapse(&mut dom, 20);
             }
             dom.in_runtime(|| assert_eq!(typeahead.push('!'), "hello!"));
         }

@@ -3,7 +3,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused, linger};
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, clock, js, wait};
@@ -108,16 +108,23 @@ async fn long_press_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.long_press(TRIGGER, 800).await?;
     is_open(d, true, "a long press").await?;
     is_open(d, false, "the release").await?;
-    // Held only now: the long press above needs the real clock.
-    if d.hold_timers(&[LONG_PRESS_MS]).await? {
-        d.long_press(TRIGGER, 100).await?;
-        d.settle().await?;
-        d.fire_timers(LONG_PRESS_MS).await?;
-        d.settle().await?;
-    } else {
-        d.long_press(TRIGGER, 100).await?;
-        linger(d, 8).await;
+    // Held only now: the long press above needs the real clock. Without a held
+    // clock a short touch's cancel is unobservable short of a fixed wait (1662).
+    if !d.hold_timers(&[LONG_PRESS_MS]).await? {
+        return Ok(());
     }
+    d.touch_down(TRIGGER).await?;
+    d.settle().await?;
+    ensure!(
+        d.armed(LONG_PRESS_MS).await? == 1,
+        "a held touch armed no {LONG_PRESS_MS} ms open"
+    );
+    d.touch_up(TRIGGER).await?;
+    d.settle().await?;
+    ensure!(
+        d.armed(LONG_PRESS_MS).await? == 0,
+        "the release left the open armed"
+    );
     ensure!(!d.exists(OPEN).await?, "a short touch opened it");
     Ok(())
 }

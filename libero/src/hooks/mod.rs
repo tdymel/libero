@@ -41,6 +41,7 @@ mod ripple;
 mod scroll_lock;
 mod silent_focus;
 mod stylesheet;
+mod subscription_slot;
 mod swipe;
 mod system_notification;
 mod theme;
@@ -111,6 +112,7 @@ pub(crate) use scroll_lock::use_scroll_lock;
 pub(crate) use silent_focus::{use_silent_focus_in, use_silent_focus_out, use_silent_focus_within};
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
+pub(crate) use subscription_slot::{SubscriptionSlot, use_subscription_slot};
 pub use swipe::{
     EdgeSwipeOptions, Swipe, SwipeDirection, SwipeEdge, SwipeEvent, SwipeOptions, edge_swipe_sx,
     use_edge_swipe, use_swipe,

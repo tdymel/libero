@@ -6,7 +6,8 @@ use crate::{
 };
 
 /// The app's colour scheme: what it is set to, what that resolves to, and how
-/// to change it. Reactive, the platform's own changes included.
+/// to change it. Reactive, the platform's own changes included. Panics outside a
+/// `LiberoProvider`.
 ///
 /// [`ThemeSwitcher`](crate::components::ThemeSwitcher) is the ready-made switch built on it.
 ///

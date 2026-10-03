@@ -1,9 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
-
 use dioxus::core::Attribute;
 use dioxus::prelude::*;
 
-use crate::hooks::{ElementHandle, use_element};
+use crate::hooks::{ElementHandle, use_element, use_subscription_slot};
 use crate::platform::{self, MediaApi, MediaState, MediaSubscription, PlatformError};
 
 /// Plays and reads one `<audio>` or `<video>`: commands go to the element, and
@@ -56,6 +54,7 @@ impl MediaHandle {
         }
     }
 
+    /// Pauses at the current time.
     pub fn pause(&self) {
         if let Some(api) = self.api() {
             let _ = api.pause();
@@ -281,22 +280,17 @@ pub fn use_media() -> MediaHandle {
         buffering: use_signal(|| defaults.buffering),
         error: use_signal(|| defaults.error),
     };
-    let slot: Rc<RefCell<Option<Box<dyn MediaSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let slot = slot.clone();
-        move || drop(slot.borrow_mut().take())
-    });
+    let slot = use_subscription_slot::<dyn MediaSubscription>();
     use_effect(move || {
         let Some(_) = handle.element.mount_token() else {
             return;
         };
         // Dropped first, so a remount never runs two listeners.
-        slot.borrow_mut().take();
+        slot.clear();
         let api = handle.api();
         let mut supported = handle.supported;
         supported.set(Some(api.is_some()));
-        *slot.borrow_mut() = api.map(|api| api.watch(Box::new(move |state| handle.apply(state))));
+        slot.set(api.map(|api| api.watch(Box::new(move |state| handle.apply(state)))));
     });
     handle
 }

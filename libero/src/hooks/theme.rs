@@ -7,6 +7,7 @@ use crate::{
 };
 
 /// The active theme. Reactive, so a Rust-side read never disagrees with the CSS vars.
+/// Panics outside a `LiberoProvider`.
 ///
 /// Docs: <https://libero-ui.dev/about/theming>
 pub fn use_theme() -> &'static Theme {
@@ -15,6 +16,7 @@ pub fn use_theme() -> &'static Theme {
 
 /// The active [`ThemeSet`], and how to swap it: a theme picker's base.
 /// Reactive. A swap rebuilds the stylesheet; the colour-scheme setting survives.
+/// Panics outside a `LiberoProvider`.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;

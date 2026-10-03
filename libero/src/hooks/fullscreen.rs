@@ -1,9 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
-
 use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
-use crate::hooks::{ElementHandle, FocusWithin, listener, use_back, use_focus_within};
+use crate::hooks::{
+    ElementHandle, FocusWithin, listener, use_back, use_focus_within, use_subscription_slot,
+};
 use crate::platform::{self, FullscreenApi, FullscreenSubscription, focused_attribute, next_task};
 
 /// Set on the element while it fills the screen: `native` or `drawn`.
@@ -66,6 +66,7 @@ impl FullscreenHandle {
         }
     }
 
+    /// Leaves either fullscreen, or enters one when in none.
     pub fn toggle(&self) {
         if *self.active.peek() || *self.drawn.peek() {
             self.exit();
@@ -196,19 +197,14 @@ pub fn use_fullscreen(element: ElementHandle) -> FullscreenHandle {
         handle.is_fullscreen(),
         use_callback(move |()| handle.exit()),
     );
-    let slot: Rc<RefCell<Option<Box<dyn FullscreenSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let slot = slot.clone();
-        move || drop(slot.borrow_mut().take())
-    });
+    let slot = use_subscription_slot::<dyn FullscreenSubscription>();
     use_effect(move || {
         let Some(_) = element.mount_token() else {
             return;
         };
-        slot.borrow_mut().take();
+        slot.clear();
         let (available, active) = (handle.available, handle.active);
-        *slot.borrow_mut() = handle.api().map(|api| {
+        slot.set(handle.api().map(|api| {
             api.watch(Box::new(move |state| {
                 let (mut available, mut active) = (available, active);
                 if *available.peek() != state.available {
@@ -218,7 +214,7 @@ pub fn use_fullscreen(element: ElementHandle) -> FullscreenHandle {
                     active.set(state.active);
                 }
             }))
-        });
+        }));
     });
     handle
 }

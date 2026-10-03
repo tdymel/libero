@@ -1,14 +1,24 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-
+use dioxus::core::provide_root_context;
 use dioxus::{core::AttributeValue, prelude::*};
 
-static NEXT_ID: AtomicU64 = AtomicU64::new(0);
+/// The app's id counter, so a server render and the client's hydration count
+/// from the same start.
+#[derive(Clone, Copy)]
+struct NextId(CopyValue<u64>);
 
 fn next_id() -> String {
-    format!("lsx-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed))
+    let NextId(mut next) = try_consume_context::<NextId>()
+        .unwrap_or_else(|| provide_root_context(NextId(CopyValue::new_in_scope(0, ScopeId::ROOT))));
+    let id = *next.peek();
+    next.set(id + 1);
+    format!("lsx-{id}")
 }
 
-/// A process-unique DOM id, stable for the component's lifetime, for aria wiring.
+/// A DOM id unique within one app (`VirtualDom`), stable for the component's
+/// lifetime, for aria wiring.
+///
+/// Ids follow render order, so a server render and its hydration agree. Known
+/// limit: suspense that resolves out of order on the client can shift them.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -62,12 +72,45 @@ pub(crate) fn id_selector(id: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::id_selector;
+    use dioxus::prelude::*;
+
+    use super::{id_selector, use_id};
 
     #[test]
     fn an_id_selector_takes_any_id() {
         assert_eq!(id_selector("1-email"), r#"[id="1-email"]"#);
         assert_eq!(id_selector("user.email"), r#"[id="user.email"]"#);
         assert_eq!(id_selector(r#"a"b\c"#), r#"[id="a\"b\\c"]"#);
+    }
+
+    #[component]
+    fn Field() -> Element {
+        let id = use_id();
+        rsx! {
+            label { r#for: "{id}", "Name" }
+            input { id: "{id}" }
+        }
+    }
+
+    fn app() -> Element {
+        rsx! {
+            Field {}
+            Field {}
+        }
+    }
+
+    fn render() -> String {
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dioxus_ssr::render(&dom)
+    }
+
+    /// Todo 1680: the hydration contract, a fresh dom of one app counts the same.
+    #[test]
+    fn two_renders_of_one_app_give_the_same_ids() {
+        let first = render();
+        assert!(first.contains(r#"id="lsx-0""#), "{first}");
+        assert!(first.contains(r#"id="lsx-1""#), "{first}");
+        assert_eq!(first, render());
     }
 }

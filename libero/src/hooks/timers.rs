@@ -6,13 +6,14 @@ use std::time::Duration;
 use dioxus::prelude::*;
 
 use crate::platform::{TimerSubscription, timer};
+use crate::utils::bump;
 
 /// A timer whose firing is observed by an effect in the caller's scope. The
 /// platform callback runs outside every scope and on the web without a runtime,
 /// so it only bumps a root-owned counter ([[codebase/platform/platform-timer]]).
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct Scheduled {
-    fired: Signal<u32>,
+    fired: Signal<u64>,
     /// Replacing or dropping the subscription cancels it.
     pending: CopyValue<Option<Box<dyn TimerSubscription>>>,
 }
@@ -44,17 +45,12 @@ impl Scheduled {
     }
 }
 
-fn bump(fired: Signal<u32>) {
-    let mut fired = fired;
-    fired += 1;
-}
-
 /// A [`Scheduled`] that calls `on_fire` in this scope each time it fires. Two
 /// firings before a render coalesce into one call.
 pub(crate) fn use_scheduled(mut on_fire: impl FnMut(Scheduled) + 'static) -> Scheduled {
     let fired = use_hook(|| Signal::new_in_scope(0, ScopeId::ROOT));
     let pending = use_hook(|| CopyValue::new(None::<Box<dyn TimerSubscription>>));
-    let mut seen = use_hook(|| CopyValue::new(0u32));
+    let mut seen = use_hook(|| CopyValue::new(0u64));
     let scheduled = Scheduled { fired, pending };
     use_drop(move || {
         scheduled.cancel();

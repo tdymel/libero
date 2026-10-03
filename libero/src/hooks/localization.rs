@@ -22,13 +22,11 @@ pub(crate) fn current_localization() -> &'static Localization {
 /// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::{localization::Localization, use_localization_handle};
-/// static GERMAN: Localization = Localization { ..Localization::ENGLISH };
-///
 /// # fn app() -> Element {
 /// let localization = use_localization_handle();
 ///
 /// rsx! {
-///     button { onclick: move |_| localization.set(&GERMAN), "Deutsch" }
+///     button { onclick: move |_| localization.set(&Localization::GERMAN), "Deutsch" }
 /// }
 /// # }
 /// ```

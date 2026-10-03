@@ -42,9 +42,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use dioxus::dioxus_core::{
-    AttributeValue, ElementId, NoOpMutations, ScopeId, VirtualDom, WriteMutations,
-};
+use dioxus::dioxus_core::{ElementId, NoOpMutations, ScopeId, VirtualDom};
 use dioxus::html::{PlatformEventData, SerializedHtmlEventConverter, SerializedMouseData};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveTime};
@@ -54,6 +52,12 @@ use libero::hooks::{
     use_popover,
 };
 use libero::{LiberoProvider, components::*};
+
+// The `all` suite's recorder; this binary reads only its click order.
+#[allow(dead_code)]
+#[path = "all/recorder.rs"]
+mod recorder;
+use recorder::FindClickListener;
 
 #[derive(Clone, PartialEq, Options)]
 enum CostPane {
@@ -471,41 +475,6 @@ const NOTIFICATION_SHAPES: &[Shape] = &[
         round: notifications_round,
     },
 ];
-
-/// The click listeners a rebuild registers, in order: the only way to address
-/// an element from outside the dom.
-#[derive(Default)]
-struct ClickListeners {
-    last: Option<ElementId>,
-    found: Vec<ElementId>,
-}
-
-impl WriteMutations for ClickListeners {
-    fn push_id(&mut self, id: ElementId) {
-        self.last = Some(id);
-    }
-    fn set_id(&mut self, id: ElementId) {
-        self.last = Some(id);
-    }
-    fn add_event_listener(&mut self, name: &str) {
-        if name == "click" {
-            self.found.extend(self.last);
-        }
-    }
-    fn child(&mut self, _index: usize) {}
-    fn pop(&mut self) {}
-    fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
-    fn create_text(&mut self, _value: &str) {}
-    fn clone(&mut self) {}
-    fn append_children(&mut self, _m: usize) {}
-    fn replace_with(&mut self, _m: usize) {}
-    fn insert_after(&mut self, _m: usize) {}
-    fn insert_before(&mut self, _m: usize) {}
-    fn set_attribute(&mut self, _name: &str, _ns: Option<&str>, _v: &AttributeValue) {}
-    fn set_text(&mut self, _value: &str) {}
-    fn remove_event_listener(&mut self, _name: &str) {}
-    fn remove(&mut self) {}
-}
 
 thread_local! {
     /// The click listeners of the dom whose round runs next.
@@ -1011,9 +980,9 @@ fn measure(shapes: &[Shape]) -> Vec<(&'static str, f64)> {
         .iter()
         .map(|shape| {
             let mut dom = VirtualDom::new(shape.app);
-            let mut clicks = ClickListeners::default();
-            dom.rebuild(&mut clicks);
-            (shape, dom, u64::MAX, clicks.found)
+            let mut find = FindClickListener::default();
+            dom.rebuild(&mut find);
+            (shape, dom, u64::MAX, find.registered_for("click"))
         })
         .collect();
 

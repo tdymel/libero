@@ -538,9 +538,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         Rc::new(api.map(|api| {
             api.on_scroll(Box::new(move || {
                 if *virtualized.peek() || *reports_edges.peek() {
-                    let mut scrolls = platform_scrolls;
-                    let next = scrolls.peek().wrapping_add(1);
-                    scrolls.set(next);
+                    crate::utils::bump(platform_scrolls);
                 }
             }))
         }))

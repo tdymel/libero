@@ -1,7 +1,6 @@
-use std::{cell::RefCell, rc::Rc};
-
 use dioxus::prelude::*;
 
+use super::use_subscription_slot;
 use crate::platform::{MediaQuerySubscription, media_query};
 
 /// The widest viewport [`use_is_mobile`] counts as mobile, the 768px breakpoint.
@@ -29,16 +28,9 @@ const MOBILE_QUERY: &str = "(max-width: 767px)";
 pub fn use_media_query(query: &str) -> ReadSignal<bool> {
     let mut matches = use_signal(|| false);
     let query = query.to_owned();
-    let slot: Rc<RefCell<Option<Box<dyn MediaQuerySubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let slot = slot.clone();
-        move || {
-            slot.borrow_mut().take();
-        }
-    });
+    let slot = use_subscription_slot::<dyn MediaQuerySubscription>();
     use_effect(use_reactive!(|query| {
-        slot.borrow_mut().take();
+        slot.clear();
         let Some(api) = media_query() else {
             matches.set(false);
             return;
@@ -52,7 +44,7 @@ pub fn use_media_query(query: &str) -> ReadSignal<bool> {
                 }
             }),
         );
-        *slot.borrow_mut() = Some(watch);
+        slot.set(Some(watch));
     }));
     matches.into()
 }

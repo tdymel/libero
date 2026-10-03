@@ -896,9 +896,7 @@ pub(super) fn PortalRoot(children: Element) -> Element {
             if drawing.is_none_or(|doc| doc.portal_entries.get() == 0) {
                 return;
             }
-            let mut scrolled = scrolled;
-            let next = scrolled.peek().wrapping_add(1);
-            scrolled.set(next);
+            crate::utils::bump(scrolled);
         })))
     });
     let realign = use_callback({

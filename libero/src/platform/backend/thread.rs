@@ -18,6 +18,10 @@ use crate::platform::{TimerApi, TimerSubscription};
 /// `None` outside a dioxus runtime: a task delivers. SSR has one, so it gets a
 /// timer that never fires.
 pub(super) fn timer() -> Option<&'static dyn TimerApi> {
+    #[cfg(test)]
+    if let Some(manual) = super::manual_timer::active() {
+        return Runtime::try_current().map(|_| manual);
+    }
     Runtime::try_current().map(|_| &TIMER as &'static dyn TimerApi)
 }
 

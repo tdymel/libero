@@ -98,9 +98,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
                 if chord.key != Key::Escape || chord.repeat || !outside || !layer.is_top() {
                     return false;
                 }
-                let mut tick = stray_escape;
-                let next = tick.peek().wrapping_add(1);
-                tick.set(next);
+                crate::utils::bump(stray_escape);
                 true
             }))
         }))

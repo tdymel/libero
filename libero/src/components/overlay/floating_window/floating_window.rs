@@ -1,7 +1,4 @@
-use std::{
-    rc::Rc,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::rc::Rc;
 
 use dioxus::prelude::*;
 
@@ -22,9 +19,8 @@ use crate::{
     hooks::{ElementHandle, escape_closes, use_element, use_focus_within, use_id},
     localization::fill,
     platform::{ElementApi, PlatformError},
+    utils::unique_id,
 };
-
-static NEXT_WINDOW_ID: AtomicU64 = AtomicU64::new(0);
 
 /// The title-bar menu's single-pointer move and resize (WCAG 2.5.7).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -99,7 +95,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
 
     // Stacking: opened on top, raised to the top when clicked or focused.
     let host = use_context::<WindowHost>();
-    let id = use_hook(|| NEXT_WINDOW_ID.fetch_add(1, Ordering::Relaxed));
+    let id = use_hook(unique_id);
     use_effect(move || host.raise(id));
     use_drop(move || host.remove(id));
     let focus = use_focus_within(

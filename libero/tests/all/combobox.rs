@@ -745,7 +745,7 @@ mod option_list {
 mod dispatched {
     use crate::common::body;
     use crate::dispatch::*;
-    use dioxus::core::{AttributeValue, ElementId, WriteMutations};
+    use dioxus::core::{ElementId, WriteMutations};
 
     use dioxus::prelude::*;
     use libero::{
@@ -773,67 +773,18 @@ mod dispatched {
             LOCKED.with(|cell| cell.get())
         }
 
-        /// A row's click listener registers before its `role="option"`, so the
-        /// two are recorded by element id and matched afterwards.
-        #[derive(Default)]
-        struct FindOption {
-            last: Option<ElementId>,
-            clicked: std::collections::HashSet<ElementId>,
-            is_option: std::collections::HashSet<ElementId>,
-        }
-
-        impl FindOption {
-            fn option_click(&self) -> Option<ElementId> {
-                self.clicked.intersection(&self.is_option).next().copied()
-            }
-        }
-
-        impl WriteMutations for FindOption {
-            fn push_id(&mut self, id: ElementId) {
-                self.last = Some(id);
-            }
-            fn set_id(&mut self, id: ElementId) {
-                self.last = Some(id);
-            }
-            fn add_event_listener(&mut self, name: &str) {
-                if name == "click"
-                    && let Some(id) = self.last
-                {
-                    self.clicked.insert(id);
-                }
-            }
-            fn child(&mut self, _index: usize) {}
-            fn pop(&mut self) {}
-            fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
-            fn create_text(&mut self, _value: &str) {}
-            fn clone(&mut self) {}
-            fn append_children(&mut self, _m: usize) {}
-            fn replace_with(&mut self, _m: usize) {}
-            fn insert_after(&mut self, _m: usize) {}
-            fn insert_before(&mut self, _m: usize) {}
-            fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
-                if name == "role"
-                    && matches!(value, AttributeValue::Text(text) if text == "option")
-                    && let Some(id) = self.last
-                {
-                    self.is_option.insert(id);
-                }
-            }
-            fn set_text(&mut self, _value: &str) {}
-            fn remove_event_listener(&mut self, _name: &str) {}
-            fn remove(&mut self) {}
+        /// A row's click listener registers before its `role="option"`; the
+        /// recorder matches the two by element id.
+        fn option_click(find: &FindClickListener) -> Option<ElementId> {
+            find.matching("click", "role", "option").first().copied()
         }
 
         fn mount(app: fn() -> Element) -> (VirtualDom, FindClickListener) {
-            dioxus::html::set_event_converter(Box::new(TestConverter));
             LOCKED.with(|cell| cell.set(false));
             PICKED.with(|cell| cell.set(false));
             TAGS.with(|cell| cell.borrow_mut().clear());
-            let mut dom = VirtualDom::new(app);
-            let mut find = FindClickListener::default();
-            dom.rebuild(&mut find);
-            dom.render_immediate(&mut find);
-            (dom, find)
+            let Page { dom, rec } = Page::mount(app);
+            (dom, rec)
         }
 
         /// Two passes: the list writes into the caller's state while it renders,
@@ -908,13 +859,11 @@ mod dispatched {
             LOCKED.with(|cell| cell.set(false));
             PICKED.with(|cell| cell.set(false));
             let mut dom = VirtualDom::new(fruit);
-            let mut find = FindOption::default();
+            let mut find = FindClickListener::default();
             dom.rebuild(&mut find);
             settle(&mut dom, &mut find);
             assert_listbox(&dom, "enabled");
-            let row = find
-                .option_click()
-                .expect("the row registered no click listener");
+            let row = option_click(&find).expect("the row registered no click listener");
 
             lock(&mut dom, &mut find);
             assert_no_listbox_claimed(&dom, "disabled");
@@ -932,11 +881,11 @@ mod dispatched {
         fn a_combobox_mounted_disabled_and_open_draws_no_row() {
             LOCKED.with(|cell| cell.set(true));
             let mut dom = VirtualDom::new(fruit);
-            let mut find = FindOption::default();
+            let mut find = FindClickListener::default();
             dom.rebuild(&mut find);
             settle(&mut dom, &mut find);
             assert_eq!(
-                find.option_click(),
+                option_click(&find),
                 None,
                 "a disabled combobox drew a clickable row"
             );
@@ -961,7 +910,7 @@ mod dispatched {
         #[test]
         fn a_tags_field_made_readonly_while_open_takes_no_mouse_pick() {
             let (mut dom, find) = mount(topics);
-            let mut rows = FindOption::default();
+            let mut rows = FindClickListener::default();
             dom.runtime().handle_event(
                 "input",
                 Event::new(input_event("rust"), true),
@@ -969,9 +918,7 @@ mod dispatched {
             );
             settle(&mut dom, &mut rows);
             assert_listbox(&dom, "editable");
-            let row = rows
-                .option_click()
-                .expect("the row registered no click listener");
+            let row = option_click(&rows).expect("the row registered no click listener");
 
             lock(&mut dom, &mut rows);
             assert_no_listbox_claimed(&dom, "readonly");
@@ -1192,66 +1139,6 @@ mod dispatched {
         use super::*;
         use libero::components::Autocomplete;
 
-        /// The click listener on the element whose `aria-label` is `label`; the
-        /// two register apart, so both are recorded by element id.
-        struct FindLabelled {
-            label: &'static str,
-            last: Option<ElementId>,
-            clicked: std::collections::HashSet<ElementId>,
-            labelled: std::collections::HashSet<ElementId>,
-        }
-
-        impl FindLabelled {
-            fn new(label: &'static str) -> Self {
-                Self {
-                    label,
-                    last: None,
-                    clicked: Default::default(),
-                    labelled: Default::default(),
-                }
-            }
-
-            fn target(&self) -> Option<ElementId> {
-                self.clicked.intersection(&self.labelled).next().copied()
-            }
-        }
-
-        impl WriteMutations for FindLabelled {
-            fn push_id(&mut self, id: ElementId) {
-                self.last = Some(id);
-            }
-            fn set_id(&mut self, id: ElementId) {
-                self.last = Some(id);
-            }
-            fn add_event_listener(&mut self, name: &str) {
-                if name == "click"
-                    && let Some(id) = self.last
-                {
-                    self.clicked.insert(id);
-                }
-            }
-            fn child(&mut self, _index: usize) {}
-            fn pop(&mut self) {}
-            fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
-            fn create_text(&mut self, _value: &str) {}
-            fn clone(&mut self) {}
-            fn append_children(&mut self, _m: usize) {}
-            fn replace_with(&mut self, _m: usize) {}
-            fn insert_after(&mut self, _m: usize) {}
-            fn insert_before(&mut self, _m: usize) {}
-            fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
-                if name == "aria-label"
-                    && matches!(value, AttributeValue::Text(text) if text == self.label)
-                    && let Some(id) = self.last
-                {
-                    self.labelled.insert(id);
-                }
-            }
-            fn set_text(&mut self, _value: &str) {}
-            fn remove_event_listener(&mut self, _name: &str) {}
-            fn remove(&mut self) {}
-        }
-
         /// Mounts `app` read-only or not and clicks the element labelled `label`,
         /// if it was drawn at all. Returns what the handler heard.
         fn click_labelled(
@@ -1259,17 +1146,11 @@ mod dispatched {
             readonly: bool,
             label: &'static str,
         ) -> Vec<String> {
-            dioxus::html::set_event_converter(Box::new(TestConverter));
             READ_ONLY.set(readonly);
             HEARD.with_borrow_mut(Vec::clear);
-            let mut dom = VirtualDom::new(app);
-            let mut find = FindLabelled::new(label);
-            dom.rebuild(&mut find);
-            dom.render_immediate(&mut find);
-            if let Some(target) = find.target() {
-                dom.runtime()
-                    .handle_event("click", Event::new(click_event(), true), target);
-                dom.render_immediate(&mut dioxus::core::NoOpMutations);
+            let mut page = Page::mount(app);
+            if let Some(&target) = page.rec.matching("click", "aria-label", label).first() {
+                page.click(target);
             }
             HEARD.with_borrow(Clone::clone)
         }

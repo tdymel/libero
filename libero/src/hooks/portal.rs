@@ -1,10 +1,7 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-
 use dioxus::prelude::*;
 
 use crate::context::{PortalEntry, PortalHost};
-
-static NEXT_PORTAL_ID: AtomicU64 = AtomicU64::new(0);
+use crate::utils::unique_id;
 
 /// One component's claim on a slot in `PortalOutlet`, written through
 /// [`show`](Self::show) after its hooks have run.
@@ -59,7 +56,7 @@ impl PortalSlot {
 /// Claims a portal slot for this component, and releases it on drop.
 pub(crate) fn use_portal_slot() -> PortalSlot {
     let host = use_context::<PortalHost>();
-    let id = use_hook(|| NEXT_PORTAL_ID.fetch_add(1, Ordering::Relaxed));
+    let id = use_hook(unique_id);
 
     use_drop(move || {
         let mut host = host;

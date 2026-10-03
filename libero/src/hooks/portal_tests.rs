@@ -1,5 +1,5 @@
-//! Portal registration across an unmount, which shifts `use_portal`'s index hints.
-//! Content changes every pass, so a write through a stale hint shows.
+//! Portal registration across an unmount, which shifts every later entry's place.
+//! Content changes every pass, so a write into the wrong entry shows.
 
 use std::cell::Cell;
 
@@ -33,8 +33,8 @@ fn app() -> Element {
             if SHOW_MIDDLE.with(Cell::get) {
                 Portalled { content: "middle-{phase}" }
             }
-            // Two after the removable one: with one, a stale hint lands past the
-            // end and the fallback scan hides the bug.
+            // Two after the removable one: with one, a write keyed by place lands
+            // past the end and goes unseen.
             Portalled { content: "third-{phase}" }
             Portalled { content: "last-{phase}" }
         }
@@ -56,7 +56,7 @@ fn a_portal_still_owns_its_entry_after_an_earlier_one_unmounts() {
     SHOW_MIDDLE.with(|show| show.set(false));
     dom.mark_dirty(ScopeId::APP);
     dom.render_immediate(&mut NoOpMutations);
-    // The render after the unmount is where a stale hint bites.
+    // The render after the unmount is where a write keyed by place goes wrong.
     dom.mark_dirty(ScopeId::APP);
     dom.render_immediate(&mut NoOpMutations);
 
@@ -73,7 +73,7 @@ fn a_portal_still_owns_its_entry_after_an_earlier_one_unmounts() {
     ] {
         assert!(
             !html.contains(stale),
-            "a portal wrote through a stale index hint, leaving {stale}:\n{html}"
+            "a portal wrote into another's entry, leaving {stale}:\n{html}"
         );
     }
 }
