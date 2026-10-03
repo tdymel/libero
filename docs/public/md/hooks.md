@@ -24,6 +24,8 @@ guide page they belong to.
 | `use_intersection` | How much of an element is visible inside a root. | [Intersection](use_intersection.md) |
 | `use_in_viewport` | Whether an element is in the viewport. | [Intersection](use_intersection.md) |
 | `use_long_press` | Handlers that call back once a pointer stays down. | [Long press](use_long_press.md) |
+| `use_swipe` | Handlers that call back once a touch swipes far enough one way. | [Swipe](use_swipe.md) |
+| `use_edge_swipe` | Opens a drawer by a swipe in from the screen's start edge. | [Swipe](use_swipe.md) |
 | `use_timeout` | Runs a callback once, a while after you start it. | [Timers](use_timers.md) |
 | `use_interval` | Runs a callback repeatedly, with start, stop and toggle. | [Timers](use_timers.md) |
 | `use_debounced_value` | A signal that follows another once it stops changing. | [Debounce and throttle](use_debounce.md) |

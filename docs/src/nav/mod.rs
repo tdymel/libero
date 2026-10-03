@@ -46,6 +46,16 @@ fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
         } else {
             "translateX(-100%)"
         })
+        // Out past the start edge under RTL too: off the left it overflowed into the
+        // scrollable side, and a phone widened the page to show it.
+        .selector(
+            ":where([dir=rtl]) &",
+            sx().transform(if open {
+                "translateX(0)"
+            } else {
+                "translateX(100%)"
+            }),
+        )
         .visibility(if open { "visible" } else { "hidden" })
         .transition(transition)
         .media("(prefers-reduced-motion: reduce)", sx().transition("none"));
@@ -59,6 +69,7 @@ fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
             .height("100%")
             .width(width)
             .transform("none")
+            .selector(":where([dir=rtl]) &", sx().transform("none"))
             .visibility("visible"),
     )
 }

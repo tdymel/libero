@@ -169,6 +169,7 @@ fetch only the file you need.
 - [Drag](use_drag.md): Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
 - [Intersection](use_intersection.md): Reports how much of an element is visible, with a root, margin and thresholds; never intersecting where nothing can observe.
 - [Long press](use_long_press.md): Pointer handlers that call back once a press is held, without breaking a tap or a scroll.
+- [Swipe](use_swipe.md): Touch swipe handlers, and an edge swipe that opens a drawer without fighting Android's back gesture.
 - [Timers](use_timers.md): Runs a callback once or on a period, started and stopped from code, cancelled when the component unmounts.
 - [Debounce and throttle](use_debounce.md): Signals and callbacks that follow their source once it settles or at most once per period.
 - [History](use_history.md): Undo and redo over snapshots of a value, with rapid changes grouped into one step by time or size.

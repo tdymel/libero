@@ -68,6 +68,16 @@ fn hooks() -> Vec<HookRow> {
             Route::UseLongPressPage {},
         ),
         row(
+            "use_swipe",
+            "Handlers that call back once a touch swipes far enough one way.",
+            Route::UseSwipePage {},
+        ),
+        row(
+            "use_edge_swipe",
+            "Opens a drawer by a swipe in from the screen's start edge.",
+            Route::UseSwipePage {},
+        ),
+        row(
             "use_timeout",
             "Runs a callback once, a while after you start it.",
             Route::UseTimersPage {},

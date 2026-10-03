@@ -79,6 +79,8 @@ pub(crate) enum Route {
     UseIntersectionPage {},
     #[route("/hooks/use-long-press")]
     UseLongPressPage {},
+    #[route("/hooks/use-swipe")]
+    UseSwipePage {},
     #[route("/hooks/use-timers")]
     UseTimersPage {},
     #[route("/hooks/use-debounce")]

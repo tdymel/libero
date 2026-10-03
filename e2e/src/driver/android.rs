@@ -229,6 +229,10 @@ impl Driver for Android {
         self.swipe(from, dx, dy).await
     }
 
+    async fn swipe_from(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
+        self.swipe(pointer::Point { x, y }, dx, dy).await
+    }
+
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {
         let (vw, vh) = self.viewport().await?;
         let from = pointer::Point {

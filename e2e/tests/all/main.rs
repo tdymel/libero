@@ -140,6 +140,7 @@ mod use_hotkeys;
 mod use_intersection;
 mod use_long_press;
 mod use_media_query;
+mod use_swipe;
 mod use_system_notification;
 mod use_timers;
 mod use_user_media;

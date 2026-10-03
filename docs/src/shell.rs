@@ -5,7 +5,7 @@ use libero::{
         Header, Icon, Kbd, Pictogram, Repository, ScrollArea, SpotlightOptions, ThemeSwitcher,
         Title, spotlight_filter, use_scroll_area, use_spotlight,
     },
-    hooks::{use_element, use_media_query},
+    hooks::{EdgeSwipeOptions, edge_swipe_sx, use_edge_swipe, use_element, use_media_query},
     platform::ElementApi,
     sx::{Sx, sx},
     theme::{
@@ -79,6 +79,16 @@ pub(crate) fn AppShell() -> Element {
             open.set(false);
         }
     }));
+    // Where the burger shows, a swipe in from the start edge opens the drawer too.
+    let swipes = home || !wide();
+    let swipe = use_edge_swipe(
+        Callback::new(move |()| {
+            if swipes && !*open.peek() {
+                open.set(true);
+            }
+        }),
+        EdgeSwipeOptions::default(),
+    );
 
     rsx! {
         Flex {
@@ -296,12 +306,17 @@ pub(crate) fn AppShell() -> Element {
                             // Inert behind the open drawer. A boolean attribute: omitted when
                             // closed, since even `"false"` enables it.
                             inert: open().then_some(true),
+                            onpointerdown: move |event| swipe.onpointerdown.call(event),
+                            onpointermove: move |event| swipe.onpointermove.call(event),
+                            onpointerup: move |event| swipe.onpointerup.call(event),
+                            onpointercancel: move |event| swipe.onpointercancel.call(event),
                             // `Container`'s `height: 100%` would cap it to the viewport: nothing to scroll.
                             sx: sx()
                                 .height("auto")
                                 .padding("24px 16px")
                                 .breakpoint(Size::Sm, sx().padding("48px 64px"))
-                                .selector("&:focus", sx().outline("none")),
+                                .selector("&:focus", sx().outline("none"))
+                                .and(if swipes { edge_swipe_sx() } else { sx() }),
                             Outlet::<Route> {}
                         }
                     }

@@ -171,6 +171,7 @@ md_pages! {
     UseLongPress => "use_long_press",
     UseMediaQuery => "use_media_query",
     UseStylesheet => "use_stylesheet",
+    UseSwipe => "use_swipe",
     UseThemeSet => "use_theme_set",
     UseTimers => "use_timers",
     UseUserMedia => "use_user_media",
