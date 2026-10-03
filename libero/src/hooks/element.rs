@@ -137,9 +137,23 @@ pub fn use_element() -> ElementHandle {
     }
 }
 
+/// What [`use_content_changes`] returns: the count, and whether an observer feeds it.
+#[derive(Clone)]
+pub(crate) struct ContentChanges {
+    pub(crate) count: ReadSignal<u64>,
+    slot: Rc<RefCell<Option<Box<dyn ContentSubscription>>>>,
+}
+
+impl ContentChanges {
+    /// An observer is live: a render that changed the subtree bumps `count`.
+    pub(crate) fn watching(&self) -> bool {
+        self.slot.borrow().is_some()
+    }
+}
+
 /// Counts the changes to `element`'s subtree while `enabled`, so an effect
 /// reading it re-runs. Stays `0` where the renderer cannot watch.
-pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> ReadSignal<u64> {
+pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> ContentChanges {
     // Bumped from the observer, which runs outside every scope.
     let changes = use_signal(|| 0u64);
     let slot: Rc<RefCell<Option<Box<dyn ContentSubscription>>>> =
@@ -148,7 +162,9 @@ pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> Read
         let slot = slot.clone();
         move || drop(slot.borrow_mut().take())
     });
+    let watched = slot.clone();
     use_effect(use_reactive!(|enabled| {
+        let slot = &watched;
         let _ = element.mount_token();
         // Dropped first, so a remount never runs two observers.
         slot.borrow_mut().take();
@@ -167,7 +183,10 @@ pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> Read
         });
         *slot.borrow_mut() = watching;
     }));
-    changes.into()
+    ContentChanges {
+        count: changes.into(),
+        slot,
+    }
 }
 
 /// Runs `onresize` where the renderer fires no `resize` (Blitz), from sizes it

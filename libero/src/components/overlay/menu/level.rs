@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use super::{
     entry::{Check, MenuEntry, MenuItem, flatten},
     hover::use_hover_delay,
-    item::{ItemDraw, menu_item},
+    item::{MenuRow, RowEvents},
     keyboard::{Level, use_level_focus},
     menu::{MenuEdge, MenuPart},
     state::MenuFocus,
@@ -202,22 +202,32 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
     let level_id = props.id.clone();
 
     // Only an open level draws rows: a closed one redraws with every parent render.
+    let mut events = use_hook(|| {
+        CopyValue::new(Rc::new(RowEvents {
+            level,
+            typeahead: typeahead.clone(),
+            labels: Vec::new(),
+            hover,
+            choices: Vec::new(),
+        }))
+    });
+    let owner = use_hook(dioxus::core::current_scope_id);
     let rows = open.then(|| {
-        let draw = ItemDraw {
+        events.set(Rc::new(RowEvents {
             level,
             typeahead,
-            // Labels for typeahead, `None` for an item it must skip.
-            labels: Rc::new(
-                flat.iter()
-                    .map(|item| (!item.disabled).then(|| item.label.clone()))
-                    .collect(),
-            ),
+            labels: flat
+                .iter()
+                .map(|item| (!item.disabled).then(|| item.label.clone()))
+                .collect(),
             hover,
-            tabbable: tabbable(),
-            expanded,
-            level_id: level_id.clone(),
-            checks: flat.iter().any(|item| item.check.is_some()),
-        };
+            choices: flat
+                .iter()
+                .map(|item| (item.onselect_callback(), item.close_on_select))
+                .collect(),
+        }));
+        let tabbable = tabbable();
+        let checks = flat.iter().any(|item| item.check.is_some());
         let (mut index, mut group) = (0usize, 0usize);
         draw_rows(
             &props.items,
@@ -225,8 +235,21 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
             &mut index,
             &mut group,
             &mut |item, index| {
-                let anchor = item.submenu_items().is_some().then(|| anchor_of(index).0);
-                menu_item(&draw, item, index, anchor)
+                let submenu = item.submenu_items().is_some();
+                rsx! {
+                    MenuRow {
+                        key: "{index}",
+                        events,
+                        owner,
+                        item: item.clone(),
+                        index,
+                        anchor: submenu.then(|| anchor_of(index).0),
+                        tabbable: index == tabbable,
+                        expanded: submenu && expanded == Some(index),
+                        level_id: level_id.clone(),
+                        checks,
+                    }
+                }
             },
         )
     });
@@ -274,7 +297,11 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         parents.push(dismiss);
         Parents(parents)
     };
-    let onclose_child = use_callback(move |()| open_child.set(None));
+    let onclose_child = use_callback(move |()| {
+        if open_child.peek().is_some() {
+            open_child.set(None);
+        }
+    });
     // Logical, so `use_popover` puts it on the left under `dir="rtl"`.
     let submenu_side = Side::End;
 

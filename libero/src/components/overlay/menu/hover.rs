@@ -64,7 +64,9 @@ pub(super) fn use_hover_delay(level: Level, delay: Duration) -> HoverDelay {
         };
         let mut open_child = level.open_child;
         level.focus(action.focus);
-        open_child.set(action.open);
+        if *open_child.peek() != action.open {
+            open_child.set(action.open);
+        }
     });
     HoverDelay {
         action,

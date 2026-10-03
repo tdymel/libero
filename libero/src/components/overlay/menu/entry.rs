@@ -227,6 +227,20 @@ impl MenuItem {
         self
     }
 
+    /// Draws the same row: everything but the callbacks, which a row reads when it runs.
+    pub(super) fn draws_like(&self, other: &Self) -> bool {
+        self.disabled == other.disabled
+            && self.check == other.check
+            && self.new_tab_hint == other.new_tab_hint
+            && self.submenu_items().is_some() == other.submenu_items().is_some()
+            && self.label == other.label
+            && self.href_url() == other.href_url()
+            && self.shortcut == other.shortcut
+            && self.description == other.description
+            && self.leading == other.leading
+            && self.trailing == other.trailing
+    }
+
     pub(super) fn onselect_callback(&self) -> Option<Callback<()>> {
         match &self.action {
             Action::Select(callback) => Some(*callback),

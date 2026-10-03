@@ -481,9 +481,14 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     // After the DOM has the content: on mount (the effect reads the mount), on
     // new content, on a change deeper down, and on resize (`onresize`).
     let children = props.children.clone();
+    let mut seen = use_hook(|| CopyValue::new(None::<(Option<usize>, u64, bool)>));
     use_effect(use_reactive!(|children, own_bars| {
-        let _ = (&children, changes());
-        if root.is_mounted() {
+        let _ = &children;
+        let now = (root.mount_token(), changes.count.cloned(), own_bars);
+        // Only new children: a watched subtree that changed bumps `count` anyway, so
+        // a parent's redraw (a theme switch) forces no layout (todo 2094).
+        let redraw_only = seen.replace(Some(now)) == Some(now) && changes.watching();
+        if now.0.is_some() && !redraw_only {
             check_stop();
             measure_bars_now(own_bars);
         }

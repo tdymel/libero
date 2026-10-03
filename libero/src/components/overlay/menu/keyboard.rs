@@ -29,7 +29,9 @@ impl Level {
     /// Moves focus to item `index` - the roving `tabindex` follows `active`.
     pub(super) fn focus(self, index: usize) {
         let mut active = self.active;
-        active.set(Some(index));
+        if *active.peek() != Some(index) {
+            active.set(Some(index));
+        }
         let _ = self
             .floating
             .query_selector(&format!("[data-menu-index=\"{index}\"]"))
@@ -212,9 +214,14 @@ pub(super) fn use_level_focus(
         let (mut active, mut open_child) = (level.active, level.open_child);
         match open {
             true => dismiss.focus_return().remember_active(),
+            // A set notifies even unchanged, which redrew a closing level twice (todo 2095).
             false => {
-                active.set(None);
-                open_child.set(None);
+                if active.peek().is_some() {
+                    active.set(None);
+                }
+                if open_child.peek().is_some() {
+                    open_child.set(None);
+                }
             }
         }
     }));

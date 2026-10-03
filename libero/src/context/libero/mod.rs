@@ -149,6 +149,11 @@ impl LiberoContext {
     /// Writes the attribute even when that theme already shows: else "dark"
     /// clicked on a dark platform would leave the page following the platform.
     pub(crate) fn set_color_scheme(&self, setting: ColorSchemeSetting) {
+        self.apply_scheme(setting, !self.shows_pair());
+    }
+
+    /// `stale`: the sheet shows no pair of this set, so a carried scheme rebuilds it too.
+    fn apply_scheme(&self, setting: ColorSchemeSetting, stale: bool) {
         // No dark half: follow the system rather than refuse, since a picker
         // swapping sets while dark is pinned also lands here.
         let setting = match setting.fixed() {
@@ -169,24 +174,23 @@ impl LiberoContext {
         }
 
         match setting.fixed() {
-            Some(scheme) => self.pin_scheme(scheme),
-            None => self.follow_system(*self.system_scheme.peek()),
+            Some(scheme) => self.pin_scheme(scheme, stale),
+            None => self.show_system(*self.system_scheme.peek(), stale),
         }
     }
 
-    fn pin_scheme(&self, scheme: ColorScheme) {
+    fn pin_scheme(&self, scheme: ColorScheme, stale: bool) {
         let name = scheme.as_str();
         let Some(theme) = self.themes.peek().get(name) else {
             return;
         };
 
-        let pair_sheet = self.shows_pair();
         let carried = document()
             .is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, Some(name)));
         let mut css = self.theme_css;
         if !carried {
             css.set(Rc::from(Stylesheet::from(theme).as_str()));
-        } else if !pair_sheet {
+        } else if stale {
             // A named theme's sheet has no attribute blocks to select (todo 1837).
             css.set(Rc::from(Stylesheet::from(&*self.themes.peek()).as_str()));
         }
@@ -199,14 +203,17 @@ impl LiberoContext {
     /// Hands the choice back to the platform: no root attribute, so the sheet's
     /// media block decides. The Rust-side theme still follows `scheme`.
     pub(crate) fn follow_system(&self, scheme: ColorScheme) {
+        self.show_system(scheme, !self.shows_pair());
+    }
+
+    fn show_system(&self, scheme: ColorScheme, stale: bool) {
         let name = scheme.as_str();
         let themes = self.themes.peek().clone();
         let theme = themes.get(name).unwrap_or_else(|| themes.light_theme());
 
-        let pair_sheet = self.shows_pair();
         let cleared =
             document().is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, None));
-        if !cleared || !pair_sheet {
+        if !cleared || stale {
             // No attribute to clear: rebuild with the whole set, whose media
             // block follows the system on its own.
             let mut css = self.theme_css;
@@ -288,14 +295,13 @@ impl LiberoContext {
     /// Swaps the whole set, as a theme picker does. Rebuilds the sheet and keeps
     /// the colour-scheme setting, so a pinned dark stays dark.
     pub fn set_theme_set(&self, themes: ThemeSet) {
-        let (mut current_set, mut css) = (self.themes, self.theme_css);
-        current_set.set(themes.clone());
-        css.set(Rc::from(Stylesheet::from(&themes).as_str()));
+        let mut current_set = self.themes;
+        current_set.set(themes);
 
-        // Read out first: a `peek()` guard held across `set_color_scheme` is a borrow panic.
+        // Read out first: a `peek()` guard held across `apply_scheme` is a borrow panic.
         let setting = *self.scheme_setting.peek();
-        // Re-applied: the new set may have no dark half.
-        self.set_color_scheme(setting);
+        // Re-applied, as the new set may have no dark half; it builds the one sheet (todo 2087).
+        self.apply_scheme(setting, true);
     }
 }
 

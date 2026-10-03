@@ -457,10 +457,11 @@ fn paging_stays_in_budget() {
     });
 }
 
-/// Opening a menu of a hundred builds its rows twice, mount and placement; the first
-/// focus landing on the first item draws nothing (todo 2070; it was a third pass).
+/// Opening a menu of a hundred draws each row once: the placement pass skips them (todo
+/// 2092). The first focus landing on the first item draws nothing (todo 2070).
+/// An arrow key then redraws the two rows whose `tabindex` moved.
 #[test]
-fn opening_a_menu_draws_its_rows_twice() {
+fn a_menu_draws_each_row_once_and_an_arrow_two() {
     block_on(async {
         let fixture = open("/perf/menu-100").await;
         let page = &fixture.page;
@@ -477,11 +478,28 @@ fn opening_a_menu_draws_its_rows_twice() {
                 ("Button", 1),
                 ("Menu", 1),
                 ("MenuLevel", 2),
+                ("MenuRow", 100),
                 ("Fragment", 2),
                 ("PortalOutlet", 2),
                 ("StyleOutlet", 1),
             ],
             "opening a menu of 100",
+        );
+        reset(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(page, &focused_nth(MENU_ITEM, 1), "the arrow")
+            .await
+            .unwrap();
+        let renders = settled(page, "arrow").await;
+        assert_within(
+            &renders,
+            &[
+                ("MenuLevel", 1),
+                ("MenuRow", 2),
+                ("Fragment", 1),
+                ("PortalOutlet", 1),
+            ],
+            "an arrow key in a menu of 100",
         );
         fixture.console.assert_clean("the menu").unwrap();
         fixture.close().await.unwrap();

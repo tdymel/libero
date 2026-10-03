@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use dioxus::prelude::*;
+use dioxus::{core::Runtime, prelude::*};
 use pictogram_icons_lucide as lucide;
 
 use super::{
@@ -21,47 +21,69 @@ use crate::{
     utils::warn,
 };
 
-/// What every item on one level is drawn from.
-pub(super) struct ItemDraw {
+/// What a row's handlers read when they run, rewritten on each level render, so a
+/// row that skipped a render calls no stale callback.
+pub(super) struct RowEvents {
     pub(super) level: Level,
     pub(super) typeahead: Typeahead,
-    pub(super) labels: Rc<Vec<Option<String>>>,
+    /// Labels for typeahead, `None` for an item it must skip.
+    pub(super) labels: Vec<Option<String>>,
     pub(super) hover: HoverDelay,
+    /// Per item, its `onselect` and `close_on_select`.
+    pub(super) choices: Vec<(Option<Callback<()>>, Option<bool>)>,
+}
+
+/// Equal when the row would draw the same: an arrow key redraws two rows, not all (todo 2092).
+#[derive(Props, Clone)]
+pub(super) struct MenuRowProps {
+    events: CopyValue<Rc<RowEvents>>,
+    /// The level's scope, which owns `events` and every handle in it.
+    owner: ScopeId,
+    item: MenuItem,
+    index: usize,
+    anchor: Option<ElementHandle>,
     /// The roving `tabindex`: the focused item, or the first-focus target.
-    pub(super) tabbable: usize,
-    pub(super) expanded: Option<usize>,
-    pub(super) level_id: String,
+    tabbable: bool,
+    expanded: bool,
+    level_id: String,
     /// Some item on the level is checkable: every row keeps a check column.
-    pub(super) checks: bool,
+    checks: bool,
+}
+
+impl PartialEq for MenuRowProps {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+            && self.tabbable == other.tabbable
+            && self.expanded == other.expanded
+            && self.checks == other.checks
+            && self.anchor == other.anchor
+            && self.events == other.events
+            && self.owner == other.owner
+            && self.level_id == other.level_id
+            && self.item.draws_like(&other.item)
+    }
 }
 
 /// One `menuitem`, `menuitemradio` or `menuitemcheckbox` row.
-pub(super) fn menu_item(
-    draw: &ItemDraw,
-    item: &MenuItem,
-    index: usize,
-    anchor: Option<ElementHandle>,
-) -> Element {
-    let ItemDraw {
-        level,
-        typeahead,
-        labels,
-        hover,
+#[component]
+pub(super) fn MenuRow(props: MenuRowProps) -> Element {
+    let MenuRowProps {
+        events,
+        owner,
+        item,
+        index,
+        anchor,
         tabbable,
-        expanded,
+        expanded: is_expanded,
         level_id,
         checks,
-    } = draw;
-    let (level, tabbable, hover) = (*level, *tabbable, *hover);
+    } = props;
     let has_submenu = item.submenu_items().is_some();
     let check = item.check;
     let disabled = item.disabled;
-    let onselect = item.onselect_callback();
-    let close_on_select = item.close_on_select;
     let item_id = format!("{level_id}-item-{index}");
     let child_id = format!("{level_id}-{index}");
     let description_id = format!("{item_id}-description");
-    let is_expanded = has_submenu && *expanded == Some(index);
     let opens = (has_submenu && !disabled).then_some(index);
 
     let href = item.href_url().map(str::to_owned);
@@ -76,32 +98,48 @@ pub(super) fn menu_item(
     }
     let is_link = href.is_some();
     let hint = is_link && item.new_tab_hint;
-    let onkeydown = {
-        let (typeahead, labels) = (typeahead.clone(), labels.clone());
-        move |event: KeyboardEvent| {
-            let space = matches!(logical_key(&event), Key::Character(ref text) if text == " ");
-            if is_link && space && !has_shortcut_modifier(&event) && !typeahead.is_typing() {
-                event.prevent_default();
-                level.click(index);
-                return;
-            }
-            level.item_keydown(event, index, opens.is_some(), &typeahead, &labels, &hover)
-        }
+    // The level's state is its scope's, and a portaled row is no descendant of it.
+    let as_level = move |run: &mut dyn FnMut(&RowEvents)| {
+        Runtime::current().in_scope(owner, || {
+            let events = events.peek().clone();
+            run(&events);
+        });
     };
-    let onmouseenter = move |_: MouseEvent| hover.enter(level, index, opens);
-    let onclick = {
-        move |_: MouseEvent| {
-            if disabled {
+    let onkeydown = move |event: KeyboardEvent| {
+        as_level(&mut |events| {
+            let space = matches!(logical_key(&event), Key::Character(ref text) if text == " ");
+            if is_link && space && !has_shortcut_modifier(&event) && !events.typeahead.is_typing() {
+                event.prevent_default();
+                events.level.click(index);
                 return;
             }
-            hover.cancel();
-            level.choose(index, onselect, has_submenu, close_on_select);
+            events.level.item_keydown(
+                event.clone(),
+                index,
+                opens.is_some(),
+                &events.typeahead,
+                &events.labels,
+                &events.hover,
+            )
+        })
+    };
+    let onmouseenter = move |_: MouseEvent| {
+        as_level(&mut |events| events.hover.enter(events.level, index, opens));
+    };
+    let onclick = move |_: MouseEvent| {
+        if disabled {
+            return;
         }
+        as_level(&mut |events| {
+            let (onselect, close) = events.choices.get(index).copied().unwrap_or_default();
+            events.hover.cancel();
+            events.level.choose(index, onselect, has_submenu, close);
+        })
     };
 
     let content = rsx! {
         // On every row of a level with a checkable item, so labels line up.
-        if check.is_some() || *checks {
+        if check.is_some() || checks {
             span { "data-slot": MenuPart::Check.slot(),
                 if check.is_some_and(Check::is_checked) {
                     Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
@@ -137,16 +175,15 @@ pub(super) fn menu_item(
     let described_by = item.description.as_ref().map(|_| description_id.clone());
     let onmounted = move |event| {
         if let Some(anchor) = anchor {
-            anchor.mount()(event);
+            Runtime::current().in_scope(owner, || anchor.mount()(event));
         }
     };
     let role = check.map_or("menuitem", Check::role);
-    let tabindex = if index == tabbable { "0" } else { "-1" };
+    let tabindex = if tabbable { "0" } else { "-1" };
 
     if is_link {
         return rsx! {
             a {
-                key: "{index}",
                 "role": role,
                 id: "{item_id}",
                 href: href.filter(|_| !disabled),
@@ -170,7 +207,6 @@ pub(super) fn menu_item(
 
     rsx! {
         button {
-            key: "{index}",
             r#type: "button",
             "role": role,
             id: "{item_id}",
