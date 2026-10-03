@@ -2,11 +2,15 @@ use crate::{
     components::{
         common::{
             Part, borderless_on_state_sx, disabled_look_sx, focus_ring_sx, inset_focus_ring_sx,
+            on_tint_color,
         },
         form::ChronoPickerPart,
     },
-    sx::{FORCED_COLORS, StaticSx, sx},
-    theme::{CHRONO_DAY, CHRONO_FONT_SIZE, ChronoPickerDefaults, Size, SizeCss},
+    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
+    theme::{
+        CHRONO_DAY, CHRONO_FONT_SIZE, ChronoPickerDefaults, Color, ColorShade, ColorValue, Size,
+        SizeCss,
+    },
 };
 
 pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
@@ -121,11 +125,23 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .width(day.clone())
                 .height(day)
                 .border_radius("50%")
-                .padding("0"),
+                .padding("0")
+                // The face's fill: the hand passes under an inner mark, not behind its digits.
+                .background("muted.1"),
         )
+        // A quiet grey made for the face's tint, not half opacity: that read 3.87:1 (todo 1999).
         .selector(
             "& [data-slot='mark'][data-disabled]",
-            disabled_look_sx("not-allowed").hover(sx().background("transparent")),
+            sx().color(
+                on_tint_color(&ThemeAwareValue::ColorValue(ColorValue::Shade(
+                    Color::Muted,
+                    ColorShade::S6,
+                )))
+                .unwrap_or_default(),
+            )
+                .cursor("not-allowed")
+                .media(FORCED_COLORS, sx().color("GrayText"))
+                .hover(sx().background("muted.1")),
         )
         // One tick per step where the marks are coarser than the step.
         .selector(

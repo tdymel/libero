@@ -396,7 +396,6 @@ fn the_range_and_limited_calendars_meet_the_baseline() {
 }
 
 #[test]
-#[ignore = "1773: the mini calendar's month label reads 3.07:1 on the picked fill"]
 fn the_mini_calendar_meets_the_baseline() {
     Suite::new("calendar-mini", "/calendar/mini")
         .focusable(STOP)

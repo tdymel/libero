@@ -10,6 +10,7 @@ use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use futures::StreamExt;
 
+use crate::passes::contrast::COLOUR_JS;
 use crate::passes::{contrast, focus, keyboard, target_size};
 use crate::{Fixture, Scheme, Viewport};
 
@@ -341,7 +342,7 @@ pub(crate) struct TextReading {
     pub(crate) weight: String,
 }
 
-/// Colour helpers shared by the sweep's own contrast readings.
+/// Colour helpers shared by the sweep's own contrast readings; `COLOUR_JS` goes before it.
 const COLOUR: &str = r#"const parse = c => {
     // A `color-mix()` computes to `color(srgb r g b / a)`, channels 0..1.
     const srgb = c && c.match(/^color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.e-]+))?\)$/);
@@ -359,10 +360,7 @@ const over = (top, under) => ({
     b: top.b * top.a + under.b * (1 - top.a),
     a: 1,
 });
-const lum = c => {
-    const f = v => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
-};
+const lum = c => LUMINANCE([c.r, c.g, c.b]);
 const ratio = (a, b) => {
     const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
     return (hi + 0.05) / (lo + 0.05);
@@ -448,7 +446,7 @@ pub(crate) async fn text_contrast(
     }
     let targets: Vec<&str> = nodes.iter().map(|n| n.target.as_str()).collect();
     let script = format!(
-        r#"(() => {{ {COLOUR} {GRADIENT}
+        r#"(() => {{ {COLOUR_JS} {COLOUR} {GRADIENT}
             // The later checks see the scrollers as they were.
             const scrolled = [...document.querySelectorAll('*')]
                 .filter(e => e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth)
@@ -642,7 +640,7 @@ async fn settle(page: &Page) -> Result<()> {
 /// The boundary is the first visible border, fill or shadow on the control, siblings or two ancestors.
 async fn boundaries(page: &Page) -> Result<(Vec<(String, String)>, usize)> {
     let script = format!(
-        r#"(() => {{ {DESCRIBE} {CLIPPED} {COLOUR}
+        r#"(() => {{ {DESCRIBE} {CLIPPED} {COLOUR_JS} {COLOUR}
             const behind = el => {{
                 const layers = [];
                 for (let p = el; p; p = p.parentElement) {{

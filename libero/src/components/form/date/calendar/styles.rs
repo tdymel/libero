@@ -114,6 +114,11 @@ pub(super) static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='strip'] [data-slot='month']",
             sx().font_size("0.75em").opacity("0.7"),
         )
+        // Faded on the selected fill it read 3.07:1 (todo 1998).
+        .selector(
+            "& [data-slot='strip'] [data-selected] > [data-slot='month']",
+            sx().opacity("1"),
+        )
         .selector(
             ChronoPickerPart::Cell.selector(),
             button.width("100%").height(format!("calc(1.25 * {day})")),

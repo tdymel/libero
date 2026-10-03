@@ -83,6 +83,9 @@ pub(crate) fn AppShell() -> Element {
     rsx! {
         Flex {
             direction: "column",
+            // The site's prose stays English when the Localization page swaps the root's
+            // `lang`; portaled dropdowns sit outside and follow it (todo 2075).
+            lang: "en",
             sx: sx().gap("0"),
             // Escape closes the mobile drawer (`main` is inert then) and returns focus to the burger.
             onkeydown: move |event: KeyboardEvent| {

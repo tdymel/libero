@@ -164,7 +164,6 @@ fn the_date_time_picker_meets_the_baseline() {
 }
 
 #[test]
-#[ignore = "1773: the analog clock's disabled marks read 3.87:1, which the suite counts"]
 fn the_analog_clock_meets_the_baseline() {
     Suite::new("time-picker-analog", "/time-picker/analog").run();
 }

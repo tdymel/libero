@@ -219,7 +219,8 @@ impl Driver for Web {
         };
         use futures::StreamExt;
 
-        let dir = std::env::temp_dir().join(format!("e2e-chooser-{}", std::process::id()));
+        // Inside the run's profile, which the runner removes (todo 2000).
+        let dir = crate::browser::chrome_profile().join("chooser");
         std::fs::create_dir_all(&dir)?;
         let mut paths = Vec::new();
         for (name, text) in files {

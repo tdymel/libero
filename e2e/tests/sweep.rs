@@ -3,6 +3,7 @@
 //! behaviour tests alone: `cargo run -p e2e -- sweep a_route_change the_landing a_combobox`.
 
 use e2e::browser::block_on;
+use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::{contrast, keyboard};
 use e2e::{Fixture, Scheme, Viewport, wait};
 
@@ -120,7 +121,8 @@ fn an_unknown_url_shows_the_not_found_page() {
 /// Each label and border of the landing page's gradient cards against the gradient's two
 /// stops and their midpoint (the lowest ratio), then axe over the page. The stops are
 /// translucent tints, so each is read over the first opaque background behind the card.
-const GRADIENT_MEASURE: &str = r#"(() => {
+/// The body of an arrow function, after `COLOUR_JS`.
+const GRADIENT_MEASURE: &str = r#"
     const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
     const rgb = (css, under = 'transparent') => {
         canvas.clearRect(0, 0, 1, 1);
@@ -131,11 +133,7 @@ const GRADIENT_MEASURE: &str = r#"(() => {
         canvas.fillRect(0, 0, 1, 1);
         return Array.from(canvas.getImageData(0, 0, 1, 1).data).slice(0, 3);
     };
-    const lum = c => {
-        const [r, g, b] = c.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    };
-    const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+    const ratio = CONTRAST;
     // The card's own `background-color` paints under its image, so the walk starts there.
     const backdrop = el => {
         for (let e = el; e; e = e.parentElement) {
@@ -182,7 +180,7 @@ const GRADIENT_MEASURE: &str = r#"(() => {
         measure('stat ' + i + ' title', spans[1], li, 'color');
     });
     return out;
-})()"#;
+"#;
 
 /// Shortfalls filed and not fixed yet: a line's name, the lowest ratio it may read, and why.
 /// A drop below that ratio still fails.
@@ -205,7 +203,7 @@ fn the_landing_gradients_are_measured() {
                 .unwrap();
             let lines: Vec<String> = fixture
                 .page
-                .evaluate(GRADIENT_MEASURE)
+                .evaluate(format!("(() => {{ {COLOUR_JS} {GRADIENT_MEASURE} }})()"))
                 .await
                 .unwrap()
                 .into_value()

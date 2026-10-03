@@ -74,11 +74,7 @@ async fn emitted(fixture: &Fixture) -> String {
 }
 
 async fn settle(fixture: &Fixture) {
-    fixture
-        .page
-        .evaluate("new Promise(r => setTimeout(() => r(1), 100))")
-        .await
-        .unwrap();
+    e2e::clock::settle(&fixture.page).await.unwrap();
 }
 
 #[test]

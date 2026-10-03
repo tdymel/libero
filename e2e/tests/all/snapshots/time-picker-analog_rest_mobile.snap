@@ -1,0 +1,43 @@
+---
+source: e2e/src/suite.rs
+description: time-picker-analog at mobile (rest)
+expression: tree
+---
+button "10 Hours" [pressed]
+  StaticText "10"
+StaticText ":"
+button "00 Minutes" [pressed=false]
+  StaticText "00"
+StaticText ":"
+button "00 Seconds" [pressed=false]
+  StaticText "00"
+slider "Hours" = 10 [valuemax=23] [valuemin=0]
+  StaticText "12"
+  StaticText "1"
+  StaticText "2"
+  StaticText "3"
+  StaticText "4"
+  StaticText "5"
+  StaticText "6"
+  StaticText "7"
+  StaticText "8"
+  StaticText "9"
+  StaticText "10"
+  StaticText "11"
+  StaticText "00"
+  StaticText "13"
+  StaticText "14"
+  StaticText "15"
+  StaticText "16"
+  StaticText "17"
+  StaticText "18"
+  StaticText "19"
+  StaticText "20"
+  StaticText "21"
+  StaticText "22"
+  StaticText "23"
+StaticText "10:00:00"
+spinbutton "Hours" = 10 [valuemax=23] [valuemin=0]
+  StaticText "10"
+spinbutton "Minutes" = 0 [valuemax=55] [valuemin=0]
+  StaticText "00"

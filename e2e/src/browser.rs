@@ -145,7 +145,7 @@ pub async fn set_coarse_pointer(page: &Page, coarse: bool) -> Result<()> {
 
 /// Where this run's Chrome profile lives. The runner sets it and cleans it up;
 /// a bare `cargo test` gets a pid-scoped fallback so it is still unique.
-fn chrome_profile() -> std::path::PathBuf {
+pub(crate) fn chrome_profile() -> std::path::PathBuf {
     std::env::var("E2E_CHROME_PROFILE")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|_| std::env::temp_dir().join(format!("e2e-chrome-{}", std::process::id())))
