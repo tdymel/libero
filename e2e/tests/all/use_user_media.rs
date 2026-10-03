@@ -169,7 +169,19 @@ async fn reads(page: &Page, selector: &str, text: &str) -> Result<()> {
         .evaluate("[...document.querySelectorAll('p[id]')].map((p) => p.id + '=' + p.textContent).join(' ')")
         .await?
         .into_value()?;
-    read.map_err(|error| error.context(format!("the fixture reads {state}")))
+    // Todo 2085: whether the browser holds the new state (the hook missed it) or not.
+    let browser: String = page
+        .evaluate(
+            "Promise.all(['camera', 'microphone'].map((name) => navigator.permissions.query({ name }) \
+             .then((s) => name + '=' + s.state))).then((all) => all.join(' ') + ' ' + document.visibilityState)",
+        )
+        .await?
+        .into_value()?;
+    read.map_err(|error| {
+        error.context(format!(
+            "the fixture reads {state}; the browser answers {browser}"
+        ))
+    })
 }
 
 /// Waits for a chunk while recording: a clip that crossed in pieces, not only at the finish.

@@ -7,7 +7,7 @@ use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::pointer;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
+use e2e::{Fixture, Suite, Viewport, clock, passes::keyboard, wait};
 
 pub const TAB: &str = "[role=tab]";
 /// What the "second" state waits on. Not `TAB`: that is visible at rest, so
@@ -249,27 +249,28 @@ fn the_arrows_part_ways_from_a_selected_disabled_tab() {
     });
 }
 
-async fn settle(fixture: &Fixture) {
-    fixture
-        .page
-        .evaluate("new Promise(r => setTimeout(() => r(1), 100))")
-        .await
-        .unwrap();
-}
-
 /// The focused tab's index and which tab is selected, e.g. `"0:0"`.
+const FOCUS_AND_SELECTION: &str = "(() => { const tabs = [...document.querySelectorAll('[role=tab]')]; \
+     return tabs.indexOf(document.activeElement) + ':' + \
+     tabs.findIndex(t => t.getAttribute('aria-selected') === 'true'); })()";
+
 async fn focus_and_selection(fixture: &Fixture) -> String {
     fixture
         .page
-        .evaluate(
-            "(() => { const tabs = [...document.querySelectorAll('[role=tab]')]; \
-             return tabs.indexOf(document.activeElement) + ':' + \
-             tabs.findIndex(t => t.getAttribute('aria-selected') === 'true'); })()",
-        )
+        .evaluate(FOCUS_AND_SELECTION)
         .await
         .unwrap()
         .into_value()
         .unwrap()
+}
+
+/// Waits for [`FOCUS_AND_SELECTION`] to read `expected`; a timeout names the last read.
+async fn until_focus_and_selection(fixture: &Fixture, expected: &str, what: &str) {
+    let check = format!("{FOCUS_AND_SELECTION} === '{expected}'");
+    if let Err(e) = wait::for_js_true(&fixture.page, &check, what).await {
+        let seen = focus_and_selection(fixture).await;
+        panic!("{what}: expected {expected}, read {seen}: {e}");
+    }
 }
 
 /// A click focuses a disabled tab without selecting it; the arrows then step
@@ -284,20 +285,10 @@ fn the_arrows_step_from_the_focused_tab() {
         pointer::click(page, "[role=tab]:nth-child(2)")
             .await
             .unwrap();
-        settle(&fixture).await;
-        assert_eq!(
-            focus_and_selection(&fixture).await,
-            "1:0",
-            "after the click"
-        );
+        until_focus_and_selection(&fixture, "1:0", "after the click").await;
 
         keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
-        settle(&fixture).await;
-        assert_eq!(
-            focus_and_selection(&fixture).await,
-            "0:0",
-            "after ArrowLeft"
-        );
+        until_focus_and_selection(&fixture, "0:0", "after ArrowLeft").await;
 
         fixture
             .console
@@ -327,12 +318,7 @@ fn manual_activation_selects_on_enter_and_space() {
             (keyboard::SPACE, "0:0"),
         ] {
             keyboard::press(page, key).await.unwrap();
-            settle(&fixture).await;
-            assert_eq!(
-                focus_and_selection(&fixture).await,
-                expected,
-                "after {key:?}"
-            );
+            until_focus_and_selection(&fixture, expected, &format!("after {key:?}")).await;
         }
         let panel: String = page
             .evaluate("document.querySelector('[role=tabpanel]').textContent")
@@ -364,12 +350,13 @@ fn shortcut_chords_pass_through() {
         .unwrap();
         reset_tab_position(page).await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
+        until_focus_and_selection(&fixture, "0:0", "Tab to focus the first tab").await;
         for modifier in [keyboard::ALT, keyboard::CTRL, keyboard::META] {
             keyboard::press_with(page, keyboard::ARROW_RIGHT, modifier)
                 .await
                 .unwrap();
         }
-        settle(&fixture).await;
+        clock::settle(page).await.unwrap();
         assert_eq!(focus_and_selection(&fixture).await, "0:0");
         let prevented: String = page
             .evaluate("window.__prevented.filter(Boolean).length + ''")
@@ -408,18 +395,15 @@ fn a_crowded_strip_scrolls_inside_itself() {
         reset_tab_position(page).await.unwrap();
         keyboard::press(page, keyboard::TAB).await.unwrap();
         keyboard::press(page, keyboard::END).await.unwrap();
-        settle(&fixture).await;
-        let visible: bool = page
-            .evaluate(
-                "(() => { const list = document.querySelector('[role=tablist]').getBoundingClientRect(); \
-                 const last = document.querySelector('[role=tab]:last-child').getBoundingClientRect(); \
-                 return last.left >= list.left - 1 && last.right <= list.right + 1; })()",
-            )
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert!(visible, "End left the last tab outside the strip");
+        wait::for_js_true(
+            page,
+            "(() => { const list = document.querySelector('[role=tablist]').getBoundingClientRect(); \
+             const last = document.querySelector('[role=tab]:last-child').getBoundingClientRect(); \
+             return last.left >= list.left - 1 && last.right <= list.right + 1; })()",
+            "End to bring the last tab inside the strip",
+        )
+        .await
+        .unwrap();
 
         fixture.console.assert_clean("a crowded strip").unwrap();
         fixture.close().await.unwrap();
