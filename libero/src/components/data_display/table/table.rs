@@ -118,13 +118,14 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& [data-sort-button]:focus-visible",
         inset_focus_ring_sx("-2px"),
     )
+    // No transition on the arrow or the detail chevron: each frame of one repaints the
+    // whole table's layer, 40-100 ms on 1000 rows (todo 1984).
     .selector(
         "& [data-sort-button] svg",
         sx().width("16px")
             .height("16px")
             .flex_shrink("0")
-            .opacity("0")
-            .transition("opacity 150ms, transform 150ms"),
+            .opacity("0"),
     )
     // `aria-sort`, on the sorted header only, doubles as the styling state.
     .selector(
@@ -421,9 +422,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     )
     .selector(
         "& [data-detail-button] svg",
-        sx().width("16px")
-            .height("16px")
-            .transition("transform 150ms"),
+        sx().width("16px").height("16px"),
     )
     // Closed, the chevron points along the reading direction.
     .selector(
