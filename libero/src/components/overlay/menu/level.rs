@@ -170,6 +170,8 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         .position(|item| item.check == Some(Check::Radio(true)))
         .unwrap_or(0);
     use_level_focus(level, open, placed, props.request, props.initial, first);
+    // A memo: the first focus sets `active` to `first`, which redrew every row for nothing.
+    let tabbable = use_memo(use_reactive!(|(first,)| active().unwrap_or(first)));
     let hover = use_hover_delay(
         level,
         Duration::from_millis(theme.menu.submenu_delay.into()),
@@ -211,7 +213,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
                     .collect(),
             ),
             hover,
-            tabbable: active().unwrap_or(first),
+            tabbable: tabbable(),
             expanded,
             level_id: level_id.clone(),
             checks: flat.iter().any(|item| item.check.is_some()),

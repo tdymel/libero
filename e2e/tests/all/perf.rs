@@ -457,6 +457,37 @@ fn paging_stays_in_budget() {
     });
 }
 
+/// Opening a menu of a hundred builds its rows twice, mount and placement; the first
+/// focus landing on the first item draws nothing (todo 2070; it was a third pass).
+#[test]
+fn opening_a_menu_draws_its_rows_twice() {
+    block_on(async {
+        let fixture = open("/perf/menu-100").await;
+        let page = &fixture.page;
+        pointer::click(page, "button[aria-haspopup]").await.unwrap();
+        wait::for_js_true(page, &focused_nth(MENU_ITEM, 0), "the first focus")
+            .await
+            .unwrap();
+        let renders = settled(page, "opening").await;
+        assert_within(
+            &renders,
+            &[
+                ("Menu100Page", 1),
+                ("Flex", 1),
+                ("Button", 1),
+                ("Menu", 1),
+                ("MenuLevel", 2),
+                ("Fragment", 2),
+                ("PortalOutlet", 2),
+                ("StyleOutlet", 1),
+            ],
+            "opening a menu of 100",
+        );
+        fixture.console.assert_clean("the menu").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Ten scroll steps through a virtualized list, then quiet.
 #[test]
 fn scrolling_a_virtual_list_stays_in_budget() {
@@ -770,6 +801,8 @@ enum Act {
     /// The `n`th match of the selector.
     Nth(&'static str, usize),
     Hover(&'static str),
+    /// Focus by script, so no click acts on the element.
+    Focus(&'static str),
     Key(keyboard::Key),
     Type(&'static str),
     /// Ten moves by `(x, y)` from the selector's centre.
@@ -792,6 +825,11 @@ impl Act {
                 pointer::click_at(page, at).await
             }
             Act::Hover(selector) => pointer::hover(page, selector).await,
+            Act::Focus(selector) => {
+                page.evaluate(format!("document.querySelector({selector:?}).focus()"))
+                    .await?;
+                Ok(())
+            }
             Act::Key(key) => keyboard::press(page, key).await,
             Act::Type(text) => keyboard::type_text(page, text).await,
             Act::Drag(selector, x, y) => {
@@ -895,6 +933,55 @@ const RADIO: &str = "input[type=radio]";
 const SEGMENT: &str = "label[for*='-segment-']";
 const PRESSED: &str = "document.querySelector('#press').textContent.includes('Pressed N')";
 const FIRST_ITEM: &str = "document.querySelector('[role=list] li')?.textContent.trim()";
+const BRANCH: &str = "[role=treeitem][data-tree-id='b0']";
+const MENU_ITEM: &str = "[role=menuitem]";
+
+/// Flipping back to the platform's own scheme drops the pin, the attribute with it.
+fn scheme_is(scheme: &str) -> String {
+    format!("(document.documentElement.getAttribute('data-lsx-theme') ?? 'light') === {scheme:?}")
+}
+
+fn expanded(selector: &str, open: bool) -> String {
+    format!("document.querySelector({selector:?}).getAttribute('aria-expanded') === '{open}'")
+}
+
+fn focused_nth(selector: &str, n: usize) -> String {
+    format!("document.activeElement === document.querySelectorAll({selector:?})[{n}]")
+}
+
+fn toasts_are(n: usize) -> String {
+    format!("document.querySelectorAll('[data-notification]').length === {n}")
+}
+
+fn step_is(n: usize) -> String {
+    format!("document.querySelector('#stepper-step-{n}')?.getAttribute('aria-current') === 'step'")
+}
+
+fn page_is(n: u32) -> String {
+    format!("document.querySelector('#page').dataset.page === '{n}'")
+}
+
+/// A page down and back up in the focused `#scroller`.
+fn paging(component: &'static str, stem: &'static str) -> Case {
+    const TOP: &str = "document.getElementById('scroller').scrollTop";
+    Case {
+        component,
+        stem,
+        setup: vec![("focus", Act::Focus("#scroller"), "true".into())],
+        steps: vec![
+            (
+                "page down",
+                Act::Key(keyboard::PAGE_DOWN),
+                format!("{TOP} > 0"),
+            ),
+            (
+                "page up",
+                Act::Key(keyboard::PAGE_UP),
+                format!("{TOP} === 0"),
+            ),
+        ],
+    }
+}
 
 fn cases() -> Vec<Case> {
     let focus = |selector: &'static str| vec![("focus", Act::Click(selector), "true".to_string())];
@@ -1043,6 +1130,75 @@ fn cases() -> Vec<Case> {
         },
         toggles("Checkbox", "checkbox", "#check", 0),
         toggles("Switch", "switch", "#switch", 0),
+        Case {
+            component: "Theme switch",
+            stem: "theme",
+            setup: vec![],
+            steps: vec![
+                ("toggle", Act::Click("#switcher button"), scheme_is("dark")),
+                ("toggle", Act::Click("#switcher button"), scheme_is("light")),
+            ],
+        },
+        Case {
+            component: "Tree (510) keys",
+            stem: "tree-500",
+            setup: vec![("focus", Act::Focus(BRANCH), "true".into())],
+            steps: vec![
+                ("expand", Act::Key(keyboard::ARROW_RIGHT), expanded(BRANCH, true)),
+                ("collapse", Act::Key(keyboard::ARROW_LEFT), expanded(BRANCH, false)),
+            ],
+        },
+        paging("List (300) keys", "list-scroll"),
+        paging("DataList (300) keys", "data-list-scroll"),
+        Case {
+            component: "Menu (100)",
+            stem: "menu-100",
+            setup: vec![],
+            steps: vec![
+                ("open", Act::Click("button[aria-haspopup]"), shown("[role=menu]")),
+                ("arrow", Act::Key(keyboard::ARROW_DOWN), focused_nth(MENU_ITEM, 1)),
+                ("type-ahead", Act::Type("a"), focused_nth(MENU_ITEM, 2)),
+                ("close", Act::Key(keyboard::ESCAPE), hidden("[role=menu]")),
+            ],
+        },
+        Case {
+            component: "Tabs (20) keys",
+            stem: "tabs-20",
+            setup: vec![("focus", Act::Focus("[role=tab]"), "true".into())],
+            steps: vec![
+                ("arrow", Act::Key(keyboard::ARROW_RIGHT), focused_nth("[role=tab]", 1)),
+                ("arrow", Act::Key(keyboard::ARROW_LEFT), focused_nth("[role=tab]", 0)),
+            ],
+        },
+        Case {
+            component: "Toast stack (10)",
+            stem: "toasts",
+            setup: (1..10)
+                .map(|n| ("show", Act::Click("#show"), toasts_are(n)))
+                .collect(),
+            steps: vec![
+                ("show", Act::Click("#show"), toasts_are(10)),
+                ("hide", Act::Click("#hide"), toasts_are(9)),
+            ],
+        },
+        Case {
+            component: "Stepper (9)",
+            stem: "stepper",
+            setup: vec![],
+            steps: vec![
+                ("next", Act::Click("#next"), step_is(1)),
+                ("back", Act::Click("#back"), step_is(0)),
+            ],
+        },
+        Case {
+            component: "Pagination (20)",
+            stem: "pagination",
+            setup: vec![],
+            steps: vec![
+                ("page", Act::Click("[aria-label='Go to page 2']"), page_is(2)),
+                ("page", Act::Click("[aria-label='Go to page 1']"), page_is(1)),
+            ],
+        },
         Case {
             component: "Radio",
             stem: "radio",

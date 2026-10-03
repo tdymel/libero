@@ -305,6 +305,11 @@ async fn go(page: &chromiumoxide::Page, path: &str, ready: &str) {
     .await
     .unwrap();
     wait::for_js_true(page, ready, path).await.unwrap();
+    quiet(page).await;
+}
+
+/// Until 60 ms pass with under 2 ms of main-thread work.
+async fn quiet(page: &chromiumoxide::Page) {
     let (mut last, _) = spent(page, &Default::default()).await;
     loop {
         tokio::time::sleep(std::time::Duration::from_millis(60)).await;
@@ -314,6 +319,190 @@ async fn go(page: &chromiumoxide::Page, path: &str, ready: &str) {
         }
         last = now;
     }
+}
+
+/// The docs shell's own interactions (todo 2070): the header's scheme toggle, a theme-set
+/// pick from its menu, and a sidebar link between two pages. Medians of 16, a warm-up first.
+/// `E2E_RELEASE=1 cargo run -p e2e -- sweep docs_interactions --ignored`; `PERF_CASE` picks.
+#[test]
+#[ignore = "docs interaction report, run on request"]
+fn docs_interactions() {
+    const TOOLS: &str = "[aria-label='Site tools']";
+    const SCHEME: &str = "(document.documentElement.getAttribute('data-lsx-theme') ?? 'light')";
+    const PAGE_BG: &str = "getComputedStyle(document.body).backgroundColor";
+    block_on(async {
+        // A release `dx` still pre-compresses for a while after it reports ready.
+        for _ in 0..3 {
+            if e2e::sweep::discover().await.is_ok() {
+                break;
+            }
+        }
+        let mut opened = Err(anyhow::anyhow!("not tried"));
+        for _ in 0..3 {
+            opened = Fixture::open_until(
+                "/buttons/button",
+                Viewport::Desktop,
+                Scheme::Light,
+                "#docs-main h1",
+            )
+            .await;
+            if opened.is_ok() {
+                break;
+            }
+        }
+        let fixture = opened.unwrap();
+        let page = &fixture.page;
+        let front = e2e::frames::bring_to_front(page).await.unwrap();
+        page.execute(chromiumoxide::cdp::browser_protocol::performance::EnableParams::default())
+            .await
+            .unwrap();
+        // `PERF_PROFILE=1`: the 30 functions most sampled per action, as `docs_mount`.
+        let profiling = std::env::var_os("PERF_PROFILE").is_some();
+        if profiling {
+            use chromiumoxide::cdp::js_protocol::profiler;
+            page.execute(profiler::EnableParams::default())
+                .await
+                .unwrap();
+            page.execute(profiler::SetSamplingIntervalParams::new(100))
+                .await
+                .unwrap();
+        }
+        let only = std::env::var("PERF_CASE").ok();
+        let mut rows: Vec<(&str, Vec<[f64; 3]>)> = Vec::new();
+        let reps = 17;
+        for name in ["scheme toggle", "theme-set pick", "sidebar link"] {
+            if only
+                .as_deref()
+                .is_some_and(|o| !o.split(',').any(|o| name.contains(o)))
+            {
+                continue;
+            }
+            let mut hot = std::collections::BTreeMap::<String, i64>::new();
+            let mut taken = Vec::new();
+            for rep in 0..reps {
+                quiet(page).await;
+                if name == "theme-set pick" {
+                    // Opening the menu is not the pick: it goes before the counters.
+                    e2e::passes::pointer::click(page, &format!("{TOOLS} [data-slot=picker]"))
+                        .await
+                        .unwrap();
+                    wait_for(
+                        page,
+                        "the theme menu",
+                        "!!document.querySelector('[role=menu]')",
+                    )
+                    .await;
+                    quiet(page).await;
+                }
+                if profiling {
+                    page.execute(chromiumoxide::cdp::js_protocol::profiler::StartParams::default())
+                        .await
+                        .unwrap();
+                }
+                let (before, _) = spent(page, &Default::default()).await;
+                match name {
+                    "scheme toggle" => {
+                        let was: String =
+                            page.evaluate(SCHEME).await.unwrap().into_value().unwrap();
+                        e2e::passes::pointer::click(page, &format!("{TOOLS} [data-slot=toggle]"))
+                            .await
+                            .unwrap();
+                        wait_for(page, "the scheme to flip", &format!("{SCHEME} !== {was:?}"))
+                            .await;
+                    }
+                    "theme-set pick" => {
+                        let set = if rep % 2 == 0 { "Ayu" } else { "Libero" };
+                        let bg: String =
+                            page.evaluate(PAGE_BG).await.unwrap().into_value().unwrap();
+                        page.evaluate(format!(
+                            "(e => {{ e.setAttribute('data-e2e', 'set'); e.scrollIntoView({{ block: 'nearest' }}); }})\
+                             ([...document.querySelectorAll('[role=menuitemradio]')].find((e) => e.textContent.trim() === {set:?}))"
+                        ))
+                        .await
+                        .unwrap();
+                        e2e::passes::pointer::click(page, "[data-e2e=set]")
+                            .await
+                            .unwrap();
+                        wait_for(
+                            page,
+                            "the page colour to change",
+                            &format!("{PAGE_BG} !== {bg:?}"),
+                        )
+                        .await;
+                    }
+                    _ => {
+                        let to = if rep % 2 == 0 {
+                            "/buttons/action-icon"
+                        } else {
+                            "/buttons/button"
+                        };
+                        e2e::passes::pointer::click(page, &format!("#docs-nav a[href='{to}']"))
+                            .await
+                            .unwrap();
+                        wait_for(
+                            page,
+                            to,
+                            &format!("location.pathname === {to:?} && !!document.querySelector('#docs-main h1')"),
+                        )
+                        .await;
+                    }
+                }
+                quiet(page).await;
+                let (_, times) = spent(page, &before).await;
+                if profiling {
+                    let profile = page
+                        .execute(chromiumoxide::cdp::js_protocol::profiler::StopParams::default())
+                        .await
+                        .unwrap();
+                    for node in &profile.result.profile.nodes {
+                        *hot.entry(node.call_frame.function_name.clone())
+                            .or_default() += node.hit_count.unwrap_or(0);
+                    }
+                }
+                if rep > 0 {
+                    taken.push(times);
+                }
+            }
+            let mut hot: Vec<_> = hot.into_iter().filter(|(_, n)| *n > 0).collect();
+            hot.sort_by_key(|a| std::cmp::Reverse(a.1));
+            for (function, samples) in hot.iter().take(30) {
+                println!("profile | {name} | {samples:>5} | {function}");
+            }
+            rows.push((name, taken));
+        }
+        println!("| Action | task | script | layout | rest |\n|---|---|---|---|---|");
+        for (name, reps) in &rows {
+            let median = |i: usize| {
+                let mut v: Vec<f64> = reps.iter().map(|r| r[i]).collect();
+                v.sort_by(f64::total_cmp);
+                v[v.len() / 2]
+            };
+            let [task, script, layout] = [median(0), median(1), median(2)];
+            println!(
+                "| {name} | {task:.1} | {script:.1} | {layout:.1} | {:.1} |",
+                task - script - layout
+            );
+        }
+        // A fixed loop: a run whose host was busy reads slow here too, so A/B runs compare.
+        let mut control: Vec<f64> = Vec::new();
+        for _ in 0..9 {
+            control.push(
+                page.evaluate(
+                    "(() => { const t = performance.now(); let x = 0; \
+                     for (let i = 0; i < 2e6; i++) x += Math.sqrt(i); \
+                     return performance.now() - t + (x < 0 ? 1 : 0); })()",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap(),
+            );
+        }
+        control.sort_by(f64::total_cmp);
+        println!("| cpu control | {:.1} | | | |", control[4]);
+        front.release().await.unwrap();
+        close(fixture).await;
+    });
 }
 
 /// Each docs page's client-side mount (todo 2031): task, script and style plus layout ms,

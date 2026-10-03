@@ -8,16 +8,18 @@ use libero::components::{
     ChronoPicker, CodeBlock, ColorCode, ColorPicker, Combobox, ComboboxOption, ComboboxOptionArgs,
     DataList, DataListItem, DateRange, DateRangePicker, Dialog, Fields, Flex,
     FloatingWindowOptions, Form, Image, ImageBar, ImageItem, ImageList, List, ListItem, Menu,
-    MenuEntry, MenuItem, MonthPicker, MultiSelect, NumberField, Options, Pagination, RadioGroup,
-    RichTextEditor, ScrollArea, SegmentedControl, Select, Slider, SliderChangeEvent, Splitter,
-    SpotlightAction, SpotlightOptions, Switch, Tabs, Text, TextField, Textarea, Timeline,
+    MenuEntry, MenuItem, MonthPicker, MultiSelect, NotificationId, NotificationOptions,
+    Notifications, NumberField, Options, Pagination, RadioGroup, RichTextEditor, ScrollArea,
+    SegmentedControl, Select, Slider, SliderChangeEvent, Splitter, SpotlightAction,
+    SpotlightOptions, Stepper, Switch, Tabs, Text, TextField, Textarea, ThemeSwitcher, Timeline,
     TimelineEvent, Tooltip, Tree, TreeNode, Virtualize, YearPicker, rich_text::Doc,
-    spotlight_filter, use_combobox, use_menu, use_spotlight,
+    spotlight_filter, use_combobox, use_menu, use_notifications, use_spotlight,
 };
 use libero::hooks::{
     DrawerOptions, ModalScope, PopoverOptions, use_drawer, use_element, use_floating_window,
     use_modal, use_popover,
 };
+use libero::theme::AutoClose;
 use libero::{sx::sx, use_theme};
 
 use crate::Routes;
@@ -105,6 +107,27 @@ pub const ROUTES: Routes = &[
     ("/timing/checkbox", || rsx! { CheckboxPage {} }),
     ("/timing/switch", || rsx! { SwitchPage {} }),
     ("/timing/radio", || rsx! { RadioPage {} }),
+    // Todo 2070's scenarios, each counted and timed.
+    ("/perf/theme", || rsx! { ThemePage {} }),
+    ("/timing/theme", || rsx! { ThemePage {} }),
+    ("/perf/tree-500", || rsx! { Tree500Page {} }),
+    ("/timing/tree-500", || rsx! { Tree500Page {} }),
+    ("/perf/list-scroll", || rsx! { ListScrollPage {} }),
+    ("/timing/list-scroll", || rsx! { ListScrollPage {} }),
+    ("/perf/data-list-scroll", || rsx! { DataListScrollPage {} }),
+    (
+        "/timing/data-list-scroll",
+        || rsx! { DataListScrollPage {} },
+    ),
+    ("/perf/menu-100", || rsx! { Menu100Page {} }),
+    ("/timing/menu-100", || rsx! { Menu100Page {} }),
+    ("/perf/tabs-20", || rsx! { Tabs20Page {} }),
+    ("/timing/tabs-20", || rsx! { Tabs20Page {} }),
+    ("/perf/toasts", || rsx! { ToastsPage {} }),
+    ("/timing/toasts", || rsx! { ToastsPage {} }),
+    ("/perf/stepper", || rsx! { StepperPage {} }),
+    ("/timing/stepper", || rsx! { StepperPage {} }),
+    ("/timing/pagination", || rsx! { PaginationPage {} }),
 ];
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -956,6 +979,198 @@ fn ListPage() -> Element {
                     ListItem { key: "{city}", "{city}" }
                 }
             }
+        }
+    }
+}
+
+/// The scheme toggle over a page of themed controls: every `use_theme()` reader restyles.
+#[component]
+fn ThemePage() -> Element {
+    let mut section = use_signal(|| Section::Account);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "640px",
+            div { id: "switcher", ThemeSwitcher {} }
+            Tabs {
+                aria_label: "Settings",
+                value: section(),
+                onchange: move |next| section.set(next),
+                panel: section_body,
+            }
+            Flex { gap: "sm",
+                for i in 0..12 {
+                    Button { variant: if i % 2 == 0 { "filled" } else { "outlined" }, "Action {i}" }
+                    Badge { "Tag {i}" }
+                }
+            }
+            for i in 0..6 {
+                TextField { label: "Field {i}", value: "", oninput: |_| {} }
+                Checkbox { label: "Check {i}", checked: i % 2 == 0, onchange: |_| {} }
+                Switch { label: "Switch {i}", checked: i % 2 == 1, onchange: |_| {} }
+            }
+        }
+    }
+}
+
+/// Ten branches of fifty leaves: 510 rows once one opens.
+#[component]
+fn Tree500Page() -> Element {
+    let data = (0..10)
+        .map(|b| {
+            TreeNode::new(format!("b{b}"), format!("Folder {b}")).children(
+                (0..50)
+                    .map(|l| TreeNode::new(format!("b{b}/{l}"), format!("File {l}.rs")))
+                    .collect(),
+            )
+        })
+        .collect::<Vec<_>>();
+    rsx! {
+        Flex { direction: "column", max_width: "320px",
+            Tree { aria_label: "Files", data }
+        }
+    }
+}
+
+/// A focusable scroller a key pages through.
+const SCROLLER_STYLE: &str = "height: 400px; width: 360px; overflow: auto";
+
+#[component]
+fn ListScrollPage() -> Element {
+    rsx! {
+        div { id: "scroller", tabindex: "0", style: SCROLLER_STYLE,
+            List {
+                for city in cities(300) {
+                    ListItem { key: "{city}", "{city}" }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn DataListScrollPage() -> Element {
+    rsx! {
+        div { id: "scroller", tabindex: "0", style: SCROLLER_STYLE,
+            DataList { orientation: "horizontal",
+                for i in 0..300 {
+                    DataListItem { key: "{i}", label: rsx! { "Term {i}" }, "Description {i}" }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn Menu100Page() -> Element {
+    let menu = use_menu();
+    let items: Vec<MenuEntry> = (0..100)
+        .map(|i| MenuItem::new(format!("Action {i}")).onselect(|_| {}).into())
+        .collect();
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Menu {
+                state: menu,
+                items,
+                Button { id: "open", variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
+        }
+    }
+}
+
+#[component]
+fn Tabs20Page() -> Element {
+    let mut tab = use_signal(|| "City 0".to_string());
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "640px",
+            Tabs::<String> {
+                aria_label: "Cities",
+                options: cities(20),
+                value: tab(),
+                onchange: move |next| tab.set(next),
+                panel: |city: String| rsx! {
+                    for line in 0..8 {
+                        Text { key: "{line}", "{city} line {line} of the panel." }
+                    }
+                },
+            }
+        }
+    }
+}
+
+/// `#show` adds a toast that stays, `#hide` closes the newest.
+#[component]
+fn ToastsPage() -> Element {
+    let notify = use_notifications();
+    let mut shown = use_signal(Vec::<NotificationId>::new);
+    rsx! {
+        Notifications { limit: 10 }
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button {
+                id: "show",
+                onclick: move |_| {
+                    let n = shown.peek().len();
+                    let id = notify.show_with(
+                        format!("Saved draft {n}"),
+                        NotificationOptions {
+                            auto_close: Some(AutoClose::Never),
+                            ..Default::default()
+                        },
+                    );
+                    shown.write().push(id);
+                },
+                "Show"
+            }
+            Button {
+                id: "hide",
+                onclick: move |_| {
+                    if let Some(id) = shown.write().pop() {
+                        notify.hide(id);
+                    }
+                },
+                "Hide"
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Debug, Options)]
+enum Phase {
+    Cart,
+    Account,
+    Shipping,
+    Billing,
+    Payment,
+    Review,
+    Confirm,
+    Receipt,
+    Survey,
+}
+
+/// Nine steps, moved by `#next` and `#back`.
+#[component]
+fn StepperPage() -> Element {
+    let mut at = use_signal(|| 0usize);
+    let all = Phase::options();
+    let value = all[at()];
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "720px",
+            Stepper {
+                id: "stepper",
+                value: Some(value),
+                options: all.to_vec(),
+                panel: section_body_phase,
+            }
+            Flex { gap: "sm",
+                Button { id: "back", onclick: move |_| at.with_mut(|at| *at = at.saturating_sub(1)), "Back" }
+                Button { id: "next", onclick: move |_| at.with_mut(|at| *at = (*at + 1).min(8)), "Next" }
+            }
+        }
+    }
+}
+
+fn section_body_phase(phase: Phase) -> Element {
+    rsx! {
+        for line in 0..8 {
+            Text { key: "{line}", "{phase:?} line {line} of the step." }
         }
     }
 }
