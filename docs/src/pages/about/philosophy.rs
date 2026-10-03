@@ -110,7 +110,8 @@ fn Principle(
                 .padding("lg")
                 .flex("1 1 100%")
                 .min_width("0")
-                .breakpoint(Size::Md, sx().flex("1 1 calc(50% - 12px)")),
+                .breakpoint(Size::Md, sx().flex("1 1 calc(50% - 12px)"))
+                .and(crate::pages::home::forced_colors_edge()),
             Flex { direction: "column", gap: "md",
                 Flex { direction: "row", align: "center", gap: "sm", wrap: "nowrap",
                     Icon {

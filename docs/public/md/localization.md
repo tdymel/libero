@@ -103,12 +103,15 @@ static WORDS: Localization = Localization {
 The groups live in `libero::localization`, each with an `ENGLISH` and a `GERMAN`
 const: `CommonLabels`, `DateLocale`, `PaginationLabels`, `AvatarLabels`,
 `BurgerLabels`, `AnchorLabels`, `PinFieldLabels`, `ThemeSwitcherLabels`,
-`RepositoryLabels`, `TldrLabels`, `DirectionToggleLabels`, `SpotlightLabels`, `CarouselLabels`, `NavLinkLabels`, `LightboxLabels`,
-`FloatingWindowLabels`, `NotificationsLabels`, `ScrollerLabels`,
-`StepperLabels`, `MarqueeLabels`, `ChipsLabels`, `ComboboxLabels`, `CascaderLabels`,
-`TagsFieldLabels`, `ImageLabels`, `CodeBlockLabels`, `CopyLabels`, `ColorLabels`,
-`PhoneFieldLabels`, `PasswordFieldLabels`, `NumberFieldLabels`,
-`FileFieldLabels`, `TextareaLabels`, `SliderLabels` and `MenuLabels`.
+`RepositoryLabels`, `TldrLabels`, `DirectionToggleLabels`, `SpotlightLabels`,
+`CarouselLabels`, `NavLinkLabels`, `LightboxLabels`, `FloatingWindowLabels`,
+`NotificationsLabels`, `ScrollerLabels`, `SortableLabels`, `KanbanLabels`,
+`StepperLabels`, `MarqueeLabels`, `MediaLabels`, `ChipsLabels`,
+`ComboboxLabels`, `CascaderLabels`, `TagsFieldLabels`, `ImageLabels`,
+`CodeBlockLabels`, `CopyLabels`, `ColorLabels`, `PhoneFieldLabels`,
+`PasswordFieldLabels`, `NumberFieldLabels`, `FileFieldLabels`,
+`ImageCropperLabels`, `TextareaLabels`, `SliderLabels`, `RatingLabels`,
+`MenuLabels`, `TableLabels`, `ShortcutHelpLabels` and `RichTextEditorLabels`.
 `DateLocale` holds the month and weekday names and every date and time
 component's labels.
 

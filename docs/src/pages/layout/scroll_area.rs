@@ -128,9 +128,9 @@ pub fn ScrollAreaPage() -> Element {
                 (ScrollAreaPart::Scrollbar, "A track `always` draws in a browser. `data-orientation` is `vertical` or `horizontal`."),
                 (ScrollAreaPart::Thumb, "The thumb inside a track."),
             ]), props("Virtualize", vec![
-                prop("count", "usize")
+                prop("count", "usize").default("required")
                     .doc("Rows in the whole list, not only the rendered ones."),
-                prop("item", "Callback<usize, Element>")
+                prop("item", "Callback<usize, Element>").default("required")
                     .doc("Renders one row. Called only for the rows in view."),
                 prop("item_size", "f64")
                     .doc("A row's height plus the gap below it, in px. Unset, it is measured from the first rows. Every row must have the same height."),

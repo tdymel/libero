@@ -13,7 +13,7 @@ use libero::{
 };
 use pictogram_icons_lucide as lucide;
 
-use super::icon_label;
+use super::{forced_colors_edge, icon_label};
 
 // copy: model
 #[derive(Clone, Copy, PartialEq, Options)]
@@ -94,7 +94,7 @@ pub fn BookingCard() -> Element {
         Paper {
             shadow: "lg",
             radius: "lg",
-            sx: sx().padding("lg").width("100%"),
+            sx: sx().padding("lg").width("100%").and(forced_colors_edge()),
             Tabs {
                 aria_label: "Table booking",
                 value: tab(),

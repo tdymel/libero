@@ -102,7 +102,7 @@ Like every component, `Badge` also takes the shared props `sx`, `class`,
 | `--lsx-badge-letter-spacing` | From `BadgeDefaults::letter_spacing`. |
 | `--lsx-badge-font-weight` | From `BadgeDefaults::font_weight`. |
 | `--lsx-badge-color` | Resolved `color`. |
-| `--lsx-badge-contrast` | Text color on that accent, for `filled`. Unset for a literal CSS color. |
+| `--lsx-badge-contrast` | Text color on that accent, for `filled`. Unset for a literal CSS color: the label then inherits the text color, so check its contrast on the fill yourself. |
 | `--lsx-badge-container` | Container fill of `tonal`. |
 | `--lsx-badge-on-container` | Label color on that container, black or white, whichever reads on it. |
 

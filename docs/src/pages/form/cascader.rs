@@ -139,7 +139,7 @@ pub fn CascaderPage() -> Element {
                 props("Cascader", vec![
                     prop("size", "Size").default(theme.cascader.size.as_str()).doc("Height, padding and font size of the frame and its rows."),
                     prop("radius", "Size").default(theme.cascader.radius.as_str()).doc("Corner radius of the frame and the list."),
-                    prop("data", "Vec<CascaderOption<T>>")
+                    prop("data", "Vec<CascaderOption<T>>").default("required")
                         .doc("The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree."),
                     prop("value", "Option<T>")
                         .doc("The selected option's value. Pair it with `onchange`. The cascader finds the path to it in `data`, and a value no option holds selects nothing."),

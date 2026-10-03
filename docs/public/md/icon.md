@@ -91,7 +91,7 @@ theme fields.
 | `--lsx-icon-size-<size>` | Width/height for that size step, from `IconDefaults`. |
 | `--lsx-icon-size-override` | Set by the `size` prop; wins over the size step. |
 | `--lsx-icon-color` | Resolved `color`; the svg inherits it as `currentColor`. |
-| `--lsx-icon-contrast` | Text color on top of that accent, for variant `filled`. Unset for a literal CSS color. |
+| `--lsx-icon-contrast` | Text color on top of that accent, for variant `filled`. Unset for a literal CSS color: the label then inherits the text color, so check its contrast on the fill yourself. |
 | `--lsx-icon-radius` | Set by the `radius` prop; falls back to `--lsx-radius-sm`. |
 | `--lsx-icon-container` | Container fill of `tonal`. |
 | `--lsx-icon-on-container` | Label color on that container, black or white, whichever reads on it. |

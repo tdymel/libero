@@ -105,7 +105,7 @@ Cascader {
 |---|---|---|---|
 | `size` | `Size` | `md` | Height, padding and font size of the frame and its rows. |
 | `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
-| `data` | `Vec<CascaderOption<T>>` | - | The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree. |
+| `data` | `Vec<CascaderOption<T>>` | required | The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree. |
 | `value` | `Option<T>` | - | The selected option's value. Pair it with `onchange`. The cascader finds the path to it in `data`, and a value no option holds selects nothing. |
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the value to select next, or `None` when the selection was cleared. |
 | `any_level` | `bool` | `false` | Lets a branch be picked as well as expanded, as its own value. Off, only a leaf commits. |

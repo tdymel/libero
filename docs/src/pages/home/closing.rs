@@ -5,7 +5,7 @@ use libero::{
     theme::{ColorCss, ColorShade},
 };
 
-use super::{CtaStack, card_background, cta_row_sx};
+use super::{CtaStack, card_background, cta_row_sx, forced_colors_edge};
 use crate::{Route, site::GITHUB};
 
 /// The way in once more, and the page's footer line.
@@ -21,7 +21,8 @@ pub fn Closing() -> Element {
                         .background(card_background())
                         .width("100%")
                         .padding("48px 24px")
-                        .text_align("center"),
+                        .text_align("center")
+                        .and(forced_colors_edge()),
                     Flex { direction: "column", gap: "lg", align: "center",
                         Title {
                             size: "xxl",

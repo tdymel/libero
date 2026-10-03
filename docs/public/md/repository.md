@@ -39,7 +39,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `repo` | `String` | - | Required. `owner/repo`, as in the repository's URL. GitLab takes nested groups too. |
+| `repo` | `String` | required | `owner/repo`, as in the repository's URL. GitLab takes nested groups too. |
 | `host` | `RepoHost` | `GitHub` | Where the repository lives: `RepoHost::GitHub` or `RepoHost::GitLab`. |
 | `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
 | `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. Unset, a `gradient` takes the theme's gradient, as no label reads on a muted one. |

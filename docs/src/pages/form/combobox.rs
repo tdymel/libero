@@ -511,12 +511,12 @@ pub fn ComboboxPage() -> Element {
             markdown: "/md/combobox.md",
             properties: vec![
                 props("Combobox", vec![
-                    prop("state", "ComboboxState")
-                        .doc("From `use_combobox()`. The open state, the highlighted row and the id the aria wiring uses. Required. One state drives one combobox."),
-                    prop("options", "OptionSource<T>")
-                        .doc("The options to list, already filtered. Required. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. Every option renders, so cap the list here. A failed fetch is an empty list, so show your own error beside the field."),
-                    prop("option", "Callback<ComboboxOptionArgs<T>, Element>")
-                        .doc("Draws one row, usually a `ComboboxOption`. Required."),
+                    prop("state", "ComboboxState").default("required")
+                        .doc("From `use_combobox()`. The open state, the highlighted row and the id the aria wiring uses. One state drives one combobox."),
+                    prop("options", "OptionSource<T>").default("required")
+                        .doc("The options to list, already filtered. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. Every option renders, so cap the list here. A failed fetch is an empty list, so show your own error beside the field."),
+                    prop("option", "Callback<ComboboxOptionArgs<T>, Element>").default("required")
+                        .doc("Draws one row, usually a `ComboboxOption`."),
                     prop("children", "Element")
                         .doc("The trigger, and anything that belongs with it, such as a hidden input."),
                     prop("empty", "Element")

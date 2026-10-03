@@ -94,7 +94,7 @@ pub fn SplitterPage() -> Element {
                 prop("orientation", "Orientation")
                     .default("vertical")
                     .doc("The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them."),
-                prop("initial_size", "f64")
+                prop("initial_size", "f64").default("required")
                     .doc("Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it."),
                 prop("min_size", "f64").default("10").doc("The smallest size of either pane in percent, at most 50."),
                 prop("divider_size", "Size").default("sm").doc("Thickness of the divider line."),
@@ -104,8 +104,8 @@ pub fn SplitterPage() -> Element {
                     .doc("Fires as the divider moves, with both panes' sizes in percent. A key press or double-click sends `Change` then `End`."),
                 prop("aria_label", "String")
                     .doc("Names the divider after the pane it resizes. A debug build warns without it."),
-                prop("panel_a", "Element").doc("The start or top pane."),
-                prop("panel_b", "Element").doc("The end or bottom pane."),
+                prop("panel_a", "Element").default("required").doc("The start or top pane."),
+                prop("panel_b", "Element").default("required").doc("The end or bottom pane."),
             ])],
             accessibility: a11y()
                 .key(["Tab"], "Focuses the divider, a tab stop.")

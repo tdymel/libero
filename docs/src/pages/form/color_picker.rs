@@ -92,7 +92,7 @@ pub fn ColorPickerPage() -> Element {
                 props("ColorPicker", vec![
                     prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker."),
                     prop("radius", "Size").default(theme.color_picker.radius.as_str()).doc("Corner radius of the swatches and the preview. `xs` makes them square."),
-                    prop("value", "ColorCode")
+                    prop("value", "ColorCode").default("required")
                         .doc("The color. Pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<ColorCode>>")
                         .doc("`Start` and `End` bracket a drag on the panel or a slider. A key press or a swatch click sends `Change`, then `End`, so saving on `End` is enough."),
@@ -124,7 +124,7 @@ pub fn ColorPickerPage() -> Element {
                 ])
                 .parts("ColorPickerPart", color_picker_parts()),
                 props("HueSlider", vec![
-                    prop("value", "f64").doc("The hue in degrees, 0 to 360. Pair it with `oninput`."),
+                    prop("value", "f64").default("required").doc("The hue in degrees, 0 to 360. Pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent>").doc("Every new hue."),
                     prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Track height and thumb."),
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
@@ -136,8 +136,8 @@ pub fn ColorPickerPage() -> Element {
                     (ColorSliderPart::Thumb, "The handle, filled with the color it points at."),
                 ]),
                 props("AlphaSlider", vec![
-                    prop("value", "f64").doc("The alpha, 0.0 to 1.0. Pair it with `oninput`."),
-                    prop("color", "ColorCode").doc("The color the track fades in. Its own alpha is ignored."),
+                    prop("value", "f64").default("required").doc("The alpha, 0.0 to 1.0. Pair it with `oninput`."),
+                    prop("color", "ColorCode").default("required").doc("The color the track fades in. Its own alpha is ignored."),
                     prop("oninput", "EventHandler<SliderChangeEvent>").doc("Every new alpha."),
                     prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Track height and thumb."),
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
@@ -149,7 +149,7 @@ pub fn ColorPickerPage() -> Element {
                     (ColorSliderPart::Thumb, "The handle, filled with the color at its alpha."),
                 ]),
                 props("ColorSwatch", vec![
-                    prop("color", "ColorCode").doc("The color. A translucent one shows a checkerboard through."),
+                    prop("color", "ColorCode").default("required").doc("The color. A translucent one shows a checkerboard through."),
                     prop("size", "Size").default(theme.color_swatch.size.as_str()).doc("Diameter."),
                     prop("radius", "Size").default(theme.color_swatch.radius.as_str()).doc("Corner radius. Round by default."),
                     prop("with_shadow", "bool").default("true").doc("A faint inner ring, so a color close to the background keeps an edge."),

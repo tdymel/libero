@@ -91,6 +91,14 @@ impl PropGroup {
         self.props.iter().map(|prop| prop.name.as_str())
     }
 
+    /// `(name, default)` per row.
+    #[cfg(test)]
+    pub fn defaults(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.props
+            .iter()
+            .map(|prop| (prop.name.as_str(), prop.default.as_str()))
+    }
+
     /// `(part, data-slot)` per row of the Style API tables.
     #[cfg(test)]
     pub fn part_slots(&self) -> impl Iterator<Item = (&str, &str)> {

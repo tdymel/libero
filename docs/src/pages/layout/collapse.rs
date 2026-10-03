@@ -162,7 +162,7 @@ pub fn CollapsePage() -> Element {
             source: "libero/src/components/layout/collapse.rs",
             markdown: "/md/collapse.md",
             properties: vec![props("Collapse", vec![
-                prop("open", "bool")
+                prop("open", "bool").default("required")
                     .doc("Whether the panel is expanded. You own this state."),
                 prop("keep_mounted", "bool")
                     .default("true")

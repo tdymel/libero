@@ -64,7 +64,7 @@ color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
 |---|---|---|---|
 | `size` | `Size` | `md` | Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker. |
 | `radius` | `Size` | `xxl` | Corner radius of the swatches and the preview. `xs` makes them square. |
-| `value` | `ColorCode` | - | The color. Pair it with `oninput`. |
+| `value` | `ColorCode` | required | The color. Pair it with `oninput`. |
 | `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | - | `Start` and `End` bracket a drag on the panel or a slider. A key press or a swatch click sends `Change`, then `End`, so saving on `End` is enough. |
 | `with_alpha` | `bool` | `false` | Shows the alpha slider and a preview swatch beside it. Without it, the color is always opaque. |
 | `swatches` | `Swatches` | - | Preset colors under the panel, as `ColorCode`s or CSS strings. A string that is no color is skipped with a warning. The swatch equal to `value` shows as picked. |
@@ -83,7 +83,7 @@ color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `f64` | - | The hue in degrees, 0 to 360. Pair it with `oninput`. |
+| `value` | `f64` | required | The hue in degrees, 0 to 360. Pair it with `oninput`. |
 | `oninput` | `EventHandler<SliderChangeEvent>` | - | Every new hue. |
 | `size` | `Size` | `md` | Track height and thumb. |
 | `disabled` | `bool` | `false` | Dims the slider and stops it moving. |
@@ -94,8 +94,8 @@ color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `f64` | - | The alpha, 0.0 to 1.0. Pair it with `oninput`. |
-| `color` | `ColorCode` | - | The color the track fades in. Its own alpha is ignored. |
+| `value` | `f64` | required | The alpha, 0.0 to 1.0. Pair it with `oninput`. |
+| `color` | `ColorCode` | required | The color the track fades in. Its own alpha is ignored. |
 | `oninput` | `EventHandler<SliderChangeEvent>` | - | Every new alpha. |
 | `size` | `Size` | `md` | Track height and thumb. |
 | `disabled` | `bool` | `false` | Dims the slider and stops it moving. |
@@ -106,7 +106,7 @@ color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ColorCode` | - | The color. A translucent one shows a checkerboard through. |
+| `color` | `ColorCode` | required | The color. A translucent one shows a checkerboard through. |
 | `size` | `Size` | `md` | Diameter. |
 | `radius` | `Size` | `xxl` | Corner radius. Round by default. |
 | `with_shadow` | `bool` | `true` | A faint inner ring, so a color close to the background keeps an edge. |

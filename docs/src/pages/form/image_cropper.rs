@@ -41,9 +41,9 @@ pub fn ImageCropperPage() -> Element {
             markdown: "/md/image_cropper.md",
             properties: vec![
                 props("ImageCropper", vec![
-                    prop("src", "String")
+                    prop("src", "String").default("required")
                         .doc("The image: any URL, a `data:` URL included."),
-                    prop("alt", "String").doc("Describes the image."),
+                    prop("alt", "String").default("required").doc("Describes the image."),
                     prop("value", "Option<CropRect>")
                         .doc("The box, in fractions of the image. Pair it with `onchange`. Unset starts centred at 80% of the largest box `aspect` allows, so it can move at once, and reports it once the image has loaded. A new `src` or `aspect` starts an unset box over. A set `value` stays as it is, so reset it yourself."),
                     prop("onchange", "EventHandler<CropRect>")

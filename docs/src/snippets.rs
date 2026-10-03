@@ -11,7 +11,7 @@
 //! - `// snippet: in <rsx>` - the rsx the snippet goes into, at `..`.
 
 use std::cell::RefCell;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -504,16 +504,17 @@ fn every_page_is_in_the_nav_under_its_title() {
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
-/// The names in a mirror's `## Props` and `## API` tables, per `###` group; `""` names the
+/// The names in a mirror's `## Props` and `## API` tables with their third cell (the default),
+/// per `###` group; `""` names the
 /// `## Props` ones before any. `## API` files options structs and handles by heading; a handle may also have a `## ` section
 /// or a table headed by its type.
-fn md_props(md: &str) -> Vec<(String, BTreeSet<String>)> {
-    let mut groups: Vec<(String, BTreeSet<String>)> = Vec::new();
+fn md_props(md: &str) -> Vec<(String, BTreeMap<String, String>)> {
+    let mut groups: Vec<(String, BTreeMap<String, String>)> = Vec::new();
     let mut section = "";
     // The group the next row joins: none until a heading (or, in `## Props`, a row) opens one.
     let mut current: Option<usize> = None;
-    let open = |groups: &mut Vec<(String, BTreeSet<String>)>, name: &str| {
-        groups.push((name.to_string(), BTreeSet::new()));
+    let open = |groups: &mut Vec<(String, BTreeMap<String, String>)>, name: &str| {
+        groups.push((name.to_string(), BTreeMap::new()));
         Some(groups.len() - 1)
     };
     for line in md.lines() {
@@ -543,7 +544,10 @@ fn md_props(md: &str) -> Vec<(String, BTreeSet<String>)> {
                 current = open(&mut groups, "");
             }
             if let Some(group) = current {
-                groups[group].1.insert(bare(name).to_string());
+                let default = line.split(" | ").nth(2).unwrap_or_default().trim();
+                groups[group]
+                    .1
+                    .insert(bare(name).to_string(), default.to_string());
             }
         }
     }
@@ -593,14 +597,200 @@ fn md_mirrors_list_the_props_of_their_page() {
                     continue;
                 };
                 let page: BTreeSet<&str> = group.names().map(bare).collect();
-                for name in page.iter().filter(|name| !listed.contains(**name)) {
+                for name in page.iter().filter(|name| !listed.contains_key(**name)) {
                     problems.push(format!(
                         "{markdown}: `{}` lacks `{name}`",
                         group.component()
                     ));
                 }
-                for name in listed.iter().filter(|name| !page.contains(name.as_str())) {
+                for name in listed.keys().filter(|name| !page.contains(name.as_str())) {
                     problems.push(format!("{markdown}: `{name}` is not on the {route} page"));
+                }
+            }
+        }
+    }
+    problems.sort();
+    problems.dedup();
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// `text` cut at each top-level comma: `<>` nest too, but not the `>` of a `->`.
+fn top_level_split(text: &str) -> Vec<&str> {
+    let (mut pieces, mut depth, mut start) = (Vec::new(), 0i32, 0);
+    let bytes = text.as_bytes();
+    for (i, &byte) in bytes.iter().enumerate() {
+        match byte {
+            b'(' | b'[' | b'{' | b'<' => depth += 1,
+            b'>' if i > 0 && bytes[i - 1] == b'-' => {}
+            b')' | b']' | b'}' | b'>' => depth -= 1,
+            b',' if depth == 0 => {
+                pieces.push(&text[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    pieces.push(&text[start..]);
+    pieces
+}
+
+/// The index past the bracket closing the one at `open`.
+fn closing(text: &str, open: usize) -> usize {
+    let (left, right) = match text.as_bytes()[open] {
+        b'(' => (b'(', b')'),
+        b'[' => (b'[', b']'),
+        _ => (b'{', b'}'),
+    };
+    let mut depth = 0;
+    for (i, &byte) in text.as_bytes()[open..].iter().enumerate() {
+        depth += (byte == left) as i32 - (byte == right) as i32;
+        if depth == 0 {
+            return open + i + 1;
+        }
+    }
+    text.len()
+}
+
+/// The fields a builder cannot leave out: no `default` or `extends`, not `Option`, not
+/// `children` (Dioxus defaults those), as `dioxus-core-macro`'s props derive decides.
+fn required_fields(fields: &str) -> Vec<String> {
+    top_level_split(fields)
+        .into_iter()
+        .filter_map(|field| {
+            let (mut attrs, mut rest) = (String::new(), field.trim());
+            while let Some(attr) = rest.strip_prefix("#[") {
+                let end = closing(rest, 1);
+                attrs.push_str(&attr[..end - 2]);
+                rest = rest[end..].trim_start();
+            }
+            let rest = rest.strip_prefix("pub ").unwrap_or(rest);
+            let (name, ty) = rest.split_once(':')?;
+            let (name, ty) = (name.trim(), ty.trim().replace(' ', ""));
+            let optional = ["Option<", "ReadSignal<Option<", "ReadOnlySignal<Option<"]
+                .iter()
+                .any(|prefix| ty.starts_with(prefix))
+                && !attrs.replace(' ', "").contains("!optional");
+            let defaulted = attrs
+                .split(|c: char| !c.is_alphanumeric() && c != '_')
+                .any(|word| matches!(word, "default" | "extends"));
+            (!name.is_empty() && name != "children" && !optional && !defaulted)
+                .then(|| name.to_string())
+        })
+        .collect()
+}
+
+/// Every libero component's required props, by name: a `#[component]` fn's own parameters
+/// or the fields of its `<Name>Props` struct.
+fn required_props() -> BTreeMap<String, Vec<String>> {
+    let mut files = Vec::new();
+    rust_files(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../libero/src"),
+        &mut files,
+    );
+    let mut required = BTreeMap::new();
+    for file in files {
+        // Comments out, but not a URL's `//`.
+        let source: String = std::fs::read_to_string(&file)
+            .unwrap()
+            .lines()
+            .map(|line| {
+                let cut = line
+                    .match_indices("//")
+                    .find(|(i, _)| !line[..*i].ends_with(':'))
+                    .map_or(line.len(), |(i, _)| i);
+                format!("{}\n", &line[..cut])
+            })
+            .collect();
+        for (at, _) in source.match_indices("#[component]") {
+            let after = &source[at..];
+            let Some(fn_at) = after.find("fn ") else {
+                continue;
+            };
+            let signature = &after[fn_at + 3..];
+            let name: String = signature
+                .chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            let Some(open) = signature.find('(') else {
+                continue;
+            };
+            let params = &signature[open + 1..closing(signature, open) - 1];
+            let fields = required_fields(params);
+            // `props: NameProps` is the struct's, found below.
+            if !(params.trim().starts_with("props:") && fields.len() == 1) {
+                required.insert(name, fields);
+            }
+        }
+        for (at, _) in source.match_indices("struct ") {
+            let after = &source[at + 7..];
+            let name: String = after
+                .chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            let (Some(component), Some(open)) =
+                (name.strip_suffix("Props"), after.find(['{', ';']))
+            else {
+                continue;
+            };
+            if after.as_bytes()[open] == b'{' && !component.is_empty() {
+                let fields = required_fields(&after[open + 1..closing(after, open) - 1]);
+                required.entry(component.to_string()).or_insert(fields);
+            }
+        }
+    }
+    required
+}
+
+/// Todo 2077: a prop the component cannot do without reads `required` in its page row and
+/// its mirror's Default cell.
+#[test]
+fn required_props_read_required() {
+    let required = required_props();
+    let public = Path::new(env!("CARGO_MANIFEST_DIR")).join("public");
+    let mut problems = Vec::new();
+    for Rendered { route, pages, .. } in rendered() {
+        for RecordedPage {
+            markdown,
+            properties: groups,
+            ..
+        } in pages
+        {
+            let mirrored = markdown
+                .as_ref()
+                .and_then(|md| {
+                    std::fs::read_to_string(public.join(md.trim_start_matches('/'))).ok()
+                })
+                .map(|md| md_props(&md))
+                .unwrap_or_default();
+            for group in groups {
+                let component = group.component().split('<').next().unwrap_or_default();
+                let Some(names) = required.get(component) else {
+                    continue;
+                };
+                let listed = mirrored
+                    .iter()
+                    .find(|(heading, _)| heading.split('<').next() == Some(component))
+                    .or_else(|| {
+                        mirrored
+                            .iter()
+                            .find(|(heading, _)| groups.len() == 1 && heading.is_empty())
+                    })
+                    .map(|(_, rows)| rows);
+                for (name, default) in group.defaults() {
+                    if !names.iter().any(|required| required == bare(name)) {
+                        continue;
+                    }
+                    if default != "required" {
+                        problems.push(format!("{route}: `{component}` `{name}` reads {default:?}"));
+                    }
+                    if let Some(cell) = listed.and_then(|rows| rows.get(bare(name)))
+                        && cell != "required"
+                    {
+                        problems.push(format!(
+                            "{}: `{component}` `{name}` reads {cell:?}",
+                            markdown.as_deref().unwrap_or_default()
+                        ));
+                    }
                 }
             }
         }

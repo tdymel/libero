@@ -39,7 +39,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `String` | - | Required. The text a press writes to the clipboard. |
+| `value` | `String` | required | The text a press writes to the clipboard. |
 | `variant` | `Variant` | - | Visual style, as on `ActionIcon`. With `color` also unset, the button draws no chrome of its own. |
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. |
 | `size` | `ThemeAwareValue` | `md` | Button size. |

@@ -10,8 +10,8 @@ pub fn RepositoryPage() -> Element {
             source: "libero/src/components/buttons/repository.rs",
             markdown: "/md/repository.md",
             properties: vec![props("Repository", vec![
-                prop("repo", "String")
-                    .doc("Required. `owner/repo`, as in the repository's URL. GitLab takes nested groups too."),
+                prop("repo", "String").default("required")
+                    .doc("`owner/repo`, as in the repository's URL. GitLab takes nested groups too."),
                 prop("host", "RepoHost")
                     .default("GitHub")
                     .doc("Where the repository lives: `RepoHost::GitHub` or `RepoHost::GitLab`."),

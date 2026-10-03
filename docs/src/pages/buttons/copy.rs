@@ -13,8 +13,8 @@ pub fn CopyPage() -> Element {
             source: "libero/src/components/buttons/copy.rs",
             markdown: "/md/copy.md",
             properties: vec![props("Copy", vec![
-                prop("value", "String")
-                    .doc("Required. The text a press writes to the clipboard."),
+                prop("value", "String").default("required")
+                    .doc("The text a press writes to the clipboard."),
                 prop("variant", "Variant")
                     .doc("Visual style, as on `ActionIcon`. With `color` also unset, the button draws no chrome of its own."),
                 prop("color", "ThemeAwareValue")

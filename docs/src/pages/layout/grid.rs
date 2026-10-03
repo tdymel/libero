@@ -183,7 +183,7 @@ pub fn GridPage() -> Element {
             markdown: "/md/grid.md",
             properties: vec![
                 props("Grid", vec![
-                    prop("template", "GridTemplate").doc("The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several. An area must be a rectangle, and the rows need at most twelve columns. Build it once, as a `StaticGridTemplate` static."),
+                    prop("template", "GridTemplate").default("required").doc("The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several. An area must be a rectangle, and the rows need at most twelve columns. Build it once, as a `StaticGridTemplate` static."),
                     prop("gap", "Size").default("md").doc("Space between zones."),
                     prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("`GridZone`s."),

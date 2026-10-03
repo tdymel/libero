@@ -128,7 +128,7 @@ explains how parts work.
 | `--lsx-alert-body-gap` | From `AlertDefaults::body_gap`. |
 | `--lsx-alert-icon-size` | From `AlertDefaults::icon_size`. |
 | `--lsx-alert-color` | Resolved `color`. |
-| `--lsx-alert-contrast` | Text color on that color, for `filled`. Unset for a literal CSS color. |
+| `--lsx-alert-contrast` | Text color on that color, for `filled`. Unset for a literal CSS color: the label then inherits the text color, so check its contrast on the fill yourself. |
 | `--lsx-alert-container` | The tint of `tonal`. |
 | `--lsx-alert-on-container` | Text color on that tint. |
 

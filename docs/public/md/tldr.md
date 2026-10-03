@@ -59,7 +59,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `url` | `String` | - | Required. The page's absolute address, e.g. its markdown mirror. The assistant is asked to read it. |
+| `url` | `String` | required | The page's absolute address, e.g. its markdown mirror. The assistant is asked to read it. |
 | `providers` | `Vec<SummaryProvider>` | `SummaryProvider::defaults()` | The menu's links, in order: ChatGPT, Google AI, Claude and Perplexity. Filter the vec to drop one, push a `SummaryProvider` to add one. |
 | `prompt` | `String` | - | What the assistant is asked. `{url}` is filled with `url`; in an `rsx!` string literal write `{{url}}`. Unset, `TldrLabels::prompt` from the localization. |
 | `label` | `String` | - | The trigger's text. Unset, `TldrLabels::label` ("TLDR"). |

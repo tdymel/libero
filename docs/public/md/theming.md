@@ -76,6 +76,41 @@ and `z_index` orders the headers, windows, modals, popovers and toasts.
 The theme sets props, not a component's inner parts. To restyle a part, pass
 `parts`, see [Style API in Styling](styling.md#style-api).
 
+## Type scale and glass
+
+`font_size` holds six steps, `xs` to `xxl`. `sx().font_size("sm")` and `Text`
+read it, so one change rescales the text. `paper.glass_background` is how much
+of the surface a `glass` Paper or Header keeps, in percent, and
+`paper.glass_blur` blurs what shows through. Stay at 70 or more, so text keeps
+its contrast.
+
+```rust,ignore
+static THEME: Theme = Theme {
+    font_size: Sizes::new("0.8rem", "0.9rem", "1rem", "1.2rem", "1.4rem", "1.6rem"),
+    paper: PaperDefaults {
+        glass_background: 85,
+        glass_blur: "blur(20px)",
+        ..PaperDefaults::DEFAULT
+    },
+    ..Theme::DEFAULT
+};
+```
+
+## Gradient
+
+`gradient` is the fill of `variant: "gradient"`, of a gradient `Paper` and of
+gradient `Text`: two palette roles and an angle. Its label is picked to read on
+both stops, in light and in dark. A component's `color` is the first stop,
+`from` only its fallback. Its `gradient` prop sets the second stop and the
+angle, as `("secondary", 45)`.
+
+```rust,ignore
+static THEME: Theme = Theme {
+    gradient: GradientDefaults { from: Color::Info, to: Color::Success, deg: 90 },
+    ..Theme::DEFAULT
+};
+```
+
 ## Light and dark
 
 A `ThemeSet` pairs a light theme with a dark one. The default pairs
@@ -126,6 +161,7 @@ silently. `use_theme()` hands out a `&'static Theme`.
 | `primary`, `secondary`, `success`, `error`, `warning`, `info`, `neutral`, `muted` | `HexColor` | One hex per palette role. Nine shades, and a readable text color for each, are derived from it. |
 | `ink`, `surface` | `HexColor` | The text color and the page it is set on. Every role is derived against `surface`. |
 | `font_smoothing` | `bool` | Whether the reset asks for antialiased text. |
+| `gradient` | `GradientDefaults` | The stops and angle of every gradient fill: Primary to Secondary at 45deg. |
 | one field per component | `*Defaults` | For example `button: ButtonDefaults`. Each component's page lists its own struct. |
 
 ## CSS variables

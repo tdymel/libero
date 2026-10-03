@@ -46,6 +46,11 @@ pub(super) fn card_background() -> String {
     )
 }
 
+/// A shadowed card's edge under forced colours, which drop its shadow and tint (todo 1995).
+pub(in crate::pages) fn forced_colors_edge() -> Sx {
+    sx().media("(forced-colors: active)", sx().border("1px solid"))
+}
+
 /// A row of buttons in which one that cannot share a line grows to the full width.
 pub(super) fn cta_row_sx() -> Sx {
     sx().selector("& > *", sx().flex("1 1 auto"))

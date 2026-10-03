@@ -55,8 +55,8 @@ FileField {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `src` | `String` | - | The image: any URL, a `data:` URL included. |
-| `alt` | `String` | - | Describes the image. |
+| `src` | `String` | required | The image: any URL, a `data:` URL included. |
+| `alt` | `String` | required | Describes the image. |
 | `value` | `Option<CropRect>` | - | The box, in fractions of the image. Pair it with `onchange`. Unset starts centred at 80% of the largest box `aspect` allows, so it can move at once, and reports it once the image has loaded. A new `src` or `aspect` starts it over. |
 | `onchange` | `EventHandler<CropRect>` | - | Fires on every move of the box, by a drag, a key or a button under the image. Without it the cropper only shows, with no buttons. |
 | `aspect` | `f64` | - | Locks width over height, in image pixels: `1.0` is square, `16.0 / 9.0` wide. Unset is free. |

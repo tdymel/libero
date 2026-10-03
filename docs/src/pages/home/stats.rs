@@ -5,7 +5,7 @@ use libero::{
     theme::Size,
 };
 
-use super::card_background;
+use super::{card_background, forced_colors_edge};
 
 /// The library in four numbers, each a floor the tests below hold.
 #[component]
@@ -49,7 +49,8 @@ fn Stat(value: &'static str, title: &'static str) -> Element {
                 .flex("1 1 calc(50% - 8px)")
                 .min_width("0")
                 .padding("lg")
-                .breakpoint(Size::Md, sx().flex("1 1 0")),
+                .breakpoint(Size::Md, sx().flex("1 1 0"))
+                .and(forced_colors_edge()),
             Flex { direction: "column", gap: "xs",
                 Text {
                     component: "span",
