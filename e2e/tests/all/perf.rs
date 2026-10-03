@@ -1449,10 +1449,15 @@ pub(crate) mod timing {
         DispatchMouseEventParams, DispatchMouseEventType,
     };
     use chromiumoxide::cdp::browser_protocol::performance::{EnableParams, GetMetricsParams};
+    use chromiumoxide::cdp::browser_protocol::tracing::{
+        EndParams, EventDataCollected, EventTracingComplete, StartParams, StartTransferMode,
+        TraceConfig,
+    };
     use e2e::browser::block_on;
     use e2e::passes::keyboard::{self, BACKSPACE, ESCAPE};
     use e2e::passes::pointer::{self, Point};
     use e2e::{Fixture, Viewport, frames, wait};
+    use futures::{FutureExt, StreamExt};
     use serde::{Deserialize, Serialize};
 
     /// Unmeasured passes first: the first run of a path pays for its wasm and style warm-up.
@@ -1859,17 +1864,21 @@ pub(crate) mod timing {
     /// Open on a click on `trigger`, close on Escape; `shown` is the overlay's selector.
     async fn open_close(page: &Page, trigger: &str, shown: &str) -> Result<Rows> {
         measure(page, 24, async |i| {
-            if i % 2 == 0 {
-                pointer::click(page, trigger).await?;
-                wait::for_visible(page, shown).await?;
-                Ok("open")
-            } else {
-                keyboard::press(page, ESCAPE).await?;
-                wait::for_hidden(page, shown).await?;
-                Ok("close")
-            }
+            open_close_step(page, i, trigger, shown).await?;
+            Ok(if i.is_multiple_of(2) { "open" } else { "close" })
         })
         .await
+    }
+
+    async fn open_close_step(page: &Page, i: usize, trigger: &str, shown: &str) -> Result<()> {
+        if i.is_multiple_of(2) {
+            pointer::click(page, trigger).await?;
+            wait::for_visible(page, shown).await?;
+        } else {
+            keyboard::press(page, ESCAPE).await?;
+            wait::for_hidden(page, shown).await?;
+        }
+        Ok(())
     }
 
     #[test]
@@ -2044,6 +2053,90 @@ pub(crate) mod timing {
                     drag_reps(page, "[role=dialog] [data-slot=handle]", (80.0, 40.0), 10, x, 12)
                         .await?;
                 report("FloatingWindow", &rows, &[("drag", 120.0)]);
+                Ok(())
+            })
+            .await;
+        });
+    }
+
+    /// Elements restyled and layout objects dirtied per rep, summed from a Chromium trace:
+    /// counts that hold on a loaded host, where the milliseconds move 2x (todo 2089).
+    async fn traced(
+        page: &Page,
+        reps: usize,
+        mut act: impl AsyncFnMut(usize) -> Result<()>,
+    ) -> Result<(f64, f64)> {
+        for i in 0..WARM_UP {
+            act(i).await?;
+            quiet(page).await?;
+        }
+        let mut batches = page.event_listener::<EventDataCollected>().await?;
+        let mut complete = page.event_listener::<EventTracingComplete>().await?;
+        let config = TraceConfig::builder()
+            .included_categories(vec!["devtools.timeline".to_string()])
+            .build();
+        page.execute(
+            StartParams::builder()
+                .trace_config(config)
+                .transfer_mode(StartTransferMode::ReportEvents)
+                .build(),
+        )
+        .await?;
+        for i in WARM_UP..WARM_UP + reps {
+            act(i).await?;
+            quiet(page).await?;
+        }
+        page.execute(EndParams::default()).await?;
+        complete.next().await;
+        let (mut restyled, mut dirtied) = (0.0, 0.0);
+        while let Some(Some(batch)) = batches.next().now_or_never() {
+            for event in &batch.value {
+                match event["name"].as_str() {
+                    Some("UpdateLayoutTree") => {
+                        restyled += event["args"]["elementCount"].as_f64().unwrap_or(0.0)
+                    }
+                    Some("Layout") => {
+                        dirtied += event["args"]["beginData"]["dirtyObjects"]
+                            .as_f64()
+                            .unwrap_or(0.0)
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Ok((restyled / reps as f64, dirtied / reps as f64))
+    }
+
+    #[test]
+    #[ignore = "trace count report, run on request"]
+    fn style_work() {
+        block_on(async {
+            timed("/timing/spotlight", async |page| {
+                let (restyled, dirtied) = traced(page, 12, async |i| {
+                    open_close_step(page, i, "#open", "[role=dialog]").await
+                })
+                .await?;
+                println!(
+                    "traced | Spotlight open+close | restyled {:.0} | dirtied {:.0}",
+                    2.0 * restyled,
+                    2.0 * dirtied
+                );
+                Ok(())
+            })
+            .await;
+            timed("/timing/slider", async |page| {
+                let (restyled, dirtied) = traced(page, 12, async |i| {
+                    let sign = if i % 2 == 0 { 1.0 } else { -1.0 };
+                    let from = pointer::centre_of(page, "[role=slider]").await?;
+                    let to = Point {
+                        x: from.x + 100.0 * sign,
+                        y: from.y,
+                    };
+                    pointer::drag(page, from, to, 10).await?;
+                    Ok(())
+                })
+                .await?;
+                println!("traced | Slider drag | restyled {restyled:.0} | dirtied {dirtied:.0}");
                 Ok(())
             })
             .await;
