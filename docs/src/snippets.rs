@@ -101,7 +101,7 @@ fn split_path(line: &str) -> (&str, &str) {
 
 fn shape(body: &str) -> Shape {
     let first = first_line(body);
-    const ITEMS: [&str; 11] = [
+    const ITEMS: [&str; 12] = [
         "#[",
         "use ",
         "fn ",
@@ -113,6 +113,7 @@ fn shape(body: &str) -> Shape {
         "struct ",
         "mod ",
         "async fn ",
+        "type ",
     ];
     let (path, rest) = split_path(first);
     let starts_lower = first.starts_with(|c: char| c.is_ascii_lowercase());

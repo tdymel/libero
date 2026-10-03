@@ -127,7 +127,35 @@ impl DemoFile {
     const END: &str = "// demo-code: end";
 
     fn is_marker(line: &str) -> bool {
-        matches!(line.trim(), Self::START | Self::END)
+        line.trim().starts_with("// demo-code:")
+    }
+
+    /// The lines between `// demo-code: <name> start` and `<name> end`, dedented, for a `Wrap`
+    /// that prints a part of the file only for some control values.
+    pub fn section(&self, name: &str) -> String {
+        let start = format!("// demo-code: {name} start\n");
+        let end = format!("// demo-code: {name} end");
+        let region = self
+            .0
+            .split_once(&start)
+            .and_then(|(_, rest)| rest.split_once(&end))
+            .map(|(region, _)| region)
+            .unwrap_or_else(|| panic!("no `{start}` .. `{end}` in the demo file"));
+        let lines: Vec<&str> = region
+            .lines()
+            .filter(|line| !Self::is_marker(line))
+            .collect();
+        let margin = lines
+            .iter()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| line.len() - line.trim_start().len())
+            .min()
+            .unwrap_or(0);
+        let lines: Vec<&str> = lines
+            .iter()
+            .map(|line| line.get(margin..).unwrap_or(""))
+            .collect();
+        lines.join("\n").trim().to_string()
     }
 
     /// The whole file, markers dropped.
@@ -714,5 +742,17 @@ mod tests {
         assert_eq!(file.full(), "use a::b;\n\nfn shown() {}\n\nfn after() {}");
         assert!(file.cuts());
         assert!(!super::DemoFile("fn all() {}").cuts());
+    }
+
+    #[test]
+    fn a_demo_file_section_is_dedented() {
+        let file = super::DemoFile(
+            "fn f() {\n    // demo-code: a start\n    let x = 1;\n    if x > 0 {\n        g();\n    }\n    // demo-code: a end\n}\n",
+        );
+        assert_eq!(file.section("a"), "let x = 1;\nif x > 0 {\n    g();\n}");
+        assert_eq!(
+            file.full(),
+            "fn f() {\n    let x = 1;\n    if x > 0 {\n        g();\n    }\n}"
+        );
     }
 }

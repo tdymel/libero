@@ -1,16 +1,26 @@
 use super::CLEAR_NAME;
 use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop, required_prop,
-    status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, prop,
+    props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
+
+struct ToppingsCopy;
+
+impl FieldCopy for ToppingsCopy {
+    const LABEL: &'static str = "Toppings";
+    const DESCRIPTION: &'static str = "Each one is at no extra cost.";
+    const HELPER: &'static str = "Picked in the order they go on.";
+    const WARNING: &'static str = "Pineapple divides the table.";
+    const ERROR: &'static str = "Pick no more than one topping.";
+}
 use libero::components::SelectPart;
 use libero::use_theme;
 use libero::{
     components::{
-        ActionIcon, Chip, FieldStatus, MultiSelect, OptionItem, OptionList, Options,
-        SelectFilterArgs, SelectOptionArgs, SelectionArgs, Text,
+        ActionIcon, Chip, MultiSelect, OptionItem, OptionList, Options, SelectFilterArgs,
+        SelectOptionArgs, SelectionArgs, Text,
     },
     hooks::use_localization,
     localization::{Localization, fill},
@@ -402,37 +412,10 @@ pub fn MultiSelectPage() -> Element {
                     "onchange: move |next| value.set(next)".to_string(),
                     "placeholder: \"Pick toppings\"".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::sizes("size").default("md"),
                     Control::sizes("radius").default("sm"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"Pineapple divides the table.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Pick no more than one topping.\"".to_string()],
-                            _ => vec![],
-                        }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Toppings\"".to_string()],
-                            _ => vec!["aria_label: \"Toppings\"".to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"Each one is at no extra cost.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"Picked in the order they go on.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<ToppingsCopy>(), vec![
                     // Draws the rows and the chips through `option` and
                     // `selection`.
                     Control::switch("custom").code(|_, values| match custom(values) {
@@ -475,23 +458,19 @@ pub fn MultiSelectPage() -> Element {
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
-                render: move |values: DemoValues| rsx! {
+                ]].concat(),
+                render: move |values: DemoValues| {
+                    let field = field_props::<ToppingsCopy>(&values);
+                    rsx! {
                     MultiSelect {
                         sx: sx().width("280px"),
                         size: values.str("size"),
                         radius: values.str("radius"),
-                        label: (values.str("label") == "true").then(|| "Toppings".to_string()),
-                        aria_label: (values.str("label") != "true").then_some("Toppings"),
-                        description: (values.str("description") == "true")
-                            .then(|| "Each one is at no extra cost.".to_string()),
-                        helper: (values.str("helper") == "true")
-                            .then(|| "Picked in the order they go on.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("Pineapple divides the table.".to_string()),
-                            "error" => FieldStatus::Error("Pick no more than one topping.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
+                        label: field.label,
+                        aria_label: field.aria_label,
+                        description: field.description,
+                        helper: field.helper,
+                        status: field.status,
                         options: topping_options(&values),
                         option: custom(&values).then(|| Callback::new(topping_row)),
                         selection: custom(&values)
@@ -505,6 +484,7 @@ pub fn MultiSelectPage() -> Element {
                         placeholder: "Pick toppings",
                         value: value(),
                         onchange: move |next| value.set(next),
+                    }
                     }
                 },
             }
