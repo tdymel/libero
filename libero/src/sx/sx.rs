@@ -30,10 +30,17 @@ pub struct Sx {
 }
 
 impl Sx {
+    /// An empty style, the same as [`sx()`](crate::sx::sx).
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Declares any CSS property by name, for one without its own method.
+    ///
+    /// ```
+    /// # use libero::sx::sx;
+    /// let tinted = sx().with("accent-color", "primary.6");
+    /// ```
     pub fn with(self, property: impl Into<String>, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_declaration(SxPropertyKey::parse(property), value.into())
     }
@@ -56,14 +63,17 @@ impl Sx {
         self.with_modifier(modifier, nested)
     }
 
+    /// Styles while the pointer is over the element.
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }
 
+    /// Styles while the element has focus, by pointer too; prefer [`focus_visible`](Self::focus_visible) for rings.
     pub fn focus(self, nested: Sx) -> Self {
         self.selector(":focus", nested)
     }
 
+    /// Styles while the element has focus the browser would show, as after a key.
     pub fn focus_visible(self, nested: Sx) -> Self {
         self.selector(":focus-visible", nested)
     }
@@ -73,6 +83,8 @@ impl Sx {
         self.selector(":focus-within", nested)
     }
 
+    /// Styles while the element's `data-state` holds the named states: `"open"`,
+    /// `"open && disabled"` or `"sm || xs"` (`&&` binds tighter, no parentheses).
     pub fn when(self, condition: impl Into<String>, nested: Sx) -> Self {
         self.modifier(
             SxModifierKey::Condition(canonical_condition(&condition.into())),
@@ -101,6 +113,8 @@ impl Sx {
         })
     }
 
+    /// Styles under any selector; `&` stands for the element, else the selector is appended
+    /// to it (`":hover"`, `"[aria-current]"`).
     pub fn selector(self, selector: impl Into<String>, nested: Sx) -> Self {
         self.modifier(SxModifierKey::Selector(selector.into()), nested)
     }
@@ -112,6 +126,7 @@ impl Sx {
             .selector(":where([dir=rtl]) &", nested)
     }
 
+    /// Styles from the viewport width of `breakpoint` up (`min-width`, mobile first).
     pub fn breakpoint(self, breakpoint: Size, nested: Sx) -> Self {
         self.modifier(SxModifierKey::Breakpoint(breakpoint), nested)
     }
@@ -171,6 +186,8 @@ impl Sx {
         )
     }
 
+    /// Runs `f` with the value when there is one, so an optional prop chains:
+    /// `sx().apply_if(width, |sx, width| sx.width(width))`.
     pub fn apply_if<T>(self, value: Option<T>, f: impl FnOnce(Self, T) -> Self) -> Self {
         match value {
             Some(value) => f(self, value),

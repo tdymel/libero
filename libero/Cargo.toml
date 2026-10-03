@@ -124,6 +124,9 @@ dioxus-ssr = { git = "https://github.com/DioxusLabs/dioxus" }
 futures-core = "0.3"
 # The layering rules in `tests/all/architecture.rs`, checked on the source files.
 archunit = "0.0.1"
+# `tests/all/hook_order.rs` walks the source for a hook behind a branch. archunit's copy.
+syn = { version = "2", features = ["full", "visit"] }
+proc-macro2 = "1"
 # The use_timers page's printed stopwatch, compiled as a doc-test.
 web-time = "1.1"
 

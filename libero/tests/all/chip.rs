@@ -287,10 +287,7 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
 
         let html = dioxus_ssr::render(&dom);
         let input = attributes_of(&body(&html), "input");
@@ -324,10 +321,7 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [false]);
 
         dom.runtime()

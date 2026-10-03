@@ -44,16 +44,20 @@ fn layered_css(layer: CssLayer, stylesheet: &Stylesheet) -> String {
     format!("@layer {}{{{}}}", layer.css_name(), stylesheet.as_str())
 }
 
+/// The sheets mounted components use, refcounted by layer, rank and CSS hash, so one
+/// `<style>` serves every instance and goes with the last of them. Clones share it.
 #[derive(Clone, Default)]
 pub struct StylesheetRegistry {
     inner: Rc<RefCell<BTreeMap<StylesheetKey, RegisteredStylesheet>>>,
 }
 
 impl StylesheetRegistry {
+    /// An empty registry.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Counts one more user of `stylesheet`, registering it on the first; pair with [`release`](Self::release).
     pub fn acquire(
         &self,
         stylesheet: impl Into<Stylesheet>,
@@ -96,6 +100,7 @@ impl StylesheetRegistry {
         key
     }
 
+    /// Counts one user less, dropping the sheet with its last one.
     pub fn release(&self, key: StylesheetKey) {
         let mut registry = self.inner.borrow_mut();
 

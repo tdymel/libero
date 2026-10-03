@@ -21,14 +21,21 @@ const DIMMED_TEXT_TOKEN: &str = "text-dimmed";
 /// Docs: <https://libero-ui.dev/about/styling>
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ThemeAwareValue {
+    /// Plain CSS text, written as is.
     String(String),
+    /// A Rust number, written as is.
     Number(String),
+    /// A size word, read off the property's scale (`"md"`).
     Size(Size),
     /// A size read off its scale in the negative direction, e.g. `"-md"`.
     NegativeSize(Size),
+    /// A palette colour at its default shade (`"primary"`).
     Color(Color),
+    /// A palette colour at a shade (`"primary.7"`) or its contrast (`"primary-contrast"`).
     ColorValue(ColorValue),
+    /// A custom property, written as `var(..)`.
     CssVar(CssVar),
+    /// One value per breakpoint, from [`bp()`](crate::sx::bp).
     BreakpointValue(BreakpointValue),
     /// A literal colour: its text for CSS, its RGB for contrast. A translucent
     /// `rgba()` stays a `String`.

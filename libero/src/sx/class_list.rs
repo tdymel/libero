@@ -5,6 +5,7 @@ use std::fmt::{self, Display};
 pub struct ClassList(Vec<String>);
 
 impl ClassList {
+    /// An empty list, the same as [`class_list()`].
     pub fn new() -> Self {
         Self::default()
     }
@@ -41,6 +42,13 @@ impl From<String> for ClassList {
     }
 }
 
+/// Starts an empty [`ClassList`].
+///
+/// ```
+/// # use libero::components::class_list;
+/// let classes = class_list().with("card".to_string()).with(None);
+/// assert_eq!(classes.to_string(), "card");
+/// ```
 pub fn class_list() -> ClassList {
     ClassList::new()
 }

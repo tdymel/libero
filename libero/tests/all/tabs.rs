@@ -258,10 +258,7 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let second = find.element("click", "aria-label", "Second");
 
         let html = dioxus_ssr::render(&dom);

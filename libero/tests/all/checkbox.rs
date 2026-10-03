@@ -30,10 +30,7 @@ fn clicking_an_indeterminate_checkbox_reports_true() {
         }
     }
 
-    dioxus::html::set_event_converter(Box::new(TestConverter));
-    let mut dom = VirtualDom::new(app);
-    let mut find = FindClickListener::default();
-    dom.rebuild(&mut find);
+    let Page { mut dom, rec: find } = Page::build(app);
     let checkbox = find.element("click", "text", "Select all");
 
     dom.runtime()
@@ -81,10 +78,7 @@ fn ticking_an_uncontrolled_checkbox_satisfies_its_own_rules() {
         }
     }
 
-    dioxus::html::set_event_converter(Box::new(TestConverter));
-    let mut dom = VirtualDom::new(app);
-    let mut find = FindClickListener::default();
-    dom.rebuild(&mut find);
+    let Page { mut dom, rec: find } = Page::build(app);
     let submit = find.element("click", "id", "submit");
     let checkbox = find.element("click", "text", "Agree");
 
@@ -123,10 +117,7 @@ fn a_read_only_checkbox_refuses_its_own_activation() {
         }
     }
 
-    dioxus::html::set_event_converter(Box::new(TestConverter));
-    let mut dom = VirtualDom::new(app);
-    let mut find = FindClickListener::default();
-    dom.rebuild(&mut find);
+    let Page { mut dom, rec: find } = Page::build(app);
     let label = find.click.expect("registered no click listener");
 
     dom.runtime()
@@ -244,12 +235,9 @@ fn readonly_radio_group() -> Element {
 #[test]
 fn a_read_only_radio_group_cancels_the_native_arrow() {
     for readonly in [false, true] {
-        dioxus::html::set_event_converter(Box::new(TestConverter));
         READ_ONLY.set(readonly);
         HEARD.with_borrow_mut(Vec::clear);
-        let mut dom = VirtualDom::new(readonly_radio_group);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(readonly_radio_group);
 
         let arrow = Event::new(key_event(Key::ArrowDown), true);
         dom.runtime()
@@ -297,13 +285,10 @@ fn radio_inputs(html: &str) -> Vec<(bool, String)> {
 /// Mounts `tier_group`, and returns each input's `(disabled, tabindex)` and
 /// what one `key` press picked.
 fn tier_press(value: Option<Tier>, off: &[Tier], key: Key) -> (Vec<(bool, String)>, Vec<String>) {
-    dioxus::html::set_event_converter(Box::new(TestConverter));
     TIER.set(value);
     TIERS_OFF.set(off.to_vec());
     HEARD.with_borrow_mut(Vec::clear);
-    let mut dom = VirtualDom::new(tier_group);
-    let mut find = FindClickListener::default();
-    dom.rebuild(&mut find);
+    let Page { mut dom, rec: find } = Page::build(tier_group);
     let inputs = radio_inputs(&dioxus_ssr::render(&dom));
     dom.runtime().handle_event(
         "keydown",

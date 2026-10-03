@@ -23,6 +23,7 @@ pub struct Stylesheet {
 }
 
 impl Stylesheet {
+    /// The CSS text.
     pub fn as_str(&self) -> &str {
         &self.css
     }

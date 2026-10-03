@@ -369,10 +369,7 @@ mod dispatched {
 
     #[test]
     fn an_inner_collapse_ending_its_exit_does_not_end_the_outer_one() {
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(nested_collapse_app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(nested_collapse_app);
         // Registered parent first: the outer root is created before its children.
         let [_outer, inner] = find.transitionend[..] else {
             panic!(

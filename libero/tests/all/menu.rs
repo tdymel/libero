@@ -454,10 +454,10 @@ mod dispatched {
     /// The root menu open with its submenu open on top, what addresses them, and
     /// the submenu's id.
     fn open_submenu() -> (VirtualDom, FindClickListener, String) {
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(submenu_app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page {
+            mut dom,
+            rec: mut find,
+        } = Page::build(submenu_app);
         settle_menu(&mut dom, &mut find);
         let html = dioxus_ssr::render(&dom);
         assert_eq!(open_menus(&html), 1, "the root menu opens");

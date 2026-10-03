@@ -1699,10 +1699,7 @@ mod dispatched {
             rsx! { LiberoProvider { PasswordField { label: "Password" } } }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let reveal = find.click.expect("registered no click listener");
         let state = |dom: &VirtualDom| {
             let html = dioxus_ssr::render(dom);
@@ -1732,10 +1729,7 @@ mod dispatched {
             rsx! { LiberoProvider { Form::<()> { PasswordField { label: "Password" } } } }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let reveal = find.click.expect("registered no click listener");
         let submit = find.submit.expect("registered no submit listener");
         let reset = find.reset.expect("registered no reset listener");
@@ -1785,10 +1779,7 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let submit = find.element("click", "id", "submit");
         let field = find.input.expect("registered no input listener");
 
@@ -1847,11 +1838,8 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
         PIN_EDITS.with_borrow_mut(Vec::clear);
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let second = find.element("keydown", "aria-label", "Character 2 of 4");
 
         for key in [Key::Backspace, Key::Delete] {
@@ -1880,11 +1868,8 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
         PIN_EDITS.with_borrow_mut(Vec::clear);
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let last = find.input.expect("registered no input listener");
 
         // The last cell stays empty: a pin has no holes, so each digit lands first.
@@ -1925,10 +1910,7 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let next = find.element("click", "id", "next");
 
         let value = |dom: &VirtualDom| {
@@ -2004,11 +1986,8 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
         HEARD.with_borrow_mut(Vec::clear);
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let mut send = |name: &str, target: ElementId, data: Rc<dyn std::any::Any>| {
             dom.runtime()
                 .handle_event(name, Event::new(data, true), target);
@@ -2058,9 +2037,7 @@ mod dispatched {
         ] {
             FORMATS.set(formats);
             HEARD.with_borrow_mut(Vec::clear);
-            let mut dom = VirtualDom::new(app);
-            let mut find = FindClickListener::default();
-            dom.rebuild(&mut find);
+            let Page { mut dom, rec: find } = Page::build(app);
             let field = find.input.expect("registered no input listener");
             for text in typed {
                 dom.runtime()
@@ -2153,11 +2130,8 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
         PIN_COMPLETIONS.with_borrow_mut(|count| *count = 0);
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let cells = find.keydown.clone();
         assert_eq!(cells.len(), 4, "expected one cell per pin position");
         let reset = find.element("click", "id", "reset");

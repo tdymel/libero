@@ -254,12 +254,13 @@ fn a_fieldset_puts_its_prefix_in_front_and_shows_an_unnamed_rule_itself() {
     }
 
     fn app() -> Element {
+        let address = use_store(Address::default);
         rsx! {
             LiberoProvider {
                 Fieldset {
                     label: "Address",
                     path: "address",
-                    value: use_store(Address::default),
+                    value: address,
                     validate: [
                         (|a: &Address| !a.zip.is_empty()).error("Zip needed").on([crate::path!(Address => zip)]),
                         (|_: &Address| false).warn("Check the whole address"),

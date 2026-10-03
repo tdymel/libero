@@ -269,10 +269,7 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let italic = find.element("click", "aria-label", "Italic");
 
         assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [true, false]);
@@ -392,13 +389,10 @@ mod dispatched {
     /// Mounts `tier_segments` with `Pro` picked and disabled, and returns what one
     /// `key` on segment `at` picked.
     fn segment_press_around_a_disabled_pick(at: usize, key: Key) -> Vec<String> {
-        dioxus::html::set_event_converter(Box::new(TestConverter));
         TIER.set(Some(Tier::Pro));
         TIERS_OFF.set(vec![Tier::Pro]);
         HEARD.with_borrow_mut(Vec::clear);
-        let mut dom = VirtualDom::new(tier_segments);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(tier_segments);
         assert_eq!(find.keydown.len(), 3, "one keydown per segment");
         dom.runtime().handle_event(
             "keydown",

@@ -6,9 +6,12 @@ use crate::{
 /// A styling prop's value: unset, owned, or a `static` (compared by address first).
 #[derive(Clone, Debug, Default)]
 pub enum Input<T: 'static> {
+    /// Not set: the component's default.
     #[default]
     None,
+    /// Built this render.
     Value(T),
+    /// A `static`, such as a [`StaticSx`]; an unchanged render skips the deep compare.
     Static(&'static T),
 }
 
@@ -28,6 +31,7 @@ impl<T: PartialEq + 'static> PartialEq for Input<T> {
 impl<T: Eq + 'static> Eq for Input<T> {}
 
 impl<T: 'static> Input<T> {
+    /// The value, if set.
     pub fn as_ref(&self) -> Option<&T> {
         match self {
             Self::None => None,
@@ -36,6 +40,7 @@ impl<T: 'static> Input<T> {
         }
     }
 
+    /// The value, if set, cloning a `Static`.
     pub fn into_option(self) -> Option<T>
     where
         T: Clone,
@@ -55,6 +60,7 @@ impl<T: 'static> Input<T> {
         self.as_ref().copied().unwrap_or(default)
     }
 
+    /// The value if set, else `T::default()`.
     pub fn copied_or_default(&self) -> T
     where
         T: Copy + Default,
@@ -62,6 +68,7 @@ impl<T: 'static> Input<T> {
         self.copied_or(T::default())
     }
 
+    /// The value if set, cloning a `Static`, else `T::default()`.
     pub fn unwrap_or_default(self) -> T
     where
         T: Default + Clone,

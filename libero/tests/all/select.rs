@@ -398,11 +398,8 @@ mod dispatched {
     /// Mounts `app`, sends `change` carrying `posted` to the select, and returns
     /// what the handler heard and the markup afterwards.
     fn change_select(app: fn() -> Element, posted: &str) -> (Vec<String>, String) {
-        dioxus::html::set_event_converter(Box::new(TestConverter));
         HEARD.with_borrow_mut(Vec::clear);
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         let select = find.change.expect("registered no change listener");
         dom.runtime()
             .handle_event("change", Event::new(input_event(posted), true), select);
@@ -499,11 +496,8 @@ mod dispatched {
         /// trigger's element id - the innermost element carrying a `keydown`,
         /// since `ComboboxCore`'s wrapper registers one first.
         fn mount() -> (VirtualDom, ElementId) {
-            dioxus::html::set_event_converter(Box::new(TestConverter));
             PICKED.with_borrow_mut(Vec::clear);
-            let mut dom = VirtualDom::new(app);
-            let mut find = FindClickListener::default();
-            dom.rebuild(&mut find);
+            let Page { dom, rec: find } = Page::build(app);
             let trigger = *find.keydown.last().expect("the trigger listens for keys");
             (dom, trigger)
         }

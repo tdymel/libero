@@ -16,10 +16,12 @@ pub struct BreakpointValue {
 }
 
 impl BreakpointValue {
+    /// No value yet, the same as [`bp()`].
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// The value from `size`'s breakpoint up. A nested `bp()` is ignored with a warning.
     pub fn with(mut self, size: Size, value: impl Into<ThemeAwareValue>) -> Self {
         let value = value.into();
         // Expansion is one level deep, so a nested one could only render as a panic.
@@ -34,22 +36,27 @@ impl BreakpointValue {
         self
     }
 
+    /// [`with`](Self::with) at [`Size::Xs`].
     pub fn xs(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with(Size::Xs, value)
     }
 
+    /// [`with`](Self::with) at [`Size::Sm`].
     pub fn sm(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with(Size::Sm, value)
     }
 
+    /// [`with`](Self::with) at [`Size::Md`].
     pub fn md(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with(Size::Md, value)
     }
 
+    /// [`with`](Self::with) at [`Size::Lg`].
     pub fn lg(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with(Size::Lg, value)
     }
 
+    /// [`with`](Self::with) at [`Size::Xl`].
     pub fn xl(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with(Size::Xl, value)
     }

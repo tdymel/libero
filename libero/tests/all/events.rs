@@ -3,7 +3,7 @@
 //! that conversion type-checks and passes an SSR test, but panics on the first
 //! real click - see `BoxBuilder::event`.
 
-use crate::dispatch::FindClickListener;
+use crate::dispatch::Page;
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::Box};
 
@@ -21,9 +21,7 @@ fn global_attributes_carry_event_listeners_through_the_spread() {
         }
     }
 
-    let mut dom = VirtualDom::new(app);
-    let mut find = FindClickListener::default();
-    dom.rebuild(&mut find);
+    let find = Page::build(app).rec;
 
     for name in ["input", "focus"] {
         assert!(

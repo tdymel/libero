@@ -855,12 +855,12 @@ mod dispatched {
         /// mouse pick.
         #[test]
         fn a_combobox_disabled_while_open_takes_no_mouse_pick() {
-            dioxus::html::set_event_converter(Box::new(TestConverter));
             LOCKED.with(|cell| cell.set(false));
             PICKED.with(|cell| cell.set(false));
-            let mut dom = VirtualDom::new(fruit);
-            let mut find = FindClickListener::default();
-            dom.rebuild(&mut find);
+            let Page {
+                mut dom,
+                rec: mut find,
+            } = Page::build(fruit);
             settle(&mut dom, &mut find);
             assert_listbox(&dom, "enabled");
             let row = option_click(&find).expect("the row registered no click listener");
@@ -880,9 +880,10 @@ mod dispatched {
         #[test]
         fn a_combobox_mounted_disabled_and_open_draws_no_row() {
             LOCKED.with(|cell| cell.set(true));
-            let mut dom = VirtualDom::new(fruit);
-            let mut find = FindClickListener::default();
-            dom.rebuild(&mut find);
+            let Page {
+                mut dom,
+                rec: mut find,
+            } = Page::build(fruit);
             settle(&mut dom, &mut find);
             assert_eq!(
                 option_click(&find),

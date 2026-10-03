@@ -4,24 +4,29 @@
 pub struct States(Vec<(&'static str, bool)>);
 
 impl States {
+    /// No state yet, the same as [`states()`].
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets `state` on or off, moving it to the end.
     pub fn with(mut self, state: &'static str, active: bool) -> Self {
         self.0.retain(|(existing, _)| existing != &state);
         self.0.push((state, active));
         self
     }
 
+    /// [`with`](Self::with) `state` on.
     pub fn active(self, state: &'static str) -> Self {
         self.with(state, true)
     }
 
+    /// [`with`](Self::with) `state` off, which overrides an earlier `active`.
     pub fn inactive(self, state: &'static str) -> Self {
         self.with(state, false)
     }
 
+    /// Every state set, on or off, in order.
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, bool)> + '_ {
         self.0.iter().copied()
     }
@@ -52,6 +57,13 @@ impl From<Vec<(&'static str, bool)>> for States {
     }
 }
 
+/// Starts an empty [`States`].
+///
+/// ```
+/// # use libero::components::states;
+/// let states = states().active("open").inactive("disabled");
+/// assert_eq!(states.data_state().as_deref(), Some("open"));
+/// ```
 pub fn states() -> States {
     States::new()
 }

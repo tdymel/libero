@@ -24,6 +24,7 @@ impl PartialEq for StaticSx {
 }
 
 impl StaticSx {
+    /// Runs `init` on the first read, once per program.
     pub const fn new(init: fn() -> Sx) -> Self {
         Self(LazyLock::new(init))
     }

@@ -569,6 +569,23 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         .with("dragging", (drag.dragging)())
         .into();
 
+    let root_states: Input<States> = props
+        .states
+        .unwrap_or_default()
+        .with(size.state_name(), true)
+        .with(controls.state_name(), true)
+        .into();
+    let root_variables: Input<Variables> = scroller_variables(props.fade_color.as_ref()).into();
+    // Prepared before the content's `?`, so an erroring child keeps the hook order.
+    let root_style = use_box()
+        .framework_sx(&SCROLLER_ROOT_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .parts(&props.parts)
+        .states(&root_states)
+        .variables(&root_variables)
+        .prepare();
+
     let content = use_box()
         .framework_sx(&SCROLLER_CONTENT_SX)
         .prepare()
@@ -643,38 +660,21 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         }
     };
 
-    let root_states: Input<States> = props
-        .states
-        .unwrap_or_default()
-        .with(size.state_name(), true)
-        .with(controls.state_name(), true)
-        .into();
-    let root_variables: Input<Variables> = scroller_variables(props.fade_color.as_ref()).into();
-
     let show_controls = controls != ScrollerControls::Never;
 
-    use_box()
-        .framework_sx(&SCROLLER_ROOT_SX)
-        .class(&props.class)
-        .sx(&props.sx)
-        .parts(&props.parts)
-        .states(&root_states)
-        .variables(&root_variables)
-        .prepare()
-        .element(&root)
-        .render(
-            HtmlTag::Div,
-            props.attributes,
-            rsx! {
-                if show_controls {
-                    {control(false)}
-                }
-                {strip}
-                if show_controls {
-                    {control(true)}
-                }
-            },
-        )
+    root_style.element(&root).render(
+        HtmlTag::Div,
+        props.attributes,
+        rsx! {
+            if show_controls {
+                {control(false)}
+            }
+            {strip}
+            if show_controls {
+                {control(true)}
+            }
+        },
+    )
 }
 
 #[cfg(test)]

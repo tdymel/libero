@@ -19,11 +19,17 @@ pub struct Page {
 impl Page {
     /// Builds `app` and runs its first effects, recording both passes.
     pub fn mount(app: fn() -> Element) -> Self {
+        let mut page = Self::build(app);
+        page.render();
+        page
+    }
+
+    /// Builds `app` only: what the first pass registered, before any effect re-renders.
+    pub fn build(app: fn() -> Element) -> Self {
         dioxus::html::set_event_converter(Box::new(TestConverter));
         let mut dom = VirtualDom::new(app);
         let mut rec = FindClickListener::default();
         dom.rebuild(&mut rec);
-        dom.render_immediate(&mut rec);
         Self { dom, rec }
     }
 

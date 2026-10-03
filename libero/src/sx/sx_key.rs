@@ -14,7 +14,7 @@ macro_rules! properties {
         #[repr(u16)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
         pub enum Property {
-            $($variant,)*
+            $(#[doc = concat!("`", $css_name, "`.")] $variant,)*
         }
 
         impl Property {
@@ -27,6 +27,7 @@ macro_rules! properties {
                 }
             }
 
+            /// The CSS name, as [`parse`](Self::parse) reads it.
             pub const fn as_str(self) -> &'static str {
                 match self {
                     $(Self::$variant => $css_name,)*
@@ -58,6 +59,7 @@ macro_rules! properties {
 
         impl Sx {
             $(
+                #[doc = concat!("Declares `", $css_name, "`.")]
                 pub fn $method(self, value: impl Into<ThemeAwareValue>) -> Self {
                     self.with_known_property(Property::$variant, value)
                 }
@@ -398,7 +400,12 @@ pub enum SxModifierKey {
     /// A `@supports` rule with this condition.
     Supports(String),
     /// A `@container` rule for container `name` (empty for the nearest) and `condition`.
-    Container { name: String, condition: String },
+    Container {
+        /// The container's name, empty for the nearest.
+        name: String,
+        /// The size query, e.g. `"(min-width: 640px)"`.
+        condition: String,
+    },
 }
 
 #[cfg(test)]

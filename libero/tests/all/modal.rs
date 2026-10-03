@@ -411,10 +411,10 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page {
+            mut dom,
+            rec: mut find,
+        } = Page::build(app);
         // `use_hook` opens after `use_modal` has already read the empty slot, so
         // the dialog only exists from the second render on.
         dom.render_immediate(&mut find);
@@ -465,11 +465,7 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
-        dom.render_immediate(&mut find);
+        let Page { mut dom, rec: find } = Page::mount(app);
         dom.process_events();
         let confirm = find.click.expect("registered no click listener");
 

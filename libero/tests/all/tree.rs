@@ -496,10 +496,7 @@ mod dispatched {
             }
         }
 
-        dioxus::html::set_event_converter(Box::new(TestConverter));
-        let mut dom = VirtualDom::new(app);
-        let mut find = FindClickListener::default();
-        dom.rebuild(&mut find);
+        let Page { mut dom, rec: find } = Page::build(app);
         // A tree root's click listener only moves focus, so clicking it is a no-op.
         assert_eq!(find.clicks.len(), 6, "one per branch row and tree root");
 

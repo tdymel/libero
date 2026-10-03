@@ -344,12 +344,12 @@ mod dispatched {
             ("DE", "30 123456", "30 123456"),
             ("US", "2133734253", "213 373 4253"),
         ] {
-            dioxus::html::set_event_converter(Box::new(TestConverter));
             PHONE_COUNTRY.set(country);
             PHONE_TOGGLE.set(false);
-            let mut dom = VirtualDom::new(phone_app);
-            let mut find = FindClickListener::default();
-            dom.rebuild(&mut find);
+            let Page {
+                mut dom,
+                rec: mut find,
+            } = Page::build(phone_app);
             // Every render is written back into `find`: the second pass, which is
             // what picks up the component CSS, replaces the nodes, and an id read
             // before it addresses an element that is gone.

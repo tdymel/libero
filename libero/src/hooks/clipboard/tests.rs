@@ -45,7 +45,8 @@ thread_local! {
 }
 
 fn hook_app() -> Element {
-    CLIPBOARD.with(|slot| slot.set(Some(use_clipboard())));
+    let clipboard = use_clipboard();
+    CLIPBOARD.with(|slot| slot.set(Some(clipboard)));
     rsx! {}
 }
 
