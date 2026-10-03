@@ -11,7 +11,7 @@ combobox "Fruit" = Cherry [expanded] [haspopup=listbox]
   StaticText "Cherry"
 status [atomic] [live=polite]
 status [atomic] [live=polite]
-listbox "Fruit" [multiselectable]
+listbox "Fruit" [multiselectable] [orientation=vertical]
   option "Apple" [selected=false]
     StaticText "Apple"
   option "Banana" [selected=false]

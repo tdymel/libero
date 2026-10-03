@@ -6,8 +6,10 @@ expression: tree
 LabelText
   StaticText "Price"
 group "Price"
-  slider "Price Minimum" = 20 [valuemax=80] [valuemin=0]
-  slider "Price Maximum" = 80 [valuemax=100] [valuemin=20]
+  slider "Price Minimum" = 20 [orientation=horizontal] [valuemax=80] [valuemin=0]
+    description "20"
+  slider "Price Maximum" = 80 [orientation=horizontal] [valuemax=100] [valuemin=20]
+    description "80"
 paragraph
   StaticText "20-80"
 tooltip "20"

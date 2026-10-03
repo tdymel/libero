@@ -9,6 +9,7 @@ LabelText
   StaticText "Alignment"
 StaticText "Where each line starts."
 radiogroup "Alignment" [invalid] [required]
+  description "Where each line starts. Applies to the whole document. Pick an alignment."
   radio "Left" [checked=false]
   LabelText
     StaticText "Left"

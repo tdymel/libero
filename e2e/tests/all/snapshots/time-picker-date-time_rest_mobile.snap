@@ -3,7 +3,7 @@ source: e2e/src/suite.rs
 description: time-picker-date-time at mobile (rest)
 expression: tree
 ---
-tablist "Date or time"
+tablist "Date or time" [orientation=horizontal]
   tab "Date" [selected]
     StaticText "Date"
   tab "Time" [selected=false]

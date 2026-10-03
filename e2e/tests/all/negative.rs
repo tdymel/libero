@@ -4,64 +4,52 @@
 use e2e::archetypes::{Combobox, Orientation, Overlay, RovingTabindex};
 use e2e::browser::block_on;
 use e2e::passes::{contrast, dismissal, focus, keyboard, reflow, target_size};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Viewport, selftest, wait};
 
-/// Opens a broken fixture, runs `check`, and requires an error containing `because`: a bare
-/// `is_err()` also passes on a check that gave up earlier for another reason.
-async fn must_fail<F, Fut>(route: &str, what: &str, because: &str, check: F)
-where
-    F: Fn(Fixture) -> Fut,
-    Fut: std::future::Future<Output = (Fixture, anyhow::Result<()>)>,
-{
-    // A short budget first; a wrong reason may be a setup step timed out, so it reruns longer.
-    let mut quick = None;
-    for share in [wait::QUICK_FAILURE_SHARE, 3] {
-        let fixture = Fixture::open(route, Viewport::Desktop)
-            .await
-            .unwrap_or_else(|e| panic!("opening {route}: {e}"));
-
-        let (fixture, outcome) = wait::expecting_failure_in(share, check(fixture)).await;
-
-        let _ = fixture.close().await;
-
-        match outcome {
-            Ok(()) => panic!(
-                "{what} passed against {route}, which is deliberately broken. \
-                 The pass is not detecting what it claims to detect, and every \
-                 component relying on it is unguarded."
-            ),
-            Err(error) => {
-                let error = format!("{error:#}");
-                if error.contains(because) {
-                    println!("{what} correctly failed on {route}: {error}");
-                    return;
-                }
-                if let Some(quick) = &quick {
-                    panic!(
-                        "{what} failed on {route}, but not for the reason the fixture \
-                         breaks.\n  expected: {because:?}\n  got: {error}\n  at the short \
-                         budget: {quick}"
-                    );
-                }
-                quick = Some(error);
-            }
-        }
-    }
+/// `must_fail` itself: a green check and a failure for another reason are both refused.
+#[test]
+fn must_fail_refuses_a_green_check_and_a_wrong_reason() {
+    block_on(async {
+        let green = selftest::caught("/button", None, "planted", async |_| Ok(())).await;
+        assert!(
+            green.is_err_and(|e| e.to_string().contains("stayed green")),
+            "a green check was accepted"
+        );
+        let wrong = selftest::caught("/button", None, "planted", async |_| {
+            anyhow::bail!("another reason")
+        })
+        .await;
+        assert!(
+            wrong.is_err_and(|e| e.to_string().contains("not for the broken reason")),
+            "a failure for another reason was accepted"
+        );
+        let right = selftest::caught(
+            "/button",
+            Some("window.planted = 1"),
+            "planted",
+            async |page| {
+                let planted: bool = page.evaluate("window.planted === 1").await?.into_value()?;
+                anyhow::ensure!(!planted, "planted");
+                Ok(())
+            },
+        )
+        .await;
+        assert_eq!(right.unwrap(), "planted");
+    });
 }
 
 /// WCAG 2.4.7 Focus Visible.
 #[test]
 fn the_focus_ring_pass_catches_a_missing_ring() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/focus-ring",
-            "assert_focus_ring",
+            None,
             "produced no visible ring anywhere on it",
-            |fixture| async move {
-                let result = focus::assert_focus_ring(&fixture.page, "#no-ring", 5)
+            async |page| {
+                focus::assert_focus_ring(page, "#no-ring", 5)
                     .await
-                    .map(|_| ());
-                (fixture, result)
+                    .map(|_| ())
             },
         )
         .await;
@@ -73,15 +61,14 @@ fn the_focus_ring_pass_catches_a_missing_ring() {
 #[test]
 fn the_focus_ring_pass_ignores_a_ring_on_an_unmarked_child() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/focus-ring",
-            "assert_focus_ring",
+            None,
             "produced no visible ring anywhere on it",
-            |fixture| async move {
-                let result = focus::assert_focus_ring(&fixture.page, "#unmarked-ring", 5)
+            async |page| {
+                focus::assert_focus_ring(page, "#unmarked-ring", 5)
                     .await
-                    .map(|_| ());
-                (fixture, result)
+                    .map(|_| ())
             },
         )
         .await;
@@ -130,19 +117,10 @@ fn the_focus_ring_pass_catches_covered_focus() {
 
 /// `must_fail` for the ring and its contrast together, as `Suite` runs them.
 async fn ring_must_fail(route: &str, selector: &'static str, expected: &'static str) {
-    must_fail(
-        route,
-        "assert_focus_ring + assert_ring_contrast",
-        expected,
-        |fixture| async move {
-            let result = async {
-                let ring = focus::assert_focus_ring(&fixture.page, selector, 5).await?;
-                focus::assert_ring_contrast(&ring)
-            }
-            .await;
-            (fixture, result)
-        },
-    )
+    selftest::must_fail(route, None, expected, async |page| {
+        let ring = focus::assert_focus_ring(page, selector, 5).await?;
+        focus::assert_ring_contrast(&ring)
+    })
     .await;
 }
 
@@ -151,22 +129,18 @@ async fn ring_must_fail(route: &str, selector: &'static str, expected: &'static 
 #[test]
 fn the_focus_ring_pass_catches_a_faint_field_ring() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/faint-field-ring",
-            "assert_focus_ring + assert_ring_contrast",
+            None,
             "WCAG 1.4.11",
-            |fixture| async move {
-                let result = async {
-                    let ring = focus::assert_focus_ring(&fixture.page, "#faint-input", 5).await?;
-                    anyhow::ensure!(
-                        ring.overlay,
-                        "measured {} instead of the ring overlay",
-                        ring.selector
-                    );
-                    focus::assert_ring_contrast(&ring)
-                }
-                .await;
-                (fixture, result)
+            async |page| {
+                let ring = focus::assert_focus_ring(page, "#faint-input", 5).await?;
+                anyhow::ensure!(
+                    ring.overlay,
+                    "measured {} instead of the ring overlay",
+                    ring.selector
+                );
+                focus::assert_ring_contrast(&ring)
             },
         )
         .await;
@@ -177,14 +151,11 @@ fn the_focus_ring_pass_catches_a_faint_field_ring() {
 #[test]
 fn the_target_size_pass_catches_a_small_target() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/target-size",
-            "assert_minimum",
+            None,
             "target size below WCAG 2.5.8 minimum",
-            |fixture| async move {
-                let result = target_size::assert_minimum(&fixture.page, "#tiny").await;
-                (fixture, result)
-            },
+            async |page| target_size::assert_minimum(page, "#tiny").await,
         )
         .await;
     });
@@ -195,15 +166,11 @@ fn the_target_size_pass_catches_a_small_target() {
 #[test]
 fn the_target_size_pass_catches_targets_too_close_together() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/target-spacing",
-            "assert_minimum_or_spacing",
+            None,
             "WCAG 2.5.8's spacing exception fails",
-            |fixture| async move {
-                let result =
-                    target_size::assert_minimum_or_spacing(&fixture.page, "#cramped-a").await;
-                (fixture, result)
-            },
+            async |page| target_size::assert_minimum_or_spacing(page, "#cramped-a").await,
         )
         .await;
     });
@@ -214,15 +181,11 @@ fn the_target_size_pass_catches_targets_too_close_together() {
 #[test]
 fn the_target_size_pass_catches_a_small_target_beside_a_thin_bar() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/target-spacing",
-            "assert_minimum_or_spacing",
+            None,
             "needs 12px of clearance",
-            |fixture| async move {
-                let result =
-                    target_size::assert_minimum_or_spacing(&fixture.page, "#beside-bar").await;
-                (fixture, result)
-            },
+            async |page| target_size::assert_minimum_or_spacing(page, "#beside-bar").await,
         )
         .await;
     });
@@ -232,15 +195,11 @@ fn the_target_size_pass_catches_a_small_target_beside_a_thin_bar() {
 #[test]
 fn the_reflow_pass_catches_sideways_scroll_at_320() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/reflow",
-            "assert_reflows",
+            None,
             "past div#too-wide reaching",
-            |fixture| async move {
-                let result =
-                    reflow::assert_reflows(&fixture.page, &["#wide-grid"], "the fixture").await;
-                (fixture, result)
-            },
+            async |page| reflow::assert_reflows(page, &["#wide-grid"], "the fixture").await,
         )
         .await;
     });
@@ -250,15 +209,9 @@ fn the_reflow_pass_catches_sideways_scroll_at_320() {
 #[test]
 fn the_contrast_pass_catches_faint_text() {
     block_on(async {
-        must_fail(
-            "/broken/contrast",
-            "axe color-contrast",
-            "color-contrast",
-            |fixture| async move {
-                let result = contrast::assert_clean(&fixture.page, "[data-fixture-ready]").await;
-                (fixture, result)
-            },
-        )
+        selftest::must_fail("/broken/contrast", None, "color-contrast", async |page| {
+            contrast::assert_clean(page, "[data-fixture-ready]").await
+        })
         .await;
     });
 }
@@ -351,19 +304,18 @@ fn the_console_pass_catches_a_warning() {
 #[test]
 fn the_roving_pass_catches_many_tab_stops() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/roving",
-            "RovingTabindex",
+            None,
             "has 3 tab stops across 3 items",
-            |fixture| async move {
-                let result = RovingTabindex {
+            async |page| {
+                RovingTabindex {
                     items: "[role=tab]",
                     orientation: Orientation::Horizontal,
                     wraps: true,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -410,20 +362,19 @@ fn the_broken_roving_fixture_breaks_only_its_count() {
 #[test]
 fn the_overlay_pass_catches_focus_not_returning() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/focus-return",
-            "Overlay",
+            None,
             "expected focus on #open-broken",
-            |fixture| async move {
-                let result = Overlay {
+            async |page| {
+                Overlay {
                     trigger: "#open-broken",
                     panel: "#broken-dialog",
                     traps_focus: false,
                     tab_budget: 5,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -435,19 +386,14 @@ fn the_overlay_pass_catches_focus_not_returning() {
 #[test]
 fn the_dismissal_pass_catches_a_phantom_panel() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/dismissal",
-            "assert_gone_from_at",
+            None,
             "is still in the accessibility tree",
-            |fixture| async move {
-                keyboard::tab_to(&fixture.page, "#dismiss", 5)
-                    .await
-                    .unwrap();
-                keyboard::press(&fixture.page, keyboard::ENTER)
-                    .await
-                    .unwrap();
-                let result = dismissal::assert_gone_from_at(&fixture.page, "#phantom").await;
-                (fixture, result)
+            async |page| {
+                keyboard::tab_to(page, "#dismiss", 5).await.unwrap();
+                keyboard::press(page, keyboard::ENTER).await.unwrap();
+                dismissal::assert_gone_from_at(page, "#phantom").await
             },
         )
         .await;
@@ -459,19 +405,18 @@ fn the_dismissal_pass_catches_a_phantom_panel() {
 #[test]
 fn the_combobox_pass_catches_a_dangling_activedescendant() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/broken/activedescendant",
-            "Combobox",
+            None,
             "but no such element is in the DOM",
-            |fixture| async move {
-                let result = Combobox {
+            async |page| {
+                Combobox {
                     trigger: "#dangling",
                     option_count: 1,
                     tab_budget: 5,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -503,15 +448,14 @@ fn the_combobox_pass_catches_a_static_highlight() {
 /// `must_fail` for the combobox contract, requiring the fixture's own failure: both are
 /// sound up to their highlight.
 async fn combobox_must_fail(route: &str, trigger: &'static str, expected: &'static str) {
-    must_fail(route, "Combobox", expected, |fixture| async move {
-        let result = Combobox {
+    selftest::must_fail(route, None, expected, async |page| {
+        Combobox {
             trigger,
             option_count: 3,
             tab_budget: 5,
         }
-        .assert_contract(&fixture.page)
-        .await;
-        (fixture, result)
+        .assert_contract(page)
+        .await
     })
     .await;
 }
@@ -583,8 +527,8 @@ fn the_snapshot_records_a_dangling_aria_controls() {
 /// Todo 760: each family of the docs sweep reports its broken fixture. The
 /// sweep never fails on a hit, so a hit is turned into the error here.
 async fn sweep_must_report(route: &str, family: &'static str, element: &'static str, value: &str) {
-    must_fail(route, "the docs sweep", family, |fixture| async move {
-        let checked = e2e::sweep::check(&fixture.page, Viewport::Desktop, route, "light desktop")
+    selftest::must_fail(route, None, family, async |page| {
+        let checked = e2e::sweep::check(page, Viewport::Desktop, route, "light desktop")
             .await
             .unwrap_or_else(|e| panic!("sweeping {route}: {e:#}"));
         let found = checked
@@ -594,7 +538,7 @@ async fn sweep_must_report(route: &str, family: &'static str, element: &'static 
                 hit.family == family && hit.element.contains(element) && hit.value.contains(value)
             })
             .map(|hit| anyhow::anyhow!("{}: {} ({})", hit.family, hit.element, hit.value));
-        (fixture, found.map_or(Ok(()), Err))
+        found.map_or(Ok(()), Err)
     })
     .await;
 }

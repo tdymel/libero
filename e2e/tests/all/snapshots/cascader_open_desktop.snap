@@ -8,7 +8,7 @@ LabelText
 combobox "Place" [expanded] [haspopup=listbox]
 status [atomic] [live=polite]
 paragraph
-listbox "Place"
+listbox "Place" [orientation=vertical]
   option "Europe" [selected]
     StaticText "Europe"
   option "Asia" [disabled] [selected=false]

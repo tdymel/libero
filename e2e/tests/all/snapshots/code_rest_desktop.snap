@@ -12,6 +12,7 @@ code
 group "Rust code"
   StaticText "Rust"
   button "Copy code"
+    description "Rust code"
   status [atomic] [live=polite]
   code
     StaticText "let"
@@ -39,6 +40,7 @@ code
 group "Rust code"
   StaticText "Rust"
   button "Copy code"
+    description "Rust code"
   status [atomic] [live=polite]
   code
     StaticText "fn"
@@ -64,6 +66,7 @@ group "Code"
 group "The greeting, Rust code"
   StaticText "Rust"
   button "Copy code"
+    description "The greeting, Rust code"
   status [atomic] [live=polite]
   region "Rust code"
     code
@@ -79,6 +82,7 @@ group "The greeting, Rust code"
       StaticText "}"
 group "Rust code"
   button "Copy code"
+    description "Rust code"
   status [atomic] [live=polite]
   region "Rust code"
     code

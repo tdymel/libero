@@ -24,7 +24,10 @@ fn a_label_names_its_separator() {
         );
         let vertical = ax::snapshot(page, "#vertical").await.unwrap();
         assert!(vertical.starts_with("separator \"Or\""), "{vertical}");
-        assert_eq!(ax::snapshot(page, "#plain").await.unwrap(), "separator\n");
+        assert_eq!(
+            ax::snapshot(page, "#plain").await.unwrap(),
+            "separator [orientation=horizontal]\n"
+        );
 
         fixture.console.assert_clean("the divider fixture").unwrap();
         fixture.close().await.unwrap();

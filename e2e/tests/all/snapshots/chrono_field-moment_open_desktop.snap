@@ -15,7 +15,7 @@ button "After"
 paragraph
   StaticText "2026-03-18 09:30:00"
 dialog "Date"
-  tablist "Date or time"
+  tablist "Date or time" [orientation=horizontal]
     tab "Date" [selected]
       StaticText "Date"
     tab "Time" [selected=false]

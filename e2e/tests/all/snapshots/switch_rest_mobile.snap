@@ -4,10 +4,12 @@ description: switch at mobile (rest)
 expression: tree
 ---
 switch "Notifications" [checked=false]
+  description "About once a month. You can turn this off later."
 StaticText "About once a month."
 StaticText "You can turn this off later."
 StaticText "Changes 0"
 switch "Accept terms" [checked=false] [invalid]
+  description "Turn this on to continue."
 LabelText
   StaticText "Accept terms"
 StaticText "Turn this on to continue."
@@ -15,5 +17,6 @@ switch "Wi-Fi" [checked=false]
 switch "Locked" [checked]
 switch "Disabled" [checked=false] [disabled]
 switch "Bluetooth" [checked=false]
+  description "Finds nearby devices."
 StaticText "Finds nearby devices."
 switch "Uncontrolled" [checked=false]

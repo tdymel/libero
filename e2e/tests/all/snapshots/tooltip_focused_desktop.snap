@@ -6,6 +6,7 @@ expression: tree
 button "Before"
   StaticText "Before"
 button "Save"
+  description "Saves the draft"
   StaticText "Save"
 button "After"
   StaticText "After"

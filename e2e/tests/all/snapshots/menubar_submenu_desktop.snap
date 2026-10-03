@@ -3,21 +3,21 @@ source: e2e/src/suite.rs
 description: menubar at desktop (submenu)
 expression: tree
 ---
-menubar "Editor"
+menubar "Editor" [orientation=horizontal]
   menuitem "File" [expanded=false] [haspopup=menu]
     StaticText "File"
   menuitem "Edit" [expanded] [haspopup=menu]
     StaticText "Edit"
   menuitem "View" [expanded=false] [haspopup=menu]
     StaticText "View"
-menu "Edit"
+menu "Edit" [orientation=vertical]
   menuitem "Undo"
     StaticText "Undo"
   menuitem "Redo"
     StaticText "Redo"
   menuitem "Find" [expanded] [haspopup=menu]
     StaticText "Find"
-menu "Find"
+menu "Find" [orientation=vertical]
   menuitem "Find next"
     StaticText "Find next"
 --> aria-controls [id="lsx-N-1-menu"] (rendered above)

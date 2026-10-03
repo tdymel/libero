@@ -3,10 +3,10 @@ source: e2e/src/suite.rs
 description: toolbar-vertical at desktop (rest)
 expression: tree
 ---
-toolbar "Tools"
+toolbar "Tools" [orientation=vertical]
   button "Pen"
     StaticText "P"
-  separator
+  separator [orientation=horizontal]
   button "Eraser"
     StaticText "E"
   button "Fill"

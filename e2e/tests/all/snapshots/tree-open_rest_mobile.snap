@@ -3,7 +3,7 @@ source: e2e/src/suite.rs
 description: tree-open at mobile (rest)
 expression: tree
 ---
-tree "Project files"
+tree "Project files" [orientation=vertical]
   treeitem "src" [expanded=false] [level=1] [selected=false]
     button "src"
       StaticText "src"

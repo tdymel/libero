@@ -2,19 +2,7 @@
 //! scrolling a target into view and out again.
 
 use anyhow::{Result, bail};
-use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
-use e2e::{Fixture, Viewport, js, wait};
-
-async fn state_reads(page: &chromiumoxide::Page, expected: &str) {
-    wait::for_js_true(
-        page,
-        &format!("document.getElementById('state').textContent === '{expected}'"),
-        &format!("#state to read {expected}"),
-    )
-    .await
-    .unwrap();
-}
 
 /// Scrolls by a quarter screen per poll (the target must stay up for a few polls) until `#state` reads `expected`.
 /// On the web it stops scrolling once the target is in (`dy` > 0) or out of the viewport.
@@ -99,28 +87,18 @@ e2e::scenario!(
     native: skip("Blitz has no IntersectionObserver")
 );
 
-#[test]
-fn a_scroller_is_the_root_and_the_ratio_follows_the_threshold() {
-    block_on(async {
-        let fixture = Fixture::open("/use-intersection/root", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        state_reads(page, "0").await;
-        // The target sits 300px down a 100px scroller: all of it shows at 280.
-        let _: bool = js(
-            page,
-            "(document.getElementById('scroller').scrollTop = 280, true)",
-        )
-        .await;
-        state_reads(page, "100").await;
-        let _: bool = js(
-            page,
-            "(document.getElementById('scroller').scrollTop = 0, true)",
-        )
-        .await;
-        state_reads(page, "0").await;
-
-        fixture.close().await.unwrap();
-    });
+async fn the_ratio_follows_the_threshold<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#state", "0", "the first measure").await?;
+    // The target sits 301px down a 100px scroller; focus brings all of it in.
+    d.focus("#target").await?;
+    eventually_text(d, "#state", "100", "focus scrolling the target in").await?;
+    d.focus("#top").await?;
+    eventually_text(d, "#state", "0", "focus scrolling back to the top").await
 }
+
+e2e::scenario!(
+    a_scroller_is_the_root_and_the_ratio_follows_the_threshold,
+    "/use-intersection/root",
+    the_ratio_follows_the_threshold,
+    native: skip("Blitz has no IntersectionObserver")
+);

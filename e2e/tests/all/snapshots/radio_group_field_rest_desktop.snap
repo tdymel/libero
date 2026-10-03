@@ -9,11 +9,15 @@ LabelText
   StaticText "Plan"
 StaticText "What your seats cost."
 radiogroup "Plan" [invalid] [required]
+  description "What your seats cost. You can change it later. Pick a plan to continue."
   radio "Free" [checked=false]
+    description "About Free"
   StaticText "About Free"
   radio "Pro" [checked]
+    description "About Pro"
   StaticText "About Pro"
   radio "Team" [checked=false] [disabled]
+    description "About Team"
   StaticText "About Team"
 StaticText "You can change it later."
 StaticText "Pick a plan to continue."

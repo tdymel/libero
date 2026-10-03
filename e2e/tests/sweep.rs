@@ -14,10 +14,6 @@ fn every_docs_page() {
 
 const BURGER: &str = "button[aria-controls=docs-nav]";
 
-async fn wait_for(page: &chromiumoxide::Page, what: &str, script: &str) {
-    wait::for_js_true(page, script, what).await.unwrap();
-}
-
 /// Any console message the page reported fails, at `close`.
 async fn close(fixture: Fixture) {
     let messages = fixture.console.drain();
@@ -49,7 +45,9 @@ fn a_route_change_closes_the_drawer() {
             .click()
             .await
             .unwrap();
-        wait_for(page, "the drawer to open", &open).await;
+        wait::for_js_true(page, &open, "the drawer to open")
+            .await
+            .unwrap();
         keyboard::press_with(
             page,
             keyboard::Key {
@@ -64,8 +62,12 @@ fn a_route_change_closes_the_drawer() {
         .unwrap();
         keyboard::type_text(page, "box").await.unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
-        wait_for(page, "the route to change", &format!("{path} !== '/'")).await;
-        wait_for(page, "the drawer to close after the search", &closed).await;
+        wait::for_js_true(page, &format!("{path} !== '/'"), "the route to change")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &closed, "the drawer to close after the search")
+            .await
+            .unwrap();
 
         // Through the browser's back button.
         page.find_element(BURGER)
@@ -74,10 +76,16 @@ fn a_route_change_closes_the_drawer() {
             .click()
             .await
             .unwrap();
-        wait_for(page, "the drawer to open again", &open).await;
+        wait::for_js_true(page, &open, "the drawer to open again")
+            .await
+            .unwrap();
         page.evaluate("history.back()").await.unwrap();
-        wait_for(page, "the route to change back", &format!("{path} === '/'")).await;
-        wait_for(page, "the drawer to close after back", &closed).await;
+        wait::for_js_true(page, &format!("{path} === '/'"), "the route to change back")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &closed, "the drawer to close after back")
+            .await
+            .unwrap();
 
         close(fixture).await;
     });
@@ -96,24 +104,27 @@ fn an_unknown_url_shows_the_not_found_page() {
         .await
         .unwrap();
         let page = &fixture.page;
-        wait_for(
+        wait::for_js_true(
             page,
-            "the not-found heading",
             "document.querySelector('#docs-main h1').textContent === 'Page not found'",
+            "the not-found heading",
         )
-        .await;
-        wait_for(
+        .await
+        .unwrap();
+        wait::for_js_true(
             page,
-            "the not-found tab title",
             "document.title === 'Page not found - Libero'",
+            "the not-found tab title",
         )
-        .await;
-        wait_for(
+        .await
+        .unwrap();
+        wait::for_js_true(
             page,
-            "a link home",
             "!!document.querySelector('#docs-main a[href=\"/\"]')",
+            "a link home",
         )
-        .await;
+        .await
+        .unwrap();
         close(fixture).await;
     });
 }
@@ -384,12 +395,13 @@ fn docs_interactions() {
                     e2e::passes::pointer::click(page, &format!("{TOOLS} [data-slot=picker]"))
                         .await
                         .unwrap();
-                    wait_for(
+                    wait::for_js_true(
                         page,
-                        "the theme menu",
                         "!!document.querySelector('[role=menu]')",
+                        "the theme menu",
                     )
-                    .await;
+                    .await
+                    .unwrap();
                     quiet(page).await;
                 }
                 if profiling {
@@ -405,8 +417,13 @@ fn docs_interactions() {
                         e2e::passes::pointer::click(page, &format!("{TOOLS} [data-slot=toggle]"))
                             .await
                             .unwrap();
-                        wait_for(page, "the scheme to flip", &format!("{SCHEME} !== {was:?}"))
-                            .await;
+                        wait::for_js_true(
+                            page,
+                            &format!("{SCHEME} !== {was:?}"),
+                            "the scheme to flip",
+                        )
+                        .await
+                        .unwrap();
                     }
                     "theme-set pick" => {
                         let set = if rep % 2 == 0 { "Ayu" } else { "Libero" };
@@ -421,12 +438,13 @@ fn docs_interactions() {
                         e2e::passes::pointer::click(page, "[data-e2e=set]")
                             .await
                             .unwrap();
-                        wait_for(
+                        wait::for_js_true(
                             page,
-                            "the page colour to change",
                             &format!("{PAGE_BG} !== {bg:?}"),
+                            "the page colour to change",
                         )
-                        .await;
+                        .await
+                        .unwrap();
                     }
                     _ => {
                         let to = if rep % 2 == 0 {
@@ -437,12 +455,7 @@ fn docs_interactions() {
                         e2e::passes::pointer::click(page, &format!("#docs-nav a[href='{to}']"))
                             .await
                             .unwrap();
-                        wait_for(
-                            page,
-                            to,
-                            &format!("location.pathname === {to:?} && !!document.querySelector('#docs-main h1')"),
-                        )
-                        .await;
+                        wait::for_js_true(page, &format!("location.pathname === {to:?} && !!document.querySelector('#docs-main h1')"), to).await.unwrap();
                     }
                 }
                 quiet(page).await;

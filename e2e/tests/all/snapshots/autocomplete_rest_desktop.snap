@@ -5,5 +5,5 @@ expression: tree
 ---
 LabelText
   StaticText "City"
-combobox "City" [expanded=false] [haspopup=listbox]
+combobox "City" [autocomplete=list] [expanded=false] [haspopup=listbox]
 status [atomic] [live=polite]

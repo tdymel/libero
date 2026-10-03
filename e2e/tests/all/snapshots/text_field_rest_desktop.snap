@@ -7,6 +7,7 @@ LabelText
   StaticText "Username"
 StaticText "How other people see you."
 textbox "Username" = ada [invalid] [required]
+  description "Shown on your profile. How other people see you. Letters and digits. That name is taken."
   StaticText "ada"
 StaticText "Letters and digits."
 StaticText "That name is taken."
@@ -20,10 +21,12 @@ StaticText "3/20"
 LabelText
   StaticText "Email"
 textbox "Email" [invalid]
+  description "Email needed"
 StaticText "Email needed"
 LabelText
   StaticText "Password"
 textbox "Password"
+  description "At least 8 characters."
 button "Show password" [pressed=false]
 StaticText "At least 8 characters."
 LabelText
@@ -40,4 +43,5 @@ group "Locked"
 LabelText
   StaticText "Bio"
 textbox "Bio" [required]
+  description "Markdown works."
 StaticText "Markdown works."

@@ -3,7 +3,7 @@ source: e2e/src/suite.rs
 description: menubar at desktop (rest)
 expression: tree
 ---
-menubar "Editor"
+menubar "Editor" [orientation=horizontal]
   menuitem "File" [expanded=false] [haspopup=menu]
     StaticText "File"
   menuitem "Edit" [expanded=false] [haspopup=menu]

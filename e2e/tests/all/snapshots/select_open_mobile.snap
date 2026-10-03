@@ -8,7 +8,7 @@ LabelText
 combobox "Fruit" = Banana [expanded] [haspopup=listbox]
   StaticText "Banana"
 status [atomic] [live=polite]
-listbox "Fruit"
+listbox "Fruit" [orientation=vertical]
   option "Apple" [selected=false]
     StaticText "Apple"
   option "Banana" [selected]

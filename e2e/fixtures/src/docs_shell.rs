@@ -1,5 +1,6 @@
 //! The docs shell's heading focus and scroll. The hooks are a copy of
-//! `docs/src/heading_focus.rs`: e2e never includes docs source (todo 951).
+//! `docs/src/heading_focus.rs`: e2e never includes docs source (todo 951);
+//! `e2e/src/docs_copy.rs` keeps the copied functions equal (1802).
 
 use dioxus::prelude::*;
 use libero::{
@@ -59,11 +60,10 @@ pub fn use_heading_focus<T: Clone + PartialEq + 'static>(
     use_effect(use_reactive!(|location| {
         if *last.peek() != location {
             last.set(location);
-            let heading = section.write().take().and_then(|id| {
-                content
-                    .query_selector(&format!("#{id} > :first-child"))
-                    .ok()
-            });
+            let heading = section
+                .write()
+                .take()
+                .and_then(|id| content.query_selector(&focus_target(&id)).ok());
             let _ = heading
                 .map_or_else(|| content.query_selector("main h1"), Ok)
                 .and_then(|h| h.focus());
@@ -89,11 +89,16 @@ pub fn use_fragment_landing(
         };
         scroll_to_section(area, content, id);
         let _ = content
-            .query_selector(&format!("#{id} > :first-child"))
+            .query_selector(&focus_target(id))
             .and_then(|heading| heading.focus());
         #[cfg(target_arch = "wasm32")]
         restore_fragment(id);
     });
+}
+
+/// A section's title is its first child; a panel without one takes focus itself.
+fn focus_target(id: &str) -> String {
+    format!("#{id}[tabindex], #{id} > :first-child")
 }
 
 /// Puts the fragment back into the URL, so a reload lands here too (todo 1184).

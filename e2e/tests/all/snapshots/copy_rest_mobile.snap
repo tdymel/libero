@@ -10,6 +10,7 @@ paragraph
 button "Copy the install command"
 status [atomic] [live=polite]
 button "Copy"
+  description "Add libero to your project"
 status [atomic] [live=polite]
 button "Copy" [disabled]
 status [atomic] [live=polite]

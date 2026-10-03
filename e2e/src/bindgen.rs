@@ -20,6 +20,8 @@ const CACHE_ENV: &str = "E2E_BINDGEN_CACHE";
 const REPORT_ENV: &str = "E2E_BINDGEN_REPORT";
 /// Outputs kept per target dir, newest first: ~35 MB each.
 const KEEP: usize = 3;
+/// A copy in progress, suffixed with its runner's pid.
+const PARTIAL: &str = "partial-";
 
 /// Whether this process was started as `wasm-bindgen`.
 pub(crate) fn is_wrapper() -> bool {
@@ -101,7 +103,10 @@ pub(crate) fn run() -> Result<()> {
         return Err(Command::new(&real).args(&args).exec().into());
     };
     let cache = PathBuf::from(cache);
-    std::fs::create_dir_all(&cache)?;
+    if let Err(error) = std::fs::create_dir_all(&cache) {
+        eprintln!("wasm-bindgen cache: {error}; running the real one uncached");
+        return Err(Command::new(&real).args(&args).exec().into());
+    }
     let started = Instant::now();
     let entry = cache.join(key(&real, &args, Path::new(input))?);
     // Said before the output lands: the runner may find the app served at once.
@@ -112,11 +117,13 @@ pub(crate) fn run() -> Result<()> {
     };
     if entry.is_dir() {
         report(format!("cached, {} ms", started.elapsed().as_millis()));
-        copy_tree(&entry, &out_dir)?;
-        // Its age orders the prune: a hit keeps it.
+        // Touched first: its age orders the prune, so a runner pruning beside this one keeps it.
         let _ = std::fs::File::open(&entry)
             .and_then(|dir| dir.set_modified(std::time::SystemTime::now()));
-        return Ok(());
+        match copy_tree(&entry, &out_dir) {
+            Ok(()) => return Ok(()),
+            Err(error) => eprintln!("wasm-bindgen cache: {error:#}; running the real one"),
+        }
     }
     report("ran".into());
     let status = Command::new(&real).args(&args).status()?;
@@ -124,14 +131,27 @@ pub(crate) fn run() -> Result<()> {
         std::process::exit(status.code().unwrap_or(1));
     }
     report(format!("ran, {} s", started.elapsed().as_secs()));
-    let partial = cache.join(format!("partial-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&partial);
-    copy_tree(&out_dir, &partial)?;
-    if std::fs::rename(&partial, &entry).is_err() {
-        let _ = std::fs::remove_dir_all(&partial);
+    // The real output is in place; a cache that cannot keep it only costs the next run.
+    if let Err(error) = keep(&cache, &out_dir, &entry) {
+        eprintln!("wasm-bindgen cache: output not kept: {error:#}");
     }
     prune(&cache);
     Ok(())
+}
+
+/// Copies `out_dir` to `entry` through a `partial-<pid>` dir, removed whatever happens.
+fn keep(cache: &Path, out_dir: &Path, entry: &Path) -> Result<()> {
+    let partial = cache.join(format!("{PARTIAL}{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&partial);
+    let kept = copy_tree(out_dir, &partial).and_then(|()| {
+        // Another runner may have kept the same entry first.
+        match std::fs::rename(&partial, entry) {
+            Err(_) if entry.is_dir() => Ok(()),
+            renamed => renamed.context("move the output into the cache"),
+        }
+    });
+    let _ = std::fs::remove_dir_all(&partial);
+    kept
 }
 
 /// The input wasm's bytes, the binary, and the arguments but the two paths.
@@ -172,14 +192,28 @@ fn copy_tree(from: &Path, to: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Keeps the `KEEP` newest outputs.
+/// Keeps the `KEEP` newest outputs and drops dead runners' partial copies.
 fn prune(cache: &Path) {
     let Ok(entries) = std::fs::read_dir(cache) else {
         return;
     };
     let mut kept: Vec<_> = entries
         .flatten()
-        .filter(|entry| !entry.file_name().to_string_lossy().starts_with("partial-"))
+        .filter(|entry| {
+            let name = entry.file_name();
+            let Some(pid) = name
+                .to_string_lossy()
+                .strip_prefix(PARTIAL)
+                .map(str::to_owned)
+            else {
+                return true;
+            };
+            // A killed runner's copy: nothing else removes it.
+            if !Path::new("/proc").join(pid).exists() {
+                let _ = std::fs::remove_dir_all(entry.path());
+            }
+            false
+        })
         .filter_map(|entry| Some((entry.metadata().ok()?.modified().ok()?, entry.path())))
         .collect();
     kept.sort_by_key(|(modified, _)| std::cmp::Reverse(*modified));

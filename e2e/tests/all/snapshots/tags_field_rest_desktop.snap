@@ -7,7 +7,7 @@ LabelText
   StaticText "Topics"
 StaticText "rust"
 button "Remove rust"
-combobox "Topics" [expanded=false] [haspopup=listbox]
+combobox "Topics" [autocomplete=list] [expanded=false] [haspopup=listbox]
 status [atomic] [live=polite]
 status [atomic] [live=polite]
 status [atomic] [live=polite]

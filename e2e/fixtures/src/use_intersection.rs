@@ -176,9 +176,12 @@ fn Rooted() -> Element {
             onmounted: scroller.mount(),
             style: "height: 100px; overflow: auto;",
             ..scroller.attributes(),
+            // Focus scrolls the scroller on every backend: `#top` back, `#target` in.
+            div { id: "top", tabindex: "-1", style: "height: 1px;" }
             div { style: "height: 300px;" }
             div {
                 id: "target",
+                tabindex: "-1",
                 style: "height: 60px;",
                 onmounted: move |event| seen.on_mounted.call(event),
                 ..seen.attributes,

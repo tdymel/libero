@@ -7,7 +7,7 @@ combobox "Fruit" = Apple [expanded] [haspopup=listbox]
   StaticText "Apple"
 status [atomic] [live=polite]
   StaticText "5 results"
-listbox
+listbox [orientation=vertical]
   option "Apple" [selected]
     StaticText "Apple"
   option "Banana" [selected=false]

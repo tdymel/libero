@@ -13,6 +13,7 @@ LabelText
   StaticText "Contract"
 group "Contract"
   button "Contract Pick a file Browse files" [invalid]
+    description "Required We cannot read that file."
     StaticText "Pick a file"
     StaticText "Browse files"
 status [atomic] [live=polite]

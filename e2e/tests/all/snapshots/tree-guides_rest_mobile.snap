@@ -3,7 +3,7 @@ source: e2e/src/suite.rs
 description: tree-guides at mobile (rest)
 expression: tree
 ---
-tree "Files"
+tree "Files" [orientation=vertical]
   treeitem "src" [expanded] [level=1] [selected=false]
     StaticText "src"
     group

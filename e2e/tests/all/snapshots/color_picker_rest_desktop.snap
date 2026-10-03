@@ -5,8 +5,8 @@ expression: tree
 ---
 button "Before"
   StaticText "Before"
-slider "Saturation" = 87 [valuemax=100] [valuemin=0]
-slider "Hue" = 208 [valuemax=360] [valuemin=0]
+slider "Saturation" = 87 [orientation=horizontal] [valuemax=100] [valuemin=0]
+slider "Hue" = 208 [orientation=horizontal] [valuemax=360] [valuemin=0]
 paragraph
   StaticText "#1c7ed6"
 button "After"

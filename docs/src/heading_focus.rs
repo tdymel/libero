@@ -1,6 +1,6 @@
 //! After a navigation: the new page starts at the top, focus on its heading,
 //! or both on the section a [`SectionLink`](crate::components::SectionLink) named.
-//! The e2e fixture `docs_shell` keeps its own copy (todo 951).
+//! The e2e fixture `docs_shell` keeps its own copy (todo 951), held equal by `e2e/src/docs_copy.rs`.
 
 use dioxus::prelude::*;
 use libero::{components::ScrollAreaHandle, hooks::ElementHandle, platform::ElementApi};
@@ -51,7 +51,16 @@ fn fragment(route: &str) -> Option<String> {
     route
         .split_once('#')
         .map(|(_, id)| id.to_string())
-        .filter(|id| !id.is_empty())
+        .filter(|id| is_plain_id(id))
+}
+
+/// An id `#{id}` selects as it reads: a dot, a space or a leading digit would not (1802).
+fn is_plain_id(id: &str) -> bool {
+    let mut chars = id.chars();
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
 /// Lands the [`use_load_fragment`] fragment on its `DocSection`, scroll and heading
@@ -163,5 +172,13 @@ mod tests {
         assert_eq!(fragment("/about/styling?x=1#a").as_deref(), Some("a"));
         assert_eq!(fragment("/about/styling#"), None);
         assert_eq!(fragment("/about/styling"), None);
+    }
+
+    #[test]
+    fn a_fragment_that_is_no_plain_id_is_dropped() {
+        assert_eq!(fragment("/a#_x-1").as_deref(), Some("_x-1"));
+        for id in ["1x", "a.b", "a%20b", "a b", "-x"] {
+            assert_eq!(fragment(&format!("/a#{id}")), None, "{id}");
+        }
     }
 }

@@ -3,7 +3,7 @@ source: e2e/src/suite.rs
 description: toolbar-fields at mobile (rest)
 expression: tree
 ---
-toolbar "Fields"
+toolbar "Fields" [orientation=horizontal]
   button "First"
     StaticText "First"
   checkbox "Bold" [checked=false]

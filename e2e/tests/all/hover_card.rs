@@ -224,7 +224,7 @@ fn the_pointer_opens_and_closes_it_on_its_delays() {
         // The open waits on the held timer, not on the hover's own render (1634).
         e2e::clock::settle(page).await.unwrap();
         assert!(
-            !wait::is_visible(page, CARD).await.unwrap(),
+            !wait::exists(page, CARD).await.unwrap(),
             "the card opened before its held open delay fired"
         );
         clock::fire(page, OPEN_MS).await.unwrap();
@@ -347,7 +347,7 @@ fn escape_closes_it_and_returns_focus_to_the_trigger() {
         // A reopen would come from the trigger's `focusin` a render later.
         e2e::clock::settle(page).await.unwrap();
         assert!(
-            !wait::is_visible(page, CARD).await.unwrap(),
+            !wait::exists(page, CARD).await.unwrap(),
             "focus returning to the trigger opened the card again"
         );
 

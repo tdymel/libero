@@ -12,6 +12,7 @@ button "Increase"
 LabelText
   StaticText "Seats"
 spinbutton "Seats" = 50 [valuemax=99] [valuemin=10] [valuetext=50]
+  description "10 to 99."
   StaticText "50"
 button "Decrease"
 button "Increase"

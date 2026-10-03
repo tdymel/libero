@@ -5,14 +5,14 @@ expression: tree
 ---
 button "Actions" [expanded] [haspopup=menu]
   StaticText "Actions"
-menu "Actions"
+menu "Actions" [orientation=vertical]
   group "Edit"
     StaticText "Edit"
     menuitem "Cut"
       StaticText "Cut"
     menuitem "Paste" [disabled]
       StaticText "Paste"
-  separator
+  separator [orientation=horizontal]
   menuitem "Save"
     StaticText "Save"
   menuitem "Share" [expanded=false] [haspopup=menu]

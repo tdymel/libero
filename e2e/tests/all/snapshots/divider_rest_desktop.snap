@@ -5,12 +5,12 @@ expression: tree
 ---
 paragraph
   StaticText "Above"
-separator
-separator "Or continue with"
+separator [orientation=horizontal]
+separator "Or continue with" [orientation=horizontal]
   StaticText "Or continue with"
 paragraph
   StaticText "Left"
-separator "Or"
+separator "Or" [orientation=vertical]
   StaticText "Or"
 paragraph
   StaticText "Right"

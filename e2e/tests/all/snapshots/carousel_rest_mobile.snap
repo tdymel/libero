@@ -3,17 +3,19 @@ source: e2e/src/suite.rs
 description: carousel at mobile (rest)
 expression: tree
 ---
-region "Slide content"
+region "Slide content" [roledescription=carousel]
   status [atomic] [live=polite]
     StaticText "Slide 1 of 3"
   group "Slide content"
-    group "1 of 3"
+    description "Slide 1 of 3"
+    group "1 of 3" [roledescription=slide]
       LabelText
         StaticText "Note"
       textbox "Note" = carousel
         StaticText "carousel"
-      slider "Volume" = 40 [valuemax=100] [valuemin=0]
-      slider "Raw range" = 50 [valuemax=100] [valuemin=0] [valuetext=50]
+      slider "Volume" = 40 [orientation=horizontal] [valuemax=100] [valuemin=0]
+        description "40"
+      slider "Raw range" = 50 [orientation=horizontal] [valuemax=100] [valuemin=0] [valuetext=50]
       radiogroup "Raw choice"
         radio "A" [checked]
         radio "B" [checked=false]

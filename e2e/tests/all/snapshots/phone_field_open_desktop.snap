@@ -11,8 +11,8 @@ button "Country: Germany, DE +49" [expanded] [haspopup=listbox]
 status [atomic] [live=polite]
 textbox "Mobile"
 paragraph
-combobox "Search countries" [expanded] [haspopup=listbox]
-listbox "Country: Germany, DE +49"
+combobox "Search countries" [autocomplete=list] [expanded] [haspopup=listbox]
+listbox "Country: Germany, DE +49" [orientation=vertical]
   option "Afghanistan +93" [selected=false]
     StaticText "Afghanistan"
     StaticText "+93"

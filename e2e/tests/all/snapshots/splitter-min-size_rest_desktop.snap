@@ -7,7 +7,7 @@ button "Raise"
   StaticText "Raise"
 paragraph
   StaticText "Pane A"
-separator "Resize panes" = 50 [valuemax=90] [valuemin=10]
+separator "Resize panes" = 50 [orientation=vertical] [valuemax=90] [valuemin=10]
 paragraph
   StaticText "Pane B"
 --> aria-controls [id="lsx-N"] (rendered above)

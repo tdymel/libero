@@ -11,7 +11,7 @@ button "00 Minutes" [pressed=false]
 StaticText ":"
 button "00 Seconds" [pressed=false]
   StaticText "00"
-slider "Hours" = 10 [valuemax=23] [valuemin=0]
+slider "Hours" = 10 [orientation=horizontal] [valuemax=23] [valuemin=0]
   StaticText "12"
   StaticText "1"
   StaticText "2"

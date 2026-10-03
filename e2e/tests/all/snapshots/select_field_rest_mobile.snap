@@ -7,6 +7,7 @@ LabelText
   StaticText "Fruit"
 StaticText "Delivered with your next box."
 combobox "Fruit" = Banana [expanded=false] [haspopup=listbox] [invalid] [required]
+  description "Delivered with your next box. You can swap it until Friday. Pick a fruit."
   StaticText "Banana"
 button "Clear Fruit"
 status [atomic] [live=polite]

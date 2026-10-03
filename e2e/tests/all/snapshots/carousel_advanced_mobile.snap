@@ -3,11 +3,12 @@ source: e2e/src/suite.rs
 description: carousel at mobile (advanced)
 expression: tree
 ---
-region "Slide content"
+region "Slide content" [roledescription=carousel]
   status [atomic] [live=polite]
     StaticText "Slide 2 of 3"
   group "Slide content"
-    group "2 of 3"
+    description "Slide 2 of 3"
+    group "2 of 3" [roledescription=slide]
       paragraph
         StaticText "The second slide, and nothing to press on it."
   button "Previous slide"

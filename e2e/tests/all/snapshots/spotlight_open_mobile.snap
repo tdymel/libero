@@ -8,11 +8,12 @@ button "Open the palette"
 paragraph
   StaticText "Or press Ctrl K."
 dialog "Command palette" [modal]
-  combobox "Search commands" [expanded] [haspopup=listbox]
-  listbox "Command palette"
+  combobox "Search commands" [autocomplete=list] [expanded] [haspopup=listbox]
+  listbox "Command palette" [orientation=vertical]
     group "Pages"
       StaticText "Pages"
       option "Home" [selected=false]
+        description "The start page"
         StaticText "Home"
         StaticText "The start page"
       option "Changelog" [selected=false]
@@ -20,6 +21,7 @@ dialog "Command palette" [modal]
     group "Commands"
       StaticText "Commands"
       option "New file" [selected=false]
+        description "Ctrl + N"
         StaticText "New file"
         StaticText "Ctrl"
         StaticText "+"

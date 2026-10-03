@@ -7,12 +7,15 @@ pub mod archetypes;
 pub mod ax;
 pub mod browser;
 pub mod clock;
+#[cfg(test)]
+mod docs_copy;
 pub mod driver;
 pub mod frames;
 pub mod journal;
 #[cfg(feature = "native")]
 pub mod native;
 pub mod passes;
+pub mod selftest;
 pub mod suite;
 pub mod sweep;
 pub mod vendor;

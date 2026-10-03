@@ -3,19 +3,19 @@ source: e2e/src/suite.rs
 description: menubar at mobile (open)
 expression: tree
 ---
-menubar "Editor"
+menubar "Editor" [orientation=horizontal]
   menuitem "File" [expanded] [haspopup=menu]
     StaticText "File"
   menuitem "Edit" [expanded=false] [haspopup=menu]
     StaticText "Edit"
   menuitem "View" [expanded=false] [haspopup=menu]
     StaticText "View"
-menu "File"
+menu "File" [orientation=vertical]
   menuitem "New"
     StaticText "New"
   menuitem "Open"
     StaticText "Open"
-  separator
+  separator [orientation=horizontal]
   menuitem "Save"
     StaticText "Save"
 --> aria-controls [id="lsx-N-0-menu"] (rendered above)

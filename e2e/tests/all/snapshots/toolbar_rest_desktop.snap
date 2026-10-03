@@ -3,13 +3,13 @@ source: e2e/src/suite.rs
 description: toolbar at desktop (rest)
 expression: tree
 ---
-toolbar "Formatting"
+toolbar "Formatting" [orientation=horizontal]
   group "Style"
     button "Bold"
       StaticText "B"
     button "Italic"
       StaticText "I"
-  separator
+  separator [orientation=vertical]
   group "Align"
     button "Left"
       StaticText "Left"

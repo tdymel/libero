@@ -9,6 +9,7 @@ StaticText "To do"
 list "To do"
   listitem [level=1]
     button "Reorder Alpha"
+      description "Press Space to lift the item, the arrow keys to move it, Space again to drop it, Escape to cancel."
     paragraph
       StaticText "Alpha"
     button "Move Alpha up" [disabled]
@@ -16,6 +17,7 @@ list "To do"
     button "Move Alpha to column" [expanded=false] [haspopup=menu]
   listitem [level=1]
     button "Reorder Beta"
+      description "Press Space to lift the item, the arrow keys to move it, Space again to drop it, Escape to cancel."
     paragraph
       StaticText "Beta"
     button "Move Beta up"
@@ -23,6 +25,7 @@ list "To do"
     button "Move Beta to column" [expanded=false] [haspopup=menu]
   listitem [level=1]
     button "Reorder Gamma"
+      description "Press Space to lift the item, the arrow keys to move it, Space again to drop it, Escape to cancel."
     paragraph
       StaticText "Gamma"
     button "Move Gamma up"
@@ -32,6 +35,7 @@ StaticText "Doing"
 list "Doing"
   listitem [level=1]
     button "Reorder Delta"
+      description "Press Space to lift the item, the arrow keys to move it, Space again to drop it, Escape to cancel."
     paragraph
       StaticText "Delta"
     button "Move Delta up" [disabled]

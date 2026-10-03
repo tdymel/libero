@@ -13,29 +13,31 @@ dialog "Gallery" [modal]
   button "Zoom out" [disabled]
   button "Zoom in"
   button "Close"
-  region "Gallery"
+  region "Gallery" [roledescription=carousel]
     status [atomic] [live=polite]
       StaticText "Slide 1 of 6"
     group "Gallery"
-      group "1 of 6"
+      description "Slide 1 of 6"
+      group "1 of 6" [roledescription=slide]
         image "Picture 1"
+          description "Picture 1 of the first gallery Z, plus or minus to zoom. Arrow keys pan a zoomed picture, or change the picture. Home and End go to the first and last picture."
     button "Previous slide" [disabled]
     button "Next slide"
   paragraph
     StaticText "Picture 1 of the first gallery"
   status [atomic] [live=polite]
-  region "Thumbnails"
+  region "Thumbnails" [roledescription=carousel]
     group "Thumbnails"
-      group "1 of 6"
+      group "1 of 6" [roledescription=slide]
         button "Go to slide 1" [current=true]
-      group "2 of 6"
+      group "2 of 6" [roledescription=slide]
         button "Go to slide 2"
-      group "3 of 6"
+      group "3 of 6" [roledescription=slide]
         button "Go to slide 3"
-      group "4 of 6"
+      group "4 of 6" [roledescription=slide]
         button "Go to slide 4"
-      group "5 of 6"
+      group "5 of 6" [roledescription=slide]
         button "Go to slide 5"
-      group "6 of 6"
+      group "6 of 6" [roledescription=slide]
         button "Go to slide 6"
 --> aria-controls [id="lsx-N"] (rendered above)

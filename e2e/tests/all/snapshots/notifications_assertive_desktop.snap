@@ -30,6 +30,7 @@ region "Notifications (F8)"
     list
       listitem [level=1]
         group "Upload failed"
+          description "The file is larger than 10 MB"
           StaticText "Upload failed"
           StaticText "The file is larger than 10 MB"
           button "Close"
@@ -37,5 +38,6 @@ region "Notifications (F8)"
     list
       listitem [level=1]
         group
+          description "Saved to your library"
           StaticText "Saved to your library"
           button "Close"

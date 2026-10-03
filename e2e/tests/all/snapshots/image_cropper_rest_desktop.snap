@@ -6,11 +6,16 @@ expression: tree
 button "Before"
   StaticText "Before"
 image "A sun on blue"
-slider "Crop area" = 25 [valuemax=100] [valuemin=0]
-slider "Top left corner" = 50 [valuemax=100] [valuemin=0]
-slider "Top right corner" = 50 [valuemax=100] [valuemin=0]
-slider "Bottom right corner" = 50 [valuemax=100] [valuemin=0]
-slider "Bottom left corner" = 50 [valuemax=100] [valuemin=0]
+slider "Crop area" = 25 [orientation=horizontal] [valuemax=100] [valuemin=0]
+  description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
+slider "Top left corner" = 50 [orientation=horizontal] [valuemax=100] [valuemin=0]
+  description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
+slider "Top right corner" = 50 [orientation=horizontal] [valuemax=100] [valuemin=0]
+  description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
+slider "Bottom right corner" = 50 [orientation=horizontal] [valuemax=100] [valuemin=0]
+  description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
+slider "Bottom left corner" = 50 [orientation=horizontal] [valuemax=100] [valuemin=0]
+  description "Arrow keys move the crop area, or resize it from a corner. Shift moves further."
 group "Crop area"
   button "Move left"
   button "Move up"

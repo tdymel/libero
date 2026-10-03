@@ -5,7 +5,7 @@ expression: tree
 ---
 heading "Book a table" [level=3]
   StaticText "Book a table"
-tablist "Book a table"
+tablist "Book a table" [orientation=horizontal]
   tab "Book" [selected]
     StaticText "Book"
   tab "Your bookings" [selected=false]

@@ -10,8 +10,9 @@ generic [haspopup=listbox]
 status [atomic] [live=polite]
 StaticText "Cities only."
 StaticText "Pick a place."
-combobox "Place" [expanded] [haspopup=listbox] [invalid] [required]
-listbox "Place"
+combobox "Place" [autocomplete=list] [expanded] [haspopup=listbox] [invalid] [required]
+  description "Where the parcel goes. Cities only. Pick a place."
+listbox "Place" [orientation=vertical]
   option "Europe" [selected]
     StaticText "Europe"
   option "Asia" [disabled] [selected=false]

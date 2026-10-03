@@ -31,5 +31,6 @@ region "Notifications (F8)"
     list
       listitem [level=1]
         group
+          description "Saved to your library"
           StaticText "Saved to your library"
           button "Close"

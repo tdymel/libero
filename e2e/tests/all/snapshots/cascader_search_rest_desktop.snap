@@ -7,6 +7,7 @@ LabelText
   StaticText "Place"
 StaticText "Where the parcel goes."
 combobox "Place" [expanded=false] [haspopup=listbox] [invalid] [required]
+  description "Where the parcel goes. Cities only. Pick a place."
 status [atomic] [live=polite]
 StaticText "Cities only."
 StaticText "Pick a place."

@@ -84,7 +84,17 @@ fn a_label_describes_the_button() {
 
         let tree = ax::snapshot(page, "#described").await.unwrap();
         assert!(tree.contains(r#"button "Copy""#), "{tree}");
-        assert!(!tree.contains("Add libero"), "read as text too:\n{tree}");
+        assert!(
+            tree.contains("  description \"Add libero to your project\""),
+            "{tree}"
+        );
+        // The description line is the only place the words may show.
+        assert!(
+            !tree
+                .lines()
+                .any(|line| line.contains("Add libero") && !line.contains("description ")),
+            "read as text too:\n{tree}"
+        );
         let description = ax::description(page, "#described button").await.unwrap();
         assert_eq!(description, "Add libero to your project");
         assert_eq!(ax::description(page, BARE).await.unwrap(), "");

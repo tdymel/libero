@@ -1,59 +1,13 @@
 //! Planted defects (311): each pass must fail on a real component's fixture, for the reason
 //! named. Most plants are injected after mount (a stylesheet, a capturing listener).
 
+use chromiumoxide::Page;
 use e2e::archetypes::{Combobox, Orientation, Overlay, RadioSet, RovingTabindex, count_tab_stops};
 use e2e::browser::block_on;
 use e2e::passes::{contrast, focus, keyboard, motion, pointer, target_size};
-use e2e::{Fixture, Scheme, Viewport, wait};
+use e2e::{Fixture, Scheme, Viewport, selftest, wait};
 
 use crate::carousel;
-
-/// Open `route`, plant `defect` (JavaScript, run once the app has mounted),
-/// run `check`, and require it to fail with an error containing `because`.
-async fn must_fail<F, Fut>(route: &str, defect: Option<&str>, because: &str, check: F)
-where
-    F: Fn(Fixture) -> Fut,
-    Fut: std::future::Future<Output = (Fixture, anyhow::Result<()>)>,
-{
-    // A short budget first; a wrong reason may be a setup step timed out, so it reruns longer.
-    let mut quick = None;
-    for share in [wait::QUICK_FAILURE_SHARE, 3] {
-        let fixture = Fixture::open(route, Viewport::Desktop)
-            .await
-            .unwrap_or_else(|e| panic!("opening {route}: {e}"));
-        if let Some(defect) = defect {
-            fixture
-                .page
-                .evaluate(defect)
-                .await
-                .unwrap_or_else(|e| panic!("planting the defect on {route}: {e}"));
-        }
-
-        let (fixture, outcome) = wait::expecting_failure_in(share, check(fixture)).await;
-        let _ = fixture.close().await;
-
-        match outcome {
-            Ok(()) => panic!(
-                "the pass stayed green on {route} with a defect planted. It cannot see the \
-                 defect it exists for on this component."
-            ),
-            Err(error) => {
-                let error = format!("{error:#}");
-                if error.contains(because) {
-                    println!("planted defect on {route} correctly caught: {error}");
-                    return;
-                }
-                if let Some(quick) = &quick {
-                    panic!(
-                        "the pass failed on {route}, but not for the planted reason.\n  \
-                         expected: {because:?}\n  got: {error}\n  at the short budget: {quick}"
-                    );
-                }
-                quick = Some(error);
-            }
-        }
-    }
-}
 
 /// A stylesheet appended to the document, as a plant.
 fn stylesheet(css: &str) -> String {
@@ -69,22 +23,21 @@ fn stylesheet(css: &str) -> String {
 #[test]
 fn radio_group_ignoring_arrow_down_fails_the_radio_set_contract() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/radio-group",
             Some(
                 "window.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { \
                  e.stopImmediatePropagation(); e.preventDefault(); } }, true)",
             ),
             "forward press 1 (ArrowDown)",
-            |fixture| async move {
-                let result = RadioSet {
+            async |page| {
+                RadioSet {
                     radios: crate::radio_group::RADIOS,
                     checked: 1,
                     tab_budget: 5,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -96,19 +49,18 @@ fn radio_group_ignoring_arrow_down_fails_the_radio_set_contract() {
 #[test]
 fn segmented_control_with_dead_arrows_fails_the_radio_set_contract() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/planted/segmented-control-readonly",
             None,
             "focus is on radio Some(1), expected 2",
-            |fixture| async move {
-                let result = RadioSet {
+            async |page| {
+                RadioSet {
                     radios: crate::segmented_control::RADIOS,
                     checked: 1,
                     tab_budget: 5,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -120,22 +72,21 @@ fn segmented_control_with_dead_arrows_fails_the_radio_set_contract() {
 #[test]
 fn menubar_with_a_tab_stop_per_trigger_fails_the_roving_contract() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/menubar",
             Some(
                 "document.querySelectorAll('[role=menubar] [data-menubar-index]')\
                  .forEach(el => el.setAttribute('tabindex', '0'))",
             ),
             "has 3 tab stops across 3 items",
-            |fixture| async move {
-                let result = RovingTabindex {
+            async |page| {
+                RovingTabindex {
                     items: crate::menubar::TRIGGERS,
                     orientation: Orientation::Horizontal,
                     wraps: true,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -147,7 +98,7 @@ fn menubar_with_a_tab_stop_per_trigger_fails_the_roving_contract() {
 #[test]
 fn tabs_with_a_tab_stop_inside_a_tab_fail_the_roving_contract() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/tabs",
             Some(
                 "(() => { const plant = () => { \
@@ -163,15 +114,14 @@ fn tabs_with_a_tab_stop_inside_a_tab_fail_the_roving_contract() {
                  plant(); })()",
             ),
             "has 2 tab stops across 3 items",
-            |fixture| async move {
-                let result = RovingTabindex {
+            async |page| {
+                RovingTabindex {
                     items: crate::tabs::TAB,
                     orientation: Orientation::Horizontal,
                     wraps: true,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -183,22 +133,21 @@ fn tabs_with_a_tab_stop_inside_a_tab_fail_the_roving_contract() {
 #[test]
 fn tabs_with_a_dead_home_fail_the_roving_contract() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/tabs",
             Some(
                 "window.addEventListener('keydown', e => { if (e.key === 'Home') { \
                  e.stopImmediatePropagation(); e.preventDefault(); } }, true)",
             ),
             "Home did not move to the first item",
-            |fixture| async move {
-                let result = RovingTabindex {
+            async |page| {
+                RovingTabindex {
                     items: crate::tabs::TAB,
                     orientation: Orientation::Horizontal,
                     wraps: true,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -210,17 +159,9 @@ fn tabs_with_a_dead_home_fail_the_roving_contract() {
 #[test]
 fn a_lightbox_thumbnail_without_its_frame_fails_the_forced_colours_check() {
     block_on(async {
-        must_fail(
-            "/lightbox",
-            Some(&stylesheet(
+        selftest::must_fail("/lightbox", Some(&stylesheet(
                 "[role=dialog] button[aria-current]:has(img) { background: transparent !important; }",
-            )),
-            "looks like the others",
-            |fixture| async move {
-                let result = crate::lightbox::the_current_thumbnail_stands_out(&fixture.page).await;
-                (fixture, result)
-            },
-        )
+            )), "looks like the others", async |page| crate::lightbox::the_current_thumbnail_stands_out(page).await)
         .await;
     });
 }
@@ -265,7 +206,7 @@ fn tree_with_no_tab_stop_at_all_counts_zero() {
 #[test]
 fn select_with_a_dangling_activedescendant_fails_the_combobox_contract() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/select",
             Some(
                 "(() => { const strip = () => document.querySelectorAll('[role=option][id]')\
@@ -275,15 +216,14 @@ fn select_with_a_dangling_activedescendant_fails_the_combobox_contract() {
                  strip(); })()",
             ),
             "but no such element is in the DOM",
-            |fixture| async move {
-                let result = Combobox {
+            async |page| {
+                Combobox {
                     trigger: crate::select::TRIGGER,
                     option_count: 5,
                     tab_budget: 10,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -295,7 +235,7 @@ fn select_with_a_dangling_activedescendant_fails_the_combobox_contract() {
 #[test]
 fn multi_select_without_a_focus_indicator_fails_the_focus_ring_pass() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/multi-select",
             Some(&stylesheet(
                 "*, *::before, *::after { outline: none !important; \
@@ -303,12 +243,10 @@ fn multi_select_without_a_focus_indicator_fails_the_focus_ring_pass() {
                  transition: none !important; }",
             )),
             "produced no visible ring",
-            |fixture| async move {
-                let result =
-                    focus::assert_focus_ring(&fixture.page, crate::multi_select::TRIGGER, 10)
-                        .await
-                        .map(|_| ());
-                (fixture, result)
+            async |page| {
+                focus::assert_focus_ring(page, crate::multi_select::TRIGGER, 10)
+                    .await
+                    .map(|_| ())
             },
         )
         .await;
@@ -319,7 +257,7 @@ fn multi_select_without_a_focus_indicator_fails_the_focus_ring_pass() {
 #[test]
 fn tags_field_with_squeezed_rows_fails_the_target_size_pass() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/tags-field",
             Some(&stylesheet(
                 "[role=option] { height: 12px !important; min-height: 0 !important; \
@@ -327,16 +265,11 @@ fn tags_field_with_squeezed_rows_fails_the_target_size_pass() {
                  font-size: 10px !important; overflow: hidden !important; }",
             )),
             "target size below WCAG 2.5.8 minimum",
-            |fixture| async move {
-                let page = &fixture.page;
-                let result = async {
-                    keyboard::tab_to(page, crate::tags_field::TRIGGER, 10).await?;
-                    keyboard::press(page, keyboard::ARROW_DOWN).await?;
-                    wait::for_visible(page, "[role=listbox]").await?;
-                    target_size::assert_minimum(page, "[role=option]").await
-                }
-                .await;
-                (fixture, result)
+            async |page| {
+                keyboard::tab_to(page, crate::tags_field::TRIGGER, 10).await?;
+                keyboard::press(page, keyboard::ARROW_DOWN).await?;
+                wait::for_visible(page, "[role=listbox]").await?;
+                target_size::assert_minimum(page, "[role=option]").await
             },
         )
         .await;
@@ -348,20 +281,15 @@ fn tags_field_with_squeezed_rows_fails_the_target_size_pass() {
 #[test]
 fn select_with_faint_options_fails_the_contrast_pass_in_the_open_state() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/select",
             Some(&stylesheet("[role=option] { color: #dddddd !important; }")),
             "color-contrast",
-            |fixture| async move {
-                let page = &fixture.page;
-                let result = async {
-                    keyboard::tab_to(page, crate::select::TRIGGER, 10).await?;
-                    keyboard::press(page, keyboard::ARROW_DOWN).await?;
-                    wait::for_visible(page, "[role=listbox]").await?;
-                    contrast::assert_clean(page, "[data-fixture-ready]").await
-                }
-                .await;
-                (fixture, result)
+            async |page| {
+                keyboard::tab_to(page, crate::select::TRIGGER, 10).await?;
+                keyboard::press(page, keyboard::ARROW_DOWN).await?;
+                wait::for_visible(page, "[role=listbox]").await?;
+                contrast::assert_clean(page, "[data-fixture-ready]").await
             },
         )
         .await;
@@ -373,22 +301,17 @@ fn select_with_faint_options_fails_the_contrast_pass_in_the_open_state() {
 #[test]
 fn spotlight_with_faint_rows_fails_the_contrast_pass_in_the_open_state() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/spotlight",
             Some(&stylesheet(
                 "[role=dialog] [role=option] * { color: #dddddd !important; }",
             )),
             "color-contrast",
-            |fixture| async move {
-                let page = &fixture.page;
-                let result = async {
-                    keyboard::tab_to(page, crate::spotlight::TRIGGER, 10).await?;
-                    keyboard::press(page, keyboard::ENTER).await?;
-                    wait::for_visible(page, "[role=dialog] [role=option]").await?;
-                    contrast::assert_clean(page, "[data-fixture-ready]").await
-                }
-                .await;
-                (fixture, result)
+            async |page| {
+                keyboard::tab_to(page, crate::spotlight::TRIGGER, 10).await?;
+                keyboard::press(page, keyboard::ENTER).await?;
+                wait::for_visible(page, "[role=dialog] [role=option]").await?;
+                contrast::assert_clean(page, "[data-fixture-ready]").await
             },
         )
         .await;
@@ -400,23 +323,18 @@ fn spotlight_with_faint_rows_fails_the_contrast_pass_in_the_open_state() {
 #[test]
 fn spotlight_rows_axe_cannot_reach_fail_the_coverage_guard() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/spotlight",
             Some("document.body.style.setProperty('overflow', 'hidden', 'important')"),
             "8 of 8 on-screen text element(s) under [role=dialog] were never evaluated by \
              axe's `color-contrast` rule",
-            |fixture| async move {
-                let page = &fixture.page;
-                let result = async {
-                    keyboard::tab_to(page, crate::spotlight::TRIGGER, 10).await?;
-                    keyboard::press(page, keyboard::ENTER).await?;
-                    wait::for_visible(page, "[role=dialog] [role=option]").await?;
-                    contrast::assert_covers(page, "[data-fixture-ready]", "[role=dialog]")
-                        .await
-                        .map(|_| ())
-                }
-                .await;
-                (fixture, result)
+            async |page| {
+                keyboard::tab_to(page, crate::spotlight::TRIGGER, 10).await?;
+                keyboard::press(page, keyboard::ENTER).await?;
+                wait::for_visible(page, "[role=dialog] [role=option]").await?;
+                contrast::assert_covers(page, "[data-fixture-ready]", "[role=dialog]")
+                    .await
+                    .map(|_| ())
             },
         )
         .await;
@@ -430,8 +348,7 @@ const MENU_CLIPPED: &str = "[role=menu] { overflow: hidden !important; height: 0
 
 /// Open `/menu`, run `before` (a plant that must leave the guard green), then clip
 /// the menu and run the guard again, which must fail.
-async fn menu_coverage_with(fixture: &Fixture, before: &str) -> anyhow::Result<()> {
-    let page = &fixture.page;
+async fn menu_coverage_with(page: &Page, before: &str) -> anyhow::Result<()> {
     keyboard::tab_to(page, crate::menu::TRIGGER, 10).await?;
     keyboard::press(page, keyboard::ARROW_DOWN).await?;
     wait::for_visible(page, "[role=menu]").await?;
@@ -450,14 +367,11 @@ async fn menu_coverage_with(fixture: &Fixture, before: &str) -> anyhow::Result<(
 #[test]
 fn a_clipped_menu_fails_the_coverage_guard_on_its_enabled_rows_only() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/menu",
             None,
             "4 of 4 on-screen text element(s) under [role=menu] were never evaluated",
-            |fixture| async move {
-                let result = menu_coverage_with(&fixture, "0").await;
-                (fixture, result)
-            },
+            async |page| menu_coverage_with(page, "0").await,
         )
         .await;
     });
@@ -468,18 +382,17 @@ fn a_clipped_menu_fails_the_coverage_guard_on_its_enabled_rows_only() {
 #[test]
 fn an_inert_menu_row_is_no_hole_but_a_clipped_menu_still_is() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/menu",
             None,
             "3 of 3 on-screen text element(s) under [role=menu] were never evaluated",
-            |fixture| async move {
-                let result = menu_coverage_with(
-                    &fixture,
+            async |page| {
+                menu_coverage_with(
+                    page,
                     "Array.from(document.querySelectorAll('[role=menuitem]'))\
                      .find(el => el.textContent.includes('Save')).inert = true",
                 )
-                .await;
-                (fixture, result)
+                .await
             },
         )
         .await;
@@ -491,7 +404,7 @@ fn an_inert_menu_row_is_no_hole_but_a_clipped_menu_still_is() {
 #[test]
 fn a_closed_details_body_is_no_hole_but_its_clipped_summary_is() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/menu",
             Some(
                 "(() => { const box = document.createElement('div'); box.id = 'planted-box'; \
@@ -499,22 +412,17 @@ fn a_closed_details_body_is_no_hole_but_its_clipped_summary_is() {
                  document.querySelector('[data-fixture-ready]').append(box); })()",
             ),
             "1 of 2 on-screen text element(s) under [data-fixture-ready] were never evaluated",
-            |fixture| async move {
-                let page = &fixture.page;
-                let result = async {
-                    contrast::assert_covers(page, "[data-fixture-ready]", "[data-fixture-ready]")
-                        .await
-                        .map_err(|e| anyhow::anyhow!("green half: {e:#}"))?;
-                    page.evaluate(stylesheet(
-                        "#planted-box { overflow: hidden !important; height: 0 !important; }",
-                    ))
-                    .await?;
-                    contrast::assert_covers(page, "[data-fixture-ready]", "[data-fixture-ready]")
-                        .await
-                        .map(|_| ())
-                }
-                .await;
-                (fixture, result)
+            async |page| {
+                contrast::assert_covers(page, "[data-fixture-ready]", "[data-fixture-ready]")
+                    .await
+                    .map_err(|e| anyhow::anyhow!("green half: {e:#}"))?;
+                page.evaluate(stylesheet(
+                    "#planted-box { overflow: hidden !important; height: 0 !important; }",
+                ))
+                .await?;
+                contrast::assert_covers(page, "[data-fixture-ready]", "[data-fixture-ready]")
+                    .await
+                    .map(|_| ())
             },
         )
         .await;
@@ -526,27 +434,19 @@ fn a_closed_details_body_is_no_hole_but_its_clipped_summary_is() {
 #[test]
 fn drawer_with_a_disabled_trigger_fails_the_focus_return() {
     block_on(async {
-        must_fail(
-            "/drawer",
-            Some(
+        selftest::must_fail("/drawer", Some(
                 "new MutationObserver(() => { \
                  const trigger = document.querySelector('#open-drawer'); \
                  if (trigger && document.querySelector('[role=dialog]')) trigger.disabled = true; }) \
                  .observe(document.body, { subtree: true, childList: true })",
-            ),
-            "Escape closing the overlay, expected focus on #open-drawer",
-            |fixture| async move {
-                let result = Overlay {
+            ), "Escape closing the overlay, expected focus on #open-drawer", async |page| Overlay {
                     trigger: crate::drawer::TRIGGER,
                     panel: "[role=dialog]",
                     traps_focus: true,
                     tab_budget: 5,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
-            },
-        )
+                .assert_contract(page)
+                .await)
         .await;
     });
 }
@@ -556,22 +456,21 @@ fn drawer_with_a_disabled_trigger_fails_the_focus_return() {
 #[test]
 fn menu_with_unfocusable_items_fails_the_overlay_contract() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/menu",
             Some(&stylesheet(
                 "[role=menu] [role=menuitem] { visibility: hidden !important; }",
             )),
             "did not move focus into [role=menu]",
-            |fixture| async move {
-                let result = Overlay {
+            async |page| {
+                Overlay {
                     trigger: crate::menu::TRIGGER,
                     panel: "[role=menu]",
                     traps_focus: false,
                     tab_budget: 5,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -583,7 +482,7 @@ fn menu_with_unfocusable_items_fails_the_overlay_contract() {
 #[test]
 fn spotlight_with_a_leaking_trap_fails_the_overlay_contract() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/spotlight",
             Some(
                 "document.addEventListener('keydown', e => { \
@@ -591,16 +490,15 @@ fn spotlight_with_a_leaking_trap_fails_the_overlay_contract() {
                  e.stopImmediatePropagation(); }, true)",
             ),
             "focus escaped [role=dialog]",
-            |fixture| async move {
-                let result = Overlay {
+            async |page| {
+                Overlay {
                     trigger: crate::spotlight::TRIGGER,
                     panel: "[role=dialog]",
                     traps_focus: true,
                     tab_budget: 5,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -628,20 +526,19 @@ fn phantom(panel: &str) -> String {
 #[test]
 fn menu_leaving_a_phantom_panel_fails_the_dismissal_check() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/menu",
             Some(&phantom("[role=menu]")),
             "is still in the accessibility tree",
-            |fixture| async move {
-                let result = Overlay {
+            async |page| {
+                Overlay {
                     trigger: crate::menu::TRIGGER,
                     panel: "[role=menu]",
                     traps_focus: false,
                     tab_budget: 5,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -653,20 +550,19 @@ fn menu_leaving_a_phantom_panel_fails_the_dismissal_check() {
 #[test]
 fn drawer_leaving_a_phantom_panel_fails_the_dismissal_check() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/drawer",
             Some(&phantom("[role=dialog]")),
             "is still in the accessibility tree",
-            |fixture| async move {
-                let result = Overlay {
+            async |page| {
+                Overlay {
                     trigger: crate::drawer::TRIGGER,
                     panel: "[role=dialog]",
                     traps_focus: true,
                     tab_budget: 5,
                 }
-                .assert_contract(&fixture.page)
-                .await;
-                (fixture, result)
+                .assert_contract(page)
+                .await
             },
         )
         .await;
@@ -677,24 +573,19 @@ fn drawer_leaving_a_phantom_panel_fails_the_dismissal_check() {
 #[test]
 fn collapse_animating_under_reduced_motion_fails_the_motion_check() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/collapse",
             Some(&stylesheet(
                 "@media (prefers-reduced-motion: reduce) { \
                  #details { transition: grid-template-rows 400ms ease !important; } }",
             )),
             "still animates under reduced motion",
-            |fixture| async move {
-                let result = async {
-                    let page = &fixture.page;
-                    motion::set_reduced_motion(page, true).await?;
-                    motion::assert_reduced_motion_matches(page).await?;
-                    pointer::click(page, crate::collapse::TOGGLE).await?;
-                    wait::for_visible(page, "#details-text").await?;
-                    motion::assert_still(page, crate::collapse::ROOT).await
-                }
-                .await;
-                (fixture, result)
+            async |page| {
+                motion::set_reduced_motion(page, true).await?;
+                motion::assert_reduced_motion_matches(page).await?;
+                pointer::click(page, crate::collapse::TOGGLE).await?;
+                wait::for_visible(page, "#details-text").await?;
+                motion::assert_still(page, crate::collapse::ROOT).await
             },
         )
         .await;
@@ -765,14 +656,11 @@ fn a_page_pinned_light_under_dark_emulation_fails_the_scheme_check() {
 #[test]
 fn a_carousel_that_ignores_key_taken_advances_under_its_own_slider() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/carousel",
             Some(&carousel::plant_arm_out(carousel::KEY_TAKEN)),
             "the carousel advanced on an arrow on a slider in a slide",
-            |fixture| async move {
-                let result = carousel::the_slider_in_a_slide_takes_the_arrows(&fixture).await;
-                (fixture, result)
-            },
+            carousel::the_slider_in_a_slide_takes_the_arrows,
         )
         .await;
     });
@@ -783,14 +671,11 @@ fn a_carousel_that_ignores_key_taken_advances_under_its_own_slider() {
 #[test]
 fn a_carousel_that_ignores_typing_target_eats_a_caret_move() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/carousel",
             Some(&carousel::plant_arm_out(carousel::TYPING_TARGET)),
             "the caret in the slide's text field did not move",
-            |fixture| async move {
-                let result = carousel::the_caret_moves_in_a_slides_text_field(&fixture).await;
-                (fixture, result)
-            },
+            carousel::the_caret_moves_in_a_slides_text_field,
         )
         .await;
     });
@@ -801,14 +686,11 @@ fn a_carousel_that_ignores_typing_target_eats_a_caret_move() {
 #[test]
 fn a_carousel_that_ignores_arrow_target_stops_a_raw_range() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/carousel",
             Some(&carousel::plant_arm_out(carousel::ARROW_TARGET)),
             "the raw range in the slide did not step",
-            |fixture| async move {
-                let result = carousel::a_raw_range_in_a_slide_steps(&fixture).await;
-                (fixture, result)
-            },
+            carousel::a_raw_range_in_a_slide_steps,
         )
         .await;
     });
@@ -819,18 +701,15 @@ fn a_carousel_that_ignores_arrow_target_stops_a_raw_range() {
 #[test]
 fn radio_group_rows_crammed_together_fail_the_spacing_exception() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/radio-group",
             Some(&stylesheet(
                 "[role=radiogroup] { gap: 0 !important; row-gap: 0 !important; } \
                  [role=radiogroup] > div { height: 10px !important; min-height: 0 !important; }",
             )),
             "spacing exception fails",
-            |fixture| async move {
-                let result =
-                    target_size::assert_minimum_or_spacing(&fixture.page, crate::radio_group::ROWS)
-                        .await;
-                (fixture, result)
+            async |page| {
+                target_size::assert_minimum_or_spacing(page, crate::radio_group::ROWS).await
             },
         )
         .await;
@@ -842,18 +721,10 @@ fn radio_group_rows_crammed_together_fail_the_spacing_exception() {
 #[test]
 fn a_floating_window_with_a_deaf_title_bar_never_moves() {
     block_on(async {
-        must_fail(
-            "/floating-window",
-            Some(
+        selftest::must_fail("/floating-window", Some(
                 "document.addEventListener('keydown', e => { \
                  if (e.target.closest('[data-slot=handle]')) e.stopImmediatePropagation(); }, true)",
-            ),
-            "the window to move by (10.0, 0.0)",
-            |fixture| async move {
-                let result = crate::floating_window::keyboard_move(&fixture.page).await;
-                (fixture, result)
-            },
-        )
+            ), "the window to move by (10.0, 0.0)", async |page| crate::floating_window::keyboard_move(page).await)
         .await;
     });
 }
@@ -863,9 +734,7 @@ fn a_floating_window_with_a_deaf_title_bar_never_moves() {
 #[test]
 fn a_floating_window_reporting_a_stale_rect_fails_the_move_report() {
     block_on(async {
-        must_fail(
-            "/floating-window",
-            Some(
+        selftest::must_fail("/floating-window", Some(
                 "(() => { let written = null; \
                  new MutationObserver(() => { const el = document.querySelector('#move-report'); \
                  if (!el) return; const now = el.textContent; if (now === written) return; \
@@ -873,13 +742,7 @@ fn a_floating_window_reporting_a_stale_rect_fails_the_move_report() {
                  written = [Number(parts[0]) - 10, parts[1], parts[2], parts[3]].join(' '); \
                  el.textContent = written; }) \
                  .observe(document.body, { subtree: true, childList: true, characterData: true }); })()",
-            ),
-            "but it reported",
-            |fixture| async move {
-                let result = crate::floating_window::keyboard_move(&fixture.page).await;
-                (fixture, result)
-            },
-        )
+            ), "but it reported", async |page| crate::floating_window::keyboard_move(page).await)
         .await;
     });
 }
@@ -889,19 +752,11 @@ fn a_floating_window_reporting_a_stale_rect_fails_the_move_report() {
 #[test]
 fn a_floating_window_that_ignores_home_on_its_separator_never_reaches_the_minimum() {
     block_on(async {
-        must_fail(
-            "/floating-window",
-            Some(
+        selftest::must_fail("/floating-window", Some(
                 "document.addEventListener('keydown', e => { \
                  if ((e.key === 'Home' || e.key === 'End') && e.target.closest('[role=separator]')) \
                  e.stopImmediatePropagation(); }, true)",
-            ),
-            "Home to size the window to 240x120",
-            |fixture| async move {
-                let result = crate::floating_window::keyboard_resize(&fixture.page).await;
-                (fixture, result)
-            },
-        )
+            ), "Home to size the window to 240x120", async |page| crate::floating_window::keyboard_resize(page).await)
         .await;
     });
 }
@@ -911,7 +766,7 @@ fn a_floating_window_that_ignores_home_on_its_separator_never_reaches_the_minimu
 #[test]
 fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/floating-window",
             Some(&stylesheet(
                 "[data-slot=title-bar] { gap: 0 !important; } \
@@ -920,17 +775,11 @@ fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
                  [data-slot=handle] { flex: 0 0 8px !important; min-width: 0 !important; }",
             )),
             "spacing exception fails",
-            |fixture| async move {
-                let page = &fixture.page;
-                let result = async {
-                    keyboard::tab_to(page, crate::floating_window::TRIGGER, 8).await?;
-                    keyboard::press(page, keyboard::ENTER).await?;
-                    wait::for_visible(page, crate::floating_window::DIALOG).await?;
-                    target_size::assert_minimum_or_spacing(page, crate::floating_window::CLOSE)
-                        .await
-                }
-                .await;
-                (fixture, result)
+            async |page| {
+                keyboard::tab_to(page, crate::floating_window::TRIGGER, 8).await?;
+                keyboard::press(page, keyboard::ENTER).await?;
+                wait::for_visible(page, crate::floating_window::DIALOG).await?;
+                target_size::assert_minimum_or_spacing(page, crate::floating_window::CLOSE).await
             },
         )
         .await;
@@ -942,22 +791,17 @@ fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
 #[test]
 fn a_floating_window_with_faint_text_fails_the_contrast_pass_in_the_open_state() {
     block_on(async {
-        must_fail(
+        selftest::must_fail(
             "/floating-window",
             Some(&stylesheet(
                 "[role=dialog] [data-slot=body] * { color: #dddddd !important; }",
             )),
             "color-contrast",
-            |fixture| async move {
-                let page = &fixture.page;
-                let result = async {
-                    keyboard::tab_to(page, crate::floating_window::TRIGGER, 8).await?;
-                    keyboard::press(page, keyboard::ENTER).await?;
-                    wait::for_visible(page, crate::floating_window::DIALOG).await?;
-                    contrast::assert_clean(page, "[data-fixture-ready]").await
-                }
-                .await;
-                (fixture, result)
+            async |page| {
+                keyboard::tab_to(page, crate::floating_window::TRIGGER, 8).await?;
+                keyboard::press(page, keyboard::ENTER).await?;
+                wait::for_visible(page, crate::floating_window::DIALOG).await?;
+                contrast::assert_clean(page, "[data-fixture-ready]").await
             },
         )
         .await;
@@ -975,15 +819,14 @@ fn swallow(key: &str, when: &str) -> String {
 }
 
 /// `RovingTabindex` over `/tabs`, the group every roving plant below breaks.
-async fn tabs_contract(fixture: Fixture) -> (Fixture, anyhow::Result<()>) {
-    let result = RovingTabindex {
+async fn tabs_contract(page: &Page) -> anyhow::Result<()> {
+    RovingTabindex {
         items: crate::tabs::TAB,
         orientation: Orientation::Horizontal,
         wraps: true,
     }
-    .assert_contract(&fixture.page)
-    .await;
-    (fixture, result)
+    .assert_contract(page)
+    .await
 }
 
 /// The last tab, in a plant's condition.
@@ -993,7 +836,7 @@ const ON_LAST_TAB: &str =
 /// `Tabs` whose forward arrow does nothing (1717).
 #[test]
 fn tabs_with_a_dead_forward_arrow_fail_the_roving_contract() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/tabs",
         Some(&swallow("ArrowRight", "true")),
         "after 1 forward arrow(s)",
@@ -1004,7 +847,7 @@ fn tabs_with_a_dead_forward_arrow_fail_the_roving_contract() {
 /// `Tabs` that stop at the last tab although the declaration says they wrap (1717).
 #[test]
 fn tabs_that_stop_at_the_end_fail_a_wrapping_roving_contract() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/tabs",
         Some(&swallow("ArrowRight", ON_LAST_TAB)),
         "arrowing past the last item",
@@ -1015,7 +858,7 @@ fn tabs_that_stop_at_the_end_fail_a_wrapping_roving_contract() {
 /// `Tabs` whose End does nothing (1717).
 #[test]
 fn tabs_with_a_dead_end_fail_the_roving_contract() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/tabs",
         Some(&swallow("End", "true")),
         "End did not move to the last item",
@@ -1026,7 +869,7 @@ fn tabs_with_a_dead_end_fail_the_roving_contract() {
 /// `Tabs` whose backward arrow does nothing (1717).
 #[test]
 fn tabs_with_a_dead_backward_arrow_fail_the_roving_contract() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/tabs",
         Some(&swallow("ArrowLeft", "true")),
         "the backward arrow did not move",
@@ -1037,7 +880,7 @@ fn tabs_with_a_dead_backward_arrow_fail_the_roving_contract() {
 /// `Tabs` that take Ctrl+ArrowRight as their own arrow: `assert_chords_ignored` sees the move.
 #[test]
 fn tabs_moving_on_a_ctrl_chord_fail_the_chord_check() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/tabs",
         Some(
             "window.addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'ArrowRight') { \
@@ -1052,7 +895,7 @@ fn tabs_moving_on_a_ctrl_chord_fail_the_chord_check() {
 /// The same move a task after the key, as a dioxus render lands: the keyup's record still sees it (2066).
 #[test]
 fn tabs_moving_a_task_after_a_ctrl_chord_fail_the_chord_check() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/tabs",
         Some(
             "window.addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'ArrowRight') setTimeout(() => { \
@@ -1067,7 +910,7 @@ fn tabs_moving_a_task_after_a_ctrl_chord_fail_the_chord_check() {
 /// `Tabs` that cancel Meta+End: nothing moves, but the browser loses its chord.
 #[test]
 fn tabs_cancelling_a_meta_chord_fail_the_chord_check() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/tabs",
         Some(
             "window.addEventListener('keydown', e => { if (e.metaKey && e.key === 'End') \
@@ -1078,15 +921,14 @@ fn tabs_cancelling_a_meta_chord_fail_the_chord_check() {
     ));
 }
 
-async fn tree_contract(fixture: Fixture) -> (Fixture, anyhow::Result<()>) {
-    let result = crate::tree::WALK.assert_contract(&fixture.page).await;
-    (fixture, result)
+async fn tree_contract(page: &Page) -> anyhow::Result<()> {
+    crate::tree::WALK.assert_contract(page).await
 }
 
 /// `Tree` whose Right does not open a closed branch (1717).
 #[test]
 fn tree_with_a_dead_right_fails_the_expansion_check() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/tree",
         Some(&swallow("ArrowRight", "true")),
         "Right on the closed branch (row 0)",
@@ -1098,7 +940,7 @@ fn tree_with_a_dead_right_fails_the_expansion_check() {
 /// dioxus render does: a read straight after the press misses it (1710).
 #[test]
 fn tree_moving_off_a_leaf_on_right_fails_the_leaf_check() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/tree",
         Some(
             "window.addEventListener('keydown', e => { const row = document.activeElement; \
@@ -1112,21 +954,20 @@ fn tree_moving_off_a_leaf_on_right_fails_the_leaf_check() {
     ));
 }
 
-async fn select_contract(fixture: Fixture) -> (Fixture, anyhow::Result<()>) {
-    let result = Combobox {
+async fn select_contract(page: &Page) -> anyhow::Result<()> {
+    Combobox {
         trigger: crate::select::TRIGGER,
         option_count: 5,
         tab_budget: 10,
     }
-    .assert_contract(&fixture.page)
-    .await;
-    (fixture, result)
+    .assert_contract(page)
+    .await
 }
 
 /// `Select` whose End does nothing (1717).
 #[test]
 fn select_with_a_dead_end_fails_the_combobox_contract() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/select",
         Some(&swallow("End", "true")),
         "while pressing End, aria-activedescendant stayed on",
@@ -1137,7 +978,7 @@ fn select_with_a_dead_end_fails_the_combobox_contract() {
 /// `Select` whose Home does nothing (1717).
 #[test]
 fn select_with_a_dead_home_fails_the_combobox_contract() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/select",
         Some(&swallow("Home", "true")),
         "while pressing Home, aria-activedescendant stayed on",
@@ -1148,7 +989,7 @@ fn select_with_a_dead_home_fails_the_combobox_contract() {
 /// `Select` that cancels Ctrl+ArrowDown (1717).
 #[test]
 fn select_cancelling_a_ctrl_chord_fails_the_combobox_contract() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/select",
         Some(
             "window.addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'ArrowDown') \
@@ -1162,7 +1003,7 @@ fn select_cancelling_a_ctrl_chord_fails_the_combobox_contract() {
 /// `Select` whose Escape does not close the list (1717).
 #[test]
 fn select_ignoring_escape_fails_the_combobox_contract() {
-    block_on(must_fail(
+    block_on(selftest::must_fail(
         "/select",
         Some(&swallow("Escape", "true")),
         "to be hidden",

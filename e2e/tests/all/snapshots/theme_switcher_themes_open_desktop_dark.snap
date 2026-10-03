@@ -6,7 +6,7 @@ expression: tree
 group "Theme"
   button "Switch to the light theme"
   button "Choose a theme" [expanded] [haspopup=menu]
-menu "Choose a theme"
+menu "Choose a theme" [orientation=vertical]
   group "Themes"
     StaticText "Themes"
     menuitemradio "Libero" [checked]

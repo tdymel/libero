@@ -6,9 +6,14 @@ expression: tree
 LabelText
   StaticText "Code"
 group "Code" [invalid]
+  description "It expires in ten minutes. That code is wrong."
   textbox "Character 1 of 4" [invalid] [required]
+    description "It expires in ten minutes. That code is wrong."
   textbox "Character 2 of 4" [invalid] [required]
+    description "It expires in ten minutes. That code is wrong."
   textbox "Character 3 of 4" [invalid] [required]
+    description "It expires in ten minutes. That code is wrong."
   textbox "Character 4 of 4" [invalid] [required]
+    description "It expires in ten minutes. That code is wrong."
 StaticText "It expires in ten minutes."
 StaticText "That code is wrong."

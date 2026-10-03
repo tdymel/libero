@@ -188,7 +188,7 @@ fn tab_focus_shows_the_bubble_and_leaving_hides_it() {
         let fixture = Fixture::open("/tooltip", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
-        assert!(!wait::is_visible(page, BUBBLE).await.unwrap(), "at rest");
+        assert!(!wait::exists(page, OPEN).await.unwrap(), "at rest");
         keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
         wait::for_visible(page, BUBBLE).await.unwrap();
 
@@ -307,7 +307,7 @@ fn escape_closes_it_under_the_pointer_and_on_focus() {
         wait::for_hidden(page, BUBBLE).await.unwrap();
         settle(page).await;
         assert!(
-            !wait::is_visible(page, BUBBLE).await.unwrap(),
+            !wait::exists(page, OPEN).await.unwrap(),
             "the resting pointer opened it again"
         );
         pointer::move_to(page, AWAY).await.unwrap();
@@ -321,7 +321,7 @@ fn escape_closes_it_under_the_pointer_and_on_focus() {
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         wait::for_hidden(page, BUBBLE).await.unwrap();
         settle(page).await;
-        assert!(!wait::is_visible(page, BUBBLE).await.unwrap(), "reopened");
+        assert!(!wait::exists(page, OPEN).await.unwrap(), "reopened");
         let focused: bool = js(
             page,
             "document.activeElement === document.querySelector('#save')",

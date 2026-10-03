@@ -8,27 +8,30 @@ paragraph
 group "Silence"
   Video
   group "Player controls"
-    slider "Seek" = 0 [valuemax=4] [valuemin=0]
-    button "Play"
-    button "Mute"
+    slider "Seek" = 0 [orientation=horizontal] [valuemax=4] [valuemin=0]
+      description "0:00 of 0:04"
+    button "Play" [keyshortcuts=K]
+    button "Mute" [keyshortcuts=M]
     button "Volume" [expanded=false] [haspopup=dialog]
-    button "Captions" [pressed=false]
+    button "Captions" [keyshortcuts=C] [pressed=false]
     button "Playback speed 1×" [expanded=false] [haspopup=menu]
       StaticText "1×"
-    button "Fullscreen"
+    button "Fullscreen" [keyshortcuts=F]
   status [atomic] [live=polite]
 group "Plain"
   Video
   group "Player controls"
-    slider "Seek" = 0 [valuemax=4] [valuemin=0]
-    button "Play"
-    button "Mute"
+    slider "Seek" = 0 [orientation=horizontal] [valuemax=4] [valuemin=0]
+      description "0:00 of 0:04"
+    button "Play" [keyshortcuts=K]
+    button "Mute" [keyshortcuts=M]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Captions" [disabled] [pressed=false]
+      description "No captions for this video"
     StaticText "No captions for this video"
     button "Playback speed 1×" [expanded=false] [haspopup=menu]
       StaticText "1×"
-    button "Fullscreen"
+    button "Fullscreen" [keyshortcuts=F]
   status [atomic] [live=polite]
 tooltip "Play K"
   StaticText "Play"

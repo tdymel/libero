@@ -7,11 +7,11 @@ LabelText
   StaticText "Topics"
 StaticText "rust"
 button "Remove rust"
-combobox "Topics" [expanded] [haspopup=listbox]
+combobox "Topics" [autocomplete=list] [expanded] [haspopup=listbox]
 status [atomic] [live=polite]
 status [atomic] [live=polite]
 status [atomic] [live=polite]
-listbox "Topics"
+listbox "Topics" [orientation=vertical]
   option "dioxus" [selected]
     StaticText "dioxus"
   option "wasm" [selected=false]

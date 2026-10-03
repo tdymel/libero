@@ -7,6 +7,7 @@ button "Inspector"
   StaticText "Inspector"
 dialog "Inspector"
   group "Move window"
+    description "Use arrow keys to move the window"
     heading "Inspector" [level=2]
       StaticText "Inspector"
   button "Window menu" [expanded=false] [haspopup=menu]
@@ -22,4 +23,4 @@ dialog "Inspector"
     StaticText "Drag the title bar, or focus it and use the arrow keys."
   button "Done"
     StaticText "Done"
-  separator "Resize window" = 378 [valuemax=480] [valuemin=240]
+  separator "Resize window" = 378 [orientation=horizontal] [valuemax=480] [valuemin=240]

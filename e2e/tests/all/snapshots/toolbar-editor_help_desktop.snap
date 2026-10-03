@@ -3,7 +3,7 @@ source: e2e/src/suite.rs
 description: toolbar-editor at desktop (help)
 expression: tree
 ---
-toolbar "Formatting"
+toolbar "Formatting" [orientation=horizontal]
   button "Bold"
     StaticText "Bold"
   button "Italic"

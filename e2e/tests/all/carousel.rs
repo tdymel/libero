@@ -177,13 +177,13 @@ fn slide_content_keeps_its_own_keys() {
     block_on(async {
         let fixture = Fixture::open("/carousel", Viewport::Desktop).await.unwrap();
 
-        the_caret_moves_in_a_slides_text_field(&fixture)
+        the_caret_moves_in_a_slides_text_field(&fixture.page)
             .await
             .unwrap();
-        the_slider_in_a_slide_takes_the_arrows(&fixture)
+        the_slider_in_a_slide_takes_the_arrows(&fixture.page)
             .await
             .unwrap();
-        a_raw_range_in_a_slide_steps(&fixture).await.unwrap();
+        a_raw_range_in_a_slide_steps(&fixture.page).await.unwrap();
         a_raw_radio_pair_in_a_slide_moves(&fixture).await.unwrap();
 
         // Last: it is the one press that does move the strip, and everything
@@ -201,8 +201,7 @@ fn slide_content_keeps_its_own_keys() {
 }
 
 /// `typing_target`: the browser moves the caret, and nothing marks the press.
-pub async fn the_caret_moves_in_a_slides_text_field(fixture: &Fixture) -> Result<()> {
-    let page = &fixture.page;
+pub async fn the_caret_moves_in_a_slides_text_field(page: &Page) -> Result<()> {
     reach(page, TEXT).await?;
     // Tab selects the input's text, so Home gives the caret a position; Home is a
     // carousel key too, so this press is already under test.
@@ -223,8 +222,7 @@ pub async fn the_caret_moves_in_a_slides_text_field(fixture: &Fixture) -> Result
 
 /// `key_taken`: `Slider` acts on the arrow and prevents its default, which is
 /// how every libero control marks a key as taken.
-pub async fn the_slider_in_a_slide_takes_the_arrows(fixture: &Fixture) -> Result<()> {
-    let page = &fixture.page;
+pub async fn the_slider_in_a_slide_takes_the_arrows(page: &Page) -> Result<()> {
     reach(page, SLIDER).await?;
 
     let value = format!("document.querySelector({SLIDER:?}).getAttribute('aria-valuenow')");
@@ -240,8 +238,7 @@ pub async fn the_slider_in_a_slide_takes_the_arrows(fixture: &Fixture) -> Result
 
 /// `arrow_target`, first shape: raw HTML the browser steps although nothing
 /// about it is text entry, so no other arm can see it.
-pub async fn a_raw_range_in_a_slide_steps(fixture: &Fixture) -> Result<()> {
-    let page = &fixture.page;
+pub async fn a_raw_range_in_a_slide_steps(page: &Page) -> Result<()> {
     reach(page, RANGE).await?;
 
     let value = format!("document.querySelector({RANGE:?}).value");
@@ -654,6 +651,7 @@ fn hover_only_pauses() {
             .await
             .unwrap();
         let page = &fixture.page;
+        hold_rotation(page).await;
         instant_scroll(page).await;
         let live = "document.querySelector('[aria-roledescription=carousel] [role=status]')\
                     .getAttribute('aria-live')";
@@ -661,13 +659,10 @@ fn hover_only_pauses() {
         wait::for_js_true(page, &format!("{live} === 'polite'"), "hover to pause")
             .await
             .unwrap();
-        pointer::hover(page, "#before").await.unwrap();
         let held = index(page).await.unwrap();
-        wait::until("autoplay to resume once the pointer left", || async move {
-            Ok(index(page).await? != held)
-        })
-        .await
-        .unwrap();
+        assert_stopped(page, held, "rotated while hovered").await;
+        pointer::hover(page, "#before").await.unwrap();
+        rotates(page, held, "autoplay to resume once the pointer left").await;
         assert_pressed(page, "false", "hover").await;
         fixture.console.assert_clean("hover").unwrap();
         fixture.close().await.unwrap();

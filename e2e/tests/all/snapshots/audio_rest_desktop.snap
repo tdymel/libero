@@ -5,18 +5,20 @@ expression: tree
 ---
 group "Silence"
   group "Player controls"
-    button "Play"
-    slider "Seek" = 0 [valuemax=4] [valuemin=0]
-    button "Mute"
+    button "Play" [keyshortcuts=K]
+    slider "Seek" = 0 [orientation=horizontal] [valuemax=4] [valuemin=0]
+      description "0:00 of 0:04"
+    button "Mute" [keyshortcuts=M]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
   status [atomic] [live=polite]
 group "Broken"
   group "Player controls"
-    button "Play"
-    slider "Seek" = 0 [disabled] [valuemax=1] [valuemin=0]
-    button "Mute"
+    button "Play" [keyshortcuts=K]
+    slider "Seek" = 0 [disabled] [orientation=horizontal] [valuemax=1] [valuemin=0]
+      description "0:00 of --:--"
+    button "Mute" [keyshortcuts=M]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
@@ -25,27 +27,30 @@ group "Broken"
   status [atomic] [live=polite]
 group "Muted"
   group "Player controls"
-    button "Play"
-    slider "Seek" = 0 [valuemax=4] [valuemin=0]
-    button "Unmute"
+    button "Play" [keyshortcuts=K]
+    slider "Seek" = 0 [orientation=horizontal] [valuemax=4] [valuemin=0]
+      description "0:00 of 0:04"
+    button "Unmute" [keyshortcuts=M]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
   status [atomic] [live=polite]
 group "Right to left"
   group "Player controls"
-    button "Play"
-    slider "Seek" = 0 [valuemax=4] [valuemin=0]
-    button "Mute"
+    button "Play" [keyshortcuts=K]
+    slider "Seek" = 0 [orientation=horizontal] [valuemax=4] [valuemin=0]
+      description "0:00 of 0:04"
+    button "Mute" [keyshortcuts=M]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"
   status [atomic] [live=polite]
 group "Inline"
   group "Player controls"
-    button "Play"
-    slider "Seek" = 0 [valuemax=4] [valuemin=0]
-    button "Mute"
+    button "Play" [keyshortcuts=K]
+    slider "Seek" = 0 [orientation=horizontal] [valuemax=4] [valuemin=0]
+      description "0:00 of 0:04"
+    button "Mute" [keyshortcuts=M]
     button "Volume" [expanded=false] [haspopup=dialog]
     button "Playback speed 1×"
       StaticText "1×"

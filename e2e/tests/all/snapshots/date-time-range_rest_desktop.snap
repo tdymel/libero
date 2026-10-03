@@ -3,7 +3,7 @@ source: e2e/src/suite.rs
 description: date-time-range at desktop (rest)
 expression: tree
 ---
-tablist "Dates and times"
+tablist "Dates and times" [orientation=horizontal]
   tab "Dates" [selected]
     StaticText "Dates"
   tab "Start time" [selected=false]

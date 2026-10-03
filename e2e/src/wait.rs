@@ -164,17 +164,22 @@ pub async fn for_selector(page: &Page, selector: &str) -> Result<()> {
 
 /// `for_selector` under a journal kind, e.g. `fixture-ready` (todo 364).
 pub async fn for_selector_kind(kind: &'static str, page: &Page, selector: &str) -> Result<()> {
-    until_kind(kind, &format!("selector {selector}"), || async {
-        let found: bool = page
-            .evaluate(format!(
-                "!!document.querySelector({})",
-                serde_json::to_string(selector)?
-            ))
-            .await?
-            .into_value()?;
-        Ok(found)
+    until_kind(kind, &format!("selector {selector}"), || {
+        exists(page, selector)
     })
     .await
+}
+
+/// Whether `selector` matches right now. A negative check reads this on a state selector,
+/// not `!is_visible`, which a card opened at opacity 0 passes (1719).
+pub async fn exists(page: &Page, selector: &str) -> Result<bool> {
+    Ok(page
+        .evaluate(format!(
+            "!!document.querySelector({})",
+            serde_json::to_string(selector)?
+        ))
+        .await?
+        .into_value()?)
 }
 
 /// Waits for an element to be visible, not just present: a popover stays
@@ -186,7 +191,8 @@ pub async fn for_visible(page: &Page, selector: &str) -> Result<()> {
     .await
 }
 
-/// Whether `selector` is visible right now, by `for_visible`'s definition.
+/// Whether `selector` is visible right now, by `for_visible`'s definition. Not the
+/// negation of `for_hidden`: opacity 0 and an empty box count as neither.
 pub async fn is_visible(page: &Page, selector: &str) -> Result<bool> {
     Ok(page
         .evaluate(format!(

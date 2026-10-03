@@ -9,7 +9,7 @@ paragraph
   StaticText "false"
 button "View" [expanded] [haspopup=menu]
   StaticText "View"
-menu "View"
+menu "View" [orientation=vertical]
   group "Sort by"
     StaticText "Sort by"
     menuitemradio "Name" [checked]
@@ -18,11 +18,11 @@ menu "View"
       StaticText "Date"
     menuitemradio "Size" [checked=false]
       StaticText "Size"
-  separator
-  menuitemcheckbox "Show grid" [checked=false]
+  separator [orientation=horizontal]
+  menuitemcheckbox "Show grid" [checked=false] [keyshortcuts=Control+G]
     StaticText "Show grid"
   menuitem "Export every selected row as a comma separated values file"
     StaticText "Export every selected row as a comma separated values file"
-  menuitem "Print" [disabled]
+  menuitem "Print" [disabled] [keyshortcuts=Control+P]
     StaticText "Print"
 --> aria-controls [id="lsx-N-menu"] (rendered above)

@@ -12,8 +12,9 @@ button "Clear Fruit"
 status [atomic] [live=polite]
 StaticText "You can swap it until Friday."
 StaticText "Pick a fruit."
-combobox "Fruit" [expanded] [haspopup=listbox] [invalid] [required]
-listbox "Fruit"
+combobox "Fruit" [autocomplete=list] [expanded] [haspopup=listbox] [invalid] [required]
+  description "Delivered with your next box. You can swap it until Friday. Pick a fruit."
+listbox "Fruit" [orientation=vertical]
   group "Orchard"
     StaticText "Orchard"
     option "Apple" [selected=false]

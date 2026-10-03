@@ -168,6 +168,13 @@ fn render(
                 .unwrap_or_else(|| v.to_string())
         })
         .filter(|v| !v.is_empty());
+    let description = node
+        .description
+        .as_ref()
+        .and_then(|v| v.value.as_ref())
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|v| !v.is_empty());
 
     let mut states = states(node);
     if let Some(token) = node.backend_dom_node_id.and_then(|id| current.get(&id)) {
@@ -177,7 +184,12 @@ fn render(
 
     // A bare `generic` says nothing to AT, and Chrome versions disagree on
     // which wrappers they expose (an `overflow: hidden` div), so it is flattened.
-    if role == "generic" && name.is_empty() && value.is_none() && states.is_empty() {
+    if role == "generic"
+        && name.is_empty()
+        && value.is_none()
+        && description.is_none()
+        && states.is_empty()
+    {
         for child in node.child_ids.iter().flatten() {
             if let Some(child) = by_id.get(child) {
                 render(child, by_id, current, depth, out);
@@ -198,6 +210,11 @@ fn render(
         out.push_str(&format!(" [{state}]"));
     }
     out.push('\n');
+    // A detached error text changes no state, only the description (1798).
+    if let Some(description) = description {
+        out.push_str(&"  ".repeat(depth + 1));
+        out.push_str(&format!("description \"{description}\"\n"));
+    }
 
     for child in node.child_ids.iter().flatten() {
         if let Some(child) = by_id.get(child) {
@@ -230,6 +247,10 @@ fn states(node: &AxNode) -> Vec<String> {
         "modal",
         "readonly",
         "multiselectable",
+        "orientation",
+        "autocomplete",
+        "roledescription",
+        "keyshortcuts",
     ];
 
     let mut out = Vec::new();
@@ -294,7 +315,7 @@ async fn current_by_node(page: &Page) -> Result<HashMap<BackendNodeId, String>> 
     Ok(out)
 }
 
-/// The computed accessible description of `selector`, or `""`. The snapshot leaves descriptions out.
+/// The computed accessible description of `selector`, or `""`.
 pub async fn description(page: &Page, selector: &str) -> Result<String> {
     let backend_id = backend_node_id(page, selector).await?;
     let nodes = page

@@ -3,7 +3,7 @@ source: e2e/src/suite.rs
 description: tree-open at desktop (open)
 expression: tree
 ---
-tree "Project files"
+tree "Project files" [orientation=vertical]
   treeitem "src" [expanded] [level=1] [selected=false]
     button "src"
       StaticText "src"

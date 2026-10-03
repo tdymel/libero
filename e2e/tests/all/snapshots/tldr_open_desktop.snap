@@ -7,7 +7,7 @@ heading "A page" [level=1]
   StaticText "A page"
 button "TLDR" [expanded] [haspopup=menu]
   StaticText "TLDR"
-menu "TLDR"
+menu "TLDR" [orientation=vertical]
   group "Summarize with"
     StaticText "Summarize with"
     menuitem "ChatGPT (opens in a new tab)"

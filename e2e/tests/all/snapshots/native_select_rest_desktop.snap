@@ -7,6 +7,7 @@ LabelText
   StaticText "Fruit"
 StaticText "For the smoothie."
 combobox "Fruit" = Pick one [expanded=false] [haspopup=menu] [invalid]
+  description "For the smoothie. One per order. Fruit needed"
   MenuListPopup
     option "Pick one" [disabled]
     option "Apple" [selected=false]
@@ -49,6 +50,7 @@ LabelText
   StaticText "Notes"
 StaticText "Anything the team should know."
 textbox "Notes" [required]
+  description "Anything the team should know. Markdown is not rendered."
 StaticText "Markdown is not rendered."
 LabelText
   StaticText "Terms"

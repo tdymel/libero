@@ -8,24 +8,28 @@ button "Before"
 list
   listitem [level=1]
     button "Reorder Alpha"
+      description "Use the move buttons to reorder the item."
     paragraph
       StaticText "Alpha"
     button "Move Alpha up" [disabled]
     button "Move Alpha down"
   listitem [level=1]
     button "Reorder Beta"
+      description "Use the move buttons to reorder the item."
     paragraph
       StaticText "Beta"
     button "Move Beta up"
     button "Move Beta down"
   listitem [level=1]
     button "Reorder Gamma"
+      description "Use the move buttons to reorder the item."
     paragraph
       StaticText "Gamma"
     button "Move Gamma up"
     button "Move Gamma down"
   listitem [level=1]
     button "Reorder Delta"
+      description "Use the move buttons to reorder the item."
     paragraph
       StaticText "Delta"
     button "Move Delta up"

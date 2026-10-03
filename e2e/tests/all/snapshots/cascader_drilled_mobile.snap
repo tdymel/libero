@@ -10,7 +10,7 @@ status [atomic] [live=polite]
 paragraph
 button "Back to Europe"
   StaticText "Europe"
-listbox "Europe"
+listbox "Europe" [orientation=vertical]
   option "France" [selected]
     StaticText "France"
   option "Germany" [selected=false]
