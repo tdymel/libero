@@ -20,8 +20,38 @@ pub(super) struct ContentOffsets {
     pub trailing: f64,
 }
 
+/// Assumed before the `ScrollArea` measured itself (first and server renders):
+/// a 1080p screen, so no blank rows on first paint at any common height.
+pub(super) const UNMEASURED: ScrollGeometry = ScrollGeometry {
+    offset: 0.0,
+    viewport: 1080.0,
+};
+
+/// What a settled `Virtualize` windows by: with the geometry, its rows and offsets.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct WindowSpec {
+    pub count: usize,
+    pub pitch: f64,
+    pub overscan: usize,
+    pub keep: Option<usize>,
+}
+
+impl WindowSpec {
+    /// The window at `geometry`, and where the kept row renders when outside it.
+    pub fn at(self, geometry: Option<ScrollGeometry>) -> (Window, Option<(usize, bool)>) {
+        let mut visible = window(
+            self.count,
+            self.pitch,
+            geometry.unwrap_or(UNMEASURED),
+            self.overscan,
+        );
+        let kept = keep_beside(&mut visible, self.keep, self.count, self.pitch);
+        (visible, kept)
+    }
+}
+
 /// The private contract between `ScrollArea` and `Virtualize`: geometry down,
-/// offsets back up.
+/// the window's spec back up.
 #[derive(Clone)]
 pub(super) struct ScrollViewport {
     /// The box holding the rows; unlike the container's, its height isn't
@@ -29,7 +59,9 @@ pub(super) struct ScrollViewport {
     pub content: ElementHandle,
     /// `None` until the first measurement lands.
     pub geometry: Signal<Option<ScrollGeometry>>,
-    pub offsets: Signal<ContentOffsets>,
+    /// The content box pads itself from it and the geometry, in the rows' render
+    /// pass: offsets handed up by an effect lagged a whole fling behind (todo 2013).
+    pub spec: Signal<Option<WindowSpec>>,
     /// Set by a `Virtualize`: the content box becomes a real box for the offsets.
     pub virtualized: Signal<bool>,
     // Not a signal: claimed in a child's first render, where dirtying the area
@@ -41,13 +73,13 @@ impl ScrollViewport {
     pub fn new(
         content: ElementHandle,
         geometry: Signal<Option<ScrollGeometry>>,
-        offsets: Signal<ContentOffsets>,
+        spec: Signal<Option<WindowSpec>>,
         virtualized: Signal<bool>,
     ) -> Self {
         Self {
             content,
             geometry,
-            offsets,
+            spec,
             virtualized,
             claimed: Rc::new(Cell::new(false)),
         }
@@ -173,6 +205,28 @@ mod tests {
         };
 
         assert_eq!(window(1000, 20.0, geometry, 2).range, 18..28);
+    }
+
+    /// The content box and the rows derive the same window from one spec and geometry.
+    #[test]
+    fn a_spec_windows_at_the_geometry_and_keeps_its_row_beside() {
+        let spec = WindowSpec {
+            count: 1000,
+            pitch: 20.0,
+            overscan: 2,
+            keep: Some(3),
+        };
+        let geometry = ScrollGeometry {
+            offset: 400.0,
+            ..GEOMETRY
+        };
+        let (window, kept) = spec.at(Some(geometry));
+
+        assert_eq!(window.range, 18..28);
+        assert_eq!(window.offsets.leading, 17.0 * 20.0);
+        assert_eq!(kept, Some((3, true)));
+        // Unmeasured: 1080px of 20px rows, a partial row and the overscan.
+        assert_eq!(spec.at(None).0.range, 0..57);
     }
 
     /// Nothing to overscan into above the first row.

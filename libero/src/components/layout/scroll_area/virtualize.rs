@@ -1,8 +1,6 @@
 use dioxus::{core::DynamicValues, prelude::*};
 
-use super::viewport::{
-    ContentOffsets, ScrollGeometry, ScrollViewport, Window, keep_beside, probed_pitch, window,
-};
+use super::viewport::{ContentOffsets, ScrollViewport, Window, WindowSpec, probed_pitch};
 use crate::{hooks::use_theme, platform::ElementApi, utils::warn};
 
 /// Rows in the second probe render: enough to weigh the gap, cheap on a short list.
@@ -11,13 +9,6 @@ const PROBE_ROWS: usize = 8;
 /// A zero came too early (still `display: contents`); each retry costs a frame,
 /// giving up renders every row.
 const PROBE_ATTEMPTS: usize = 8;
-
-/// Assumed before the `ScrollArea` measured itself (first and server renders):
-/// a 1080p screen, so no blank rows on first paint at any common height.
-const UNMEASURED: ScrollGeometry = ScrollGeometry {
-    offset: 0.0,
-    viewport: 1080.0,
-};
 
 /// The row a `Virtualize` keeps out of its window and the slot its box sits at,
 /// beside the window: for a row that translates itself to a slot (todo 1408).
@@ -162,17 +153,21 @@ pub fn Virtualize(
         .as_ref()
         .and_then(|viewport| *viewport.geometry.read());
     let mut kept = None;
-    let visible = match (owned, stage, geometry) {
+    let spec = match (owned, stage) {
+        (true, Probe::Settled(Some(pitch))) => Some(WindowSpec {
+            count,
+            pitch,
+            overscan: overscan.unwrap_or(theme.scroll_area.overscan),
+            keep: keep_rendered,
+        }),
+        _ => None,
+    };
+    let visible = match (owned, stage, spec) {
         // Don't wait for a measurement: server renders never get one, and
         // waiting rendered every row.
-        (true, Probe::Settled(Some(pitch)), geometry) => {
-            let mut visible = window(
-                count,
-                pitch,
-                geometry.unwrap_or(UNMEASURED),
-                overscan.unwrap_or(theme.scroll_area.overscan),
-            );
-            kept = keep_beside(&mut visible, keep_rendered, count, pitch);
+        (_, _, Some(spec)) => {
+            let (visible, beside) = spec.at(geometry);
+            kept = beside;
             visible
         }
         // Still probing: render just enough to measure, for one frame.
@@ -188,13 +183,12 @@ pub fn Virtualize(
 
     // Handed up rather than drawn here: spacer elements would have to guess a
     // tag legal inside whatever list wraps these rows.
-    let offsets = visible.offsets;
-    let mut reserved = viewport.as_ref().map(|viewport| viewport.offsets);
-    use_effect(use_reactive!(|offsets| {
-        if let (Some(reserved), true) = (reserved.as_mut(), owned)
-            && *reserved.peek() != offsets
+    let mut handed = viewport.as_ref().map(|viewport| viewport.spec);
+    use_effect(use_reactive!(|spec| {
+        if let (Some(handed), true) = (handed.as_mut(), owned)
+            && *handed.peek() != spec
         {
-            reserved.set(offsets);
+            handed.set(spec);
         }
     }));
 

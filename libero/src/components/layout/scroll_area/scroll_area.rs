@@ -6,7 +6,7 @@ use super::{
     handle::{ScrollAreaHandle, inline_x, scroll_to_percent},
     keys::scroll_on_key,
     scrollbars::{DrawnBars, ScrollAreaBars, ScrollMetrics},
-    viewport::{ContentOffsets, ScrollGeometry, ScrollViewport},
+    viewport::{ContentOffsets, ScrollGeometry, ScrollViewport, WindowSpec},
 };
 use crate::{
     components::{
@@ -389,9 +389,12 @@ fn ScrollAreaContent(content: ElementHandle, children: Element) -> Element {
     let viewport = use_context::<ScrollViewport>();
     // Unvirtualized content is `display: contents` and reserves nothing.
     let (states, variables): (Input<States>, Input<Variables>) = if (viewport.virtualized)() {
+        let offsets = (viewport.spec)()
+            .map(|spec| spec.at((viewport.geometry)()).0.offsets)
+            .unwrap_or_default();
         (
             States::default().with("virtualized", true).into(),
-            scroll_area_content_variables((viewport.offsets)()).into(),
+            scroll_area_content_variables(offsets).into(),
         )
     } else {
         (Input::None, Input::None)
@@ -507,9 +510,9 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let edges = use_signal(|| EdgeState::AT_ORIGIN);
 
     let mut geometry = use_signal(|| None::<ScrollGeometry>);
-    let offsets = use_signal(ContentOffsets::default);
+    let spec = use_signal(|| None::<WindowSpec>);
     let virtualized = use_signal(|| false);
-    use_context_provider(|| ScrollViewport::new(content, geometry, offsets, virtualized));
+    use_context_provider(|| ScrollViewport::new(content, geometry, spec, virtualized));
     // A `Virtualize` child needs the height before any scroll and on every resize.
     let measure = move || {
         if root.is_mounted() {

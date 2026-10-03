@@ -1,4 +1,9 @@
-use std::{future::Future, pin::Pin, rc::Rc};
+use std::{
+    future::{Future, poll_fn},
+    pin::Pin,
+    rc::Rc,
+    task::Poll,
+};
 
 use dioxus::prelude::MountedData;
 
@@ -121,6 +126,52 @@ pub struct Dimensions {
 /// Start the read in the event handler, await it anywhere: under Blitz a read
 /// made inside a `spawn` fails, the document is locked while tasks drain.
 pub type Read<T> = Pin<Box<dyn Future<Output = Result<T, PlatformError>>>>;
+
+/// Awaits every future at once: a WebView read starts only when polled, so
+/// awaiting many one by one costs a round-trip each (todo 2018).
+pub(crate) async fn join_all<F: Future>(futures: impl IntoIterator<Item = F>) -> Vec<F::Output> {
+    let mut futures: Vec<_> = futures.into_iter().map(Box::pin).collect();
+    let mut outs: Vec<Option<F::Output>> = futures.iter().map(|_| None).collect();
+    poll_fn(|cx| {
+        let mut done = true;
+        let slots = futures.iter_mut().zip(outs.iter_mut());
+        for (future, out) in slots.filter(|(_, out)| out.is_none()) {
+            match future.as_mut().poll(cx) {
+                Poll::Ready(value) => *out = Some(value),
+                Poll::Pending => done = false,
+            }
+        }
+        if done { Poll::Ready(()) } else { Poll::Pending }
+    })
+    .await;
+    outs.into_iter().flatten().collect()
+}
+
+/// [`join_all`] for two futures of different outputs.
+pub(crate) async fn join<A: Future, B: Future>(a: A, b: B) -> (A::Output, B::Output) {
+    let (mut a, mut b) = (Box::pin(a), Box::pin(b));
+    let (mut left, mut right) = (None, None);
+    poll_fn(|cx| {
+        if left.is_none()
+            && let Poll::Ready(value) = a.as_mut().poll(cx)
+        {
+            left = Some(value);
+        }
+        if right.is_none()
+            && let Poll::Ready(value) = b.as_mut().poll(cx)
+        {
+            right = Some(value);
+        }
+        if left.is_some()
+            && right.is_some()
+            && let Some(both) = left.take().zip(right.take())
+        {
+            return Poll::Ready(both);
+        }
+        Poll::Pending
+    })
+    .await
+}
 
 /// One element, reached through [`use_element`](crate::hooks::use_element) or a
 /// scoped query, never stored. What a renderer can't serve is `Unsupported`.

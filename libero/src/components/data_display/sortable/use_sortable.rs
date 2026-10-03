@@ -239,7 +239,7 @@ fn start_reads(items: &[MountedItem]) -> Reads {
 
 /// A node's span along the flow, `None` when a read failed.
 async fn node_span((offset, size): NodeRead, vertical: bool, flipped: bool) -> Option<Span> {
-    let (Ok((x, y)), Ok(size)) = (offset.await, size.await) else {
+    let (Ok((x, y)), Ok(size)) = platform::join(offset, size).await else {
         return None;
     };
     Some(match (vertical, flipped) {
@@ -260,20 +260,20 @@ async fn node_span((offset, size): NodeRead, vertical: bool, flipped: bool) -> O
 
 /// The spans along the flow, each item's up to its extent's far edge; `None` when a read failed.
 async fn spans(reads: Reads, vertical: bool, flipped: bool) -> Option<Vec<Span>> {
-    let mut spans = Vec::with_capacity(reads.len());
-    for (item, extent) in reads {
-        let mut span = node_span(item, vertical, flipped).await?;
-        if let Some(extent) = extent {
-            let extent = node_span(extent, vertical, flipped).await?;
-            let start = span.start.min(extent.start);
-            span = Span {
-                start,
-                size: span.end().max(extent.end()) - start,
-            };
-        }
-        spans.push(span);
-    }
-    Some(spans)
+    let spans = reads.into_iter().map(|(item, extent)| async move {
+        let item = node_span(item, vertical, flipped);
+        let Some(extent) = extent else {
+            return item.await;
+        };
+        let (span, extent) = platform::join(item, node_span(extent, vertical, flipped)).await;
+        let (span, extent) = (span?, extent?);
+        let start = span.start.min(extent.start);
+        Some(Span {
+            start,
+            size: span.end().max(extent.end()) - start,
+        })
+    });
+    platform::join_all(spans).await.into_iter().collect()
 }
 
 /// Where a drag's spans come from.

@@ -69,6 +69,129 @@ fn a_taller_pane_renders_rows_to_its_new_bottom() {
     });
 }
 
+/// Scrolls the list 60px a frame for 40 frames, as a fling does, and returns the
+/// most px of the pane no row covered in any frame after the first three.
+const FLING_BLANK: &str = r#"(async () => {
+    const pane = document.querySelector('#list-pane');
+    const area = [...pane.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 100);
+    const frame = () => new Promise(requestAnimationFrame);
+    let worst = 0;
+    for (let i = 0; i < 40; i++) {
+        area.scrollTop += 60;
+        await frame();
+        const view = area.getBoundingClientRect();
+        const rows = [...pane.querySelectorAll('[data-row]')].map(r => r.getBoundingClientRect());
+        const top = Math.min(...rows.map(r => r.top)), bottom = Math.max(...rows.map(r => r.bottom));
+        const blank = Math.max(0, top - view.top) + Math.max(0, view.bottom - bottom);
+        if (i >= 3) worst = Math.max(worst, Math.min(blank, view.height));
+    }
+    return worst;
+})()"#;
+
+/// Todo 2013: the padding standing in for the rows above the window follows every
+/// scroll step. It came up through an effect, which a fling starved: the rows drifted off.
+#[test]
+fn rows_stay_in_view_through_a_fling() {
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, &format!("{LAST_ROW} < 29"), "the measured window")
+            .await
+            .unwrap();
+
+        let blank: f64 = page
+            .evaluate(FLING_BLANK)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        // A row's pitch of slack for a frame the window trails by.
+        assert!(blank <= 20.0, "{blank}px of the 120px pane showed no row");
+
+        fixture.console.assert_clean("a fling").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The list's scrolling box, and the lowest row index it has in the document.
+#[cfg_attr(not(feature = "android"), allow(dead_code))]
+const AREA: &str = "[...document.querySelectorAll('#list-pane *')].find(e => e.scrollHeight > e.clientHeight + 100)";
+#[cfg_attr(not(feature = "android"), allow(dead_code))]
+const FIRST_ROW: &str = "Math.min(...[...document.querySelectorAll('#list-pane [data-row]')].map(r => Number(r.dataset.row)))";
+
+/// Samples each frame's leading padding of the list's content box while the list scrolls.
+#[cfg_attr(not(feature = "android"), allow(dead_code))]
+const SAMPLE_LEADING: &str = r#"(() => {
+    const pane = document.querySelector('#list-pane');
+    const area = [...pane.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 100);
+    const S = window.__leading = {frames: [], on: true};
+    const tick = () => {
+        if (!S.on) return;
+        const box = area.querySelector('[style*="scroll-area-leading"]');
+        S.frames.push([area.scrollTop, box ? box.style.getPropertyValue('--lsx-scroll-area-leading') : '']);
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+})()"#;
+
+/// Todo 2013 on a touch fling in the WebView, where the effect handing the padding up
+/// starved: the padding froze and the list rocked between rows without coming to rest.
+mod the_window_follows_a_touch_fling {
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        use super::{AREA, FIRST_ROW};
+        use e2e::driver::{Android, Driver};
+        use e2e::wait;
+
+        e2e::android::block_on(async {
+            let mut driver = Android::open("/scroll-area").await.unwrap();
+            let page = driver.page().clone();
+            // Mid-list, so every window step moves the padding; a drag is held to the pane.
+            page.evaluate(format!("{AREA}.scrollTop = 10000"))
+                .await
+                .unwrap();
+            wait::for_js_true(&page, &format!("{FIRST_ROW} > 400"), "the window mid-list")
+                .await
+                .unwrap();
+            page.evaluate(super::SAMPLE_LEADING).await.unwrap();
+            driver.drag("#list-pane", 0.0, -120.0).await.unwrap();
+            e2e::driver::eventually(&mut driver, "the list to come to rest", async |_| {
+                let frames: Vec<(f64, String)> = page
+                    .evaluate("window.__leading.frames.slice(-10)")
+                    .await?
+                    .into_value()?;
+                Ok(frames.len() == 10 && frames.iter().all(|f| f.0 == frames[0].0))
+            })
+            .await
+            .unwrap();
+            let frames: Vec<(f64, String)> = page
+                .evaluate("(() => { __leading.on = false; return __leading.frames })()")
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let (start, end) = (frames[0].0, frames.last().unwrap().0);
+            let moving: Vec<&String> = frames
+                .iter()
+                .filter(|f| f.0 > start && f.0 < end)
+                .map(|f| &f.1)
+                .collect();
+            let mut paddings = moving.clone();
+            paddings.dedup();
+            assert!(
+                moving.len() >= 5 && paddings.len() >= 3,
+                "{} moving frames saw {} leading paddings: {paddings:?}",
+                moving.len(),
+                paddings.len()
+            );
+            driver.finish("scroll_area").await.unwrap();
+        });
+    }
+}
+
 /// The `#region` area's scrollbar thumb colour, as the `thumb` of [`thumb_contrast`].
 const REGION_THUMB: &str = "getComputedStyle(document.querySelector('#region')).scrollbarColor";
 

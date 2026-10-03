@@ -122,7 +122,8 @@ fn read(node: &Rc<MountedData>) -> Reading {
 }
 
 async fn rect((offset, size): Reading) -> Option<Rect> {
-    let ((x, y), size) = (offset.await.ok()?, size.await.ok()?);
+    let (offset, size) = platform::join(offset, size).await;
+    let ((x, y), size) = (offset.ok()?, size.ok()?);
     Some(Rect {
         x,
         y,
@@ -246,9 +247,19 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
         );
         spawn(async move {
             let (board, content, scroll) = board_reads;
-            let board = rect(board).await;
-            let content = content.await.map_or(0.0, |size| size.width);
-            let scroll = scroll.await.unwrap_or_default();
+            // Every read at once: one round-trip on a WebView, not one per card (todo 2018).
+            let lanes_read = platform::join_all(list_reads.into_iter().zip(card_reads).map(
+                |(list, column)| {
+                    platform::join(rect(list), platform::join_all(column.into_iter().map(rect)))
+                },
+            ));
+            let ((board, (content, scroll)), lanes_read) = platform::join(
+                platform::join(rect(board), platform::join(content, scroll)),
+                lanes_read,
+            )
+            .await;
+            let content = content.map_or(0.0, |size| size.width);
+            let scroll = scroll.unwrap_or_default();
             // A board that fits has nothing to scroll: no ticks.
             let board = board.filter(|board| content > board.width + 0.5);
             let most = board.map_or(0.0, |board| content - board.width);
@@ -257,14 +268,9 @@ pub(super) fn use_board_drag(options: BoardDragOptions) -> BoardDrag {
                 true => (-most, 0.0),
                 false => (0.0, most),
             };
-            let mut lanes = Vec::with_capacity(list_reads.len());
-            for (list, column) in list_reads.into_iter().zip(card_reads) {
-                let mut cards = Vec::with_capacity(column.len());
-                for card in column {
-                    cards.push(rect(card).await);
-                }
-                let (Some(list), Some(cards)) = (rect(list).await, cards.into_iter().collect())
-                else {
+            let mut lanes = Vec::with_capacity(lanes_read.len());
+            for (list, cards) in lanes_read {
+                let (Some(list), Some(cards)) = (list, cards.into_iter().collect()) else {
                     started.call(None);
                     return;
                 };
