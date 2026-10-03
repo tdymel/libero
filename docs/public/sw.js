@@ -13,22 +13,25 @@ self.addEventListener('push', (event) => {
 });
 
 // Tells the page about a notification `use_system_notification` showed here,
-// so its `on_click` runs. Pages without that notification ignore the message.
-const tell = (notification, name) => {
+// so its `on_click` or `on_action` runs. Pages without that notification ignore the message.
+const tell = (notification, name, action) => {
   const libero = notification.data?.libero;
   if (!libero) return Promise.resolve([]);
   return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((tabs) => {
-    for (const tab of tabs) tab.postMessage({ libero, event: name });
+    for (const tab of tabs) tab.postMessage({ libero, event: name, action });
     return tabs;
   });
 };
 
-// Focuses an open tab of the app, else opens one.
+// Focuses an open tab of the app, else opens one. A button press carries its `action`.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url ?? '/';
+  const pressed = event.action
+    ? tell(event.notification, 'action', event.action)
+    : tell(event.notification, 'click');
   event.waitUntil(
-    tell(event.notification, 'click')
+    pressed
       // A close from here fires no `notificationclose`, so the page forgets it now.
       .then(() => tell(event.notification, 'close'))
       .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))

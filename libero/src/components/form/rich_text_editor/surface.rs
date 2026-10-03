@@ -12,7 +12,8 @@ pub(crate) const ROOT_ATTR: &str = "data-lsx-rich-text";
 
 const SCRIPT: &str = r#"
 const token = await dioxus.recv();
-const root = () => document.querySelector(`[data-lsx-rich-text="${token}"]`);
+const clips = await dioxus.recv();
+const root =() => document.querySelector(`[data-lsx-rich-text="${token}"]`);
 const leafOf = (node) => {
     let el = node && (node.nodeType === 1 ? node : node.parentElement);
     el = el && el.closest('[data-key]');
@@ -174,9 +175,24 @@ const onPress = (e) => {
     dioxus.send({ end: true });
 };
 document.addEventListener('mousedown', onPress);
+// A WebView hands Rust a copy of the clipboard event: the model's Markdown goes in here,
+// or the DOM's text if the selection moved since (todo 2106).
+let clip = null;
+const onClip = (e) => {
+    const r = root();
+    if (!r) { removeEventListener('copy', onClip, true); removeEventListener('cut', onClip, true); return; }
+    const now = current(), text = String(document.getSelection());
+    if (!r.contains(e.target) || !e.clipboardData || !now || !text) return;
+    const same = clip && clip.at.every((v, i) => v === now.selection[i]);
+    e.clipboardData.setData('text/plain', same ? clip.markdown : text);
+    if (same) e.clipboardData.setData('text/markdown', clip.markdown);
+    e.preventDefault();
+};
+if (clips) { addEventListener('copy', onClip, true); addEventListener('cut', onClip, true); }
 while (true) {
     const m = await dioxus.recv();
     if (m.ack) held -= 1;
+    if (m.clip) clip = { at: m.clip, markdown: m.markdown };
     const r = root();
     if (!r) continue;
     if (m.read !== undefined) {
@@ -247,23 +263,31 @@ pub(crate) struct Surface {
 }
 
 impl Surface {
-    /// Starts the script for the root marked `token`; each report goes to `on_report`.
-    pub fn start(token: String, mut on_report: impl FnMut(Report) + 'static) -> Self {
+    /// Starts the script for the root marked `token`; each report goes to `on_report`,
+    /// which may answer a reported selection with its [`clip`](Self::clip) Markdown.
+    pub fn start(
+        token: String,
+        mut on_report: impl FnMut(Report) -> Option<String> + 'static,
+    ) -> Self {
         let mut eval = Signal::new(None);
         if !crate::platform::edits_rich_text() {
             return Self { eval };
         }
         spawn(async move {
             let mut script = document::eval(SCRIPT);
-            if script.send(token).is_err() {
+            if script.send(token).is_err() || script.send(!cfg!(target_arch = "wasm32")).is_err() {
                 return;
             }
             eval.set(Some(script));
             while let Ok(report) = script.recv::<Report>().await {
                 let held = report.input.is_some() || report.key.is_some();
-                on_report(report);
+                let selection = report.selection;
+                let clip = on_report(report);
                 if held {
                     let _ = script.send(serde_json::json!({ "ack": true }));
+                }
+                if let (Some((ak, ao, hk, ho)), Some(markdown)) = (selection, clip) {
+                    let _ = script.send(clip_message((ak, ao), (hk, ho), markdown));
                 }
             }
         });
@@ -288,4 +312,13 @@ impl Surface {
     pub fn read(&self, key: u64) {
         self.send(serde_json::json!({ "read": key }));
     }
+
+    /// What a copy or cut of the DOM selection `anchor`..`head` puts on the clipboard.
+    pub fn clip(&self, anchor: (u64, usize), head: (u64, usize), markdown: String) {
+        self.send(clip_message(anchor, head, markdown));
+    }
+}
+
+fn clip_message(anchor: (u64, usize), head: (u64, usize), markdown: String) -> serde_json::Value {
+    serde_json::json!({ "clip": [anchor.0, anchor.1, head.0, head.1], "markdown": markdown })
 }

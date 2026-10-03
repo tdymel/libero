@@ -50,8 +50,9 @@ mod typeahead;
 mod user_media;
 
 pub use crate::platform::{
-    GeolocationError, GeolocationOptions, MediaDevice, PermissionState, Position, PushEndpoint,
-    PushError, PushOptions, SystemNotification, SystemNotificationError, UserMediaError,
+    GeolocationError, GeolocationOptions, MediaDevice, NotificationAction, PermissionState,
+    Position, PushEndpoint, PushError, PushOptions, SystemNotification, SystemNotificationError,
+    UserMediaError,
 };
 pub use accessibility::{AccessibilityHandle, use_accessibility};
 pub(crate) use cache::use_cache;

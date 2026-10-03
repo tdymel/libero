@@ -603,6 +603,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     caret_tick += 1;
                 }
             }
+            let mut clip = None;
             if let Some((anchor_key, anchor, head_key, head)) = report.selection
                 && (report.press || !*syncing.peek())
                 && !*composing.peek()
@@ -613,11 +614,12 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                         .zip(model_position(&live, head_key, head))
                         .map(|(anchor, head)| Selection::range(anchor, head))
                 };
-                if let Some(selection) = selection
-                    && selection != editor.peek().state().selection
-                {
-                    editor.write().select(selection);
-                    revision += 1;
+                if let Some(selection) = selection {
+                    if selection != editor.peek().state().selection {
+                        editor.write().select(selection);
+                        revision += 1;
+                    }
+                    clip = clip_of(&editor.peek(), &registry.peek());
                 }
             }
             if let Some((input_type, data, key)) = report.input
@@ -663,6 +665,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
                     changed(Some(before), true);
                 }
             }
+            clip
         })
     });
 
@@ -670,11 +673,14 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         let (_, focus) = placed();
         let live = editor.peek();
         let selection = live.state().selection;
-        surface.select(
+        let (anchor, head) = (
             dom_position(&live, selection.anchor),
             dom_position(&live, selection.head),
-            focus,
         );
+        surface.select(anchor, head, focus);
+        if let Some(markdown) = clip_of(&live, &registry.peek()) {
+            surface.clip(anchor, head, markdown);
+        }
     });
 
     let _ = revision();
@@ -873,25 +879,21 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
     };
 
     // The selection as Markdown, in both plain text and `text/markdown` (todo 1258);
-    // `false` when nothing was written.
+    // `false` when nothing was selected. A WebView's event is a copy: the script writes there.
     let copy = move |event: &ClipboardEvent| -> bool {
-        let fragment = {
-            let live = editor.peek();
-            if live.state().selection.is_collapsed() {
+        let registry = registry.peek().clone().unwrap_or_default();
+        let Some(markdown) = selected_markdown(&editor.peek(), &registry) else {
+            return false;
+        };
+        if cfg!(target_arch = "wasm32") {
+            let transfer = event.data().data_transfer();
+            if transfer.set_data("text/plain", &markdown).is_err() {
                 return false;
             }
-            live.state().selected_doc()
-        };
-        let registry = registry.peek().clone().unwrap_or_default();
-        let transfer = event.data().data_transfer();
-        let markdown = fragment.to_markdown_with(&registry);
-        let markdown = markdown.trim_end_matches('\n');
-        let written = transfer.set_data("text/plain", markdown).is_ok();
-        if written {
-            let _ = transfer.set_data("text/markdown", markdown);
+            let _ = transfer.set_data("text/markdown", &markdown);
             event.prevent_default();
         }
-        written
+        true
     };
     let oncopy = move |event: ClipboardEvent| {
         copy(&event);
@@ -1418,6 +1420,25 @@ fn link_href(state: &EditorState) -> Option<String> {
         Mark::Link { href, .. } => Some(href.as_str().to_string()),
         _ => None,
     }
+}
+
+/// The selection as Markdown; `None` when it is collapsed.
+fn selected_markdown(live: &LiveEditor, registry: &NodeRegistry) -> Option<String> {
+    let state = live.state();
+    if state.selection.is_collapsed() {
+        return None;
+    }
+    let markdown = state.selected_doc().to_markdown_with(registry);
+    Some(markdown.trim_end_matches('\n').to_string())
+}
+
+/// What the script copies in a WebView, where Rust's clipboard data never reaches the event
+/// (todo 2106); `None` on the web, whose `oncopy` writes it.
+fn clip_of(live: &LiveEditor, registry: &Option<NodeRegistry>) -> Option<String> {
+    if cfg!(target_arch = "wasm32") {
+        return None;
+    }
+    selected_markdown(live, &registry.clone().unwrap_or_default())
 }
 
 /// Puts the caret at the start or end of code block `key`, which then renders as source.

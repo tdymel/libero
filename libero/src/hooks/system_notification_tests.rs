@@ -10,6 +10,7 @@ thread_local! {
     static CLOSED: RefCell<Vec<u64>> = const { RefCell::new(Vec::new()) };
     static DROPPED: RefCell<Vec<u64>> = const { RefCell::new(Vec::new()) };
     static CLICKS: Cell<u32> = const { Cell::new(0) };
+    static ACTIONS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
 }
 
 struct Fake(u64);
@@ -54,6 +55,7 @@ fn mounted() -> VirtualDom {
     CLOSED.take();
     DROPPED.take();
     CLICKS.set(0);
+    ACTIONS.take();
     let mut dom = VirtualDom::new(app);
     dom.rebuild_in_place();
     pump(&mut dom);
@@ -69,10 +71,13 @@ fn fake_shown(dom: &VirtualDom, id: u64, tag: Option<&str>) {
     let mut notifier = handle();
     dom.in_scope(ScopeId::APP, || {
         let on_click = Callback::new(|()| CLICKS.set(CLICKS.get() + 1));
+        let on_action =
+            Callback::new(|action: String| ACTIONS.with_borrow_mut(|actions| actions.push(action)));
         notifier.shown.write().push(Entry {
             id,
             tag: tag.map(str::to_string),
             on_click: Some(on_click),
+            on_action: Some(on_action),
             shown: Box::new(Fake(id)),
         });
     });
@@ -138,6 +143,22 @@ fn a_click_runs_on_click_and_a_close_forgets_it() {
         CLOSED.with_borrow(Vec::is_empty),
         "the user closed it already"
     );
+}
+
+#[test]
+fn an_action_runs_on_action_with_its_id_and_not_on_click() {
+    let mut dom = mounted();
+    fake_shown(&dom, 1, None);
+    fake_shown(&dom, 2, None);
+    let mut notifier = handle();
+    dom.in_runtime(|| {
+        let event = NotificationEvent::from_name("action:reply").expect("an action name");
+        notifier.events.write().push((2, event));
+    });
+    pump(&mut dom);
+    assert_eq!(ACTIONS.take(), ["reply"]);
+    assert_eq!(CLICKS.get(), 0);
+    assert!(DROPPED.with_borrow(Vec::is_empty));
 }
 
 #[test]

@@ -7,11 +7,14 @@ use dioxus::prelude::Callback;
 use super::PermissionState;
 
 /// One system notification. Showing another with the same `tag` replaces it.
+///
+/// Android draws the status bar icon from a drawable named `libero_notification` in the
+/// app's resources, a white shape on transparent; without one, the launcher icon.
 #[derive(Clone, PartialEq, Default)]
 pub struct SystemNotification {
     pub title: String,
     pub body: Option<String>,
-    /// An image URL.
+    /// An image URL. Android ignores it: its asset URLs are not reachable outside the WebView.
     pub icon: Option<String>,
     pub tag: Option<String>,
     /// Asks the platform for no sound or vibration. A hint only.
@@ -19,6 +22,10 @@ pub struct SystemNotification {
     /// Runs when the user clicks it while this component is mounted, after the
     /// click focused the window. Behind a service worker, only if it posts the click back.
     pub on_click: Option<Callback<()>>,
+    /// Buttons on the notification. The web shows them only through a service worker.
+    pub actions: Vec<NotificationAction>,
+    /// Runs with the [`NotificationAction::id`] the user pressed, as `on_click` runs.
+    pub on_action: Option<Callback<String>>,
 }
 
 impl SystemNotification {
@@ -26,6 +33,22 @@ impl SystemNotification {
         Self {
             title: title.into(),
             ..Default::default()
+        }
+    }
+}
+
+/// A button on a [`SystemNotification`]; `id` comes back in its `on_action`.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct NotificationAction {
+    pub id: String,
+    pub title: String,
+}
+
+impl NotificationAction {
+    pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            title: title.into(),
         }
     }
 }
@@ -53,10 +76,12 @@ impl SystemNotificationError {
 }
 
 /// What the user did to a shown notification.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum NotificationEvent {
     Click,
     Close,
+    /// A [`NotificationAction`] was pressed, by its id.
+    Action(String),
 }
 
 impl NotificationEvent {
@@ -65,7 +90,9 @@ impl NotificationEvent {
         match name {
             "click" => Some(Self::Click),
             "close" => Some(Self::Close),
-            _ => None,
+            _ => name
+                .strip_prefix("action:")
+                .map(|id| Self::Action(id.to_string())),
         }
     }
 }
@@ -102,9 +129,9 @@ pub(crate) fn permission_of(name: Option<&str>) -> Option<PermissionState> {
 }
 
 /// Shared by the web and the WebView. `show` resolves to an error name or
-/// `{ close, detach }`; without a `Notification` constructor (Chrome on Android)
-/// it falls back to the page's service worker, which reports clicks and closes
-/// by posting `{ libero: data.libero, event: 'click' | 'close' }` to the page.
+/// `{ close, detach }`; without a `Notification` constructor (Chrome on Android), or
+/// with actions, it falls back to the page's service worker, which reports by posting
+/// `{ libero: data.libero, event: 'click' | 'close' | 'action', action }` to the page.
 #[cfg_attr(any(feature = "native", target_os = "android"), allow(dead_code))]
 pub(crate) const NOTIFICATION_SCRIPT: &str = "
     const probe = () => typeof Notification === 'undefined' ? null : Notification.permission;
@@ -113,7 +140,7 @@ pub(crate) const NOTIFICATION_SCRIPT: &str = "
     const show = async (title, options, send) => {
         if (typeof Notification === 'undefined') return 'Unsupported';
         if (Notification.permission !== 'granted') return 'Denied';
-        try {
+        const plain = () => {
             const shown = new Notification(title, options);
             shown.onclick = () => { window.focus(); send('click'); };
             shown.onclose = () => send('close');
@@ -121,10 +148,18 @@ pub(crate) const NOTIFICATION_SCRIPT: &str = "
                 close: () => shown.close(),
                 detach: () => { shown.onclick = null; shown.onclose = null; },
             };
+        };
+        try {
+            return plain();
         } catch (error) {
             const workers = navigator.serviceWorker;
             const registration = await workers?.getRegistration();
-            if (!registration) return 'Failed';
+            if (!registration) {
+                // Only a worker shows actions: without one, the notification goes without them.
+                if (!options.actions) return 'Failed';
+                delete options.actions;
+                try { return plain(); } catch (error) { return 'Failed'; }
+            }
             const token = `${Date.now()}-${Math.random()}`;
             const data = { libero: token };
             try { await registration.showNotification(title, { ...options, data }); } catch (error) { return 'Failed'; }
@@ -132,6 +167,7 @@ pub(crate) const NOTIFICATION_SCRIPT: &str = "
                 if (event.data?.libero !== token) return;
                 if (event.data.event === 'click') { window.focus(); send('click'); }
                 if (event.data.event === 'close') send('close');
+                if (event.data.event === 'action') { window.focus(); send('action:' + event.data.action); }
             };
             workers.addEventListener('message', listen);
             workers.startMessages();
@@ -156,6 +192,13 @@ pub(crate) fn options_of(notification: &SystemNotification) -> serde_json::Value
         if let Some(value) = value {
             options[name] = value.as_str().into();
         }
+    }
+    if !notification.actions.is_empty() {
+        options["actions"] = notification
+            .actions
+            .iter()
+            .map(|action| serde_json::json!({ "action": action.id, "title": action.title }))
+            .collect();
     }
     options
 }
@@ -380,5 +423,24 @@ pub(crate) fn raise_window() {
     if let Some(desktop) = dioxus::prelude::try_consume_context::<dioxus_desktop::DesktopContext>()
     {
         desktop.window.set_focus();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn actions_go_into_the_options_only_when_given() {
+        let plain = SystemNotification::new("Build done");
+        assert!(options_of(&plain).get("actions").is_none());
+        let with = SystemNotification {
+            actions: vec![NotificationAction::new("open", "Open")],
+            ..plain
+        };
+        assert_eq!(
+            options_of(&with)["actions"],
+            serde_json::json!([{ "action": "open", "title": "Open" }])
+        );
     }
 }

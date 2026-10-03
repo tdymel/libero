@@ -3,7 +3,8 @@
 
 use dioxus::prelude::*;
 use libero::hooks::{
-    PushOptions, SystemNotification, use_push_subscription, use_system_notification,
+    NotificationAction, PushOptions, SystemNotification, use_push_subscription,
+    use_system_notification,
 };
 
 use crate::Routes;
@@ -23,6 +24,8 @@ fn Notifying() -> Element {
     });
     let mut clicks = use_signal(|| 0);
     let clicked = use_callback(move |()| clicks += 1);
+    let mut action = use_signal(String::new);
+    let acted = use_callback(move |id: String| action.set(id));
 
     rsx! {
         button { id: "request", onclick: move |_| notifier.request(), "Request" }
@@ -36,6 +39,19 @@ fn Notifying() -> Element {
             }),
             "Show"
         }
+        button {
+            id: "show-actions",
+            onclick: move |_| notifier.show(SystemNotification {
+                tag: Some("fixture".into()),
+                actions: vec![
+                    NotificationAction::new("open", "Open"),
+                    NotificationAction::new("retry", "Retry"),
+                ],
+                on_action: Some(acted),
+                ..SystemNotification::new("Fixture")
+            }),
+            "Show with actions"
+        }
         button { id: "close", onclick: move |_| notifier.close("fixture"), "Close" }
         button { id: "subscribe", onclick: move |_| push.subscribe(), "Subscribe" }
         p { id: "supported", "{notifier.is_supported()}" }
@@ -43,6 +59,7 @@ fn Notifying() -> Element {
         p { id: "error", "{notifier.error():?}" }
         p { id: "pending", "{notifier.is_pending()}" }
         p { id: "clicks", "{clicks}" }
+        p { id: "action", "{action}" }
         p { id: "push-supported", "{push.is_supported()}" }
         p { id: "push-error", "{push.error():?}" }
         p { id: "push-pending", "{push.is_pending()}" }

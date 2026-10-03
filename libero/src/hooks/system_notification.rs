@@ -12,6 +12,7 @@ struct Entry {
     id: u64,
     tag: Option<String>,
     on_click: Option<Callback<()>>,
+    on_action: Option<Callback<String>>,
     shown: Box<dyn ShownNotification>,
 }
 
@@ -99,7 +100,12 @@ impl SystemNotifier {
                 events.write().push((id, event));
             }),
         );
-        let SystemNotification { tag, on_click, .. } = notification;
+        let SystemNotification {
+            tag,
+            on_click,
+            on_action,
+            ..
+        } = notification;
         let mut this = *self;
         spawn(async move {
             match shown.await {
@@ -113,6 +119,7 @@ impl SystemNotifier {
                         id,
                         tag,
                         on_click,
+                        on_action,
                         shown,
                     });
                 }
@@ -121,7 +128,7 @@ impl SystemNotifier {
         });
     }
 
-    /// Runs the queued events' clicks and forgets the closed notifications.
+    /// Runs the queued events' clicks and actions and forgets the closed notifications.
     fn handle_events(mut self) {
         let events = std::mem::take(&mut *self.events.write());
         for (id, event) in events {
@@ -136,6 +143,18 @@ impl SystemNotifier {
                         .and_then(|entry| entry.on_click);
                     if let Some(on_click) = on_click {
                         on_click.call(());
+                    }
+                }
+                NotificationEvent::Action(action) => {
+                    raise_window();
+                    let on_action = self
+                        .shown
+                        .peek()
+                        .iter()
+                        .find(|entry| entry.id == id)
+                        .and_then(|entry| entry.on_action);
+                    if let Some(on_action) = on_action {
+                        on_action.call(action);
                     }
                 }
                 NotificationEvent::Close => {

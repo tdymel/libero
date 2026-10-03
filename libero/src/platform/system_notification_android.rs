@@ -41,8 +41,16 @@ const POLL: Duration = Duration::from_millis(100);
 static ASKED: AtomicBool = AtomicBool::new(false);
 static NEXT_KEY: AtomicU64 = AtomicU64::new(1);
 /// Where each shown notification's tap goes, by the key in its URL.
-static ROUTES: Mutex<Option<HashMap<u64, mpsc::UnboundedSender<NotificationEvent>>>> =
-    Mutex::new(None);
+static ROUTES: Mutex<Option<HashMap<u64, Route>>> = Mutex::new(None);
+/// The status bar icon an app ships; the launcher icon stands in without it.
+const SMALL_ICON: &str = "libero_notification";
+
+struct Route {
+    events: mpsc::UnboundedSender<NotificationEvent>,
+    /// The action ids, by their index in the URL.
+    actions: Vec<String>,
+    tag: Option<String>,
+}
 
 thread_local! {
     static LISTENING: Cell<bool> = const { Cell::new(false) };
@@ -182,6 +190,47 @@ struct Content {
     body: Option<String>,
     tag: Option<String>,
     silent: bool,
+    action_titles: Vec<String>,
+}
+
+/// The app's `libero_notification` drawable, else its launcher icon.
+fn small_icon(env: &mut JNIEnv, activity: &JObject) -> JniResult<i32> {
+    let resources = env
+        .call_method(
+            activity,
+            "getResources",
+            "()Landroid/content/res/Resources;",
+            &[],
+        )?
+        .l()?;
+    let package = env
+        .call_method(activity, "getPackageName", "()Ljava/lang/String;", &[])?
+        .l()?;
+    let (name, kind) = (env.new_string(SMALL_ICON)?, env.new_string("drawable")?);
+    let id = env
+        .call_method(
+            &resources,
+            "getIdentifier",
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I",
+            &[
+                JValue::Object(&name),
+                JValue::Object(&kind),
+                JValue::Object(&package),
+            ],
+        )?
+        .i()?;
+    if id != 0 {
+        return Ok(id);
+    }
+    let info = env
+        .call_method(
+            activity,
+            "getApplicationInfo",
+            "()Landroid/content/pm/ApplicationInfo;",
+            &[],
+        )?
+        .l()?;
+    env.get_field(&info, "icon", "I")?.i()
 }
 
 fn post(env: &mut JNIEnv, activity: &JObject, content: &Content) -> JniResult<()> {
@@ -217,15 +266,7 @@ fn post(env: &mut JNIEnv, activity: &JObject, content: &Content) -> JniResult<()
             &[JValue::Object(activity)],
         )?
     };
-    let info = env
-        .call_method(
-            activity,
-            "getApplicationInfo",
-            "()Landroid/content/pm/ApplicationInfo;",
-            &[],
-        )?
-        .l()?;
-    let icon = env.get_field(&info, "icon", "I")?.i()?;
+    let icon = small_icon(env, activity)?;
     let builder_class = "Landroid/app/Notification$Builder;";
     env.call_method(
         &builder,
@@ -263,13 +304,35 @@ fn post(env: &mut JNIEnv, activity: &JObject, content: &Content) -> JniResult<()
         format!("(Z){builder_class}"),
         &[JValue::Bool(1)],
     )?;
-    let tap = tap_intent(env, activity, content.key)?;
+    let tap = tap_intent(env, activity, content.key, None)?;
     env.call_method(
         &builder,
         "setContentIntent",
         format!("(Landroid/app/PendingIntent;){builder_class}"),
         &[JValue::Object(&tap)],
     )?;
+    for (index, title) in content.action_titles.iter().enumerate() {
+        let press = tap_intent(env, activity, content.key, Some(index))?;
+        let title = env.new_string(title)?;
+        let action = env.new_object(
+            "android/app/Notification$Action$Builder",
+            "(ILjava/lang/CharSequence;Landroid/app/PendingIntent;)V",
+            &[
+                JValue::Int(0),
+                JValue::Object(&title),
+                JValue::Object(&press),
+            ],
+        )?;
+        let action = env
+            .call_method(&action, "build", "()Landroid/app/Notification$Action;", &[])?
+            .l()?;
+        env.call_method(
+            &builder,
+            "addAction",
+            format!("(Landroid/app/Notification$Action;){builder_class}"),
+            &[JValue::Object(&action)],
+        )?;
+    }
     let notification = env
         .call_method(&builder, "build", "()Landroid/app/Notification;", &[])?
         .l()?;
@@ -326,8 +389,18 @@ fn app_label<'a>(env: &mut JNIEnv<'a>, activity: &JObject) -> JniResult<JObject<
 }
 
 /// An explicit `VIEW` intent back to this activity: tao forwards only `VIEW`'s data.
-fn tap_intent<'a>(env: &mut JNIEnv<'a>, activity: &JObject, key: u64) -> JniResult<JObject<'a>> {
-    let url = env.new_string(format!("{SCHEME}:{key}"))?;
+/// An action's URL adds its index.
+fn tap_intent<'a>(
+    env: &mut JNIEnv<'a>,
+    activity: &JObject,
+    key: u64,
+    action: Option<usize>,
+) -> JniResult<JObject<'a>> {
+    let url = match action {
+        Some(index) => format!("{SCHEME}:{key}/{index}"),
+        None => format!("{SCHEME}:{key}"),
+    };
+    let url = env.new_string(url)?;
     let uri = env
         .call_static_method(
             "android/net/Uri",
@@ -386,9 +459,15 @@ fn cancel(tag: Option<String>, key: u64) {
     });
 }
 
-/// The key in a tapped notification's URL.
-fn tapped(scheme: &str, path: &str) -> Option<u64> {
-    (scheme == SCHEME).then(|| path.parse().ok()).flatten()
+/// The key in a tapped notification's URL, and the pressed action's index.
+fn tapped(scheme: &str, path: &str) -> Option<(u64, Option<usize>)> {
+    if scheme != SCHEME {
+        return None;
+    }
+    match path.split_once('/') {
+        Some((key, index)) => Some((key.parse().ok()?, Some(index.parse().ok()?))),
+        None => Some((path.parse().ok()?, None)),
+    }
 }
 
 /// Once per window: tao's `Opened` carries the tapped notification's URL.
@@ -405,16 +484,30 @@ fn listen_for_taps() {
             return;
         };
         for url in urls {
-            let Some(key) = tapped(url.scheme(), url.path()) else {
+            let Some((key, action)) = tapped(url.scheme(), url.path()) else {
                 continue;
             };
-            debug!("libero notification {key} tapped");
+            debug!("libero notification {key} tapped, action {action:?}");
             let mut routes = ROUTES.lock().unwrap_or_else(|poison| poison.into_inner());
-            if let Some(events) = routes.get_or_insert_default().remove(&key) {
-                let _ = events.unbounded_send(NotificationEvent::Click);
-                // Auto-cancelled by the tap.
-                let _ = events.unbounded_send(NotificationEvent::Close);
+            let Some(route) = routes.get_or_insert_default().remove(&key) else {
+                continue;
+            };
+            let event = match action {
+                // Only a tap on the body auto-cancels.
+                Some(index) => {
+                    cancel(route.tag.clone(), key);
+                    route
+                        .actions
+                        .get(index)
+                        .cloned()
+                        .map(NotificationEvent::Action)
+                }
+                None => Some(NotificationEvent::Click),
+            };
+            if let Some(event) = event {
+                let _ = route.events.unbounded_send(event);
             }
+            let _ = route.events.unbounded_send(NotificationEvent::Close);
         }
     });
 }
@@ -437,7 +530,7 @@ impl SystemNotificationApi for AndroidNotification {
         Box::pin(async move { answer.await.unwrap_or(PermissionState::Unsupported) })
     }
 
-    /// `icon` is ignored: the app's launcher icon shows. A tap reopens the app.
+    /// `icon` is ignored: the status bar shows [`SMALL_ICON`]. A tap or an action reopens the app.
     fn show(
         &self,
         notification: &SystemNotification,
@@ -446,12 +539,18 @@ impl SystemNotificationApi for AndroidNotification {
         listen_for_taps();
         let key = NEXT_KEY.fetch_add(1, Ordering::Relaxed);
         let tag = notification.tag.clone();
+        let (actions, action_titles) = notification
+            .actions
+            .iter()
+            .map(|action| (action.id.clone(), action.title.clone()))
+            .unzip();
         let content = Content {
             key,
             title: notification.title.clone(),
             body: notification.body.clone(),
             tag: tag.clone(),
             silent: notification.silent,
+            action_titles,
         };
         let answer = off_thread(move || {
             if read_permission() != PermissionState::Granted {
@@ -469,7 +568,14 @@ impl SystemNotificationApi for AndroidNotification {
                 .lock()
                 .unwrap_or_else(|poison| poison.into_inner())
                 .get_or_insert_default()
-                .insert(key, sender);
+                .insert(
+                    key,
+                    Route {
+                        events: sender,
+                        actions,
+                        tag: tag.clone(),
+                    },
+                );
             let task = spawn(async move {
                 while let Some(event) = poll_fn(|cx| Pin::new(&mut receiver).poll_next(cx)).await {
                     events(event);
@@ -534,8 +640,10 @@ mod tests {
     fn a_tag_keeps_one_identity_and_taps_parse_the_key() {
         assert_eq!(identity(Some("build"), 9), (Some("build"), 0));
         assert_eq!(identity(None, 9), (None, 9));
-        assert_eq!(tapped(SCHEME, "12"), Some(12));
+        assert_eq!(tapped(SCHEME, "12"), Some((12, None)));
+        assert_eq!(tapped(SCHEME, "12/1"), Some((12, Some(1))));
         assert_eq!(tapped("https", "12"), None);
         assert_eq!(tapped(SCHEME, "x"), None);
+        assert_eq!(tapped(SCHEME, "12/x"), None);
     }
 }

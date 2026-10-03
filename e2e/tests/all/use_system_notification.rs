@@ -219,6 +219,23 @@ fn the_web_shows_closes_and_reports_a_denial() {
             .unwrap();
         assert_eq!(focused, 1, "a worker click focuses the window");
 
+        // Todo 2107: actions show through the worker, whose posted press runs `on_action`.
+        click(page, "#show-actions").await;
+        let with_actions = "navigator.serviceWorker.getRegistration()
+            .then((r) => r.getNotifications())
+            .then((shown) => shown.some((one) => one.actions?.map((a) => a.action).join() === 'open,retry'))";
+        wait::for_js_true(page, with_actions, "the worker's notification with actions")
+            .await
+            .unwrap();
+        page.evaluate(format!(
+            "{latest}.then((token) => navigator.serviceWorker.dispatchEvent(
+                new MessageEvent('message', {{ data: {{ libero: token, event: 'action', action: 'retry' }} }})))"
+        ))
+        .await
+        .unwrap();
+        reads(page, "#action", "retry").await.unwrap();
+        reads(page, "#clicks", "2").await.unwrap();
+
         click(page, "#close").await;
         let gone = "navigator.serviceWorker.getRegistration()
             .then((r) => r.getNotifications()).then((shown) => shown.length === 0)";

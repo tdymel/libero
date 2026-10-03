@@ -18,8 +18,8 @@ use futures_channel::{mpsc, oneshot};
 use futures_core::Stream;
 
 use super::{
-    Answer, NotificationEvent, Shown, ShownNotification, SystemNotification, SystemNotificationApi,
-    SystemNotificationError,
+    Answer, NotificationAction, NotificationEvent, Shown, ShownNotification, SystemNotification,
+    SystemNotificationApi, SystemNotificationError,
 };
 use crate::platform::PermissionState;
 
@@ -48,6 +48,7 @@ struct Content {
     icon: String,
     tag: Option<String>,
     silent: bool,
+    actions: Vec<NotificationAction>,
 }
 
 /// The server's ids by tag, and where each id's events go.
@@ -76,11 +77,12 @@ impl Routes {
     }
 
     fn send(&mut self, id: u32, event: NotificationEvent) {
+        let closed = event == NotificationEvent::Close;
         let delivered = self
             .events
             .get(&id)
             .is_some_and(|events| events.unbounded_send(event).is_ok());
-        if !delivered || event == NotificationEvent::Close {
+        if !delivered || closed {
             self.events.remove(&id);
             self.tags.retain(|_, shown| *shown != id);
         }
@@ -105,8 +107,12 @@ fn run(commands: std_mpsc::Receiver<Command>) {
         let clicks = routes.clone();
         let invoked = MatchRule::new_signal(INTERFACE, "ActionInvoked");
         let _ = connection.add_match(invoked, move |(id, action): (u32, String), _, _| {
-            if action == "default" {
-                clicks.borrow_mut().send(id, NotificationEvent::Click);
+            let event = match action.as_str() {
+                "default" => Some(NotificationEvent::Click),
+                action => NotificationEvent::from_name(action),
+            };
+            if let Some(event) = event {
+                clicks.borrow_mut().send(id, event);
             }
             true
         });
@@ -166,7 +172,7 @@ fn handle(connection: Option<&LocalConnection>, routes: &RefCell<Routes>, comman
                     notification.icon,
                     notification.title,
                     notification.body,
-                    vec!["default", ""],
+                    action_list(&notification.actions),
                     hints,
                     -1i32,
                 ),
@@ -185,6 +191,16 @@ fn handle(connection: Option<&LocalConnection>, routes: &RefCell<Routes>, comman
             }
         }
     }
+}
+
+/// `Notify`'s key and label pairs: `default` is the click, `action:<id>` a button.
+fn action_list(actions: &[NotificationAction]) -> Vec<String> {
+    let mut list = vec!["default".to_string(), String::new()];
+    for action in actions {
+        list.push(format!("action:{}", action.id));
+        list.push(action.title.clone());
+    }
+    list
 }
 
 /// No server answering is `Unsupported`, as the probe reports it; a refusal is `Failed`.
@@ -247,6 +263,7 @@ impl SystemNotificationApi for FreedesktopNotification {
                 icon: notification.icon.clone().unwrap_or_default(),
                 tag: notification.tag.clone(),
                 silent: notification.silent,
+                actions: notification.actions.clone(),
             },
             events: sender,
             reply,
@@ -314,6 +331,19 @@ mod tests {
             SystemNotificationError::Failed
         );
         assert_eq!(error_of(None), SystemNotificationError::Failed);
+    }
+
+    #[test]
+    fn actions_follow_the_click_as_prefixed_pairs() {
+        let actions = [NotificationAction::new("reply", "Reply")];
+        assert_eq!(
+            action_list(&actions),
+            ["default", "", "action:reply", "Reply"]
+        );
+        assert_eq!(
+            NotificationEvent::from_name("action:reply"),
+            Some(NotificationEvent::Action("reply".into()))
+        );
     }
 
     #[test]

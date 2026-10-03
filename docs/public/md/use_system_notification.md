@@ -1,7 +1,7 @@
 # System notifications
 
 Crate: `libero`
-Import: `use libero::hooks::{PermissionState, PushEndpoint, PushError, PushOptions, PushSubscription, SystemNotification, SystemNotificationError, SystemNotifier, use_push_subscription, use_system_notification};`
+Import: `use libero::hooks::{NotificationAction, PermissionState, PushEndpoint, PushError, PushOptions, PushSubscription, SystemNotification, SystemNotificationError, SystemNotifier, use_push_subscription, use_system_notification};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/system_notification.rs>
 Index: [index.md](index.md) lists every other page
 Description: Notifications the operating system draws and a web push subscription; never prompt on mount.
@@ -9,7 +9,8 @@ Description: Notifications the operating system draws and a web push subscriptio
 `use_system_notification() -> SystemNotifier` shows notifications the
 operating system draws, outside the page; the in-app toasts are
 `Notifications`. `request()` asks for the permission,
-`show(SystemNotification)` shows one, `close(tag)` closes it. Read
+`show(SystemNotification)` shows one, `close(tag)` closes it; its `actions`
+are buttons whose id comes back in `on_action`. Read
 `permission()`, `error()`, `is_pending()` and `is_supported()`; all are
 reactive.
 
@@ -28,7 +29,10 @@ for Blitz; without it WebKitGTK denies every request. macOS and Windows
 WebViews go through the page's `Notification`, untested. Push is web only.
 Android: the system's notifications over JNI, after
 `notifications = { description = ".." }` under `[permissions]` in the app's
-`Dioxus.toml`; a tap reopens the app and runs `on_click`. Blitz on Linux: the
+`Dioxus.toml`; a tap reopens the app and runs `on_click`. The status bar icon
+is a drawable named `libero_notification` in the app's resources, a white
+shape on transparent; without it the launcher icon shows. Actions are untested
+on macOS and Windows. Blitz on Linux: the
 desktop's notification server over D-Bus, no permission to ask. Blitz on macOS
 and Windows, and a server render: `is_supported()` stays false and calls fail
 with `Unsupported`.
@@ -40,8 +44,8 @@ use dioxus::prelude::*;
 use libero::{
     components::{Button, Flex, Text},
     hooks::{
-        PermissionState, PushError, PushOptions, SystemNotification, SystemNotificationError,
-        use_push_subscription, use_system_notification,
+        NotificationAction, PermissionState, PushError, PushOptions, SystemNotification,
+        SystemNotificationError, use_push_subscription, use_system_notification,
     },
     sx::sx,
 };
@@ -53,15 +57,15 @@ fn Notify() -> Element {
         service_worker: "/sw.js".into(),
         vapid_public_key: "<your server's VAPID public key>".into(),
     });
-    let mut clicks = use_signal(|| 0);
-    let clicked = use_callback(move |()| clicks += 1);
+    let mut last = use_signal(String::new);
+    let clicked = use_callback(move |()| last.set("Notification clicked".into()));
+    let acted = use_callback(move |action: String| last.set(format!("Action pressed: {action}")));
     // The page says it too: a system notification is never the only channel.
     let status = match notifier.error() {
         Some(SystemNotificationError::Denied) => "Notifications refused".to_string(),
         Some(SystemNotificationError::Unsupported) => "No system notifications here".to_string(),
         Some(SystemNotificationError::Failed) => "The notification did not show".to_string(),
-        None if clicks() > 0 => format!("Notification clicked {} times", clicks()),
-        None => String::new(),
+        None => last(),
     };
     let permission = match notifier.permission() {
         PermissionState::Granted => "granted",
@@ -84,10 +88,16 @@ fn Notify() -> Element {
                 Button { onclick: move |_| notifier.request(), "Allow notifications" }
                 Button {
                     onclick: move |_| notifier.show(SystemNotification {
-                        body: Some("Sent from the libero docs".into()),
+                        body: Some("3 tests failed in the nightly run".into()),
+                        icon: Some("/icon.png".into()),
                         tag: Some("demo".into()),
                         on_click: Some(clicked),
-                        ..SystemNotification::new("Hello")
+                        actions: vec![
+                            NotificationAction::new("report", "Open report"),
+                            NotificationAction::new("retry", "Run again"),
+                        ],
+                        on_action: Some(acted),
+                        ..SystemNotification::new("Build finished")
                     }),
                     "Notify"
                 }
@@ -126,6 +136,13 @@ pub struct SystemNotification {
     pub tag: Option<String>,
     pub silent: bool,
     pub on_click: Option<Callback<()>>,
+    pub actions: Vec<NotificationAction>,
+    pub on_action: Option<Callback<String>>,
+}
+
+pub struct NotificationAction {
+    pub id: String,
+    pub title: String,
 }
 
 pub struct PushOptions {
@@ -148,10 +165,12 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
 |---|---|---|
 | `title` | | Set by `SystemNotification::new(title)`. |
 | `body` | `None` | The text under the title. |
-| `icon` | `None` | An image URL. |
+| `icon` | `None` | An image URL. Android ignores it. |
 | `tag` | `None` | Showing another with the same tag replaces it; `close(tag)` closes it. |
 | `silent` | `false` | Asks for no sound or vibration; a hint. |
 | `on_click` | `None` | Runs on a click while the component is mounted, after the click focused the page's window. |
+| `actions` | `[]` | Buttons, each a `NotificationAction::new(id, title)`. The web shows them only through a service worker. |
+| `on_action` | `None` | Runs with the pressed action's `id`, as `on_click` runs. |
 
 | Method of `SystemNotifier` | Description |
 |---|---|
@@ -176,20 +195,24 @@ Both handles are `Copy`. `PushOptions` apply to the next `subscribe`.
 | Web | Full, in a secure context. Chrome on Android shows through the page's service worker, which must forward clicks (below). | Full, in a secure context; iOS Safari only for a Home Screen web app. |
 | Linux desktop (WebKitGTK) | With libero's `desktop` feature, the desktop's notification server, always `Granted`; a click raises the window and runs `on_click`. Without it every request is `Denied`. | `Unsupported`. |
 | macOS, Windows desktop | Untested; a click runs `on_click` and, with libero's `desktop` feature, raises the window. | `Unsupported`. |
-| Android (WebView) | Full, through the system's `NotificationManager`, with `notifications` under `[permissions]`; one channel named after the app. `icon` is ignored. | `Unsupported`; FCM needs app-level Kotlin (recipe below). |
+| Android (WebView) | Full, through the system's `NotificationManager`, with `notifications` under `[permissions]`; one channel named after the app. `icon` is ignored; the status bar shows the `libero_notification` drawable, else the launcher icon. An action reopens the app. | `Unsupported`; FCM needs app-level Kotlin (recipe below). |
 | Blitz on Linux | Full, through the desktop's notification server; always `Granted`. A click runs `on_click` without raising the window. | `Unsupported`. |
 | Blitz on macOS and Windows, server render | `Unsupported`. | `Unsupported`. |
 
-Where the page has no `Notification` constructor, `show` goes through the
-page's service worker, and the click reaches the worker, not the page. The
-notification's `data.libero` names it; post it back to the open tabs and
-`on_click` runs (the sample `sw.js` does this):
+Where the page has no `Notification` constructor, or the notification has
+actions, `show` goes through the page's service worker, and the click reaches
+the worker, not the page. The notification's `data.libero` names it; post it
+back to the open tabs and `on_click` or `on_action` runs (the sample `sw.js`
+does this):
 
 ```js
 self.addEventListener('notificationclick', (event) => {
   const libero = event.notification.data?.libero;
+  const message = event.action
+    ? { libero, event: 'action', action: event.action }
+    : { libero, event: 'click' };
   event.waitUntil(self.clients.matchAll({ type: 'window' }).then((tabs) => {
-    for (const tab of tabs) tab.postMessage({ libero, event: 'click' });
+    for (const tab of tabs) tab.postMessage(message);
     return tabs[0]?.focus();
   }));
 });
@@ -335,8 +358,12 @@ server, its service account and the sending stay outside libero.
   and libero cannot open its settings.
 - Android reads `Prompt` until the first request and `Denied` after a refusal,
   also after a restart; it cannot tell a dismissed dialog from a refusal.
-- Android ignores `icon` (the launcher icon shows), and a tap on a notification
-  from before a restart only opens the app.
+- Android ignores `icon`: the status bar shows the app's `libero_notification`
+  drawable, else the launcher icon. A tap on a notification from before a
+  restart only opens the app.
+- An action on Android reopens the app, as a tap does. The web shows actions
+  only through a service worker, which must post the press back; without one
+  the notification shows without them.
 - Blitz cannot raise the window on a click: `on_click` runs, the window stays
   where it is.
 - Where only a service worker may show notifications (Chrome on Android),
