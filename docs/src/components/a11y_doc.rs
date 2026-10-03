@@ -27,6 +27,7 @@ pub struct A11yDoc {
     keys: Vec<KeyRow>,
     handles: Vec<String>,
     must: Vec<String>,
+    example: Option<String>,
     limits: Vec<String>,
 }
 
@@ -62,6 +63,12 @@ impl A11yDoc {
     /// What the caller has to do.
     pub fn must<S: Into<String>>(mut self, items: impl IntoIterator<Item = S>) -> Self {
         self.must.extend(strings(items));
+        self
+    }
+
+    /// One concrete case of the split above: what the app writes, what a user then gets.
+    pub fn example(mut self, text: impl Into<String>) -> Self {
+        self.example = Some(text.into());
         self
     }
 
@@ -102,6 +109,14 @@ pub fn A11yPanel(doc: A11yDoc) -> Element {
             }
             A11yList { title: "Libero handles", items: doc.handles }
             A11yList { title: "You must", items: doc.must }
+            if let Some(example) = doc.example {
+                Flex {
+                    direction: "column",
+                    gap: "sm",
+                    Title { size: "lg", component: "h2", "Example" }
+                    Text { {prose(&example)} }
+                }
+            }
             A11yList { title: "Limits", items: doc.limits }
         }
     }

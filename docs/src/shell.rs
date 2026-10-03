@@ -302,7 +302,7 @@ pub(crate) fn AppShell() -> Element {
                             id: "docs-main",
                             // Focusable by the skip link only, with no ring round the page.
                             tabindex: "-1",
-                            size: if home { "xl" } else { "lg" },
+                            size: "xl",
                             // Inert behind the open drawer. A boolean attribute: omitted when
                             // closed, since even `"false"` enables it.
                             inert: open().then_some(true),

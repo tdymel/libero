@@ -1,232 +1,9 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y};
-use dioxus::html::FileData;
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Audio, Button, Code, Flex, Image, NativeSelect, Text, Video},
-    hooks::{
-        MediaDevice, UserMedia, UserMediaError, UserMediaOptions, use_user_media,
-        use_user_media_devices,
-    },
-    sx::sx,
-    utils::data_url,
-};
+use libero::components::{Code, Text};
 
-/// The hook in one component, as `CaptureBooth` renders it.
-fn code(values: &DemoValues, _: &str) -> String {
-    let camera = values.str("camera") == "true";
-    let microphone = values.str("microphone") == "true" || !camera;
-    format!(
-        r#"let mut media = use_user_media(UserMediaOptions {{
-    camera: {camera},
-    microphone: {microphone},
-    ..Default::default()
-}});
-let devices = use_user_media_devices();
-let device = if {camera} {{ "Camera" }} else {{ "Microphone" }};
-let noun = device.to_lowercase();
-// Announced once per change, never per frame.
-let status = match (media.error(), media.is_recording(), media.is_live()) {{
-    (Some(UserMediaError::Denied), _, _) => format!("{{device}} refused"),
-    (Some(_), _, _) => format!("{{device}} unavailable"),
-    (None, true, _) => "Recording".to_string(),
-    (None, false, true) => format!("{{device}} on"),
-    (None, false, false) if media.is_pending() => "Waiting for permission".to_string(),
-    (None, false, false) => format!("{{device}} off"),
-}};
-// Ids and labels fill in once a start is granted.
-let cameras: Vec<MediaDevice> = devices.cameras().into_iter().filter(|c| !c.id.is_empty()).collect();
-let ids: Vec<String> = cameras.iter().map(|c| c.id.clone()).collect();
-
-rsx! {{
-    // A recording's `Video` is 40rem wide unsized: the cap keeps it, and the photo, in a phone's width.
-    Flex {{ direction: "column", gap: "sm", sx: sx().max_width("100%"),
-        if {camera} {{
-            video {{
-                aria_label: "Camera preview",
-                autoplay: true, muted: true, playsinline: true,
-                width: "320", height: "240",
-                style: "background: #000; max-width: 100%;",
-                ..media.attributes(),
-            }}
-        }}
-        Flex {{ direction: "row", gap: "sm", align: "center", wrap: "wrap",
-            Button {{
-                onclick: move |_| if media.is_live() {{ media.stop() }} else {{ media.start() }},
-                if media.is_live() {{ "Turn {{noun}} off" }} else {{ "Turn {{noun}} on" }}
-            }}
-            if {camera} {{
-                Button {{ variant: "outlined", disabled: !media.is_live(), onclick: move |_| media.snapshot(), "Take photo" }}
-            }}
-            Button {{
-                variant: "outlined",
-                disabled: !media.is_live(),
-                onclick: move |_| if media.is_recording() {{ media.finish() }} else {{ media.record() }},
-                if media.is_recording() {{ "Stop recording" }} else {{ "Record" }}
-            }}
-        }}
-        // Only where there is another camera to switch to.
-        if {camera} && media.is_live() && cameras.len() > 1 {{
-            NativeSelect {{
-                label: "Camera",
-                placeholder: "Default camera",
-                options: ids,
-                option_label: move |id: String| camera_name(&cameras, &id),
-                value: media.camera_id(),
-                onchange: move |id: String| media.switch_camera(id),
-            }}
-        }}
-        div {{ role: "status", "{{status}}" }}
-        // `data_url` reads the file once; fine for a photo or a short clip.
-        if let Some(photo) = media.photo() {{
-            Preview {{ file: photo }}
-        }}
-        if let Some(clip) = media.recorded() {{
-            Preview {{ file: clip }}
-        }}
-    }}
-}}
-
-/// The camera's label, or "Camera 2" where the platform gives none.
-fn camera_name(cameras: &[MediaDevice], id: &str) -> String {{
-    let at = cameras.iter().position(|c| c.id == id).unwrap_or_default();
-    match cameras.get(at) {{
-        Some(camera) if !camera.label.is_empty() => camera.label.clone(),
-        _ => format!("Camera {{}}", at + 1),
-    }}
-}}
-
-#[component]
-fn Preview(file: dioxus::html::FileData) -> Element {{
-    let src = use_resource(use_reactive!(|file| async move {{ libero::utils::data_url(&file).await }}));
-    let kind = file.content_type().unwrap_or_default();
-    let Some(Some(src)) = src() else {{ return rsx! {{}} }};
-    rsx! {{
-        if kind.starts_with("image/") {{
-            Image {{ src, alt: "Your photo", sx: sx().width("160px").height("auto") }}
-        }} else if kind.starts_with("audio/") {{
-            Audio {{ src, label: "Your recording" }}
-        }} else {{
-            Video {{ src, label: "Your recording" }}
-        }}
-    }}
-}}"#
-    )
-}
-
-/// What the status region says, `device` being "Camera" or "Microphone".
-fn status(media: &UserMedia, device: &str) -> String {
-    match (media.error(), media.is_recording(), media.is_live()) {
-        (Some(UserMediaError::Denied), _, _) => format!("{device} refused"),
-        (Some(_), _, _) => format!("{device} unavailable"),
-        (None, true, _) => "Recording".to_string(),
-        (None, false, true) => format!("{device} on"),
-        (None, false, false) if media.is_pending() => "Waiting for permission".to_string(),
-        (None, false, false) => format!("{device} off"),
-    }
-}
-
-/// The camera's label, or "Camera 2" where the platform gives none.
-fn camera_name(cameras: &[MediaDevice], id: &str) -> String {
-    let at = cameras.iter().position(|c| c.id == id).unwrap_or_default();
-    match cameras.get(at) {
-        Some(camera) if !camera.label.is_empty() => camera.label.clone(),
-        _ => format!("Camera {}", at + 1),
-    }
-}
-
-/// A photo as an image, a recording as a player, from the file's own bytes.
-#[component]
-fn Preview(file: FileData) -> Element {
-    let src = use_resource(use_reactive!(|file| async move { data_url(&file).await }));
-    let kind = file.content_type().unwrap_or_default();
-    let Some(Some(src)) = src() else {
-        return rsx! {};
-    };
-    rsx! {
-        if kind.starts_with("image/") {
-            // `Image` fills its box: a `width` attribute loses to that.
-            Image { src, alt: "Your photo", sx: sx().width("160px").height("auto") }
-        } else if kind.starts_with("audio/") {
-            Audio { src, label: "Your recording" }
-        } else {
-            Video { src, label: "Your recording" }
-        }
-    }
-}
-
-#[component]
-fn CaptureBooth(camera: bool, microphone: bool) -> Element {
-    let mut media = use_user_media(UserMediaOptions {
-        camera,
-        microphone: microphone || !camera,
-        ..Default::default()
-    });
-    let devices = use_user_media_devices();
-    let device = if camera { "Camera" } else { "Microphone" };
-    let status = status(&media, device);
-    let noun = device.to_lowercase();
-    // Ids and labels fill in once a start is granted.
-    let cameras: Vec<MediaDevice> = devices
-        .cameras()
-        .into_iter()
-        .filter(|c| !c.id.is_empty())
-        .collect();
-    let ids: Vec<String> = cameras.iter().map(|c| c.id.clone()).collect();
-
-    rsx! {
-        Flex { direction: "column", gap: "sm", sx: sx().max_width("100%"),
-            if camera {
-                video {
-                    aria_label: "Camera preview",
-                    autoplay: true,
-                    muted: true,
-                    playsinline: true,
-                    width: "320",
-                    height: "240",
-                    style: "background: #000; max-width: 100%;",
-                    ..media.attributes(),
-                }
-            }
-            Flex { direction: "row", gap: "sm", align: "center", wrap: "wrap",
-                Button {
-                    onclick: move |_| if media.is_live() { media.stop() } else { media.start() },
-                    if media.is_live() { "Turn {noun} off" } else { "Turn {noun} on" }
-                }
-                if camera {
-                    Button {
-                        variant: "outlined",
-                        disabled: !media.is_live(),
-                        onclick: move |_| media.snapshot(),
-                        "Take photo"
-                    }
-                }
-                Button {
-                    variant: "outlined",
-                    disabled: !media.is_live(),
-                    onclick: move |_| if media.is_recording() { media.finish() } else { media.record() },
-                    if media.is_recording() { "Stop recording" } else { "Record" }
-                }
-            }
-            if camera && media.is_live() && cameras.len() > 1 {
-                NativeSelect {
-                    label: "Camera",
-                    placeholder: "Default camera",
-                    options: ids,
-                    option_label: move |id: String| camera_name(&cameras, &id),
-                    value: media.camera_id(),
-                    onchange: move |id: String| media.switch_camera(id),
-                }
-            }
-            div { role: "status", "{status}" }
-            if let Some(photo) = media.photo() {
-                Preview { file: photo }
-            }
-            if let Some(clip) = media.recorded() {
-                Preview { file: clip }
-            }
-        }
-    }
-}
+mod demo;
+use demo::CaptureBooth;
 
 #[component]
 pub fn UseUserMediaPage() -> Element {
@@ -326,14 +103,17 @@ pub fn UseUserMediaPage() -> Element {
             },
 
             Demo {
-                component: "use_user_media",
+                component: "CaptureBooth",
                 children_text: "",
-                // Options, not props: `code` prints them into the hook call.
+                file: DemoFile(include_str!("use_user_media/demo.rs")),
+                // Printed at any value: `camera` is required.
                 controls: vec![
-                    Control::switch("camera").default("true").code(|_, _| vec![]),
+                    Control::switch("camera")
+                        .default("true")
+                        .code(|_, values| vec![format!("camera: {}", values.str("camera"))]),
                     // Camera off records audio, so the microphone is on whatever the switch says.
                     Control::switch("microphone")
-                        .code(|_, _| vec![])
+                        .code(|_, values| vec![format!("microphone: {}", values.str("microphone"))])
                         .hidden_when(|values| values.str("camera") != "true"),
                 ],
                 render: move |values: DemoValues| {
@@ -341,7 +121,6 @@ pub fn UseUserMediaPage() -> Element {
                     let microphone = values.str("microphone") == "true";
                     rsx! { CaptureBooth { key: "{camera}{microphone}", camera, microphone } }
                 },
-                wrap: Wrap(code),
             }
         }
     }

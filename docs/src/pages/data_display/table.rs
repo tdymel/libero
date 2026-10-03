@@ -320,7 +320,7 @@ const TOOLBAR_FILTERS: &str = r#"toolbar: rsx! {
 }"#;
 
 /// Wider than the preview at any width, so `scroll` has something to scroll.
-const SCROLL_WIDTH: &str = "640px";
+const SCROLL_WIDTH: &str = "1400px";
 
 /// Shorter than the header and two rows, so `max_height` has something to scroll.
 const MAX_HEIGHT: &str = "100px";
@@ -897,7 +897,7 @@ pub fn TablePage() -> Element {
                     " wraps a table wider than its container in a "
                     Code { source: "ScrollArea" }
                     " that scrolls sideways. The demo's switch also sets "
-                    Code { source: "sx().min_width(\"640px\")" }
+                    Code { source: format!("sx().min_width({SCROLL_WIDTH:?})") }
                     ", so the columns overflow at any width. "
                     Code { source: "max_height" }
                     " caps a long table's height: its rows scroll under a header that stays put."
@@ -945,6 +945,7 @@ pub fn TablePage() -> Element {
             Demo {
                 component: "Table",
                 children_text: "",
+                wide_preview: true,
                 fixed: vec![
                     r#"caption: "Team members""#.to_string(),
                     "row_key: |p: &Person| p.name.clone()".to_string(),

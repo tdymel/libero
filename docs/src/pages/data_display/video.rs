@@ -138,6 +138,7 @@ pub fn VideoPage() -> Element {
             },
             Demo {
                 component: "Video",
+                wide_preview: true,
                 children_text: "",
                 fixed: vec![
                     format!("src: {:?}", crate::site::SAMPLE_VIDEO),

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props, status_prop};
 use dioxus::prelude::*;
 use libero::components::RatingPart;
 use libero::components::{Code, CodeBlock, Rating, Text};
@@ -61,9 +61,7 @@ pub fn RatingPage() -> Element {
                 prop("label", "Caption").doc("The caption above the stars, and the slider's name."),
                 prop("description", "Caption").doc("Under the label."),
                 prop("helper", "Caption").doc("Under the stars."),
-                prop("status", "FieldStatus")
-                    .default("Valid")
-                    .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
+                status_prop(),
                 prop("required", "bool")
                     .default("false")
                     .doc("Marks the label with an asterisk. No `aria-required`: ARIA does not allow it on a slider, so the name says the localization's `rating.required` word instead."),

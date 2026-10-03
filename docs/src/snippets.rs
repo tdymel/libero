@@ -830,8 +830,8 @@ const FIELD_PROPS: [&str; 9] = [
     "readonly",
 ];
 
-/// `(component, prop or part slot)` the tables left out when todo 1926 added the checks.
-/// Each is either drift to document or a variant the component never draws.
+/// `(component, part slot)` of a shared part enum the component never draws, so its
+/// table leaves it out (checked against the source, todo 1926 triage).
 const KNOWN_GAPS: &[(&str, &str)] = &[
     ("Cascader", "leading"),
     ("ChronoField", "leading"),
@@ -848,13 +848,6 @@ const KNOWN_GAPS: &[(&str, &str)] = &[
     ("PasswordField", "leading"),
     ("PinField", "leading"),
     ("PinField", "trailing"),
-    ("Radio", "description"),
-    ("Radio", "disabled"),
-    ("Radio", "helper"),
-    ("Radio", "label"),
-    ("Radio", "required"),
-    ("Radio", "size"),
-    ("Radio", "status"),
     ("RangeSlider", "bars"),
     ("RichTextEditor", "leading"),
     ("RichTextEditor", "trailing"),

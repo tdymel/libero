@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, status_prop};
 use dioxus::prelude::*;
 use libero::components::rich_text::{
     Attrs, Builtin, Chord, Commands, Doc, EditorInput, EditorState, Keymap, NodeRegistry, NodeSpec,
@@ -489,9 +489,7 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption")
                         .doc("Under the control. Formatting rules or limits."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
+                    status_prop(),
                     prop("required", "bool")
                         .default("false")
                         .doc("Marks the field required and adds an asterisk to the label."),
@@ -570,6 +568,7 @@ pub fn RichTextEditorPage() -> Element {
             // snippet: let mut doc = use_signal(|| rich_text::Doc::from_markdown("## Release notes"));
             Demo {
                 component: "RichTextEditor",
+                wide_preview: true,
                 children_text: "",
                 fixed: vec![
                     "value: doc()".to_string(),

@@ -1,5 +1,8 @@
 use super::dropdown_parts::{PHONE_DROPDOWN, list_dropdown_parts};
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, disabled_prop, prop, props, readonly_prop,
+    status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::PhoneFieldPart;
 use libero::{
@@ -70,18 +73,12 @@ pub fn PhoneFieldPage() -> Element {
                         .doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption")
                         .doc("Under the control. The format, or an example."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
+                    status_prop(),
                     prop("required", "bool")
                         .default("false")
                         .doc("Marks the field required and adds an asterisk to the label."),
-                    prop("disabled", "bool")
-                        .default("false")
-                        .doc("Disables and dims the field."),
-                    prop("readonly", "bool")
-                        .default("false")
-                        .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. The country button stays focusable and opens nothing."),
+                    disabled_prop("field"),
+                    readonly_prop("field").also("The country button stays focusable and opens nothing."),
                     prop("dropdown_parts", "Parts<DropdownPart>")
                         .doc("Styles the portaled country list and its inner parts."),
                 ])

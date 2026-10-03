@@ -67,25 +67,25 @@ pub fn AudioPage() -> Element {
                 .key(["Escape"], "Closes the volume menu and returns to its button.")
                 .key(["Tab"], "Moves through every control in visual order: play, seek, mute, volume, speed. In the volume menu, returns to its button.")
                 .handles([
-                    "The player is a `group` named by `label`, its controls a `group` named \"Player controls\"; every button and slider is its own Tab stop, as in the browser's own controls.",
-                    "The speed button shows the rate (\"1×\") and is named \"Playback speed 1×\"; a press steps to 1.5×, 2× and back to 1×, and the name follows.",
-                    "The play button changes its name (Play/Pause) rather than using `aria-pressed`.",
-                    "The visible time is hidden from screen readers: the seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`).",
-                    "The speaker button mutes and unmutes, its name following (Mute/Unmute). The chevron beside it, named \"Volume\", opens a `dialog` holding the volume slider and focuses it; moving the volume up unmutes.",
-                    "The seek track is a row of bars, the played ones filled: the seek slider's `SliderTrack::Bars`, so it keeps the slider's keys, press and drag. The bars follow the sound's loudness, decoded from the file, and are hidden from screen readers. A file over 10 minutes or 20 MB is not decoded: its bars stay drawn from the URL.",
-                    "The row never wraps: the seek track shrinks first, then the time goes, then the buttons shrink, to 24px at the least (WCAG 2.5.8): every control stays at 320px and 200% zoom (WCAG 1.4.10).",
-                    "The bubble has a border at 3:1 against the page in light and dark (WCAG 1.4.11).",
-                    "A polite status says \"Loading\" while playing waits for data; a failed source shows an alert.",
-                    "No autoplay unless asked, and a debug warning for autoplay with sound (WCAG 1.4.2).",
+                    "The player is a group named by `label`. Each button and slider is its own Tab stop.",
+                    "Buttons say what a press does: Play or Pause, Mute or Unmute. The speed button reads \"Playback speed 1×\" and steps to 1.5×, 2× and back to 1×.",
+                    "The seek slider reads the time as \"1:05 of 4:56\". The visible time is hidden from screen readers, so it is not read twice.",
+                    "The chevron beside the speaker, named \"Volume\", opens the volume slider and focuses it. Raising the volume unmutes.",
+                    "The loudness bars on the seek track are hidden from screen readers; the slider's keys, press and drag work on them.",
+                    "Every control fits at 320px wide and 200% zoom: the track shrinks first, and no button gets smaller than 24px (WCAG 1.4.10, 2.5.8).",
+                    "The volume bubble's border has 3:1 contrast in light and dark (WCAG 1.4.11).",
+                    "A polite \"Loading\" is announced while the sound waits for data, and an alert when the file fails.",
+                    "It never plays by itself unless you set `autoplay`; autoplay with sound warns in a debug build (WCAG 1.4.2).",
                 ])
                 .must([
                     "Give each player a `label` that says what plays.",
                     "Offer a transcript for speech (WCAG 1.2.1): libero cannot write it.",
                 ])
+                .example("A podcast episode: `Audio { src: \"/episode-12.mp3\", label: \"Episode 12: Accessible forms\" }` with a transcript link under it. A screen reader announces the group \"Episode 12: Accessible forms\", and a deaf user reads the transcript instead.")
                 .limits([
                     "Blitz plays no media: the controls give way to `children`, by default a link to the file.",
                     "On a WebView each command and state change crosses the IPC, so the time trails by a moment.",
-                    "The bars need the file readable by the page: a file on another origin without CORS, or `preload: none`, keeps placeholder bars drawn from the URL.",
+                    "The bars need the file readable by the page: a file on another origin without CORS, or `preload: none`, keeps placeholder bars drawn from the URL. So does a file over 10 minutes or 20 MB, which is not decoded.",
                 ]),
             lead: rsx! {
                 Text {
@@ -121,6 +121,7 @@ pub fn AudioPage() -> Element {
             },
             Demo {
                 component: "Audio",
+                wide_preview: true,
                 children_text: "",
                 fixed: vec![
                     format!("src: {:?}", crate::site::SAMPLE_AUDIO),

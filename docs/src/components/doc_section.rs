@@ -1,10 +1,16 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Flex, Title},
-    sx::sx,
+    sx::{Sx, sx},
 };
 
 use crate::{Route, heading_focus::PendingSection};
+
+/// Caps a column's own paragraphs and lists at a readable line length; demos,
+/// tables and code keep the full width (todo 2137).
+pub(crate) fn prose_sx() -> Sx {
+    sx().selector("& > p, & > ul, & > ol", sx().max_width("80ch"))
+}
 
 /// One titled section of a [`DocPage`](super::DocPage). With an `id`, a
 /// [`SectionLink`] can land on it.
@@ -20,6 +26,7 @@ pub fn DocSection(
             id,
             direction: "column",
             gap: "sm",
+            sx: prose_sx(),
             // Focused by the landing (`AppShell`), without a ring, as the page title.
             Title {
                 size: "xl",

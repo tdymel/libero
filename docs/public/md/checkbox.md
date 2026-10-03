@@ -74,7 +74,7 @@ Checkbox {
 | `description` | `Caption` | - | Under the label. What checking it means. |
 | `helper` | `Caption` | - | Under the description, in the label's column. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
-| `required` | `bool` | `false` | Sets `aria-required` and marks the label with an asterisk. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
 | `disabled` | `bool` | `false` | Disables and dims the checkbox. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the checkbox from the tab order and the post instead. Chromium does not announce read-only on a checkbox, so say it in the label or description where it matters. |
 | `aria_label` | `String` | - | Names the checkbox when it has no `label`. |

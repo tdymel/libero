@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, prop, props, readonly_prop, status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, FieldStatus, PasswordField, Text};
@@ -40,18 +42,14 @@ pub fn PasswordFieldPage() -> Element {
                         .doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption")
                         .doc("Under the control. The password rules."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
+                    status_prop(),
                     prop("required", "bool")
                         .default("false")
                         .doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables and dims the field, reveal button included."),
-                    prop("readonly", "bool")
-                        .default("false")
-                        .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                    readonly_prop("field"),
                 ])
                 .parts("FieldPart", vec![
                     (FieldPart::Label, "The label above the control."),

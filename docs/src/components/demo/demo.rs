@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, CodeBlock, Flex, Input, NativeSelect, OptionLabel, SegmentedControl, Slider,
+        Box, Button, CodeBlock, Flex, Input, NativeSelect, OptionLabel, SegmentedControl, Slider,
         SliderChangeEvent, Switch, Text,
     },
     hooks::use_id,
@@ -114,6 +114,46 @@ impl DemoValues {
             .find(|(key, _)| *key == name)
             .map(|(_, value)| value.clone())
             .unwrap_or_default()
+    }
+}
+
+/// A demo's own file, compiled as a module and printed above the generated call, so the
+/// two cannot drift (todo 1858). Its `// demo-code: start` .. `end` lines show until expanded.
+#[derive(Clone, Copy, PartialEq)]
+pub struct DemoFile(pub &'static str);
+
+impl DemoFile {
+    const START: &str = "// demo-code: start";
+    const END: &str = "// demo-code: end";
+
+    fn is_marker(line: &str) -> bool {
+        matches!(line.trim(), Self::START | Self::END)
+    }
+
+    /// The whole file, markers dropped.
+    pub fn full(&self) -> String {
+        let lines: Vec<&str> = self
+            .0
+            .lines()
+            .filter(|line| !Self::is_marker(line))
+            .collect();
+        lines.join("\n").trim().to_string()
+    }
+
+    /// The marked part, or the whole file without markers.
+    pub fn shown(&self) -> String {
+        let Some((_, rest)) = self.0.split_once(Self::START) else {
+            return self.full();
+        };
+        let region = rest
+            .split_once(Self::END)
+            .map_or(rest, |(region, _)| region);
+        region.trim().to_string()
+    }
+
+    /// Whether the shown part leaves anything out.
+    pub fn cuts(&self) -> bool {
+        self.shown() != self.full()
     }
 }
 
@@ -242,14 +282,32 @@ pub struct DemoCode {
     pub controls: Vec<Control>,
     pub wrap: Option<Wrap>,
     pub child: Option<Child>,
+    pub file: Option<DemoFile>,
     /// Names the code block for a screen reader, so it must differ per demo on a page.
     #[cfg(test)]
     pub label: String,
 }
 
 impl DemoCode {
-    /// What the code block prints for these values.
+    /// What the code block prints for these values, a `file` in full.
     pub fn source(&self, values: &DemoValues) -> String {
+        self.with_file(values, DemoFile::full)
+    }
+
+    /// What the code block prints before "Expand code": the marked part of a `file`.
+    pub fn shown_source(&self, values: &DemoValues) -> String {
+        self.with_file(values, DemoFile::shown)
+    }
+
+    fn with_file(&self, values: &DemoValues, part: fn(&DemoFile) -> String) -> String {
+        let call = self.call(values);
+        match &self.file {
+            Some(file) => format!("{}\n\n{call}", part(file)),
+            None => call,
+        }
+    }
+
+    fn call(&self, values: &DemoValues) -> String {
         let children_text = match self.child {
             Some(Child(child)) => child(values),
             None => self.children_text.clone(),
@@ -298,9 +356,11 @@ pub fn Demo(
     /// on and off.
     child: Option<Child>,
     /// Keeps the controls below the preview at every width, for a preview
-    /// that needs the card's whole width - a notification host.
+    /// that needs the card's whole width - a table, a player, a notification host.
     #[props(default)]
     wide_preview: bool,
+    /// The demo's own source, printed above the call: `DemoFile(include_str!("x_demo.rs"))`.
+    file: Option<DemoFile>,
     /// Tells the code blocks apart when a page has several demos of one component.
     title: Option<String>,
 ) -> Element {
@@ -334,10 +394,17 @@ pub fn Demo(
         controls: controls.clone(),
         wrap,
         child,
+        file,
     };
     #[cfg(test)]
     use_hook(|| crate::snippets::record(&code));
-    let source = code.source(&current);
+    let mut expanded = use_signal(|| false);
+    let code_id = use_id();
+    let cuts = file.is_some_and(|file| file.cuts());
+    let source = match expanded() || !cuts {
+        true => code.source(&current),
+        false => code.shown_source(&current),
+    };
     rsx! {
         Box {
             sx: sx()
@@ -399,7 +466,7 @@ pub fn Demo(
                                         // `Elevated`-wide segments, ~93px each at `sm`.
                                         .width("512px")
                                         .border_top("none")
-                                        .border_left(border()),
+                                        .border_inline_start(border()),
                                 )
                             }
                         },
@@ -552,12 +619,30 @@ pub fn Demo(
                     }
                 }
             }
-            CodeBlock {
-                language: "rust",
-                source,
-                label: code_label,
-                header: false,
-                sx: sx().border("none").border_radius("0"),
+            Box { id: code_id(),
+                CodeBlock {
+                    language: "rust",
+                    source,
+                    label: code_label,
+                    header: false,
+                    sx: sx().border("none").border_radius("0"),
+                }
+            }
+            // Imports and helpers stay folded, as MUI's demos (todo 1858).
+            if cuts {
+                Flex {
+                    direction: "row",
+                    justify: "flex-end",
+                    sx: sx().padding("8px 12px").border_top(border()),
+                    Button {
+                        variant: "text",
+                        size: "sm",
+                        aria_expanded: expanded(),
+                        aria_controls: code_id(),
+                        onclick: move |_| expanded.toggle(),
+                        if expanded() { "Collapse code" } else { "Expand code" }
+                    }
+                }
             }
         }
     }
@@ -618,5 +703,16 @@ mod tests {
         for site in sites {
             assert!(site.ends_with(": label(control.name),"), "{site}");
         }
+    }
+
+    #[test]
+    fn a_demo_file_shows_its_marked_part() {
+        let file = super::DemoFile(
+            "use a::b;\n\n// demo-code: start\nfn shown() {}\n// demo-code: end\n\nfn after() {}\n",
+        );
+        assert_eq!(file.shown(), "fn shown() {}");
+        assert_eq!(file.full(), "use a::b;\n\nfn shown() {}\n\nfn after() {}");
+        assert!(file.cuts());
+        assert!(!super::DemoFile("fn all() {}").cuts());
     }
 }

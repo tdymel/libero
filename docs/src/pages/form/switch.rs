@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, disabled_prop, prop, props, readonly_prop,
+    required_prop, status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::SwitchPart;
 use libero::components::{Code, FieldStatus, Switch, Text};
@@ -36,18 +39,10 @@ pub fn SwitchPage() -> Element {
                     .doc("Under the label. What turning it on does."),
                 prop("helper", "Caption")
                     .doc("Under the description, in the label's column."),
-                prop("status", "FieldStatus")
-                    .default("Valid")
-                    .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
-                prop("required", "bool")
-                    .default("false")
-                    .doc("Sets `aria-required` and marks the label with an asterisk."),
-                prop("disabled", "bool")
-                    .default("false")
-                    .doc("Disables and dims the switch."),
-                prop("readonly", "bool")
-                    .default("false")
-                    .doc("Focusable and posted with the form, but not editable. `disabled` drops the switch from the tab order and the post instead. Chromium does not announce read-only on a switch, so say it in the label or description where it matters."),
+                status_prop(),
+                required_prop(),
+                disabled_prop("switch"),
+                readonly_prop("switch").also("Chromium does not announce read-only on a switch, so say it in the label or description where it matters."),
                 prop("aria_label", "String")
                     .doc("Names the switch when it has no `label`."),
                 prop("variant", "ChoiceVariant")

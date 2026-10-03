@@ -31,12 +31,13 @@ pub fn ContainerPage() -> Element {
             ])],
             accessibility: a11y()
                 .handles([
-                    "A focused container, such as a skip-link target with `tabindex`, draws its focus ring inside its edges, so a full-width one keeps it on screen.",
+                    "A focused container draws its focus ring inside its edges, so a full-width one keeps the ring on screen.",
                 ])
                 .must([
-                "Use `component: \"main\"` or `\"section\"` when the region is a landmark.",
-                "Name a `section` (`aria-label` or `aria-labelledby`) for it to count as a landmark.",
-            ]),
+                    "Set `component: \"main\"` or `\"section\"` when the region is a landmark.",
+                    "Name a `section` with `aria-label` or `aria-labelledby`: without a name it is no landmark.",
+                ])
+                .example("A skip-link target: `Container { component: \"main\", id: \"content\", tabindex: \"-1\", .. }`. A link to `#content` moves focus there, and screen readers list the region as the main landmark."),
             lead: rsx! {
                 Text {
                     "Centers content and caps its width at a breakpoint. Wrap your main "
@@ -52,6 +53,8 @@ pub fn ContainerPage() -> Element {
             },
             Demo {
                 component: "Container",
+                // Room for the `xs` and `sm` caps to show.
+                wide_preview: true,
                 children_text: "Centered, width-capped content.",
                 fixed: vec![SX.to_string()],
                 controls: vec![

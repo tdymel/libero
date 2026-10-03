@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, disabled_prop, prop, props};
 use dioxus::prelude::*;
 use libero::components::ChipPart;
 use libero::components::{Chip, Code, Input, Text};
@@ -25,9 +25,7 @@ pub fn ChipPage() -> Element {
                     .doc("Corner radius."),
                 prop("checked", "bool")
                     .doc("Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it."),
-                prop("disabled", "bool")
-                    .default("false")
-                    .doc("Disables and dims the chip."),
+                disabled_prop("chip"),
                 prop("readonly", "bool")
                     .default("false")
                     .doc("A selectable chip stays focusable and posted with the form, but clicks and Space no longer toggle it."),

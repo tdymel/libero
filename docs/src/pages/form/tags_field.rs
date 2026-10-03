@@ -1,6 +1,8 @@
 use super::CLEAR_NAME;
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop, status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::TagsFieldPart;
 use libero::{
@@ -172,12 +174,10 @@ pub fn TagsFieldPage() -> Element {
                     prop("label", "Caption").doc("The field's caption, above the control."),
                     prop("description", "Caption").doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry affects."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
+                    status_prop(),
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Takes the input out of the tab order and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                    readonly_prop("field"),
                     prop("dropdown_parts", "Parts<DropdownPart>").doc("Styles the portaled `suggestions` dropdown and its inner parts."),
                 ])
                 .parts("TagsFieldPart", vec![

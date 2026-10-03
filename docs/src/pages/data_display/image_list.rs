@@ -292,15 +292,16 @@ pub fn ImageListPage() -> Element {
             ],
             accessibility: a11y()
                 .handles([
-                    "Each picture's name is its own `alt`.",
-                    "A cell with a bar is a `figure`, and the bar is its caption.",
-                    "`ImageItem::to` makes the picture the link and stretches it over the tile, so the link's name is the image's `alt`. The bar sits above the link: a click on its text opens the link, and a control in it (a link, button, field, label or `tabindex` element) keeps its own click.",
-                    "The scrim never drops below 60% black, so the bar's white text holds at least 5.7:1 even over a white picture. A `below` bar has no scrim and always reads.",
+                    "Each picture is named by its own `alt`.",
+                    "A tile with a bar is a `figure`, and the bar is its caption.",
+                    "With `ImageItem::to` the picture is the link, stretched over the tile, so the link is named by the `alt`. A click on the bar's text opens the link too; a link, button or field inside the bar keeps its own click.",
+                    "The scrim under an overlaid bar stays at least 60% black, so its white text reads at 5.7:1 or more over any picture. A `below` bar needs no scrim.",
                 ])
                 .must([
-                    "Give a linked picture an `alt`: a decorative image leaves the link unnamed.",
+                    "Give a linked picture an `alt`: without one the link has no name.",
                     "Check the contrast of text you dim yourself in a bar: it can still fall short.",
-                ]),
+                ])
+                .example("A photo gallery that opens each photo: `ImageItem::new(rsx! { Image { src: \"/harbour.jpg\", alt: \"Harbour at dusk\" } }).to(\"/photos/harbour\")`. Tab lands on a link a screen reader reads as \"Harbour at dusk, link\"."),
             lead: rsx! {
                 Text {
                     "A grid of pictures, each with an optional caption bar. It renders a list, "
@@ -322,6 +323,7 @@ pub fn ImageListPage() -> Element {
             // snippet: item #[component] fn Photo(id: u32) -> Element { rsx! {} }
             Demo {
                 component: "ImageList",
+                wide_preview: true,
                 children_text: "",
                 controls: vec![
                     Control::slider("cols", ["1", "2", "3", "4", "6"])

@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props, readonly_prop, status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::SliderPart;
 use libero::{
@@ -301,18 +303,14 @@ pub fn RangeSliderPage() -> Element {
                         .doc("Between the label and the track. What the range means."),
                     prop("helper", "Caption")
                         .doc("Under the track, below the mark captions."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
+                    status_prop(),
                     prop("required", "bool")
                         .default("false")
                         .doc("Adds an asterisk to the label. No `aria-required`: ARIA does not allow it on a slider, which always holds a value."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Takes the thumbs out of the tab order and dims the slider."),
-                    prop("readonly", "bool")
-                        .default("false")
-                        .doc("Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead."),
+                    readonly_prop("slider"),
                 ])
                 .parts("SliderPart", vec![
                     (SliderPart::Label, "The label above the control."),

@@ -138,6 +138,7 @@ pub fn ChronoPickerPage() -> Element {
             // snippet: let mut date_time_range = use_signal(|| None::<DateRange<NaiveDateTime>>);
             Demo {
                 component: "ChronoPicker",
+                wide_preview: true,
                 children_text: "",
                 controls: [vec![
                     Control::select("value", KINDS).default("date").code(|_, values| {

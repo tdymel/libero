@@ -99,7 +99,7 @@ Saving is yours. A cell that starts with `=` runs as a formula in a
 spreadsheet, so neutralise text users typed first.
 
 `scroll` wraps a table wider than its container in a `ScrollArea` that
-scrolls sideways. The demo's switch also sets `sx().min_width("640px")`, so the
+scrolls sideways. The demo's switch also sets `sx().min_width("1400px")`, so the
 columns overflow at any width. `max_height` caps a long table's height:
 its rows scroll under a header that stays put.
 

@@ -4,7 +4,9 @@ use super::date_common::{
     text_of, time_limits, today_of, twelve_hour_of,
 };
 use super::dropdown_parts::chrono_dropdown_parts;
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props, readonly_prop,
+};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use libero::components::FieldPart;
@@ -105,7 +107,7 @@ pub fn ChronoFieldPage() -> Element {
                         .doc("Validation state, under the helper. Text the field cannot accept shows its own error instead, such as `DateLocale::invalid_date`, `invalid_duration` or the bound it missed."),
                     prop("required", "bool").default("false").doc("Sets `required` on the input and marks the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
+                    readonly_prop("field"),
                     prop("dropdown_parts", "Parts<ChronoDropdownPart>").doc("Styles the portaled dropdown and the picker in it."),
                 ])
                 .parts("FieldPart", vec![

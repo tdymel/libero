@@ -72,7 +72,7 @@ fn Demo() -> Element {
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
 | `disabled` | `bool` | `false` | Disables and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. The country button stays focusable and opens nothing. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. The country button stays focusable and opens nothing. |
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled country list and its inner parts. |
 
 `PhoneField` also takes the `<input>` HTML attributes and, like every

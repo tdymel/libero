@@ -62,7 +62,7 @@ Switch {
 | `description` | `Caption` | - | Under the label. What turning it on does. |
 | `helper` | `Caption` | - | Under the description, in the label's column. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
-| `required` | `bool` | `false` | Sets `aria-required` and marks the label with an asterisk. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
 | `disabled` | `bool` | `false` | Disables and dims the switch. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the switch from the tab order and the post instead. Chromium does not announce read-only on a switch, so say it in the label or description where it matters. |
 | `aria_label` | `String` | - | Names the switch when it has no `label`. |

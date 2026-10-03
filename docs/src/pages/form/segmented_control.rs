@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, or_unset, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, or_unset, prop, props, readonly_prop,
+    status_prop,
+};
 use libero::components::Pictogram;
 use libero::components::SegmentedControlPart;
 use pictogram_icons_lucide as lucide;
@@ -152,18 +155,14 @@ pub fn SegmentedControlPage() -> Element {
                         .doc("Between the label and the segments. How to choose."),
                     prop("helper", "Caption")
                         .doc("Under the segments. What the choice changes."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
+                    status_prop(),
                     prop("required", "bool")
                         .default("false")
                         .doc("Sets `aria-required` on the group and marks the label."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables every segment and dims the captions."),
-                    prop("readonly", "bool")
-                        .default("false")
-                        .doc("Focusable and posted with the form, but not editable. `disabled` drops the control from the tab order and the post instead."),
+                    readonly_prop("control"),
                 ])
                 .parts("SegmentedControlPart", vec![
                     (SegmentedControlPart::Label, "The label above the control."),

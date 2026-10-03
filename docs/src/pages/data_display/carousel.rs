@@ -126,10 +126,13 @@ pub fn CarouselPage() -> Element {
                 .key(["Up", "Down"], "The same, when vertical.")
                 .key(["Home", "End"], "Goes to the first or last slide.")
                 .handles([
-                    "On the indicators, focus follows the slide.",
-                    "With `autoplay`, focus entering the carousel stops it until the pause button is pressed. Hover only pauses it.",
+                    "The carousel is a region named by `aria_label`, and each slide is a group a screen reader calls a slide. Slides out of view leave the Tab and reading order.",
+                    "After each move a hidden status says which slide shows, out of how many. It stays quiet while autoplay rotates (WCAG 2.2.2).",
+                    "Previous and Next are buttons. The indicators are one Tab stop with the current one marked, and focus follows the slide on them.",
+                    "With `autoplay`, focus inside the carousel stops it until the pause button is pressed. Hover only pauses it.",
                 ])
-                .must(["Set `aria_label` to name the region."]),
+                .must(["Set `aria_label` to name the region. Without it the theme's generic name is used, and a debug build warns."])
+                .example("A product gallery: `Carousel { aria_label: \"Product photos\", .. }`. A screen reader lists a \"Product photos\" region, and after Next it hears which photo shows, out of how many."),
             lead: rsx! {
                 Text {
                     "A strip of slides that snaps as it scrolls and knows which slide it is "
@@ -140,6 +143,7 @@ pub fn CarouselPage() -> Element {
             // snippet: let mut index = use_signal(|| 2);
             Demo {
                 component: "Carousel",
+                wide_preview: true,
                 children_text: "",
                 fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![

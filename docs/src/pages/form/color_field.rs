@@ -1,5 +1,7 @@
 use super::dropdown_parts::color_dropdown_parts;
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, prop, props, readonly_prop, status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{
@@ -63,12 +65,10 @@ pub fn ColorFieldPage() -> Element {
                     prop("label", "Caption").doc("The field's caption."),
                     prop("description", "Caption").doc("Between the label and the control."),
                     prop("helper", "Caption").doc("Under the control."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
+                    status_prop(),
                     prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                    readonly_prop("field"),
                     prop("dropdown_parts", "Parts<ColorDropdownPart>").doc("Styles the portaled dropdown and the picker in it."),
                 ])
                 .parts("FieldPart", vec![

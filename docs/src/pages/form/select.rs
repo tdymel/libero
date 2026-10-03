@@ -1,6 +1,9 @@
 use super::CLEAR_NAME;
 use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop, required_prop,
+    status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::SelectPart;
 use libero::use_theme;
@@ -262,12 +265,10 @@ pub fn SelectPage() -> Element {
                         .doc("The caption above the control, and the select's name."),
                     prop("description", "Caption").doc("Between the label and the control. What to pick."),
                     prop("helper", "Caption").doc("Under the control. Constraints, or what the choice changes."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
-                    prop("required", "bool").default("false").doc("Sets `aria-required` and marks the label."),
+                    status_prop(),
+                    required_prop(),
                     prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead."),
+                    readonly_prop("select"),
                     prop("dropdown_parts", "Parts<DropdownPart>").doc("Styles the portaled dropdown and its inner parts."),
                 ])
                 .parts("SelectPart", vec![

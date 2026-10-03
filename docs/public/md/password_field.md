@@ -61,7 +61,7 @@ fn Demo() -> Element {
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
 | `disabled` | `bool` | `false` | Disables and dims the field, reveal button included. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 
 `PasswordField` also takes the `<input>` HTML attributes (`autocomplete`,
 `maxlength`, ...) and, like every component, the shared props `sx`, `class`,

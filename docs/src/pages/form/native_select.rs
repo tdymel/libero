@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, disabled_prop, prop, props, required_prop,
+    status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, FieldStatus, NativeSelect, OptionList, Options, Text};
@@ -67,15 +70,9 @@ pub fn NativeSelectPage() -> Element {
                         .doc("Between the label and the control. What to pick."),
                     prop("helper", "Caption")
                         .doc("Under the control. Constraints, or what the choice changes."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
-                    prop("required", "bool")
-                        .default("false")
-                        .doc("Sets `aria-required` and marks the label. An untouched select is not announced invalid. `validate` or the surrounding `Form` enforces it."),
-                    prop("disabled", "bool")
-                        .default("false")
-                        .doc("Disables and dims the field. A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that."),
+                    status_prop(),
+                    required_prop().also("An untouched select is not announced invalid. `validate` or the surrounding `Form` enforces it."),
+                    disabled_prop("field").also("A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that."),
                 ])
                 .parts("FieldPart", vec![
                     (FieldPart::Label, "The label above the control."),

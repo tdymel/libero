@@ -36,6 +36,38 @@ impl PropDoc {
         self.description = description.into();
         self
     }
+
+    /// Appends a sentence to a shared row's text, a component's own caveat.
+    pub fn also(mut self, note: &str) -> Self {
+        self.description = format!("{} {note}", self.description);
+        self
+    }
+}
+
+// A form field's shared rows, worded once (todo 1860). `noun` names the field: "select".
+
+pub fn status_prop() -> PropDoc {
+    prop("status", "FieldStatus")
+        .default("Valid")
+        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`.")
+}
+
+pub fn required_prop() -> PropDoc {
+    prop("required", "bool")
+        .default("false")
+        .doc("Sets `aria-required` and marks the label.")
+}
+
+pub fn disabled_prop(noun: &str) -> PropDoc {
+    prop("disabled", "bool")
+        .default("false")
+        .doc(format!("Disables and dims the {noun}."))
+}
+
+pub fn readonly_prop(noun: &str) -> PropDoc {
+    prop("readonly", "bool").default("false").doc(format!(
+        "Focusable and posted with the form, but not editable. `disabled` drops the {noun} from the tab order and the post instead."
+    ))
 }
 
 /// One row of a component's Style API table: a part, its `data-slot`, what it is.

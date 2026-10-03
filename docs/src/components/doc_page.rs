@@ -6,7 +6,7 @@ use libero::{
 };
 use pictogram_icons_lucide as lucide;
 
-use super::{A11yDoc, A11yPanel, PartsPanel, PropGroup, PropertyTable};
+use super::{A11yDoc, A11yPanel, PartsPanel, PropGroup, PropertyTable, doc_section::prose_sx};
 use crate::{
     Route, heading_focus,
     nav::neighbours,
@@ -137,9 +137,11 @@ pub fn DocPage(
         Flex {
             direction: "column",
             gap: "xxl",
+            sx: prose_sx(),
             Flex {
                 direction: "column",
                 gap: "lg",
+                sx: prose_sx(),
                 Flex {
                     direction: "row",
                     align: "center",
@@ -237,7 +239,7 @@ pub fn DocPage(
                         // The sections carry no spacing of their own - outside
                         // the tabs the page's own column `Flex` gaps them.
                         DocTab::Usage => rsx! {
-                            Flex { direction: "column", gap: "xxl", {children.clone()} }
+                            Flex { direction: "column", gap: "xxl", sx: prose_sx(), {children.clone()} }
                         },
                         // No heading: the tab already names it (1358).
                         DocTab::Extra => match extra_tab.clone() {
@@ -250,7 +252,7 @@ pub fn DocPage(
                                     tabindex: "-1",
                                     // Room to scroll its top up even before late content (the
                                     // catalogue's fetch) fills it.
-                                    sx: sx()
+                                    sx: prose_sx()
                                         .min_height(format!("calc(100vh - {})", HEADER_HEIGHT_VAR.value()))
                                         .selector("&:focus", sx().outline("none").box_shadow("none")),
                                     onmounted: move |_| extra_mounted.set(true),

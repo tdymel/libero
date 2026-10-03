@@ -83,7 +83,7 @@ The field tells screen readers why it refused a tag, but shows nothing. The
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
 | `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
 | `disabled` | `bool` | `false` | Takes the input out of the tab order and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled `suggestions` dropdown and its inner parts. |
 
 `SelectionArgs<String>` carries `value`, `remove`, `disabled` and `readonly`, as it does for

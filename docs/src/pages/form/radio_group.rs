@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop, required_prop,
+    status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, OptionList, Options, RadioGroup, Text};
 use libero::components::{RadioGroupPart, RadioPart};
@@ -103,18 +106,14 @@ pub fn RadioGroupPage() -> Element {
                         .doc("Between the question and the options. How to choose."),
                     prop("helper", "Caption")
                         .doc("Under the options. What the choice changes."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
+                    status_prop(),
                     prop("required", "bool")
                         .default("false")
                         .doc("Sets `aria-required` on the group and marks the label."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables every option and dims the group."),
-                    prop("readonly", "bool")
-                        .default("false")
-                        .doc("Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. Chromium does not announce read-only on a group, so say it in the label or description where it matters."),
+                    readonly_prop("group").also("Chromium does not announce read-only on a group, so say it in the label or description where it matters."),
                 ])
                 .parts("RadioGroupPart", vec![
                     (RadioGroupPart::Label, "The label above the control."),
@@ -138,6 +137,15 @@ pub fn RadioGroupPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("Ring and dot color when selected."),
+                    prop("size", "Size").default("md").doc("Size of the circle and its label."),
+                    prop("label", "Caption").doc("The text beside the circle, and the radio's name."),
+                    prop("description", "Caption").doc("A second line under the label."),
+                    prop("helper", "Caption").doc("A caption under the radio."),
+                    status_prop(),
+                    required_prop().also("In a group, set it on `RadioGroup`."),
+                    prop("disabled", "bool")
+                        .default("false")
+                        .doc("Cannot be picked, dimmed and out of the tab order."),
                     prop("aria_label", "String")
                         .doc("Names the radio when it has no `label`."),
                     prop("readonly", "bool")

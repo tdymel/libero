@@ -99,6 +99,13 @@ RadioGroup {
 | `name` | `String` | - | Shared by every radio in one group, which makes them exclusive. `RadioGroup` sets it. |
 | `tabindex` | `String` | - | Which radio is the group's tab stop. `RadioGroup` sets it. |
 | `color` | `ThemeAwareValue` | `primary` | Ring and dot color when selected. |
+| `size` | `Size` | `md` | Size of the circle and its label. |
+| `label` | `Caption` | - | The text beside the circle, and the radio's name. |
+| `description` | `Caption` | - | A second line under the label. |
+| `helper` | `Caption` | - | A caption under the radio. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. In a group, set it on `RadioGroup`. |
+| `disabled` | `bool` | `false` | Cannot be picked, dimmed and out of the tab order. |
 | `aria_label` | `String` | - | Names the radio when it has no `label`. |
 | `readonly` | `bool` | `false` | Refuses the pick. ARIA has no read-only radio, so only `RadioGroup` can announce it. |
 | `variant` | `ChoiceVariant` | `plain` | `card` draws the radio as a bordered surface you can click anywhere. |

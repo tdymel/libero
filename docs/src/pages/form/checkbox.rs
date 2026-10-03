@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, disabled_prop, prop, props, readonly_prop,
+    required_prop, status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::CheckboxPart;
 use libero::components::{Checkbox, Code, FieldStatus, Text};
@@ -40,18 +43,10 @@ pub fn CheckboxPage() -> Element {
                         .doc("Under the label. What checking it means."),
                     prop("helper", "Caption")
                         .doc("Under the description, in the label's column."),
-                    prop("status", "FieldStatus")
-                        .default("Valid")
-                        .doc("Validation state, under the helper. A bare `&str` is an error, an empty one `Valid`."),
-                    prop("required", "bool")
-                        .default("false")
-                        .doc("Sets `aria-required` and marks the label with an asterisk."),
-                    prop("disabled", "bool")
-                        .default("false")
-                        .doc("Disables and dims the checkbox."),
-                    prop("readonly", "bool")
-                        .default("false")
-                        .doc("Focusable and posted with the form, but not editable. `disabled` drops the checkbox from the tab order and the post instead. Chromium does not announce read-only on a checkbox, so say it in the label or description where it matters."),
+                    status_prop(),
+                    required_prop(),
+                    disabled_prop("checkbox"),
+                    readonly_prop("checkbox").also("Chromium does not announce read-only on a checkbox, so say it in the label or description where it matters."),
                     prop("aria_label", "String")
                         .doc("Names the checkbox when it has no `label`."),
                     prop("variant", "ChoiceVariant")
