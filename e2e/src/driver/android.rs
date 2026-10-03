@@ -7,7 +7,8 @@ use super::web::{element, json};
 use super::{Driver, Platform, Rect};
 use crate::android::{
     ALT, CTRL, SHIFT, download, harness, input, input_text, keycode, posted_notifications,
-    soft_keyboard_shown, tap_any_node_within, tap_node, tap_notification, webview_view_focused,
+    soft_keyboard_shown, tap_any_node_within, tap_node, tap_notification, tap_notification_action,
+    webview_view_focused,
 };
 use crate::passes::{focus, keyboard, pointer};
 
@@ -354,6 +355,14 @@ impl Driver for Android {
 
     async fn tap_notification(&mut self, title: &str) -> Result<()> {
         tap_notification(title).await
+    }
+
+    async fn tap_notification_action(&mut self, label: &str) -> Result<()> {
+        tap_notification_action(label).await
+    }
+
+    async fn drag_at(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
+        self.swipe(pointer::Point { x, y }, dx, dy).await
     }
 
     /// The app runs outside the WebView: the idle rounds of `settle` carry the frame's report.

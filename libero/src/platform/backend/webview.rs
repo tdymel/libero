@@ -1229,6 +1229,31 @@ impl WaveformApi for WebViewWaveform {
     }
 }
 
+/// The image at `src` fitted into a transparent `size` px square PNG, drawn by the page:
+/// only the WebView reaches wry's asset URLs, and it decodes SVG. `None` if it fails.
+#[cfg(target_os = "android")]
+pub(crate) fn square_png(src: &str, size: u32) -> impl Future<Output = Option<Vec<u8>>> + use<> {
+    let script = eval_with(
+        json!([src, size]),
+        "const [src, size] = data;
+        try {
+            const image = new Image();
+            image.src = src;
+            await Promise.race([image.decode(), new Promise((_, fail) => setTimeout(fail, 5000))]);
+            const width = image.naturalWidth || size, height = image.naturalHeight || size;
+            const scale = size / Math.max(width, height);
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = size;
+            const [w, h] = [width * scale, height * scale];
+            canvas.getContext('2d').drawImage(image, (size - w) / 2, (size - h) / 2, w, h);
+            return canvas.toDataURL('image/png').split(',')[1] ?? null;
+        } catch (error) {
+            return null;
+        }",
+    );
+    async move { decode_base64(&script.join::<Option<String>>().await.ok()??) }
+}
+
 /// Standard, padded base64, as `btoa` writes it; `None` on anything else.
 fn decode_base64(text: &str) -> Option<Vec<u8>> {
     let text = text.trim_end_matches('=').as_bytes();

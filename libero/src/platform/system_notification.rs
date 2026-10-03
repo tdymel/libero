@@ -14,7 +14,7 @@ use super::PermissionState;
 pub struct SystemNotification {
     pub title: String,
     pub body: Option<String>,
-    /// An image URL. Android ignores it: its asset URLs are not reachable outside the WebView.
+    /// An image URL. Android shows it as the large icon, drawn to a PNG by the WebView.
     pub icon: Option<String>,
     pub tag: Option<String>,
     /// Asks the platform for no sound or vibration. A hint only.

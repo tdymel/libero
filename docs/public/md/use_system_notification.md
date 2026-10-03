@@ -165,7 +165,7 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
 |---|---|---|
 | `title` | | Set by `SystemNotification::new(title)`. |
 | `body` | `None` | The text under the title. |
-| `icon` | `None` | An image URL. Android ignores it. |
+| `icon` | `None` | An image URL. Android shows it as the large icon. |
 | `tag` | `None` | Showing another with the same tag replaces it; `close(tag)` closes it. |
 | `silent` | `false` | Asks for no sound or vibration; a hint. |
 | `on_click` | `None` | Runs on a click while the component is mounted, after the click focused the page's window. |
@@ -195,7 +195,7 @@ Both handles are `Copy`. `PushOptions` apply to the next `subscribe`.
 | Web | Full, in a secure context. Chrome on Android shows through the page's service worker, which must forward clicks (below). | Full, in a secure context; iOS Safari only for a Home Screen web app. |
 | Linux desktop (WebKitGTK) | With libero's `desktop` feature, the desktop's notification server, always `Granted`; a click raises the window and runs `on_click`. Without it every request is `Denied`. | `Unsupported`. |
 | macOS, Windows desktop | Untested; a click runs `on_click` and, with libero's `desktop` feature, raises the window. | `Unsupported`. |
-| Android (WebView) | Full, through the system's `NotificationManager`, with `notifications` under `[permissions]`; one channel named after the app. `icon` is ignored; the status bar shows the `libero_notification` drawable, else the launcher icon. An action reopens the app. | `Unsupported`; FCM needs app-level Kotlin (recipe below). |
+| Android (WebView) | Full, through the system's `NotificationManager`, with `notifications` under `[permissions]`; one channel named after the app. `icon` is the large icon, drawn to a PNG by the WebView; the status bar shows the `libero_notification` drawable, else the launcher icon. An action reopens the app. | `Unsupported`; FCM needs app-level Kotlin (recipe below). |
 | Blitz on Linux | Full, through the desktop's notification server; always `Granted`. A click runs `on_click` without raising the window. | `Unsupported`. |
 | Blitz on macOS and Windows, server render | `Unsupported`. | `Unsupported`. |
 
@@ -358,9 +358,9 @@ server, its service account and the sending stay outside libero.
   and libero cannot open its settings.
 - Android reads `Prompt` until the first request and `Denied` after a refusal,
   also after a restart; it cannot tell a dismissed dialog from a refusal.
-- Android ignores `icon`: the status bar shows the app's `libero_notification`
-  drawable, else the launcher icon. A tap on a notification from before a
-  restart only opens the app.
+- Android shows `icon` as the large icon, the status bar the app's
+  `libero_notification` drawable, else the launcher icon. A tap on a
+  notification from before a restart only opens the app.
 - An action on Android reopens the app, as a tap does. The web shows actions
   only through a service worker, which must post the press back; without one
   the notification shows without them.

@@ -104,7 +104,8 @@ apk-android arch="aarch64": _dx (_android-icon "release")
     echo "$apk"
 
 # Regenerates `docs/android/res` from `assets/logo.svg`: an adaptive icon (the
-# logo inside the 66dp safe zone of a 108dp canvas) plus square legacy icons.
+# logo inside the 66dp safe zone of a 108dp canvas), square legacy icons, and
+# the white `libero_notification` vector the status bar shows.
 android-icons:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -118,6 +119,7 @@ android-icons:
         rsvg-convert -w $((icon * 80 / 100)) assets/logo.svg \
             | magick png:- -background white -gravity center -extent ${icon}x${icon} "$dir/ic_launcher.png"
     done
+    python3 android/notification_icon.py assets/logo.svg android/res/drawable/libero_notification.xml
 
 # Installs `apk-android`'s newest file on the one device `adb devices` shows.
 install-android arch="aarch64":

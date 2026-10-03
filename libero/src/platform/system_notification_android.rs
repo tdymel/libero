@@ -25,6 +25,7 @@ use super::{
     SystemNotificationError,
 };
 use crate::platform::PermissionState;
+use crate::platform::backend::webview_square_png;
 
 const POST_NOTIFICATIONS: &str = "android.permission.POST_NOTIFICATIONS";
 const CHANNEL: &str = "libero";
@@ -44,6 +45,8 @@ static NEXT_KEY: AtomicU64 = AtomicU64::new(1);
 static ROUTES: Mutex<Option<HashMap<u64, Route>>> = Mutex::new(None);
 /// The status bar icon an app ships; the launcher icon stands in without it.
 const SMALL_ICON: &str = "libero_notification";
+/// The large icon's side: 64dp at xxxhdpi.
+const LARGE_ICON_PX: u32 = 256;
 
 struct Route {
     events: mpsc::UnboundedSender<NotificationEvent>,
@@ -191,6 +194,8 @@ struct Content {
     tag: Option<String>,
     silent: bool,
     action_titles: Vec<String>,
+    /// The `icon` as PNG bytes.
+    large_icon: Option<Vec<u8>>,
 }
 
 /// The app's `libero_notification` drawable, else its launcher icon.
@@ -289,6 +294,29 @@ fn post(env: &mut JNIEnv, activity: &JObject, content: &Content) -> JniResult<()
             format!("(Ljava/lang/CharSequence;){builder_class}"),
             &[JValue::Object(&body)],
         )?;
+    }
+    if let Some(png) = &content.large_icon {
+        let bytes = env.byte_array_from_slice(png)?;
+        let bitmap = env
+            .call_static_method(
+                "android/graphics/BitmapFactory",
+                "decodeByteArray",
+                "([BII)Landroid/graphics/Bitmap;",
+                &[
+                    JValue::Object(&bytes),
+                    JValue::Int(0),
+                    JValue::Int(png.len() as i32),
+                ],
+            )?
+            .l()?;
+        if !bitmap.is_null() {
+            env.call_method(
+                &builder,
+                "setLargeIcon",
+                format!("(Landroid/graphics/Bitmap;){builder_class}"),
+                &[JValue::Object(&bitmap)],
+            )?;
+        }
     }
     if content.silent && sdk >= 31 {
         env.call_method(
@@ -530,7 +558,8 @@ impl SystemNotificationApi for AndroidNotification {
         Box::pin(async move { answer.await.unwrap_or(PermissionState::Unsupported) })
     }
 
-    /// `icon` is ignored: the status bar shows [`SMALL_ICON`]. A tap or an action reopens the app.
+    /// `icon` becomes the large icon; the status bar shows [`SMALL_ICON`]. A tap or an action
+    /// reopens the app.
     fn show(
         &self,
         notification: &SystemNotification,
@@ -544,22 +573,30 @@ impl SystemNotificationApi for AndroidNotification {
             .iter()
             .map(|action| (action.id.clone(), action.title.clone()))
             .unzip();
-        let content = Content {
+        let mut content = Content {
             key,
             title: notification.title.clone(),
             body: notification.body.clone(),
             tag: tag.clone(),
             silent: notification.silent,
             action_titles,
+            large_icon: None,
         };
-        let answer = off_thread(move || {
-            if read_permission() != PermissionState::Granted {
-                return Err(SystemNotificationError::Denied);
-            }
-            on_main(move |env, activity| post(env, activity, &content))
-                .ok_or(SystemNotificationError::Failed)
-        });
+        let large_icon = notification
+            .icon
+            .as_deref()
+            .map(|src| webview_square_png(src, LARGE_ICON_PX));
         Box::pin(async move {
+            if let Some(png) = large_icon {
+                content.large_icon = png.await;
+            }
+            let answer = off_thread(move || {
+                if read_permission() != PermissionState::Granted {
+                    return Err(SystemNotificationError::Denied);
+                }
+                on_main(move |env, activity| post(env, activity, &content))
+                    .ok_or(SystemNotificationError::Failed)
+            });
             answer
                 .await
                 .unwrap_or(Err(SystemNotificationError::Failed))?;

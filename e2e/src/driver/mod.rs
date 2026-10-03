@@ -131,6 +131,16 @@ pub trait Driver {
         let _ = title;
         bail!("{:?}: no notification shade", self.platform())
     }
+    /// Opens the notification shade and presses the action button labelled `label`.
+    async fn tap_notification_action(&mut self, label: &str) -> Result<()> {
+        let _ = label;
+        bail!("{:?}: no notification shade", self.platform())
+    }
+    /// A finger drag from a viewport point by `(dx, dy)`, for a press beside any element.
+    async fn drag_at(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
+        let _ = (x, y, dx, dy);
+        bail!("{:?}: no drag from a point", self.platform())
+    }
     /// The system Back key, which only Android has.
     async fn press_back(&mut self) -> Result<()> {
         bail!("{:?}: no Back key", self.platform())

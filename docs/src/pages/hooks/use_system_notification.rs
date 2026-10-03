@@ -188,7 +188,7 @@ pub fn UseSystemNotificationPage() -> Element {
                 .limits([
                     "A denial is usually permanent for the site: the browser does not ask again, and libero cannot open its settings.",
                     "Android reads Prompt until the first request and Denied after a refusal, also after a restart; it cannot tell a dismissed dialog from a refusal.",
-                    "Android ignores icon: the status bar shows the app's libero_notification drawable, else the launcher icon. A tap on a notification from before a restart only opens the app.",
+                    "Android shows icon as the large icon, the status bar the app's libero_notification drawable, else the launcher icon. A tap on a notification from before a restart only opens the app.",
                     "An action on Android reopens the app, as a tap does. The web shows actions only through a service worker, which must post the press back; without one the notification shows without them.",
                     "Blitz cannot raise the window on a click: on_click runs, the window stays where it is.",
                     "Where only a service worker may show notifications (Chrome on Android), on_click runs only if the app's worker posts the click back, as the sample sw.js does.",

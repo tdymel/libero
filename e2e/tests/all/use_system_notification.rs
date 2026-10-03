@@ -1,6 +1,6 @@
 //! `use_system_notification` and `use_push_subscription`: mounting asks nothing;
 //! on the web a granted show and close, a denial, and push registering its worker.
-//! Android's dialog, posted notification and tap (1348); push is web only.
+//! Android's dialog, posted notification, tap (1348) and action (2126); push is web only.
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -40,6 +40,19 @@ async fn mounting_asks_nothing<D: Driver>(d: &mut D, _route: &str) -> Result<()>
             eventually_text(d, "#error", "None", "a show").await?;
             d.tap_notification("Fixture").await?;
             eventually_text(d, "#clicks", "1", "a tap on the notification").await?;
+            // Todo 2126: an action button in the shade runs on_action and cancels the notification.
+            d.click("#show-actions").await?;
+            eventually(d, "the notification with actions to post", async |d| {
+                Ok(d.posted_notifications().await?.contains("tag=fixture"))
+            })
+            .await?;
+            d.tap_notification_action("Retry").await?;
+            eventually_text(d, "#action", "retry", "a press on the Retry action").await?;
+            eventually(d, "the action to cancel it", async |d| {
+                Ok(!d.posted_notifications().await?.contains("tag=fixture"))
+            })
+            .await?;
+            eventually_text(d, "#clicks", "1", "a press on an action").await?;
             d.click("#show").await?;
             eventually(d, "the second notification to post", async |d| {
                 Ok(d.posted_notifications().await?.contains("tag=fixture"))

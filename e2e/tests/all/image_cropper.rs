@@ -584,6 +584,26 @@ fn a_drag_or_wheel_beside_the_box_moves_or_scales_it() {
     });
 }
 
+/// A real finger drag begun beside the box moves it, as the touch emulation does above (2123).
+async fn a_finger_beside_the_box_moves_it<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    eventually_text(d, "#crop", "25,25,50,50", "the box").await?;
+    let image = d.rect("[data-slot=image]").await?;
+    let (x, y) = (image.x + image.width * 0.04, image.y + image.height * 0.1);
+    let (dx, dy) = (image.width / 10.0, image.height / 10.0);
+    d.drag_at(x + dx, y + dy, -dx, -dy).await?;
+    eventually_text(d, "#crop", "15,15,50,50", "a finger drag beside the box").await?;
+    d.drag_at(x, y, dx, dy).await?;
+    eventually_text(d, "#crop", "25,25,50,50", "a finger drag back").await
+}
+e2e::scenario!(
+    a_finger_beside_the_box_moves_it,
+    "/image-cropper",
+    a_finger_beside_the_box_moves_it,
+    android_only(
+        "2123: the web and Blitz arms are a_drag_or_wheel_beside_the_box_moves_or_scales_it"
+    )
+);
+
 /// A `src` that fails calls `onerror` once, warns, and draws no box over the alt text (1265).
 #[test]
 fn a_broken_src_reports_and_draws_no_box() {

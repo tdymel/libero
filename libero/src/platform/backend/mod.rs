@@ -52,6 +52,8 @@ pub(crate) use webview::permission as webview_permission;
     not(feature = "desktop")
 ))]
 pub(crate) use webview::save_file as webview_save_file;
+#[cfg(all(target_os = "android", not(feature = "native")))]
+pub(crate) use webview::square_png as webview_square_png;
 #[cfg(all(
     not(target_arch = "wasm32"),
     not(target_os = "android"),

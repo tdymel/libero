@@ -215,8 +215,20 @@ pub(crate) async fn posted_notifications(package: &str) -> Result<String> {
 
 /// Opens the notification shade and taps the notification titled `title`.
 pub(crate) async fn tap_notification(title: &str) -> Result<()> {
+    tap_in_shade(&[&format!("text=\"{title}\"")]).await
+}
+
+/// Opens the notification shade and presses the action button labelled `label`.
+pub(crate) async fn tap_notification_action(label: &str) -> Result<()> {
+    // Older shades draw action labels in capitals.
+    let upper = format!("text=\"{}\"", label.to_uppercase());
+    tap_in_shade(&[&format!("text=\"{label}\""), &upper]).await
+}
+
+/// Opens the notification shade, taps the first of `wanted` and waits for the shade to hide.
+async fn tap_in_shade(wanted: &[&str]) -> Result<()> {
     shell(&["cmd statusbar expand-notifications".into()]).await?;
-    tap_node(&format!("text=\"{title}\"")).await?;
+    tap_any_node_within(wanted, crate::wait::timeout()).await?;
     // The shade can stay down over the app.
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     shell(&["cmd statusbar collapse".into()]).await?;
