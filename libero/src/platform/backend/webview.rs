@@ -408,6 +408,34 @@ pub(super) fn on_element_scroll(
     }))
 }
 
+/// Injected: `preventDefault` has to answer the `touchmove` synchronously.
+pub(super) fn hold_edge_pan(
+    band: crate::platform::scroll::EdgeBand,
+) -> Option<Box<dyn ScrollSubscription>> {
+    if !runs_scripts() {
+        return None;
+    }
+    let slot = Slot::new();
+    let script = eval(&format!(
+        "const remove = ({})({}, {}, {});
+        {}
+        remove();",
+        crate::platform::scroll::EDGE_PAN_JS,
+        band.inset,
+        band.width,
+        band.left,
+        slot.park("")
+    ));
+    let task = spawn(async move {
+        let mut script = script;
+        while script.recv::<()>().await.is_ok() {}
+    });
+    Some(Box::new(WebViewListener {
+        task,
+        _slot: Rc::new(slot),
+    }))
+}
+
 pub(super) fn media_query() -> Option<&'static dyn MediaQueryApi> {
     runs_scripts().then_some(&MEDIA_QUERY as &'static dyn MediaQueryApi)
 }

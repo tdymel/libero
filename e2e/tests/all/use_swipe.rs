@@ -74,6 +74,32 @@ async fn opens_from_the_right_under_rtl<D: Driver>(d: &mut D, _route: &str) -> R
     text_is(d, "#opens", "1").await
 }
 
+/// The drawer opens mid-press and the page turns inert, so the press ends off it:
+/// every later swipe still opens (todo 2170).
+async fn reopens_after_each_close<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (_, vh) = d.viewport().await?;
+    let scroller = d.rect("#scroller").await?;
+    for round in 1..=5 {
+        // Every other round starts on an inner scroller, which takes the pointer (2170).
+        let y = if round % 2 == 0 {
+            scroller.y + scroller.height / 2.0
+        } else {
+            vh * 0.75
+        };
+        d.swipe_from(IN_BAND, y, 120.0, 0.0).await?;
+        text_is(d, "#opens", &round.to_string()).await?;
+        // Android drops the click of a tap that lands right after a swipe: tap again.
+        eventually(d, "the drawer to close", async |d| {
+            if d.exists("#drawer").await? {
+                d.click("#close").await?;
+            }
+            Ok(!d.exists("#drawer").await?)
+        })
+        .await?;
+    }
+    Ok(())
+}
+
 e2e::scenario!(
     a_touch_swipe_reports_its_direction_past_the_distance,
     "/use-swipe/basic",
@@ -96,5 +122,11 @@ e2e::scenario!(
     an_edge_swipe_opens_from_the_right_under_rtl,
     "/use-swipe/edge-rtl",
     opens_from_the_right_under_rtl,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+e2e::scenario!(
+    an_edge_swipe_reopens_a_drawer_five_times,
+    "/use-swipe/drawer",
+    reopens_after_each_close,
     desktop: skip("1126: no touch input under Xvfb")
 );

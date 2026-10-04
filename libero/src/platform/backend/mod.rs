@@ -445,6 +445,21 @@ pub(crate) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn Scro
     return webview::on_viewport_resize(callback);
 }
 
+/// See [`hold_edge_pan`](crate::platform::scroll::hold_edge_pan).
+pub(crate) fn hold_edge_pan(
+    band: crate::platform::scroll::EdgeBand,
+) -> Option<Box<dyn ScrollSubscription>> {
+    #[cfg(target_arch = "wasm32")]
+    return web::hold_edge_pan(band);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return {
+        let _ = band;
+        None
+    };
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::hold_edge_pan(band);
+}
+
 /// `scrollIntoView`'s `nearest`, vertically: how far a view spanning
 /// `view_top..view_bottom` has to scroll to show `top..bottom`, `None` if it
 /// already shows it. A box taller than the view aligns its top.

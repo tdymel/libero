@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use dioxus::prelude::*;
 use libero::{
     components::{Flex, NavLink, Sidebar, Tree, TreeNode, TreeNodeRenderArgs, default_tree_render},
-    hooks::ElementHandle,
+    hooks::{ElementHandle, use_direction},
     platform::ElementApi,
     sx::{Sx, sx},
     theme::{SIDEBAR_SIZE, Size},
@@ -12,11 +12,13 @@ use libero::{
 use crate::Route;
 
 mod data;
+mod drag;
 
 #[cfg(test)]
 pub use data::page_title;
 use data::{NavEntry, nav_tree};
 pub use data::{neighbours, page_actions, page_label};
+pub(crate) use drag::use_nav_drag;
 
 // Below `Sm` an off-canvas panel toggled by `open` (`visibility` drops closed links from tab
 // order); from `Sm` up the sticky sidebar, ignoring `open`. With `drawer` off-canvas everywhere.
@@ -74,6 +76,16 @@ fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
     )
 }
 
+/// The closed drawer `px` out from its start edge, the right one under RTL.
+fn pulled_style(px: f64, rtl: bool) -> String {
+    let at = if rtl {
+        format!("calc(100% - {px}px)")
+    } else {
+        format!("calc(-100% + {px}px)")
+    };
+    format!("transform: translateX({at}); transition: none; visibility: visible;")
+}
+
 fn ancestor_group(data: &[TreeNode<NavEntry>], target: &str) -> Option<String> {
     data.iter()
         .find(|node| node.children.iter().any(|child| child.id == target))
@@ -87,8 +99,12 @@ pub fn DocsNav(
     /// An off-canvas drawer at every width, not a sidebar from `Sm` up.
     #[props(default)]
     drawer: bool,
+    /// How far an edge swipe pulls the closed drawer out, px: it follows the finger.
+    #[props(default)]
+    pulled: Option<f64>,
 ) -> Element {
     let data = nav_tree();
+    let rtl = use_direction().is_rtl();
     let current_path = use_route::<Route>().to_string();
     let group = ancestor_group(&data, &current_path);
 
@@ -112,6 +128,8 @@ pub fn DocsNav(
             // Names the landmark and, when it overflows, its scroll area's tab stop.
             aria_label: "Documentation",
             sx: nav_responsive_sx(open(), drawer),
+            // Inline, not a class per finger position; the class's transition takes over on release.
+            style: pulled.map(|px| pulled_style(px, rtl)),
             Flex {
                 direction: "column",
                 gap: "sm",

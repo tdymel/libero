@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 
 use crate::{
-    hooks::{DragPoint, use_direction},
-    platform,
+    hooks::{DragPoint, use_direction, use_subscription_slot},
+    platform::{self, EDGE_SWIPE_MARK, EdgeBand, ScrollSubscription, hold_edge_pan},
     sx::{Sx, sx},
 };
 
@@ -47,12 +47,33 @@ pub struct Swipe {
     pub onpointercancel: Callback<PointerEvent>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct Track {
     pointer_id: i32,
     start: DragPoint,
     /// The swipe was reported; the rest of the press is ignored.
     done: bool,
+}
+
+/// The track a pointerdown leaves. A primary touch or pen starts over, also over a
+/// press that never ended here: its swipe opened a drawer that made this element
+/// inert (2170). A second finger makes it a pinch; a mouse is ignored.
+fn track_after_down(
+    current: Option<Track>,
+    primary: bool,
+    mouse: bool,
+    pointer_id: i32,
+    start: DragPoint,
+) -> Option<Track> {
+    match (primary, mouse) {
+        (false, _) => None,
+        (true, true) => current,
+        (true, false) => Some(Track {
+            pointer_id,
+            start,
+            done: false,
+        }),
+    }
 }
 
 /// The direction `delta` swipes in, once one axis covers `distance` and
@@ -114,22 +135,18 @@ pub fn use_swipe(on_swipe: Callback<SwipeEvent>, options: SwipeOptions) -> Swipe
     let mut track = use_signal(|| None::<Track>);
 
     let onpointerdown = use_callback(move |event: PointerEvent| {
-        // A second finger makes it a pinch, not a swipe.
-        if !event.is_primary() || track.peek().is_some() {
-            if track.peek().is_some() {
-                track.set(None);
-            }
-            return;
-        }
-        if event.pointer_type() == "mouse" {
-            return;
-        }
         let at = event.client_coordinates();
-        track.set(Some(Track {
-            pointer_id: event.pointer_id(),
-            start: DragPoint { x: at.x, y: at.y },
-            done: false,
-        }));
+        let current = *track.peek();
+        let next = track_after_down(
+            current,
+            event.is_primary(),
+            event.pointer_type() == "mouse",
+            event.pointer_id(),
+            DragPoint { x: at.x, y: at.y },
+        );
+        if next != current {
+            track.set(next);
+        }
     });
     let onpointermove = use_callback(move |event: PointerEvent| {
         let Some(mut current) = *track.peek() else {
@@ -228,10 +245,12 @@ pub(crate) fn edge_swipe_opens(
 
 /// `touch-action: pan-y pinch-zoom` for the element an edge swipe is spread on:
 /// the page still scrolls and zooms, a sideways move reaches the hook. It stops
-/// the browser's own sideways pan of that box (inner scrollers keep theirs), so
-/// spread it on the main column, not on a horizontal scroller.
+/// the browser's own sideways pan of that box, and of inner scrollers for a swipe
+/// that starts in the band, so spread it on the main column, not on a horizontal scroller.
 pub fn edge_swipe_sx() -> Sx {
+    // The mark tells the hook's touch listener the touch started inside.
     sx().touch_action("pan-y pinch-zoom")
+        .with(EDGE_SWIPE_MARK, "1")
 }
 
 /// Calls `on_swipe` when a touch or pen swipes inward from a band near the
@@ -272,6 +291,17 @@ pub fn edge_swipe_sx() -> Sx {
 pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     let direction = use_direction();
     let mut viewport = use_signal(|| None::<f64>);
+    // An inner scroller (code block, tab list) would take the band's sideways pan (2170).
+    let holding = use_subscription_slot::<dyn ScrollSubscription>();
+    let rtl = direction.is_rtl();
+    use_effect(use_reactive!(|(options, rtl)| {
+        holding.clear();
+        holding.set(hold_edge_pan(EdgeBand {
+            inset: options.inset,
+            width: options.width,
+            left: (options.edge == SwipeEdge::Start) != rtl,
+        }));
+    }));
     let decide = use_callback(move |event: SwipeEvent| {
         edge_swipe_opens(
             event.start.x,
@@ -354,6 +384,34 @@ mod tests {
         );
         // A diagonal is neither.
         assert_eq!(swipe_direction(at(60.0, 60.0), 48.0), None);
+    }
+
+    #[test]
+    fn a_press_starts_over_a_track_that_never_ended() {
+        let stale = Some(Track {
+            pointer_id: 3,
+            start: at(70.0, 400.0),
+            done: true,
+        });
+        let fresh = Track {
+            pointer_id: 4,
+            start: at(60.0, 300.0),
+            done: false,
+        };
+        assert_eq!(
+            track_after_down(stale, true, false, 4, at(60.0, 300.0)),
+            Some(fresh)
+        );
+        // A second finger drops the press; a mouse leaves it.
+        assert_eq!(
+            track_after_down(Some(fresh), false, false, 5, at(0.0, 0.0)),
+            None
+        );
+        assert_eq!(
+            track_after_down(Some(fresh), true, true, 1, at(0.0, 0.0)),
+            Some(fresh)
+        );
+        assert_eq!(track_after_down(None, true, true, 1, at(0.0, 0.0)), None);
     }
 
     fn opens(x: f64, direction: SwipeDirection, edge: SwipeEdge, rtl: bool) -> Option<bool> {

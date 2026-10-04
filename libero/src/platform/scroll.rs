@@ -184,3 +184,63 @@ pub fn scroll() -> Option<&'static dyn ScrollApi> {
 pub(crate) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn ScrollSubscription>> {
     backend::on_viewport_resize(callback)
 }
+
+/// Where an edge swipe starts: `inset..inset + width` px in from the left edge, or
+/// from the right one.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct EdgeBand {
+    pub(crate) inset: f64,
+    pub(crate) width: f64,
+    pub(crate) left: bool,
+}
+
+/// The custom property [`hold_edge_pan`] finds the swiped element by, inherited.
+pub(crate) const EDGE_SWIPE_MARK: &str = "--lsx-edge-swipe";
+
+/// `(inset, width, left) => remove`: a non-passive `touchmove` that keeps an inner
+/// scroller from claiming a single touch from the band whose first move goes inward and
+/// mostly sideways. Chromium starts a pan on any later unprevented move, so it holds them all.
+#[cfg_attr(all(not(target_arch = "wasm32"), feature = "native"), allow(dead_code))]
+pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left) => {
+    let start = null;
+    let holding = false;
+    const down = (event) => {
+        start = null;
+        holding = false;
+        const touch = event.touches[0];
+        if (event.touches.length !== 1 || !(event.target instanceof Element)) return;
+        const from = left ? touch.clientX : innerWidth - touch.clientX;
+        if (from < inset || from > inset + width) return;
+        if (getComputedStyle(event.target).getPropertyValue('--lsx-edge-swipe').trim() !== '1') return;
+        start = { x: touch.clientX, y: touch.clientY };
+    };
+    const move = (event) => {
+        if (event.touches.length !== 1) {
+            start = null;
+            holding = false;
+        }
+        if (start) {
+            const touch = event.touches[0];
+            const dx = (touch.clientX - start.x) * (left ? 1 : -1);
+            const dy = Math.abs(touch.clientY - start.y);
+            if (Math.max(Math.abs(dx), dy) < 4) return;
+            start = null;
+            holding = dx > dy;
+        }
+        if (holding && event.cancelable) event.preventDefault();
+    };
+    const capture = { capture: true };
+    addEventListener('touchstart', down, { capture: true, passive: true });
+    addEventListener('touchmove', move, { capture: true, passive: false });
+    return () => {
+        removeEventListener('touchstart', down, capture);
+        removeEventListener('touchmove', move, capture);
+    };
+}";
+
+/// Holds a sideways pan from `band` for an edge swipe until the subscription drops: an
+/// inner scroller's `touch-action` would else take the touch and cancel the pointer
+/// (2170). Only inside an element carrying [`EDGE_SWIPE_MARK`]; `None` on Blitz.
+pub(crate) fn hold_edge_pan(band: EdgeBand) -> Option<Box<dyn ScrollSubscription>> {
+    backend::hold_edge_pan(band)
+}

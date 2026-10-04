@@ -19,6 +19,7 @@ pub const ROUTES: Routes = &[
     ("/use-swipe/basic", || rsx! { SwipePad {} }),
     ("/use-swipe/edge", || rsx! { EdgePage {} }),
     ("/use-swipe/edge-rtl", || rsx! { EdgeRtlPage {} }),
+    ("/use-swipe/drawer", || rsx! { DrawerPage {} }),
 ];
 
 #[component]
@@ -59,6 +60,57 @@ fn EdgePage() -> Element {
                 onpointercancel: move |event| swipe.onpointercancel.call(event),
                 sx: edge_swipe_sx().height("3000px"),
                 p { id: "opens", "{opens}" }
+            }
+        }
+    }
+}
+
+/// The docs shell's drawer: the swipe opens it mid-press and the page turns inert,
+/// so the press never ends on the page (todo 2170).
+#[component]
+fn DrawerPage() -> Element {
+    let mut open = use_signal(|| false);
+    let mut opens = use_signal(|| 0);
+    let swipe = use_edge_swipe(
+        Callback::new(move |()| {
+            if !open() {
+                open.set(true);
+                opens += 1;
+            }
+        }),
+        EdgeSwipeOptions::default(),
+    );
+    rsx! {
+        ScrollArea { aria_label: "Page", sx: sx().position("fixed").inset("0"),
+            Box {
+                id: "page",
+                inert: open().then_some(true),
+                onpointerdown: move |event| swipe.onpointerdown.call(event),
+                onpointermove: move |event| swipe.onpointermove.call(event),
+                onpointerup: move |event| swipe.onpointerup.call(event),
+                onpointercancel: move |event| swipe.onpointercancel.call(event),
+                sx: edge_swipe_sx().height("3000px"),
+                p { id: "opens", "{opens}" }
+                // A code block's box: its own scroller, so the page's `touch-action` stops there.
+                div {
+                    id: "scroller",
+                    style: "overflow-x: auto; height: 200px; background: #eef;",
+                    "fn main() {{}}"
+                }
+            }
+        }
+        if open() {
+            Box {
+                id: "drawer",
+                // Centred: API 36 draws edge to edge, the status bar over the top.
+                sx: sx()
+                    .position("fixed")
+                    .inset("0")
+                    .display("flex")
+                    .align_items("center")
+                    .justify_content("center")
+                    .background("surface"),
+                button { id: "close", onclick: move |_| open.set(false), "Close" }
             }
         }
     }

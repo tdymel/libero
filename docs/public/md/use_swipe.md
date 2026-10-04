@@ -101,7 +101,11 @@ drawer. The band begins `inset` px (44) in, past Android 16's system back zone
 at its highest sensitivity, and is `width` px (48) wide, so it needs no gesture
 exclusion.
 Spread it with `edge_swipe_sx()` on a box covering the page: no strip lies over
-the content. These docs open their navigation this way on a phone.
+the content. A swipe from the band that goes inward, more sideways than up or
+down, also starts on a code block or another inner scroller: the hook keeps that
+box from scrolling sideways for the press. These docs open their navigation this
+way on a phone, and the drawer follows the finger: past a third of its width or
+on a flick it opens.
 
 ## API
 
@@ -146,7 +150,8 @@ pub enum SwipeEdge { Start, End }
 
 `Swipe` is `Copy`. `edge_swipe_sx()` is `touch-action: pan-y pinch-zoom`: the
 page still scrolls and zooms, a sideways move reaches the hook. It stops the
-browser's own sideways pan of that box (inner scrollers keep theirs), so spread
+browser's own sideways pan of that box (inner scrollers keep theirs but from the
+band), so spread
 it on the main column, not on a horizontal scroller. The edge swipe
 reads the direction from `use_direction` and the viewport width at each press.
 
@@ -154,8 +159,9 @@ reads the direction from `use_direction` and the viewport width at each press.
 
 ### Libero handles
 
-- A tap, a scroll and a pinch keep working: the hooks never prevent a default,
-  and a second finger drops the press.
+- A tap, a scroll and a pinch keep working: the hooks prevent no default but an
+  edge swipe's sideways pan of an inner scroller, and a second finger drops the
+  press.
 - The edge swipe starts past Android's system back zone, so Back from the
   screen edge still works.
 - A mouse is ignored, so a desktop click or text selection never turns into a

@@ -5,10 +5,7 @@ use libero::{
         Header, Icon, Kbd, Pictogram, Repository, ScrollArea, ScrollAreaHandle, SpotlightOptions,
         ThemeSwitcher, Title, spotlight_filter, use_scroll_area, use_spotlight,
     },
-    hooks::{
-        EdgeSwipeOptions, ElementHandle, edge_swipe_sx, use_edge_swipe, use_element,
-        use_media_query,
-    },
+    hooks::{ElementHandle, edge_swipe_sx, use_element, use_media_query},
     platform::ElementApi,
     sx::{Sx, sx},
     theme::{
@@ -20,7 +17,7 @@ use pictogram_icons_lucide as lucide;
 
 use crate::{
     Route, heading_focus,
-    nav::{self, DocsNav},
+    nav::{self, DocsNav, use_nav_drag},
     site::{LOGO_INLINE, REPO},
 };
 
@@ -95,16 +92,11 @@ pub(crate) fn AppShell() -> Element {
             open.set(false);
         }
     }));
-    // Where the burger shows, a swipe in from the start edge opens the drawer too.
+    // Where the burger shows, a swipe in from the start edge pulls the drawer out too.
     let swipes = home || !wide();
-    let swipe = use_edge_swipe(
-        Callback::new(move |()| {
-            if swipes && !*open.peek() {
-                open.set(true);
-            }
-        }),
-        EdgeSwipeOptions::default(),
-    );
+    let nav_box = use_element();
+    let drag = use_nav_drag(open, swipes, nav_box);
+    let swipe = drag.swipe;
 
     rsx! {
         Flex {
@@ -301,7 +293,15 @@ pub(crate) fn AppShell() -> Element {
                     // The visible viewport: under a phone's toolbar `100vh` hid the page's end.
                     // An engine without `dvh` drops this and keeps the `100vh` height.
                     .max_height(format!("calc(100dvh - {})", HEADER_HEIGHT_VAR.value())),
-                DocsNav { open, burger, drawer: home }
+                // The drag's handle on the drawer, to measure its width.
+                div { display: "contents", onmounted: nav_box.mount(),
+                    DocsNav {
+                        open,
+                        burger,
+                        drawer: home,
+                        pulled: (drag.pulled)(),
+                    }
+                }
                 ScrollArea {
                     handle: area,
                     // The overflowing page is a region tab stop: it needs a name.

@@ -90,7 +90,7 @@ pub fn UseSwipePage() -> Element {
             markdown: "/md/use_swipe.md",
             accessibility: a11y()
                 .handles([
-                    "A tap, a scroll and a pinch keep working: the hooks never prevent a default, and a second finger drops the press.",
+                    "A tap, a scroll and a pinch keep working: the hooks prevent no default but an edge swipe's sideways pan of an inner scroller, and a second finger drops the press.",
                     "The edge swipe starts past Android's system back zone, so Back from the screen edge still works.",
                     "A mouse is ignored, so a desktop click or text selection never turns into a swipe.",
                 ])
@@ -147,7 +147,7 @@ pub fn UseSwipePage() -> Element {
                     Code { source: "width" }
                     " px (48) wide, so it needs no gesture exclusion. Spread it with "
                     Code { source: "edge_swipe_sx()" }
-                    " on a box covering the page: no strip lies over the content. These docs open their navigation this way on a phone."
+                    " on a box covering the page: no strip lies over the content. A swipe from the band that goes inward, more sideways than up or down, also starts on a code block or another inner scroller: the hook keeps that box from scrolling sideways for the press. These docs open their navigation this way on a phone, and the drawer follows the finger: past a third of its width or on a flick it opens."
                 }
             }
         }

@@ -647,6 +647,40 @@ impl Drop for WebResizeSubscription {
     }
 }
 
+pub(super) fn hold_edge_pan(
+    band: crate::platform::scroll::EdgeBand,
+) -> Option<Box<dyn ScrollSubscription>> {
+    let install =
+        js_sys::Function::new_no_args(&format!("return {};", crate::platform::scroll::EDGE_PAN_JS))
+            .call0(&JsValue::NULL)
+            .ok()?
+            .dyn_into::<js_sys::Function>()
+            .ok()?;
+    let remove = install
+        .call3(
+            &JsValue::NULL,
+            &JsValue::from_f64(band.inset),
+            &JsValue::from_f64(band.width),
+            &JsValue::from_bool(band.left),
+        )
+        .ok()?
+        .dyn_into::<js_sys::Function>()
+        .ok()?;
+    Some(Box::new(WebEdgePan { remove }))
+}
+
+struct WebEdgePan {
+    remove: js_sys::Function,
+}
+
+impl ScrollSubscription for WebEdgePan {}
+
+impl Drop for WebEdgePan {
+    fn drop(&mut self) {
+        let _ = self.remove.call0(&JsValue::NULL);
+    }
+}
+
 /// Attributes that make a node focusable or not, or reshape it through a
 /// class. Not `style`: a `Virtualize` rewrites the observed wrapper's on scroll.
 const CONTENT_ATTRIBUTES: [&str; 7] = [
