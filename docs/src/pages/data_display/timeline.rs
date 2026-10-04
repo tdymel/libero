@@ -1,60 +1,21 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::Pictogram;
-use libero::components::{Code, Text, Timeline, TimelineEvent, TimelineLine, TimelinePart};
-use pictogram_icons_lucide as lucide;
+use libero::components::{Code, Text, Timeline, TimelinePart};
 
-/// The four fixed events as printed, with the controls' bullets and line style.
-// snippet: mirrors demo_items except vec
-fn items_code(values: &DemoValues) -> String {
-    let bullets = values.str("bullets") == "true";
-    let dashed = values.str("line") == "dashed";
+mod demo;
+use demo::demo_items;
 
-    let rows = [
-        (
-            "Pushed to main",
-            "3 commits",
-            "Pictogram { icon: lucide::code::outlined }",
-        ),
-        (
-            "Review requested",
-            "@tom",
-            "Pictogram { icon: pictogram_icons_simple::github::regular }",
-        ),
-        (
-            "Deployed",
-            "v2.4.0 to production",
-            "Pictogram { icon: lucide::check::outlined }",
-        ),
-        (
-            "Rolled back",
-            "reverted in 4 minutes",
-            "Pictogram { icon: lucide::file::outlined }",
-        ),
-    ];
-
-    let mut out = String::from("items: vec![\n");
-    for (index, (title, content, icon)) in rows.iter().enumerate() {
-        out.push_str(&format!(
-            "    TimelineEvent::new(\"{title}\")\n        \
-             .content(rsx! {{ Text {{ \"{content}\" }} }})"
-        ));
-        if bullets {
-            out.push_str(&format!("\n        .bullet(rsx! {{ {icon} }})"));
-        }
-        // On the second-to-last: its connector reaches the final bullet.
-        if dashed && index == rows.len() - 2 {
-            out.push_str("\n        .line(TimelineLine::Dashed)");
-        }
-        out.push_str(",\n");
-    }
-    out.push(']');
-    out
+fn switches(values: &DemoValues) -> (bool, bool) {
+    (
+        values.str("bullets") == "true",
+        values.str("line") == "dashed",
+    )
 }
 
 /// Splices `items`, which `generate_code` never prints, into the generated block.
 fn wrap_page(values: &DemoValues, source: &str) -> String {
-    let items = indent(&items_code(values));
+    let (bullets, dashed) = switches(values);
+    let items = format!("    items: demo_items({bullets}, {dashed}),\n");
     match source.strip_suffix('}') {
         // The props form, `Timeline {\n    ..\n}`.
         Some(open) if source.contains('\n') => format!("{open}{items}}}"),
@@ -62,40 +23,6 @@ fn wrap_page(values: &DemoValues, source: &str) -> String {
         // `Timeline {}` on one line.
         _ => format!("Timeline {{\n{items}}}"),
     }
-}
-
-fn demo_items(values: &DemoValues) -> Vec<TimelineEvent> {
-    let bullets = values.str("bullets") == "true";
-    let dashed = values.str("line") == "dashed";
-
-    let rows: [(&str, &str); 4] = [
-        ("Pushed to main", "3 commits"),
-        ("Review requested", "@tom"),
-        ("Deployed", "v2.4.0 to production"),
-        ("Rolled back", "reverted in 4 minutes"),
-    ];
-
-    rows.iter()
-        .enumerate()
-        .map(|(index, (title, content))| {
-            let content = content.to_string();
-            let mut event = TimelineEvent::new(*title).content(rsx! { Text { "{content}" } });
-            if bullets {
-                // Matched by index rather than looked up: the printed code names
-                // each icon directly.
-                event = event.bullet(match index {
-                    0 => rsx! { Pictogram { icon: lucide::code::outlined } },
-                    1 => rsx! { Pictogram { icon: pictogram_icons_simple::github::regular } },
-                    2 => rsx! { Pictogram { icon: lucide::check::outlined } },
-                    _ => rsx! { Pictogram { icon: lucide::file::outlined } },
-                });
-            }
-            if dashed && index == rows.len() - 2 {
-                event = event.line(TimelineLine::Dashed);
-            }
-            event
-        })
-        .collect()
 }
 
 #[component]
@@ -204,8 +131,10 @@ pub fn TimelinePage() -> Element {
                         .code(|_, _| vec![]),
                 ],
                 wrap: Wrap(wrap_page),
+                file: DemoFile(include_str!("timeline/demo.rs")),
                 render: move |values: DemoValues| {
-                    let items = demo_items(&values);
+                    let (bullets, dashed) = switches(&values);
+                    let items = demo_items(bullets, dashed);
                     let active = values.str("active").parse::<usize>().ok();
 
                     rsx! {

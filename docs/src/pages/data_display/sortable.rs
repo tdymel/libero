@@ -1,44 +1,11 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
-use dioxus::prelude::*;
-use libero::{
-    components::{Code, Orientation, Sortable, SortableItem, SortableItemPart, Text},
-    hooks::SortableMove,
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y, prop, props,
 };
+use dioxus::prelude::*;
+use libero::components::{Code, Orientation, SortableItemPart, Text};
 
-/// The whole list as `Fruit` renders it, with the chosen orientation.
-// snippet: mirrors Fruit except horizontal "horizontal"
-fn code(values: &DemoValues, _: &str) -> String {
-    let orientation = match values.str("orientation").as_str() {
-        "horizontal" => "\n        orientation: \"horizontal\",",
-        _ => "",
-    };
-    format!(
-        r#"let mut fruit = use_signal(|| vec!["Apple", "Pear", "Plum", "Cherry"]);
-
-rsx! {{
-    Sortable {{{orientation}
-        onreorder: move |step: SortableMove| step.apply(&mut fruit.write()),
-        for (index, name) in fruit().into_iter().enumerate() {{
-            SortableItem {{ key: "{{name}}", index, label: name, "{{name}}" }}
-        }}
-    }}
-}}"#
-    )
-}
-
-#[component]
-fn Fruit(orientation: Orientation) -> Element {
-    let mut fruit = use_signal(|| vec!["Apple", "Pear", "Plum", "Cherry"]);
-    rsx! {
-        Sortable {
-            orientation,
-            onreorder: move |step: SortableMove| step.apply(&mut fruit.write()),
-            for (index, name) in fruit().into_iter().enumerate() {
-                SortableItem { key: "{name}", index, label: name, "{name}" }
-            }
-        }
-    }
-}
+mod demo;
+use demo::Fruit;
 
 #[component]
 pub fn SortablePage() -> Element {
@@ -113,7 +80,7 @@ pub fn SortablePage() -> Element {
                 }
             },
             Demo {
-                component: "Sortable",
+                component: "Fruit",
                 children_text: "",
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
@@ -127,7 +94,7 @@ pub fn SortablePage() -> Element {
                         orientation: Orientation::from(values.str("orientation").as_str()),
                     }
                 },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("sortable/demo.rs")),
             }
 
             DocSection {

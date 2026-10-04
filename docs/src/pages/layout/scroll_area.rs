@@ -1,5 +1,6 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoFile, DemoValues, DocPage, DocSection, UNSET, Wrap, a11y, indent,
+    prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -11,31 +12,10 @@ use libero::{
     use_theme,
 };
 
-/// Fifty thousand rows, of which the preview renders about a dozen.
-const VIRTUAL_ROWS: usize = 50_000;
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("scroll_area.rs"));
 
-/// What the `virtualize` switch puts in the area instead of `CONTENT`.
-// snippet: mirrors ScrollAreaPage
-const VIRTUAL_CONTENT: &str = r#"List {
-    Virtualize {
-        count: 50_000,
-        item: move |index: usize| rsx! {
-            ListItem { sx: sx().padding("sm"), "Row {index}" }
-        },
-    }
-}"#;
-
-/// Wider and taller than the frame, so both axes have something to scroll -
-/// relative, so it stays wider however wide the frame gets.
-// snippet: mirrors ScrollAreaPage
-const CONTENT: &str = r#"Box {
-    sx: sx().width("150%").padding("md"),
-    for i in 0..20 {
-        Text { key: "{i}", "Item {i}" }
-    }
-}"#;
-
-/// Fixed wiring; `area`, `position` and `edge` are declared in `PREAMBLE`. The plain content
+/// Fixed wiring; `area`, `position` and `edge` are declared in the `state` section. The plain content
 /// makes the area a tab stop, so it needs a name.
 // snippet: mirrors ScrollAreaPage
 const FIXED: [&str; 5] = [
@@ -46,8 +26,8 @@ const FIXED: [&str; 5] = [
     r#"onbottomreached: move |_| edge.set("bottom")"#,
 ];
 
+// demo-code: readout start
 /// Rounded percentages: a raw `{event:?}` reflows the row every tick.
-/// `PREAMBLE` prints it; `printed_snippets_mirror_their_live_code` keeps the two in step.
 fn readout(event: ScrollPositionEvent) -> String {
     let (kind, x, y) = match event {
         ScrollPositionEvent::Start(x, y) => ("Start", x, y),
@@ -56,29 +36,14 @@ fn readout(event: ScrollPositionEvent) -> String {
     };
     format!("{kind} at x {x:.0}%, y {y:.0}%")
 }
-
-/// The helper, the handle and the two signals the preview's wiring uses,
-/// printed above the rsx so the snippet compiles as it stands.
-// snippet: mirrors readout,ScrollAreaPage
-const PREAMBLE: &str = r#"fn readout(event: ScrollPositionEvent) -> String {
-    let (kind, x, y) = match event {
-        ScrollPositionEvent::Start(x, y) => ("Start", x, y),
-        ScrollPositionEvent::Change(x, y) => ("Change", x, y),
-        ScrollPositionEvent::End(x, y) => ("End", x, y),
-    };
-    format!("{kind} at x {x:.0}%, y {y:.0}%")
-}
-
-let area = use_scroll_area();
-let mut position = use_signal(|| ScrollPositionEvent::Change(0.0, 0.0));
-let mut edge = use_signal(|| "none");
-
-"#;
+// demo-code: readout end
 
 /// Prints the sized parent a scroll area fills, and the readout and jump buttons it wires to.
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
-        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}}\" }}\n        // A reached edge is a result, so a screen reader hears it.\n        Text {{ size: \"sm\", role: \"status\", \"Last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
+        "{}\n\n{}\n\nrsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}}\" }}\n        // A reached edge is a result, so a screen reader hears it.\n        Text {{ size: \"sm\", role: \"status\", \"Last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
+        FILE.section("readout"),
+        FILE.section("state"),
         indent(&indent(&indent(code)))
     )
 }
@@ -86,9 +51,11 @@ fn wrap_frame(_: &DemoValues, code: &str) -> String {
 #[component]
 pub fn ScrollAreaPage() -> Element {
     let theme = use_theme();
+    // demo-code: state start
+    let area = use_scroll_area();
     let mut position = use_signal(|| ScrollPositionEvent::Change(0.0, 0.0));
     let mut edge = use_signal(|| "none");
-    let area = use_scroll_area();
+    // demo-code: state end
 
     rsx! {
         DocPage {
@@ -174,8 +141,8 @@ pub fn ScrollAreaPage() -> Element {
                 component: "ScrollArea",
                 children_text: "",
                 code_child: Child(|values: &DemoValues| match values.str("virtualize").as_str() {
-                    "true" => VIRTUAL_CONTENT.to_string(),
-                    _ => CONTENT.to_string(),
+                    "true" => FILE.section("virtual").to_string(),
+                    _ => FILE.section("content").to_string(),
                 }),
                 fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![
@@ -223,21 +190,25 @@ pub fn ScrollAreaPage() -> Element {
                                 ontopreached: move |_| edge.set("top"),
                                 onbottomreached: move |_| edge.set("bottom"),
                                 if values.str("virtualize") == "true" {
+                                    // demo-code: virtual start
                                     List {
                                         Virtualize {
-                                            count: VIRTUAL_ROWS,
+                                            count: 50_000,
                                             item: move |index: usize| rsx! {
                                                 ListItem { sx: sx().padding("sm"), "Row {index}" }
                                             },
                                         }
                                     }
+                                    // demo-code: virtual end
                                 } else {
+                                    // demo-code: content start
                                     Box {
                                         sx: sx().width("150%").padding("md"),
                                         for i in 0..20 {
                                             Text { key: "{i}", "Item {i}" }
                                         }
                                     }
+                                    // demo-code: content end
                                 }
                             }
                         }

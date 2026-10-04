@@ -1,55 +1,21 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Carousel, CarouselPart, Input, Text},
-    sx::sx,
+    components::{Carousel, CarouselPart, Input, Text},
     use_theme,
 };
 
+mod demo;
+use demo::demo_slides;
+
 /// Fixed slides, controlled so a control change keeps the reader's slide. Opens on slide 3:
 /// at slide 1 every `align` rests the same way.
-// snippet: mirrors demo_slides,CarouselPage
 const FIXED: [&str; 4] = [
     r#"aria_label: "Product photos""#,
     "index: index()",
     "onindexchange: move |next| index.set(next)",
-    r#"slides: (1..=6)
-    .map(|n| rsx! {
-        Box {
-            sx: sx()
-                .display("flex")
-                .align_items("center")
-                .justify_content("center")
-                .min_height("160px")
-                .height("100%")
-                .background(format!("primary.{n}"))
-                .color(format!("primary-contrast.{n}")),
-            Text { "Slide {n}" }
-        }
-    })
-    .collect()"#,
+    "slides: demo_slides()",
 ];
-
-fn demo_slides() -> Vec<Element> {
-    (1..=6)
-        .map(|n| {
-            rsx! {
-                Box {
-                    sx: sx()
-                        .display("flex")
-                        .align_items("center")
-                        .justify_content("center")
-                        // A floor, not the size: as `height`, a vertical 300px slide painted only 160px.
-                        .min_height("160px")
-                        .height("100%")
-                        .background(format!("primary.{n}"))
-                        .color(format!("primary-contrast.{n}")),
-                    Text { "Slide {n}" }
-                }
-            }
-        })
-        .collect()
-}
 
 #[component]
 pub fn CarouselPage() -> Element {
@@ -147,6 +113,7 @@ pub fn CarouselPage() -> Element {
                 wide_preview: true,
                 children_text: "",
                 fixed: FIXED.map(str::to_string).to_vec(),
+                file: DemoFile(include_str!("carousel/demo.rs")),
                 controls: vec![
                     // Opens at 1.5: `align` only shows at a fractional `per_view` (todo 153).
                     // `code` prints against the real default of 1, unquoted (`f64`).

@@ -1,77 +1,10 @@
 use crate::Route;
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Anchor, Box, Button, Code, Flex, Text},
-    hooks::use_element,
-    platform::ElementApi,
-    sx::sx,
-};
+use libero::components::{Anchor, Code, Text};
 
-/// The hook call and the markup it measures, as `Measure` renders them.
-// snippet: mirrors Measure
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let panel = use_element();
-let mut size = use_signal(String::new);
-
-rsx! {
-    Flex { direction: "column", align: "flex-start", gap: "sm",
-        Box {
-            onmounted: panel.mount(),
-            sx: sx().width("240px").height("96px").padding("md")
-                .background("muted.1").border_radius("8px"),
-            style: "resize: both; overflow: auto",
-            "Drag the corner to resize me."
-        }
-        Button {
-            variant: "outlined",
-            onclick: move |_| {
-                // Start the read in the handler, await it in a task.
-                let read = panel.dimensions();
-                spawn(async move {
-                    if let Ok(box_size) = read.await {
-                        size.set(format!("{:.0} × {:.0} px", box_size.width, box_size.height));
-                    }
-                });
-            },
-            "Measure"
-        }
-        span { role: "status", "{size}" }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn Measure() -> Element {
-    let panel = use_element();
-    let mut size = use_signal(String::new);
-
-    rsx! {
-        Flex { direction: "column", align: "flex-start", gap: "sm",
-            Box {
-                onmounted: panel.mount(),
-                sx: sx().width("240px").height("96px").padding("md")
-                    .background("muted.1").border_radius("8px"),
-                style: "resize: both; overflow: auto",
-                "Drag the corner to resize me."
-            }
-            Button {
-                variant: "outlined",
-                onclick: move |_| {
-                    let read = panel.dimensions();
-                    spawn(async move {
-                        if let Ok(box_size) = read.await {
-                            size.set(format!("{:.0} × {:.0} px", box_size.width, box_size.height));
-                        }
-                    });
-                },
-                "Measure"
-            }
-            span { role: "status", "{size}" }
-        }
-    }
-}
+mod demo;
+use demo::Measure;
 
 #[component]
 pub fn UseElementPage() -> Element {
@@ -106,11 +39,11 @@ pub fn UseElementPage() -> Element {
             },
 
             Demo {
-                component: "use_element",
+                component: "Measure",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Measure {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_element/demo.rs")),
             }
 
             DocSection {

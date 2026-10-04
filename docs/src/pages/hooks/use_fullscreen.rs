@@ -1,57 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Code, Text},
-    hooks::{use_element, use_fullscreen},
-};
+use libero::components::{Code, Text};
 
-/// The hook in one component, as `Panel` renders it.
-// snippet: mirrors Panel
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let panel = use_element();
-let fullscreen = use_fullscreen(panel);
-// Drawn where the platform refuses native fullscreen: a fixed box over the page.
-let drawn = if fullscreen.is_drawn() { "position: fixed; inset: 0; z-index: 1000;" } else { "" };
-
-rsx! {
-    div {
-        onmounted: panel.mount(),
-        style: "{drawn} display: flex; flex-direction: column; gap: 8px; padding: 16px; background: Canvas; color: CanvasText; border: 1px solid GrayText; border-radius: 8px;",
-        ..fullscreen.attributes(),
-        Text { "A chart, a map or a slide deck." }
-        Button {
-            variant: "outlined",
-            onclick: move |_| fullscreen.toggle(),
-            if fullscreen.is_fullscreen() { "Exit fullscreen" } else { "Fullscreen" }
-        }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn Panel() -> Element {
-    let panel = use_element();
-    let fullscreen = use_fullscreen(panel);
-    let drawn = if fullscreen.is_drawn() {
-        "position: fixed; inset: 0; z-index: 1000;"
-    } else {
-        ""
-    };
-    rsx! {
-        div {
-            onmounted: panel.mount(),
-            style: "{drawn} display: flex; flex-direction: column; gap: 8px; padding: 16px; background: Canvas; color: CanvasText; border: 1px solid GrayText; border-radius: 8px;",
-            ..fullscreen.attributes(),
-            Text { "A chart, a map or a slide deck." }
-            Button {
-                variant: "outlined",
-                onclick: move |_| fullscreen.toggle(),
-                if fullscreen.is_fullscreen() { "Exit fullscreen" } else { "Fullscreen" }
-            }
-        }
-    }
-}
+mod demo;
+use demo::Panel;
 
 #[component]
 pub fn UseFullscreenPage() -> Element {
@@ -95,11 +47,11 @@ pub fn UseFullscreenPage() -> Element {
             },
 
             Demo {
-                component: "use_fullscreen",
+                component: "Panel",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Panel {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_fullscreen/demo.rs")),
             }
         }
     }

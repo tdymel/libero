@@ -1,116 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Code, Flex, Text, TextField},
-    hooks::{UndoHistory, use_history},
-};
+use libero::components::{Code, Text};
 
-/// The field and its undo and redo buttons, as `UndoableNote` renders them.
-// snippet: mirrors UndoableNote
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let note = use_history(|| UndoHistory::new(String::new()), 500);
-
-rsx! {
-    Flex {
-        direction: "column",
-        align: "flex-start",
-        gap: "sm",
-        // Ctrl+Z and Ctrl+Shift+Z (Cmd on macOS) anywhere in the note's controls.
-        onkeydown: move |event: KeyboardEvent| {
-            let modifiers = event.modifiers();
-            let Key::Character(key) = event.key() else { return };
-            if !(modifiers.ctrl() || modifiers.meta()) || !key.eq_ignore_ascii_case("z") {
-                return;
-            }
-            event.prevent_default();
-            if modifiers.shift() { note.redo(); } else { note.undo(); }
-        },
-        TextField {
-            label: "Note",
-            value: note.value().to_string(),
-            oninput: move |next| note.merge(next),
-        }
-        Flex { direction: "row", gap: "sm",
-            Button {
-                variant: "outlined",
-                disabled: !note.can_undo(),
-                focusable_when_disabled: true,
-                onclick: move |_| { note.undo(); },
-                "Undo"
-            }
-            Button {
-                variant: "outlined",
-                disabled: !note.can_redo(),
-                focusable_when_disabled: true,
-                onclick: move |_| { note.redo(); },
-                "Redo"
-            }
-            Button {
-                variant: "text",
-                onclick: move |_| note.reset(String::new()),
-                "Clear"
-            }
-        }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn UndoableNote() -> Element {
-    let note = use_history(|| UndoHistory::new(String::new()), 500);
-
-    rsx! {
-        Flex {
-            direction: "column",
-            align: "flex-start",
-            gap: "sm",
-            onkeydown: move |event: KeyboardEvent| {
-                let modifiers = event.modifiers();
-                let Key::Character(key) = event.key() else { return };
-                if !(modifiers.ctrl() || modifiers.meta()) || !key.eq_ignore_ascii_case("z") {
-                    return;
-                }
-                event.prevent_default();
-                if modifiers.shift() {
-                    note.redo();
-                } else {
-                    note.undo();
-                }
-            },
-            TextField {
-                label: "Note",
-                value: note.value().to_string(),
-                oninput: move |next| note.merge(next),
-            }
-            Flex { direction: "row", gap: "sm",
-                Button {
-                    variant: "outlined",
-                    disabled: !note.can_undo(),
-                    focusable_when_disabled: true,
-                    onclick: move |_| {
-                        note.undo();
-                    },
-                    "Undo"
-                }
-                Button {
-                    variant: "outlined",
-                    disabled: !note.can_redo(),
-                    focusable_when_disabled: true,
-                    onclick: move |_| {
-                        note.redo();
-                    },
-                    "Redo"
-                }
-                Button {
-                    variant: "text",
-                    onclick: move |_| note.reset(String::new()),
-                    "Clear"
-                }
-            }
-        }
-    }
-}
+mod demo;
+use demo::UndoableNote;
 
 #[component]
 pub fn UseHistoryPage() -> Element {
@@ -152,11 +45,11 @@ pub fn UseHistoryPage() -> Element {
             },
 
             Demo {
-                component: "use_history",
+                component: "UndoableNote",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { UndoableNote {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_history/demo.rs")),
             }
 
             DocSection {

@@ -1,23 +1,10 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, DataList, DataListItem, Text};
 use libero::use_theme;
 
-/// The pairs, printed verbatim. The `for` loop shows several descriptions per term.
-// snippet: let phones = ["+49 30 1234567"];
-// snippet: in DataList { .. }
-// snippet: mirrors DataListPage
-const CHILDREN: &str = r#"DataListItem {
-    label: rsx! { "Status" },
-    Chip { variant: "filled", color: "success", size: "xs", "Active" }
-}
-DataListItem { label: rsx! { "Owner" }, "Jamie Chen" }
-DataListItem {
-    label: rsx! { "Phone" },
-    for phone in &phones {
-        div { "{phone}" }
-    }
-}"#;
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("data_list.rs"));
 
 #[component]
 pub fn DataListPage() -> Element {
@@ -70,7 +57,7 @@ pub fn DataListPage() -> Element {
             Demo {
                 component: "DataList",
                 children_text: "",
-                children_code: CHILDREN,
+                children_code: FILE.section("children"),
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
@@ -82,6 +69,7 @@ pub fn DataListPage() -> Element {
                     DataList {
                         orientation: values.str("orientation"),
                         gap: values.str("gap"),
+                        // demo-code: children start
                         DataListItem {
                             label: rsx! { "Status" },
                             Chip { variant: "filled", color: "success", size: "xs", "Active" }
@@ -89,10 +77,11 @@ pub fn DataListPage() -> Element {
                         DataListItem { label: rsx! { "Owner" }, "Jamie Chen" }
                         DataListItem {
                             label: rsx! { "Phone" },
-                            for phone in phones.clone() {
+                            for phone in &phones {
                                 div { "{phone}" }
                             }
                         }
+                        // demo-code: children end
                     }
                 },
             }

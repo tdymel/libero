@@ -1,115 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Checkbox, Code, Flex, Text},
-    hooks::use_focus_return,
-    sx::sx,
-};
+use libero::components::{Code, Text};
 
-/// The hook call and the panel it returns focus from, as `Filters` renders them.
-// snippet: mirrors Filters
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let mut open = use_signal(|| false);
-let mut in_stock = use_signal(|| false);
-let trigger = use_focus_return();
-
-rsx! {
-    Flex { direction: "column", align: "flex-start", gap: "sm",
-        Button {
-            variant: "outlined",
-            aria_expanded: open(),
-            aria_controls: "filters-panel",
-            onclick: move |_| {
-                // Arm on every open, while the trigger still has focus.
-                if !open() {
-                    trigger.remember_active();
-                }
-                open.toggle();
-            },
-            "Filters"
-        }
-        if open() {
-            Flex {
-                id: "filters-panel",
-                direction: "column",
-                align: "flex-start",
-                gap: "sm",
-                sx: sx().padding("md").background("muted.1").border_radius("8px"),
-                onkeydown: move |event: KeyboardEvent| {
-                    if event.key() == Key::Escape {
-                        open.set(false);
-                        trigger.restore();
-                    }
-                },
-                Checkbox {
-                    label: "In stock only",
-                    checked: in_stock(),
-                    onchange: move |next| in_stock.set(next),
-                }
-                Button {
-                    onclick: move |_| {
-                        open.set(false);
-                        trigger.restore();
-                    },
-                    "Apply"
-                }
-            }
-        }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn Filters() -> Element {
-    let mut open = use_signal(|| false);
-    let mut in_stock = use_signal(|| false);
-    let trigger = use_focus_return();
-
-    rsx! {
-        Flex { direction: "column", align: "flex-start", gap: "sm",
-            Button {
-                variant: "outlined",
-                aria_expanded: open(),
-                aria_controls: "filters-panel",
-                onclick: move |_| {
-                    if !open() {
-                        trigger.remember_active();
-                    }
-                    open.toggle();
-                },
-                "Filters"
-            }
-            if open() {
-                Flex {
-                    id: "filters-panel",
-                    direction: "column",
-                    align: "flex-start",
-                    gap: "sm",
-                    sx: sx().padding("md").background("muted.1").border_radius("8px"),
-                    onkeydown: move |event: KeyboardEvent| {
-                        if event.key() == Key::Escape {
-                            open.set(false);
-                            trigger.restore();
-                        }
-                    },
-                    Checkbox {
-                        label: "In stock only",
-                        checked: in_stock(),
-                        onchange: move |next| in_stock.set(next),
-                    }
-                    Button {
-                        onclick: move |_| {
-                            open.set(false);
-                            trigger.restore();
-                        },
-                        "Apply"
-                    }
-                }
-            }
-        }
-    }
-}
+mod demo;
+use demo::Filters;
 
 #[component]
 pub fn UseFocusReturnPage() -> Element {
@@ -137,11 +31,11 @@ pub fn UseFocusReturnPage() -> Element {
             },
 
             Demo {
-                component: "use_focus_return",
+                component: "Filters",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Filters {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_focus_return/demo.rs")),
             }
 
             DocSection {

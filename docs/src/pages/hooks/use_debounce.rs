@@ -1,51 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Code, Flex, Text, TextField},
-    hooks::{use_debounced_value, use_throttled_value},
-};
+use libero::components::{Code, Text};
 
-/// One field and the two delayed copies of it, as `LiveSearch` renders them.
-// snippet: mirrors LiveSearch
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let mut query = use_signal(String::new);
-let settled = use_debounced_value(query.into(), 400);
-let throttled = use_throttled_value(query.into(), 400);
-
-rsx! {
-    Flex { direction: "column", align: "flex-start", gap: "sm",
-        TextField {
-            label: "Search",
-            value: query(),
-            oninput: move |next| query.set(next),
-        }
-        Text { "Typed: {query}" }
-        Text { "Debounced: {settled}" }
-        Text { "Throttled: {throttled}" }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn LiveSearch() -> Element {
-    let mut query = use_signal(String::new);
-    let settled = use_debounced_value(query.into(), 400);
-    let throttled = use_throttled_value(query.into(), 400);
-
-    rsx! {
-        Flex { direction: "column", align: "flex-start", gap: "sm",
-            TextField {
-                label: "Search",
-                value: query(),
-                oninput: move |next| query.set(next),
-            }
-            Text { "Typed: {query}" }
-            Text { "Debounced: {settled}" }
-            Text { "Throttled: {throttled}" }
-        }
-    }
-}
+mod demo;
+use demo::LiveSearch;
 
 #[component]
 pub fn UseDebouncePage() -> Element {
@@ -77,11 +35,11 @@ pub fn UseDebouncePage() -> Element {
             },
 
             Demo {
-                component: "use_debounce",
+                component: "LiveSearch",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { LiveSearch {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_debounce/demo.rs")),
             }
 
             DocSection {

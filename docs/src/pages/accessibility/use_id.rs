@@ -1,53 +1,12 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, Wrap, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Box, Button, Code, Flex, Text},
-    hooks::use_id,
-};
+use libero::components::{Code, Flex, Text};
 
-/// The id is per instance, so the snippet is the component and two of it.
-// snippet: mirrors Disclosure,UseIdPage
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"#[component]
-fn Disclosure(title: String, children: Element) -> Element {
-    let panel = use_id();
-    let mut open = use_signal(|| false);
+mod demo;
+use demo::Disclosure;
 
-    rsx! {
-        Button {
-            variant: "standard",
-            aria_expanded: open(),
-            aria_controls: panel(),
-            onclick: move |_| open.toggle(),
-            "{title}"
-        }
-        Box { id: panel(), hidden: !open(), {children} }
-    }
-}
-
-Flex { direction: "column", align: "flex-start", gap: "xs",
-    Disclosure { title: "Shipping", Text { "Two to four working days." } }
-    Disclosure { title: "Returns", Text { "Free within 30 days." } }
-}"#
-    .to_string()
-}
-
-#[component]
-fn Disclosure(title: String, children: Element) -> Element {
-    let panel = use_id();
-    let mut open = use_signal(|| false);
-
-    rsx! {
-        Button {
-            variant: "standard",
-            aria_expanded: open(),
-            aria_controls: panel(),
-            onclick: move |_| open.toggle(),
-            "{title}"
-        }
-        Box { id: panel(), hidden: !open(), {children} }
-    }
-}
+/// The page's own source: the usage prints from its live demo.
+const PAGE: DemoFile = DemoFile(include_str!("use_id.rs"));
 
 #[component]
 pub fn UseIdPage() -> Element {
@@ -70,16 +29,19 @@ pub fn UseIdPage() -> Element {
                 }
             },
             Demo {
-                component: "use_id",
+                component: "Disclosure",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! {
+                    // demo-code: usage start
                     Flex { direction: "column", align: "flex-start", gap: "xs",
                         Disclosure { title: "Shipping", Text { "Two to four working days." } }
                         Disclosure { title: "Returns", Text { "Free within 30 days." } }
                     }
+                    // demo-code: usage end
                 },
-                wrap: Wrap(code),
+                wrap: Wrap(|_, _| PAGE.section("usage")),
+                file: DemoFile(include_str!("use_id/demo.rs")),
             }
         }
     }

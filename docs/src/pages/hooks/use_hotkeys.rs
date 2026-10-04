@@ -1,65 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Code, Flex, Kbd, Text, TextField},
-    hooks::{Hotkey, use_element, use_hotkeys},
-};
+use libero::components::{Code, Kbd, Text};
 
-/// The hook in one component, as `Shortcuts` renders it.
-// snippet: mirrors Shortcuts
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let mut searches = use_signal(|| 0);
-let mut helps = use_signal(|| 0);
-let mut bolds = use_signal(|| 0);
-let editor = use_element();
-use_hotkeys([
-    Hotkey::new("f2", move || searches += 1),
-    Hotkey::new("f8", move || helps += 1).include_editable(true),
-    Hotkey::new("mod+b", move || bolds += 1)
-        .include_editable(true)
-        .within(editor),
-]);
-
-rsx! {
-    Flex { direction: "column", gap: "sm",
-        Text { "Search opened {searches} times" }
-        Text { "Help opened {helps} times" }
-        TextField { label: "Press F8 while typing" }
-        div { onmounted: editor.mount(), ..editor.attributes(),
-            TextField { label: "Press Ctrl+B (Cmd+B on a Mac) in here" }
-        }
-        Text { "Bold pressed {bolds} times" }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn Shortcuts() -> Element {
-    let mut searches = use_signal(|| 0);
-    let mut helps = use_signal(|| 0);
-    let mut bolds = use_signal(|| 0);
-    let editor = use_element();
-    use_hotkeys([
-        Hotkey::new("f2", move || searches += 1),
-        Hotkey::new("f8", move || helps += 1).include_editable(true),
-        Hotkey::new("mod+b", move || bolds += 1)
-            .include_editable(true)
-            .within(editor),
-    ]);
-
-    rsx! {
-        Flex { direction: "column", gap: "sm",
-            Text { "Search opened {searches} times" }
-            Text { "Help opened {helps} times" }
-            TextField { label: "Press F8 while typing" }
-            div { onmounted: editor.mount(), ..editor.attributes(),
-                TextField { label: "Press Ctrl+B (Cmd+B on a Mac) in here" }
-            }
-            Text { "Bold pressed {bolds} times" }
-        }
-    }
-}
+mod demo;
+use demo::Shortcuts;
 
 #[component]
 pub fn UseHotkeysPage() -> Element {
@@ -97,11 +41,11 @@ pub fn UseHotkeysPage() -> Element {
             },
 
             Demo {
-                component: "use_hotkeys",
+                component: "Shortcuts",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Shortcuts {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_hotkeys/demo.rs")),
             }
 
             DocSection {

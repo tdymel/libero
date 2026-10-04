@@ -1,63 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Box, Code, ScrollArea, Text},
-    hooks::{IntersectionOptions, use_intersection},
-    sx::sx,
-};
+use libero::components::{Code, Text};
 
-/// The hook in one component, as `Reveal` renders it.
-// snippet: mirrors Reveal
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let seen = use_intersection(IntersectionOptions {
-    thresholds: vec![0.0, 0.5, 1.0],
-    ..Default::default()
-});
-let percent = seen.entry.read().map_or(0, |entry| (entry.ratio * 100.0).round() as u32);
-
-// No `root`: the viewport's observer also clips by the scrolling area around the element.
-rsx! {
-    Box { sx: sx().width("16rem").height("8rem").border("1px solid currentColor"),
-        ScrollArea { aria_label: "Scrolling box",
-            div { style: "height: 12rem;", "Scroll down" }
-            div {
-                onmounted: move |event| seen.on_mounted.call(event),
-                ..seen.attributes,
-                "{percent}% visible"
-            }
-            div { style: "height: 12rem;" }
-        }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn Reveal() -> Element {
-    let seen = use_intersection(IntersectionOptions {
-        thresholds: vec![0.0, 0.5, 1.0],
-        ..Default::default()
-    });
-    let percent = seen
-        .entry
-        .read()
-        .map_or(0, |entry| (entry.ratio * 100.0).round() as u32);
-
-    // No `root`: the viewport's observer also clips by the scrolling area around the element.
-    rsx! {
-        Box { sx: sx().width("16rem").height("8rem").border("1px solid currentColor"),
-            ScrollArea { aria_label: "Scrolling box",
-                div { style: "height: 12rem;", "Scroll down" }
-                div {
-                    onmounted: move |event| seen.on_mounted.call(event),
-                    ..seen.attributes,
-                    "{percent}% visible"
-                }
-                div { style: "height: 12rem;" }
-            }
-        }
-    }
-}
+mod demo;
+use demo::Reveal;
 
 #[component]
 pub fn UseIntersectionPage() -> Element {
@@ -88,11 +34,11 @@ pub fn UseIntersectionPage() -> Element {
             },
 
             Demo {
-                component: "use_intersection",
+                component: "Reveal",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Reveal {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_intersection/demo.rs")),
             }
 
             DocSection {

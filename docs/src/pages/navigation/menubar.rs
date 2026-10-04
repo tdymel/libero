@@ -1,128 +1,21 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, align_of, indent, prop, props,
-    side_of,
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
-use libero::components::{
-    Code, Flex, MenuEntry, MenuItem, Menubar, MenubarMenu, MenubarPart, Text,
-};
+use libero::components::{Code, MenubarPart, Text};
 
-/// Everything above the `rsx!`, the pick handler and the menus. `generate_code`
-/// only emits props, and the list is a `let`.
-// snippet: mirrors MenubarDemo
-const PREAMBLE: &str = r#"let mut last = use_signal(|| String::from("nothing yet"));
-let pick = move |name: &'static str| move |_| last.set(name.to_string());
-let item = move |name: &'static str| -> MenuEntry {
-    MenuItem::new(name).onselect(pick(name)).into()
-};
-let mut wrap = use_signal(|| true);
+mod demo;
+use demo::MenubarDemo;
 
-let menus = vec![
-    MenubarMenu::new("File", vec![
-        item("New"),
-        item("Open"),
-        MenuItem::new("Open recent")
-            .submenu(vec![item("notes.md"), item("todo.md")])
-            .into(),
-        MenuEntry::Separator,
-        MenuItem::new("Save")
-            .shortcut("Control+S")
-            .onselect(pick("Save"))
-            .into(),
-    ]),
-    MenubarMenu::new("Edit", vec![
-        item("Undo"),
-        item("Redo"),
-        MenuEntry::Separator,
-        item("Cut"),
-        item("Copy"),
-        item("Paste"),
-        MenuEntry::Separator,
-        MenuItem::new("Word wrap")
-            .checkbox(wrap())
-            .onselect(move |_| wrap.toggle())
-            .into(),
-    ]),
-    MenubarMenu::new("View", vec![item("Zoom in"), item("Zoom out")]).disabled(true),
-    MenubarMenu::new("Help", vec![item("Documentation"), item("About")]),
-];
-
-"#;
+/// The live demo; its state, pick handler and menus print above the `rsx!`.
+const FILE: DemoFile = DemoFile(include_str!("menubar/demo.rs"));
 
 fn wrap(_: &DemoValues, source: &str) -> String {
     format!(
-        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"md\",\n{}        Text {{ size: \"sm\", role: \"status\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
+        "{}\n\nrsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"md\",\n{}        Text {{ size: \"sm\", role: \"status\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
+        FILE.section("preamble"),
         indent(&indent(source))
     )
-}
-
-/// The code block's example as a component, so its signal stays out of `Demo`'s hook slots.
-#[component]
-fn MenubarDemo(
-    side: String,
-    align: String,
-    size: String,
-    radius: String,
-    loop_focus: bool,
-) -> Element {
-    let mut last = use_signal(|| String::from("nothing yet"));
-    let pick = move |name: &'static str| move |_| last.set(name.to_string());
-    let item =
-        move |name: &'static str| -> MenuEntry { MenuItem::new(name).onselect(pick(name)).into() };
-    let mut wrap = use_signal(|| true);
-
-    let menus = vec![
-        MenubarMenu::new(
-            "File",
-            vec![
-                item("New"),
-                item("Open"),
-                MenuItem::new("Open recent")
-                    .submenu(vec![item("notes.md"), item("todo.md")])
-                    .into(),
-                MenuEntry::Separator,
-                MenuItem::new("Save")
-                    .shortcut("Control+S")
-                    .onselect(pick("Save"))
-                    .into(),
-            ],
-        ),
-        MenubarMenu::new(
-            "Edit",
-            vec![
-                item("Undo"),
-                item("Redo"),
-                MenuEntry::Separator,
-                item("Cut"),
-                item("Copy"),
-                item("Paste"),
-                MenuEntry::Separator,
-                MenuItem::new("Word wrap")
-                    .checkbox(wrap())
-                    .onselect(move |_| wrap.toggle())
-                    .into(),
-            ],
-        ),
-        MenubarMenu::new("View", vec![item("Zoom in"), item("Zoom out")]).disabled(true),
-        MenubarMenu::new("Help", vec![item("Documentation"), item("About")]),
-    ];
-
-    rsx! {
-        Flex {
-            direction: "column",
-            gap: "md",
-            Menubar {
-                aria_label: "Main",
-                menus,
-                side: side_of(&side),
-                align: align_of(&align),
-                size,
-                radius,
-                loop_focus,
-            }
-            Text { size: "sm", role: "status", "Last chosen: {last()}" }
-        }
-    }
 }
 
 #[component]

@@ -1,52 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Code, Flex, Text},
-    platform::{SaveOutcome, save_file},
-};
+use libero::components::{Code, Text};
 
-/// The demo in one component, as `SaveDemo` renders it.
-// snippet: mirrors SaveDemo
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let mut outcome = use_signal(|| None::<SaveOutcome>);
-
-rsx! {
-    Flex { gap: "sm", align: "center", wrap: "wrap",
-        Button {
-            onclick: move |_| async move {
-                let csv = "name,role\nAda,Engineer\n";
-                let saved = save_file("team.csv", "text/csv", csv.into()).await;
-                outcome.set(Some(saved));
-            },
-            "Save team.csv"
-        }
-        if let Some(outcome) = outcome() {
-            Text { size: "sm", "{outcome:?}" }
-        }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn SaveDemo() -> Element {
-    let mut outcome = use_signal(|| None::<SaveOutcome>);
-    rsx! {
-        Flex { gap: "sm", align: "center", wrap: "wrap",
-            Button {
-                onclick: move |_| async move {
-                    let csv = "name,role\nAda,Engineer\n";
-                    let saved = save_file("team.csv", "text/csv", csv.into()).await;
-                    outcome.set(Some(saved));
-                },
-                "Save team.csv"
-            }
-            if let Some(outcome) = outcome() {
-                Text { size: "sm", "{outcome:?}" }
-            }
-        }
-    }
-}
+mod demo;
+use demo::SaveDemo;
 
 #[component]
 pub fn SaveFilePage() -> Element {
@@ -87,11 +44,11 @@ pub fn SaveFilePage() -> Element {
             },
 
             Demo {
-                component: "save_file",
+                component: "SaveDemo",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { SaveDemo {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("save_file/demo.rs")),
             }
         }
     }

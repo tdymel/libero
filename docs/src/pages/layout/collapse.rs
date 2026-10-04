@@ -1,5 +1,6 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop,
+    props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -7,22 +8,14 @@ use libero::{
     hooks::use_focus_return,
 };
 
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("collapse.rs"));
+
 const TEXTS: [&str; 3] = [
     "Shipping is calculated at checkout.",
     "Standard delivery arrives in three to five working days.",
     "Returns are free within thirty days of delivery.",
 ];
-
-// snippet: let mut open = use_signal(|| false);
-// snippet: let trigger = use_focus_return();
-// snippet: mirrors CollapseDemo
-const DONE: &str = r#"Button {
-    onclick: move |_| {
-        open.set(false);
-        trigger.restore();
-    },
-    "Done"
-}"#;
 
 fn focus_return(values: &DemoValues) -> bool {
     values.str("focus_return") == "true"
@@ -40,7 +33,7 @@ fn content_code(values: &DemoValues) -> String {
         .map(|text| format!("Text {{ \"{text}\" }}"))
         .collect();
     if focus_return(values) {
-        lines.push(DONE.to_string());
+        lines.push(FILE.section("done").to_string());
     } else if count == 1 {
         return lines.remove(0);
     }
@@ -131,6 +124,7 @@ fn CollapseDemo(
                         for text in texts {
                             Text { "{text}" }
                         }
+                        // demo-code: done start
                         Button {
                             onclick: move |_| {
                                 open.set(false);
@@ -138,6 +132,7 @@ fn CollapseDemo(
                             },
                             "Done"
                         }
+                        // demo-code: done end
                     }
                 } else if long {
                     Flex {

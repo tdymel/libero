@@ -1,5 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, a11y, indent, prop, props,
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, UNSET, Wrap, a11y, indent, prop,
+    props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -9,6 +10,9 @@ use libero::{
     sx::sx,
     use_theme,
 };
+
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("scroller.rs"));
 
 /// Wide enough to overflow the preview at every width.
 const TAGS: [&str; 20] = [
@@ -33,15 +37,6 @@ const TAGS: [&str; 20] = [
     "Tables",
     "Charts",
 ];
-
-/// The strip itself, printed verbatim so the code block builds the preview.
-// snippet: item const TAGS: [&str; 2] = ["rust", "dioxus"];
-// snippet: mirrors strip_content
-const CHILDREN: &str = r#"Flex { direction: "row", gap: "sm", wrap: "nowrap",
-    for tag in TAGS {
-        Chip { key: "{tag}", "{tag}" }
-    }
-}"#;
 
 /// Adds the signal `onedgechange` writes and the report under the strip; under
 /// `controls: "never"` also the handle and the caller's own two buttons.
@@ -76,11 +71,13 @@ fn wrap_edges(values: &DemoValues, source: &str) -> String {
 
 fn strip_content() -> Element {
     rsx! {
+        // demo-code: children start
         Flex { direction: "row", gap: "sm", wrap: "nowrap",
             for tag in TAGS {
                 Chip { key: "{tag}", "{tag}" }
             }
         }
+        // demo-code: children end
     }
 }
 
@@ -206,7 +203,7 @@ pub fn ScrollerPage() -> Element {
             Demo {
                 component: "Scroller",
                 children_text: "",
-                children_code: CHILDREN.to_string(),
+                children_code: FILE.section("children").to_string(),
                 fixed: vec![
                     r#"aria_label: "Tags""#.to_string(),
                     "onedgechange: move |next| edges.set(Some(next))".to_string(),

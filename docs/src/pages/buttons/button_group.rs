@@ -1,14 +1,13 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::Pictogram;
 use libero::components::{ActionIcon, Button, ButtonGroup, Code, Input, Text};
 use pictogram_icons_lucide as lucide;
 
-/// The buttons inside - a subtree, so the code block prints it verbatim.
-// snippet: mirrors ButtonGroupPage
-const CHILDREN: &str = r#"Button { "Undo" }
-Button { "Redo" }
-ActionIcon { aria_label: "Confirm", Pictogram { icon: lucide::check::outlined } }"#;
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("button_group.rs"));
 
 #[component]
 pub fn ButtonGroupPage() -> Element {
@@ -57,7 +56,7 @@ pub fn ButtonGroupPage() -> Element {
             Demo {
                 component: "ButtonGroup",
                 children_text: "",
-                children_code: CHILDREN,
+                children_code: FILE.section("children"),
                 fixed: vec!["\"aria-label\": \"Edit\"".to_string()],
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
@@ -88,9 +87,11 @@ pub fn ButtonGroupPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         disabled: values.str("disabled") == "true",
+                        // demo-code: children start
                         Button { "Undo" }
                         Button { "Redo" }
                         ActionIcon { aria_label: "Confirm", Pictogram { icon: lucide::check::outlined } }
+                        // demo-code: children end
                     }
                 },
             }

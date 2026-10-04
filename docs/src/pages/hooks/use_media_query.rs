@@ -1,49 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Code, Flex, Text},
-    hooks::{use_is_mobile, use_media_query},
-};
+use libero::components::{Code, Text};
 
-/// The two hooks in one component, as `Layout` renders them.
-// snippet: mirrors Layout
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let mobile = use_is_mobile();
-let wide = use_media_query("(min-width: 1024px)");
-
-rsx! {
-    Flex { direction: "column", gap: "sm",
-        Text { if mobile() { "Mobile: under 768px" } else { "Not mobile" } }
-        Text { if wide() { "Wide: 1024px or more" } else { "Narrower than 1024px" } }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn Layout() -> Element {
-    let mobile = use_is_mobile();
-    let wide = use_media_query("(min-width: 1024px)");
-
-    rsx! {
-        Flex { direction: "column", gap: "sm",
-            Text {
-                if mobile() {
-                    "Mobile: under 768px"
-                } else {
-                    "Not mobile"
-                }
-            }
-            Text {
-                if wide() {
-                    "Wide: 1024px or more"
-                } else {
-                    "Narrower than 1024px"
-                }
-            }
-        }
-    }
-}
+mod demo;
+use demo::Layout;
 
 #[component]
 pub fn UseMediaQueryPage() -> Element {
@@ -76,11 +36,11 @@ pub fn UseMediaQueryPage() -> Element {
             },
 
             Demo {
-                component: "use_media_query",
+                component: "Layout",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Layout {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_media_query/demo.rs")),
             }
 
             DocSection {

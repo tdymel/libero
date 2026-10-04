@@ -1,33 +1,16 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
-use dioxus::prelude::*;
-use libero::components::{
-    ActionIcon, Code, Pictogram, Text, Textarea, Toolbar, ToolbarGroup, ToolbarPart,
-    ToolbarSeparator,
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
-use libero::hooks::use_element;
-use pictogram_icons_lucide as lucide;
+use dioxus::prelude::*;
+use libero::components::{Code, Text, ToolbarPart};
 
-/// The controls inside - a subtree, so the code block prints it verbatim.
-// snippet: mirrors ToolbarPreview
-const CHILDREN: &str = r#"ToolbarGroup { "aria-label": "Style",
-    ActionIcon { aria_label: "Bold", Pictogram { icon: lucide::bold::outlined } }
-    ActionIcon { aria_label: "Italic", Pictogram { icon: lucide::italic::outlined } }
-    ActionIcon { aria_label: "Underline", Pictogram { icon: lucide::underline::outlined } }
-}
-ToolbarSeparator {}
-ToolbarGroup { "aria-label": "History",
-    ActionIcon { aria_label: "Undo", Pictogram { icon: lucide::undo_2::outlined } }
-    ActionIcon { aria_label: "Redo", disabled: true, Pictogram { icon: lucide::redo_2::outlined } }
-}"#;
+mod demo;
+use demo::ToolbarPreview;
 
-/// The element `focus_from` names: Alt+F10 in it reaches the bar, Escape there comes back.
-// snippet: let editor = use_element();
-// snippet: mirrors ToolbarPreview
-const EDITOR: &str = r#"div { onmounted: editor.mount(), ..editor.attributes(),
-    Textarea { label: "Text" }
-}"#;
+/// The live preview; its groups and the editor print from it.
+const FILE: DemoFile = DemoFile(include_str!("toolbar/demo.rs"));
 
-fn focus_from(values: &DemoValues) -> bool {
+pub(super) fn focus_from(values: &DemoValues) -> bool {
     values.str("focus_from") == "true"
 }
 
@@ -38,39 +21,9 @@ fn wrap(values: &DemoValues, source: &str) -> String {
     }
     let mut code = String::from("let editor = use_element();\n\nrsx! {\n");
     code.push_str(&indent(source));
-    code.push_str(&indent(EDITOR));
+    code.push_str(&indent(&FILE.section("editor")));
     code.push('}');
     code
-}
-
-/// Owns the editor's handle, which `render` cannot hold.
-#[component]
-fn ToolbarPreview(values: DemoValues) -> Element {
-    let editor = use_element();
-    let from = focus_from(&values);
-    rsx! {
-        Toolbar {
-            "aria-label": "Formatting",
-            orientation: values.str("orientation"),
-            loop_focus: values.str("loop_focus") == "true",
-            focus_from: from.then_some(editor),
-            ToolbarGroup { "aria-label": "Style",
-                ActionIcon { aria_label: "Bold", Pictogram { icon: lucide::bold::outlined } }
-                ActionIcon { aria_label: "Italic", Pictogram { icon: lucide::italic::outlined } }
-                ActionIcon { aria_label: "Underline", Pictogram { icon: lucide::underline::outlined } }
-            }
-            ToolbarSeparator {}
-            ToolbarGroup { "aria-label": "History",
-                ActionIcon { aria_label: "Undo", Pictogram { icon: lucide::undo_2::outlined } }
-                ActionIcon { aria_label: "Redo", disabled: true, Pictogram { icon: lucide::redo_2::outlined } }
-            }
-        }
-        if from {
-            div { onmounted: editor.mount(), ..editor.attributes(),
-                Textarea { label: "Text" }
-            }
-        }
-    }
 }
 
 #[component]
@@ -157,7 +110,7 @@ pub fn ToolbarPage() -> Element {
             Demo {
                 component: "Toolbar",
                 children_text: "",
-                children_code: CHILDREN,
+                children_code: FILE.section("children"),
                 fixed: vec!["\"aria-label\": \"Formatting\"".to_string()],
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])

@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y, prop, props,
+};
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
@@ -6,18 +8,8 @@ use dioxus::prelude::*;
 use libero::components::{Code, Icon, List, ListItem, ListItemPart, Text};
 use libero::use_theme;
 
-/// The items, printed verbatim. Only the outer list carries `size`: nested indent comes from
-/// the parent's `& ul` rule.
-// snippet: mirrors ListPage
-const CHILDREN: &str = r#"ListItem { "First item" }
-ListItem { "Second item" }
-ListItem {
-    "Third item, with a nested list"
-    List {
-        ListItem { "Nested one" }
-        ListItem { "Nested two" }
-    }
-}"#;
+/// The page's own source: the printed parts are cut from its live demo.
+const FILE: DemoFile = DemoFile(include_str!("list.rs"));
 
 // snippet: in List { .. }
 const ICON_CODE: &str = r#"icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } } }"#;
@@ -79,7 +71,7 @@ pub fn ListPage() -> Element {
             Demo {
                 component: "List",
                 children_text: "",
-                children_code: CHILDREN,
+                children_code: FILE.section("children"),
                 controls: vec![
                     Control::sizes("size")
                         .default("md"),
@@ -98,6 +90,7 @@ pub fn ListPage() -> Element {
                         icon: (values.str("icon") == "true").then(|| rsx! {
                             Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } }
                         }),
+                        // demo-code: children start
                         ListItem { "First item" }
                         ListItem { "Second item" }
                         ListItem {
@@ -107,6 +100,7 @@ pub fn ListPage() -> Element {
                                 ListItem { "Nested two" }
                             }
                         }
+                        // demo-code: children end
                     }
                 },
             }

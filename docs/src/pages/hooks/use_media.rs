@@ -1,9 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, ExtraTab, Wrap, a11y, prose};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, ExtraTab, a11y, prose};
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Code, Flex, Table, Text, column},
-    hooks::use_media,
-};
+use libero::components::{Code, Table, Text, column};
+
+mod demo;
+use demo::OwnPlayer;
 
 /// `MediaHandle`'s methods, as the markdown's API table lists them.
 const METHODS: [(&str, &str); 10] = [
@@ -48,55 +48,6 @@ const METHODS: [(&str, &str); 10] = [
         "`false` until mounted, then whether anything plays media here.",
     ),
 ];
-
-/// The hook in one component, as `OwnPlayer` renders it.
-// snippet: mirrors OwnPlayer except "/podcast.mp3"
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let media = use_media();
-let time = media.current_time() as u64;
-let status = match (media.error(), media.buffering()) {
-    (Some(_), _) => "The audio could not be played.",
-    (None, true) => "Loading",
-    (None, false) => "",
-};
-
-rsx! {
-    audio { src: "/podcast.mp3", onmounted: media.mount(), ..media.attributes() }
-    Flex { gap: "sm", align: "center",
-        Button {
-            onclick: move |_| media.toggle(),
-            if media.paused() { "Play" } else { "Pause" }
-        }
-        Button { variant: "outlined", onclick: move |_| media.seek(0.0), "Restart" }
-        Text { "{time / 60}:{time % 60:02}" }
-        div { role: "status", "{status}" }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn OwnPlayer() -> Element {
-    let media = use_media();
-    let time = media.current_time() as u64;
-    let status = match (media.error(), media.buffering()) {
-        (Some(_), _) => "The audio could not be played.",
-        (None, true) => "Loading",
-        (None, false) => "",
-    };
-    rsx! {
-        audio { src: crate::site::SAMPLE_AUDIO, onmounted: media.mount(), ..media.attributes() }
-        Flex { gap: "sm", align: "center",
-            Button {
-                onclick: move |_| media.toggle(),
-                if media.paused() { "Play" } else { "Pause" }
-            }
-            Button { variant: "outlined", onclick: move |_| media.seek(0.0), "Restart" }
-            Text { "{time / 60}:{time % 60:02}" }
-            div { role: "status", "{status}" }
-        }
-    }
-}
 
 #[component]
 pub fn UseMediaPage() -> Element {
@@ -168,12 +119,13 @@ pub fn UseMediaPage() -> Element {
                 }
             },
 
+            // snippet: ignore - the file names the site's sample audio; the page compiles it as its own module
             Demo {
-                component: "use_media",
+                component: "OwnPlayer",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { OwnPlayer {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_media/demo.rs")),
             }
         }
     }

@@ -1,56 +1,11 @@
 use super::KeepSite;
 use crate::Route;
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Anchor, Button, Code, Flex, Text},
-    theme::ThemeSet,
-    use_theme_set,
-};
+use libero::components::{Anchor, Code, Text};
 
-/// The hook call and the picker, as `ThemePicker` renders them.
-// snippet: mirrors ThemePicker
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let themes = use_theme_set();
-
-rsx! {
-    Flex { direction: "row", gap: "sm",
-        for set in ThemeSet::CATALOGUE.iter().take(4) {
-            Button {
-                variant: if themes.name() == set.name() { "filled" } else { "outlined" },
-                aria_pressed: themes.name() == set.name(),
-                onclick: {
-                    let themes = themes.clone();
-                    move |_| themes.set((*set).clone())
-                },
-                "{set.name()}"
-            }
-        }
-    }
-}"#
-    .to_string()
-}
-
-#[component]
-fn ThemePicker() -> Element {
-    let themes = use_theme_set();
-
-    rsx! {
-        Flex { direction: "row", gap: "sm",
-            for set in ThemeSet::CATALOGUE.iter().take(4) {
-                Button {
-                    variant: if themes.name() == set.name() { "filled" } else { "outlined" },
-                    aria_pressed: themes.name() == set.name(),
-                    onclick: {
-                        let themes = themes.clone();
-                        move |_| themes.set((*set).clone())
-                    },
-                    "{set.name()}"
-                }
-            }
-        }
-    }
-}
+mod demo;
+use demo::ThemePicker;
 
 #[component]
 pub fn UseThemeSetPage() -> Element {
@@ -78,13 +33,13 @@ pub fn UseThemeSetPage() -> Element {
                 }
             },
             Demo {
-                component: "use_theme_set",
+                component: "ThemePicker",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! {
                     KeepSite { ThemePicker {} }
                 },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_theme_set/demo.rs")),
             }
 
             DocSection {

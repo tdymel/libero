@@ -1,86 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Code, Flex, Switch, Text},
-    hooks::use_accessibility,
-};
+use libero::components::{Code, Text};
 
-// snippet: mirrors Settings
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let accessibility = use_accessibility();
-
-rsx! {
-    Flex { direction: "column", gap: "sm",
-        Switch {
-            label: "Reduce motion",
-            checked: accessibility.reduced_motion(),
-            onchange: {
-                let accessibility = accessibility.clone();
-                move |on: bool| accessibility.set_reduced_motion(Some(on))
-            },
-        }
-        Button {
-            variant: "outlined",
-            onclick: {
-                let accessibility = accessibility.clone();
-                move |_| accessibility.set_reduced_motion(None)
-            },
-            "Follow the system"
-        }
-        Text {
-            "Contrast: {accessibility.contrast().as_str()}, forced colors: "
-            "{accessibility.forced_colors()}, reduced transparency: "
-            "{accessibility.reduced_transparency()}"
-        }
-    }
-}"#
-    .to_string()
-}
-
-/// The forced setting is kept across visits, so leaving the page hands the site back to the
-/// system if the demo forced it.
-#[component]
-fn Settings() -> Element {
-    let accessibility = use_accessibility();
-    let mut forced = use_hook(|| CopyValue::new(false));
-    use_drop({
-        let accessibility = accessibility.clone();
-        move || {
-            if forced() {
-                accessibility.set_reduced_motion(None);
-            }
-        }
-    });
-
-    rsx! {
-        Flex { direction: "column", gap: "sm",
-            Switch {
-                label: "Reduce motion",
-                checked: accessibility.reduced_motion(),
-                onchange: {
-                    let accessibility = accessibility.clone();
-                    move |on: bool| {
-                        forced.set(true);
-                        accessibility.set_reduced_motion(Some(on));
-                    }
-                },
-            }
-            Button {
-                variant: "outlined",
-                onclick: {
-                    let accessibility = accessibility.clone();
-                    move |_| accessibility.set_reduced_motion(None)
-                },
-                "Follow the system"
-            }
-            Text {
-                "Contrast: {accessibility.contrast().as_str()}, forced colors: "
-                "{accessibility.forced_colors()}, reduced transparency: "
-                "{accessibility.reduced_transparency()}"
-            }
-        }
-    }
-}
+mod demo;
+use demo::Settings;
 
 #[component]
 pub fn UseAccessibilityPage() -> Element {
@@ -101,11 +24,11 @@ pub fn UseAccessibilityPage() -> Element {
                 }
             },
             Demo {
-                component: "use_accessibility",
+                component: "Settings",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Settings {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_accessibility/demo.rs")),
             }
 
             DocSection {

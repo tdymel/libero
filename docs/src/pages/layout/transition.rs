@@ -1,11 +1,11 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Code, Flex, Paper, Text, Transition, TransitionKind},
-    sx::sx,
-};
+use libero::components::{Code, Text, TransitionKind};
+
+mod demo;
+use demo::TransitionDemo;
 
 const KINDS: [&str; 21] = [
     "Fade",
@@ -66,12 +66,14 @@ fn from_filter(values: &DemoValues) -> Option<String> {
     }
 }
 
+/// The live demo; its `show` signal prints above the `rsx!`.
+const FILE: DemoFile = DemoFile(include_str!("transition/demo.rs"));
+
 /// Prints the trigger and its `show` signal: `open` is the caller's, and the paste needs it to compile.
-// snippet: mirrors TransitionDemo except transition
 fn wrap_page(_values: &DemoValues, source: &str) -> String {
     let transition = indent(&indent(source));
     format!(
-        "let mut show = use_signal(|| false);\n\n\
+        "{}\n\n\
          rsx! {{\n    \
          Flex {{\n        \
          direction: \"column\",\n        \
@@ -82,27 +84,9 @@ fn wrap_page(_values: &DemoValues, source: &str) -> String {
          onclick: move |_| show.toggle(),\n            \
          \"Toggle\"\n        \
          }}\n\
-         {transition}    }}\n}}"
+         {transition}    }}\n}}",
+        FILE.section("state")
     )
-}
-
-/// Its own component: a hook in `render` would land in `Demo`'s scope.
-/// `wrap_page` prints it; the snippet drift test ties the two.
-#[component]
-fn TransitionDemo(kind: TransitionKind, duration: Option<u32>, filter: Option<String>) -> Element {
-    let mut show = use_signal(|| false);
-
-    rsx! {
-        Flex {
-            direction: "column",
-            align: "flex-start",
-            gap: "sm",
-            Button { aria_expanded: show(), onclick: move |_| show.toggle(), "Toggle" }
-            Transition { kind, duration, open: show(), from: filter.map(|filter| sx().filter(filter)),
-                Paper { Text { "Hello" } }
-            }
-        }
-    }
 }
 
 #[component]

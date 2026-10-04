@@ -1,92 +1,9 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
+use crate::components::{Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Code, Flex, Text},
-    hooks::{Geolocation, GeolocationError, GeolocationOptions, PermissionState, use_geolocation},
-};
+use libero::components::{Code, Text};
 
-/// The hook in one component, as `ShareLocation` renders it.
-// snippet: mirrors status,ShareLocation
-fn code(_: &DemoValues, _: &str) -> String {
-    r#"let mut location = use_geolocation(GeolocationOptions::default());
-// Announced once per outcome, never per fix.
-let status = match (location.error(), location.position()) {
-    (Some(GeolocationError::Denied), _) => "Location refused",
-    (Some(_), _) => "No location found",
-    (None, Some(_)) if location.is_watching() => "Following your location",
-    (None, Some(_)) => "Location found",
-    (None, None) if location.is_pending() => "Locating",
-    (None, None) => "",
-};
-let permission = match location.permission() {
-    PermissionState::Granted => "granted",
-    PermissionState::Denied => "denied",
-    PermissionState::Prompt => "not asked yet",
-    PermissionState::Unknown => "unknown",
-    PermissionState::Unsupported => "unsupported here",
-};
-
-rsx! {
-    Flex { direction: "column", align: "flex-start", gap: "sm",
-        Flex { gap: "sm",
-            Button { onclick: move |_| location.request(), "Share location" }
-            Button {
-                variant: "outlined",
-                onclick: move |_| if location.is_watching() { location.stop() } else { location.watch() },
-                if location.is_watching() { "Stop following" } else { "Follow" }
-            }
-        }
-        div { role: "status", "{status}" }
-        if let Some(fix) = location.position() {
-            Text { "{fix.latitude:.2}, {fix.longitude:.2}, within {fix.accuracy:.0} m" }
-        }
-        Text { size: "sm", "Permission: {permission}" }
-    }
-}"#
-    .to_string()
-}
-
-fn status(location: &Geolocation) -> &'static str {
-    match (location.error(), location.position()) {
-        (Some(GeolocationError::Denied), _) => "Location refused",
-        (Some(_), _) => "No location found",
-        (None, Some(_)) if location.is_watching() => "Following your location",
-        (None, Some(_)) => "Location found",
-        (None, None) if location.is_pending() => "Locating",
-        (None, None) => "",
-    }
-}
-
-#[component]
-fn ShareLocation() -> Element {
-    let mut location = use_geolocation(GeolocationOptions::default());
-    let status = status(&location);
-    let permission = match location.permission() {
-        PermissionState::Granted => "granted",
-        PermissionState::Denied => "denied",
-        PermissionState::Prompt => "not asked yet",
-        PermissionState::Unknown => "unknown",
-        PermissionState::Unsupported => "unsupported here",
-    };
-
-    rsx! {
-        Flex { direction: "column", align: "flex-start", gap: "sm",
-            Flex { gap: "sm",
-                Button { onclick: move |_| location.request(), "Share location" }
-                Button {
-                    variant: "outlined",
-                    onclick: move |_| if location.is_watching() { location.stop() } else { location.watch() },
-                    if location.is_watching() { "Stop following" } else { "Follow" }
-                }
-            }
-            div { role: "status", "{status}" }
-            if let Some(fix) = location.position() {
-                Text { "{fix.latitude:.2}, {fix.longitude:.2}, within {fix.accuracy:.0} m" }
-            }
-            Text { size: "sm", "Permission: {permission}" }
-        }
-    }
-}
+mod demo;
+use demo::ShareLocation;
 
 #[component]
 pub fn UseGeolocationPage() -> Element {
@@ -143,11 +60,11 @@ pub fn UseGeolocationPage() -> Element {
             },
 
             Demo {
-                component: "use_geolocation",
+                component: "ShareLocation",
                 children_text: "",
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { ShareLocation {} },
-                wrap: Wrap(code),
+                file: DemoFile(include_str!("use_geolocation/demo.rs")),
             }
 
             DocSection {
