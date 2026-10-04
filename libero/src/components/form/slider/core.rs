@@ -315,6 +315,58 @@ fn segment_label(segments: &[TrackSegment], value: f64) -> Option<&str> {
         .and_then(|segment| segment.label.as_deref())
 }
 
+/// A value's `aria-valuetext`, `None` for the bare value already in `aria-valuenow`, and
+/// its bubble's text. A labelled segment names itself after the value, so it is heard too.
+fn value_text(
+    label: Option<Callback<f64, String>>,
+    segments: &[TrackSegment],
+    segment_text: &str,
+    value: f64,
+    decimal_separator: &str,
+) -> (Option<String>, String) {
+    let text = label.map(|label| label.call(value));
+    let bare = || value.to_string().replacen('.', decimal_separator, 1);
+    let text = match segment_label(segments, value) {
+        Some(segment) => Some(fill(
+            segment_text,
+            &[("value", &text.unwrap_or_else(bare)), ("segment", &segment)],
+        )),
+        None => text,
+    };
+    let bubble = text.clone().unwrap_or_else(bare);
+    (text, bubble)
+}
+
+/// The bubble over the value a hovering mouse or pen points at, while no drag runs.
+#[component]
+fn SliderHoverPreview(
+    hovered: Signal<Option<(f64, ThumbTrack)>>,
+    dragging: Signal<bool>,
+    min: f64,
+    max: f64,
+    size: Size,
+    label: Option<Callback<f64, String>>,
+    segments: Vec<TrackSegment>,
+    segment_text: &'static str,
+) -> Element {
+    let decimal_separator = use_formats().decimal_separator;
+    let Some((value, track)) = hovered().filter(|_| !dragging()) else {
+        return rsx! {};
+    };
+    let (_, text) = value_text(label, &segments, segment_text, value, decimal_separator);
+    rsx! {
+        TooltipPinned {
+            label: rsx! { {text} },
+            anchor: track.at(fraction(value, min, max)),
+            size,
+            gap: Size::Sm,
+            id: None,
+            rtl: track.rtl,
+            shown: true,
+        }
+    }
+}
+
 /// How much of a segment is filled when the bar reaches `filled` (0-1 of the track).
 pub(crate) fn segment_filled(start: f64, end: f64, filled: f64) -> f64 {
     if end <= start {
@@ -601,7 +653,21 @@ impl ThumbTrack {
             height: self.thumb.height,
         }
     }
+
+    /// The fraction of the range under a pointer at `client_x`, as the drag maps it.
+    fn fraction_at(&self, client_x: f64) -> Option<f64> {
+        if self.travel <= 0.0 {
+            return None;
+        }
+        let along = ((client_x - self.left - self.thumb.width / 2.0) / self.travel).clamp(0.0, 1.0);
+        Some(if self.rtl { 1.0 - along } else { along })
+    }
 }
+
+/// Provided by the video seek: its segmented slider previews the value under a
+/// hovering mouse or pen (todo 2166).
+#[derive(Clone, Copy)]
+pub(crate) struct HoverPreview;
 
 #[component]
 fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
@@ -646,6 +712,13 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // the thumbs' scope reads it for the open bubble.
     let mut active = use_signal(|| 0_usize);
     let mut thumb_track = use_signal(|| None::<ThumbTrack>);
+    // The hover preview's value and geometry, measured at the first move over the slider.
+    let previews = try_use_context::<HoverPreview>().is_some() && !props.segments.is_empty();
+    let mut hovered = use_signal(|| None::<(f64, ThumbTrack)>);
+    let mut hover_track = use_hook(|| CopyValue::new(None::<ThumbTrack>));
+    let mut hover_x = use_hook(|| CopyValue::new(None::<f64>));
+    let mut hover_busy = use_hook(|| CopyValue::new(false));
+    let mut hover_dirty = use_hook(|| CopyValue::new(false));
 
     let oninput = props.oninput;
     let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
@@ -864,8 +937,91 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
         drag.onpointerdown.call(event);
         on_thumb.set(false);
+        if hovered.peek().is_some() {
+            hovered.set(None);
+        }
     });
     let onthumbdown = use_callback(move |_: Event<PointerData>| on_thumb.set(true));
+
+    // Requests coalesce into one update per task: a WebView sends each move over IPC.
+    let refresh_preview = use_callback(move |()| {
+        hover_dirty.set(true);
+        if std::mem::replace(&mut *hover_busy.write(), true) {
+            return;
+        }
+        spawn(async move {
+            while std::mem::replace(&mut *hover_dirty.write(), false) {
+                if hover_track.peek().is_none() {
+                    let (track_size, track_offset) =
+                        (track_element.dimensions(), track_element.client_offset());
+                    let (thumb_size, thumb_offset) = (
+                        thumb_elements[0].dimensions(),
+                        thumb_elements[0].client_offset(),
+                    );
+                    let rtl = root_element.is_rtl();
+                    if let (Ok(track), Ok((left, _)), Ok(thumb), Ok((_, top))) = (
+                        track_size.await,
+                        track_offset.await,
+                        thumb_size.await,
+                        thumb_offset.await,
+                    ) {
+                        hover_track.set(Some(ThumbTrack {
+                            left,
+                            travel: track.width - thumb.width,
+                            top,
+                            thumb,
+                            rtl,
+                            stale: false,
+                        }));
+                    }
+                }
+                next_task().await;
+                let geometry = *hover_track.peek();
+                let shown = geometry.zip(*hover_x.peek()).and_then(|(track, x)| {
+                    // Over a thumb its own bubble shows the value.
+                    let on_thumb = live.peek().value.thumbs().any(|thumb| {
+                        let at = track.at(fraction(thumb, min, max));
+                        at.x <= x && x <= at.x + at.width
+                    });
+                    let value = SliderCoreValue::Single(min + track.fraction_at(x)? * (max - min))
+                        .snapped(min, max, step)
+                        .thumb(0);
+                    (!on_thumb).then_some((value, track))
+                });
+                if *hovered.peek() != shown {
+                    hovered.set(shown);
+                }
+            }
+            hover_busy.set(false);
+        });
+    });
+    let onpointermove = use_callback(move |event: Event<PointerData>| {
+        drag.onpointermove.call(event.clone());
+        let pointer = event.data().pointer_type();
+        if !previews
+            || !interactive
+            || *drag.dragging.peek()
+            || !matches!(pointer.as_str(), "mouse" | "pen")
+        {
+            return;
+        }
+        hover_x.set(Some(event.data().client_coordinates().x));
+        refresh_preview.call(());
+    });
+    let onpointerleave = move |_: Event<PointerData>| {
+        hover_x.set(None);
+        hover_track.set(None);
+        if hovered.peek().is_some() {
+            hovered.set(None);
+        }
+    };
+    // A resize or fullscreen moves the track: measured again for the pointer still on it.
+    let onresize = move |_: Event<ResizeData>| {
+        hover_track.set(None);
+        if hover_x.peek().is_some() {
+            refresh_preview.call(());
+        }
+    };
 
     // One handler for both thumbs: the focused thumb is the one the keys
     // move, so the index comes from whichever element fired.
@@ -952,6 +1108,20 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let hidden = props.name.clone().map(|name| {
         rsx! { SliderHidden { live, name, disabled } }
     });
+    let preview = previews.then(|| {
+        rsx! {
+            SliderHoverPreview {
+                hovered,
+                dragging: drag.dragging,
+                min,
+                max,
+                size,
+                label: props.label,
+                segments: segments.clone(),
+                segment_text,
+            }
+        }
+    });
 
     // Two thumbs are one control: a labelled group names them together. A
     // single thumb already carries the label itself.
@@ -975,9 +1145,11 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .attr("aria-label", group_label)
         .element(&root_element)
         .event("onpointerdown", onpointerdown)
-        .event("onpointermove", drag.onpointermove)
+        .event("onpointermove", onpointermove)
         .event("onpointerup", drag.onpointerup)
         .event("onpointercancel", drag.onpointercancel)
+        .event("onpointerleave", previews.then_some(onpointerleave))
+        .event("onresize", previews.then_some(onresize))
         .render(
             HtmlTag::Div,
             props.attributes,
@@ -1018,6 +1190,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         thumb_track,
                     }
                 }
+                {preview}
                 {hidden}
             },
         )
@@ -1132,19 +1305,13 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
     let range = matches!(value, SliderCoreValue::Range { .. });
     let thumbs = value.thumbs().enumerate().map(|(index, thumb_value)| {
         let (thumb_min, thumb_max) = value.bounds(index, min, max, step, min_range);
-        // Only a custom label is worth an `aria-valuetext` - the bare value
-        // is already in `aria-valuenow`.
-        let text = props.label.map(|label| label.call(thumb_value));
-        let bare = || thumb_value.to_string().replacen('.', decimal_separator, 1);
-        // A labelled segment names itself after the value, so it is heard too.
-        let text = match segment_label(&props.segments, thumb_value) {
-            Some(segment) => Some(fill(
-                props.segment_text,
-                &[("value", &text.unwrap_or_else(bare)), ("segment", &segment)],
-            )),
-            None => text,
-        };
-        let bubble_text = text.clone().unwrap_or_else(bare);
+        let (text, bubble_text) = value_text(
+            props.label,
+            &props.segments,
+            props.segment_text,
+            thumb_value,
+            decimal_separator,
+        );
         // `aria-labelledby` beats `aria-label`, so a range thumb lists itself
         // after the label ("Price Minimum"); a single thumb's label wins alone.
         let aria_label = aria_labels[index].clone();
@@ -1333,8 +1500,8 @@ fn SliderHidden(live: Signal<Live>, name: String, disabled: bool) -> Element {
 #[cfg(test)]
 mod tests {
     use super::{
-        SliderSegment, TrackSegment, filled_bars, on_boundary, segment_filled, segment_label,
-        track_segments,
+        Dimensions, SliderSegment, ThumbTrack, TrackSegment, filled_bars, on_boundary,
+        segment_filled, segment_label, track_segments,
     };
 
     fn starts(segments: &[TrackSegment]) -> Vec<(f64, f64, Option<&str>)> {
@@ -1409,5 +1576,34 @@ mod tests {
         assert_eq!(filled_bars(1.0, 8), 8);
         assert_eq!(filled_bars(1.5, 8), 8, "clamped to the bars there are");
         assert_eq!(filled_bars(0.5, 0), 0);
+    }
+
+    /// Todo 2166: the hover preview maps the pointer over the thumb's travel, as a drag does.
+    #[test]
+    fn a_pointer_maps_to_the_fraction_under_it() {
+        let track = |rtl| ThumbTrack {
+            left: 100.0,
+            travel: 200.0,
+            top: 0.0,
+            thumb: Dimensions {
+                width: 20.0,
+                height: 20.0,
+            },
+            rtl,
+            stale: false,
+        };
+        assert_eq!(track(false).fraction_at(110.0), Some(0.0));
+        assert_eq!(track(false).fraction_at(160.0), Some(0.25));
+        assert_eq!(track(true).fraction_at(160.0), Some(0.75));
+        assert_eq!(
+            track(false).fraction_at(500.0),
+            Some(1.0),
+            "clamped past the end"
+        );
+        let flat = ThumbTrack {
+            travel: 0.0,
+            ..track(false)
+        };
+        assert_eq!(flat.fraction_at(110.0), None);
     }
 }

@@ -153,6 +153,89 @@ fn a_press_or_the_menu_seeks_to_a_chapter() {
     });
 }
 
+/// Todo 2166: a hovering mouse sees the time and chapter under it, also under RTL
+/// and on top in fullscreen; leaving the track hides it.
+#[test]
+fn a_hovering_mouse_previews_the_time_and_chapter() {
+    const PREVIEW: &str = "[...document.querySelectorAll('[role=tooltip]')].find((e) =>
+        e.textContent === '0:02 of 0:04, Middle' && getComputedStyle(e).visibility === 'visible')";
+    block_on(async {
+        let mut _fullscreen = None;
+        let fixture = Fixture::open("/video/chapters", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, LOADED, "every duration")
+            .await
+            .unwrap();
+        for (id, fullscreen) in [("prop", false), ("rtl", false), ("prop", true)] {
+            // The fourth player sits below the fold.
+            page.evaluate(format!(
+                "document.querySelector('#{id}').scrollIntoView({{ block: 'center' }})"
+            ))
+            .await
+            .unwrap();
+            if fullscreen {
+                // Only for this leg: other tests' tabs wait while one holds fullscreen.
+                _fullscreen = Some(e2e::frames::keep_fullscreen().await);
+                pointer::click(page, &format!("#{id} button[aria-label=Fullscreen]"))
+                    .await
+                    .unwrap();
+                wait::for_js_true(
+                    page,
+                    &format!("(document.querySelector('#{id} [role=group]').dataset.fullscreen ?? 'none') !== 'none'"),
+                    "the player to fill the screen",
+                )
+                .await
+                .unwrap();
+            }
+            let segment = format!("document.querySelectorAll('#{id} [data-slot=segment]')[1]");
+            let middle: pointer::Point = page
+                .evaluate(format!(
+                    "(() => {{ const r = {segment}.getBoundingClientRect();
+                     return {{ x: r.x + r.width / 2, y: r.y + r.height / 2 }}; }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            pointer::move_to(page, middle).await.unwrap();
+            let shown = wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{ const tip = {PREVIEW}; if (!tip) return false;
+                     const r = tip.getBoundingClientRect(), s = {segment}.getBoundingClientRect();
+                     const x = r.x + r.width / 2;
+                     return s.left <= x && x <= s.right && r.bottom <= s.top
+                         && (!document.fullscreenElement || document.fullscreenElement.contains(tip)); }})()"
+                ),
+                &format!("{id}, fullscreen {fullscreen}: the preview over Middle"),
+            )
+            .await;
+            if let Err(error) = shown {
+                let tips: String = e2e::js(
+                    page,
+                    "JSON.stringify([...document.querySelectorAll('[role=tooltip]')].map((e) =>
+                         [e.textContent, getComputedStyle(e).visibility, JSON.stringify(e.getBoundingClientRect())]))",
+                )
+                .await;
+                panic!("{error}: {tips} pointer {middle:?}");
+            }
+            pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 })
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("!{PREVIEW}"),
+                &format!("{id}: the preview gone"),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Ctrl+ArrowRight goes to the next chapter and Ctrl+ArrowLeft back; under RTL
 /// they swap, as the track runs right to left.
 #[test]

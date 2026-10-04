@@ -80,15 +80,16 @@ pub(crate) fn use_nav_drag(mut open: Signal<bool>, enabled: bool, nav: ElementHa
             following: false,
         }));
         // Measured at each press: the drawer is the page wide on a phone, a sidebar on
-        // Home. A WebView may not read a queried element: the viewport then.
+        // Home. A WebView queries no element (2191): it reads the tagged `nav`'s width.
         let drawer = nav
             .query_selector("nav")
-            .map(|element| element.dimensions());
+            .map(|element| element.dimensions())
+            .map_err(|_| nav.computed_px("width"));
         let viewport = document().map(|document| document.viewport());
         spawn(async move {
             let measured = match drawer {
                 Ok(size) => size.await.ok().map(|size| size.width),
-                Err(_) => None,
+                Err(tagged) => tagged.await.ok().flatten(),
             }
             .filter(|found| *found > 0.0);
             let fallback = match viewport {

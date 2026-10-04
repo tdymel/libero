@@ -738,12 +738,8 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
 
         keyboard::type_text(page, "ab").await.unwrap();
         out_eq(page, "ab\n").await;
+        // The pointer stays on the button, its tooltip open through the composition (todo 2044).
         pointer::click(page, "[role=toolbar] button[aria-label=\"Bulleted list\"]")
-            .await
-            .unwrap();
-        // Off the button: its tooltip rising mid-composition commits the composed text
-        // (`- abcに日本`), todo 2044.
-        pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 })
             .await
             .unwrap();
         out_eq(page, "- ab\n").await;
@@ -758,6 +754,14 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
         keyboard::type_text(page, "c").await.unwrap();
         out_eq(page, "- abc\n").await;
 
+        // Of the DOM moves probed, only focus leaving and coming back commits "に" this way
+        // (`- abcに日本`), so a failure names the focus moves.
+        page.evaluate(
+            "window.__moves = []; for (const type of ['focusin', 'focusout'])
+             document.addEventListener(type, (e) => __moves.push(type + ' ' + e.target.outerHTML.slice(0, 80)), true)",
+        )
+        .await
+        .unwrap();
         page.execute(ImeSetCompositionParams::new("に", 1, 1))
             .await
             .unwrap();
@@ -765,7 +769,15 @@ fn toolbar_buttons_keep_the_caret_and_composition_lands_in_the_model() {
             .await
             .unwrap();
         keyboard::insert_text(page, "日本").await.unwrap();
-        out_eq(page, "- abc日本\n").await;
+        let composed = wait::until("the composition in the model", || async {
+            let now: String = page.evaluate(OUT).await?.into_value()?;
+            Ok(now == "- abc日本\n")
+        })
+        .await;
+        if composed.is_err() {
+            let moves: String = js(page, "JSON.stringify(__moves)").await;
+            panic!("#out reads {:?}; focus moves: {moves}", out(page).await);
+        }
         keyboard::type_text(page, "d").await.unwrap();
         out_eq(page, "- abc日本d\n").await;
 

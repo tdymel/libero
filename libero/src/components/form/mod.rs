@@ -87,11 +87,11 @@ pub use select::{
     MultiSelect, MultiSelectProps, Select, SelectFilterArgs, SelectOptionArgs, SelectPart,
     SelectProps, SelectionArgs,
 };
+pub(crate) use slider::{HoverPreview, segment_filled, track_segments};
 pub use slider::{
     RangeSlider, RangeSliderProps, Slider, SliderChangeEvent, SliderMark, SliderPart, SliderProps,
     SliderSegment, SliderStep, SliderTrack, SliderValue,
 };
-pub(crate) use slider::{segment_filled, track_segments};
 pub use switch::{Switch, SwitchPart, SwitchProps};
 pub use tags_field::{TagRejectReason, TagRejection, TagsField, TagsFieldPart, TagsFieldProps};
 pub use text_field::{TextField, TextFieldProps};

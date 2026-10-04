@@ -11,7 +11,7 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::{ActionIcon, Button, TooltipOpenDelay},
         common::{Glyph, HtmlTag, Input, Part, Parts, parts_enum},
-        form::{Slider, SliderChangeEvent, SliderSegment, SliderTrack},
+        form::{HoverPreview, Slider, SliderChangeEvent, SliderSegment, SliderTrack},
         layout::{paper_sx, use_box},
         overlay::{Menu, MenuItem, Shortcut, ShortcutHelp, use_menu},
     },
@@ -684,6 +684,8 @@ pub(super) fn MediaSeek(
 ) -> Element {
     let labels = use_localization().media;
     let mut scrub = use_signal(|| None::<f64>);
+    // With chapters, a hovering mouse sees the time and chapter under it (todo 2166).
+    use_context_provider(|| HoverPreview);
     let duration = media.duration();
     // Only once the duration is known: till then `max` is 1, which would drop every later chapter.
     let segments = match duration {

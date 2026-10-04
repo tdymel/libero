@@ -122,7 +122,7 @@ pub fn VideoPage() -> Element {
                     "With two or more captions or subtitles tracks, the captions button opens a menu of Off and each track by its `label` (else its `srclang`), as radio items. Without one it stays, disabled but focusable, and says \"No captions for this video\".",
                     "The speed button shows the rate and is named \"Playback speed 1×\" (\"1,5×\" under `Formats::GERMAN`); its menu offers 0.5× to 2× as radio items.",
                     "The speaker button mutes; the chevron beside it, named \"Volume\", opens a `dialog` with the volume slider focused. At volume 0, Unmute brings back the last audible volume.",
-                    "A press anywhere on the seek track jumps there; a drag scrubs.",
+                    "A press anywhere on the seek track jumps there; a drag scrubs. With chapters, a hovering mouse or pen sees the time and chapter under it in a bubble, gone on a drag or as it leaves.",
                     "The seek slider's `aria-valuetext` reads \"1:05 of 4:56\" (the localization's `media.position`), with chapters \"1:05 of 4:56, The plan\" (`slider.segment`); the bubble shows the same.",
                     "With chapters a menu button, named \"Chapters\", lists each start and title as radio items, the current one checked; picking one seeks there. It is the way to a chapter on touch and without the chord keys.",
                     "In fullscreen the menus and tooltips open inside the player. Where the page may not go fullscreen, the player covers the window instead, the page behind stays still, and Escape, F or a Tab out leaves it; focus stays on the pressed control.",

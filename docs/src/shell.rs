@@ -300,6 +300,7 @@ pub(crate) fn AppShell() -> Element {
                         burger,
                         drawer: home,
                         pulled: (drag.pulled)(),
+                        measure: nav_box,
                     }
                 }
                 ScrollArea {

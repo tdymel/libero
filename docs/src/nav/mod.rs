@@ -102,6 +102,8 @@ pub fn DocsNav(
     /// How far an edge swipe pulls the closed drawer out, px: it follows the finger.
     #[props(default)]
     pulled: Option<f64>,
+    /// The drag's handle: its tag on the `nav` is how a WebView measures it.
+    measure: ElementHandle,
 ) -> Element {
     let data = nav_tree();
     let rtl = use_direction().is_rtl();
@@ -130,6 +132,7 @@ pub fn DocsNav(
             sx: nav_responsive_sx(open(), drawer),
             // Inline, not a class per finger position; the class's transition takes over on release.
             style: pulled.map(|px| pulled_style(px, rtl)),
+            attributes: measure.attributes(),
             Flex {
                 direction: "column",
                 gap: "sm",

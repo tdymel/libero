@@ -487,13 +487,18 @@ fn at_xs_the_speaker_and_the_chevron_each_own_a_24px_target() {
                 if (hit === chevron) own.Volume += 0.5;
             }
             return JSON.stringify(own); })()";
-        wait::for_js_true(page, &format!("{owned} !== null"), "the volume buttons")
+        // Polled: under load the first read can land before the xs row settles (todo 2139).
+        let enough = format!(
+            "(() => {{ const own = {owned}; if (own === null) return false;
+             const o = JSON.parse(own); return o.Mute >= 24 && o.Volume >= 24; }})()"
+        );
+        if wait::for_js_true(page, &enough, "each volume button to own 24px")
             .await
-            .unwrap();
-        let measured: String = page.evaluate(owned).await.unwrap().into_value().unwrap();
-        let own: serde_json::Value = serde_json::from_str(&measured).unwrap();
-        for button in ["Mute", "Volume"] {
-            assert!(own[button].as_f64().unwrap() >= 24.0, "{measured}");
+            .is_err()
+        {
+            let measured: Option<String> =
+                page.evaluate(owned).await.unwrap().into_value().unwrap();
+            panic!("a volume button owns less than 24px: {measured:?}");
         }
         fixture.close().await.unwrap();
     });

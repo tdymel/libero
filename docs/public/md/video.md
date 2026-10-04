@@ -169,7 +169,9 @@ screen, from [use_fullscreen](use_fullscreen.md).
 - The speaker button mutes; the chevron beside it, named "Volume", opens a
   `dialog` with the volume slider focused. At volume 0, Unmute brings back the
   last audible volume.
-- A press anywhere on the seek track jumps there; a drag scrubs.
+- A press anywhere on the seek track jumps there; a drag scrubs. With
+  chapters, a hovering mouse or pen sees the time and chapter under it in a
+  bubble, gone on a drag or as it leaves.
 - The seek slider's `aria-valuetext` reads "1:05 of 4:56" (the localization's
   `media.position`), with chapters "1:05 of 4:56, The plan"
   (`slider.segment`); the bubble shows the same.
