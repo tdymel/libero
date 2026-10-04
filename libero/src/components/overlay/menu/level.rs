@@ -148,11 +148,16 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         false => onclose.call(()),
     });
     let close_all = props.close_all.unwrap_or(own_close_all);
+    let mut own_id = use_hook(|| CopyValue::new(props.id.clone()));
+    if *own_id.peek() != props.id {
+        own_id.set(props.id.clone());
+    }
 
     let level = Level {
         floating,
         wrapper: props.wrapper,
         dismiss,
+        id: own_id,
         close_all,
         onedge: props.onedge,
         active,

@@ -76,6 +76,18 @@ pub trait Driver {
         let _ = dy;
         bail!("{:?}: no page scroll", self.platform())
     }
+    /// Turns the wheel over the first match's centre by about `dy` CSS px (positive: down).
+    /// Desktop turns whole notches, so `dy` is rounded there: assert movement, not exact px.
+    async fn wheel(&mut self, selector: &str, dy: f64) -> Result<()> {
+        let _ = (selector, dy);
+        bail!("{:?}: no wheel", self.platform())
+    }
+    /// The escape hatch for a measurement no typed read covers: `expression`'s JSON value,
+    /// a promise awaited. Prefer a typed method; name the probe a const in the test file.
+    async fn evaluate(&mut self, expression: &str) -> Result<serde_json::Value> {
+        let _ = expression;
+        bail!("{:?}: no script reads", self.platform())
+    }
     /// A touch held still at the first match's centre for `ms`, then lifted.
     async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
         let _ = (selector, ms);
@@ -164,8 +176,8 @@ pub trait Driver {
         let _ = (width, height);
         bail!("{:?}: no viewport resize", self.platform())
     }
-    /// Holds the page's timers of `delays` ([`crate::clock`]); `false` where the app's timers
-    /// do not run in the page (Blitz, the WebViews), so the caller waits them out instead.
+    /// Holds the app's timers of `delays` ([`crate::clock`]; a WebView's in the app, 2144);
+    /// `false` where none can be held (Blitz), so the caller waits them out instead.
     async fn hold_timers(&mut self, delays: &[u32]) -> Result<bool> {
         let _ = delays;
         Ok(false)
@@ -175,7 +187,8 @@ pub trait Driver {
         let _ = ms;
         bail!("{:?}: no held clock", self.platform())
     }
-    /// Fires every pending held timer of `ms`; returns how many ran.
+    /// Fires every pending held timer of `ms`; returns how many. A WebView's run on the
+    /// app's next poll: wait for their effect, never read it straight after.
     async fn fire_timers(&mut self, ms: u32) -> Result<usize> {
         let _ = ms;
         bail!("{:?}: no held clock", self.platform())

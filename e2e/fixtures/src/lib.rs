@@ -62,6 +62,8 @@ fn Shell() -> Element {
     let generation = use_context_provider(|| Generation(Signal::new(0)));
     #[cfg(any(target_os = "android", feature = "desktop"))]
     route_hook(generation.0);
+    #[cfg(any(feature = "mobile", feature = "desktop"))]
+    held_clock_hook();
     // The desktop WebView has no DevTools socket to navigate through.
     #[cfg(feature = "desktop")]
     {
@@ -89,8 +91,50 @@ fn route_hook(mut generation: Signal<u64>) {
              await new Promise(() => {});",
         );
         while let Ok((path, next)) = hook.recv::<(String, u64)>().await {
+            // A fresh fixture starts on the real clock, as a fresh page does on the web.
+            #[cfg(any(feature = "mobile", feature = "desktop"))]
+            libero::platform::held_clock::reset();
             navigator.push(path);
             generation.set(next);
+        }
+    });
+}
+
+/// A WebView's timers are libero's thread timers, which no page script holds: the drivers
+/// reach `libero::platform::held_clock` through `await window.__heldClock.call(op, [ms..])`,
+/// `op` one of `hold`, `armed` and `fire` (2144).
+#[cfg(any(feature = "mobile", feature = "desktop"))]
+fn held_clock_hook() {
+    use libero::platform::held_clock;
+    use_future(|| async {
+        let mut hook = document::eval(
+            "let seq = 0;
+             const pending = new Map();
+             window.__heldClock = {
+                 call: (op, ms) => new Promise((done) => {
+                     seq += 1;
+                     pending.set(seq, done);
+                     dioxus.send([seq, op, ms]);
+                 }),
+             };
+             while (true) {
+                 const [at, answer] = await dioxus.recv();
+                 pending.get(at)?.(answer);
+                 pending.delete(at);
+             }",
+        );
+        while let Ok((seq, op, ms)) = hook.recv::<(u64, String, Vec<u32>)>().await {
+            let first = ms.first().copied().unwrap_or_default();
+            let answer = match op.as_str() {
+                "hold" => {
+                    held_clock::hold_timers(&ms);
+                    1
+                }
+                "armed" => held_clock::armed(first),
+                "fire" => held_clock::fire(first),
+                _ => 0,
+            };
+            let _ = hook.send((seq, answer));
         }
     });
 }

@@ -86,8 +86,20 @@ async fn pick_later<D: Driver>(d: &mut D, steps: usize) -> Result<()> {
     if native {
         d.press(keyboard::ARROW_DOWN).await?;
     }
-    for _ in 0..steps {
+    let desktop = d.platform() == Platform::Desktop;
+    for step in 0..steps {
+        let before = match desktop {
+            true => d.value(":focus").await?,
+            false => String::new(),
+        };
         d.press(keyboard::ARROW_DOWN).await?;
+        // WebKitGTK rewinds a press that lands before the last change's render.
+        if desktop {
+            eventually(d, &format!("ArrowDown {}", step + 1), async |d| {
+                Ok(d.value(":focus").await? != before)
+            })
+            .await?;
+        }
     }
     if native {
         d.press(keyboard::ENTER).await?;
@@ -769,8 +781,14 @@ async fn a_date_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> R
             d.platform()
         );
     }
-    d.click(DUE).await?;
+    // WebKitGTK's click lands on the segment under it; focus starts at the month.
+    match d.platform() {
+        Platform::Desktop => d.focus(DUE).await?,
+        _ => d.click(DUE).await?,
+    }
     match native_input {
+        // WebKitGTK's en-US segments advance only on a separator; Chromium's on a full one.
+        true if d.platform() == Platform::Desktop => d.type_text("03/10/2024").await?,
         // Chromium's en-US date input takes month, day, then year.
         true => d.type_text("03102024").await?,
         false => {

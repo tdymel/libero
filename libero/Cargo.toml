@@ -139,6 +139,9 @@ native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cur
 # `Notification`, so system notifications go over the session bus (todo 1470).
 # `save_file` opens rfd's save dialog there, as under `native` (todo 2016).
 desktop = ["dep:futures-channel", "dep:dbus", "dep:dioxus-desktop", "dep:rfd"]
+# For e2e harnesses only (todo 2144): `platform::held_clock` holds the thread timer's
+# named delays until fired, as a test clock. Never in an app build.
+held-clock = []
 default = [
     "code-lang-rust",
     "code-lang-bash",

@@ -53,6 +53,20 @@ pub const HELD_CLOCK: &str = r#"(delays) => {
     };
 }"#;
 
+/// A WebView app's timers are libero's thread timers (2144): the expression a driver awaits
+/// for `op` (`hold`, `armed` or `fire`) on them, through the fixtures app's `__heldClock`.
+pub fn app_clock(op: &str, ms: &[u32]) -> String {
+    format!("window.__heldClock.call({op:?}, {ms:?})")
+}
+
+/// The count an [`app_clock`] call answered.
+pub fn app_count(answer: serde_json::Value) -> Result<usize> {
+    match answer.as_u64() {
+        Some(count) => Ok(count as usize),
+        None => bail!("the app's held clock answered {answer}"),
+    }
+}
+
 /// Holds the page's timers of `delays` from now on; ones armed before keep the real clock.
 pub async fn hold(page: &Page, delays: &[u32]) -> Result<()> {
     page.evaluate(format!(

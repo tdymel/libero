@@ -34,6 +34,16 @@ impl TimerApi for ThreadTimer {
         let cancelled = Arc::new(AtomicBool::new(false));
         let guard = cancelled.clone();
         let origin = Origin::here();
+        #[cfg(feature = "held-clock")]
+        if super::held_clock::holds(delay) {
+            let mut fired = super::held_clock::park(delay, false, guard.clone());
+            spawn_on_root(async move {
+                if fired.next().await && !guard.load(Ordering::Acquire) {
+                    origin.run(callback);
+                }
+            });
+            return Box::new(ThreadTimerSubscription { cancelled });
+        }
 
         spawn_on_root(async move {
             sleep(delay).await;
@@ -49,6 +59,16 @@ impl TimerApi for ThreadTimer {
         let cancelled = Arc::new(AtomicBool::new(false));
         let guard = cancelled.clone();
         let origin = Origin::here();
+        #[cfg(feature = "held-clock")]
+        if super::held_clock::holds(interval) {
+            let mut fired = super::held_clock::park(interval, true, guard.clone());
+            spawn_on_root(async move {
+                while fired.next().await && !guard.load(Ordering::Acquire) {
+                    origin.run(&callback);
+                }
+            });
+            return Box::new(ThreadTimerSubscription { cancelled });
+        }
 
         spawn_on_root(async move {
             loop {

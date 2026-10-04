@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result, bail};
 use serde::de::DeserializeOwned;
 
+use crate::clock::{app_clock, app_count};
 use crate::driver::{Driver, Platform, Rect};
 use crate::passes::keyboard::Key;
 
@@ -22,6 +23,9 @@ pub const APP_ENV: &str = "E2E_DESKTOP_APP";
 
 /// A cold WebKitGTK start under Xvfb took 5.5 s on a seat.
 const LAUNCH: Duration = Duration::from_secs(60);
+
+/// About what one WebKitGTK wheel notch scrolls, in CSS px.
+const WHEEL_NOTCH: f64 = 50.0;
 
 /// The app the last scenario finished cleanly in; the next scenario of its unit reuses it.
 static IDLE: Mutex<Option<Desktop>> = Mutex::new(None);
@@ -386,6 +390,36 @@ impl Driver for Desktop {
             std::thread::sleep(Duration::from_millis(16));
         }
         xdotool(&["mouseup", "1"]).map(drop)
+    }
+
+    /// X buttons 4 and 5, one notch per [`WHEEL_NOTCH`] px of `dy`, at least one.
+    async fn wheel(&mut self, selector: &str, dy: f64) -> Result<()> {
+        let (x, y) = self.centre(selector)?;
+        let notches = (dy.abs() / WHEEL_NOTCH).round().max(1.0).to_string();
+        let button = if dy < 0.0 { "4" } else { "5" };
+        self.pointer(
+            x,
+            y,
+            &["click", "--repeat", &notches, "--delay", "16", button],
+        )
+    }
+
+    async fn evaluate(&mut self, expression: &str) -> Result<serde_json::Value> {
+        self.json(&format!("await ({expression})"))
+    }
+
+    /// libero's thread timers, held in the app (2144).
+    async fn hold_timers(&mut self, delays: &[u32]) -> Result<bool> {
+        self.evaluate(&app_clock("hold", delays)).await?;
+        Ok(true)
+    }
+
+    async fn armed(&mut self, ms: u32) -> Result<usize> {
+        app_count(self.evaluate(&app_clock("armed", &[ms])).await?)
+    }
+
+    async fn fire_timers(&mut self, ms: u32) -> Result<usize> {
+        app_count(self.evaluate(&app_clock("fire", &[ms])).await?)
     }
 
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {

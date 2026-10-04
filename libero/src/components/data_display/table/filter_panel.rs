@@ -19,11 +19,11 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        Align, ElementHandle, PopoverOptions, Side, listener, use_debounced_callback, use_element,
-        use_id, use_popover, use_theme,
+        Align, ElementHandle, PopoverOptions, Side, id_selector, listener, use_debounced_callback,
+        use_element, use_id, use_popover, use_theme,
     },
     localization::TableLabels,
-    platform::{ElementApi, next_task},
+    platform::{ElementApi, PlatformError, focus_selector, next_task},
     sx::{StaticSx, sx},
     theme::{Size, SizeCss},
 };
@@ -245,9 +245,18 @@ pub(super) fn FilterPanel(
         spawn(async move {
             for _ in 0..5 {
                 next_task().await;
-                if let Ok(element) = floating.query_selector(&selector) {
-                    let _ = element.focus();
-                    break;
+                match floating.query_selector(&selector) {
+                    Ok(element) => {
+                        let _ = element.focus();
+                        break;
+                    }
+                    // A WebView queries nothing: the page focuses it inside the box (958).
+                    Err(PlatformError::Unsupported) => {
+                        let inside = format!("{} {selector}", id_selector(&box_id.peek()));
+                        let _ = focus_selector(&inside);
+                        break;
+                    }
+                    Err(_) => {}
                 }
             }
             focus.set(None);
@@ -334,8 +343,16 @@ pub(super) fn FilterPanel(
                                     line - 1
                                 ),
                             };
-                            if let Ok(next) = floating.query_selector(&next) {
-                                let _ = next.focus();
+                            match floating.query_selector(&next) {
+                                Ok(next) => {
+                                    let _ = next.focus();
+                                }
+                                // A WebView queries nothing (958).
+                                Err(PlatformError::Unsupported) => {
+                                    let at = id_selector(&box_id.peek());
+                                    let _ = focus_selector(&format!("{at} {next}"));
+                                }
+                                Err(_) => {}
                             }
                             let mut filters = slice.peek();
                             if line < filters.len() {

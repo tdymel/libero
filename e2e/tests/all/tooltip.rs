@@ -114,17 +114,16 @@ async fn long_press_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         return Ok(());
     }
     d.touch_down(TRIGGER).await?;
-    d.settle().await?;
-    ensure!(
-        d.armed(LONG_PRESS_MS).await? == 1,
-        "a held touch armed no {LONG_PRESS_MS} ms open"
-    );
+    // A WebView's events reach the app after the page's own round trip.
+    eventually(d, "a held touch to arm the open", async |d| {
+        Ok(d.armed(LONG_PRESS_MS).await? == 1)
+    })
+    .await?;
     d.touch_up(TRIGGER).await?;
-    d.settle().await?;
-    ensure!(
-        d.armed(LONG_PRESS_MS).await? == 0,
-        "the release left the open armed"
-    );
+    eventually(d, "the release to cancel the open", async |d| {
+        Ok(d.armed(LONG_PRESS_MS).await? == 0)
+    })
+    .await?;
     ensure!(!d.exists(OPEN).await?, "a short touch opened it");
     Ok(())
 }

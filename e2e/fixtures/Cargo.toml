@@ -18,9 +18,10 @@ serde_json = { version = "1", optional = true }
 
 [features]
 # The Android fixtures APK (964): `dx build --platform android --features mobile`.
-mobile = ["dioxus/mobile"]
+# Both WebView builds hold libero's thread timers for the driver's clock (2144).
+mobile = ["dioxus/mobile", "libero/held-clock"]
 # The desktop WebView (wry) build, opened at `E2E_ROUTE` (1026), read through `E2E_BRIDGE` (1126).
-desktop = ["dioxus/desktop", "libero/desktop", "dep:futures-channel", "dep:futures-util", "dep:serde_json"]
+desktop = ["dioxus/desktop", "libero/desktop", "libero/held-clock", "dep:futures-channel", "dep:futures-util", "dep:serde_json"]
 
 # `perf::install`: counts dioxus-core's `render` spans per scope on `/perf/*`
 # pages. The versions dioxus-logger already pulls in.

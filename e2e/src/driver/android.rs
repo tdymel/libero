@@ -3,13 +3,14 @@ use std::time::Duration;
 use anyhow::Result;
 use chromiumoxide::Page;
 
-use super::web::{element, json};
+use super::web::{element, evaluate, json};
 use super::{Driver, Platform, Rect};
 use crate::android::{
     ALT, CTRL, SHIFT, download, harness, input, input_text, keycode, posted_notifications,
     soft_keyboard_shown, tap_any_node_within, tap_node, tap_notification, tap_notification_action,
     webview_view_focused,
 };
+use crate::clock::{app_clock, app_count};
 use crate::passes::{focus, keyboard, pointer};
 
 /// A fixture route in the emulator's WebView, reached through the app's
@@ -249,10 +250,38 @@ impl Driver for Android {
         input(&["swipe".into(), x.clone(), y.clone(), x, y, ms.to_string()]).await
     }
 
+    async fn touch_down(&mut self, selector: &str) -> Result<()> {
+        let [x, y] = self.device(self.centre(selector).await?);
+        input(&["motionevent".into(), "DOWN".into(), x, y]).await
+    }
+
+    async fn touch_up(&mut self, selector: &str) -> Result<()> {
+        let [x, y] = self.device(pointer::centre_of(&self.page, selector).await?);
+        input(&["motionevent".into(), "UP".into(), x, y]).await
+    }
+
+    /// libero's thread timers, held in the app (2144).
+    async fn hold_timers(&mut self, delays: &[u32]) -> Result<bool> {
+        self.evaluate(&app_clock("hold", delays)).await?;
+        Ok(true)
+    }
+
+    async fn armed(&mut self, ms: u32) -> Result<usize> {
+        app_count(self.evaluate(&app_clock("armed", &[ms])).await?)
+    }
+
+    async fn fire_timers(&mut self, ms: u32) -> Result<usize> {
+        app_count(self.evaluate(&app_clock("fire", &[ms])).await?)
+    }
+
     /// CDP's: `adb input` has one finger.
     async fn pinch(&mut self, selector: &str, from: f64, to: f64) -> Result<()> {
         let at = self.centre(selector).await?;
         pointer::pinch(&self.page, at, from, to, 8).await
+    }
+
+    async fn evaluate(&mut self, expression: &str) -> Result<serde_json::Value> {
+        evaluate(&self.page, expression).await
     }
 
     async fn focus(&mut self, selector: &str) -> Result<()> {

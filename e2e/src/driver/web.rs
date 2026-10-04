@@ -2,6 +2,9 @@ use std::time::Duration;
 
 use anyhow::Result;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+use chromiumoxide::cdp::browser_protocol::input::{
+    DispatchMouseEventParams, DispatchMouseEventType,
+};
 
 use super::{Driver, Platform, Rect};
 use crate::frames::in_front;
@@ -38,6 +41,20 @@ pub(super) async fn json<T: serde::de::DeserializeOwned>(
 ) -> Result<T> {
     let json: String = page
         .evaluate(format!("JSON.stringify({expression})"))
+        .await?
+        .into_value()?;
+    Ok(serde_json::from_str(&json)?)
+}
+
+/// [`Driver::evaluate`] over CDP: through JSON, so `undefined` reads as `null`.
+pub(super) async fn evaluate(
+    page: &chromiumoxide::Page,
+    expression: &str,
+) -> Result<serde_json::Value> {
+    let json: String = page
+        .evaluate(format!(
+            "(async () => JSON.stringify(await ({expression})) ?? 'null')()"
+        ))
         .await?
         .into_value()?;
     Ok(serde_json::from_str(&json)?)
@@ -147,6 +164,28 @@ impl Driver for Web {
         let page = &self.fixture.page;
         let at = pointer::centre_of(page, selector).await?;
         in_front(page, pointer::touch_up(page, at)).await
+    }
+
+    async fn wheel(&mut self, selector: &str, dy: f64) -> Result<()> {
+        let page = &self.fixture.page;
+        let at = pointer::centre_of(page, selector).await?;
+        let wheel = DispatchMouseEventParams::builder()
+            .r#type(DispatchMouseEventType::MouseWheel)
+            .x(at.x)
+            .y(at.y)
+            .delta_x(0.0)
+            .delta_y(dy)
+            .build()
+            .map_err(anyhow::Error::msg)?;
+        in_front(page, async {
+            page.execute(wheel).await?;
+            Ok(())
+        })
+        .await
+    }
+
+    async fn evaluate(&mut self, expression: &str) -> Result<serde_json::Value> {
+        evaluate(&self.fixture.page, expression).await
     }
 
     async fn scroll_by(&mut self, dy: f64) -> Result<()> {

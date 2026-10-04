@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use super::{hover::HoverDelay, menu::MenuEdge, state::MenuFocus};
 use crate::{
     components::common::has_shortcut_modifier,
-    hooks::{DismissHandle, ElementHandle, Typeahead, typeahead_match},
-    platform::{ElementApi, logical_key},
+    hooks::{DismissHandle, ElementHandle, Typeahead, id_selector, typeahead_match},
+    platform::{ElementApi, PlatformError, focus_selector, logical_key},
 };
 
 /// The `Copy` half of one menu's state, shared by every item's handlers.
@@ -13,6 +13,8 @@ pub(super) struct Level {
     pub(super) floating: ElementHandle,
     pub(super) wrapper: ElementHandle,
     pub(super) dismiss: DismissHandle,
+    /// The level's id, which its rows' ids start with.
+    pub(super) id: CopyValue<String>,
     pub(super) close_all: Callback<bool>,
     pub(super) onedge: Option<Callback<MenuEdge>>,
     pub(super) active: Signal<Option<usize>>,
@@ -32,10 +34,15 @@ impl Level {
         if *active.peek() != Some(index) {
             active.set(Some(index));
         }
-        let _ = self
+        let focused = self
             .floating
             .query_selector(&format!("[data-menu-index=\"{index}\"]"))
             .and_then(|item| item.focus());
+        // A WebView queries nothing: the page focuses the row by its id (958).
+        if let Err(PlatformError::Unsupported) = focused {
+            let row = format!("{}-item-{index}", self.id.peek());
+            let _ = focus_selector(&id_selector(&row));
+        }
     }
 
     /// Clicks item `index`: Space on a link, which only Enter activates natively.

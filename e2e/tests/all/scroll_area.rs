@@ -1,19 +1,19 @@
 //! `ScrollArea` re-measures when its pane resizes (425), resized by script as a `Splitter`
 //! would, with the window left alone.
 
+use anyhow::{Result, anyhow, ensure};
 use chromiumoxide::cdp::browser_protocol::input::{
     DispatchMouseEventParams, DispatchMouseEventType,
 };
 use chromiumoxide::cdp::browser_protocol::page::AddScriptToEvaluateOnNewDocumentParams;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, Platform, eventually};
 use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The highest row index a `Virtualize` has in the document.
 const LAST_ROW: &str = "Math.max(...[...document.querySelectorAll('#list-pane [data-row]')].map(r => Number(r.dataset.row)))";
-/// How often the caller's own `onresize` on the area has run.
-const RESIZES: &str = "Number(document.querySelector('#list-resizes').textContent)";
 
 /// 20px rows: a 120px pane shows a dozen, 600px needs 29. The area listens for `onresize`
 /// itself; a caller's listener must still run.
@@ -29,45 +29,47 @@ fn it_meets_the_baseline() {
     }
 }
 
-#[test]
-fn a_taller_pane_renders_rows_to_its_new_bottom() {
-    block_on(async {
-        let fixture = Fixture::open("/scroll-area", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-
-        // The measured window, not the first render's 1080px guess.
-        wait::for_js_true(
-            page,
-            &format!("{LAST_ROW} < 29 && {RESIZES} > 0"),
-            "the window to fit the short pane",
-        )
-        .await
-        .unwrap();
-        let before: f64 = page.evaluate(RESIZES).await.unwrap().into_value().unwrap();
-        page.evaluate("document.querySelector('#list-pane').style.height = '600px'")
-            .await
-            .unwrap();
-        wait::for_js_true(
-            page,
-            &format!("{LAST_ROW} >= 29"),
-            "rows down to the taller pane's bottom",
-        )
-        .await
-        .unwrap();
-        wait::for_js_true(
-            page,
-            &format!("{RESIZES} > {before}"),
-            "the caller's own onresize to run",
-        )
-        .await
-        .unwrap();
-
-        fixture.console.assert_clean("a list pane resize").unwrap();
-        fixture.close().await.unwrap();
-    });
+/// A number [`Driver::evaluate`] read.
+async fn number<D: Driver>(d: &mut D, probe: &str) -> Result<f64> {
+    let value = d.evaluate(probe).await?;
+    value
+        .as_f64()
+        .ok_or_else(|| anyhow!("{probe} read {value}, no number"))
 }
+
+async fn resizes<D: Driver>(d: &mut D) -> Result<u64> {
+    Ok(d.text("#list-resizes").await?.trim().parse()?)
+}
+
+/// The measured window first, not the first render's 1080px guess.
+async fn measured<D: Driver>(d: &mut D) -> Result<()> {
+    eventually(d, "the window to fit the short pane", async |d| {
+        Ok(number(d, LAST_ROW).await? < 29.0 && resizes(d).await? > 0)
+    })
+    .await
+}
+
+async fn a_taller_pane_renders_more_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    measured(d).await?;
+    let before = resizes(d).await?;
+    d.evaluate("document.querySelector('#list-pane').style.height = '600px'")
+        .await?;
+    eventually(d, "rows down to the taller pane's bottom", async |d| {
+        Ok(number(d, LAST_ROW).await? >= 29.0)
+    })
+    .await?;
+    eventually(d, "the caller's own onresize to run", async |d| {
+        Ok(resizes(d).await? > before)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_taller_pane_renders_rows_to_its_new_bottom,
+    "/scroll-area",
+    a_taller_pane_renders_more_rows,
+    native: skip("no script reads on Blitz")
+);
 
 /// Scrolls the list 60px a frame for 40 frames, as a fling does, and returns the
 /// most px of the pane no row covered in any frame after the first three.
@@ -90,36 +92,80 @@ const FLING_BLANK: &str = r#"(async () => {
 
 /// Todo 2013: the padding standing in for the rows above the window follows every
 /// scroll step. It came up through an effect, which a fling starved: the rows drifted off.
-#[test]
-fn rows_stay_in_view_through_a_fling() {
-    block_on(async {
-        let fixture = Fixture::open("/scroll-area", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        wait::for_js_true(page, &format!("{LAST_ROW} < 29"), "the measured window")
-            .await
-            .unwrap();
-
-        let blank: f64 = page
-            .evaluate(FLING_BLANK)
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        // A row's pitch of slack for a frame the window trails by.
-        assert!(blank <= 20.0, "{blank}px of the 120px pane showed no row");
-
-        fixture.console.assert_clean("a fling").unwrap();
-        fixture.close().await.unwrap();
-    });
+async fn rows_stay_in_view<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    measured(d).await?;
+    let blank = number(d, FLING_BLANK).await?;
+    // A row's pitch of slack for a frame the window trails by.
+    ensure!(blank <= 20.0, "{blank}px of the 120px pane showed no row");
+    Ok(())
 }
 
+e2e::scenario!(
+    rows_stay_in_view_through_a_fling,
+    "/scroll-area",
+    rows_stay_in_view,
+    native: skip("no script reads on Blitz"),
+    desktop: skip("2131: the window trails a WebView fling, 80px of 120 blank"),
+    android: skip("2131: the window trails a WebView fling")
+);
+
 /// The list's scrolling box, and the lowest row index it has in the document.
-#[cfg_attr(not(feature = "android"), allow(dead_code))]
 const AREA: &str = "[...document.querySelectorAll('#list-pane *')].find(e => e.scrollHeight > e.clientHeight + 100)";
-#[cfg_attr(not(feature = "android"), allow(dead_code))]
 const FIRST_ROW: &str = "Math.min(...[...document.querySelectorAll('#list-pane [data-row]')].map(r => Number(r.dataset.row)))";
+/// The px of the list's pane no row covers now.
+const BLANK: &str = "(() => { const pane = document.querySelector('#list-pane'); \
+    const view = [...pane.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 100).getBoundingClientRect(); \
+    const rows = [...pane.querySelectorAll('[data-row]')].map(r => r.getBoundingClientRect()); \
+    const top = Math.min(...rows.map(r => r.top)), bottom = Math.max(...rows.map(r => r.bottom)); \
+    return Math.max(0, top - view.top) + Math.max(0, view.bottom - bottom); })()";
+
+/// Todo 2177's setup on every platform: a jump far down the list renders the window there.
+async fn a_jump_renders_the_window_there<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    measured(d).await?;
+    d.evaluate(&format!("{AREA}.scrollTop = 10000")).await?;
+    eventually(d, "the window mid-list, the pane covered", async |d| {
+        Ok(number(d, FIRST_ROW).await? > 400.0 && number(d, BLANK).await? < 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_jump_mid_list_renders_the_window_there,
+    "/scroll-area",
+    a_jump_renders_the_window_there,
+    native: skip("no script reads on Blitz"),
+    android: skip("2177: the WebView does not follow the jump")
+);
+
+/// The real input path: a wheel, or a touch fling where there is no wheel. The list comes
+/// to rest with the window moved down and the pane covered.
+async fn the_window_follows_the_input<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    measured(d).await?;
+    match d.platform() {
+        Platform::Android => d.drag("#list-pane", 0.0, -120.0).await?,
+        _ => d.wheel("#list-pane", 600.0).await?,
+    }
+    let mut last = -1.0;
+    eventually(d, "the list to come to rest past its top", async |d| {
+        d.frame().await?;
+        let top = number(d, &format!("{AREA}.scrollTop")).await?;
+        let rest = top > 0.0 && top == last;
+        last = top;
+        Ok(rest)
+    })
+    .await?;
+    eventually(d, "the window moved down, the pane covered", async |d| {
+        Ok(number(d, FIRST_ROW).await? > 0.0 && number(d, BLANK).await? < 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    the_window_follows_a_wheel_or_a_fling,
+    "/scroll-area",
+    the_window_follows_the_input,
+    native: skip("no script reads on Blitz")
+);
 
 /// Samples each frame's leading padding of the list's content box while the list scrolls.
 #[cfg_attr(not(feature = "android"), allow(dead_code))]

@@ -16,11 +16,11 @@ use crate::{
     },
     context::IconSlot,
     hooks::{
-        Align, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side,
+        Align, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side, id_selector,
         use_debounced_callback, use_id, use_popover, use_theme,
     },
     localization::TableLabels,
-    platform::{ElementApi, reads_dom_synchronously, when_laid_out},
+    platform::{ElementApi, PlatformError, focus_first_of, reads_dom_synchronously, when_laid_out},
     sx::StaticSx,
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -355,15 +355,22 @@ pub(super) fn FilterPopover(
     use_effect(move || match (open(), popover.placed()) {
         (true, true) if !*entered.peek() => {
             entered.set(true);
+            const VALUE: &str = "input[data-filter-value]";
+            const PICKER: &str = ":is(select, [role=combobox])";
             let target = floating
-                .query_selector("input[data-filter-value]")
-                .or_else(|_| floating.query_selector(":is(select, [role=combobox])"))
-                .ok();
+                .query_selector(VALUE)
+                .or_else(|_| floating.query_selector(PICKER));
             match target {
-                Some(target) => {
+                Ok(target) => {
                     let _ = target.focus();
                 }
-                None => {
+                // A WebView queries nothing: the page focuses the first in the box (958).
+                Err(PlatformError::Unsupported) => {
+                    let at = id_selector(&box_id.peek());
+                    let _ =
+                        focus_first_of(&[format!("{at} {VALUE}"), format!("{at} {PICKER}"), at]);
+                }
+                Err(_) => {
                     let _ = floating.focus();
                 }
             }

@@ -157,8 +157,7 @@ e2e::scenario!(
     a_click_opens_it_and_focus_moving_into_the_list_keeps_it_open,
     "/menu-submenu-reopen",
     a_click_opens,
-    android: skip("958: element identity on the WebView"),
-    desktop: skip("958: element identity on the WebView")
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     a_click_outside_closes_it_and_leaves_focus_where_it_went,
