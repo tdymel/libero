@@ -189,7 +189,7 @@ impl Drop for CssRegistrations {
                 true
             });
 
-        if released {
+        if released && context.stylesheet_registry.take_outlet_change() {
             *context.stylesheet_registry_version.write() += 1;
         }
     }
@@ -205,9 +205,9 @@ fn use_css_registrations(slots: usize) -> Rc<CssRegistrations> {
 }
 
 /// A signal write during render, sound only because `StyleOutlet` renders
-/// after `{children}`: load-bearing ordering.
+/// after `{children}`: load-bearing ordering. Only when the outlet's `<style>` list moved.
 fn bump_if_changed(changed: bool, context: &mut LiberoContext) {
-    if changed {
+    if changed && context.stylesheet_registry.take_outlet_change() {
         *context.stylesheet_registry_version.write() += 1;
     }
 }

@@ -21,6 +21,15 @@ impl CssLayer {
     pub const fn order_css() -> &'static str {
         "@layer lsx-base, lsx-framework, lsx-user-static, lsx-user-custom;"
     }
+
+    /// One empty block per layer, in order: block `layer.index()` takes that layer's rules.
+    pub(crate) const fn blocks_css() -> &'static str {
+        "@layer lsx-base{}@layer lsx-framework{}@layer lsx-user-static{}@layer lsx-user-custom{}"
+    }
+
+    pub(crate) const fn index(self) -> usize {
+        self as usize
+    }
 }
 
 #[cfg(test)]
@@ -38,5 +47,27 @@ mod tests {
         );
 
         assert_eq!(CssLayer::order_css(), expected);
+    }
+
+    #[test]
+    fn each_layer_owns_the_block_at_its_index() {
+        let layers = [
+            CssLayer::Base,
+            CssLayer::Framework,
+            CssLayer::UserStatic,
+            CssLayer::UserCustom,
+        ];
+        let expected: String = layers
+            .iter()
+            .map(|layer| format!("@layer {}{{}}", layer.css_name()))
+            .collect();
+
+        assert_eq!(CssLayer::blocks_css(), expected);
+        assert!(
+            layers
+                .iter()
+                .enumerate()
+                .all(|(i, layer)| layer.index() == i)
+        );
     }
 }

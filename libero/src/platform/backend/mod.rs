@@ -272,6 +272,17 @@ pub(crate) fn SheetWatch(version: u64) -> Element {
     };
 }
 
+/// Only the web edits a mounted sheet's rules; elsewhere each sheet keeps its `<style>`.
+pub(crate) fn style_rules(style: &Rc<MountedData>) -> Option<Box<dyn super::StyleRulesApi>> {
+    #[cfg(target_arch = "wasm32")]
+    return web::style_rules(style);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = style;
+        None
+    }
+}
+
 /// Wraps the app on a renderer that has to watch input from above it; only
 /// Blitz does (see `blitz::Listener`). Everywhere else this is `children`.
 #[allow(non_snake_case)]

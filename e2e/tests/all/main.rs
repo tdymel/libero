@@ -110,6 +110,7 @@ mod sortable;
 mod splitter;
 mod spotlight;
 mod stepper;
+mod style_rules;
 mod switch;
 mod table;
 mod table_detail;

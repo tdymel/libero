@@ -413,6 +413,11 @@ async fn a_windowed_table_reorders<D: Driver>(d: &mut D, _route: &str) -> Result
     d.press(keyboard::HOME).await?;
     eventually_text(d, LIVE, "Row 1 moved to position 1 of 200.", "Home").await?;
     shown_below_the_header(d, HANDLE, "Home").await?;
+    // The lifted row shows by its transform before the window follows the scroll.
+    eventually(d, "the window back at the top after Home", async |d| {
+        d.exists("[aria-label=\"Reorder Row 2\"]").await
+    })
+    .await?;
     d.press(keyboard::SPACE).await?;
     eventually_text(d, "#ends", "Row 1 Row 200", "the second drop").await?;
     eventually_focused(d, HANDLE, "the second drop").await

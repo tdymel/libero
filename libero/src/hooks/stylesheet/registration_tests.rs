@@ -76,7 +76,7 @@ fn Probe(tick: u32) -> Element {
     let class = use_box_css(&Input::None, Some(&COLOR), None, Some(source));
     let context = use_context::<LiberoContext>();
     let version = *context.stylesheet_registry_version.peek();
-    SEEN.set((version, context.stylesheet_registry.stylesheets().len()));
+    SEEN.set((version, context.stylesheet_registry.len()));
     rsx! { div { class } }
 }
 

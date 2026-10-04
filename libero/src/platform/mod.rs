@@ -41,6 +41,7 @@ mod scroll;
 mod select;
 mod session;
 mod storage;
+mod style_rules;
 mod system_notification;
 mod table;
 mod task;
@@ -148,6 +149,7 @@ pub(crate) use session::{session_get, session_set};
 pub(crate) use storage::{MemoryStorage, StorageApi, fake_storage};
 pub(crate) use storage::{StorageArea, StorageChange, StorageSubscription, storage};
 pub use storage::{StorageError, set_storage_dir};
+pub(crate) use style_rules::{StyleRulesApi, edits_style_rules, style_rules};
 pub use system_notification::{NotificationAction, SystemNotification, SystemNotificationError};
 pub(crate) use system_notification::{
     NotificationEvent, ShownNotification, raise_window, system_notification,

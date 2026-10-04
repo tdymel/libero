@@ -17,8 +17,8 @@ use crate::platform::a11y_media::{
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
     DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, MediaQueryApi,
-    MediaQuerySubscription, PlatformError, Read, ScrollApi, ScrollSubscription, TimerApi,
-    TimerSubscription,
+    MediaQuerySubscription, PlatformError, Read, ScrollApi, ScrollSubscription, StyleRulesApi,
+    TimerApi, TimerSubscription,
     keyboard::{takes_arrows, takes_typing, warn_reserved_chord},
 };
 use crate::tokens::{
@@ -30,6 +30,44 @@ use crate::tokens::{
 pub(super) fn element(mounted: &Rc<MountedData>) -> Option<Box<dyn ElementApi>> {
     let element = mounted.downcast::<web_sys::Element>()?.clone();
     Some(Box::new(WebElement { element }))
+}
+
+/// The top-level grouping rules of a mounted `<style>`, in source order.
+pub(super) fn style_rules(style: &Rc<MountedData>) -> Option<Box<dyn StyleRulesApi>> {
+    let sheet = style
+        .downcast::<web_sys::Element>()?
+        .dyn_ref::<web_sys::HtmlStyleElement>()?
+        .sheet()?
+        .dyn_into::<web_sys::CssStyleSheet>()
+        .ok()?;
+    let rules = sheet.css_rules().ok()?;
+    let blocks = (0..rules.length())
+        .map(|index| {
+            rules
+                .get(index)?
+                .dyn_into::<web_sys::CssGroupingRule>()
+                .ok()
+        })
+        .collect::<Option<Vec<_>>>()?;
+    Some(Box::new(WebStyleRules { blocks }))
+}
+
+struct WebStyleRules {
+    blocks: Vec<web_sys::CssGroupingRule>,
+}
+
+impl StyleRulesApi for WebStyleRules {
+    fn insert(&self, block: usize, index: usize, rule: &str) -> bool {
+        self.blocks
+            .get(block)
+            .is_some_and(|block| block.insert_rule_with_index(rule, index as u32).is_ok())
+    }
+
+    fn delete(&self, block: usize, index: usize) {
+        if let Some(block) = self.blocks.get(block) {
+            let _ = block.delete_rule(index as u32);
+        }
+    }
 }
 
 pub(super) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
