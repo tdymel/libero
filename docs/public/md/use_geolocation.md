@@ -14,12 +14,6 @@ all are reactive.
 `accuracy` is a radius in metres: a fix from Wi-Fi or IP can be kilometres
 wide. `high_accuracy` asks for GPS, slower and costlier on battery.
 
-Web: a secure context (HTTPS or localhost). Android: declare
-`[permissions] location` in Dioxus.toml; the system asks on the first request.
-macOS and Windows WebViews are untested. Blitz and a server render have no
-Geolocation API: `is_supported()` stays false and a request fails with
-`Unsupported`.
-
 ## Usage
 
 ```rust
@@ -68,6 +62,14 @@ fn ShareLocation() -> Element {
     }
 }
 ```
+
+## Platforms
+
+Web: a secure context (HTTPS or localhost). Android: declare
+`[permissions] location` in Dioxus.toml; the system asks on the first request.
+macOS and Windows WebViews are untested. Blitz and a server render have no
+Geolocation API: `is_supported()` stays false and a request fails with
+`Unsupported`.
 
 ## API
 

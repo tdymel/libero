@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, ButtonGroup, Code, Flex, Text},
@@ -127,6 +127,18 @@ pub fn UseSwipePage() -> Element {
                     Code { source: "pan-y" }
                     " for sideways swipes on a page that scrolls."
                 }
+            },
+
+            Demo {
+                component: "use_swipe",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { SwipePad {} },
+                wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Edge swipes",
                 Text {
                     Code { source: "use_edge_swipe(on_swipe, options) -> Swipe" }
                     " is built on it: an inward swipe that starts in a band near the start edge (the right edge under RTL) opens your drawer. The band begins "
@@ -137,14 +149,6 @@ pub fn UseSwipePage() -> Element {
                     Code { source: "edge_swipe_sx()" }
                     " on a box covering the page: no strip lies over the content. These docs open their navigation this way on a phone."
                 }
-            },
-
-            Demo {
-                component: "use_swipe",
-                children_text: "",
-                controls: Vec::new(),
-                render: move |_: DemoValues| rsx! { SwipePad {} },
-                wrap: Wrap(code),
             }
         }
     }

@@ -12,10 +12,6 @@ settings page can force reduced motion on or off over the system's, and the
 choice is kept for the next visit (the web's localStorage, Android) until
 `set_reduced_motion(None)` clears it.
 
-A forced reduced motion reaches libero's own CSS and motion on every platform.
-A `<style>` the app adds itself still follows the system. The other settings
-are read-only.
-
 ## Usage
 
 ```rust
@@ -63,6 +59,12 @@ GNOME's and older KDE's own keys as a fallback); other native platforms report n
 
 A forced reduced motion is kept across restarts in a browser (`localStorage`) and on
 Android; on desktop and native it lasts for the session.
+
+## Forced settings
+
+A forced reduced motion reaches libero's own CSS and motion on every platform.
+A `<style>` the app adds itself still follows the system. The other settings
+are read-only.
 
 ## API
 

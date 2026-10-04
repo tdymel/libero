@@ -42,6 +42,8 @@ fn ThemePicker() -> Element {
 }
 ```
 
+## Swapping
+
 A swap rebuilds the stylesheet, because the sheet carries the set's pair. The
 colour scheme setting survives it, so a reader who pinned dark stays in dark.
 

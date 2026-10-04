@@ -10,10 +10,6 @@ A layout matrix of named areas. `Grid` holds the shape, each `GridZone` is a
 twelve-column container of its own, and a `GridItem` takes a fraction of its
 zone. A zone also works alone, so a masonry wall needs no template.
 
-`dense` fills gaps by moving items out of DOM order, but Tab still follows the
-DOM. Skip it where the reading order matters. `masonry` alone keeps the order,
-since each item starts no higher than the one before it.
-
 ## Usage
 
 A zone on its own, with six cards of mixed spans and heights. Turn on `masonry`
@@ -147,6 +143,12 @@ fn Demo() -> Element {
 # static SPANS: StaticGridTemplate<SpanArea> =
 #     StaticGridTemplate::new(|template| template.row(|row| row.cell(SpanArea::Row)));
 ```
+
+## Dense
+
+`dense` fills gaps by moving items out of DOM order, but Tab still follows the
+DOM. Skip it where the reading order matters. `masonry` alone keeps the order,
+since each item starts no higher than the one before it.
 
 ## Props
 

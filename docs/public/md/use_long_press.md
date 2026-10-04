@@ -12,13 +12,6 @@ a pointer stays down for `options.ms` (400 by default). It moves no more than
 element: `onpointerdown`, `onpointermove`, `onpointerup`, `onpointerleave`,
 `onpointercancel`, `oncontextmenu` and `onclick`.
 
-Read `pressing`, a signal that is true while a press is held and not yet fired,
-for a hold cue.
-
-Give the element `user-select: none` and `-webkit-touch-callout: none` so
-holding does not select text. It runs on the web, Blitz and a WebView, on one
-timer.
-
 ## Usage
 
 ```rust
@@ -64,6 +57,17 @@ fn HoldToCount() -> Element {
     }
 }
 ```
+
+## Hold cue
+
+Read `pressing`, a signal that is true while a press is held and not yet fired,
+for a hold cue.
+
+## Text selection
+
+Give the element `user-select: none` and `-webkit-touch-callout: none` so
+holding does not select text. It runs on the web, Blitz and a WebView, on one
+timer.
 
 ## API
 

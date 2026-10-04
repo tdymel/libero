@@ -10,11 +10,6 @@ A clickable action, a toggle, or a link when `to` is set. It defaults to
 `type="button"`, so it never submits a form by accident. A submit button sets
 `r#type: "submit"`. For an icon-only button, use [ActionIcon](action_icon.md).
 
-A `Button` shows a label, with an optional `icon` before it. `ActionIcon` is the
-same button reduced to a square icon: it requires an `aria_label`, keeps a 24px
-target and defaults to no background. A `Button` with no text would be a wide
-pill without an accessible name.
-
 ## Usage
 
 ```rust
@@ -35,6 +30,13 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Labels and icons
+
+A `Button` shows a label, with an optional `icon` before it. `ActionIcon` is the
+same button reduced to a square icon: it requires an `aria_label`, keeps a 24px
+target and defaults to no background. A `Button` with no text would be a wide
+pill without an accessible name.
 
 ## Props
 

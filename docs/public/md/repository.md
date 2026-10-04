@@ -16,10 +16,6 @@ It opens in a new tab. This site's header uses
 `Repository { repo: "tdymel/libero" }`. The button's name comes from the
 [localization](localization.md).
 
-Native builds fetch through dioxus-native's network provider, which needs its
-`net` feature. `net` is on by default, so only an app that turns dioxus-native's
-default features off has to add it back.
-
 ## Usage
 
 ```rust
@@ -34,6 +30,12 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Native builds
+
+Native builds fetch through dioxus-native's network provider, which needs its
+`net` feature. `net` is on by default, so only an app that turns dioxus-native's
+default features off has to add it back.
 
 ## Props
 

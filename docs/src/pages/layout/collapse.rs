@@ -1,5 +1,5 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -196,17 +196,6 @@ pub fn CollapsePage() -> Element {
                     Code { source: "id" }
                     "."
                 }
-                Text {
-                    "Focus inside a closing panel does not return to the trigger on its "
-                    "own. Use "
-                    Code { source: "use_focus_return" }
-                    ", with "
-                    Code { source: "remember_active()" }
-                    " on every open and "
-                    Code { source: "restore()" }
-                    " where the panel closes from inside. Switch on Focus return, open "
-                    "the panel with the keyboard and press Done."
-                }
             },
             Demo {
                 component: "Collapse",
@@ -257,6 +246,21 @@ pub fn CollapsePage() -> Element {
                         }
                     }
                 },
+            }
+
+            DocSection {
+                title: "Focus",
+                Text {
+                    "Focus inside a closing panel does not return to the trigger on its "
+                    "own. Use "
+                    Code { source: "use_focus_return" }
+                    ", with "
+                    Code { source: "remember_active()" }
+                    " on every open and "
+                    Code { source: "restore()" }
+                    " where the panel closes from inside. Switch on Focus return, open "
+                    "the panel with the keyboard and press Done."
+                }
             }
         }
     }

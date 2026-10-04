@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props, status_prop};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props, status_prop,
+};
 use dioxus::prelude::*;
 use libero::components::RatingPart;
 use libero::components::{Code, CodeBlock, Rating, Text};
@@ -119,18 +121,6 @@ pub fn RatingPage() -> Element {
                     Code { source: "focusable: false" }
                     " shows a value only, such as an average."
                 }
-                Text {
-                    Code { source: "icon" }
-                    " draws another symbol on one rating (the demo's Heart). For every rating in a subtree, "
-                    "swap "
-                    Code { source: "IconSlot::Star" }
-                    " in an "
-                    Code { source: "IconProvider" }
-                    "; an "
-                    Code { source: "icon" }
-                    " prop still wins:"
-                }
-                CodeBlock { source: HEART_EXAMPLE, language: "rust" }
             },
             // snippet: let mut stars = use_signal(|| 3.5);
             Demo {
@@ -206,6 +196,22 @@ pub fn RatingPage() -> Element {
                         focusable: (values.str("focusable") != "true").then_some(false),
                     }
                 },
+            }
+
+            DocSection {
+                title: "Other symbols",
+                Text {
+                    Code { source: "icon" }
+                    " draws another symbol on one rating (the demo's Heart). For every rating in a subtree, "
+                    "swap "
+                    Code { source: "IconSlot::Star" }
+                    " in an "
+                    Code { source: "IconProvider" }
+                    "; an "
+                    Code { source: "icon" }
+                    " prop still wins:"
+                }
+                CodeBlock { source: HEART_EXAMPLE, language: "rust" }
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
     Button, Checkbox, Code, FieldName, Fields, Fieldset, Flex, Form, FormPart, PasswordField, Rule,
@@ -226,19 +226,6 @@ pub fn FormPage() -> Element {
                     "validates on submit. The Form getting started page shows how fields, "
                     "fieldsets, rules and paths fit together."
                 }
-                Text {
-                    "A submit shows every status. With an error, it is cancelled, and a summary of "
-                    "every problem appears above the fields and takes focus. Warnings never block. "
-                    "The summary keeps the problems of that submit. A line leaves once it is fixed, "
-                    "and new ones wait for the next submit."
-                }
-                Text {
-                    "A field shown only for some values is a plain "
-                    Code { source: "if" }
-                    " around it, as the company switch shows. Its rules leave with it, so a "
-                    "hidden field never blocks a submit. Its value stays in the store, and a "
-                    "rule on the whole form still runs, so check the condition there too."
-                }
             },
             // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
             Demo {
@@ -259,6 +246,27 @@ pub fn FormPage() -> Element {
                         company: values.str("company") == "true",
                     }
                 },
+            }
+
+            DocSection {
+                title: "Submit",
+                Text {
+                    "A submit shows every status. With an error, it is cancelled, and a summary of "
+                    "every problem appears above the fields and takes focus. Warnings never block. "
+                    "The summary keeps the problems of that submit. A line leaves once it is fixed, "
+                    "and new ones wait for the next submit."
+                }
+            }
+
+            DocSection {
+                title: "Conditional fields",
+                Text {
+                    "A field shown only for some values is a plain "
+                    Code { source: "if" }
+                    " around it, as the company switch shows. Its rules leave with it, so a "
+                    "hidden field never blocks a submit. Its value stays in the store, and a "
+                    "rule on the whole form still runs, so check the condition there too."
+                }
             }
         }
     }

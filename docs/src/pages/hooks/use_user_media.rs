@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y};
+use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -61,6 +61,31 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "microphone_permission()" }
                     " read the permission state, kept current where the platform reports changes."
                 }
+            },
+
+            Demo {
+                component: "CaptureBooth",
+                children_text: "",
+                file: DemoFile(include_str!("use_user_media/demo.rs")),
+                // Printed at any value: `camera` is required.
+                controls: vec![
+                    Control::switch("camera")
+                        .default("true")
+                        .code(|_, values| vec![format!("camera: {}", values.str("camera"))]),
+                    // Camera off records audio, so the microphone is on whatever the switch says.
+                    Control::switch("microphone")
+                        .code(|_, values| vec![format!("microphone: {}", values.str("microphone"))])
+                        .hidden_when(|values| values.str("camera") != "true"),
+                ],
+                render: move |values: DemoValues| {
+                    let camera = values.str("camera") == "true";
+                    let microphone = values.str("microphone") == "true";
+                    rsx! { CaptureBooth { key: "{camera}{microphone}", camera, microphone } }
+                },
+            }
+
+            DocSection {
+                title: "Devices",
                 Text {
                     Code { source: "use_user_media_devices()" }
                     " lists "
@@ -85,6 +110,10 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "TooLarge" }
                     "; in a browser it stays in the page until you read it."
                 }
+            }
+
+            DocSection {
+                title: "Platforms",
                 Text {
                     "Web: a secure context (HTTPS or localhost). Android: declare "
                     Code { source: "[permissions] camera" }
@@ -100,27 +129,6 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "Unsupported" }
                     ". Screen capture and speaker choice are not covered."
                 }
-            },
-
-            Demo {
-                component: "CaptureBooth",
-                children_text: "",
-                file: DemoFile(include_str!("use_user_media/demo.rs")),
-                // Printed at any value: `camera` is required.
-                controls: vec![
-                    Control::switch("camera")
-                        .default("true")
-                        .code(|_, values| vec![format!("camera: {}", values.str("camera"))]),
-                    // Camera off records audio, so the microphone is on whatever the switch says.
-                    Control::switch("microphone")
-                        .code(|_, values| vec![format!("microphone: {}", values.str("microphone"))])
-                        .hidden_when(|values| values.str("camera") != "true"),
-                ],
-                render: move |values: DemoValues| {
-                    let camera = values.str("camera") == "true";
-                    let microphone = values.str("microphone") == "true";
-                    rsx! { CaptureBooth { key: "{camera}{microphone}", camera, microphone } }
-                },
             }
         }
     }

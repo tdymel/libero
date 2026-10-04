@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Flex, Text},
@@ -172,22 +172,6 @@ pub fn UseTimersPage() -> Element {
                     Code { source: "active()" }
                     " are reactive."
                 }
-                Text {
-                    "One timer serves the web, Blitz and a webview. The callback runs in "
-                    "your component's scope, so it may write signals, spawn or read "
-                    "elements. A server render never fires it. Natively every interval "
-                    "tick costs a thread, so keep the period to a second or more."
-                }
-                Text {
-                    "The stopwatch below reads a clock, not the count of ticks, so a late tick "
-                    "loses no time. The clock is the "
-                    Code { source: "web-time" }
-                    " crate's "
-                    Code { source: "Instant" }
-                    ": "
-                    Code { source: "std::time::Instant" }
-                    " panics on wasm."
-                }
             },
 
             Demo {
@@ -196,6 +180,30 @@ pub fn UseTimersPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Stopwatch {} },
                 wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Where it runs",
+                Text {
+                    "One timer serves the web, Blitz and a webview. The callback runs in "
+                    "your component's scope, so it may write signals, spawn or read "
+                    "elements. A server render never fires it. Natively every interval "
+                    "tick costs a thread, so keep the period to a second or more."
+                }
+            }
+
+            DocSection {
+                title: "The stopwatch",
+                Text {
+                    "The stopwatch above reads a clock, not the count of ticks, so a late tick "
+                    "loses no time. The clock is the "
+                    Code { source: "web-time" }
+                    " crate's "
+                    Code { source: "Instant" }
+                    ": "
+                    Code { source: "std::time::Instant" }
+                    " panics on wasm."
+                }
             }
         }
     }

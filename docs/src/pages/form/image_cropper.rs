@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use crate::site::SAMPLE_IMAGE;
 use dioxus::prelude::*;
 use libero::components::{Code, CropRect, CropShape, Flex, ImageCropper, ImageCropperPart, Text};
@@ -133,13 +133,6 @@ pub fn ImageCropperPage() -> Element {
                     Code { source: "to_pixels" }
                     " turns it into pixels."
                 }
-                Text {
-                    "It only picks the box. To cut the picture, give a "
-                    Code { source: "FileField" }
-                    " a "
-                    Code { source: "crop" }
-                    ": a picked image opens in a cropper first, and the field takes the cut file."
-                }
             },
             // snippet: let mut crop = use_signal(|| None::<CropRect>);
             Demo {
@@ -180,6 +173,17 @@ pub fn ImageCropperPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     ImageCropperDemo { values }
                 },
+            }
+
+            DocSection {
+                title: "Cutting the picture",
+                Text {
+                    "It only picks the box. To cut the picture, give a "
+                    Code { source: "FileField" }
+                    " a "
+                    Code { source: "crop" }
+                    ": a picked image opens in a cropper first, and the field takes the cut file."
+                }
             }
         }
     }

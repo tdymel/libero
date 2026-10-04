@@ -1,6 +1,8 @@
 use std::{cell::Cell, rc::Rc, time::Duration};
 
-use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props,
+};
 
 use dioxus::prelude::*;
 use libero::{
@@ -427,23 +429,6 @@ pub fn NotificationsPage() -> Element {
                     " then returns a handle that shows notifications from anywhere, and each "
                     "one outlives the component that raised it."
                 }
-                Text {
-                    Code { source: "use_notifications_with" }
-                    " takes your own data type and a template to draw it. The template is a "
-                    Code { source: "fn" }
-                    ", not a capturing closure, so everything it draws travels in the data. "
-                    Code { source: "update(id, data)" }
-                    " redraws one notification in place."
-                }
-                Text {
-                    "Each stack shows up to "
-                    Code { source: "limit" }
-                    " at once, and the rest wait. Hovering or focusing one pauses every "
-                    "timer, and each starts over when you leave. A "
-                    Code { source: "contained" }
-                    " host draws its stacks in its own box and keeps a queue for the handles "
-                    "below it."
-                }
             },
             // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }
             // snippet: item #[component] fn Home() -> Element { rsx! {} }
@@ -542,6 +527,31 @@ pub fn NotificationsPage() -> Element {
                 },
                 wrap: Wrap(wrap_demo),
                 wide_preview: true,
+            }
+
+            DocSection {
+                title: "Your own data",
+                Text {
+                    Code { source: "use_notifications_with" }
+                    " takes your own data type and a template to draw it. The template is a "
+                    Code { source: "fn" }
+                    ", not a capturing closure, so everything it draws travels in the data. "
+                    Code { source: "update(id, data)" }
+                    " redraws one notification in place."
+                }
+            }
+
+            DocSection {
+                title: "Stacks and timers",
+                Text {
+                    "Each stack shows up to "
+                    Code { source: "limit" }
+                    " at once, and the rest wait. Hovering or focusing one pauses every "
+                    "timer, and each starts over when you leave. A "
+                    Code { source: "contained" }
+                    " host draws its stacks in its own box and keeps a queue for the handles "
+                    "below it."
+                }
             }
         }
     }

@@ -45,6 +45,8 @@ fn Demo() -> Element {
 }
 ```
 
+## Sets
+
 One slot: `IconSet::new().with(slot, icon)` for just that slot, as above.
 
 A whole set: turn on its libero feature and start from its constructor, at

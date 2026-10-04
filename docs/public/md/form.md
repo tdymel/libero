@@ -11,11 +11,6 @@ across its fields and validates on submit. The Form
 [getting started](form_getting_started.md) page shows how fields, fieldsets,
 rules and paths fit together.
 
-A submit shows every status. With an error, it is cancelled, and a summary of
-every problem appears above the fields and takes focus. Warnings never block.
-The summary keeps the problems of that submit. A line leaves once it is fixed,
-and new ones wait for the next submit.
-
 ## Usage
 
 ```rust,ignore
@@ -104,6 +99,8 @@ fn CheckButton() -> Element {
 }
 ```
 
+## Conditional fields
+
 A field shown only for some values is a plain `if` around it. Its rules leave
 with it, so a hidden field never blocks a submit. Its value stays in the store,
 and a rule on the whole form still runs, so check the condition there too.
@@ -119,6 +116,13 @@ if signup.read().company {
     }
 }
 ```
+
+## Submit
+
+A submit shows every status. With an error, it is cancelled, and a summary of
+every problem appears above the fields and takes focus. Warnings never block.
+The summary keeps the problems of that submit. A line leaves once it is fixed,
+and new ones wait for the next submit.
 
 ## Props
 

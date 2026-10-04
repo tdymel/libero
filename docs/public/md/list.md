@@ -12,16 +12,6 @@ parent sets a nested list's indent. A nested ordered list keeps a fixed 2em,
 room for its numbers. On an inner `List`, `size` changes only the gap.
 `ordered: true` renders an `<ol>` with visible numbers.
 
-An `icon` on the list marks every item. A `ListItem`'s own `icon` replaces it
-for that item. A nested list does not take its parent's icon.
-
-```rust,ignore
-List { ordered: true,
-    ListItem { "Install" }
-    ListItem { "Configure" }
-}
-```
-
 ## Usage
 
 ```rust
@@ -63,6 +53,20 @@ fn Checklist() -> Element {
             }
         }
     }
+}
+```
+
+## Icons
+
+An `icon` on the list marks every item. A `ListItem`'s own `icon` replaces it
+for that item. A nested list does not take its parent's icon.
+
+## Ordered lists
+
+```rust,ignore
+List { ordered: true,
+    ListItem { "Install" }
+    ListItem { "Configure" }
 }
 ```
 

@@ -10,10 +10,6 @@ Buttons and action icons side by side as one control. Neighbours share one
 seam and only the group's outer corners are round, on logical sides, so the
 ends swap under right-to-left text.
 
-`variant`, `color`, `size`, `radius` and `disabled` set the default of every
-button inside; a button's own prop wins. This site's header groups its
-repository link, direction toggle and theme switcher, and on a phone the search.
-
 ## Usage
 
 `CheckmarkIcon` stands for any component of yours that renders an `svg`.
@@ -35,6 +31,12 @@ fn Demo() -> Element {
 #
 # #[component] fn CheckmarkIcon() -> Element { rsx! {} }
 ```
+
+## Shared defaults
+
+`variant`, `color`, `size`, `radius` and `disabled` set the default of every
+button inside; a button's own prop wins. This site's header groups its
+repository link, direction toggle and theme switcher, and on a phone the search.
 
 ## Props
 

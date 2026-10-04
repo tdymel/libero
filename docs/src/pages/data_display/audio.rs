@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Audio, AudioPart, Code, CodeBlock, Input, Text},
@@ -104,20 +104,6 @@ pub fn AudioPage() -> Element {
                     Code { source: "current_time()" }
                     " and friends."
                 }
-                Text {
-                    "A browser plays the first "
-                    Code { source: "sources" }
-                    " entry whose type it supports, then "
-                    Code { source: "src" }
-                    ". An Ogg first and an MP3 as "
-                    Code { source: "src" }
-                    " reach every browser, Safari included."
-                }
-                CodeBlock { source: FORMATS, language: "rust" }
-                Text {
-                    "The demo plays \"Wikipedia guitar solo\" (CC0), streamed from Wikimedia "
-                    "Commons, so it plays only online."
-                }
             },
             Demo {
                 component: "Audio",
@@ -146,6 +132,28 @@ pub fn AudioPage() -> Element {
                         }
                     }
                 },
+            }
+
+            DocSection {
+                title: "Formats",
+                Text {
+                    "A browser plays the first "
+                    Code { source: "sources" }
+                    " entry whose type it supports, then "
+                    Code { source: "src" }
+                    ". An Ogg first and an MP3 as "
+                    Code { source: "src" }
+                    " reach every browser, Safari included."
+                }
+                CodeBlock { source: FORMATS, language: "rust" }
+            }
+
+            DocSection {
+                title: "The demo audio",
+                Text {
+                    "The demo plays \"Wikipedia guitar solo\" (CC0), streamed from Wikimedia "
+                    "Commons, so it plays only online."
+                }
             }
         }
     }

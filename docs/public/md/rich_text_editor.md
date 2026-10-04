@@ -9,9 +9,7 @@ Description: A rich text field over a `Doc`: headings, lists, quotes, code block
 A rich text field over a `Doc`: paragraphs, headings, lists, quotes, code
 blocks and marks, with undo, the usual shortcuts and Markdown typing
 shortcuts. `Doc::to_markdown` and `Doc::from_markdown` convert it; the types
-live in `libero::components::rich_text`. A code block shows its source with
-fences while the caret is in it; the language button on its opening fence,
-the toolbar's language menu or `Ctrl+Shift+L` change its language.
+live in `libero::components::rich_text`.
 
 ## Usage
 
@@ -242,6 +240,17 @@ fn MentionEditor() -> Element {
 On Android a soft keyboard reports most keys as `Unidentified` and composes
 its text, so `intercept` sees Enter but rarely the typed text; `with_state`
 still sees every word once it is composed, which is what the example reads.
+
+## Code blocks
+
+A code block shows its source with fences while the caret is in it; the
+language button on its opening fence, the toolbar's language menu or
+`Ctrl+Shift+L` change its language.
+
+## Mentions
+
+The mentions switch adds an @ list at the caret, built from `intercept`,
+`overlay` and a custom node.
 
 ## Accessibility
 

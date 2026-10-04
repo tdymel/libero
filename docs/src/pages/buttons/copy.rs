@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Copy, Input, Text};
 
@@ -53,25 +53,6 @@ pub fn CopyPage() -> Element {
                     Code { source: "CodeBlock" }
                     "'s copy control is one."
                 }
-                Text {
-                    "Name it after what it copies with "
-                    Code { source: "aria_label" }
-                    ", such as \"Copy link\". For a copy control of your own, build on "
-                    Code { source: "use_clipboard()" }
-                    ": "
-                    Code { source: "copy(text)" }
-                    " starts the write, "
-                    Code { source: "copied()" }
-                    " or "
-                    Code { source: "failed()" }
-                    " rises once the platform answers, and "
-                    Code { source: "reset()" }
-                    " clears both. Say the result in a status region that is already "
-                    "mounted. On the web the browser allows the write only over HTTPS or on "
-                    "localhost, inside a user action; natively it needs the "
-                    Code { source: "native" }
-                    " feature."
-                }
             },
             Demo {
                 component: "Copy",
@@ -113,6 +94,29 @@ pub fn CopyPage() -> Element {
                         disabled: values.str("disabled") == "true",
                     }
                 },
+            }
+
+            DocSection {
+                title: "Label and custom controls",
+                Text {
+                    "Name it after what it copies with "
+                    Code { source: "aria_label" }
+                    ", such as \"Copy link\". For a copy control of your own, build on "
+                    Code { source: "use_clipboard()" }
+                    ": "
+                    Code { source: "copy(text)" }
+                    " starts the write, "
+                    Code { source: "copied()" }
+                    " or "
+                    Code { source: "failed()" }
+                    " rises once the platform answers, and "
+                    Code { source: "reset()" }
+                    " clears both. Say the result in a status region that is already "
+                    "mounted. On the web the browser allows the write only over HTTPS or on "
+                    "localhost, inside a user action; natively it needs the "
+                    Code { source: "native" }
+                    " feature."
+                }
             }
         }
     }

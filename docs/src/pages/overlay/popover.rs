@@ -285,12 +285,6 @@ pub fn PopoverPage() -> Element {
                     Code { source: "overflow: hidden" }
                     " ancestor clips it, and flips and shifts it to stay on screen."
                 }
-                Text {
-                    "It owns no open state. Pass "
-                    Code { source: "show(None)" }
-                    " to take a closed box away. Popovers nest. Anchor the inner one to a row "
-                    "in the outer box, and the one shown later paints on top."
-                }
             },
             // snippet: let mut opened = use_signal(|| false);
             // snippet: let theme = use_theme();
@@ -340,6 +334,16 @@ pub fn PopoverPage() -> Element {
                     "tell, a WebView cannot, so there only "
                     Kbd { "Esc" }
                     " and your own handlers close the box."
+                }
+            }
+
+            DocSection {
+                title: "Open state and nesting",
+                Text {
+                    "It owns no open state. Pass "
+                    Code { source: "show(None)" }
+                    " to take a closed box away. Popovers nest. Anchor the inner one to a row "
+                    "in the outer box, and the one shown later paints on top."
                 }
             }
         }

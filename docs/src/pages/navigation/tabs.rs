@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
@@ -137,13 +137,6 @@ pub fn TabsPage() -> Element {
                     " matches on the same enum, so a missing tab does not compile. Only the "
                     "selected panel is built."
                 }
-                Text {
-                    Code { source: "option_label" }
-                    " renames tabs during render, so the strip follows a locale signal. "
-                    Code { source: "OptionLabel::rich" }
-                    " draws a tab as rsx, such as an icon, and takes a text name for screen "
-                    "readers."
-                }
             },
             // snippet: let mut section = use_signal(|| Section::Account);
             Demo {
@@ -211,6 +204,17 @@ pub fn TabsPage() -> Element {
                         },
                     }
                 },
+            }
+
+            DocSection {
+                title: "Labels",
+                Text {
+                    Code { source: "option_label" }
+                    " renames tabs during render, so the strip follows a locale signal. "
+                    Code { source: "OptionLabel::rich" }
+                    " draws a tab as rsx, such as an icon, and takes a text name for screen "
+                    "readers."
+                }
             }
         }
     }

@@ -1,5 +1,7 @@
 use super::dropdown_parts::color_picker_parts;
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::ColorSliderPart;
 use libero::components::{
@@ -179,18 +181,6 @@ pub fn ColorPickerPage() -> Element {
                     Code { source: "hsl()" }
                     " and converts back to any of them."
                 }
-                Text {
-                    Code { source: "ColorCode::hex(0x228be6)" }
-                    " and its siblings build one, and a theme "
-                    Code { source: "HexColor" }
-                    " converts into one. It prints as "
-                    Code { source: "#rrggbb" }
-                    ", or "
-                    Code { source: "#rrggbbaa" }
-                    " when translucent, which a "
-                    Code { source: "style" }
-                    " accepts."
-                }
             },
             Demo {
                 component: "ColorPicker",
@@ -244,6 +234,22 @@ pub fn ColorPickerPage() -> Element {
                     },
                     _ => rsx! { ColorPickerDemo { values } },
                 },
+            }
+
+            DocSection {
+                title: "Building a value",
+                Text {
+                    Code { source: "ColorCode::hex(0x228be6)" }
+                    " and its siblings build one, and a theme "
+                    Code { source: "HexColor" }
+                    " converts into one. It prints as "
+                    Code { source: "#rrggbb" }
+                    ", or "
+                    Code { source: "#rrggbbaa" }
+                    " when translucent, which a "
+                    Code { source: "style" }
+                    " accepts."
+                }
             }
         }
     }

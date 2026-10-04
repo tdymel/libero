@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, a11y, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Code, KanbanCardPart, KanbanColumnPart, Text};
 
@@ -94,8 +96,7 @@ pub fn KanbanPage() -> Element {
                     Code { source: "apply" }
                     " does it to a "
                     Code { source: "Vec<Vec<T>>" }
-                    ". The cards are your content: the board draws no card look. The demo builds Jira-style "
-                    "issue cards from Text, Badge, Icon and Avatar."
+                    "."
                 }
             },
             Demo {
@@ -107,6 +108,14 @@ pub fn KanbanPage() -> Element {
                     Board { move_buttons: values.str("move_buttons") != "false" }
                 },
                 wide_preview: true,
+            }
+
+            DocSection {
+                title: "Cards",
+                Text {
+                    "The cards are your content: the board draws no card look. The demo builds Jira-style "
+                    "issue cards from Text, Badge, Icon and Avatar."
+                }
             }
         }
     }

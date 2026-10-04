@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -322,10 +324,6 @@ pub fn FloatingWindowPage() -> Element {
                     "the page stays usable. A drag re-renders the whole window, so keep its "
                     "body shallow."
                 }
-                Text {
-                    "Windows sit on the viewport, not in this preview. The buttons open them "
-                    "over the whole page, and the code shows the last one you pressed."
-                }
             },
             Demo {
                 component: "FloatingWindowOptions",
@@ -347,6 +345,14 @@ pub fn FloatingWindowPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_example),
+            }
+
+            DocSection {
+                title: "In this preview",
+                Text {
+                    "Windows sit on the viewport, not in this preview. The buttons open them "
+                    "over the whole page, and the code shows the last one you pressed."
+                }
             }
         }
     }

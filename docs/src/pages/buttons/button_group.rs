@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::Pictogram;
 use libero::components::{ActionIcon, Button, ButtonGroup, Code, Input, Text};
@@ -52,19 +52,6 @@ pub fn ButtonGroupPage() -> Element {
                     "one seam and only the group's outer corners are round, on logical sides, "
                     "so the ends swap under right-to-left text."
                 }
-                Text {
-                    Code { source: "variant" }
-                    ", "
-                    Code { source: "color" }
-                    ", "
-                    Code { source: "size" }
-                    ", "
-                    Code { source: "radius" }
-                    " and "
-                    Code { source: "disabled" }
-                    " set the default of every button inside; a button's own prop wins. "
-                    "This site's header groups its repository link, direction toggle and theme switcher, and on a phone the search."
-                }
             },
             Demo {
                 component: "ButtonGroup",
@@ -105,6 +92,23 @@ pub fn ButtonGroupPage() -> Element {
                         ActionIcon { aria_label: "Confirm", Pictogram { icon: lucide::check::outlined } }
                     }
                 },
+            }
+
+            DocSection {
+                title: "Shared defaults",
+                Text {
+                    Code { source: "variant" }
+                    ", "
+                    Code { source: "color" }
+                    ", "
+                    Code { source: "size" }
+                    ", "
+                    Code { source: "radius" }
+                    " and "
+                    Code { source: "disabled" }
+                    " set the default of every button inside; a button's own prop wins. "
+                    "This site's header groups its repository link, direction toggle and theme switcher, and on a phone the search."
+                }
             }
         }
     }

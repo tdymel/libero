@@ -10,10 +10,6 @@ A saturation panel and a hue slider, with an optional alpha slider and preset
 swatches. The value is a `ColorCode`, which parses from hex, `rgb()` or `hsl()`
 and converts back to any of them.
 
-`ColorCode::hex(0x228be6)` and its siblings build one, and a theme `HexColor`
-converts into one. It prints as `#rrggbb`, or `#rrggbbaa` when translucent,
-which a `style` accepts.
-
 ## Usage
 
 ```rust
@@ -55,6 +51,12 @@ color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
 # Ok(())
 # }
 ```
+
+## Building a value
+
+`ColorCode::hex(0x228be6)` and its siblings build one, and a theme `HexColor`
+converts into one. It prints as `#rrggbb`, or `#rrggbbaa` when translucent,
+which a `style` accepts.
 
 ## Props
 

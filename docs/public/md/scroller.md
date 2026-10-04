@@ -11,10 +11,6 @@ shown while there is more content that way. A press scrolls by `scroll_amount`
 pixels. Touch, trackpad and the arrow keys scroll it as usual. The content fades
 out under each control, so set `fade_color` to the surface the strip sits on.
 
-`onedgechange` reports whether the strip rests against an end, printed under the
-strip. With `controls: "never"`, move the strip from your own buttons through a
-`use_scroller()` handle.
-
 ## Usage
 
 ```rust
@@ -60,6 +56,12 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Edges
+
+`onedgechange` reports whether the strip rests against an end, printed under the
+strip. With `controls: "never"`, move the strip from your own buttons through a
+`use_scroller()` handle.
 
 ## Props
 

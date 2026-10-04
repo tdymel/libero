@@ -3,7 +3,7 @@ use super::date_common::{
     shared_controls, shown, step_of, time_limits, today_of, twelve_hour_of,
 };
 use super::dropdown_parts::chrono_picker_parts;
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use libero::components::{ChronoPicker, Code, DateLevel, DateRange, Flex, Text};
@@ -110,27 +110,6 @@ pub fn ChronoPickerPage() -> Element {
                     Code { source: "calendar: \"mini\"" }
                     " into one row of days."
                 }
-                Text {
-                    "It opens on the value's month, else today's. Names come from the "
-                    "localization's "
-                    Code { source: "DateLocale" }
-                    ", and the first weekday and heading format from the provider's "
-                    Code { source: "Formats" }
-                    ". As on "
-                    Code { source: "ChronoField" }
-                    ", a typed handler or a turbofish names the value type. For one value type "
-                    "there are "
-                    Code { source: "DatePicker" }
-                    ", "
-                    Code { source: "MonthPicker" }
-                    ", "
-                    Code { source: "YearPicker" }
-                    ", "
-                    Code { source: "TimePicker" }
-                    " and "
-                    Code { source: "DateRangePicker" }
-                    ", with only the props that type uses and no turbofish."
-                }
             },
             // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
             // snippet: let mut date = use_signal(|| None::<NaiveDate>);
@@ -193,6 +172,31 @@ pub fn ChronoPickerPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     ChronoPickerDemo { values }
                 },
+            }
+
+            DocSection {
+                title: "Start month and language",
+                Text {
+                    "It opens on the value's month, else today's. Names come from the "
+                    "localization's "
+                    Code { source: "DateLocale" }
+                    ", and the first weekday and heading format from the provider's "
+                    Code { source: "Formats" }
+                    ". As on "
+                    Code { source: "ChronoField" }
+                    ", a typed handler or a turbofish names the value type. For one value type "
+                    "there are "
+                    Code { source: "DatePicker" }
+                    ", "
+                    Code { source: "MonthPicker" }
+                    ", "
+                    Code { source: "YearPicker" }
+                    ", "
+                    Code { source: "TimePicker" }
+                    " and "
+                    Code { source: "DateRangePicker" }
+                    ", with only the props that type uses and no turbofish."
+                }
             }
         }
     }

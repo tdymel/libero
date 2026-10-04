@@ -11,10 +11,6 @@ children. `use_menu()` keeps the open state in your scope, and the trigger is
 your own `Button`, wired by `menu.a11y_attributes()`. The menu is portaled, so
 no `overflow: hidden` ancestor clips it.
 
-A submenu opens beside its item on ArrowRight, a click, or when the pointer
-rests on the item for 150ms. Moving to a sibling waits as long, so the pointer
-can cross one on its way into the submenu.
-
 ## Usage
 
 ```rust
@@ -70,6 +66,17 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Submenus
+
+A submenu opens beside its item on ArrowRight, a click, or when the pointer
+rests on the item for 150ms. Moving to a sibling waits as long, so the pointer
+can cross one on its way into the submenu.
+
+## Links
+
+An item can be a link: `MenuItem::new("Docs").href(url)` renders an `<a>` that
+opens `url` in a new tab. Space activates it like Enter.
 
 ## Props
 

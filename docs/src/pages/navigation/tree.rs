@@ -2,7 +2,7 @@ use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, or_unset, prop, props,
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, or_unset, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -256,32 +256,6 @@ pub fn TreePage() -> Element {
                     Code { source: "onexpandedchange" }
                     ", as here."
                 }
-                Text {
-                    Code { source: "Tree" }
-                    " has no selection. "
-                    Code { source: "render_node" }
-                    " decides what a row does. "
-                    Code { source: "TreeItemContent" }
-                    " is the standard row: the chevron, an "
-                    Code { source: "icon" }
-                    ", the label and a "
-                    Code { source: "trailing_icon" }
-                    ". The default row is one. "
-                    Code { source: "TreeItem" }
-                    " lays a row out the same way as a button that picks up the tab stop and "
-                    Code { source: "disabled" }
-                    ". A row that links somewhere is a "
-                    Code { source: "NavLink" }
-                    " with "
-                    Code { source: "args.tabindex" }
-                    ", as in this site's sidebar."
-                }
-                Text {
-                    Code { source: "guides" }
-                    " draws a line down each open branch and marks the "
-                    Code { source: "current" }
-                    " row's part of it, as this site's sidebar does. Pick a file below to see it."
-                }
             },
             // snippet: item #[derive(Clone, PartialEq)] struct FileEntry { name: &'static str }
             // snippet: item impl TreeLabel for FileEntry { fn tree_label(&self) -> String { self.name.to_string() } }
@@ -339,6 +313,40 @@ pub fn TreePage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_selection),
+            }
+
+            DocSection {
+                title: "Rows",
+                Text {
+                    Code { source: "Tree" }
+                    " has no selection. "
+                    Code { source: "render_node" }
+                    " decides what a row does. "
+                    Code { source: "TreeItemContent" }
+                    " is the standard row: the chevron, an "
+                    Code { source: "icon" }
+                    ", the label and a "
+                    Code { source: "trailing_icon" }
+                    ". The default row is one. "
+                    Code { source: "TreeItem" }
+                    " lays a row out the same way as a button that picks up the tab stop and "
+                    Code { source: "disabled" }
+                    ". A row that links somewhere is a "
+                    Code { source: "NavLink" }
+                    " with "
+                    Code { source: "args.tabindex" }
+                    ", as in this site's sidebar."
+                }
+            }
+
+            DocSection {
+                title: "Guides",
+                Text {
+                    Code { source: "guides" }
+                    " draws a line down each open branch and marks the "
+                    Code { source: "current" }
+                    " row's part of it, as this site's sidebar does. Pick a file below to see it."
+                }
             }
         }
     }

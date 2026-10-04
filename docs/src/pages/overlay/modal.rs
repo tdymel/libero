@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Dialog, Flex, Text},
@@ -239,16 +241,6 @@ pub fn ModalPage() -> Element {
                     Code { source: "None" }
                     " when dismissed."
                 }
-                Text {
-                    "Make the answer the dialog's own enum, not a "
-                    Code { source: "bool" }
-                    ". The handle is "
-                    Code { source: "Copy" }
-                    ", so a trigger elsewhere in the tree can take it as a prop or from "
-                    "context. A "
-                    Code { source: "Dialog" }
-                    " inside closes the modal from its own close button."
-                }
             },
             Demo {
                 component: "ModalDemo",
@@ -266,6 +258,20 @@ pub fn ModalPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_hook_call),
+            }
+
+            DocSection {
+                title: "Answers and triggers",
+                Text {
+                    "Make the answer the dialog's own enum, not a "
+                    Code { source: "bool" }
+                    ". The handle is "
+                    Code { source: "Copy" }
+                    ", so a trigger elsewhere in the tree can take it as a prop or from "
+                    "context. A "
+                    Code { source: "Dialog" }
+                    " inside closes the modal from its own close button."
+                }
             }
         }
     }

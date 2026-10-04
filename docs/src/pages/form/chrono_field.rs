@@ -163,43 +163,6 @@ pub fn ChronoFieldPage() -> Element {
                     Code { source: "libero::chrono" }
                     "."
                 }
-                Text {
-                    "Typed text is read on blur or Enter, and leniently. Any separator works, "
-                    "as do one-digit days, month names as a unique prefix, and a missing year. "
-                    "Two-digit years are not read. Only the order of day, month and year follows "
-                    Code { source: "format" }
-                    ". Text the field cannot accept stays, and the error says why. The form "
-                    "always gets ISO 8601."
-                }
-                Text {
-                    "The language of names, labels and errors comes from the provider's "
-                    Code { source: "Localization" }
-                    ". The patterns, first weekday and 12- or 24-hour clock come from its "
-                    Code { source: "Formats" }
-                    ", "
-                    Code { source: "Formats::AMERICAN" }
-                    " by default or "
-                    Code { source: "Formats::GERMAN" }
-                    ". This site uses English with German formats."
-                }
-                Text {
-                    "A typed "
-                    Code { source: "value" }
-                    " alone does not name the type. A handler that stores into a typed signal "
-                    "does, or a turbofish such as "
-                    Code { source: "ChronoField::<NaiveTime> {{ .. }}" }
-                    ". For one value type there are "
-                    Code { source: "DateField" }
-                    ", "
-                    Code { source: "TimeField" }
-                    ", "
-                    Code { source: "DateTimeField" }
-                    ", "
-                    Code { source: "DateRangeField" }
-                    " and "
-                    Code { source: "DateTimeRangeField" }
-                    ", with only the props that type uses and no turbofish."
-                }
             },
             // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
             // snippet: let mut date = use_signal(|| None::<NaiveDate>);
@@ -338,6 +301,55 @@ pub fn ChronoFieldPage() -> Element {
                     " is text it cannot read. A screen reader hears each column's value with its unit, "
                     Code { source: "2 hours" }
                     "."
+                }
+            }
+
+            DocSection {
+                title: "Typing",
+                Text {
+                    "Typed text is read on blur or Enter, and leniently. Any separator works, "
+                    "as do one-digit days, month names as a unique prefix, and a missing year. "
+                    "Two-digit years are not read. Only the order of day, month and year follows "
+                    Code { source: "format" }
+                    ". Text the field cannot accept stays, and the error says why. The form "
+                    "always gets ISO 8601."
+                }
+            }
+
+            DocSection {
+                title: "Localization",
+                Text {
+                    "The language of names, labels and errors comes from the provider's "
+                    Code { source: "Localization" }
+                    ". The patterns, first weekday and 12- or 24-hour clock come from its "
+                    Code { source: "Formats" }
+                    ", "
+                    Code { source: "Formats::AMERICAN" }
+                    " by default or "
+                    Code { source: "Formats::GERMAN" }
+                    ". This site uses English with German formats."
+                }
+            }
+
+            DocSection {
+                title: "The value's type",
+                Text {
+                    "A typed "
+                    Code { source: "value" }
+                    " alone does not name the type. A handler that stores into a typed signal "
+                    "does, or a turbofish such as "
+                    Code { source: "ChronoField::<NaiveTime> {{ .. }}" }
+                    ". For one value type there are "
+                    Code { source: "DateField" }
+                    ", "
+                    Code { source: "TimeField" }
+                    ", "
+                    Code { source: "DateTimeField" }
+                    ", "
+                    Code { source: "DateRangeField" }
+                    " and "
+                    Code { source: "DateTimeRangeField" }
+                    ", with only the props that type uses and no turbofish."
                 }
             }
         }

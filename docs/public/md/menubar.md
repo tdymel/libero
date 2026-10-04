@@ -11,9 +11,6 @@ A row of menus, like a desktop app's File, Edit and View. Each menu is a
 at most and is a single tab stop. Click a trigger to open its menu. While one
 is open, hovering another trigger switches to it. Nothing opens on hover alone.
 
-Use it in an app such as an editor. For page navigation, use links. For one set
-of actions, use a single `Menu`.
-
 ## Usage
 
 ```rust
@@ -45,6 +42,11 @@ fn Demo() -> Element {
     rsx! { Menubar { aria_label: "Main", menus } }
 }
 ```
+
+## When to use it
+
+Use it in an app such as an editor. For page navigation, use links. For one set
+of actions, use a single `Menu`.
 
 ## Props
 

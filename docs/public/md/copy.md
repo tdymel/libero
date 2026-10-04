@@ -10,13 +10,6 @@ An icon button that copies a value to the clipboard. Once the write landed, the
 icon turns into a check and a screen reader hears "Copied". Both reset when the
 pointer or the focus leaves. `CodeBlock`'s copy control is one.
 
-Name it after what it copies with `aria_label`, such as "Copy link". For a copy
-control of your own, build on `use_clipboard()`: `copy(text)` starts the write,
-`copied()` or `failed()` rises once the platform answers, and `reset()` clears
-both. Say the result in a status region that is already mounted. On the web the
-browser allows the write only over HTTPS or on localhost, inside a user action;
-natively it needs the `native` feature.
-
 ## Usage
 
 ```rust
@@ -34,6 +27,15 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Label and custom controls
+
+Name it after what it copies with `aria_label`, such as "Copy link". For a copy
+control of your own, build on `use_clipboard()`: `copy(text)` starts the write,
+`copied()` or `failed()` rises once the platform answers, and `reset()` clears
+both. Say the result in a status region that is already mounted. On the web the
+browser allows the write only over HTTPS or on localhost, inside a user action;
+natively it needs the `native` feature.
 
 ## Props
 

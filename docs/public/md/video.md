@@ -11,30 +11,6 @@ speed, captions and fullscreen, in a bar over the picture as YouTube's, in the
 theme's look on every platform that plays media. `use_media()` drives the same engine for a
 layout of your own: see [use_media](use_media.md).
 
-A browser plays the first `sources` entry whose type it supports, then `src`.
-WebM first and an MP4 as `src` reach every browser, Safari included.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{MediaSource, Video};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Video {
-            src: "/launch.mp4",
-            sources: vec![MediaSource::new("/launch.webm", "video/webm")],
-            label: "Launch day",
-        }
-    }
-}
-```
-
-The demo plays "Big Buck Bunny", (c) 2008 Blender Foundation,
-<https://peach.blender.org>, under CC BY 3.0, streamed from Wikimedia Commons,
-so it plays only online. Its English and German tracks are one placeholder
-caption each, not the film's sound.
-
 ## Usage
 
 ```rust
@@ -74,6 +50,34 @@ A captions or subtitles track enables the captions button: it shows the
 default one, else the first. Two or more make it a menu of Off and each track.
 Without one the button stays, disabled. Pass a `use_media()` handle to `Video { media }` to drive
 the player from outside.
+
+## Formats
+
+A browser plays the first `sources` entry whose type it supports, then `src`.
+WebM first and an MP4 as `src` reach every browser, Safari included.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{MediaSource, Video};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Video {
+            src: "/launch.mp4",
+            sources: vec![MediaSource::new("/launch.webm", "video/webm")],
+            label: "Launch day",
+        }
+    }
+}
+```
+
+## The demo video
+
+"Big Buck Bunny", (c) 2008 Blender Foundation, <https://peach.blender.org>,
+under CC BY 3.0, streamed from Wikimedia Commons, so it plays only online. Its
+English and German tracks are one placeholder caption each, not the film's
+sound.
 
 ## Props
 
@@ -140,48 +144,42 @@ screen, from [use_fullscreen](use_fullscreen.md).
 
 ### Libero handles
 
-- The player is a `group` named by `label`, its controls a `group` named
-  "Player controls"; every button and slider is its own Tab stop, as in the
-  browser's own controls.
+- The player is a `group` named by `label`, its bar a `group` named "Player
+  controls"; every button and slider is its own Tab stop.
 - The play, mute and fullscreen buttons change their names (Play/Pause,
-  Mute/Unmute, Fullscreen/Exit fullscreen); the captions button uses
-  `aria-pressed`, and a bar under its icon shows it pressed.
-- In fullscreen the speed and volume menus and the tooltips open inside the
-  player, so they show over the fullscreen picture.
+  Mute/Unmute, Fullscreen/Exit fullscreen); the captions toggle uses
+  `aria-pressed`.
+- With two or more captions or subtitles tracks, the captions button opens a
+  menu of Off and each track by its `label` (else its `srclang`), as radio
+  items. Without one it stays, disabled but focusable, and says "No captions
+  for this video".
+- The speed button shows the rate and is named "Playback speed 1×" ("1,5×"
+  under `Formats::GERMAN`); its menu offers 0.5× to 2× as radio items.
+- The speaker button mutes; the chevron beside it, named "Volume", opens a
+  `dialog` with the volume slider focused. At volume 0, Unmute brings back the
+  last audible volume.
 - A press anywhere on the seek track jumps there; a drag scrubs.
-- The speed button shows the rate ("1×", "1,5×" under `Formats::GERMAN`) and is
-  named "Playback speed 1×"; its menu offers 0.5× to 2× as radio items.
-- Without a captions or subtitles track the captions button stays, disabled
-  but focusable, and says "No captions for this video".
-- With two or more captions or subtitles tracks the captions button opens a
-  menu: Off and each track by its `label` (else its `srclang`), as radio items.
-  With one it stays a toggle.
-- The speaker button mutes and unmutes. The chevron beside it, named "Volume",
-  opens a `dialog` holding the volume slider and focuses it, as `Audio`'s.
-- At volume 0 the mute button offers Unmute, which brings back the last audible
-  volume; moving the volume up while muted unmutes.
-- Where the page may not go fullscreen, the player covers the window as a fixed
-  box instead, which Escape, F and a Tab out of the player leave, so focus never
-  hides behind it. The page behind it does not scroll, as under a modal. Focus
-  stays on the control that was pressed, inside the box, and is there again when
-  the box closes.
-- The controls overlay the bottom of the picture, as YouTube's, and fade after 3
-  seconds of playing untouched or as the mouse leaves the player; while paused
-  they stay. A pointer move, a tap or a key brings them back. After a key they
-  stay until the next click or tap, so keyboard focus never sits on a faded
-  control, and focus moved into them by code or a screen reader shows them too.
-  They never leave the Tab order.
-- A click on the picture plays or pauses, as YouTube's. A tap on it while the
-  controls are faded only shows them; once shown, a tap plays or pauses.
-- No control leaves the player at any width: the seek track has a row of its own
-  and shrinks with the player, below 22rem the total time goes, and below 15rem
-  the bar moves under the picture and wraps, so it fits at 320px and 200% zoom
-  (WCAG 1.4.10).
-- A black scrim under the bar keeps its white text at 4.5:1 and its icons,
-  tracks and thumbs at 3:1 over any picture, a white one included, in light and
-  dark (WCAG 1.4.3, 1.4.11).
 - The seek slider's `aria-valuetext` reads "1:05 of 4:56" (the localization's
-  `media.position`).
+  `media.position`), with chapters "1:05 of 4:56, The plan"
+  (`slider.segment`); the bubble shows the same.
+- With chapters a menu button, named "Chapters", lists each start and title as
+  radio items, the current one checked; picking one seeks there. It is the way
+  to a chapter on touch and without the chord keys.
+- In fullscreen the menus and tooltips open inside the player. Where the page
+  may not go fullscreen, the player covers the window instead, the page behind
+  stays still, and Escape, F or a Tab out leaves it; focus stays on the
+  pressed control.
+- The bar overlays the bottom of the picture and fades after 3 seconds of
+  untouched play or as the mouse leaves; paused, it stays. A pointer move, a
+  tap, a key or focus moved into it brings it back, and after a key it stays
+  until the next click or tap. It never leaves the Tab order.
+- A click on the picture plays or pauses. A tap while the bar is faded only
+  shows it.
+- No control leaves the player at any width: below 22rem the total time goes,
+  below 15rem the bar moves under the picture and wraps, so it fits at 320px
+  and 200% zoom (WCAG 1.4.10).
+- A black scrim under the bar keeps its text at 4.5:1 and its icons and tracks
+  at 3:1 over any picture, in light and dark (WCAG 1.4.3, 1.4.11).
 - A polite status says "Loading" while playing waits for data; a failed source
   shows an alert.
 - No autoplay unless asked, and a debug warning for autoplay with sound (WCAG
@@ -191,12 +189,18 @@ screen, from [use_fullscreen](use_fullscreen.md).
 
 - Give each player a `label` that says what plays.
 - Add a captions track for speech (WCAG 1.2.2), and a described version or a
-  transcript for what only the picture shows (WCAG 1.2.3, 1.2.5): libero cannot
-  write them.
+  transcript for what only the picture shows (WCAG 1.2.3, 1.2.5): libero
+  cannot write them.
 - Do not let a clip flash more than three times a second (WCAG 2.3.1).
 - In a parent that shrink-wraps its content, such as a flex column, give the
   parent `max-width: 100%` or `min-width: 0`: an unsized player asks for 40rem
   and would push it past a narrow screen (WCAG 1.4.10).
+
+### Example
+
+The demo's player has `label: "Big Buck Bunny"` and four chapters. Tab reaches
+the seek slider; Ctrl+Right jumps to 1:55, and the slider's value ends in "The
+bullies". K pauses, C shows the English captions, and Shift+? lists every key.
 
 ### Limits
 
@@ -204,6 +208,9 @@ screen, from [use_fullscreen](use_fullscreen.md).
   to the file.
 - On a WebView each command and state change crosses the IPC, so the time
   trails by a moment.
+- The seek slider moves in whole seconds, so a chapter starting at 12.4 s is
+  named from 13 s in the slider's value; the label beside the time follows the
+  exact time. A chapters track on another origin needs CORS.
 - The shown controls cover the bottom of the picture. Chromium-based browsers
   draw the captions above them, through the WebKit captions box Safari shares;
   Firefox offers no hook to move them, so there the bar covers them until it

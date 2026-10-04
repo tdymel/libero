@@ -11,10 +11,6 @@ returns a handle that opens it. The content is built only while it shows. Each
 opening passes its arguments to the closure's `ModalScope`, and settles with
 what `resolve` answered, or `None` when dismissed.
 
-Make the answer the dialog's own enum, not a `bool`. The handle is `Copy`, so a
-trigger elsewhere in the tree can take it as a prop or from context. A
-[`Dialog`](dialog.md) inside closes the modal from its own close button.
-
 ## Usage
 
 Wrap `use_modal` in a hook of your own. Its parameters are shared by every
@@ -120,6 +116,12 @@ fn CloseIfModal() -> Element {
     }
 }
 ```
+
+## Answers and triggers
+
+Make the answer the dialog's own enum, not a `bool`. The handle is `Copy`, so a
+trigger elsewhere in the tree can take it as a prop or from context. A
+[`Dialog`](dialog.md) inside closes the modal from its own close button.
 
 ## API
 

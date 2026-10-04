@@ -14,22 +14,6 @@ implements `TreeLabel`, whose text feeds typeahead and the default row.
 once you store the new set, and you can open one from outside, as this site's
 sidebar opens the current page's section.
 
-`Tree` has no selection. `render_node` decides what a row does, and gets the
-row's live `expanded` state. `TreeItemContent` is the standard row: the
-chevron, an `icon`, the label and a `trailing_icon`, icons as `SvgData` (see
-[`Pictogram`](pictogram.md)). The default row is one. `TreeItem` lays a row out
-the same way as a button that picks up the tab stop and `disabled`. A row that
-links somewhere is a [`NavLink`](nav_link.md) with `args.tabindex`.
-`default_tree_render(args)` draws the default row, so a custom `render_node`
-can fall back to it.
-
-`guides` draws a line down each open branch, under its chevron, and marks the
-`current` row's part of it, as this site's sidebar does. The lines use logical
-properties, so they move to the right under `dir="rtl"`.
-
-`Tree` renders through [`List`](list.md). `size` sets the row gap and the
-per-level indent together. Set them apart through `sx`.
-
 ## Usage
 
 ```rust
@@ -122,6 +106,26 @@ fn Demo() -> Element {
 
 The expansion, the buttons and the selection readout are the example's own
 state, not part of `Tree`.
+
+## Rows
+
+`Tree` has no selection. `render_node` decides what a row does, and gets the
+row's live `expanded` state. `TreeItemContent` is the standard row: the
+chevron, an `icon`, the label and a `trailing_icon`, icons as `SvgData` (see
+[`Pictogram`](pictogram.md)). The default row is one. `TreeItem` lays a row out
+the same way as a button that picks up the tab stop and `disabled`. A row that
+links somewhere is a [`NavLink`](nav_link.md) with `args.tabindex`.
+`default_tree_render(args)` draws the default row, so a custom `render_node`
+can fall back to it.
+
+## Guides
+
+`guides` draws a line down each open branch, under its chevron, and marks the
+`current` row's part of it, as this site's sidebar does. The lines use logical
+properties, so they move to the right under `dir="rtl"`.
+
+`Tree` renders through [`List`](list.md). `size` sets the row gap and the
+per-level indent together. Set them apart through `sx`.
 
 ## Props
 

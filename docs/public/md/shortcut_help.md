@@ -11,13 +11,6 @@ A dialog listing keyboard shortcuts. Chords are written as
 names, so `"mod+b"` reads Ctrl + B on Windows and Linux and Cmd + B on a Mac.
 Open it with [`use_modal`](modal.md), often from a `shift+?` hotkey.
 
-It belongs to the app: one dialog for the shortcuts of the screen the reader is
-on. [`RichTextEditor`](rich_text_editor.md) opens its own from Ctrl + /.
-[`Video`](video.md) and [`Audio`](audio.md) open their own from Shift + ?
-with focus in the player. [`Kanban`](kanban.md),
-[`Sortable`](sortable.md) and [`Table`](table.md) have no shortcuts: their drag handles describe their keys
-to screen readers.
-
 ## Usage
 
 ```rust
@@ -46,6 +39,15 @@ fn Demo() -> Element {
     rsx! {}
 }
 ```
+
+## Where it belongs
+
+It belongs to the app: one dialog for the shortcuts of the screen the reader is
+on. [`RichTextEditor`](rich_text_editor.md) opens its own from Ctrl + /.
+[`Video`](video.md) and [`Audio`](audio.md) open their own from Shift + ?
+with focus in the player. [`Kanban`](kanban.md),
+[`Sortable`](sortable.md) and [`Table`](table.md) have no shortcuts: their drag handles describe their keys
+to screen readers.
 
 ## Props
 

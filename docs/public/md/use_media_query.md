@@ -11,10 +11,6 @@ query matches, and keeps answering as the viewport or the reader's settings
 change. `use_is_mobile() -> ReadSignal<bool>` is `(max-width: 767px)`: the 768px
 breakpoint.
 
-Both answer `false` on the first render and on a server render, then the real
-answer once the component is mounted. Where the platform cannot answer, as on
-native Blitz, they stay `false`. Passing a different query re-subscribes.
-
 ## Usage
 
 ```rust
@@ -49,6 +45,12 @@ fn Layout() -> Element {
     }
 }
 ```
+
+## First render
+
+Both answer `false` on the first render and on a server render, then the real
+answer once the component is mounted. Where the platform cannot answer, as on
+native Blitz, they stay `false`. Passing a different query re-subscribes.
 
 ## API
 

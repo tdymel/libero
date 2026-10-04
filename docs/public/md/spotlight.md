@@ -13,10 +13,6 @@ and returns the rows, so a fixed list and search results are the same prop.
 prefix matches before matches inside a word, so "table" puts Table above
 Sortable.
 
-Rows with a `group` are drawn under its header, groups in the order they first
-appear. A `shortcut` on an action is a hint, drawn as one `Kbd` per key, and
-never bound.
-
 ## Usage
 
 ```rust
@@ -92,6 +88,12 @@ let spotlight = use_spotlight(SpotlightOptions {
     ..Default::default()
 });
 ```
+
+## Groups and shortcuts
+
+Rows with a `group` are drawn under its header, groups in the order they first
+appear. A `shortcut` on an action is a hint, drawn as one `Kbd` per key, and
+never bound.
 
 ## API
 

@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use crate::site::LOGO;
 use dioxus::prelude::*;
 use libero::{
@@ -221,6 +221,18 @@ pub fn UseSystemNotificationPage() -> Element {
                     Code { source: "is_supported()" }
                     "; all are reactive."
                 }
+            },
+
+            Demo {
+                component: "use_system_notification",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { Notify {} },
+                wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Push",
                 Text {
                     Code { source: "use_push_subscription(PushOptions) -> PushSubscription" }
                     " registers your service worker and subscribes with your server's VAPID public key. "
@@ -231,6 +243,10 @@ pub fn UseSystemNotificationPage() -> Element {
                     Code { source: "docs/public/sw.js" }
                     ". Push on Android is Firebase Cloud Messaging in the app itself, with no libero code: the markdown version of this page has a recipe."
                 }
+            }
+
+            DocSection {
+                title: "Platforms",
                 Text {
                     "Web: a secure context (HTTPS or localhost). Desktop WebView on Linux: with libero's "
                     Code { source: "desktop" }
@@ -254,14 +270,6 @@ pub fn UseSystemNotificationPage() -> Element {
                     Code { source: "Unsupported" }
                     "."
                 }
-            },
-
-            Demo {
-                component: "use_system_notification",
-                children_text: "",
-                controls: Vec::new(),
-                render: move |_: DemoValues| rsx! { Notify {} },
-                wrap: Wrap(code),
             }
         }
     }

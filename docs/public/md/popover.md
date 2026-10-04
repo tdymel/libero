@@ -11,10 +11,6 @@ where the box goes, not how it looks. `use_popover` portals the box, so no
 `overflow: hidden` ancestor clips it, and flips and shifts it to stay on
 screen.
 
-It owns no open state. Pass `show(None)` to take a closed box away. Popovers
-nest. Anchor the inner one to a row in the outer box, and the one shown later
-paints on top.
-
 ## Usage
 
 The role, the trigger's aria and the box's focus are yours, so the example
@@ -180,6 +176,12 @@ only Escape and your own handlers close the box.
 | `on_dismiss(f)` | `impl FnMut()` | What Escape and a press outside call, with `dismiss` on. Call it on every render. |
 | `anchor_events()` | `Vec<Attribute>` | Spread on the trigger: `dismiss`, and on a WebView the link `Hotkey::within` follows into the box. |
 | `floating_events()` | `Vec<Attribute>` | Spread on the box, as `anchor_events()` on the trigger; the WebView link needs both. |
+
+## Open state and nesting
+
+It owns no open state. Pass `show(None)` to take a closed box away. Popovers
+nest. Anchor the inner one to a row in the outer box, and the one shown later
+paints on top.
 
 ## Accessibility
 

@@ -10,10 +10,6 @@ A strip of tabs over an enum, with the selected tab's panel below it.
 `#[derive(Options)]` lists and names the tabs. `panel` matches on the same enum,
 so a missing tab does not compile. Only the selected panel is built.
 
-`option_label` renames tabs during render, so the strip follows a locale
-signal. `OptionLabel::rich` draws a tab as rsx, such as an icon, and takes a
-text name for screen readers.
-
 ## Usage
 
 The enum is the tab strip. `#[option(label = ..)]` renames a variant.
@@ -130,6 +126,12 @@ fn Demo() -> Element {
 ```
 
 `FileIcon` is your own icon component. Any `svg` works, and `Icon` sizes it.
+
+## Labels
+
+`option_label` renames tabs during render, so the strip follows a locale
+signal. `OptionLabel::rich` draws a tab as rsx, such as an icon, and takes a
+text name for screen readers.
 
 ## Props
 

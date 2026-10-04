@@ -11,12 +11,6 @@ panel or popup closes. Without it, focus inside a closing panel drops to the
 document body and a keyboard user loses their place. The overlays in libero do
 this already; use the hook for a panel of your own.
 
-Call `remember_active()` in the handler that opens, and `restore()` wherever it
-closes. `restore()` consumes what `remember_active()` saved, so arm it on every
-open. `remember(event)` on a trigger's `onmounted` names an element instead,
-which stays armed. `fallback(handle)` names where focus goes if the trigger is
-gone by then, such as the list a deleted row lived in.
-
 ## Usage
 
 ```rust
@@ -83,6 +77,14 @@ fn Filters() -> Element {
 `remember_active()` reads the focused element from the document, which the web
 and Blitz have and a webview does not. There it remembers nothing, so name the
 trigger with `remember(event)` instead.
+
+## Arming and restoring
+
+Call `remember_active()` in the handler that opens, and `restore()` wherever it
+closes. `restore()` consumes what `remember_active()` saved, so arm it on every
+open. `remember(event)` on a trigger's `onmounted` names an element instead,
+which stays armed. `fallback(handle)` names where focus goes if the trigger is
+gone by then, such as the list a deleted row lived in.
 
 ## API
 

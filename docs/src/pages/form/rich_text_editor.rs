@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, indent,
-    prop, props, status_prop,
+    Control, Demo, DemoFile, DemoValues, DocPage, DocSection, FieldCopy, Wrap, a11y,
+    field_controls, indent, prop, props, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::rich_text::Doc;
@@ -341,6 +341,24 @@ pub fn RichTextEditorPage() -> Element {
                     }
                 },
             }
+
+            DocSection {
+                title: "Code blocks",
+                Text {
+                    "A code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language."
+                }
+            }
+
+            DocSection {
+                title: "Mentions",
+                Text {
+                    "The mentions switch adds an @ list at the caret, built from "
+                    Code { source: "intercept" }
+                    ", "
+                    Code { source: "overlay" }
+                    " and a custom node."
+                }
+            }
         }
     }
 }
@@ -357,12 +375,7 @@ fn rich_lead() -> Element {
             Code { source: "Doc::from_markdown" }
             " convert it; the types live in "
             Code { source: "libero::components::rich_text" }
-            ". A code block shows its source with fences while the caret is in it; the language button on its opening fence, the toolbar's language menu or Ctrl+Shift+L change its language. "
-            "The mentions switch adds an @ list at the caret, built from "
-            Code { source: "intercept" }
-            ", "
-            Code { source: "overlay" }
-            " and a custom node."
+            "."
         }
     }
 }

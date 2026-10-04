@@ -9,10 +9,7 @@ Description: A board of columns whose cards move by drag in a column or to anoth
 A board of columns. A card moves by dragging its handle, in its column or to
 another; by keyboard or with its move buttons in its column; and to another
 column with its Move to menu. `onmove` gets a `KanbanMove` with the old and new
-column and index, and `apply` does it to a `Vec<Vec<T>>`. The cards are your
-content: the board draws no card look. The docs demo builds Jira-style issue
-cards from `Text`, `Badge`, `Icon` and `Avatar`, with a count in each column's
-`header`.
+column and index, and `apply` does it to a `Vec<Vec<T>>`.
 
 ## Usage
 
@@ -47,6 +44,12 @@ fn Demo() -> Element {
 Key each column and card by its data, not its index. A drag to another column
 lands the card where it was let go; the Move to menu lands it at that column's
 end.
+
+## Cards
+
+The cards are your content: the board draws no card look. The docs demo builds
+Jira-style issue cards from `Text`, `Badge`, `Icon` and `Avatar`, with a count
+in each column's `header`.
 
 ## Props
 

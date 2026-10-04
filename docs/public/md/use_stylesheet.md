@@ -27,6 +27,8 @@ fn Callout(children: Element) -> Element {
 }
 ```
 
+## Raw CSS
+
 Raw CSS as a `&str` or a `String` works too. It has no single selector, so it
 returns `None`. Components that register the same sheet share one copy of it.
 

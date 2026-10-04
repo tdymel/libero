@@ -10,9 +10,6 @@ A group of radios over an enum, exactly one of them selected. The group is the
 field. It holds the question's label and captions, makes the options exclusive
 and gives the whole set one tab stop.
 
-Use a `Radio` on its own only to lay a group out by hand. Then the shared
-`name`, the tab order and the group's name are yours to set.
-
 ## Usage
 
 ```rust
@@ -64,6 +61,11 @@ RadioGroup {
     .to_string(),
 }
 ```
+
+## A Radio on its own
+
+Use a `Radio` on its own only to lay a group out by hand. Then the shared
+`name`, the tab order and the group's name are yours to set.
 
 ## Props
 

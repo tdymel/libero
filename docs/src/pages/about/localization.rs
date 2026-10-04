@@ -110,11 +110,6 @@ pub fn LocalizationPage() -> Element {
                     Code { source: "formats" }
                     ". Any language goes with any formats: this site is English in German formats."
                 }
-                Text {
-                    "Direction comes from the document. Components follow a "
-                    Code { source: "dir=\"rtl\"" }
-                    " around them, and their directional props say start and end, not left and right."
-                }
             },
             // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }
             // snippet: item #[component] fn Home() -> Element { rsx! {} }
@@ -198,6 +193,15 @@ pub fn LocalizationPage() -> Element {
                     ", and every component that reads them follows."
                 }
                 CodeBlock { source: SWITCH_LOCALIZATION, language: "rust" }
+            }
+
+            DocSection {
+                title: "Direction",
+                Text {
+                    "Direction comes from the document. Components follow a "
+                    Code { source: "dir=\"rtl\"" }
+                    " around them, and their directional props say start and end, not left and right."
+                }
             }
         }
     }

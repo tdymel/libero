@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, readonly_prop, required_prop,
-    status_prop,
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props, readonly_prop,
+    required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, OptionList, Options, RadioGroup, Text};
@@ -184,13 +184,6 @@ pub fn RadioGroupPage() -> Element {
                     "is the field. It holds the question's label and captions, makes the "
                     "options exclusive and gives the whole set one tab stop."
                 }
-                Text {
-                    "Use a "
-                    Code { source: "Radio" }
-                    " on its own only to lay a group out by hand. Then the shared "
-                    Code { source: "name" }
-                    ", the tab order and the group's name are yours to set."
-                }
             },
             // snippet: let mut plan = use_signal(|| Some(Plan::Pro));
             Demo {
@@ -293,6 +286,17 @@ pub fn RadioGroupPage() -> Element {
                     }
                 },
                 wrap: Wrap(|_values, code| format!("{PLAN_ENUM}{code}")),
+            }
+
+            DocSection {
+                title: "A Radio on its own",
+                Text {
+                    "Use a "
+                    Code { source: "Radio" }
+                    " on its own only to lay a group out by hand. Then the shared "
+                    Code { source: "name" }
+                    ", the tab order and the group's name are yours to set."
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Kbd, Shortcut, ShortcutHelp, Text};
 
@@ -55,6 +55,27 @@ pub fn ShortcutHelpPage() -> Element {
                     Code { source: "shift+?" }
                     " hotkey; here it is shown inline."
                 }
+            },
+            Demo {
+                component: "ShortcutHelp",
+                children_text: "",
+                children_code: "",
+                fixed: vec![SHORTCUTS.to_string()],
+                controls: vec![],
+                render: move |_: DemoValues| rsx! {
+                    ShortcutHelp {
+                        shortcuts: vec![
+                            Shortcut::new("mod+b", "Bold"),
+                            Shortcut::new("mod+i", "Italic"),
+                            Shortcut::new("shift+mod+k", "Insert a link"),
+                            Shortcut::new("alt+f10", "Go to the toolbar"),
+                        ],
+                    }
+                },
+            }
+
+            DocSection {
+                title: "Where it belongs",
                 Text {
                     "It belongs to the app: one dialog for the shortcuts of the screen the reader is on. "
                     Code { source: "RichTextEditor" }
@@ -78,23 +99,6 @@ pub fn ShortcutHelpPage() -> Element {
                     Code { source: "Table" }
                     " have no shortcuts: their drag handles describe their keys to screen readers."
                 }
-            },
-            Demo {
-                component: "ShortcutHelp",
-                children_text: "",
-                children_code: "",
-                fixed: vec![SHORTCUTS.to_string()],
-                controls: vec![],
-                render: move |_: DemoValues| rsx! {
-                    ShortcutHelp {
-                        shortcuts: vec![
-                            Shortcut::new("mod+b", "Bold"),
-                            Shortcut::new("mod+i", "Italic"),
-                            Shortcut::new("shift+mod+k", "Insert a link"),
-                            Shortcut::new("alt+f10", "Go to the toolbar"),
-                        ],
-                    }
-                },
             }
         }
     }

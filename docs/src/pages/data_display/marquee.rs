@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Chip, Code, Flex, Marquee, MarqueePart, Text},
@@ -161,13 +163,6 @@ pub fn MarqueePage() -> Element {
                     Code { source: "paused" }
                     "."
                 }
-                Text {
-                    "Under "
-                    Code { source: "prefers-reduced-motion: reduce" }
-                    " it does not move. It shows one copy in a strip the reader scrolls, "
-                    "without the fade or the toggle. To see it, switch the setting in your "
-                    "system or your browser's dev tools."
-                }
             },
             Demo {
                 component: "Marquee",
@@ -205,6 +200,17 @@ pub fn MarqueePage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     MarqueePreview { values }
                 },
+            }
+
+            DocSection {
+                title: "Reduced motion",
+                Text {
+                    "Under "
+                    Code { source: "prefers-reduced-motion: reduce" }
+                    " it does not move. It shows one copy in a strip the reader scrolls, "
+                    "without the fade or the toggle. To see it, switch the setting in your "
+                    "system or your browser's dev tools."
+                }
             }
         }
     }

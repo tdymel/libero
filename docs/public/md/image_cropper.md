@@ -12,9 +12,6 @@ keys on the box and its corners. `value` is a
 `CropRect` in fractions of the image, so it fits any resolution; `to_pixels`
 turns it into pixels.
 
-It only picks the box. To cut the picture, give a `FileField` a `crop`: a
-picked image opens in a cropper first, and the field takes the cut file.
-
 ## Usage
 
 ```rust
@@ -48,6 +45,11 @@ FileField {
     onchange: move |files| avatar.set(files),
 }
 ```
+
+## Cutting the picture
+
+It only picks the box. To cut the picture, give a `FileField` a `crop`: a
+picked image opens in a cropper first, and the field takes the cut file.
 
 ## Props
 

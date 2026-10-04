@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, PictogramNote, a11y, gradient_controls, gradient_value,
-    not_gradient_variant, prop, props,
+    Control, Demo, DemoValues, DocPage, DocSection, PictogramNote, a11y, gradient_controls,
+    gradient_value, not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Text};
@@ -90,20 +90,6 @@ pub fn ActionIconPage() -> Element {
                     Code { source: "color" }
                     " set, it has no background of its own and takes the surrounding text color."
                 }
-                Text {
-                    "Use it when the icon is the whole control: a square button that lines up with a "
-                    Code { source: "Button" }
-                    " of the same size, and cannot be built without an accessible name. Once the button "
-                    "carries a visible label, use a "
-                    Code { source: "Button" }
-                    " with its "
-                    Code { source: "icon" }
-                    " prop instead. A "
-                    Code { source: "Button" }
-                    " with an icon and no text is a wide pill and has no name unless you add "
-                    Code { source: "aria-label" }
-                    " yourself."
-                }
             },
             Demo {
                 component: "ActionIcon",
@@ -185,6 +171,24 @@ pub fn ActionIconPage() -> Element {
                         icon: pictogram_icons_lucide::check::outlined,
                     }
                 },
+            }
+
+            DocSection {
+                title: "When to use it",
+                Text {
+                    "Use it when the icon is the whole control: a square button that lines up with a "
+                    Code { source: "Button" }
+                    " of the same size, and cannot be built without an accessible name. Once the button "
+                    "carries a visible label, use a "
+                    Code { source: "Button" }
+                    " with its "
+                    Code { source: "icon" }
+                    " prop instead. A "
+                    Code { source: "Button" }
+                    " with an icon and no text is a wide pill and has no name unless you add "
+                    Code { source: "aria-label" }
+                    " yourself."
+                }
             }
         }
     }

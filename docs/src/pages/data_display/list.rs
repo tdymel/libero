@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
@@ -74,15 +74,6 @@ pub fn ListPage() -> Element {
                     " on the outer list only, since the parent sets a nested list's indent. "
                     "A nested ordered list keeps a fixed 2em, room for its numbers."
                 }
-                Text {
-                    "An "
-                    Code { source: "icon" }
-                    " on the list marks every item. A "
-                    Code { source: "ListItem" }
-                    "'s own "
-                    Code { source: "icon" }
-                    " replaces it for that item. A nested list does not take its parent's icon."
-                }
             },
             Demo {
                 component: "List",
@@ -117,6 +108,19 @@ pub fn ListPage() -> Element {
                         }
                     }
                 },
+            }
+
+            DocSection {
+                title: "Icons",
+                Text {
+                    "An "
+                    Code { source: "icon" }
+                    " on the list marks every item. A "
+                    Code { source: "ListItem" }
+                    "'s own "
+                    Code { source: "icon" }
+                    " replaces it for that item. A nested list does not take its parent's icon."
+                }
             }
         }
     }

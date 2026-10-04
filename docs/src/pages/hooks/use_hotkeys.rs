@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Kbd, Text, TextField},
@@ -91,7 +91,22 @@ pub fn UseHotkeysPage() -> Element {
                     " runs a handler when its chord is pressed anywhere in the document, "
                     "even with focus on the page body or in a portal. Each binding is "
                     Code { source: "Hotkey::new(chord, handler)" }
-                    ". A chord is modifiers and a key joined by "
+                    "."
+                }
+            },
+
+            Demo {
+                component: "use_hotkeys",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { Shortcuts {} },
+                wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Chords",
+                Text {
+                    "A chord is modifiers and a key joined by "
                     Code { source: "+" }
                     ": "
                     Code { source: "ctrl" }
@@ -120,6 +135,10 @@ pub fn UseHotkeysPage() -> Element {
                     Kbd { "mod+shift+k" }
                     "."
                 }
+            }
+
+            DocSection {
+                title: "Text entry and guards",
                 Text {
                     "Presses in text entry are skipped unless the binding calls "
                     Code { source: ".include_editable(true)" }
@@ -150,20 +169,16 @@ pub fn UseHotkeysPage() -> Element {
                     "A press a binding takes has its default action prevented; one it turns away keeps it. "
                     "Native Blitz hears presses that bubble out of the app, and a server render binds nothing."
                 }
+            }
+
+            DocSection {
+                title: "Lifetime",
                 Text {
                     "A hotkey lives as long as the component that calls the hook: it is bound when "
                     "the component mounts and removed when it unmounts, such as when a route change "
                     "drops the page. A hook in a layout or the app root stays bound across navigation. "
                     "Each call listens on its own, so two components with the same chord both run."
                 }
-            },
-
-            Demo {
-                component: "use_hotkeys",
-                children_text: "",
-                controls: Vec::new(),
-                render: move |_: DemoValues| rsx! { Shortcuts {} },
-                wrap: Wrap(code),
             }
         }
     }

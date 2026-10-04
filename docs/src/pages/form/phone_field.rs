@@ -1,6 +1,6 @@
 use super::dropdown_parts::{PHONE_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, disabled_prop, field_controls,
+    Control, Demo, DemoValues, DocPage, DocSection, FieldCopy, a11y, disabled_prop, field_controls,
     field_props, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
@@ -127,16 +127,7 @@ pub fn PhoneFieldPage() -> Element {
                     "the value is one E.164 string such as "
                     Code { source: "\"+12133734253\"" }
                     ". The field regroups the digits when it loses focus, for countries with a "
-                    "fixed number format. It ships the country list but no number validation, so "
-                    "add a rule through "
-                    Code { source: "validate" }
-                    ". It does not strip a national trunk prefix: "
-                    Code { source: "0171 1234567" }
-                    " typed under Germany becomes "
-                    Code { source: "\"+4901711234567\"" }
-                    ", which is not E.164. Say so in "
-                    Code { source: "helper" }
-                    ", or add a rule that refuses a leading 0."
+                    "fixed number format."
                 }
             },
             // snippet: let mut phone = use_signal(String::new);
@@ -210,6 +201,22 @@ pub fn PhoneFieldPage() -> Element {
                         }
                     }
                 },
+            }
+
+            DocSection {
+                title: "Validation",
+                Text {
+                    "The field ships the country list but no number validation, so "
+                    "add a rule through "
+                    Code { source: "validate" }
+                    ". It does not strip a national trunk prefix: "
+                    Code { source: "0171 1234567" }
+                    " typed under Germany becomes "
+                    Code { source: "\"+4901711234567\"" }
+                    ", which is not E.164. Say so in "
+                    Code { source: "helper" }
+                    ", or add a rule that refuses a leading 0."
+                }
             }
         }
     }

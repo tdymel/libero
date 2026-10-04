@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, gradient_controls, gradient_value,
+    Control, Demo, DemoValues, DocPage, DocSection, a11y, gradient_controls, gradient_value,
     not_gradient_variant, prop, props,
 };
 use dioxus::prelude::*;
@@ -82,19 +82,6 @@ pub fn ButtonPage() -> Element {
                     Code { source: "ActionIcon" }
                     "."
                 }
-                Text {
-                    "A "
-                    Code { source: "Button" }
-                    " shows a label, with an optional "
-                    Code { source: "icon" }
-                    " before it. "
-                    Code { source: "ActionIcon" }
-                    " is the same button reduced to a square icon: it requires an "
-                    Code { source: "aria_label" }
-                    ", keeps a 24px target and defaults to no background. A "
-                    Code { source: "Button" }
-                    " with no text would be a wide pill without an accessible name."
-                }
             },
             Demo {
                 component: "Button",
@@ -176,6 +163,23 @@ pub fn ButtonPage() -> Element {
                         "Save changes"
                     }
                 },
+            }
+
+            DocSection {
+                title: "Labels and icons",
+                Text {
+                    "A "
+                    Code { source: "Button" }
+                    " shows a label, with an optional "
+                    Code { source: "icon" }
+                    " before it. "
+                    Code { source: "ActionIcon" }
+                    " is the same button reduced to a square icon: it requires an "
+                    Code { source: "aria_label" }
+                    ", keeps a 24px target and defaults to no background. A "
+                    Code { source: "Button" }
+                    " with no text would be a wide pill without an accessible name."
+                }
             }
         }
     }

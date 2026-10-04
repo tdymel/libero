@@ -11,10 +11,6 @@ content. `#[derive(Options)]` lists and names the steps. `panel` matches on the
 same enum, so a step without a body does not compile. You own `value` and move
 it on, usually from a button inside the step.
 
-Steps before `value` are completed, the rest pending. `state` overrides single
-steps and is the only way to mark one `StepState::Error`. An error changes the
-marker, not which step is current.
-
 ## Usage
 
 ```rust
@@ -57,6 +53,12 @@ fn Demo() -> Element {
 #
 # fn address_valid() -> bool { true }
 ```
+
+## Step states
+
+Steps before `value` are completed, the rest pending. `state` overrides single
+steps and is the only way to mark one `StepState::Error`. An error changes the
+marker, not which step is current.
 
 ## Props
 

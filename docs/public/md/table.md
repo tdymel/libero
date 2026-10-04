@@ -6,124 +6,11 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_d
 Index: [index.md](index.md) lists every other page
 Description: A sortable data table built from a row type and a list of column definitions.
 
-A table built from `data` and `columns`. Each column comes from `column(..)`,
-with a header and a `value` that reads one cell out of a row. The cell's type
-sets the sort order and alignment, so a numeric column sorts numerically and
-aligns right on its own.
-
-`sortable` turns a header into a button. The first click sorts ascending, the
-next flips it, and a third restores source order. `render` changes only what a
-cell draws, so a Role column rendered as a [Chip](chip.md) still sorts by its
-text. `format` does the same for the cell's text: the Bonus column prints a
-percent and still sorts by number.
-
-`default_sort` sorts the first render. To hold the sort yourself, for a
-server-side query or a saved view, pass `sort` and update it from
-`onsortchange`.
-
-`row_key` gives each row an identity, so its DOM node follows it when rows are
-added, removed or sorted. `size` sets the cell padding and font size, and
-`striped` shades every other row.
-
-`width` and `min_width` size a column, `header_render` draws its header, and
-`column_defaults` sets what every column starts from, say a minimum width.
-Columns of one kind, say prices, share a `const ColumnType` with
-`column("Price").of(&MONEY).value(..)`.
-
-`selectable` adds a checkbox per row and a select-all box. The selection is a
-list of `row_key`s, so it stays with its rows through a sort. Hold it yourself
-with `selection` and `onselectionchange`. `multi_sort` lets Shift-click, or a
-tap on a touch screen, sort by one more column.
-
-`page_sizes` pages the rows after sorting them, with a page-size picker, the
-shown range and page buttons under the table. `page` and `page_size` hold the
-state yourself, as `sort` does. For server-side data set `manual_sort` and
-`manual_pagination`, pass the current page as `data` and the total as
-`row_count`. Select-all covers the rows on every page.
-
-`show_quick_filter` puts a search field above the table. A row stays when every
-typed word occurs in one of its shown cells; `.filterable(false)` leaves a column
-out. The rows are filtered, then sorted, then paged. Hold the text yourself with
-`quick_filter` and `onquickfilterchange`, or filter on a server with
-`manual_filter`.
-
-`toolbar` puts your own controls in a row above the table, the search field at
-its end. `loading` shows placeholder rows while there are none yet, and a
-progress bar over the rows while new ones load. `empty` and `no_results`
-replace the text of the row shown without data and without matches.
-
-`column_menu`'s Filter entry, and `header_filters`' row of fields under the
-headers, filter one column each, with operators for its type: contains or
-starts with for text, greater than for numbers, before, after or between for
-dates, as the Joined and Review columns show, yes or no for booleans. The
-filters all apply, together with the quick filter. Hold them yourself with
-`column_filters` and `oncolumnfilterschange`.
-
-A date column, one whose value is a `chrono::NaiveDate`, filters with before,
-after, on or before, on or after, and between. Its value field is a `DateField`,
-whose calendar opens inside the filter; on a WebView (desktop, Android) it is the
-native date input. Both hold an ISO day (`2026-10-03`).
-`ColumnFilter::between("Joined", from, to)` sets both
-ends, in `value` and `value_to`: an empty end leaves that side open, and ends
-given the wrong way round are swapped. `filter_logic: FilterLogic::Or` keeps a
-row that passes any one column filter instead of all; the quick filter still
-applies on top. A column may hold several filters; the popover and the header
-field edit its first, and `filter_panel` all of them.
-
-`column_menu` adds a menu to each header to sort, hide the column, or show and
-hide the others. `.hideable(false)` keeps a column out of it. To hold the hidden
-columns yourself, pass `hidden_columns` and update it from
-`onhiddencolumnschange`.
-
-`column("Q1").value(..).group("Revenue")` puts a column under a group header,
-shared with its neighbours of the same group; call `group` again for a nested
-one. `col_span` lets a row's cell cover the next columns, say a total row's
-label.
-
-`row_detail` gives a row a toggle that opens a full-width detail row under it,
-as in a master-detail view. Rows the closure answers `None` for get no toggle.
-The open details are `row_key`s, held yourself with `expanded` and
-`onexpandedchange`.
-
-`onrowreorder` gives each row a drag handle and move buttons. The table hands
-you the move, by positions in `data`, and `step.apply(&mut rows.write())`
-applies it. Sorted or filtered, the shown order is not your data's, so the
-controls turn off. With `column_menu`, Move left and Move right reorder the
-columns, and a grip at each unpinned header's start edge drags one to a gap
-between the others; hold the order yourself with `column_order` and
-`oncolumnorderchange`. A sorted column stays sorted wherever it moves.
-
-`table_csv(&columns, &rows)` writes the cells as CSV, each as its column shows
-it as text, and `table_text` hands them over unjoined for another format.
-Saving is yours. A cell that starts with `=` runs as a formula in a
-spreadsheet, so neutralise text users typed first.
-
-`scroll` wraps a table wider than its container in a `ScrollArea` that
-scrolls sideways. The demo's switch also sets `sx().min_width("1400px")`, so the
-columns overflow at any width. `max_height` caps a long table's height:
-its rows scroll under a header that stays put.
-
-For thousands of rows add `virtual_row_height` to `max_height`: only the rows
-in view render, each that tall. The demo's switch swaps in ten thousand
-people, 40px a row under a 320px cap, and hides the switches that render every
-row. Sorting, filtering, selection and pinning work as before.
-
-`onbottomreached` asks for more rows once the table scrolls to its bottom, by
-wheel, drag or End. The demo's switch, shown with `virtual_row_height`, fetches
-the people from a fake server instead, a hundred at a time, and `loading` holds
-off another ask until the batch arrives.
-
-`default_pinned_columns` holds columns at the start or end edge while the rest
-scroll under them, and the column menu pins and unpins them. Start and end
-follow the page's direction. Give each pinned column but the outermost a
-`width`, so the next one knows where to sit.
-
-`resizable_columns` puts a grip on each header's end edge, a short line that
-lights up on hover: drag it, or double-click it to reset the width. Tab reaches
-it too, and the arrow keys step the width, Home and End to its limits. With `column_menu`, Widen column, Narrow
-column and Reset width do the same without a drag. The demo holds the widths
-itself with `column_widths` and `oncolumnwidthschange`, say to save them with a
-view.
+A data table over your own row type. `data` holds the rows, and each
+`column(..)` in `columns` reads one cell, whose type sets its sort order and
+alignment. Sorting, selection, paging, filters, a column menu, pinned, resized
+and reordered columns, row details and virtual rows are each a prop away, their
+state held by the table or by you.
 
 ## Usage
 
@@ -809,7 +696,7 @@ fn Demo() -> Element {
 | `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, "No rows". When the quick filter or the column filters leave no rows, the row reads `table.no_results`, "No matching rows", instead. |
 | `no_results` | `Option<Element>` | `None` | Shown in one full-width row when the quick filter or the column filters leave no rows, over the localized `table.no_results`. |
 | `loading` | `bool` | `false` | Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, "Loading rows". The empty row waits until loading ends. |
-| `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton`, `TableFilterButton` and `TableExportButton` work only in here. |
+| `toolbar` | `Option<Element>` | `None` | A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton`, `TableFilterButton` and `TableExportButton` work only in here. `TableColumnsButton` opens a checklist that shows and hides the hideable columns; `TableDensityButton` picks compact, standard or comfortable rows, `size` small, medium or large. |
 | `scroll` | `bool` | `false` | Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 | `max_height` | `Option<String>` | `None` | Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector("& thead th", ..)`. |
 | `virtual_row_height` | `Option<f64>` | `None` | With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. With `onrowreorder` a keyboard move scrolls to its slot, and a row dragged to the top or bottom edge scrolls the rows on. Ignored with `row_detail`, which renders every row; a debug build warns. |
@@ -851,12 +738,12 @@ fn Demo() -> Element {
 | `hidden_columns` | `Option<Vec<String>>` | `None` | The hidden columns' headers. Set, visibility is controlled: pair it with `onhiddencolumnschange`. A hidden sorted column keeps sorting. |
 | `default_hidden_columns` | `Vec<String>` | `[]` | Seeds the hidden columns once. Ignored when `hidden_columns` is set. |
 | `onhiddencolumnschange` | `EventHandler<Vec<String>>` | `None` | Called with the hidden columns a column menu pick asks for. |
-| `quick_filter` | `Option<String>` | `None` | The quick filter's text. A row stays when every word occurs, ignoring case, in the text of one of its shown, `filterable` cells. Set, the filter is controlled: pair it with `onquickfilterchange`. |
+| `quick_filter` | `Option<String>` | `None` | The quick filter's text. A row stays when every word occurs, ignoring case, in the text of one of its shown, `filterable` cells. Set, the filter is controlled: pair it with `onquickfilterchange`. The rows are filtered, then sorted, then paged. |
 | `default_quick_filter` | `String` | `""` | Seeds the quick filter once. Ignored when `quick_filter` is set. |
 | `onquickfilterchange` | `EventHandler<String>` | `None` | Called with the text typed into the quick-filter field. |
 | `show_quick_filter` | `bool` | `false` | Puts a search field above the table that drives the quick filter. |
 | `manual_filter` | `bool` | `false` | `data` comes filtered, say from a server: the quick filter and the column filters only report through `onquickfilterchange` and `oncolumnfilterschange`. Pair it with `manual_pagination` and `row_count` when paged. |
-| `column_filters` | `Option<Vec<ColumnFilter>>` | `None` | Filters by header: `ColumnFilter::new("Age", FilterOperator::GreaterThan, "30")`, or `ColumnFilter::between("Joined", "2026-01-01", "2026-06-30")` for a date range. A row stays when it passes all of them (or any, with `filter_logic`) and the quick filter. Dates take an ISO day. Text operators ignore case, `Equals` too; number operators compare the value, not its formatted text, and take `1,5` as 1.5. An empty value, a number that does not parse, or an operator the column's type does not offer keeps every row. A hidden column's filter keeps filtering. Set, the filters are controlled: pair them with `oncolumnfilterschange`. |
+| `column_filters` | `Option<Vec<ColumnFilter>>` | `None` | Filters by header: `ColumnFilter::new("Age", FilterOperator::GreaterThan, "30")`, or `ColumnFilter::between("Joined", "2026-01-01", "2026-06-30")` for a date range. A row stays when it passes all of them (or any, with `filter_logic`) and the quick filter. Dates take an ISO day. Text operators ignore case, `Equals` too; number operators compare the value, not its formatted text, and take `1,5` as 1.5. An empty value, a number that does not parse, or an operator the column's type does not offer keeps every row. A hidden column's filter keeps filtering. Set, the filters are controlled: pair them with `oncolumnfilterschange`. The operators follow the column's type, such as contains or starts with for text, greater than for numbers, before, after, on or before, on or after and between for a `chrono::NaiveDate`, yes or no for booleans. A date's value field is a `DateField`, the native date input on a WebView. A `between` end left empty is open, and ends the wrong way round are swapped. A column may hold several filters: the popover and the header field edit its first, `filter_panel` all of them. |
 | `default_column_filters` | `Vec<ColumnFilter>` | `[]` | Seeds the column filters once. Ignored when `column_filters` is set. |
 | `oncolumnfilterschange` | `EventHandler<Vec<ColumnFilter>>` | `None` | Called with the filters a filter popover or a header filter asks for. Typed values arrive once typing pauses for 300 ms, an operator or yes/no pick at once. |
 | `filter_logic` | `Option<FilterLogic>` | `None` | How the column filters join: `FilterLogic::And` keeps a row that passes all of them, `Or` one that passes any. The quick filter applies on top either way. Set, it is controlled. |
@@ -867,7 +754,7 @@ fn Demo() -> Element {
 | `pinned_columns` | `Option<PinnedColumns>` | `None` | The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly. |
 | `default_pinned_columns` | `PinnedColumns` | none pinned | Seeds the pinned columns once. Ignored when `pinned_columns` is set. |
 | `onpinnedcolumnschange` | `EventHandler<PinnedColumns>` | `None` | Called with the pinned columns a column menu pick asks for. |
-| `column_order` | `Option<Vec<String>>` | `None` | The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column. |
+| `column_order` | `Option<Vec<String>>` | `None` | The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column. With `column_menu`, a grip at each unpinned header's start edge also drags the column to a gap. |
 | `default_column_order` | `Vec<String>` | `[]` | Seeds the column order once. Ignored when `column_order` is set. |
 | `oncolumnorderchange` | `EventHandler<Vec<String>>` | `None` | Called with the order a column menu's Move left or Move right, or a header drag, asks for, every header listed. |
 | `resizable_columns` | `bool` | `false` | Puts a visible grip on each header's end edge, 24px wide on a touch screen, and Widen column, Narrow column (50px steps, the menu stays open) and Reset width in its `column_menu`, the drag-free way. Drag a grip, or double-click it to reset. A focused grip takes the keys: Left and Right move it 10px the way they point, 50px with Shift, Home and End go to the limits. A column opts out with `.resizable(false)` and sets its range with `.resize_limits(min, max)` in px, 50 to unbounded by default. Auto layout never draws a column narrower than its content. Blitz: use the menu, the grip does not drag reliably there. |

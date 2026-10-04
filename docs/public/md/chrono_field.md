@@ -13,21 +13,6 @@ picks two, and `TimeDelta` is a duration. `level` makes a `NaiveDate` field a
 month or a year field, typed as `September 2026` or `2026`. The types are
 `chrono`'s, re-exported as `libero::chrono`.
 
-Typed text is read on blur or Enter, and leniently. Any separator works, as do
-one-digit days, month names as a unique prefix, and a missing year. Two-digit
-years are not read. Only the order of day, month and year follows `format`.
-Text the field cannot accept stays, and the error says why. The form always
-gets ISO 8601.
-
-The language of names, labels and errors comes from the provider's
-`Localization`. The patterns, first weekday and 12- or 24-hour clock come from
-its `Formats`, `Formats::AMERICAN` by default or `Formats::GERMAN`.
-
-A typed value alone does not name the type. A handler that stores into a typed
-signal does, or a turbofish such as `ChronoField::<NaiveTime> { .. }`. For one
-value type there are `DateField`, `TimeField`, `DateTimeField`, `DateRangeField`
-and `DateTimeRangeField`, with only the props that type uses and no turbofish.
-
 ## Usage
 
 ```rust
@@ -106,6 +91,27 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Typing
+
+Typed text is read on blur or Enter, and leniently. Any separator works, as do
+one-digit days, month names as a unique prefix, and a missing year. Two-digit
+years are not read. Only the order of day, month and year follows `format`.
+Text the field cannot accept stays, and the error says why. The form always
+gets ISO 8601.
+
+## Localization
+
+The language of names, labels and errors comes from the provider's
+`Localization`. The patterns, first weekday and 12- or 24-hour clock come from
+its `Formats`, `Formats::AMERICAN` by default or `Formats::GERMAN`.
+
+## The value's type
+
+A typed value alone does not name the type. A handler that stores into a typed
+signal does, or a turbofish such as `ChronoField::<NaiveTime> { .. }`. For one
+value type there are `DateField`, `TimeField`, `DateTimeField`, `DateRangeField`
+and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 
 ## Props
 

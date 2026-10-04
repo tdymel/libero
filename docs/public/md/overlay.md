@@ -10,10 +10,6 @@ Dims and blurs whatever is behind it. A [modal](modal.md) renders one behind its
 content. There is no `open` prop, so render it conditionally. Its children are
 centred, which makes it a loading screen as well as a backdrop.
 
-It covers the viewport. To keep it inside a box of your own, give that box a
-`position` and a `z-index`, and the overlay `position: absolute`. Without the
-`z-index`, the overlay still stacks against the whole page.
-
 ## Usage
 
 ```rust
@@ -48,6 +44,12 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Inside a box
+
+It covers the viewport. To keep it inside a box of your own, give that box a
+`position` and a `z-index`, and the overlay `position: absolute`. Without the
+`z-index`, the overlay still stacks against the whole page.
 
 ## Props
 

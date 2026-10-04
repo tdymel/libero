@@ -39,6 +39,9 @@ Rating { label: "Average", value: 4.3, focusable: false }
 ```
 
 `clearable` resets the rating to 0 when the current value is picked again.
+
+## Other symbols
+
 `icon` draws another symbol on one rating, empty as an outline and filled
 solid:
 

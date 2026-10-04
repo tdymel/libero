@@ -1,5 +1,5 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{Box, Button, Code, CodeBlock, Flex, Input, Skeleton, Text};
@@ -142,22 +142,6 @@ pub fn SkeletonPage() -> Element {
                     " is set, so the placeholder has exactly its size. Hidden content is not "
                     "announced and not reachable with Tab."
                 }
-                Text {
-                    "A descendant that sets "
-                    Code { source: "visibility: visible" }
-                    " on itself shows through, so avoid one under a visible skeleton."
-                }
-                Text {
-                    "A fetch that answers in 50 ms should not flash a placeholder. Keep the "
-                    "region transparent until a grace period ends, and end it with "
-                    Code { source: "timer()" }
-                    ". Use "
-                    Code { source: "opacity" }
-                    " for that, since "
-                    Code { source: "visibility" }
-                    " would not hide the grey."
-                }
-                CodeBlock { source: GRACE_EXAMPLE, language: "rust" }
             },
             Demo {
                 component: "Skeleton",
@@ -224,6 +208,30 @@ pub fn SkeletonPage() -> Element {
                         false => skeleton,
                     }
                 },
+            }
+
+            DocSection {
+                title: "Showing through",
+                Text {
+                    "A descendant that sets "
+                    Code { source: "visibility: visible" }
+                    " on itself shows through, so avoid one under a visible skeleton."
+                }
+            }
+
+            DocSection {
+                title: "Grace period",
+                Text {
+                    "A fetch that answers in 50 ms should not flash a placeholder. Keep the "
+                    "region transparent until a grace period ends, and end it with "
+                    Code { source: "timer()" }
+                    ". Use "
+                    Code { source: "opacity" }
+                    " for that, since "
+                    Code { source: "visibility" }
+                    " would not hide the grey."
+                }
+                CodeBlock { source: GRACE_EXAMPLE, language: "rust" }
             }
         }
     }

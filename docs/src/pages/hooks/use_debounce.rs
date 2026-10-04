@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Text, TextField},
@@ -73,22 +73,6 @@ pub fn UseDebouncePage() -> Element {
                     Code { source: "ms" }
                     ", ending on the last value: the right copy for a pointer position or a scroll offset."
                 }
-                Text {
-                    Code { source: "use_debounced_callback(callback, ms) -> Callback<A>" }
-                    " and "
-                    Code { source: "use_throttled_callback" }
-                    " do the same for a call: the returned callback takes the argument "
-                    "and runs yours later, with the last one. A throttled callback runs "
-                    "its first call at once."
-                }
-                Text {
-                    "Pass a signal as "
-                    Code { source: "query.into()" }
-                    ". The first value shows at once, and a change that is undone inside "
-                    "the delay never shows. A change lands from an effect, one render "
-                    "after its source. It runs on the same timer on the web and "
-                    "natively; a server render never follows a change."
-                }
             },
 
             Demo {
@@ -97,6 +81,30 @@ pub fn UseDebouncePage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { LiveSearch {} },
                 wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Callbacks",
+                Text {
+                    Code { source: "use_debounced_callback(callback, ms) -> Callback<A>" }
+                    " and "
+                    Code { source: "use_throttled_callback" }
+                    " do the same for a call: the returned callback takes the argument "
+                    "and runs yours later, with the last one. A throttled callback runs "
+                    "its first call at once."
+                }
+            }
+
+            DocSection {
+                title: "Signals",
+                Text {
+                    "Pass a signal as "
+                    Code { source: "query.into()" }
+                    ". The first value shows at once, and a change that is undone inside "
+                    "the delay never shows. A change lands from an effect, one render "
+                    "after its source. It runs on the same timer on the web and "
+                    "natively; a server render never follows a change."
+                }
             }
         }
     }

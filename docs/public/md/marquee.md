@@ -10,9 +10,6 @@ Content that scrolls on its own in an endless loop, such as a logo strip or a
 ticker. The children render `repeat` times in a row. `duration` is one full
 cycle, so adding an item makes the strip move faster.
 
-Under `prefers-reduced-motion: reduce` it does not move. It shows one copy in a
-strip the reader scrolls, without the fade or the toggle.
-
 ## Usage
 
 ```rust
@@ -72,6 +69,11 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Reduced motion
+
+Under `prefers-reduced-motion: reduce` it does not move. It shows one copy in a
+strip the reader scrolls, without the fade or the toggle.
 
 ## Props
 

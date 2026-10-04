@@ -10,9 +10,6 @@ comes from `LiberoProvider`'s `localization`. How dates and numbers are written
 depends on the region, so it is a prop of its own, `formats`. Any language goes
 with any formats: this site is English in German formats.
 
-Direction comes from the document. Components follow a `dir="rtl"` around them,
-and their directional props say start and end, not left and right.
-
 ## Usage
 
 The docs page's controls switch the site's language, formats and direction.
@@ -148,6 +145,11 @@ fn LanguagePicker() -> Element {
 
 The handles take a `&'static` reference, so a catalogue loaded at runtime is
 leaked once per language with `Box::leak`.
+
+## Direction
+
+Direction comes from the document. Components follow a `dir="rtl"` around them,
+and their directional props say start and end, not left and right.
 
 ## API
 

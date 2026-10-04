@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Input, RepoHost, Repository, RepositoryPart, Text};
 
@@ -58,14 +58,6 @@ pub fn RepositoryPage() -> Element {
                     Code { source: "Repository {{ repo: \"tdymel/libero\" }}" }
                     "."
                 }
-                Text {
-                    "Native builds fetch through dioxus-native's network provider, which needs its "
-                    Code { source: "net" }
-                    " feature. "
-                    Code { source: "net" }
-                    " is on by default, so only an app that turns dioxus-native's default "
-                    "features off has to add it back; without it the icon stands alone."
-                }
             },
             Demo {
                 component: "Repository",
@@ -109,6 +101,18 @@ pub fn RepositoryPage() -> Element {
                         }
                     }
                 },
+            }
+
+            DocSection {
+                title: "Native builds",
+                Text {
+                    "Native builds fetch through dioxus-native's network provider, which needs its "
+                    Code { source: "net" }
+                    " feature. "
+                    Code { source: "net" }
+                    " is on by default, so only an app that turns dioxus-native's default "
+                    "features off has to add it back; without it the icon stands alone."
+                }
             }
         }
     }

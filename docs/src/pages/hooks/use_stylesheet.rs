@@ -1,5 +1,5 @@
 use crate::Route;
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Box, Code, Text},
@@ -66,15 +66,6 @@ pub fn UseStylesheetPage() -> Element {
                     Anchor { to: Route::StylingPage {}, "Styling" }
                     " explains the layers."
                 }
-                Text {
-                    "Raw CSS as a "
-                    Code { source: "&str" }
-                    " or a "
-                    Code { source: "String" }
-                    " works too. It has no single selector, so it returns "
-                    Code { source: "None" }
-                    ". Components that register the same sheet share one copy of it."
-                }
             },
             Demo {
                 component: "use_stylesheet",
@@ -94,6 +85,19 @@ pub fn UseStylesheetPage() -> Element {
                     }
                 },
                 wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Raw CSS",
+                Text {
+                    "Raw CSS as a "
+                    Code { source: "&str" }
+                    " or a "
+                    Code { source: "String" }
+                    " works too. It has no single selector, so it returns "
+                    Code { source: "None" }
+                    ". Components that register the same sheet share one copy of it."
+                }
             }
         }
     }

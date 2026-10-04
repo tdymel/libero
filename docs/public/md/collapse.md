@@ -11,10 +11,6 @@ its height changes. You own `open`. `Collapse` has no role or ARIA, so the
 trigger carries `aria_expanded` and an `aria_controls` pointing at the panel's
 `id`.
 
-Focus inside a closing panel does not return to the trigger on its own. Use
-[`use_focus_return`](use_focus_return.md), with `remember_active()` on every
-open and `restore()` where the panel closes from inside.
-
 ## Usage
 
 ```rust
@@ -66,6 +62,12 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Focus
+
+Focus inside a closing panel does not return to the trigger on its own. Use
+[`use_focus_return`](use_focus_return.md), with `remember_active()` on every
+open and `restore()` where the panel closes from inside.
 
 ## Props
 

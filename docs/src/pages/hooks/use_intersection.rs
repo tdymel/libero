@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, ScrollArea, Text},
@@ -82,7 +82,22 @@ pub fn UseIntersectionPage() -> Element {
                     Code { source: "use_intersection(options) -> Intersection" }
                     " watches one element with the browser's "
                     Code { source: "IntersectionObserver" }
-                    ". Give "
+                    "."
+                }
+            },
+
+            Demo {
+                component: "use_intersection",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { Reveal {} },
+                wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Wiring and options",
+                Text {
+                    "Give "
                     Code { source: "on_mounted" }
                     " to the element's "
                     Code { source: "onmounted" }
@@ -106,6 +121,10 @@ pub fn UseIntersectionPage() -> Element {
                     Code { source: "once" }
                     ", which stops observing after the first sighting."
                 }
+            }
+
+            DocSection {
+                title: "In the viewport",
                 Text {
                     Code { source: "use_in_viewport() -> InViewport" }
                     " is the same with the defaults, with "
@@ -118,14 +137,6 @@ pub fn UseIntersectionPage() -> Element {
                     Code { source: "false" }
                     "."
                 }
-            },
-
-            Demo {
-                component: "use_intersection",
-                children_text: "",
-                controls: Vec::new(),
-                render: move |_: DemoValues| rsx! { Reveal {} },
-                wrap: Wrap(code),
             }
         }
     }

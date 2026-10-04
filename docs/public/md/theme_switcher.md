@@ -11,20 +11,6 @@ system's scheme, and each press flips to the other one. Flipping back to the
 system's scheme follows the system again, so the app never stays pinned. The
 icon shows where the next press goes: a sun for light, a moon for dark.
 
-With `with_system`, following the system is a step of its own. A press goes
-from following the system, to the scheme the system is not showing, to the one
-it is, and back, so under a light system the order is system, dark, light. The
-icon for that step is a half-filled disc.
-
-While it follows the system, a change of the OS setting applies at once. A
-picked scheme stays until the next press. For your own control, such as a menu
-of all three choices, build on `use_color_scheme()`: it reads the setting and
-what it resolves to, and `set`, `toggle` and `cycle` change it.
-
-With `themes` set, a second button beside it opens a menu of theme sets. This
-site's header uses `ThemeSwitcher { themes: ThemeSet::CATALOGUE }`. The
-button names come from the [localization](localization.md).
-
 ## Usage
 
 ```rust
@@ -38,6 +24,24 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Following the system
+
+With `with_system`, following the system is a step of its own. A press goes
+from following the system, to the scheme the system is not showing, to the one
+it is, and back, so under a light system the order is system, dark, light. The
+icon for that step is a half-filled disc.
+
+While it follows the system, a change of the OS setting applies at once. A
+picked scheme stays until the next press. For your own control, such as a menu
+of all three choices, build on `use_color_scheme()`: it reads the setting and
+what it resolves to, and `set`, `toggle` and `cycle` change it.
+
+## Theme sets
+
+With `themes` set, a second button beside it opens a menu of theme sets. This
+site's header uses `ThemeSwitcher { themes: ThemeSet::CATALOGUE }`. The
+button names come from the [localization](localization.md).
 
 ## Props
 

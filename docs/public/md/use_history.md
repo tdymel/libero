@@ -12,13 +12,6 @@ step of its own; `merge` folds rapid changes, such as typing, into one step.
 `undo`, `redo` and `reset` move through them, and `value`, `can_undo` and
 `can_redo` read them reactively.
 
-A group of merges closes on whichever comes first: `group_ms` without a merge,
-its size limit, or a `seal`, push, undo or redo. `UndoHistory` itself has no dioxus
-in it: build one with `UndoHistory::new(value).with_cap(50).with_group_max(20)`
-(defaults 200 steps and 50 changes per group) and use it on its own or hand it
-to the hook. Each snapshot is held in an `Rc`, so cloning a history or a value
-is cheap.
-
 ## Usage
 
 ```rust
@@ -94,6 +87,15 @@ assert_eq!(**history.present(), 2);
 history.undo();
 assert_eq!(**history.present(), 0);
 ```
+
+## Grouping
+
+A group of merges closes on whichever comes first: `group_ms` without a merge,
+its size limit, or a `seal`, push, undo or redo. `UndoHistory` itself has no dioxus
+in it: build one with `UndoHistory::new(value).with_cap(50).with_group_max(20)`
+(defaults 200 steps and 50 changes per group) and use it on its own or hand it
+to the hook. Each snapshot is held in an `Rc`, so cloning a history or a value
+is cheap.
 
 ## Accessibility
 

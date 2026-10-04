@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Flex, Text, TextField},
@@ -148,6 +148,18 @@ pub fn UseHistoryPage() -> Element {
                     Code { source: "can_redo" }
                     " read them reactively."
                 }
+            },
+
+            Demo {
+                component: "use_history",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { UndoableNote {} },
+                wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Grouping",
                 Text {
                     "A group of merges closes on whichever comes first: "
                     Code { source: "group_ms" }
@@ -162,14 +174,6 @@ pub fn UseHistoryPage() -> Element {
                     Code { source: "Rc" }
                     ", so cloning a history or a value is cheap."
                 }
-            },
-
-            Demo {
-                component: "use_history",
-                children_text: "",
-                controls: Vec::new(),
-                render: move |_: DemoValues| rsx! { UndoableNote {} },
-                wrap: Wrap(code),
             }
         }
     }

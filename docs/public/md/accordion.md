@@ -12,10 +12,6 @@ a match over the same enum, so a forgotten section is a compile error. A closed
 panel is not mounted, so what it held, such as a half-typed form, is gone when
 it closes.
 
-`open` is controlled, and its variant is the mode. `AccordionOpen::One` holds at
-most one section, so opening another closes the first. `AccordionOpen::Many`
-toggles each on its own. `onchange` hands back the whole new set.
-
 ## Usage
 
 ```rust
@@ -47,6 +43,12 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Open sections
+
+`open` is controlled, and its variant is the mode. `AccordionOpen::One` holds at
+most one section, so opening another closes the first. `AccordionOpen::Many`
+toggles each on its own. `onchange` hands back the whole new set.
 
 ## Props
 

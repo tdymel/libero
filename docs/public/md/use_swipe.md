@@ -13,14 +13,6 @@ the delta. Spread `onpointerdown`, `onpointermove`, `onpointerup` and
 `onpointercancel` onto one element, and give it a `touch-action`: `none` for all
 four directions, `pan-y` for sideways swipes on a page that scrolls.
 
-`use_edge_swipe(on_swipe, options) -> Swipe` is built on it: an inward swipe that
-starts in a band near the start edge (the right edge under RTL) opens your
-drawer. The band begins `inset` px (44) in, past Android 16's system back zone
-at its highest sensitivity, and is `width` px (48) wide, so it needs no gesture
-exclusion.
-Spread it with `edge_swipe_sx()` on a box covering the page: no strip lies over
-the content. These docs open their navigation this way on a phone.
-
 ## Usage
 
 ```rust
@@ -100,6 +92,16 @@ fn Page(open: Signal<bool>, children: Element) -> Element {
     }
 }
 ```
+
+## Edge swipes
+
+`use_edge_swipe(on_swipe, options) -> Swipe` is built on it: an inward swipe that
+starts in a band near the start edge (the right edge under RTL) opens your
+drawer. The band begins `inset` px (44) in, past Android 16's system back zone
+at its highest sensitivity, and is `width` px (48) wide, so it needs no gesture
+exclusion.
+Spread it with `edge_swipe_sx()` on a box covering the page: no strip lies over
+the content. These docs open their navigation this way on a phone.
 
 ## API
 

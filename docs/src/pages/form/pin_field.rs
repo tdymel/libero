@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop, props,
-    readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, DocSection, FieldCopy, a11y, field_controls, field_props,
+    prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
@@ -89,10 +89,7 @@ pub fn PinFieldPage() -> Element {
                     Code { source: "\"4 2-1 3\"" }
                     " lands as "
                     Code { source: "4213" }
-                    ". "
-                    Code { source: "oncomplete" }
-                    " fires the moment the last cell fills, which is usually where you submit "
-                    "the code. Extra HTML attributes land on the group, not on a cell."
+                    "."
                 }
             },
             Demo {
@@ -132,6 +129,15 @@ pub fn PinFieldPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     PinFieldDemo { values }
                 },
+            }
+
+            DocSection {
+                title: "Completion and attributes",
+                Text {
+                    Code { source: "oncomplete" }
+                    " fires the moment the last cell fills, which is usually where you submit "
+                    "the code. Extra HTML attributes land on the group, not on a cell."
+                }
             }
         }
     }

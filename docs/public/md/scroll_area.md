@@ -8,10 +8,7 @@ Description: A scrollable region that fills its parent, with themed scrollbars, 
 
 Scrolls its content and fills its parent, so give the parent a size. `onscroll`
 reports the position as a percent of each axis, and each edge has its own event.
-The buttons scroll through a handle from `use_scroll_area()`. `Virtualize`
-renders only the rows in view out of 50,000. It draws no element of its own and
-needs a `ScrollArea` above it, one per area. Without one, or as the second, it
-warns and renders every row.
+The buttons scroll through a handle from `use_scroll_area()`.
 
 ## Usage
 
@@ -99,6 +96,12 @@ fn Rows() -> Element {
     }
 }
 ```
+
+## Virtualize
+
+`Virtualize` renders only the rows in view out of 50,000. It draws no element of
+its own and needs a `ScrollArea` above it, one per area. Without one, or as the
+second, it warns and renders every row.
 
 ## Props
 

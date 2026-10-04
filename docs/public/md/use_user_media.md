@@ -12,23 +12,6 @@ your own `video` to show the stream. `snapshot()` takes a PNG into `photo()`;
 `record()` and `finish()` fill `recorded()`, both a `FileData` like a picked
 file. Options apply on the next `start()`.
 
-`use_user_media_devices()` lists `cameras()` and `microphones()`; labels and
-ids fill in once a start is granted. `switch_camera(id)` reopens a live stream
-on another camera, `camera_id()` names the live one, and the `facing` option
-picks a phone's front or back. `libero::utils::data_url(&file)` turns a photo
-or clip into a `src`. Switch the camera off for an audio-only recording. A
-recording crosses a WebView's IPC in 1 s chunks and is dropped past
-`max_bytes` (50 MB by default) with `TooLarge`; in a browser it stays in the
-page until you read it.
-
-Web: a secure context (HTTPS or localhost). Android: declare
-`[permissions] camera` and `microphone` in Dioxus.toml, plus
-`"android.permission.MODIFY_AUDIO_SETTINGS"` under `[android.permissions]`:
-without it every microphone request is denied. The system asks on the first
-start. Windows is untested. Blitz and a server render have no capture
-API: `is_supported()` stays false and a start fails with `Unsupported`. Screen
-capture and speaker choice are not covered.
-
 ## Usage
 
 ```rust
@@ -159,6 +142,27 @@ pub fn CaptureBooth(camera: bool, #[props(default)] microphone: bool) -> Element
     }
 }
 ```
+
+## Devices
+
+`use_user_media_devices()` lists `cameras()` and `microphones()`; labels and
+ids fill in once a start is granted. `switch_camera(id)` reopens a live stream
+on another camera, `camera_id()` names the live one, and the `facing` option
+picks a phone's front or back. `libero::utils::data_url(&file)` turns a photo
+or clip into a `src`. Switch the camera off for an audio-only recording. A
+recording crosses a WebView's IPC in 1 s chunks and is dropped past
+`max_bytes` (50 MB by default) with `TooLarge`; in a browser it stays in the
+page until you read it.
+
+## Platforms
+
+Web: a secure context (HTTPS or localhost). Android: declare
+`[permissions] camera` and `microphone` in Dioxus.toml, plus
+`"android.permission.MODIFY_AUDIO_SETTINGS"` under `[android.permissions]`:
+without it every microphone request is denied. The system asks on the first
+start. Windows is untested. Blitz and a server render have no capture
+API: `is_supported()` stays false and a start fails with `Unsupported`. Screen
+capture and speaker choice are not covered.
 
 ## API
 

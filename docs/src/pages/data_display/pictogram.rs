@@ -1,5 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, ExtraTab, IconCatalogue, PictogramNote, a11y, prop, props,
+    Control, Demo, DemoValues, DocPage, DocSection, ExtraTab, IconCatalogue, PictogramNote, a11y,
+    prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{Code, Pictogram, SvgData, Text};
@@ -77,18 +78,6 @@ pub fn PictogramPage() -> Element {
                     Code { source: "currentColor" }
                     ", so it takes the text color. Your attributes win over the glyph's own."
                 }
-                Text {
-                    "Not every glyph is "
-                    Code { source: "currentColor" }
-                    ": the color variants of "
-                    Code { source: "pictogram-icons-lobe" }
-                    " and some phosphor glyphs hard-code their fills, so they ignore the text color and dark mode. Lobe's gradient glyphs carry fixed ids: two copies on one page share them."
-                }
-                Text {
-                    "Take icon crates from pictogram's 0.5 line, the one libero builds on. A crate of another minor, such as 0.4, brings a second "
-                    Code { source: "SvgData" }
-                    " type: its icons fail with a type mismatch that does not name the version."
-                }
             },
             Demo {
                 component: "Pictogram",
@@ -128,6 +117,26 @@ pub fn PictogramPage() -> Element {
                         aria_label: (values.str("aria_label") == "true").then(|| icon_name(&values.str("icon"))),
                     }
                 },
+            }
+
+            DocSection {
+                title: "Colours",
+                Text {
+                    "Not every glyph is "
+                    Code { source: "currentColor" }
+                    ": the color variants of "
+                    Code { source: "pictogram-icons-lobe" }
+                    " and some phosphor glyphs hard-code their fills, so they ignore the text color and dark mode. Lobe's gradient glyphs carry fixed ids: two copies on one page share them."
+                }
+            }
+
+            DocSection {
+                title: "Versions",
+                Text {
+                    "Take icon crates from pictogram's 0.5 line, the one libero builds on. A crate of another minor, such as 0.4, brings a second "
+                    Code { source: "SvgData" }
+                    " type: its icons fail with a type mismatch that does not name the version."
+                }
             }
         }
     }

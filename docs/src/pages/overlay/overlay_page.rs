@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Input, Overlay, Paper, Text},
@@ -35,17 +35,6 @@ pub fn OverlayPage() -> Element {
                     " prop, so render it conditionally. Its children are centred, which makes "
                     "it a loading screen as well as a backdrop."
                 }
-                Text {
-                    "It covers the viewport. To keep it inside a box of your own, give that box a "
-                    Code { source: "position" }
-                    " and a "
-                    Code { source: "z-index" }
-                    ", and the overlay "
-                    Code { source: "position: absolute" }
-                    ". Without the "
-                    Code { source: "z-index" }
-                    ", the overlay still stacks against the whole page."
-                }
             },
             Demo {
                 component: "Overlay",
@@ -75,6 +64,21 @@ pub fn OverlayPage() -> Element {
                         }
                     }
                 },
+            }
+
+            DocSection {
+                title: "Inside a box",
+                Text {
+                    "It covers the viewport. To keep it inside a box of your own, give that box a "
+                    Code { source: "position" }
+                    " and a "
+                    Code { source: "z-index" }
+                    ", and the overlay "
+                    Code { source: "position: absolute" }
+                    ". Without the "
+                    Code { source: "z-index" }
+                    ", the overlay still stacks against the whole page."
+                }
             }
         }
     }

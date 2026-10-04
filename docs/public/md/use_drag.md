@@ -11,12 +11,6 @@ captures the pointer, keeps the start point and reports each move as a delta
 against it. Release and cancel end the same way. It knows no axes and no units,
 so convert the delta yourself.
 
-The returned `Drag` holds four handlers and a `dragging` signal. `onpointerdown`
-goes on the grab handle, the other three on the `capture` element, which owns
-the geometry. Measure in `onstart`, and call its `cancel` to refuse the drag.
-Give the handle `drag_handle_sx()`, or a touch scrolls the page and the handle
-never moves.
-
 ## Usage
 
 ```rust
@@ -86,6 +80,14 @@ The hook cancels the press's default, so on the web it focuses the pressed tab
 stop itself. Natively, or to focus something else, focus it in `onstart`. Blitz
 and a webview have no pointer capture; Blitz follows the pointer instead, and in
 a webview the drag stops once the pointer leaves the capture element.
+
+## The handlers
+
+The returned `Drag` holds four handlers and a `dragging` signal. `onpointerdown`
+goes on the grab handle, the other three on the `capture` element, which owns
+the geometry. Measure in `onstart`, and call its `cancel` to refuse the drag.
+Give the handle `drag_handle_sx()`, or a touch scrolls the page and the handle
+never moves.
 
 ## API
 

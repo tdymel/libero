@@ -130,23 +130,6 @@ pub fn UseDragPage() -> Element {
                     "cancel end the same way. It knows no axes and no units, so convert the "
                     "delta yourself."
                 }
-                Text {
-                    "The returned "
-                    Code { source: "Drag" }
-                    " holds four handlers and a "
-                    Code { source: "dragging" }
-                    " signal. "
-                    Code { source: "onpointerdown" }
-                    " goes on the grab handle, the other three on the "
-                    Code { source: "capture" }
-                    " element, which owns the geometry. Measure in "
-                    Code { source: "onstart" }
-                    ", and call its "
-                    Code { source: "cancel" }
-                    " to refuse the drag. Give the handle "
-                    Code { source: "drag_handle_sx()" }
-                    ", or a touch scrolls the page and the handle never moves."
-                }
             },
 
             Demo {
@@ -167,6 +150,27 @@ pub fn UseDragPage() -> Element {
                     ". Blitz and a webview have no pointer capture; Blitz follows the "
                     "pointer instead, and in a webview the drag stops once the pointer "
                     "leaves the capture element."
+                }
+            }
+
+            DocSection {
+                title: "The handlers",
+                Text {
+                    "The returned "
+                    Code { source: "Drag" }
+                    " holds four handlers and a "
+                    Code { source: "dragging" }
+                    " signal. "
+                    Code { source: "onpointerdown" }
+                    " goes on the grab handle, the other three on the "
+                    Code { source: "capture" }
+                    " element, which owns the geometry. Measure in "
+                    Code { source: "onstart" }
+                    ", and call its "
+                    Code { source: "cancel" }
+                    " to refuse the drag. Give the handle "
+                    Code { source: "drag_handle_sx()" }
+                    ", or a touch scrolls the page and the handle never moves."
                 }
             }
         }

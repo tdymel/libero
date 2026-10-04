@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Image, Kbd, LightboxPart, Text},
@@ -191,17 +191,6 @@ pub fn LightboxPage() -> Element {
                     Code { source: "Image {{ zoomable }}" }
                     " is this viewer with one picture."
                 }
-                Text {
-                    "Double-click or press "
-                    Kbd { "z" }
-                    " to step through 2x, 4x and 8x and back to fitted. The zoom buttons, "
-                    Kbd { "+" }
-                    " and "
-                    Kbd { "-" }
-                    " zoom in finer steps. Scroll to zoom at the cursor. Drag, click or use the arrows "
-                    "to pan. At the edge of a pan the arrows move to the next picture, so the "
-                    "keyboard never gets stuck."
-                }
             },
             // snippet: item struct Photo { src: String, alt: String, title: String }
             // snippet: let photos: Vec<Photo> = Vec::new();
@@ -224,6 +213,21 @@ pub fn LightboxPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_hook),
+            }
+
+            DocSection {
+                title: "Zoom",
+                Text {
+                    "Double-click or press "
+                    Kbd { "z" }
+                    " to step through 2x, 4x and 8x and back to fitted. The zoom buttons, "
+                    Kbd { "+" }
+                    " and "
+                    Kbd { "-" }
+                    " zoom in finer steps. Scroll to zoom at the cursor. Drag, click or use the arrows "
+                    "to pan. At the edge of a pan the arrows move to the next picture, so the "
+                    "keyboard never gets stuck."
+                }
             }
         }
     }

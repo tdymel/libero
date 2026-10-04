@@ -10,14 +10,6 @@ A hook and a host. Render `Notifications {}` once near the root.
 `use_notifications()` then returns a handle that shows notifications from
 anywhere, and each one outlives the component that raised it.
 
-`use_notifications_with` takes your own data type and a template to draw it.
-The template is a `fn`, not a capturing closure, so everything it draws travels
-in the data. `update(id, data)` redraws one notification in place.
-
-Each stack shows up to `limit` at once, and the rest wait. Hovering or focusing
-one pauses every timer, and each starts over when you leave. A `contained` host
-draws its stacks in its own box and keeps a queue for the handles below it.
-
 ## Usage
 
 ```rust
@@ -114,6 +106,18 @@ let id = uploads.show_with(
 );
 uploads.update(id, Upload { file: "archive.zip", percent: 40.0 });
 ```
+
+## Your own data
+
+`use_notifications_with` takes your own data type and a template to draw it.
+The template is a `fn`, not a capturing closure, so everything it draws travels
+in the data. `update(id, data)` redraws one notification in place.
+
+## Stacks and timers
+
+Each stack shows up to `limit` at once, and the rest wait. Hovering or focusing
+one pauses every timer, and each starts over when you leave. A `contained` host
+draws its stacks in its own box and keeps a queue for the handles below it.
 
 ## API
 

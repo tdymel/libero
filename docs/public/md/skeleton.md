@@ -11,13 +11,6 @@ shape, and a few of them stand in for a layout. Wrapped around the real
 content, it hides that content while `visible` is set, so the placeholder has
 exactly its size. Hidden content is not announced and not reachable with Tab.
 
-A descendant that sets `visibility: visible` on itself shows through, so avoid
-one under a visible skeleton.
-
-A fetch that answers in 50 ms should not flash a placeholder. Keep the region
-transparent until a grace period ends, and end it with `timer()`. Use `opacity`
-for that, since `visibility` would not hide the grey.
-
 ## Usage
 
 Wrapped around the real content, so the layout is written once:
@@ -107,6 +100,17 @@ fn Card() -> Element {
 
 The grace runs once, from mount. A card that fetches again starts a new timer
 and sets `slow` back to `false`.
+
+## Showing through
+
+A descendant that sets `visibility: visible` on itself shows through, so avoid
+one under a visible skeleton.
+
+## Grace period
+
+A fetch that answers in 50 ms should not flash a placeholder. Keep the region
+transparent until a grace period ends, and end it with `timer()`. Use `opacity`
+for that, since `visibility` would not hide the grey.
 
 ## Props
 

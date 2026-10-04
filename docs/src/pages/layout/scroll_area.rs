@@ -1,5 +1,5 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -166,13 +166,7 @@ pub fn ScrollAreaPage() -> Element {
                     " reports the position as a percent of each axis, and each edge has "
                     "its own event. The buttons scroll through a handle from "
                     Code { source: "use_scroll_area()" }
-                    ". With virtualize on, "
-                    Code { source: "Virtualize" }
-                    " renders only the rows in view out of 50,000. It draws no element of "
-                    "its own and needs a "
-                    Code { source: "ScrollArea" }
-                    " above it, one per area. Without one, or as the second, it warns and "
-                    "renders every row."
+                    "."
                 }
             },
             Demo {
@@ -273,6 +267,19 @@ pub fn ScrollAreaPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_frame),
+            }
+
+            DocSection {
+                title: "Virtualize",
+                Text {
+                    "With virtualize on, "
+                    Code { source: "Virtualize" }
+                    " renders only the rows in view out of 50,000. It draws no element of "
+                    "its own and needs a "
+                    Code { source: "ScrollArea" }
+                    " above it, one per area. Without one, or as the second, it warns and "
+                    "renders every row."
+                }
             }
         }
     }

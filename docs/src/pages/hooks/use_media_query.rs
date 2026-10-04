@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Text},
@@ -72,14 +72,6 @@ pub fn UseMediaQueryPage() -> Element {
                     Code { source: "(max-width: 767px)" }
                     ": the 768px breakpoint."
                 }
-                Text {
-                    "Both answer "
-                    Code { source: "false" }
-                    " on the first render and on a server render, then the real answer once the component is mounted. "
-                    "Where the platform cannot answer, as on native Blitz, they stay "
-                    Code { source: "false" }
-                    ". Passing a different query re-subscribes."
-                }
             },
 
             Demo {
@@ -88,6 +80,18 @@ pub fn UseMediaQueryPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Layout {} },
                 wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "First render",
+                Text {
+                    "Both answer "
+                    Code { source: "false" }
+                    " on the first render and on a server render, then the real answer once the component is mounted. "
+                    "Where the platform cannot answer, as on native Blitz, they stay "
+                    Code { source: "false" }
+                    ". Passing a different query re-subscribes."
+                }
             }
         }
     }

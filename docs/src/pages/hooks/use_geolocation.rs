@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Flex, Text},
@@ -139,6 +139,18 @@ pub fn UseGeolocationPage() -> Element {
                     Code { source: "high_accuracy" }
                     " asks for GPS, slower and costlier on battery."
                 }
+            },
+
+            Demo {
+                component: "use_geolocation",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { ShareLocation {} },
+                wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Platforms",
                 Text {
                     "Web: a secure context (HTTPS or localhost). Android: declare "
                     Code { source: "[permissions] location" }
@@ -148,14 +160,6 @@ pub fn UseGeolocationPage() -> Element {
                     Code { source: "Unsupported" }
                     "."
                 }
-            },
-
-            Demo {
-                component: "use_geolocation",
-                children_text: "",
-                controls: Vec::new(),
-                render: move |_: DemoValues| rsx! { ShareLocation {} },
-                wrap: Wrap(code),
             }
         }
     }

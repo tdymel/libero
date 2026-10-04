@@ -11,20 +11,6 @@ elements, and the only way to reach an element at all. Mount it with
 `onmounted: handle.mount()`. The handle is `Copy` and implements `ElementApi`,
 so it focuses, scrolls and measures the same way on every renderer.
 
-Commands such as `focus()` return at once. Reads such as `dimensions()` are
-futures. Start one in the handler and await it in a `spawn`. Until the element
-mounts, every call answers `PlatformError::Unsupported`. `is_mounted()` is
-reactive, so an effect that reads it runs again once the element is there. The
-full method list is on [Platform](platform.md).
-
-The handle picks the richest backing the renderer offers: the DOM element on the
-web, a Blitz node natively (the `native` feature), and dioxus's portable mounted
-data in a webview. A webview still measures, scrolls and focuses, but
-`query_selector` answers `Unsupported` there, and `is_focused()` always answers
-`false`. Where a webview has to find the element, as `use_intersection`'s
-`root`, spread `..handle.attributes()` on it; on the web and Blitz they are
-empty.
-
 ## Usage
 
 ```rust
@@ -66,6 +52,24 @@ fn Measure() -> Element {
     }
 }
 ```
+
+## Commands and reads
+
+Commands such as `focus()` return at once. Reads such as `dimensions()` are
+futures. Start one in the handler and await it in a `spawn`. Until the element
+mounts, every call answers `PlatformError::Unsupported`. `is_mounted()` is
+reactive, so an effect that reads it runs again once the element is there. The
+full method list is on [Platform](platform.md).
+
+## Renderers
+
+The handle picks the richest backing the renderer offers: the DOM element on the
+web, a Blitz node natively (the `native` feature), and dioxus's portable mounted
+data in a webview. A webview still measures, scrolls and focuses, but
+`query_selector` answers `Unsupported` there, and `is_focused()` always answers
+`false`. Where a webview has to find the element, as `use_intersection`'s
+`root`, spread `..handle.attributes()` on it; on the web and Blitz they are
+empty.
 
 ## Accessibility
 

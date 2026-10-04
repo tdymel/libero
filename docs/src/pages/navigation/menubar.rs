@@ -1,5 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, align_of, indent, prop, props, side_of,
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, align_of, indent, prop, props,
+    side_of,
 };
 use dioxus::prelude::*;
 use libero::components::{
@@ -193,12 +194,6 @@ pub fn MenubarPage() -> Element {
                     "tab stop. Click a trigger to open its menu. While one is open, hovering "
                     "another trigger switches to it."
                 }
-                Text {
-                    "Use it in an app such as an editor. For page navigation, use links. For "
-                    "one set of actions, use a single "
-                    Code { source: "Menu" }
-                    "."
-                }
             },
             Demo {
                 component: "Menubar",
@@ -221,6 +216,16 @@ pub fn MenubarPage() -> Element {
                         loop_focus: values.str("loop_focus") == "true",
                     }
                 },
+            }
+
+            DocSection {
+                title: "When to use it",
+                Text {
+                    "Use it in an app such as an editor. For page navigation, use links. For "
+                    "one set of actions, use a single "
+                    Code { source: "Menu" }
+                    "."
+                }
             }
         }
     }

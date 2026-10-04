@@ -11,11 +11,6 @@ each item's move buttons. The other items step aside while one drags. On drop
 `onreorder` gets a `SortableMove` with the old and new index, and `apply` does
 it to a `Vec`.
 
-For your own markup, `use_sortable` gives the list's handlers and
-`use_sortable_item(index)` each item's handle, element, move buttons and
-`style()`. The component is those two hooks plus a grip button, two move
-buttons and a status region.
-
 ## Usage
 
 ```rust
@@ -112,6 +107,13 @@ fn Fruit(index: usize, name: &'static str) -> Element {
     }
 }
 ```
+
+## Your own markup
+
+For your own markup, `use_sortable` gives the list's handlers and
+`use_sortable_item(index)` each item's handle, element, move buttons and
+`style()`. The component is those two hooks plus a grip button, two move
+buttons and a status region.
 
 ## Props
 

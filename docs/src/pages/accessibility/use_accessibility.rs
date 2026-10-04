@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Flex, Switch, Text},
@@ -99,13 +99,6 @@ pub fn UseAccessibilityPage() -> Element {
                     "system clears it. This page clears what its demo forced when you "
                     "leave it."
                 }
-                Text {
-                    "A forced reduced motion reaches libero's own CSS and motion on every "
-                    "platform. A "
-                    Code { source: "<style>" }
-                    " the app adds itself still follows the system. The other settings are "
-                    "read-only."
-                }
             },
             Demo {
                 component: "use_accessibility",
@@ -113,6 +106,17 @@ pub fn UseAccessibilityPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Settings {} },
                 wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Forced settings",
+                Text {
+                    "A forced reduced motion reaches libero's own CSS and motion on every "
+                    "platform. A "
+                    Code { source: "<style>" }
+                    " the app adds itself still follows the system. The other settings are "
+                    "read-only."
+                }
             }
         }
     }

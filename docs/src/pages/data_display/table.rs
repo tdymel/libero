@@ -192,7 +192,7 @@ pub fn TablePage() -> Element {
                     prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty. Unset, the row reads the localized `table.no_rows`, \"No rows\". When the quick filter or the column filters leave no rows, the row reads `table.no_results`, \"No matching rows\", instead."),
                     prop("no_results", "Option<Element>").default("None").doc("Shown in one full-width row when the quick filter or the column filters leave no rows, over the localized `table.no_results`."),
                     prop("loading", "bool").default("false").doc("Rows are on their way. While no row shows, placeholder rows fill the body, a page of them when paged, else five, and the table is `aria-busy`. With rows shown, they stay usable under a thin progress bar over the table's top edge, named by the localized `table.loading`, \"Loading rows\". The empty row waits until loading ends."),
-                    prop("toolbar", "Option<Element>").default("None").doc("A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton`, `TableFilterButton` and `TableExportButton` work only in here."),
+                    prop("toolbar", "Option<Element>").default("None").doc("A row above the table for your own controls, say an export or add button. With `show_quick_filter` the search field joins it at the end. It wraps on a narrow screen and stays put while the table scrolls. `TableColumnsButton`, `TableDensityButton`, `TableFilterButton` and `TableExportButton` work only in here. `TableColumnsButton` opens a checklist that shows and hides the hideable columns; `TableDensityButton` picks compact, standard or comfortable rows, `size` small, medium or large."),
                     prop("scroll", "bool").default("false").doc("Wraps the table in a `ScrollArea` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                     prop("max_height", "Option<String>").default("None").doc("Caps the table's height, any CSS length. The rows scroll in a `ScrollArea`, both ways, under a header that stays put, with the scrollbar beside the rows only. The `caption` sits above the scrolled box. The header takes the page surface's colour: on another background, set it with `sx().selector(\"& thead th\", ..)`."),
                     prop("virtual_row_height", "Option<f64>").default("None").doc("With `max_height`, renders only the rows in view plus a few beyond each edge, so ten thousand rows scroll like fifty. Every body row is clipped to this height in px: one line per cell, longer text ends in an ellipsis. The table then lays out fixed, columns without a `width` sharing the rest evenly. A row holding focus stays rendered while it scrolls away. With `onrowreorder` a keyboard move scrolls to its slot, and a row dragged to the top or bottom edge scrolls the rows on. Ignored with `row_detail`, which renders every row; a debug build warns."),
@@ -234,12 +234,12 @@ pub fn TablePage() -> Element {
                     prop("hidden_columns", "Option<Vec<String>>").default("None").doc("The hidden columns' headers. Set, visibility is controlled: pair it with `onhiddencolumnschange`. A hidden sorted column keeps sorting."),
                     prop("default_hidden_columns", "Vec<String>").default("[]").doc("Seeds the hidden columns once. Ignored when `hidden_columns` is set."),
                     prop("onhiddencolumnschange", "EventHandler<Vec<String>>").default("None").doc("Called with the hidden columns a column menu pick asks for."),
-                    prop("quick_filter", "Option<String>").default("None").doc("The quick filter's text. A row stays when every word occurs, ignoring case, in the text of one of its shown, `filterable` cells. Set, the filter is controlled: pair it with `onquickfilterchange`."),
+                    prop("quick_filter", "Option<String>").default("None").doc("The quick filter's text. A row stays when every word occurs, ignoring case, in the text of one of its shown, `filterable` cells. Set, the filter is controlled: pair it with `onquickfilterchange`. The rows are filtered, then sorted, then paged."),
                     prop("default_quick_filter", "String").default("\"\"").doc("Seeds the quick filter once. Ignored when `quick_filter` is set."),
                     prop("onquickfilterchange", "EventHandler<String>").default("None").doc("Called with the text typed into the quick-filter field."),
                     prop("show_quick_filter", "bool").default("false").doc("Puts a search field above the table that drives the quick filter."),
                     prop("manual_filter", "bool").default("false").doc("`data` comes filtered, say from a server: the quick filter and the column filters only report through `onquickfilterchange` and `oncolumnfilterschange`. Pair it with `manual_pagination` and `row_count` when paged."),
-                    prop("column_filters", "Option<Vec<ColumnFilter>>").default("None").doc("Filters by header: `ColumnFilter::new(\"Age\", FilterOperator::GreaterThan, \"30\")`, or `ColumnFilter::between(\"Joined\", \"2026-01-01\", \"2026-06-30\")` for a date range. A row stays when it passes all of them (or any, with `filter_logic`) and the quick filter. Dates take an ISO day. Text operators ignore case, `Equals` too; number operators compare the value, not its formatted text, and take `1,5` as 1.5. An empty value, a number that does not parse, or an operator the column's type does not offer keeps every row. A hidden column's filter keeps filtering. Set, the filters are controlled: pair them with `oncolumnfilterschange`."),
+                    prop("column_filters", "Option<Vec<ColumnFilter>>").default("None").doc("Filters by header: `ColumnFilter::new(\"Age\", FilterOperator::GreaterThan, \"30\")`, or `ColumnFilter::between(\"Joined\", \"2026-01-01\", \"2026-06-30\")` for a date range. A row stays when it passes all of them (or any, with `filter_logic`) and the quick filter. Dates take an ISO day. Text operators ignore case, `Equals` too; number operators compare the value, not its formatted text, and take `1,5` as 1.5. An empty value, a number that does not parse, or an operator the column's type does not offer keeps every row. A hidden column's filter keeps filtering. Set, the filters are controlled: pair them with `oncolumnfilterschange`. The operators follow the column's type, such as contains or starts with for text, greater than for numbers, before, after, on or before, on or after and between for a `chrono::NaiveDate`, yes or no for booleans. A date's value field is a `DateField`, the native date input on a WebView. A `between` end left empty is open, and ends the wrong way round are swapped. A column may hold several filters: the popover and the header field edit its first, `filter_panel` all of them."),
                     prop("default_column_filters", "Vec<ColumnFilter>").default("[]").doc("Seeds the column filters once. Ignored when `column_filters` is set."),
                     prop("oncolumnfilterschange", "EventHandler<Vec<ColumnFilter>>").default("None").doc("Called with the filters a filter popover or a header filter asks for. Typed values arrive once typing pauses for 300 ms, an operator or yes/no pick at once."),
                     prop("filter_logic", "Option<FilterLogic>").default("None").doc("How the column filters join: `FilterLogic::And` keeps a row that passes all of them, `Or` one that passes any. The quick filter applies on top either way. Set, it is controlled."),
@@ -250,7 +250,7 @@ pub fn TablePage() -> Element {
                     prop("pinned_columns", "Option<PinnedColumns>").default("None").doc("The columns held at the table's start and end edges while the rest scroll sideways, by header: `PinnedColumns::default().start([..]).end([..])`. Start is the left in a left-to-right page, the right in a right-to-left one. Set, pinning is controlled: pair it with `onpinnedcolumnschange`. Pair it with `scroll` or `max_height`, and give every pinned column but the outermost on its side a `width`, which it then keeps exactly."),
                     prop("default_pinned_columns", "PinnedColumns").default("none pinned").doc("Seeds the pinned columns once. Ignored when `pinned_columns` is set."),
                     prop("onpinnedcolumnschange", "EventHandler<PinnedColumns>").default("None").doc("Called with the pinned columns a column menu pick asks for."),
-                    prop("column_order", "Option<Vec<String>>").default("None").doc("The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column."),
+                    prop("column_order", "Option<Vec<String>>").default("None").doc("The headers in display order. Unlisted columns follow the listed ones in `columns` order, and pinned columns keep their pinned order. Set, the order is controlled: pair it with `oncolumnorderchange`. The sort, hidden and pinned columns name headers, so they follow a moved column. With `column_menu`, a grip at each unpinned header's start edge also drags the column to a gap."),
                     prop("default_column_order", "Vec<String>").default("[]").doc("Seeds the column order once. Ignored when `column_order` is set."),
                     prop("oncolumnorderchange", "EventHandler<Vec<String>>").default("None").doc("Called with the order a column menu's Move left or Move right, or a header drag, asks for, every header listed."),
                     prop("resizable_columns", "bool").default("false").doc("Puts a visible grip on each header's end edge, 24px wide on a touch screen, and Widen column, Narrow column (50px steps, the menu stays open) and Reset width in its `column_menu`, the drag-free way. Drag a grip, or double-click it to reset. A focused grip takes the keys: Left and Right move it 10px the way they point, 50px with Shift, Home and End go to the limits. A column opts out with `.resizable(false)` and sets its range with `.resize_limits(min, max)` in px, 50 to unbounded by default. Auto layout never draws a column narrower than its content. Blitz: use the menu, the grip does not drag reliably there."),
@@ -338,299 +338,16 @@ pub fn TablePage() -> Element {
                 ]),
             lead: rsx! {
                 Text {
-                    "A table built from "
+                    "A data table over your own row type. "
                     Code { source: "data" }
-                    " and "
+                    " holds the rows, and each "
+                    Code { source: "column(..)" }
+                    " in "
                     Code { source: "columns" }
-                    ". Each column comes from "
-                    Code { source: "column" }
-                    ", with a header and a "
-                    Code { source: "value" }
-                    " that reads one cell out of a row. The cell's type sets the sort order "
-                    "and alignment, so a numeric column sorts numerically and aligns right "
-                    "on its own."
-                }
-                Text {
-                    Code { source: "sortable" }
-                    " turns a header into a button. The first click sorts ascending, the "
-                    "next flips it, and a third restores source order. "
-                    Code { source: "render" }
-                    " changes only what a cell draws, so the Role column below still sorts "
-                    "by its text. "
-                    Code { source: "format" }
-                    " does the same for the cell's text: the Bonus column prints a percent "
-                    "and still sorts by number."
-                }
-                Text {
-                    Code { source: "default_sort" }
-                    " sorts the first render. To hold the sort yourself, for a server-side "
-                    "query or a saved view, pass "
-                    Code { source: "sort" }
-                    " and update it from "
-                    Code { source: "onsortchange" }
-                    "."
-                }
-                Text {
-                    Code { source: "row_key" }
-                    " gives each row an identity, so its DOM node follows it when rows "
-                    "are added, removed or sorted. "
-                    Code { source: "size" }
-                    " sets the cell padding and font size, and "
-                    Code { source: "striped" }
-                    " shades every other row."
-                }
-                Text {
-                    Code { source: "width" }
-                    " and "
-                    Code { source: "min_width" }
-                    " size a column, "
-                    Code { source: "header_render" }
-                    " draws its header, and "
-                    Code { source: "column_defaults" }
-                    " sets what every column starts from, say a minimum width. Columns of one "
-                    "kind, say prices, share a "
-                    Code { source: "const ColumnType" }
-                    " with "
-                    Code { source: "column(\"Price\").of(&MONEY).value(..)" }
-                    "."
-                }
-                Text {
-                    Code { source: "selectable" }
-                    " adds a checkbox per row and a select-all box. The selection is a list of "
-                    Code { source: "row_key" }
-                    "s, so it stays with its rows through a sort. Hold it yourself with "
-                    Code { source: "selection" }
-                    " and "
-                    Code { source: "onselectionchange" }
-                    ". "
-                    Code { source: "multi_sort" }
-                    " lets Shift-click, or a tap on a touch screen, sort by one more column."
-                }
-                Text {
-                    Code { source: "page_sizes" }
-                    " pages the rows after sorting them, with a page-size picker, the shown "
-                    "range and page buttons under the table. "
-                    Code { source: "page" }
-                    " and "
-                    Code { source: "page_size" }
-                    " hold the state yourself, as "
-                    Code { source: "sort" }
-                    " does. For server-side data set "
-                    Code { source: "manual_sort" }
-                    " and "
-                    Code { source: "manual_pagination" }
-                    ", pass the current page as "
-                    Code { source: "data" }
-                    " and the total as "
-                    Code { source: "row_count" }
-                    ". Select-all covers the rows on every page."
-                }
-                Text {
-                    Code { source: "show_quick_filter" }
-                    " puts a search field above the table. A row stays when every typed word "
-                    "occurs in one of its shown cells; "
-                    Code { source: ".filterable(false)" }
-                    " leaves a column out. The rows are filtered, then sorted, then paged. Hold "
-                    "the text yourself with "
-                    Code { source: "quick_filter" }
-                    " and "
-                    Code { source: "onquickfilterchange" }
-                    ", or filter on a server with "
-                    Code { source: "manual_filter" }
-                    "."
-                }
-                Text {
-                    Code { source: "toolbar" }
-                    " puts your own controls in a row above the table, the search field at its "
-                    "end. "
-                    Code { source: "loading" }
-                    " shows placeholder rows while there are none yet, and a progress bar over "
-                    "the rows while new ones load. "
-                    Code { source: "empty" }
-                    " and "
-                    Code { source: "no_results" }
-                    " replace the text of the row shown without data and without matches."
-                }
-                Text {
-                    "Four ready pieces go in the "
-                    Code { source: "toolbar" }
-                    ", and only there. "
-                    Code { source: "TableColumnsButton" }
-                    " opens a checklist that shows and hides the hideable columns. "
-                    Code { source: "TableDensityButton" }
-                    " picks compact, standard or comfortable rows, the "
-                    Code { source: "size" }
-                    " small, medium or large; the pick wins over "
-                    Code { source: "size" }
-                    ". "
-                    Code { source: "TableExportButton" }
-                    " hands "
-                    Code { source: "onexport" }
-                    " the filtered, sorted rows of every page as CSV, in the shown columns; "
-                    Code { source: "save_file" }
-                    " saves it, a download on the web, a save dialog on the desktop, the share sheet on Android. "
-                    Code { source: "TableFilterButton" }
-                    " opens "
-                    Code { source: "filter_panel" }
-                    "'s dialog from where you put it; with a "
-                    Code { source: "toolbar" }
-                    ", the table leaves the Filters button to it. Only "
-                    Code { source: "TableExportButton" }
-                    " takes a prop, "
-                    Code { source: "onexport" }
-                    "; the demo's "
-                    Code { source: "toolbar" }
-                    " switch, on at first, shows them, "
-                    Code { source: "TableFilterButton" }
-                    " with "
-                    Code { source: "filter_panel" }
-                    " on."
-                }
-                Text {
-                    Code { source: "column_menu" }
-                    "'s Filter entry, and "
-                    Code { source: "header_filters" }
-                    "' row of fields under the headers, filter one column each, with operators "
-                    "for its type: contains or starts with for text, greater than for numbers, "
-                    "before, after or between for dates, as the Joined and Review columns show, "
-                    "yes or no for booleans. The filters all apply, together with the quick filter. "
-                    "Hold them yourself with "
-                    Code { source: "column_filters" }
-                    " and "
-                    Code { source: "oncolumnfilterschange" }
-                    "."
-                }
-                Text {
-                    "A date column, one whose value is a "
-                    Code { source: "chrono::NaiveDate" }
-                    ", filters with before, after, on or before, on or after, and between. Its "
-                    "value field is a "
-                    Code { source: "DateField" }
-                    ", whose calendar opens inside the filter; on a WebView (desktop, Android) it is the native date input. Both hold an ISO day ("
-                    Code { source: "2026-10-03" }
-                    "). "
-                    Code { source: "ColumnFilter::between(\"Joined\", from, to)" }
-                    " sets both ends, in "
-                    Code { source: "value" }
-                    " and "
-                    Code { source: "value_to" }
-                    ": an empty end leaves that side open, and ends given the wrong way round "
-                    "are swapped. "
-                    Code { source: "filter_logic: FilterLogic::Or" }
-                    " keeps a row that passes any one column filter instead of all; the quick "
-                    "filter still applies on top. A column may hold several filters; the popover "
-                    "and the header field edit its first, and "
-                    Code { source: "filter_panel" }
-                    " all of them."
-                }
-                Text {
-                    Code { source: "column_menu" }
-                    " adds a menu to each header to sort, hide the column, or show and hide "
-                    "the others. "
-                    Code { source: ".hideable(false)" }
-                    " keeps a column out of it. To hold the hidden columns yourself, pass "
-                    Code { source: "hidden_columns" }
-                    " and update it from "
-                    Code { source: "onhiddencolumnschange" }
-                    "."
-                }
-                Text {
-                    Code { source: "column(\"Q1\").value(..).group(\"Revenue\")" }
-                    " puts a column under a group header, shared with its neighbours of the "
-                    "same group; call "
-                    Code { source: "group" }
-                    " again for a nested one. "
-                    Code { source: "col_span" }
-                    " lets a row's cell cover the next columns, say a total row's label."
-                }
-                Text {
-                    Code { source: "row_detail" }
-                    " gives a row a toggle that opens a full-width detail row under it, as in a "
-                    "master-detail view. Rows the closure answers "
-                    Code { source: "None" }
-                    " for get no toggle. The open details are "
-                    Code { source: "row_key" }
-                    "s, held yourself with "
-                    Code { source: "expanded" }
-                    " and "
-                    Code { source: "onexpandedchange" }
-                    "."
-                }
-                Text {
-                    Code { source: "onrowreorder" }
-                    " gives each row a drag handle and move buttons. The table hands you the "
-                    "move, by positions in "
-                    Code { source: "data" }
-                    ", and "
-                    Code { source: "step.apply(&mut rows.write())" }
-                    " applies it. Sorted or filtered, the shown order is not your data's, so "
-                    "the controls turn off. With "
-                    Code { source: "column_menu" }
-                    ", Move left and Move right reorder the columns, and a grip at each unpinned "
-                    "header's start edge drags one to a gap between the others; hold the order "
-                    "yourself with "
-                    Code { source: "column_order" }
-                    " and "
-                    Code { source: "oncolumnorderchange" }
-                    ". A sorted column stays sorted wherever it moves."
-                }
-                Text {
-                    Code { source: "table_csv(&columns, &rows)" }
-                    " writes the cells as CSV, each as its column shows it as text, and "
-                    Code { source: "table_text" }
-                    " hands them over unjoined for another format. Saving is yours. A cell "
-                    "that starts with "
-                    Code { source: "=" }
-                    " runs as a formula in a spreadsheet, so neutralise text users typed first."
-                }
-                Text {
-                    Code { source: "scroll" }
-                    " wraps a table wider than its container in a "
-                    Code { source: "ScrollArea" }
-                    " that scrolls sideways. The demo's switch also sets "
-                    Code { source: format!("sx().min_width({SCROLL_WIDTH:?})") }
-                    ", so the columns overflow at any width. "
-                    Code { source: "max_height" }
-                    " caps a long table's height: its rows scroll under a header that stays put."
-                }
-                Text {
-                    "For thousands of rows add "
-                    Code { source: "virtual_row_height" }
-                    " to "
-                    Code { source: "max_height" }
-                    ": only the rows in view render, each that tall. The demo's switch swaps in "
-                    "ten thousand people, 40px a row under a 320px cap, and hides the switches "
-                    "that render every row. Sorting, filtering, selection and pinning work as before."
-                }
-                Text {
-                    Code { source: "onbottomreached" }
-                    " asks for more rows once the table scrolls to its bottom, by wheel, drag or "
-                    "End. The demo's switch, shown with "
-                    Code { source: "virtual_row_height" }
-                    ", fetches the people from a fake server instead, a hundred at a time, and "
-                    Code { source: "loading" }
-                    " holds off another ask until the batch arrives."
-                }
-                Text {
-                    Code { source: "default_pinned_columns" }
-                    " holds columns at the start or end edge while the rest scroll under "
-                    "them, and the column menu pins and unpins them. Start and end follow "
-                    "the page's direction. Give each pinned column but the outermost a "
-                    Code { source: "width" }
-                    ", so the next one knows where to sit."
-                }
-                Text {
-                    Code { source: "resizable_columns" }
-                    " puts a grip on each header's end edge, a short line that lights up on "
-                    "hover: drag it, or double-click it to reset the width. Tab reaches it too, "
-                    "and the arrow keys step the width, Home and End to its limits. With "
-                    Code { source: "column_menu" }
-                    ", Widen column, Narrow column and Reset width do the same without a drag. "
-                    "The demo holds the widths itself with "
-                    Code { source: "column_widths" }
-                    " and "
-                    Code { source: "oncolumnwidthschange" }
-                    ", say to save them with a view."
+                    " reads one cell, whose type sets its sort order and alignment. Sorting, "
+                    "selection, paging, filters, a column menu, pinned, resized and reordered "
+                    "columns, row details and virtual rows are each a prop away, their state held "
+                    "by the table or by you."
                 }
             },
             Demo {

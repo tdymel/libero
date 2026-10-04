@@ -1,6 +1,6 @@
 use crate::Route;
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, PictogramNote, Wrap, a11y, prop, props,
+    Control, Demo, DemoValues, DocPage, DocSection, PictogramNote, Wrap, a11y, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -171,21 +171,6 @@ pub fn IconProviderPage() -> Element {
                     Anchor { to: Route::ProvidersPage {}, "providers" }
                     " in one page."
                 }
-                Text {
-                    "One slot: "
-                    Code { source: "IconSet::new().with(IconSlot::Close, icon)" }
-                    ". A whole set: turn on its libero feature ("
-                    Code { source: "icons-material" }
-                    ", "
-                    Code { source: "icons-tabler" }
-                    ", "
-                    Code { source: "icons-bootstrap" }
-                    ", "
-                    Code { source: "icons-phosphor" }
-                    ") and start from its constructor, such as "
-                    Code { source: "IconSet::material_rounded()" }
-                    ". Only the set you call is compiled into your app. Brand marks are no slots: they name a service."
-                }
             },
             // snippet: ignore - the sets need libero's `icons-*` features, off in its doc-tests
             Demo {
@@ -202,6 +187,25 @@ pub fn IconProviderPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     IconProvider { icons: demo_icons(&values), Inputs {} }
                 },
+            }
+
+            DocSection {
+                title: "Sets",
+                Text {
+                    "One slot: "
+                    Code { source: "IconSet::new().with(IconSlot::Close, icon)" }
+                    ". A whole set: turn on its libero feature ("
+                    Code { source: "icons-material" }
+                    ", "
+                    Code { source: "icons-tabler" }
+                    ", "
+                    Code { source: "icons-bootstrap" }
+                    ", "
+                    Code { source: "icons-phosphor" }
+                    ") and start from its constructor, such as "
+                    Code { source: "IconSet::material_rounded()" }
+                    ". Only the set you call is compiled into your app. Brand marks are no slots: they name a service."
+                }
             }
         }
     }

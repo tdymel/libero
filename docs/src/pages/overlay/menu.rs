@@ -1,5 +1,6 @@
 use crate::components::{
-    Child, Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoFile, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop,
+    props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -155,22 +156,6 @@ pub fn MenuPage() -> Element {
                     Code { source: "overflow: hidden" }
                     " ancestor clips it."
                 }
-                Text {
-                    "A submenu opens beside its item on "
-                    Kbd { "→" }
-                    ", a click, or when the pointer rests on the item for 150ms. Moving to a "
-                    "sibling waits as long, so the pointer can cross one on its way into the "
-                    "submenu."
-                }
-                Text {
-                    "An item can be a link: "
-                    Code { source: "MenuItem::new(\"Docs\").href(url)" }
-                    " renders an "
-                    Code { source: "<a>" }
-                    " that opens "
-                    Code { source: "url" }
-                    " in a new tab. Space activates it like Enter."
-                }
             },
             Demo {
                 component: "Menu",
@@ -200,6 +185,30 @@ pub fn MenuPage() -> Element {
                         disabled: values.str("disabled") == "true",
                     }
                 },
+            }
+
+            DocSection {
+                title: "Submenus",
+                Text {
+                    "A submenu opens beside its item on "
+                    Kbd { "→" }
+                    ", a click, or when the pointer rests on the item for 150ms. Moving to a "
+                    "sibling waits as long, so the pointer can cross one on its way into the "
+                    "submenu."
+                }
+            }
+
+            DocSection {
+                title: "Links",
+                Text {
+                    "An item can be a link: "
+                    Code { source: "MenuItem::new(\"Docs\").href(url)" }
+                    " renders an "
+                    Code { source: "<a>" }
+                    " that opens "
+                    Code { source: "url" }
+                    " in a new tab. Space activates it like Enter."
+                }
             }
         }
     }

@@ -14,29 +14,6 @@ are buttons whose id comes back in `on_action`. Read
 `permission()`, `error()`, `is_pending()` and `is_supported()`; all are
 reactive.
 
-`use_push_subscription(PushOptions) -> PushSubscription` registers your
-service worker and subscribes with your server's VAPID public key.
-`subscription()` is the `PushEndpoint` your server stores and pushes to; the
-worker shows what arrives. Sending, VAPID signing, FCM and APNs stay on your
-server. The demo's key is a throwaway public key: no private key exists
-anywhere in the repo, so nothing ever pushes to it. A sample worker is
-`docs/public/sw.js`. Push on Android is Firebase Cloud Messaging in the app
-itself, with no libero code: see the recipe below.
-
-Web: a secure context (HTTPS or localhost). Desktop WebView on Linux: with
-libero's `desktop` feature, the desktop's notification server over D-Bus, as
-for Blitz; without it WebKitGTK denies every request. macOS and Windows
-WebViews go through the page's `Notification`, untested. Push is web only.
-Android: the system's notifications over JNI, after
-`notifications = { description = ".." }` under `[permissions]` in the app's
-`Dioxus.toml`; a tap reopens the app and runs `on_click`. The status bar icon
-is a drawable named `libero_notification` in the app's resources, a white
-shape on transparent; without it the launcher icon shows. Actions are untested
-on macOS and Windows. Blitz on Linux: the
-desktop's notification server over D-Bus, no permission to ask. Blitz on macOS
-and Windows, and a server render: `is_supported()` stays false and calls fail
-with `Unsupported`.
-
 ## Usage
 
 ```rust
@@ -122,6 +99,33 @@ fn Notify() -> Element {
     }
 }
 ```
+
+## Push
+
+`use_push_subscription(PushOptions) -> PushSubscription` registers your
+service worker and subscribes with your server's VAPID public key.
+`subscription()` is the `PushEndpoint` your server stores and pushes to; the
+worker shows what arrives. Sending, VAPID signing, FCM and APNs stay on your
+server. The demo's key is a throwaway public key: no private key exists
+anywhere in the repo, so nothing ever pushes to it. A sample worker is
+`docs/public/sw.js`. Push on Android is Firebase Cloud Messaging in the app
+itself, with no libero code: see the recipe below.
+
+## Platforms
+
+Web: a secure context (HTTPS or localhost). Desktop WebView on Linux: with
+libero's `desktop` feature, the desktop's notification server over D-Bus, as
+for Blitz; without it WebKitGTK denies every request. macOS and Windows
+WebViews go through the page's `Notification`, untested. Push is web only.
+Android: the system's notifications over JNI, after
+`notifications = { description = ".." }` under `[permissions]` in the app's
+`Dioxus.toml`; a tap reopens the app and runs `on_click`. The status bar icon
+is a drawable named `libero_notification` in the app's resources, a white
+shape on transparent; without it the launcher icon shows. Actions are untested
+on macOS and Windows. Blitz on Linux: the
+desktop's notification server over D-Bus, no permission to ask. Blitz on macOS
+and Windows, and a server render: `is_supported()` stays false and calls fail
+with `Unsupported`.
 
 ## API
 

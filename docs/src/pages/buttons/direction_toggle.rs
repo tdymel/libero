@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, DirectionToggle, Input, Text};
 use libero::theme::Direction;
@@ -58,14 +58,6 @@ pub fn DirectionTogglePage() -> Element {
                     "keeps the choice for the next visit. The arrow shows where the next "
                     "press goes."
                 }
-                Text {
-                    "Place it and you are done: it needs no state of its own. For your own "
-                    "control, build on "
-                    Code { source: "use_direction()" }
-                    "; the start direction is "
-                    Code { source: "LiberoProvider {{ direction }}" }
-                    "."
-                }
             },
             Demo {
                 component: "DirectionToggle",
@@ -99,6 +91,18 @@ pub fn DirectionTogglePage() -> Element {
                         disabled: values.str("disabled") == "true",
                     }
                 },
+            }
+
+            DocSection {
+                title: "Your own control",
+                Text {
+                    "Place it and you are done: it needs no state of its own. For your own "
+                    "control, build on "
+                    Code { source: "use_direction()" }
+                    "; the start direction is "
+                    Code { source: "LiberoProvider {{ direction }}" }
+                    "."
+                }
             }
         }
     }

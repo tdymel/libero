@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props,
+    Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -200,15 +200,6 @@ pub fn ScrollerPage() -> Element {
                     Code { source: "fade_color" }
                     " to the surface the strip sits on."
                 }
-                Text {
-                    Code { source: "onedgechange" }
-                    " reports whether the strip rests against an end, printed under the "
-                    "strip. With "
-                    Code { source: "controls: \"never\"" }
-                    ", move the strip from your own buttons through a "
-                    Code { source: "use_scroller()" }
-                    " handle."
-                }
             },
             // snippet: item const TAGS: [&str; 2] = ["rust", "dioxus"];
             Demo {
@@ -252,6 +243,19 @@ pub fn ScrollerPage() -> Element {
                 ],
                 wrap: Wrap(wrap_edges),
                 render: move |values: DemoValues| rsx! { ScrollerDemo { values } },
+            }
+
+            DocSection {
+                title: "Edges",
+                Text {
+                    Code { source: "onedgechange" }
+                    " reports whether the strip rests against an end, printed under the "
+                    "strip. With "
+                    Code { source: "controls: \"never\"" }
+                    ", move the strip from your own buttons through a "
+                    Code { source: "use_scroller()" }
+                    " handle."
+                }
             }
         }
     }

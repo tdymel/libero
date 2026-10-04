@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::use_theme;
 use libero::{
@@ -78,35 +78,6 @@ pub fn ThemeSwitcherPage() -> Element {
                     "pinned. The icon shows where the next press goes: a sun for light, a "
                     "moon for dark."
                 }
-                Text {
-                    "With "
-                    Code { source: "with_system" }
-                    ", following the system is a step of its own. A press goes from following "
-                    "the system, to the scheme the system is not showing, to the one it is, "
-                    "and back, so under a light system the order is system, dark, light. The "
-                    "icon for that step is a half-filled disc."
-                }
-                Text {
-                    "While it follows the system, a change of the OS setting applies at once. "
-                    "A picked scheme stays until the next press. For your own control, such "
-                    "as a menu of all three choices, build on "
-                    Code { source: "use_color_scheme()" }
-                    ": it reads the setting and what it resolves to, and "
-                    Code { source: "set" }
-                    ", "
-                    Code { source: "toggle" }
-                    " and "
-                    Code { source: "cycle" }
-                    " change it."
-                }
-                Text {
-                    "With "
-                    Code { source: "themes" }
-                    " set, a second button beside it opens a menu of theme sets. This site's "
-                    "header uses "
-                    Code { source: "ThemeSwitcher {{ themes: ThemeSet::CATALOGUE }}" }
-                    "."
-                }
             },
             Demo {
                 component: "ThemeSwitcher",
@@ -153,6 +124,43 @@ pub fn ThemeSwitcherPage() -> Element {
                         themes: (values.str("themes") == "true").then_some(ThemeSet::CATALOGUE),
                     }
                 },
+            }
+
+            DocSection {
+                title: "Following the system",
+                Text {
+                    "With "
+                    Code { source: "with_system" }
+                    ", following the system is a step of its own. A press goes from following "
+                    "the system, to the scheme the system is not showing, to the one it is, "
+                    "and back, so under a light system the order is system, dark, light. The "
+                    "icon for that step is a half-filled disc."
+                }
+                Text {
+                    "While it follows the system, a change of the OS setting applies at once. "
+                    "A picked scheme stays until the next press. For your own control, such "
+                    "as a menu of all three choices, build on "
+                    Code { source: "use_color_scheme()" }
+                    ": it reads the setting and what it resolves to, and "
+                    Code { source: "set" }
+                    ", "
+                    Code { source: "toggle" }
+                    " and "
+                    Code { source: "cycle" }
+                    " change it."
+                }
+            }
+
+            DocSection {
+                title: "Theme sets",
+                Text {
+                    "With "
+                    Code { source: "themes" }
+                    " set, a second button beside it opens a menu of theme sets. This site's "
+                    "header uses "
+                    Code { source: "ThemeSwitcher {{ themes: ThemeSet::CATALOGUE }}" }
+                    "."
+                }
             }
         }
     }

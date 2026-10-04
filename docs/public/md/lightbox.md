@@ -11,11 +11,6 @@ around it. Each opening carries its pictures and where to start, and focus
 returns to the thumbnail that opened it. `Image { zoomable }` ([Image](image.md))
 is this viewer with one picture.
 
-Double-click or press `z` to step through 2x, 4x and 8x and back to fitted. The
-zoom buttons, `+` and `-` zoom in finer steps. Scroll to zoom at the cursor.
-Drag, click or use the arrows to pan. At the edge of a pan the arrows move to
-the next picture, so the keyboard never gets stuck.
-
 ## Usage
 
 The options are shared by every opening and read once. The gallery travels with
@@ -59,6 +54,13 @@ fn Demo(photos: Vec<Photo>) -> Element {
     }
 }
 ```
+
+## Zoom
+
+Double-click or press `z` to step through 2x, 4x and 8x and back to fitted. The
+zoom buttons, `+` and `-` zoom in finer steps. Scroll to zoom at the cursor.
+Drag, click or use the arrows to pan. At the edge of a pan the arrows move to
+the next picture, so the keyboard never gets stuck.
 
 ## API
 

@@ -133,24 +133,6 @@ pub fn UseFocusReturnPage() -> Element {
                     "and a keyboard user loses their place. The overlays in libero do "
                     "this already; use the hook for a panel of your own."
                 }
-                Text {
-                    "Call "
-                    Code { source: "remember_active()" }
-                    " in the handler that opens, and "
-                    Code { source: "restore()" }
-                    " wherever it closes. "
-                    Code { source: "restore()" }
-                    " consumes what "
-                    Code { source: "remember_active()" }
-                    " saved, so arm it on every open. "
-                    Code { source: "remember(event)" }
-                    " on a trigger's "
-                    Code { source: "onmounted" }
-                    " names an element instead, which stays armed. "
-                    Code { source: "fallback(handle)" }
-                    " names where focus goes if the trigger is gone by then, such as the "
-                    "list a deleted row lived in."
-                }
             },
 
             Demo {
@@ -170,6 +152,28 @@ pub fn UseFocusReturnPage() -> Element {
                     "trigger with "
                     Code { source: "remember(event)" }
                     " instead."
+                }
+            }
+
+            DocSection {
+                title: "Arming and restoring",
+                Text {
+                    "Call "
+                    Code { source: "remember_active()" }
+                    " in the handler that opens, and "
+                    Code { source: "restore()" }
+                    " wherever it closes. "
+                    Code { source: "restore()" }
+                    " consumes what "
+                    Code { source: "remember_active()" }
+                    " saved, so arm it on every open. "
+                    Code { source: "remember(event)" }
+                    " on a trigger's "
+                    Code { source: "onmounted" }
+                    " names an element instead, which stays armed. "
+                    Code { source: "fallback(handle)" }
+                    " names where focus goes if the trigger is gone by then, such as the "
+                    "list a deleted row lived in."
                 }
             }
         }

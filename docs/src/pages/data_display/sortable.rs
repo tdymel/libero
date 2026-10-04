@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Orientation, Sortable, SortableItem, SortableItemPart, Text},
@@ -111,15 +111,6 @@ pub fn SortablePage() -> Element {
                     Code { source: "Vec" }
                     "."
                 }
-                Text {
-                    "For your own markup, "
-                    Code { source: "use_sortable" }
-                    " gives the list's handlers and "
-                    Code { source: "use_sortable_item(index)" }
-                    " each item's handle, element, move buttons and "
-                    Code { source: "style()" }
-                    ". The component is those two hooks plus a grip button, two move buttons and a status region."
-                }
             },
             Demo {
                 component: "Sortable",
@@ -137,6 +128,19 @@ pub fn SortablePage() -> Element {
                     }
                 },
                 wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Your own markup",
+                Text {
+                    "For your own markup, "
+                    Code { source: "use_sortable" }
+                    " gives the list's handlers and "
+                    Code { source: "use_sortable_item(index)" }
+                    " each item's handle, element, move buttons and "
+                    Code { source: "style()" }
+                    ". The component is those two hooks plus a grip button, two move buttons and a status region."
+                }
             }
         }
     }

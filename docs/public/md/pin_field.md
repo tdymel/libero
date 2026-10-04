@@ -9,9 +9,7 @@ Description: A pin, one character per cell, with auto-advance, paste spreading a
 A pin, one character per cell. Typing fills a cell and moves to the next,
 Backspace clears and steps back, and the arrows move without changing anything.
 A code pasted into any cell spreads across the rest, and characters the field
-does not take are dropped, so `"4 2-1 3"` lands as `4213`. `oncomplete` fires
-the moment the last cell fills, which is usually where you submit the code.
-Extra HTML attributes land on the group, not on a cell.
+does not take are dropped, so `"4 2-1 3"` lands as `4213`.
 
 ## Usage
 
@@ -38,6 +36,11 @@ fn Demo() -> Element {
 #
 # fn submit(_code: String) {}
 ```
+
+## Completion and attributes
+
+`oncomplete` fires the moment the last cell fills, which is usually where you
+submit the code. Extra HTML attributes land on the group, not on a cell.
 
 ## Props
 

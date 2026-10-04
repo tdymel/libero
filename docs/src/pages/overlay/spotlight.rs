@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
+};
 use libero::components::Pictogram;
 use pictogram_icons_lucide as lucide;
 
@@ -425,13 +427,6 @@ pub fn SpotlightPage() -> Element {
                     " covers the common case. Label hits come first, exact and prefix matches "
                     "before matches inside a word, so \"table\" puts Table above Sortable."
                 }
-                Text {
-                    "The hotkey here is J or P, because this site's search owns "
-                    Kbd { "Ctrl" }
-                    " + "
-                    Kbd { "K" }
-                    "."
-                }
             },
             // snippet: item async fn search_on_server(_: &str, _: &[SpotlightAction]) -> Vec<SpotlightAction> { Vec::new() }
             Demo {
@@ -459,6 +454,17 @@ pub fn SpotlightPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_example),
+            }
+
+            DocSection {
+                title: "The demo's hotkey",
+                Text {
+                    "The hotkey here is J or P, because this site's search owns "
+                    Kbd { "Ctrl" }
+                    " + "
+                    Kbd { "K" }
+                    "."
+                }
             }
         }
     }
