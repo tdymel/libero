@@ -57,7 +57,7 @@ js-sys = "0.3"
 # 0.2.128+ imports a wasm exception tag (`__wbindgen_jstag`) that dx's hotpatch parser rejects.
 wasm-bindgen = "=0.2.127"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlImageElement", "HtmlInputElement", "HtmlMediaElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "FilePropertyBag", "NodeList", "Navigator", "ScrollBehavior", "ScrollToOptions", "Clipboard", "CssStyleDeclaration", "DomRect", "KeyboardEvent", "MediaError", "MediaQueryList", "MutationObserver", "MutationObserverInit", "IntersectionObserver", "IntersectionObserverEntry", "IntersectionObserverInit", "Storage", "MouseEvent", "FocusEvent", "FocusOptions", "PointerEvent", "TransitionEvent", "console", "Blob", "BlobPropertyBag", "Url", "HtmlAnchorElement"] }
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlImageElement", "HtmlInputElement", "HtmlMediaElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "FilePropertyBag", "NodeList", "Navigator", "ScrollBehavior", "ScrollToOptions", "Clipboard", "CssStyleDeclaration", "DomRect", "KeyboardEvent", "MediaError", "MediaQueryList", "MutationObserver", "MutationObserverInit", "IntersectionObserver", "IntersectionObserverEntry", "IntersectionObserverInit", "Storage", "StorageEvent", "MouseEvent", "FocusEvent", "FocusOptions", "PointerEvent", "TransitionEvent", "console", "Blob", "BlobPropertyBag", "Url", "HtmlAnchorElement"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # Only for `serialize`, which is what defines `SerializedTransitionData` - the
@@ -68,6 +68,8 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Event
 # 2026-09-19, todo 36a).
 dioxus-html = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["serialize"] }
 regex = "1"
+# `use_local_storage`'s directory under `native`/`desktop`. The lock's copy (wry's).
+dirs = "6"
 # `Local`, for today off the web: the system time zone via `iana-time-zone`.
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 # Blitz's `NodeHandle`, which is what a `MountedData` downcasts to under

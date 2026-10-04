@@ -40,6 +40,7 @@ mod save_file;
 mod scroll;
 mod select;
 mod session;
+mod storage;
 mod system_notification;
 mod table;
 mod task;
@@ -143,6 +144,10 @@ pub(crate) use scroll::{
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::opens_select_picker;
 pub(crate) use session::{session_get, session_set};
+#[cfg(test)]
+pub(crate) use storage::{MemoryStorage, StorageApi, fake_storage};
+pub(crate) use storage::{StorageArea, StorageChange, StorageSubscription, storage};
+pub use storage::{StorageError, set_storage_dir};
 pub use system_notification::{NotificationAction, SystemNotification, SystemNotificationError};
 pub(crate) use system_notification::{
     NotificationEvent, ShownNotification, raise_window, system_notification,

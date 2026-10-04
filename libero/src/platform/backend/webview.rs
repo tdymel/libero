@@ -5,7 +5,6 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -50,6 +49,7 @@ use crate::platform::{
     media::{MEDIA_EVENTS, MediaApi, MediaState, MediaSubscription},
     permission::{PermissionApi, PermissionKind, PermissionState, PermissionSubscription},
     scroll::{ScrollData, ScrollReport},
+    storage::{app_file, write_app_file},
     waveform::{PEAKS_SCRIPT, Peaks, WaveformApi},
 };
 use crate::tokens::{
@@ -1737,33 +1737,6 @@ fn watch_scheme(page: &Rc<PageState>) {
             callback(scheme);
         }
     });
-}
-
-fn write_app_file(path: &std::path::Path, text: &str) -> std::io::Result<()> {
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir)?;
-    }
-    std::fs::write(path, text)
-}
-
-/// Desktop names no app directory yet, so an override is not kept.
-#[cfg(not(target_os = "android"))]
-fn app_file(_name: &str) -> Option<PathBuf> {
-    None
-}
-
-/// `name` in the app's own files directory, `None` where it cannot be named. User 0's
-/// path: under a secondary Android user the override lives for the session.
-#[cfg(target_os = "android")]
-fn app_file(name: &str) -> Option<PathBuf> {
-    let cmdline = std::fs::read("/proc/self/cmdline").ok()?;
-    // The package name, minus a `:process` suffix and the NUL padding.
-    let process = cmdline.split(|byte| *byte == 0).next()?;
-    let package = std::str::from_utf8(process).ok()?.split(':').next()?;
-    if package.is_empty() || package.contains('/') {
-        return None;
-    }
-    Some(PathBuf::from(format!("/data/data/{package}/files/{name}")))
 }
 
 impl ColorSchemeApi for WebViewColorScheme {

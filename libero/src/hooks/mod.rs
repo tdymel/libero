@@ -41,6 +41,7 @@ mod push_subscription;
 mod ripple;
 mod scroll_lock;
 mod silent_focus;
+mod storage;
 mod stylesheet;
 mod subscription_slot;
 mod swipe;
@@ -54,8 +55,8 @@ mod user_media;
 
 pub use crate::platform::{
     GeolocationError, GeolocationOptions, MediaDevice, NotificationAction, PermissionState,
-    Position, PushEndpoint, PushError, PushOptions, SystemNotification, SystemNotificationError,
-    UserMediaError,
+    Position, PushEndpoint, PushError, PushOptions, StorageError, SystemNotification,
+    SystemNotificationError, UserMediaError,
 };
 pub use accessibility::{AccessibilityHandle, use_accessibility};
 pub(crate) use cache::use_cache;
@@ -112,6 +113,7 @@ pub use push_subscription::{PushSubscription, use_push_subscription};
 pub(crate) use ripple::{clipped_ripple_sx, ripple_sx, use_ripple};
 pub(crate) use scroll_lock::use_scroll_lock;
 pub(crate) use silent_focus::{use_silent_focus_in, use_silent_focus_out, use_silent_focus_within};
+pub use storage::{Stored, use_local_storage, use_session_storage};
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
 pub(crate) use subscription_slot::{SubscriptionSlot, use_subscription_slot};

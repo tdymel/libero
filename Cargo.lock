@@ -4472,6 +4472,7 @@ dependencies = [
  "dioxus-html",
  "dioxus-native-dom",
  "dioxus-ssr",
+ "dirs",
  "fast_qr",
  "futures-channel",
  "futures-core",
