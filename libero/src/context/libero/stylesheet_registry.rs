@@ -1,7 +1,14 @@
-use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, VecDeque},
+    rc::Rc,
+};
 
 use super::CssLayer;
 use crate::css::Stylesheet;
+
+/// Unused sheets kept mounted: Chromium restyles and relays out the whole page per `@layer` sheet added or removed.
+const RETAINED: usize = 256;
 
 /// Where a sheet sorts in its layer: without a rank, source order between equal
 /// specificity rules is the CSS hash's, i.e. arbitrary.
@@ -29,6 +36,8 @@ struct RegisteredStylesheet {
     node_key: Rc<str>,
     css: Rc<str>,
     ref_count: usize,
+    /// When it last fell to no users, matched against its `retired` queue entry.
+    retired_at: u64,
 }
 
 impl RegisteredStylesheet {
@@ -44,11 +53,19 @@ fn layered_css(layer: CssLayer, stylesheet: &Stylesheet) -> String {
     format!("@layer {}{{{}}}", layer.css_name(), stylesheet.as_str())
 }
 
+#[derive(Default)]
+struct Sheets {
+    by_key: BTreeMap<StylesheetKey, RegisteredStylesheet>,
+    /// Sheets that fell to no users, oldest first; an entry is stale once its sheet was used again.
+    retired: VecDeque<(StylesheetKey, u64)>,
+    clock: u64,
+}
+
 /// The sheets mounted components use, refcounted by layer, rank and CSS hash, so one
-/// `<style>` serves every instance and goes with the last of them. Clones share it.
+/// `<style>` serves every instance. The last [`RETAINED`] unused ones stay. Clones share it.
 #[derive(Clone, Default)]
 pub struct StylesheetRegistry {
-    inner: Rc<RefCell<BTreeMap<StylesheetKey, RegisteredStylesheet>>>,
+    inner: Rc<RefCell<Sheets>>,
 }
 
 impl StylesheetRegistry {
@@ -72,16 +89,20 @@ impl StylesheetRegistry {
         };
         let mut registry = self.inner.borrow_mut();
 
-        let entry = registry.entry(key).or_insert_with(|| RegisteredStylesheet {
-            // Not a `Stylesheet`, which would re-hash. The rank is in the key,
-            // so the same CSS on both ranks needs two node keys.
-            node_key: Rc::from(match rank {
-                SheetRank::Default => format!("{}-default-{:x}", layer.css_name(), key.hash),
-                SheetRank::Component => format!("{}-{:x}", layer.css_name(), key.hash),
-            }),
-            css: Rc::from(layered_css(layer, &stylesheet)),
-            ref_count: 0,
-        });
+        let entry = registry
+            .by_key
+            .entry(key)
+            .or_insert_with(|| RegisteredStylesheet {
+                // Not a `Stylesheet`, which would re-hash. The rank is in the key,
+                // so the same CSS on both ranks needs two node keys.
+                node_key: Rc::from(match rank {
+                    SheetRank::Default => format!("{}-default-{:x}", layer.css_name(), key.hash),
+                    SheetRank::Component => format!("{}-{:x}", layer.css_name(), key.hash),
+                }),
+                css: Rc::from(layered_css(layer, &stylesheet)),
+                ref_count: 0,
+                retired_at: 0,
+            });
 
         // A 64-bit hash collision would silently render one sheet with another's
         // CSS and share its refcount: too rare to design around, too quiet to ignore.
@@ -100,14 +121,36 @@ impl StylesheetRegistry {
         key
     }
 
-    /// Counts one user less, dropping the sheet with its last one.
+    /// Counts one user less. A sheet without users stays until [`RETAINED`] newer ones
+    /// push it out, so a class toggled back costs no `<style>` write.
     pub fn release(&self, key: StylesheetKey) {
         let mut registry = self.inner.borrow_mut();
+        let registry = &mut *registry;
 
-        if let Some(entry) = registry.get_mut(&key) {
-            entry.ref_count = entry.ref_count.saturating_sub(1);
-            if entry.ref_count == 0 {
-                registry.remove(&key);
+        let Some(entry) = registry.by_key.get_mut(&key) else {
+            return;
+        };
+        if entry.ref_count == 0 {
+            return;
+        }
+        entry.ref_count -= 1;
+        if entry.ref_count > 0 {
+            return;
+        }
+        registry.clock += 1;
+        entry.retired_at = registry.clock;
+        registry.retired.push_back((key, registry.clock));
+
+        while registry.retired.len() > RETAINED {
+            let Some((old, at)) = registry.retired.pop_front() else {
+                break;
+            };
+            if registry
+                .by_key
+                .get(&old)
+                .is_some_and(|entry| entry.ref_count == 0 && entry.retired_at == at)
+            {
+                registry.by_key.remove(&old);
             }
         }
     }
@@ -116,6 +159,7 @@ impl StylesheetRegistry {
     pub fn stylesheets(&self) -> Vec<(Rc<str>, Rc<str>)> {
         self.inner
             .borrow()
+            .by_key
             .values()
             .map(|entry| (entry.node_key.clone(), entry.css.clone()))
             .collect()
@@ -128,7 +172,7 @@ mod tests {
     use crate::sx::sx;
 
     #[test]
-    fn acquire_release_round_trip_removes_the_entry() {
+    fn acquire_release_round_trip_keeps_one_entry_for_reuse() {
         let registry = StylesheetRegistry::new();
         let stylesheet = Stylesheet::from(&sx().padding("lg"));
 
@@ -139,15 +183,75 @@ mod tests {
         );
         assert_eq!(registry.stylesheets().len(), 1);
 
-        let second_key = registry.acquire(stylesheet, CssLayer::UserCustom, SheetRank::Component);
+        let second_key = registry.acquire(
+            stylesheet.clone(),
+            CssLayer::UserCustom,
+            SheetRank::Component,
+        );
         assert_eq!(key, second_key);
         assert_eq!(registry.stylesheets().len(), 1);
 
         registry.release(key);
-        assert_eq!(registry.stylesheets().len(), 1);
-
         registry.release(second_key);
-        assert!(registry.stylesheets().is_empty());
+        assert_eq!(registry.stylesheets().len(), 1, "kept, unused");
+
+        registry.acquire(stylesheet, CssLayer::UserCustom, SheetRank::Component);
+        assert_eq!(registry.stylesheets().len(), 1);
+    }
+
+    fn padding(registry: &StylesheetRegistry, px: usize) -> StylesheetKey {
+        registry.acquire(
+            Stylesheet::from(&sx().padding(format!("{px}px"))),
+            CssLayer::UserCustom,
+            SheetRank::Component,
+        )
+    }
+
+    #[test]
+    fn unused_sheets_past_the_cap_go_oldest_first() {
+        let registry = StylesheetRegistry::new();
+        let keys: Vec<_> = (0..=RETAINED).map(|px| padding(&registry, px)).collect();
+        for &key in &keys {
+            registry.release(key);
+        }
+
+        let sheets = registry.inner.borrow();
+        assert_eq!(sheets.by_key.len(), RETAINED);
+        assert!(!sheets.by_key.contains_key(&keys[0]));
+        assert!(sheets.by_key.contains_key(&keys[RETAINED]));
+    }
+
+    #[test]
+    fn a_sheet_used_again_is_not_evicted_by_its_older_retirement() {
+        let registry = StylesheetRegistry::new();
+        let first = padding(&registry, 0);
+        registry.release(first);
+        padding(&registry, 0);
+
+        for px in 1..=RETAINED {
+            let key = padding(&registry, px);
+            registry.release(key);
+        }
+
+        assert!(
+            registry.inner.borrow().by_key.contains_key(&first),
+            "in use"
+        );
+        registry.release(first);
+        assert!(
+            registry.inner.borrow().by_key.contains_key(&first),
+            "newest unused"
+        );
+    }
+
+    #[test]
+    fn a_release_past_zero_changes_nothing() {
+        let registry = StylesheetRegistry::new();
+        let key = padding(&registry, 0);
+        registry.release(key);
+        registry.release(key);
+
+        assert_eq!(registry.inner.borrow().retired.len(), 1);
     }
 
     #[test]
@@ -164,9 +268,6 @@ mod tests {
 
         assert_ne!(framework, custom);
         assert_eq!(registry.stylesheets().len(), 2);
-
-        registry.release(framework);
-        assert_eq!(registry.stylesheets().len(), 1);
     }
 
     /// Stands in for a real hash collision, which can't be constructed to order.
@@ -180,7 +281,7 @@ mod tests {
             SheetRank::Component,
         );
         let registry = registry.inner.borrow();
-        let entry = registry.get(&key).expect("just acquired");
+        let entry = registry.by_key.get(&key).expect("just acquired");
 
         assert!(entry.holds(CssLayer::Framework, &Stylesheet::from(&sx().padding("lg"))));
         assert!(!entry.holds(CssLayer::Framework, &Stylesheet::from(&sx().color("red"))));

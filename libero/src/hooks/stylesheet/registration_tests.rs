@@ -114,7 +114,7 @@ fn an_unchanged_render_registers_nothing() {
     assert_eq!(rerender(&mut dom), first);
 }
 
-/// A changed `sx` swaps its sheet: a new version, and the old sheet released.
+/// A changed `sx` swaps its sheet: a new version, and the old sheet released but kept.
 #[test]
 fn a_changed_sx_swaps_its_sheet() {
     OWNED.set(false);
@@ -122,5 +122,5 @@ fn a_changed_sx_swaps_its_sheet() {
     OWNED.set(true);
     let (changed, now) = rerender(&mut dom);
     assert!(changed > version);
-    assert_eq!(now, sheets);
+    assert_eq!(now, sheets + 1, "the old one stays for reuse");
 }
