@@ -78,6 +78,44 @@ e2e::scenario!(
     desktop: skip("no soft keyboard, and wry's window is not resized here")
 );
 
+/// Todo 2173: mobile Chrome's keyboard shrinks only the visual viewport. A 2x page scale
+/// does the same here: the open list re-places inside the visible part of the layout viewport.
+#[test]
+fn the_country_list_fits_a_shrunk_visual_viewport() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetPageScaleFactorParams;
+    block_on(async {
+        let fixture = Fixture::open("/phone-field/low", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, PICKER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('[role=listbox]')",
+            "the list",
+        )
+        .await
+        .unwrap();
+        page.execute(SetPageScaleFactorParams::new(2.0))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const v = visualViewport;
+                 if (v.height > innerHeight * 0.6) return false;
+                 const inside = (s) => {{ const r = document.querySelector(s).getBoundingClientRect();
+                     return r.top >= v.offsetTop - 0.5 && r.bottom <= v.offsetTop + v.height + 0.5; }};
+                 return inside('{PICKER}') && inside('[data-slot=dropdown]'); }})()"
+            ),
+            "the picker and its list inside the visual viewport",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("phone_field", "/phone-field")

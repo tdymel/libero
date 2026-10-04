@@ -36,6 +36,36 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 1394: `volume_parts` reaches the portaled card and its slider, past the 8rem default.
+#[test]
+fn volume_parts_style_the_portaled_menu() {
+    block_on(async {
+        let fixture = Fixture::open("/audio", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let chevron = "#inline [data-slot=volume] button[aria-haspopup=dialog]";
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{chevron}') !== null"),
+            "the controls",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, chevron).await.unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const card = document.querySelector('[data-slot=volume-card]');
+             const slider = card?.querySelector(':scope > [data-slot=volume-slider]');
+             return !!slider && getComputedStyle(card).paddingTop === '13px'
+                 && Math.abs(slider.getBoundingClientRect().width - 160) < 1; })()",
+            "the card's padding and the slider's width from volume_parts",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("volume parts").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 1465: a control's tooltip opens only after 2s of hover, as Video's does; the delay
 /// runs on the held clock (todo 1824).
 #[test]

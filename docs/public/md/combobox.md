@@ -270,6 +270,7 @@ match at any depth inside the list.
 | `DropdownPart::GroupLabel` | `group-label` | A group's heading. |
 | `DropdownPart::Option` | `option` | A row. |
 | `DropdownPart::OptionLabel` | `label` | A row's `span { "data-slot": "label" }`, which ends in an ellipsis. |
+| `DropdownPart::Empty` | `nothing-found` | The text shown when the query matches nothing. |
 
 ## Accessibility
 

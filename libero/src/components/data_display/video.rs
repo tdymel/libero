@@ -2,7 +2,7 @@ use dioxus::core::{Attribute, AttributeValue};
 use dioxus::prelude::*;
 
 use super::media_controls::{
-    Captions, MediaControls, MediaFallback, chapter_jump, use_media_keys, use_sound,
+    Captions, MediaControls, MediaFallback, VolumePart, chapter_jump, use_media_keys, use_sound,
 };
 use super::{
     MediaPreload, MediaSource,
@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
+        common::{HtmlTag, Input, Part, Parts, base_props, parts_enum, use_name_warning},
         layout::use_box,
         overlay::Shortcut,
     },
@@ -405,6 +405,9 @@ base_props! {
         onended: Option<EventHandler<()>>,
         #[props(default)]
         onerror: Option<EventHandler<MediaError>>,
+        /// Styles the portaled volume menu and its slider.
+        #[props(default, into)]
+        volume_parts: Input<Parts<VolumePart>>,
         /// Shown instead of the controls where nothing plays media (Blitz). Unset,
         /// a sentence and a link to the file.
         #[props(default)]
@@ -742,6 +745,7 @@ pub fn Video(props: VideoProps) -> Element {
                 chapters,
                 fullscreen: Some(fullscreen),
                 overlay: true,
+                volume_parts: props.volume_parts,
                 onheight: move |height: f64| {
                     if *bar.peek() != Some(height) {
                         bar.set(Some(height));

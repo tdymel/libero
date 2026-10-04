@@ -134,6 +134,7 @@ pub(super) const COMBOBOX_DROPDOWN: &[DropdownPart] = &[
     D::GroupLabel,
     D::Option,
     D::OptionLabel,
+    D::Empty,
 ];
 pub(super) const SELECT_DROPDOWN: &[DropdownPart] = &[
     D::Panel,

@@ -36,6 +36,7 @@ pub use kanban::{
 };
 pub use list::{List, ListItem, ListItemPart, ListItemProps, ListProps};
 pub use marquee::{Marquee, MarqueePart, MarqueeProps};
+pub use media_controls::VolumePart;
 pub use pictogram::{Pictogram, PictogramProps, SvgData};
 pub use qr_code::{QrCode, QrCodeProps};
 pub use sortable::{Sortable, SortableItem, SortableItemPart, SortableItemProps, SortableProps};

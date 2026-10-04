@@ -1,3 +1,4 @@
+use super::video::volume_parts;
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
@@ -46,6 +47,7 @@ pub fn AudioPage() -> Element {
                     prop("onerror", "EventHandler<MediaError>")
                         .default("None")
                         .doc("The source failed: `Aborted`, `Network`, `Decode` or `SourceNotSupported`."),
+                    prop("volume_parts", "Parts<VolumePart>").doc("Styles the portaled volume menu and its slider."),
                     prop("children", "Element")
                         .default("a sentence and a link")
                         .doc("Shown instead of the controls where nothing plays media (Blitz)."),
@@ -56,7 +58,8 @@ pub fn AudioPage() -> Element {
                     (AudioPart::Seek, "The seek slider's wrapper; its `SliderTrack::Bars` track draws the bars."),
                     (AudioPart::Volume, "The mute button and the volume menu's trigger."),
                     (AudioPart::Message, "The error text, or the fallback where nothing plays media."),
-                ]),
+                ])
+                .volume_parts("VolumePart", volume_parts()),
             ],
             accessibility: a11y()
                 .key(["K"], "Plays or pauses, with focus anywhere in the player.")

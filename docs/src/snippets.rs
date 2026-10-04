@@ -831,16 +831,16 @@ const FIELD_PROPS: [&str; 9] = [
     "readonly",
 ];
 
-/// `(component, part slot)` of a shared part enum the component never draws, so its
-/// table leaves it out (checked against the source, todo 1926 triage).
+/// `(component, part slot)` of a shared part enum the component never draws, so its table
+/// leaves it out. A frame's `leading`/`trailing` draw only where `use_field_frame` gets one.
 const KNOWN_GAPS: &[(&str, &str)] = &[
     ("Cascader", "leading"),
     ("ChronoField", "leading"),
+    // Cascader's and PhoneField's dropdown parts; `Combobox` passes its core no search box.
     ("Combobox", "column"),
     ("Combobox", "dial"),
     ("Combobox", "drill-back"),
     ("Combobox", "name"),
-    ("Combobox", "nothing-found"),
     ("Combobox", "pick-parent"),
     ("Combobox", "search"),
     ("MultiSelect", "leading"),
@@ -849,12 +849,14 @@ const KNOWN_GAPS: &[(&str, &str)] = &[
     ("PasswordField", "leading"),
     ("PinField", "leading"),
     ("PinField", "trailing"),
+    // `Slider`'s `track` and `segments`, which `RangeSlider` has no props for.
     ("RangeSlider", "bars"),
     ("RangeSlider", "segment"),
     ("RangeSlider", "segment-fill"),
     ("RangeSlider", "segments"),
     ("RichTextEditor", "leading"),
     ("RichTextEditor", "trailing"),
+    // `MultiSelect`'s chips.
     ("Select", "chip"),
     ("Select", "leading"),
     ("TagsField", "leading"),

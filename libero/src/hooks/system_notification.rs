@@ -238,7 +238,7 @@ pub fn use_system_notification() -> SystemNotifier {
             notifier.permission.set(PermissionState::Unsupported);
             return;
         };
-        let (probe, follows) = (api.probe(), api.follows_page());
+        let probe = api.probe();
         spawn(async move {
             let Some(state) = probe.await else {
                 notifier.permission.set(PermissionState::Unsupported);
@@ -246,7 +246,8 @@ pub fn use_system_notification() -> SystemNotifier {
             };
             notifier.supported.set(true);
             notifier.permission.set(state);
-            if follows {
+            // After the probe: the Linux desktop knows only then whether the page answers.
+            if api.follows_page() {
                 notifier.permission.follow();
             }
         });

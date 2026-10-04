@@ -1,8 +1,9 @@
 //! `Audio` over a generated 4 s silent WAV behind an unplayable `<source>`, a broken source, and `use_media` on a bare element.
 
 use dioxus::prelude::*;
-use libero::components::{Audio, Button, Flex, MediaSource, Text};
+use libero::components::{Audio, Button, Flex, MediaSource, Parts, Text, VolumePart};
 use libero::hooks::use_media;
+use libero::sx::sx;
 
 use crate::Routes;
 
@@ -67,9 +68,16 @@ fn AudioPage() -> Element {
             div { id: "broken", Audio { src: "data:audio/wav;base64,AAAA", label: "Broken" } }
             div { id: "muted", Audio { src: src.clone(), label: "Muted", muted: true } }
             div { id: "rtl", dir: "rtl", Audio { src: src.clone(), label: "Right to left" } }
-            // A shrink-wrapping parent: the bubble still takes its full width.
+            // A shrink-wrapping parent: the bubble still takes its full width. Its volume
+            // menu is styled through `volume_parts` (todo 1394).
             div { id: "inline", style: "display: inline-flex",
-                Audio { src: src.clone(), label: "Inline" }
+                Audio {
+                    src: src.clone(),
+                    label: "Inline",
+                    volume_parts: Parts::new()
+                        .part(VolumePart::Card, sx().padding("13px"))
+                        .part(VolumePart::Slider, sx().width("10rem")),
+                }
             }
             div { id: "custom",
                 audio { src, onmounted: media.mount(), ..media.attributes() }

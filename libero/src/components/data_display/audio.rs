@@ -3,14 +3,14 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::*;
 
 use super::media_controls::{
-    CONTROLS, MediaFallback, MediaSeek, MediaStatus, MediaVolume, SEEK, Sound, TIME, clock,
-    controls_sx, icon_size, seek_sx, space_toggles, times, use_late_tooltips, use_media_keys,
-    use_sound,
+    CONTROLS, MediaFallback, MediaSeek, MediaStatus, MediaVolume, SEEK, Sound, TIME, VolumePart,
+    clock, controls_sx, icon_size, seek_sx, space_toggles, times, use_late_tooltips,
+    use_media_keys, use_sound,
 };
 use crate::{
     components::{
         buttons::{ActionIcon, Button},
-        common::{Glyph, HtmlTag, Input, Part, base_props, parts_enum, use_name_warning},
+        common::{Glyph, HtmlTag, Input, Part, Parts, base_props, parts_enum, use_name_warning},
         form::SliderTrack,
         layout::use_box,
     },
@@ -232,6 +232,9 @@ base_props! {
         onended: Option<EventHandler<()>>,
         #[props(default)]
         onerror: Option<EventHandler<MediaError>>,
+        /// Styles the portaled volume menu and its slider.
+        #[props(default, into)]
+        volume_parts: Input<Parts<VolumePart>>,
         /// Shown instead of the controls where nothing plays media (Blitz). Unset,
         /// a sentence and a link to the file.
         #[props(default)]
@@ -323,7 +326,7 @@ pub fn Audio(props: AudioProps) -> Element {
         if unsupported {
             MediaFallback { src: props.src.clone(), children: props.children }
         } else {
-            AudioControls { media, sound, size: props.size.clone(), heights }
+            AudioControls { media, sound, size: props.size.clone(), heights, volume_parts: props.volume_parts }
         }
     };
 
@@ -347,6 +350,7 @@ fn AudioControls(
     sound: Sound,
     size: Input<Size>,
     heights: [f64; BARS],
+    volume_parts: Input<Parts<VolumePart>>,
 ) -> Element {
     use_late_tooltips();
     let labels = use_localization().media;
@@ -370,7 +374,7 @@ fn AudioControls(
                 MediaSeek { media, size: size.clone(), track: SliderTrack::Bars(heights.to_vec()) }
             }
             AudioTime { media }
-            MediaVolume { media, sound, size: size.clone() }
+            MediaVolume { media, sound, size: size.clone(), parts: volume_parts }
             AudioSpeed { media, size }
         }
         MediaStatus { media }

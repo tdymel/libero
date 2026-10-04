@@ -4,6 +4,7 @@
 use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually};
+use e2e::passes::contrast::COLOUR_JS;
 use e2e::passes::{motion, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -62,6 +63,66 @@ e2e::scenario!(
     "/progress-bar/segments",
     segments_fill
 );
+
+/// Todo 2185, WCAG 1.4.11: a segment's fill keeps 3:1 on its track and on the page
+/// in the gaps, and forced colours draw each segment's edge.
+#[test]
+fn the_segments_keep_their_contrast() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/progress-bar/segments", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('#segments [data-slot=segment-fill]').length === 3",
+            "the segments",
+        )
+        .await
+        .unwrap();
+        let ratios = format!(
+            r#"(() => {{ {COLOUR_JS}
+            const style = (s) => getComputedStyle(document.querySelector('#segments ' + s));
+            const base = OVER(RGBA(getComputedStyle(document.body).backgroundColor), [255, 255, 255, 1]);
+            const track = OVER(RGBA(style('[data-slot=segment]').backgroundColor), base);
+            const fill = OVER(RGBA(style('[data-slot=segment-fill]').backgroundColor), track);
+            return [CONTRAST(fill, track), CONTRAST(fill, base)]; }})()"#
+        );
+        let [on_track, on_page]: [f64; 2] = page
+            .evaluate(ratios.as_str())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            on_track >= 3.0,
+            "a segment's fill is {on_track:.2}:1 on its track"
+        );
+        assert!(
+            on_page >= 3.0,
+            "a segment's fill is {on_page:.2}:1 on the page"
+        );
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('#segments [data-slot=segment]')].every((s) => {
+                 const style = getComputedStyle(s);
+                 return style.outlineStyle === 'solid' && style.outlineColor !== 'rgba(0, 0, 0, 0)'
+                     && getComputedStyle(s.firstElementChild).backgroundColor !== style.backgroundColor; })",
+            "an edge on every segment, a fill apart from it",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
 
 /// `[fill width / track width, fill opacity]` for the bar at `selector`.
 fn fill(selector: &str) -> String {

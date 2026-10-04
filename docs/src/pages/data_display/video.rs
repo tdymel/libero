@@ -3,9 +3,21 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         Anchor, Chapter, Code, CodeBlock, Input, MediaTrack, Text, TrackKind, Video, VideoPart,
+        VolumePart,
     },
     theme::Size,
 };
+
+/// The volume menu's parts, shared with the Audio page.
+pub(super) fn volume_parts() -> Vec<(VolumePart, &'static str)> {
+    vec![
+        (VolumePart::Card, "The card the volume chevron opens."),
+        (
+            VolumePart::Slider,
+            "The volume slider's wrapper on the card, `8rem` wide.",
+        ),
+    ]
+}
 
 const CHAPTERS: &str = r#"vec![
     Chapter::new(0.0, "Morning"),
@@ -76,6 +88,7 @@ pub fn VideoPage() -> Element {
                     prop("onerror", "EventHandler<MediaError>")
                         .default("None")
                         .doc("The source failed: `Aborted`, `Network`, `Decode` or `SourceNotSupported`."),
+                    prop("volume_parts", "Parts<VolumePart>").doc("Styles the portaled volume menu and its slider."),
                     prop("children", "Element")
                         .default("a sentence and a link")
                         .doc("Shown instead of the controls where nothing plays media (Blitz)."),
@@ -88,7 +101,8 @@ pub fn VideoPage() -> Element {
                     (VideoPart::Seek, "The seek slider's wrapper."),
                     (VideoPart::Volume, "The mute button and the volume menu's trigger."),
                     (VideoPart::Message, "The error text, or the fallback where nothing plays media."),
-                ]),
+                ])
+                .volume_parts("VolumePart", volume_parts()),
             ],
             accessibility: a11y()
                 .key(["K"], "Plays or pauses, with focus anywhere in the player.")

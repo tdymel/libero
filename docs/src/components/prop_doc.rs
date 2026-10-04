@@ -87,6 +87,7 @@ pub struct PropGroup {
     extends: String,
     parts: Vec<PartDoc>,
     dropdown_parts: Vec<PartDoc>,
+    portal: Portal,
     /// Every slot of the part enum behind `parts`, for the coverage test.
     all_slots: Vec<&'static str>,
 }
@@ -100,9 +101,33 @@ pub fn props(component: impl Into<String>, props: Vec<PropDoc>) -> PropGroup {
         extends: String::new(),
         parts: Vec::new(),
         dropdown_parts: Vec::new(),
+        portal: DROPDOWN_PORTAL,
         all_slots: Vec::new(),
     }
 }
+
+/// What the second Style API table styles, out of what, its prop and the text after the prop.
+#[derive(Clone, Copy, PartialEq)]
+struct Portal {
+    what: &'static str,
+    owner: &'static str,
+    prop: &'static str,
+    tail: &'static str,
+}
+
+const DROPDOWN_PORTAL: Portal = Portal {
+    what: "dropdown",
+    owner: "field",
+    prop: "dropdown_parts",
+    tail: " prop. They match from the dropdown box at any depth.",
+};
+
+const VOLUME_PORTAL: Portal = Portal {
+    what: "volume menu",
+    owner: "player",
+    prop: "volume_parts",
+    tail: " prop.",
+};
 
 fn part_docs<P: Part + std::fmt::Debug>(enum_name: &str, parts: Vec<(P, &str)>) -> Vec<PartDoc> {
     parts
@@ -189,6 +214,18 @@ impl PropGroup {
         parts: Vec<(P, &str)>,
     ) -> Self {
         self.dropdown_parts = part_docs(enum_name, parts);
+        self.portal = DROPDOWN_PORTAL;
+        self
+    }
+
+    /// A media player's second Style API table, for the `volume_parts` prop of its volume menu.
+    pub fn volume_parts<P: Part + std::fmt::Debug>(
+        mut self,
+        enum_name: &str,
+        parts: Vec<(P, &str)>,
+    ) -> Self {
+        self.dropdown_parts = part_docs(enum_name, parts);
+        self.portal = VOLUME_PORTAL;
         self
     }
 }
@@ -276,12 +313,12 @@ pub fn PartsPanel(properties: Vec<PropGroup>) -> Element {
                     }
                     if !group.dropdown_parts.is_empty() {
                         Text {
-                            "The dropdown is portaled out of the field, so its parts take the "
-                            Code { source: "dropdown_parts" }
-                            " prop. They match from the dropdown box at any depth."
+                            "The {group.portal.what} is portaled out of the {group.portal.owner}, so its parts take the "
+                            Code { source: group.portal.prop }
+                            "{group.portal.tail}"
                         }
                         PartRows {
-                            name: format!("{} dropdown parts", group.component),
+                            name: format!("{} {} parts", group.component, group.portal.what),
                             parts: group.dropdown_parts,
                         }
                     }

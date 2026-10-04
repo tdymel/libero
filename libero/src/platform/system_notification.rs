@@ -112,8 +112,8 @@ pub(crate) trait SystemNotificationApi {
     fn probe(&self) -> Answer<Option<PermissionState>>;
     /// Prompts if the user has not answered yet.
     fn request(&self) -> Answer<PermissionState>;
-    /// Whether the page's `notifications` permission reports this API's answer. Android's
-    /// WebView reads `denied` whatever the app holds (todo 2135).
+    /// Whether the page's `notifications` permission reports this API's answer, asked after
+    /// `probe`. Android's WebView reads `denied` whatever the app holds (todo 2135).
     fn follows_page(&self) -> bool {
         true
     }
@@ -332,12 +332,39 @@ mod android;
 #[cfg_attr(all(test, feature = "native"), allow(dead_code))]
 mod freedesktop;
 
+/// Whether the last route picked the session bus. WebKitGTK reports `prompt` for the
+/// page's `notifications` whatever the bus grants (todo 2172), so the page then says nothing.
+#[cfg(any(
+    test,
+    all(target_os = "linux", feature = "desktop", not(feature = "native"))
+))]
+struct BusRoute(std::sync::atomic::AtomicBool);
+
+#[cfg(any(
+    test,
+    all(target_os = "linux", feature = "desktop", not(feature = "native"))
+))]
+impl BusRoute {
+    const fn new() -> Self {
+        Self(std::sync::atomic::AtomicBool::new(false))
+    }
+
+    // Release here, Acquire below: `follows_page` runs after the probe's route returned.
+    fn record(&self, bus: bool) {
+        self.0.store(bus, std::sync::atomic::Ordering::Release);
+    }
+
+    fn page_answers(&self) -> bool {
+        !self.0.load(std::sync::atomic::Ordering::Acquire)
+    }
+}
+
 /// The desktop WebView on Linux: WebKitGTK denies the page's `Notification`, so the
 /// session bus shows them; a liveview page keeps the browser's (todo 1470).
 #[cfg(all(target_os = "linux", feature = "desktop", not(feature = "native")))]
 mod desktop {
     use super::{
-        Answer, NotificationEvent, Shown, SystemNotification, SystemNotificationApi,
+        Answer, BusRoute, NotificationEvent, Shown, SystemNotification, SystemNotificationApi,
         SystemNotificationError, freedesktop,
     };
     use crate::platform::PermissionState;
@@ -345,10 +372,14 @@ mod desktop {
 
     type Api = &'static dyn SystemNotificationApi;
 
+    static BUS_ROUTE: BusRoute = BusRoute::new();
+
     /// The page's impl is read before the first `await`, while a scope is current.
     async fn route(page: Option<Api>) -> Option<Api> {
         let page = page?;
-        Some(if wry_page().await {
+        let bus = wry_page().await;
+        BUS_ROUTE.record(bus);
+        Some(if bus {
             &freedesktop::SYSTEM_NOTIFICATION
         } else {
             page
@@ -360,6 +391,10 @@ mod desktop {
     pub(super) static SYSTEM_NOTIFICATION: DesktopNotification = DesktopNotification;
 
     impl SystemNotificationApi for DesktopNotification {
+        fn follows_page(&self) -> bool {
+            BUS_ROUTE.page_answers()
+        }
+
         fn probe(&self) -> Answer<Option<PermissionState>> {
             let page = webview_system_notification();
             Box::pin(async move { route(page).await?.probe().await })
@@ -447,5 +482,15 @@ mod tests {
             options_of(&with)["actions"],
             serde_json::json!([{ "action": "open", "title": "Open" }])
         );
+    }
+
+    #[test]
+    fn the_page_answers_only_off_the_bus() {
+        let route = BusRoute::new();
+        assert!(route.page_answers());
+        route.record(true);
+        assert!(!route.page_answers());
+        route.record(false);
+        assert!(route.page_answers());
     }
 }

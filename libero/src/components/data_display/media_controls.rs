@@ -10,7 +10,7 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::{ActionIcon, Button, TooltipOpenDelay},
-        common::{Glyph, HtmlTag, Input},
+        common::{Glyph, HtmlTag, Input, Part, Parts, parts_enum},
         form::{Slider, SliderChangeEvent, SliderSegment, SliderTrack},
         layout::{paper_sx, use_box},
         overlay::{Menu, MenuItem, Shortcut, ShortcutHelp, use_menu},
@@ -35,6 +35,17 @@ pub(super) const SEEK: &str = "seek";
 pub(super) const VOLUME: &str = "volume";
 pub(super) const MESSAGE: &str = "message";
 
+parts_enum! {
+    /// The volume menu's parts, for the `volume_parts` prop of [`Audio`](super::Audio) and
+    /// [`Video`](super::Video): the menu is portaled, so the player's `parts` miss it.
+    pub enum VolumePart {
+        /// The card the menu opens.
+        Card = "volume-card" => "&",
+        /// The volume slider's wrapper on it, `8rem` wide.
+        Slider = "volume-slider" => "& > [data-slot='volume-slider']",
+    }
+}
+
 /// The buttons' tooltips open after 2s of hover; keyboard focus still opens them at once (todo 1439).
 pub(super) fn use_late_tooltips() {
     use_context_provider(|| TooltipOpenDelay(2000));
@@ -45,6 +56,8 @@ static VOLUME_MENU_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
         .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Sm))
+        // The card sizes to its content, which a `100%` track has none of.
+        .selector(VolumePart::Slider.selector(), sx().width("8rem"))
 });
 
 /// The speeds the speed menu offers.
@@ -252,6 +265,7 @@ pub(super) fn MediaControls(
     chapters: Vec<Chapter>,
     #[props(default)] fullscreen: Option<FullscreenHandle>,
     #[props(default)] overlay: bool,
+    #[props(default)] volume_parts: Input<Parts<VolumePart>>,
     /// The row's border-box height, each time it changes.
     #[props(default)]
     onheight: Option<EventHandler<f64>>,
@@ -281,7 +295,7 @@ pub(super) fn MediaControls(
         }
     };
     let sound_controls = rsx! {
-        MediaVolume { media, sound, size: size.clone() }
+        MediaVolume { media, sound, size: size.clone(), parts: volume_parts }
     };
     let speed = rsx! {
         MediaSpeed { media, size: size.clone(), overlay }
@@ -539,7 +553,12 @@ fn MediaSpeed(media: MediaHandle, size: Input<Size>, overlay: bool) -> Element {
 /// The speaker mutes and unmutes; the chevron beside it opens the volume slider
 /// in a menu, which keeps the row narrow.
 #[component]
-pub(super) fn MediaVolume(media: MediaHandle, sound: Sound, size: Input<Size>) -> Element {
+pub(super) fn MediaVolume(
+    media: MediaHandle,
+    sound: Sound,
+    size: Input<Size>,
+    parts: Input<Parts<VolumePart>>,
+) -> Element {
     let labels = use_localization().media;
     let theme = use_theme();
     let silent = sound.silent();
@@ -558,6 +577,7 @@ pub(super) fn MediaVolume(media: MediaHandle, sound: Sound, size: Input<Size>) -
     let floating = *popover.floating();
     let card = use_box()
         .framework_sx(&VOLUME_MENU_SX)
+        .parts(&parts)
         .style(Some(popover.style()))
         .prepare();
 
@@ -579,6 +599,7 @@ pub(super) fn MediaVolume(media: MediaHandle, sound: Sound, size: Input<Size>) -
         attributes.extend(owner_link(&anchor));
         card.element(&floating)
             .attr("id", menu_id.cloned())
+            .attr("data-slot", VolumePart::Card.slot())
             .attr("role", "dialog")
             .attr("aria-label", labels.volume)
             // Tab leaves the card for its trigger, as a menu does.
@@ -595,17 +616,18 @@ pub(super) fn MediaVolume(media: MediaHandle, sound: Sound, size: Input<Size>) -
             .render(
                 HtmlTag::Div,
                 attributes,
+                // Wrapped: a `Slider` puts spread attributes on its thumb, not its root.
                 rsx! {
-                    Slider::<f64> {
-                        value: media.volume() * 100.0,
-                        min: 0.0,
-                        max: 100.0,
-                        step: 5.0,
-                        size: size.clone(),
-                        aria_label: labels.volume,
-                        // The card sizes to its content, which a `100%` track has none of.
-                        sx: sx().width("8rem"),
-                        oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
+                    div { "data-slot": VolumePart::Slider.slot(),
+                        Slider::<f64> {
+                            value: media.volume() * 100.0,
+                            min: 0.0,
+                            max: 100.0,
+                            step: 5.0,
+                            size: size.clone(),
+                            aria_label: labels.volume,
+                            oninput: move |event: SliderChangeEvent| sound.set_volume(event.value() / 100.0),
+                        }
                     }
                 },
             )
@@ -738,6 +760,19 @@ pub(super) fn clock(seconds: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::common::part_table;
+
+    /// The slot names are public: a rename here is a breaking change.
+    #[test]
+    fn the_volume_part_table_is_stable() {
+        assert_eq!(
+            part_table::<VolumePart>(),
+            [
+                ("volume-card", "&"),
+                ("volume-slider", "& > [data-slot='volume-slider']"),
+            ]
+        );
+    }
 
     #[test]
     fn a_clock_shows_hours_only_from_an_hour() {

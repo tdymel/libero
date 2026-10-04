@@ -98,6 +98,7 @@ so it plays only online.
 | `onpause` | `EventHandler<()>` | `None` | Playing paused. |
 | `onended` | `EventHandler<()>` | `None` | Playing reached the end. |
 | `onerror` | `EventHandler<MediaError>` | `None` | The source failed: `Aborted`, `Network`, `Decode` or `SourceNotSupported`. |
+| `volume_parts` | `Parts<VolumePart>` | - | Styles the portaled volume menu and its slider. |
 | `children` | `Element` | a sentence and a link | Shown instead of the controls where nothing plays media (Blitz). |
 
 Like every component, `Audio` also takes the shared props `sx`, `class`,
@@ -116,6 +117,16 @@ explains how parts work.
 | `AudioPart::Seek` | `seek` | The seek slider's wrapper; its `SliderTrack::Bars` track draws the bars. |
 | `AudioPart::Volume` | `volume` | The mute button and the volume menu's trigger. |
 | `AudioPart::Message` | `message` | The error text, or the fallback where nothing plays media. |
+
+### Volume menu
+
+The volume menu is portaled out of the player, so its parts take the
+`volume_parts` prop.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `VolumePart::Card` | `volume-card` | The card the volume chevron opens. |
+| `VolumePart::Slider` | `volume-slider` | The volume slider's wrapper on the card, `8rem` wide. |
 
 ## Accessibility
 
