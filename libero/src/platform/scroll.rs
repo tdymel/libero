@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use dioxus::html::geometry::WheelDelta;
-use dioxus::prelude::{ScrollData, WheelData};
+pub(crate) use dioxus::prelude::ScrollData;
+use dioxus::prelude::WheelData;
 
 use super::backend;
 
@@ -118,6 +119,53 @@ pub trait ScrollApi {
     /// Calls `callback` whenever anything scrolls, until the returned
     /// subscription is dropped. No coordinates: the callback re-measures.
     fn on_scroll(&self, callback: Box<dyn Fn()>) -> Box<dyn ScrollSubscription>;
+}
+
+/// One element's scroll position, as a `scroll` event carries it.
+#[cfg_attr(any(target_arch = "wasm32", feature = "native"), allow(dead_code))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(crate) struct ScrollReport {
+    pub top: f64,
+    pub left: f64,
+    pub scroll_width: i32,
+    pub scroll_height: i32,
+    pub client_width: i32,
+    pub client_height: i32,
+}
+
+impl dioxus::html::HasScrollData for ScrollReport {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    fn scroll_top(&self) -> f64 {
+        self.top
+    }
+    fn scroll_left(&self) -> f64 {
+        self.left
+    }
+    fn scroll_width(&self) -> i32 {
+        self.scroll_width
+    }
+    fn scroll_height(&self) -> i32 {
+        self.scroll_height
+    }
+    fn client_width(&self) -> i32 {
+        self.client_width
+    }
+    fn client_height(&self) -> i32 {
+        self.client_height
+    }
+}
+
+/// The scrolls of the element carrying `tag`, about one a frame and the last
+/// one always, flagged `true` on `scrollend`, without holding up the page.
+/// `None` where its `scroll` event is cheap: a WebView's is a synchronous round
+/// trip to Rust (todo 2131).
+pub(crate) fn on_element_scroll(
+    tag: u64,
+    callback: Box<dyn Fn(ScrollData, bool)>,
+) -> Option<Box<dyn ScrollSubscription>> {
+    backend::on_element_scroll(tag, callback)
 }
 
 /// `None` where no scroll is reported: a WebView, a headless build. Blitz reports

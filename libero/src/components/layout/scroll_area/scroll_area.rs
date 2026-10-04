@@ -20,10 +20,14 @@ use crate::{
     platform::{
         Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, SCROLL_QUIET, TimerSubscription,
         clips_z_indexed, draws_own_scrollbars, fires_scroll_end, fires_scroll_on_scroll_to,
-        has_match_by_tag, scroll, scroll_range, scrolls_on_keys, timer, when_free, when_laid_out,
+        has_match_by_tag, on_element_scroll, scroll, scroll_range, scrolls_on_keys, timer,
+        when_free, when_laid_out,
     },
-    sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{
+        ColorCss, ColorShade, CssVar, SKELETON_COLOR, ScrollAxis, ScrollbarSize,
+        ScrollbarVisibility,
+    },
     utils::warn,
 };
 
@@ -45,6 +49,11 @@ const SCROLL_AREA_THUMB_VAR: CssVar = CssVar::new("--lsx-scroll-area-thumb-color
 /// Rows a `Virtualize` child skipped, as padding so the range spans the whole list.
 const SCROLL_AREA_LEADING_VAR: CssVar = CssVar::new("--lsx-scroll-area-leading");
 const SCROLL_AREA_TRAILING_VAR: CssVar = CssVar::new("--lsx-scroll-area-trailing");
+/// A windowed row's pitch, for the placeholder rows in the padding.
+const SCROLL_AREA_PITCH_VAR: CssVar = CssVar::new("--lsx-scroll-area-pitch");
+
+/// A reported position, and whether it ended the scroll.
+type ScrollHandler = Box<dyn FnMut(&ScrollData, bool)>;
 
 /// The drawn bars' `aria-hidden` layer, the root's first child. Plumbing, not a part.
 pub(super) const SCROLLBARS_SLOT: &str = "scrollbars";
@@ -135,13 +144,36 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
 /// Reserves the rows a `Virtualize` skipped; `display: contents` until then,
 /// so an ordinary area lays out as without it.
 static SCROLL_AREA_CONTENT_SX: StaticSx = StaticSx::new(|| {
-    sx().display("contents").when(
-        "virtualized",
-        sx().display("block")
-            .padding_top(SCROLL_AREA_LEADING_VAR.value_or("0px"))
-            .padding_bottom(SCROLL_AREA_TRAILING_VAR.value_or("0px")),
-    )
+    sx().display("contents")
+        .when(
+            "virtualized",
+            sx().display("block")
+                .padding_top(SCROLL_AREA_LEADING_VAR.value_or("0px"))
+                .padding_bottom(SCROLL_AREA_TRAILING_VAR.value_or("0px")),
+        )
+        .when("windowed", placeholder_rows_sx())
 });
+
+/// Skeleton bars, one per pitch, in the padding only: a fast fling outruns the
+/// rows' render, and shows these instead of a blank pane (todo 2131). Forced
+/// colours compute the image to `none`, so no bars stray there.
+fn placeholder_rows_sx() -> Sx {
+    let pitch = SCROLL_AREA_PITCH_VAR.value();
+    let bar = format!("min(6px, {pitch} / 4)");
+    let color = SKELETON_COLOR.value();
+    let rows = format!(
+        "repeating-linear-gradient(to bottom, transparent 0 calc({pitch} / 2 - {bar}), \
+         {color} 0 calc({pitch} / 2 + {bar}), transparent 0 {pitch})"
+    );
+    sx().background_image(format!("{rows}, {rows}"))
+        .background_size(format!(
+            "calc(100% - 2rem) {}, calc(100% - 2rem) {}",
+            SCROLL_AREA_LEADING_VAR.value_or("0px"),
+            SCROLL_AREA_TRAILING_VAR.value_or("0px")
+        ))
+        .background_position("1rem top, 1rem bottom")
+        .background_repeat("no-repeat")
+}
 
 fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
     variables().with(SCROLL_AREA_THUMB_VAR, color.and_then(|v| v.resolve(None)))
@@ -149,10 +181,14 @@ fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
 
 /// Both always, `0px` included: the style attribute is patched per property,
 /// so a dropped one would keep the last window's reserve.
-fn scroll_area_content_variables(offsets: ContentOffsets) -> Variables {
+fn scroll_area_content_variables(offsets: ContentOffsets, pitch: Option<f64>) -> Variables {
     variables()
         .with(SCROLL_AREA_LEADING_VAR, format!("{}px", offsets.leading))
         .with(SCROLL_AREA_TRAILING_VAR, format!("{}px", offsets.trailing))
+        .with(
+            SCROLL_AREA_PITCH_VAR,
+            pitch.map(|pitch| format!("{pitch}px")),
+        )
 }
 
 /// The edges the last position rested against, so `on*reached` fires on the
@@ -239,6 +275,7 @@ base_props! {
         #[doc(hidden)]
         #[props(default)]
         bar_inset_top: Option<f64>,
+        /// The position as it scrolls; a WebView (desktop, mobile) coalesces it to about once a frame.
         #[props(default)]
         onscroll: Option<EventHandler<ScrollPositionEvent>>,
         /// After the area resized and re-measured itself. A prop, so it doesn't
@@ -287,6 +324,7 @@ fn measure_area(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometry>
                 (Ok(size), Ok((_, top))) => ScrollGeometry {
                     offset: top,
                     viewport: size.height,
+                    ..ScrollGeometry::default()
                 },
                 _ => ScrollGeometry::default(),
             };
@@ -307,10 +345,7 @@ fn measure_offset(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometr
                 return;
             };
             if known.offset != top {
-                geometry.set(Some(ScrollGeometry {
-                    offset: top,
-                    ..known
-                }));
+                geometry.set(Some(known.scrolled(top, known.viewport)));
             }
         });
     });
@@ -389,12 +424,16 @@ fn ScrollAreaContent(content: ElementHandle, children: Element) -> Element {
     let viewport = use_context::<ScrollViewport>();
     // Unvirtualized content is `display: contents` and reserves nothing.
     let (states, variables): (Input<States>, Input<Variables>) = if (viewport.virtualized)() {
-        let offsets = (viewport.spec)()
+        let spec = (viewport.spec)();
+        let offsets = spec
             .map(|spec| spec.at((viewport.geometry)()).0.offsets)
             .unwrap_or_default();
         (
-            States::default().with("virtualized", true).into(),
-            scroll_area_content_variables(offsets).into(),
+            States::default()
+                .with("virtualized", true)
+                .with("windowed", spec.is_some())
+                .into(),
+            scroll_area_content_variables(offsets, spec.map(|spec| spec.pitch)).into(),
         )
     } else {
         (Input::None, Input::None)
@@ -624,16 +663,15 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         }
     });
 
-    let onscroll = move |event: Event<ScrollData>| {
-        let data = event.data();
+    let mut scroll_data = move |data: &ScrollData| {
         if own_bars {
-            drawn_bars.scrolled(&data);
+            drawn_bars.scrolled(data);
         }
-        let (x_pct, y_pct, max_x, max_y) = scroll_metrics(&data);
-        geometry.set(Some(ScrollGeometry {
-            offset: data.scroll_top(),
-            viewport: data.client_height() as f64,
-        }));
+        let (x_pct, y_pct, max_x, max_y) = scroll_metrics(data);
+        let known = geometry.peek().unwrap_or_default();
+        geometry.set(Some(
+            known.scrolled(data.scroll_top(), data.client_height() as f64),
+        ));
         if onscroll_prop && !fires_scroll_end() {
             last_at.set((x_pct, y_pct)); // Replacing the wait drops the one before, which cancels it.
             quiet_wait.set(timer().map(|timer| {
@@ -661,6 +699,25 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             max_y,
         );
     };
+    let onscroll = move |event: Event<ScrollData>| scroll_data(&event.data());
+    // The latest render's handler, for the WebView's report below.
+    let mut latest = use_hook(|| CopyValue::new(None::<ScrollHandler>));
+    // On a WebView a `scroll` listener held the page up a round trip per step,
+    // most of a fast fling's frames (todo 2131): it reports by message instead.
+    let reported = use_hook(|| {
+        Rc::new(tag.and_then(|tag| {
+            on_element_scroll(
+                tag,
+                Box::new(move |data, end| {
+                    let mut latest = latest;
+                    if let Some(handler) = latest.write().as_mut() {
+                        handler(&data, end);
+                    }
+                }),
+            )
+        }))
+    })
+    .is_some();
 
     let onscrollend = move |event: Event<ScrollData>| {
         let (x_pct, y_pct, ..) = scroll_metrics(&event.data());
@@ -694,7 +751,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     if !has_role {
         attributes.retain(|attribute| !matches!(attribute.name, "aria-label" | "aria-labelledby"));
     }
-    if automatic && spread_tag.is_none() {
+    if (automatic || reported) && spread_tag.is_none() {
         attributes.extend(root.attributes());
     }
 
@@ -714,6 +771,18 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         || [ontopreached, onbottomreached, onleftreached, onrightreached]
             .iter()
             .any(Option::is_some);
+    // `scrollend` comes by the same message: as its own event it would beat the last step.
+    let handler: Option<ScrollHandler> = match tracks_scroll && reported {
+        true => Some(Box::new(move |data: &ScrollData, end: bool| {
+            scroll_data(data);
+            if end && onscroll_prop {
+                let (x_pct, y_pct, ..) = scroll_metrics(data);
+                ended((x_pct, y_pct));
+            }
+        })),
+        false => None,
+    };
+    latest.set(handler);
 
     // `ResizeObserver` reports once on observe: the mount-time check.
     let resized = move |event: Event<ResizeData>| {
@@ -745,8 +814,11 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         // same one: this, named as a region (APG scrollable region).
         .attr_default("tabindex", if tab_stop { "0" } else { "-1" })
         .attr_default("role", tab_stop.then_some("region"))
-        .event("onscroll", tracks_scroll.then_some(onscroll))
-        .event("onscrollend", onscroll_prop.then_some(onscrollend))
+        .event("onscroll", (tracks_scroll && !reported).then_some(onscroll))
+        .event(
+            "onscrollend",
+            (onscroll_prop && !reported).then_some(onscrollend),
+        )
         .event(
             "onkeydown",
             (!owned && !scrolls_on_keys()).then_some(move |event| scroll_on_key(root, event)),

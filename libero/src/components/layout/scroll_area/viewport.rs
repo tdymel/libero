@@ -10,7 +10,24 @@ use crate::hooks::ElementHandle;
 pub(super) struct ScrollGeometry {
     pub offset: f64,
     pub viewport: f64,
+    /// The last scroll step, signed: the window reaches that far further ahead.
+    pub step: f64,
 }
+
+impl ScrollGeometry {
+    /// Scrolled to `offset`, remembering the step from here.
+    pub fn scrolled(self, offset: f64, viewport: f64) -> Self {
+        Self {
+            offset,
+            viewport,
+            step: offset - self.offset,
+        }
+    }
+}
+
+/// Scroll steps the window reaches ahead: rows land a few frames after a fast
+/// fling moved, and must be there by then (todo 2131).
+const STEPS_AHEAD: f64 = 3.0;
 
 /// Space standing in for the rows a `Virtualize` did not render, which its
 /// `ScrollArea` pads itself with.
@@ -25,6 +42,7 @@ pub(super) struct ContentOffsets {
 pub(super) const UNMEASURED: ScrollGeometry = ScrollGeometry {
     offset: 0.0,
     viewport: 1080.0,
+    step: 0.0,
 };
 
 /// What a settled `Virtualize` windows by: with the geometry, its rows and offsets.
@@ -126,8 +144,9 @@ fn measurable(px: f64) -> bool {
     px.is_finite() && px > 0.0
 }
 
-/// The rows visible at `geometry`, plus `overscan` beyond each edge. `pitch`
-/// includes the gap, so the total overshoots by one trailing gap.
+/// The rows visible at `geometry`, plus `overscan` beyond each edge and the
+/// last steps ahead, up to two viewports. `pitch` includes the gap, so the
+/// total overshoots by one trailing gap.
 pub(super) fn window(
     count: usize,
     pitch: f64,
@@ -144,11 +163,20 @@ pub(super) fn window(
     let first = (geometry.offset.max(0.0) / pitch).floor() as usize;
     // The partial row at each edge is why this rounds up and adds one.
     let rows = (geometry.viewport / pitch).ceil() as usize + 1;
+    let reach = (geometry.step.abs() * STEPS_AHEAD).min(geometry.viewport * 2.0);
+    let ahead = match reach.is_finite() {
+        true => (reach / pitch).ceil() as usize,
+        false => 0,
+    };
+    let (above, below) = match geometry.step < 0.0 {
+        true => (overscan + ahead, overscan),
+        false => (overscan, overscan + ahead),
+    };
 
-    let start = first.saturating_sub(overscan).min(count);
+    let start = first.saturating_sub(above).min(count);
     let end = first
         .saturating_add(rows)
-        .saturating_add(overscan)
+        .saturating_add(below)
         .clamp(start, count);
 
     Window {
@@ -197,7 +225,26 @@ mod tests {
     const GEOMETRY: ScrollGeometry = ScrollGeometry {
         offset: 0.0,
         viewport: 100.0,
+        step: 0.0,
     };
+
+    /// A 50px step down reaches 150px (8 rows) further below; up, above.
+    #[test]
+    fn the_window_reaches_ahead_by_the_last_steps() {
+        let down = GEOMETRY.scrolled(400.0, 100.0).scrolled(450.0, 100.0);
+        assert_eq!(down.step, 50.0);
+        assert_eq!(window(1000, 20.0, down, 2).range, 20..38);
+
+        let up = down.scrolled(400.0, 100.0);
+        assert_eq!(window(1000, 20.0, up, 2).range, 10..28);
+    }
+
+    /// A jump across the list reaches two viewports ahead, not the jump's length.
+    #[test]
+    fn a_long_jump_reaches_two_viewports_ahead() {
+        let jump = GEOMETRY.scrolled(10_000.0, 100.0);
+        assert_eq!(window(1000, 20.0, jump, 0).range, 500..516);
+    }
 
     #[test]
     fn the_first_window_starts_at_the_top() {

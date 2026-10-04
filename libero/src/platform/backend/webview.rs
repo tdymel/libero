@@ -49,6 +49,7 @@ use crate::platform::{
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
     media::{MEDIA_EVENTS, MediaApi, MediaState, MediaSubscription},
     permission::{PermissionApi, PermissionKind, PermissionState, PermissionSubscription},
+    scroll::{ScrollData, ScrollReport},
     waveform::{PEAKS_SCRIPT, Peaks, WaveformApi},
 };
 use crate::tokens::{
@@ -308,6 +309,97 @@ pub(super) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn Scro
         let mut script = script;
         while script.recv::<()>().await.is_ok() {
             callback();
+        }
+    });
+    Some(Box::new(WebViewListener {
+        task,
+        _slot: Rc::new(slot),
+    }))
+}
+
+/// Delegated from the window, so a remounted element under the same tag still
+/// reports. The first step of a frame goes at once, the rest as one at the next
+/// frame: a starved frame would hold the first back too. `scrollend` carries the
+/// last position itself, so it never lands before a queued step.
+const ON_ELEMENT_SCROLL: &str = "const selector = '[' + data[0] + '=\"' + data[1] + '\"]';
+    let queued = null, armed = false, seq = 0;
+    const send = (s, ended) => {
+        if (!s.isConnected) return;
+        seq += 1;
+        dioxus.send([seq, s.scrollTop, s.scrollLeft, s.scrollWidth, s.scrollHeight, s.clientWidth, s.clientHeight, ended]);
+    };
+    const flush = () => {
+        armed = false;
+        if (queued !== null) send(queued, false);
+        queued = null;
+    };
+    const ours = (event) => event.target instanceof Element && event.target.matches(selector);
+    const tick = (event) => {
+        if (!ours(event)) return;
+        if (armed) {
+            queued = event.target;
+            return;
+        }
+        armed = true;
+        send(event.target, false);
+        requestAnimationFrame(flush);
+    };
+    const end = (event) => {
+        if (!ours(event)) return;
+        queued = null;
+        send(event.target, true);
+    };
+    window.addEventListener('scroll', tick, { capture: true, passive: true });
+    window.addEventListener('scrollend', end, { capture: true, passive: true });";
+
+pub(super) fn on_element_scroll(
+    tag: u64,
+    callback: Box<dyn Fn(ScrollData, bool)>,
+) -> Option<Box<dyn ScrollSubscription>> {
+    if !runs_scripts() {
+        return None;
+    }
+    let slot = Slot::new();
+    let script = eval_with(
+        json!([OBSERVE_ATTR, tag.to_string()]),
+        &format!(
+            "{ON_ELEMENT_SCROLL}
+            {}
+            window.removeEventListener('scroll', tick, {{ capture: true }});
+            window.removeEventListener('scrollend', end, {{ capture: true }});",
+            slot.park("")
+        ),
+    );
+    let task = spawn(async move {
+        let mut script = script;
+        let mut last = 0;
+        while let Ok((
+            seq,
+            top,
+            left,
+            scroll_width,
+            scroll_height,
+            client_width,
+            client_height,
+            ended,
+        )) = script
+            .recv::<(u64, f64, f64, i32, i32, i32, i32, bool)>()
+            .await
+        {
+            // Never back to an older position, should one arrive late.
+            if seq <= last {
+                continue;
+            }
+            last = seq;
+            let report = ScrollReport {
+                top,
+                left,
+                scroll_width,
+                scroll_height,
+                client_width,
+                client_height,
+            };
+            callback(ScrollData::new(report), ended);
         }
     });
     Some(Box::new(WebViewListener {

@@ -134,6 +134,20 @@ pub(crate) fn has_match_by_tag(tag: u64, selector: &str) -> super::Read<bool> {
     }
 }
 
+/// Only a WebView; see [`on_element_scroll`](crate::platform::scroll::on_element_scroll).
+pub(crate) fn on_element_scroll(
+    tag: u64,
+    callback: Box<dyn Fn(dioxus::prelude::ScrollData, bool)>,
+) -> Option<Box<dyn super::ScrollSubscription>> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::on_element_scroll(tag, callback);
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
+    {
+        let _ = (tag, callback);
+        None
+    }
+}
+
 /// The web and a WebView have an `IntersectionObserver`; Blitz has none.
 pub(crate) fn on_intersection(
     target: &Rc<MountedData>,
