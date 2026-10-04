@@ -8,7 +8,6 @@ use super::{
 };
 use crate::{
     context::{ModalHost, PortalHost, PortalOutlet, WindowHost, window::ZLayers},
-    css::Stylesheet,
     localization::{Formats, Localization},
     platform::{
         self, A11yAnswers, a11y_media, answers_a11y_media, apply_direction, color_scheme,
@@ -87,7 +86,7 @@ pub fn LiberoProvider(
     });
     let theme_css = use_signal({
         let themes = themes.clone();
-        move || Rc::<str>::from(Stylesheet::from(&themes).as_str())
+        move || themes.sheet_css()
     });
     let theme_set = use_signal(|| themes);
     // Set before the first render where the root is in reach (the web).

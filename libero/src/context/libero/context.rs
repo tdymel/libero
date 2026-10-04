@@ -4,13 +4,12 @@ use dioxus::prelude::*;
 
 use super::{CssLayer, stylesheet_registry::StylesheetRegistry};
 use crate::{
-    css::Stylesheet,
     localization::{Formats, Localization},
     platform::{
         A11yAnswers, a11y_media, apply_direction, clear_root_direction, color_scheme, document,
         forget_direction, set_current_a11y_answers, store_direction,
     },
-    theme::{THEME_ATTRIBUTE, Theme, ThemeSet},
+    theme::{THEME_ATTRIBUTE, Theme, ThemeSet, theme_sheet_css},
     tokens::{AccessibilityPreferences, ColorScheme, ColorSchemeSetting, Direction},
     utils::warn,
 };
@@ -129,7 +128,7 @@ impl LiberoContext {
         if *active.peek() == name {
             return;
         }
-        css.set(Rc::from(Stylesheet::from(theme).as_str()));
+        css.set(theme_sheet_css(theme, None));
         active.set(name);
         current.set(theme);
     }
@@ -179,10 +178,10 @@ impl LiberoContext {
             .is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, Some(name)));
         let mut css = self.theme_css;
         if !carried {
-            css.set(Rc::from(Stylesheet::from(theme).as_str()));
+            css.set(theme_sheet_css(theme, None));
         } else if stale {
             // A named theme's sheet has no attribute blocks to select (todo 1837).
-            css.set(Rc::from(Stylesheet::from(&*self.themes.peek()).as_str()));
+            css.set(self.themes.peek().sheet_css());
         }
 
         let (mut active, mut current) = (self.active, self.theme);
@@ -207,7 +206,7 @@ impl LiberoContext {
             // No attribute to clear: rebuild with the whole set, whose media
             // block follows the system on its own.
             let mut css = self.theme_css;
-            css.set(Rc::from(Stylesheet::from(&themes).as_str()));
+            css.set(themes.sheet_css());
         }
 
         let (mut active, mut current) = (self.active, self.theme);

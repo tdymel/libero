@@ -128,6 +128,11 @@ impl ThemeSet {
         }
     }
 
+    /// The set's sheet text, the light/dark pair only (see `From<&ThemeSet> for Stylesheet`).
+    pub(crate) fn sheet_css(&self) -> std::rc::Rc<str> {
+        super::theme_sheet_css(self.light, self.dark)
+    }
+
     /// Whether `name` is in the pair, which switches by attribute rather than a rebuild.
     pub(crate) fn is_in_pair(&self, name: &str) -> bool {
         name == Self::LIGHT || (name == Self::DARK && self.dark.is_some())

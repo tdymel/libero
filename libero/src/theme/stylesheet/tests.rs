@@ -622,3 +622,15 @@ fn theme_css_omits_font_smoothing_when_disabled() {
     assert!(css.contains("html{box-sizing:border-box;color-scheme:light;}"));
     assert!(!css.contains("font-smoothing"));
 }
+
+/// Todo 2152: a provider mount reuses the cached text, which matches the built sheet.
+#[test]
+fn the_cached_theme_sheet_is_the_built_one() {
+    let pair = ThemeSet::DEFAULT.sheet_css();
+    assert_eq!(*pair, *Stylesheet::from(&ThemeSet::DEFAULT).as_str());
+    assert!(std::rc::Rc::ptr_eq(&pair, &ThemeSet::DEFAULT.sheet_css()));
+
+    let lone = ThemeSet::of(&Theme::DARK).sheet_css();
+    assert_eq!(*lone, *Stylesheet::from(&Theme::DARK).as_str());
+    assert_ne!(*lone, *pair);
+}

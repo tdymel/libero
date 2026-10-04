@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use super::{
     declarations::theme_declarations,
     palette::{foreground_var, theme_ends},
@@ -61,6 +63,45 @@ impl From<&ThemeSet> for Stylesheet {
         css.push_str(&base_layer_and_keyframes(light, "light dark"));
         Stylesheet::from(css)
     }
+}
+
+/// The last few theme sheets, keyed by their themes' addresses: a `&'static Theme` never changes.
+const THEME_SHEETS: usize = 8;
+
+type ThemeSheetKey = (*const Theme, Option<*const Theme>);
+
+thread_local! {
+    static THEME_SHEET_CACHE: std::cell::RefCell<std::collections::VecDeque<(ThemeSheetKey, Rc<str>)>> =
+        const { std::cell::RefCell::new(std::collections::VecDeque::new()) };
+}
+
+/// [`Stylesheet::from`] the pair `light`/`dark` (a lone theme without `dark`), cached: every
+/// provider mount needs it, ~25 ms of colour maths per /about/providers mount on wasm (todo 2152).
+pub(crate) fn theme_sheet_css(light: &'static Theme, dark: Option<&'static Theme>) -> Rc<str> {
+    let key: ThemeSheetKey = (light, dark.map(|dark| dark as *const Theme));
+    let hit = THEME_SHEET_CACHE.with_borrow(|cache| {
+        cache
+            .iter()
+            .find(|(cached, _)| *cached == key)
+            .map(|(_, css)| css.clone())
+    });
+    if let Some(css) = hit {
+        return css;
+    }
+
+    let css: Rc<str> = match dark {
+        Some(dark) => Stylesheet::from(&ThemeSet::pair("", light, dark)),
+        None => Stylesheet::from(light),
+    }
+    .as_str()
+    .into();
+    THEME_SHEET_CACHE.with_borrow_mut(|cache| {
+        if cache.len() == THEME_SHEETS {
+            cache.pop_front();
+        }
+        cache.push_back((key, css.clone()));
+    });
+    css
 }
 
 /// The attribute a document root carries to pin one theme of the pair.
