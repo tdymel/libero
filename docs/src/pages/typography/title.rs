@@ -33,7 +33,8 @@ pub fn TitlePage() -> Element {
                     "Keep one `h1` per page and skip no levels.",
                     "A `lg` heading in a section under the page's `h1` needs `component: \"h2\"`, or the document jumps from `h1` to `h3`.",
                     "Check the contrast of a literal CSS stop in `gradient`. A debug build warns when a hex stop reads under 4.5:1 on the page background.",
-                ]),
+                ])
+                .example("A section heading under the page's `h1`, `Title { size: \"lg\", component: \"h2\", \"Pricing\" }`: a screen reader lists \"Pricing\" as a level 2 heading, whatever its size."),
             lead: rsx! {
                 Text {
                     "A heading, "

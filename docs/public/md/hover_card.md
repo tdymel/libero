@@ -90,6 +90,12 @@ Like every component, `HoverCard` also takes the shared props `sx`, `class`,
 - Name the card with `aria_label` or `aria-labelledby` pointing into the
   content.
 
+### Example
+
+A user's name as a link, with a `HoverCard { aria_label: "Ada Lovelace", .. }`
+showing an avatar and bio: focusing the link opens the card, and the profile
+page the link leads to holds the same facts for a screen reader.
+
 ### Limits
 
 - On desktop and mobile, Escape works only while focus is on the trigger or

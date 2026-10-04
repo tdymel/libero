@@ -64,7 +64,8 @@ pub fn ImagePage() -> Element {
                     "A zoomable image is a button named after its `alt`, \"Zoom in: <alt>\" (the localization's `image.zoom_named`).",
                     "An image with neither `alt` nor `decorative` warns in a debug build and renders no `alt`, so a checker still flags it.",
                 ])
-                .must(["Give every image an `alt`, or set `decorative` for one that carries nothing."]),
+                .must(["Give every image an `alt`, or set `decorative` for one that carries nothing."])
+                .example("A product photo, `Image { alt: \"Blue running shoe, side view\", zoomable: true, .. }`: a screen reader reads the button \"Zoom in: Blue running shoe, side view\", and Escape closes the zoomed view."),
             lead: rsx! {
                 Text {
                     "An "

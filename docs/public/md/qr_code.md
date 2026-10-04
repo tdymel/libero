@@ -56,6 +56,12 @@ Like every component, `QrCode` also takes the shared props `sx`, `class`,
   the payload.
 - Next to a real link, the link serves better.
 
+### Example
+
+A ticket, `QrCode { data: .., aria_label: "Ticket for the 8 pm show, row 4,
+seat 12" }`: a screen reader user hears what the code holds, not that it is a
+QR code.
+
 ## Theme defaults
 
 `QrCodeDefaults` on the theme.

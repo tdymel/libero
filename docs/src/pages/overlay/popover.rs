@@ -275,7 +275,8 @@ pub fn PopoverPage() -> Element {
                 .limits([
                     "Safari does not focus a button on click, so there a press outside a box opened by pointer does not close it.",
                     "On Android, a box opened without a tap (on mount or from a timer) may let Back close the app.",
-                ]),
+                ])
+                .example("A \"Filter\" button that opens a box with `use_popover` and `dismiss(true)`, the box `role: \"dialog\"` and `tabindex: \"-1\"`, the button `aria-expanded` from the same signal: Escape closes it and puts focus back on Filter."),
             lead: rsx! {
                 Text {
                     "A popover is a hook, not a component. A dropdown, a menu and a hover "

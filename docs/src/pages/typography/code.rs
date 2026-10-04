@@ -51,7 +51,8 @@ pub fn CodePage() -> Element {
                 .handles([
                     "Each snippet is a real `<code>`. Highlighting only adds colored spans, so a screen reader reads the source as it is.",
                     "A long identifier wraps at any character, so it fits a 320px column. A span of up to 20 characters stays on one line.",
-                ]),
+                ])
+                .example("An inline `Code { source: \"use_theme()\" }` in a sentence: a screen reader reads `use_theme()` as written, with or without highlighting."),
             lead: rsx! {
                 Text {
                     "A "

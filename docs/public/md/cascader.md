@@ -215,6 +215,12 @@ The dropdown is portaled out of the field, so its parts take the
 - Without a `label`, set `aria_label`. Otherwise screen readers announce an
   unnamed combobox.
 
+### Example
+
+A category picker, `Cascader { label: "Category" }`: Down opens it, Right
+expands a branch, Left goes up a level, Enter on a leaf picks it and closes,
+and Escape closes without a change.
+
 ## Theme defaults
 
 `theme.cascader` is `CascaderDefaults { size, radius, column_width }`. The frame

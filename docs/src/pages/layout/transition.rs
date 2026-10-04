@@ -67,6 +67,7 @@ fn from_filter(values: &DemoValues) -> Option<String> {
 }
 
 /// Prints the trigger and its `show` signal: `open` is the caller's, and the paste needs it to compile.
+// snippet: mirrors TransitionDemo except transition
 fn wrap_page(_values: &DemoValues, source: &str) -> String {
     let transition = indent(&indent(source));
     format!(
@@ -86,7 +87,7 @@ fn wrap_page(_values: &DemoValues, source: &str) -> String {
 }
 
 /// Its own component: a hook in `render` would land in `Demo`'s scope.
-/// **Kept in step with `wrap_page` by hand.**
+/// `wrap_page` prints it; the snippet drift test ties the two.
 #[component]
 fn TransitionDemo(kind: TransitionKind, duration: Option<u32>, filter: Option<String>) -> Element {
     let mut show = use_signal(|| false);
@@ -134,7 +135,8 @@ pub fn TransitionPage() -> Element {
                 .must([
                     "Give the button that shows and hides the content `aria_expanded`, so a screen reader hears whether it is open.",
                     "Move focus yourself when focused content exits: use `use_focus_return`.",
-                ]),
+                ])
+                .example("A \"Show filters\" button with `aria_expanded` above a filter panel in a `Transition`: a screen reader hears whether the panel is open, and once it closes its fields leave the Tab order."),
             lead: rsx! {
                 Text {
                     "Animates its children in on mount, and out when "

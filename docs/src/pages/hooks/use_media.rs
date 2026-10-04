@@ -116,6 +116,7 @@ pub fn UseMediaPage() -> Element {
                     "Announce buffering and errors yourself, from `buffering()` and `error()`, as the demo's status line and `Audio` and `Video` do.",
                     "Never autoplay sound (WCAG 1.4.2); offer captions and a transcript as for any media.",
                 ])
+                .example("Your own podcast player on `use_media()`: the play button's name follows the state, Play or Pause, and a status line says \"Buffering\" while `buffering()` is true.")
                 .limits([
                     "Blitz and a server render play no media: every command does nothing and `is_supported()` stays false.",
                     "On a WebView each command and state change crosses the IPC, so the time trails by a moment.",

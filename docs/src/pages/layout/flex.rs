@@ -81,7 +81,8 @@ pub fn FlexPage() -> Element {
                 .must([
                     "Add `role` and `aria-label` when the children form a group, such as `role: \"group\"` around related buttons.",
                     "`Flex` always renders a `div`: for a list or a nav, use `Box` with `component: \"ul\"` or `\"nav\"`.",
-                ]),
+                ])
+                .example("Save and Cancel in a `Flex` with `role: \"group\"` and `\"aria-label\": \"Form actions\"`: a screen reader reads both as one group, in the order they are shown."),
             lead: rsx! {
                 Text {
                     "A flexbox container with theme-aware direction, gap, alignment and "

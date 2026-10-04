@@ -58,6 +58,7 @@ pub fn UseBackPage() -> Element {
                 .must([
                     "Keep a visible control for the same step, such as a Previous button: web, desktop and keyboard users have no Back button.",
                 ])
+                .example("A three-step wizard with `use_back(step() > 0, ..)` going one step back: on Android Back returns to the previous step, and a visible Previous button does the same for everyone else.")
                 .limits([
                     "Android only. Elsewhere the hook does nothing.",
                     "Activated without a tap (on mount, from a timer), the first Back may still leave the app: Android's WebView skips a history entry pushed without a user gesture.",

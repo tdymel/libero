@@ -97,6 +97,12 @@ explains how parts work.
 - Set `autocomplete` so password managers can fill the field: `"new-password"`
   on a sign-up form, `"current-password"` on a sign-in form.
 
+### Example
+
+A sign-in password, `PasswordField { label: "Password", autocomplete:
+"current-password" }`: the password manager fills it, and the reveal button
+reads as pressed while the password shows.
+
 ## Theme defaults
 
 `PasswordFieldDefaults` holds `reveal_button`, the prop's default (`true`).

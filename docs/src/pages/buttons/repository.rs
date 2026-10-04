@@ -45,18 +45,12 @@ pub fn RepositoryPage() -> Element {
                 ])
                 .must([
                     "With your own `aria_label`, name the repository and say that it opens in a new tab.",
-                ]),
+                ])
+                .example("A header link, `Repository { repo: \"tdymel/libero\" }`: a screen reader reads \"GitHub tdymel/libero\", then the star count once it arrives, then that it opens in a new tab."),
             lead: rsx! {
                 Text {
                     "A link to a repository with its star count beside the host's icon. "
-                    "Give it the repository's name; it asks the host's public API once per "
-                    "mount and keeps the count for the session. Until the count arrives, "
-                    "when it is 0, or when the host does not answer, the icon stands alone."
-                }
-                Text {
-                    "It opens in a new tab. This site's header uses "
-                    Code { source: "Repository {{ repo: \"tdymel/libero\" }}" }
-                    "."
+                    "It opens in a new tab."
                 }
             },
             Demo {
@@ -101,6 +95,18 @@ pub fn RepositoryPage() -> Element {
                         }
                     }
                 },
+            }
+
+            DocSection {
+                title: "Star count",
+                Text {
+                    "Give it the repository's name; it asks the host's public API once per "
+                    "mount and keeps the count for the session. Until the count arrives, "
+                    "when it is 0, or when the host does not answer, the icon stands alone. "
+                    "This site's header uses "
+                    Code { source: "Repository {{ repo: \"tdymel/libero\" }}" }
+                    "."
+                }
             }
 
             DocSection {

@@ -158,7 +158,8 @@ pub fn ScrollAreaPage() -> Element {
                 .must([
                     "Name the area with `aria_label` or `aria_labelledby`.",
                     "Use `scrollbars: \"none\"` only where something else scrolls: it puts the clipped content out of reach.",
-                ]),
+                ])
+                .example("A terms text in `ScrollArea { aria_label: \"Terms of service\", .. }`: Tab stops on the area, a screen reader reads its name, and the arrow keys scroll it."),
             lead: rsx! {
                 Text {
                     "Scrolls its content and fills its parent, so give the parent a size. "

@@ -213,6 +213,12 @@ paints on top.
 - If you animate the close, give the closing box `visibility: hidden` or
   `inert`. Until it unmounts, it is still tabbable and still announced.
 
+### Example
+
+A "Filter" button that opens a box with `use_popover` and `dismiss(true)`, the
+box `role: "dialog"` and `tabindex: "-1"`, the button `aria-expanded` from the
+same signal: Escape closes it and puts focus back on Filter.
+
 ### Limits
 
 - Safari does not focus a button on click, so there a press outside a box

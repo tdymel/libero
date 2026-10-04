@@ -141,6 +141,11 @@ parts work.
 - Pass `alt: ""` where the name shows beside the avatar, or it is read twice.
 - Put nothing focusable in a decorative avatar.
 
+### Example
+
+A comment author, `Avatar { name: "Ada Lovelace", alt: "" }` beside the
+visible name: the name is read once, from the text, not twice.
+
 ## Theme defaults
 
 `AvatarDefaults` and `AvatarGroupDefaults` on the theme. The chip's words are

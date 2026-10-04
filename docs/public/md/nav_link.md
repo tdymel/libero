@@ -139,6 +139,12 @@ parts work.
 
 - Wrap a list of them in a `<nav>` to make a navigation landmark.
 
+### Example
+
+A side menu of `NavLink`s inside a `<nav>`: a screen reader lists the
+navigation landmark, and a link with a `description` keeps its short name,
+such as "Docs".
+
 ### Limits
 
 - In a native app, Tab still enters the nested links of a closed panel.

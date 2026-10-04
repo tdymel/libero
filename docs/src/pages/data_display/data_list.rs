@@ -54,7 +54,8 @@ pub fn DataListPage() -> Element {
                 .handles(["Each term is a `<dt>` and its descriptions one `<dd>`, so a screen reader pairs them."])
                 .must([
                     "Put each `DataListItem` directly inside the `DataList`. A wrapper element between them breaks the pairing of term and description.",
-                ]),
+                ])
+                .example("An order summary with a `DataListItem` per row, such as \"Status\" and \"Shipped\": a screen reader pairs each term with its description."),
             lead: rsx! {
                 Text {
                     "A "

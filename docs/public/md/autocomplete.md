@@ -180,6 +180,12 @@ The dropdown is portaled out of the field, so its parts take the
 - The clear button is named by the field's `label`, "Clear Fruit", so two clear
   buttons on one form tell apart. Without a `label` it is "Clear" alone.
 
+### Example
+
+A city field, `Autocomplete { label: "City", .. }`: typing "ber" opens the
+list and the status says "2 results", Down highlights Berlin, and Enter picks
+it.
+
 ## Theme defaults
 
 Almost everything is `FieldDefaults`, shared by every field, and the list is

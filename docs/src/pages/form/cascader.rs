@@ -1,16 +1,26 @@
 use super::CLEAR_NAME;
 use super::dropdown_parts::{CASCADER_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props, readonly_prop,
-    required_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, indent,
+    prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::CascaderPart;
 use libero::use_theme;
 use libero::{
-    components::{Cascader, CascaderNodeArgs, CascaderOption, Code, FieldStatus, Flex, Text},
+    components::{Cascader, CascaderNodeArgs, CascaderOption, Code, Flex, Text},
     sx::sx,
 };
+
+struct CategoryCopy;
+
+impl FieldCopy for CategoryCopy {
+    const LABEL: &'static str = "Category";
+    const DESCRIPTION: &'static str = "Down to a leaf.";
+    const HELPER: &'static str = "Shown on the product page.";
+    const WARNING: &'static str = "That aisle is being retired.";
+    const ERROR: &'static str = "Pick a category.";
+}
 
 /// The tree the preview renders, printed above the snippet so the two cannot
 /// drift - `data` is deliberately not a control.
@@ -238,7 +248,8 @@ pub fn CascaderPage() -> Element {
                     "Android's Back button closes the dropdown as Escape does, rather than the app.",
                     CLEAR_NAME,
                 ])
-                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
+                .example("A category picker, `Cascader { label: \"Category\" }`: Down opens it, Right expands a branch, Left goes up a level, Enter on a leaf picks it and closes, and Escape closes without a change."),
             lead: rsx! {
                 Text {
                     "Picks one option from a tree, one level at a time. The value is that option's "
@@ -259,34 +270,13 @@ pub fn CascaderPage() -> Element {
                     "value: chosen()".to_string(),
                     "onchange: move |next: Option<String>| chosen.set(next)".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::sizes("size").default("md"),
                     Control::sizes("radius").default("sm"),
                     Control::toggle("layout", ["columns", "paths"])
                         .labels(["Columns", "Paths"])
                         .default("columns"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"That aisle is being retired.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Pick a category.\"".to_string()],
-                            _ => vec![],
-                        }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Category\"".to_string()],
-                            _ => vec!["aria_label: \"Category\"".to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"Down to a leaf.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<CategoryCopy>(), vec![
                     Control::switch("placeholder").default("true").code(|_, values| {
                         match values.str("placeholder").as_str() {
                             "true" => vec!["placeholder: \"Pick a category\"".to_string()],
@@ -304,38 +294,37 @@ pub fn CascaderPage() -> Element {
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
+                ]].concat(),
                 wrap: Wrap(wrap_value),
-                render: move |values: DemoValues| rsx! {
-                    Flex { direction: "column", gap: "sm", align: "flex-start",
-                        Cascader {
-                            sx: sx().width("100%").max_width("320px"),
-                            size: values.str("size"),
-                            radius: values.str("radius"),
-                            layout: values.str("layout"),
-                            label: (values.str("label") == "true").then(|| "Category".to_string()),
-                            aria_label: (values.str("label") != "true").then_some("Category"),
-                            description: (values.str("description") == "true")
-                                .then(|| "Down to a leaf.".to_string()),
-                            placeholder: (values.str("placeholder") == "true")
-                                .then(|| "Pick a category".to_string()),
-                            status: match values.str("status").as_str() {
-                                "warning" => FieldStatus::Warning("That aisle is being retired.".to_string()),
-                                "error" => FieldStatus::Error("Pick a category.".to_string()),
-                                _ => FieldStatus::Valid,
-                            },
-                            node: (values.str("node") == "true").then(|| Callback::new(category_node)),
-                            searchable: (values.str("searchable") == "true").then_some(true),
-                            any_level: (values.str("any_level") == "true").then_some(true),
-                            allow_deselect: (values.str("allow_deselect") == "true").then_some(true),
-                            clearable: (values.str("clearable") == "true").then_some(true),
-                            required: (values.str("required") == "true").then_some(true),
-                            disabled: (values.str("disabled") == "true").then_some(true),
-                            data: categories(),
-                            value: chosen(),
-                            onchange: move |next: Option<String>| chosen.set(next),
+                render: move |values: DemoValues| {
+                    let field = field_props::<CategoryCopy>(&values);
+                    rsx! {
+                        Flex { direction: "column", gap: "sm", align: "flex-start",
+                            Cascader {
+                                sx: sx().width("100%").max_width("320px"),
+                                size: values.str("size"),
+                                radius: values.str("radius"),
+                                layout: values.str("layout"),
+                                label: field.label,
+                                aria_label: field.aria_label,
+                                description: field.description,
+                                placeholder: (values.str("placeholder") == "true")
+                                    .then(|| "Pick a category".to_string()),
+                                helper: field.helper,
+                                status: field.status,
+                                node: (values.str("node") == "true").then(|| Callback::new(category_node)),
+                                searchable: (values.str("searchable") == "true").then_some(true),
+                                any_level: (values.str("any_level") == "true").then_some(true),
+                                allow_deselect: (values.str("allow_deselect") == "true").then_some(true),
+                                clearable: (values.str("clearable") == "true").then_some(true),
+                                required: (values.str("required") == "true").then_some(true),
+                                disabled: (values.str("disabled") == "true").then_some(true),
+                                data: categories(),
+                                value: chosen(),
+                                onchange: move |next: Option<String>| chosen.set(next),
+                            }
+                            Text { size: "sm", "value: {chosen():?}" }
                         }
-                        Text { size: "sm", "value: {chosen():?}" }
                     }
                 },
             }

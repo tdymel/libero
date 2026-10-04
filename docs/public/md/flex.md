@@ -94,6 +94,12 @@ Like every component, `Flex` also takes the shared props `sx`, `class`, `style`,
 - `Flex` always renders a `div`: for a list or a nav, use `Box` with
   `component: "ul"` or `"nav"`.
 
+### Example
+
+Save and Cancel in a `Flex` with `role: "group"` and `"aria-label": "Form
+actions"`: a screen reader reads both as one group, in the order they are
+shown.
+
 ## Theme defaults
 
 `FlexDefaults` on the theme holds one `FlexAxisDefaults` per axis.

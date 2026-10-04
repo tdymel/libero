@@ -55,6 +55,12 @@ Like every component, `Center` also takes the shared props `sx`, `class`,
 - `Center` always renders a `div`: for a list or a nav, put a `Box` with
   `component: "ul"` or `"nav"` inside.
 
+### Example
+
+An empty state in `Center`, with an icon, a line of text and a "New project"
+button: a screen reader and Tab meet them in that order, the order of the
+code.
+
 ## Theme defaults
 
 `CenterDefaults` on the theme holds the display mode every `Center` starts

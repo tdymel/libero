@@ -50,6 +50,11 @@ Like every component, `Text` also takes the shared props `sx`, `class`,
   stop. A debug build warns when a hex stop reads under 4.5:1 on the page
   background.
 
+### Example
+
+A price in a sentence, `Text { component: "span", size: "lg", "$12" }`: it
+stays part of the sentence, and its large size does not make it a heading.
+
 ## Theme defaults
 
 `TextDefaults` on the theme; per-size values live in its `sizes` scale.

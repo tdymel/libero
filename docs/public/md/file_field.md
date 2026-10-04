@@ -206,6 +206,12 @@ explains how parts work.
 
 - Without a `label`, pass `aria_label`, which names the Browse button.
 
+### Example
+
+An attachment field, `FileField { label: "Attachment" }`: a group named
+"Attachment". The picked files are one tab stop and Browse is another; on
+Browse, Enter opens the picker and Backspace removes the last file.
+
 ## Theme defaults
 
 `FileFieldDefaults` on the theme.

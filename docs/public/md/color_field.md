@@ -126,6 +126,12 @@ The dropdown is portaled out of the field, so its parts take the
 - Android's Back button closes the dropdown rather than the app. Focus in the
   dropdown goes back to the text.
 
+### Example
+
+A brand color field, `ColorField { label: "Brand color" }`: focus opens the
+dropdown and stays in the text, so `#228be6` can be typed at once. Down moves
+into the picker, and Escape brings focus back to the text.
+
 ## Theme defaults
 
 `ColorFieldDefaults` holds `size`, `radius`, `with_preview`,

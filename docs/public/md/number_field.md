@@ -186,6 +186,12 @@ explains how parts work.
   field with `increment_label` and `decrement_label`, such as "Add a guest".
   Unset, every field's are "Increase" and "Decrease".
 
+### Example
+
+Two guest counts with `steppers` in one form: ArrowUp adds one guest, PageUp
+ten, and `increment_label: "Add an adult"` and `"Add a child"` tell the two
+Increase buttons apart.
+
 ## Theme defaults
 
 Most of it is `FieldDefaults`, shared by every field. `NumberFieldDefaults`

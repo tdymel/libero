@@ -173,6 +173,11 @@ parts work.
 - Use `scrollbars: "none"` only where something else scrolls: it puts the
   clipped content out of reach.
 
+### Example
+
+A terms text in `ScrollArea { aria_label: "Terms of service", .. }`: Tab stops
+on the area, a screen reader reads its name, and the arrow keys scroll it.
+
 ## Theme defaults
 
 `ScrollAreaDefaults` on the theme.

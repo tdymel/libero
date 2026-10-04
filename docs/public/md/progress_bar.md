@@ -116,6 +116,12 @@ explains how parts work.
 - The bar is not a live region. To announce progress, update a separate status
   line at milestones, not on every tick.
 
+### Example
+
+An upload bar, `ProgressBar { value: Some(42.0), aria_label: "Upload" }`: a
+screen reader reads the name "Upload" and 42% when it reaches the bar. A
+status line beside it says "Half done" once, at the milestone.
+
 ## Theme defaults
 
 `ProgressBarDefaults` on the theme, as `theme.progress_bar`.

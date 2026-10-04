@@ -34,7 +34,8 @@ pub fn ShortcutHelpPage() -> Element {
                 .must([
                     "Open it with `use_modal`, which traps focus, closes on Escape and hands focus back.",
                     "List only shortcuts that work where the reader is.",
-                ]),
+                ])
+                .example("A `ShortcutHelp` opened with `use_modal` on \"?\": focus moves into the dialog, a screen reader reads each chord and what it does as a pair, and Escape returns focus."),
             lead: rsx! {
                 Text {
                     "A dialog listing keyboard shortcuts. Chords are written as "

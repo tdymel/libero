@@ -561,7 +561,7 @@ pub fn ComboboxPage() -> Element {
                         .default("from the Combobox")
                         .doc("Overrides whether the row is refused. A refused row is greyed and ignores the click and Enter."),
                     prop("onpick", "EventHandler<()>")
-                        .doc("Called on a click, and by Enter while the row is active."),
+                        .doc("Called on a click, and by Enter while the row is active. The only way to pick."),
                     prop("size", "Size")
                         .doc("Row height and font size. Defaults to the `Combobox`'s `size`."),
                     prop("radius", "Size")
@@ -593,20 +593,15 @@ pub fn ComboboxPage() -> Element {
                     "Close the list on your trigger's blur, or an enclosing `Modal` stops hearing Escape while the list stays open.",
                     "Name the trigger: it becomes a `combobox`, which takes no name from its content. Point a button trigger's `aria-labelledby` at a visible label, and give a text field a `label`.",
                     "Pass the same label's id as `labelled_by`, so the list has a name too.",
-                ]),
+                ])
+                .example("A search field as your own trigger, with `state.a11y_attributes()` spread on it and a visible label whose id is `labelled_by`: a screen reader reads a combobox named by the label, Down moves into the list, and focus never leaves the field."),
             lead: rsx! {
                 Text {
-                    "A listbox that hangs off whatever control you put in it. It holds no "
-                    "state of its own. "
+                    "A listbox that hangs off whatever control you put in it, with the placement, "
+                    "the arrow keys and the row styling. It holds no state: "
                     Code { source: "use_combobox()" }
-                    " keeps the open state in your scope, the selection is yours, "
-                    Code { source: "option" }
-                    " draws the rows and "
-                    Code { source: "children" }
-                    " is the trigger. The combobox adds the placement, the arrow keys and the "
-                    "row styling. Closing on an outside click is yours, and "
-                    Code { source: "onpick" }
-                    " is the only way to pick."
+                    " keeps the open state in your scope, and the selection and closing on an "
+                    "outside click are yours."
                 }
             },
             // snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }

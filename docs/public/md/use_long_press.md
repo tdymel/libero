@@ -115,6 +115,12 @@ of the newest render is the one used.
   does.
 - Announce what the press did with a live region, as the demo does.
 
+### Example
+
+A message you hold to reply to: the same Reply sits in the message's context
+menu and in a visible button, and a status line says "Replying to Ada" once
+the press fires.
+
 ### Limits
 
 - It reacts to pointer events only. Keyboard and screen reader activation arrive

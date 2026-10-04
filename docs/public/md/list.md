@@ -116,6 +116,12 @@ parts work.
 - When an icon carries meaning, such as done or missing, say it in the item's
   text too.
 
+### Example
+
+A checklist of `ListItem`s with check icons: a screen reader says the item
+count and reads each item's text. The item says "done" in words, since the
+icon is not read.
+
 ## Theme defaults
 
 `ListDefaults` on the theme. The gap and indent scales are separate, both in

@@ -66,6 +66,12 @@ Like every component, `ButtonGroup` also takes the shared props `sx`,
 
 - Name the group with `aria-label`, or `aria-labelledby` on a visible heading.
 
+### Example
+
+Zoom out, Reset and Zoom in in a `ButtonGroup` with `"aria-label": "Zoom"`: a
+screen reader reads the three buttons as the "Zoom" group, and Tab stops on
+each one.
+
 ### Limits
 
 - It is not a `toolbar`: no arrow-key navigation between the buttons.

@@ -129,6 +129,12 @@ behave the same. See [Modal](modal.md).
   its own.
 - Give its content a way to close it: it has no header close button.
 
+### Example
+
+A filters drawer, `DrawerOptions { aria_label: Some("Filters".into()), .. }`:
+focus moves into the panel, Tab stays inside it, and Escape or the panel's own
+Done button closes it and returns focus to the trigger.
+
 ### Limits
 
 - On Android, a drawer opened without a tap (on mount or from a timer) may let

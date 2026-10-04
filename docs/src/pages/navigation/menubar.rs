@@ -185,7 +185,8 @@ pub fn MenubarPage() -> Element {
                     "A disabled trigger takes focus and opens nothing.",
                     "The rest works as in `Menu`, including `MenuItem`'s `shortcut` and `checkbox`.",
                 ])
-                .must(["Name the bar with `aria_label`. It is required."]),
+                .must(["Name the bar with `aria_label`. It is required."])
+                .example("An editor's menu bar, `Menubar { aria_label: \"Editor\", .. }` with File, Edit and View: Tab enters on File, Right moves to Edit, and Down opens the Edit menu on its first item."),
             lead: rsx! {
                 Text {
                     "A row of menus, like a desktop app's File, Edit and View. Each menu is a "

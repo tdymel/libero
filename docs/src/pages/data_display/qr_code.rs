@@ -33,7 +33,8 @@ pub fn QrCodePage() -> Element {
                 .must([
                     "Say in `aria_label` where the code leads or what it holds, not that it is a QR code. A screen reader user cannot scan it, so the label is the only way to the payload.",
                     "Next to a real link, the link serves better.",
-                ]),
+                ])
+                .example("A ticket, `QrCode { data: .., aria_label: \"Ticket for the 8 pm show, row 4, seat 12\" }`: a screen reader user hears what the code holds, not that it is a QR code."),
             lead: rsx! {
                 Text {
                     "Encodes "

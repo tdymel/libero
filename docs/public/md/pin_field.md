@@ -115,6 +115,12 @@ explains how parts work.
 
 - Give the field a `label`, which names the whole group.
 
+### Example
+
+A sign-in code, `PinField { label: "Verification code", length: 6, .. }`: a
+screen reader reads the group as "Verification code" and each cell as
+"Character 1 of 6" and so on.
+
 ## Theme defaults
 
 `PinFieldDefaults` holds `length`, `size`, `radius`, `kind` and `gap`, the

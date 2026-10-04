@@ -100,3 +100,9 @@ arrives, so a new `ms` applies from the next one.
   changed.
 - Keep the field itself bound to the live signal, as the demo does: delaying the
   text a person is typing makes the field lag behind their keys.
+
+### Example
+
+A product search that fetches on `use_debounced_value` of the query, 300 ms
+after the last key: the field follows every key, and a `role="status"` line
+says "12 results" once the late results arrive.

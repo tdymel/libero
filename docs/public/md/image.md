@@ -110,6 +110,12 @@ explains how parts work.
 
 - Give every image an `alt`, or set `decorative` for one that carries nothing.
 
+### Example
+
+A product photo, `Image { alt: "Blue running shoe, side view", zoomable: true,
+.. }`: a screen reader reads the button "Zoom in: Blue running shoe, side
+view", and Escape closes the zoomed view.
+
 ## Theme defaults
 
 `ImageDefaults` on the theme.

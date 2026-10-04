@@ -179,7 +179,8 @@ pub fn LightboxPage() -> Element {
                     "With `zoom` on, the picture showing is a tab stop that takes the zoom and pan keys. Its description lists them, and a status message reads each new zoom level.",
                     "At the edge of a pan the arrows move to the next picture, so the keyboard never gets stuck.",
                 ])
-                .must(["Give every picture its own `alt`."]),
+                .must(["Give every picture its own `alt`."])
+                .example("A product gallery whose photos each have their own `alt`: the viewer opens from a thumbnail, Left and Right move between photos, and Escape closes it with focus back on that thumbnail."),
             lead: rsx! {
                 Text {
                     "A modal image viewer. "

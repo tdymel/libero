@@ -111,6 +111,12 @@ parts work. The menus open in a portal, outside the bar: style them with
 
 - Name the bar with `aria_label`. It is required.
 
+### Example
+
+An editor's menu bar, `Menubar { aria_label: "Editor", .. }` with File, Edit
+and View: Tab enters on File, Right moves to Edit, and Down opens the Edit
+menu on its first item.
+
 ## Theme defaults
 
 `MenubarDefaults` on the theme. The menus read `MenuDefaults`, but take the

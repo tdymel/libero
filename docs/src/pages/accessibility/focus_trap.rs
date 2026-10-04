@@ -84,6 +84,7 @@ pub fn FocusTrapPage() -> Element {
                     "Keep a trap only around content that is the one thing that matters on screen, such as an open overlay. A keyboard user who cannot Tab out of a region has no way back to the page.",
                     "Give the user a way out: the trap has no Escape of its own, so close it on Escape and on a button.",
                 ])
+                .example("A delete confirmation, `FocusTrap { restore_focus: true, .. }` around its message and two buttons: Tab from the last button wraps to the first, Escape and Cancel close it, and focus goes back to the button that opened it.")
                 .limits([
                     "Without `restore_focus`, focus is not restored on unmount: it falls to the page body.",
                 ]),

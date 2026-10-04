@@ -87,6 +87,12 @@ empty.
 - Announce a result the reader asked for, such as a measurement, in a status
   region, as the demo does.
 
+### Example
+
+A "Measure" button that reads its card's size through the handle: the result
+goes into a status region, so a screen reader hears "320 by 180" without focus
+moving.
+
 ## API
 
 ```rust,ignore

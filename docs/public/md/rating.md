@@ -144,6 +144,11 @@ explains how parts work.
 - Without a visible label, set `aria_label`.
 - Translate the spoken value with the localization or `format`.
 
+### Example
+
+A product review, `Rating { label: "Your rating", fractions: 2, .. }`: one tab
+stop, a slider read as "3.5 of 5", and the arrows move it by half a star.
+
 ### Limits
 
 - At the default `md` size a whole star is a 28px target, a half star 14px

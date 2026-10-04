@@ -96,6 +96,13 @@ Like every component, `Collapse` also takes the shared props `sx`, `class`,
   [`use_focus_return`](use_focus_return.md), with `remember_active()` on every
   open and `restore()` where the panel closes.
 
+### Example
+
+A "Show details" button with `aria_expanded: open()` and `aria_controls:
+"details"` above a `Collapse { open: open(), id: "details", .. }`: a screen
+reader reads the button as expanded or collapsed, and the closed panel is
+skipped.
+
 ## Theme defaults
 
 `CollapseDefaults` on the theme, as `theme.collapse`.

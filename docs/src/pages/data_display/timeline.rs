@@ -5,6 +5,7 @@ use libero::components::{Code, Text, Timeline, TimelineEvent, TimelineLine, Time
 use pictogram_icons_lucide as lucide;
 
 /// The four fixed events as printed, with the controls' bullets and line style.
+// snippet: mirrors demo_items except vec
 fn items_code(values: &DemoValues) -> String {
     let bullets = values.str("bullets") == "true";
     let dashed = values.str("line") == "dashed";
@@ -160,6 +161,7 @@ pub fn TimelinePage() -> Element {
                     "Never put anything focusable in a `.bullet(..)`. It would stay a tab stop with no name. Interactive content belongs in `.content(..)`.",
                     "Say an error or other status in the title or content. The `.color(..)` accent alone does not carry it.",
                 ])
+                .example("An order's history in a `Timeline` with `active` on the \"Shipped\" event: a screen reader reads each event's place in the list and marks \"Shipped\" as the current step. A failed delivery says \"Failed\" in its title, not only in red.")
                 .limits([
                     "A screen reader hears only which event is current, as `aria-current=\"step\"`. Done and pending are visual; put them in the title or content where they matter. With `active` past the end, the last event still reads as current.",
                 ]),

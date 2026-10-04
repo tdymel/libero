@@ -72,6 +72,11 @@ Like every component, both also take the shared props `sx`, `class`, `style`,
 - Put each `DataListItem` directly inside the `DataList`. A wrapper element
   between them breaks the pairing of term and description.
 
+### Example
+
+An order summary with a `DataListItem` per row, such as "Status" and
+"Shipped": a screen reader pairs each term with its description.
+
 ## Theme defaults
 
 `DataListDefaults` on the theme. The gap scale is in pixels.

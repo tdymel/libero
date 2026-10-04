@@ -133,6 +133,12 @@ explains how parts work.
 - Pick a `placement` that does not cover the page's controls: the page behind
   a window still takes Tab.
 
+### Example
+
+An inspector window with the title "Inspector": it takes focus when it opens,
+the arrows on its title bar move it, F6 goes back to the page, and Escape
+closes it and returns focus to its trigger.
+
 ### Limits
 
 - In a desktop WebView or on Android, F6 does not move focus, and the Move and

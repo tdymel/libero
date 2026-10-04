@@ -97,7 +97,8 @@ pub fn NativeSelectPage() -> Element {
             ],
             accessibility: a11y()
                 .handles(["Your own `aria-describedby` ids come first, before the captions."])
-                .must(["Without a visible `label`, set `aria_label`. A select with no name is a defect."]),
+                .must(["Without a visible `label`, set `aria_label`. A select with no name is a defect."])
+                .example("A font size select with no visible label, `NativeSelect { aria_label: \"Size\" }`: a screen reader names it \"Size\", and the browser's own list handles the arrows and type-ahead."),
             lead: rsx! {
                 Text {
                     "A styled native select over an enum, with a label, captions and a status "

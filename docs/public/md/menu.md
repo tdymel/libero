@@ -162,6 +162,12 @@ explains how parts work.
 - Put a shortcut hint in `shortcut`, not `trailing`. A screen reader then
   hears it as `aria-keyshortcuts`, not as part of the item's name.
 
+### Example
+
+An "Actions" menu with a Save item, `shortcut: "Ctrl+S"`: Enter on the trigger
+opens the menu on its first item, a screen reader reads "Save" and the
+shortcut apart, and Escape returns focus to the trigger.
+
 ### Limits
 
 - On Android, a menu opened without a tap (on mount or from a timer) may let

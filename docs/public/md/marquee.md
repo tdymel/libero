@@ -138,6 +138,12 @@ parts work.
   only reports through `onpausechange`, and without the handler it does
   nothing.
 
+### Example
+
+A logo strip in a `Marquee`: a screen reader reads the logos once, and a
+keyboard user Tabs to the toggle named "Pause" and stops the motion with
+Enter.
+
 ## Theme defaults
 
 `MarqueeDefaults` on the theme.

@@ -216,6 +216,12 @@ The host.
   action that closes it. Neither Escape nor `F8` closes a notification, so the
   demo hides the switch for such an alert.
 
+### Example
+
+A "Message archived" notification with an Undo action and `AutoClose::Never`:
+it takes no focus when it shows, F8 jumps to it, and once it closes focus
+returns to where F8 was pressed.
+
 ## Theme defaults
 
 `NotificationsDefaults` on the theme, as `notifications`.

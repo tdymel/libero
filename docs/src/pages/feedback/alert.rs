@@ -68,7 +68,8 @@ pub fn AlertPage() -> Element {
                     "Prefer `tonal` or `filled` for an error: `outlined` has no tint.",
                     "Move the focus somewhere sensible in `onclose`: closing removes the focused close button.",
                     "Mount the Alert after the page loads to have it announced: one present at first paint is read only when the reader reaches it.",
-                ]),
+                ])
+                .example("A failed save, `Alert { color: \"error\", title: \"Error: not saved\" }` mounted after the click: a screen reader interrupts to read it, and the title says the severity in words."),
             lead: rsx! {
                 Text {
                     "A tinted surface for something the reader has to know, such as an error, "

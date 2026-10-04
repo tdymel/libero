@@ -42,7 +42,8 @@ pub fn CenterPage() -> Element {
                 ])
                 .must([
                     "`Center` always renders a `div`: for a list or a nav, put a `Box` with `component: \"ul\"` or `\"nav\"` inside.",
-                ]),
+                ])
+                .example("An empty state in `Center`, with an icon, a line of text and a \"New project\" button: a screen reader and Tab meet them in that order, the order of the code."),
             lead: rsx! {
                 Text {
                     "Centers its child horizontally and vertically. It fills the parent's "

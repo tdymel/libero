@@ -64,7 +64,8 @@ pub fn PaginationPage() -> Element {
                 ])
                 .must([
                     "Keep `theme.pagination.gap` above zero: at `xs` the controls are 22px and meet the 24px target size only through the gap.",
-                ]),
+                ])
+                .example("A results pager: each page number and arrow is a button and a tab stop, and the next arrow reads \"Go to next page\" from `PaginationLabels` instead of a bare arrow."),
             lead: rsx! {
                 Text {
                     "A row of page buttons in a named "

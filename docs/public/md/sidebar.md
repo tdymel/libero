@@ -118,6 +118,11 @@ parts work.
 - Give it an `aria_label` when the page has more than one landmark of that
   kind.
 
+### Example
+
+The site navigation, `Sidebar { component: "nav", aria_label: "Main" }`: a
+screen reader lists it as the "Main" navigation landmark.
+
 ## Theme defaults
 
 `SidebarDefaults` on the theme.

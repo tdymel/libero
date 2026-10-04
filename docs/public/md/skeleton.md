@@ -166,6 +166,12 @@ fn Card() -> Element {
 # #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
 ```
 
+### Example
+
+A profile card loading, `Skeleton { visible: loading(), .. }` around the name
+and bio, inside a region with `aria-busy`: a screen reader says nothing about
+the grey shapes, and Tab skips the hidden content until it loads.
+
 ## Theme defaults
 
 `SkeletonDefaults` on the theme.

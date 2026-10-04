@@ -108,6 +108,12 @@ explains how parts work.
   that belongs to the value, such as a unit or a counter, set
   `describe_leading` or `describe_trailing`.
 
+### Example
+
+An email field, `TextField { label: "Email", helper: "We never share it." }`:
+a screen reader reads the label, then the helper. An error status marks the
+input invalid and is read the same way.
+
 ## Theme defaults
 
 Most of it is `FieldDefaults`, shared by every field. `TextFieldDefaults` holds

@@ -59,7 +59,8 @@ pub fn DividerPage() -> Element {
             ])],
             accessibility: a11y()
                 .handles(["The rule is a `separator`, named by its label. Your own `aria-label` or `aria-labelledby` wins."])
-                .must(["Pass `role: \"none\"` for a purely visual rule."]),
+                .must(["Pass `role: \"none\"` for a purely visual rule."])
+                .example("A rule between two settings groups, `Divider { \"Advanced\" }`: a screen reader reads a separator named \"Advanced\". A rule that only spaces two cards takes `role: \"none\"` and is skipped."),
             lead: rsx! {
                 Text { "A horizontal or vertical rule, with an optional label sitting in the line." }
             },

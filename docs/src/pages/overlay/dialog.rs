@@ -86,7 +86,8 @@ pub fn DialogPage() -> Element {
                     "Name it with `title` or `aria_label`.",
                     "Open it in a modal: the focus trap, Escape and backdrop dismissal come from the modal. A `Dialog` on its own has none of them.",
                     "Outside a modal, give a close button `onclose`, or it closes nothing.",
-                ]),
+                ])
+                .example("A confirm dialog, `Dialog { title: \"Delete file?\" }` inside a modal: the title names it, and the modal traps focus and closes it on Escape."),
             lead: rsx! {
                 Text {
                     "The dialog surface, a "

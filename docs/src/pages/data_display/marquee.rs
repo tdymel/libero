@@ -149,7 +149,8 @@ pub fn MarqueePage() -> Element {
                     "Give the children no `id`: they render once per copy, so an `id` would repeat and `label for`, `aria-labelledby` or `#id` links would find only the first.",
                     "Don't rely on `pause_on_hover` alone: a keyboard or a touch screen cannot hover.",
                     "Turn the toggle off only when the page offers its own control through `paused` and `onpausechange`. `paused` is controlled when set: the toggle then only reports through `onpausechange`, and without the handler it does nothing.",
-                ]),
+                ])
+                .example("A logo strip in a `Marquee`: a screen reader reads the logos once, and a keyboard user Tabs to the toggle named \"Pause\" and stops the motion with Enter."),
             lead: rsx! {
                 Text {
                     "Content that scrolls on its own in an endless loop, such as a logo strip "

@@ -41,7 +41,8 @@ pub fn MarkPage() -> Element {
                     "With a CSS color name such as `gold`, the text keeps the page's color: check its contrast.",
                     "Check the contrast of a literal CSS stop in `gradient`.",
                     "Say in the text why a highlight matters. Not every screen reader announces `<mark>`.",
-                ]),
+                ])
+                .example("A search result with the query highlighted, `Mark { \"libero\" }`: the text stays readable on the tint, and the result says \"1 match\" in words, since not every screen reader announces the highlight."),
             lead: rsx! {
                 Text {
                     "Highlights "

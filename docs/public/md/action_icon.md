@@ -90,6 +90,12 @@ Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
 - Below 24px, keep other targets clear of that 24x24 box, or the one drawn
   later takes the overlap.
 
+### Example
+
+A bold button in an editor bar, `ActionIcon { aria_label: "Bold", shortcut:
+"Control+B", .. }`: a screen reader reads "Bold, button" and announces the
+shortcut.
+
 ## Theme defaults
 
 `ActionIconDefaults` on the theme; the size resolves through `Button`'s height

@@ -63,6 +63,11 @@ Like every component, `Badge` also takes the shared props `sx`, `class`,
   region.
 - Pick `filled` or `tonal` for `warning` and `success`.
 
+### Example
+
+A "Paid" badge in an invoice row, `Badge { color: "success", variant: "tonal",
+"Paid" }`: read in place with the row, at 4.5:1 or more.
+
 ### Limits
 
 - The other variants print the label in the color itself, which stays under

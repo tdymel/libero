@@ -60,6 +60,7 @@ pub fn UseMediaQueryPage() -> Element {
                     "Keep the content and every control reachable in both layouts: a breakpoint may rearrange a page, never drop what a reader needs.",
                     "Prefer CSS `@media` rules for pure styling. Use the hook when the component tree itself differs, such as a drawer in place of a sidebar.",
                 ])
+                .example("A settings page that swaps its sidebar for a drawer on `use_media_query(\"(max-width: 48em)\")`: at 200% zoom the page narrows past the breakpoint, the drawer takes over, and every link stays reachable from its burger.")
                 .limits([
                     "The first render answers `false` and the real answer lands after mount, so a layout chosen by the hook flashes its default once. Native Blitz has no media queries and always answers `false`.",
                 ]),

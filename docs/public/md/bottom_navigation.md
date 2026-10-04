@@ -162,6 +162,12 @@ parts work.
   `scroll-padding-bottom: var(--lsx-bottom-navigation-height)`, so a focused
   element in it scrolls clear of the bar.
 
+### Example
+
+An app bar, `BottomNavigation { "aria-label": "Main" }` with Home, Search and
+an Inbox item labelled `"aria-label": "Inbox, 3 unread"`: a screen reader
+lists the "Main" navigation, and the current item reads as the current page.
+
 ### Limits
 
 - A native app has no line clamp: a long label wraps onto more lines and grows

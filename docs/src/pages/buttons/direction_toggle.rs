@@ -48,7 +48,8 @@ pub fn DirectionTogglePage() -> Element {
                     "The button's name says what a press does, from the localization's `DirectionToggleLabels`: `to_rtl` or `to_ltr`.",
                     "It sets the document's `dir`, so a screen reader and every component follow the new direction.",
                 ])
-                .must(["With `label`, return what the press does, not the current direction."]),
+                .must(["With `label`, return what the press does, not the current direction."])
+                .example("A `DirectionToggle {}` in the site header on an English page: its name says what a press does, switch to right-to-left, and after the press the page and its components follow the new direction."),
             lead: rsx! {
                 Text {
                     "An icon button that turns the app's text between left to right and "

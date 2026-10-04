@@ -53,7 +53,8 @@ pub fn IconPage() -> Element {
                 .must([
                     "Name an icon that means something with `aria_label` or `aria_labelledby`. A `<title>` inside the svg does not name it, since it is hidden with the rest.",
                     "For a clickable icon, use `ActionIcon`.",
-                ]),
+                ])
+                .example("A warning icon beside a field, `Icon { aria_label: \"Warning\", .. }`: a screen reader reads an image named \"Warning\". The same icon next to the word \"Warning\" stays unnamed and hidden."),
             lead: rsx! {
                 PictogramNote {}
                 Text {

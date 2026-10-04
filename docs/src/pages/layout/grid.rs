@@ -207,7 +207,8 @@ pub fn GridPage() -> Element {
                     "Write the zones in reading order: the template places them anywhere, but screen readers and Tab follow the code.",
                     "Use `dense` only where order means nothing, such as a photo wall: a later item fills an earlier gap and shows before items it follows in the code.",
                     "Give two landmarks of the same kind an `aria-label` each, such as two `Aside` zones.",
-                ]),
+                ])
+                .example("A page `Grid` with a header, a main zone and two `Aside` zones named \"Filters\" and \"Related\": a screen reader lists the two complementary landmarks apart, and Tab follows the code order."),
             lead: rsx! {
                 Text {
                     "A layout matrix of named areas. "

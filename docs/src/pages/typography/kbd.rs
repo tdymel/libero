@@ -19,7 +19,8 @@ pub fn KbdPage() -> Element {
                 .handles(["Each key is a real `<kbd>`."])
                 .must([
                     "Put the separator in the text around the keys. A screen reader reads `Kbd { \"Ctrl\" } \" + \" Kbd { \"S\" }` as \"Ctrl plus S\", but one `Kbd { \"Ctrl+S\" }` as a single token.",
-                ]),
+                ])
+                .example("A save hint, `Kbd { \"Ctrl\" } \" + \" Kbd { \"S\" }`: a screen reader reads \"Ctrl plus S\", key by key."),
             lead: rsx! {
                 Text {
                     "One keyboard key in a real "

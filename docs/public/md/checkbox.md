@@ -112,6 +112,11 @@ explains how parts work.
 
 - Without a visible label, set `aria_label`.
 
+### Example
+
+A terms checkbox, `Checkbox { label: "Accept the terms" }`: Tab lands on the
+box, the label is its name, and Space ticks or clears it.
+
 ## Theme defaults
 
 `CheckboxDefaults` holds `variant` (`plain`), `size`, `radius`, and one square

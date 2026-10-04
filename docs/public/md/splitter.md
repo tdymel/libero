@@ -119,6 +119,12 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
   divider, which gets no press there. For example, use `padding: 12px` on
   that side.
 
+### Example
+
+A file sidebar beside an editor, `Splitter { aria_label: "Resize sidebar", ..
+}`: Tab reaches the divider, Left and Right move it by 1%, and a double-click
+collapses the sidebar without a drag.
+
 ## Theme defaults
 
 `SplitterDefaults` on the theme.

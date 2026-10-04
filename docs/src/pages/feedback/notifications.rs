@@ -419,7 +419,8 @@ pub fn NotificationsPage() -> Element {
                     "Give one with an action, such as Undo, `AutoClose::Never`: it is safer.",
                     "In your own template, draw the close button yourself: read `s.closable()` and give the button an `aria_label`, as the Card option does.",
                     "Leave `closable` on for one that never closes on its own, unless it has an action that closes it. Neither Escape nor `F8` closes a notification, so the demo hides the switch for such an alert.",
-                ]),
+                ])
+                .example("A \"Message archived\" notification with an Undo action and `AutoClose::Never`: it takes no focus when it shows, F8 jumps to it, and once it closes focus returns to where F8 was pressed."),
             lead: rsx! {
                 Text {
                     "A hook and a host. Render "

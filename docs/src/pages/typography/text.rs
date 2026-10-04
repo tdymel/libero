@@ -35,7 +35,8 @@ pub fn TextPage() -> Element {
                     "Use `component: \"span\"` for text inside a sentence.",
                     "For a heading, use `Title`.",
                     "Keep `gradient` to large display text and check the contrast of a literal CSS stop. A debug build warns when a hex stop reads under 4.5:1 on the page background.",
-                ]),
+                ])
+                .example("A price in a sentence, `Text { component: \"span\", size: \"lg\", \"$12\" }`: it stays part of the sentence, and its large size does not make it a heading."),
             lead: rsx! {
                 Text {
                     "Body copy in a "

@@ -140,6 +140,7 @@ pub fn UseTimersPage() -> Element {
                     "Announce what a timer changes with a live region (`role=\"status\"`), as the demo does for \"Lap saved\": a sighted user sees it appear, a screen reader hears nothing otherwise.",
                     "Give the reader a way to stop anything that moves on its own for more than five seconds (WCAG 2.2.2). A `use_interval` that starts itself needs a Stop control.",
                 ])
+                .example("A quiz countdown on `use_interval`: a Pause button stops it, and a status line says \"One minute left\" once, rather than every second.")
                 .limits([
                     "A tick that lands while the component is still rendering the previous one is skipped, so a callback that counts should read a clock, not add one per tick, if the count must stay exact.",
                 ]),

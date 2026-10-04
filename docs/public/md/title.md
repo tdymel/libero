@@ -63,6 +63,12 @@ fn Demo() -> Element {
 }
 ```
 
+### Example
+
+A section heading under the page's `h1`, `Title { size: "lg", component: "h2",
+"Pricing" }`: a screen reader lists "Pricing" as a level 2 heading, whatever
+its size.
+
 ## Theme defaults
 
 `TitleDefaults` on the theme.

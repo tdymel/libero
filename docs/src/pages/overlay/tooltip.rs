@@ -73,7 +73,8 @@ pub fn TooltipPage() -> Element {
                 ])
                 .must([
                     "Give the bubble an id with `label_id` and point your trigger's `aria-describedby` at it, so a screen reader reads the label. The demo's Save button does.",
-                ]),
+                ])
+                .example("A Save icon button with a \"Save (Ctrl+S)\" tooltip and `label_id: \"save-tip\"`: the button's `aria-describedby: \"save-tip\"` makes a screen reader read the tip, Tab to it shows the bubble, and Escape hides it."),
             lead: rsx! {
                 Text {
                     "A label that appears while its child is hovered or focused by keyboard. "

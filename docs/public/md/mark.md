@@ -61,6 +61,12 @@ Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
 - Say in the text why a highlight matters. Not every screen reader announces
   `<mark>`.
 
+### Example
+
+A search result with the query highlighted, `Mark { "libero" }`: the text
+stays readable on the tint, and the result says "1 match" in words, since not
+every screen reader announces the highlight.
+
 ## Theme defaults
 
 `MarkDefaults` on the theme.

@@ -356,6 +356,12 @@ server, its service account and the sending stay outside libero.
 - Let the user stop push from the page as well as in the browser: unsubscribe
   and tell your server.
 
+### Example
+
+A "Notify me when the export is done" switch that asks for the permission on
+press: when the export ends, the system notification shows and a status line
+in the page says the same.
+
 ### Limits
 
 - A denial is usually permanent for the site: the browser does not ask again,

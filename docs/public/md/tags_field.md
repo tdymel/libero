@@ -152,6 +152,12 @@ The dropdown is portaled out of the field, so its parts take the
 - A custom `tag` must make its remove control a button with `tabindex: "-1"`.
   The arrow keys focus it, and without the tabindex each tag adds a tab stop.
 
+### Example
+
+A topics field, `TagsField { label: "Topics" }`: type a topic and press Enter
+to add it. Backspace on the empty input removes the last tag, and Left walks
+the tags, where Delete removes one.
+
 ## Theme defaults
 
 Most of it is `FieldDefaults`, shared by every field, and the list is

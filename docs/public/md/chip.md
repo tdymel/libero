@@ -179,6 +179,11 @@ explains how parts work.
 - Keep `children` to text and `Icon`: a selectable chip is a `<label>`, which
   takes the clicks of any control inside it.
 
+### Example
+
+A filter chip, `Chip { checked, onchange, "Vegan" }`: Tab lands on it, Space
+toggles it, and a `readonly` chip keeps its tab stop but stays as it is.
+
 ## Theme defaults
 
 `ChipDefaults` on the theme. Per-size values live in its `sizes` scale.

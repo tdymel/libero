@@ -166,6 +166,7 @@ fn option_lines(values: &DemoValues) -> Vec<String> {
 }
 
 /// The code of the example opened last. The preview's buttons pick it.
+// snippet: mirrors SpotlightDemo except Callback already async await frame next search_on_server label none actions_code hint nlet setup
 fn wrap_example(values: &DemoValues, _: &str) -> String {
     let example = values.str("example");
     let (handle, actions, actions_code, label) = EXAMPLES
@@ -410,7 +411,8 @@ pub fn SpotlightPage() -> Element {
                 .must([
                     "Turn `highlight_first_on_query` off for a palette whose actions change things. Then nothing is highlighted until you press Down.",
                     "Call `open()` from the trigger's handler, so focus returns there.",
-                ]),
+                ])
+                .example("A command palette opened from a \"Search\" button that calls `open()`: typing \"the\" says \"2 results\", Enter runs the first one, and Escape puts focus back on Search."),
             lead: rsx! {
                 Text {
                     "A command palette, a modal search box over a list of actions. "

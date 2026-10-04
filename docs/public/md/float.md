@@ -90,6 +90,11 @@ Like every component, `Float` also takes the shared props `sx`, `class`,
 - Keep it off text and controls at 320px wide and at 200% text size: it takes
   no space, so nothing moves out of its way.
 
+### Example
+
+A "New" badge floated over a card's corner, written right after the card's
+title in the code: a screen reader reads "Spring sale, New", in that order.
+
 ## Theme defaults
 
 `FloatDefaults` on the theme.

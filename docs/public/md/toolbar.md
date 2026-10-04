@@ -96,6 +96,12 @@ parts work.
 - Name each `ToolbarGroup` with `aria-label`. Without it the group warns in
   debug builds too.
 
+### Example
+
+An editor bar, `Toolbar { "aria-label": "Formatting" }` with `ToolbarGroup`s
+named "Style" and "History": Tab enters on one button, the arrows move through
+Bold, Italic, Undo and Redo, and Tab leaves the bar.
+
 ### Limits
 
 - Only `Button`, `ActionIcon`, `Select`, `Checkbox`, `Switch`,

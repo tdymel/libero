@@ -256,6 +256,12 @@ explains how parts work.
 - Pass `format` when a bare number does not say the unit, and to translate a
   discrete slider.
 
+### Example
+
+A volume slider, `Slider { label: "Volume" }` with a `format` that adds " %":
+the arrows move one step, PageUp ten, Home and End jump to the ends, and a
+screen reader reads the formatted value.
+
 ## Theme defaults
 
 `theme.slider` is a `SliderDefaults`. Per-size values live in its `sizes` scale.

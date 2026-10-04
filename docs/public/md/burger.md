@@ -102,6 +102,12 @@ Burger {
 Burger { onclick: move |_| modal.open() }
 ```
 
+### Example
+
+A burger that opens the site menu panel, with `open: menu_open()` and
+`"aria-controls": "site-menu"`: a screen reader reads "Toggle navigation",
+expanded or collapsed.
+
 ## Theme defaults
 
 `BurgerDefaults` on the theme.

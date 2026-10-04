@@ -26,7 +26,8 @@ pub fn OverlayPage() -> Element {
             ],
             accessibility: a11y().must([
                 "For a modal backdrop, use a `Dialog` in `use_modal`, which brings its own overlay. An overlay does not trap focus or hide the page from a screen reader.",
-            ]),
+            ])
+                .example("A loading screen, `Overlay` over a form while it saves: it only dims the page, so Tab and a screen reader still reach the form. For a modal backdrop, open a `Dialog` with `use_modal` instead."),
             lead: rsx! {
                 Text {
                     "Dims and blurs whatever is behind it. A modal renders one behind its "

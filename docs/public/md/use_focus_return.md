@@ -110,6 +110,12 @@ closing event has finished, so it is safe to call from that event's handler.
   the panel, then press Apply or Escape, and focus lands on Filters again.
   [Collapse](collapse.md) shows the same return on an animated panel.
 
+### Example
+
+A filters panel of your own: the Filters button calls `remember_active()` as
+it opens the panel, and Apply calls `restore()`, so a keyboard user lands back
+on Filters instead of the top of the page.
+
 ### Limits
 
 - Some browsers do not focus a button on a mouse click, so a panel opened

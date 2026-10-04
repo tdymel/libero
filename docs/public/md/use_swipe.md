@@ -9,9 +9,7 @@ Description: Touch swipe handlers, and an edge swipe that opens a drawer without
 `use_swipe(on_swipe, options) -> Swipe` calls `on_swipe` once a touch or pen
 moves `options.distance` px (48) along one axis, more than along the other. It
 fires during the move, once per press, with the `direction`, the start point and
-the delta. Spread `onpointerdown`, `onpointermove`, `onpointerup` and
-`onpointercancel` onto one element, and give it a `touch-action`: `none` for all
-four directions, `pan-y` for sideways swipes on a page that scrolls.
+the delta.
 
 ## Usage
 
@@ -93,6 +91,12 @@ fn Page(open: Signal<bool>, children: Element) -> Element {
 }
 ```
 
+## Wiring
+
+Spread `onpointerdown`, `onpointermove`, `onpointerup` and `onpointercancel`
+onto one element, and give it a `touch-action`: `none` for all four directions,
+`pan-y` for sideways swipes on a page that scrolls.
+
 ## Edge swipes
 
 `use_edge_swipe(on_swipe, options) -> Swipe` is built on it: an inward swipe that
@@ -173,6 +177,11 @@ reads the direction from `use_direction` and the viewport width at each press.
   (WCAG 2.5.1, 2.5.7). The docs keep the burger as the single-pointer way to
   open the navigation; the demo has buttons.
 - Announce what the swipe did with a live region, or move focus where it leads.
+
+### Example
+
+A photo strip that goes to the next photo on a left swipe: Previous and Next
+buttons do the same, and a status line says "Photo 3 of 8" after each move.
 
 ### Limits
 

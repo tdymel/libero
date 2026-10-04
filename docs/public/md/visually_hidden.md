@@ -70,6 +70,12 @@ VisuallyHidden {
 main { id: "main", tabindex: "-1", /* the page */ }
 ```
 
+### Example
+
+A "Read more" link in a news card with `VisuallyHidden { " about the launch"
+}` inside it: sighted users see "Read more", and a screen reader reads "Read
+more about the launch".
+
 ## Theme defaults
 
 None. The hiding rules are fixed.

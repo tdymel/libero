@@ -115,6 +115,7 @@ pub fn ImageCropperPage() -> Element {
                     "Describe the image with `alt`.",
                     "Translate the corner names and the spoken value with the localization.",
                 ])
+                .example("An avatar crop, `ImageCropper { alt: \"Your photo\", aria_label: \"Crop area\", aspect: 1.0, .. }`: Tab reaches the crop box, the arrows move it, and a screen reader hears where it sits, such as \"50% by 50%, at 25%, 25%\".")
                 .limits([
                     "The edge handles are pointer-only: the corners reach every size.",
                     "A screen reader hears where the box is, not what it shows.",

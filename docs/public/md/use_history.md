@@ -112,6 +112,12 @@ is cheap.
   the stack (`focusable_when_disabled`), and named by their text or
   `aria-label`.
 
+### Example
+
+A notes field with `use_history`: Ctrl+Z and Ctrl+Shift+Z undo and redo in the
+field, and the Undo and Redo buttons stay in the tab order with
+`focusable_when_disabled` at either end of the stack.
+
 ## API
 
 ```rust,ignore

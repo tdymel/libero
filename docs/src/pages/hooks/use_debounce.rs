@@ -61,7 +61,8 @@ pub fn UseDebouncePage() -> Element {
                 .must([
                     "Announce results that arrive late from a debounced search in a live region (`role=\"status\"`); a screen reader user gets no other sign that the list changed.",
                     "Keep the field itself bound to the live signal, as the demo does: delaying the text a person is typing makes the field lag behind their keys.",
-                ]),
+                ])
+                .example("A product search that fetches on `use_debounced_value` of the query, 300 ms after the last key: the field follows every key, and a `role=\"status\"` line says \"12 results\" once the late results arrive."),
             lead: rsx! {
                 Text {
                     Code { source: "use_debounced_value(value: ReadSignal<T>, ms: u64) -> ReadSignal<T>" }

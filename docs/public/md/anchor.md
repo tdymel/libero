@@ -87,6 +87,12 @@ parts work.
 - Keep the underline on a link inside a paragraph: with `underline: "never"`
   it stands out by color alone.
 
+### Example
+
+A link in a paragraph, `Anchor { to: "https://www.rust-lang.org", target:
+"_blank", "The Rust website" }`: it keeps its underline, and a screen reader
+reads "The Rust website (opens in a new tab)".
+
 ## Theme defaults
 
 `AnchorDefaults` on the theme. Sizing itself comes from `TextDefaults`, so an

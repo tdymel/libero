@@ -1,10 +1,20 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, disabled_prop, prop, props, readonly_prop,
-    required_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, disabled_prop, field_controls,
+    field_props, prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::CheckboxPart;
-use libero::components::{Checkbox, Code, FieldStatus, Text};
+use libero::components::{Checkbox, Code, Text};
+
+struct TermsCopy;
+
+impl FieldCopy for TermsCopy {
+    const LABEL: &'static str = "Accept the terms";
+    const DESCRIPTION: &'static str = "The licence and the privacy policy.";
+    const HELPER: &'static str = "You can withdraw consent at any time.";
+    const WARNING: &'static str = "You can change this later.";
+    const ERROR: &'static str = "Accept the terms to continue.";
+}
 
 fn describes(values: &DemoValues) -> bool {
     values.str("description") == "true" || values.str("variant") == "card"
@@ -65,7 +75,8 @@ pub fn CheckboxPage() -> Element {
             ],
             accessibility: a11y()
                 .key(["Space"], "Toggles the checkbox.")
-                .must(["Without a visible label, set `aria_label`."]),
+                .must(["Without a visible label, set `aria_label`."])
+                .example("A terms checkbox, `Checkbox { label: \"Accept the terms\" }`: Tab lands on the box, the label is its name, and Space ticks or clears it."),
             lead: rsx! {
                 Text {
                     "A checkbox with its label beside the box and the description, helper and "
@@ -82,11 +93,17 @@ pub fn CheckboxPage() -> Element {
             Demo {
                 component: "Checkbox",
                 children_text: "",
-                controls: vec![
+                controls: [vec![
                     Control::toggle("variant", ["plain", "card"])
                         .labels(["Plain", "Card"])
                         .default("plain")
                         .code(|_, values| match values.str("variant").as_str() {
+                            // A card only reads as one with a description under
+                            // the label, so the card shows one either way.
+                            "card" if values.str("description") != "true" => vec![
+                                r#"variant: "card""#.to_string(),
+                                format!("description: {:?}", TermsCopy::DESCRIPTION),
+                            ],
                             "card" => vec![r#"variant: "card""#.to_string()],
                             _ => vec![],
                         }),
@@ -95,16 +112,7 @@ pub fn CheckboxPage() -> Element {
                         .default("md"),
                     Control::sizes("radius")
                         .default("sm"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"You can change this later.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Accept the terms to continue.\"".to_string()],
-                            _ => vec![],
-                        }),
+                ], field_controls::<TermsCopy>(), vec![
                     // `checked` + `onchange` as a pair (the library warns on one alone); the
                     // preview writes `onchange` back into this control.
                     Control::switch("checked").default("true").code(|_, _| {
@@ -114,71 +122,40 @@ pub fn CheckboxPage() -> Element {
                         ]
                     }),
                     Control::switch("indeterminate"),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Accept the terms\"".to_string()],
-                            _ => vec!["aria_label: \"Accept the terms\"".to_string()],
-                        }
-                    }),
-                    // A card only reads as one with a description under
-                    // the label, so the card shows one either way.
-                    Control::switch("description").code(|_, values| {
-                        match describes(values) {
-                            true => vec![
-                                "description: \"The licence and the privacy policy.\"".to_string(),
-                            ],
-                            false => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"You can withdraw consent at any time.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
-                render: move |values: DemoValues| rsx! {
-                    Checkbox {
-                        variant: values.str("variant"),
-                        color: values.str("color"),
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        // Both or neither: `checked` alone can never change.
-                        checked: match values.str("checked").as_str() {
-                            "true" => Some(true),
-                            _ => Some(false),
-                        },
-                        // The preview writes `onchange` back into the switches,
-                        // so the box can be ticked; a mixed box turns `true`.
-                        onchange: {
-                            let values = values.clone();
-                            EventHandler::new(move |next: bool| {
-                                values.set("checked", next.to_string());
-                                values.set("indeterminate", "false");
-                            })
-                        },
-                        indeterminate: (values.str("indeterminate") == "true").then_some(true),
-                        label: (values.str("label") == "true")
-                            .then(|| "Accept the terms".to_string()),
-                        aria_label: (values.str("label") != "true")
-                            .then(|| "Accept the terms".to_string()),
-                        description: describes(&values)
-                            .then(|| "The licence and the privacy policy.".to_string()),
-                        helper: (values.str("helper") == "true")
-                            .then(|| "You can withdraw consent at any time.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => {
-                                FieldStatus::Warning("You can change this later.".to_string())
-                            }
-                            "error" => {
-                                FieldStatus::Error("Accept the terms to continue.".to_string())
-                            }
-                            _ => FieldStatus::Valid,
-                        },
-                        required: (values.str("required") == "true").then_some(true),
-                        disabled: (values.str("disabled") == "true").then_some(true),
+                ]].concat(),
+                render: move |values: DemoValues| {
+                    let field = field_props::<TermsCopy>(&values);
+                    rsx! {
+                        Checkbox {
+                            variant: values.str("variant"),
+                            color: values.str("color"),
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            // Both or neither: `checked` alone can never change.
+                            checked: match values.str("checked").as_str() {
+                                "true" => Some(true),
+                                _ => Some(false),
+                            },
+                            // The preview writes `onchange` back into the switches,
+                            // so the box can be ticked; a mixed box turns `true`.
+                            onchange: {
+                                let values = values.clone();
+                                EventHandler::new(move |next: bool| {
+                                    values.set("checked", next.to_string());
+                                    values.set("indeterminate", "false");
+                                })
+                            },
+                            indeterminate: (values.str("indeterminate") == "true").then_some(true),
+                            label: field.label,
+                            aria_label: field.aria_label.map(String::from),
+                            description: describes(&values).then(|| TermsCopy::DESCRIPTION.to_string()),
+                            helper: field.helper,
+                            status: field.status,
+                            required: (values.str("required") == "true").then_some(true),
+                            disabled: (values.str("disabled") == "true").then_some(true),
+                        }
                     }
                 },
             }

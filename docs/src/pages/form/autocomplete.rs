@@ -22,6 +22,7 @@ impl FieldCopy for CityCopy {
 }
 
 /// The suggestion list is runtime data, so every snippet has to show it.
+// snippet: mirrors CITIES, cities, country
 const CITIES_CONST: &str = r#"const CITIES: [(&str, &str); 6] = [
     ("Amsterdam", "Netherlands"),
     ("Antwerp", "Belgium"),
@@ -223,7 +224,8 @@ pub fn AutocompletePage() -> Element {
                     "A polite status region says how many options the typed text left (`ComboboxLabels::results`, \"2 results\"), or \"No results\".",
                     CLEAR_NAME,
                 ])
-                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
+                .example("A city field, `Autocomplete { label: \"City\", .. }`: typing \"ber\" opens the list and the status says \"2 results\", Down highlights Berlin, and Enter picks it."),
             lead: rsx! {
                 Text {
                     "A "

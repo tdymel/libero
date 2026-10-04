@@ -96,6 +96,7 @@ pub fn UseLongPressPage() -> Element {
                     "Offer the same action without holding: a long press is a gesture with no keyboard or switch equivalent (WCAG 2.5.1, 2.1.1). Put it on a context menu, a key such as Shift+F10, or a visible button, as the demo's \"Count a hold\" does.",
                     "Announce what the press did with a live region, as the demo does.",
                 ])
+                .example("A message you hold to reply to: the same Reply sits in the message's context menu and in a visible button, and a status line says \"Replying to Ada\" once the press fires.")
                 .limits([
                     "It reacts to pointer events only. Keyboard and screen reader activation arrive as clicks and do not count as a press.",
                 ]),

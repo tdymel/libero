@@ -118,7 +118,8 @@ pub fn PhoneFieldPage() -> Element {
                     "The country picker is a second tab stop.",
                     "Android's Back button closes the country list as Escape does, rather than the app.",
                 ])
-                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed text field."]),
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed text field."])
+                .example("A contact number, `PhoneField { label: \"Phone\", .. }`: Tab stops on the country picker, then on the number, and typing a letter in the open list filters the countries."),
             lead: rsx! {
                 Text {
                     "A country picker in front of a "

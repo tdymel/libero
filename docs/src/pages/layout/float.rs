@@ -51,7 +51,8 @@ pub fn FloatPage() -> Element {
                 .must([
                     "Write the float next to what it marks: screen readers and Tab follow the code, not where it shows.",
                     "Keep it off text and controls at 320px wide and at 200% text size: it takes no space, so nothing moves out of its way.",
-                ]),
+                ])
+                .example("A \"New\" badge floated over a card's corner, written right after the card's title in the code: a screen reader reads \"Spring sale, New\", in that order."),
             lead: rsx! {
                 Text {
                     "Anchors its child to a corner or edge of the nearest positioned "

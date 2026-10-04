@@ -132,7 +132,8 @@ pub fn SkeletonPage() -> Element {
                 .must([
                     "Mark the region you are filling `aria-busy` while it waits, as on `Loader`. The demo's `Busy region` switch shows it.",
                     "Avoid a descendant that sets `visibility: visible` on itself under a visible skeleton: it shows through.",
-                ]),
+                ])
+                .example("A profile card loading, `Skeleton { visible: loading(), .. }` around the name and bio, inside a region with `aria-busy`: a screen reader says nothing about the grey shapes, and Tab skips the hidden content until it loads."),
             lead: rsx! {
                 Text {
                     "A placeholder for content that is still loading. Without children it is "

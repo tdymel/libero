@@ -130,6 +130,11 @@ runs, so it sees current state.
   five seconds (WCAG 2.2.2). A `use_interval` that starts itself needs a Stop
   control.
 
+### Example
+
+A quiz countdown on `use_interval`: a Pause button stops it, and a status line
+says "One minute left" once, rather than every second.
+
 ### Limits
 
 - A tick that lands while the component is still rendering the previous one is

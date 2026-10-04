@@ -8,11 +8,12 @@ Description: How to build libero forms, with specialized fields, composed parts,
 libero's forms are built in layers. A field holds one value. A specialized
 field is a field with a narrower contract. A composed part groups fields into
 one value with a [Fieldset](fieldset.md), and a [Form](form.md) holds the whole
-value in one store, validates it and submits it. Rules live at the layer that
-can see the values they check, and typed paths from `#[derive(Fields)]` tie
-every layer to your own structs.
+value in one store, validates it and submits it.
 
 ## The layers
+
+Rules live at the layer that can see the values they check, and typed paths
+from `#[derive(Fields)]` tie every layer to your own structs.
 
 ```text
 TextField                      // a field, one value with its label and rules

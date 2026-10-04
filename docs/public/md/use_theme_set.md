@@ -62,6 +62,12 @@ colour scheme setting survives it, so a reader who pinned dark stays in dark.
   Dragon and Vague light `muted.6` falls just under 3:1, the minimum for borders
   and icons (WCAG 1.4.11).
 
+### Example
+
+A theme picker with one button per set, each with `aria_pressed` on the active
+one: a screen reader reads "Kanagawa, pressed", and a reader who pinned dark
+stays in dark after the swap.
+
 ## API
 
 ```rust,ignore

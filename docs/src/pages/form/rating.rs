@@ -104,6 +104,7 @@ pub fn RatingPage() -> Element {
                     "Without a visible label, set `aria_label`.",
                     "Translate the spoken value with the localization or `format`, and the `rating.required` word with the localization.",
                 ])
+                .example("A product review, `Rating { label: \"Your rating\", fractions: 2, .. }`: one tab stop, a slider read as \"3.5 of 5\", and the arrows move it by half a star.")
                 .limits([
                     "At the default `md` size a whole star is a 28px target, a half star 14px wide: the row is one slider target, and a drag reaches any half. `size: \"xxl\"` makes each half 24px wide.",
                     "A solid custom icon shows the value by colour alone.",

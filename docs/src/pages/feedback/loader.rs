@@ -61,7 +61,8 @@ pub fn LoaderPage() -> Element {
                     "Say the wait with something else. Beside its own text, the text says it. Inside a control, such as a `Button` with `loading`, the control does.",
                     "As the only content of a region, mark the region `aria-busy` and put the text in a `role=\"status\"` region outside it.",
                     "Mount that status region up front and fill it only while loading, or a screen reader may skip it. The demo's `Beside text` and `Sole content` switches show both setups.",
-                ]),
+                ])
+                .example("A `Loader` beside the text \"Loading results\": a screen reader reads the text and skips the loader. With reduced motion the loader stops moving."),
             lead: rsx! {
                 Text {
                     "An indeterminate busy indicator. It says something is happening, not how "

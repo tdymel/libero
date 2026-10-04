@@ -164,3 +164,9 @@ solid, a solid one only changes colour.
 
 - Pick a glyph that means the same as the one it replaces: a chevron for
   `ChevronDown`, a check for `CheckboxCheck`.
+
+### Example
+
+An `IconProvider` that swaps `ChevronDown` for your own chevron: a `Select`
+keeps its own name, and the new glyph stays hidden from screen readers like
+the one it replaces.

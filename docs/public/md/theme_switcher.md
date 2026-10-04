@@ -90,6 +90,11 @@ explains how parts work.
 
 - With `label`, return what the press does, not the current scheme.
 
+### Example
+
+A `ThemeSwitcher {}` in the header while the page is light: its name says what
+a press does, switch to dark, not that the page is light now.
+
 ## Theme defaults
 
 `ThemeSwitcherDefaults` on the theme, as `theme_switcher`.

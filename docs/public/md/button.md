@@ -101,6 +101,12 @@ fn Demo() -> Element {
 }
 ```
 
+### Example
+
+A narrow toolbar button whose label may be cut, `Button { title: "Export as
+PDF", "Export as PDF" }`: a screen reader still reads the full label, and the
+title shows it on hover.
+
 ## Theme defaults
 
 `ButtonDefaults` on the theme; per-size values live in its `sizes` scale.

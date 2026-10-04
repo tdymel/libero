@@ -107,6 +107,12 @@ explains how parts work.
 
 - Without a visible label, set `aria_label`.
 
+### Example
+
+A notifications switch in a settings `Form`, `Switch { label: "Notifications"
+}`: Space turns it on or off, Enter submits the form, and the label is its
+name.
+
 ## Theme defaults
 
 `SwitchDefaults` on the theme. Per-size values live in its `sizes` scale. The

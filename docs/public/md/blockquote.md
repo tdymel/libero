@@ -88,6 +88,12 @@ parts work.
   as part of the quote.
 - `work` renders in a `<cite>`, the comma kept outside it.
 
+### Example
+
+A quote with `attribution: rsx! { "Ada Lovelace" }` and `work: "Notes"`: a
+screen reader reads the quote, then "Ada Lovelace, Notes" as its caption,
+never the name as part of the quote.
+
 ### Limits
 
 - `cite_url` is for machines only: browsers do not show it, so link the source

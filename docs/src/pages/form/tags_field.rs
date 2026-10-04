@@ -209,7 +209,8 @@ pub fn TagsFieldPage() -> Element {
                 ])
                 .must([
                     "A custom `tag` must make its remove control a button with `tabindex: \"-1\"`. The arrow keys focus it, and without the tabindex each tag adds a tab stop.",
-                ]),
+                ])
+                .example("A topics field, `TagsField { label: \"Topics\" }`: type a topic and press Enter to add it. Backspace on the empty input removes the last tag, and Left walks the tags, where Delete removes one."),
             lead: rsx! {
                 Text {
                     "A field whose value is a list of typed strings, drawn as chips around the "

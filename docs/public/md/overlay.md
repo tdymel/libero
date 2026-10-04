@@ -72,6 +72,12 @@ Like every component, `Overlay` also takes the shared props `sx`, `class`,
   which brings its own overlay. An overlay does not trap focus or hide the
   page from a screen reader.
 
+### Example
+
+A loading screen, `Overlay` over a form while it saves: it only dims the page,
+so Tab and a screen reader still reach the form. For a modal backdrop, open a
+`Dialog` with `use_modal` instead.
+
 ## Theme defaults
 
 `OverlayDefaults` on the theme holds `opacity` (`f32`) and `blur` (a

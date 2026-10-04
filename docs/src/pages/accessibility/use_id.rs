@@ -58,7 +58,8 @@ pub fn UseIdPage() -> Element {
             markdown: "/md/use_id.md",
             accessibility: a11y()
                 .handles(["The id is unique within the app, so each instance's wiring stays its own. Each disclosure in the demo names its own panel, so a screen reader pairs every button with the right one."])
-                .must(["Pass the id to `aria_controls`, `aria_labelledby`, `aria_describedby` or a label's `r#for`: an id is how they find their element."]),
+                .must(["Pass the id to `aria_controls`, `aria_labelledby`, `aria_describedby` or a label's `r#for`: an id is how they find their element."])
+                .example("A disclosure in an FAQ: the button takes `aria_controls: id()` and the panel `id: id()`, so each question opens and names its own answer, however many disclosures the page has."),
             lead: rsx! {
                 Text {
                     Code { source: "use_id() -> Signal<String>" }

@@ -123,6 +123,12 @@ explains how parts work.
 
 - Give the group a `label`, so screen readers announce what its fields are for.
 
+### Example
+
+A shipping address, `Fieldset { label: "Shipping address", .. }` around
+street, city and postcode: a screen reader announces "Shipping address" as you
+enter the first field.
+
 ## Theme defaults
 
 | Field | Type | Description |

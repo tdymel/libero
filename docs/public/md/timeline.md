@@ -145,6 +145,12 @@ explains how parts work.
 - Say an error or other status in the title or content. The `.color(..)` accent
   alone does not carry it.
 
+### Example
+
+An order's history in a `Timeline` with `active` on the "Shipped" event: a
+screen reader reads each event's place in the list and marks "Shipped" as the
+current step. A failed delivery says "Failed" in its title, not only in red.
+
 ### Limits
 
 - A screen reader hears only which event is current, as `aria-current="step"`.

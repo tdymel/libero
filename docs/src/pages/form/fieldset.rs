@@ -123,7 +123,8 @@ pub fn FieldsetPage() -> Element {
                     "`description`, `helper` and the group's status join its `aria-describedby`.",
                     "`disabled` reaches every field inside, Libero's own and nested fieldsets included, not only native controls.",
                 ])
-                .must(["Give the group a `label`, so screen readers announce what its fields are for."]),
+                .must(["Give the group a `label`, so screen readers announce what its fields are for."])
+                .example("A shipping address, `Fieldset { label: \"Shipping address\", .. }` around street, city and postcode: a screen reader announces \"Shipping address\" as you enter the first field."),
             lead: rsx! {
                 Text {
                     "Several fields that form one value, such as an address or a date range, under "

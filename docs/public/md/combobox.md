@@ -6,11 +6,10 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/c
 Index: [index.md](index.md) lists every other page
 Description: A listbox that hangs off a trigger you supply, holding no state of its own.
 
-A listbox that hangs off whatever control you put in it. It holds no state of
-its own. `use_combobox()` keeps the open state in your scope, the selection is
-yours, `option` draws the rows and `children` is the trigger. The combobox adds
-the placement, the arrow keys and the row styling. Closing on an outside click
-is yours, and `onpick` is the only way to pick.
+A listbox that hangs off whatever control you put in it, with the placement, the
+arrow keys and the row styling. It holds no state: `use_combobox()` keeps the
+open state in your scope, and the selection and closing on an outside click are
+yours.
 
 ## Usage
 
@@ -250,7 +249,7 @@ From `use_combobox()`. It is `Copy`, so it goes into event handlers by value.
 | `selected` | `bool` | - | Marks the current selection with `aria-selected` and a tint. Leave it unset in a suggestion list. |
 | `active` | `bool` | from the `Combobox` | Overrides the keyboard highlight. |
 | `disabled` | `bool` | from the `Combobox` | Overrides whether the row is refused. A refused row is greyed and ignores the click and Enter. |
-| `onpick` | `EventHandler<()>` | - | A click, or Enter while the row is active. |
+| `onpick` | `EventHandler<()>` | - | A click, or Enter while the row is active. The only way to pick. |
 | `size` | `Size` | the `Combobox`'s | Row height and font size. |
 | `radius` | `Size` | the `Combobox`'s | Corner radius, reduced so the row nests inside the dropdown. |
 | `children` | `Element` | required | The row's content. |
@@ -302,6 +301,13 @@ match at any depth inside the list.
   content. Point a button trigger's `aria-labelledby` at a visible label, and
   give a text field a `label`.
 - Pass the same label's id as `labelled_by`, so the list has a name too.
+
+### Example
+
+A search field as your own trigger, with `state.a11y_attributes()` spread on
+it and a visible label whose id is `labelled_by`: a screen reader reads a
+combobox named by the label, Down moves into the list, and focus never leaves
+the field.
 
 ## Theme defaults
 

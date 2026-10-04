@@ -123,6 +123,12 @@ link opens.
 
 - Give a custom provider a name that says which service it opens.
 
+### Example
+
+A `Tldr { url: .. }` under an article: Enter opens the "Summarize with" menu
+on its first link, the arrows move between the providers, and each one reads
+its name and "(opens in a new tab)".
+
 ## Theme defaults
 
 `TldrDefaults` on the theme, as `tldr`.

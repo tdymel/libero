@@ -69,7 +69,8 @@ pub fn ThemeSwitcherPage() -> Element {
                     "The button's name says what a press does, from the localization's `ThemeSwitcherLabels`: `to_light` and `to_dark`, plus `to_system` with `with_system`.",
                     "With `themes`, both buttons sit in a `role=\"group\"` named by `group`. The picker is named by `picker` and opens a `Menu`, with its keys; the sets are radio items in a group named by `themes`.",
                 ])
-                .must(["With `label`, return what the press does, not the current scheme."]),
+                .must(["With `label`, return what the press does, not the current scheme."])
+                .example("A `ThemeSwitcher {}` in the header while the page is light: its name says what a press does, switch to dark, not that the page is light now."),
             lead: rsx! {
                 Text {
                     "An icon button that switches the app's colour scheme. It starts on the "

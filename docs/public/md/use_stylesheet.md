@@ -46,6 +46,12 @@ returns `None`. Components that register the same sheet share one copy of it.
   borders and icons (WCAG 1.4.3, 1.4.11). A theme colour such as `primary.1`
   follows the theme set.
 
+### Example
+
+A card class from `use_stylesheet` that gives its link `color: primary.6` and
+leaves the focus ring alone: the link keeps libero's visible ring, and the
+theme colour follows the theme set.
+
 ## API
 
 ```rust,ignore

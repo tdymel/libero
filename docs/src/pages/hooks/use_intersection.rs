@@ -74,6 +74,7 @@ pub fn UseIntersectionPage() -> Element {
                     "Keep content that matters in the document and reachable by keyboard; `use_intersection` only reports, it hides nothing. An infinite list still needs a \"Load more\" button.",
                     "Gate reveal animations on the reader's motion setting (`use_accessibility`).",
                 ])
+                .example("An endless product list that loads the next page once its last row comes into view: a \"Load more\" button under the list does the same for a keyboard user, and every loaded row stays in the document.")
                 .limits([
                     "The web and a WebView (desktop, Android) use an `IntersectionObserver`. A WebView finds the element by `attributes`, so spread them on it; without them nothing is observed there. A `root` needs `root.attributes()` spread on it the same way; without them a WebView observes against the viewport (a warning in debug builds). On Blitz and in a server render `entry` stays `None`: treat `None` as \"unknown\" and show lazy content, rather than waiting for a sighting that never comes.",
                 ]),

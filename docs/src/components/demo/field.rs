@@ -9,10 +9,12 @@ pub trait FieldCopy {
     const HELPER: &'static str;
     const WARNING: &'static str;
     const ERROR: &'static str;
+    /// What names an unlabelled field; `"aria-label"` (quoted) where it has no `aria_label` prop.
+    const ARIA_LABEL: &'static str = "aria_label";
 }
 
 /// The `status` toggle and the `label`, `description` and `helper` switches; `label` off
-/// prints `aria_label` instead.
+/// prints `C::ARIA_LABEL` instead.
 pub fn field_controls<C: FieldCopy>() -> Vec<Control> {
     vec![
         Control::toggle("status", ["valid", "warning", "error"])
@@ -29,7 +31,7 @@ pub fn field_controls<C: FieldCopy>() -> Vec<Control> {
         Control::switch("label").default("true").code(|_, values| {
             match values.str("label") == "true" {
                 true => vec![format!("label: {:?}", C::LABEL)],
-                false => vec![format!("aria_label: {:?}", C::LABEL)],
+                false => vec![format!("{}: {:?}", C::ARIA_LABEL, C::LABEL)],
             }
         }),
         Control::switch("description")

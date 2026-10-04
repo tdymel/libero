@@ -51,6 +51,11 @@ Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,
   `Kbd { "Ctrl" } " + " Kbd { "S" }` as "Ctrl plus S", but one
   `Kbd { "Ctrl+S" }` as a single token.
 
+### Example
+
+A save hint, `Kbd { "Ctrl" } " + " Kbd { "S" }`: a screen reader reads "Ctrl
+plus S", key by key.
+
 ## Theme defaults
 
 `KbdDefaults` on the theme.

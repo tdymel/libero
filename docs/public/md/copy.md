@@ -75,6 +75,12 @@ The words are `CopyLabels` in the [localization](localization.md): `copy`
 - For a copy control of your own on `use_clipboard()`, say the result in a
   status region that is already mounted.
 
+### Example
+
+An install command, `Copy { value: "cargo add libero", label: "Add libero to
+your project" }`: the button reads "Copy, Add libero to your project", and
+after a press the status region says "Copied".
+
 ## CSS variables
 
 None of its own; it renders an `ActionIcon`, whose variables apply.

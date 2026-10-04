@@ -320,7 +320,8 @@ pub fn SelectPage() -> Element {
                     "Android's Back button closes the list as Escape does, rather than the app.",
                     CLEAR_NAME,
                 ])
-                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
+                .example("A country field, `Select { label: \"Country\", .. }`: on the closed field, typing \"ger\" picks Germany in place as a native select does, and Enter opens the list for browsing."),
             lead: rsx! {
                 Text {
                     "A listbox over an enum, in the same frame as every other field. Unlike "

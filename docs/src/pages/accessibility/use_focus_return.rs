@@ -122,6 +122,7 @@ pub fn UseFocusReturnPage() -> Element {
                 .handles([
                     "`restore()` puts focus back on the remembered element. In the demo, Tab into the panel, then press Apply or Escape, and focus lands on Filters again. `Collapse` shows the same return on an animated panel.",
                 ])
+                .example("A filters panel of your own: the Filters button calls `remember_active()` as it opens the panel, and Apply calls `restore()`, so a keyboard user lands back on Filters instead of the top of the page.")
                 .limits([
                     "Some browsers do not focus a button on a mouse click, so a panel opened with the mouse may remember the body. That only matters to a keyboard user, and for them the trigger has focus.",
                 ]),

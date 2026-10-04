@@ -1,10 +1,21 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props, readonly_prop,
-    required_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, DocSection, FieldCopy, Wrap, a11y, field_controls,
+    field_props, prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
-use libero::components::{Code, FieldStatus, OptionList, Options, RadioGroup, Text};
+use libero::components::{Code, OptionList, Options, RadioGroup, Text};
 use libero::components::{RadioGroupPart, RadioPart};
+
+struct PlanCopy;
+
+impl FieldCopy for PlanCopy {
+    const LABEL: &'static str = "Plan";
+    const DESCRIPTION: &'static str = "What your seats cost.";
+    const HELPER: &'static str = "You can change it later.";
+    const WARNING: &'static str = "Billing starts today.";
+    const ERROR: &'static str = "Pick a plan to continue.";
+    const ARIA_LABEL: &'static str = "\"aria-label\"";
+}
 
 /// The enum is the option list, so the snippet has to show it.
 const PLAN_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -177,7 +188,8 @@ pub fn RadioGroupPage() -> Element {
                     "The whole group is one tab stop, and the arrows select as they move. Disabled options are skipped.",
                     "A group with no name logs a warning.",
                 ])
-                .must(["Without a visible `label`, spread `\"aria-label\"`, since the option labels do not say what the question is."]),
+                .must(["Without a visible `label`, spread `\"aria-label\"`, since the option labels do not say what the question is."])
+                .example("A plan question, `RadioGroup { label: \"Plan\" }` with three options: Tab enters the group on the picked plan, a screen reader says \"Plan\" on the way in, and the arrows move and pick at once."),
             lead: rsx! {
                 Text {
                     "A group of radios over an enum, exactly one of them selected. The group "
@@ -193,7 +205,7 @@ pub fn RadioGroupPage() -> Element {
                     "value: plan()".to_string(),
                     "onchange: move |next| plan.set(Some(next))".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     // A card only reads as one with a description, so the
                     // card brings the per-option descriptions with it.
                     Control::toggle("variant", ["plain", "card"])
@@ -216,36 +228,7 @@ pub fn RadioGroupPage() -> Element {
                             "horizontal" => vec![r#"orientation: "horizontal""#.to_string()],
                             _ => vec![],
                         }),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                r#"status: FieldStatus::Warning("Billing starts today.".into())"#
-                                    .to_string(),
-                            ],
-                            "error" => vec![r#"status: "Pick a plan to continue.""#.to_string()],
-                            _ => vec![],
-                        }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec![r#"label: "Plan""#.to_string()],
-                            // Unlabelled, it still needs a name.
-                            _ => vec![r#""aria-label": "Plan""#.to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec![r#"description: "What your seats cost.""#.to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec![r#"helper: "You can change it later.""#.to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<PlanCopy>(), vec![
                     Control::switch("required"),
                     Control::switch("disabled"),
                     Control::switch("readonly"),
@@ -257,32 +240,29 @@ pub fn RadioGroupPage() -> Element {
                             false => vec![],
                         }
                     }),
-                ],
-                render: move |values: DemoValues| rsx! {
-                    RadioGroup {
-                        variant: values.str("variant"),
-                        option_description: (values.str("variant") == "card")
-                            .then(|| Callback::new(plan_description)),
-                        color: values.str("color"),
-                        size: values.str("size"),
-                        orientation: values.str("orientation"),
-                        label: is_on(&values, "label").then(|| "Plan".to_string()),
-                        "aria-label": (!is_on(&values, "label")).then_some("Plan"),
-                        description: is_on(&values, "description")
-                            .then(|| "What your seats cost.".to_string()),
-                        helper: is_on(&values, "helper")
-                            .then(|| "You can change it later.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("Billing starts today.".to_string()),
-                            "error" => FieldStatus::Error("Pick a plan to continue.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
-                        required: is_on(&values, "required").then_some(true),
-                        disabled: is_on(&values, "disabled").then_some(true),
-                        readonly: is_on(&values, "readonly").then_some(true),
-                        options: plan_options(&values),
-                        value: plan(),
-                        onchange: move |next| plan.set(Some(next)),
+                ]].concat(),
+                render: move |values: DemoValues| {
+                    let field = field_props::<PlanCopy>(&values);
+                    rsx! {
+                        RadioGroup {
+                            variant: values.str("variant"),
+                            option_description: (values.str("variant") == "card")
+                                .then(|| Callback::new(plan_description)),
+                            color: values.str("color"),
+                            size: values.str("size"),
+                            orientation: values.str("orientation"),
+                            label: field.label,
+                            "aria-label": field.aria_label,
+                            description: field.description,
+                            helper: field.helper,
+                            status: field.status,
+                            required: is_on(&values, "required").then_some(true),
+                            disabled: is_on(&values, "disabled").then_some(true),
+                            readonly: is_on(&values, "readonly").then_some(true),
+                            options: plan_options(&values),
+                            value: plan(),
+                            onchange: move |next| plan.set(Some(next)),
+                        }
                     }
                 },
                 wrap: Wrap(|_values, code| format!("{PLAN_ENUM}{code}")),

@@ -196,6 +196,11 @@ modal.
 
 - Name the `Dialog` with its `title`, or `aria_label`.
 
+### Example
+
+A delete confirmation opened from a button: focus moves into the dialog, Tab
+stays inside it, and Escape closes it and puts focus back on the button.
+
 ### Limits
 
 - On Android, a modal opened without a tap (on mount or from a timer) may let

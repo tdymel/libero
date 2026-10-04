@@ -114,6 +114,12 @@ explains how parts work.
 - Name the steps with `aria_label` or `aria_labelledby`.
 - Give a rich label a name that contains its visible text.
 
+### Example
+
+A checkout, `Stepper { aria_label: "Checkout steps", .. }` with Cart, Address
+and Payment: a screen reader reads the list as "Checkout steps", and with
+`onstepclick` each clickable step is a button and a tab stop.
+
 ## Theme defaults
 
 `StepperDefaults` on the theme: `size`, `sizes` (marker, font sizes, gaps),

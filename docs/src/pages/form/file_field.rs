@@ -1,12 +1,21 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, a11y, prop, props, readonly_prop, status_prop,
+    Child, Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop,
+    props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FileFieldPart;
-use libero::components::{
-    Code, CropOptions, FieldStatus, FileField, FileRejection, Files, Flex, Text,
-};
+use libero::components::{Code, CropOptions, FileField, FileRejection, Files, Flex, Text};
 use libero::use_theme;
+
+struct AttachmentCopy;
+
+impl FieldCopy for AttachmentCopy {
+    const LABEL: &'static str = "Attachment";
+    const DESCRIPTION: &'static str = "Anything under 5 MB.";
+    const HELPER: &'static str = "We keep it for 30 days.";
+    const WARNING: &'static str = "That is a large file.";
+    const ERROR: &'static str = "We cannot read that file.";
+}
 
 fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
@@ -137,7 +146,8 @@ pub fn FileFieldPage() -> Element {
                     "In the `input` variant the files are one tab stop.",
                     "In the `dropzone` variant each card's remove button is its own tab stop.",
                 ])
-                .must(["Without a `label`, pass `aria_label`, which names the Browse button."]),
+                .must(["Without a `label`, pass `aria_label`, which names the Browse button."])
+                .example("An attachment field, `FileField { label: \"Attachment\" }`: a group named \"Attachment\". The picked files are one tab stop and Browse is another; on Browse, Enter opens the picker and Backspace removes the last file."),
             lead: rsx! {
                 Text {
                     "Files picked from the system dialog or dropped on the control. It shows "
@@ -164,7 +174,7 @@ pub fn FileFieldPage() -> Element {
                     "value: files()".to_string(),
                     "onchange: move |picked| files.set(picked)".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::toggle("variant", ["input", "dropzone"])
                         .labels(["Input", "Dropzone"])
                         .default("input")
@@ -178,17 +188,7 @@ pub fn FileFieldPage() -> Element {
                             "any" => vec![],
                             accept => vec![format!("accept: {accept:?}")],
                         }),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                r#"status: FieldStatus::Warning("That is a large file.".into())"#
-                                    .to_string(),
-                            ],
-                            "error" => vec![r#"status: "We cannot read that file.""#.to_string()],
-                            _ => vec![],
-                        }),
+                ], field_controls::<AttachmentCopy>(), vec![
                     Control::switch("multiple").code(|_, values| match is_on(values, "multiple") {
                         true => vec!["multiple: true".to_string()],
                         false => vec![],
@@ -209,26 +209,10 @@ pub fn FileFieldPage() -> Element {
                                 false => vec!["clearable: false".to_string()],
                             }
                         }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match is_on(values, "label") {
-                            true => vec![r#"label: "Attachment""#.to_string()],
-                            false => vec![r#"aria_label: "Attachment""#.to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match is_on(values, "description") {
-                            true => vec![r#"description: "Anything under 5 MB.""#.to_string()],
-                            false => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| match is_on(values, "helper") {
-                        true => vec![r#"helper: "We keep it for 30 days.""#.to_string()],
-                        false => vec![],
-                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
                     Control::switch("loading"),
-                ],
+                ]].concat(),
                 render: move |values: DemoValues| rsx! {
                     FileFieldDemo { values }
                 },
@@ -240,6 +224,7 @@ pub fn FileFieldPage() -> Element {
 /// Its own component, so the picked files survive a control change.
 #[component]
 fn FileFieldDemo(values: DemoValues) -> Element {
+    let field = field_props::<AttachmentCopy>(&values);
     let mut files = use_signal(Files::default);
     let mut refused = use_signal(Vec::<String>::new);
 
@@ -262,16 +247,11 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 clearable: is_on(&values, "clearable"),
                 placeholder: "No file picked",
                 value: files(),
-                label: is_on(&values, "label").then(|| "Attachment".to_string()),
-                aria_label: (!is_on(&values, "label")).then_some("Attachment"),
-                description: is_on(&values, "description")
-                    .then(|| "Anything under 5 MB.".to_string()),
-                helper: is_on(&values, "helper").then(|| "We keep it for 30 days.".to_string()),
-                status: match values.str("status").as_str() {
-                    "warning" => FieldStatus::Warning("That is a large file.".to_string()),
-                    "error" => FieldStatus::Error("We cannot read that file.".to_string()),
-                    _ => FieldStatus::Valid,
-                },
+                label: field.label,
+                aria_label: field.aria_label,
+                description: field.description,
+                helper: field.helper,
+                status: field.status,
                 required: is_on(&values, "required").then_some(true),
                 disabled: is_on(&values, "disabled").then_some(true),
                 loading: is_on(&values, "loading").then_some(true),

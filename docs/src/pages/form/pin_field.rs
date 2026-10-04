@@ -79,7 +79,8 @@ pub fn PinFieldPage() -> Element {
                     "A separator is decoration, hidden from screen readers.",
                     "Each cell is named for its place, such as \"Character 1 of 6\", from the localization's `PinFieldLabels`, and reads the helper and the error too.",
                 ])
-                .must(["Give the field a `label`, which names the whole group."]),
+                .must(["Give the field a `label`, which names the whole group."])
+                .example("A sign-in code, `PinField { label: \"Verification code\", length: 6, .. }`: a screen reader reads the group as \"Verification code\" and each cell as \"Character 1 of 6\" and so on."),
             lead: rsx! {
                 Text {
                     "A pin, one character per cell. Typing fills a cell and moves to the next, "

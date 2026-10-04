@@ -68,3 +68,9 @@ wants a `String`.
 
 - Pass the id to `aria_controls`, `aria_labelledby`, `aria_describedby` or a
   label's `r#for`: an id is how they find their element.
+
+### Example
+
+A disclosure in an FAQ: the button takes `aria_controls: id()` and the panel
+`id: id()`, so each question opens and names its own answer, however many
+disclosures the page has.

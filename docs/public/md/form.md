@@ -198,6 +198,12 @@ h2 { id: "checkout-title", "Checkout" }
 Form { "aria-labelledby": "checkout-title", value: order, /* .. */ }
 ```
 
+### Example
+
+A checkout, `Form { "aria-labelledby": "checkout-title", .. }` under a visible
+"Checkout" heading: a screen reader lists it as the "Checkout" form landmark,
+and each line of the error summary starts with its field's label.
+
 ## Theme defaults
 
 | Field | Type | Description |

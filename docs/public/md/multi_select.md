@@ -216,6 +216,12 @@ The dropdown is portaled out of the field, so its parts take the
 - The clear button is named by the field's `label`, "Clear Fruit", so two clear
   buttons on one form tell apart. Without a `label` it is "Clear" alone.
 
+### Example
+
+A tags field, `MultiSelect { label: "Tags", .. }`: Enter opens the list, Space
+ticks rows and keeps it open, and after closing it Left and Right move over
+the chips and Delete removes one.
+
 ## Theme defaults
 
 Almost everything is `FieldDefaults`, shared by every field, and the list is

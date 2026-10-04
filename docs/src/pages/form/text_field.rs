@@ -89,7 +89,8 @@ pub fn TextFieldPage() -> Element {
                     "Leave `label` unset only when something else names the field, such as an `aria_label`.",
                     "Markup in `description` or `helper` is shown but not read, so its accessibility is yours.",
                     "A `leading` or `trailing` slot is not read with the input. When it is text that belongs to the value, such as a unit or a counter, set `describe_leading` or `describe_trailing`.",
-                ]),
+                ])
+                .example("An email field, `TextField { label: \"Email\", helper: \"We never share it.\" }`: a screen reader reads the label, then the helper. An error status marks the input invalid and is read the same way."),
             lead: rsx! {
                 Text {
                     "A single-line text field. Like every field, it stacks a label, a description, "

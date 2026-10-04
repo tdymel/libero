@@ -1,13 +1,22 @@
 use super::dropdown_parts::color_dropdown_parts;
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, field_controls, field_props, prop, props,
+    readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{
-    Code, ColorCode, ColorField, FieldStatus, Flex, SliderChangeEvent, Swatches, Text,
-};
+use libero::components::{Code, ColorCode, ColorField, Flex, SliderChangeEvent, Swatches, Text};
 use libero::use_theme;
+
+struct BrandCopy;
+
+impl FieldCopy for BrandCopy {
+    const LABEL: &'static str = "Brand color";
+    const DESCRIPTION: &'static str = "Used for buttons and links.";
+    const HELPER: &'static str = "Shown in the theme preview.";
+    const WARNING: &'static str = "Low contrast on white.";
+    const ERROR: &'static str = "Pick a brand color.";
+}
 
 const SWATCHES: [&str; 7] = [
     "#2e2e2e", "#fa5252", "#be4bdb", "#228be6", "#12b886", "#fab005", "#fd7e14",
@@ -98,7 +107,8 @@ pub fn ColorFieldPage() -> Element {
                     "A mouse click in the dropdown leaves focus in the text.",
                     "Android's Back button closes the dropdown rather than the app. Focus in the dropdown goes back to the text.",
                 ])
-                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
+                .example("A brand color field, `ColorField { label: \"Brand color\" }`: focus opens the dropdown and stays in the text, so `#228be6` can be typed at once. Down moves into the picker, and Escape brings focus back to the text."),
             lead: rsx! {
                 Text {
                     "A text field holding a "
@@ -129,7 +139,7 @@ pub fn ColorFieldPage() -> Element {
                     "oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value())"
                         .to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::sizes("size").default("md"),
                     Control::sizes("radius").default("sm"),
                     Control::select("format", ["hex", "hexa", "rgb", "rgba", "hsl", "hsla"])
@@ -139,17 +149,7 @@ pub fn ColorFieldPage() -> Element {
                             "hex" => vec![],
                             format => vec![format!("format: {format:?}")],
                         }),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                r#"status: FieldStatus::Warning("Low contrast on white.".into())"#
-                                    .to_string(),
-                            ],
-                            "error" => vec![r#"status: "Pick a brand color.""#.to_string()],
-                            _ => vec![],
-                        }),
+                ], field_controls::<BrandCopy>(), vec![
                     Control::switch("with_alpha"),
                     Control::switch("swatches").code(|_, values| match is_on(values, "swatches") {
                         true => vec!["swatches: SWATCHES".to_string()],
@@ -181,21 +181,9 @@ pub fn ColorFieldPage() -> Element {
                     }),
                     Control::switch("disallow_input"),
                     Control::switch("close_on_swatch_click"),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match is_on(values, "label") {
-                            true => vec![r#"label: "Brand color""#.to_string()],
-                            false => vec![r#"aria_label: "Brand color""#.to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match is_on(values, "description") {
-                            true => vec![r#"description: "Used for buttons and links.""#.to_string()],
-                            false => vec![],
-                        }
-                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
+                ]].concat(),
                 render: move |values: DemoValues| rsx! {
                     ColorFieldDemo { values }
                 },
@@ -207,6 +195,7 @@ pub fn ColorFieldPage() -> Element {
 /// Its own component so the color survives a control change.
 #[component]
 fn ColorFieldDemo(values: DemoValues) -> Element {
+    let field = field_props::<BrandCopy>(&values);
     let mut color = use_signal(|| ColorCode::hex(0x228be6));
 
     let swatches = match is_on(&values, "swatches") {
@@ -230,15 +219,11 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
                 fix_on_blur: is_on(&values, "fix_on_blur"),
                 disallow_input: is_on(&values, "disallow_input"),
                 close_on_swatch_click: is_on(&values, "close_on_swatch_click"),
-                label: is_on(&values, "label").then(|| "Brand color".to_string()),
-                aria_label: (!is_on(&values, "label")).then_some("Brand color"),
-                description: is_on(&values, "description")
-                    .then(|| "Used for buttons and links.".to_string()),
-                status: match values.str("status").as_str() {
-                    "warning" => FieldStatus::Warning("Low contrast on white.".to_string()),
-                    "error" => FieldStatus::Error("Pick a brand color.".to_string()),
-                    _ => FieldStatus::Valid,
-                },
+                label: field.label,
+                aria_label: field.aria_label,
+                description: field.description,
+                helper: field.helper,
+                status: field.status,
                 required: is_on(&values, "required").then_some(true),
                 disabled: is_on(&values, "disabled").then_some(true),
             }

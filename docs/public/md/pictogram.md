@@ -96,3 +96,9 @@ with a type mismatch that does not name the version.
 - Name a pictogram that means something on its own with `aria_label`. One
   next to a text label stays hidden.
 - For a clickable glyph, use `ActionIcon { icon }`.
+
+### Example
+
+A status column with no text, `Pictogram { icon: .., aria_label: "Synced" }`:
+a screen reader reads an image named "Synced". The same glyph next to the word
+"Synced" stays hidden.

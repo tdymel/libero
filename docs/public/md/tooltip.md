@@ -105,6 +105,12 @@ fn Demo() -> Element {
 }
 ```
 
+### Example
+
+A Save icon button with a "Save (Ctrl+S)" tooltip and `label_id: "save-tip"`:
+the button's `aria-describedby: "save-tip"` makes a screen reader read the
+tip, Tab to it shows the bubble, and Escape hides it.
+
 ## Theme defaults
 
 `TooltipDefaults` on the theme.

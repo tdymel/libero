@@ -62,6 +62,7 @@ pub fn SaveFilePage() -> Element {
                 .must([
                     "Say what happened: the browser's download shows no dialog, so name the file in your button or confirm the save in text, as `TableExportButton` announces its rows.",
                 ])
+                .example("An \"Export report.csv\" button that calls the save: the file name is in the button's text, and a status line says \"Saved report.csv\" once it reports `Saved`, since a browser download shows no dialog.")
                 .limits([
                     "Android shares text only, under about 500 KB; other bytes come back `Failed`.",
                     "The web cannot tell a finished download from a blocked one: it reports `Saved` once the browser has the file.",

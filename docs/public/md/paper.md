@@ -47,7 +47,7 @@ Paper { sx: sx().padding("lg").box_shadow("none"), "Flat" }
 | `radius` | `Size` | `md` | Corner radius, a step on the shared radius scale. |
 | `shadow` | `Size` | `sm` | Elevation, a step on the shared shadow scale. For a flat surface use `sx().box_shadow("none")`. |
 | `bordered` | `bool` | `false` | A hairline border in the theme's surface border colour. Works together with a shadow. |
-| `glass` | `bool` | `false` | Frosted glass: translucent, blurring what is behind it, tuned by the theme's `paper.glass_background` and `paper.glass_blur`. A `color` or `gradient` tints it, and a tinted glass gets glass cues: a saturated backdrop, a top highlight and a light sheen. Use it over app chrome, not over images, where text can lose contrast. Opaque when the user reduces transparency, in forced colours, and in native windows, where a coloured one is its solid fill. |
+| `glass` | `bool` | `false` | Frosted glass: translucent, blurring what is behind it, tuned by the theme's `paper.glass_background` and `paper.glass_blur`. A `color` or `gradient` tints it, and a tinted glass gets glass cues: a saturated backdrop, a top highlight and a light sheen. Use it over app chrome such as a sticky bar (this site's header is drawn with it), not over images, where text can lose contrast. Opaque when the user reduces transparency, in forced colours, and in native windows, where a coloured one is its solid fill. |
 | `color` | `ThemeAwareValue` | - | Fills the surface. A theme color name paints its shade 6 under a text colour picked to read on it; any other CSS color is used as given, and its text colour is yours to set. With `glass`, a translucent tint of it, its share raised until the text reads 4.5:1: the more a colour must carry text, the less see-through the glass. Under a gradient, its first stop. |
 | `gradient` | `Gradient` | - | Fills the surface with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text colour is picked to read on both stops. With `glass`, the stops turn translucent, their share raised until the text reads 4.5:1; a literal stop's text is yours to check. Its stops carry down to any gradient inside it. |
 | `component` | `HtmlTag` | `div` | The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. An `aside` is a landmark and needs your `aria-label`; a `section` becomes one once you give it an `aria-label`. |
@@ -69,6 +69,11 @@ reaches the element untouched.
   ones a reader should find.
 - Put nothing interactive inside a `Paper` rendered as an `a`: the whole
   surface is one link, named by its contents.
+
+### Example
+
+A related-links panel, `Paper { component: "aside", "aria-label": "Related
+articles", .. }`: a screen reader lists it as the "Related articles" landmark.
 
 ## Theme defaults
 

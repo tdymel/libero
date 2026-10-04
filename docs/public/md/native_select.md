@@ -214,6 +214,12 @@ explains how parts work.
 - Without a visible `label`, set `aria_label`. A select with no name is a
   defect.
 
+### Example
+
+A font size select with no visible label, `NativeSelect { aria_label: "Size"
+}`: a screen reader names it "Size", and the browser's own list handles the
+arrows and type-ahead.
+
 ## Theme defaults
 
 Almost everything is `FieldDefaults`, shared by every field.

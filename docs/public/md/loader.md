@@ -99,6 +99,11 @@ fn Results() -> Element {
 # #[component] fn ResultList(rows: Vec<String>) -> Element { rsx! {} }
 ```
 
+### Example
+
+A `Loader` beside the text "Loading results": a screen reader reads the text
+and skips the loader. With reduced motion the loader stops moving.
+
 ## Theme defaults
 
 `LoaderDefaults` on the theme.

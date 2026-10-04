@@ -55,6 +55,12 @@ Like every component, `AspectRatio` also takes the shared props `sx`, `class`,
 - Keep nothing meaningful at the child's edges: they get cropped.
 - Give an image `alt` text that describes what the reader can see.
 
+### Example
+
+A video thumbnail in `AspectRatio { ratio: 16.0 / 9.0, .. }` with an image
+whose `alt` is "Sunset over the harbour": the picture is cropped at its edges,
+and the play button in its centre keeps its focus ring.
+
 ## Theme defaults
 
 `AspectRatioDefaults` on the theme holds the ratio used when the prop is omitted.

@@ -200,6 +200,12 @@ Like every component, all three also take the shared props `sx`, `class`,
 - Give two landmarks of the same kind an `aria-label` each, such as two
   `Aside` zones.
 
+### Example
+
+A page `Grid` with a header, a main zone and two `Aside` zones named "Filters"
+and "Related": a screen reader lists the two complementary landmarks apart,
+and Tab follows the code order.
+
 ## Theme defaults
 
 `GridDefaults` on the theme.

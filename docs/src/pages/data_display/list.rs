@@ -61,7 +61,8 @@ pub fn ListPage() -> Element {
                 .must([
                     "Keep a `List`'s children to `ListItem`s. A stray element between them breaks the list and its item count for a screen reader.",
                     "When an icon carries meaning, such as done or missing, say it in the item's text too.",
-                ]),
+                ])
+                .example("A checklist of `ListItem`s with check icons: a screen reader says the item count and reads each item's text. The item says \"done\" in words, since the icon is not read."),
             lead: rsx! {
                 Text {
                     "A "

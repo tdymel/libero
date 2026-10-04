@@ -91,6 +91,12 @@ Like every component, `Box` also takes the shared props `sx`, `class`, `style`,
 - Set `r#type: "button"` on a `button` inside a form, or it submits the form.
 - Give an `img` an `alt`, empty for a decorative one.
 
+### Example
+
+A clickable card, `Box { component: "button", r#type: "button", .. }`: Tab
+reaches it and Enter or Space press it, which a clickable `div` would not
+allow.
+
 ## Theme defaults
 
 None. The theme reaches a `Box` only through the values its `sx` names.

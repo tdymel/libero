@@ -1,6 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, or_unset, prop, props, readonly_prop,
-    status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props,
+    or_unset, prop, props, readonly_prop, status_prop,
 };
 use libero::components::Pictogram;
 use libero::components::SegmentedControlPart;
@@ -8,9 +8,21 @@ use pictogram_icons_lucide as lucide;
 
 use dioxus::prelude::*;
 use libero::components::{
-    Code, FieldStatus, Icon, Input, OptionLabel, OptionList, Options, SegmentedControl, Text,
+    Code, Icon, Input, OptionLabel, OptionList, Options, SegmentedControl, Text,
 };
 use libero::use_theme;
+
+struct AlignmentCopy;
+
+impl FieldCopy for AlignmentCopy {
+    const LABEL: &'static str = "Alignment";
+    const DESCRIPTION: &'static str = "Where each line starts.";
+    const HELPER: &'static str = "Applies to the whole document.";
+    const WARNING: &'static str = "Justified text is harder to read.";
+    const ERROR: &'static str = "This layout only takes centered text.";
+    // No `aria_label` prop: unlabelled, the attribute names it.
+    const ARIA_LABEL: &'static str = "\"aria-label\"";
+}
 
 /// The enum is the strip, so the snippet has to show it.
 // snippet: mirrors Alignment
@@ -187,7 +199,8 @@ pub fn SegmentedControlPage() -> Element {
                 .key(["Left", "Right", "Up", "Down"], "Move the selection.")
                 .key(["Space"], "Picks the focused segment.")
                 .key(["Enter"], "Outside a `Form`: picks the focused segment. Inside one: submits the form, as on a native radio.")
-                .must(["Without a visible label, spread `\"aria-label\"`, since the segments name the options, not the question."]),
+                .must(["Without a visible label, spread `\"aria-label\"`, since the segments name the options, not the question."])
+                .example("An alignment strip with no visible label, `\"aria-label\": \"Alignment\"`: Tab enters the whole strip once, the arrows move the selection, and the next Tab leaves it."),
             lead: rsx! {
                 Text {
                     "A connected strip of segments over an enum, exactly one of them selected. "
@@ -220,7 +233,7 @@ pub fn SegmentedControlPage() -> Element {
                     "value: alignment()".to_string(),
                     "onchange: move |next| alignment.set(next)".to_string(),
                 ],
-                controls: vec![
+                controls: [vec![
                     Control::toggle("labels", ["derived", "renamed", "rich"])
                         .labels(["Derived", "Renamed", "Rich"])
                         .code(|_, values| match values.str("labels").as_str() {
@@ -245,36 +258,7 @@ pub fn SegmentedControlPage() -> Element {
                     // "auto" is no gap at all: the segments stay connected
                     // and share their borders.
                     Control::slider("gap", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                r#"status: FieldStatus::Warning("Justified text is harder to read.".into())"#
-                                    .to_string(),
-                            ],
-                            "error" => vec![r#"status: "This layout only takes centered text.""#.to_string()],
-                            _ => vec![],
-                        }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec![r#"label: "Alignment""#.to_string()],
-                            // Unlabelled, it still needs a name.
-                            _ => vec![r#""aria-label": "Alignment""#.to_string()],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec![r#"description: "Where each line starts.""#.to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec![r#"helper: "Applies to the whole document.""#.to_string()],
-                            _ => vec![],
-                        }
-                    }),
+                ], field_controls::<AlignmentCopy>(), vec![
                     Control::switch("full_width"),
                     Control::switch("required"),
                     Control::switch("disabled"),
@@ -286,44 +270,41 @@ pub fn SegmentedControlPage() -> Element {
                             false => vec![],
                         }
                     }),
-                ],
-                render: move |values: DemoValues| rsx! {
-                    SegmentedControl {
-                        variant: values.str("variant"),
-                        color: match values.str("color").as_str() {
-                            "primary" => Input::None,
-                            color => Input::from(color),
-                        },
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        orientation: values.str("orientation"),
-                        gap: or_unset(values.str("gap")),
-                        full_width: is_on(&values, "full_width"),
-                        label: is_on(&values, "label").then(|| "Alignment".to_string()),
-                        "aria-label": (!is_on(&values, "label")).then_some("Alignment"),
-                        description: is_on(&values, "description")
-                            .then(|| "Where each line starts.".to_string()),
-                        helper: is_on(&values, "helper")
-                            .then(|| "Applies to the whole document.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("Justified text is harder to read.".to_string()),
-                            "error" => FieldStatus::Error("This layout only takes centered text.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
-                        required: is_on(&values, "required").then_some(true),
-                        disabled: is_on(&values, "disabled").then_some(true),
-                        option_label: match values.str("labels").as_str() {
-                            "renamed" => Some(Callback::new(renamed)),
-                            "rich" => Some(Callback::new(rich)),
-                            _ => None,
-                        },
-                        options: {
-                            let off = is_on(&values, "disabled_option");
-                            OptionList::from_options()
-                                .disabling(move |align| off && *align == Alignment::Center)
-                        },
-                        value: alignment(),
-                        onchange: move |next| alignment.set(next),
+                ]].concat(),
+                render: move |values: DemoValues| {
+                    let field = field_props::<AlignmentCopy>(&values);
+                    rsx! {
+                        SegmentedControl {
+                            variant: values.str("variant"),
+                            color: match values.str("color").as_str() {
+                                "primary" => Input::None,
+                                color => Input::from(color),
+                            },
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            orientation: values.str("orientation"),
+                            gap: or_unset(values.str("gap")),
+                            full_width: is_on(&values, "full_width"),
+                            label: field.label,
+                            "aria-label": field.aria_label,
+                            description: field.description,
+                            helper: field.helper,
+                            status: field.status,
+                            required: is_on(&values, "required").then_some(true),
+                            disabled: is_on(&values, "disabled").then_some(true),
+                            option_label: match values.str("labels").as_str() {
+                                "renamed" => Some(Callback::new(renamed)),
+                                "rich" => Some(Callback::new(rich)),
+                                _ => None,
+                            },
+                            options: {
+                                let off = is_on(&values, "disabled_option");
+                                OptionList::from_options()
+                                    .disabling(move |align| off && *align == Alignment::Center)
+                            },
+                            value: alignment(),
+                            onchange: move |next| alignment.set(next),
+                        }
                     }
                 },
             }

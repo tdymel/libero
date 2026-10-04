@@ -223,6 +223,12 @@ explains how parts work.
 - Without a visible label, spread `"aria-label"`, since the segments name the
   options, not the question.
 
+### Example
+
+An alignment strip with no visible label, `"aria-label": "Alignment"`: Tab
+enters the whole strip once, the arrows move the selection, and the next Tab
+leaves it.
+
 ## Theme defaults
 
 `SegmentedControlDefaults` on the theme.

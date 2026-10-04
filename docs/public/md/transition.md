@@ -70,6 +70,12 @@ Like every component, `Transition` also takes the shared props `sx`, `class`,
 - Move focus yourself when focused content exits: use
   [`use_focus_return`](use_focus_return.md).
 
+### Example
+
+A "Show filters" button with `aria_expanded` above a filter panel in a
+`Transition`: a screen reader hears whether the panel is open, and once it
+closes its fields leave the Tab order.
+
 ## Theme defaults
 
 `TransitionDefaults` on the theme, as `theme.transition`.

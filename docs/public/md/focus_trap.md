@@ -107,6 +107,12 @@ fn Demo() -> Element {
 }
 ```
 
+### Example
+
+A delete confirmation, `FocusTrap { restore_focus: true, .. }` around its
+message and two buttons: Tab from the last button wraps to the first, Escape
+and Cancel close it, and focus goes back to the button that opened it.
+
 ### Limits
 
 - Without `restore_focus`, focus is not restored on unmount: it falls to the

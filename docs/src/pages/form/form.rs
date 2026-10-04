@@ -22,6 +22,7 @@ pub struct Signup {
 }
 
 // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
+// snippet: mirrors SignupForm, Signup
 const FORM_CODE: &str = r#"use dioxus::prelude::*;
 use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, not_empty};__IMPORTS____COMPANY_IMPORT__
 
@@ -217,7 +218,8 @@ pub fn FormPage() -> Element {
                     "Name the form when the page holds more than one form, or when the form is the page's main task, such as a checkout. Pass `aria-labelledby` pointing at a visible heading, or `aria-label`.",
                     "Join intro text through `aria-describedby`, if any.",
                     "Put the field's name into its messages when its label is markup (`Caption::Node`): the summary cannot read markup, so the line has no name.",
-                ]),
+                ])
+                .example("A checkout, `Form { \"aria-labelledby\": \"checkout-title\", .. }` under a visible \"Checkout\" heading: a screen reader lists it as the \"Checkout\" form landmark, and each line of the error summary starts with its field's label."),
             lead: rsx! {
                 Text {
                     "A "

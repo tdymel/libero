@@ -104,6 +104,7 @@ pub fn DrawerPage() -> Element {
                     "Set `DrawerOptions::aria_label`, since the panel is a dialog with no name of its own.",
                     "Give its content a way to close it: it has no header close button.",
                 ])
+                .example("A filters drawer, `DrawerOptions { aria_label: Some(\"Filters\".into()), .. }`: focus moves into the panel, Tab stays inside it, and Escape or the panel's own Done button closes it and returns focus to the trigger.")
                 .limits([
                     "On Android, a drawer opened without a tap (on mount or from a timer) may let Back close the app.",
                     "On the desktop WebView, Shift+Tab from the panel's first control leaves it; on Android, Tab does.",

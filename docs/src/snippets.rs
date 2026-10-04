@@ -1150,11 +1150,49 @@ fn live_items(source: &str, name: &str) -> String {
                 .is_some_and(|after| !after.starts_with(|c: char| c.is_alphanumeric() || c == '_'))
         })
     };
+    let printed = in_raw_strings(&lines);
     lines
         .iter()
         .enumerate()
-        .filter(|(_, l)| starts(l))
+        .filter(|&(index, l)| !printed[index] && starts(l))
         .map(|(index, _)| item_text(&lines, index))
+        .collect()
+}
+
+/// Which lines start inside a `r#".."#` literal: a printed `fn Name` is not the live one.
+fn in_raw_strings(lines: &[&str]) -> Vec<bool> {
+    let mut close: Option<String> = None;
+    lines
+        .iter()
+        .map(|line| {
+            let inside = close.is_some();
+            let mut rest = *line;
+            loop {
+                match &close {
+                    Some(end) => match rest.find(end.as_str()) {
+                        Some(at) => {
+                            rest = &rest[at + end.len()..];
+                            close = None;
+                        }
+                        None => break,
+                    },
+                    None => match rest.find("r#") {
+                        Some(at) => {
+                            let after = &rest[at + 1..];
+                            let hashes = after.len() - after.trim_start_matches('#').len();
+                            if !after[hashes..].starts_with('"') {
+                                rest = &rest[at + 2..];
+                                continue;
+                            }
+                            close = Some(format!("\"{}", "#".repeat(hashes)));
+                            rest = &after[hashes + 1..];
+                        }
+                        None => break,
+                    },
+                }
+            }
+            inside
+        })
         .collect()
 }
 
@@ -1340,6 +1378,16 @@ fn printed_snippets_mirror_their_live_code() {
     }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
     assert!(tagged > 0, "no `// snippet: mirrors` marker found");
+}
+
+#[test]
+fn live_items_skip_the_printed_copy() {
+    let source = "const CODE: &str = r#\"use x::y;\nfn demo() {\n    printed(r#type);\n}\"#;\n\nfn demo() {\n    live();\n}\n";
+    let item = live_items(source, "demo");
+    assert!(
+        item.contains("live()") && !item.contains("printed"),
+        "{item}"
+    );
 }
 
 #[test]

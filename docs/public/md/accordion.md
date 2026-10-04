@@ -87,6 +87,12 @@ Like every component, `Accordion` also takes the shared props `sx`, `class`,
 - With `OptionLabel::rich`, make the name contain the visible text, since it
   replaces the drawn label (WCAG 2.5.3).
 
+### Example
+
+A FAQ under the section title "Shipping", with the default `h3` heading: a
+screen reader lists each question as a level 3 heading, and Enter opens its
+answer as a region named by the question.
+
 ### Limits
 
 - A `Many` accordion with a dozen open sections makes a long landmark list.

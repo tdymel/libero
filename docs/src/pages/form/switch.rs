@@ -1,10 +1,20 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, disabled_prop, prop, props, readonly_prop,
-    required_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, a11y, disabled_prop, field_controls,
+    field_props, prop, props, readonly_prop, required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::SwitchPart;
-use libero::components::{Code, FieldStatus, Switch, Text};
+use libero::components::{Code, Switch, Text};
+
+struct NotificationsCopy;
+
+impl FieldCopy for NotificationsCopy {
+    const LABEL: &'static str = "Notifications";
+    const DESCRIPTION: &'static str = "About once a month.";
+    const HELPER: &'static str = "You can turn this off later.";
+    const WARNING: &'static str = "Uses mobile data.";
+    const ERROR: &'static str = "Turn this on to continue.";
+}
 
 fn describes(values: &DemoValues) -> bool {
     values.str("description") == "true" || values.str("variant") == "card"
@@ -63,7 +73,8 @@ pub fn SwitchPage() -> Element {
                 .key(["Space"], "Toggles the switch.")
                 .key(["Enter"], "Outside a `Form`: toggles the switch. Inside one: submits the form, as on a native checkbox.")
                 .handles(["A debug build warns when the switch has neither a visible label nor `aria_label`."])
-                .must(["Without a visible label, set `aria_label`."]),
+                .must(["Without a visible label, set `aria_label`."])
+                .example("A notifications switch in a settings `Form`, `Switch { label: \"Notifications\" }`: Space turns it on or off, Enter submits the form, and the label is its name."),
             lead: rsx! {
                 Text {
                     "An on/off toggle drawn as a track and thumb. It is a checkbox underneath, "
@@ -82,11 +93,17 @@ pub fn SwitchPage() -> Element {
             Demo {
                 component: "Switch",
                 children_text: "",
-                controls: vec![
+                controls: [vec![
                     Control::toggle("variant", ["plain", "card"])
                         .labels(["Plain", "Card"])
                         .default("plain")
                         .code(|_, values| match values.str("variant").as_str() {
+                            // A card only reads as one with a description under
+                            // the label, so the card shows one either way.
+                            "card" if values.str("description") != "true" => vec![
+                                r#"variant: "card""#.to_string(),
+                                format!("description: {:?}", NotificationsCopy::DESCRIPTION),
+                            ],
                             "card" => vec![r#"variant: "card""#.to_string()],
                             _ => vec![],
                         }),
@@ -95,16 +112,7 @@ pub fn SwitchPage() -> Element {
                         .default("md"),
                     Control::sizes("radius")
                         .default("xl"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"Uses mobile data.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Turn this on to continue.\"".to_string()],
-                            _ => vec![],
-                        }),
+                ], field_controls::<NotificationsCopy>(), vec![
                     // `checked` + `onchange` as a pair (the library warns on one alone); the
                     // preview writes `onchange` back into this control.
                     Control::switch("checked").default("true").code(|_, _| {
@@ -113,62 +121,34 @@ pub fn SwitchPage() -> Element {
                             "onchange: move |next| enabled.set(next)".to_string(),
                         ]
                     }),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec!["label: \"Notifications\"".to_string()],
-                            // Unlabelled, it still needs a name.
-                            _ => vec!["aria_label: \"Notifications\"".to_string()],
-                        }
-                    }),
-                    // A card only reads as one with a description under
-                    // the label, so the card shows one either way.
-                    Control::switch("description").code(|_, values| {
-                        match describes(values) {
-                            true => vec!["description: \"About once a month.\"".to_string()],
-                            false => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"You can turn this off later.\"".to_string()],
-                            _ => vec![],
-                        }
-                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
-                render: move |values: DemoValues| rsx! {
-                    Switch {
-                        variant: values.str("variant"),
-                        color: values.str("color"),
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        // Both or neither: `checked` alone can never change.
-                        checked: match values.str("checked").as_str() {
-                            "true" => Some(true),
-                            _ => Some(false),
-                        },
-                        onchange: {
-                            let values = values.clone();
-                            EventHandler::new(move |next: bool| values.set("checked", next.to_string()))
-                        },
-                        label: (values.str("label") == "true")
-                            .then(|| "Notifications".to_string()),
-                        aria_label: (values.str("label") != "true")
-                            .then(|| "Notifications".to_string()),
-                        description: describes(&values)
-                            .then(|| "About once a month.".to_string()),
-                        helper: (values.str("helper") == "true")
-                            .then(|| "You can turn this off later.".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("Uses mobile data.".to_string()),
-                            "error" => {
-                                FieldStatus::Error("Turn this on to continue.".to_string())
-                            }
-                            _ => FieldStatus::Valid,
-                        },
-                        required: (values.str("required") == "true").then_some(true),
-                        disabled: (values.str("disabled") == "true").then_some(true),
+                ]].concat(),
+                render: move |values: DemoValues| {
+                    let field = field_props::<NotificationsCopy>(&values);
+                    rsx! {
+                        Switch {
+                            variant: values.str("variant"),
+                            color: values.str("color"),
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            // Both or neither: `checked` alone can never change.
+                            checked: match values.str("checked").as_str() {
+                                "true" => Some(true),
+                                _ => Some(false),
+                            },
+                            onchange: {
+                                let values = values.clone();
+                                EventHandler::new(move |next: bool| values.set("checked", next.to_string()))
+                            },
+                            label: field.label,
+                            aria_label: field.aria_label.map(String::from),
+                            description: describes(&values).then(|| NotificationsCopy::DESCRIPTION.to_string()),
+                            helper: field.helper,
+                            status: field.status,
+                            required: (values.str("required") == "true").then_some(true),
+                            disabled: (values.str("disabled") == "true").then_some(true),
+                        }
                     }
                 },
             }

@@ -80,6 +80,12 @@ screen. `FullscreenHandle` is `Copy`.
   fullscreen.
 - Keep a visible way out inside the element: a touch screen has no Escape.
 
+### Example
+
+A video panel with a button whose text follows `is_fullscreen()`, Fullscreen
+or Exit fullscreen: Escape leaves fullscreen, and the button stays inside the
+panel for a touch screen.
+
 ### Limits
 
 - Blitz and a server render have no Fullscreen API: the handle always draws it.

@@ -235,7 +235,8 @@ pub fn TreePage() -> Element {
                 .must([
                     "Name the tree with `aria_label`. It is required.",
                     "Pass `args.tabindex` to any link or button `render_node` draws, or it adds a tab stop the arrow keys never reach.",
-                ]),
+                ])
+                .example("A file browser, `Tree { aria_label: \"Project files\", .. }`: Tab enters on one row, Down walks the visible rows, Right opens a folder, and typing \"ma\" jumps to `main.rs`."),
             lead: rsx! {
                 Text {
                     "A tree view over "

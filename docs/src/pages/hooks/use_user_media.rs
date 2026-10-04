@@ -26,6 +26,7 @@ pub fn UseUserMediaPage() -> Element {
                     "Keep the preview `<video>` muted and give it an `aria_label`; a live microphone played back echoes.",
                     "Give a refused user another way on, such as a file upload, and say how to re-enable the camera in the browser or system settings.",
                 ])
+                .example("A \"Start camera\" button for a profile photo: the browser asks only on press, the muted preview is named \"Camera preview\", a status line says \"Camera on\", and Stop camera turns the light off.")
                 .limits([
                     "A denial is usually permanent for the site: the browser does not ask again, and libero cannot open its settings.",
                     "The Linux desktop WebView (WebKitGTK) denies every request, because wry answers no permission request there.",
@@ -42,25 +43,7 @@ pub fn UseUserMediaPage() -> Element {
                     Code { source: "attributes()" }
                     " on your own "
                     Code { source: "video" }
-                    " to show the stream. "
-                    Code { source: "snapshot()" }
-                    " takes a PNG into "
-                    Code { source: "photo()" }
-                    "; "
-                    Code { source: "record()" }
-                    " and "
-                    Code { source: "finish()" }
-                    " fill "
-                    Code { source: "recorded()" }
-                    ", both a "
-                    Code { source: "FileData" }
-                    " like a picked file. Options apply on the next "
-                    Code { source: "start()" }
-                    ". "
-                    Code { source: "camera_permission()" }
-                    " and "
-                    Code { source: "microphone_permission()" }
-                    " read the permission state, kept current where the platform reports changes."
+                    " to show the stream."
                 }
             },
 
@@ -83,6 +66,30 @@ pub fn UseUserMediaPage() -> Element {
                     let microphone = values.str("microphone") == "true";
                     rsx! { CaptureBooth { key: "{camera}{microphone}", camera, microphone } }
                 },
+            }
+
+            DocSection {
+                title: "Photos and recordings",
+                Text {
+                    Code { source: "snapshot()" }
+                    " takes a PNG into "
+                    Code { source: "photo()" }
+                    "; "
+                    Code { source: "record()" }
+                    " and "
+                    Code { source: "finish()" }
+                    " fill "
+                    Code { source: "recorded()" }
+                    ", both a "
+                    Code { source: "FileData" }
+                    " like a picked file. Options apply on the next "
+                    Code { source: "start()" }
+                    ". "
+                    Code { source: "camera_permission()" }
+                    " and "
+                    Code { source: "microphone_permission()" }
+                    " read the permission state, kept current where the platform reports changes."
+                }
             }
 
             DocSection {

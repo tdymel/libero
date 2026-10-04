@@ -93,17 +93,7 @@ pub fn AudioPage() -> Element {
                     "An "
                     Code { source: "<audio>" }
                     " in one compact row, as a chat app's voice message: play, a track of bars to seek, the time, mute with a volume menu and a speed button, "
-                    "in the theme's look on every platform that plays media. "
-                    Code { source: "use_media()" }
-                    " drives the same engine for a layout of your own: spread its "
-                    Code { source: "attributes()" }
-                    " and "
-                    Code { source: "mount()" }
-                    " on a bare element and read "
-                    Code { source: "paused()" }
-                    ", "
-                    Code { source: "current_time()" }
-                    " and friends."
+                    "in the theme's look on every platform that plays media."
                 }
             },
             Demo {
@@ -133,6 +123,22 @@ pub fn AudioPage() -> Element {
                         }
                     }
                 },
+            }
+
+            DocSection {
+                title: "Your own layout",
+                Text {
+                    Code { source: "use_media()" }
+                    " drives the same engine for a layout of your own: spread its "
+                    Code { source: "attributes()" }
+                    " and "
+                    Code { source: "mount()" }
+                    " on a bare element and read "
+                    Code { source: "paused()" }
+                    ", "
+                    Code { source: "current_time()" }
+                    " and friends."
+                }
             }
 
             DocSection {

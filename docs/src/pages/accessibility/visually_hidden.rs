@@ -37,7 +37,8 @@ pub fn VisuallyHiddenPage() -> Element {
                     "Use it for text a screen reader user is missing, never to hide something sighted users need. To replace a control's whole name, use `aria_label` instead.",
                     "Keep the children to text unless `focusable` is set, or keyboard focus lands somewhere invisible.",
                     "A skip link shows at its place in the flow, so put it first on the page. Further down, put it in a positioned parent and set `position: absolute` through `sx`, or Tab never scrolls it into view.",
-                ]),
+                ])
+                .example("A \"Read more\" link in a news card with `VisuallyHidden { \" about the launch\" }` inside it: sighted users see \"Read more\", and a screen reader reads \"Read more about the launch\"."),
             lead: rsx! {
                 Text {
                     "Content for screen readers only, such as extra context for a link that "

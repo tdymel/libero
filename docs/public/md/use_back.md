@@ -58,6 +58,12 @@ pub fn use_back(active: bool, onback: Callback<()>)
 - Keep a visible control for the same step, such as a Previous button: web,
   desktop and keyboard users have no Back button.
 
+### Example
+
+A three-step wizard with `use_back(step() > 0, ..)` going one step back: on
+Android Back returns to the previous step, and a visible Previous button does
+the same for everyone else.
+
 ### Limits
 
 - Android only. Elsewhere the hook does nothing.

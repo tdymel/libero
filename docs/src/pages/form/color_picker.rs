@@ -169,6 +169,7 @@ pub fn ColorPickerPage() -> Element {
                     "Give a `ColorSwatch` with `onclick` an `aria-label`; without one it is just \"button\", and it warns.",
                     "Name the color in text beside a plain `ColorSwatch`, or give it `role: \"img\"` and an `aria-label`: on its own it says nothing.",
                 ])
+                .example("A brand color picker with `swatches: Swatches::labelled(..)` naming each swatch \"Ocean\", \"Forest\" and so on: a screen reader reads \"Ocean\", not a hex code spelled out, and the swatch equal to the value reads as pressed.")
                 .limits(["The hue and alpha tracks meet the 24px target size of WCAG 2.5.8 from `md` up, not at `sm` or `xs`."]),
             lead: rsx! {
                 Text {

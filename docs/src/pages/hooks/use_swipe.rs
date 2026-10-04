@@ -98,6 +98,7 @@ pub fn UseSwipePage() -> Element {
                     "Offer the same action without a gesture: a swipe is a path-based gesture (WCAG 2.5.1, 2.5.7). The docs keep the burger as the single-pointer way to open the navigation; the demo has buttons.",
                     "Announce what the swipe did with a live region, or move focus where it leads.",
                 ])
+                .example("A photo strip that goes to the next photo on a left swipe: Previous and Next buttons do the same, and a status line says \"Photo 3 of 8\" after each move.")
                 .limits([
                     "Touch and pen only. On iOS and in a mobile browser tab the system or the browser owns the very screen edge; the edge swipe band starts past it, but its inset was measured on Android only.",
                     "Blitz has no touch input, so the hooks are inert in native windows.",
@@ -111,7 +112,22 @@ pub fn UseSwipePage() -> Element {
                     Code { source: "options.distance" }
                     " px (48) along one axis, more than along the other. It fires during the move, once per press, with the "
                     Code { source: "direction" }
-                    ", the start point and the delta. Spread "
+                    ", the start point and the delta."
+                }
+            },
+
+            Demo {
+                component: "use_swipe",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { SwipePad {} },
+                wrap: Wrap(code),
+            }
+
+            DocSection {
+                title: "Wiring",
+                Text {
+                    "Spread "
                     Code { source: "onpointerdown" }
                     ", "
                     Code { source: "onpointermove" }
@@ -127,14 +143,6 @@ pub fn UseSwipePage() -> Element {
                     Code { source: "pan-y" }
                     " for sideways swipes on a page that scrolls."
                 }
-            },
-
-            Demo {
-                component: "use_swipe",
-                children_text: "",
-                controls: Vec::new(),
-                render: move |_: DemoValues| rsx! { SwipePad {} },
-                wrap: Wrap(code),
             }
 
             DocSection {

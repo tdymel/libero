@@ -86,6 +86,12 @@ parts work.
 
 - Pass `role: "none"` for a purely visual rule.
 
+### Example
+
+A rule between two settings groups, `Divider { "Advanced" }`: a screen reader
+reads a separator named "Advanced". A rule that only spaces two cards takes
+`role: "none"` and is skipped.
+
 ## Theme defaults
 
 `DividerDefaults` on the theme.

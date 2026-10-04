@@ -35,6 +35,7 @@ fn EmailField(
     }
 }"#;
 
+// snippet: mirrors AddressFieldset, Address
 const COMPOSE_CODE: &str = r#"use libero::components::{FieldName, Fields, Fieldset, Rule, TextField, not_empty};
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -63,6 +64,7 @@ fn AddressFieldset(#[props(into)] label: String, #[props(into)] path: FieldName<
 }"#;
 
 // snippet: ignore - builds on the page's earlier snippets
+// snippet: mirrors OrderForm, Order
 const FORM_CODE: &str = r#"use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, not_empty};
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -210,13 +212,15 @@ pub fn FormGettingStartedPage() -> Element {
                     Code { source: "Fieldset" }
                     ", and a "
                     Code { source: "Form" }
-                    " holds the whole value in one store, validates it and submits it. Rules live at "
-                    "the layer that can see the values they check, and typed paths from "
-                    Code { source: "#[derive(Fields)]" }
-                    " tie every layer to your own structs."
+                    " holds the whole value in one store, validates it and submits it."
                 }
             },
             DocSection { title: "The layers",
+                Text {
+                    "Rules live at the layer that can see the values they check, and typed paths from "
+                    Code { source: "#[derive(Fields)]" }
+                    " tie every layer to your own structs."
+                }
                 CodeBlock { source: SHAPE_CODE }
                 Text {
                     "The example below uses all four layers. An "

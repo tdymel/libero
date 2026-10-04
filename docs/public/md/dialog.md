@@ -81,6 +81,11 @@ explains how parts work.
   the modal. A `Dialog` on its own has none of them.
 - Outside a modal, give a close button `onclose`, or it closes nothing.
 
+### Example
+
+A confirm dialog, `Dialog { title: "Delete file?" }` inside a modal: the title
+names it, and the modal traps focus and closes it on Escape.
+
 ## Theme defaults
 
 `DialogDefaults` on the theme.

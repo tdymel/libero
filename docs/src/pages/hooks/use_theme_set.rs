@@ -66,7 +66,8 @@ pub fn UseThemeSetPage() -> Element {
                 .must([
                     "Mark the active set on its control, as the demo's buttons do with `aria_pressed`.",
                     "Check the sets you offer against your own colours: in Kanagawa, Kanagawa Dragon and Vague light `muted.6` falls just under 3:1, the minimum for borders and icons (WCAG 1.4.11).",
-                ]),
+                ])
+                .example("A theme picker with one button per set, each with `aria_pressed` on the active one: a screen reader reads \"Kanagawa, pressed\", and a reader who pinned dark stays in dark after the swap."),
             lead: rsx! {
                 Text {
                     Code { source: "use_theme_set() -> ThemeSetHandle" }

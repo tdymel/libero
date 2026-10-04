@@ -49,6 +49,12 @@ fn Demo() -> Element {
 
 Pass the handle to `Audio { media }` to drive the built-in player from outside.
 
+## Your own layout
+
+[`use_media()`](use_media.md) drives the same engine for a layout of your own:
+spread its `attributes()` and `mount()` on a bare element and read `paused()`,
+`current_time()` and friends.
+
 ## Formats
 
 A browser plays the first `sources` entry whose type it supports, then `src`.

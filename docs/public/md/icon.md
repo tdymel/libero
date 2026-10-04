@@ -72,6 +72,12 @@ Like every component, `Icon` also takes the shared props `sx`, `class`,
   `<title>` inside the svg does not name it, since it is hidden with the rest.
 - For a clickable icon, use [`ActionIcon`](action_icon.md).
 
+### Example
+
+A warning icon beside a field, `Icon { aria_label: "Warning", .. }`: a screen
+reader reads an image named "Warning". The same icon next to the word
+"Warning" stays unnamed and hidden.
+
 ## Theme defaults
 
 `IconDefaults` on the theme.

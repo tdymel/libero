@@ -126,7 +126,8 @@ pub fn UseHistoryPage() -> Element {
                 .must([
                     "Offer undo and redo from the keyboard as well, as the demo does with Ctrl+Z and Ctrl+Shift+Z (Cmd on macOS) on the element around the field; a button alone leaves a keyboard user tabbing away from the field.",
                     "Keep the Undo and Redo buttons focusable in the tab order, even at the end of the stack (`focusable_when_disabled`), and named by their text or `aria-label`.",
-                ]),
+                ])
+                .example("A notes field with `use_history`: Ctrl+Z and Ctrl+Shift+Z undo and redo in the field, and the Undo and Redo buttons stay in the tab order with `focusable_when_disabled` at either end of the stack."),
             lead: rsx! {
                 Text {
                     Code { source: "use_history(initial: impl FnOnce() -> UndoHistory<T>, group_ms: u64) -> HistoryHandle<T>" }

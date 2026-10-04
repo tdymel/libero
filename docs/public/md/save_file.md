@@ -79,6 +79,12 @@ pub enum SaveOutcome {
   in your button or confirm the save in text, as `TableExportButton` announces
   its rows.
 
+### Example
+
+An "Export report.csv" button that calls the save: the file name is in the
+button's text, and a status line says "Saved report.csv" once it reports
+`Saved`, since a browser download shows no dialog.
+
 ### Limits
 
 - Android shares text only, under about 500 KB; other bytes come back `Failed`.

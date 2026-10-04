@@ -123,7 +123,8 @@ pub fn SplitterPage() -> Element {
                 .must([
                     "Set `aria_label` to name the divider after the pane it resizes, such as `\"Resize sidebar\"`. It has no name of its own.",
                     "Keep a pane's scrollbar or edge buttons out of the 12px gutter next to the divider, which gets no press there. For example, use `padding: 12px` on that side.",
-                ]),
+                ])
+                .example("A file sidebar beside an editor, `Splitter { aria_label: \"Resize sidebar\", .. }`: Tab reaches the divider, Left and Right move it by 1%, and a double-click collapses the sidebar without a drag."),
             lead: rsx! {
                 Text {
                     "Two panes, "

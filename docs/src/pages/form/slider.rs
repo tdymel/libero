@@ -426,7 +426,8 @@ pub fn SliderPage() -> Element {
                 .must([
                     "Without a `label`, set the `aria_label` prop. Put in `attributes`, it would name the wrapper instead of the thumb.",
                     "Pass `format` when a bare number does not say the unit, and to translate a discrete slider.",
-                ]),
+                ])
+                .example("A volume slider, `Slider { label: \"Volume\" }` with a `format` that adds \" %\": the arrows move one step, PageUp ten, Home and End jump to the ends, and a screen reader reads the formatted value."),
             lead: rsx! {
                 Text {
                     "A value you drag along a track. It slides over any "

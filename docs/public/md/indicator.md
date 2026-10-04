@@ -86,6 +86,12 @@ Like every component, `Indicator` also takes the shared props `sx`, `class`,
   than hex labels the count with `contrast-color()`, which a browser without it
   ignores.
 
+### Example
+
+An unread count on an avatar, `Indicator { label: 128 }` with `Avatar { alt:
+"Ada Lovelace, 128 unread" }`: a screen reader hears the count once, in the
+avatar's name, and never reads the indicator.
+
 ## Theme defaults
 
 `IndicatorDefaults` on the theme.

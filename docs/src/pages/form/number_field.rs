@@ -188,7 +188,8 @@ pub fn NumberFieldPage() -> Element {
                 .must([
                     "Leave `label` unset only when something else names the field.",
                     "With `steppers` on several fields of one form, name the buttons by their field with `increment_label` and `decrement_label`, such as \"Add a guest\". Unset, every field's are \"Increase\" and \"Decrease\".",
-                ]),
+                ])
+                .example("Two guest counts with `steppers` in one form: ArrowUp adds one guest, PageUp ten, and `increment_label: \"Add an adult\"` and `\"Add a child\"` tell the two Increase buttons apart."),
             lead: rsx! {
                 Text {
                     "A numeric field over your own number type, with optional steppers. Every "

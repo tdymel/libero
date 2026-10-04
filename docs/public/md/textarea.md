@@ -91,6 +91,12 @@ explains how parts work.
 
 - Leave `label` unset only when something else names the field.
 
+### Example
+
+A bio, `Textarea { label: "Bio", maxlength: 200, counter: true }`: the counter
+is silent while you type, and from 20 characters left a polite status says how
+many remain.
+
 ## Theme defaults
 
 Most of it is `FieldDefaults`, shared by every field. `TextareaDefaults` holds

@@ -311,7 +311,8 @@ pub fn FloatingWindowPage() -> Element {
                 .must([
                     "Pick a `placement` that does not cover the page's controls: the page behind a window still takes Tab.",
                 ])
-                .limits(["In a desktop WebView or on Android, F6 does not move focus, and the Move and Resize step buttons do not take focus when they appear: Tab reaches them."]),
+                .limits(["In a desktop WebView or on Android, F6 does not move focus, and the Move and Resize step buttons do not take focus when they appear: Tab reaches them."])
+                .example("An inspector window with the title \"Inspector\": it takes focus when it opens, the arrows on its title bar move it, F6 goes back to the page, and Escape closes it and returns focus to its trigger."),
             lead: rsx! {
                 Text {
                     "A non-modal window over the page, with a title bar that drags, an optional "

@@ -48,6 +48,11 @@ Like every component, `Code` also takes the shared props `sx`, `class`,
 - A long identifier wraps at any character, so it fits a 320px column. A span
   of up to 20 characters stays on one line.
 
+### Example
+
+An inline `Code { source: "use_theme()" }` in a sentence: a screen reader
+reads `use_theme()` as written, with or without highlighting.
+
 ## Theme defaults
 
 `CodeDefaults` on the theme, the monospace stack plus one color per token

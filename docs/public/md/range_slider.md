@@ -218,6 +218,12 @@ explains how parts work.
 - Set `format` when a bare number does not say the unit. To translate a
   discrete range, pass `format`, as on a `Slider`.
 
+### Example
+
+A price range, `RangeSlider { label: "Price" }`: the thumbs read as "Price
+Minimum" and "Price Maximum". The arrows move the focused thumb one step,
+PageUp ten, and Home or End to the end, stopping at the other thumb.
+
 ## Theme defaults
 
 `theme.slider`, the same `SliderDefaults` a `Slider` reads. See

@@ -113,6 +113,12 @@ pub struct InViewport {
   needs a "Load more" button.
 - Gate reveal animations on the reader's motion setting (`use_accessibility`).
 
+### Example
+
+An endless product list that loads the next page once its last row comes into
+view: a "Load more" button under the list does the same for a keyboard user,
+and every loaded row stays in the document.
+
 ### Limits
 
 - The web and a WebView (desktop, Android) use an `IntersectionObserver`. A

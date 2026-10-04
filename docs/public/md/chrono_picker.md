@@ -9,8 +9,7 @@ Description: One picker for every date and time value, from days, months and yea
 One picker for every date and time value. The value's type picks what it draws.
 `NaiveDate` a month of days, `NaiveTime` a clock, `NaiveDateTime` the day and
 then the time, a `DateRange` of either a start and an end, and a `TimeDelta` a
-duration, one column per part. `level` turns a day picker into a month or a
-year picker, and `calendar: "mini"` into one row of days.
+duration, one column per part.
 
 ## Usage
 

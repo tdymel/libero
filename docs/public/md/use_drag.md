@@ -122,3 +122,8 @@ coordinates. `drag_handle_sx()` sets `touch-action: none`.
 - Give anything a drag sets a second way in: a pointer is not a keyboard. The
   demo's knob is a focusable, named slider that takes the arrow keys, Home and
   End.
+
+### Example
+
+A volume knob dragged with `use_drag`: the knob is also a focusable slider
+named "Volume", so a keyboard user turns it with the arrows, Home and End.

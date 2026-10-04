@@ -93,6 +93,12 @@ pub enum MediaError { Aborted, Network, Decode, SourceNotSupported }
 - Never autoplay sound (WCAG 1.4.2); offer captions and a transcript as for any
   media.
 
+### Example
+
+Your own podcast player on `use_media()`: the play button's name follows the
+state, Play or Pause, and a status line says "Buffering" while `buffering()`
+is true.
+
 ### Limits
 
 - Blitz and a server render play no media: every command does nothing and

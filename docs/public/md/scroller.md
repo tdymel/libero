@@ -113,6 +113,11 @@ parts work.
 - Name the strip with `aria_label`. It is required, as the strip is a named
   region and can be a tab stop.
 
+### Example
+
+A row of category chips, `Scroller { aria_label: "Categories", .. }`: Tab
+moves from chip to chip, and the strip scrolls each one into view.
+
 ## Theme defaults
 
 `ScrollerDefaults` on the theme.

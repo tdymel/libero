@@ -135,6 +135,12 @@ The dropdown is portaled out of the field, so its parts take the
 - Android's Back button closes the country list as Escape does, rather than
   the app.
 
+### Example
+
+A contact number, `PhoneField { label: "Phone", .. }`: Tab stops on the
+country picker, then on the number, and typing a letter in the open list
+filters the countries.
+
 ## Theme defaults
 
 `PhoneFieldDefaults` holds `size`, `radius`, `country` (`US`) and

@@ -119,7 +119,8 @@ pub fn BottomNavigationPage() -> Element {
                 .limits([
                     "A native app has no line clamp: a long label wraps onto more lines and grows the bar.",
                     "A native app's focus scroll ignores that padding, so a link reached with Tab can sit under a sticky bar.",
-                ]),
+                ])
+                .example("An app bar, `BottomNavigation { \"aria-label\": \"Main\" }` with Home, Search and an Inbox item labelled `\"aria-label\": \"Inbox, 3 unread\"`: a screen reader lists the \"Main\" navigation, and the current item reads as the current page."),
             lead: rsx! {
                 Text {
                     "A phone's bar of three to five top-level destinations, a "

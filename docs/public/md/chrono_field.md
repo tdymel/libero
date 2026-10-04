@@ -9,9 +9,8 @@ Description: A text field for every date and time value, typed leniently, with t
 A text field for every date and time value, with a [ChronoPicker](chrono_picker.md)
 in a dropdown. The value's type picks what the dropdown shows: `NaiveDate` a
 calendar, `NaiveTime` a clock, `NaiveDateTime` both, a `DateRange` of either
-picks two, and `TimeDelta` is a duration. `level` makes a `NaiveDate` field a
-month or a year field, typed as `September 2026` or `2026`. The types are
-`chrono`'s, re-exported as `libero::chrono`.
+picks two, and `TimeDelta` is a duration. The types are `chrono`'s, re-exported
+as `libero::chrono`.
 
 ## Usage
 
@@ -123,7 +122,7 @@ and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 | `radius` | `Size` | `sm` | Corner radius of the frame. |
 | `value` | `Option<V>` | - | The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`. |
 | `onchange` | `EventHandler<Option<V>>` | - | Called on every pick, and when typed text is committed on blur or Enter. Emptied text commits `None`. |
-| `level` | `DateLevel` | `Day` | Types and picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for other values. |
+| `level` | `DateLevel` | `Day` | Types and picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1), typed as `September 2026` or `2026`. Ignored for other values. |
 | `format` | `String` | `(Formats::date)(level)` | How the text shows the value, in dayjs tokens. The default is `MMMM D, YYYY` in American formats, `D. MMMM YYYY` in German, and `MMMM YYYY` or `YYYY` in both for a month or a year. Typing only has to match the order of day, month and year. |
 | `time_format` | `String` | `Formats::time` | How the text shows a time. `h:mm A` in American formats, `HH:mm` in German. |
 | `min` | `V::Bound` | - | The earliest value accepted. For a range, the earliest end. A duration's is 0 when unset. |
@@ -225,6 +224,12 @@ The dropdown is portaled out of the field, so its parts take the
 - A mouse click in the dropdown leaves focus in the text.
 - Android's Back button closes the dropdown rather than the app. Focus in the
   dropdown goes back to the text.
+
+### Example
+
+A delivery date, `ChronoField { label: "Delivery date", .. }`: focus opens the
+calendar while the caret stays in the text, so you can type the date at once,
+or press Down to pick a day with the arrows.
 
 ## Theme defaults
 

@@ -70,6 +70,7 @@ pub fn UseFullscreenPage() -> Element {
                     "Give the toggle a name that says what it does now, such as Fullscreen or Exit fullscreen.",
                     "Keep a visible way out inside the element: a touch screen has no Escape.",
                 ])
+                .example("A video panel with a button whose text follows `is_fullscreen()`, Fullscreen or Exit fullscreen: Escape leaves fullscreen, and the button stays inside the panel for a touch screen.")
                 .limits([
                     "Blitz and a server render have no Fullscreen API: the handle always draws it.",
                     "The drawn fullscreen keeps the browser's bars and the device's status bar.",

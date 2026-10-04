@@ -59,6 +59,12 @@ Like every component, `DirectionToggle` also takes the shared props `sx`,
 
 - With `label`, return what the press does, not the current direction.
 
+### Example
+
+A `DirectionToggle {}` in the site header on an English page: its name says
+what a press does, switch to right-to-left, and after the press the page and
+its components follow the new direction.
+
 ## Theme defaults
 
 `DirectionToggleDefaults` on the theme, as `direction_toggle`.

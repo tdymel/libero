@@ -104,11 +104,7 @@ pub fn ChronoPickerPage() -> Element {
                     Code { source: "DateRange" }
                     " of either a start and an end, and a "
                     Code { source: "TimeDelta" }
-                    " a duration, one column per part. "
-                    Code { source: "level" }
-                    " turns a day picker into a month or a year picker, and "
-                    Code { source: "calendar: \"mini\"" }
-                    " into one row of days."
+                    " a duration, one column per part."
                 }
             },
             // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};

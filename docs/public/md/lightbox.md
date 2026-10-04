@@ -158,6 +158,12 @@ explains how parts work.
 
 - Give every picture its own `alt`.
 
+### Example
+
+A product gallery whose photos each have their own `alt`: the viewer opens
+from a thumbnail, Left and Right move between photos, and Escape closes it
+with focus back on that thumbnail.
+
 ## Theme defaults
 
 `LightboxDefaults` on the theme.

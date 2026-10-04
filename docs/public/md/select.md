@@ -193,6 +193,12 @@ The dropdown is portaled out of the field, so its parts take the
 - The clear button is named by the field's `label`, "Clear Fruit", so two clear
   buttons on one form tell apart. Without a `label` it is "Clear" alone.
 
+### Example
+
+A country field, `Select { label: "Country", .. }`: on the closed field,
+typing "ger" picks Germany in place as a native select does, and Enter opens
+the list for browsing.
+
 ## Theme defaults
 
 Almost everything is `FieldDefaults`, shared by every field, and the list is

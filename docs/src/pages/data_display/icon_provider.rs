@@ -157,7 +157,8 @@ pub fn IconProviderPage() -> Element {
                 ])
                 .must([
                     "Pick a glyph that means the same as the one it replaces: a chevron for `ChevronDown`, a check for `CheckboxCheck`.",
-                ]),
+                ])
+                .example("An `IconProvider` that swaps `ChevronDown` for your own chevron: a `Select` keeps its own name, and the new glyph stays hidden from screen readers like the one it replaces."),
             lead: rsx! {
                 PictogramNote {}
                 Text {

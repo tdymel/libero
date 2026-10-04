@@ -81,6 +81,13 @@ Call both hooks unconditionally, in the same order every render.
 - Prefer CSS `@media` rules for pure styling. Use the hook when the component
   tree itself differs, such as a drawer in place of a sidebar.
 
+### Example
+
+A settings page that swaps its sidebar for a drawer on
+`use_media_query("(max-width: 48em)")`: at 200% zoom the page narrows past the
+breakpoint, the drawer takes over, and every link stays reachable from its
+burger.
+
 ### Limits
 
 - The first render answers `false` and the real answer lands after mount, so a

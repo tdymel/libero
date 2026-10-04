@@ -62,7 +62,8 @@ pub fn ChipPage() -> Element {
                 .handles(["A `readonly` chip keeps its tab stop and ignores the toggle."])
                 .must([
                     "Keep `children` to text and `Icon`: a selectable chip is a `<label>`, which takes the clicks of any control inside it.",
-                ]),
+                ])
+                .example("A filter chip, `Chip { checked, onchange, \"Vegan\" }`: Tab lands on it, Space toggles it, and a `readonly` chip keeps its tab stop but stays as it is."),
             lead: rsx! {
                 Text {
                     "A compact token. With "

@@ -129,6 +129,12 @@ parts work.
 - A line in `highlight_lines` is marked only by color and a bar, so say in the
   text why it matters.
 
+### Example
+
+Two blocks on a setup page, `label: "Cargo.toml, TOML code"` and `label:
+"main.rs, Rust code"`: a screen reader tells them apart, and each copy button
+reads "Copy code, main.rs, Rust code".
+
 ## Theme defaults
 
 `CodeBlockDefaults` on the theme; the font family and token colors come from

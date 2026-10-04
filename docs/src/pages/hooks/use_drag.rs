@@ -121,7 +121,8 @@ pub fn UseDragPage() -> Element {
                 .handles(["A right or middle button never starts a drag, and a second finger is ignored."])
                 .must([
                     "Give anything a drag sets a second way in: a pointer is not a keyboard. The demo's knob is a focusable, named slider that takes the arrow keys, Home and End.",
-                ]),
+                ])
+                .example("A volume knob dragged with `use_drag`: the knob is also a focusable slider named \"Volume\", so a keyboard user turns it with the arrows, Home and End."),
             lead: rsx! {
                 Text {
                     Code { source: "use_drag(options: DragOptions) -> Drag" }

@@ -127,7 +127,8 @@ pub fn TabsPage() -> Element {
                 .must([
                     "Name the strip with `aria_label` or `aria_labelledby`. Without either it warns in debug builds.",
                     "If you remove the focused tab from `options`, move the focus back to the strip yourself.",
-                ]),
+                ])
+                .example("A settings strip, `Tabs { aria_label: \"Settings\" }`: Tab lands on the selected tab, the arrows move and select, and Home and End jump to the first and last tab."),
             lead: rsx! {
                 Text {
                     "A strip of tabs over an enum, with the selected tab's panel below it. "

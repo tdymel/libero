@@ -186,6 +186,7 @@ pub fn UseSystemNotificationPage() -> Element {
                     "Announce a refusal or failure once in a status region, as the demo does, and say how to re-enable notifications in the browser settings.",
                     "Let the user stop push from the page as well as in the browser: unsubscribe and tell your server.",
                 ])
+                .example("A \"Notify me when the export is done\" switch that asks for the permission on press: when the export ends, the system notification shows and a status line in the page says the same.")
                 .limits([
                     "A denial is usually permanent for the site: the browser does not ask again, and libero cannot open its settings.",
                     "Android reads Prompt until the first request and Denied after a refusal, also after a restart; it cannot tell a dismissed dialog from a refusal.",

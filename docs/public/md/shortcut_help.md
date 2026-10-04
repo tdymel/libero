@@ -73,3 +73,9 @@ Like every component, `ShortcutHelp` also takes the shared props `sx`, `class`,
 - Open it with `use_modal`, which traps focus, closes on Escape and hands focus
   back.
 - List only shortcuts that work where the reader is.
+
+### Example
+
+A `ShortcutHelp` opened with `use_modal` on "?": focus moves into the dialog,
+a screen reader reads each chord and what it does as a pair, and Escape
+returns focus.

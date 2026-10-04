@@ -6,15 +6,8 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/button
 Index: [index.md](index.md) - every other component's markdown page
 Description: A link to a GitHub or GitLab repository with its star count beside the host's icon.
 
-A link to a repository with its star count beside the host's icon. Give it the
-repository's name; it asks the host's public API once per mount and keeps the
-count for the session (the web's `sessionStorage`, memory elsewhere). Until the
-count arrives, when it is 0, or when the host does not answer, the icon stands
-alone.
-
-It opens in a new tab. This site's header uses
-`Repository { repo: "tdymel/libero" }`. The button's name comes from the
-[localization](localization.md).
+A link to a repository with its star count beside the host's icon. It opens in a
+new tab.
 
 ## Usage
 
@@ -30,6 +23,14 @@ fn Demo() -> Element {
     }
 }
 ```
+
+## Star count
+
+Give it the repository's name; it asks the host's public API once per mount and
+keeps the count for the session (the web's `sessionStorage`, memory elsewhere).
+Until the count arrives, when it is 0, or when the host does not answer, the
+icon stands alone. This site's header uses `Repository { repo: "tdymel/libero" }`.
+The button's name comes from the [localization](localization.md).
 
 ## Native builds
 
@@ -81,6 +82,12 @@ explains how parts work.
 
 - With your own `aria_label`, name the repository and say that it opens in a
   new tab.
+
+### Example
+
+A header link, `Repository { repo: "tdymel/libero" }`: a screen reader reads
+"GitHub tdymel/libero", then the star count once it arrives, then that it
+opens in a new tab.
 
 ## Theme defaults
 

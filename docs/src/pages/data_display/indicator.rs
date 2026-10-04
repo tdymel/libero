@@ -74,7 +74,8 @@ pub fn IndicatorPage() -> Element {
                     "To have the indicator read, pass `aria_hidden: \"false\"` and wrap it in your own `role=\"status\"` region.",
                     "`processing` pings until you turn it off. Set it back to `false` when the work ends, since motion that never stops fails WCAG 2.2.2.",
                     "Give the fill 3:1 against what is around it (WCAG 1.4.11). A CSS color other than hex labels the count with `contrast-color()`, which a browser without it ignores.",
-                ]),
+                ])
+                .example("An unread count on an avatar, `Indicator { label: 128 }` with `Avatar { alt: \"Ada Lovelace, 128 unread\" }`: a screen reader hears the count once, in the avatar's name, and never reads the indicator."),
             lead: rsx! {
                 Text {
                     "A dot or a small count pinned to something else, such as an unread "

@@ -174,6 +174,12 @@ explains how parts work.
 - Without a visible `label`, spread `"aria-label"`, since the option labels do
   not say what the question is.
 
+### Example
+
+A plan question, `RadioGroup { label: "Plan" }` with three options: Tab enters
+the group on the picked plan, a screen reader says "Plan" on the way in, and
+the arrows move and pick at once.
+
 ## Theme defaults
 
 `RadioDefaults` holds `variant` (`plain`, for a `Radio` and a `RadioGroup`),

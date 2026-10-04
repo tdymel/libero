@@ -394,7 +394,8 @@ pub fn MultiSelectPage() -> Element {
                     "Android's Back button closes the list as Escape does, rather than the app.",
                     CLEAR_NAME,
                 ])
-                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
+                .example("A tags field, `MultiSelect { label: \"Tags\", .. }`: Enter opens the list, Space ticks rows and keeps it open, and after closing it Left and Right move over the chips and Delete removes one."),
             lead: rsx! {
                 Text {
                     "A listbox over an enum that holds any number of its options, drawn as chips "

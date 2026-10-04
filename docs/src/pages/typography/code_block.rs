@@ -88,7 +88,8 @@ pub fn CodeBlockPage() -> Element {
                 .must([
                     "With several blocks on a page, give each a `label` that says what the code is, such as \"The booking form, Rust code\".",
                     "A line in `highlight_lines` is marked only by color and a bar, so say in the text why it matters.",
-                ]),
+                ])
+                .example("Two blocks on a setup page, `label: \"Cargo.toml, TOML code\"` and `label: \"main.rs, Rust code\"`: a screen reader tells them apart, and each copy button reads \"Copy code, main.rs, Rust code\"."),
             lead: rsx! {
                 Text {
                     "A multi-line code block with line numbers, a copy button and a header "

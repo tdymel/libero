@@ -128,7 +128,8 @@ pub fn StepperPage() -> Element {
                 .must([
                     "Name the steps with `aria_label` or `aria_labelledby`.",
                     "Give a rich label a name that contains its visible text.",
-                ]),
+                ])
+                .example("A checkout, `Stepper { aria_label: \"Checkout steps\", .. }` with Cart, Address and Payment: a screen reader reads the list as \"Checkout steps\", and with `onstepclick` each clickable step is a button and a tab stop."),
             lead: rsx! {
                 Text {
                     "The stages of a process, one per variant of an enum, with the current "

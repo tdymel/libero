@@ -1,15 +1,24 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props, readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, field_controls, field_props, indent,
+    prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::SliderPart;
 use libero::{
-    components::{
-        Code, FieldStatus, Flex, RangeSlider, SliderChangeEvent, SliderMark, SliderValue, Text,
-    },
+    components::{Code, Flex, RangeSlider, SliderChangeEvent, SliderMark, SliderValue, Text},
     sx::sx,
     use_theme,
 };
+
+struct PriceCopy;
+
+impl FieldCopy for PriceCopy {
+    const LABEL: &'static str = "Price";
+    const DESCRIPTION: &'static str = "What you are willing to pay.";
+    const HELPER: &'static str = "Both ends included.";
+    const WARNING: &'static str = "A wide range costs more.";
+    const ERROR: &'static str = "Pick a narrower range.";
+}
 
 const MIN_VALUES: [&str; 4] = ["auto", "0.0", "10.0", "50.0"];
 const MAX_VALUES: [&str; 4] = ["auto", "50.0", "100.0", "200.0"];
@@ -346,7 +355,8 @@ pub fn RangeSliderPage() -> Element {
                     "Without a `label`, set the `aria_label` prop, or the thumbs say only \"Minimum\" and \"Maximum\". Put in `attributes`, it would name a wrapper with no role.",
                     "Set `aria_label_from` and `aria_label_to` when those words do not fit.",
                     "Set `format` when a bare number does not say the unit. To translate a discrete range, pass `format`, as on a `Slider`.",
-                ]),
+                ])
+                .example("A price range, `RangeSlider { label: \"Price\" }`: the thumbs read as \"Price Minimum\" and \"Price Maximum\". The arrows move the focused thumb one step, PageUp ten, and Home or End to the end, stopping at the other thumb."),
             lead: rsx! {
                 Text {
                     "Two thumbs on one track, for a span instead of a point. It takes the same "
@@ -365,7 +375,7 @@ pub fn RangeSliderPage() -> Element {
             Demo {
                 component: "RangeSlider",
                 children_text: "",
-                controls: vec![
+                controls: [vec![
                     Control::toggle("mode", ["discrete", "continuous"])
                         .default("continuous")
                         .labels(["Discrete", "Continuous"])
@@ -398,46 +408,14 @@ pub fn RangeSliderPage() -> Element {
                     Control::slider("min_range_value", ["0.0", "10.0", "25.0"])
                         .code(number_code)
                         .hidden_when(discrete),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .labels(["Valid", "Warning", "Error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                r#"status: FieldStatus::Warning("A wide range costs more.".into())"#
-                                    .to_string(),
-                            ],
-                            "error" => vec![r#"status: "Pick a narrower range.""#.to_string()],
-                            _ => vec![],
-                        }),
+                ], field_controls::<PriceCopy>(), vec![
                     Control::switch("marks").code(marks_code),
                     Control::switch("format").code(format_code),
-                    Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec![r#"label: "Price""#.to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec![r#"description: "What you are willing to pay.""#.to_string()],
-                            _ => vec![],
-                        }
-                    }),
-                    Control::switch("helper").code(|_, values| {
-                        match values.str("helper").as_str() {
-                            "true" => vec![r#"helper: "Both ends included.""#.to_string()],
-                            _ => vec![],
-                        }
-                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                ],
+                ]].concat(),
                 render: move |values: DemoValues| {
-                    let status = match values.str("status").as_str() {
-                        "warning" => FieldStatus::Warning("A wide range costs more.".to_string()),
-                        "error" => FieldStatus::Error("Pick a narrower range.".to_string()),
-                        _ => FieldStatus::Valid,
-                    };
+                    let field = field_props::<PriceCopy>(&values);
                     rsx! {
                         Flex {
                             direction: "column",
@@ -445,7 +423,7 @@ pub fn RangeSliderPage() -> Element {
                             sx: sx().width("100%"),
                             if discrete(&values) {
                                 RangeSlider {
-                                    aria_label: "Price",
+                                    aria_label: field.aria_label.map(String::from),
                                     value: quality(),
                                     size: values.str("size"),
                                     color: values.str("color"),
@@ -459,12 +437,10 @@ pub fn RangeSliderPage() -> Element {
                                                 format!("{quality:?} quality")
                                             })
                                         }),
-                                    label: is_on(&values, "label").then(|| "Price".to_string()),
-                                    description: is_on(&values, "description")
-                                        .then(|| "What you are willing to pay.".to_string()),
-                                    helper: is_on(&values, "helper")
-                                        .then(|| "Both ends included.".to_string()),
-                                    status: status.clone(),
+                                    label: field.label.clone(),
+                                    description: field.description.clone(),
+                                    helper: field.helper.clone(),
+                                    status: field.status.clone(),
                                     required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
                                     oninput: move |event: SliderChangeEvent<(Quality, Quality)>| {
@@ -478,7 +454,7 @@ pub fn RangeSliderPage() -> Element {
                                 }
                             } else {
                                 RangeSlider {
-                                    aria_label: "Price",
+                                    aria_label: field.aria_label.map(String::from),
                                     value: price(),
                                     size: values.str("size"),
                                     color: values.str("color"),
@@ -489,12 +465,10 @@ pub fn RangeSliderPage() -> Element {
                                     marks: continuous_marks(&values),
                                     format: is_on(&values, "format")
                                         .then(|| Callback::new(|value: f64| format!("{value} EUR"))),
-                                    label: is_on(&values, "label").then(|| "Price".to_string()),
-                                    description: is_on(&values, "description")
-                                        .then(|| "What you are willing to pay.".to_string()),
-                                    helper: is_on(&values, "helper")
-                                        .then(|| "Both ends included.".to_string()),
-                                    status,
+                                    label: field.label,
+                                    description: field.description,
+                                    helper: field.helper,
+                                    status: field.status,
                                     required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
                                     oninput: move |event: SliderChangeEvent<(f64, f64)>| {

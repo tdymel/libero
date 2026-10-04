@@ -44,7 +44,8 @@ pub fn CopyPage() -> Element {
                 .must([
                     "Name it after what it copies with `aria_label`, such as \"Copy link\", or keep the short name and say what it copies with `label`.",
                     "For a copy control of your own on `use_clipboard()`, say the result in a status region that is already mounted.",
-                ]),
+                ])
+                .example("An install command, `Copy { value: \"cargo add libero\", label: \"Add libero to your project\" }`: the button reads \"Copy, Add libero to your project\", and after a press the status region says \"Copied\"."),
             lead: rsx! {
                 Text {
                     "An icon button that copies a value to the clipboard. Once the write "

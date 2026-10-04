@@ -320,16 +320,18 @@ pub fn HooksPage() -> Element {
                 Text {
                     "Libero's components are built from these hooks, and they are public for "
                     "yours. They are positional like every dioxus hook, so call them "
-                    "unconditionally, in the same order every render. The primitives and the "
-                    "theme-set and stylesheet hooks have a page of their own; the unique ID, "
-                    "focus return and accessibility settings hooks have theirs under "
-                    "Accessibility. The rest are shown on the component or guide page they "
-                    "belong to."
+                    "unconditionally, in the same order every render."
                 }
             },
 
             DocSection {
                 title: "Every public hook",
+                Text {
+                    "The primitives and the theme-set and stylesheet hooks have a page of their "
+                    "own; the unique ID, focus return and accessibility settings hooks have "
+                    "theirs under Accessibility. The rest are shown on the component or guide "
+                    "page they belong to."
+                }
                 Table {
                     caption: "Libero's public hooks",
                     data: hooks(),

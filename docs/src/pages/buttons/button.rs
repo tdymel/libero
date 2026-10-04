@@ -69,7 +69,8 @@ pub fn ButtonPage() -> Element {
                     "`selected: Some(false)` announces a toggle that is off. An unset `selected` announces no state.",
                     "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
                 ])
-                .must(["Pass a label that may be cut as `title` too, so sighted users can read it on hover."]),
+                .must(["Pass a label that may be cut as `title` too, so sighted users can read it on hover."])
+                .example("A narrow toolbar button whose label may be cut, `Button { title: \"Export as PDF\", \"Export as PDF\" }`: a screen reader still reads the full label, and the title shows it on hover."),
             lead: rsx! {
                 Text {
                     "A clickable action, a toggle, or a link when "

@@ -8,9 +8,7 @@ Description: The camera and microphone with a preview, a PNG snapshot, a chunked
 
 `use_user_media(options) -> UserMedia` opens the camera and microphone.
 `start()` asks and opens them, `stop()` closes them. Spread `attributes()` on
-your own `video` to show the stream. `snapshot()` takes a PNG into `photo()`;
-`record()` and `finish()` fill `recorded()`, both a `FileData` like a picked
-file. Options apply on the next `start()`.
+your own `video` to show the stream.
 
 ## Usage
 
@@ -143,6 +141,13 @@ pub fn CaptureBooth(camera: bool, #[props(default)] microphone: bool) -> Element
 }
 ```
 
+## Photos and recordings
+
+`snapshot()` takes a PNG into `photo()`; `record()` and `finish()` fill
+`recorded()`, both a `FileData` like a picked file. Options apply on the next
+`start()`. `camera_permission()` and `microphone_permission()` read the
+permission state, kept current where the platform reports changes.
+
 ## Devices
 
 `use_user_media_devices()` lists `cameras()` and `microphones()`; labels and
@@ -254,6 +259,12 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
   microphone played back echoes.
 - Give a refused user another way on, such as a file upload, and say how to
   re-enable the camera in the browser or system settings.
+
+### Example
+
+A "Start camera" button for a profile photo: the browser asks only on press,
+the muted preview is named "Camera preview", a status line says "Camera on",
+and Stop camera turns the light off.
 
 ### Limits
 

@@ -48,7 +48,8 @@ pub fn AnchorPage() -> Element {
                 .must([
                     "Make the link text say where the link goes: it is the accessible name.",
                     "Keep the underline on a link inside a paragraph: with `underline: \"never\"` it stands out by color alone.",
-                ]),
+                ])
+                .example("A link in a paragraph, `Anchor { to: \"https://www.rust-lang.org\", target: \"_blank\", \"The Rust website\" }`: it keeps its underline, and a screen reader reads \"The Rust website (opens in a new tab)\"."),
             lead: rsx! {
                 Text {
                     "A link styled and sized like "

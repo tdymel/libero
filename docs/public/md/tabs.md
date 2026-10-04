@@ -200,6 +200,11 @@ explains how parts work.
 - If you remove the focused tab from `options`, move the focus back to the
   strip yourself.
 
+### Example
+
+A settings strip, `Tabs { aria_label: "Settings" }`: Tab lands on the selected
+tab, the arrows move and select, and Home and End jump to the first and last
+tab.
 
 ## Theme defaults
 

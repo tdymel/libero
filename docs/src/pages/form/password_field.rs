@@ -78,7 +78,8 @@ pub fn PasswordFieldPage() -> Element {
                 .must([
                     "Leave `label` unset only when something else names the field.",
                     "Set `autocomplete` so password managers can fill the field: `\"new-password\"` on a sign-up form, `\"current-password\"` on a sign-in form.",
-                ]),
+                ])
+                .example("A sign-in password, `PasswordField { label: \"Password\", autocomplete: \"current-password\" }`: the password manager fills it, and the reveal button reads as pressed while the password shows."),
             lead: rsx! {
                 Text {
                     "A "

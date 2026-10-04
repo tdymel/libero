@@ -103,6 +103,12 @@ explains how parts work.
 - Mount the Alert after the page loads to have it announced: one present at
   first paint is read only when the reader reaches it.
 
+### Example
+
+A failed save, `Alert { color: "error", title: "Error: not saved" }` mounted
+after the click: a screen reader interrupts to read it, and the title says the
+severity in words.
+
 ## Theme defaults
 
 `AlertDefaults` on the theme.

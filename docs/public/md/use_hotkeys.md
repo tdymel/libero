@@ -124,6 +124,12 @@ that parses to no key is ignored.
 - Tell the reader the chord exists, on the control it triggers or in a help
   dialog.
 
+### Example
+
+A bold shortcut, `Hotkey::new("mod+b", ..)`, next to a Bold button whose
+tooltip says "Ctrl+B": the button does the same for anyone who cannot press
+the chord, and the tooltip tells everyone else it exists.
+
 ### Limits
 
 - A WebView prevents a chord's default action only from the second press of it.

@@ -89,7 +89,8 @@ pub fn UseElementPage() -> Element {
                     "Focus only an element that takes focus, a control or one with `tabindex: \"-1\"`, and that shows a visible focus ring.",
                     "Scroll the page only when the reader asked for it.",
                     "Announce a result the reader asked for, such as a measurement, in a status region, as the demo does.",
-                ]),
+                ])
+                .example("A \"Measure\" button that reads its card's size through the handle: the result goes into a status region, so a screen reader hears \"320 by 180\" without focus moving."),
             lead: rsx! {
                 Text {
                     Code { source: "use_element() -> ElementHandle" }

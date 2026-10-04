@@ -108,6 +108,7 @@ pub fn UseGeolocationPage() -> Element {
                     "Give a refused user another way on, such as typing an address, and say how to re-enable location in the browser or system settings.",
                     "Round coordinates you show, and keep them out of logs and storage unless the user agreed.",
                 ])
+                .example("A \"Find stores near me\" button that asks for the location on press: a status line says \"Found 3 stores\" once, and a refused user gets a postcode field instead.")
                 .limits([
                     "A denial is usually permanent for the site: the browser does not ask again, and libero cannot open its settings.",
                     "The Linux desktop WebView (WebKitGTK) denies every request, because wry answers no permission request there.",

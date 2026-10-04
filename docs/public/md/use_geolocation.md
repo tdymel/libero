@@ -146,6 +146,12 @@ pub enum PermissionState { Granted, Denied, Prompt, Unknown, Unsupported }
 - Round coordinates you show, and keep them out of logs and storage unless the
   user agreed.
 
+### Example
+
+A "Find stores near me" button that asks for the location on press: a status
+line says "Found 3 stores" once, and a refused user gets a postcode field
+instead.
+
 ### Limits
 
 - A denial is usually permanent for the site: the browser does not ask again,

@@ -71,7 +71,8 @@ pub fn ActionIconPage() -> Element {
                 .must([
                     "Name the button with `aria_label`: the icon gives a screen reader nothing to read.",
                     "Below 24px, keep other targets clear of that 24x24 box, or the one drawn later takes the overlap.",
-                ]),
+                ])
+                .example("A bold button in an editor bar, `ActionIcon { aria_label: \"Bold\", shortcut: \"Control+B\", .. }`: a screen reader reads \"Bold, button\" and announces the shortcut."),
             lead: rsx! {
                 PictogramNote {}
                 Text {

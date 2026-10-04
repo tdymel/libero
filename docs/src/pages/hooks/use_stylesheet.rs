@@ -54,7 +54,8 @@ pub fn UseStylesheetPage() -> Element {
                 .must([
                     "Keep a visible focus indicator: a rule here outranks libero's own focus ring, so `outline: none` on a control removes it (WCAG 2.4.7).",
                     "Check the contrast of a literal colour you set: 4.5:1 for text, 3:1 for borders and icons (WCAG 1.4.3, 1.4.11). A theme colour such as `primary.1` follows the theme set.",
-                ]),
+                ])
+                .example("A card class from `use_stylesheet` that gives its link `color: primary.6` and leaves the focus ring alone: the link keeps libero's visible ring, and the theme colour follows the theme set."),
             lead: rsx! {
                 Text {
                     Code { source: "use_stylesheet(sheet) -> Option<String>" }
