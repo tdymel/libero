@@ -582,7 +582,8 @@ impl Fixture {
         Ok(())
     }
 
-    /// Writes a PNG of the current page and returns its path.
+    /// Writes a PNG of the current page and returns its path. Takes the page to front
+    /// itself: never call it inside `frames::in_front` or while holding a `Front`.
     pub async fn screenshot(&self, name: &str) -> Result<std::path::PathBuf> {
         let dir = std::env::var("E2E_ARTIFACTS")
             .map(std::path::PathBuf::from)
@@ -590,16 +591,20 @@ impl Fixture {
         std::fs::create_dir_all(&dir).context("create the artifacts directory")?;
         let path = dir.join(format!("{name}-{}.png", self.viewport.name()));
 
-        let png = self
-            .page
-            .screenshot(
-                CaptureScreenshotParams::builder()
-                    .format(CaptureScreenshotFormat::Png)
-                    .capture_beyond_viewport(true)
-                    .build(),
-            )
-            .await
-            .context("capture a screenshot")?;
+        // A capture shows the tab, which broke Escape in another test's fullscreen until the
+        // home tab came back to front (todos 2169, 2175).
+        let capture = async {
+            self.page
+                .screenshot(
+                    CaptureScreenshotParams::builder()
+                        .format(CaptureScreenshotFormat::Png)
+                        .capture_beyond_viewport(true)
+                        .build(),
+                )
+                .await
+                .context("capture a screenshot")
+        };
+        let png = crate::frames::in_front(&self.page, capture).await?;
         std::fs::write(&path, png).context("write the screenshot")?;
         Ok(path)
     }

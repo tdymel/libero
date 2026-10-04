@@ -46,10 +46,7 @@ fn the_seek_track_splits_into_chapters() {
         )
         .await
         .unwrap();
-        // A screenshot activates the tab, which ends the other video tests' fullscreen (todo 2169).
-        let shot = e2e::frames::in_front(page, fixture.screenshot("video-chapters"))
-            .await
-            .unwrap();
+        let shot = fixture.screenshot("video-chapters").await.unwrap();
         println!("screenshot: {}", shot.display());
         fixture.close().await.unwrap();
     });
