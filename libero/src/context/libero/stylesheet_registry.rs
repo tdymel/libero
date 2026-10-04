@@ -38,6 +38,9 @@ struct RegisteredStylesheet {
     ref_count: usize,
     /// When it last fell to no users, matched against its `retired` queue entry.
     retired_at: u64,
+    /// Only a sheet scoped to its own class matches nothing once unused; a global
+    /// (`:root`, raw CSS) one must leave the cascade at its last release.
+    retainable: bool,
 }
 
 impl RegisteredStylesheet {
@@ -102,6 +105,7 @@ impl StylesheetRegistry {
                 css: Rc::from(layered_css(layer, &stylesheet)),
                 ref_count: 0,
                 retired_at: 0,
+                retainable: stylesheet.class_name().is_some(),
             });
 
         // A 64-bit hash collision would silently render one sheet with another's
@@ -121,8 +125,8 @@ impl StylesheetRegistry {
         key
     }
 
-    /// Counts one user less. A sheet without users stays until [`RETAINED`] newer ones
-    /// push it out, so a class toggled back costs no `<style>` write.
+    /// Counts one user less. A class-scoped sheet without users stays until [`RETAINED`] newer
+    /// ones push it out, so a class toggled back costs no `<style>` write; a global one goes at once.
     pub fn release(&self, key: StylesheetKey) {
         let mut registry = self.inner.borrow_mut();
         let registry = &mut *registry;
@@ -135,6 +139,10 @@ impl StylesheetRegistry {
         }
         entry.ref_count -= 1;
         if entry.ref_count > 0 {
+            return;
+        }
+        if !entry.retainable {
+            registry.by_key.remove(&key);
             return;
         }
         registry.clock += 1;
@@ -242,6 +250,26 @@ mod tests {
             registry.inner.borrow().by_key.contains_key(&first),
             "newest unused"
         );
+    }
+
+    /// A kept `:root` sheet would stay in the cascade (todo 2195).
+    #[test]
+    fn a_released_root_sheet_is_removed_and_a_class_scoped_one_stays() {
+        let registry = StylesheetRegistry::new();
+        let root = registry.acquire(
+            ":root{--height:64px;}",
+            CssLayer::Framework,
+            SheetRank::Component,
+        );
+        let scoped = padding(&registry, 0);
+
+        registry.release(root);
+        registry.release(scoped);
+
+        let sheets = registry.inner.borrow();
+        assert!(!sheets.by_key.contains_key(&root));
+        assert!(sheets.by_key.contains_key(&scoped));
+        assert_eq!(sheets.retired.len(), 1, "only the scoped one queued");
     }
 
     #[test]
