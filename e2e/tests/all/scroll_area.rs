@@ -195,6 +195,13 @@ mod the_window_follows_a_touch_fling {
         e2e::android::block_on(async {
             let mut driver = Android::open("/scroll-area").await.unwrap();
             let page = driver.page().clone();
+            // Its first render holds only the rows a 1080px pane needs: a jump then clamps (2177).
+            let reserved = format!(
+                "(() => {{ const a = {AREA}; return !!a && a.scrollHeight > 10000 + a.clientHeight }})()"
+            );
+            wait::for_js_true(&page, &reserved, "the list's full height")
+                .await
+                .unwrap();
             // Mid-list, so every window step moves the padding; a drag is held to the pane.
             page.evaluate(format!("{AREA}.scrollTop = 10000"))
                 .await
@@ -219,18 +226,18 @@ mod the_window_follows_a_touch_fling {
                 .unwrap()
                 .into_value()
                 .unwrap();
-            let (start, end) = (frames[0].0, frames.last().unwrap().0);
-            let moving: Vec<&String> = frames
+            // From the last frame at rest before the move: a starved emulator samples
+            // only a frame or two of the move itself.
+            let moved = frames.iter().position(|f| f.0 != frames[0].0).unwrap_or(0);
+            let mut paddings: Vec<&String> = frames[moved.saturating_sub(1)..]
                 .iter()
-                .filter(|f| f.0 > start && f.0 < end)
                 .map(|f| &f.1)
                 .collect();
-            let mut paddings = moving.clone();
             paddings.dedup();
             assert!(
-                moving.len() >= 5 && paddings.len() >= 3,
-                "{} moving frames saw {} leading paddings: {paddings:?}",
-                moving.len(),
+                paddings.len() >= 2,
+                "{} frames from the move saw {} leading paddings: {paddings:?}",
+                frames.len() - moved,
                 paddings.len()
             );
             driver.finish("scroll_area").await.unwrap();

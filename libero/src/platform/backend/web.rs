@@ -649,6 +649,7 @@ impl Drop for WebResizeSubscription {
 
 pub(super) fn hold_edge_pan(
     band: crate::platform::scroll::EdgeBand,
+    swiped: crate::platform::scroll::LostSwipe,
 ) -> Option<Box<dyn ScrollSubscription>> {
     let install =
         js_sys::Function::new_no_args(&format!("return {};", crate::platform::scroll::EDGE_PAN_JS))
@@ -656,21 +657,30 @@ pub(super) fn hold_edge_pan(
             .ok()?
             .dyn_into::<js_sys::Function>()
             .ok()?;
+    let closure = Closure::<dyn Fn(f64, f64, f64, f64)>::new(move |x, y, dx, dy| {
+        swiped([x, y, dx, dy]);
+    });
+    let args = js_sys::Array::of5(
+        &JsValue::from_f64(band.inset),
+        &JsValue::from_f64(band.width),
+        &JsValue::from_bool(band.left),
+        &JsValue::from_f64(band.distance),
+        closure.as_ref(),
+    );
     let remove = install
-        .call3(
-            &JsValue::NULL,
-            &JsValue::from_f64(band.inset),
-            &JsValue::from_f64(band.width),
-            &JsValue::from_bool(band.left),
-        )
+        .apply(&JsValue::NULL, &args)
         .ok()?
         .dyn_into::<js_sys::Function>()
         .ok()?;
-    Some(Box::new(WebEdgePan { remove }))
+    Some(Box::new(WebEdgePan {
+        remove,
+        _closure: closure,
+    }))
 }
 
 struct WebEdgePan {
     remove: js_sys::Function,
+    _closure: Closure<dyn Fn(f64, f64, f64, f64)>,
 }
 
 impl ScrollSubscription for WebEdgePan {}

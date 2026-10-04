@@ -52,10 +52,14 @@ pub(crate) fn use_nav_drag(mut open: Signal<bool>, enabled: bool, nav: ElementHa
                 return;
             }
             let held = *press.peek();
-            if let Some(mut current) = held {
-                current.following = true;
-                press.set(Some(current));
-                pulled.set(Some(current.travel));
+            match held {
+                Some(mut current) => {
+                    current.following = true;
+                    press.set(Some(current));
+                    pulled.set(Some(current.travel));
+                }
+                // The browser took the touch (a fling ran): nothing to follow (todo 2190).
+                None => open.set(true),
             }
         }),
         EdgeSwipeOptions::default(),

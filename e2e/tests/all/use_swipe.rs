@@ -88,16 +88,66 @@ async fn reopens_after_each_close<D: Driver>(d: &mut D, _route: &str) -> Result<
         };
         d.swipe_from(IN_BAND, y, 120.0, 0.0).await?;
         text_is(d, "#opens", &round.to_string()).await?;
-        // Android drops the click of a tap that lands right after a swipe: tap again.
+        // One tap right after the swipe closes it (todo 2189).
+        d.click("#close").await?;
         eventually(d, "the drawer to close", async |d| {
-            if d.exists("#drawer").await? {
-                d.click("#close").await?;
-            }
             Ok(!d.exists("#drawer").await?)
         })
         .await?;
     }
     Ok(())
+}
+
+/// Todo 2190: in a fling Chromium sends a touch's first move uncancelable, an inner
+/// scroller pans and the pointer is cancelled; the touch still opens the drawer.
+mod an_edge_swipe_opens_while_the_page_flings {
+    #[cfg(feature = "android")]
+    #[test]
+    fn android() {
+        use e2e::driver::{Android, Driver};
+        use e2e::wait;
+
+        e2e::android::block_on(async {
+            let mut driver = Android::open("/use-swipe/drawer").await.unwrap();
+            let page = driver.page().clone();
+            // The code box the whole page long: the swipe starts on it wherever the fling stops.
+            page.evaluate(
+                "document.querySelector('#scroller').style.height = '2800px';
+                 window.__cancels = 0; addEventListener('pointercancel', () => __cancels++, true)",
+            )
+            .await
+            .unwrap();
+            let (vw, vh) = driver.viewport().await.unwrap();
+            driver
+                .fling_from(vw / 2.0, vh * 0.85, 0.0, -vh * 0.35)
+                .await
+                .unwrap();
+            // The fling's own press was cancelled too: only the swipe's counts.
+            page.evaluate("__cancels = 0").await.unwrap();
+            driver
+                .swipe_from(super::IN_BAND, vh / 2.0, 120.0, 0.0)
+                .await
+                .unwrap();
+            wait::for_js_true(
+                &page,
+                "document.querySelector('#opens').textContent === '1'",
+                "the drawer to open",
+            )
+            .await
+            .unwrap();
+            let cancels: u32 = page
+                .evaluate("__cancels")
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                cancels > 0,
+                "the fling ended before the swipe: no pointer was cancelled"
+            );
+            driver.finish("use_swipe").await.unwrap();
+        });
+    }
 }
 
 e2e::scenario!(

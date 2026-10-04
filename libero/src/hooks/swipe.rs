@@ -261,7 +261,8 @@ pub fn edge_swipe_sx() -> Sx {
 /// gesture there keeps working and needs no exclusion. Spread the handlers and
 /// [`edge_swipe_sx`] on a box covering the page; no strip covers the content,
 /// so taps go through. It adds a way in, not the only one: keep a button that
-/// opens the same drawer (WCAG 2.5.1). RTL follows [`use_direction`].
+/// opens the same drawer (WCAG 2.5.1). RTL follows [`use_direction`]. A swipe
+/// during a running fling, whose pointer the browser cancels, still counts.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -294,14 +295,6 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     // An inner scroller (code block, tab list) would take the band's sideways pan (2170).
     let holding = use_subscription_slot::<dyn ScrollSubscription>();
     let rtl = direction.is_rtl();
-    use_effect(use_reactive!(|(options, rtl)| {
-        holding.clear();
-        holding.set(hold_edge_pan(EdgeBand {
-            inset: options.inset,
-            width: options.width,
-            left: (options.edge == SwipeEdge::Start) != rtl,
-        }));
-    }));
     let decide = use_callback(move |event: SwipeEvent| {
         edge_swipe_opens(
             event.start.x,
@@ -313,12 +306,35 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
     });
     // A swipe that beat the viewport measurement waits for it.
     let mut waiting = use_signal(|| None::<SwipeEvent>);
+    // By the pointer, or after its cancel by the touch the browser took from it.
+    let on_track = use_callback(move |event: SwipeEvent| match decide.call(event) {
+        Some(true) => on_swipe.call(()),
+        Some(false) => {}
+        None => waiting.set(Some(event)),
+    });
+    use_effect(use_reactive!(|(options, rtl)| {
+        holding.clear();
+        holding.set(hold_edge_pan(
+            EdgeBand {
+                inset: options.inset,
+                width: options.width,
+                left: (options.edge == SwipeEdge::Start) != rtl,
+                distance: options.distance,
+            },
+            Box::new(move |[x, y, dx, dy]| {
+                let delta = DragPoint { x: dx, y: dy };
+                if let Some(direction) = swipe_direction(delta, options.distance) {
+                    on_track.call(SwipeEvent {
+                        direction,
+                        start: DragPoint { x, y },
+                        delta,
+                    });
+                }
+            }),
+        ));
+    }));
     let swipe = use_swipe(
-        Callback::new(move |event: SwipeEvent| match decide.call(event) {
-            Some(true) => on_swipe.call(()),
-            Some(false) => {}
-            None => waiting.set(Some(event)),
-        }),
+        on_track,
         SwipeOptions {
             distance: options.distance,
         },

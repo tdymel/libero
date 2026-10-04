@@ -34,6 +34,12 @@ pub(crate) fn draws_own_scrollbars() -> bool {
     !NATIVE
 }
 
+/// Whether a windowed table reserves its skipped rows in its body: a browser
+/// scrolls ahead of the rows. Blitz keeps the padding it was verified with.
+pub(crate) fn reserves_rows_in_tables() -> bool {
+    !NATIVE
+}
+
 /// Whether CSS scroll timelines move the drawn bars, so a scroll writes nothing to the
 /// DOM: a write per scroll cost Chromium a frame per wheel step (todo 1954).
 pub(crate) fn scroll_timelines() -> bool {
@@ -186,61 +192,92 @@ pub(crate) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn Scro
 }
 
 /// Where an edge swipe starts: `inset..inset + width` px in from the left edge, or
-/// from the right one.
+/// from the right one; `distance` is how far it travels before it counts.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct EdgeBand {
     pub(crate) inset: f64,
     pub(crate) width: f64,
     pub(crate) left: bool,
+    pub(crate) distance: f64,
 }
+
+/// A swipe the browser took from the pointer: where it started and how far it
+/// went, `[x, y, dx, dy]` in client px.
+pub(crate) type LostSwipe = Box<dyn Fn([f64; 4])>;
 
 /// The custom property [`hold_edge_pan`] finds the swiped element by, inherited.
 pub(crate) const EDGE_SWIPE_MARK: &str = "--lsx-edge-swipe";
 
-/// `(inset, width, left) => remove`: a non-passive `touchmove` that keeps an inner
-/// scroller from claiming a single touch from the band whose first move goes inward and
-/// mostly sideways. Chromium starts a pan on any later unprevented move, so it holds them all.
+/// `(inset, width, left, distance, swiped) => remove`: holds every move of a band touch
+/// going inward, mostly sideways, from inner scrollers. One whose pointer was cancelled
+/// anyway (its first move uncancelable in a fling) goes to `swiped` past `distance` (2190).
 #[cfg_attr(all(not(target_arch = "wasm32"), feature = "native"), allow(dead_code))]
-pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left) => {
+pub(crate) const EDGE_PAN_JS: &str = "(inset, width, left, distance, swiped) => {
     let start = null;
+    let origin = null;
     let holding = false;
-    const down = (event) => {
+    let lost = false;
+    const reset = () => {
         start = null;
+        origin = null;
         holding = false;
+        lost = false;
+    };
+    const down = (event) => {
+        reset();
         const touch = event.touches[0];
         if (event.touches.length !== 1 || !(event.target instanceof Element)) return;
         const from = left ? touch.clientX : innerWidth - touch.clientX;
         if (from < inset || from > inset + width) return;
         if (getComputedStyle(event.target).getPropertyValue('--lsx-edge-swipe').trim() !== '1') return;
         start = { x: touch.clientX, y: touch.clientY };
+        origin = start;
     };
     const move = (event) => {
-        if (event.touches.length !== 1) {
-            start = null;
-            holding = false;
-        }
+        if (event.touches.length !== 1) reset();
+        const touch = event.touches[0];
         if (start) {
-            const touch = event.touches[0];
             const dx = (touch.clientX - start.x) * (left ? 1 : -1);
             const dy = Math.abs(touch.clientY - start.y);
             if (Math.max(Math.abs(dx), dy) < 4) return;
             start = null;
             holding = dx > dy;
         }
-        if (holding && event.cancelable) event.preventDefault();
+        if (!holding) return;
+        if (event.cancelable) event.preventDefault();
+        if (!lost) return;
+        const dx = touch.clientX - origin.x;
+        const dy = touch.clientY - origin.y;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < distance) return;
+        swiped(origin.x, origin.y, dx, dy);
+        reset();
+    };
+    const cancel = (event) => {
+        if (event.pointerType === 'touch' && (start || holding)) lost = true;
     };
     const capture = { capture: true };
-    addEventListener('touchstart', down, { capture: true, passive: true });
+    const passive = { capture: true, passive: true };
+    addEventListener('touchstart', down, passive);
     addEventListener('touchmove', move, { capture: true, passive: false });
+    addEventListener('pointercancel', cancel, passive);
+    addEventListener('touchend', reset, passive);
+    addEventListener('touchcancel', reset, passive);
     return () => {
         removeEventListener('touchstart', down, capture);
         removeEventListener('touchmove', move, capture);
+        removeEventListener('pointercancel', cancel, capture);
+        removeEventListener('touchend', reset, capture);
+        removeEventListener('touchcancel', reset, capture);
     };
 }";
 
 /// Holds a sideways pan from `band` for an edge swipe until the subscription drops: an
 /// inner scroller's `touch-action` would else take the touch and cancel the pointer
-/// (2170). Only inside an element carrying [`EDGE_SWIPE_MARK`]; `None` on Blitz.
-pub(crate) fn hold_edge_pan(band: EdgeBand) -> Option<Box<dyn ScrollSubscription>> {
-    backend::hold_edge_pan(band)
+/// (2170). Only inside an element carrying [`EDGE_SWIPE_MARK`]; `None` on Blitz. A
+/// swipe the pointer lost all the same goes to `swiped`.
+pub(crate) fn hold_edge_pan(
+    band: EdgeBand,
+    swiped: LostSwipe,
+) -> Option<Box<dyn ScrollSubscription>> {
+    backend::hold_edge_pan(band, swiped)
 }

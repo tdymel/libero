@@ -320,11 +320,15 @@ pub(super) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn Scro
 /// Delegated from the window, so a remounted element under the same tag still
 /// reports. The first step of a frame goes at once, the rest as one at the next
 /// frame: a starved frame would hold the first back too. `scrollend` carries the
-/// last position itself, so it never lands before a queued step.
+/// last position itself, so it never lands before a queued step. A step under a
+/// px is dropped: Android rocks a device px at an edge for seconds (todo 2178).
 const ON_ELEMENT_SCROLL: &str = "const selector = '[' + data[0] + '=\"' + data[1] + '\"]';
-    let queued = null, armed = false, seq = 0;
+    let queued = null, armed = false, seq = 0, top = NaN, left = NaN;
     const send = (s, ended) => {
         if (!s.isConnected) return;
+        if (!ended && Math.abs(s.scrollTop - top) < 1 && Math.abs(s.scrollLeft - left) < 1) return;
+        top = s.scrollTop;
+        left = s.scrollLeft;
         seq += 1;
         dioxus.send([seq, s.scrollTop, s.scrollLeft, s.scrollWidth, s.scrollHeight, s.clientWidth, s.clientHeight, ended]);
     };
@@ -411,24 +415,28 @@ pub(super) fn on_element_scroll(
 /// Injected: `preventDefault` has to answer the `touchmove` synchronously.
 pub(super) fn hold_edge_pan(
     band: crate::platform::scroll::EdgeBand,
+    swiped: crate::platform::scroll::LostSwipe,
 ) -> Option<Box<dyn ScrollSubscription>> {
     if !runs_scripts() {
         return None;
     }
     let slot = Slot::new();
     let script = eval(&format!(
-        "const remove = ({})({}, {}, {});
+        "const remove = ({})({}, {}, {}, {}, (...swipe) => dioxus.send(swipe));
         {}
         remove();",
         crate::platform::scroll::EDGE_PAN_JS,
         band.inset,
         band.width,
         band.left,
+        band.distance,
         slot.park("")
     ));
     let task = spawn(async move {
         let mut script = script;
-        while script.recv::<()>().await.is_ok() {}
+        while let Ok(swipe) = script.recv::<[f64; 4]>().await {
+            swiped(swipe);
+        }
     });
     Some(Box::new(WebViewListener {
         task,

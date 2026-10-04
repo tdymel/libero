@@ -911,10 +911,11 @@ fn a_windowed_table_has_no_blank_rows_while_scrolling() {
         )
         .await
         .unwrap();
-        // The px of the area under the header that no rendered row covers.
+        // The px of the area under the header that no rendered row covers. The sticky
+        // cells, not the `thead`: it scrolls away above the reserved rows (2176).
         const GAP: &str = "(() => { const area = document.querySelector('[data-table-scroll]'); \
              const a = area.getBoundingClientRect(); \
-             const top = document.querySelector('thead').getBoundingClientRect().bottom; \
+             const top = document.querySelector('thead th').getBoundingClientRect().bottom; \
              const bottom = a.top + area.clientHeight; \
              const rows = [...document.querySelectorAll('tbody tr')].map(r => r.getBoundingClientRect()); \
              const first = Math.min(...rows.map(r => r.top)), last = Math.max(...rows.map(r => r.bottom)); \

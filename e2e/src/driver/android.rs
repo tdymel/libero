@@ -98,7 +98,18 @@ impl Android {
         Ok(at)
     }
 
+    /// A swipe lifted its travel again further on, so the page flings on: lifted on
+    /// its last move, a touch comes to rest.
+    pub async fn fling_from(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
+        self.stroke(pointer::Point { x, y }, dx, dy, 2.0).await
+    }
+
     async fn swipe(&mut self, from: pointer::Point, dx: f64, dy: f64) -> Result<()> {
+        self.stroke(from, dx, dy, 1.0).await
+    }
+
+    /// Four moves to `from + d`, lifted at `from + d * lift`.
+    async fn stroke(&mut self, from: pointer::Point, dx: f64, dy: f64, lift: f64) -> Result<()> {
         // `input swipe` lifts 1-2px short of its last move, and a drag follows moves
         // only (1002): step the touch by hand, its last move on the end point.
         // A touch lifted off the screen leaves the WebView a stuck touch that eats later drags.
@@ -108,7 +119,7 @@ impl Android {
         events.push("UP".into());
         let mut chain = Vec::new();
         for (i, event) in events.into_iter().enumerate() {
-            let t = (i as f64 / 4.0).min(1.0);
+            let t = if i > 4 { lift } else { i as f64 / 4.0 };
             let [x, y] = self.device(pointer::Point {
                 x: (from.x + dx * t).clamp(0.0, vw - 1.0),
                 y: (from.y + dy * t).clamp(0.0, vh - 1.0),

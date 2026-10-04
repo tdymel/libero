@@ -20,8 +20,8 @@ use crate::{
     platform::{
         Dimensions, ElementApi, OBSERVE_ATTR, PlatformError, Read, SCROLL_QUIET, TimerSubscription,
         clips_z_indexed, draws_own_scrollbars, fires_scroll_end, fires_scroll_on_scroll_to,
-        has_match_by_tag, on_element_scroll, scroll, scroll_range, scrolls_on_keys, timer,
-        when_free, when_laid_out,
+        has_match_by_tag, on_element_scroll, reserves_rows_in_tables, scroll, scroll_range,
+        scrolls_on_keys, timer, when_free, when_laid_out,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -144,15 +144,33 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
 /// Reserves the rows a `Virtualize` skipped; `display: contents` until then,
 /// so an ordinary area lays out as without it.
 static SCROLL_AREA_CONTENT_SX: StaticSx = StaticSx::new(|| {
+    let reserved = sx()
+        .display("block")
+        .padding_top(SCROLL_AREA_LEADING_VAR.value_or("0px"))
+        .padding_bottom(SCROLL_AREA_TRAILING_VAR.value_or("0px"));
+    let reserved = match reserves_rows_in_tables() {
+        true => reserved.and(table_body_reserve_sx()),
+        false => reserved,
+    };
     sx().display("contents")
-        .when(
-            "virtualized",
-            sx().display("block")
-                .padding_top(SCROLL_AREA_LEADING_VAR.value_or("0px"))
-                .padding_bottom(SCROLL_AREA_TRAILING_VAR.value_or("0px")),
-        )
+        .when("virtualized", reserved)
         .when("windowed", placeholder_rows_sx())
 });
+
+/// A table's skipped rows reserved in its body, not around it: a sticky `th` holds
+/// only inside the table box, and a fling ahead of the rows left it below the pane (todo 2176).
+fn table_body_reserve_sx() -> Sx {
+    let row = |height: String| sx().content("\"\"").display("table-row").height(height);
+    sx().selector("&:has(> table)", sx().padding_block("0"))
+        .selector(
+            "& > table > tbody:first-of-type::before",
+            row(SCROLL_AREA_LEADING_VAR.value_or("0px")),
+        )
+        .selector(
+            "& > table > tbody:last-of-type::after",
+            row(SCROLL_AREA_TRAILING_VAR.value_or("0px")),
+        )
+}
 
 /// Skeleton bars, one per pitch, in the padding only: a fast fling outruns the
 /// rows' render, and shows these instead of a blank pane (todo 2131). Forced
@@ -663,7 +681,18 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         }
     });
 
+    let mut rested_at = use_hook(|| CopyValue::new(None::<(f64, f64)>));
     let mut scroll_data = move |data: &ScrollData| {
+        // Chrome on Android rocks a device px at an edge for seconds after `scrollend`:
+        // no new scroll (todo 2178).
+        let (top, left) = (data.scroll_top(), data.scroll_left());
+        let rested = *rested_at.peek();
+        if !*is_scrolling.peek()
+            && rested.is_some_and(|(y, x)| (top - y).abs() < 1.0 && (left - x).abs() < 1.0)
+        {
+            return;
+        }
+        rested_at.set(Some((top, left)));
         if own_bars {
             drawn_bars.scrolled(data);
         }
