@@ -3,7 +3,7 @@
 use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually_text};
+use e2e::driver::{Driver, Platform, Rect, eventually, eventually_text};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, ax, passes::keyboard, passes::pointer, wait};
 
@@ -21,6 +21,61 @@ e2e::scenario!(
     typing_a_phone_number_reaches_its_e164_value,
     "/phone-field/echo",
     typing_reaches_e164
+);
+
+/// Todo 2129: the soft keyboard the search box opens shrinks the viewport after the
+/// list was placed; the list moves or shrinks into what is left, and a covered picker
+/// scrolls back into view. The web shrinks it by hand to `room` px below the picker's top.
+async fn list_fits_the_shrunk_viewport<D: Driver>(d: &mut D, room: f64) -> Result<()> {
+    d.click(PICKER).await?;
+    eventually(d, "the country list to open", async |d| {
+        d.exists("[role=listbox]").await
+    })
+    .await?;
+    if d.platform() == Platform::Android {
+        eventually(d, "the soft keyboard to show", async |d| {
+            d.soft_keyboard_shown().await
+        })
+        .await?;
+    } else {
+        let (width, _) = d.viewport().await?;
+        let picker = d.rect(PICKER).await?;
+        d.resize_viewport(width, picker.y + room).await?;
+    }
+    eventually(
+        d,
+        "the picker and its list inside the shrunk viewport",
+        async |d| {
+            let (_, height) = d.viewport().await?;
+            let inside = |rect: Rect| rect.y >= -0.5 && rect.y + rect.height <= height + 0.5;
+            Ok(inside(d.rect(PICKER).await?) && inside(d.rect("[data-slot=dropdown]").await?))
+        },
+    )
+    .await
+}
+
+async fn room_below_the_picker<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    list_fits_the_shrunk_viewport(d, 180.0).await
+}
+
+async fn picker_covered<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    list_fits_the_shrunk_viewport(d, -40.0).await
+}
+
+e2e::scenario!(
+    the_country_list_fits_a_viewport_the_keyboard_shrank,
+    "/phone-field/low",
+    room_below_the_picker,
+    native: skip("Blitz reports no window resize (todo 2129)"),
+    desktop: skip("no soft keyboard, and wry's window is not resized here")
+);
+e2e::scenario!(
+    a_picker_the_keyboard_covers_scrolls_back_with_its_list,
+    "/phone-field/low",
+    picker_covered,
+    native: skip("Blitz reports no window resize (todo 2129)"),
+    android: skip("the keyboard's height is the device's: the first scenario covers it"),
+    desktop: skip("no soft keyboard, and wry's window is not resized here")
 );
 
 #[test]

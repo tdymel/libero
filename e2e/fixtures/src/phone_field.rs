@@ -18,7 +18,19 @@ pub const ROUTES: Routes = &[
     ),
     ("/phone-field/german", || rsx! { PhoneFieldGermanPage {} }),
     ("/phone-field/echo", || rsx! { PhoneFieldEchoPage {} }),
+    ("/phone-field/low", || rsx! { PhoneFieldLowPage {} }),
 ];
+
+/// The field 320px down, where a phone's soft keyboard covers the room below it (todo 2129).
+#[component]
+fn PhoneFieldLowPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            div { style: "height: 300px" }
+            PhoneField { label: "Mobile", country: "DE" }
+        }
+    }
+}
 
 /// Germany, the E.164 value echoed in `#echo`, for the shared web/native scenarios.
 #[component]

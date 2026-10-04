@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use anyhow::Result;
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 
 use super::{Driver, Platform, Rect};
 use crate::frames::in_front;
@@ -69,6 +70,22 @@ impl Driver for Web {
 
     async fn viewport(&mut self) -> Result<(f64, f64)> {
         self.json("[innerWidth, innerHeight]").await
+    }
+
+    async fn resize_viewport(&mut self, width: f64, height: f64) -> Result<()> {
+        let (width, height) = (width.round() as i64, height.round() as i64);
+        self.fixture
+            .page
+            .execute(SetDeviceMetricsOverrideParams::new(
+                width, height, 1.0, false,
+            ))
+            .await?;
+        crate::wait::for_js_true(
+            &self.fixture.page,
+            &format!("innerWidth === {width} && innerHeight === {height}"),
+            &format!("the viewport to be {width}x{height}"),
+        )
+        .await
     }
 
     async fn press(&mut self, key: keyboard::Key) -> Result<()> {

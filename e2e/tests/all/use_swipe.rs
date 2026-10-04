@@ -3,7 +3,7 @@
 //! system back zone opens, mirrored under RTL, inside a scrolling `ScrollArea`.
 
 use anyhow::Result;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, Platform, eventually};
 
 async fn text_is<D: Driver>(d: &mut D, selector: &str, expected: &str) -> Result<()> {
     eventually(d, &format!("{selector} to read {expected:?}"), async |d| {
@@ -39,11 +39,20 @@ async fn ignores_a_mouse<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 const IN_BAND: f64 = 70.0;
 const IN_BACK_ZONE: f64 = 24.0;
 
+/// Under Android's gesture navigation the back zone is the system's: a swipe there goes
+/// Back and closes the app (2133), so only three-button runs and the web try it.
+fn system_takes_the_back_zone<D: Driver>(d: &D) -> bool {
+    d.platform() == Platform::Android
+        && std::env::var("E2E_ANDROID_NAV").is_ok_and(|nav| nav == "gestural")
+}
+
 async fn opens_from_the_band<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let (_, vh) = d.viewport().await?;
     let y = vh / 2.0;
     // The system's back zone and the wrong way: none opens.
-    d.swipe_from(IN_BACK_ZONE, y, 120.0, 0.0).await?;
+    if !system_takes_the_back_zone(d) {
+        d.swipe_from(IN_BACK_ZONE, y, 120.0, 0.0).await?;
+    }
     d.swipe_from(IN_BAND + 120.0, y, -120.0, 0.0).await?;
     d.settle().await?;
     text_is(d, "#opens", "0").await?;

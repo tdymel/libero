@@ -13,7 +13,7 @@ use dioxus::prelude::{
 
 use super::{
     A11yMediaApi, ColorSchemeApi, ContentSubscription, DocumentApi, ElementApi, KeyboardApi,
-    MediaQueryApi, PressApi, ScrollApi, SilentFocusApi, TimerApi,
+    MediaQueryApi, PressApi, ScrollApi, ScrollSubscription, SilentFocusApi, TimerApi,
 };
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
@@ -416,6 +416,19 @@ pub(crate) fn scroll() -> Option<&'static dyn ScrollApi> {
     return blitz::scroll();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::scroll();
+}
+
+/// See [`on_viewport_resize`](crate::platform::scroll::on_viewport_resize).
+pub(crate) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn ScrollSubscription>> {
+    #[cfg(target_arch = "wasm32")]
+    return web::on_viewport_resize(callback);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return {
+        let _ = callback;
+        None
+    };
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::on_viewport_resize(callback);
 }
 
 /// `scrollIntoView`'s `nearest`, vertically: how far a view spanning

@@ -20,7 +20,10 @@ use crate::{
         portal::{PortalSlot, use_portal_slot},
         use_subscription_slot,
     },
-    platform::{ElementApi, ScrollSubscription, document, scroll, when_laid_out},
+    platform::{
+        ElementApi, ScrollSubscription, document, focus_is_in, on_viewport_resize,
+        reads_dom_synchronously, scroll, when_laid_out,
+    },
     theme::CssVar,
     utils::bump,
 };
@@ -258,10 +261,16 @@ pub(crate) fn use_popover_on(
     let scroll_tick = use_signal(|| 0u64);
     // Alive only while open, so closed dropdowns listen to nothing.
     let listening = use_subscription_slot::<dyn ScrollSubscription>();
+    // A soft keyboard shrinks the viewport after the open placed the box (todo 2129).
+    let resizing = use_subscription_slot::<dyn ScrollSubscription>();
     // How often this open waited for the box's first layout.
     let waited: Rc<Cell<u8>> = use_hook(|| Rc::new(Cell::new(0)));
     // Whether this open measured the box again at its capped height.
     let capped: Rc<Cell<bool>> = use_hook(|| Rc::new(Cell::new(false)));
+    // Whether the next pass follows a viewport resize, the only one that may scroll the anchor.
+    let resized: Rc<Cell<bool>> = use_hook(|| Rc::new(Cell::new(false)));
+    // The viewport height the last pass of this open measured.
+    let last_height: Rc<Cell<Option<f64>>> = use_hook(|| Rc::new(Cell::new(None)));
 
     use_effect(use_reactive!(|(open, options)| {
         // Reading it is what re-runs this on a scroll.
@@ -270,8 +279,11 @@ pub(crate) fn use_popover_on(
         let mounted = floating.mount_token().is_some();
         if !open || !mounted {
             listening.clear();
+            resizing.clear();
             waited.set(0);
             capped.set(false);
+            resized.set(false);
+            last_height.set(None);
             // A `set` redraws even when unchanged: every opening ran this before
             // its box mounted and redrew the whole consumer for nothing.
             if placed.peek().is_some() {
@@ -287,6 +299,15 @@ pub(crate) fn use_popover_on(
         if let Some(api) = (!listening.is_some()).then(scroll).flatten() {
             listening.set(Some(api.on_scroll(Box::new(move || bump(scroll_tick)))));
         }
+        if !resizing.is_some() {
+            // The room changed, so the box may cap itself once more.
+            let (capped, resized) = (capped.clone(), resized.clone());
+            resizing.set(on_viewport_resize(Box::new(move || {
+                capped.set(false);
+                resized.set(true);
+                bump(scroll_tick);
+            })));
+        }
 
         // Started here, awaited in the task: Blitz locks the document while
         // tasks drain (see `ElementApi::dimensions`).
@@ -297,6 +318,14 @@ pub(crate) fn use_popover_on(
         let rtl = anchor.is_rtl();
         let waited = waited.clone();
         let capped = capped.clone();
+        let resized = resized.clone();
+        let last_height = last_height.clone();
+        // A WebView cannot tell where focus is; there only the shrink guards the scroll.
+        let focused = !reads_dom_synchronously()
+            || [anchor.mounted(), floating.mounted()]
+                .iter()
+                .flatten()
+                .any(focus_is_in);
 
         spawn(async move {
             let (Ok(anchor_size), Ok((x, y)), Ok(floating_size), Ok(viewport)) = (
@@ -322,6 +351,14 @@ pub(crate) fn use_popover_on(
                 width: anchor_size.width,
                 height: anchor_size.height,
             };
+            // A keyboard covered the focused anchor: bring it back, whose scroll places the box again.
+            let shrank = last_height
+                .replace(Some(viewport.height))
+                .is_some_and(|last| viewport.height < last - 0.5);
+            let covered = y < 0.0 || y + anchor_size.height > viewport.height;
+            if resized.replace(false) && shrank && focused && covered {
+                let _ = anchor.scroll_into_view(false);
+            }
             // The width style lands after this measure: place on the next pass, once per change.
             let widened = *anchor_width.peek() != Some(anchor_size.width);
             if widened {

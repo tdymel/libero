@@ -238,7 +238,7 @@ pub fn use_system_notification() -> SystemNotifier {
             notifier.permission.set(PermissionState::Unsupported);
             return;
         };
-        let probe = api.probe();
+        let (probe, follows) = (api.probe(), api.follows_page());
         spawn(async move {
             let Some(state) = probe.await else {
                 notifier.permission.set(PermissionState::Unsupported);
@@ -246,7 +246,9 @@ pub fn use_system_notification() -> SystemNotifier {
             };
             notifier.supported.set(true);
             notifier.permission.set(state);
-            notifier.permission.follow();
+            if follows {
+                notifier.permission.follow();
+            }
         });
     });
     notifier

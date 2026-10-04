@@ -122,8 +122,13 @@ impl DocumentApi for WebViewDocument {
         None
     }
 
+    /// The height stops at the visual viewport's bottom, as on the web.
     fn viewport(&self) -> Read<Dimensions> {
-        let read = eval("return [window.innerWidth, window.innerHeight];");
+        let read = eval(
+            "const visual = window.visualViewport;
+            const bottom = visual ? visual.offsetTop + visual.height : Infinity;
+            return [window.innerWidth, Math.min(window.innerHeight, bottom)];",
+        );
         Box::pin(async move {
             let (width, height) = read
                 .join::<(f64, f64)>()
@@ -274,6 +279,41 @@ impl ScrollApi for WebViewScroll {
             _slot: Rc::new(slot),
         })
     }
+}
+
+/// The window and the visual viewport (a soft keyboard), throttled as [`ON_SCROLL`].
+pub(super) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn ScrollSubscription>> {
+    if !runs_scripts() {
+        return None;
+    }
+    let slot = Slot::new();
+    let script = eval(&format!(
+        "let queued = false;
+        const tick = () => {{
+            if (queued) return;
+            queued = true;
+            requestAnimationFrame(() => {{ queued = false; dioxus.send(null); }});
+        }};
+        const visual = window.visualViewport;
+        window.addEventListener('resize', tick);
+        visual?.addEventListener('resize', tick);
+        visual?.addEventListener('scroll', tick);
+        {}
+        window.removeEventListener('resize', tick);
+        visual?.removeEventListener('resize', tick);
+        visual?.removeEventListener('scroll', tick);",
+        slot.park("")
+    ));
+    let task = spawn(async move {
+        let mut script = script;
+        while script.recv::<()>().await.is_ok() {
+            callback();
+        }
+    });
+    Some(Box::new(WebViewListener {
+        task,
+        _slot: Rc::new(slot),
+    }))
 }
 
 pub(super) fn media_query() -> Option<&'static dyn MediaQueryApi> {

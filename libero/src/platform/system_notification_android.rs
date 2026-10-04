@@ -558,6 +558,10 @@ impl SystemNotificationApi for AndroidNotification {
         Box::pin(async move { answer.await.unwrap_or(PermissionState::Unsupported) })
     }
 
+    fn follows_page(&self) -> bool {
+        false
+    }
+
     /// `icon` becomes the large icon; the status bar shows [`SMALL_ICON`]. A tap or an action
     /// reopens the app.
     fn show(

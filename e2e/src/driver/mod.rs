@@ -159,6 +159,11 @@ pub trait Driver {
     async fn soft_keyboard_shown(&mut self) -> Result<bool> {
         Ok(false)
     }
+    /// Resizes the viewport to `(width, height)` CSS px, as a soft keyboard shrinks it.
+    async fn resize_viewport(&mut self, width: f64, height: f64) -> Result<()> {
+        let _ = (width, height);
+        bail!("{:?}: no viewport resize", self.platform())
+    }
     /// Holds the page's timers of `delays` ([`crate::clock`]); `false` where the app's timers
     /// do not run in the page (Blitz, the WebViews), so the caller waits them out instead.
     async fn hold_timers(&mut self, delays: &[u32]) -> Result<bool> {

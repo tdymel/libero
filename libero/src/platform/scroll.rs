@@ -130,3 +130,9 @@ pub trait ScrollApi {
 pub fn scroll() -> Option<&'static dyn ScrollApi> {
     backend::scroll()
 }
+
+/// Calls `callback` when the viewport resizes, the visual one included (a soft keyboard),
+/// until the subscription drops. `None` on Blitz: no window resize is reported.
+pub(crate) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn ScrollSubscription>> {
+    backend::on_viewport_resize(callback)
+}

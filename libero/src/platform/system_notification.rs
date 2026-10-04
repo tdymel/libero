@@ -112,6 +112,11 @@ pub(crate) trait SystemNotificationApi {
     fn probe(&self) -> Answer<Option<PermissionState>>;
     /// Prompts if the user has not answered yet.
     fn request(&self) -> Answer<PermissionState>;
+    /// Whether the page's `notifications` permission reports this API's answer. Android's
+    /// WebView reads `denied` whatever the app holds (todo 2135).
+    fn follows_page(&self) -> bool {
+        true
+    }
     fn show(
         &self,
         notification: &SystemNotification,

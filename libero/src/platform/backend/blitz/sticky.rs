@@ -20,7 +20,8 @@ thread_local! {
     static WINDOW: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
 }
 
-/// The window's size and scale, as a resize changes them.
+/// The window's size and scale, as a resize changes them. Known gap: an open popover
+/// does not re-place on a resize here (`on_viewport_resize` is `None` on Blitz).
 fn window(doc: &BaseDocument) -> ((u32, u32), f64) {
     (doc.viewport().window_size, doc.viewport().scale_f64())
 }

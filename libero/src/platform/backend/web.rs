@@ -525,12 +525,13 @@ impl DocumentApi for WebDocument {
     }
 
     /// `inner_width`/`inner_height`: scrollbars included, the box a fixed
-    /// element is laid out in.
+    /// element is laid out in. The height stops at the visual viewport's bottom.
     fn viewport(&self) -> Read<Dimensions> {
         let size = web_sys::window()
             .and_then(|window| {
                 let width = window.inner_width().ok()?.as_f64()?;
                 let height = window.inner_height().ok()?.as_f64()?;
+                let height = visible_bottom(&window).map_or(height, |bottom| height.min(bottom));
                 Some(Dimensions { width, height })
             })
             .ok_or(PlatformError::Unsupported);
@@ -587,6 +588,63 @@ struct WebScrollSubscription {
     /// Kept alive as long as the listener is registered: dropping it frees the
     /// JS function the listener points at.
     closure: Closure<dyn FnMut()>,
+}
+
+fn visual_viewport(window: &web_sys::Window) -> Option<JsValue> {
+    js_sys::Reflect::get(window, &JsValue::from_str("visualViewport"))
+        .ok()
+        .filter(|viewport| viewport.is_object())
+}
+
+/// The visual viewport's bottom in layout coordinates: a keyboard in a browser tab
+/// shrinks only the visual viewport.
+fn visible_bottom(window: &web_sys::Window) -> Option<f64> {
+    let viewport = visual_viewport(window)?;
+    let read = |name: &str| {
+        js_sys::Reflect::get(&viewport, &JsValue::from_str(name))
+            .ok()?
+            .as_f64()
+    };
+    Some(read("offsetTop")? + read("height")?)
+}
+
+pub(super) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn ScrollSubscription>> {
+    let window = web_sys::window()?;
+    let closure = Closure::<dyn FnMut()>::new(callback);
+    let mut listened = Vec::new();
+    let visual: Option<web_sys::EventTarget> =
+        visual_viewport(&window).and_then(|viewport| viewport.dyn_into().ok());
+    let targets = [
+        (Some(window.into()), "resize"),
+        (visual.clone(), "resize"),
+        (visual, "scroll"),
+    ];
+    for (target, event) in targets {
+        if let Some(target) = target
+            && target
+                .add_event_listener_with_callback(event, closure.as_ref().unchecked_ref())
+                .is_ok()
+        {
+            listened.push((target, event));
+        }
+    }
+    Some(Box::new(WebResizeSubscription { listened, closure }))
+}
+
+struct WebResizeSubscription {
+    listened: Vec<(web_sys::EventTarget, &'static str)>,
+    closure: Closure<dyn FnMut()>,
+}
+
+impl ScrollSubscription for WebResizeSubscription {}
+
+impl Drop for WebResizeSubscription {
+    fn drop(&mut self) {
+        for (target, event) in &self.listened {
+            let _ = target
+                .remove_event_listener_with_callback(event, self.closure.as_ref().unchecked_ref());
+        }
+    }
 }
 
 /// Attributes that make a node focusable or not, or reshape it through a
