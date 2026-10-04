@@ -24,8 +24,9 @@ pub const APP_ENV: &str = "E2E_DESKTOP_APP";
 /// A cold WebKitGTK start under Xvfb took 5.5 s on a seat.
 const LAUNCH: Duration = Duration::from_secs(60);
 
-/// About what one WebKitGTK wheel notch scrolls, in CSS px.
-const WHEEL_NOTCH: f64 = 50.0;
+/// What one WebKitGTK wheel notch scrolls, in CSS px: measured 68 per notch in a 120 px tall
+/// scroller of the harness's 573 px tall window (todo 2197).
+const WHEEL_NOTCH: f64 = 68.0;
 
 /// The app the last scenario finished cleanly in; the next scenario of its unit reuses it.
 static IDLE: Mutex<Option<Desktop>> = Mutex::new(None);

@@ -396,6 +396,16 @@ pub(crate) fn root_padding_right() -> Option<f64> {
     return None;
 }
 
+/// See [`visible_top`](crate::platform::visible_top).
+pub(crate) fn visible_top() -> super::Read<f64> {
+    #[cfg(target_arch = "wasm32")]
+    return Box::pin(std::future::ready(Ok(web::visible_top())));
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return Box::pin(std::future::ready(Ok(0.0)));
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::visible_top();
+}
+
 /// See [`color_scheme`](crate::platform::color_scheme).
 pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     #[cfg(target_arch = "wasm32")]

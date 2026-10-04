@@ -282,6 +282,16 @@ impl ScrollApi for WebViewScroll {
     }
 }
 
+/// The visual viewport's top in layout coordinates, 0 where none is panned.
+pub(super) fn visible_top() -> Read<f64> {
+    let read = eval("return Math.max(0, window.visualViewport?.offsetTop ?? 0);");
+    Box::pin(async move {
+        read.join::<f64>()
+            .await
+            .map_err(|_| PlatformError::Unsupported)
+    })
+}
+
 /// The window and the visual viewport (a soft keyboard), throttled as [`ON_SCROLL`].
 pub(super) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn ScrollSubscription>> {
     if !runs_scripts() {

@@ -29,6 +29,12 @@ pub fn document() -> Option<&'static dyn DocumentApi> {
     backend::document()
 }
 
+/// The visible viewport's top in layout coordinates: above 0 where the browser panned
+/// the visual viewport down (a focused field over a soft keyboard, a pinch zoom).
+pub(crate) fn visible_top() -> Read<f64> {
+    backend::visible_top()
+}
+
 /// `:root`'s computed `padding-right` in px, where the renderer can tell (the web).
 pub(crate) fn root_padding_right() -> Option<f64> {
     backend::root_padding_right()

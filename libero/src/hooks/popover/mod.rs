@@ -21,8 +21,8 @@ use crate::{
         use_subscription_slot,
     },
     platform::{
-        ElementApi, ScrollSubscription, document, focus_is_in, on_viewport_resize,
-        reads_dom_synchronously, scroll, when_laid_out,
+        Dimensions, ElementApi, ScrollSubscription, document, focus_is_in, on_viewport_resize,
+        reads_dom_synchronously, scroll, visible_top, when_laid_out,
     },
     theme::CssVar,
     utils::bump,
@@ -315,6 +315,7 @@ pub(crate) fn use_popover_on(
         let anchor_offset = anchor.client_offset();
         let floating_size = floating.dimensions();
         let viewport = document.viewport();
+        let top = visible_top();
         let rtl = anchor.is_rtl();
         let waited = waited.clone();
         let capped = capped.clone();
@@ -336,6 +337,8 @@ pub(crate) fn use_popover_on(
             ) else {
                 return;
             };
+            // A panned visual viewport (todo 2200): place in the visible part, shifted back below.
+            let top = top.await.unwrap_or(0.0).min(viewport.height);
             // Not laid out yet (native shell): a 0x0 box placed at the anchor's
             // edge overflows, so wait for layout, a few times at most (todo 896).
             let tries = waited.get();
@@ -355,7 +358,7 @@ pub(crate) fn use_popover_on(
             let shrank = last_height
                 .replace(Some(viewport.height))
                 .is_some_and(|last| viewport.height < last - 0.5);
-            let covered = y < 0.0 || y + anchor_size.height > viewport.height;
+            let covered = y < top || y + anchor_size.height > viewport.height;
             if resized.replace(false) && shrank && focused && covered {
                 let _ = anchor.scroll_into_view(false);
             }
@@ -369,7 +372,18 @@ pub(crate) fn use_popover_on(
                 }
             }
             // A scroll that moved nothing (a listbox's own) must not redraw the consumer.
-            let mut next = place(rect, floating_size, viewport, &options, rtl);
+            let visible = Dimensions {
+                height: viewport.height - top,
+                ..viewport
+            };
+            let mut next = place(
+                Rect { y: y - top, ..rect },
+                floating_size,
+                visible,
+                &options,
+                rtl,
+            );
+            next.y += top;
             // Taller than the room: a box capping itself at it shrinks, and above
             // its anchor its top follows the new height. Once per open.
             if floating_size.height > next.available_height + 0.5 && !capped.get() {

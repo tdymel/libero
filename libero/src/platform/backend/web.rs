@@ -596,16 +596,24 @@ fn visual_viewport(window: &web_sys::Window) -> Option<JsValue> {
         .filter(|viewport| viewport.is_object())
 }
 
+fn visual_read(window: &web_sys::Window, name: &str) -> Option<f64> {
+    js_sys::Reflect::get(&visual_viewport(window)?, &JsValue::from_str(name))
+        .ok()?
+        .as_f64()
+}
+
 /// The visual viewport's bottom in layout coordinates: a keyboard in a browser tab
 /// shrinks only the visual viewport.
 fn visible_bottom(window: &web_sys::Window) -> Option<f64> {
-    let viewport = visual_viewport(window)?;
-    let read = |name: &str| {
-        js_sys::Reflect::get(&viewport, &JsValue::from_str(name))
-            .ok()?
-            .as_f64()
-    };
-    Some(read("offsetTop")? + read("height")?)
+    Some(visual_read(window, "offsetTop")? + visual_read(window, "height")?)
+}
+
+/// The visual viewport's top in layout coordinates: mobile Chrome pans it down to keep a
+/// focused field visible.
+pub(super) fn visible_top() -> f64 {
+    web_sys::window()
+        .and_then(|window| visual_read(&window, "offsetTop"))
+        .map_or(0.0, |top| top.max(0.0))
 }
 
 pub(super) fn on_viewport_resize(callback: Box<dyn Fn()>) -> Option<Box<dyn ScrollSubscription>> {

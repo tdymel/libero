@@ -75,8 +75,8 @@ pub(crate) use direction::{
     apply_direction, apply_lang, clear_root_direction, forget_direction, set_root_direction,
     store_direction, stored_direction,
 };
-pub(crate) use document::root_padding_right;
 pub use document::{DocumentApi, document};
+pub(crate) use document::{root_padding_right, visible_top};
 pub(crate) use element::{
     ContentSubscription, FocusStep, SCROLL_MARGIN_VAR, SCROLL_PADDING_VARS, focus_among,
     focus_first_of, focus_kept, focus_selector, focused_attribute, is_rtl, join, join_all,

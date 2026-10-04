@@ -116,6 +116,53 @@ fn the_country_list_fits_a_shrunk_visual_viewport() {
     });
 }
 
+/// Todo 2200: zoomed 3x and panned down to the picker, the visual viewport starts far below the
+/// layout top. The list must not flip into the layout room above it, out of sight.
+#[test]
+fn the_country_list_stays_below_a_panned_visual_viewport_top() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetPageScaleFactorParams;
+    block_on(async {
+        let fixture = Fixture::open("/phone-field/low", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, PICKER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('[role=listbox]')",
+            "the list",
+        )
+        .await
+        .unwrap();
+        page.execute(SetPageScaleFactorParams::new(3.0))
+            .await
+            .unwrap();
+        page.evaluate(format!(
+            "document.querySelector('{PICKER}').scrollIntoView({{ block: 'start' }})"
+        ))
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "visualViewport.offsetTop > 200",
+            "a panned visual viewport",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const v = visualViewport, list = document.querySelector('[data-slot=dropdown]');
+             if (!list || list.closest('[hidden]')) return false;
+             const r = list.getBoundingClientRect();
+             return r.height > 0 && r.top >= v.offsetTop - 0.5 && r.bottom <= v.offsetTop + v.height + 0.5; })()",
+            "the list inside the panned visual viewport",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("phone_field", "/phone-field")
